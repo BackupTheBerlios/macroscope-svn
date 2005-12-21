@@ -1,0 +1,272 @@
+/*-
+ * Copyright 2005 Guram Dukashvili
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+//---------------------------------------------------------------------------
+#include <adicpp/ksys.h>
+//---------------------------------------------------------------------------
+namespace ksys {
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+uint8_t giantPlaceHolder[sizeof(InterlockedMutex)];
+//---------------------------------------------------------------------------
+#if !defined(__i386__) && !defined(_MSC_VER) && !defined(__BCPLUSPLUS__)
+int32_t interlockedIncrement(int32_t * v,int32_t a)
+{
+  giant().acquire();
+  int32_t ov = *v;
+  *v += a;
+  giant().release();
+  return ov;
+}
+
+int32_t interlockedCompareExchange(int32_t * v,int32_t exValue,int32_t cmpValue)
+{
+  giant().acquire();
+  int32_t ov;
+  if( *v == cmpValue ){
+    ov = cmpValue;
+    *v = exValue;
+  }
+  else {
+    ov = exValue;
+  }
+  giant().release();
+  return ov;
+}
+#endif
+//---------------------------------------------------------------------------
+#ifdef __BCPLUSPLUS__
+#pragma option push -w-8070 -O2 -6 -y- -r
+int32_t __fastcall __declspec(nothrow) interlockedIncrement(int32_t *,int32_t)
+{
+  __asm {
+    lock xadd       [eax],edx
+    mov             eax,edx
+  }
+}
+
+int32_t __fastcall __declspec(nothrow) interlockedCompareExchange(int32_t *,int32_t,int32_t)
+{
+  __asm {
+    xchg            eax,ecx
+    lock cmpxchg    [ecx],edx
+  }
+}
+#pragma option pop
+#endif
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+void InterlockedMutex::initialize()
+{
+#if FAST_MUTEX
+  if( numberOfProcessors() > 1 ){
+    InterlockedMutex::acquire_ = InterlockedMutex::multiAcquire;
+#if !HAVE_PTHREAD_RWLOCK_INIT
+    Mutex::rdLock_ = Mutex::multiRDLock;
+    Mutex::wrLock_ = Mutex::multiWRLock;
+#endif
+  }
+  else {
+    InterlockedMutex::acquire_ = InterlockedMutex::singleAcquire;
+#if !HAVE_PTHREAD_RWLOCK_INIT
+    Mutex::rdLock_ = Mutex::singleRDLock;
+    Mutex::wrLock_ = Mutex::singleWRLock;
+#endif
+  }
+#endif
+  new (giantPlaceHolder) InterlockedMutex;
+}
+//---------------------------------------------------------------------------
+void InterlockedMutex::cleanup()
+{
+  giant().~InterlockedMutex();
+}
+//---------------------------------------------------------------------------
+#if FAST_MUTEX
+//---------------------------------------------------------------------------
+void (*InterlockedMutex::acquire_)(InterlockedMutex * mutex) = InterlockedMutex::singleAcquire;
+//---------------------------------------------------------------------------
+void InterlockedMutex::multiAcquire(InterlockedMutex * mutex)
+{
+  uintptr_t i;
+  for(;;){
+    i = 4096;
+    do {
+      if( interlockedCompareExchange(&mutex->refCount_,-1,0) == 0 ) goto l1;
+    } while( --i > 0 );
+    sleep1();
+  }
+l1:;
+}
+//---------------------------------------------------------------------------
+void InterlockedMutex::singleAcquire(InterlockedMutex * mutex)
+{
+  for(;;){
+    if( interlockedCompareExchange(&mutex->refCount_,-1,0) == 0 ) break;
+    sleep1();
+  }
+}
+//---------------------------------------------------------------------------
+#elif defined(__WIN32__) || defined(__WIN64__)
+//---------------------------------------------------------------------------
+InterlockedMutex::InterlockedMutex()
+{
+  memset(&cs_,0,sizeof(cs_));
+  if( InitializeCriticalSectionAndSpinCount(&cs_,4000) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    throw ExceptionSP(new Exception(err,utf8::string(__PRETTY_FUNCTION__)));
+  }
+}
+//---------------------------------------------------------------------------
+#elif HAVE_PTHREAD_H
+//---------------------------------------------------------------------------
+InterlockedMutex::InterlockedMutex() : mutex_(NULL)
+{
+  if( pthread_mutex_init(&mutex_,NULL) != 0 ){
+    int32_t err = errno;
+    throw ExceptionSP(new Exception(err,utf8::string(__PRETTY_FUNCTION__)));
+  }
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+Mutex::Mutex()
+{
+#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
+  value_ = 0;
+#elif HAVE_PTHREAD_RWLOCK_INIT
+  mutex_ = NULL;
+  if( pthread_rwlock_init(&mutex_,NULL) != 0 ){
+    int32_t err = errno;
+    throw ExceptionSP(new Exception(err,utf8::string(__PRETTY_FUNCTION__)));
+  }
+#endif
+}
+//---------------------------------------------------------------------------
+#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
+//---------------------------------------------------------------------------
+void (*Mutex::rdLock_)(Mutex * mutex) = Mutex::singleRDLock;
+//---------------------------------------------------------------------------
+void Mutex::multiRDLock(Mutex * mutex)
+{
+  uint64_t st = 1;
+  uintptr_t i;
+  for(;;){
+    i = 4096;
+    do {
+      mutex->acquire();
+      if( mutex->value_ >= 0 ){ mutex->value_++; goto l1; }
+      mutex->release();
+    } while( --i > 0 );
+    sleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+l1:
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+void Mutex::singleRDLock(Mutex * mutex)
+{
+  uint64_t st = 1;
+  for(;;){
+    mutex->acquire();
+    if( mutex->value_ >= 0 ){ mutex->value_++; break; }
+    mutex->release();
+    sleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+void (*Mutex::wrLock_)(Mutex * mutex) = Mutex::singleWRLock;
+//---------------------------------------------------------------------------
+void Mutex::multiWRLock(Mutex * mutex)
+{
+  uint64_t st = 1;
+  uintptr_t i;
+  for(;;){
+    i = 4096;
+    do {
+      mutex->acquire();
+      if( mutex->value_ == 0 ){ mutex->value_--; goto l1; }
+      mutex->release();
+    } while( --i > 0 );
+    sleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+l1:
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+void Mutex::singleWRLock(Mutex * mutex)
+{
+  uint64_t st = 1;
+  for(;;){
+    mutex->acquire();
+    if( mutex->value_ == 0 ){ mutex->value_--; break; }
+    mutex->release();
+    sleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+Event::~Event()
+{
+#if HAVE_PTHREAD_H
+  if( mutex_ != NULL ) pthread_mutex_destroy(&mutex_);
+  if( handle_ != NULL ) pthread_cond_destroy(&handle_);
+#elif defined(__WIN32__) || defined(__WIN64__)
+  if( handle_ != NULL ) CloseHandle(handle_);
+#endif
+}
+//---------------------------------------------------------------------------
+Event::Event()
+{
+  int32_t err;
+#if HAVE_PTHREAD_H
+  handle_ = NULL;
+  mutex_ = NULL;
+  if( pthread_cond_init(&handle_,NULL) != 0 || pthread_mutex_init(&mutex_,NULL) != 0 ){
+    err = errno;
+    pthread_mutex_destroy(&mutex_);
+    pthread_cond_destroy(&handle_);
+#elif defined(__WIN32__) || defined(__WIN64__)
+  handle_ = CreateEvent(NULL,TRUE,FALSE,NULL);
+  if( handle_ == NULL ){
+    err = GetLastError() + errorOffset;
+#endif
+    throw ExceptionSP(new Exception(err,utf8::string(__PRETTY_FUNCTION__)));
+  }
+}
+//---------------------------------------------------------------------------
+} // namespace ksys
+//---------------------------------------------------------------------------

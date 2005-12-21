@@ -1,0 +1,232 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- C++Builder XML Project -->
+<PROJECT>
+  <MACROS>
+    <VERSION value="BCB.06.00"/>
+    <PROJECT value="..\..\..\binaries\libksys.lib"/>
+    <OBJFILES value="..\..\..\src\libksys\except.obj ..\..\..\src\libksys\fhc.obj 
+      ..\..\..\src\libksys\log.obj ..\..\..\src\libksys\mutant.obj 
+      ..\..\..\src\libksys\mutex.obj ..\..\..\src\libksys\profiler.obj 
+      ..\..\..\src\libksys\rnd.obj ..\..\..\src\libksys\sysutils.obj 
+      ..\..\..\src\libksys\thread.obj ..\..\..\src\libksys\xalloc.obj 
+      ..\..\..\src\libksys\xtime.obj ..\..\..\src\libksys\mstream.obj 
+      ..\..\..\src\libksys\conf.obj ..\..\..\src\libksys\fiber.obj 
+      ..\..\..\src\libksys\sha.obj ..\..\..\src\libksys\afd.obj 
+      ..\..\..\src\libksys\service.obj ..\..\..\src\libksys\lzo.obj 
+      ..\..\..\src\libksys\utime.obj ..\..\..\src\libksys\stat.obj 
+      ..\..\..\src\libksys\perror.obj ..\..\..\src\libksys\lzo1x_o.obj 
+      ..\..\..\src\libksys\lzo1x_9x.obj ..\..\..\src\libksys\lzo1x_d1.obj 
+      ..\..\..\src\libksys\lzo1x_d2.obj ..\..\..\src\libksys\lzo1x_d3.obj 
+      ..\..\..\src\libksys\lzo_init.obj ..\..\..\src\libksys\client.obj 
+      ..\..\..\src\libksys\address.obj ..\..\..\src\libksys\scktintf.obj 
+      ..\..\..\src\libksys\server.obj ..\..\..\src\libksys\shobjs.obj 
+      ..\..\..\src\libksys\aio.obj ..\..\..\src\libksys\socket.obj"/>
+    <RESFILES value=""/>
+    <IDLFILES value=""/>
+    <IDLGENFILES value=""/>
+    <DEFFILE value=""/>
+    <RESDEPEN value="$(RESFILES)"/>
+    <LIBFILES value=""/>
+    <LIBRARIES value=""/>
+    <PACKAGES value=""/>
+    <PATHCPP value=".;..\..\..\src\libksys"/>
+    <PATHPAS value=".;"/>
+    <PATHRC value=".;"/>
+    <PATHASM value=".;"/>
+    <LINKER value="TLib"/>
+    <USERDEFINES value="_DEBUG"/>
+    <SYSDEFINES value="NO_STRICT"/>
+    <MAINSOURCE value="libksys.bpf"/>
+    <INCLUDEPATH value="..\..\..\src\libksys;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="..\..\..\src\libmycpp;..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <WARNINGS value="-w8092 -w8091 -w8090 -w8089 -w8087 -wprc -wuse -wucp -wstv -wstu -wpin 
+      -wnod -wnak -wdef -wcln -wbbf -wasm -wamp -wamb"/>
+    <LISTFILE value=""/>
+    <OTHERFILES value=""/>
+  </MACROS>
+  <OPTIONS>
+    <IDLCFLAGS value="-I..\..\..\src\libksys -I..\..\..\include -I$(BCB)\include 
+      -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -boa"/>
+    <CFLAG1 value="-vGc -vGt -vGd -Od -H=..\..\..\binaries\bcb.csm -Hc -Q -Vx -Ve -X- -r- -a8 
+      -6 -b- -d -k -y -v -vi- -c -tW -tWM"/>
+    <PFLAGS value="-$Y+ -$W -$O- -$A8 -v -JPHNE -M"/>
+    <AFLAGS value="/mx /w2 /zi"/>
+    <LFLAGS value="/P64"/>
+    <OTHERFILES value=""/>
+  </OPTIONS>
+  <LINKER>
+    <ALLOBJ value="$(OBJFILES)"/>
+    <ALLLIB value="cg32.lib"/>
+    <OTHERFILES value=""/>
+  </LINKER>
+  <FILELIST>
+      <FILE FILENAME="libksys.bpf" FORMNAME="" UNITNAME="libksys" CONTAINERID="BPF" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\except.cpp" FORMNAME="" UNITNAME="except.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\fhc.cpp" FORMNAME="" UNITNAME="fhc.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\log.cpp" FORMNAME="" UNITNAME="log.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\mutant.cpp" FORMNAME="" UNITNAME="mutant.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\mutex.cpp" FORMNAME="" UNITNAME="mutex.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\profiler.cpp" FORMNAME="" UNITNAME="profiler.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\rnd.cpp" FORMNAME="" UNITNAME="rnd.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\sysutils.cpp" FORMNAME="" UNITNAME="sysutils.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\thread.cpp" FORMNAME="" UNITNAME="thread.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\xalloc.cpp" FORMNAME="" UNITNAME="xalloc.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\xtime.cpp" FORMNAME="" UNITNAME="xtime.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\mstream.cpp" FORMNAME="" UNITNAME="mstream" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\conf.cpp" FORMNAME="" UNITNAME="conf" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\fiber.cpp" FORMNAME="" UNITNAME="fiber" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\sha.cpp" FORMNAME="" UNITNAME="sha" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\afd.cpp" FORMNAME="" UNITNAME="afd" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\service.cpp" FORMNAME="" UNITNAME="service" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\lzo.cpp" FORMNAME="" UNITNAME="lzo" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\utime.cpp" FORMNAME="" UNITNAME="utime" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\stat.cpp" FORMNAME="" UNITNAME="stat" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\perror.cpp" FORMNAME="" UNITNAME="perror" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\lzo1x_o.c" FORMNAME="" UNITNAME="lzo1x_o.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\lzo1x_9x.c" FORMNAME="" UNITNAME="lzo1x_9x.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\lzo1x_d1.c" FORMNAME="" UNITNAME="lzo1x_d1.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\lzo1x_d2.c" FORMNAME="" UNITNAME="lzo1x_d2.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\lzo1x_d3.c" FORMNAME="" UNITNAME="lzo1x_d3.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\lzo_init.c" FORMNAME="" UNITNAME="lzo_init.c" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\client.cpp" FORMNAME="" UNITNAME="client.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\address.cpp" FORMNAME="" UNITNAME="address.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\scktintf.cpp" FORMNAME="" UNITNAME="scktintf.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\server.cpp" FORMNAME="" UNITNAME="server.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\shobjs.cpp" FORMNAME="" UNITNAME="shobjs.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\aio.cpp" FORMNAME="" UNITNAME="aio.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libksys\socket.cpp" FORMNAME="" UNITNAME="socket.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+  </FILELIST>
+  <BUILDTOOLS>
+  </BUILDTOOLS>
+
+  <FILES>
+    <FILE type="override" value="..\..\..\src\libksys\sysutils.cpp" translator="Auto">
+    </FILE>
+    <FILE type="override" value="..\..\..\src\libksys\afd.cpp" translator="Auto">
+    </FILE>
+    <FILE type="override" value="..\..\..\src\libksys\sha.cpp" translator="Auto">
+    </FILE>
+    <FILE type="override" value="..\..\..\src\libksys\lzo1x_9x.c" translator="Auto">
+      <CFLAG1 value=" -O2"/>
+      <WARNINGS value=" -w-aus"/>
+      <WARNOPTSTR value=" -w8092 -w8091 -w8090 -w8089 -w8087 -wprc -wuse -wucp -wstv -wstu -wpin -wnod -wnak -wdef -wcln -wbbf -w-aus -wasm -wamp -wamb"/>
+    </FILE>
+    <FILE type="override" value="..\..\..\src\libksys\lzo1x_o.c" translator="Auto">
+      <CFLAG1 value=" -O2"/>
+      <WARNINGS value=" -w-pch -w-aus"/>
+      <WARNOPTSTR value=" -w8092 -w8091 -w8090 -w8089 -w8087 -wprc -wuse -wucp -wstv -wstu -wpin -w-pch -wnod -wnak -wdef -wcln -wbbf -w-aus -wasm -wamp -wamb"/>
+    </FILE>
+    <FILE type="override" value="..\..\..\src\libksys\utime.cpp" translator="Auto">
+    </FILE>
+    <FILE type="override" value="..\..\..\src\libksys\fiber.cpp" translator="Auto">
+    </FILE>
+  </FILES>
+
+  <IDEOPTIONS>
+[Version Info]
+IncludeVerInfo=0
+AutoIncBuild=0
+MajorVer=1
+MinorVer=0
+Release=0
+Build=0
+Debug=0
+PreRelease=0
+Special=0
+Private=0
+DLL=0
+Locale=1049
+CodePage=1251
+
+[Version Info Keys]
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
+
+[HistoryLists\hlIncludePath]
+Count=6
+Item0=..\..\..\src\libksys;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item1=..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item2=..\..\..\src\libmycpp;..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item3=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item4=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\include;$(BCB)\include;$(BCB)\include\vcl;..\..\..\include
+Item5=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\include;$(BCB)\include;$(BCB)\include\vcl
+
+[HistoryLists\hlLibraryPath]
+Count=3
+Item0=..\..\..\src\libmycpp;..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;$(BCB)\lib\obj;$(BCB)\lib
+Item1=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;$(BCB)\lib\obj;$(BCB)\lib
+Item2=$(BCB)\lib\obj;$(BCB)\lib
+
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=$(BCB)\source\vcl
+
+[HistoryLists\hlConditionals]
+Count=11
+Item0=_DEBUG
+Item1=_WIN32_WINNT=0x0502
+Item2=_WIN32_WINNT=0x0502;_DEBUG
+Item3=NDEBUG;_WIN32_WINNT=0x0502;_DEBUG
+Item4=NDEBUG;_WIN32_WINNT=0x0502
+Item5=_DEBUG;_WIN32_WINNT=0x0502
+Item6=_WIN32_WINNT=0x0500;_DEBUG
+Item7=EMBED_ALL_CP;_WIN32_WINNT=0x0500;_DEBUG
+Item8=EMBED_ALL_CP;_DEBUG
+Item9=EMBED_ALL_CP
+Item10=_DEBUG;EMBED_ALL_CP
+
+[HistoryLists\hlFinalOutputDir]
+Count=2
+Item0=..\..\..\binaries\
+Item1=..\..\..\binaries
+
+[HistoryLists\hlTlibPageSize]
+Count=8
+Item0=0x0040
+Item1=64
+Item2=0x0020
+Item3=32
+Item4=0x0010
+Item5=0x10
+Item6=0x0080
+Item7=128
+
+[Debugging]
+DebugSourceDirs=$(BCB)\source\vcl
+
+[Parameters]
+RunParams=-co libadicpp.default_connection.server_type mysql
+Launcher=
+UseLauncher=0
+DebugCWD=
+HostApplication=
+RemoteHost=
+RemotePath=
+RemoteLauncher=
+RemoteCWD=
+RemoteDebug=0
+
+[Compiler]
+ShowInfoMsgs=0
+LinkDebugVcl=0
+LinkCGLIB=1
+
+[CORBA]
+AddServerUnit=1
+AddClientUnit=1
+PrecompiledHeaders=1
+
+[Language]
+ActiveLang=
+ProjectLang=
+RootDir=
+  </IDEOPTIONS>
+</PROJECT>

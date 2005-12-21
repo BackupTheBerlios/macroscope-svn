@@ -1,0 +1,153 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- C++Builder XML Project -->
+<PROJECT>
+  <MACROS>
+    <VERSION value="BCB.06.00"/>
+    <PROJECT value="genutf8test.exe"/>
+    <OBJFILES value="genutf8test.obj ..\src\utf8uct.obj ..\src\utf8c2.obj ..\src\utf8c3.obj 
+      ..\src\utf8embed.obj ..\src\utf8func.obj ..\src\utf8lct.obj 
+      ..\src\utf8c1.obj"/>
+    <RESFILES value="genutf8test.res"/>
+    <IDLFILES value=""/>
+    <IDLGENFILES value=""/>
+    <DEFFILE value=""/>
+    <RESDEPEN value="$(RESFILES)"/>
+    <LIBFILES value=""/>
+    <LIBRARIES value=""/>
+    <SPARELIBS value=""/>
+    <PACKAGES value="vcl.bpi rtl.bpi dbrtl.bpi adortl.bpi vcldb.bpi vclx.bpi bdertl.bpi 
+      vcldbx.bpi dsnap.bpi cds.bpi bdecds.bpi qrpt.bpi teeui.bpi teedb.bpi 
+      tee.bpi dss.bpi teeqr.bpi visualclx.bpi visualdbclx.bpi dsnapcrba.bpi 
+      dsnapcon.bpi bcbsmp.bpi vclie.bpi xmlrtl.bpi inet.bpi inetdbbde.bpi 
+      inetdbxpress.bpi inetdb.bpi nmfast.bpi webdsnap.bpi bcbie.bpi websnap.bpi 
+      soaprtl.bpi dclocx.bpi dbexpress.bpi dbxcds.bpi indy.bpi bcb2kaxserver.bpi 
+      ZCore.bpi ZParseSql.bpi ZPlain.bpi ZDbc.bpi ZComponent.bpi"/>
+    <PATHCPP value=".;..\src"/>
+    <PATHPAS value=".;"/>
+    <PATHRC value=".;"/>
+    <PATHASM value=".;"/>
+    <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
+    <RELEASELIBPATH value="$(BCB)\lib\release"/>
+    <LINKER value="ilink32"/>
+    <USERDEFINES value="_DEBUG;EMBED_CP1251_SUPPORT"/>
+    <SYSDEFINES value="NO_STRICT;_NO_VCL"/>
+    <MAINSOURCE value="genutf8test.bpf"/>
+    <INCLUDEPATH value="..\src;..\include;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="..\src;C:\4;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <WARNINGS value="-w-par"/>
+    <OTHERFILES value=""/>
+  </MACROS>
+  <OPTIONS>
+    <IDLCFLAGS value="-I..\src -I..\include -I$(BCB)\include -I$(BCB)\include\vcl -src_suffix 
+      cpp -D_DEBUG -DEMBED_CP1251_SUPPORT -boa"/>
+    <CFLAG1 value="-Od -Q -w -Vx -Ve -X- -r- -a8 -6 -b- -d -k -y -v -vi- -tWC -tWM- -c"/>
+    <PFLAGS value="-$YD -$W -$O- -$A8 -v -JPHNE -M"/>
+    <RFLAGS value=""/>
+    <AFLAGS value="/mx /w2 /zi"/>
+    <LFLAGS value="-D&quot;&quot; -ap -Tpe -x -Gn -v"/>
+    <OTHERFILES value=""/>
+  </OPTIONS>
+  <LINKER>
+    <ALLOBJ value="c0x32.obj $(OBJFILES)"/>
+    <ALLRES value="$(RESFILES)"/>
+    <ALLLIB value="$(LIBFILES) $(LIBRARIES) import32.lib cw32.lib"/>
+    <OTHERFILES value=""/>
+  </LINKER>
+  <FILELIST>
+      <FILE FILENAME="genutf8test.res" FORMNAME="" UNITNAME="genutf8test.res" CONTAINERID="ResTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="genutf8test.bpf" FORMNAME="" UNITNAME="genutf8test" CONTAINERID="BPF" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="genutf8test.cpp" FORMNAME="" UNITNAME="genutf8test" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\src\utf8uct.cpp" FORMNAME="" UNITNAME="utf8uct.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\src\utf8c2.cpp" FORMNAME="" UNITNAME="utf8c2.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\src\utf8c3.cpp" FORMNAME="" UNITNAME="utf8c3.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\src\utf8embed.cpp" FORMNAME="" UNITNAME="utf8embed.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\src\utf8func.cpp" FORMNAME="" UNITNAME="utf8func.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\src\utf8lct.cpp" FORMNAME="" UNITNAME="utf8lct.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\src\utf8c1.cpp" FORMNAME="" UNITNAME="utf8c1.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+  </FILELIST>
+  <BUILDTOOLS>
+  </BUILDTOOLS>
+
+  <IDEOPTIONS>
+[Version Info]
+IncludeVerInfo=0
+AutoIncBuild=0
+MajorVer=1
+MinorVer=0
+Release=0
+Build=0
+Debug=0
+PreRelease=0
+Special=0
+Private=0
+DLL=0
+Locale=1049
+CodePage=1251
+
+[Version Info Keys]
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
+
+[Excluded Packages]
+c:\program files\borland\cbuilder6\Bin\DCLIB60.bpl=Borland InterBase Express Components
+
+[HistoryLists\hlIncludePath]
+Count=3
+Item0=..\include;$(BCB)\include;$(BCB)\include\vcl
+Item1=..\src;C:\4;$(BCB)\include;$(BCB)\include\vcl
+Item2=C:\4;$(BCB)\include;$(BCB)\include\vcl
+
+[HistoryLists\hlLibraryPath]
+Count=2
+Item0=..\src;C:\4;$(BCB)\lib\obj;$(BCB)\lib
+Item1=C:\4;$(BCB)\lib\obj;$(BCB)\lib
+
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=$(BCB)\source\vcl
+
+[HistoryLists\hlConditionals]
+Count=3
+Item0=_DEBUG;EMBED_CP1251_SUPPORT
+Item1=_DEBUG;EMBED_ALL_CP
+Item2=_DEBUG
+
+[Debugging]
+DebugSourceDirs=$(BCB)\source\vcl
+
+[Parameters]
+RunParams=
+Launcher=
+UseLauncher=0
+DebugCWD=
+HostApplication=
+RemoteHost=
+RemotePath=
+RemoteLauncher=
+RemoteCWD=
+RemoteDebug=0
+
+[Compiler]
+ShowInfoMsgs=0
+LinkDebugVcl=0
+LinkCGLIB=0
+
+[CORBA]
+AddServerUnit=1
+AddClientUnit=1
+PrecompiledHeaders=1
+
+[Language]
+ActiveLang=
+ProjectLang=
+RootDir=
+  </IDEOPTIONS>
+</PROJECT>

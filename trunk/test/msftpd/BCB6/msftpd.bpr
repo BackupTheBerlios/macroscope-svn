@@ -1,0 +1,158 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- C++Builder XML Project -->
+<PROJECT>
+  <MACROS>
+    <VERSION value="BCB.06.00"/>
+    <PROJECT value="..\msftpd.exe"/>
+    <OBJFILES value="..\main.obj"/>
+    <RESFILES value=""/>
+    <IDLFILES value=""/>
+    <IDLGENFILES value=""/>
+    <DEFFILE value=""/>
+    <RESDEPEN value="$(RESFILES)"/>
+    <LIBFILES value="..\..\..\binaries\libutf8.lib ..\..\..\binaries\libfbcpp.lib 
+      ..\..\..\binaries\libksys.lib ..\..\..\binaries\libmycpp.lib 
+      ..\..\..\binaries\libadicpp.lib"/>
+    <LIBRARIES value=""/>
+    <SPARELIBS value=""/>
+    <PACKAGES value="vcl.bpi rtl.bpi dbrtl.bpi adortl.bpi vcldb.bpi vclx.bpi bdertl.bpi 
+      vcldbx.bpi dsnap.bpi cds.bpi bdecds.bpi qrpt.bpi teeui.bpi teedb.bpi 
+      tee.bpi dss.bpi teeqr.bpi visualclx.bpi visualdbclx.bpi dsnapcrba.bpi 
+      dsnapcon.bpi bcbsmp.bpi vclie.bpi xmlrtl.bpi inet.bpi inetdbbde.bpi 
+      inetdbxpress.bpi inetdb.bpi nmfast.bpi webdsnap.bpi bcbie.bpi websnap.bpi 
+      soaprtl.bpi dclocx.bpi dbexpress.bpi dbxcds.bpi indy.bpi bcb2kaxserver.bpi 
+      ZCore.bpi ZParseSql.bpi ZPlain.bpi ZDbc.bpi ZComponent.bpi"/>
+    <PATHCPP value=".;.."/>
+    <PATHPAS value=".;"/>
+    <PATHRC value=".;"/>
+    <PATHASM value=".;"/>
+    <DEBUGLIBPATH value="$(BCB)\lib\debug"/>
+    <RELEASELIBPATH value="$(BCB)\lib\release"/>
+    <LINKER value="ilink32"/>
+    <USERDEFINES value="_DEBUG;_WIN32_WINNT=0x0502"/>
+    <SYSDEFINES value="NO_STRICT;_NO_VCL"/>
+    <MAINSOURCE value="msftpd.bpf"/>
+    <INCLUDEPATH value="..\;..;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="..\;..;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <WARNINGS value="-w-par"/>
+    <OTHERFILES value=""/>
+  </MACROS>
+  <OPTIONS>
+    <IDLCFLAGS value="-I..\. -I.. -I..\..\..\include -I$(BCB)\include -I$(BCB)\include\vcl 
+      -src_suffix cpp -D_DEBUG -D_WIN32_WINNT=0x0502 -boa"/>
+    <CFLAG1 value="-vGc -vGt -vGd -Od -Q -w -Vx -Ve -X- -r- -a8 -6 -b- -d -k -y -v -vi- -tWC 
+      -tWM -c"/>
+    <PFLAGS value="-$YD -$W -$O- -$A8 -v -JPHNE -M"/>
+    <RFLAGS value=""/>
+    <AFLAGS value="/mx /w2 /zi"/>
+    <LFLAGS value="-D&quot;&quot; -B:0x410000 -ap -Tpe -x -Gn -v"/>
+    <OTHERFILES value=""/>
+  </OPTIONS>
+  <LINKER>
+    <ALLOBJ value="c0x32.obj $(OBJFILES)"/>
+    <ALLRES value="$(RESFILES)"/>
+    <ALLLIB value="cg32.lib $(LIBFILES) $(LIBRARIES) import32.lib cw32mt.lib"/>
+    <OTHERFILES value=""/>
+  </LINKER>
+  <FILELIST>
+      <FILE FILENAME="msftpd.bpf" FORMNAME="" UNITNAME="msftpd" CONTAINERID="BPF" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\binaries\libutf8.lib" FORMNAME="" UNITNAME="libutf8.lib" CONTAINERID="LibTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\binaries\libfbcpp.lib" FORMNAME="" UNITNAME="libfbcpp.lib" CONTAINERID="LibTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\binaries\libksys.lib" FORMNAME="" UNITNAME="libksys.lib" CONTAINERID="LibTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\binaries\libmycpp.lib" FORMNAME="" UNITNAME="libmycpp.lib" CONTAINERID="LibTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\binaries\libadicpp.lib" FORMNAME="" UNITNAME="libadicpp.lib" CONTAINERID="LibTool" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\main.cpp" FORMNAME="" UNITNAME="msftpd" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+  </FILELIST>
+  <BUILDTOOLS>
+  </BUILDTOOLS>
+
+  <IDEOPTIONS>
+[Version Info]
+IncludeVerInfo=0
+AutoIncBuild=0
+MajorVer=1
+MinorVer=0
+Release=0
+Build=0
+Debug=0
+PreRelease=0
+Special=0
+Private=0
+DLL=0
+Locale=1049
+CodePage=1251
+
+[Version Info Keys]
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
+
+[Excluded Packages]
+c:\program files\borland\cbuilder6\Bin\DCLIB60.bpl=Borland InterBase Express Components
+
+[HistoryLists\hlIncludePath]
+Count=4
+Item0=..\;..;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item1=..\;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item2=..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item3=C:\Korvin\Gluki\libadicpp\test\msftpd;$(BCB)\include;$(BCB)\include\vcl
+
+[HistoryLists\hlLibraryPath]
+Count=3
+Item0=..\;..;$(BCB)\lib\obj;$(BCB)\lib
+Item1=..\;$(BCB)\lib\obj;$(BCB)\lib
+Item2=C:\Korvin\Gluki\libadicpp\test\msftpd;$(BCB)\lib\obj;$(BCB)\lib
+
+[HistoryLists\hlDebugSourcePath]
+Count=2
+Item0=$(BCB)\source\vcl;C:\Korvin\Gluki\libadicpp\include\adicpp\
+Item1=$(BCB)\source\vcl
+
+[HistoryLists\hlConditionals]
+Count=3
+Item0=_DEBUG;_WIN32_WINNT=0x0502
+Item1=_DEBUG
+Item2=_DEBUG;_WIN32_WINNT=0x0500
+
+[HistoryLists\hlFinalOutputDir]
+Count=1
+Item0=..\
+
+[Debugging]
+DebugSourceDirs=$(BCB)\source\vcl;C:\Korvin\Gluki\libadicpp\include\adicpp\
+
+[Parameters]
+RunParams=
+Launcher=
+UseLauncher=0
+DebugCWD=
+HostApplication=
+RemoteHost=
+RemotePath=
+RemoteLauncher=
+RemoteCWD=
+RemoteDebug=0
+
+[Compiler]
+ShowInfoMsgs=0
+LinkDebugVcl=0
+LinkCGLIB=1
+
+[CORBA]
+AddServerUnit=1
+AddClientUnit=1
+PrecompiledHeaders=1
+
+[Language]
+ActiveLang=
+ProjectLang=
+RootDir=
+  </IDEOPTIONS>
+</PROJECT>

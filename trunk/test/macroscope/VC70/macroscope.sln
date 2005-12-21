@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "macroscope", "macroscope.vcproj", "{25C00737-2324-43FA-9156-1D8E61947DEF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{BE5679BC-85DC-4AA9-A2B6-855C3BFD0106} = {BE5679BC-85DC-4AA9-A2B6-855C3BFD0106}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libadicpp", "..\..\..\builds\windows\VC70\libadicpp.vcproj", "{BE5679BC-85DC-4AA9-A2B6-855C3BFD0106}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{25C00737-2324-43FA-9156-1D8E61947DEF}.Debug.ActiveCfg = Debug|Win32
+		{25C00737-2324-43FA-9156-1D8E61947DEF}.Debug.Build.0 = Debug|Win32
+		{25C00737-2324-43FA-9156-1D8E61947DEF}.Release.ActiveCfg = Release|Win32
+		{25C00737-2324-43FA-9156-1D8E61947DEF}.Release.Build.0 = Release|Win32
+		{BE5679BC-85DC-4AA9-A2B6-855C3BFD0106}.Debug.ActiveCfg = Debug|Win32
+		{BE5679BC-85DC-4AA9-A2B6-855C3BFD0106}.Debug.Build.0 = Debug|Win32
+		{BE5679BC-85DC-4AA9-A2B6-855C3BFD0106}.Release.ActiveCfg = Release|Win32
+		{BE5679BC-85DC-4AA9-A2B6-855C3BFD0106}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal
