@@ -654,6 +654,7 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
     Events newRequests_;
     HANDLE sems_[MAXIMUM_WAIT_OBJECTS];
     AsyncEvent * eSems_[MAXIMUM_WAIT_OBJECTS];
+   intptr_t sp_;
 #endif
 
     void execute();

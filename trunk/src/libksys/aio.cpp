@@ -674,7 +674,6 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
 //------------------------------------------------------------------------------
 void AsyncIoSlave::transplant(Events & requests)
 {
-  assert( !terminated_ );
 #if defined(__WIN32__) || defined(__WIN64__)
 #define MAX_REQS (MAXIMUM_WAIT_OBJECTS - 2)
 #elif HAVE_KQUEUE
@@ -714,7 +713,6 @@ AsyncOpenFileSlave::AsyncOpenFileSlave()
 //------------------------------------------------------------------------------
 void AsyncOpenFileSlave::transplant(Events & requests)
 {
-  assert( !terminated_ );
   bool r = false;
   AutoLock<InterlockedMutex> lock(*this);
   while( requests.count() > 0 && requests_.count() < 16 ){
@@ -967,7 +965,6 @@ AsyncTimerSlave::AsyncTimerSlave()
 //------------------------------------------------------------------------------
 void AsyncTimerSlave::transplant(Events & requests)
 {
-  assert( !terminated_ );
   AutoLock<InterlockedMutex> lock(*this);
   while( requests.count() > 0 ){
     requests_.insToTail(requests.remove(*requests.first()));
@@ -1053,7 +1050,7 @@ AsyncAcquireSlave::~AsyncAcquireSlave()
 #endif
 }
 //------------------------------------------------------------------------------
-AsyncAcquireSlave::AsyncAcquireSlave()
+AsyncAcquireSlave::AsyncAcquireSlave() : sp_(-1)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;
@@ -1068,16 +1065,23 @@ AsyncAcquireSlave::AsyncAcquireSlave()
 //------------------------------------------------------------------------------
 void AsyncAcquireSlave::transplant(Events & requests)
 {
-  assert( !terminated_ );
   AutoLock<InterlockedMutex> lock(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
+  intptr_t i;
   bool r = false;
-  while( requests.count() > 0 && requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
-    newRequests_.insToTail(requests.remove(*requests.first()));
-    r = true;
+  EmbeddedListNode<AsyncEvent> * node = requests.first();
+  while( node != NULL && requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
+    AsyncEvent & object = AsyncEvent::nodeObject(*node);
+    node = node->next();
+    for( i = sp_; i >= 0; i-- )
+      if( sems_[i] == object.mutex_->sem_ ) break;
+    if( i < 0 ){
+      newRequests_.insToTail(requests.remove(object));
+      r = true;
+    }
   }
   if( r ){
-    SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
+    if( sp_ >= 0 ) SetEvent(sems_[sp_ + 1]);
     post();
   }
 #else
@@ -1092,7 +1096,7 @@ void AsyncAcquireSlave::execute()
 {
   priority(THREAD_PRIORITY_TIME_CRITICAL);
 #if defined(__WIN32__) || defined(__WIN64__)
-  intptr_t sp = -1;
+//  HANDLE safe[MAXIMUM_WAIT_OBJECTS];
   AsyncEvent * object;
   EmbeddedListNode<AsyncEvent> * node;
   for(;;){
@@ -1102,10 +1106,11 @@ void AsyncAcquireSlave::execute()
       if( node == NULL ) break;
       object = &AsyncEvent::nodeObject(*node);
       assert( object->type_ == etAcquire );
-      assert( sp < MAXIMUM_WAIT_OBJECTS - 1 );
-      ++sp;
-      sems_[sp] = object->mutex_->sem_;
-      eSems_[sp] = object;
+      assert( sp_ < MAXIMUM_WAIT_OBJECTS - 1 );
+      ++sp_;
+      sems_[sp_] = object->mutex_->sem_;
+      eSems_[sp_] = object;
+      sems_[sp_ + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
       requests_.insToTail(newRequests_.remove(*node));
     }
     if( requests_.count() == 0 ){
@@ -1118,40 +1123,41 @@ void AsyncAcquireSlave::execute()
       release();
       object = NULL;
       node = NULL;
-      DWORD wm = WaitForMultipleObjectsEx(MAXIMUM_WAIT_OBJECTS,sems_,FALSE,INFINITE,TRUE);
+      DWORD wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,INFINITE,FALSE);
       acquire();
-      if( wm >= WAIT_OBJECT_0 && wm < WAIT_OBJECT_0 + sp + 1 ){
+      if( wm >= WAIT_OBJECT_0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
         wm -= WAIT_OBJECT_0;
         assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm >= STATUS_ABANDONED_WAIT_0 && wm < STATUS_ABANDONED_WAIT_0 + sp + 1 ){
+      else if( wm >= STATUS_ABANDONED_WAIT_0 && wm < STATUS_ABANDONED_WAIT_0 + sp_ + 1 ){
         wm -= STATUS_ABANDONED_WAIT_0;
         assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm == WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS - 1	){
+      else if( wm == WAIT_OBJECT_0 + sp_ + 1	){
         ResetEvent(sems_[wm - WAIT_OBJECT_0]);
       }
-      else if( wm == STATUS_ABANDONED_WAIT_0 + MAXIMUM_WAIT_OBJECTS - 1	){
+      else if( wm == STATUS_ABANDONED_WAIT_0 + sp_ + 1	){
         ResetEvent(sems_[wm - STATUS_ABANDONED_WAIT_0]);
       }
       else {
         assert( 0 );
       }
       if( node != NULL ){
-        xchg(sems_[wm],sems_[sp]);
-        eSems_[wm] = eSems_[sp];
-        eSems_[sp] = NULL;
-        sems_[sp] = NULL;
-        sp--;
+        xchg(sems_[wm],sems_[sp_]);
+        sems_[sp_] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
+        eSems_[wm] = eSems_[sp_];
+        eSems_[sp_] = NULL;
+        sp_--;
         requests_.remove(*node);
         BaseFiber * fiber = dynamic_cast<BaseFiber *>(object->fiber_);
         assert( fiber != NULL );
+        object->errno_ = 0;
         fiber->thread()->postEvent(object->type_,fiber);
       }
     }
@@ -1260,8 +1266,14 @@ void Requester::execute()
       }
       for(;;){
         for( i = acquireSlaves_.count() - 1; i >= 0; i-- ){
-          acquireSlaves_[i].transplant(acquireRequests_);
-          if( acquireRequests_.count() == 0 ) break;
+          if( acquireSlaves_[i].finished() ){
+	          acquireSlaves_[i].Thread::wait();
+            acquireSlaves_.remove(i);
+          }
+          else {
+            acquireSlaves_[i].transplant(acquireRequests_);
+            if( acquireRequests_.count() == 0 ) break;
+          }
         }
         if( acquireRequests_.count() == 0 ) break;
         AutoPtr<AsyncAcquireSlave> slave(new AsyncAcquireSlave);
@@ -1276,6 +1288,7 @@ void Requester::execute()
 	        throw;
 	      }
 	      slave->transplant(acquireRequests_);
+        if( acquireSlaves_.count() > numberOfProcessors() ) slave->terminate();
         slave.ptr(NULL);
         if( acquireRequests_.count() == 0 ) break;
       }

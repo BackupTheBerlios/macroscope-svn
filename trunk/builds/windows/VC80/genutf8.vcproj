@@ -216,7 +216,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -293,7 +293,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

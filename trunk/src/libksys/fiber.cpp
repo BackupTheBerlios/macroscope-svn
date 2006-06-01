@@ -584,7 +584,7 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
       assert( fiber->event().type_ == etAcquire );
       if( fiber->event().errno_ != 0 )
         throw ksys::ExceptionSP(
-          new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+          new Exception(fiber->event().errno_,__PRETTY_FUNCTION__)
         );
       return true;
     }

@@ -30,7 +30,7 @@
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  sleep(15000000);
+//  sleep(15000000);
   int errcode = 0;
   adicpp::initialize();
   try {

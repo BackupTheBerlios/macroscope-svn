@@ -91,7 +91,7 @@ void * Thread::threadFunc(void * thread)
   }
   currentThread() = NULL;
 #if defined(__WIN32__) || defined(__WIN64__)
-  while( PostThreadMessage(mainThreadId,threadFinishMessage,0,0) == 0 ) Sleep(1);
+//  while( PostThreadMessage(mainThreadId,threadFinishMessage,0,0) == 0 ) Sleep(1);
   return (DWORD)
 #elif HAVE_PTHREAD_H
   return (void *)

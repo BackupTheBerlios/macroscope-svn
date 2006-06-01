@@ -213,7 +213,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
 				LinkIncremental="1"
 				SubSystem="1"
 				TargetMachine="1"
@@ -286,7 +286,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
 				LinkIncremental="1"
 				SubSystem="1"
 				TargetMachine="17"
