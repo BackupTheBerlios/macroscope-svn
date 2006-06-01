@@ -287,16 +287,7 @@ void AsyncIoSlave::execute()
   EventsNode * node;
   AsyncEvent * object = NULL;
   for(;;){
-    acquire();
-    if( requests_.count() == 0 && newRequests_.count() == 0 ){
-      release();
-      Semaphore::wait();
-      acquire();
-      if( terminated_ ){
-        release();
-        break;
-      }
-    }
+    AutoLock<InterlockedMutex> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -498,13 +489,19 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       }
 #endif
     }
-    node = NULL;
+    if( requests_.count() == 0 ){
+      release();
+      if( terminated_ ) break;
+      Semaphore::wait();
+      acquire();
+    }
+    else {
+      node = NULL;
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( requests_.count() > 0 ){
       DWORD wm;
       if( isw9x ){
         node = requests_.first();
-		    object = &AsyncEvent::nodeObject(*node);
+	      object = &AsyncEvent::nodeObject(*node);
         wm = ~DWORD(0);
       }
       else {
@@ -554,17 +551,16 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         requests_.remove(*object);
 
         object->descriptor_->cluster()->postEvent(
-	        object->descriptor_,
-	        GetLastError(),
-	        object->type_,
-	        GetLastError() != ERROR_SUCCESS ? ~uint64_t(0) : nb
-	      );
+          object->descriptor_,
+          GetLastError(),
+          object->type_,
+          GetLastError() != ERROR_SUCCESS ? ~uint64_t(0) : nb
+        );
         sp--;
       }
     }
-    release();
 #elif HAVE_KQUEUE
-    if( requests_.count() > 0 ){
+    else {
       int evCount = kevent(kqueue_,NULL,0,&kevents_[0],kevents_.count(),NULL);
       if( evCount == -1 ){
         perror(NULL);
@@ -1210,13 +1206,14 @@ void Requester::execute()
     try {
       for(;;){
         for( i = slaves_.count() - 1; i >= 0; i-- ){
-          /*if( slaves_[i].finished() ){
+          if( slaves_[i].finished() ){
             slaves_[i].Thread::wait();
             slaves_.remove(i);
-            continue;
-          }*/
-          slaves_[i].transplant(ioRequests_);
-          if( ioRequests_.count() == 0 ) break;
+          }
+          else {
+            slaves_[i].transplant(ioRequests_);
+            if( ioRequests_.count() == 0 ) break;
+          }
         }
         if( ioRequests_.count() == 0 ) break;
         AutoPtr<AsyncIoSlave> slave(new AsyncIoSlave);
@@ -1231,14 +1228,20 @@ void Requester::execute()
 	        throw;
 	      }
 	      slave->transplant(ioRequests_);
-        //if( slaves_.count() > numberOfProcessors() ) slave->terminate();
+        if( slaves_.count() > numberOfProcessors() * 8 ) slave->terminate();
         slave.ptr(NULL);
         if( ioRequests_.count() == 0 ) break;
       }
       for(;;){
         for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
-          ofSlaves_[i].transplant(ofRequests_);
-          if( ofRequests_.count() == 0 ) break;
+          if( ofSlaves_[i].finished() ){
+	          ofSlaves_[i].Thread::wait();
+            ofSlaves_.remove(i);
+          }
+          else {
+            ofSlaves_[i].transplant(ofRequests_);
+            if( ofRequests_.count() == 0 ) break;
+          }
         }
         if( ofRequests_.count() == 0 ) break;
         AutoPtr<AsyncOpenFileSlave> slave(new AsyncOpenFileSlave);
@@ -1253,6 +1256,7 @@ void Requester::execute()
 	        throw;
 	      }
 	      slave->transplant(ofRequests_);
+        if( ofSlaves_.count() > numberOfProcessors() * 8 ) slave->terminate();
         slave.ptr(NULL);
         if( ofRequests_.count() == 0 ) break;
       }
@@ -1288,7 +1292,7 @@ void Requester::execute()
 	        throw;
 	      }
 	      slave->transplant(acquireRequests_);
-        if( acquireSlaves_.count() > numberOfProcessors() ) slave->terminate();
+        if( acquireSlaves_.count() > numberOfProcessors() * 8 ) slave->terminate();
         slave.ptr(NULL);
         if( acquireRequests_.count() == 0 ) break;
       }
