@@ -38,19 +38,18 @@ AcceptFiber::AcceptFiber()
 {
 }
 //---------------------------------------------------------------------------
-void AcceptFiber::execute()
+void AcceptFiber::fiberExecute()
 {
-  assert( thread() != NULL );
-  Server * server = dynamic_cast<Server *>(thread()->server());
+  Server * server = dynamic_cast<Server *>(ksys::Fiber::thread()->server());
   assert( server != NULL );
   attach();
   try {
     for(;;){
-      ksys::AutoPtr<ServerFiber> fiber(dynamic_cast<ServerFiber *>(server->newFiber()));
-      assert( fiber.ptr() != NULL );
-      accept(*fiber.ptr());
-      server->attachFiber(*fiber.ptr());
-      fiber.ptr(NULL);
+      ServerFiber * serverFiber = dynamic_cast<ServerFiber *>(server->newFiber());
+      assert( serverFiber != NULL );
+      ksys::AutoPtr<Fiber> fiber(serverFiber);
+      accept(*serverFiber);
+      server->attachFiber(fiber);
     }
   }
   catch( ksys::ExceptionSP & e ){
@@ -74,10 +73,10 @@ Server::Server() : acceptFiber_(NULL)
 {
 }
 //------------------------------------------------------------------------------
-void ServerFiber::execute()
+void ServerFiber::fiberExecute()
 {
   open();
-  attachDescriptor(*this);
+  attach();
   main();
   flush();
 }
@@ -87,14 +86,15 @@ void ServerFiber::execute()
 void Server::open()
 {
   assert( acceptFiber_ == NULL );
-  ksys::AutoPtr<AcceptFiber> fiber(new AcceptFiber);
-  fiber->open();
+  AcceptFiber * acceptFiber = new AcceptFiber;
+  ksys::AutoPtr<ksys::Fiber> fiber(acceptFiber);
+  acceptFiber->open();
   for( intptr_t i = bindAddrs_.count() - 1; i >= 0; i-- )
-    fiber->bind(bindAddrs_[i]);
-  fiber->listen();
-  attachFiber(*fiber.ptr());
-  fiber->mutex_.acquire();
-  acceptFiber_ = fiber.ptr(NULL);
+    acceptFiber->bind(bindAddrs_[i]);
+  acceptFiber->listen();
+  acceptFiber->mutex_.acquire();
+  attachFiber(fiber);
+  acceptFiber_ = acceptFiber;
 }
 //------------------------------------------------------------------------------
 void Server::close()

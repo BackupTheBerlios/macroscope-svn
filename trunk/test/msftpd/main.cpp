@@ -310,7 +310,7 @@ class MSFTPServer : public ksock::Server {
     MSFTPServer(const ksys::ConfigSP config);
   protected:
     ksys::ConfigSP config_;
-    ksys::BaseFiber * newFiber();
+    ksys::Fiber * newFiber();
   private:
 };
 //------------------------------------------------------------------------------
@@ -322,7 +322,7 @@ MSFTPServer::MSFTPServer(const ksys::ConfigSP config) : config_(config)
 {
 }
 //------------------------------------------------------------------------------
-ksys::BaseFiber * MSFTPServer::newFiber()
+ksys::Fiber * MSFTPServer::newFiber()
 {
   return new MSFTPServerFiber(config_);
 }

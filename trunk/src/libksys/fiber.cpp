@@ -28,7 +28,7 @@
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------
-uint8_t currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber>)];
+uint8_t Fiber::currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber>)];
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -51,12 +51,16 @@ AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 //------------------------------------------------------------------------------
 void Fiber::initialize()
 {
+#if !defined(__WIN32__) && !defined(__WIN64__)
   new (currentFiberPlaceHolder) ThreadLocalVariable<Fiber>;
+#endif
 }
 //------------------------------------------------------------------------------
 void Fiber::cleanup()
 {
-  currentFiber().~ThreadLocalVariable<Fiber>();
+#if !defined(__WIN32__) && !defined(__WIN64__)
+  reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder)->~ThreadLocalVariable<Fiber>();
+#endif
 }
 //------------------------------------------------------------------------------
 Fiber::~Fiber()
@@ -67,20 +71,21 @@ Fiber::~Fiber()
 }
 //---------------------------------------------------------------------------
 Fiber::Fiber() : started_(false), terminated_(false), finished_(false),
-  mainFiber_(NULL),
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  stackPointer_(NULL)
+  stackPointer_(NULL),
 #else
-  fiber_(NULL), ip_(NULL), param_(NULL)
+  fiber_(NULL),
 #endif
+  thread_(NULL)
 {
+  event_.fiber_ = this;
 }
 //---------------------------------------------------------------------------
 Fiber & Fiber::allocateStack(
 #if !defined(__WIN32__) && !defined(__WIN64__)
   void * ip,void * param,size_t size,Fiber * mainFiber,uintptr_t dummy1,uintptr_t dummy2)
 #else
-  void * ip,void * param,size_t,Fiber * mainFiber,uintptr_t,uintptr_t)
+  void *,void *,size_t,Fiber *,uintptr_t,uintptr_t)
 #endif
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
@@ -127,11 +132,7 @@ Fiber & Fiber::allocateStack(
     stackPointer_ = (void **) stackPointer_ + 10;
   }
   started_ = terminated_ = finished_ = false;
-#else
-  ip_ = ip;
-  param_ = param;
 #endif
-  mainFiber_ = mainFiber;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -196,10 +197,10 @@ void Fiber::start(Fiber * fiber,void * param,void (* ip)(void *))
 {
   fiber->started_ = true;
   try {
-#if !defined(__WIN32__) && !defined(__WIN64__)
-    ip(param);
+#if defined(__WIN32__) || defined(__WIN64__)
+    fiber->fiberExecute();
 #else
-    (*(void (*)(void *)) fiber->ip_)(fiber->param_);
+    ip(param);
 #endif
   }
   catch( ksys::ExceptionSP & e ){
@@ -207,33 +208,13 @@ void Fiber::start(Fiber * fiber,void * param,void (* ip)(void *))
   }
   catch( ... ){
   }
+  fiber->detachDescriptors();
   fiber->finished_ = true;
-  fiber->switchFiber(fiber->mainFiber_);
+  fiber->switchFiber(fiber->thread_);
 }
 //------------------------------------------------------------------------------
-void Fiber::attachDescriptor(AsyncDescriptor & descriptor)
-{
-  descriptorsList_.insToTail(descriptor);
-  descriptor.fiber_ = this;
-}
-//------------------------------------------------------------------------------
-void Fiber::detachDescriptor(AsyncDescriptor & descriptor)
-{
-  descriptorsList_.remove(descriptor);
-  descriptor.fiber_ = NULL;
-}
-//------------------------------------------------------------------------------
-////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
-BaseFiber::~BaseFiber()
-{
-}
-//---------------------------------------------------------------------------
-BaseFiber::BaseFiber() : thread_(NULL)
-{
-}
-//---------------------------------------------------------------------------
-void BaseFiber::fiber2(BaseFiber * fiber)
+#if !defined(__WIN32__) && !defined(__WIN64__)
+void Fiber::fiber2(Fiber * fiber)
 {
   try {
     fiber->execute();
@@ -244,22 +225,13 @@ void BaseFiber::fiber2(BaseFiber * fiber)
   }
   fiber->detachDescriptors();
 }
+#endif
 //------------------------------------------------------------------------------
-void BaseFiber::detachDescriptors()
+void Fiber::detachDescriptors()
 {
   EmbeddedListNode<AsyncDescriptor> * adp;
   for( adp = descriptorsList_.first(); adp != NULL; adp = adp->next() )
     AsyncDescriptor::fiberListNodeObject(*adp).detach();
-}
-//------------------------------------------------------------------------------
-void BaseFiber::attachDescriptor(AsyncDescriptor & descriptor)
-{
-  thread_->AsyncDescriptorsCluster::attachDescriptor(descriptor,*this);
-}
-//------------------------------------------------------------------------------
-void BaseFiber::detachDescriptor(AsyncDescriptor & descriptor)
-{
-  thread_->AsyncDescriptorsCluster::detachDescriptor(descriptor);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -269,7 +241,7 @@ BaseThread::~BaseThread()
   assert( fibers_.count() == 0 );
 }
 //---------------------------------------------------------------------------
-BaseThread::BaseThread() : server_(NULL), maxStackSize_(0)
+BaseThread::BaseThread() : server_(NULL)//, maxStackSize_(0)
 {
 }
 //---------------------------------------------------------------------------
@@ -279,9 +251,7 @@ void BaseThread::execute()
   convertThreadToFiber();
   try {
 #endif
-    currentFiber() = this;
     while( !Thread::terminated_ ) queue();
-    assert( fibers_.count() == 0 );
 #if defined(__WIN32__) || defined(__WIN64__)
   }
   catch( ... ){
@@ -303,7 +273,7 @@ void BaseThread::queue()
   }
   else {
     assert( !ev->fiber_->finished() );
-    currentFiber()->switchFiber(ev->fiber_);
+    Fiber::switchFiber(ev->fiber_);
     if( ev->fiber_->finished() ){
       detectMaxFiberStackSize();
       sweepFiber(ev->fiber_);
@@ -313,13 +283,11 @@ void BaseThread::queue()
 //------------------------------------------------------------------------------
 void BaseThread::sweepFiber(Fiber * fiber)
 {
-  BaseFiber * bf;
   {
     AutoLock<InterlockedMutex> lock(mutex_);
-    bf = dynamic_cast<BaseFiber *>(fiber);
-    fibers_.remove(*bf);
+    fibers_.remove(*fiber);
   }
-  delete bf;
+  delete fiber;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( (server_->howCloseServer_ & server_->csDWM) != 0 && fibers_.count() == 0 )
     while( PostThreadMessage(mainThreadId,fiberFinishMessage,NULL,NULL) == 0 ) Sleep(1);
@@ -380,7 +348,7 @@ void BaseServer::closeServer()
   assert( currentFiber() == NULL );
   uintptr_t how = howCloseServer_;
   EmbeddedListNode<BaseThread> * btp;
-  EmbeddedListNode<BaseFiber> * bfp;
+  EmbeddedListNode<Fiber> * bfp;
   EmbeddedListNode<AsyncDescriptor> * adp;
   BaseThread * thread;
   if( how & csTerminate ){
@@ -389,7 +357,7 @@ void BaseServer::closeServer()
       thread = &BaseThread::serverListNodeObject(*btp);
       AutoLock<InterlockedMutex> lock2(thread->mutex_);
       for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() )
-        BaseFiber::nodeObject(*bfp).terminate();
+        Fiber::nodeObject(*bfp).terminate();
     }
   }
   for(;;){
@@ -404,7 +372,7 @@ void BaseServer::closeServer()
           if( thread->fibers_.count() > 0 ) break;
         }
       }
-      if( how & csAbortTimer ) AsyncDescriptorsCluster::requester().abortTimer();
+      if( how & csAbortTimer ) BaseThread::requester().abortTimer();
       if( btp == NULL ) break;
       sweepThreads();
       fbtmd = fbtm > fbtmd ? fbtmd : fbtm;
@@ -439,10 +407,10 @@ void BaseServer::closeServer()
       for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
         thread = &BaseThread::serverListNodeObject(*btp);
         AutoLock<InterlockedMutex> lock2(thread->mutex_);
-        for( adp = thread->AsyncDescriptorsCluster::descriptorsList_.first(); adp != NULL; adp = adp->next() )
+        for( adp = thread->descriptorsList_.first(); adp != NULL; adp = adp->next() )
           AsyncDescriptor::clusterListNodeObject(*adp).shutdown2();
       }
-      AsyncDescriptorsCluster::requester().abortTimer();
+      BaseThread::requester().abortTimer();
     }
   }
   sweepThreads();
@@ -476,20 +444,22 @@ BaseThread * BaseServer::selectThread()
   return thread;
 }
 //------------------------------------------------------------------------------
-void BaseServer::attachFiber(BaseFiber & fiber)
+void BaseServer::attachFiber(const AutoPtr<Fiber> & fiber)
 {
   AutoLock<InterlockedMutex> lock(mutex_);
   BaseThread * thread = selectThread();
-  fiber.allocateStack((void *) fiber.fiber2,&fiber,fiberStackSize_,thread);
+  fiber->allocateStack(Fiber::start,fiber,fiberStackSize_,thread);
 #if defined(__WIN32__) || defined(__WIN64__)
-  fiber.createFiber(fiberStackSize_);
+  fiber->createFiber(fiberStackSize_);
 #endif
+  Fiber * fib = fiber;
   {
     AutoLock<InterlockedMutex> lock2(thread->mutex_);
-    thread->fibers_.insToTail(fiber);
-    fiber.thread(thread);
+    thread->fibers_.insToTail(*fiber.ptr(NULL));
+    fib->thread_ = thread;
   }
-  thread->postEvent(etDispatch,&fiber);
+  fib->event_.type_ = etDispatch;
+  thread->postEvent(&fib->event_);
 }
 //------------------------------------------------------------------------------
 void BaseServer::DispatchWindowMessages()
@@ -556,7 +526,27 @@ bool FiberInterlockedMutex::tryAcquireHelper()
 //------------------------------------------------------------------------------
 bool FiberInterlockedMutex::internalAcquire(bool wait)
 {
-  if( currentFiber() == NULL ){
+  if( isRunInFiber() ){
+    if( wait ){
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( tryAcquireHelper() ) return true;
+#else
+      if( mutex_.tryAcquire() ) return true;
+#endif
+      assert( currentFiber() != NULL );
+      currentFiber()->event_.mutex_ = this;
+      currentFiber()->event_.type_ = etAcquire;
+      currentFiber()->thread()->postRequest();
+      currentFiber()->switchFiber(currentFiber()->mainFiber());
+      assert( currentFiber()->event_.type_ == etAcquire );
+      if( currentFiber()->event_.errno_ != 0 )
+        throw ksys::ExceptionSP(
+          new Exception(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+        );
+      return true;
+    }
+  }
+  else {
     if( wait ){
 #if defined(__WIN32__) || defined(__WIN64__)
       DWORD r = WaitForSingleObject(sem_,INFINITE);
@@ -570,29 +560,10 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
       return true;
     }
   }
-  else {
-    if( wait ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( tryAcquireHelper() ) return true;
-#else
-      if( mutex_.tryAcquire() ) return true;
-#endif
-      BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-      assert( fiber != NULL );
-      fiber->thread()->postRequest(this);
-      fiber->switchFiber(fiber->mainFiber());
-      assert( fiber->event().type_ == etAcquire );
-      if( fiber->event().errno_ != 0 )
-        throw ksys::ExceptionSP(
-          new Exception(fiber->event().errno_,__PRETTY_FUNCTION__)
-        );
-      return true;
-    }
-  }
 #if defined(__WIN32__) || defined(__WIN64__)
   return tryAcquireHelper();
 #else
-  mutex_.tryAcquire();
+  return mutex_.tryAcquire();
 #endif
 }
 //---------------------------------------------------------------------------

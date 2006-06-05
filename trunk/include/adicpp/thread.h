@@ -119,7 +119,7 @@ class Thread {
     static Array< Action> & beforeExecuteActions();
     static Array< Action> & afterExecuteActions();
   protected:
-    virtual void            execute() = 0;
+    virtual void execute() = 0;
     uintptr_t       stackSize_;
 #if defined(__WIN32__) || defined(__WIN64__)
     HANDLE          handle_;

@@ -497,11 +497,8 @@ void KFTPShell::open()
   config_->parse().override();
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
-    if( sectionName.strncasecmp("job",3) == 0 ){
-      ksys::AutoPtr<KFTPClient> fiber(new KFTPClient(config_,sectionName));
-      attachFiber(fiber);
-      fiber.ptr(NULL);
-    }
+    if( sectionName.strncasecmp("job",3) == 0 )
+      attachFiber(new KFTPClient(config_,sectionName));
   }
 }
 //------------------------------------------------------------------------------

@@ -367,23 +367,25 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 {
 }
 //------------------------------------------------------------------------------
-void SpoolWalker::execute()
+void SpoolWalker::fiberExecute()
 {
   utf8::String spool(server_.spoolDir());
-//  Message message;
+  Message message;
   while( !terminated_ ){
-/*    {
+    {
       AutoLock<FiberInterlockedMutex> lock(server_.fmutex_);
       server_.file_.fileName(spool + message.id());
-      static int32_t a = 0;
-      interlockedIncrement(a,1);
-//      AsyncFile file(spool + message.id());
-//      file.open();
+//      static int32_t a = 0;
+//      interlockedIncrement(a,1);
+      /*AsyncFile file(spool + message.id());
+      file.open();
+      file << message;*/
       server_.file_.detach();
       server_.file_.open();
       server_.file_ << message;
-      interlockedIncrement(a,-1);
-    }*/
+      server_.file_.detach();
+//      interlockedIncrement(a,-1);
+    }
 
     /*try {
       Vector<utf8::String> list;
@@ -426,15 +428,16 @@ void SpoolWalker::execute()
     catch( ExceptionSP & e ){
       e->writeStdError();
       if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
-    }*/
+    }
     try {
       sleepAsync(server_.config_->value("spool_processing_interval",10000000u));
     }
     catch( ExceptionSP & e ){
       if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
     }
-    stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker wakeup.\n");
+    stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker wakeup.\n");*/
   }
+  //stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker exit.\n");
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

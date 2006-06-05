@@ -62,8 +62,8 @@ template< class T> class AutoPtr {
     bool            operator !=(const T * ptr) const;
     bool            operator !=(const AutoPtr< T> & ptr) const;
 
-    T *             ptr(T * ptr);
-    T * const &     ptr() const;
+    T * ptr(T * ptr) const;
+    T * const & ptr() const;
 
     AutoPtr< T> &   alloc(size_t size);
     AutoPtr< T> &   realloc(size_t size);
@@ -84,16 +84,16 @@ template< class T> class AutoPtr {
     AutoPtr< T> &   invertBitRange(uintptr_t n, uintptr_t c);
   protected:
   private:
-    T * ptr_;
+    mutable T * ptr_;
 };
-//---------------------------------------------------------------------------
-template< class T> inline AutoPtr< T>::AutoPtr(T * ptr) : ptr_(ptr)
-{
-}
 //---------------------------------------------------------------------------
 template< class T> inline AutoPtr< T>::~AutoPtr()
 {
   delete ptr_;
+}
+//---------------------------------------------------------------------------
+template< class T> inline AutoPtr< T>::AutoPtr(T * ptr) : ptr_(ptr)
+{
 }
 //---------------------------------------------------------------------------
 template< class T> inline
@@ -215,7 +215,7 @@ AutoPtr< T> & AutoPtr<T>::operator =(T * ptr)
 }
 //---------------------------------------------------------------------------
 template< class T> inline
-T * AutoPtr< T>::ptr(T * ptr)
+T * AutoPtr<T>::ptr(T * ptr) const
 {
   xchg(ptr_, ptr);
   return ptr;

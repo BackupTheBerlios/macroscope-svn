@@ -61,10 +61,9 @@ void AsyncDescriptor::flush2()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-uintptr_t AsyncDescriptorsCluster::refCount_ = 0;
-//------------------------------------------------------------------------------
-void AsyncDescriptorsCluster::initialize()
+void BaseThread::initialize()
 {
+  new (requester_) Requester;
 #if defined(__WIN32__) || defined(__WIN64__)
 #else
 #if HAVE_SIGNAL_H
@@ -77,61 +76,20 @@ void AsyncDescriptorsCluster::initialize()
 #endif
 }
 //------------------------------------------------------------------------------
-void AsyncDescriptorsCluster::cleanup()
+void BaseThread::cleanup()
 {
+  requester().~Requester();
 }
 //------------------------------------------------------------------------------
-AsyncDescriptorsCluster::~AsyncDescriptorsCluster()
-{
-  deallocateSig();
-}
-//------------------------------------------------------------------------------
-AsyncDescriptorsCluster::AsyncDescriptorsCluster()
-{
-  allocateSig();
-}
-//------------------------------------------------------------------------------
-void AsyncDescriptorsCluster::allocateSig()
-{
-  AutoLock<InterlockedMutex> lock(giant());
-  if( refCount_ == 0 ){
-    new (requester_) Requester;
-    try {
-      requester().resume();
-    }
-    catch( ... ){
-      requester().~Requester();
-      throw;
-    }
-  }
-  refCount_++;
-}
-//------------------------------------------------------------------------------
-void AsyncDescriptorsCluster::deallocateSig()
-{
-  AutoLock<InterlockedMutex> lock(giant());
-  assert( refCount_ > 0 );
-  if( refCount_ == 1 ){
-    requester().terminate();
-    while( !requester().finished() ){
-      requester().post();
-      sleep1();
-    }
-    requester().Thread::wait();
-    requester().~Requester();
-  }
-  refCount_--;
-}
-//------------------------------------------------------------------------------
-void AsyncDescriptorsCluster::attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber)
+void BaseThread::attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber)
 {
   AutoLock<InterlockedMutex> lock(mutex_);
-  if( descriptor.cluster_ == NULL ){
+  if( descriptor.fiber_ == NULL ){
     descriptorsList_.insToTail(descriptor);
-    descriptor.cluster_ = this;
-    toFiber.Fiber::attachDescriptor(descriptor);
+    toFiber.descriptorsList_.insToTail(descriptor);
+    descriptor.fiber_ = &toFiber;
   }
-  else if( descriptor.cluster_ != this ){
+  else if( descriptor.fiber_->thread_ != this ){
     throw ExceptionSP(new Exception(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_INVALID_DATA + errorOffset
@@ -143,14 +101,14 @@ void AsyncDescriptorsCluster::attachDescriptor(AsyncDescriptor & descriptor,Fibe
   }
 }
 //------------------------------------------------------------------------------
-void AsyncDescriptorsCluster::detachDescriptor(AsyncDescriptor & descriptor)
+void BaseThread::detachDescriptor(AsyncDescriptor & descriptor)
 {
   AutoLock<InterlockedMutex> lock(mutex_);
-  if( descriptor.cluster_ != NULL ){
-    if( descriptor.cluster_ == this ){
+  if( descriptor.fiber_ != NULL ){
+    if( descriptor.fiber_->thread_ == this ){
       descriptorsList_.remove(descriptor);
-      descriptor.cluster_ = NULL;
-      descriptor.fiber_->Fiber::detachDescriptor(descriptor);
+      descriptor.fiber_->descriptorsList_.remove(descriptor);
+      descriptor.fiber_ = NULL;
     }
     else {
       throw ExceptionSP(new Exception(
@@ -165,49 +123,6 @@ void AsyncDescriptorsCluster::detachDescriptor(AsyncDescriptor & descriptor)
   }
 }
 //------------------------------------------------------------------------------
-void AsyncDescriptorsCluster::postEvent(AsyncEventType event,Fiber * fiber)
-{
-  AutoLock<InterlockedMutex> lock(mutex_);
-  fiber->event_.type_ = event;
-  fiber->event_.fiber_ = fiber;
-  fiber->event_.descriptor_ = NULL;
-  events_.insToTail(fiber->event_);
-  if( events_.count() < 2 ) semaphore_.post();
-}
-//---------------------------------------------------------------------------
-void AsyncDescriptorsCluster::postEvent(
-  AsyncDescriptor * descriptor,
-  int32_t errNo,
-  AsyncEventType event,
-  uint64_t count)
-{
-  AutoLock<InterlockedMutex> lock(mutex_);
-  descriptor->fiber_->event_.fiber_ = descriptor->fiber_;
-  descriptor->fiber_->event_.descriptor_ = descriptor;
-  descriptor->fiber_->event_.errno_ = errNo;
-  descriptor->fiber_->event_.type_ = event;
-  descriptor->fiber_->event_.count_ = count;
-  events_.insToTail(descriptor->fiber_->event_);
-  if( events_.count() < 2 ) semaphore_.post();
-}
-//---------------------------------------------------------------------------
-void AsyncDescriptorsCluster::postEvent(
-  AsyncDescriptor * descriptor,
-  int32_t errNo,
-  AsyncEventType event,
-  const AsyncDescriptorKey & file)
-{
-  assert( event == etOpenFile );
-  AutoLock<InterlockedMutex> lock(mutex_);
-  descriptor->fiber_->event_.fiber_ = descriptor->fiber_;
-  descriptor->fiber_->event_.descriptor_ = descriptor;
-  descriptor->fiber_->event_.errno_ = errNo;
-  descriptor->fiber_->event_.type_ = event;
-  descriptor->fiber_->event_.fileDescriptor_ = file.descriptor_;
-  events_.insToTail(descriptor->fiber_->event_);
-  if( events_.count() < 2 ) semaphore_.post();
-}
-//---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 AsyncIoSlave::~AsyncIoSlave()
@@ -406,7 +321,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         case etAccept :
 #if defined(__WIN32__) || defined(__WIN64__)
           rw = object->descriptor_->AcceptEx(
-            (SOCKET) object->buffer_,
+            object->socket_,
             NULL,
             0,
             NULL,
@@ -461,12 +376,9 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       if( rw == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != WSAEWOULDBLOCK ){
         ResetEvent(events_[sp]);
         newRequests_.remove(*object);
-        object->descriptor_->cluster()->postEvent(
-	        object->descriptor_,
-	        GetLastError(),
-	        object->type_,
-	        ~(uint64_t) 0
-	      );
+        object->errno_ = GetLastError();
+        object->count_ = ~(uint64_t) 0;
+        object->fiber_->thread()->postEvent(object);
         sp--;
       }
       else {
@@ -550,12 +462,9 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
 
         requests_.remove(*object);
 
-        object->descriptor_->cluster()->postEvent(
-          object->descriptor_,
-          GetLastError(),
-          object->type_,
-          GetLastError() != ERROR_SUCCESS ? ~uint64_t(0) : nb
-        );
+        object->errno_ = GetLastError();
+        object->count_ = object->errno_ != ERROR_SUCCESS ? ~uint64_t(0) : nb;
+        object->fiber_->thread()->postEvent(object);
         sp--;
       }
     }
@@ -652,23 +561,19 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
           default        :
                 assert( 0 );
         }
-        object->descriptor_->cluster()->postEvent(
-  	      object->descriptor_,
-	        error,
-	        object->ioType_,
-	        count
-	      );
         acquire();
-  	    object->ioThread_ = NULL;
         requests_.remove(*object);
         release();
+        object->errno_ = error;
+        object->count = count;
+        object->fiber_->thread()->postEvent(object);
       }
     }
 #endif
   }
 }
 //------------------------------------------------------------------------------
-void AsyncIoSlave::transplant(Events & requests)
+bool AsyncIoSlave::transplant(AsyncEvent & request)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
 #define MAX_REQS (MAXIMUM_WAIT_OBJECTS - 2)
@@ -677,24 +582,25 @@ void AsyncIoSlave::transplant(Events & requests)
 #endif
   bool r = false;
   AutoLock<InterlockedMutex> lock(*this);
-  while( requests.count() > 0 && requests_.count() + newRequests_.count() < MAX_REQS ){
-    newRequests_.insToTail(requests.remove(*requests.first()));
+  if( requests_.count() + newRequests_.count() < MAX_REQS ){
+    newRequests_.insToTail(request);
+    if( newRequests_.count() < 2 ){
+#if defined(__WIN32__) || defined(__WIN64__)
+      SetEvent(events_[MAXIMUM_WAIT_OBJECTS - 1]);
+#elif HAVE_KQUEUE
+      struct kevent ev;
+      EV_SET(&ev,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,0);
+      if( kevent(kqueue_,&ev,1,NULL,0,NULL) == -1 ){
+        perror(NULL);
+        abort();
+      }
+#endif
+      post();
+    }
     r = true;
   }
-  if( r ){
-#if defined(__WIN32__) || defined(__WIN64__)
-    SetEvent(events_[MAXIMUM_WAIT_OBJECTS - 1]);
-#elif HAVE_KQUEUE
-    struct kevent ev;
-    EV_SET(&ev,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,0);
-    if( kevent(kqueue_,&ev,1,NULL,0,NULL) == -1 ){
-      perror(NULL);
-      abort();
-    }
-#endif
-    post();
-  }
 #undef MAX_REQS
+  return r;
 }
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -707,15 +613,16 @@ AsyncOpenFileSlave::AsyncOpenFileSlave()
 {
 }
 //------------------------------------------------------------------------------
-void AsyncOpenFileSlave::transplant(Events & requests)
+bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
   AutoLock<InterlockedMutex> lock(*this);
-  while( requests.count() > 0 && requests_.count() < 16 ){
-    requests_.insToTail(requests.remove(*requests.first()));
+  if( requests_.count() < 16 ){
+    requests_.insToTail(request);
+    if( requests_.count() < 2 ) post();
     r = true;
   }
-  if( r ) post();
+  return r;
 }
 //------------------------------------------------------------------------------
 void AsyncOpenFileSlave::execute()
@@ -791,12 +698,9 @@ void AsyncOpenFileSlave::execute()
             }
           }
           if( file != INVALID_HANDLE_VALUE && GetLastError() == ERROR_ALREADY_EXISTS ) SetLastError(0);
-          request->descriptor_->cluster()->postEvent(
-            request->descriptor_,
-            GetLastError(),
-            etOpenFile,
-            file
-          );
+          request->errno_ = GetLastError();
+          request->fileDescriptor_ = file;
+          request->fiber_->thread()->postEvent(request);
 #else
           int file;
           utf8::AnsiString ansiFileName(anyPathName2HostPathName(request->string()).getANSIString());
@@ -825,12 +729,9 @@ void AsyncOpenFileSlave::execute()
 #endif
         }
         catch( ExceptionSP & e ){
-          request->descriptor_->cluster()->postEvent(
-            request->descriptor_,
-            e->code(),
-            etOpenFile,
-            INVALID_HANDLE_VALUE
-          );
+          request->errno_ = e->code();
+          request->fileDescriptor_ = INVALID_HANDLE_VALUE;
+          request->fiber_->thread()->postEvent(request);
         }
       }
       else if( request->type_ == etDirList ){
@@ -842,9 +743,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
       else if( request->type_ == etCreateDir ){
         int32_t err = 0;
@@ -857,9 +757,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
       else if( request->type_ == etRemoveDir ){
         int32_t err = 0;
@@ -872,9 +771,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
       else if( request->type_ == etRemoveFile ){
         int32_t err = 0;
@@ -887,9 +785,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
       else if( request->type_ == etResolveName ){
         int32_t err = 0;
@@ -900,9 +797,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
       else if( request->type_ == etResolveAddress ){
         int32_t err = 0;
@@ -913,9 +809,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
       else if( request->type_ == etStat ){
         int32_t err = 0;
@@ -928,9 +823,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
       else if( request->type_ == etRename ){
         int32_t err = 0;
@@ -941,9 +835,8 @@ void AsyncOpenFileSlave::execute()
           err = e->code();
         }
         request->errno_ = err;
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-        assert( fiber != NULL );
-        fiber->thread()->postEvent(request->type_,fiber);
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
     }
   }
@@ -959,13 +852,11 @@ AsyncTimerSlave::AsyncTimerSlave()
 {
 }
 //------------------------------------------------------------------------------
-void AsyncTimerSlave::transplant(Events & requests)
+void AsyncTimerSlave::transplant(AsyncEvent & request)
 {
   AutoLock<InterlockedMutex> lock(*this);
-  while( requests.count() > 0 ){
-    requests_.insToTail(requests.remove(*requests.first()));
-    post();
-  }
+  requests_.insToTail(request);
+  post();
 }
 //------------------------------------------------------------------------------
 void AsyncTimerSlave::execute()
@@ -1006,8 +897,7 @@ void AsyncTimerSlave::execute()
         if( request->timerStartTime_ <= currentTime )
           request->timeout_ -= request->timeout_ >= elapsedTime ? elapsedTime : request->timeout_;
         if( request->timeout_ == 0 || request->abortTimer_ ){
-          BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-          assert( fiber != NULL );
+          assert( request->fiber_ != NULL );
           request->errno_ = request->abortTimer_ ?
 #if defined(__WIN32__) || defined(__WIN64__)
             ERROR_REQUEST_ABORTED + errorOffset
@@ -1017,7 +907,7 @@ void AsyncTimerSlave::execute()
             : 0;
           requestNode = requestNode->next();
           requests_.remove(*request);
-          fiber->thread()->postEvent(request->type_,fiber);
+          request->fiber_->thread()->postEvent(request);
         }
         else {
           requestNode = requestNode->next();
@@ -1060,40 +950,33 @@ AsyncAcquireSlave::AsyncAcquireSlave() : sp_(-1)
 #endif
 }
 //------------------------------------------------------------------------------
-void AsyncAcquireSlave::transplant(Events & requests)
+bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 {
   AutoLock<InterlockedMutex> lock(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;
   bool r = false;
-  EmbeddedListNode<AsyncEvent> * node = requests.first();
-  while( node != NULL && requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
-    AsyncEvent & object = AsyncEvent::nodeObject(*node);
-    node = node->next();
-    for( i = sp_; i >= 0; i-- )
-      if( sems_[i] == object.mutex_->sem_ ) break;
+  if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
+    for( i = sp_; i >= 0; i-- ) if( sems_[i] == request.mutex_->sem_ ) break;
     if( i < 0 ){
-      newRequests_.insToTail(requests.remove(object));
+      newRequests_.insToTail(request);
+      if( sp_ >= 0 ) SetEvent(sems_[sp_ + 1]);
+      post();
       r = true;
     }
   }
-  if( r ){
-    if( sp_ >= 0 ) SetEvent(sems_[sp_ + 1]);
-    post();
-  }
 #else
-  while( requests.count() > 0 ){
-    requests_.insToTail(requests.remove(*requests.first()));
-    post();
-  }
+  requests_.insToTail(request);
+  post();
+  r = true;
 #endif
+  return r;
 }
 //------------------------------------------------------------------------------
 void AsyncAcquireSlave::execute()
 {
   priority(THREAD_PRIORITY_TIME_CRITICAL);
 #if defined(__WIN32__) || defined(__WIN64__)
-//  HANDLE safe[MAXIMUM_WAIT_OBJECTS];
   AsyncEvent * object;
   EmbeddedListNode<AsyncEvent> * node;
   for(;;){
@@ -1152,10 +1035,9 @@ void AsyncAcquireSlave::execute()
         eSems_[sp_] = NULL;
         sp_--;
         requests_.remove(*node);
-        BaseFiber * fiber = dynamic_cast<BaseFiber *>(object->fiber_);
-        assert( fiber != NULL );
+        assert( object->fiber_ != NULL );
         object->errno_ = 0;
-        fiber->thread()->postEvent(object->type_,fiber);
+        object->fiber_->thread()->postEvent(object);
       }
     }
   }
@@ -1178,9 +1060,8 @@ void AsyncAcquireSlave::execute()
       catch( ExceptionSP & e ){
         request->errno_ = e->code();
       }
-      BaseFiber * fiber = dynamic_cast<BaseFiber *>(request->fiber_);
-      assert( fiber != NULL );
-      fiber->thread()->postEvent(request->type_,fiber);
+      assert( request->fiber_ != NULL );
+      request->fiber_->thread()->postEvent();
     }
   }
 #endif
@@ -1190,123 +1071,13 @@ void AsyncAcquireSlave::execute()
 //------------------------------------------------------------------------------
 Requester::~Requester()
 {
-}
-//---------------------------------------------------------------------------
-Requester::Requester()
-{
-}
-//---------------------------------------------------------------------------
-void Requester::execute()
-{
   intptr_t i;
-  priority(THREAD_PRIORITY_HIGHEST);
-  for(;;){
-    Semaphore::wait();
-    if( terminated_ ) break;
-    AutoLock<InterlockedMutex> lock(*this);
-    try {
-      for(;;){
-        for( i = slaves_.count() - 1; i >= 0; i-- ){
-          if( slaves_[i].finished() ){
-            slaves_[i].Thread::wait();
-            slaves_.remove(i);
-          }
-          else {
-            slaves_[i].transplant(ioRequests_);
-            if( ioRequests_.count() == 0 ) break;
-          }
-        }
-        if( ioRequests_.count() == 0 ) break;
-        AutoPtr<AsyncIoSlave> slave(new AsyncIoSlave);
-        slave->resume();
-  	    try {
-	        slaves_.add(slave.ptr());
-	      }
-	      catch( ... ){
-	        slave->terminate();
-	        slave->post();
-	        slave->Thread::wait();
-	        throw;
-	      }
-	      slave->transplant(ioRequests_);
-        if( slaves_.count() > numberOfProcessors() * 8 ) slave->terminate();
-        slave.ptr(NULL);
-        if( ioRequests_.count() == 0 ) break;
-      }
-      for(;;){
-        for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
-          if( ofSlaves_[i].finished() ){
-	          ofSlaves_[i].Thread::wait();
-            ofSlaves_.remove(i);
-          }
-          else {
-            ofSlaves_[i].transplant(ofRequests_);
-            if( ofRequests_.count() == 0 ) break;
-          }
-        }
-        if( ofRequests_.count() == 0 ) break;
-        AutoPtr<AsyncOpenFileSlave> slave(new AsyncOpenFileSlave);
-        slave->resume();
-  	    try {
-	        ofSlaves_.add(slave.ptr());
-	      }
-	      catch( ... ){
-	        slave->terminate();
-	        slave->post();
-	        slave->Thread::wait();
-	        throw;
-	      }
-	      slave->transplant(ofRequests_);
-        if( ofSlaves_.count() > numberOfProcessors() * 8 ) slave->terminate();
-        slave.ptr(NULL);
-        if( ofRequests_.count() == 0 ) break;
-      }
-      if( timerRequests_.count() > 0 ){
-        if( timerSlave_ == NULL ){
-          AutoPtr<AsyncTimerSlave> slave(new AsyncTimerSlave);
-          slave->resume();
-          timerSlave_ = slave.ptr(NULL);
-        }
-        timerSlave_->transplant(timerRequests_);
-      }
-      for(;;){
-        for( i = acquireSlaves_.count() - 1; i >= 0; i-- ){
-          if( acquireSlaves_[i].finished() ){
-	          acquireSlaves_[i].Thread::wait();
-            acquireSlaves_.remove(i);
-          }
-          else {
-            acquireSlaves_[i].transplant(acquireRequests_);
-            if( acquireRequests_.count() == 0 ) break;
-          }
-        }
-        if( acquireRequests_.count() == 0 ) break;
-        AutoPtr<AsyncAcquireSlave> slave(new AsyncAcquireSlave);
-        slave->resume();
-  	    try {
-	        acquireSlaves_.add(slave.ptr());
-	      }
-	      catch( ... ){
-	        slave->terminate();
-	        slave->post();
-	        slave->Thread::wait();
-	        throw;
-	      }
-	      slave->transplant(acquireRequests_);
-        if( acquireSlaves_.count() > numberOfProcessors() * 8 ) slave->terminate();
-        slave.ptr(NULL);
-        if( acquireRequests_.count() == 0 ) break;
-      }
-    }
-    catch( ... ){
-      post();
-    }
-  }
+
   abortTimer();
-  for( i = slaves_.count() - 1; i >= 0; i-- ){
-    slaves_[i].terminate();
-    slaves_[i].post();
-    slaves_[i].Thread::wait();
+  for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
+    ioSlaves_[i].terminate();
+    ioSlaves_[i].post();
+    ioSlaves_[i].Thread::wait();
   }
   for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
     ofSlaves_[i].terminate();
@@ -1319,10 +1090,17 @@ void Requester::execute()
     acquireSlaves_[i].Thread::wait();
   }
 }
-//------------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+Requester::Requester() :
+  ioSlavesSweepTime_(0),
+  ofSlavesSweepTime_(0),
+  acquireSlavesSweepTime_(0)
+{
+}
+//---------------------------------------------------------------------------
 void Requester::abortTimer()
 {
-  AutoLock<InterlockedMutex> lock(*this);
+  AutoLock<InterlockedMutex> lock(timerRequestsMutex_);
   if( timerSlave_ != NULL ){
     timerSlave_->terminate();
     timerSlave_->abortTimer();
@@ -1332,200 +1110,125 @@ void Requester::abortTimer()
   }
 }
 //---------------------------------------------------------------------------
-void Requester::postRequest(
-  AsyncDescriptor * descriptor,
-  uint64_t position,
-  const void * buffer,
-  uint64_t length,
-  AsyncEventType ioType)
+void Requester::postRequest(AsyncDescriptor * descriptor)
 {
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ioRequests_.count() == 0;
-  descriptor->fiber_->event_.fiber_ = descriptor->fiber_;
-  descriptor->fiber_->event_.descriptor_ = descriptor;
-  descriptor->fiber_->event_.position_ = position;
-  descriptor->fiber_->event_.cbuffer_ = buffer;
-  descriptor->fiber_->event_.length_ = length;
-  descriptor->fiber_->event_.type_ = ioType;
-  ioRequests_.insToTail(descriptor->fiber_->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(AsyncDescriptor * descriptor,const ksock::SockAddr & addr)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ioRequests_.count() == 0;
-  descriptor->fiber_->event_.fiber_ = descriptor->fiber_;
-  descriptor->fiber_->event_.descriptor_ = descriptor;
-  descriptor->fiber_->event_.type_ = etConnect;
-  descriptor->fiber_->event_.address_ = addr;
-  ioRequests_.insToTail(descriptor->fiber_->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(
-  AsyncDescriptor * descriptor,
-  const utf8::String & fileName,
-  bool createIfNotExist,
-  bool exclusive,
-  bool readOnly)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ofRequests_.count() == 0;
-  descriptor->fiber_->event_.fiber_ = descriptor->fiber_;
-  descriptor->fiber_->event_.descriptor_ = descriptor;
-  descriptor->fiber_->event_.type_ = etOpenFile;
-  descriptor->fiber_->event_.createIfNotExist_ = createIfNotExist;
-  descriptor->fiber_->event_.exclusive_ = exclusive;
-  descriptor->fiber_->event_.readOnly_ = readOnly;
-  descriptor->fiber_->event_.string0_ = fileName;
-  ofRequests_.insToTail(descriptor->fiber_->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(AsyncDescriptor * descriptor,uint64_t position,uint64_t length,AsyncEvent::LockFileType lockType)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ioRequests_.count() == 0;
-  descriptor->fiber_->event_.fiber_ = descriptor->fiber_;
-  descriptor->fiber_->event_.descriptor_ = descriptor;
-  descriptor->fiber_->event_.type_ = etLockFile;
-  descriptor->fiber_->event_.lockType_ = lockType;
-  descriptor->fiber_->event_.position_ = position;
-  descriptor->fiber_->event_.length_ = length;
-  ioRequests_.insToTail(descriptor->fiber_->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(Vector<utf8::String> * dirList,const utf8::String & dirAndMask,const utf8::String & exMask,bool recursive,bool includeDirs)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ofRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.dirList_ = dirList;
-  fiber->event_.string0_ = dirAndMask;
-  fiber->event_.string1_ = exMask;
-  fiber->event_.recursive_ = recursive;
-  fiber->event_.includeDirs_ = includeDirs;
-  fiber->event_.type_ = etDirList;
-  ofRequests_.insToTail(fiber->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(AsyncEventType event,const utf8::String & name,bool recursive)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ofRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.type_ = event;
-  fiber->event_.string0_ = name;
-  fiber->event_.recursive_ = recursive;
-  ofRequests_.insToTail(fiber->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(const utf8::String & name,struct Stat & stat)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ofRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.string0_ = name;
-  fiber->event_.stat_ = &stat;
-  fiber->event_.type_ = etStat;
-  ofRequests_.insToTail(fiber->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(const utf8::String & name,uintptr_t defPort)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ofRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.string0_ = name;
-  fiber->event_.defPort_ = defPort;
-  fiber->event_.type_ = etResolveName;
-  ofRequests_.insToTail(fiber->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(const ksock::SockAddr & address)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ofRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.address_ = address;
-  fiber->event_.type_ = etResolveAddress;
-  ofRequests_.insToTail(fiber->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(const utf8::String & oldName,const utf8::String & newName)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = ofRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.string0_ = oldName;
-  fiber->event_.string1_ = newName;
-  fiber->event_.type_ = etRename;
-  ofRequests_.insToTail(fiber->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(uint64_t timeout)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = timerRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.timerStartTime_ = gettimeofday();
-  fiber->event_.timeout_ = timeout;
-  fiber->event_.abortTimer_ = false;
-  fiber->event_.type_ = etTimer;
-  timerRequests_.insToTail(fiber->event_);
-  if( pf ) post();
-}
-//---------------------------------------------------------------------------
-void Requester::postRequest(FiberInterlockedMutex * mutex)
-{
-  bool pf;
-  AutoLock<InterlockedMutex> lock(*this);
-  pf = acquireRequests_.count() == 0;
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->event_.descriptor_ = NULL;
-  fiber->event_.mutex_ = mutex;
-  fiber->event_.type_ = etAcquire;
-  acquireRequests_.insToTail(fiber->event_);
-  if( pf ) post();
+  intptr_t i;
+  assert( currentFiber() != NULL );
+  currentFiber()->event_.descriptor_ = descriptor;
+  switch( currentFiber()->event_.type_ ){
+    case etNone :
+    case etError : 
+      break;
+    case etOpenFile :
+    case etLockFile :
+    case etDirList :
+    case etCreateDir :
+    case etRemoveDir :
+    case etRemoveFile :
+    case etRename :
+    case etResolveName :
+    case etResolveAddress :
+    case etStat :
+      {
+        AutoLock<InterlockedMutex> lock(ofRequestsMutex_);
+        /*if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
+          for( i = ofSlaves_.count() - 1; i >= 0; i-- )
+            if( !ofSlaves_[i].started() || ofSlaves_[i].finished() ){
+              //ofSlaves_[i].post();
+	            ofSlaves_[i].Thread::wait();
+              ofSlaves_.remove(i);
+            }
+          ofSlavesSweepTime_ = gettimeofday();
+        }*/
+        for( i = ofSlaves_.count() - 1; i >= 0; i-- )
+          if( ofSlaves_[i].transplant(currentFiber()->event_) ) break;
+        if( i < 0 ){
+          AutoPtr<AsyncOpenFileSlave> slave(new AsyncOpenFileSlave);
+          slave->stackSize(getpagesize() / 16u);
+          ofSlaves_.add(slave.ptr(NULL));
+          ofSlaves_[ofSlaves_.count() - 1].resume();
+	        ofSlaves_[ofSlaves_.count() - 1].transplant(currentFiber()->event_);
+          /*if( ofSlaves_.count() > numberOfProcessors() )
+            ofSlaves_[ofSlaves_.count() - 1].terminate();*/
+        }
+      }
+      return;
+    case etRead :
+    case etWrite :
+    case etAccept :
+    case etConnect :
+      {
+        AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
+        /*if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
+          for( i = ioSlaves_.count() - 1; i >= 0; i-- )
+            if( !ioSlaves_[i].started() || ioSlaves_[i].finished() ){
+              //ioSlaves_[i].post();
+	            ioSlaves_[i].Thread::wait();
+              ioSlaves_.remove(i);
+            }
+          ioSlavesSweepTime_ = gettimeofday();
+        }*/
+        for( i = ioSlaves_.count() - 1; i >= 0; i-- )
+          if( ioSlaves_[i].transplant(currentFiber()->event_) ) break;
+        if( i < 0 ){
+          AutoPtr<AsyncIoSlave> slave(new AsyncIoSlave);
+          slave->stackSize(getpagesize() / 8u);
+          ioSlaves_.add(slave.ptr(NULL));
+          ioSlaves_[ioSlaves_.count() - 1].resume();
+	        ioSlaves_[ioSlaves_.count() - 1].transplant(currentFiber()->event_);
+          /*if( ioSlaves_.count() > numberOfProcessors() )
+            ioSlaves_[ioSlaves_.count() - 1].terminate();*/
+        }
+      }
+      return;
+    case etClose :
+    case etQuit :
+    case etDispatch :
+      break;
+    case etTimer :
+      {
+        AutoLock<InterlockedMutex> lock(timerRequestsMutex_);
+        if( timerSlave_ == NULL ){
+          AutoPtr<AsyncTimerSlave> slave(new AsyncTimerSlave);
+          slave->stackSize(getpagesize() / 8u);
+          slave->resume();
+          timerSlave_ = slave.ptr(NULL);
+        }
+        timerSlave_->transplant(currentFiber()->event_);
+      }
+      return;
+    case etAcquire :
+      {
+        AutoLock<InterlockedMutex> lock(acquireRequestsMutex_);
+        /*if( gettimeofday() - acquireSlavesSweepTime_ >= 10000000 ){
+          for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
+            if( !acquireSlaves_[i].started() || acquireSlaves_[i].finished() ){
+              acquireSlaves_[i].post();
+	            acquireSlaves_[i].Thread::wait();
+              acquireSlaves_.remove(i);
+            }
+          acquireSlavesSweepTime_ = gettimeofday();
+        }*/
+        for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
+          if( acquireSlaves_[i].transplant(currentFiber()->event_) ) break;
+        if( i < 0 ){
+          AutoPtr<AsyncAcquireSlave> slave(new AsyncAcquireSlave);
+          slave->stackSize(getpagesize() / 8u);
+          acquireSlaves_.add(slave.ptr(NULL));
+          acquireSlaves_[acquireSlaves_.count() - 1].resume();
+	        acquireSlaves_[acquireSlaves_.count() - 1].transplant(currentFiber()->event_);
+          /*if( acquireSlaves_.count() > numberOfProcessors() )
+            acquireSlaves_[acquireSlaves_.count() - 1].terminate();*/
+        }
+      }
+      return;
+  }
+  throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-uint8_t AsyncDescriptorsCluster::requester_[sizeof(Requester)];
+uint8_t BaseThread::requester_[sizeof(Requester)];
 //------------------------------------------------------------------------------
 //VOID CALLBACK AsyncDescriptorsCluster::fileIOCompletionRoutine(
 //  DWORD dwErrorCode,	// completion code

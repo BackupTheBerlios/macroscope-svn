@@ -36,9 +36,9 @@ template< class T> class Vector {
     uintptr_t count_;
     uintptr_t max_;
   public:
-                      Vector();
-                      Vector(const Vector< T> & s);
-                      ~Vector();
+    Vector();
+    Vector(const Vector< T> & s);
+    ~Vector();
 
     Vector< T> &      operator =(const Vector< T> & s);
     T &               operator[](intptr_t i);
@@ -70,6 +70,7 @@ template< class T> class Vector {
     intptr_t          searchCase(const T & element) const;
     intptr_t          bSearchCase(const T & element) const;
     uintptr_t         bSearchCase(const T & element, intptr_t & c) const;
+    Vector<T> & xchg(uintptr_t e1,uintptr_t e2);
 };
 //---------------------------------------------------------------------------
 template< class T> inline Vector< T>::Vector() : ptr_(NULL), count_(0), max_(0)
@@ -460,6 +461,16 @@ uintptr_t Vector<T>::bSearchCase(const T & element,intptr_t & c) const
       break;
   }
   return pos;
+}
+//-----------------------------------------------------------------------------
+template <class T> inline
+Vector<T> & Vector<T>::xchg(uintptr_t e1,uintptr_t e2)
+{
+  assert( e1 < count_ && e2 < count_ );
+  T * p = ptr_[e1];
+  ptr_[e1] = ptr_[e2];
+  ptr_[e2] = p;
+  return *this;
 }
 //-----------------------------------------------------------------------------
 }

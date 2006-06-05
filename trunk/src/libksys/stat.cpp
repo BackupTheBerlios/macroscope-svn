@@ -152,16 +152,17 @@ done:
 bool statAsync(const utf8::String & pathName,struct Stat & st)
 {
   assert( currentFiber() != NULL );
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->thread()->postRequest(pathName,st);
-  fiber->switchFiber(fiber->mainFiber());
-  assert( fiber->event().type_ == etStat );
-  if( fiber->event().errno_ != 0 )
+  currentFiber()->event_.string0_ = pathName;
+  currentFiber()->event_.stat_ = &st;
+  currentFiber()->event_.type_ = etStat;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etStat );
+  if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
-  return fiber->event().rval_;
+  return currentFiber()->event_.rval_;
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

@@ -210,15 +210,17 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
 #if defined(__WIN32__) || defined(__WIN64__)
   assert( socket.socket_ == INVALID_SOCKET );
   socket.open();
-  cluster()->postRequest(this,0,(void *) socket.socket_,0,ksys::etAccept);
+  fiber()->event_.socket_ = socket.socket_;
+  fiber()->event_.type_ = ksys::etAccept;
+  fiber()->thread()->postRequest(this);
   fiber()->switchFiber(fiber()->mainFiber());
-  assert( fiber()->event().type_ == ksys::etAccept );
-  if( fiber()->event().errno_ != 0 ){
+  assert( fiber()->event_.type_ == ksys::etAccept );
+  if( fiber()->event_.errno_ != 0 ){
     socket.detach();
     socket.close();
     throw ksys::ExceptionSP(
       new EAsyncSocket(
-        fiber()->event().errno_ + ksys::errorOffset,__PRETTY_FUNCTION__
+        fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__
       )
     );
 ///      LPSOCKADDR plsa, prsa;
@@ -243,14 +245,15 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   socket.detach();
 #elif HAVE_KQUEUE
   assert( socket.socket_ == INVALID_SOCKET );
-  cluster()->postIoRequest(this,0,0,0,ksys::etAccept);
+  fiber()->event_.type_ = ksys::etAccept;
+  fiber()->thread()->postRequest(this);
   fiber()->switchFiber(fiber()->mainFiber());
-  assert( fiber()->event().event_ == ksys::etAccept );
-  if( fiber()->event().errno_ != 0 )
+  assert( fiber()->event_.event_ == ksys::etAccept );
+  if( fiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EAsyncSocket(fiber()->event().errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
+      new EAsyncSocket(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
     );
-  socket.socket_ = (int) fiber()->event().data_;
+  socket.socket_ = (int) fiber()->event_.data_;
   if( fcntl(socket.socket_,F_SETFL,fcntl(socket.socket_,F_GETFL,0) | O_NONBLOCK) != 0 ){
     err = errno;
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
@@ -272,13 +275,15 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
 AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
 {
   open();
-  cluster()->postRequest(this,addr);
+  fiber()->event_.address_ = addr;
+  fiber()->event_.type_ = ksys::etConnect;
+  fiber()->thread()->postRequest(this);
   fiber()->switchFiber(fiber()->mainFiber());
-  assert( fiber()->event().type_ == ksys::etConnect );
-  if( fiber()->event().errno_ != 0 )
+  assert( fiber()->event_.type_ == ksys::etConnect );
+  if( fiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
       new EAsyncSocket(
-        fiber()->event().errno_ + ksys::errorOffset,__PRETTY_FUNCTION__
+        fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__
       )
     );
   return *this;
@@ -290,16 +295,19 @@ uint64_t AsyncSocket::sysRecv(void * buf,uint64_t len)
 #if HAVE_KQUEUE
 l1:
 #endif
-  cluster()->postRequest(this,0,buf,len,ksys::etRead);
+  fiber()->event_.buffer_ = buf;
+  fiber()->event_.length_ = len;
+  fiber()->event_.type_ = ksys::etRead;
+  fiber()->thread()->postRequest(this);
   fiber()->switchFiber(fiber()->mainFiber());
-  assert( fiber()->event().type_ == ksys::etRead );
+  assert( fiber()->event_.type_ == ksys::etRead );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( fiber()->event().errno_ != 0 || fiber()->event().count_ == 0 ){
+  if( fiber()->event_.errno_ != 0 || fiber()->event_.count_ == 0 ){
 #elif HAVE_KQUEUE
-  switch( fiber()->event().errno_ ){
+  switch( fiber()->event_.errno_ ){
     case 0           :
-//      if( fiber()->event().count_ > 0 ) break; else goto l2;
-      assert( fiber()->event().count_ > 0 );
+//      if( fiber()->event_.count_ > 0 ) break; else goto l2;
+      assert( fiber()->event_.count_ > 0 );
       break;
     case EWOULDBLOCK :
       goto l1;
@@ -312,10 +320,10 @@ l1:
 //l2:
 #endif
      throw ksys::ExceptionSP(new EAsyncSocket(
-        fiber()->event().errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
+        fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
       );
   }
-  r = fiber()->event().count_;
+  r = fiber()->event_.count_;
   nrb_ += r;
   return r;
 }
@@ -374,16 +382,19 @@ uint64_t AsyncSocket::sysSend(const void * buf,uint64_t len)
 #if HAVE_KQUEUE
 l1:
 #endif
-  cluster()->postRequest(this,0,buf,len,ksys::etWrite);
+  fiber()->event_.cbuffer_ = buf;
+  fiber()->event_.length_ = len;
+  fiber()->event_.type_ = ksys::etWrite;
+  fiber()->thread()->postRequest(this);
   fiber()->switchFiber(fiber()->mainFiber());
-  assert( fiber()->event().type_ == ksys::etWrite );
+  assert( fiber()->event_.type_ == ksys::etWrite );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( fiber()->event().errno_ != 0 || fiber()->event().count_ == 0 ){
+  if( fiber()->event_.errno_ != 0 || fiber()->event_.count_ == 0 ){
 #elif HAVE_KQUEUE
-  switch( fiber()->event().errno_ ){
+  switch( fiber()->event_.errno_ ){
     case 0           :
-//      if( fiber()->event().count_ > 0 ) break; else goto l2;
-      assert( fiber()->event().count_ > 0 );
+//      if( fiber()->event_.count_ > 0 ) break; else goto l2;
+      assert( fiber()->event_.count_ > 0 );
       break;
     case EWOULDBLOCK :
       goto l1;
@@ -396,10 +407,10 @@ l1:
 //l2:
 #endif  
      throw ksys::ExceptionSP(new EAsyncSocket(
-        fiber()->event().errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
+        fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
       );
   }
-  w = fiber()->event().count_;
+  w = fiber()->event_.count_;
   nsb_ += w;
   return w;
 }

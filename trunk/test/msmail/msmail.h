@@ -360,12 +360,12 @@ class ServerFiber : public ksock::ServerFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class SpoolWalker : public BaseFiber {
+class SpoolWalker : public Fiber {
   public:
     virtual ~SpoolWalker();
     SpoolWalker(Server & server);
   protected:
-    void execute();
+    void fiberExecute();
   private:
     Server & server_;
 };
@@ -445,7 +445,7 @@ class Server : public ksock::Server {
     };
   protected:
     ConfigSP config_;
-    BaseFiber * newFiber();
+    Fiber * newFiber();
     utf8::String spoolDir() const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;

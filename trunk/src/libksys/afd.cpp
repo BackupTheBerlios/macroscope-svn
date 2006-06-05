@@ -74,18 +74,22 @@ AsyncFile & AsyncFile::open()
 {
   if( file_ == INVALID_HANDLE_VALUE ){
     assert( currentFiber() != NULL );
-    assert( dynamic_cast<BaseFiber *>(currentFiber().ptr()) != NULL );
     attach();
-    cluster()->postRequest(this,fileName_,true,exclusive_,readOnly_);
+    fiber()->event_.string0_ = fileName_;
+    fiber()->event_.createIfNotExist_ = true;
+    fiber()->event_.exclusive_ = exclusive_;
+    fiber()->event_.readOnly_ = readOnly_;
+    fiber()->event_.type_ = etOpenFile;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    assert( fiber()->event().type_ == etOpenFile );
-    descriptor_ = fiber()->event().fileDescriptor_;
-    if( fiber()->event().errno_ != 0 )
+    assert( fiber()->event_.type_ == etOpenFile );
+    descriptor_ = fiber()->event_.fileDescriptor_;
+    if( fiber()->event_.errno_ != 0 )
       throw ksys::ExceptionSP(
-        new EFileError(fiber()->event().errno_ + errorOffset, fileName_)
+        new EFileError(fiber()->event_.errno_ + errorOffset, fileName_)
       );
 /*#if defined(__WIN32__) || defined(__WIN64__)
-    switch( fiber()->event().errno_ ){
+    switch( event().errno_ ){
       case ERROR_INVALID_DRIVE       :
       case ERROR_ACCESS_DENIED       :
       case ERROR_TOO_MANY_OPEN_FILES :
@@ -128,12 +132,16 @@ bool AsyncFile::tryOpen()
 {
   if( file_ == INVALID_HANDLE_VALUE ){
     assert( currentFiber() != NULL );
-    assert( dynamic_cast<BaseFiber *>(currentFiber().ptr()) != NULL );
     attach();
-    cluster()->postRequest(this,fileName_,createIfNotExist_,exclusive_,readOnly_);
+    fiber()->event_.string0_ = fileName_;
+    fiber()->event_.createIfNotExist_ = createIfNotExist_;
+    fiber()->event_.exclusive_ = exclusive_;
+    fiber()->event_.readOnly_ = readOnly_;
+    fiber()->event_.type_ = etOpenFile;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    assert( fiber()->event().type_ == etOpenFile );
-    descriptor_ = fiber()->event().fileDescriptor_;
+    assert( fiber()->event_.type_ == etOpenFile );
+    descriptor_ = fiber()->event_.fileDescriptor_;
   }
   return isOpen();
 }
@@ -191,97 +199,113 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
   return *this;
 }
 //---------------------------------------------------------------------------
-int64_t AsyncFile::read(void * buf, uint64_t size)
+int64_t AsyncFile::read(void * buf,uint64_t size)
 {
   assert( isOpen() );
   int64_t r = 0;
   while( size > 0 ){
     int64_t pos = tell();
-    cluster()->postRequest(this,pos,buf,size,etRead);
+    fiber()->event_.position_ = pos;
+    fiber()->event_.cbuffer_ = buf;
+    fiber()->event_.length_ = size;
+    fiber()->event_.type_ = etRead;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 ){
+    if( fiber()->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event().errno_);
+      SetLastError(fiber()->event_.errno_);
 #else
-      errno = fiber()->event().errno_;
+      errno = fiber()->event_.errno_;
 #endif
       return -1;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event().count_;
-    r += fiber()->event().count_;
-    size -= fiber()->event().count_;
-    seek(pos + fiber()->event().count_);
+    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+    r += fiber()->event_.count_;
+    size -= fiber()->event_.count_;
+    seek(pos + fiber()->event_.count_);
     if( r == 0 ) break;
   }
   return r;
 }
 //---------------------------------------------------------------------------
-int64_t AsyncFile::write(const void * buf, uint64_t size)
+int64_t AsyncFile::write(const void * buf,uint64_t size)
 {
   assert( isOpen() );
   int64_t w = 0;
   while( size > 0 ){
     int64_t pos = tell();
-    cluster()->postRequest(this,pos,(void *)buf,size,etWrite);
+    fiber()->event_.position_ = pos;
+    fiber()->event_.cbuffer_ = buf;
+    fiber()->event_.length_ = size;
+    fiber()->event_.type_ = etWrite;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 ){
+    if( fiber()->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event().errno_);
+      SetLastError(fiber()->event_.errno_);
 #else
-      errno = fiber()->event().errno_;
+      errno = fiber()->event_.errno_;
 #endif
       return -1;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event().count_;
-    w += fiber()->event().count_;
-    size -= fiber()->event().count_;
-    seek(pos + fiber()->event().count_);
+    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+    w += fiber()->event_.count_;
+    size -= fiber()->event_.count_;
+    seek(pos + fiber()->event_.count_);
     if( w == 0 ) break;
   }
   return w;
 }
 //---------------------------------------------------------------------------
-int64_t AsyncFile::read(uint64_t pos, void * buf, uint64_t size)
+int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
 {
   assert( isOpen() );
   int64_t r = 0;
   while( size > 0 ){
-    cluster()->postRequest(this,pos,buf,size,etRead);
+    fiber()->event_.position_ = pos;
+    fiber()->event_.cbuffer_ = buf;
+    fiber()->event_.length_ = size;
+    fiber()->event_.type_ = etRead;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 ){
+    if( fiber()->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event().errno_);
+      SetLastError(fiber()->event_.errno_);
 #else
-      errno = fiber()->event().errno_;
+      errno = fiber()->event_.errno_;
 #endif
       return -1;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event().count_;
-    r += fiber()->event().count_;
-    size -= fiber()->event().count_;
+    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+    r += fiber()->event_.count_;
+    size -= fiber()->event_.count_;
     if( r == 0 ) break;
   }
   return r;
 }
 //---------------------------------------------------------------------------
-int64_t AsyncFile::write(uint64_t pos, const void * buf, uint64_t size)
+int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
 {
   assert( isOpen() );
   int64_t w = 0;
   while( size > 0 ){
-    cluster()->postRequest(this,pos,(void *) buf,size,etWrite);
+    fiber()->event_.position_ = pos;
+    fiber()->event_.cbuffer_ = buf;
+    fiber()->event_.length_ = size;
+    fiber()->event_.type_ = etWrite;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 ){
+    if( fiber()->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event().errno_);
+      SetLastError(fiber()->event_.errno_);
 #else
-      errno = fiber()->event().errno_;
+      errno = fiber()->event_.errno_;
 #endif
       return -1;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event().count_;
-    w += fiber()->event().count_;
-    size -= fiber()->event().count_;
+    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+    w += fiber()->event_.count_;
+    size -= fiber()->event_.count_;
     if( w == 0 ) break;
   }
   return w;
@@ -295,7 +319,7 @@ AsyncFile & AsyncFile::readBuffer(void * buf, uint64_t size)
     throw ksys::ExceptionSP(new EFileEOF(EIO, __PRETTY_FUNCTION__));
   if( r < 0 || (uint64_t) r != size )
     throw ksys::ExceptionSP(new EFileError(
-      fiber()->event().errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -305,7 +329,7 @@ AsyncFile & AsyncFile::writeBuffer(const void * buf, uint64_t size)
   int64_t w = write(buf, size);
   if( w < 0 && size > 0 )
     throw ksys::ExceptionSP(new EFileError(
-      fiber()->event().errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
   if( (uint64_t) w != size && size > 0 )
     throw ksys::ExceptionSP(new EFileError(EIO, __PRETTY_FUNCTION__));
   return *this;
@@ -319,7 +343,7 @@ AsyncFile & AsyncFile::readBuffer(uint64_t pos, void * buf, uint64_t size)
     throw ksys::ExceptionSP(new EFileEOF(EIO, __PRETTY_FUNCTION__));
   if( r < 0 || (uint64_t) r != size )
     throw ksys::ExceptionSP(new EFileError(
-      fiber()->event().errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -329,7 +353,7 @@ AsyncFile & AsyncFile::writeBuffer(uint64_t pos, const void * buf, uint64_t size
   int64_t w = write(pos, buf, size);
   if( w < 0 && size > 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber()->event().errno_ + errorOffset, __PRETTY_FUNCTION__));
+      new EFileError(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
   if( (uint64_t) w != size && size > 0 )
     throw ksys::ExceptionSP(new EFileError(EIO, __PRETTY_FUNCTION__));
   return *this;
@@ -339,14 +363,19 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
 {
   assert( isOpen() );
 #if defined(__WIN32__) || defined(__WIN64__)
-  fiber()->event().errno_ = 0;
+  fiber()->event_.errno_ = 0;
   if( !exclusive_ ){
-    cluster()->postRequest(this,pos,size,AsyncEvent::tryRDLock);
+    if( size == 0 ) size = ~UINT64_C(0);
+    fiber()->event_.type_ = etLockFile;
+    fiber()->event_.lockType_ = AsyncEvent::tryRDLock;
+    fiber()->event_.position_ = pos;
+    fiber()->event_.length_ = size;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 && fiber()->event().errno_ != ERROR_LOCK_VIOLATION )
-      throw ksys::ExceptionSP(new EFLock(fiber()->event().errno_ + errorOffset, __PRETTY_FUNCTION__));
+    if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
+      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
   }
-  return fiber()->event().errno_ == 0;
+  return fiber()->event_.errno_ == 0;
 #else
   if( !exclusive_ ){
     struct flock  fl;
@@ -368,14 +397,19 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
 {
   assert( isOpen() );
 #if defined(__WIN32__) || defined(__WIN64__)
-  fiber()->event().errno_ = 0;
+  fiber()->event_.errno_ = 0;
   if( !exclusive_ ){
-    cluster()->postRequest(this,pos,size,AsyncEvent::tryWRLock);
+    if( size == 0 ) size = ~UINT64_C(0);
+    fiber()->event_.type_ = etLockFile;
+    fiber()->event_.lockType_ = AsyncEvent::tryWRLock;
+    fiber()->event_.position_ = pos;
+    fiber()->event_.length_ = size;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 && fiber()->event().errno_ != ERROR_LOCK_VIOLATION )
-      throw ksys::ExceptionSP(new EFLock(fiber()->event().errno_ + errorOffset, __PRETTY_FUNCTION__));
+    if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
+      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
   }
-  return fiber()->event().errno_ == 0;
+  return fiber()->event_.errno_ == 0;
 #else
   if( !exclusive_ ){
     struct flock  fl;
@@ -398,12 +432,15 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos, uint64_t size)
   assert( isOpen() );
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    cluster()->postRequest(this,pos,size,AsyncEvent::rdLock);
+    if( size == 0 ) size = ~UINT64_C(0);
+    fiber()->event_.type_ = etLockFile;
+    fiber()->event_.lockType_ = AsyncEvent::rdLock;
+    fiber()->event_.position_ = pos;
+    fiber()->event_.length_ = size;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 ){
-      int32_t err = GetLastError();
-      throw ksys::ExceptionSP(new EFLock(err + errorOffset, __PRETTY_FUNCTION__));
-    }
+    if( fiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
 #else
     struct flock  fl;
     fl.l_start = pos;
@@ -424,12 +461,15 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
   assert( isOpen() );
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    cluster()->postRequest(this,pos,size,AsyncEvent::wrLock);
+    if( size == 0 ) size = ~UINT64_C(0);
+    fiber()->event_.type_ = etLockFile;
+    fiber()->event_.lockType_ = AsyncEvent::wrLock;
+    fiber()->event_.position_ = pos;
+    fiber()->event_.length_ = size;
+    fiber()->thread()->postRequest(this);
     fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event().errno_ != 0 ){
-      int32_t err = GetLastError();
-      throw ksys::ExceptionSP(new EFLock(err + errorOffset, __PRETTY_FUNCTION__));
-    }
+    if( fiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
 #else
     struct flock  fl;
     fl.l_start = pos;
@@ -521,8 +561,8 @@ uintptr_t AsyncFile::gets(AutoPtr<char> & p,bool * eof)
   char * a, * q;
   if( eof != NULL ) *eof = false;
   for(;;){
-    a = p.realloc(l + 256).ptr() + l;
-    rr = r = (intptr_t) read(a, 256);
+    a = p.realloc(l + getpagesize()).ptr() + l;
+    rr = r = (intptr_t) read(a,getpagesize());
     if( r <= 0 ){
       if( eof != NULL ) *eof = true;
       break;

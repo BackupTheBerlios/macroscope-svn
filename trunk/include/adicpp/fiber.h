@@ -99,8 +99,10 @@ class AsyncEvent {
           const void * cbuffer_;
 #if defined(__WIN32__) || defined(__WIN64__)
           HANDLE fileDescriptor_;
+          SOCKET socket_;
 #else
           int fileDescriptor_;
+          int socket_;
 #endif
           FiberInterlockedMutex * mutex_;
           struct Stat * stat_;
@@ -237,13 +239,11 @@ inline uintptr_t AsyncDescriptorKey::hash(bool) const
 //---------------------------------------------------------------------------
 class AsyncDescriptor : public AsyncDescriptorKey {
   friend class Fiber;
-  friend class AsyncDescriptorsCluster;
   friend class AsyncIoSlave;
   friend class AsyncOpenFileSlave;
   friend class Requester;
   friend class BaseServer;
   friend class BaseThread;
-  friend class BaseFiber;
   public:
     virtual ~AsyncDescriptor();
     AsyncDescriptor();
@@ -252,9 +252,6 @@ class AsyncDescriptor : public AsyncDescriptorKey {
     AsyncDescriptor & detach();
 
     Fiber * const & fiber() const;
-    AsyncDescriptor & fiber(Fiber * fiber);
-    AsyncDescriptorsCluster * const & cluster() const;
-    AsyncDescriptor & cluster(AsyncDescriptorsCluster * cluster);
 
     virtual bool isSocket() const;
 
@@ -277,7 +274,6 @@ class AsyncDescriptor : public AsyncDescriptorKey {
     virtual void flush2();
   private:
     Fiber * fiber_;
-    AsyncDescriptorsCluster * cluster_;
 
     mutable EmbeddedListNode<AsyncDescriptor> fiberListNode_;
     static EmbeddedListNode<AsyncDescriptor> & fiberListNode(const AsyncDescriptor & object){
@@ -298,10 +294,10 @@ class AsyncDescriptor : public AsyncDescriptorKey {
 //---------------------------------------------------------------------------
 inline AsyncDescriptor::~AsyncDescriptor()
 {
-  assert( fiber_ == NULL && cluster_ == NULL );
+  assert( fiber_ == NULL );
 }
 //---------------------------------------------------------------------------
-inline AsyncDescriptor::AsyncDescriptor() : fiber_(NULL), cluster_(NULL)
+inline AsyncDescriptor::AsyncDescriptor() : fiber_(NULL)
 {
 }
 //---------------------------------------------------------------------------
@@ -310,32 +306,15 @@ inline Fiber * const & AsyncDescriptor::fiber() const
   return fiber_;
 }
 //---------------------------------------------------------------------------
-inline AsyncDescriptor & AsyncDescriptor::fiber(Fiber * fiber)
-{
-  fiber_ = fiber;
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline AsyncDescriptorsCluster * const & AsyncDescriptor::cluster() const
-{
-  return cluster_;
-}
-//---------------------------------------------------------------------------
-inline AsyncDescriptor & AsyncDescriptor::cluster(AsyncDescriptorsCluster * cluster)
-{
-  cluster_ = cluster;
-  return *this;
-}
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Fiber {
   friend void initialize();
   friend void cleanup();
+  friend class BaseThread;
+  friend class BaseServer;
   friend class Requester;
   friend class AsyncDescriptor;
-  friend class AsyncDescriptorsCluster;
-  friend class BaseFiber;
   public:
     virtual ~Fiber();
     Fiber();
@@ -346,9 +325,37 @@ class Fiber {
     const bool & finished() const;
 
     void switchFiber(Fiber * fiber) GNUG_NOTHROW;
-    void switchFiber(Fiber & fiber) GNUG_NOTHROW;
 
-    Fiber & mainFiber() const;
+    Fiber * const mainFiber() const;
+
+    BaseThread * const & thread() const;
+
+    void attachDescriptor(AsyncDescriptor & descriptor);
+    void detachDescriptor(AsyncDescriptor & descriptor);
+
+    AsyncEvent event_;
+  protected:
+    bool started_;
+    bool terminated_;
+    bool finished_;
+
+    virtual void fiberExecute() = 0;
+  private:
+#if defined(__WIN32__) || defined(__WIN64__)
+    static VOID WINAPI start(Fiber * fiber);
+    LPVOID fiber_;
+#else
+    static void start(Fiber * fiber, void * param, void (*ip) (void *)) GNUG_NOTHROW_CDECL;
+    AutoPtr<uint8_t> stack_;
+    void * stackPointer_;
+    void switchFiber2(Fiber * fiber) GNUG_NOTHROW_CDECL;
+#endif
+    BaseThread * thread_;
+    EmbeddedList<
+      AsyncDescriptor,
+      AsyncDescriptor::fiberListNode,
+      AsyncDescriptor::fiberListNodeObject
+    > descriptorsList_;
 
     Fiber & allocateStack(void * ip,void * param,size_t size,Fiber * mainFiber,uintptr_t dummy1 = 0,uintptr_t dummy2 = 0);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -356,38 +363,30 @@ class Fiber {
     Fiber & deleteFiber();
     Fiber & clearFiber();
     Fiber & convertThreadToFiber();
-    LPVOID fiber() const;
-#endif
-    AsyncEvent & event() const;
-    virtual void attachDescriptor(AsyncDescriptor & descriptor);
-    virtual void detachDescriptor(AsyncDescriptor & descriptor);
-  protected:
-    bool started_;
-    bool terminated_;
-    bool finished_;
-  private:
-    Fiber * mainFiber_;
-#if defined(__WIN32__) || defined(__WIN64__)
-    static VOID WINAPI start(Fiber * fiber);
-    LPVOID              fiber_;
-    void *              ip_;
-    void *              param_;
 #else
-    static void start(Fiber * fiber, void * param, void (*ip) (void *)) GNUG_NOTHROW_CDECL;
-    AutoPtr<uint8_t> stack_;
-    void * stackPointer_;
-    void switchFiber2(Fiber * fiber) GNUG_NOTHROW_CDECL;
+    static void fiber2(Fiber * fiber);
 #endif
-    EmbeddedList<
-      AsyncDescriptor,
-      AsyncDescriptor::fiberListNode,
-      AsyncDescriptor::fiberListNodeObject
-    > descriptorsList_;
-    mutable AsyncEvent event_;
 
+    void detachDescriptors();
+
+    mutable EmbeddedListNode<Fiber> node_;
+    static EmbeddedListNode<Fiber> & node(const Fiber & object){
+      return object.node_;
+    }
+    static Fiber & nodeObject(const EmbeddedListNode<Fiber> & node,Fiber * p = NULL){
+      return node.object(p->node_);
+    }
+
+    static uint8_t currentFiberPlaceHolder[];
+    friend Fiber * currentFiber();
     static void initialize();
     static void cleanup();
 };
+//---------------------------------------------------------------------------
+inline BaseThread * const & Fiber::thread() const
+{
+  return thread_;
+}
 //---------------------------------------------------------------------------
 inline const bool & Fiber::started() const
 {
@@ -410,39 +409,7 @@ inline const bool & Fiber::finished() const
   return finished_;
 }
 //---------------------------------------------------------------------------
-inline void Fiber::switchFiber(Fiber & fiber)
-{
-  switchFiber(&fiber);
-}
-//---------------------------------------------------------------------------
-inline Fiber & Fiber::mainFiber() const
-{
-  return *mainFiber_;
-}
-//---------------------------------------------------------------------------
-inline AsyncEvent & Fiber::event() const
-{
-  return event_;
-}
-//---------------------------------------------------------------------------
-extern uint8_t currentFiberPlaceHolder[];
-inline ThreadLocalVariable<Fiber> & currentFiber()
-{
-  return *reinterpret_cast<ThreadLocalVariable< Fiber> *>(currentFiberPlaceHolder);
-}
-//---------------------------------------------------------------------------
-inline bool isRunInFiber()
-{
-  return currentFiber() != NULL;
-}
-//---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-//---------------------------------------------------------------------------
-inline void Fiber::switchFiber(Fiber * fiber)
-{
-  currentFiber() = fiber;
-  SwitchToFiber(fiber->fiber_);
-}
 //---------------------------------------------------------------------------
 inline Fiber & Fiber::createFiber(uintptr_t dwStackSize)
 {
@@ -450,7 +417,7 @@ inline Fiber & Fiber::createFiber(uintptr_t dwStackSize)
 #ifdef __WIN64__
   fiber_ = CreateFiber(dwStackSize, (LPFIBER_START_ROUTINE) start, this);
 #else
-  fiber_ = CreateFiber((DWORD) dwStackSize, (LPFIBER_START_ROUTINE) start, this);
+  fiber_ = CreateFiber((DWORD) dwStackSize,(LPFIBER_START_ROUTINE) start,this);
 #endif
   if( fiber_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
@@ -462,7 +429,7 @@ inline Fiber & Fiber::createFiber(uintptr_t dwStackSize)
 inline Fiber & Fiber::convertThreadToFiber()
 {
   assert( fiber_ == NULL );
-  if( (fiber_ = ConvertThreadToFiber(NULL)) == NULL ){
+  if( (fiber_ = ConvertThreadToFiber(this)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
     throw ExceptionSP(new Exception(err, __PRETTY_FUNCTION__));
   }
@@ -472,21 +439,20 @@ inline Fiber & Fiber::convertThreadToFiber()
 inline Fiber & Fiber::deleteFiber()
 {
   DeleteFiber(fiber_);
-  fiber_ = NULL;
-  finished_ = true;
+  clearFiber();
   return *this;
 }
 //---------------------------------------------------------------------------
 inline Fiber & Fiber::clearFiber()
 {
   fiber_ = NULL;
-  finished_ = true;
   return *this;
 }
 //---------------------------------------------------------------------------
-inline LPVOID Fiber::fiber() const
+inline void Fiber::switchFiber(Fiber * fiber)
 {
-  return fiber_;
+  *reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder) = fiber;
+  SwitchToFiber(fiber->fiber_);
 }
 //---------------------------------------------------------------------------
 #else
@@ -498,6 +464,16 @@ inline void Fiber::switchFiber(Fiber * fiber)
 }
 //---------------------------------------------------------------------------
 #endif
+//---------------------------------------------------------------------------
+inline Fiber * currentFiber()
+{
+  return *reinterpret_cast<ThreadLocalVariable<Fiber> *>(Fiber::currentFiberPlaceHolder);
+}
+//---------------------------------------------------------------------------
+inline bool isRunInFiber()
+{
+  return currentFiber() != NULL;
+}
 //---------------------------------------------------------------------------
 inline AsyncDescriptor & AsyncDescriptor::attach()
 {
@@ -576,7 +552,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
     virtual ~AsyncIoSlave();
     AsyncIoSlave();
 
-    void transplant(Events & requests);
+    bool transplant(AsyncEvent & requests);
 #if HAVE_KQUEUE
     void cancelEvent(const Events & request);
 #endif
@@ -606,7 +582,7 @@ class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMu
     virtual ~AsyncOpenFileSlave();
     AsyncOpenFileSlave();
 
-    void transplant(Events & requests);
+    bool transplant(AsyncEvent & requests);
   protected:
   private:
     AsyncOpenFileSlave(const AsyncOpenFileSlave &){}
@@ -624,7 +600,7 @@ class AsyncTimerSlave : public Thread, public Semaphore, public InterlockedMutex
     virtual ~AsyncTimerSlave();
     AsyncTimerSlave();
 
-    void transplant(Events & requests);
+    void transplant(AsyncEvent & requests);
     void abortTimer();
   protected:
   private:
@@ -643,7 +619,7 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
     virtual ~AsyncAcquireSlave();
     AsyncAcquireSlave();
 
-    void transplant(Events & requests);
+    bool transplant(AsyncEvent & requests);
   protected:
   private:
     AsyncAcquireSlave(const AsyncAcquireSlave &){}
@@ -654,7 +630,7 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
     Events newRequests_;
     HANDLE sems_[MAXIMUM_WAIT_OBJECTS];
     AsyncEvent * eSems_[MAXIMUM_WAIT_OBJECTS];
-   intptr_t sp_;
+    intptr_t sp_;
 #endif
 
     void execute();
@@ -662,37 +638,29 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Requester : public Thread, public Semaphore, public InterlockedMutex {
-  friend class AsyncDescriptorsCluster;
+class Requester {
   public:
-    virtual ~Requester();
+    ~Requester();
     Requester();
 
     void abortTimer();
+    void postRequest(AsyncDescriptor * descriptor);
   protected:
   private:
-    Events ioRequests_;
-    Vector<AsyncIoSlave> slaves_;
-    Events ofRequests_;
-    Vector<AsyncOpenFileSlave> ofSlaves_;
-    Events timerRequests_;
-    AutoPtr<AsyncTimerSlave> timerSlave_;
-    Events acquireRequests_;
-    Vector<AsyncAcquireSlave> acquireSlaves_;
+    InterlockedMutex ioRequestsMutex_;
+    Vector<AsyncIoSlave> ioSlaves_;
+    int64_t ioSlavesSweepTime_;
 
-    void execute();
-    void postRequest(AsyncDescriptor * descriptor,uint64_t position,const void * buffer,uint64_t length,AsyncEventType ioType);
-    void postRequest(AsyncDescriptor * descriptor,const ksock::SockAddr & addr);
-    void postRequest(AsyncDescriptor * descriptor,const utf8::String & fileName,bool createIfNotExist,bool exclusive,bool readOnly);
-    void postRequest(AsyncDescriptor * descriptor,uint64_t position,uint64_t length,AsyncEvent::LockFileType lockType);
-    void postRequest(Vector<utf8::String> * dirList,const utf8::String & dirAndMask,const utf8::String & exMask,bool recursive,bool includeDirs);
-    void postRequest(AsyncEventType event,const utf8::String & name,bool recursive);
-    void postRequest(const utf8::String & name,uintptr_t defPort);
-    void postRequest(const utf8::String & name,struct Stat & stat);
-    void postRequest(const ksock::SockAddr & address);
-    void postRequest(const utf8::String & oldName,const utf8::String & newName);
-    void postRequest(uint64_t timeout);
-    void postRequest(FiberInterlockedMutex * mutex);
+    InterlockedMutex ofRequestsMutex_;
+    Vector<AsyncOpenFileSlave> ofSlaves_;
+    int64_t ofSlavesSweepTime_;
+
+    InterlockedMutex timerRequestsMutex_;
+    AutoPtr<AsyncTimerSlave> timerSlave_;
+
+    InterlockedMutex acquireRequestsMutex_;
+    Vector<AsyncAcquireSlave> acquireSlaves_;
+    int64_t acquireSlavesSweepTime_;
 
     Requester(const Requester &){}
     void operator = (const Requester &){}
@@ -700,185 +668,10 @@ class Requester : public Thread, public Semaphore, public InterlockedMutex {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AsyncDescriptorsCluster {
-  friend class BaseFiber;
-  friend class BaseThread;
-  friend class BaseServer;
-  friend class AsyncIoSlave;
-  friend class AsyncOpenFileSlave;
-  friend class AsyncTimerSlave;
-  friend class AsyncAcquireSlave;
-  friend class FiberInterlockedMutex;
-  friend class AsyncDescriptor;
+class BaseThread : public Thread, public Fiber {
   friend void initialize();
   friend void cleanup();
-  public:
-    virtual ~AsyncDescriptorsCluster();
-    AsyncDescriptorsCluster();
-
-    void postRequest(AsyncDescriptor * descriptor,uint64_t position,const void * buffer,uint64_t length,AsyncEventType ioType);
-    void postRequest(AsyncDescriptor * descriptor,const ksock::SockAddr & addr);
-    void postRequest(AsyncDescriptor * descriptor,const utf8::String & fileName,bool createIfNotExist,bool exclusive,bool readOnly);
-    void postRequest(AsyncDescriptor * descriptor,uint64_t position,uint64_t length,AsyncEvent::LockFileType lockType);
-    void postRequest(Vector<utf8::String> * dirList,const utf8::String & dirAndMask,const utf8::String & exMask,bool recursive,bool includeDirs);
-    void postRequest(AsyncEventType event,const utf8::String & name,bool recursive);
-    void postRequest(const utf8::String & name,uintptr_t defPort);
-    void postRequest(const utf8::String & name,struct Stat & stat);
-    void postRequest(const ksock::SockAddr & address);
-    void postRequest(const utf8::String & oldName,const utf8::String & newName);
-    void postRequest(uint64_t timeout);
-    void postRequest(FiberInterlockedMutex * mutex);
-  protected:
-    Semaphore semaphore_;
-    InterlockedMutex mutex_;
-    virtual void queue() = 0;
-    virtual void sweepFiber(Fiber * fiber) = 0;
-  private:
-    Events events_;
-    EmbeddedList<
-      AsyncDescriptor,
-      AsyncDescriptor::clusterListNode,
-      AsyncDescriptor::clusterListNodeObject
-    > descriptorsList_;
-
-    static uintptr_t refCount_;
-    static uint8_t requester_[];
-    static Requester & requester();
-
-#if defined(__WIN32__) || defined(__WIN64__)
-    static VOID CALLBACK fileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped);
-    static VOID CALLBACK socketIOCompletionRoutine(DWORD dwError, DWORD cbTransferred, LPWSAOVERLAPPED lpOverlapped, DWORD dwFlags);
-#endif
-    static void allocateSig();
-    static void deallocateSig();
-    static void initialize();
-    static void cleanup();
-
-    void attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber);
-    void detachDescriptor(AsyncDescriptor & descriptor);
-
-    void postEvent(AsyncEventType event,Fiber * fiber);
-    void postEvent(AsyncDescriptor * descriptor,int32_t errNo,AsyncEventType event,uint64_t count);
-    void postEvent(AsyncDescriptor * descriptor,int32_t errNo,AsyncEventType event,const AsyncDescriptorKey & file);
-};
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(AsyncDescriptor * descriptor, uint64_t position, const void * buffer, uint64_t length, AsyncEventType ioType)
-{
-  requester().postRequest(descriptor,position,buffer,length,ioType);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(AsyncDescriptor * descriptor, const ksock::SockAddr & addr)
-{
-  requester().postRequest(descriptor,addr);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(AsyncDescriptor * descriptor,const utf8::String & fileName,bool createIfNotExist,bool exclusive,bool readOnly)
-{
-  requester().postRequest(descriptor,fileName,createIfNotExist,exclusive,readOnly);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(AsyncDescriptor * descriptor,uint64_t position,uint64_t length,AsyncEvent::LockFileType lockType)
-{
-  requester().postRequest(descriptor,position,length,lockType);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(Vector<utf8::String> * dirList,const utf8::String & dirAndMask,const utf8::String & exMask,bool recursive,bool notIncludeDirs)
-{
-  requester().postRequest(dirList,dirAndMask,exMask,recursive,notIncludeDirs);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(AsyncEventType event,const utf8::String & name,bool recursive)
-{
-  requester().postRequest(event,name,recursive);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(const utf8::String & name,uintptr_t defPort)
-{
-  requester().postRequest(name,defPort);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(const utf8::String & name,struct Stat & stat)
-{
-  requester().postRequest(name,stat);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(const ksock::SockAddr & address)
-{
-  requester().postRequest(address);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(const utf8::String & oldName,const utf8::String & newName)
-{
-  requester().postRequest(oldName,newName);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(uint64_t timeout)
-{
-  requester().postRequest(timeout);
-}
-//---------------------------------------------------------------------------
-inline void AsyncDescriptorsCluster::postRequest(FiberInterlockedMutex * mutex)
-{
-  requester().postRequest(mutex);
-}
-//---------------------------------------------------------------------------
-inline Requester & AsyncDescriptorsCluster::requester()
-{
-  return *reinterpret_cast<Requester *>(requester_);
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class BaseFiber : public Fiber {
-  friend class BaseThread;
-  friend class BaseServer;
-  friend class FiberInterlockedMutex;
-  friend class FiberMutex;
-  friend class FiberSemaphore;
-  public:
-    virtual ~BaseFiber();
-    BaseFiber();
-
-    BaseThread * const & thread() const;
-    BaseFiber & thread(BaseThread * threadL);
-    void attachDescriptor(AsyncDescriptor & descriptor);
-    void detachDescriptor(AsyncDescriptor & descriptor);
-  protected:
-    virtual void execute() = 0;
-  private:
-    BaseThread * thread_;
-
-    static void fiber2(BaseFiber * fiber);
-    void detachDescriptors();
-
-    mutable EmbeddedListNode<BaseFiber> node_;
-    static EmbeddedListNode<BaseFiber> & node(const BaseFiber & object){
-      return object.node_;
-    }
-    static BaseFiber & nodeObject(const EmbeddedListNode<BaseFiber> & node,BaseFiber * p = NULL){
-      return node.object(p->node_);
-    }
-
-    //FiberInterlockedMutex::LockNode lockNode_;
-};
-//---------------------------------------------------------------------------
-inline BaseThread * const & BaseFiber::thread() const
-{
-  return thread_;
-}
-//---------------------------------------------------------------------------
-inline BaseFiber & BaseFiber::thread(BaseThread * threadL)
-{
-  thread_ = threadL;
-  return *this;
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class BaseThread : public Thread, public AsyncDescriptorsCluster, public Fiber {
-  friend class BaseFiber;
+  friend class Fiber;
   friend class BaseServer;
   public:
     virtual ~BaseThread();
@@ -886,20 +679,39 @@ class BaseThread : public Thread, public AsyncDescriptorsCluster, public Fiber {
 
     BaseServer * const &  server() const;
     BaseThread & server(BaseServer * serverL);
+
+    void postRequest(AsyncDescriptor * descriptor = NULL);
+    void postEvent(AsyncEvent * event);
   protected:
+  private:
+    BaseServer * server_;
+    Semaphore semaphore_;
+    InterlockedMutex mutex_;
+    Events events_;
     EmbeddedList<
-      BaseFiber,
-      BaseFiber::node,
-      BaseFiber::nodeObject
+      Fiber,
+      Fiber::node,
+      Fiber::nodeObject
     > fibers_;
+    EmbeddedList<
+      AsyncDescriptor,
+      AsyncDescriptor::clusterListNode,
+      AsyncDescriptor::clusterListNodeObject
+    > descriptorsList_;
+//    uintptr_t maxStackSize_;
+
+    static uint8_t requester_[];
+    static Requester & requester();
+
     void queue();
     void sweepFiber(Fiber * fiber);
     void detectMaxFiberStackSize();
-  private:
-    BaseServer * server_;
-    uintptr_t maxStackSize_;
+
+    void attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber);
+    void detachDescriptor(AsyncDescriptor & descriptor);
 
     void execute();
+    void fiberExecute() {}
 
     mutable EmbeddedListNode<BaseThread> serverListNode_;
     static EmbeddedListNode<BaseThread> & serverListNode(const BaseThread & object){
@@ -908,6 +720,9 @@ class BaseThread : public Thread, public AsyncDescriptorsCluster, public Fiber {
     static BaseThread & serverListNodeObject(const EmbeddedListNode<BaseThread> & node,BaseThread * p = NULL){
       return node.object(p->serverListNode_);
     }
+
+    static void initialize();
+    static void cleanup();
 };
 //---------------------------------------------------------------------------
 inline BaseServer * const & BaseThread::server() const
@@ -921,10 +736,42 @@ inline BaseThread & BaseThread::server(BaseServer * serverL)
   return *this;
 }
 //---------------------------------------------------------------------------
+inline void BaseThread::postRequest(AsyncDescriptor * descriptor)
+{
+  requester().postRequest(descriptor);
+}
+//---------------------------------------------------------------------------
+inline void BaseThread::postEvent(AsyncEvent * event)
+{
+  AutoLock<InterlockedMutex> lock(mutex_);
+  events_.insToTail(*event);
+  if( events_.count() < 2 ) semaphore_.post();
+}
+//---------------------------------------------------------------------------
+inline Requester & BaseThread::requester()
+{
+  return *reinterpret_cast<Requester *>(requester_);
+}
+//------------------------------------------------------------------------------
+inline void Fiber::attachDescriptor(AsyncDescriptor & descriptor)
+{
+  thread_->attachDescriptor(descriptor,*this);
+}
+//------------------------------------------------------------------------------
+inline void Fiber::detachDescriptor(AsyncDescriptor & descriptor)
+{
+  thread_->detachDescriptor(descriptor);
+}
+//------------------------------------------------------------------------------
+inline Fiber * const Fiber::mainFiber() const
+{
+  return thread_;
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class BaseServer {
-  friend class BaseFiber;
+  friend class Fiber;
   friend class BaseThread;
   public:
     virtual ~BaseServer();
@@ -954,8 +801,8 @@ class BaseServer {
     void closeServer();
   protected:
     virtual BaseThread * newThread();
-    virtual BaseFiber * newFiber() = 0;
-    virtual void attachFiber(BaseFiber & fiber);
+    virtual Fiber * newFiber() = 0;
+    virtual void attachFiber(const AutoPtr<Fiber> & fiber);
     void sweepThreads();
   private:
     mutable InterlockedMutex                                          mutex_;

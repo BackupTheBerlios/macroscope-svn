@@ -101,12 +101,13 @@ inline StreamCryptor::StreamCryptor()
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private ksys::SHA256Filter {
+  friend class SockAddr;
   friend class Server;
   public:
     virtual ~AsyncSocket();
     AsyncSocket();
 
-    bool              isSocket() const;
+    bool isSocket() const;
     // low level methods
     AsyncSocket &     open(int domain = PF_INET, int type = SOCK_STREAM, int protocol = IPPROTO_IP);
     AsyncSocket &     close();
@@ -421,15 +422,15 @@ inline uint64_t AsyncSocket::rscRatio() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class ServerFiber : public ksys::BaseFiber, public AsyncSocket {
+class ServerFiber : public ksys::Fiber, public AsyncSocket {
   friend class AcceptFiber;
   public:
     virtual ~ServerFiber();
     ServerFiber();
   protected:
-    virtual void  main() = 0;
+    virtual void main() = 0;
   private:
-    void execute();
+    void fiberExecute();
 };
 //---------------------------------------------------------------------------
 inline ServerFiber::~ServerFiber()
@@ -442,7 +443,7 @@ inline ServerFiber::ServerFiber()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AcceptFiber : public ksys::BaseFiber, public AsyncSocket {
+class AcceptFiber : public ksys::Fiber, public AsyncSocket {
   friend class Server;
   public:
     virtual ~AcceptFiber();
@@ -450,7 +451,7 @@ class AcceptFiber : public ksys::BaseFiber, public AsyncSocket {
   protected:
   private:
     ksys::InterlockedMutex mutex_;
-    void execute();
+    void fiberExecute();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -487,14 +488,14 @@ inline Server & Server::addBind(const SockAddr & addr)
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class ClientFiber : public ksys::BaseFiber, public AsyncSocket {
+class ClientFiber : public ksys::Fiber, public AsyncSocket {
   public:
     virtual ~ClientFiber();
     ClientFiber();
   protected:
     virtual void main() = 0;
   private:
-    void execute();
+    void fiberExecute();
 };
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -509,8 +510,8 @@ class Client : public ksys::BaseServer {
     virtual void close();
   protected:
   private:
-    void execute();
-    ksys::BaseFiber * newFiber(){ return NULL; }
+    void fiberExecute();
+    ksys::Fiber * newFiber(){ return NULL; }
 };
 //------------------------------------------------------------------------------
 inline Client::~Client()

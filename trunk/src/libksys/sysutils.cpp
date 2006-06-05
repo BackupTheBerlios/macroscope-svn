@@ -722,63 +722,64 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
 bool createDirectoryAsync(const utf8::String & name)
 {
   assert( currentFiber() != NULL );
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->thread()->postRequest(etCreateDir,name,false);
-  fiber->switchFiber(fiber->mainFiber());
-  assert( fiber->event().type_ == etCreateDir );
+  currentFiber()->event_.string0_ = name;
+  currentFiber()->event_.type_ = etCreateDir;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etCreateDir );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( fiber->event().errno_ - errorOffset == ERROR_ALREADY_EXISTS ) return false;
+  if( currentFiber()->event_.errno_ - errorOffset == ERROR_ALREADY_EXISTS ) return false;
 #else
-  if( fiber->event().errno_ == EEXIST ) return false;
+  if( currentFiber()->event_.errno_ == EEXIST ) return false;
 #endif
-  if( fiber->event().errno_ != 0 )
+  if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
-  return fiber->event().rval_;
+  return currentFiber()->event_.rval_;
 }
 //---------------------------------------------------------------------------
 bool removeDirectoryAsync(const utf8::String & name,bool recursive)
 {
   assert( currentFiber() != NULL );
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->thread()->postRequest(etRemoveDir,name,recursive);
-  fiber->switchFiber(fiber->mainFiber());
-  assert( fiber->event().type_ == etRemoveDir );
+  currentFiber()->event_.string0_ = name;
+  currentFiber()->event_.recursive_ = recursive;
+  currentFiber()->event_.type_ = etRemoveDir;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etRemoveDir );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( fiber->event().errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
-      fiber->event().errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
+  if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
+      currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
 #else
-  if( fiber->event().errno_ == ENOENT ) return false;
+  if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
-  if( fiber->event().errno_ != 0 )
+  if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
-  return fiber->event().rval_;
+  return currentFiber()->event_.rval_;
 }
 //---------------------------------------------------------------------------
 bool removeAsync(const utf8::String & name)
 {
   assert( currentFiber() != NULL );
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->thread()->postRequest(etRemoveFile,name,false);
-  fiber->switchFiber(fiber->mainFiber());
-  assert( fiber->event().type_ == etRemoveFile );
+  currentFiber()->event_.string0_ = name;
+  currentFiber()->event_.type_ = etRemoveFile;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etRemoveFile );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( fiber->event().errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
-      fiber->event().errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
+  if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
+      currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
 #else
-  if( fiber->event().errno_ == ENOENT ) return false;
+  if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
-  if( fiber->event().errno_ != 0 )
+  if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
-  return fiber->event().rval_;
+  return currentFiber()->event_.rval_;
 }
 //---------------------------------------------------------------------------
 void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
@@ -801,28 +802,29 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
 void renameAsync(const utf8::String & oldPathName,const utf8::String & newPathName)
 {
   assert( currentFiber() != NULL );
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->thread()->postRequest(oldPathName,newPathName);
-  fiber->switchFiber(fiber->mainFiber());
-  assert( fiber->event().type_ == etRename );
-  if( fiber->event().errno_ != 0 )
+  currentFiber()->event_.string0_ = oldPathName;
+  currentFiber()->event_.string1_ = newPathName;
+  currentFiber()->event_.type_ = etRename;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etRename );
+  if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
 }
 //---------------------------------------------------------------------------
 void sleepAsync(uint64_t timeout)
 {
   assert( currentFiber() != NULL );
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->thread()->postRequest(timeout);
-  fiber->switchFiber(fiber->mainFiber());
-  assert( fiber->event().type_ == etTimer );
-  if( fiber->event().errno_ != 0 )
+  currentFiber()->event_.timeout_ = timeout;
+  currentFiber()->event_.type_ = etTimer;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etTimer );
+  if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
 }
 //---------------------------------------------------------------------------
@@ -834,14 +836,18 @@ void getDirListAsync(
   bool includeDirs)
 {
   assert( currentFiber() != NULL );
-  BaseFiber * fiber = dynamic_cast<BaseFiber *>(currentFiber().ptr());
-  assert( fiber != NULL );
-  fiber->thread()->postRequest(&list,dirAndMask,exMask,recursive,includeDirs);
-  fiber->switchFiber(fiber->mainFiber());
-  assert( fiber->event().type_ == etDirList );
-  if( fiber->event().errno_ != 0 )
+  currentFiber()->event_.dirList_ = &list;
+  currentFiber()->event_.string0_ = dirAndMask;
+  currentFiber()->event_.string1_ = exMask;
+  currentFiber()->event_.recursive_ = recursive;
+  currentFiber()->event_.includeDirs_ = includeDirs;
+  currentFiber()->event_.type_ = etDirList;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etDirList );
+  if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber->event().errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
 }
 //---------------------------------------------------------------------------
@@ -1076,6 +1082,8 @@ done:
   err = GetLastError() + errorOffset;
   if( hProcess != NULL ) CloseHandle(hProcess);
   throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+#else
+  throw ksys::ExceptionSP(new ksys::Exception(ENOSYS,__PRETTY_FUNCTION__));
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1309,7 +1317,7 @@ void initialize()
   TProfiler::initialize();
 #endif
   Fiber::initialize();
-  AsyncDescriptorsCluster::initialize();
+  BaseThread::initialize();
   ksock::api.initialize();
   try {
     utf8::String cwd(getCurrentDir());
@@ -1332,7 +1340,7 @@ void initialize()
 void cleanup()
 {
   ksock::api.cleanup();
-  AsyncDescriptorsCluster::cleanup();
+  BaseThread::cleanup();
   Fiber::cleanup();
 #ifdef NETMAIL_ENABLE_PROFILER
   TProfiler::cleanup();

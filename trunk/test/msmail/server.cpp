@@ -42,11 +42,8 @@ Server::Server(const ConfigSP config) : config_(config)
 void Server::open()
 {
   ksock::Server::open();
-  for( uintptr_t i = config_->value("spool_fibers",10); i > 0; i-- ){
-    AutoPtr<BaseFiber> fiber(new SpoolWalker(*this));
-    attachFiber(fiber);
-    fiber.ptr(NULL);
-  }
+  for( uintptr_t i = config_->value("spool_fibers",2000); i > 0; i-- )
+    attachFiber(new SpoolWalker(*this));
 }
 //------------------------------------------------------------------------------
 void Server::close()
@@ -54,7 +51,7 @@ void Server::close()
   ksock::Server::close();
 }
 //------------------------------------------------------------------------------
-BaseFiber * Server::newFiber()
+Fiber * Server::newFiber()
 {
   return new ServerFiber(*this);
 }
