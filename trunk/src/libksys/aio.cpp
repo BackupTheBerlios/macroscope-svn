@@ -977,27 +977,28 @@ void AsyncTimerSlave::execute()
   for(;;){
     minRequest = NULL;
     minTimeout = ~uint64_t(0);
-    {
-      AutoLock<InterlockedMutex> lock(*this);
-      requestNode = requests_.first();
-      while( requestNode != NULL ){
-        request = &AsyncEvent::nodeObject(*requestNode);
-        if( request->timeout_ < minTimeout ){
-          minRequest = request;
-          minTimeout = request->timeout_;
-        }
-        requestNode = requestNode->next();
+    AutoLock<InterlockedMutex> lock(*this);
+    requestNode = requests_.first();
+    while( requestNode != NULL ){
+      request = &AsyncEvent::nodeObject(*requestNode);
+      if( request->timeout_ < minTimeout ){
+        minRequest = request;
+        minTimeout = request->timeout_;
       }
+      requestNode = requestNode->next();
     }
     if( minRequest == NULL ){
       if( terminated_ ) break;
+      release();
       Semaphore::wait();
+      acquire();
     }
     else {
       assert( minRequest->type_ == etTimer );
       timerStartTime = gettimeofday();
+      release();
       Semaphore::timedWait(minRequest->timeout_);
-      AutoLock<InterlockedMutex> lock(*this);
+      acquire();
       requestNode = requests_.first();
       while( requestNode != NULL ){
         elapsedTime = (currentTime = gettimeofday()) - timerStartTime;

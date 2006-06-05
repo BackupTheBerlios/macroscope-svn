@@ -42,7 +42,7 @@ Server::Server(const ConfigSP config) : config_(config)
 void Server::open()
 {
   ksock::Server::open();
-  for( uintptr_t i = config_->value("spool_fibers",2000); i > 0; i-- ){
+  for( uintptr_t i = config_->value("spool_fibers",10); i > 0; i-- ){
     AutoPtr<BaseFiber> fiber(new SpoolWalker(*this));
     attachFiber(fiber);
     fiber.ptr(NULL);
