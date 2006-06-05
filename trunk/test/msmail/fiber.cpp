@@ -373,17 +373,17 @@ void SpoolWalker::fiberExecute()
   Message message;
   while( !terminated_ ){
     {
-      AutoLock<FiberInterlockedMutex> lock(server_.fmutex_);
-      server_.file_.fileName(spool + message.id());
+//      AutoLock<FiberInterlockedMutex> lock(server_.fmutex_);
+//      server_.file_.fileName(spool + message.id());
 //      static int32_t a = 0;
 //      interlockedIncrement(a,1);
-      /*AsyncFile file(spool + message.id());
+      AsyncFile file(spool + message.id());
       file.open();
-      file << message;*/
-      server_.file_.detach();
-      server_.file_.open();
-      server_.file_ << message;
-      server_.file_.detach();
+      file << message;
+//      server_.file_.detach();
+//      server_.file_.open();
+//      server_.file_ << message;
+//      server_.file_.detach();
 //      interlockedIncrement(a,-1);
     }
 

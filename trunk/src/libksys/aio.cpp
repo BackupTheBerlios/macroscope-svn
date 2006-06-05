@@ -1134,7 +1134,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         /*if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
           for( i = ofSlaves_.count() - 1; i >= 0; i-- )
             if( !ofSlaves_[i].started() || ofSlaves_[i].finished() ){
-              //ofSlaves_[i].post();
+              ofSlaves_[i].post();
 	            ofSlaves_[i].Thread::wait();
               ofSlaves_.remove(i);
             }
@@ -1143,13 +1143,13 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = ofSlaves_.count() - 1; i >= 0; i-- )
           if( ofSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AutoPtr<AsyncOpenFileSlave> slave(new AsyncOpenFileSlave);
-          slave->stackSize(getpagesize() / 16u);
+          AsyncOpenFileSlave * p = new AsyncOpenFileSlave;
+          AutoPtr<AsyncOpenFileSlave> slave(p);
+          slave->stackSize(getpagesize() / 8u);
           ofSlaves_.add(slave.ptr(NULL));
-          ofSlaves_[ofSlaves_.count() - 1].resume();
-	        ofSlaves_[ofSlaves_.count() - 1].transplant(currentFiber()->event_);
-          /*if( ofSlaves_.count() > numberOfProcessors() )
-            ofSlaves_[ofSlaves_.count() - 1].terminate();*/
+          p->resume();
+	        p->transplant(currentFiber()->event_);
+          /*if( ofSlaves_.count() > numberOfProcessors() ) p->terminate();*/
         }
       }
       return;
@@ -1162,7 +1162,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         /*if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
           for( i = ioSlaves_.count() - 1; i >= 0; i-- )
             if( !ioSlaves_[i].started() || ioSlaves_[i].finished() ){
-              //ioSlaves_[i].post();
+              ioSlaves_[i].post();
 	            ioSlaves_[i].Thread::wait();
               ioSlaves_.remove(i);
             }
@@ -1171,13 +1171,13 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = ioSlaves_.count() - 1; i >= 0; i-- )
           if( ioSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AutoPtr<AsyncIoSlave> slave(new AsyncIoSlave);
+          AsyncIoSlave * p = new AsyncIoSlave;
+          AutoPtr<AsyncIoSlave> slave(p);
           slave->stackSize(getpagesize() / 8u);
           ioSlaves_.add(slave.ptr(NULL));
-          ioSlaves_[ioSlaves_.count() - 1].resume();
-	        ioSlaves_[ioSlaves_.count() - 1].transplant(currentFiber()->event_);
-          /*if( ioSlaves_.count() > numberOfProcessors() )
-            ioSlaves_[ioSlaves_.count() - 1].terminate();*/
+          p->resume();
+	        p->transplant(currentFiber()->event_);
+          /*if( ioSlaves_.count() > numberOfProcessors() ) p->terminate();*/
         }
       }
       return;
@@ -1212,13 +1212,13 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
           if( acquireSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AutoPtr<AsyncAcquireSlave> slave(new AsyncAcquireSlave);
+          AsyncAcquireSlave * p = new AsyncAcquireSlave;
+          AutoPtr<AsyncAcquireSlave> slave(p);
           slave->stackSize(getpagesize() / 8u);
           acquireSlaves_.add(slave.ptr(NULL));
-          acquireSlaves_[acquireSlaves_.count() - 1].resume();
-	        acquireSlaves_[acquireSlaves_.count() - 1].transplant(currentFiber()->event_);
-          /*if( acquireSlaves_.count() > numberOfProcessors() )
-            acquireSlaves_[acquireSlaves_.count() - 1].terminate();*/
+          p->resume();
+	        p->transplant(currentFiber()->event_);
+          /*if( acquireSlaves_.count() > numberOfProcessors() ) p->terminate();*/
         }
       }
       return;
