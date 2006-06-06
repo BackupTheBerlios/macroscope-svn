@@ -370,25 +370,8 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 void SpoolWalker::fiberExecute()
 {
   utf8::String spool(server_.spoolDir());
-//  Message message;
   while( !terminated_ ){
-/*    AsyncFile file(spool + message.id());
-    file.open();
-    file << message;
-    {
-      AutoLock<FiberInterlockedMutex> lock(server_.fmutex_);
-      server_.file_.fileName(spool + message.id());
-//      static int32_t a = 0;
-//      interlockedIncrement(a,1);
-
-      server_.file_.detach();
-      server_.file_.open();
-      server_.file_ << message;
-      server_.file_.detach();
-//      interlockedIncrement(a,-1);
-    }*/
-
-    /*try {
+    try {
       Vector<utf8::String> list;
       getDirListAsync(list,spool + "*",utf8::String(),false);
       for( intptr_t i = list.count() - 1; i >= 0; i-- ){
@@ -428,9 +411,12 @@ void SpoolWalker::fiberExecute()
     }
     catch( ExceptionSP & e ){
       e->writeStdError();
+#if defined(__WIN32__) || defined(__WIN64__)
       if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
-    }*/
-    //stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker sleep.\n");
+#else
+      if( e->code() != EINVAL ) throw;
+#endif
+    }
     try {
       uint64_t timeout = server_.config_->value("spool_processing_interval",10000000u);
       sleepAsync(timeout);
