@@ -188,9 +188,7 @@ Client::Client() : pAsyncEvent_(NULL), config_(new ksys::InterlockedConfig<ksys:
 //------------------------------------------------------------------------------
 void Client::open()
 {
-  AutoPtr<ClientFiber> fiber(new ClientFiber(*this));
-  attachFiber(fiber);
-  fiber.ptr(NULL);
+  attachFiber(new ClientFiber(*this));
 }
 //------------------------------------------------------------------------------
 void Client::close()
@@ -265,9 +263,7 @@ Client & Client::sendMessage(const utf8::String & id)
   sendQueue_[i].value("#Sender.Host",ksock::SockAddr::gethostname());
   sendWait_.acquire();
   try {
-    AutoPtr<ClientMailSenderFiber> fiber(new ClientMailSenderFiber(*this,sendQueue_[i]));
-    attachFiber(fiber);
-    fiber.ptr(NULL);
+    attachFiber(new ClientMailSenderFiber(*this,sendQueue_[i]));
   }
   catch( ... ){
     sendWait_.release();
