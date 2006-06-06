@@ -308,7 +308,7 @@ BaseServer::~BaseServer()
 BaseServer::BaseServer() :
   mfpt_(numberOfProcessors() * 4),
   mt_(numberOfProcessors() * 4),
-  fiberStackSize_(getpagesize()),
+  fiberStackSize_(PTHREAD_STACK_MIN),
   fiberTimeout_(10000000),
   howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbortTimer))
 {

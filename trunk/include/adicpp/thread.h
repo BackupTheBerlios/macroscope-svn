@@ -31,9 +31,9 @@ namespace ksys {
 //---------------------------------------------------------------------------
 #ifndef PTHREAD_STACK_MIN
 #if defined(__WIN32__) || defined(__WIN64__)
-#define PTHREAD_STACK_MIN 0
+#define PTHREAD_STACK_MIN getpagesize()
 #else
-#define PTHREAD_STACK_MIN 8192
+#define PTHREAD_STACK_MIN getpagesize()
 #endif
 #endif
 //---------------------------------------------------------------------------
@@ -229,8 +229,7 @@ inline const bool & Thread::finished() const
 inline Thread & Thread::stackSize(uintptr_t newStackSize)
 {
 #if HAVE_PTHREAD_H
-  if( newStackSize < PTHREAD_STACK_MIN )
-    newStackSize = PTHREAD_STACK_MIN;
+  if( newStackSize < PTHREAD_STACK_MIN ) newStackSize = PTHREAD_STACK_MIN;
 #endif
   stackSize_ = newStackSize;
   return *this;

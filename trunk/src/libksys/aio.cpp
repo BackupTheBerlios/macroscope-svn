@@ -581,23 +581,25 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 #define MAX_REQS 64
 #endif
   bool r = false;
-  AutoLock<InterlockedMutex> lock(*this);
-  if( requests_.count() + newRequests_.count() < MAX_REQS ){
-    newRequests_.insToTail(request);
-    if( newRequests_.count() < 2 ){
+  if( !terminated_ ){
+    AutoLock<InterlockedMutex> lock(*this);
+    if( requests_.count() + newRequests_.count() < MAX_REQS ){
+      newRequests_.insToTail(request);
+      if( newRequests_.count() < 2 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      SetEvent(events_[MAXIMUM_WAIT_OBJECTS - 1]);
+        SetEvent(events_[MAXIMUM_WAIT_OBJECTS - 1]);
 #elif HAVE_KQUEUE
-      struct kevent ev;
-      EV_SET(&ev,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,0);
-      if( kevent(kqueue_,&ev,1,NULL,0,NULL) == -1 ){
-        perror(NULL);
-        abort();
-      }
+        struct kevent ev;
+        EV_SET(&ev,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,0);
+        if( kevent(kqueue_,&ev,1,NULL,0,NULL) == -1 ){
+          perror(NULL);
+          abort();
+        }
 #endif
-      post();
+        post();
+      }
+      r = true;
     }
-    r = true;
   }
 #undef MAX_REQS
   return r;
@@ -616,11 +618,13 @@ AsyncOpenFileSlave::AsyncOpenFileSlave()
 bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
-  AutoLock<InterlockedMutex> lock(*this);
-  if( requests_.count() < 16 ){
-    requests_.insToTail(request);
-    if( requests_.count() < 2 ) post();
-    r = true;
+  if( !terminated_ ){
+    AutoLock<InterlockedMutex> lock(*this);
+    if( requests_.count() < 64 ){
+      requests_.insToTail(request);
+      if( requests_.count() < 2 ) post();
+      r = true;
+    }
   }
   return r;
 }
@@ -952,24 +956,26 @@ AsyncAcquireSlave::AsyncAcquireSlave() : sp_(-1)
 //------------------------------------------------------------------------------
 bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 {
-  AutoLock<InterlockedMutex> lock(*this);
-#if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;
   bool r = false;
-  if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
-    for( i = sp_; i >= 0; i-- ) if( sems_[i] == request.mutex_->sem_ ) break;
-    if( i < 0 ){
-      newRequests_.insToTail(request);
-      if( sp_ >= 0 ) SetEvent(sems_[sp_ + 1]);
-      post();
-      r = true;
+  if( !terminated_ ){
+    AutoLock<InterlockedMutex> lock(*this);
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( !terminated_ && requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
+      for( i = sp_; i >= 0; i-- ) if( sems_[i] == request.mutex_->sem_ ) break;
+      if( i < 0 ){
+        newRequests_.insToTail(request);
+        if( sp_ >= 0 ) SetEvent(sems_[sp_ + 1]);
+        post();
+        r = true;
+      }
     }
-  }
 #else
-  requests_.insToTail(request);
-  post();
-  r = true;
+    requests_.insToTail(request);
+    post();
+    r = true;
 #endif
+  }
   return r;
 }
 //------------------------------------------------------------------------------
@@ -1130,25 +1136,23 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etStat :
       {
         AutoLock<InterlockedMutex> lock(ofRequestsMutex_);
-        /*if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
+        if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
           for( i = ofSlaves_.count() - 1; i >= 0; i-- )
-            if( !ofSlaves_[i].started() || ofSlaves_[i].finished() ){
-              ofSlaves_[i].post();
+            if( ofSlaves_[i].finished() ){
 	            ofSlaves_[i].Thread::wait();
               ofSlaves_.remove(i);
             }
           ofSlavesSweepTime_ = gettimeofday();
-        }*/
+        }
         for( i = ofSlaves_.count() - 1; i >= 0; i-- )
           if( ofSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
           AsyncOpenFileSlave * p = new AsyncOpenFileSlave;
           AutoPtr<AsyncOpenFileSlave> slave(p);
-          slave->stackSize(getpagesize());
-          ofSlaves_.add(slave.ptr(NULL));
           p->resume();
+          ofSlaves_.add(slave.ptr(NULL));
 	        p->transplant(currentFiber()->event_);
-          /*if( ofSlaves_.count() > numberOfProcessors() ) p->terminate();*/
+          if( ofSlaves_.count() > numberOfProcessors() ) p->terminate();
         }
       }
       return;
@@ -1159,25 +1163,23 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etConnect :
       {
         AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
-        /*if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
+        if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
           for( i = ioSlaves_.count() - 1; i >= 0; i-- )
-            if( !ioSlaves_[i].started() || ioSlaves_[i].finished() ){
-              ioSlaves_[i].post();
+            if( ioSlaves_[i].finished() ){
 	            ioSlaves_[i].Thread::wait();
               ioSlaves_.remove(i);
             }
           ioSlavesSweepTime_ = gettimeofday();
-        }*/
+        }
         for( i = ioSlaves_.count() - 1; i >= 0; i-- )
           if( ioSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
           AsyncIoSlave * p = new AsyncIoSlave;
           AutoPtr<AsyncIoSlave> slave(p);
-          slave->stackSize(getpagesize());
-          ioSlaves_.add(slave.ptr(NULL));
           p->resume();
+          ioSlaves_.add(slave.ptr(NULL));
 	        p->transplant(currentFiber()->event_);
-          /*if( ioSlaves_.count() > numberOfProcessors() ) p->terminate();*/
+          if( ioSlaves_.count() > numberOfProcessors() ) p->terminate();
         }
       }
       return;
@@ -1190,7 +1192,6 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         AutoLock<InterlockedMutex> lock(timerRequestsMutex_);
         if( timerSlave_ == NULL ){
           AutoPtr<AsyncTimerSlave> slave(new AsyncTimerSlave);
-          slave->stackSize(getpagesize());
           slave->resume();
           timerSlave_ = slave.ptr(NULL);
         }
@@ -1200,25 +1201,23 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etAcquire :
       {
         AutoLock<InterlockedMutex> lock(acquireRequestsMutex_);
-        /*if( gettimeofday() - acquireSlavesSweepTime_ >= 10000000 ){
+        if( gettimeofday() - acquireSlavesSweepTime_ >= 10000000 ){
           for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
-            if( !acquireSlaves_[i].started() || acquireSlaves_[i].finished() ){
-              acquireSlaves_[i].post();
+            if( acquireSlaves_[i].finished() ){
 	            acquireSlaves_[i].Thread::wait();
               acquireSlaves_.remove(i);
             }
           acquireSlavesSweepTime_ = gettimeofday();
-        }*/
+        }
         for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
           if( acquireSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
           AsyncAcquireSlave * p = new AsyncAcquireSlave;
           AutoPtr<AsyncAcquireSlave> slave(p);
-          slave->stackSize(getpagesize());
-          acquireSlaves_.add(slave.ptr(NULL));
           p->resume();
+          acquireSlaves_.add(slave.ptr(NULL));
 	        p->transplant(currentFiber()->event_);
-          /*if( acquireSlaves_.count() > numberOfProcessors() ) p->terminate();*/
+          if( acquireSlaves_.count() > numberOfProcessors() ) p->terminate();
         }
       }
       return;

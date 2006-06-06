@@ -42,7 +42,7 @@ Server::Server(const ConfigSP config) : config_(config)
 void Server::open()
 {
   ksock::Server::open();
-  for( uintptr_t i = config_->value("spool_fibers",2000); i > 0; i-- )
+  for( uintptr_t i = config_->value("spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
 }
 //------------------------------------------------------------------------------

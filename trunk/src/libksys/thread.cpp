@@ -100,7 +100,7 @@ void * Thread::threadFunc(void * thread)
 }
 //---------------------------------------------------------------------------
 Thread::Thread() :
-  stackSize_(0),
+  stackSize_(PTHREAD_STACK_MIN),
 #if defined(__WIN32__) || defined(__WIN64__)
   handle_(NULL),
   id_(~DWORD(0)),
@@ -130,6 +130,7 @@ Thread & Thread::resume()
     if( pthread_mutex_init(&mutex_,NULL) != 0 ) goto l1;
     if( pthread_attr_init(&attr) != 0 ) goto l1;
     if( pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE) != 0 ) goto l1;
+    if( pthread_attr_setstacksize(&attr,stackSize_) != 0 ) goto l1;
 #if HAVE_PTHREAD_ATTR_SETGUARDSIZE
     if( pthread_attr_setguardsize(&attr,0) != 0 ) goto l1;
 #endif
