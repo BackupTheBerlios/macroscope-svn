@@ -245,7 +245,7 @@ BaseThread::BaseThread() : server_(NULL)//, maxStackSize_(0)
 {
 }
 //---------------------------------------------------------------------------
-void BaseThread::execute()
+void BaseThread::threadExecute()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   convertThreadToFiber();

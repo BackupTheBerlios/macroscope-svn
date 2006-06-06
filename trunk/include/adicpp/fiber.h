@@ -35,7 +35,6 @@ enum AsyncEventType {
   etNone, 
   etError, 
   etOpenFile,
-  etLockFile,
   etDirList,
   etCreateDir,
   etRemoveDir,
@@ -44,6 +43,7 @@ enum AsyncEventType {
   etResolveName,
   etResolveAddress,
   etStat,
+  etLockFile,
   etRead, 
   etWrite, 
   etAccept, 
@@ -572,7 +572,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #else
 #error async io not implemented
 #endif
-    void            execute();
+    void threadExecute();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -590,7 +590,7 @@ class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMu
 
     Events requests_;
 
-    void execute();
+    void threadExecute();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -609,7 +609,7 @@ class AsyncTimerSlave : public Thread, public Semaphore, public InterlockedMutex
 
     Events requests_;
 
-    void execute();
+    void threadExecute();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -633,7 +633,7 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
     intptr_t sp_;
 #endif
 
-    void execute();
+    void threadExecute();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -710,7 +710,7 @@ class BaseThread : public Thread, public Fiber {
     void attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber);
     void detachDescriptor(AsyncDescriptor & descriptor);
 
-    void execute();
+    void threadExecute();
     void fiberExecute() {}
 
     mutable EmbeddedListNode<BaseThread> serverListNode_;

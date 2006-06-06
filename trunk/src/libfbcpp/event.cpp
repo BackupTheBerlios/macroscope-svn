@@ -52,7 +52,7 @@ EventHandler::EventThread::EventThread(EventHandler & eventHandler)
 {
 }
 //---------------------------------------------------------------------------
-void EventHandler::EventThread::execute()
+void EventHandler::EventThread::threadExecute()
 {
   try{
     while( !terminated_ ){

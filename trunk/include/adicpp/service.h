@@ -123,8 +123,15 @@ class Services
     Vector< Service>              services_;
     utf8::String                  controlName_;
     AutoPtr< SharedMemoryQueue>   control_;
-    void        execute();
-    enum ServiceDispatcherCmd { svcStart, svcStop, svcSuspend, svcResume, svcQuery, svcStopDispatcher };
+    void threadExecute();
+    enum ServiceDispatcherCmd { 
+      svcStart,
+      svcStop,
+      svcSuspend,
+      svcResume,
+      svcQuery,
+      svcStopDispatcher
+    };
 #endif
 };
 //---------------------------------------------------------------------------

@@ -186,7 +186,7 @@ void AsyncIoSlave::cancelEvent(const IoRequest & request)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-void AsyncIoSlave::execute()
+void AsyncIoSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_HIGHEST);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -625,7 +625,7 @@ bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
   return r;
 }
 //------------------------------------------------------------------------------
-void AsyncOpenFileSlave::execute()
+void AsyncOpenFileSlave::threadExecute()
 {
   AsyncEvent * request;
   for(;;){
@@ -859,7 +859,7 @@ void AsyncTimerSlave::transplant(AsyncEvent & request)
   post();
 }
 //------------------------------------------------------------------------------
-void AsyncTimerSlave::execute()
+void AsyncTimerSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_TIME_CRITICAL);
   uint64_t minTimeout, timerStartTime, elapsedTime, currentTime;
@@ -973,7 +973,7 @@ bool AsyncAcquireSlave::transplant(AsyncEvent & request)
   return r;
 }
 //------------------------------------------------------------------------------
-void AsyncAcquireSlave::execute()
+void AsyncAcquireSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_TIME_CRITICAL);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1120,7 +1120,6 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etError : 
       break;
     case etOpenFile :
-    case etLockFile :
     case etDirList :
     case etCreateDir :
     case etRemoveDir :
@@ -1145,7 +1144,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( i < 0 ){
           AsyncOpenFileSlave * p = new AsyncOpenFileSlave;
           AutoPtr<AsyncOpenFileSlave> slave(p);
-          slave->stackSize(getpagesize() / 8u);
+          slave->stackSize(getpagesize());
           ofSlaves_.add(slave.ptr(NULL));
           p->resume();
 	        p->transplant(currentFiber()->event_);
@@ -1153,6 +1152,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
+    case etLockFile :
     case etRead :
     case etWrite :
     case etAccept :
@@ -1173,7 +1173,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( i < 0 ){
           AsyncIoSlave * p = new AsyncIoSlave;
           AutoPtr<AsyncIoSlave> slave(p);
-          slave->stackSize(getpagesize() / 8u);
+          slave->stackSize(getpagesize());
           ioSlaves_.add(slave.ptr(NULL));
           p->resume();
 	        p->transplant(currentFiber()->event_);
@@ -1190,7 +1190,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         AutoLock<InterlockedMutex> lock(timerRequestsMutex_);
         if( timerSlave_ == NULL ){
           AutoPtr<AsyncTimerSlave> slave(new AsyncTimerSlave);
-          slave->stackSize(getpagesize() / 8u);
+          slave->stackSize(getpagesize());
           slave->resume();
           timerSlave_ = slave.ptr(NULL);
         }
@@ -1214,7 +1214,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( i < 0 ){
           AsyncAcquireSlave * p = new AsyncAcquireSlave;
           AutoPtr<AsyncAcquireSlave> slave(p);
-          slave->stackSize(getpagesize() / 8u);
+          slave->stackSize(getpagesize());
           acquireSlaves_.add(slave.ptr(NULL));
           p->resume();
 	        p->transplant(currentFiber()->event_);

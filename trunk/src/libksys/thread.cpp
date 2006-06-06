@@ -70,7 +70,7 @@ void * Thread::threadFunc(void * thread)
   reinterpret_cast<Thread *>(thread)->started_ = true;
   try {
     currentThread() = reinterpret_cast<Thread *>(thread);
-    reinterpret_cast<Thread *>(thread)->execute();
+    reinterpret_cast<Thread *>(thread)->threadExecute();
 #if defined(__WIN32__) || defined(__WIN64__)
     if( reinterpret_cast<Thread *>(thread)->exitCode_ == (int32_t) STILL_ACTIVE )
       reinterpret_cast<Thread *>(thread)->exitCode_ = 0;

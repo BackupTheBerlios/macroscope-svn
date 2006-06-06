@@ -55,9 +55,10 @@ void AcceptFiber::fiberExecute()
   catch( ksys::ExceptionSP & e ){
     mutex_.acquire();
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( e->codes()[0] != ERROR_OPERATION_ABORTED + ksys::errorOffset ) throw;
+    if( e->code() != ERROR_OPERATION_ABORTED + ksys::errorOffset &&
+        e->code() != WSAENOTSOCK + ksys::errorOffset) throw;
 #else
-    if( e->codes()[0] != EINTR ) throw;
+    if( e->code() != EINTR && e->code() != ENOTSOCK ) throw;
 #endif
   }
 }

@@ -67,7 +67,7 @@ class EventHandler {
         EventThread(const EventThread &){}
         void operator = (const EventThread &){}
       protected:
-        void execute();
+        void threadExecute();
       public:
         EventThread(EventHandler & eventHandler);
     };
@@ -89,14 +89,14 @@ class EventHandler {
     // properties
     bool                    attached();
   protected:
-    static void             eventFunction(EPB * epb, short length, char * updated);
-    Database *          database_;
-    EventThread *       thread_;
-    ksys::Vector< EPB>  epbs_;
-    ksys::Semaphore     semaphore_;
+    static void eventFunction(EPB * epb, short length, char * updated);
+    Database * database_;
+    EventThread * thread_;
+    ksys::Vector<EPB>  epbs_;
+    ksys::Semaphore semaphore_;
 
-    void                    execute();
-    virtual EventHandler &  eventHandler(const utf8::String & eventName, uintptr_t eventCount);
+    void execute();
+    virtual EventHandler & eventHandler(const utf8::String & eventName, uintptr_t eventCount);
   private:
 };
 //---------------------------------------------------------------------------

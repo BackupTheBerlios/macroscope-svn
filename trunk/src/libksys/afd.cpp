@@ -365,7 +365,6 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
 #if defined(__WIN32__) || defined(__WIN64__)
   fiber()->event_.errno_ = 0;
   if( !exclusive_ ){
-    if( size == 0 ) size = ~UINT64_C(0);
     fiber()->event_.type_ = etLockFile;
     fiber()->event_.lockType_ = AsyncEvent::tryRDLock;
     fiber()->event_.position_ = pos;
@@ -399,7 +398,6 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
 #if defined(__WIN32__) || defined(__WIN64__)
   fiber()->event_.errno_ = 0;
   if( !exclusive_ ){
-    if( size == 0 ) size = ~UINT64_C(0);
     fiber()->event_.type_ = etLockFile;
     fiber()->event_.lockType_ = AsyncEvent::tryWRLock;
     fiber()->event_.position_ = pos;
@@ -432,7 +430,6 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos, uint64_t size)
   assert( isOpen() );
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( size == 0 ) size = ~UINT64_C(0);
     fiber()->event_.type_ = etLockFile;
     fiber()->event_.lockType_ = AsyncEvent::rdLock;
     fiber()->event_.position_ = pos;
@@ -461,7 +458,6 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
   assert( isOpen() );
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( size == 0 ) size = ~UINT64_C(0);
     fiber()->event_.type_ = etLockFile;
     fiber()->event_.lockType_ = AsyncEvent::wrLock;
     fiber()->event_.position_ = pos;
