@@ -430,8 +430,10 @@ void SpoolWalker::fiberExecute()
       e->writeStdError();
       if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
     }*/
+    //stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker sleep.\n");
     try {
-      sleepAsync(server_.config_->value("spool_processing_interval",10000000u));
+      uint64_t timeout = server_.config_->value("spool_processing_interval",10000000u);
+      sleepAsync(timeout);
     }
     catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)

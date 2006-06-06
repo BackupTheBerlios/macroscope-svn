@@ -817,6 +817,7 @@ void renameAsync(const utf8::String & oldPathName,const utf8::String & newPathNa
 void sleepAsync(uint64_t timeout)
 {
   assert( currentFiber() != NULL );
+  currentFiber()->event_.timerStartTime_ = gettimeofday();
   currentFiber()->event_.timeout_ = timeout;
   currentFiber()->event_.type_ = etTimer;
   currentFiber()->thread()->postRequest();

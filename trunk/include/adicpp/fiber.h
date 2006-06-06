@@ -741,13 +741,6 @@ inline void BaseThread::postRequest(AsyncDescriptor * descriptor)
   requester().postRequest(descriptor);
 }
 //---------------------------------------------------------------------------
-inline void BaseThread::postEvent(AsyncEvent * event)
-{
-  AutoLock<InterlockedMutex> lock(mutex_);
-  events_.insToTail(*event);
-  if( events_.count() < 2 ) semaphore_.post();
-}
-//---------------------------------------------------------------------------
 inline Requester & BaseThread::requester()
 {
   return *reinterpret_cast<Requester *>(requester_);
@@ -805,16 +798,16 @@ class BaseServer {
     virtual void attachFiber(const AutoPtr<Fiber> & fiber);
     void sweepThreads();
   private:
-    mutable InterlockedMutex                                          mutex_;
+    mutable InterlockedMutex mutex_;
     EmbeddedList<
       BaseThread,
       BaseThread::serverListNode,
       BaseThread::serverListNodeObject
     > threads_;
-    uintptr_t                                                         mfpt_;
-    uintptr_t                                                         mt_;
-    uintptr_t                                                         fiberStackSize_;
-    uint64_t                                                          fiberTimeout_;
+    uintptr_t mfpt_;
+    uintptr_t mt_;
+    uintptr_t fiberStackSize_;
+    uint64_t fiberTimeout_;
     HowCloseServer howCloseServer_;
 
     BaseThread * selectThread();

@@ -631,6 +631,7 @@ bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
 //------------------------------------------------------------------------------
 void AsyncOpenFileSlave::threadExecute()
 {
+  priority(THREAD_PRIORITY_HIGHEST);
   AsyncEvent * request;
   for(;;){
     request = NULL;
@@ -872,7 +873,7 @@ void AsyncTimerSlave::threadExecute()
   for(;;){
     minRequest = NULL;
     minTimeout = ~uint64_t(0);
-    AutoLock<InterlockedMutex> lock(*this);
+    acquire();
     requestNode = requests_.first();
     while( requestNode != NULL ){
       request = &AsyncEvent::nodeObject(*requestNode);
@@ -882,18 +883,16 @@ void AsyncTimerSlave::threadExecute()
       }
       requestNode = requestNode->next();
     }
+    release();
     if( minRequest == NULL ){
       if( terminated_ ) break;
-      release();
       Semaphore::wait();
-      acquire();
     }
     else {
       assert( minRequest->type_ == etTimer );
       timerStartTime = gettimeofday();
-      release();
-      Semaphore::timedWait(minRequest->timeout_);
-      acquire();
+      timedWait(minRequest->timeout_);
+      AutoLock<InterlockedMutex> lock(*this);
       requestNode = requests_.first();
       while( requestNode != NULL ){
         elapsedTime = (currentTime = gettimeofday()) - timerStartTime;
@@ -929,6 +928,7 @@ void AsyncTimerSlave::abortTimer()
     AsyncEvent::nodeObject(*requestNode).abortTimer_ = true;
     requestNode = requestNode->next();
   }
+  post();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

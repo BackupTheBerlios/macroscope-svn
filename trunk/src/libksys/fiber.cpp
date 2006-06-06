@@ -264,9 +264,9 @@ void BaseThread::threadExecute()
 //------------------------------------------------------------------------------
 void BaseThread::queue()
 {
-  AsyncEvent * ev = NULL;
+  AsyncEvent * ev;
   mutex_.acquire();
-  if( events_.count() > 0 ) ev = &events_.remove(*events_.first());
+  if( events_.count() > 0 ) ev = &events_.remove(*events_.first()); else ev = NULL;
   mutex_.release();
   if( ev == NULL ){
     semaphore_.wait();
@@ -298,6 +298,13 @@ void BaseThread::detectMaxFiberStackSize()
 {
 }
 //------------------------------------------------------------------------------
+void BaseThread::postEvent(AsyncEvent * event)
+{
+  AutoLock<InterlockedMutex> lock(mutex_);
+  events_.insToTail(*event);
+  if( events_.count() < 2 ) semaphore_.post();
+}
+//---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 BaseServer::~BaseServer()
@@ -421,7 +428,7 @@ BaseThread * BaseServer::selectThread()
 {
   BaseThread * thread = NULL;
   uintptr_t msc = ~uintptr_t(0);
-  if( threads_.count() >= numberOfProcessors() ){
+  if( threads_.count() >= mt_ ){
     EmbeddedListNode<BaseThread> * btp;
     for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
       BaseThread * athread = &BaseThread::serverListNodeObject(*btp);
@@ -432,13 +439,11 @@ BaseThread * BaseServer::selectThread()
       }
     }
   }
-  if( msc >= mfpt_ || thread == NULL ){
-    if( threads_.count() < mt_ ){
-      thread = newThread();
-      threads_.insToTail(*thread);
-      thread->server(this);
-      thread->resume();
-    }
+  if( thread == NULL ){
+    AutoPtr<BaseThread> p(thread = newThread());
+    thread->resume();
+    threads_.insToTail(*p.ptr(NULL));
+    thread->server(this);
   }
   assert( thread != NULL );
   return thread;
