@@ -429,16 +429,19 @@ void SpoolWalker::fiberExecute()
     catch( ExceptionSP & e ){
       e->writeStdError();
       if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
-    }
+    }*/
     try {
       sleepAsync(server_.config_->value("spool_processing_interval",10000000u));
     }
     catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
       if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
+#else
+      if( e->code() != EINTR ) throw;
+#endif
     }
-    stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker wakeup.\n");*/
+    stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker wakeup.\n");
   }
-  //stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker exit.\n");
 }
 //------------------------------------------------------------------------------
 } // namespace msmail
