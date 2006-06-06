@@ -354,7 +354,9 @@ void ServerFiber::sendMail()
 void ServerFiber::recvMail()
 {
   utf8::String mailForUser, mailForKey;
-  *this >> mailForUser >> mailForKey;
+  uint8_t waitForMail;
+  *this >> mailForUser >> mailForKey >> waitForMail;
+  utf8::String userMailBox(server_.mailDir() + mailForUser);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -401,7 +403,9 @@ void SpoolWalker::fiberExecute()
           }
           file.close();
           if( deliverLocaly ){
-            renameAsync(list[i],server_.mailDir() + suser + "-" + message.id());
+            utf8::String userMailBox(server_.mailDir() + suser);
+            createDirectoryAsync(userMailBox);
+            renameAsync(list[i],includeTrailingPathDelimiter(userMailBox) + message.id());
           }
           else {
             renameAsync(list[i],server_.mqueueDir() + message.id());
@@ -428,7 +432,6 @@ void SpoolWalker::fiberExecute()
       if( e->code() != EINTR ) throw;
 #endif
     }
-    stdErr.log(lmDEBUG,utf8::String::Stream() << this << " SpoolWalker wakeup.\n");
   }
 }
 //------------------------------------------------------------------------------

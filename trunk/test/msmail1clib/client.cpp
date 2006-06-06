@@ -118,7 +118,7 @@ void ClientFiber::main()
           KeyInfo(client_.key_) << GroupInfo(stringPartByNo(client_.groups_,i));
         getCode();
       }
-      *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_;
+      *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << uint8_t(1);
       getCode();
     }
     catch( ExceptionSP & e ){
