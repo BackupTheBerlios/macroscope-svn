@@ -581,8 +581,6 @@ l1:
 utf8::String AsyncFile::gets(bool * eof)
 {
   uint64_t op = tell();
-  if( op >= size() )
-    throw ksys::ExceptionSP(new EFileEOF(EIO,__PRETTY_FUNCTION__));
   intptr_t r, rr, l  = 0;
   char * a, * q;
   AutoPtr<char>  p;

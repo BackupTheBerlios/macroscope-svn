@@ -285,9 +285,9 @@ T * const & SPRC<T>::ptr() const
 //-----------------------------------------------------------------------------
 template <class T> class SPRCZS {
   public:
-                  ~SPRCZS();
-                  SPRCZS(T * ptr);
-                  SPRCZS(const SPRCZS< T> & ptr);
+    ~SPRCZS();
+    SPRCZS(T * ptr);
+    SPRCZS(const SPRCZS< T> & ptr);
 
     T * const     operator ->() const;
     SPRCZS< T> &  operator =(T * ptr);
@@ -334,7 +334,7 @@ SPRCZS< T> & SPRCZS<T>::operator =(T * ptr)
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
-SPRCZS< T> & SPRCZS<T>::operator =(const SPRCZS< T> & ptr)
+SPRCZS<T> & SPRCZS<T>::operator =(const SPRCZS< T> & ptr)
 {
   if( ptr.ptr_ != NULL ) ptr.ptr_->addRef();
   if( ptr_ != NULL ) ptr_->remRef();
@@ -369,80 +369,83 @@ T * const & SPRCZS< T>::ptr() const
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template< class T> class Holder {
+template<typename T,typename M> class LockedAction {
   public:
-              ~Holder();
-              Holder(T * ptr);
-    T * const operator ->() const;
+    ~LockedAction();
+    LockedAction(T & object,M & mutex);
+    LockedAction(const LockedAction<T,M> & a);
+
+    T * const operator -> () const;
   protected:
   private:
-    T * ptr_;
+    void operator = (const LockedAction<T,M> &){}
+    T & object_;
+    M & mutex_;
 };
 //-----------------------------------------------------------------------------
-template< class T> inline Holder< T>::~Holder()
+template <typename T,typename M> inline LockedAction<T,M>::~LockedAction()
 {
-  ptr_->release();
+  mutex_.release();
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Holder< T>::Holder(T * ptr) : ptr_(ptr)
+template <typename T,typename M> inline
+LockedAction<T,M>::LockedAction(T & object,M & mutex) : object_(object), mutex_(mutex)
 {
-  ptr_->acquire();
+  mutex_.acquire();
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-T * const Holder<T>::operator ->() const
+template <typename T,typename M> inline
+LockedAction<T,M>::LockedAction(const LockedAction<T,M> & a) : object_(a.object_), mutex_(a.mutex_)
 {
-  return ptr_;
+}
+//-----------------------------------------------------------------------------
+/*template <typename T,typename M> inline LockedAction<T,M> & operator = (const LockedAction<T,M> & a)
+{
+  return *this;
+}*/
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+T * const LockedAction<T,M>::operator -> () const
+{
+  return &object_;
 }
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template< class T> class SPIA {
+template<class T> class SPIA {
   public:
     ~SPIA();
     SPIA(T * ptr);
-    SPIA(const SPIA< T> & ptr);
 
-    SPIA< T> &  operator =(const SPIA< T> & ptr);
-    Holder< T>  operator ->() const;
+    SPIA<T> & operator = (const SPIA<T> & ptr);
+    LockedAction<T,T> operator -> () const;
 
-    bool        operator ==(const SPIA< T> & ptr) const;
-    bool        operator !=(const SPIA< T> & ptr) const;
+    bool operator == (const SPIA< T> & ptr) const;
+    bool operator != (const SPIA< T> & ptr) const;
 
-    SPIA< T> &  ptr(T * ptr);
+    T * ptr(T * ptr);
     T * const & ptr() const;
   protected:
   private:
-    SPIA< T> &  operator =(T * ptr);
+    SPIA(const SPIA<T> &){}
+    void operator = (T *){}
 
     T * ptr_;
 };
 //-----------------------------------------------------------------------------
-template< class T> inline SPIA< T>::~SPIA()
+template<class T> inline SPIA< T>::~SPIA()
 {
   delete ptr_;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline SPIA< T>::SPIA(T * ptr)
-  : ptr_(ptr)
-{
-}
-//-----------------------------------------------------------------------------
-template< class T> inline SPIA< T>::SPIA(const SPIA< T> & ptr)
-  : ptr_(ptr.ptr_)
+template<class T> inline SPIA< T>::SPIA(T * ptr) : ptr_(ptr)
 {
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
-SPIA< T> & SPIA<T>::operator =(const SPIA< T> &)
+LockedAction<T,T> SPIA<T>::operator ->() const
 {
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template< class T> inline
-Holder< T> SPIA<T>::operator ->() const
-{
-  return Holder< T>(ptr_);
+  return LockedAction<T,T>(*ptr_,*ptr_);
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
@@ -458,10 +461,10 @@ bool SPIA<T>::operator !=(const SPIA< T> & ptr) const
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
-SPIA< T> & SPIA< T>::ptr(T * ptr)
+T * SPIA< T>::ptr(T * ptr)
 {
-  ptr_ = ptr;
-  return *this;
+  xchg(ptr_,ptr);
+  return ptr;
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
@@ -472,37 +475,125 @@ T * const & SPIA< T>::ptr() const
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template< typename T> class SPIARC : public SPRC< T> {
+template<typename T,typename M> class SPEIA {
+  public:
+    ~SPEIA();
+    SPEIA(T * object,M & mutex = *object);
+
+    SPEIA<T,M> & operator = (T * object);
+    LockedAction<T,M> operator -> () const;
+
+    bool operator == (const SPEIA<T,M> & object) const;
+    bool operator != (const SPEIA<T,M> & object) const;
+
+    T * ptr(T * ptr);
+    T * const & ptr() const;
+  protected:
+  private:
+    SPEIA(const SPEIA<T,M> &){}
+    void operator = (const SPEIA<T,M> &){}
+
+    T * object_;
+    M & mutex_;
+};
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline SPEIA<T,M>::~SPEIA()
+{
+  delete object_;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+SPEIA<T,M>::SPEIA(T * object,M & mutex) : object_(object), mutex_(mutex)
+{
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+SPEIA<T,M> & SPEIA<T,M>::operator = (T * object)
+{
+  mutex_.acquire();
+  delete object_;
+  object_ = object;
+  mutex_.release();
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+LockedAction<T,M> SPEIA<T,M>::operator -> () const
+{
+  return LockedAction<T,M>(*object_,mutex_);
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+bool SPEIA<T,M>::operator == (const SPEIA<T,M> & ptr) const
+{
+  return object_ == object.object_;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+bool SPEIA<T,M>::operator != (const SPEIA<T,M> & ptr) const
+{
+  return object_ != object.object_;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+T * SPEIA<T,M>::ptr(T * ptr)
+{
+  xchg(object_,object);
+  return object;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename M> inline
+T * const & SPEIA<T,M>::ptr() const
+{
+  return object_;
+}
+//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
+template<typename T> class SPIARC : public SPRC<T> {
   public:
     ~SPIARC();
     SPIARC(T * ptr);
-    SPIARC(const SPIARC< T> & ptr);
+    SPIARC(const SPIARC<T> & ptr);
 
-    SPIARC< T> &  operator =(const SPIARC< T> & ptr);
-    Holder< T>    operator ->() const;
+    //SPIARC<T> & operator = (T * ptr);
+    //SPIARC<T> & operator = (const SPIARC<T> & ptr);
+    LockedAction<T,T> operator ->() const;
   protected:
   private:
-    void operator =(T *){}
 };
 //-----------------------------------------------------------------------------
-template< typename T> inline SPIARC< T>::~SPIARC()
+template<typename T> inline SPIARC< T>::~SPIARC()
 {
 }
 //-----------------------------------------------------------------------------
-template< typename T> inline SPIARC< T>::SPIARC(T * ptr)
-  : SPRC< T>(ptr)
-{
-}
-//-----------------------------------------------------------------------------
-template< typename T> inline SPIARC< T>::SPIARC(const SPIARC< T> & ptr)
-  : SPRC< T>(ptr)
+template< typename T> inline SPIARC< T>::SPIARC(T * ptr) : SPRC< T>(ptr)
 {
 }
 //-----------------------------------------------------------------------------
 template< typename T> inline
-Holder< T> SPIARC<T>::operator ->() const
+SPIARC< T>::SPIARC(const SPIARC< T> & ptr) : SPRC< T>(ptr)
 {
-  return Holder<T>(SPRC<T>::ptr_);
+}
+//-----------------------------------------------------------------------------
+/*template <typename T> inline
+SPIARC<T> & SPIARC<T>::SPIARC(T * ptr)
+{
+  SPRC<T>::operator = (ptr);
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+SPIARC<T> & SPIARC<T>::SPIARC(const SPIARC<T> & ptr)
+{
+  SPRC<T>::operator = (ptr);
+  return *this;
+}*/
+//-----------------------------------------------------------------------------
+template< typename T> inline
+LockedAction<T,T> SPIARC<T>::operator -> () const
+{
+  return LockedAction<T,T>(*ptr_,*ptr_);
 }
 //-----------------------------------------------------------------------------
 }

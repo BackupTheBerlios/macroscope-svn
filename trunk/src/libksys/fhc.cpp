@@ -618,16 +618,15 @@ FileHandleContainer & FileHandleContainer::seek(uint64_t pos)
   return *this;
 }
 //---------------------------------------------------------------------------
-uintptr_t FileHandleContainer::gets(AutoPtr< char> & p)
+uintptr_t FileHandleContainer::gets(AutoPtr<char> & p)
 {
-  uint64_t  op        = tell();
-  intptr_t  r, rr, l  = 0;
-  char *    a, * q;
-  for( ; ; ){
+  uint64_t op = tell();
+  intptr_t r, rr, l = 0;
+  char * a, * q;
+  for(;;){
     a = p.realloc(l + 256).ptr() + l;
     rr = r = (intptr_t) read(a, 256);
-    if( r <= 0 )
-      break;
+    if( r <= 0 ) break;
     for( q = a; r > 0; q++, r-- ){
       if( *q == '\n' ){
         l = intptr_t(q - p.ptr() + 1);
@@ -638,32 +637,27 @@ uintptr_t FileHandleContainer::gets(AutoPtr< char> & p)
   }
   l1 : seek(op + l);
   p.realloc(l + (l > 0));
-  if( l > 0 )
-    p[l] = '\0';
+  if( l > 0 ) p[l] = '\0';
   return l;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-EFileError::EFileError(int32_t code, const utf8::String & what)
-  : Exception(code, what)
+EFileError::EFileError(int32_t code, const utf8::String & what) : Exception(code, what)
 {
 }
 //---------------------------------------------------------------------------
-EFileEOF::EFileEOF(int32_t code, const utf8::String & what)
-  : Exception(code, what)
+EFileEOF::EFileEOF(int32_t code, const utf8::String & what) : Exception(code, what)
 {
 }  
 //---------------------------------------------------------------------------
-EDiskFull::EDiskFull(int32_t code, const utf8::String & what)
-  : Exception(code, what)
+EDiskFull::EDiskFull(int32_t code, const utf8::String & what) : Exception(code, what)
 {
 }
 //---------------------------------------------------------------------------
-EFLock::EFLock(int32_t code, const utf8::String & what)
-  : Exception(code, what)
+EFLock::EFLock(int32_t code, const utf8::String & what) : Exception(code, what)
 {
 }
 //---------------------------------------------------------------------------
-} // namespace fbcpp
+} // namespace ksys
 //---------------------------------------------------------------------------

@@ -32,8 +32,8 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 enum AsyncEventType { 
-  etNone, 
-  etError, 
+  etNone,
+  etError,
   etOpenFile,
   etDirList,
   etCreateDir,
@@ -43,17 +43,18 @@ enum AsyncEventType {
   etResolveName,
   etResolveAddress,
   etStat,
+  etDirectoryChangeNotification,
   etLockFile,
-  etRead, 
-  etWrite, 
-  etAccept, 
-  etConnect, 
-  etClose, 
-  etQuit, 
-  etDispatch, 
+  etRead,
+  etWrite,
+  etAccept,
+  etConnect,
+  etClose,
+  etQuit,
+  etDispatch,
   etTimer,
   etAcquire,
-  etCount 
+  etCount
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -105,6 +106,7 @@ class AsyncEvent {
           int socket_;
 #endif
           FiberInterlockedMutex * mutex_;
+          DirectoryChangeNotification * directoryChangeNotification_;
           struct Stat * stat_;
           struct {
             bool readOnly_;
@@ -112,7 +114,7 @@ class AsyncEvent {
             bool exclusive_;
             bool recursive_;
             bool includeDirs_;
-            bool abortTimer_;
+            bool abort_;
             bool rval_;
           };
         };
@@ -556,6 +558,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #if HAVE_KQUEUE
     void cancelEvent(const Events & request);
 #endif
+    void abortNotification();
   protected:
   private:
     AsyncIoSlave(const AsyncIoSlave &){}
@@ -638,12 +641,39 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semaphore, public InterlockedMutex {
+  public:
+    virtual ~AsyncWin9xDirectoryChangeNotificationSlave();
+    AsyncWin9xDirectoryChangeNotificationSlave();
+
+    bool transplant(AsyncEvent & requests);
+    void abortNotification();
+  protected:
+  private:
+    AsyncWin9xDirectoryChangeNotificationSlave(const AsyncAcquireSlave &){}
+    void operator = (const AsyncWin9xDirectoryChangeNotificationSlave &){}
+
+    Events requests_;
+#if defined(__WIN32__) || defined(__WIN64__)
+    Events newRequests_;
+    HANDLE sems_[MAXIMUM_WAIT_OBJECTS];
+    AsyncEvent * eSems_[MAXIMUM_WAIT_OBJECTS];
+    intptr_t sp_;
+#endif
+
+    void threadExecute();
+};
+#endif
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 class Requester {
   public:
     ~Requester();
     Requester();
 
-    void abortTimer();
+    void abort();
     void postRequest(AsyncDescriptor * descriptor);
   protected:
   private:
@@ -661,6 +691,12 @@ class Requester {
     InterlockedMutex acquireRequestsMutex_;
     Vector<AsyncAcquireSlave> acquireSlaves_;
     int64_t acquireSlavesSweepTime_;
+
+#if defined(__WIN32__) || defined(__WIN64__)
+    InterlockedMutex wdcnRequestsMutex_;
+    Vector<AsyncWin9xDirectoryChangeNotificationSlave> wdcnSlaves_;
+    int64_t wdcnSlavesSweepTime_;
+#endif
 
     Requester(const Requester &){}
     void operator = (const Requester &){}
@@ -786,7 +822,7 @@ class BaseServer {
       csTerminate = 2,
       csShutdown = 4,
       csDWM = 8,
-      csAbortTimer = 16
+      csAbort = 16
     };
 
     const HowCloseServer & howCloseServer() const;

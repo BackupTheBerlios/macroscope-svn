@@ -455,8 +455,8 @@ class Server : public ksock::Server {
 // списки даных рядового сервера
     Data standaloneData_;
     Data & data(ServerType type);
-    FiberInterlockedMutex fmutex_;
-    AsyncFile file_;
+    FiberInterlockedMutex rndMutex_;
+    SPEIA<Randomizer,FiberInterlockedMutex> rnd_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

@@ -149,21 +149,25 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
   for(;;){
     key = s.gets(&eof);
     if( eof ) break;
-    utf8::String::Iterator i(key.strstr(": "));
-    if( !(i = key.strstr(" -#=#- ")).eof() ){
+    utf8::String::Iterator i(key.strstr(" -#:#- "));
+    if( !i.eof() ){
       a.value(
         unScreenString(utf8::String(key,i)),
         unScreenString(i + 7)
       );
     }
-    else if( !i.eof() ){
+    else if( !(i = key.strstr(" -#=#- ")).eof() ){
       a.value(
         unScreenString(utf8::String(key,i)),
-        unScreenString(i + 2)
+        unScreenString(i + 7)
       );
     }
     else {
+#if defined(__WIN32__) || defined(__WIN64__)
       throw ExceptionSP(new Exception(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__));
+#else
+      throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+#endif
     }
   }
   return s;

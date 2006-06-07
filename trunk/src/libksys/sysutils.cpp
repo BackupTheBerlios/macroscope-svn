@@ -28,6 +28,104 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+DirectoryChangeNotification::~DirectoryChangeNotification()
+{
+  stop();
+}
+//---------------------------------------------------------------------------
+DirectoryChangeNotification::DirectoryChangeNotification() :
+#if defined(__WIN32__) || defined(__WIN64__)
+  hFFCNotification_(INVALID_HANDLE_VALUE),
+  hDirectory_(INVALID_HANDLE_VALUE),
+  bufferSize_(0)
+#endif
+{
+}
+//---------------------------------------------------------------------------
+void DirectoryChangeNotification::monitor(const utf8::String & pathName)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  assert( 
+    (hFFCNotification_ == INVALID_HANDLE_VALUE && hDirectory_ == INVALID_HANDLE_VALUE) || 
+    ((hFFCNotification_ != INVALID_HANDLE_VALUE) ^ (hDirectory_ != INVALID_HANDLE_VALUE)) 
+  );
+  if( isWin9x() ){
+    if( hFFCNotification_ == INVALID_HANDLE_VALUE ){
+      hFFCNotification_ = FindFirstChangeNotificationA(
+        pathName.getOEMString(),
+        FALSE,
+        FILE_NOTIFY_CHANGE_FILE_NAME
+      );
+      if( hFFCNotification_ == INVALID_HANDLE_VALUE ){
+        int32_t err = GetLastError() + errorOffset;
+        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      }
+    }
+    else if( FindNextChangeNotification(hFFCNotification_) == 0 ){
+      int32_t err = GetLastError() + errorOffset;
+      stop();
+      throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    }
+  }
+  else {
+    if( buffer_ == NULL ){
+      bufferSize_ = getpagesize() / sizeof(FILE_NOTIFY_INFORMATION);
+      bufferSize_ *= sizeof(FILE_NOTIFY_INFORMATION);
+      buffer_.alloc(bufferSize_);
+    }
+    if( hDirectory_ == INVALID_HANDLE_VALUE ){
+      hDirectory_ = CreateFileW(
+          pathName.getUNICODEString(),
+          GENERIC_READ,
+          FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+          NULL,
+          OPEN_EXISTING,
+          FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
+          NULL
+      );
+      if( hDirectory_ == INVALID_HANDLE_VALUE ){
+        int32_t err = GetLastError() + errorOffset;
+        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      }
+    }
+  }
+  assert( currentFiber() != NULL );
+  currentFiber()->event_.abort_ = false;
+  currentFiber()->event_.position_ = 0;
+  currentFiber()->event_.directoryChangeNotification_ = this;
+  currentFiber()->event_.type_ = etDirectoryChangeNotification;
+  currentFiber()->thread()->postRequest();
+  currentFiber()->switchFiber(currentFiber()->mainFiber());
+  assert( currentFiber()->event_.type_ == etDirectoryChangeNotification );
+  if( currentFiber()->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
+  if( currentFiber()->event_.errno_ != 0 ){
+    throw ksys::ExceptionSP(
+      new EFileError(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
+    );
+  }
+#endif
+}
+//---------------------------------------------------------------------------
+void DirectoryChangeNotification::stop()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( hFFCNotification_ != INVALID_HANDLE_VALUE ){
+    FindCloseChangeNotification(hFFCNotification_);
+    hFFCNotification_ = INVALID_HANDLE_VALUE;
+  }
+  if( hDirectory_ != INVALID_HANDLE_VALUE ){
+    CloseHandle(hDirectory_);
+    hDirectory_ = INVALID_HANDLE_VALUE;
+  }
+  buffer_.free();
+  bufferSize_ = 0;
+#endif
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 uint8_t argvPlaceHolder[sizeof(Array<utf8::String>)];
 #if defined(__WIN32__) || defined(__WIN64__)
 char pathDelimiter = '\\';
@@ -817,6 +915,7 @@ void renameAsync(const utf8::String & oldPathName,const utf8::String & newPathNa
 void sleepAsync(uint64_t timeout)
 {
   assert( currentFiber() != NULL );
+  currentFiber()->event_.abort_ = false;
   currentFiber()->event_.timerStartTime_ = gettimeofday();
   currentFiber()->event_.timeout_ = timeout;
   currentFiber()->event_.type_ = etTimer;
@@ -825,7 +924,7 @@ void sleepAsync(uint64_t timeout)
   assert( currentFiber()->event_.type_ == etTimer );
   if( currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      new EFileError(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
     );
 }
 //---------------------------------------------------------------------------

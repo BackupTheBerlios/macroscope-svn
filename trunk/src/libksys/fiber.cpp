@@ -317,7 +317,7 @@ BaseServer::BaseServer() :
   mt_(numberOfProcessors() * 4),
   fiberStackSize_(PTHREAD_STACK_MIN),
   fiberTimeout_(10000000),
-  howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbortTimer))
+  howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbort))
 {
 }
 //------------------------------------------------------------------------------
@@ -379,7 +379,7 @@ void BaseServer::closeServer()
           if( thread->fibers_.count() > 0 ) break;
         }
       }
-      if( how & csAbortTimer ) BaseThread::requester().abortTimer();
+      if( how & csAbort ) BaseThread::requester().abort();
       if( btp == NULL ) break;
       sweepThreads();
       fbtmd = fbtm > fbtmd ? fbtmd : fbtm;
@@ -417,7 +417,7 @@ void BaseServer::closeServer()
         for( adp = thread->descriptorsList_.first(); adp != NULL; adp = adp->next() )
           AsyncDescriptor::clusterListNodeObject(*adp).shutdown2();
       }
-      BaseThread::requester().abortTimer();
+      BaseThread::requester().abort();
     }
   }
   sweepThreads();

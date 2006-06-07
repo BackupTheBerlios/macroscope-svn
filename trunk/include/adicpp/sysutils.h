@@ -29,6 +29,59 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class DirectoryChangeNotification {
+  public:
+    ~DirectoryChangeNotification();
+    DirectoryChangeNotification();
+
+#if defined(__WIN32__) || defined(__WIN64__)
+    const HANDLE & hFFCNotification() const;
+    const HANDLE & hDirectory() const;
+    FILE_NOTIFY_INFORMATION * const buffer() const;
+    const uintptr_t & bufferSize() const; 
+#endif
+    void monitor(const utf8::String & pathName);
+    void stop();
+  protected:
+  private:
+#if defined(__WIN32__) || defined(__WIN64__)
+    HANDLE hFFCNotification_; // from FindFirstChangeNotification for FindNextChangeNotification
+    HANDLE hDirectory_; // for ReadDirectoryChangesW
+    AutoPtr<FILE_NOTIFY_INFORMATION> buffer_; // for ReadDirectoryChangesW
+    uintptr_t bufferSize_;
+#else
+#error Not implemented
+#endif
+};
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+//---------------------------------------------------------------------------
+inline const HANDLE & DirectoryChangeNotification::hFFCNotification() const
+{
+  return hFFCNotification_;
+}
+//---------------------------------------------------------------------------
+inline const HANDLE & DirectoryChangeNotification::hDirectory() const
+{
+  return hDirectory_;
+}
+//---------------------------------------------------------------------------
+inline FILE_NOTIFY_INFORMATION * const DirectoryChangeNotification::buffer() const
+{
+  return buffer_;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & DirectoryChangeNotification::bufferSize() const
+{
+  return bufferSize_;
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 extern uint8_t argvPlaceHolder[sizeof(Array< utf8::String>)];
 inline Array<utf8::String> & argv()
 {

@@ -97,7 +97,8 @@ void ServerFiber::main()
     uint8_t cmd;
     uint8_t ui8;
   };
-  //FindFirstChangeNotification
+  //FindFirstChangeNotification must be used ander Win9x
+  //ReadDirectoryChangesW must be used ander Win2000, XP ...
   auth();
   while( !terminated_ ){
     *this >> cmd;
@@ -371,24 +372,35 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 //------------------------------------------------------------------------------
 void SpoolWalker::fiberExecute()
 {
+  intptr_t i;
+  DirectoryChangeNotification dcn;
   utf8::String spool(server_.spoolDir());
   while( !terminated_ ){
-    try {
-      Vector<utf8::String> list;
-      getDirListAsync(list,spool + "*",utf8::String(),false);
-      for( intptr_t i = list.count() - 1; i >= 0; i-- ){
-        AsyncFile ctrl(list[i] + ".lck");
-        ctrl.removeAfterClose(true);
-        ctrl.open();
-        AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
-        AsyncFile file(list[i]);
-        try {
-          file.open();
-        }
-        catch( ExceptionSP & e ){
-          if( e->code() != ERROR_SHARING_VIOLATION + errorOffset ||
-              e->code() != ERROR_FILE_NOT_FOUND + errorOffset ) throw;
-        }
+    bool wait = true;
+    Vector<utf8::String> list;
+    getDirListAsync(list,spool + "*.msg",utf8::String(),false);
+    while( list.count() > 0 ){
+      i = server_.rnd_->random(list.count());
+      AsyncFile ctrl(list[i] + ".lck");
+      ctrl.removeAfterClose(true);
+      ctrl.open();
+      AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+      AsyncFile file(list[i]);
+      try {
+        file.open();
+      }
+      catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+            e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
+            e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
+        if( e->code() == ERROR_ACCESS_DENIED ) e->writeStdError();
+        wait = e->code() != ERROR_SHARING_VIOLATION;
+#else
+#error Not implemented
+#endif
+      }
+      try {
         if( file.isOpen() ){
           Message message;
           file >> message;
@@ -412,25 +424,29 @@ void SpoolWalker::fiberExecute()
           }
         }
       }
-    }
-    catch( ExceptionSP & e ){
-      e->writeStdError();
+      catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
+        if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
 #else
-      if( e->code() != EINVAL ) throw;
+        if( e->code() != EINVAL ) throw;
 #endif
+        stdErr.log(lmWARNING,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
+      }
+      list.remove(i);
     }
-    try {
-      uint64_t timeout = server_.config_->value("spool_processing_interval",10000000u);
-      sleepAsync(timeout);
-    }
-    catch( ExceptionSP & e ){
+    if( wait ){
+      dcn.monitor(excludeTrailingPathDelimiter(spool));
+/*      try {
+        uint64_t timeout = server_.config_->value("spool_processing_interval",10000000u);
+        sleepAsync(timeout);
+      }
+      catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
+        if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
 #else
-      if( e->code() != EINTR ) throw;
+        if( e->code() != EINTR ) throw;
 #endif
+      }*/
     }
   }
 }
