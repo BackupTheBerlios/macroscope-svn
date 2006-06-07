@@ -366,28 +366,18 @@ Config & Config::parseSectionBody(ConfigSection & root)
 Config & Config::parse()
 {
   utf8::String fileName;
+  if( file_.fileName().strlen() == 0 ){
+    if( defaultFileName().strlen() == 0 ){
+      file_.fileName(changeFileExt(getExecutableName(), "conf"));
+    }
+    else{
+      file_.fileName(defaultFileName());
+    }
+  }
+  fileName = file_.fileName();
   if( isRunInFiber() ){
     if( afile_ == NULL ) afile_ = new AsyncFile;
-    if( afile_->fileName().strlen() == 0 ){
-      if( defaultFileName().strlen() == 0 ){
-        afile_->fileName(changeFileExt(getExecutableName(), "conf"));
-      }
-      else{
-        afile_->fileName(defaultFileName());
-      }
-    }
-    fileName = afile_->fileName();
-  }
-  else {
-    if( file_.fileName().strlen() == 0 ){
-      if( defaultFileName().strlen() == 0 ){
-        file_.fileName(changeFileExt(getExecutableName(), "conf"));
-      }
-      else{
-        file_.fileName(defaultFileName());
-      }
-    }
-    fileName = file_.fileName();
+    afile_->fileName(fileName);
   }
   struct Stat st;
   bool stf;

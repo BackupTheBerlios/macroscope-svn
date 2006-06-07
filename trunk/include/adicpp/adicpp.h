@@ -23,22 +23,42 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
+//---------------------------------------------------------------------------
 #ifndef adicppH
 #define adicppH
-
+//---------------------------------------------------------------------------
 #include <adicpp/fbcpp.h>
 #include <adicpp/mycpp.h>
 
 #include <adicpp/adiexcpt.h>
 #include <adicpp/adidb.h>
 #include <adicpp/adist.h>
-
+//---------------------------------------------------------------------------
 namespace adicpp {
-
-void  initialize();
-void  cleanup();
-
+//---------------------------------------------------------------------------
+inline void initialize()
+{
+  ksys::initialize();
+#if !DISABLE_FIREBIRD_INTERFACE
+  fbcpp::initialize();
+#endif
+#if !DISABLE_MYSQL_INTERFACE
+  mycpp::initialize();
+#endif
 }
-
+//---------------------------------------------------------------------------
+inline void cleanup()
+{
+#if !DISABLE_MYSQL_INTERFACE
+  mycpp::cleanup();
+#endif
+#if !DISABLE_FIREBIRD_INTERFACE
+  fbcpp::cleanup();
+#endif
+  ksys::cleanup();
+}
+//---------------------------------------------------------------------------
+}
+//---------------------------------------------------------------------------
 #endif /* adicppH */
+//---------------------------------------------------------------------------

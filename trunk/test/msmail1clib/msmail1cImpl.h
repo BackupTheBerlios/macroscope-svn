@@ -46,6 +46,7 @@ class ClientFiber : public ksock::ClientFiber {
     Client & client_;
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
+    int32_t getCode2(int32_t noThrowCode0 = eOK,int32_t noThrowCode1 = eOK);
     void auth();
     void main();
   private:
@@ -73,6 +74,7 @@ class ClientMailSenderFiber : public ClientFiber {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class Client : public ksock::Client {
+  friend class ClientFiber;
   public:
     virtual ~Client();
     Client();
@@ -86,6 +88,8 @@ class Client : public ksock::Client {
     utf8::String key_;
     utf8::String groups_;
     utf8::String mailServer_;
+    utf8::String mailServerUser_;
+    utf8::String mailServerPassword_;
     utf8::String configFile_;
     utf8::String logFile_;
     ConfigSP config_;
@@ -98,6 +102,7 @@ class Client : public ksock::Client {
     InterlockedMutex sendWait_;
     int32_t sendLastError_;
   protected:
+    FiberInterlockedMutex recvQueueMutex_;
     Vector<Message> recvQueue_;
     Vector<Message> sendQueue_;
   private:
@@ -153,6 +158,8 @@ public:
   utf8::String key_;
   utf8::String groups_;
   utf8::String mailServer_;
+  utf8::String mailServerUser_;
+  utf8::String mailServerPassword_;
   utf8::String configFile_;
   utf8::String logFile_;
   bool active_;

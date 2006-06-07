@@ -955,35 +955,35 @@ String int2Str(intmax_t a)
 {
   intmax_t  x;
   uintptr_t l = int2StrLen(a);
-  if( a < 0 )
-    x = -a;
-  else
-    x = a;
+  if( a < 0 ) x = -a; else x = a;
   String::Container * container = String::Container::container(l);
-  char *              p;
+  char * p;
   *(p = container->string_ + l) = '\0';
-  do{
+  do {
     *--p = (char) (x % 10u + '0');
     x /= 10u;
-  }
-  while( x != 0 );
-  if( a < 0 )
-    *--p = '-';
+  } while( x != 0 );
+  if( a < 0 ) *--p = '-';
   return container;
 }
 //---------------------------------------------------------------------------
 String int2Str(uintmax_t a)
 {
-  uintptr_t           l         = int2StrLen(a);
+  uintptr_t l = int2StrLen(a);
   String::Container * container = String::Container::container(l);
-  char *              p;
+  char * p;
   *(p = container->string_ + l) = '\0';
-  do{
+  do {
     *--p = (char) (a % 10u + '0');
     a /= 10u;
-  }
-  while( a != 0 );
+  } while( a != 0 );
   return container;
+}
+//---------------------------------------------------------------------------
+static inline uintmax_t sfSHL(uintmax_t c)
+{
+  uintmax_t a = (c << 3) + (c << 1);
+  return a > c ? a : ~uintmax_t(0);
 }
 //---------------------------------------------------------------------------
 uintptr_t int2StrLen(intmax_t a)
@@ -992,7 +992,7 @@ uintptr_t int2StrLen(intmax_t a)
   uintmax_t x, c;
 
   if( a < 0 ) x = -a; else x = a;
-  for( l = 1, c = 10; c < x; c = (c << 3) + (c << 1), l++ );
+  for( l = 1, c = 10; c < x; c = sfSHL(c), l++ );
   if( a < 0 ) l++;
   return l;
 }
@@ -1002,7 +1002,7 @@ uintptr_t int2StrLen(uintmax_t a)
   uintptr_t l;
   uintmax_t c;
 
-  for( l = 1, c = 10; c < a; c = (c << 3) + (c << 1), l++ );
+  for( l = 1, c = 10; c < a; c = sfSHL(c), l++ );
   return l;
 }
 //---------------------------------------------------------------------------
@@ -1014,7 +1014,7 @@ uintptr_t int2StrLen(intptr_t a)
   uintmax_t x, c;
 
   if( a < 0 ) x = -a; else x = a;
-  for( l = 1, c = 10; c < x; c = (c << 3) + (c << 1), l++ );
+  for( l = 1, c = 10; c < x; c = sfSHL(c), l++ );
   if( a < 0 ) l++;
   return l;
 }
@@ -1024,7 +1024,7 @@ uintptr_t int2StrLen(uintptr_t a)
   uintptr_t l;
   uintmax_t c;
 
-  for( l = 1, c = 10; c < a; c = (c << 3) + (c << 1), l++ );
+  for( l = 1, c = 10; c < a; c = sfSHL(c), l++ );
   return l;
 }
 //---------------------------------------------------------------------------
@@ -1037,8 +1037,7 @@ String int2HexStr(uintmax_t a, uintptr_t padding)
     *--p = (char) (a % 16u + '0');
     a /= 16u;
     if( padding > 0 ) padding--;
-  }
-  while( a != 0 );
+  } while( a != 0 );
   while( padding > 0 ){
     *--p = '0';
     padding--;

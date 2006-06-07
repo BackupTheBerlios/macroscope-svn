@@ -137,6 +137,7 @@ bool stat(const utf8::String & pathName,struct Stat & st)
   st.st_rdev = st.st_dev = 0;
 done:
   CloseHandle(hFile);
+  SetLastError(err);
   if( err != 0 && err != ERROR_PATH_NOT_FOUND && err != ERROR_FILE_NOT_FOUND )
     throw ExceptionSP(new Exception(err + errorOffset, __PRETTY_FUNCTION__));
 #else
@@ -158,7 +159,9 @@ bool statAsync(const utf8::String & pathName,struct Stat & st)
   currentFiber()->thread()->postRequest();
   currentFiber()->switchFiber(currentFiber()->mainFiber());
   assert( currentFiber()->event_.type_ == etStat );
-  if( currentFiber()->event_.errno_ != 0 )
+  if( currentFiber()->event_.errno_ != 0 &&
+      currentFiber()->event_.errno_ != ERROR_PATH_NOT_FOUND + errorOffset &&
+      currentFiber()->event_.errno_ != ERROR_FILE_NOT_FOUND + errorOffset )
     throw ksys::ExceptionSP(
       new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );

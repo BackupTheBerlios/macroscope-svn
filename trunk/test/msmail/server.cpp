@@ -45,7 +45,7 @@ void Server::open()
 {
 //  maxThreads(1);
   ksock::Server::open();
-  for( uintptr_t i = config_->value("spool_fibers",1000); i > 0; i-- )
+  for( uintptr_t i = config_->value("spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
 }
 //------------------------------------------------------------------------------

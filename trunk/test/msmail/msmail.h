@@ -90,6 +90,7 @@ enum Error {
   eInvalidCommand,
   eInvalidServerType,
   eInvalidMessage,
+  eLastMessage,
   eCount
 };
 //------------------------------------------------------------------------------
@@ -372,9 +373,25 @@ class SpoolWalker : public Fiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class MailQueueWalker : public ksock::ClientFiber {
+  public:
+    virtual ~MailQueueWalker();
+    MailQueueWalker(Server & server);
+  protected:
+    void checkCode(int32_t code,int32_t noThrowCode = eOK);
+    void getCode(int32_t noThrowCode = eOK);
+    void auth();
+    void main();
+  private:
+    Server & server_;
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 class Server : public ksock::Server {
   friend class ServerFiber;
   friend class SpoolWalker;
+  friend class MailQueueWalker;
   public:
     virtual ~Server();
     Server(const ConfigSP config);
@@ -386,6 +403,7 @@ class Server : public ksock::Server {
       friend class Server;
       friend class ServerFiber;
       friend class SpoolWalker;
+      friend class MailQueueWalker;
       public:
         ~Data();
         Data();

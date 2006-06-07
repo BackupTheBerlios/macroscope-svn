@@ -53,6 +53,15 @@ void ClientFiber::getCode(int32_t noThrowCode)
   checkCode(r,noThrowCode);
 }
 //------------------------------------------------------------------------------
+int32_t ClientFiber::getCode2(int32_t noThrowCode0,int32_t noThrowCode1)
+{
+  int32_t r;
+  *this >> r;
+  if( r != eOK && r != noThrowCode0 && r != noThrowCode1 )
+    throw ksys::ExceptionSP(new ksys::Exception(r,__PRETTY_FUNCTION__));
+  return r;
+}
+//------------------------------------------------------------------------------
 void ClientFiber::auth()
 {
   utf8::String user, password, encryption, compression, compressionType, crc;
@@ -85,7 +94,7 @@ void ClientFiber::auth()
 //------------------------------------------------------------------------------
 void ClientFiber::main()
 {
-  intptr_t i;
+  intptr_t i, c;
   stdErr.fileName(client_.logFile_);
   client_.config_->fileName(client_.configFile_).parse();
   bool connected = false;
@@ -120,6 +129,20 @@ void ClientFiber::main()
       }
       *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << uint8_t(1);
       getCode();
+      while( !terminated_ ){
+        AutoPtr<Message> message(new Message);
+        *this >> message;
+        {
+          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          i = client_.recvQueue_.bSearch(message,c);
+          client_.recvQueue_.insert(i + (c > 0),message.ptr(NULL));
+        }
+        AutoPtr<OLECHAR> name(client_.name_.getOLEString());
+        AutoPtr<OLECHAR> what(SysAllocString(L"Message"));
+        AutoPtr<OLECHAR> id(message->id().getOLEString());
+        client_.pAsyncEvent_->ExternalEvent(name.ptr(NULL),what.ptr(NULL),id.ptr(NULL));
+        getCode2(eLastMessage);
+      }
     }
     catch( ExceptionSP & e ){
       e->writeStdError();
@@ -182,7 +205,7 @@ Client::~Client()
 //------------------------------------------------------------------------------
 Client::Client() : pAsyncEvent_(NULL), config_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>)
 {
-  howCloseServer(csTerminate | csShutdown);
+  howCloseServer(csTerminate | csShutdown | csAbort);
   fiberTimeout(0);
 }
 //------------------------------------------------------------------------------
@@ -209,15 +232,7 @@ const utf8::String & Client::value(const utf8::String & id,const utf8::String & 
     queue = &recvQueue_;
     i = queue->bSearch(Message(id));
   }
-  if( i < 0 )
-    throw ExceptionSP(new Exception(
-#if defined(__WIN32__) || defined(__WIN64__)
-      ERROR_NOT_FOUND
-#else
-      ENOENT
-#endif
-      ,__PRETTY_FUNCTION__
-    ));
+  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND,__PRETTY_FUNCTION__));
   return (*queue)[i].value(key);
 }
 //------------------------------------------------------------------------------
@@ -229,15 +244,7 @@ utf8::String Client::value(const utf8::String & id,const utf8::String & key,cons
     queue = &recvQueue_;
     i = queue->bSearch(Message(id));
   }
-  if( i < 0 )
-    throw ExceptionSP(new Exception(
-#if defined(__WIN32__) || defined(__WIN64__)
-      ERROR_NOT_FOUND
-#else
-      ENOENT
-#endif
-      ,__PRETTY_FUNCTION__
-    ));
+  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND,__PRETTY_FUNCTION__));
   utf8::String oldValue((*queue)[i].value(key));
   (*queue)[i].value(key,value);
   return oldValue;
@@ -246,15 +253,7 @@ utf8::String Client::value(const utf8::String & id,const utf8::String & key,cons
 Client & Client::sendMessage(const utf8::String & id)
 {
   intptr_t i = sendQueue_.bSearch(Message(id));
-  if( i < 0 )
-    throw ExceptionSP(new Exception(
-#if defined(__WIN32__) || defined(__WIN64__)
-      ERROR_NOT_FOUND
-#else
-      ENOENT
-#endif
-      ,__PRETTY_FUNCTION__
-    ));
+  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND,__PRETTY_FUNCTION__));
   sendLastError_ = 0;
   sendQueue_[i].value("#Sender",user_ + "@" + key_);
   sendQueue_[i].value("#Sender.Sended",getTimeString(gettimeofday()));
@@ -270,6 +269,7 @@ Client & Client::sendMessage(const utf8::String & id)
     throw;
   }
   AutoLock<InterlockedMutex> lock(sendWait_);
+  sendQueue_.remove(i);
   return *this;
 }
 //------------------------------------------------------------------------------

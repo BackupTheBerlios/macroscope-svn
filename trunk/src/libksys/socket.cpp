@@ -68,7 +68,7 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
   int32_t err;
   if( socket_ == INVALID_SOCKET ){
     if( ksys::currentFiber() != NULL ) attach();
-    clearCompressionStatistic();
+    clearStatistic();
     api.open();
     try {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -368,6 +368,7 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
   else {
     r = sysRecv(buf,len);
   }
+  srb_ += r;
   return r;
 }
 //------------------------------------------------------------------------------
@@ -441,6 +442,7 @@ uint64_t AsyncSocket::send(const void * buf,uint64_t len)
   else {
     w = sysSend(buf,len);
   }
+  ssb_ += w;
   return w;
 }
 //------------------------------------------------------------------------------
@@ -469,7 +471,6 @@ AsyncSocket & AsyncSocket::read(void * buf,uint64_t len)
     uint64_t l = recv(buf,len);
     buf = (uint8_t *) buf + (size_t) l;
     len -= l;
-    srb_ += l;
   }
   return *this;
 }
@@ -485,7 +486,6 @@ AsyncSocket & AsyncSocket::write(const void * buf,uint64_t len)
     uint64_t l = send(buf,len);
     buf = (uint8_t *) buf + (size_t) l;
     len -= l;
-    ssb_ += l;
   }
   return *this;
 }

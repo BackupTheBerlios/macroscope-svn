@@ -220,7 +220,7 @@ void ServerFiber::registerUser2KeyLink()
     data.keys_.insert(key);
   }
   intptr_t c, i = key->users_.bSearchCase(user->name_,c);
-  if( c != 0 ) key->users_.insert(i + (i > 0),user->name_);
+  if( c != 0 ) key->users_.insert(i + (c > 0),user->name_);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::registerKey2GroupLink()
@@ -239,7 +239,7 @@ void ServerFiber::registerKey2GroupLink()
     data.groups_.insert(group);
   }
   intptr_t c, i = group->keys_.bSearchCase(key->key_,c);
-  if( c != 0 ) group->keys_.insert(i + (i > 0),key->key_);
+  if( c != 0 ) group->keys_.insert(i + (c > 0),key->key_);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::getUserList()
@@ -314,7 +314,7 @@ void ServerFiber::getServerList()
   data.remRef(data.serverList_,data.servers_);
 }
 //------------------------------------------------------------------------------
-void ServerFiber::sendMail()
+void ServerFiber::sendMail() // client sending mail
 {
   uintptr_t i;
 
@@ -348,16 +348,42 @@ void ServerFiber::sendMail()
     file << message;
     file.removeAfterClose(false);
     file.close();
+    renameAsync(file.fileName(),file.fileName() + ".msg");
     putCode(eOK);
   }
 }
 //------------------------------------------------------------------------------
-void ServerFiber::recvMail()
+void ServerFiber::recvMail() // client receiving mail
 {
   utf8::String mailForUser, mailForKey;
   uint8_t waitForMail;
   *this >> mailForUser >> mailForKey >> waitForMail;
-  utf8::String userMailBox(server_.mailDir() + mailForUser);
+  utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
+  DirectoryChangeNotification dcn;
+  putCode(eOK);
+  while( !terminated_ ){
+    Vector<utf8::String> list;
+    getDirListAsync(list,userMailBox + "*.msg",utf8::String(),false);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+      AsyncFile ctrl(list[i] + ".lck");
+      ctrl.removeAfterClose(true);
+      ctrl.open();
+      AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+      AsyncFile file(list[i]);
+      file.open();
+      Message message;
+      file >> message;
+      *this << message;
+      file.close();
+      putCode(i > 0 ? eOK : eLastMessage);
+    }
+    if( waitForMail ){
+      dcn.monitor(excludeTrailingPathDelimiter(userMailBox));
+    }
+    else {
+      terminate();
+    }
+  }
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -380,7 +406,7 @@ void SpoolWalker::fiberExecute()
     Vector<utf8::String> list;
     getDirListAsync(list,spool + "*.msg",utf8::String(),false);
     while( list.count() > 0 ){
-      i = server_.rnd_->random(list.count());
+      i = (intptr_t) server_.rnd_->random(list.count());
       AsyncFile ctrl(list[i] + ".lck");
       ctrl.removeAfterClose(true);
       ctrl.open();
@@ -406,9 +432,9 @@ void SpoolWalker::fiberExecute()
           file >> message;
           utf8::String suser, skey;
           message.separateValue("#Recepient",suser,skey);
-          Server::Data & data = server_.data(stStandalone);
           bool deliverLocaly;
           {
+            Server::Data & data = server_.data(stStandalone);
             AutoLock<FiberInterlockedMutex> lock(data.mutex_);
             KeyInfo * key = data.keys_.find(skey);
             deliverLocaly = key != NULL && key->server_.strcasecmp(ksock::SockAddr::gethostname()) == 0;
@@ -448,6 +474,170 @@ void SpoolWalker::fiberExecute()
 #endif
       }*/
     }
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+MailQueueWalker::~MailQueueWalker()
+{
+}
+//------------------------------------------------------------------------------
+MailQueueWalker::MailQueueWalker(Server & server) : server_(server)
+{
+}
+//------------------------------------------------------------------------------
+void MailQueueWalker::checkCode(int32_t code,int32_t noThrowCode)
+{
+  if( code != eOK && code != noThrowCode )
+    throw ksys::ExceptionSP(new ksys::Exception(code,__PRETTY_FUNCTION__));
+}
+//------------------------------------------------------------------------------
+void MailQueueWalker::getCode(int32_t noThrowCode)
+{
+  int32_t r;
+  *this >> r;
+  checkCode(r,noThrowCode);
+}
+//------------------------------------------------------------------------------
+void MailQueueWalker::auth()
+{
+  utf8::String user, password, encryption, compression, compressionType, crc;
+  maxSendSize(server_.config_->value("max_send_size",getpagesize()));
+  user = server_.config_->text("user","system");
+  password = server_.config_->text("password","sha256:D7h+DiEkmuy6kSKdj9YoFurRn2Cbqoa2qGdd5kocOjE");
+  encryption = server_.config_->section("encryption").text(utf8::String(),"default");
+  uintptr_t encryptionThreshold = server_.config_->section("encryption").value("threshold",1024 * 1024);
+  compression = server_.config_->section("compression").text(utf8::String(),"default");
+  compressionType = server_.config_->section("compression").value("type","default");
+  crc = server_.config_->section("compression").value("crc","default");
+  uintptr_t compressionLevel = server_.config_->section("compression").value("level",3);
+  bool optimize = server_.config_->section("compression").value("optimize",false);
+  uintptr_t bufferSize = server_.config_->section("compression").value("buffer_size",getpagesize());
+  checkCode(
+    clientAuth(
+      user,
+      password,
+      encryption,
+      encryptionThreshold,
+      compression,
+      compressionType,
+      crc,
+      compressionLevel,
+      optimize,
+      bufferSize
+    )
+  );
+}
+//------------------------------------------------------------------------------
+void MailQueueWalker::main()
+{
+  intptr_t i;
+  DirectoryChangeNotification dcn;
+  utf8::String spool(server_.mqueueDir());
+  while( !terminated_ ){
+    bool wait = true;
+    Vector<utf8::String> list;
+    getDirListAsync(list,spool + "*.msg",utf8::String(),false);
+    while( list.count() > 0 ){
+      i = (intptr_t) server_.rnd_->random(list.count());
+      AsyncFile ctrl(list[i] + ".lck");
+      ctrl.removeAfterClose(true);
+      ctrl.open();
+      AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+      AsyncFile file(list[i]);
+      try {
+        file.open();
+      }
+      catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+            e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
+            e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
+        if( e->code() == ERROR_ACCESS_DENIED ) e->writeStdError();
+        wait = e->code() != ERROR_SHARING_VIOLATION;
+#else
+#error Not implemented
+#endif
+      }
+      try {
+        if( file.isOpen() ){
+          Message message;
+          file >> message;
+          file.close();
+          utf8::String server, suser, skey;
+          message.separateValue("#Recepient",suser,skey);
+          ksock::SockAddr address;
+          {
+            Server::Data & data = server_.data(stStandalone);
+            AutoLock<FiberInterlockedMutex> lock(data.mutex_);
+            KeyInfo * key = data.keys_.find(skey);
+            if( key != NULL ) server = key->server_;
+          }
+          bool resolved = false;
+          try {
+            address.resolveAsync(server);
+            resolved = true;
+          }
+          catch( ExceptionSP & e ){
+            e->writeStdError();
+            stdErr.log(lmINFO,
+              utf8::String::Stream() <<
+                "Invalid message " << message.id() <<
+                " recepient" << message.value("#Recepient") << "\n"
+            );
+          }
+          bool connected = false;
+          if( resolved ){
+            try {
+              connect(address);
+              connected = true;
+            }
+            catch( ExceptionSP & ){
+              stdErr.log(lmINFO,utf8::String::Stream() << "Unable to connect. Host " << server << " unreachable.\n");
+            }
+          }
+          bool authentificated = false;
+          if( connected ){
+            try {
+              auth();
+              authentificated = true;
+            }
+            catch( ExceptionSP & ){
+              stdErr.log(lmINFO,utf8::String::Stream() << "Authentification to host " << server << " failed.\n");
+            }
+          }
+          if( authentificated ){ // and now we can send message
+            try {
+              *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
+              getCode();
+              *this << uint8_t(cmSendMail) << message;
+              getCode();
+              stdErr.log(lmWARNING,utf8::String::Stream() <<
+                "Message " << message.id() <<
+                " sended to " << message.value("#Recepient") <<
+                ", traffic " << allBytes() << "\n"
+              );
+            }
+            catch( ExceptionSP & e ){
+              e->writeStdError();
+            }
+            shutdown();
+            close();
+          }
+        }
+      }
+      catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
+#else
+        if( e->code() != EINVAL ) throw;
+#endif
+        stdErr.log(lmWARNING,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
+      }
+      list.remove(i);
+    }
+    if( wait ) dcn.monitor(excludeTrailingPathDelimiter(spool));
   }
 }
 //------------------------------------------------------------------------------

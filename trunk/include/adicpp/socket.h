@@ -192,7 +192,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
       uintptr_t bufferSize
     );
 
-    AsyncSocket & clearCompressionStatistic();
+    AsyncSocket & clearStatistic();
     AsyncSocket & activateEncryption(const uint8_t sha256[32]);
     AsyncSocket & activateEncryption(const void * key,uintptr_t keyLen);
     AsyncSocket & deActivateEncryption();
@@ -201,22 +201,25 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     AsyncSocket & deActivateCompression();
     bool compressionActive() const;
 
-    int64_t       rcDifference() const;
-    uint64_t      rcRatio() const;
-    int64_t       scDifference() const;
-    uint64_t      scRatio() const;
-    int64_t       rscDifference() const;
-    uint64_t      rscRatio() const;
+    uint64_t recvBytes() const;
+    uint64_t sendBytes() const;
+    uint64_t allBytes() const;
+    int64_t rcDifference() const;
+    uint64_t rcRatio() const;
+    int64_t scDifference() const;
+    uint64_t scRatio() const;
+    int64_t rscDifference() const;
+    uint64_t rscRatio() const;
   protected:
     virtual bool isValidUser(const utf8::String & /*user*/){ return false; }
     virtual utf8::String getUserPassword(const utf8::String & /*user*/){ return utf8::String(); }
   private:
-    static const uint8_t  authMagic_[16];
-    uintptr_t             maxSendSize_;
-    uint64_t              srb_, nrb_, ssb_, nsb_;
+    static const uint8_t authMagic_[16];
+    uintptr_t maxSendSize_;
+    uint64_t srb_, nrb_, ssb_, nsb_;
 
 #if defined(__WIN32__) || defined(__WIN64__)
-    int           WSAEnumNetworkEvents(WSAEVENT hEventObject, DWORD event);
+    int WSAEnumNetworkEvents(WSAEVENT hEventObject,DWORD event);
 
     struct AcceptExBuffer {
         union {
@@ -384,10 +387,25 @@ inline const uintptr_t & AsyncSocket::maxSendSize() const
   return maxSendSize_;
 }
 //---------------------------------------------------------------------------
-inline AsyncSocket & AsyncSocket::clearCompressionStatistic()
+inline AsyncSocket & AsyncSocket::clearStatistic()
 {
   srb_ = nrb_ = ssb_ = nsb_ = 0;
   return *this;
+}
+//---------------------------------------------------------------------------
+inline uint64_t AsyncSocket::recvBytes() const
+{
+  return nrb_;
+}
+//---------------------------------------------------------------------------
+inline uint64_t AsyncSocket::sendBytes() const
+{
+  return nsb_;
+}
+//---------------------------------------------------------------------------
+inline uint64_t AsyncSocket::allBytes() const
+{
+  return nrb_ + nsb_;
 }
 //---------------------------------------------------------------------------
 inline int64_t AsyncSocket::rcDifference() const
