@@ -104,8 +104,28 @@ void ClientFiber::main()
         for( i = enumStringParts(client_.mailServer_) - 1; i >= 0 && !terminated_ && !connected; i-- ){
           ksock::SockAddr remoteAddress;
           remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
-          connect(remoteAddress);
-          auth();
+          try {
+            open();
+            connect(remoteAddress);
+          }
+          catch( ExceptionSP & ){
+            stdErr.debug(3,
+              utf8::String::Stream() << "Unable to connect. Host " <<
+              stringPartByNo(client_.mailServer_,i) <<
+              " unreachable.\n"
+            );
+            throw;
+          }
+          try {
+            auth();
+          }
+          catch( ExceptionSP & ){
+            stdErr.debug(3,
+              utf8::String::Stream() << "Authentification to host " <<
+              stringPartByNo(client_.mailServer_,i) << " failed.\n"
+            );
+            throw;
+          }
           connected = true;
         }
       }

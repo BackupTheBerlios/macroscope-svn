@@ -456,7 +456,7 @@ void SpoolWalker::fiberExecute()
 #else
         if( e->code() != EINVAL ) throw;
 #endif
-        stdErr.log(lmWARNING,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
+        stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
       }
       list.remove(i);
     }
@@ -581,7 +581,7 @@ void MailQueueWalker::main()
           }
           catch( ExceptionSP & e ){
             e->writeStdError();
-            stdErr.log(lmINFO,
+            stdErr.debug(1,
               utf8::String::Stream() <<
                 "Invalid message " << message.id() <<
                 " recepient" << message.value("#Recepient") << "\n"
@@ -594,7 +594,10 @@ void MailQueueWalker::main()
               connected = true;
             }
             catch( ExceptionSP & ){
-              stdErr.log(lmINFO,utf8::String::Stream() << "Unable to connect. Host " << server << " unreachable.\n");
+              stdErr.debug(3,
+                utf8::String::Stream() <<
+                "Unable to connect. Host " << server << " unreachable.\n"
+              );
             }
           }
           bool authentificated = false;
@@ -604,7 +607,10 @@ void MailQueueWalker::main()
               authentificated = true;
             }
             catch( ExceptionSP & ){
-              stdErr.log(lmINFO,utf8::String::Stream() << "Authentification to host " << server << " failed.\n");
+              stdErr.debug(3,
+                utf8::String::Stream() << "Authentification to host " <<
+                server << " failed.\n"
+              );
             }
           }
           if( authentificated ){ // and now we can send message
@@ -613,7 +619,7 @@ void MailQueueWalker::main()
               getCode();
               *this << uint8_t(cmSendMail) << message;
               getCode();
-              stdErr.log(lmWARNING,utf8::String::Stream() <<
+              stdErr.debug(0,utf8::String::Stream() <<
                 "Message " << message.id() <<
                 " sended to " << message.value("#Recepient") <<
                 ", traffic " << allBytes() << "\n"
@@ -633,7 +639,7 @@ void MailQueueWalker::main()
 #else
         if( e->code() != EINVAL ) throw;
 #endif
-        stdErr.log(lmWARNING,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
+        stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
       }
       list.remove(i);
     }
