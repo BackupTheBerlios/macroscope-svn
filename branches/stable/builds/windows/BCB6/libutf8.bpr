@@ -1,0 +1,365 @@
+<?xml version='1.0' encoding='utf-8' ?>
+<!-- C++Builder XML Project -->
+<PROJECT>
+  <MACROS>
+    <VERSION value="BCB.06.00"/>
+    <PROJECT value="..\..\..\binaries\libutf8.lib"/>
+    <OBJFILES value="..\..\..\src\libutf8\utf8uct.obj ..\..\..\src\libutf8\cp10001.obj 
+      ..\..\..\src\libutf8\cp10002.obj ..\..\..\src\libutf8\cp10003.obj 
+      ..\..\..\src\libutf8\cp10004.obj ..\..\..\src\libutf8\cp10005.obj 
+      ..\..\..\src\libutf8\cp10006.obj ..\..\..\src\libutf8\cp10007.obj 
+      ..\..\..\src\libutf8\cp10008.obj ..\..\..\src\libutf8\cp10010.obj 
+      ..\..\..\src\libutf8\cp10017.obj ..\..\..\src\libutf8\cp10021.obj 
+      ..\..\..\src\libutf8\cp10029.obj ..\..\..\src\libutf8\cp10079.obj 
+      ..\..\..\src\libutf8\cp10081.obj ..\..\..\src\libutf8\cp10082.obj 
+      ..\..\..\src\libutf8\cp1026.obj ..\..\..\src\libutf8\cp1047.obj 
+      ..\..\..\src\libutf8\cp1140.obj ..\..\..\src\libutf8\cp1141.obj 
+      ..\..\..\src\libutf8\cp1142.obj ..\..\..\src\libutf8\cp1143.obj 
+      ..\..\..\src\libutf8\cp1144.obj ..\..\..\src\libutf8\cp1145.obj 
+      ..\..\..\src\libutf8\cp1146.obj ..\..\..\src\libutf8\cp1147.obj 
+      ..\..\..\src\libutf8\cp1148.obj ..\..\..\src\libutf8\cp1149.obj 
+      ..\..\..\src\libutf8\cp1250.obj ..\..\..\src\libutf8\cp1251.obj 
+      ..\..\..\src\libutf8\cp1252.obj ..\..\..\src\libutf8\cp1253.obj 
+      ..\..\..\src\libutf8\cp1254.obj ..\..\..\src\libutf8\cp1255.obj 
+      ..\..\..\src\libutf8\cp1256.obj ..\..\..\src\libutf8\cp1257.obj 
+      ..\..\..\src\libutf8\cp1258.obj ..\..\..\src\libutf8\cp1361.obj 
+      ..\..\..\src\libutf8\cp20000.obj ..\..\..\src\libutf8\cp20001.obj 
+      ..\..\..\src\libutf8\cp20002.obj ..\..\..\src\libutf8\cp20003.obj 
+      ..\..\..\src\libutf8\cp20004.obj ..\..\..\src\libutf8\cp20005.obj 
+      ..\..\..\src\libutf8\cp20105.obj ..\..\..\src\libutf8\cp20106.obj 
+      ..\..\..\src\libutf8\cp20107.obj ..\..\..\src\libutf8\cp20108.obj 
+      ..\..\..\src\libutf8\cp20127.obj ..\..\..\src\libutf8\cp20261.obj 
+      ..\..\..\src\libutf8\cp20269.obj ..\..\..\src\libutf8\cp20273.obj 
+      ..\..\..\src\libutf8\cp20277.obj ..\..\..\src\libutf8\cp20278.obj 
+      ..\..\..\src\libutf8\cp20280.obj ..\..\..\src\libutf8\cp20284.obj 
+      ..\..\..\src\libutf8\cp20285.obj ..\..\..\src\libutf8\cp20290.obj 
+      ..\..\..\src\libutf8\cp20297.obj ..\..\..\src\libutf8\cp20420.obj 
+      ..\..\..\src\libutf8\cp20423.obj ..\..\..\src\libutf8\cp20424.obj 
+      ..\..\..\src\libutf8\cp20833.obj ..\..\..\src\libutf8\cp20838.obj 
+      ..\..\..\src\libutf8\cp20866.obj ..\..\..\src\libutf8\cp20871.obj 
+      ..\..\..\src\libutf8\cp20880.obj ..\..\..\src\libutf8\cp20905.obj 
+      ..\..\..\src\libutf8\cp20924.obj ..\..\..\src\libutf8\cp20932.obj 
+      ..\..\..\src\libutf8\cp20936.obj ..\..\..\src\libutf8\cp20949.obj 
+      ..\..\..\src\libutf8\cp21025.obj ..\..\..\src\libutf8\cp21027.obj 
+      ..\..\..\src\libutf8\cp21866.obj ..\..\..\src\libutf8\cp28591.obj 
+      ..\..\..\src\libutf8\cp28592.obj ..\..\..\src\libutf8\cp28593.obj 
+      ..\..\..\src\libutf8\cp28594.obj ..\..\..\src\libutf8\cp28595.obj 
+      ..\..\..\src\libutf8\cp28596.obj ..\..\..\src\libutf8\cp28597.obj 
+      ..\..\..\src\libutf8\cp28598.obj ..\..\..\src\libutf8\cp28599.obj 
+      ..\..\..\src\libutf8\cp28605.obj ..\..\..\src\libutf8\cp37.obj 
+      ..\..\..\src\libutf8\cp38598.obj ..\..\..\src\libutf8\cp437.obj 
+      ..\..\..\src\libutf8\cp500.obj ..\..\..\src\libutf8\cp50220.obj 
+      ..\..\..\src\libutf8\cp50221.obj ..\..\..\src\libutf8\cp50222.obj 
+      ..\..\..\src\libutf8\cp50225.obj ..\..\..\src\libutf8\cp50227.obj 
+      ..\..\..\src\libutf8\cp50229.obj ..\..\..\src\libutf8\cp51949.obj 
+      ..\..\..\src\libutf8\cp52936.obj ..\..\..\src\libutf8\cp57002.obj 
+      ..\..\..\src\libutf8\cp57003.obj ..\..\..\src\libutf8\cp57004.obj 
+      ..\..\..\src\libutf8\cp57005.obj ..\..\..\src\libutf8\cp57006.obj 
+      ..\..\..\src\libutf8\cp57007.obj ..\..\..\src\libutf8\cp57008.obj 
+      ..\..\..\src\libutf8\cp57009.obj ..\..\..\src\libutf8\cp57010.obj 
+      ..\..\..\src\libutf8\cp57011.obj ..\..\..\src\libutf8\cp708.obj 
+      ..\..\..\src\libutf8\cp720.obj ..\..\..\src\libutf8\cp737.obj 
+      ..\..\..\src\libutf8\cp775.obj ..\..\..\src\libutf8\cp850.obj 
+      ..\..\..\src\libutf8\cp852.obj ..\..\..\src\libutf8\cp855.obj 
+      ..\..\..\src\libutf8\cp857.obj ..\..\..\src\libutf8\cp858.obj 
+      ..\..\..\src\libutf8\cp860.obj ..\..\..\src\libutf8\cp861.obj 
+      ..\..\..\src\libutf8\cp862.obj ..\..\..\src\libutf8\cp863.obj 
+      ..\..\..\src\libutf8\cp864.obj ..\..\..\src\libutf8\cp865.obj 
+      ..\..\..\src\libutf8\cp866.obj ..\..\..\src\libutf8\cp869.obj 
+      ..\..\..\src\libutf8\cp870.obj ..\..\..\src\libutf8\cp874.obj 
+      ..\..\..\src\libutf8\cp875.obj ..\..\..\src\libutf8\cp932.obj 
+      ..\..\..\src\libutf8\cp936.obj ..\..\..\src\libutf8\cp949.obj 
+      ..\..\..\src\libutf8\cp10000.obj ..\..\..\src\libutf8\cp950.obj 
+      ..\..\..\src\libutf8\utf8c1.obj ..\..\..\src\libutf8\utf8c2.obj 
+      ..\..\..\src\libutf8\utf8c3.obj ..\..\..\src\libutf8\utf8cp.obj 
+      ..\..\..\src\libutf8\utf8dtcp.obj ..\..\..\src\libutf8\utf8func.obj 
+      ..\..\..\src\libutf8\utf8lct.obj ..\..\..\src\libutf8\utf8str.obj"/>
+    <RESFILES value=""/>
+    <IDLFILES value=""/>
+    <IDLGENFILES value=""/>
+    <DEFFILE value=""/>
+    <RESDEPEN value="$(RESFILES)"/>
+    <LIBFILES value=""/>
+    <LIBRARIES value=""/>
+    <PACKAGES value=""/>
+    <PATHCPP value=".;..\..\..\src\libutf8"/>
+    <PATHPAS value=".;"/>
+    <PATHRC value=".;"/>
+    <PATHASM value=".;"/>
+    <LINKER value="TLib"/>
+    <USERDEFINES value="_DEBUG;EMBED_ALL_CP"/>
+    <SYSDEFINES value="NO_STRICT"/>
+    <MAINSOURCE value="libutf8.bpf"/>
+    <INCLUDEPATH value="..\..\..\src\libmycpp;..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl"/>
+    <LIBPATH value="..\..\..\src\libmycpp;..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;$(BCB)\lib\obj;$(BCB)\lib"/>
+    <WARNINGS value="-w8092 -w8091 -w8090 -w8089 -w8087 -wprc -wuse -wucp -wstv -wstu -wpin 
+      -w-pck -wnod -wnak -wdef -wcln -wbbf -wasm -wamp -wamb"/>
+    <LISTFILE value=""/>
+    <OTHERFILES value=""/>
+  </MACROS>
+  <OPTIONS>
+    <IDLCFLAGS value="-I..\..\..\src\libmycpp -I..\..\..\src\libutf8 -I..\..\..\src\libksys 
+      -I..\..\..\src\libfbcpp -I..\..\..\include -I$(BCB)\include 
+      -I$(BCB)\include\vcl -src_suffix cpp -D_DEBUG -DEMBED_ALL_CP -boa"/>
+    <CFLAG1 value="-vGc -vGt -vGd -Od -H=..\..\..\binaries\bcb.csm -Hc -Q -Vx -Ve -X- -r- -a8 
+      -6 -b- -d -k -y -v -vi- -c -tW -tWM"/>
+    <PFLAGS value="-$Y+ -$W -$O- -$A8 -v -JPHNE -M"/>
+    <AFLAGS value="/mx /w2 /zi"/>
+    <LFLAGS value="/P128"/>
+    <OTHERFILES value=""/>
+  </OPTIONS>
+  <LINKER>
+    <ALLOBJ value="$(OBJFILES)"/>
+    <ALLLIB value="cg32.lib"/>
+    <OTHERFILES value=""/>
+  </LINKER>
+  <FILELIST>
+      <FILE FILENAME="libutf8.bpf" FORMNAME="" UNITNAME="libutf8" CONTAINERID="BPF" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8uct.cpp" FORMNAME="" UNITNAME="utf8uct.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10001.cpp" FORMNAME="" UNITNAME="cp10001.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10002.cpp" FORMNAME="" UNITNAME="cp10002.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10003.cpp" FORMNAME="" UNITNAME="cp10003.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10004.cpp" FORMNAME="" UNITNAME="cp10004.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10005.cpp" FORMNAME="" UNITNAME="cp10005.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10006.cpp" FORMNAME="" UNITNAME="cp10006.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10007.cpp" FORMNAME="" UNITNAME="cp10007.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10008.cpp" FORMNAME="" UNITNAME="cp10008.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10010.cpp" FORMNAME="" UNITNAME="cp10010.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10017.cpp" FORMNAME="" UNITNAME="cp10017.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10021.cpp" FORMNAME="" UNITNAME="cp10021.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10029.cpp" FORMNAME="" UNITNAME="cp10029.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10079.cpp" FORMNAME="" UNITNAME="cp10079.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10081.cpp" FORMNAME="" UNITNAME="cp10081.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10082.cpp" FORMNAME="" UNITNAME="cp10082.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1026.cpp" FORMNAME="" UNITNAME="cp1026.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1047.cpp" FORMNAME="" UNITNAME="cp1047.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1140.cpp" FORMNAME="" UNITNAME="cp1140.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1141.cpp" FORMNAME="" UNITNAME="cp1141.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1142.cpp" FORMNAME="" UNITNAME="cp1142.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1143.cpp" FORMNAME="" UNITNAME="cp1143.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1144.cpp" FORMNAME="" UNITNAME="cp1144.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1145.cpp" FORMNAME="" UNITNAME="cp1145.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1146.cpp" FORMNAME="" UNITNAME="cp1146.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1147.cpp" FORMNAME="" UNITNAME="cp1147.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1148.cpp" FORMNAME="" UNITNAME="cp1148.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1149.cpp" FORMNAME="" UNITNAME="cp1149.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1250.cpp" FORMNAME="" UNITNAME="cp1250.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1251.cpp" FORMNAME="" UNITNAME="cp1251.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1252.cpp" FORMNAME="" UNITNAME="cp1252.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1253.cpp" FORMNAME="" UNITNAME="cp1253.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1254.cpp" FORMNAME="" UNITNAME="cp1254.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1255.cpp" FORMNAME="" UNITNAME="cp1255.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1256.cpp" FORMNAME="" UNITNAME="cp1256.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1257.cpp" FORMNAME="" UNITNAME="cp1257.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1258.cpp" FORMNAME="" UNITNAME="cp1258.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp1361.cpp" FORMNAME="" UNITNAME="cp1361.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20000.cpp" FORMNAME="" UNITNAME="cp20000.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20001.cpp" FORMNAME="" UNITNAME="cp20001.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20002.cpp" FORMNAME="" UNITNAME="cp20002.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20003.cpp" FORMNAME="" UNITNAME="cp20003.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20004.cpp" FORMNAME="" UNITNAME="cp20004.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20005.cpp" FORMNAME="" UNITNAME="cp20005.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20105.cpp" FORMNAME="" UNITNAME="cp20105.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20106.cpp" FORMNAME="" UNITNAME="cp20106.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20107.cpp" FORMNAME="" UNITNAME="cp20107.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20108.cpp" FORMNAME="" UNITNAME="cp20108.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20127.cpp" FORMNAME="" UNITNAME="cp20127.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20261.cpp" FORMNAME="" UNITNAME="cp20261.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20269.cpp" FORMNAME="" UNITNAME="cp20269.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20273.cpp" FORMNAME="" UNITNAME="cp20273.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20277.cpp" FORMNAME="" UNITNAME="cp20277.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20278.cpp" FORMNAME="" UNITNAME="cp20278.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20280.cpp" FORMNAME="" UNITNAME="cp20280.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20284.cpp" FORMNAME="" UNITNAME="cp20284.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20285.cpp" FORMNAME="" UNITNAME="cp20285.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20290.cpp" FORMNAME="" UNITNAME="cp20290.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20297.cpp" FORMNAME="" UNITNAME="cp20297.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20420.cpp" FORMNAME="" UNITNAME="cp20420.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20423.cpp" FORMNAME="" UNITNAME="cp20423.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20424.cpp" FORMNAME="" UNITNAME="cp20424.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20833.cpp" FORMNAME="" UNITNAME="cp20833.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20838.cpp" FORMNAME="" UNITNAME="cp20838.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20866.cpp" FORMNAME="" UNITNAME="cp20866.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20871.cpp" FORMNAME="" UNITNAME="cp20871.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20880.cpp" FORMNAME="" UNITNAME="cp20880.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20905.cpp" FORMNAME="" UNITNAME="cp20905.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20924.cpp" FORMNAME="" UNITNAME="cp20924.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20932.cpp" FORMNAME="" UNITNAME="cp20932.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20936.cpp" FORMNAME="" UNITNAME="cp20936.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp20949.cpp" FORMNAME="" UNITNAME="cp20949.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp21025.cpp" FORMNAME="" UNITNAME="cp21025.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp21027.cpp" FORMNAME="" UNITNAME="cp21027.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp21866.cpp" FORMNAME="" UNITNAME="cp21866.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28591.cpp" FORMNAME="" UNITNAME="cp28591.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28592.cpp" FORMNAME="" UNITNAME="cp28592.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28593.cpp" FORMNAME="" UNITNAME="cp28593.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28594.cpp" FORMNAME="" UNITNAME="cp28594.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28595.cpp" FORMNAME="" UNITNAME="cp28595.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28596.cpp" FORMNAME="" UNITNAME="cp28596.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28597.cpp" FORMNAME="" UNITNAME="cp28597.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28598.cpp" FORMNAME="" UNITNAME="cp28598.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28599.cpp" FORMNAME="" UNITNAME="cp28599.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp28605.cpp" FORMNAME="" UNITNAME="cp28605.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp37.cpp" FORMNAME="" UNITNAME="cp37.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp38598.cpp" FORMNAME="" UNITNAME="cp38598.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp437.cpp" FORMNAME="" UNITNAME="cp437.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp500.cpp" FORMNAME="" UNITNAME="cp500.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp50220.cpp" FORMNAME="" UNITNAME="cp50220.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp50221.cpp" FORMNAME="" UNITNAME="cp50221.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp50222.cpp" FORMNAME="" UNITNAME="cp50222.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp50225.cpp" FORMNAME="" UNITNAME="cp50225.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp50227.cpp" FORMNAME="" UNITNAME="cp50227.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp50229.cpp" FORMNAME="" UNITNAME="cp50229.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp51949.cpp" FORMNAME="" UNITNAME="cp51949.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp52936.cpp" FORMNAME="" UNITNAME="cp52936.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57002.cpp" FORMNAME="" UNITNAME="cp57002.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57003.cpp" FORMNAME="" UNITNAME="cp57003.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57004.cpp" FORMNAME="" UNITNAME="cp57004.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57005.cpp" FORMNAME="" UNITNAME="cp57005.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57006.cpp" FORMNAME="" UNITNAME="cp57006.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57007.cpp" FORMNAME="" UNITNAME="cp57007.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57008.cpp" FORMNAME="" UNITNAME="cp57008.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57009.cpp" FORMNAME="" UNITNAME="cp57009.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57010.cpp" FORMNAME="" UNITNAME="cp57010.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp57011.cpp" FORMNAME="" UNITNAME="cp57011.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp708.cpp" FORMNAME="" UNITNAME="cp708.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp720.cpp" FORMNAME="" UNITNAME="cp720.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp737.cpp" FORMNAME="" UNITNAME="cp737.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp775.cpp" FORMNAME="" UNITNAME="cp775.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp850.cpp" FORMNAME="" UNITNAME="cp850.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp852.cpp" FORMNAME="" UNITNAME="cp852.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp855.cpp" FORMNAME="" UNITNAME="cp855.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp857.cpp" FORMNAME="" UNITNAME="cp857.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp858.cpp" FORMNAME="" UNITNAME="cp858.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp860.cpp" FORMNAME="" UNITNAME="cp860.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp861.cpp" FORMNAME="" UNITNAME="cp861.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp862.cpp" FORMNAME="" UNITNAME="cp862.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp863.cpp" FORMNAME="" UNITNAME="cp863.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp864.cpp" FORMNAME="" UNITNAME="cp864.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp865.cpp" FORMNAME="" UNITNAME="cp865.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp866.cpp" FORMNAME="" UNITNAME="cp866.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp869.cpp" FORMNAME="" UNITNAME="cp869.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp870.cpp" FORMNAME="" UNITNAME="cp870.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp874.cpp" FORMNAME="" UNITNAME="cp874.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp875.cpp" FORMNAME="" UNITNAME="cp875.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp932.cpp" FORMNAME="" UNITNAME="cp932.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp936.cpp" FORMNAME="" UNITNAME="cp936.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp949.cpp" FORMNAME="" UNITNAME="cp949.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp10000.cpp" FORMNAME="" UNITNAME="cp10000.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\cp950.cpp" FORMNAME="" UNITNAME="cp950.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8c1.cpp" FORMNAME="" UNITNAME="utf8c1.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8c2.cpp" FORMNAME="" UNITNAME="utf8c2.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8c3.cpp" FORMNAME="" UNITNAME="utf8c3.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8cp.cpp" FORMNAME="" UNITNAME="utf8cp.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8dtcp.cpp" FORMNAME="" UNITNAME="utf8dtcp.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8func.cpp" FORMNAME="" UNITNAME="utf8func.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8lct.cpp" FORMNAME="" UNITNAME="utf8lct.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+      <FILE FILENAME="..\..\..\src\libutf8\utf8str.cpp" FORMNAME="" UNITNAME="utf8str.cpp" CONTAINERID="CCompiler" DESIGNCLASS="" LOCALCOMMAND=""/>
+  </FILELIST>
+  <BUILDTOOLS>
+  </BUILDTOOLS>
+
+  <IDEOPTIONS>
+[Version Info]
+IncludeVerInfo=0
+AutoIncBuild=0
+MajorVer=1
+MinorVer=0
+Release=0
+Build=0
+Debug=0
+PreRelease=0
+Special=0
+Private=0
+DLL=0
+Locale=1049
+CodePage=1251
+
+[Version Info Keys]
+CompanyName=
+FileDescription=
+FileVersion=1.0.0.0
+InternalName=
+LegalCopyright=
+LegalTrademarks=
+OriginalFilename=
+ProductName=
+ProductVersion=1.0.0.0
+Comments=
+
+[HistoryLists\hlIncludePath]
+Count=5
+Item0=..\..\..\src\libmycpp;..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item1=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item2=..\..\..\include;$(BCB)\include;$(BCB)\include\vcl
+Item3=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\include;$(BCB)\include;$(BCB)\include\vcl;..\..\..\include
+Item4=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;..\..\include;$(BCB)\include;$(BCB)\include\vcl
+
+[HistoryLists\hlLibraryPath]
+Count=3
+Item0=..\..\..\src\libmycpp;..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;$(BCB)\lib\obj;$(BCB)\lib
+Item1=..\..\..\src\libutf8;..\..\..\src\libksys;..\..\..\src\libfbcpp;$(BCB)\lib\obj;$(BCB)\lib
+Item2=$(BCB)\lib\obj;$(BCB)\lib
+
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=$(BCB)\source\vcl
+
+[HistoryLists\hlConditionals]
+Count=9
+Item0=_DEBUG;EMBED_ALL_CP
+Item1=_DEBUG;EMBED_CP1251_SUPPORT
+Item2=EMBED_CP1251_SUPPORT;_DEBUG
+Item3=EMBED_CP1251_SUPPORT
+Item4=NDEBUG;EMBED_CP1251_SUPPORT;_DEBUG
+Item5=NDEBUG;EMBED_CP1251_SUPPORT
+Item6=EMBED_ALL_CP;_DEBUG
+Item7=EMBED_ALL_CP
+Item8=_DEBUG
+
+[HistoryLists\hlFinalOutputDir]
+Count=2
+Item0=..\..\..\binaries\
+Item1=..\..\..\binaries
+
+[HistoryLists\hlTlibPageSize]
+Count=7
+Item0=0x0080
+Item1=128
+Item2=0x0040
+Item3=64
+Item4=0x0020
+Item5=0x0010
+Item6=0x10
+
+[Debugging]
+DebugSourceDirs=$(BCB)\source\vcl
+
+[Parameters]
+RunParams=
+Launcher=
+UseLauncher=0
+DebugCWD=
+HostApplication=
+RemoteHost=
+RemotePath=
+RemoteLauncher=
+RemoteCWD=
+RemoteDebug=0
+
+[Compiler]
+ShowInfoMsgs=0
+LinkDebugVcl=0
+LinkCGLIB=1
+
+[CORBA]
+AddServerUnit=1
+AddClientUnit=1
+PrecompiledHeaders=1
+
+[Language]
+ActiveLang=
+ProjectLang=
+RootDir=
+  </IDEOPTIONS>
+</PROJECT>
