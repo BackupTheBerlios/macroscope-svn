@@ -51,7 +51,7 @@ LogFile::~LogFile()
 }
 //---------------------------------------------------------------------------
 LogFile::LogFile() : 
-  enabledLevels_(1 + 2 + 4),
+  enabledLevels_(1 + 2 + 4 + 8),
   rotationThreshold_(1024 * 1024),
   rotatedFileCount_(10)
 {
