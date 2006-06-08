@@ -50,18 +50,13 @@ LogFile::~LogFile()
   close();
 }
 //---------------------------------------------------------------------------
-LogFile::LogFile() : filter_(lmFATAL)
+LogFile::LogFile() : 
+  enabledLevels_(1 + 2 + 4),
+  rotationThreshold_(1024 * 1024),
+  rotatedFileCount_(10)
 {
   afile_ = new AsyncFile;
   fmutex_ = new FiberInterlockedMutex;
-}
-//---------------------------------------------------------------------------
-LogFile::LogFile(const utf8::String & fileName) : filter_(lmFATAL)
-{
-  afile_ = new AsyncFile;
-  fmutex_ = new FiberInterlockedMutex;
-  afile_->fileName(fileName);
-  file_.fileName(fileName);
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::open()
@@ -78,9 +73,12 @@ LogFile & LogFile::close()
 //---------------------------------------------------------------------------
 LogFile & LogFile::fileName(const utf8::String & name)
 {
+  {
+    AutoLock<FiberInterlockedMutex> lock(fmutex_);
+    afile_->close();
+    afile_->fileName(name);
+  }
   AutoLock<InterlockedMutex> lock(mutex_);
-  afile_->close();
-  afile_->fileName(name);
   file_.close();
   file_.fileName(name);
   return *this;
@@ -96,6 +94,101 @@ const char * const  LogFile::priNicks_[]  = {
   "PROFILER",
   "DIRECT"
 };
+//---------------------------------------------------------------------------
+void LogFile::rotate(uint64_t size)
+{
+  if( rotatedFileCount_ > 0 && size <= rotationThreshold_) return;
+  if( isRunInFiber() ){
+    AsyncFile flock(afile_->fileName() + ".lck");
+    flock.removeAfterClose(true);
+    flock.open();
+    if( flock.tryWRLock(0,0) ){
+      utf8::String fileExt(getFileExt(afile_->fileName()));
+      Stat st;
+      intptr_t i = 0, j;
+      while( statAsync(changeFileExt(afile_->fileName(),utf8::int2Str(i)) + fileExt,st) ) i++;
+      for( j = --i; j >= (intptr_t) rotatedFileCount_ - 1; j-- )
+        removeAsync(changeFileExt(afile_->fileName(),utf8::int2Str(j)) + fileExt);
+      while( i > 0 ){
+        renameAsync(
+          changeFileExt(afile_->fileName(),utf8::int2Str(i - 1)) + fileExt,
+          changeFileExt(afile_->fileName(),utf8::int2Str(i)) + fileExt
+        );
+        i--;
+      }
+      afile_->close();
+      for(;;){
+        {
+          AutoLock<InterlockedMutex> lock(mutex_);
+          file_.close();
+        }
+        bool renamed = false;
+        try {
+          renameAsync(afile_->fileName(),changeFileExt(afile_->fileName(),"0") + fileExt);
+          renamed = true;
+        }
+        catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+          if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+              e->code() != ERROR_LOCK_VIOLATION + errorOffset ) throw;
+#else
+          if( e->code() != EAGAIN && e->code() != EDEADLK ) throw;
+#endif
+        }
+        if( renamed ) break;
+      }
+      flock.unLock(0,0);
+    }
+    else {
+      afile_->close();
+    }
+  }
+  else {
+    FileHandleContainer flock(file_.fileName() + ".lck");
+    flock.removeAfterClose(true);
+    flock.open();
+    if( flock.tryWRLock(0,0) ){
+      utf8::String fileExt(getFileExt(file_.fileName()));
+      Stat st;
+      intptr_t i = 0, j;
+      while( statAsync(changeFileExt(file_.fileName(),utf8::int2Str(i)) + fileExt,st) ) i++;
+      for( j = --i; j >= (intptr_t) rotatedFileCount_ - 1; j-- )
+        remove(changeFileExt(file_.fileName(),utf8::int2Str(j)) + fileExt);
+      while( i > 0 ){
+        rename(
+          changeFileExt(file_.fileName(),utf8::int2Str(i - 1)) + fileExt,
+          changeFileExt(file_.fileName(),utf8::int2Str(i)) + fileExt
+        );
+        i--;
+      }
+      file_.close();
+      for(;;){
+        {
+          AutoLock<FiberInterlockedMutex> lock(fmutex_);
+          afile_->close();
+        }
+        bool renamed = false;
+        try {
+          rename(file_.fileName(),changeFileExt(file_.fileName(),"0") + fileExt);
+          renamed = true;
+        }
+        catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+          if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+              e->code() != ERROR_LOCK_VIOLATION + errorOffset ) throw;
+#else
+          if( e->code() != EAGAIN && e->code() != EDEADLK ) throw;
+#endif
+        }
+        if( renamed ) break;
+      }
+      flock.unLock(0,0);
+    }
+    else {
+      file_.close();
+    }
+  }
+}
 //---------------------------------------------------------------------------
 LogFile & LogFile::log(LogMessagePriority pri,const utf8::String::Stream & stream)
 {
@@ -156,7 +249,7 @@ LogFile & LogFile::log(LogMessagePriority pri,const utf8::String::Stream & strea
   }
   buf.realloc(a + l);
   utf8::utf8s2mbcs(CP_OEMCP,buf.ptr() + a,l,stream.plane(),stream.count());
-  if( currentFiber() != NULL ){
+  if( isRunInFiber() ){
     AutoLock<FiberInterlockedMutex> lock(fmutex_);
     if( !afile_->isOpen() ){
       if( afile_->fileName().strlen() == 0 )
@@ -176,30 +269,43 @@ LogFile & LogFile::log(LogMessagePriority pri,const utf8::String::Stream & strea
       else {
         afile_->writeBuffer(afile_->size(),buf.ptr(),(a + l) * sizeof(char));
       }
+      sz = afile_->size();
     }
     catch( ... ){
       afile_->detach();
       afile_->close();
       throw;
     }
+    rotate(sz);
     afile_->detach();
   }
   else {
     AutoLock<InterlockedMutex> lock(mutex_);
     if( !file_.isOpen() ){
       if( file_.fileName().strlen() == 0 )
-        file_.fileName(changeFileExt(getExecutableName(), "log"));
+        file_.fileName(changeFileExt(getExecutableName(),"log"));
       file_.open();
     }
     uint64_t sz = file_.size();
-    AutoFileWRLock<FileHandleContainer> flock(file_,sz,0);
-    if( pri == lmDIRECT ){
-      file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
+    {
+      AutoFileWRLock<FileHandleContainer> flock(file_,sz,0);
+      if( pri == lmDIRECT ){
+        file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
+      }
+      else {
+        file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
+      }
+      sz = file_.size();
     }
-    else {
-      file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
-    }
+    rotate(sz);
   }
+  return *this;
+}
+//---------------------------------------------------------------------------
+LogFile & LogFile::debug(uintptr_t level,const utf8::String::Stream & stream)
+{
+  assert( level <= 9 );
+  if( (enabledLevels_ & (1u << level)) != 0 ) log(lmDEBUG,stream);
   return *this;
 }
 //---------------------------------------------------------------------------

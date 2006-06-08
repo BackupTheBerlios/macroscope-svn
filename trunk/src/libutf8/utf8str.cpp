@@ -993,7 +993,7 @@ uintptr_t int2StrLen(intmax_t a)
 
   if( a < 0 ) x = -a; else x = a;
   for( l = 1, c = 10; c < x; c = sfSHL(c), l++ );
-  if( a < 0 ) l++;
+  if( a < 0 || c == x ) l++;
   return l;
 }
 //---------------------------------------------------------------------------
@@ -1003,6 +1003,7 @@ uintptr_t int2StrLen(uintmax_t a)
   uintmax_t c;
 
   for( l = 1, c = 10; c < a; c = sfSHL(c), l++ );
+  if( c == a ) l++;
   return l;
 }
 //---------------------------------------------------------------------------

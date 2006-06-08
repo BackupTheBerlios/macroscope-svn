@@ -501,6 +501,20 @@ utf8::String changeFileExt(const utf8::String & fileName,const utf8::String & ex
   return fileName + "." + extension;
 }
 //---------------------------------------------------------------------------
+utf8::String getFileExt(const utf8::String & fileName)
+{
+  utf8::String::Iterator i(fileName);
+  i.last();
+  while( !i.bof() ){
+    switch( i.getChar() ){
+      case '\\' : case ':' : break;
+      case '.'  : return utf8::String(i);
+      default   : i.prev();
+    }
+  }
+  return utf8::String();
+}
+//---------------------------------------------------------------------------
 utf8::String getExecutableName()
 {
 #if defined(__WIN32__) || defined(__WIN64__)

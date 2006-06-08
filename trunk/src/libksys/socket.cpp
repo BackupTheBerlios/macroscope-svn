@@ -137,23 +137,29 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::close()
 {
-  if( socket_ != INVALID_SOCKET ){
-    if( api.closesocket(socket_) != 0 ){
-      int32_t err = errNo();
-      throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+  bool closed = false;
+  {
+    ksys::AutoLock<ksys::InterlockedMutex> lock(api.mutex());
+    if( socket_ != INVALID_SOCKET ){
+      if( api.closesocket(socket_) != 0 ){
+        int32_t err = errNo();
+        throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+      }
+      socket_ = INVALID_SOCKET;
+      closed = true;
     }
-    api.close();
-    socket_ = INVALID_SOCKET;
   }
+  if( closed ) api.close();
   return *this;
 }
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::shutdown(int how)
 {
+  ksys::AutoLock<ksys::InterlockedMutex> lock(api.mutex());
   if( socket_ != INVALID_SOCKET ){
     if( api.shutdown(socket_,how) != 0 ){
       int32_t err = errNo();
-      if( err != ENOTCONN && err != ENOTSOCK )
+      if( err != ENOTCONN && err != ENOTSOCK && err != EWSANOTINITIALISED )
         throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
     }
 #if HAVE_KQUEUE

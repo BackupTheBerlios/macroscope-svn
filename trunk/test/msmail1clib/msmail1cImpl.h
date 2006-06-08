@@ -150,6 +150,7 @@ public:
   }
 
 public:
+  adicpp::AutoInitializer autoInitializer_;
   msmail::Client client_;
   LPDISPATCH pBackConnection_;
   IAsyncEvent * pAsyncEvent_;

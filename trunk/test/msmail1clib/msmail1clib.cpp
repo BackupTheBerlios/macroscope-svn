@@ -56,10 +56,10 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpRes
 #endif
     switch( dwReason ){
       case DLL_PROCESS_ATTACH :
-        adicpp::initialize();
+//        adicpp::initialize();
         break;
       case DLL_PROCESS_DETACH :
-        adicpp::cleanup();
+//        adicpp::cleanup();
         break;
     }
 	  hInstance;

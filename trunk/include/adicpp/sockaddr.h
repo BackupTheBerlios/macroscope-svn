@@ -52,12 +52,24 @@ class SockAddr {
         struct sockaddr_in6 addr6_;
 #endif
     };
-    SockAddr & resolve(const utf8::String & addr,uintptr_t defPort = 0);
-    static void resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,uintptr_t defPort = 0);
+
+    operator struct sockaddr_in * () { return &addr4_; }
+    operator const struct sockaddr_in * () const { return &addr4_; }
+    operator struct sockaddr_in & () { return addr4_; }
+    operator const struct sockaddr_in & () const { return addr4_; }
+#if HAVE_STRUCT_SOCKADDR_IN6
+    operator struct sockaddr_in6 * () { return &addr6_; }
+    operator const struct sockaddr_in6 * () const { return &addr6_; }
+    operator struct sockaddr_in6 & () { return addr6_; }
+    operator const struct sockaddr_in6 & () const { return addr6_; }
+#endif
+
+    SockAddr & resolve(const utf8::String & addr,const ksys::Mutant & defPort = 0);
+    static void resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
     utf8::String resolve() const;
 
-    SockAddr & resolveAsync(const utf8::String & addr,uintptr_t defPort = 0);
-    static void resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & addrs,uintptr_t defPort = 0);
+    SockAddr & resolveAsync(const utf8::String & addr,const ksys::Mutant & defPort = 0);
+    static void resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
     utf8::String resolveAsync() const;
 
     static utf8::String gethostname();

@@ -675,7 +675,7 @@ void Logger::main()
 int main(int argc, char * argv[])
 {
   int errcode = -1;
-  adicpp::initialize();
+  adicpp::AutoInitializer autoInitializer;
   try{
     uintptr_t i;
     ksys::initializeArguments(argc, argv);
@@ -694,7 +694,6 @@ int main(int argc, char * argv[])
   }
   catch( ... ){
   }
-  adicpp::cleanup();
   return errcode;
 }
 //------------------------------------------------------------------------------

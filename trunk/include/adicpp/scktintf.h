@@ -164,6 +164,28 @@ class API {
     HANDLE WSAAsyncGetHostByName(HWND hWnd,unsigned int wMsg,const char * name,char * buf,int buflen){
       return WSAAsyncGetHostByName(hWnd,wMsg,name,buf,buflen);
     }
+    int getaddrinfo(const char FAR * nodename,const char FAR * servname,const struct addrinfo FAR * hints,struct addrinfo FAR * FAR * res)
+    {
+      return ::getaddrinfo(nodename,servname,hints,res);
+    }
+    int GetAddrInfoA(const char FAR * nodename,const char FAR * servname,const struct addrinfo FAR * hints,struct addrinfo FAR * FAR * res)
+    {
+      return ::getaddrinfo(nodename,servname,hints,res);
+    }
+    int GetAddrInfoW(PCWSTR pNodeName,PCWSTR pServiceName,const ADDRINFOW * pHints,PADDRINFOW * ppResult)
+    {
+      return ::GetAddrInfoW(pNodeName,pServiceName,pHints,ppResult);
+    }
+    void freeaddrinfo(LPADDRINFO pAddrInfo){
+      ::freeaddrinfo(pAddrInfo);
+    }
+    void FreeAddrInfoA(LPADDRINFO pAddrInfo){
+      ::freeaddrinfo(pAddrInfo);
+    }
+    void FreeAddrInfoW(PADDRINFOW pAddrInfo)
+    {
+      return ::FreeAddrInfoW(pAddrInfo);
+    }
 #else
 #if _MSC_VER
 #pragma warning(push,3)
@@ -171,185 +193,219 @@ class API {
     union {
         struct {
             union {
-                int (WSAAPI * WSAGetLastError)(void); 
-                void *  p_WSAGetLastError;
+              int (WSAAPI * WSAGetLastError)(void); 
+              void *  p_WSAGetLastError;
             };
             union {
-                void (WSAAPI * WSASetLastError)(int iError);
-                void *  p_WSASetLastError;
+              void (WSAAPI * WSASetLastError)(int iError);
+              void *  p_WSASetLastError;
             };
             union {
-                int (WSAAPI * WSAStartup)(WORD wVersionRequested,
-                                          LPWSADATA lpWSAData);
-                void *  p_WSAStartup;
+              int (WSAAPI * WSAStartup)(WORD wVersionRequested,
+                                        LPWSADATA lpWSAData);
+              void *  p_WSAStartup;
             };
             union {
-                int (WSAAPI * WSACleanup)(void);
-                void *  p_WSACleanup;
+              int (WSAAPI * WSACleanup)(void);
+              void *  p_WSACleanup;
             };
             union {
-                int (WSAAPI * WSAAsyncSelect)(SOCKET s, HWND hWnd,
-                                              unsigned int wMsg, long lEvent);
-                void *  p_WSAAsyncSelect;
+              int (WSAAPI * WSAAsyncSelect)(SOCKET s, HWND hWnd,
+                                            unsigned int wMsg, long lEvent);
+              void *  p_WSAAsyncSelect;
             };
             union {
-                SOCKET (WSAAPI * socket)(int domain, int type, int protocol);
-                void *  p_socket;
+              SOCKET (WSAAPI * socket)(int domain, int type, int protocol);
+              void *  p_socket;
             };
             union {
-                int (WSAAPI * closesocket)(SOCKET s);
-                void *  p_closesocket;
+              int (WSAAPI * closesocket)(SOCKET s);
+              void *  p_closesocket;
             };
             union {
-                int (WSAAPI * shutdown)(SOCKET s, int how);
-                void *  p_shutdown;
+              int (WSAAPI * shutdown)(SOCKET s, int how);
+              void *  p_shutdown;
             };
             union {
-                int (WSAAPI * bind)(SOCKET s,
-                                    const struct sockaddr FAR * name,
-                                    socklen_t namelen);
-                void *  p_bind;
+              int (WSAAPI * bind)(SOCKET s,
+                                  const struct sockaddr FAR * name,
+                                  socklen_t namelen);
+              void *  p_bind;
             };
             union {
-                int (WSAAPI * listen)(SOCKET s, int backlog);
-                void *  p_listen;
+              int (WSAAPI * listen)(SOCKET s, int backlog);
+              void *  p_listen;
             };
             union {
-                SOCKET (WSAAPI * accept)(SOCKET s, struct sockaddr FAR * addr,
-                                         socklen_t FAR * addrlen);
-                void *  p_accept;
+              SOCKET (WSAAPI * accept)(SOCKET s, struct sockaddr FAR * addr,
+                                       socklen_t FAR * addrlen);
+              void *  p_accept;
             };
             union {
-                int (WSAAPI * recv)(SOCKET s, char FAR * buf, int len,
-                                    int flags);
-                void *  p_recv;
+              int (WSAAPI * recv)(SOCKET s, char FAR * buf, int len,
+                                  int flags);
+              void *  p_recv;
             };
             union {
-                int (WSAAPI * recvfrom)(SOCKET s, char FAR * buf, int len,
-                                        int flags, struct sockaddr FAR * from,
-                                        socklen_t FAR * fromlen);
-                void *  p_recvfrom;
+              int (WSAAPI * recvfrom)(SOCKET s, char FAR * buf, int len,
+                                      int flags, struct sockaddr FAR * from,
+                                      socklen_t FAR * fromlen);
+              void *  p_recvfrom;
             };
             union {
-                int (WSAAPI * send)(SOCKET s, const char FAR * buf, int len,
-                                    int flags);
-                void *  p_send;
+              int (WSAAPI * send)(SOCKET s, const char FAR * buf, int len,int flags);
+              void *  p_send;
             };
             union {
-                int (WSAAPI * sendto)(SOCKET s, const char FAR * buf, int len,
-                                      int flags,
-                                      const struct sockaddr FAR * to,
-                                      socklen_t tolen);
-                void *  p_sendto;
+              int (WSAAPI * sendto)(SOCKET s, const char FAR * buf, int len,
+                                    int flags,
+                                    const struct sockaddr FAR * to,
+                                    socklen_t tolen);
+              void *  p_sendto;
             };
             union {
-                int (WSAAPI * getsockopt)(SOCKET s, int level, int optname,
-                                          char FAR * optval,
-                                          socklen_t FAR * optlen);
-                void *  p_getsockopt;
+              int (WSAAPI * getsockopt)(SOCKET s, int level, int optname,
+                                        char FAR * optval,
+                                        socklen_t FAR * optlen);
+              void *  p_getsockopt;
             };
             union {
-                int (WSAAPI * setsockopt)(SOCKET s, int level, int optname,
-                                          const char FAR * optval,
-                                          socklen_t optlen);
-                void *  p_setsockopt;
+              int (WSAAPI * setsockopt)(SOCKET s, int level, int optname,
+                                        const char FAR * optval,
+                                        socklen_t optlen);
+              void *  p_setsockopt;
             };
             union {
-                int (WSAAPI * connect)(SOCKET s,
-                                       const struct sockaddr FAR * name,
-                                       socklen_t namelen);
-                void *  p_connect;
+              int (WSAAPI * connect)(SOCKET s,
+                                     const struct sockaddr FAR * name,
+                                     socklen_t namelen);
+              void *  p_connect;
             };
             union {
-                u_long (WSAAPI * htonl)(u_long hostlong);
-                void *  p_htonl;
+              u_long (WSAAPI * htonl)(u_long hostlong);
+              void *  p_htonl;
             };
             union {
-                u_long (WSAAPI * ntohl)(u_long netlong);
-                void *  p_ntohl;
+              u_long (WSAAPI * ntohl)(u_long netlong);
+              void *  p_ntohl;
             };
             union {
-                u_short (WSAAPI * htons)(u_short hostshort);
-                void *  p_htons;
+              u_short (WSAAPI * htons)(u_short hostshort);
+              void *  p_htons;
             };
             union {
-                u_short (WSAAPI * ntohs)(u_short netshort);
-                void *  p_ntohs;
+              u_short (WSAAPI * ntohs)(u_short netshort);
+              void *  p_ntohs;
             };
             union {
-                char FAR * (WSAAPI * inet_ntoa)(struct in_addr in);
-                void *  p_inet_ntoa;
+              char FAR * (WSAAPI * inet_ntoa)(struct in_addr in);
+              void *  p_inet_ntoa;
             };
             union {
-                unsigned long (WSAAPI * inet_addr)(const char FAR * cp);
-                void *  p_inet_addr;
+              unsigned long (WSAAPI * inet_addr)(const char FAR * cp);
+              void *  p_inet_addr;
             };
             union {
-                int (WSAAPI * WSARecv)(
+              int (WSAAPI * WSARecv)(
                 SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount,
                 LPDWORD lpNumberOfBytesRecvd, LPDWORD lpFlags,
                 LPWSAOVERLAPPED lpOverlapped,
                 LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionROUTINE);
-                void *  p_WSARecv;
+              void *  p_WSARecv;
             };
             union {
-                int (WSAAPI * WSASend)(
+              int (WSAAPI * WSASend)(
                 SOCKET s, LPWSABUF lpBuffers, DWORD dwBufferCount,
                 LPDWORD lpNumberOfBytesSent, DWORD dwFlags,
                 LPWSAOVERLAPPED lpOverlapped,
                 LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionROUTINE);
-                void *  p_WSASend;
+              void *  p_WSASend;
             };
             union {
-                SOCKET (WSAAPI * WSASocketA)(
+              SOCKET (WSAAPI * WSASocketA)(
                 int af, int type, int protocol,
                 LPWSAPROTOCOL_INFOA lpProtocolInfo, GROUP g, DWORD dwFlags);
-                void *  p_WSASocketA;
+              void *  p_WSASocketA;
             };
             union {
-                SOCKET (WSAAPI * WSASocketW)(
+              SOCKET (WSAAPI * WSASocketW)(
                 int af, int type, int protocol,
                 LPWSAPROTOCOL_INFOW lpProtocolInfo, GROUP g, DWORD dwFlags);
-                void *  p_WSASocketW;
+              void *  p_WSASocketW;
             };
             union {
-                BOOL (WSAAPI * WSAGetOverlappedResult)(
+              BOOL (WSAAPI * WSAGetOverlappedResult)(
                 SOCKET s,
                 LPWSAOVERLAPPED lpOverlapped, LPDWORD lpcbTransfer,
                 BOOL fWait,
                 LPDWORD lpdwFlags);
-                void *  p_WSAGetOverlappedResult;
+              void *  p_WSAGetOverlappedResult;
             };
             union {
-                struct hostent * (WSAAPI * gethostbyname)(const char * name);
-                void *  p_gethostbyname;
+              struct hostent * (WSAAPI * gethostbyname)(const char * name);
+              void *  p_gethostbyname;
             };
             union {
-                struct hostent * (WSAAPI * gethostbyaddr)(const char FAR * addr,int len,int type);
-                void * p_gethostbyaddr;
+              struct hostent * (WSAAPI * gethostbyaddr)(const char FAR * addr,int len,int type);
+              void * p_gethostbyaddr;
             };
             union {
               int (WSAAPI * gethostname)(char * name,int namelen);
               void * p_gethostname;
             };
             union {
-                int (WSAAPI * WSAEventSelect)(SOCKET s, WSAEVENT hEventObject,long lNetworkEvents);
-                void *  p_WSAEventSelect;
+              int (WSAAPI * WSAEventSelect)(SOCKET s, WSAEVENT hEventObject,long lNetworkEvents);
+              void *  p_WSAEventSelect;
             };
             union {
-                int (WSAAPI * WSAEnumNetworkEvents)(
-                SOCKET s, WSAEVENT hEventObject,
-                LPWSANETWORKEVENTS lpNetworkEvents);
+              int (WSAAPI * WSAEnumNetworkEvents)(SOCKET s,WSAEVENT hEventObject,LPWSANETWORKEVENTS lpNetworkEvents);
             };
             union {
-                HANDLE (WSAAPI * WSAAsyncGetHostByName)(
-                  HWND hWnd,
-                  unsigned int wMsg,
-                  const char * name,
-                  char * buf,
-                  int buflen
-                );
-                void * p_WSAAsyncGetHostByName;
+              HANDLE (WSAAPI * WSAAsyncGetHostByName)(
+                HWND hWnd,
+                unsigned int wMsg,
+                const char * name,
+                char * buf,
+                int buflen
+              );
+              void * p_WSAAsyncGetHostByName;
+            };
+            union {
+              int (WSAAPI * getaddrinfo)(
+                  const char FAR * nodename,
+                  const char FAR * servname,
+                  const struct addrinfo FAR * hints,
+                  struct addrinfo FAR * FAR * res
+              );
+              #undef GetAddrInfoA
+              int (WSAAPI * GetAddrInfoA)(
+                  const char FAR * nodename,
+                  const char FAR * servname,
+                  const struct addrinfo FAR * hints,
+                  struct addrinfo FAR * FAR * res
+              );
+              #define GetAddrInfoA getaddrinfo
+              void * p_getaddrinfo;
+            };
+            union {
+              int (WSAAPI * GetAddrInfoW)(
+                PCWSTR pNodeName,
+                PCWSTR pServiceName,
+                const ADDRINFOW * pHints,
+                PADDRINFOW * ppResult
+              );
+              void * p_GetAddrInfoW;
+            };
+            union {
+              void (WSAAPI * freeaddrinfo)(LPADDRINFO pAddrInfo);
+              #undef FreeAddrInfoA
+              void (WSAAPI * FreeAddrInfoA)(LPADDRINFO pAddrInfo);
+              #define FreeAddrInfoA freeaddrinfo
+              void * p_freeaddrinfo;
+            };
+            union {
+              void (WSAAPI * FreeAddrInfoW)(PADDRINFOW pAddrInfo);
+              void * p_FreeAddrInfoW;
             };
         };
     };
@@ -446,6 +502,14 @@ class API {
     {
       return ::getnameinfo(sa,salen,host,hostlen,serv,servlen,flags);
     }
+    int getaddrinfo(const char *hostname, const char *servname,const struct addrinfo *hints, struct addrinfo **res)
+    {
+      return ::getaddrinfo(hostname,servname,hints,res);
+    }
+    void freeaddrinfo(struct addrinfo *ai)
+    {
+      ::freeaddrinfo(ai);
+    }
     void open()
     {
     }
@@ -453,13 +517,13 @@ class API {
     {
     }
 #endif
+    static ksys::InterlockedMutex & mutex();
   protected:
 #if defined(__WIN32__) || defined(__WIN64__)
     static WSADATA            wsaData_;
     static HINSTANCE          handle_;
 
     static uint8_t            mutex_[];
-    static ksys::InterlockedMutex & mutex();
     static uintptr_t          count_;
 
     static const char * const symbols_[];

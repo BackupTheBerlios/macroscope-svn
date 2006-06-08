@@ -34,7 +34,7 @@ int main(int _argc,char * _argv[])
 //  _set_amblksiz(1024);
 
   int errcode = 0;
-  adicpp::initialize();
+  adicpp::AutoInitializer autoInitializer;
   try {
     union {
       intptr_t i;
@@ -112,7 +112,6 @@ int main(int _argc,char * _argv[])
   }
   catch( ... ){
   }
-  adicpp::cleanup();
   return errcode;
 }
 //------------------------------------------------------------------------------

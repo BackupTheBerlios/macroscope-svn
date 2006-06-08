@@ -33,95 +33,88 @@ namespace utf8 {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template< typename T> class StringT {
-    friend class String;
+template <typename T> class StringT {
+  friend class String;
   public:
-                    ~StringT();
-                    StringT(const StringT< T> & string);
+    ~StringT();
+    StringT(const StringT<T> & string);
 
-    StringT< T> &   operator =(const StringT< T> & string);
+    StringT<T> & operator = (const StringT<T> & string);
 
-                    operator T *();
-    operator const  T *() const;
-    T &             operator[](intptr_t i);
-    const T &       operator[](intptr_t i) const;
-    T &             operator[](uintptr_t i);
-    const T &       operator[](uintptr_t i) const;
+    operator T * ();
+    operator T * const () const;
+    T & operator [] (intptr_t i);
+    const T & operator [] (intptr_t i) const;
+    T & operator [] (uintptr_t i);
+    const T & operator [] (uintptr_t i) const;
   protected:
   private:
     StringT(T * string);
     class Container {
       public:
-        ksys::AutoPtr< T> string_;
-        int32_t           refCount_;
+        ksys::AutoPtr<T> string_;
+        int32_t refCount_;
 
-        ~Container()
-        {
-        }
-        Container(T * string) : string_(string), refCount_(0)
-        {
-        }
+        ~Container(){}
 
-        Container & addRef()
-        {
-          ksys::interlockedIncrement(refCount_, 1); 
-          return *this;
-        }
-        Container & remRef()
-        {
-          if( ksys::interlockedIncrement(refCount_, -1) == 1 ) delete this;
-          return *this;
-        }
+        Container(T * string) : string_(string), refCount_(0){}
+
+        void addRef(){ ksys::interlockedIncrement(refCount_, 1); }
+        void remRef(){ if( ksys::interlockedIncrement(refCount_, -1) == 1 ) delete this; }
+      private:
+        Container(const Container &) {}
+        void operator = (const Container &) {}
     };
-    ksys::SPRC< Container>  container_;
+    ksys::SPRC<Container> container_;
 };
 //---------------------------------------------------------------------------
-template< typename T> inline StringT< T>::~StringT()
+template <typename T> inline StringT<T>::~StringT()
 {
 }
 //---------------------------------------------------------------------------
-template< typename T> inline StringT< T>::StringT(T * string)
-  : container_(new Container(string))
+template <typename T> inline
+StringT<T>::StringT(T * string) : container_(new Container(string))
 {
 }
 //---------------------------------------------------------------------------
-template< typename T> inline StringT< T>::StringT(const StringT< T> & string)
-  : container_(string.container_)
+template <typename T> inline
+StringT<T>::StringT(const StringT<T> & string) : container_(string.container_)
 {
 }
 //---------------------------------------------------------------------------
-template< typename T> inline StringT< T> & StringT<T>::operator =(const StringT< T> & string)
+template <typename T> inline
+StringT<T> & StringT<T>::operator = (const StringT<T> & string)
 {
   container_ = string.container_;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< typename T> StringT<T>::operator T *()
+template <typename T> StringT<T>::operator T *()
 {
   return container_->string_;
 }
 //---------------------------------------------------------------------------
-template< typename T> StringT<T>::operator const T *() const
+template <typename T> StringT<T>::operator T * const () const
 {
   return container_->string_;
 }
 //---------------------------------------------------------------------------
-template< typename T> T & StringT<T>::operator[](intptr_t i)
+template <typename T> T & StringT<T>::operator [] (intptr_t i)
 {
   return container_->string_[i];
 }
 //---------------------------------------------------------------------------
-template< typename T> const T & StringT<T>::operator[](intptr_t i) const
+template <typename T> const T & StringT<T>::operator [] (intptr_t i) const
 {
   return container_->string_[i];
 }
 //---------------------------------------------------------------------------
-template< typename T> T & StringT<T>::operator[](uintptr_t i)
+template <typename T> T & StringT<T>::operator [] (uintptr_t i)
 {
   return container_->string_[i];
 }
 //---------------------------------------------------------------------------
-template< typename T> const T & StringT<T>::operator[](uintptr_t i) const
+template <typename T> const T & StringT<T>::operator [] (uintptr_t i) const
 {
   return container_->string_[i];
 }

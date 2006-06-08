@@ -82,21 +82,20 @@ void * Thread::threadFunc(void * thread)
   }
   catch( ... ){
   }
-  reinterpret_cast<Thread *>(thread)->finished_ = true;
   try {
     for( i = afterExecuteActions().count() - 1; i >= 0; i-- )
       ((void (*)(void *)) afterExecuteActions()[i].handler())(afterExecuteActions()[i].data());
   }
   catch( ... ){
   }
+  reinterpret_cast<Thread *>(thread)->finished_ = true;
   currentThread() = NULL;
 #if defined(__WIN32__) || defined(__WIN64__)
 //  while( PostThreadMessage(mainThreadId,threadFinishMessage,0,0) == 0 ) Sleep(1);
-  return (DWORD)
+  return (DWORD) reinterpret_cast<Thread *>(thread)->exitCode_;
 #elif HAVE_PTHREAD_H
-  return (void *)
+  return (void *) reinterpret_cast<Thread *>(thread)->exitCode_;
 #endif
-    reinterpret_cast<Thread *>(thread)->exitCode_;
 }
 //---------------------------------------------------------------------------
 Thread::Thread() :
@@ -163,9 +162,12 @@ Thread & Thread::wait()
 {
   if( handle_ != NULL ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    WaitForSingleObjectEx(handle_,INFINITE,TRUE);
     DWORD exitCode;
-    GetExitCodeThread(handle_,&exitCode);
+    BOOL r = GetExitCodeThread(handle_,&exitCode);
+    if( r == 0 || exitCode == STILL_ACTIVE ){
+      WaitForSingleObject(handle_,INFINITE);
+      GetExitCodeThread(handle_,&exitCode);
+    }
     CloseHandle(handle_);
     handle_ = NULL;
 #elif HAVE_PTHREAD_H

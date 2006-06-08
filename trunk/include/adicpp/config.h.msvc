@@ -271,6 +271,7 @@ typedef uint64_t                uintmax_t;
 #define PACKED
 #define HAVE_LZO1X_DECOMPRESS_SAFE 1
 #define HAVE_UUID 1
+#define HAVE_STRUCT_SOCKADDR_IN6 1
 
 #define SIZEOF_TIMEVAL 8
 #define SIZEOF_TIMEZONE 0

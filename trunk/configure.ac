@@ -354,6 +354,7 @@ gethostbyname \
 gethostbyname2 \
 gethostbyaddr \
 getnameinfo \
+getaddrinfo \
 strerror \
 utime \
 sysconf \

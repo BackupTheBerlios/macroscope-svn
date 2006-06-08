@@ -36,27 +36,62 @@
 //---------------------------------------------------------------------------
 namespace adicpp {
 //---------------------------------------------------------------------------
-inline void initialize()
+class Initializer {
+  friend class AutoInitializer;
+  public:
+    static void acquire();
+    static void release();
+  protected:
+    static void initialize();
+    static void cleanup();
+  private:
+    static int32_t mutex_;
+    static int32_t initCount_;
+};
+//---------------------------------------------------------------------------
+inline void Initializer::release()
 {
-  ksys::initialize();
-#if !DISABLE_FIREBIRD_INTERFACE
-  fbcpp::initialize();
-#endif
-#if !DISABLE_MYSQL_INTERFACE
-  mycpp::initialize();
-#endif
+  ksys::interlockedIncrement(mutex_, 1);
 }
 //---------------------------------------------------------------------------
-inline void cleanup()
+inline void Initializer::initialize()
 {
+  ksys::AutoLock<Initializer> lock(*(Initializer *) NULL);
+  if( initCount_ == 0 ){
+    ksys::initialize();
+#if !DISABLE_FIREBIRD_INTERFACE
+    fbcpp::initialize();
+#endif
 #if !DISABLE_MYSQL_INTERFACE
-  mycpp::cleanup();
+    mycpp::initialize();
+#endif
+  }
+  initCount_++;
+}
+//---------------------------------------------------------------------------
+inline void Initializer::cleanup()
+{
+  ksys::AutoLock<Initializer> lock(*(Initializer *) NULL);
+  assert( initCount_ > 0 );
+  if( initCount_ == 1 ){
+#if !DISABLE_MYSQL_INTERFACE
+    mycpp::cleanup();
 #endif
 #if !DISABLE_FIREBIRD_INTERFACE
-  fbcpp::cleanup();
+    fbcpp::cleanup();
 #endif
-  ksys::cleanup();
+    ksys::cleanup();
+  }
+  initCount_--;
 }
+//---------------------------------------------------------------------------
+class AutoInitializer {
+  public:
+    ~AutoInitializer(){ Initializer::cleanup(); }
+    AutoInitializer(){ Initializer::initialize(); }
+  protected:
+  private:
+};
 //---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------

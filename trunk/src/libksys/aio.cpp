@@ -850,7 +850,7 @@ void AsyncOpenFileSlave::threadExecute()
       else if( request->type_ == etResolveName ){
         int32_t err = 0;
         try {
-          request->address_.resolve(request->string0_,request->defPort_);
+          request->address_.resolve(request->string0_,request->string1_);
         }
         catch( ExceptionSP & e ){
           err = e->code();
@@ -888,7 +888,7 @@ void AsyncOpenFileSlave::threadExecute()
       else if( request->type_ == etRename ){
         int32_t err = 0;
         try {
-          rename(request->string0_,request->string0_);
+          rename(request->string0_,request->string1_);
         }
         catch( ExceptionSP & e ){
           err = e->code();

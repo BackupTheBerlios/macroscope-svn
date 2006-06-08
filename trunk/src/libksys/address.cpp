@@ -34,7 +34,7 @@ namespace ksock {
 #pragma option push -w-8004
 #endif
 //------------------------------------------------------------------------------
-SockAddr & SockAddr::resolve(const utf8::String & addr, uintptr_t defPort)
+SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort)
 {
 #if HAVE_STRUCT_SOCKADDR_IN6
   memset(&addr6_, 0, sizeof(addr6_));
@@ -44,11 +44,11 @@ SockAddr & SockAddr::resolve(const utf8::String & addr, uintptr_t defPort)
   addr6_.sin6_family = PF_INET6;
   //  struct hostent * pent = api.gethostbyname2(host.getANSIString(),PF_INET6);
 #else
-  memset(&addr4_, 0, sizeof(addr4_));
+  memset(&addr4_,0,sizeof(addr4_));
   addr4_.sin_family = PF_INET;
 #endif
-  unsigned  a1  = 0, a2 = 0, a3 = 0, a4 = 0, port = (unsigned) defPort;
-  int       r   = sscanf(addr.c_str(), "%u.%u.%u.%u:%u", &a1, &a2, &a3, &a4, &port);
+/*  unsigned a1 = 0, a2 = 0, a3 = 0, a4 = 0, port = (unsigned) defPort;
+  int r = sscanf(addr.c_str(), "%u.%u.%u.%u:%u", &a1, &a2, &a3, &a4, &port);
   if( r >= 4 && a1 < 256 && a2 < 256 && a3 < 256 && a4 < 256 ){
 #if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
     addr4_.sin_len = sizeof(addr4_);
@@ -65,15 +65,17 @@ SockAddr & SockAddr::resolve(const utf8::String & addr, uintptr_t defPort)
 #endif
     api.close();
   }
-  else {
+  else {*/
     utf8::String::Iterator  pi(addr.strstr(":"));
     if( pi.position() < 0 ) pi.last();
     utf8::String host(utf8::String::Iterator(addr), pi);
     utf8::String port(pi + 1);
+    if( port.trim().strlen() == 0 ) port = defPort;
     host = host.trim();
+    port = port.trim();
     api.open();
     try {
-      struct hostent * pent = api.gethostbyname(host.getANSIString());
+/*      struct hostent * pent = api.gethostbyname(host.getANSIString());
       intmax_t a = defPort;
       if( pent == NULL || port.trim().strlen() == 0 || utf8::tryStr2Int(port, a) ){
         if( pent != NULL && host.strlen() > 0 ){
@@ -100,18 +102,90 @@ SockAddr & SockAddr::resolve(const utf8::String & addr, uintptr_t defPort)
       else {
         int32_t err = errNo();
         throw ksys::ExceptionSP(new EAsyncSocket(err, __PRETTY_FUNCTION__));
+      }*/
+#if defined(__WIN32__) || defined(__WIN64__)
+      union {
+        struct addrinfo aiHints;
+        struct addrinfoW aiHintsW;
+      };
+      union {
+        struct addrinfo * aiList;
+        struct addrinfoW * aiListW;
+      };
+      union {
+        struct addrinfo * res;
+        struct addrinfoW * resW;
+      };
+#else
+      struct addrinfo aiHints;
+      struct addrinfo * aiList = NULL, * res;
+#endif
+      res = NULL;
+      memset(&aiHints,0,sizeof(aiHints));
+      aiHints.ai_family = PF_UNSPEC;
+      aiHints.ai_socktype = SOCK_STREAM;
+      aiHints.ai_protocol = IPPROTO_TCP;
+      aiHints.ai_flags |= host.strlen() == 0 ? AI_PASSIVE : 0;
+      int r;
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( ksys::isWin9x() ){
+        r = api.GetAddrInfoA(
+          host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
+          port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
+          &aiHints,
+          &aiList
+        );
       }
+      else {
+        r = api.GetAddrInfoW(
+          host.strlen() > 0 ? (const wchar_t *) host.getUNICODEString() : NULL,
+          port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const wchar_t *) port.getUNICODEString() : NULL,
+          &aiHintsW,
+          &aiListW
+        );
+      }
+#else
+      r = api.getaddrinfo(
+        host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
+        port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
+        &aiHints,
+        &aiList
+      );
+#endif
+      if( r != 0 ){
+        int32_t err = errNo();
+        throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+      }
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( ksys::isWin9x() ){
+        for( res = aiList; res != NULL; res = res->ai_next ){
+          memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
+        }
+        api.FreeAddrInfoA(aiList);
+      }
+      else {
+        for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
+          memcpy(&addr4_,resW->ai_addr,resW->ai_addrlen);
+        }
+        api.FreeAddrInfoW(aiListW);
+      }
+#else
+      for( res = aiList; res != NULL; res = res->ai_next ){
+        memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
+      }
+      api.freeaddrinfo(aiList);
+#endif
     }
     catch( ... ){
       api.close();
       throw;
     }
     api.close();
-  }
+  //}
   return *this;
 }
 //------------------------------------------------------------------------------
-void SockAddr::resolve(const utf8::String & bind, ksys::Array<SockAddr> & addrs,uintptr_t defPort)
+void SockAddr::resolve(const utf8::String & bind, ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort)
 {
   intptr_t i = ksys::enumStringParts(bind);
   if( i <= 0 ){
@@ -139,11 +213,11 @@ utf8::String SockAddr::resolve() const
   return s;
 }
 //------------------------------------------------------------------------------
-SockAddr & SockAddr::resolveAsync(const utf8::String & addr,uintptr_t defPort)
+SockAddr & SockAddr::resolveAsync(const utf8::String & addr,const ksys::Mutant & defPort)
 {
   assert( ksys::currentFiber() != NULL );
   ksys::currentFiber()->event_.string0_ = addr;
-  ksys::currentFiber()->event_.defPort_ = defPort;
+  ksys::currentFiber()->event_.string1_ = defPort;
   ksys::currentFiber()->event_.type_ = ksys::etResolveName;
   ksys::currentFiber()->thread()->postRequest();
   ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
@@ -156,7 +230,7 @@ SockAddr & SockAddr::resolveAsync(const utf8::String & addr,uintptr_t defPort)
   return *this;
 }
 //------------------------------------------------------------------------------
-void SockAddr::resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & addrs,uintptr_t defPort)
+void SockAddr::resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort)
 {
   intptr_t i = ksys::enumStringParts(bind);
   if( i <= 0 ){

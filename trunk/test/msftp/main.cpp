@@ -505,7 +505,7 @@ void KFTPShell::open()
 int main(int argc,char * argv[])
 {
   int errcode = 0;
-  adicpp::initialize();
+  adicpp::Initializer autoInitializer;
   try {
     union {
       intptr_t i;
@@ -539,7 +539,6 @@ int main(int argc,char * argv[])
     e->writeStdError();
     errcode = e->code();
   }
-  adicpp::cleanup();
   return errcode;
 }
 //------------------------------------------------------------------------------

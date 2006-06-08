@@ -70,7 +70,11 @@ const char * const  API::symbols_[]   = {
   "gethostname",
   "WSAEventSelect",
   "WSAEnumNetworkEvents",
-  "WSAAsyncGetHostByName"
+  "WSAAsyncGetHostByName",
+  "getaddrinfo",
+  "GetAddrInfoW",
+  "freeaddrinfo",
+  "FreeAddrInfoW"
 };
 
 HINSTANCE           API::handle_;

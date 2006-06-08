@@ -145,6 +145,7 @@ utf8::String  getCurrentDir();
 void          changeCurrentDir(const utf8::String & name);
 utf8::String  getTempPath();
 utf8::String  changeFileExt(const utf8::String & fileName, const utf8::String & extension);
+utf8::String  getFileExt(const utf8::String & fileName);
 utf8::String  getExecutableName();
 utf8::String  getExecutablePath();
 utf8::String  excludeTrailingPathDelimiter(const utf8::String & path);
