@@ -95,16 +95,18 @@ class Client : public ksock::Client {
     ConfigSP config_;
 
     const utf8::String & newMessage();
-    const utf8::String & value(const utf8::String & id,const utf8::String & key) const;
-    utf8::String value(const utf8::String & id,const utf8::String & key,const utf8::String & value);
+    const utf8::String & value(const utf8::String id,const utf8::String key) const;
+    utf8::String value(const utf8::String id,const utf8::String key,const utf8::String value);
 
-    Client & sendMessage(const utf8::String & id);
+    bool sendMessage(const utf8::String id);
+    bool removeMessage(const utf8::String id);
+
     InterlockedMutex sendWait_;
     int32_t sendLastError_;
   protected:
-    FiberInterlockedMutex recvQueueMutex_;
-    Vector<Message> recvQueue_;
-    Vector<Message> sendQueue_;
+    mutable FiberInterlockedMutex recvQueueMutex_;
+    mutable Vector<Message> recvQueue_;
+    mutable Vector<Message> sendQueue_;
   private:
     Client(const Client &) : config_(NULL) {}
     void operator = (const Client &){}

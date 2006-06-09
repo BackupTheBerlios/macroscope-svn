@@ -95,7 +95,6 @@ void ClientFiber::auth()
 void ClientFiber::main()
 {
   intptr_t i, c;
-  stdErr.fileName(client_.logFile_);
   client_.config_->fileName(client_.configFile_).parse();
   bool connected = false;
   while( !terminated_ ){
@@ -155,7 +154,7 @@ void ClientFiber::main()
         {
           AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
           i = client_.recvQueue_.bSearch(message,c);
-          client_.recvQueue_.insert(i + (c > 0),message.ptr(NULL));
+          client_.recvQueue_.safeInsert(i + (c > 0),message.ptr(NULL));
         }
         AutoPtr<OLECHAR> name(client_.name_.getOLEString());
         AutoPtr<OLECHAR> what(SysAllocString(L"Message"));
@@ -191,17 +190,21 @@ void ClientMailSenderFiber::main()
     uintptr_t u;
   };
   try {
-    for( i = enumStringParts(client_.mailServer_) - 1; i >= 0 && !terminated_; i-- ){
+    for( i = enumStringParts(client_.mailServer_) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
-      remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
       try {
+        remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
         connect(remoteAddress);
+        auth();
+        i = -1;
       }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
+      catch( ExceptionSP & ){
+        stdErr.debug(2,utf8::String::Stream() <<
+          "Unable to connect. Host " << stringPartByNo(client_.mailServer_,i) <<
+          " unreachable.\n"
+        );
+        if( terminated_ || i == 0 ) throw;
       }
-      auth();
-      break;
     }
     *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
     getCode();
@@ -231,7 +234,7 @@ Client::Client() : pAsyncEvent_(NULL), config_(new ksys::InterlockedConfig<ksys:
 //------------------------------------------------------------------------------
 void Client::open()
 {
-  attachFiber(new ClientFiber(*this));
+//  attachFiber(new ClientFiber(*this));
 }
 //------------------------------------------------------------------------------
 void Client::close()
@@ -241,39 +244,45 @@ void Client::close()
 //------------------------------------------------------------------------------
 const utf8::String & Client::newMessage()
 {
-  return sendQueue_.safeAdd(new Message).id();
+  AutoPtr<Message> message(new Message);
+  intptr_t c, i = sendQueue_.bSearch(message->id(),c);
+  sendQueue_.insert(i + (c > 0),message.ptr());
+  return message.ptr(NULL)->id();
 }
 //------------------------------------------------------------------------------
-const utf8::String & Client::value(const utf8::String & id,const utf8::String & key) const
+const utf8::String & Client::value(const utf8::String id,const utf8::String key) const
 {
+  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
   const Vector<Message> * queue = &sendQueue_;
   intptr_t i = queue->bSearch(Message(id));
   if( i < 0 ){
     queue = &recvQueue_;
     i = queue->bSearch(Message(id));
   }
-  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND,__PRETTY_FUNCTION__));
+  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
   return (*queue)[i].value(key);
 }
 //------------------------------------------------------------------------------
-utf8::String Client::value(const utf8::String & id,const utf8::String & key,const utf8::String & value)
+utf8::String Client::value(const utf8::String id,const utf8::String key,const utf8::String value)
 {
+  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
   Vector<Message> * queue = &sendQueue_;
   intptr_t i = queue->bSearch(Message(id));
   if( i < 0 ){
     queue = &recvQueue_;
     i = queue->bSearch(Message(id));
   }
-  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND,__PRETTY_FUNCTION__));
-  utf8::String oldValue((*queue)[i].value(key));
+  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+  utf8::String oldValue;
+  if( (*queue)[i].isValue(key) ) oldValue = ((*queue)[i].value(key));
   (*queue)[i].value(key,value);
   return oldValue;
 }
 //------------------------------------------------------------------------------
-Client & Client::sendMessage(const utf8::String & id)
+bool Client::sendMessage(const utf8::String id)
 {
   intptr_t i = sendQueue_.bSearch(Message(id));
-  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND,__PRETTY_FUNCTION__));
+  if( i < 0 ) return false;
   sendLastError_ = 0;
   sendQueue_[i].value("#Sender",user_ + "@" + key_);
   sendQueue_[i].value("#Sender.Sended",getTimeString(gettimeofday()));
@@ -289,8 +298,21 @@ Client & Client::sendMessage(const utf8::String & id)
     throw;
   }
   AutoLock<InterlockedMutex> lock(sendWait_);
-  sendQueue_.remove(i);
-  return *this;
+  if( sendLastError_ == 0 ) sendQueue_.remove(i);
+  return sendLastError_ == 0;
+}
+//------------------------------------------------------------------------------
+bool Client::removeMessage(const utf8::String id)
+{
+  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+  Vector<Message> * queue = &sendQueue_;
+  intptr_t i = queue->bSearch(Message(id));
+  if( i < 0 ){
+    queue = &recvQueue_;
+    i = queue->bSearch(Message(id));
+  }
+  if( i >= 0 ) queue->remove(i);
+  return i >= 0;
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

@@ -370,7 +370,7 @@ utf8::String stringPartByNo(const utf8::String & s,uintptr_t n,const char * deli
     }
     if( c == 0 ) break;
   }
-  return utf8::String();
+  return i.bof() || n > 0 ? utf8::String() : s;
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -790,7 +790,7 @@ utf8::String anyPathName2HostPathName(const utf8::String & pathName)
     uintptr_t c = pathDelimiter == '\\' ? '/' : '\\';
     while( !i.eof() ){
       if( i.getChar() == c )
-        s.replace(i,i + 1,pathDelimiterStr);
+        s = s.replace(i,i + 1,pathDelimiterStr);
       i.prev(); 
     }
   }
@@ -1199,6 +1199,37 @@ done:
 #else
   throw ksys::ExceptionSP(new ksys::Exception(ENOSYS,__PRETTY_FUNCTION__));
 #endif
+}
+//---------------------------------------------------------------------------
+intptr_t strToMonth(const utf8::String & month)
+{
+  if( month.strcasecmp("Jan") == 0 ) return 0;
+  if( month.strcasecmp("Feb") == 0 ) return 1;
+  if( month.strcasecmp("Mar") == 0 ) return 2;
+  if( month.strcasecmp("Apr") == 0 ) return 3;
+  if( month.strcasecmp("Mai") == 0 ) return 4;
+  if( month.strcasecmp("May") == 0 ) return 4;
+  if( month.strcasecmp("Jun") == 0 ) return 5;
+  if( month.strcasecmp("Jul") == 0 ) return 6;
+  if( month.strcasecmp("Aug") == 0 ) return 7;
+  if( month.strcasecmp("Sep") == 0 ) return 8;
+  if( month.strcasecmp("Okt") == 0 ) return 9;
+  if( month.strcasecmp("Oct") == 0 ) return 9;
+  if( month.strcasecmp("Nov") == 0 ) return 10;
+  if( month.strcasecmp("Dez") == 0 ) return 11;
+  if( month.strcasecmp("Dec") == 0 ) return 11;
+  return -1;
+}
+//------------------------------------------------------------------------------
+utf8::String getTimestamp(const utf8::String & date,const utf8::String & time)
+{
+  utf8::String::Iterator i(date);
+  return 
+    utf8::String(i + 4,i + 4 + 2).replaceAll(" ","0") + "." +
+    utf8::int2Str0(strToMonth(utf8::String(i,i + 3)),2) + "." +
+    utf8::String(i + 7,i + 7 + 4) + " " +
+    time/*.replaceAll(":","")*/
+  ;
 }
 //---------------------------------------------------------------------------
 // base64 routines

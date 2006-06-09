@@ -238,7 +238,7 @@ utf8::String DSQLStatement::compileSQLParameters()
         while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
         if( i2 - i > 1 ){
           params_.indexToParam_.add(params_.add(utf8::String(i + 1, i2)));
-          text.replace(i, i2, "?");
+          text = text.replace(i, i2, "?");
         }
       }
       i.next();

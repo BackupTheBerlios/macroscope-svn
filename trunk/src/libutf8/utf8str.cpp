@@ -35,14 +35,13 @@ class EStr2Scalar : public ksys::Exception {
     EStr2Scalar(int32_t code, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
-EStr2Scalar::EStr2Scalar(int32_t code, const utf8::String & what)
-  : ksys::Exception(code, what)
+EStr2Scalar::EStr2Scalar(int32_t code, const utf8::String & what) : ksys::Exception(code, what)
 {
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-String::Container::Container() : string_(NULL), refCount_(0)
+String::Container::Container() : string_(NULL), refCount_(0)/*, mutex_(0)*/
 {
 }
 //---------------------------------------------------------------------------
@@ -51,6 +50,14 @@ String::Container * String::Container::container(uintptr_t l)
   ksys::AutoPtr<String::Container> cp(new Container);
   ksys::xmalloc(cp->string_, l + (l != ~(uintptr_t) 0));
   return cp.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+void String::Container::acquire()
+{
+/*  for(;;){
+    if( ksys::interlockedCompareExchange(mutex_,-1,0) == 0 ) break;
+    ksys::sleep1();
+  }*/
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -589,7 +596,7 @@ String String::cut(const Iterator & i)
 }
 #endif
 //---------------------------------------------------------------------------
-String String::cut(const Iterator & i1, const Iterator & i2)
+String String::cut(const Iterator & i1, const Iterator & i2) const
 {
   assert(container_.ptr() == i1.container_.ptr() && i1.container_.ptr() == i2.container_.ptr() && i1.cursor_ <= i2.cursor_);
   Container * container;
@@ -599,7 +606,8 @@ String String::cut(const Iterator & i1, const Iterator & i2)
     container->string_[i2.cursor_ - i1.cursor_] = '\0';
     uintptr_t l = ksys::strlen(i2.c_str());
     if( l == 0 ){
-      i1.container_ = i2.container_ = container_ = &nullContainer();
+      container_ = &nullContainer();
+      i1.container_ = i2.container_ = container_;
     }
     else{
       memcpy(container->string_, i2.c_str(), l + 1);
@@ -612,28 +620,44 @@ String String::cut(const Iterator & i1, const Iterator & i2)
   return container;
 }
 //---------------------------------------------------------------------------
-String & String::replace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2)
+String & String::replaceInPlace(const Iterator & d1,const Iterator & d2, const Iterator & s1, const Iterator & s2)
 {
-  assert(container_ == d1.container_ && d1.container_ == d2.container_ && s1.container_ == s2.container_);
-  if( container_.ptr() == &nullContainer() )
-    return *this = utf8::String(s1, s2);
+  assert( container_ == d1.container_ );
+  assert( d1.container_ == d2.container_ );
+  assert( s1.container_ == s2.container_ );
+  if( container_.ptr() == &nullContainer() ) return *this = utf8::String(s1, s2);
   if( s1.container_ == d1.container_ ){
-    String  a (utf8::String(s1, s2));
-    return replace(d1, d2, String::Iterator(a), String::Iterator(a).last());
+    String a(utf8::String(s1,s2));
+    return replaceInPlace(d1,d2,String::Iterator(a),String::Iterator(a).last());
   }
-  if( d1.cursor_ > d2.cursor_ )
-    return replace(d2, d1, s1, s2);
-  if( s1.cursor_ > s2.cursor_ )
-    return replace(d1, d1, s2, s1);
+  if( d1.cursor_ > d2.cursor_ ) return replaceInPlace(d2, d1, s1, s2);
+  if( s1.cursor_ > s2.cursor_ ) return replaceInPlace(d1, d1, s2, s1);
   uintptr_t l = ksys::strlen(container_->string_);
   intptr_t  k = (s2.cursor_ - s1.cursor_) - (d2.cursor_ - d1.cursor_);
-  if( k > 0 )
-    ksys::xrealloc(container_->string_, l + k + 1);
+  if( k > 0 ) ksys::xrealloc(container_->string_, l + k + 1);
   memmove((char *) d2.c_str() + k, d2.c_str(), l - d2.cursor_ + 1);
   memcpy((char *) d1.c_str(), s1.c_str(), s2.cursor_ - s1.cursor_);
-  if( k < 0 )
-    ksys::xrealloc(container_->string_, l + k + 1);
+  if( k < 0 ) ksys::xrealloc(container_->string_, l + k + 1);
   return *this;
+}
+//---------------------------------------------------------------------------
+String String::replace(const Iterator & d1,const Iterator & d2,const Iterator & s1,const Iterator & s2) const
+{
+  String s(unique());
+  Iterator da1(s.container_,d1.cursor_,d1.position_);
+  Iterator da2(s.container_,d2.cursor_,d2.position_);
+  return s.replaceInPlace(da1,da2,s1,s2);
+}
+//---------------------------------------------------------------------------
+String String::replaceAll(const String & what,const String & onWhat) const
+{
+  String s(*this);
+  Iterator i(s.strstr(what));
+  while( !i.eof() ){
+    s = s.replace(i,i + what.strlen(),onWhat);
+    i = s.strstr(what);
+  }
+  return s;
 }
 //---------------------------------------------------------------------------
 String String::left(uintptr_t symbols) const
@@ -897,8 +921,7 @@ String int2Str(int a)
     x /= 10u;
   }
   while( x != 0 );
-  if( a < 0 )
-    *--p = '-';
+  if( a < 0 ) *--p = '-';
   return container;
 }
 //---------------------------------------------------------------------------
@@ -916,6 +939,44 @@ String int2Str(unsigned int a)
   return container;
 }
 //---------------------------------------------------------------------------
+String int2Str0(int a,uintptr_t padding)
+{
+  int x;
+  uintptr_t l = int2StrLen((intmax_t) a);
+  if( padding > l ) l = padding;
+  if( a < 0 ) x = -a; else x = a;
+  String::Container * container = String::Container::container(l);
+  char * p;
+  *(p = container->string_ + l) = '\0';
+  do {
+    *--p = (char) (x % 10u + '0');
+    x /= 10u;
+    --l;
+  } while( x != 0 );
+  if( a < 0 ){
+    while( l-- > 1 ) *--p = '0';
+    *--p = '-';
+  }
+  else {
+    while( l-- > 0 ) *--p = '0';
+  }
+  return container;
+}
+//---------------------------------------------------------------------------
+String int2Str0(unsigned int a,uintptr_t padding)
+{
+  uintptr_t l = int2StrLen((uintmax_t) a);
+  if( padding > l ) l = padding;
+  String::Container * container = String::Container::container(l);
+  char * p;
+  *(p = container->string_ + l) = '\0';
+  do {
+    *--p = (char) (a % 10u + '0');
+    a /= 10u;
+  } while( a != 0 || --l > 0 );
+  return container;
+}
+//---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
 String int2Str(intptr_t a)
@@ -926,13 +987,11 @@ String int2Str(intptr_t a)
   String::Container * container = String::Container::container(l);
   char *              p;
   *(p = container->string_ + l) = '\0';
-  do{
+  do {
     *--p = (char) (x % 10u + '0');
     x /= 10u;
-  }
-  while( x != 0 );
-  if( a < 0 )
-    *--p = '-';
+  } while( x != 0 );
+  if( a < 0 ) *--p = '-';
   return container;
 }
 //---------------------------------------------------------------------------
@@ -947,6 +1006,44 @@ String int2Str(uintptr_t a)
     a /= 10u;
   }
   while( a != 0 );
+  return container;
+}
+//---------------------------------------------------------------------------
+String int2Str0(intptr_t a,uintptr_t padding)
+{
+  intptr_t  x;
+  uintptr_t l = int2StrLen((intmax_t) a);
+  if( padding > l ) l = padding;
+  if( a < 0 ) x = -a; else x = a;
+  String::Container * container = String::Container::container(l);
+  char * p;
+  *(p = container->string_ + l) = '\0';
+  do {
+    *--p = (char) (x % 10u + '0');
+    x /= 10u;
+    --l;
+  } while( x != 0 );
+  if( a < 0 ){
+    while( l-- > 1 ) *--p = '0';
+    *--p = '-';
+  }
+  else {
+    while( l-- > 0 ) *--p = '0';
+  }
+  return container;
+}
+//---------------------------------------------------------------------------
+String int2Str0(uintptr_t a,uintptr_t padding)
+{
+  uintptr_t l = int2StrLen((uintmax_t) a);
+  if( padding > l ) l = padding;
+  String::Container * container = String::Container::container(l);
+  char * p;
+  *(p = container->string_ + l) = '\0';
+  do {
+    *--p = (char) (a % 10u + '0');
+    a /= 10u;
+  } while( a != 0 || --l > 0 );
   return container;
 }
 //---------------------------------------------------------------------------
@@ -1005,6 +1102,44 @@ uintptr_t int2StrLen(uintmax_t a)
   for( l = 1, c = 10; c < a; c = sfSHL(c), l++ );
   if( c == a ) l++;
   return l;
+}
+//---------------------------------------------------------------------------
+String int2Str0(intmax_t a,uintptr_t padding)
+{
+  intmax_t x;
+  uintptr_t l = int2StrLen((intmax_t) a);
+  if( padding > l ) l = padding;
+  if( a < 0 ) x = -a; else x = a;
+  String::Container * container = String::Container::container(l);
+  char * p;
+  *(p = container->string_ + l) = '\0';
+  do {
+    *--p = (char) (x % 10u + '0');
+    x /= 10u;
+    --l;
+  } while( x != 0 );
+  if( a < 0 ){
+    while( l-- > 1 ) *--p = '0';
+    *--p = '-';
+  }
+  else {
+    while( l-- > 0 ) *--p = '0';
+  }
+  return container;
+}
+//---------------------------------------------------------------------------
+String int2Str0(uintmax_t a,uintptr_t padding)
+{
+  uintptr_t l = int2StrLen((uintmax_t) a);
+  if( padding > l ) l = padding;
+  String::Container * container = String::Container::container(l);
+  char * p;
+  *(p = container->string_ + l) = '\0';
+  do {
+    *--p = (char) (a % 10u + '0');
+    a /= 10u;
+  } while( a != 0 || --l > 0 );
+  return container;
 }
 //---------------------------------------------------------------------------
 #endif

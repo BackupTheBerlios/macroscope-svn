@@ -190,54 +190,93 @@ void LogFile::rotate(uint64_t size)
   }
 }
 //---------------------------------------------------------------------------
-LogFile & LogFile::log(LogMessagePriority pri,const utf8::String::Stream & stream)
+LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8::String::Stream & stream)
 {
+  assert( level <= 9 || level == ~uintptr_t(0) );
+  if( level <= 9 && (enabledLevels_ & (1u << level)) == 0 ) return *this;
+
   struct timeval tv = time2Timeval(getlocaltimeofday());
   struct tm t = time2tm(timeval2Time(tv));
   int a;
 
 #if HAVE_SNPRINTF
-  a = snprintf(
+#define SNPRINTF snprintf
 #elif HAVE__SNPRINTF
-  a = _snprintf(
+#define SNPRINTF _snprintf
 #endif
-    NULL,
-    0,
-    "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-    t.tm_mday,
-    t.tm_mon + 1,
-    t.tm_year + 1900,
-    t.tm_hour,
-    t.tm_min,
-    t.tm_sec,
-    tv.tv_usec,
-    priNicks_[pri],
-    getpid()
-  );
+  if( pri == lmDEBUG ){
+    a = SNPRINTF(
+      NULL,
+      0,
+      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
+      t.tm_mday,
+      t.tm_mon + 1,
+      t.tm_year + 1900,
+      t.tm_hour,
+      t.tm_min,
+      t.tm_sec,
+      tv.tv_usec,
+      priNicks_[pri],
+      getpid(),
+      (unsigned int) level
+    );
+  }
+  else {
+    a = SNPRINTF(
+      NULL,
+      0,
+      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
+      t.tm_mday,
+      t.tm_mon + 1,
+      t.tm_year + 1900,
+      t.tm_hour,
+      t.tm_min,
+      t.tm_sec,
+      tv.tv_usec,
+      priNicks_[pri],
+      getpid()
+    );
+  }
   if( a == -1 ){
     int32_t err = errno;
     throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
   }
   AutoPtr<char> buf;
   buf.alloc(a);
-#if HAVE_SNPRINTF
-  a = snprintf(
-#elif HAVE__SNPRINTF
-  a = _snprintf(
-#endif
-    buf.ptr(),
-    a,
-    "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-    t.tm_mday,
-    t.tm_mon + 1,
-    t.tm_year + 1900,
-    t.tm_hour,
-    t.tm_min,
-    t.tm_sec,
-    tv.tv_usec,
-    priNicks_[pri],
-    getpid()
-  );
+  if( pri == lmDEBUG ){
+    a = SNPRINTF(
+      buf.ptr(),
+      a,
+      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
+      t.tm_mday,
+      t.tm_mon + 1,
+      t.tm_year + 1900,
+      t.tm_hour,
+      t.tm_min,
+      t.tm_sec,
+      tv.tv_usec,
+      priNicks_[pri],
+      getpid(),
+      (unsigned int) level
+    );
+  }
+  else {
+    a = SNPRINTF(
+      buf.ptr(),
+      a,
+      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
+      t.tm_mday,
+      t.tm_mon + 1,
+      t.tm_year + 1900,
+      t.tm_hour,
+      t.tm_min,
+      t.tm_sec,
+      tv.tv_usec,
+      priNicks_[pri],
+      getpid()
+    );
+  }
+#undef SNPRINTF
   if( a == -1 ){
     int32_t err = errno;
     throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
@@ -299,13 +338,6 @@ LogFile & LogFile::log(LogMessagePriority pri,const utf8::String::Stream & strea
     }
     rotate(sz);
   }
-  return *this;
-}
-//---------------------------------------------------------------------------
-LogFile & LogFile::debug(uintptr_t level,const utf8::String::Stream & stream)
-{
-  assert( level <= 9 );
-  if( (enabledLevels_ & (1u << level)) != 0 ) log(lmDEBUG,stream);
   return *this;
 }
 //---------------------------------------------------------------------------

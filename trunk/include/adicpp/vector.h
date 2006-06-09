@@ -60,6 +60,7 @@ template< class T> class Vector {
     T &               safeAdd(T * val);
     T &               insert(uintptr_t i, const T & val);
     T &               insert(uintptr_t i, T * val);
+    T &               safeInsert(uintptr_t i, T * val);
     Vector< T> &      replace(uintptr_t i, T * val);
     Vector< T> &      remove(uintptr_t i);
     T *               cut(uintptr_t i);
@@ -273,9 +274,9 @@ T & Vector< T>::insert(uintptr_t i, const T & val)
 //-----------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-T & Vector< T>::insert(uintptr_t i, T * val)
+T & Vector< T>::safeInsert(uintptr_t i, T * val)
 {
   assert((uintptr_t) i <= count_);
   uintptr_t amax  = max_;
@@ -289,6 +290,25 @@ T & Vector< T>::insert(uintptr_t i, T * val)
       delete val;
       throw;
     }
+  }
+  memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
+  ptr_[i] = val;
+  count_++;
+  return *ptr_[i];
+}
+//-----------------------------------------------------------------------------
+template< class T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+T & Vector< T>::insert(uintptr_t i, T * val)
+{
+  assert((uintptr_t) i <= count_);
+  uintptr_t amax  = max_;
+  while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
+  if( amax != max_ ){
+    xrealloc(ptr_, sizeof(T *) * amax);
+    max_ = amax;
   }
   memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
   ptr_[i] = val;

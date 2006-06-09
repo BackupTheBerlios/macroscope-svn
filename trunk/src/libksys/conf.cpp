@@ -164,7 +164,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           screened = false;
           uintptr_t     screenLen;
           utf8::String  sc  = unScreenChar(aheadi_, screenLen);
-          ahead_.replace(aheadi_, aheadi_ + screenLen + 1, sc);
+          ahead_ = ahead_.replace(aheadi_, aheadi_ + screenLen + 1, sc);
         }
         else if( aheadi_.getChar() == '\"' ){
           inQuoted = false;
@@ -269,10 +269,10 @@ Config & Config::putToken(const utf8::String & s, TokenType tt)
 {
   switch( tt ){
     case ttQuotedString :
-      ahead_.insert(aheadi_, "\"" + unScreenString(s) + "\"");
+      ahead_ = ahead_.insert(aheadi_, "\"" + unScreenString(s) + "\"");
       break;
     default :
-      ahead_.insert(aheadi_, s);
+      ahead_ = ahead_.insert(aheadi_, s);
       break;
   }
   return *this;

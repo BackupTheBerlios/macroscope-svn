@@ -124,6 +124,8 @@ void createUUID(UUID & uuid);
 inline UUID createUUID(){ UUID uuid; createUUID(uuid); return uuid; }
 void copyStrToClipboard(const utf8::String & s);
 int64_t getProcessStartTime(bool toLocalTime = false);
+intptr_t strToMonth(const utf8::String & month);
+utf8::String getTimestamp(const utf8::String & date,const utf8::String & time);
 //---------------------------------------------------------------------------
 inline uintptr_t strlen(const char * s)
 {

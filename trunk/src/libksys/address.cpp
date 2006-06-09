@@ -267,11 +267,12 @@ utf8::String SockAddr::gethostname()
   api.open();
   while( api.gethostname(s.c_str(),(int) s.size()) != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( (err = errNo()) != WSAEFAULT ) break;
+    if( (err = errNo()) != WSAEFAULT + ksys::errorOffset) break;
 #else
     if( (err = errNo()) != EFAULT ) break;
 #endif
     s.resize((s.size() << 1) + (s.size() == 0));
+    err = 0;
   }
   api.close();
   if( err != 0 )

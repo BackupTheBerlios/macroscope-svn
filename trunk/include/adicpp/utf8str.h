@@ -126,8 +126,8 @@ typedef StringT<wchar_t> WideString;
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class String {
-    friend void ksys::initialize();
-    friend void ksys::cleanup();
+  friend void ksys::initialize();
+  friend void ksys::cleanup();
   public:
     class Container {
       public:
@@ -142,17 +142,20 @@ class String {
 
         static Container * container(uintptr_t l);
 
-        Container & addRef();
-        Container & remRef();
+        void addRef();
+        void remRef();
+        void acquire();
+        void release();
       private:
         int32_t refCount_;
+//        int32_t mutex_;
     };
     class Iterator {
       friend class BaseString;
       friend class String;
       // typed constructors
-      friend String     plane(const char * s, uintptr_t size = ~uintptr_t(0) >> 1);
-      friend String     plane(ksys::AutoPtr< char> & s, uintptr_t size = ~uintptr_t(0) >> 1);
+      friend String plane(const char * s, uintptr_t size = ~uintptr_t(0) >> 1);
+      friend String plane(ksys::AutoPtr<char> & s, uintptr_t size = ~uintptr_t(0) >> 1);
       public:
         ~Iterator();
         Iterator(const Iterator & i);
@@ -388,18 +391,20 @@ class String {
     String              trimRight() const;
     String              trim() const;
 
-    String &            insert(const Iterator & i, const String & str);
-    String &            insert(const Iterator & i, const Iterator & i1, const Iterator & i2);
-    String              cut(const Iterator & i);
-    String              cut(const Iterator & i1, const Iterator & i2);
-    String &            remove(const Iterator & i);
-    String &            remove(const Iterator & i1, const Iterator & i2);
-    String &            replace(const Iterator & i, const String & str);
-    String &            replace(const Iterator & i1, const Iterator & i2, const String & str);
-    String &            replace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2);
-    String              left(uintptr_t symbols) const;
-    String              right(uintptr_t symbols) const;
-    String              middle(uintptr_t pos, uintptr_t symbols) const;
+    String insert(const Iterator & i, const String & str) const;
+    String insert(const Iterator & i, const Iterator & i1, const Iterator & i2) const;
+    String cut(const Iterator & i) const;
+    String cut(const Iterator & i1, const Iterator & i2) const;
+    String remove(const Iterator & i) const;
+    String remove(const Iterator & i1, const Iterator & i2) const;
+    String replace(const Iterator & i, const String & str) const;
+    String replace(const Iterator & i1, const Iterator & i2, const String & str) const;
+    String replace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2) const;
+    String & replaceInPlace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2);
+    String replaceAll(const String & what,const String & onWhat) const;
+    String left(uintptr_t symbols) const;
+    String right(uintptr_t symbols) const;
+    String middle(uintptr_t pos, uintptr_t symbols) const;
 
     static String       print(const char * fmt, ...);
     String              catPrint(const char * fmt, ...);
@@ -410,11 +415,11 @@ class String {
     uintptr_t           hash(bool caseSensitive) const;
     uint64_t            hash_ll(bool caseSensitive) const;
   protected:
-    ksys::SPRC< Container>  container_;
-    static char             nullString_[];
-    static uint8_t          nullContainer_[];
+    mutable ksys::SPRC<Container> container_;
+    static char nullString_[];
+    static uint8_t nullContainer_[];
 
-    static Container &  nullContainer();
+    static Container & nullContainer();
   private:
     static void         initialize();
     static void         cleanup();
@@ -432,22 +437,24 @@ inline String::Container::~Container()
   ksys::xfree(string_);
 }
 //---------------------------------------------------------------------------
-inline String::Container::Container(int32_t refCount, char * str)
-  : string_(str),
-    refCount_(refCount)
+inline String::Container::Container(int32_t refCount,char * str) :
+  string_(str), refCount_(refCount)/*, mutex_(0)*/
 {
 }
 //---------------------------------------------------------------------------
-inline String::Container & String::Container::addRef()
+inline void String::Container::addRef()
 {
-  ksys::interlockedIncrement(refCount_, 1);
-  return *this;
+  ksys::interlockedIncrement(refCount_,1);
 }
 //---------------------------------------------------------------------------
-inline String::Container & String::Container::remRef()
+inline void String::Container::remRef()
 {
-  if( ksys::interlockedIncrement(refCount_, -1) == 1 ) delete this;
-  return *this;
+  if( ksys::interlockedIncrement(refCount_,-1) == 1 ) delete this;
+}
+//---------------------------------------------------------------------------
+inline void String::Container::release()
+{
+//  ksys::interlockedIncrement(mutex_,1);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -507,39 +514,39 @@ inline uintptr_t String::size() const
   return (uintptr_t) ::strlen((const char *) container_->string_);
 }
 //---------------------------------------------------------------------------
-inline String & String::insert(const Iterator & i, const String & str)
+inline String String::insert(const Iterator & i, const String & str) const
 {
   return insert(i, Iterator(str), Iterator(str).last());
 }
 //---------------------------------------------------------------------------
-inline String & String::insert(const Iterator & i, const Iterator & i1, const Iterator & i2)
+inline String String::insert(const Iterator & i, const Iterator & i1, const Iterator & i2) const
 {
   return replace(i, i, i1, i2);
 }
 //---------------------------------------------------------------------------
 #ifndef __BCPLUSPLUS__
-inline String String::cut(const Iterator & i)
+inline String String::cut(const Iterator & i) const
 {
   return cut(i, i + 1);
 }
 #endif
 //---------------------------------------------------------------------------
-inline String & String::remove(const Iterator & i)
+inline String String::remove(const Iterator & i) const
 {
   return remove(i, i + 1);
 }
 //---------------------------------------------------------------------------
-inline String & String::remove(const Iterator & i1, const Iterator & i2)
+inline String String::remove(const Iterator & i1, const Iterator & i2) const
 {
   return replace(i1, i2, i1, i1);
 }
 //---------------------------------------------------------------------------
-inline String & String::replace(const Iterator & i, const String & str)
+inline String String::replace(const Iterator & i, const String & str) const
 {
   return replace(i, i + 1, Iterator(str), Iterator(str).last());
 }
 //---------------------------------------------------------------------------
-inline String & String::replace(const Iterator & i1, const Iterator & i2, const String & str)
+inline String String::replace(const Iterator & i1, const Iterator & i2, const String & str) const
 {
   return replace(i1, i2, Iterator(str), Iterator(str).last());
 }
@@ -669,25 +676,22 @@ inline String::Iterator & String::Iterator::first()
 //---------------------------------------------------------------------------
 inline bool String::Iterator::isFirst() const
 {
-  assert(position_ >= 0 && cursor_ >= 0);
-  return cursor_ == 0 && *container_->string_ != '\0';
+  return position_ == 0 && cursor_ == 0 && *container_->string_ != '\0';
 }
 //---------------------------------------------------------------------------
 inline bool String::Iterator::isLast() const
 {
-  assert(position_ >= 0 && cursor_ >= 0);
-  return container_->string_[cursor_] != '\0' && container_->string_[cursor_ + utf8seqlen(container_->string_ + cursor_)] == '\0';
+  return position_ < 0 || container_->string_[cursor_] != '\0' && container_->string_[cursor_ + utf8seqlen(container_->string_ + cursor_)] == '\0';
 }
 //---------------------------------------------------------------------------
 inline bool String::Iterator::bof() const
 {
-  return cursor_ == 0;
+  return position_ <= 0;
 }
 //---------------------------------------------------------------------------
 inline bool String::Iterator::eof() const
 {
-  assert(position_ >= 0 && cursor_ >= 0);
-  return container_->string_[cursor_] == 0;
+  return position_ < 0 || container_->string_[cursor_] == 0;
 }
 //---------------------------------------------------------------------------
 inline const intptr_t & String::Iterator::cursor() const
@@ -806,13 +810,19 @@ uintptr_t       int2StrLen(intmax_t a);
 uintptr_t       int2StrLen(uintmax_t a);
 String          int2Str(intmax_t a);
 String          int2Str(uintmax_t a);
+String int2Str0(intmax_t a,uintptr_t padding = 0);
+String int2Str0(uintmax_t a,uintptr_t padding = 0);
 #endif
 #if !HAVE_INTPTR_T_AS_INT
 String          int2Str(int a);
 String          int2Str(unsigned int a);
+String int2Str0(int a,uintptr_t padding = 0);
+String int2Str0(unsigned int a,uintptr_t padding = 0);
 #endif
 String          int2Str(intptr_t a);
 String          int2Str(uintptr_t a);
+String int2Str0(intptr_t a,uintptr_t padding = 0);
+String int2Str0(uintptr_t a,uintptr_t padding = 0);
 uintptr_t       int2StrLen(intptr_t a);
 uintptr_t       int2StrLen(uintptr_t a);
 String          int2HexStr(uintmax_t a, uintptr_t padding);

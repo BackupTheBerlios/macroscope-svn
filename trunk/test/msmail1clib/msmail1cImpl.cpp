@@ -83,7 +83,7 @@ HRESULT Cmsmail1c::RegisterExtensionAs(BSTR * bstrExtensionName)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNProps(long * plProps)
 {
-  *plProps = 14;
+  *plProps = 15;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -144,6 +144,10 @@ HRESULT Cmsmail1c::FindProp(BSTR bstrPropName,long * plPropNum)
   if( _wcsicoll(bstrPropName,L"RandomNumber") == 0 ) *plPropNum = 13;
   else
   if( _wcsicoll(bstrPropName,L"СлучайноеЧисло") == 0 ) *plPropNum = 13;
+  else
+  if( _wcsicoll(bstrPropName,L"Version") == 0 ) *plPropNum = 14;
+  else
+  if( _wcsicoll(bstrPropName,L"Версия") == 0 ) *plPropNum = 14;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -264,6 +268,14 @@ HRESULT Cmsmail1c::GetPropName(long lPropNum,long lPropAlias,BSTR * pbstrPropNam
           return (*pbstrPropName = SysAllocString(L"СлучайноеЧисло")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 14 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"Version")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"Версия")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -278,11 +290,11 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 1 :
-        hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
+        if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
         if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = active_ ? 1 : 0;
         break;
       case 2 :
-        hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
+        if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
         if( SUCCEEDED(hr) ){
           V_VT(pvarPropVal) = VT_BSTR;
           switch( GetPriorityClass(GetCurrentProcess()) ){
@@ -312,7 +324,7 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         }
         break;
       case 3 :
-        hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
+        if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
         if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = lastError_;
         break;
       case 4 : // User
@@ -360,6 +372,10 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         V_BSTR(pvarPropVal) = utf8::int2Str(rnd_.random()).getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
+      case 14 : // Version
+        V_BSTR(pvarPropVal) = getTimestamp(__DATE__,__TIME__).getOLEString();
+        V_VT(pvarPropVal) = VT_BSTR;
+        break;
     }
   }
   catch( ExceptionSP & e ){
@@ -375,11 +391,11 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
   try {
     switch( lPropNum ){
       case 0 :
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
+        if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
         if( SUCCEEDED(hr) ) name_ = V_BSTR(varPropVal);
         break;
       case 1 :
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4);
+        if( V_VT(varPropVal) != VT_I4 ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4);
         if( SUCCEEDED(hr) ){
           if( V_I4(varPropVal) != 0 && pAsyncEvent_ == NULL ){
             hr = pBackConnection_->QueryInterface(IID_IAsyncEvent,(void **) &pAsyncEvent_);
@@ -397,6 +413,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               client_.mailServer_ = mailServer_;
               client_.configFile_ = configFile_;
               client_.logFile_ = logFile_;
+              stdErr.fileName(logFile_);
               client_.open();
               active_ = true;
             }
@@ -436,7 +453,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
           else
             r = false;
         }
-        if( !r && VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4) == S_OK ){
+        if( !r && (V_VT(varPropVal) == VT_I4 || VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4) == S_OK) ){
           SetPriorityClass(GetCurrentProcess(),V_I4(varPropVal));
         }
         break;
@@ -444,27 +461,27 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
         hr = E_NOTIMPL;
         break;
       case 4 : // User
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
+        if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
         if( SUCCEEDED(hr) ) user_ = V_BSTR(varPropVal);
         break;
       case 5 : // Key
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
+        if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
         if( SUCCEEDED(hr) ) key_ = V_BSTR(varPropVal);
         break;
       case 6 : // Groups
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
+        if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
         if( SUCCEEDED(hr) ) groups_ = V_BSTR(varPropVal);
         break;
       case 7 : // MailServer
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
+        if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
         if( SUCCEEDED(hr) ) mailServer_ = V_BSTR(varPropVal);
         break;
       case 8 : // ConfigFile
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
+        if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
         if( SUCCEEDED(hr) ) configFile_ = V_BSTR(varPropVal);
         break;
       case 9 : // LogFile
-        hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
+        if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
         if( SUCCEEDED(hr) ) logFile_ = V_BSTR(varPropVal);
         break;
       case 10 : // LocalTime
@@ -477,6 +494,9 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
         hr = E_NOTIMPL;
         break;
       case 13 : // RandomNumber
+        hr = E_NOTIMPL;
+        break;
+      case 14 : // Version
         hr = E_NOTIMPL;
         break;
     }
@@ -504,6 +524,7 @@ HRESULT Cmsmail1c::IsPropReadable(long lPropNum,BOOL * pboolPropRead)
     case 11 : *pboolPropRead = TRUE; break;
     case 12 : *pboolPropRead = TRUE; break;
     case 13 : *pboolPropRead = TRUE; break;
+    case 14 : *pboolPropRead = TRUE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -526,6 +547,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
     case 11 : *pboolPropWrite = FALSE; break;
     case 12 : *pboolPropWrite = FALSE; break;
     case 13 : *pboolPropWrite = FALSE; break;
+    case 14 : *pboolPropWrite = FALSE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -533,7 +555,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 10;
+  *plMethods = 11;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -578,6 +600,10 @@ HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
   if( _wcsicoll(bstrMethodName,L"SendMessage") == 0 ) *plMethodNum = 9;
   else
   if( _wcsicoll(bstrMethodName,L"ПослатьСообщение") == 0 ) *plMethodNum = 9;
+  else
+  if( _wcsicoll(bstrMethodName,L"RemoveMessage") == 0 ) *plMethodNum = 10;
+  else
+  if( _wcsicoll(bstrMethodName,L"УдалитьСообщение") == 0 ) *plMethodNum = 10;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -666,6 +692,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"ПослатьСообщение")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 10 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RemoveMessage")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"УдалитьСообщение")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -683,6 +717,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 7 : *plParams = 3; break;
     case 8 : *plParams = 2; break;
     case 9 : *plParams = 1; break;
+    case 10 : *plParams = 1; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -711,7 +746,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
 //  VariantInit(&v0);
 //  VariantInit(&v1);
 //  VariantInit(&v2);
-  hr = VariantChangeType(pvarRetValue,pvarRetValue,0,VT_I4);
+  if( V_VT(pvarRetValue) != VT_I4 ) hr = VariantChangeType(pvarRetValue,pvarRetValue,0,VT_I4);
   if( SUCCEEDED(hr) ){
     LONG lIndex = -1;
     V_I4(pvarRetValue) = 0;
@@ -729,11 +764,11 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 lIndex = 2; // Максимальное время (в милисекундах)
                 hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
                 if( SUCCEEDED(hr) ){
-                  hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+                  if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
-                    hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
+                    if( V_VT(pv1) != VT_I4 ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
                     if( SUCCEEDED(hr) ){
-                      hr = VariantChangeTypeEx(pv2,pv2,0,0,VT_I4);
+                      if( V_VT(pv2) != VT_I4 ) hr = VariantChangeTypeEx(pv2,pv2,0,0,VT_I4);
                       if( SUCCEEDED(hr) )
                         hr = lockFile(V_BSTR(pv0),V_I4(pv1),V_I4(pv2),&V_I4(pvarRetValue));
                     }
@@ -750,7 +785,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             lIndex = 0; // Имя файла
             hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
             if( SUCCEEDED(hr) ){
-              hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) )
                 hr = unlockFile(V_BSTR(pv0),&V_I4(pvarRetValue));
             }
@@ -763,7 +798,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             lIndex = 0; // Имя файла
             hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
             if( SUCCEEDED(hr) ){
-              hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) )
                 hr = getLastError(V_BSTR(pv0),&V_I4(pvarRetValue));
             }
@@ -776,9 +811,11 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             lIndex = 0;
             hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
             if( SUCCEEDED(hr) ){
-              hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
-              if( SUCCEEDED(hr) )
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
                 hr = sleep(V_I4(pv0));
+                if( SUCCEEDED(hr) ) V_I4(pvarRetValue) = 1;
+              }
             }
             SafeArrayUnlock(*paParams);
           }
@@ -792,11 +829,13 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               lIndex = 1;
               hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
               if( SUCCEEDED(hr) ){
-                hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+                if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
                 if( SUCCEEDED(hr) ){
-                  hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
-                  if( SUCCEEDED(hr) )
+                  if( V_VT(pv1) != VT_I4 ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
+                  if( SUCCEEDED(hr) ){
                     hr = sleepIn(V_I4(pv0),V_I4(pv1));
+                    if( SUCCEEDED(hr) ) V_I4(pvarRetValue) = 1;
+                  }
                 }
               }
             }
@@ -812,18 +851,20 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               lIndex = 1;
               hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
               if( SUCCEEDED(hr) ){
-                hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+                if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
                 if( SUCCEEDED(hr) ){
-                  hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
-                  if( SUCCEEDED(hr) )
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
                     hr = textToFile(V_BSTR(pv0),V_BSTR(pv1),&V_I4(pvarRetValue));
+                    if( SUCCEEDED(hr) ) V_I4(pvarRetValue) = 1;
+                  }
                 }
               }
             }
             SafeArrayUnlock(*paParams);
           }
           break;
-        case 6 :
+        case 6 : // NewMessage
           if( !active_ ) throw ExceptionSP(new Exception(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__));
           V_BSTR(pvarRetValue) = client_.newMessage().getOLEString();
           V_VT(pvarRetValue) = VT_BSTR;
@@ -841,11 +882,11 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 lIndex = 2; // Value of attribute
                 hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
                 if( SUCCEEDED(hr) ){
-                  hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+                  if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
-                    hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                    if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                     if( SUCCEEDED(hr) ){
-                      hr = VariantChangeTypeEx(pv2,pv2,0,0,VT_BSTR);
+                      if( V_VT(pv2) != VT_BSTR ) hr = VariantChangeTypeEx(pv2,pv2,0,0,VT_BSTR);
                       if( SUCCEEDED(hr) ){
                         V_BSTR(pvarRetValue) = client_.value(V_BSTR(pv0),V_BSTR(pv1),V_BSTR(pv2)).getOLEString();
                         V_VT(pvarRetValue) = VT_BSTR;
@@ -868,9 +909,9 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               lIndex = 1; // Key of attribute
               hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
               if( SUCCEEDED(hr) ){
-                hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+                if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
                 if( SUCCEEDED(hr) ){
-                  hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
                     V_BSTR(pvarRetValue) = client_.value(V_BSTR(pv0),V_BSTR(pv1)).getOLEString();
                     V_VT(pvarRetValue) = VT_BSTR;
@@ -888,9 +929,27 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             lIndex = 0;
             hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
             if( SUCCEEDED(hr) ){
-              hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
-              if( SUCCEEDED(hr) )
-                client_.sendMessage(V_BSTR(pv0));
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0)) ? 1 : 0;
+                lastError_ = client_.sendLastError_ - errorOffset;
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 10 : // RemoveMessage
+          if( !active_ ) throw ExceptionSP(new Exception(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__));
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                V_I4(pvarRetValue) = client_.removeMessage(V_BSTR(pv0));
+                lastError_ = client_.sendLastError_;
+              }
             }
             SafeArrayUnlock(*paParams);
           }

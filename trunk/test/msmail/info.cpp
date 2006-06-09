@@ -56,12 +56,6 @@ Message & Message::operator = (const Message & a)
 //------------------------------------------------------------------------------
 bool Message::isValue(const utf8::String & key) const
 {
-  if( attributes_.count() == 0 ){
-    UUID uuid;
-    createUUID(uuid);
-    utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-    attributes_.add(Attribute(messageIdKey,suuid));
-  }
   return attributes_.bSearch(Attribute(key,utf8::String())) >= 0;
 }
 //------------------------------------------------------------------------------
@@ -77,7 +71,7 @@ const utf8::String & Message::value(const utf8::String & key) const
   if( i < 0 )
     throw ExceptionSP(new Exception(
 #if defined(__WIN32__) || defined(__WIN64__)
-      ERROR_NOT_FOUND
+      ERROR_NOT_FOUND + errorOffset
 #else
       ENOENT
 #endif
@@ -89,21 +83,16 @@ const utf8::String & Message::value(const utf8::String & key) const
 Message & Message::value(const utf8::String & key,const utf8::String & value)
 {
   intptr_t i, c;
-  if( attributes_.count() == 0 || key.strcmp(messageIdKey) == 0 ){
+  if( attributes_.count() == 0 && key.strcmp(messageIdKey) == 0 && value.strlen() == 0 ){
     UUID uuid;
     createUUID(uuid);
     utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
     i = attributes_.bSearch(Attribute(messageIdKey,utf8::String()),c);
-    if( c != 0 ){
-      attributes_.insert(i + (i > 0),Attribute(messageIdKey,suuid));
-    }
-    else {
-      attributes_[i].value_ = suuid;
-    }
+    attributes_.add(Attribute(messageIdKey,suuid));
   }
   i = attributes_.bSearch(Attribute(key,utf8::String()),c);
   if( c != 0 ){
-    attributes_.insert(i + (i > 0),Attribute(key,value));
+    attributes_.insert(i + (c > 0),Attribute(key,value));
   }
   else {
     attributes_[i].value_ = value;

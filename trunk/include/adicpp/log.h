@@ -80,11 +80,22 @@ class LogFile {
     uint64_t rotationThreshold_;
     uintptr_t rotatedFileCount_;
 
+    LogFile & internalLog(LogMessagePriority pri,uintptr_t level,const utf8::String::Stream & stream);
     void rotate(uint64_t size);
   private:
     static void initialize();
     static void cleanup();
 };
+//---------------------------------------------------------------------------
+inline LogFile & LogFile::log(LogMessagePriority pri,const utf8::String::Stream & stream)
+{
+  return internalLog(pri,~uintptr_t(0),stream);
+}
+//---------------------------------------------------------------------------
+inline LogFile & LogFile::debug(uintptr_t level,const utf8::String::Stream & stream)
+{
+  return internalLog(lmDEBUG,level,stream);
+}
 //---------------------------------------------------------------------------
 inline const utf8::String & LogFile::fileName() const
 {
