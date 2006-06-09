@@ -444,7 +444,7 @@ void SpoolWalker::fiberExecute()
             renameAsync(list[i],includeTrailingPathDelimiter(userMailBox) + message.id());
           }
           else {
-            renameAsync(list[i],server_.mqueueDir() + message.id());
+            renameAsync(list[i],server_.mqueueDir() + message.id() + ".msg");
           }
         }
       }

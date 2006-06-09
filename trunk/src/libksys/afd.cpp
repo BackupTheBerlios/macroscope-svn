@@ -223,7 +223,7 @@ int64_t AsyncFile::read(void * buf,uint64_t size)
     r += fiber()->event_.count_;
     size -= fiber()->event_.count_;
     seek(pos + fiber()->event_.count_);
-    if( r == 0 ) break;
+    if( (uint64_t) r < size ) break;
   }
   return r;
 }
@@ -252,7 +252,7 @@ int64_t AsyncFile::write(const void * buf,uint64_t size)
     w += fiber()->event_.count_;
     size -= fiber()->event_.count_;
     seek(pos + fiber()->event_.count_);
-    if( w == 0 ) break;
+    if( (uint64_t) w < size ) break;
   }
   return w;
 }

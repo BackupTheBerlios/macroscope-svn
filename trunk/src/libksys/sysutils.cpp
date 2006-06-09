@@ -806,12 +806,10 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
     else if( mi.getChar() == '*' ){
       mi.next();
 #if defined(__WIN32__) || defined(__WIN64__)
-      while( ni.next() && ni.getUpperChar() != mi.getUpperChar() );
+      while( ni.getUpperChar() != mi.getUpperChar() ) ni.next();
 #else
-      while( ni.next() && ni.getChar() != mi.getChar() );
+      while( ni.getChar() != mi.getChar() ) ni.next();
 #endif
-      mi.next();
-      continue;
     }
     else if( mi.getChar() == '[' ){
 //      mi.next();

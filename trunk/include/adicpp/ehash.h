@@ -285,7 +285,7 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object, b
 {
   EmbeddedHashNode<T> ** head;
   if( size_ == 0 ){
-    hash_.realloc(1);
+    hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
     hash_[0] = NULL;
     size_ = 1;
   }

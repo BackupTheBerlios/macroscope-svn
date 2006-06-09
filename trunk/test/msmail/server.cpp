@@ -87,8 +87,12 @@ utf8::String Server::mailDir() const
 //------------------------------------------------------------------------------
 utf8::String Server::mqueueDir() const
 {
-  utf8::String mqueue(excludeTrailingPathDelimiter(
-    config_->value("spool",getExecutablePath() + "spool")) + "mqueue");
+  utf8::String mqueue(
+    includeTrailingPathDelimiter(
+      config_->value("spool",getExecutablePath() + "spool")
+    ) +
+    "mqueue"
+  );
   createDirectoryAsync(mqueue);
   return includeTrailingPathDelimiter(mqueue);
 }

@@ -105,7 +105,7 @@ utf8::String Message::separateValue(const utf8::String & key,utf8::String & s0,u
   utf8::String value(value(key));
   utf8::String::Iterator i(value.strcasestr(separator));
   s0 = utf8::String(value,i);
-  s1 = i;
+  s1 = i + 1;
   return value;
 }
 //---------------------------------------------------------------------------
@@ -141,7 +141,13 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
   for(;;){
     key = s.gets(&eof);
     if( eof ) break;
-    utf8::String::Iterator i(key.strstr(": "));
+    utf8::String::Iterator i(key);
+    i.last().prev();
+    if( i.getChar() == '\n' ) key.remove(i);
+    i = key;
+    i.last().prev();
+    if( i.getChar() == '\r' ) key.remove(i);
+    i = key.strstr(": ");
     if( !i.eof() ){
       a.value(
         /*unScreenString(*/utf8::String(key,i)/*)*/,

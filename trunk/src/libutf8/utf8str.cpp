@@ -819,16 +819,8 @@ String::Iterator & String::Iterator::operator +=(intptr_t relPos)
 //---------------------------------------------------------------------------
 String::Iterator & String::Iterator::operator -=(intptr_t relPos)
 {
-  while( relPos > 0 )
-    if( prev() )
-      relPos--;
-    else
-      break;
-  while( relPos < 0 )
-    if( next() )
-      relPos++;
-    else
-      break;
+  while( relPos > 0 ) if( prev() ) relPos--; else break;
+  while( relPos < 0 ) if( next() ) relPos++; else break;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -846,7 +838,7 @@ String::Iterator String::Iterator::operator -(intptr_t relPos) const
 //---------------------------------------------------------------------------
 String::Iterator & String::Iterator::reset()
 {
-  intptr_t  position  = position_;
+  intptr_t position = position_;
   cursor_ = 0;
   position_ = 0;
   while( position_ < position && container_->ustring_[cursor_] != 0 ){
@@ -860,7 +852,7 @@ String::Iterator & String::Iterator::last()
 {
   if( position_ < 0 || cursor_ < 0 ) position_ = cursor_ = 0;
   uintptr_t size;
-  position_ += utf8strlen(container_->string_ + cursor_, size);
+  position_ += utf8strlen(container_->string_ + cursor_,size);
   cursor_ += size;
   return *this;
 }
@@ -868,10 +860,9 @@ String::Iterator & String::Iterator::last()
 bool String::Iterator::prev()
 {
   if( cursor_ == 0 ) return false;
-  for( ; ; ){
+  for(;;){
     uintptr_t c = container_->ustring_[--cursor_];
-    if( c < 0x80 || (c & 0xC0) == 0xC0 )
-      break;
+    if( c < 0x80 || (c & 0xC0) == 0xC0 ) break;
   }
   position_--;
   return true;
