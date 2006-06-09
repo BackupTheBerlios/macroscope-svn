@@ -74,7 +74,9 @@ const char * const  API::symbols_[]   = {
   "getaddrinfo",
   "GetAddrInfoW",
   "freeaddrinfo",
-  "FreeAddrInfoW"
+  "FreeAddrInfoW",
+  "getnameinfo",
+  "GetNameInfoW"
 };
 
 HINSTANCE           API::handle_;

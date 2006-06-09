@@ -391,16 +391,15 @@ class String {
     String              trimRight() const;
     String              trim() const;
 
-    String insert(const Iterator & i, const String & str) const;
-    String insert(const Iterator & i, const Iterator & i1, const Iterator & i2) const;
+    String & insert(const Iterator & i, const String & str);
+    String & insert(const Iterator & i, const Iterator & i1, const Iterator & i2);
     String cut(const Iterator & i) const;
     String cut(const Iterator & i1, const Iterator & i2) const;
-    String remove(const Iterator & i) const;
-    String remove(const Iterator & i1, const Iterator & i2) const;
-    String replace(const Iterator & i, const String & str) const;
-    String replace(const Iterator & i1, const Iterator & i2, const String & str) const;
-    String replace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2) const;
-    String & replaceInPlace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2);
+    String & remove(const Iterator & i);
+    String & remove(const Iterator & i1, const Iterator & i2);
+    String & replace(const Iterator & i, const String & str);
+    String & replace(const Iterator & i1, const Iterator & i2, const String & str);
+    String & replace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2);
     String replaceAll(const String & what,const String & onWhat) const;
     String left(uintptr_t symbols) const;
     String right(uintptr_t symbols) const;
@@ -514,12 +513,12 @@ inline uintptr_t String::size() const
   return (uintptr_t) ::strlen((const char *) container_->string_);
 }
 //---------------------------------------------------------------------------
-inline String String::insert(const Iterator & i, const String & str) const
+inline String & String::insert(const Iterator & i, const String & str)
 {
   return insert(i, Iterator(str), Iterator(str).last());
 }
 //---------------------------------------------------------------------------
-inline String String::insert(const Iterator & i, const Iterator & i1, const Iterator & i2) const
+inline String & String::insert(const Iterator & i, const Iterator & i1, const Iterator & i2)
 {
   return replace(i, i, i1, i2);
 }
@@ -531,22 +530,22 @@ inline String String::cut(const Iterator & i) const
 }
 #endif
 //---------------------------------------------------------------------------
-inline String String::remove(const Iterator & i) const
+inline String & String::remove(const Iterator & i)
 {
   return remove(i, i + 1);
 }
 //---------------------------------------------------------------------------
-inline String String::remove(const Iterator & i1, const Iterator & i2) const
+inline String & String::remove(const Iterator & i1, const Iterator & i2)
 {
   return replace(i1, i2, i1, i1);
 }
 //---------------------------------------------------------------------------
-inline String String::replace(const Iterator & i, const String & str) const
+inline String & String::replace(const Iterator & i, const String & str)
 {
   return replace(i, i + 1, Iterator(str), Iterator(str).last());
 }
 //---------------------------------------------------------------------------
-inline String String::replace(const Iterator & i1, const Iterator & i2, const String & str) const
+inline String & String::replace(const Iterator & i1, const Iterator & i2, const String & str)
 {
   return replace(i1, i2, Iterator(str), Iterator(str).last());
 }

@@ -146,8 +146,10 @@ void ServerFiber::main()
         getServerList();
         break;
       case cmSendMail :
+        sendMail();
         break;
       case cmRecvMail :
+        recvMail();
         break;
       default : // unrecognized or unsupported command, terminate
         putCode(eInvalidCommand);
@@ -336,19 +338,15 @@ void ServerFiber::sendMail() // client sending mail
       if( !message->isValue(relay) ) break;
     }
     message->value(relay,ksock::SockAddr::gethostname());
-    relay += ".";
-    message->value(relay + "#Received",getTimeString(gettimeofday()));
-    message->value(relay + "#Process.Id",utf8::int2Str(ksys::getpid()));
-    message->value(relay + "#Process.StartTime",getTimeString(getProcessStartTime()));
+    relay = relay + ".";
+    message->value(relay + "Received",getTimeString(gettimeofday()));
+    message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
+    message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
     utf8::String spool(server_.spoolDir());
-    AsyncFile file(spool + message->value(messageIdKey));
-    file.removeAfterClose(true);
-    file.exclusive(true);
-    file.open();
+    AsyncFile file(spool + message->value(messageIdKey) + ".msg");
+    file.removeAfterClose(true).exclusive(true).open();
     file << message;
-    file.removeAfterClose(false);
-    file.close();
-    renameAsync(file.fileName(),file.fileName() + ".msg");
+    file.removeAfterClose(false).close();
     putCode(eOK);
   }
 }

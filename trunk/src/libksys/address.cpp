@@ -34,6 +34,88 @@ namespace ksock {
 #pragma option push -w-8004
 #endif
 //------------------------------------------------------------------------------
+utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8::String & port,const ksys::Mutant & defPort,int ai_flag)
+{
+  utf8::String s;
+#if defined(__WIN32__) || defined(__WIN64__)
+  union {
+    struct addrinfo aiHints;
+    struct addrinfoW aiHintsW;
+  };
+  union {
+    struct addrinfo * aiList;
+    struct addrinfoW * aiListW;
+  };
+  union {
+    struct addrinfo * res;
+    struct addrinfoW * resW;
+  };
+#else
+  struct addrinfo aiHints;
+  struct addrinfo * aiList = NULL, * res;
+#endif
+  res = NULL;
+  memset(&aiHints,0,sizeof(aiHints));
+  aiHints.ai_family = PF_UNSPEC;
+  aiHints.ai_socktype = SOCK_STREAM;
+  aiHints.ai_protocol = IPPROTO_TCP;
+  aiHints.ai_flags |= host.strlen() == 0 ? AI_PASSIVE : 0;
+  aiHints.ai_flags |= ai_flag;
+  int r;
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( ksys::isWin9x() ){
+    r = api.GetAddrInfoA(
+      host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
+      port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
+      &aiHints,
+      &aiList
+    );
+  }
+  else {
+    r = api.GetAddrInfoW(
+      host.strlen() > 0 ? (const wchar_t *) host.getUNICODEString() : NULL,
+      port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const wchar_t *) port.getUNICODEString() : NULL,
+      &aiHintsW,
+      &aiListW
+    );
+  }
+#else
+  r = api.getaddrinfo(
+    host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
+    port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
+    &aiHints,
+    &aiList
+  );
+#endif
+  if( r != 0 ){
+    int32_t err = errNo();
+    throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+  }
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( ksys::isWin9x() ){
+    for( res = aiList; res != NULL; res = res->ai_next ){
+      if( res->ai_canonname != NULL ) s = res->ai_canonname;
+      memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
+    }
+    api.FreeAddrInfoA(aiList);
+  }
+  else {
+    for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
+      if( res->ai_canonname != NULL ) s = res->ai_canonname;
+      memcpy(&addr4_,resW->ai_addr,resW->ai_addrlen);
+    }
+    api.FreeAddrInfoW(aiListW);
+  }
+#else
+  for( res = aiList; res != NULL; res = res->ai_next ){
+    if( res->ai_canonname != NULL ) s = res->ai_canonname;
+    memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
+  }
+  api.freeaddrinfo(aiList);
+#endif
+  return s;
+}
+//------------------------------------------------------------------------------
 SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort)
 {
 #if HAVE_STRUCT_SOCKADDR_IN6
@@ -75,106 +157,7 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
     port = port.trim();
     api.open();
     try {
-/*      struct hostent * pent = api.gethostbyname(host.getANSIString());
-      intmax_t a = defPort;
-      if( pent == NULL || port.trim().strlen() == 0 || utf8::tryStr2Int(port, a) ){
-        if( pent != NULL && host.strlen() > 0 ){
-#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-          addr4_.sin_len = sizeof(addr4_);
-          //          addr4_.sin_len = pent->h_length;
-#endif
-          addr4_.sin_family = pent->h_addrtype;
-          memcpy(&addr4_.sin_addr, pent->h_addr_list[0], pent->h_length);
-        }
-        else {
-#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-          addr4_.sin_len = sizeof(addr4_);
-#endif
-          addr4_.sin_family = PF_INET;
-#if defined(__WIN32__) || defined(__WIN64__)
-          addr4_.sin_addr.S_un.S_addr = INADDR_ANY;
-#else
-          addr4_.sin_addr.s_addr = INADDR_ANY;
-#endif
-        }
-        addr4_.sin_port = api.htons((u_short) a);
-      }
-      else {
-        int32_t err = errNo();
-        throw ksys::ExceptionSP(new EAsyncSocket(err, __PRETTY_FUNCTION__));
-      }*/
-#if defined(__WIN32__) || defined(__WIN64__)
-      union {
-        struct addrinfo aiHints;
-        struct addrinfoW aiHintsW;
-      };
-      union {
-        struct addrinfo * aiList;
-        struct addrinfoW * aiListW;
-      };
-      union {
-        struct addrinfo * res;
-        struct addrinfoW * resW;
-      };
-#else
-      struct addrinfo aiHints;
-      struct addrinfo * aiList = NULL, * res;
-#endif
-      res = NULL;
-      memset(&aiHints,0,sizeof(aiHints));
-      aiHints.ai_family = PF_UNSPEC;
-      aiHints.ai_socktype = SOCK_STREAM;
-      aiHints.ai_protocol = IPPROTO_TCP;
-      aiHints.ai_flags |= host.strlen() == 0 ? AI_PASSIVE : 0;
-      int r;
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( ksys::isWin9x() ){
-        r = api.GetAddrInfoA(
-          host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
-          port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
-          &aiHints,
-          &aiList
-        );
-      }
-      else {
-        r = api.GetAddrInfoW(
-          host.strlen() > 0 ? (const wchar_t *) host.getUNICODEString() : NULL,
-          port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const wchar_t *) port.getUNICODEString() : NULL,
-          &aiHintsW,
-          &aiListW
-        );
-      }
-#else
-      r = api.getaddrinfo(
-        host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
-        port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
-        &aiHints,
-        &aiList
-      );
-#endif
-      if( r != 0 ){
-        int32_t err = errNo();
-        throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
-      }
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( ksys::isWin9x() ){
-        for( res = aiList; res != NULL; res = res->ai_next ){
-          memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
-        }
-        api.FreeAddrInfoA(aiList);
-      }
-      else {
-        for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
-          memcpy(&addr4_,resW->ai_addr,resW->ai_addrlen);
-        }
-        api.FreeAddrInfoW(aiListW);
-      }
-#else
-      for( res = aiList; res != NULL; res = res->ai_next ){
-        memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
-      }
-      api.freeaddrinfo(aiList);
-#endif
+      internalGetAddrInfo(host,port,defPort,0);
     }
     catch( ... ){
       api.close();
@@ -274,10 +257,69 @@ utf8::String SockAddr::gethostname()
     s.resize((s.size() << 1) + (s.size() == 0));
     err = 0;
   }
+  s.resize(s.size());
+  try {
+    SockAddr addr;
+    addr.internalGetAddrInfo(s,utf8::String(),0,0/*AI_CANONNAME*/);
+#if defined(__WIN32__) || defined(__WIN64__)
+    union {
+      char hostName[NI_MAXHOST];
+      wchar_t hostNameW[NI_MAXHOST];
+    };
+    union {
+      char servInfo[NI_MAXSERV];
+      wchar_t servInfoW[NI_MAXSERV];
+    };
+    int r;
+    if( ksys::isWin9x() ){
+      r = api.GetNameInfoA(
+        (const sockaddr *) &addr.addr4_,
+        (socklen_t) addr.length(),
+        hostName,
+        sizeof(hostName),
+        servInfo,
+        sizeof(servInfo),
+        NI_NUMERICSERV
+      );
+      if( r == 0 ) s = hostName;
+    }
+    else {
+      r = api.GetNameInfoW(
+        (const sockaddr *) &addr.addr4_,
+        (socklen_t) addr.length(),
+        hostNameW,
+        sizeof(hostNameW),
+        servInfoW,
+        sizeof(servInfoW),
+        NI_NUMERICSERV
+      );
+      if( r == 0 ) s = hostNameW;
+    }
+#else
+    r = api.getnameinfo(
+      (const sockaddr *) &addr.addr4_,
+      (socklen_t) addr.length(),
+      hostName,
+      sizeof(hostName),
+      servInfo,
+      sizeof(servInfo),
+      NI_NUMERICSERV
+    );
+    if( r == 0 ) s = hostName;
+#endif
+    if( r != 0 ){
+      int32_t err = errNo();
+      throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+    }
+  }
+  catch( ... ){
+    api.close();
+    throw;
+  }
   api.close();
   if( err != 0 )
     throw ksys::ExceptionSP(new EAsyncSocket(err + ksys::errorOffset,__PRETTY_FUNCTION__));
-  return s.resize(s.size());
+  return s;
 }
 //------------------------------------------------------------------------------
 #if __BCPLUSPLUS__

@@ -63,11 +63,7 @@ void Service::start()
   msmailConfig_->parse().override();
 #endif
   Array<ksock::SockAddr> addrs;
-  ksock::SockAddr::resolve(
-    msmailConfig_->text("bind"),
-    addrs,
-    defaultPort
-  );
+  ksock::SockAddr::resolve(msmailConfig_->text("bind"),addrs,defaultPort);
   for( intptr_t i = addrs.count() - 1; i >= 0; i-- ) msmail_.addBind(addrs[i]);
   msmail_.open();
   stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.v_gnu << " started\n");

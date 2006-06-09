@@ -76,6 +76,12 @@ class SockAddr {
 
     uintptr_t length() const;
   protected:
+    utf8::String internalGetAddrInfo(
+      const utf8::String & host,
+      const utf8::String & port,
+      const ksys::Mutant & defPort,
+      int ai_flag
+    );
   private:
 };
 //---------------------------------------------------------------------------

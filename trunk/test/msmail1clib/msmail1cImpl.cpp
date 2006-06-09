@@ -932,7 +932,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
                 V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0)) ? 1 : 0;
-                lastError_ = client_.sendLastError_ - errorOffset;
+                lastError_ = client_.sendLastError_ - (client_.sendLastError_ >= errorOffset ? errorOffset : 0);
               }
             }
             SafeArrayUnlock(*paParams);
@@ -948,7 +948,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
                 V_I4(pvarRetValue) = client_.removeMessage(V_BSTR(pv0));
-                lastError_ = client_.sendLastError_;
+                lastError_ = client_.sendLastError_ - (client_.sendLastError_ >= errorOffset ? errorOffset : 0);
               }
             }
             SafeArrayUnlock(*paParams);
@@ -959,7 +959,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
       }
     }
     catch( ExceptionSP & e ){
-      lastError_ = e->code() - errorOffset;
+      lastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
       hr = HRESULT_FROM_WIN32(lastError_);
       if( lIndex >= 0 ) SafeArrayUnlock(*paParams);
     }

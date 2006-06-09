@@ -164,7 +164,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           screened = false;
           uintptr_t     screenLen;
           utf8::String  sc  = unScreenChar(aheadi_, screenLen);
-          ahead_ = ahead_.replace(aheadi_, aheadi_ + screenLen + 1, sc);
+          ahead_.replace(aheadi_, aheadi_ + screenLen + 1, sc);
         }
         else if( aheadi_.getChar() == '\"' ){
           inQuoted = false;
@@ -235,7 +235,9 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           maxTokenLen = 1;
         }
         else if( (ctype & C1_CNTRL) == 0 ){
-          if( tt != ttNumeric || (c != 'K' && c != 'k' && c != 'M' && c != 'm' && c != 'G' && c != 'g' && !isdigit((int) prevChar)) ){
+          if( tt != ttNumeric ||
+              (c != 'K' && c != 'k' && c != 'M' && c != 'm' &&
+               c != 'G' && c != 'g' && !isdigit((int) prevChar)) ){
             t = ttString;
             maxTokenLen = ~uintptr_t(0);
           }
@@ -247,8 +249,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         prevChar = c;
       }
     }
-    if( t != tt && tt != ttUnknown )
-      break;
+    if( t != tt && tt != ttUnknown )  break;
     tt = t;
     if( tt == ttEof ) break;
     token += utf8::String(aheadi_, aheadi_ + 1);
@@ -269,10 +270,10 @@ Config & Config::putToken(const utf8::String & s, TokenType tt)
 {
   switch( tt ){
     case ttQuotedString :
-      ahead_ = ahead_.insert(aheadi_, "\"" + unScreenString(s) + "\"");
+      ahead_.insert(aheadi_, "\"" + unScreenString(s) + "\"");
       break;
     default :
-      ahead_ = ahead_.insert(aheadi_, s);
+      ahead_.insert(aheadi_, s);
       break;
   }
   return *this;
@@ -286,8 +287,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
   for( ; ; ){
     // get section header values
     token = getToken(tt);
-    if( tt == ttLeftBrace )
-      break;
+    if( tt == ttLeftBrace ) break;
     if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
       throw ksys::ExceptionSP(new EConfig(this, "invalid section param"));
     if( param.strlen() > 0 ) param += ", ";
@@ -313,7 +313,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
 {
   TokenType     tt;
   utf8::String  token;
-  for( ; ; ){
+  for(;;){
     token = getToken(tt);
     if( tt == ttEof ){
       if( &root != this ) getToken(tt, true);

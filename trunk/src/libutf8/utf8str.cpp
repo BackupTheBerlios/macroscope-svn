@@ -260,9 +260,10 @@ String & String::operator +=(const String & str)
 //---------------------------------------------------------------------------
 String String::unique() const
 {
-  uintptr_t   l         = ksys::strlen(container_->string_);
+  ksys::SPRC<Container> rc(container_);
+  uintptr_t l = ksys::strlen(container_->string_);
   Container * container = Container::container(l);
-  memcpy(container->string_, container_->string_, l + 1);
+  memcpy(container->string_,container_->string_,l + 1);
   return container;
 }
 //---------------------------------------------------------------------------
@@ -620,7 +621,7 @@ String String::cut(const Iterator & i1, const Iterator & i2) const
   return container;
 }
 //---------------------------------------------------------------------------
-String & String::replaceInPlace(const Iterator & d1,const Iterator & d2, const Iterator & s1, const Iterator & s2)
+String & String::replace(const Iterator & d1,const Iterator & d2, const Iterator & s1, const Iterator & s2)
 {
   assert( container_ == d1.container_ );
   assert( d1.container_ == d2.container_ );
@@ -628,10 +629,10 @@ String & String::replaceInPlace(const Iterator & d1,const Iterator & d2, const I
   if( container_.ptr() == &nullContainer() ) return *this = utf8::String(s1, s2);
   if( s1.container_ == d1.container_ ){
     String a(utf8::String(s1,s2));
-    return replaceInPlace(d1,d2,String::Iterator(a),String::Iterator(a).last());
+    return replace(d1,d2,String::Iterator(a),String::Iterator(a).last());
   }
-  if( d1.cursor_ > d2.cursor_ ) return replaceInPlace(d2, d1, s1, s2);
-  if( s1.cursor_ > s2.cursor_ ) return replaceInPlace(d1, d1, s2, s1);
+  if( d1.cursor_ > d2.cursor_ ) return replace(d2, d1, s1, s2);
+  if( s1.cursor_ > s2.cursor_ ) return replace(d1, d1, s2, s1);
   uintptr_t l = ksys::strlen(container_->string_);
   intptr_t  k = (s2.cursor_ - s1.cursor_) - (d2.cursor_ - d1.cursor_);
   if( k > 0 ) ksys::xrealloc(container_->string_, l + k + 1);
@@ -641,17 +642,9 @@ String & String::replaceInPlace(const Iterator & d1,const Iterator & d2, const I
   return *this;
 }
 //---------------------------------------------------------------------------
-String String::replace(const Iterator & d1,const Iterator & d2,const Iterator & s1,const Iterator & s2) const
-{
-  String s(unique());
-  Iterator da1(s.container_,d1.cursor_,d1.position_);
-  Iterator da2(s.container_,d2.cursor_,d2.position_);
-  return s.replaceInPlace(da1,da2,s1,s2);
-}
-//---------------------------------------------------------------------------
 String String::replaceAll(const String & what,const String & onWhat) const
 {
-  String s(*this);
+  String s(unique());
   Iterator i(s.strstr(what));
   while( !i.eof() ){
     s = s.replace(i,i + what.strlen(),onWhat);

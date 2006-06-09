@@ -186,6 +186,18 @@ class API {
     {
       return ::FreeAddrInfoW(pAddrInfo);
     }
+    int getnameinfo(const struct sockaddr FAR * sa,socklen_t salen,char FAR * host,DWORD hostlen,char FAR * serv,DWORD servlen,int flags)
+    {
+      return ::getnameinfo(sa,salen,host,hostlen,serv,servlen,flags);
+    }
+    int GetNameInfoA(const struct sockaddr FAR * sa,socklen_t salen,char FAR * host,DWORD hostlen,char FAR * serv,DWORD servlen,int flags)
+    {
+      return ::getnameinfo(sa,salen,host,hostlen,serv,servlen,flags);
+    }
+    INT GetNameInfoW(const SOCKADDR * pSockaddr,socklen_t SockaddrLength,PWCHAR pNodeBuffer,DWORD NodeBufferSize,PWCHAR pServiceBuffer,DWORD ServiceBufferSize,INT Flags)
+    {
+      return ::GetNameInfoW(pSockaddr,SockaddrLength,pNodeBuffer,NodeBufferSize,pServiceBuffer,ServiceBufferSize,Flags);
+    }
 #else
 #if _MSC_VER
 #pragma warning(push,3)
@@ -406,6 +418,41 @@ class API {
             union {
               void (WSAAPI * FreeAddrInfoW)(PADDRINFOW pAddrInfo);
               void * p_FreeAddrInfoW;
+            };
+            union {
+              int (WSAAPI * getnameinfo)(
+                  const struct sockaddr FAR * sa,
+                  socklen_t       salen,
+                  char FAR *      host,
+                  DWORD           hostlen,
+                  char FAR *      serv,
+                  DWORD           servlen,
+                  int             flags
+              );
+              #undef GetNameInfoA
+              int (WSAAPI * GetNameInfoA)(
+                  const struct sockaddr FAR * sa,
+                  socklen_t       salen,
+                  char FAR *      host,
+                  DWORD           hostlen,
+                  char FAR *      serv,
+                  DWORD           servlen,
+                  int             flags
+              );
+              #define GetNameInfoA getnameinfo
+              void * p_getnameinfo;
+            };
+            union {
+              INT (WSAAPI * GetNameInfoW)(
+                const SOCKADDR *    pSockaddr,
+                socklen_t           SockaddrLength,
+                PWCHAR              pNodeBuffer,
+                DWORD               NodeBufferSize,
+                PWCHAR              pServiceBuffer,
+                DWORD               ServiceBufferSize,
+                INT                 Flags
+              );
+              void * p_GetNameInfoW;
             };
         };
     };

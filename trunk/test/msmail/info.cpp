@@ -114,7 +114,8 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
   uint64_t i;
   utf8::String key, value;
   s >> i;
-  while( i-- > 0 ){
+  while( i > 0 ){
+    i--;
     s >> key >> value;
     a.value(key,value);
   }
@@ -124,9 +125,11 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
 {
   uintptr_t i;
-  s << uint64_t(a.attributes().count());
-  for( i = 0; i < a.attributes().count(); i++ )
+  s << uint64_t(i = a.attributes().count());
+  while( i > 0 ){
+    i--;
     s << a.attributes()[i].key_ << a.attributes()[i].value_;
+  }
   return s;
 }
 //------------------------------------------------------------------------------
@@ -138,11 +141,11 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
   for(;;){
     key = s.gets(&eof);
     if( eof ) break;
-    utf8::String::Iterator i(key.strstr(" -#:#- "));
+    utf8::String::Iterator i(key.strstr(": "));
     if( !i.eof() ){
       a.value(
-        unScreenString(utf8::String(key,i)),
-        unScreenString(i + 7)
+        /*unScreenString(*/utf8::String(key,i)/*)*/,
+        /*unScreenString(*/i + 2/*)*/
       );
     }
     else if( !(i = key.strstr(" -#=#- ")).eof() ){
@@ -169,8 +172,8 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   for( i = 0; i < a.attributes().count(); i++ ){
     if( a.attributes()[i].key_.strncmp("#",1) != 0 ) continue;
     v =
-      screenString(a.attributes()[i].key_) + ": " +
-      screenString(a.attributes()[i].value_) + "\n"
+      /*screenString(*/a.attributes()[i].key_/*)*/ + ": " +
+      /*screenString(*/a.attributes()[i].value_/*)*/ + "\n"
     ;
     s.writeBuffer(v.c_str(),v.size());
   }
