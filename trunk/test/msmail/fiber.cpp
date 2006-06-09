@@ -537,7 +537,7 @@ void MailQueueWalker::main()
     bool wait = true;
     Vector<utf8::String> list;
     getDirListAsync(list,spool + "*.msg",utf8::String(),false);
-    while( list.count() > 0 ){
+    while( !terminated_ && list.count() > 0 ){
       i = (intptr_t) server_.rnd_->random(list.count());
       AsyncFile ctrl(list[i] + ".lck");
       ctrl.removeAfterClose(true);
@@ -641,7 +641,7 @@ void MailQueueWalker::main()
       }
       list.remove(i);
     }
-    if( wait ) dcn.monitor(excludeTrailingPathDelimiter(spool));
+    if( !terminated_ && wait ) dcn.monitor(excludeTrailingPathDelimiter(spool));
   }
 }
 //------------------------------------------------------------------------------
