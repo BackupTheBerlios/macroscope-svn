@@ -240,7 +240,7 @@ void ServerFiber::recvMail() // client receiving mail
     Vector<utf8::String> list;
     getDirListAsync(list,userMailBox + "*.msg",utf8::String(),false);
     for( intptr_t i = list.count() - 1; i >= 0; i-- ){
-      AsyncFile ctrl(server_.lckDir() + list[i] + ".lck");
+      AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
       ctrl.removeAfterClose(true);
       ctrl.open();
       AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
@@ -280,7 +280,7 @@ intptr_t SpoolWalker::processQueue()
   k = list.count();
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
-    AsyncFile ctrl(server_.lckDir() + list[i] + ".lck");
+    AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
     ctrl.removeAfterClose(true);
     ctrl.open();
     AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
@@ -350,11 +350,13 @@ void SpoolWalker::fiberExecute()
     if( terminated_ ) break;
     if( k == 0 ){
       dcn.monitor(excludeTrailingPathDelimiter(server_.spoolDir()));
+      stdErr.debug(1,utf8::String::Stream() << "Processing spool by monitor... \n");
     }
     else {
       try {
         uint64_t timeout = server_.config_->value("queue_processing_interval",10000000u);
         sleepAsync(timeout);
+        stdErr.debug(1,utf8::String::Stream() << "Processing spool by timer... \n");
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
@@ -429,7 +431,7 @@ intptr_t MailQueueWalker::processQueue()
   k = list.count();
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
-    AsyncFile ctrl(server_.lckDir() + list[i] + ".lck");
+    AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
     ctrl.removeAfterClose(true);
     ctrl.open();
     AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
@@ -553,11 +555,13 @@ void MailQueueWalker::main()
     if( terminated_ ) break;
     if( k == 0 ){
       dcn.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
+      stdErr.debug(1,utf8::String::Stream() << "Processing mqueue by monitor... \n");
     }
     else {
       try {
         uint64_t timeout = server_.config_->value("mqueue_processing_interval",10000000u);
         sleepAsync(timeout);
+        stdErr.debug(1,utf8::String::Stream() << "Processing mqueue by timer... \n");
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
