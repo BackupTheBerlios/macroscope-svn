@@ -373,6 +373,12 @@ class String {
 #ifndef __BCPLUSPLUS__
 #undef strcmp
 #endif
+    bool operator == (const utf8::String & s) const { return strcmp(s) == 0; }
+    bool operator != (const utf8::String & s) const { return strcmp(s) != 0; }
+    bool operator >= (const utf8::String & s) const { return strcmp(s) >= 0; }
+    bool operator >  (const utf8::String & s) const { return strcmp(s) >  0; }
+    bool operator <= (const utf8::String & s) const { return strcmp(s) <= 0; }
+    bool operator <  (const utf8::String & s) const { return strcmp(s) <  0; }
     intptr_t            strcmp(const String & s) const;
     intptr_t            strncmp(const String & s, uintptr_t n) const;
     intptr_t            strcasecmp(const String & s) const;

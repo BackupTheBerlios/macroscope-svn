@@ -35,6 +35,7 @@ int main(int _argc,char * _argv[])
 
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
+//  stdErr.enableDebugLevel(9);
   try {
     union {
       intptr_t i;

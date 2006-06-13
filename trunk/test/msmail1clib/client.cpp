@@ -140,7 +140,7 @@ void ClientFiber::main()
           *this << GroupInfo(stringPartByNo(client_.groups_,i));
         if( terminated_ ) break;
         getCode();
-        *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << uint8_t(1);
+        *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << uint8_t(1) << uint8_t(1);
         getCode();
         while( !terminated_ ){
           Message * msg;

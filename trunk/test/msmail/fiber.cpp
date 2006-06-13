@@ -230,12 +230,13 @@ void ServerFiber::sendMail() // client sending mail
 void ServerFiber::recvMail() // client receiving mail
 {
   utf8::String mailForUser, mailForKey;
-  uint8_t waitForMail;
-  *this >> mailForUser >> mailForKey >> waitForMail;
+  uint8_t waitForMail, onlyNewMail;
+  *this >> mailForUser >> mailForKey >> waitForMail >> onlyNewMail;
   utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
   createDirectoryAsync(userMailBox);
   DirectoryChangeNotification dcn;
   putCode(eOK);
+  Array<utf8::String> ids;
   while( !terminated_ ){
     Vector<utf8::String> list;
     getDirListAsync(list,userMailBox + "*.msg",utf8::String(),false);
@@ -248,10 +249,17 @@ void ServerFiber::recvMail() // client receiving mail
       file.open();
       Message message;
       file >> message;
-      *this << message;
+      if( !onlyNewMail || ids.bSearch(message.id()) < 0 ){
+        stdErr.debug(1,utf8::String::Stream() << "Processing message " << message.id() << " in recvMail.\n");
+        *this << message;
+      }
       file.close();
-      list.remove(i);
       putCode(i > 0 ? eOK : eLastMessage);
+      if( onlyNewMail ){
+        intptr_t c, j = ids.bSearch(message.id(),c);
+        if( c != 0 ) ids.insert(j + (c > 0),message.id());
+      }
+      list.remove(i);
     }
     if( waitForMail ){
       dcn.monitor(userMailBox);
