@@ -206,6 +206,8 @@ void ClientMailSenderFiber::main()
     getCode();
     *this << uint8_t(cmSendMail) << message_;
     getCode();
+    *this << uint8_t(cmQuit);
+    getCode();
   }
   catch( ExceptionSP & e ){
     e->writeStdError();

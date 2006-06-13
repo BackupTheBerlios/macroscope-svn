@@ -250,9 +250,9 @@ void ServerFiber::recvMail() // client receiving mail
       if( !onlyNewMail || ids.bSearch(message.id()) < 0 ){
         stdErr.debug(1,utf8::String::Stream() << "Processing message " << message.id() << " in recvMail.\n");
         *this << message;
+        putCode(i > 0 ? eOK : eLastMessage);
       }
       file.close();
-      putCode(i > 0 ? eOK : eLastMessage);
       if( onlyNewMail ){
         intptr_t c, j = ids.bSearch(message.id(),c);
         if( c != 0 ) ids.insert(j + (c > 0),message.id());
@@ -355,10 +355,12 @@ void SpoolWalker::fiberExecute()
     k = processQueue();
     if( terminated_ ) break;
     if( k == 0 ){
+      processQueue();
       dcn.monitor(excludeTrailingPathDelimiter(server_.spoolDir()));
       stdErr.debug(1,utf8::String::Stream() << "Processing spool by monitor... \n");
     }
     else {
+      processQueue();
       try {
         uint64_t timeout = server_.config_->value("queue_processing_interval",10000000u);
         sleepAsync(timeout);
@@ -560,10 +562,12 @@ void MailQueueWalker::main()
     k = processQueue();
     if( terminated_ ) break;
     if( k == 0 ){
+      processQueue();
       dcn.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
       stdErr.debug(1,utf8::String::Stream() << "Processing mqueue by monitor... \n");
     }
     else {
+      processQueue();
       try {
         uint64_t timeout = server_.config_->value("mqueue_processing_interval",10000000u);
         sleepAsync(timeout);
