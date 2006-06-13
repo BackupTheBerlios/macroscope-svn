@@ -97,8 +97,6 @@ void ServerFiber::main()
     uint8_t cmd;
     uint8_t ui8;
   };
-  //FindFirstChangeNotification must be used ander Win9x
-  //ReadDirectoryChangesW must be used ander Win2000, XP ...
   auth();
   while( !terminated_ ){
     *this >> cmd;
