@@ -584,6 +584,54 @@ void FiberInterlockedMutex::release()
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+FiberMutex & FiberMutex::rdLock()
+{
+  bool r;
+  for(;;){
+    acquire();
+    r = value_ >= 0;
+    if( r ){
+      value_++;
+      break;
+    }
+    queue_++;
+    release();
+    waitQueue_.acquire();
+  }
+  release();
+  return *this;
+}
+//---------------------------------------------------------------------------
+FiberMutex & FiberMutex::wrLock()
+{
+  bool r;
+  for(;;){
+    acquire();
+    r = value_ == 0;
+    if( r ){
+      value_ = -1;
+      break;
+    }
+    queue_++;
+    release();
+    waitQueue_.acquire();
+  }
+  release();
+  return *this;
+}
+//---------------------------------------------------------------------------
+FiberMutex & FiberMutex::unlock()
+{
+  acquire();
+  assert( value_ != 0 );
+  if( value_ > 0 ) value_--; else if( value_ < 0 ) value_++;
+  if( queue_ > 0 ) waitQueue_.release();
+  release();
+  return *this;
+}
+//---------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 /*FiberMutex & FiberMutex::rdLock()
 {
   Fiber * fib = currentFiber();

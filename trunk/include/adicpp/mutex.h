@@ -373,6 +373,56 @@ inline Mutex & Mutex::unlock()
   return *this;
 }
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T> class AutoMutexRDLock {
+  public:
+    ~AutoMutexRDLock();
+    AutoMutexRDLock(T & mutex);
+  protected:
+  private:
+    T & mutex_;
+
+    AutoMutexRDLock(const AutoMutexRDLock<T> &){}
+    void operator =(const AutoMutexRDLock<T> &){}
+};
+//---------------------------------------------------------------------------
+template<typename T> inline AutoMutexRDLock<T>::~AutoMutexRDLock()
+{
+  mutex_.unlock();
+}
+//---------------------------------------------------------------------------
+template<typename T> inline AutoMutexRDLock<T>::AutoMutexRDLock(T & mutex) : mutex_(mutex)
+{
+  mutex_.rdLock();
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T> class AutoMutexWRLock {
+  public:
+    ~AutoMutexWRLock();
+    AutoMutexWRLock(T & mutex);
+  protected:
+  private:
+    T & mutex_;
+
+    AutoMutexWRLock(const AutoMutexWRLock<T> &){}
+    void operator =(const AutoMutexWRLock<T> &){}
+};
+//---------------------------------------------------------------------------
+template<typename T> inline AutoMutexWRLock<T>::~AutoMutexWRLock()
+{
+  mutex_.unlock();
+}
+//---------------------------------------------------------------------------
+template<typename T> inline AutoMutexWRLock<T>::AutoMutexWRLock(T & mutex) : mutex_(mutex)
+{
+  mutex_.wrLock();
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 extern uint8_t giantPlaceHolder[];
 inline InterlockedMutex & giant()
 {

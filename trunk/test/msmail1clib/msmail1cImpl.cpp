@@ -962,6 +962,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
       lastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
       hr = HRESULT_FROM_WIN32(lastError_);
       if( lIndex >= 0 ) SafeArrayUnlock(*paParams);
+      e->writeStdError();
     }
   }
 //  VariantClear(&v2);

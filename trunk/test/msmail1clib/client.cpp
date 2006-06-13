@@ -99,68 +99,64 @@ void ClientFiber::main()
   bool connected = false;
   while( !terminated_ ){
     try {
+      utf8::String server(client_.config_->value("server",client_.mailServer_));
       while( !terminated_ && !connected ){
-        for( i = enumStringParts(client_.mailServer_) - 1; i >= 0 && !terminated_ && !connected; i-- ){
+        for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !connected; i-- ){
           ksock::SockAddr remoteAddress;
-          remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
+          remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
           try {
             open();
             connect(remoteAddress);
+            try {
+              auth();
+              connected = true;
+            }
+            catch( ExceptionSP & e ){
+              e->writeStdError();
+              stdErr.debug(3,
+                utf8::String::Stream() << "Authentification to host " <<
+                stringPartByNo(server,i) << " failed.\n"
+              );
+            }
           }
-          catch( ExceptionSP & ){
+          catch( ExceptionSP & e ){
+            e->writeStdError();
             stdErr.debug(3,
               utf8::String::Stream() << "Unable to connect. Host " <<
-              stringPartByNo(client_.mailServer_,i) <<
+              stringPartByNo(server,i) <<
               " unreachable.\n"
             );
-            throw;
           }
-          try {
-            auth();
-          }
-          catch( ExceptionSP & ){
-            stdErr.debug(3,
-              utf8::String::Stream() << "Authentification to host " <<
-              stringPartByNo(client_.mailServer_,i) << " failed.\n"
-            );
-            throw;
-          }
-          connected = true;
         }
       }
-      *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
-      getCode();
-      *this << uint8_t(cmRegisterUser) << UserInfo(client_.user_);
-      getCode();
-      *this << uint8_t(cmRegisterKey) << KeyInfo(client_.key_);
-      getCode();
-      for( i = enumStringParts(client_.groups_) - 1; i >= 0 && !terminated_; i-- ){
-        *this << uint8_t(cmRegisterGroup) << GroupInfo(stringPartByNo(client_.groups_,i));
+      if( connected ){
+        *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
         getCode();
-      }
-      *this << uint8_t(cmRegisterUser2KeyLink) <<
-        UserInfo(client_.user_) << KeyInfo(client_.key_);
-      getCode();
-      for( i = enumStringParts(client_.groups_) - 1; i >= 0 && !terminated_; i-- ){
-        *this << uint8_t(cmRegisterKey2GroupLink) <<
-          KeyInfo(client_.key_) << GroupInfo(stringPartByNo(client_.groups_,i));
+        *this << uint8_t(cmRegisterClient) <<
+          UserInfo(client_.user_) << KeyInfo(client_.key_);
+        uint64_t u = enumStringParts(client_.groups_);
+        *this << u;
+        for( i = intptr_t(u - 1); i >= 0 && !terminated_; i-- )
+          *this << GroupInfo(stringPartByNo(client_.groups_,i));
+        if( terminated_ ) break;
         getCode();
-      }
-      *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << uint8_t(1);
-      getCode();
-      while( !terminated_ ){
-        AutoPtr<Message> message(new Message);
-        *this >> message;
-        {
-          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
-          i = client_.recvQueue_.bSearch(message,c);
-          client_.recvQueue_.safeInsert(i + (c > 0),message.ptr(NULL));
+        *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << uint8_t(1);
+        getCode();
+        while( !terminated_ ){
+          Message * msg;
+          AutoPtr<Message> message(msg = new Message);
+          *this >> message;
+          {
+            AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+            i = client_.recvQueue_.bSearch(message,c);
+            client_.recvQueue_.safeInsert(i + (c > 0),message.ptr(NULL));
+          }
+          AutoPtr<OLECHAR> name(client_.name_.getOLEString());
+          AutoPtr<OLECHAR> what(SysAllocString(L"Message"));
+          AutoPtr<OLECHAR> id(msg->id().getOLEString());
+          client_.pAsyncEvent_->ExternalEvent(name.ptr(NULL),what.ptr(NULL),id.ptr(NULL));
+          getCode2(eLastMessage);
         }
-        AutoPtr<OLECHAR> name(client_.name_.getOLEString());
-        AutoPtr<OLECHAR> what(SysAllocString(L"Message"));
-        AutoPtr<OLECHAR> id(message->id().getOLEString());
-        client_.pAsyncEvent_->ExternalEvent(name.ptr(NULL),what.ptr(NULL),id.ptr(NULL));
-        getCode2(eLastMessage);
       }
     }
     catch( ExceptionSP & e ){
@@ -198,12 +194,12 @@ void ClientMailSenderFiber::main()
         auth();
         i = -1;
       }
-      catch( ExceptionSP & ){
+      catch( ExceptionSP & e ){
         stdErr.debug(2,utf8::String::Stream() <<
           "Unable to connect. Host " << stringPartByNo(client_.mailServer_,i) <<
           " unreachable.\n"
         );
-        if( terminated_ || i == 0 ) throw;
+        if( terminated_ || i == 0 ) throw; else e->writeStdError();
       }
     }
     *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
@@ -214,8 +210,6 @@ void ClientMailSenderFiber::main()
   catch( ExceptionSP & e ){
     e->writeStdError();
     client_.sendLastError_ = e->code();
-    client_.sendWait_.release();
-    throw;
   }
   client_.sendWait_.release();
 }
@@ -234,7 +228,7 @@ Client::Client() : pAsyncEvent_(NULL), config_(new ksys::InterlockedConfig<ksys:
 //------------------------------------------------------------------------------
 void Client::open()
 {
-//  attachFiber(new ClientFiber(*this));
+  attachFiber(new ClientFiber(*this));
 }
 //------------------------------------------------------------------------------
 void Client::close()

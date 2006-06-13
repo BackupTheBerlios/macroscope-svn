@@ -47,7 +47,9 @@ const Exception & Exception::writeStdError() const
 {
   for( uintptr_t i = 0; i < whats_.count(); i++ ){
     if( codes_[0] == 0 ) continue;
-    stdErr.debug(9,utf8::String::Stream() << strError(codes_[i]) << " " << whats_[i] << "\n");
+    stdErr.debug(9,utf8::String::Stream() <<
+      codes_[i] << " " << strError(codes_[i]) << " " << whats_[i] << "\n"
+    );
   }
   return *this;
 }

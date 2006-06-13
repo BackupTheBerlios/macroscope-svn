@@ -493,6 +493,28 @@ Vector<T> & Vector<T>::xchg(uintptr_t e1,uintptr_t e2)
   return *this;
 }
 //-----------------------------------------------------------------------------
+template <typename T,typename ST> inline
+ST & operator << (ST & stream,const Vector<T> & vector)
+{
+  uint64_t u = vector.count();
+  stream << u;
+  while( u-- > 0 ) stream << vector[(uintptr_t) u];
+  return stream;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename ST> inline
+ST & operator >> (ST & stream,Vector<T> & vector)
+{
+  uint64_t u;
+  stream >> u;
+  while( u-- > 0 ){
+    AutoPtr<T> element;
+    stream >> element;
+    vector.safeAdd(element.ptr(NULL));
+  }
+  return stream;
+}
+//-----------------------------------------------------------------------------
 }
 //-----------------------------------------------------------------------------
 #endif

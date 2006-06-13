@@ -88,8 +88,6 @@ class Client : public ksock::Client {
     utf8::String key_;
     utf8::String groups_;
     utf8::String mailServer_;
-    utf8::String mailServerUser_;
-    utf8::String mailServerPassword_;
     utf8::String configFile_;
     utf8::String logFile_;
     ConfigSP config_;

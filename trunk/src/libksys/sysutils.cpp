@@ -639,6 +639,7 @@ static int32_t removeDirectoryHelper(const utf8::String & name)
 #else
   if( rmdir(anyPathName2HostPathName(name).getANSIString()) != 0 ) err = errno;
 #endif
+  oserror(err);
   return err;
 }
 //---------------------------------------------------------------------------
@@ -687,6 +688,7 @@ bool removeDirectory(const utf8::String & name,bool recursive)
 #else
   if( err == ENOENT ) return false;
 #endif
+  oserror(err);
   if( err != 0 )
     throw ExceptionSP(new Exception(err + errorOffset,__PRETTY_FUNCTION__));
   return true;
@@ -695,6 +697,7 @@ bool removeDirectory(const utf8::String & name,bool recursive)
 bool remove(const utf8::String & name)
 {
   int32_t err = 0;
+  oserror(0);
 #if defined(__WIN32__) || defined(__WIN64__)
   if( isWin9x() ){
     if( DeleteFileA(anyPathName2HostPathName(name).getANSIString()) == 0 )

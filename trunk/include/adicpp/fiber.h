@@ -546,6 +546,54 @@ inline void FiberInterlockedMutex::release()
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+class FiberMutex : protected FiberInterlockedMutex {
+  public:
+    ~FiberMutex();
+    FiberMutex();
+
+    FiberMutex & rdLock();
+    bool tryRDLock();
+    FiberMutex & wrLock();
+    bool tryWRLock();
+    FiberMutex & unlock();
+  protected:
+    FiberInterlockedMutex waitQueue_;
+    int32_t value_;
+    int32_t queue_;
+
+    FiberMutex(const FiberMutex &){}
+    void operator =(const FiberMutex &){}
+  private:
+};
+//---------------------------------------------------------------------------
+inline FiberMutex::~FiberMutex()
+{
+}
+//---------------------------------------------------------------------------
+inline FiberMutex::FiberMutex() : value_(0), queue_(0)
+{
+}
+//---------------------------------------------------------------------------
+inline bool FiberMutex::tryRDLock()
+{
+  acquire();
+  bool r = value_ >= 0;
+  if( r ) value_++;
+  release();
+  return r;
+}
+//---------------------------------------------------------------------------
+inline bool FiberMutex::tryWRLock()
+{
+  acquire();
+  bool r = value_ == 0;
+  if( r ) value_ = -1;
+  release();
+  return r;
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 typedef EmbeddedList<AsyncEvent,AsyncEvent::node,AsyncEvent::nodeObject> Events;
 typedef EmbeddedListNode<AsyncEvent> EventsNode;
 //---------------------------------------------------------------------------
@@ -904,76 +952,6 @@ inline const uint64_t & BaseServer::fiberTimeout() const
   return fiberTimeout_;
 }
 //------------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-/* TODO: rewrite
-class FiberMutex {
-  public:
-    ~FiberMutex();
-    FiberMutex();
-
-    FiberMutex &  rdLock();
-    bool          tryRDLock();
-    FiberMutex &  wrLock();
-    bool          tryWRLock();
-    FiberMutex &  unlock();
-  protected:
-  private:
-    FiberInterlockedMutex mutex_;
-    intptr_t counter_;
-
-    FiberMutex(const FiberMutex &){}
-    void operator =(const FiberMutex &){}
-};
-//---------------------------------------------------------------------------
-inline FiberMutex::~FiberMutex()
-{
-  assert( counter_ == 0 && wait_.first() == NULL && wait_.last() == NULL && wait_.count() == 0 );
-}
-//---------------------------------------------------------------------------
-inline FiberMutex::FiberMutex() : counter_(0)
-{
-}
-//---------------------------------------------------------------------------
-inline bool FiberMutex::tryRDLock()
-{
-  return main_.tryRDLock();
-}
-//---------------------------------------------------------------------------
-inline bool FiberMutex::tryWRLock()
-{
-  return main_.tryWRLock();
-}*/
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-/*TODO: rewrite
-class FiberSemaphore {
-  public:
-    ~FiberSemaphore();
-    FiberSemaphore();
-
-    void  post();
-    void  wait();
-    bool  tryWait();
-  protected:
-  private:
-    Semaphore                                                     semaphore_;
-    InterlockedMutex                                              mutex_;
-    EmbeddedList< BaseFiber,BaseFiber::ipc,BaseFiber::ipcObject>  wait_;
-    FiberSemaphore(const FiberSemaphore &){}
-    void operator =(const FiberSemaphore &){}
-};
-//---------------------------------------------------------------------------
-inline FiberSemaphore::~FiberSemaphore()
-{
-  assert(wait_.first() == NULL && wait_.last() == NULL);
-}
-//---------------------------------------------------------------------------
-inline FiberSemaphore::FiberSemaphore()
-{
-}*/
-//---------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------
 #endif /* _fiber_H_ */

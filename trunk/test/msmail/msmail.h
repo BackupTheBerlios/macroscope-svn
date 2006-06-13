@@ -63,16 +63,9 @@ enum CmdType {
   cmQuit,
   cmGetProcessStartTime,
   cmSelectServerType,
-  cmRegisterUser,
-  cmRegisterKey,
-  cmRegisterGroup,
-  cmRegisterServer,
-  cmRegisterUser2KeyLink,
-  cmRegisterKey2GroupLink,
-  cmGetUserList,
-  cmGetKeyList,
-  cmGetGroupList,
-  cmGetServerList,
+  cmRegisterClient,
+  cmRegisterDB,
+  cmGetDB,
   cmSendMail,
   cmRecvMail
 };
@@ -180,9 +173,8 @@ class UserInfo {
     ~UserInfo();
     UserInfo();
     UserInfo(const utf8::String & name);
-
-    void addRef(){ interlockedIncrement(refCount_,1); }
-    UserInfo * remRef(){ return interlockedIncrement(refCount_,-1) == 1 ? this : NULL; }
+    UserInfo(const UserInfo &);
+    UserInfo & operator = (const UserInfo &);
 
     static EmbeddedHashNode<UserInfo> & hashNode(const UserInfo & object){
       return object.hashNode_;
@@ -197,15 +189,12 @@ class UserInfo {
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int32_t refCount_;
     int64_t atime_; // время последнего обращения (для удаления устаревших)
     int64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<UserInfo> hashNode_;
     utf8::String name_;
   protected:
   private:
-    UserInfo(const UserInfo &);
-    UserInfo & operator = (const UserInfo &);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -216,10 +205,9 @@ class KeyInfo {
   public:
     ~KeyInfo();
     KeyInfo();
-    KeyInfo(const utf8::String & key);
-
-    void addRef(){ interlockedIncrement(refCount_,1); }
-    KeyInfo * remRef(){ return interlockedIncrement(refCount_,-1) == 1 ? this : NULL; }
+    KeyInfo(const utf8::String & name);
+    KeyInfo(const KeyInfo &);
+    KeyInfo & operator = (const KeyInfo &);
 
     static EmbeddedHashNode<KeyInfo> & hashNode(const KeyInfo & object){
       return object.hashNode_;
@@ -228,23 +216,18 @@ class KeyInfo {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const KeyInfo & object){
-      return object.key_.hash(true);
+      return object.name_.hash(true);
     }
     static bool hashNodeEqu(const KeyInfo & object1,const KeyInfo & object2){
-      return object1.key_.strcasecmp(object2.key_) == 0;
+      return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int32_t refCount_;
     int64_t atime_; // время последнего обращения (для удаления устаревших)
     int64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<KeyInfo> hashNode_;
-    utf8::String key_;
-    utf8::String server_;
-    Array<utf8::String> users_;
+    utf8::String name_;
   protected:
   private:
-    KeyInfo(const KeyInfo &);
-    KeyInfo & operator = (const KeyInfo &);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -258,9 +241,8 @@ class GroupInfo {
     ~GroupInfo();
     GroupInfo();
     GroupInfo(const utf8::String & name);
-
-    void addRef(){ interlockedIncrement(refCount_,1); }
-    GroupInfo * remRef(){ return interlockedIncrement(refCount_,-1) == 1 ? this : NULL; }
+    GroupInfo(const GroupInfo &);
+    GroupInfo & operator = (const GroupInfo &);
 
     static EmbeddedHashNode<GroupInfo> & hashNode(const GroupInfo & object){
       return object.hashNode_;
@@ -275,16 +257,12 @@ class GroupInfo {
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int32_t refCount_;
     int64_t atime_; // время последнего обращения (для удаления устаревших)
     int64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<GroupInfo> hashNode_;
     utf8::String name_;
-    Array<utf8::String> keys_;
   protected:
   private:
-    GroupInfo(const GroupInfo &);
-    GroupInfo & operator = (const GroupInfo &);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -295,9 +273,9 @@ class ServerInfo {
   public:
     ~ServerInfo();
     ServerInfo();
-
-    void addRef(){ interlockedIncrement(refCount_,1); }
-    ServerInfo * remRef(){ return interlockedIncrement(refCount_,-1) == 1 ? this : NULL; }
+    ServerInfo(const utf8::String & name);
+    ServerInfo(const ServerInfo &);
+    ServerInfo & operator = (const ServerInfo &);
 
     static EmbeddedHashNode<ServerInfo> & hashNode(const ServerInfo & object){
       return object.hashNode_;
@@ -312,17 +290,121 @@ class ServerInfo {
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int32_t refCount_;
     int64_t atime_; // время последнего обращения (для удаления устаревших)
     int64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
     bool node_; // признак того что сервер является узловым
-    Array<utf8::String> keys_;
   protected:
   private:
-    ServerInfo(const ServerInfo &);
-    ServerInfo & operator = (const ServerInfo &);
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class User2KeyLink {
+  friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,User2KeyLink & a);
+  friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a);
+  public:
+    ~User2KeyLink();
+    User2KeyLink();
+    User2KeyLink(const utf8::String & userName,const utf8::String & keyName);
+    User2KeyLink(const User2KeyLink &);
+    User2KeyLink & operator = (const User2KeyLink &);
+
+    static EmbeddedHashNode<User2KeyLink> & hashNode(const User2KeyLink & object){
+      return object.hashNode_;
+    }
+    static User2KeyLink & hashNodeObject(const EmbeddedHashNode<User2KeyLink> & node,User2KeyLink * p){
+      return node.object(p->hashNode_);
+    }
+    static uintptr_t hashNodeHash(const User2KeyLink & object){
+      uintptr_t h[2];
+      h[0] = object.user_.hash(false);
+      h[1] = object.key_.hash(false);
+      return HF::hash(h,sizeof(h));
+    }
+    static bool hashNodeEqu(const User2KeyLink & object1,const User2KeyLink & object2){
+      return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
+    }
+
+    int64_t atime_; // время последнего обращения (для удаления устаревших)
+    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    mutable EmbeddedHashNode<User2KeyLink> hashNode_;
+    utf8::String user_;
+    utf8::String key_;
+  protected:
+  private:
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class Key2GroupLink {
+  friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2GroupLink & a);
+  friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a);
+  public:
+    ~Key2GroupLink();
+    Key2GroupLink();
+    Key2GroupLink(const utf8::String & keyName,const utf8::String & groupName);
+    Key2GroupLink(const Key2GroupLink &);
+    Key2GroupLink & operator = (const Key2GroupLink &);
+
+    static EmbeddedHashNode<Key2GroupLink> & hashNode(const Key2GroupLink & object){
+      return object.hashNode_;
+    }
+    static Key2GroupLink & hashNodeObject(const EmbeddedHashNode<Key2GroupLink> & node,Key2GroupLink * p){
+      return node.object(p->hashNode_);
+    }
+    static uintptr_t hashNodeHash(const Key2GroupLink & object){
+      uintptr_t h[2];
+      h[0] = object.key_.hash(false);
+      h[1] = object.group_.hash(false);
+      return HF::hash(h,sizeof(h));
+    }
+    static bool hashNodeEqu(const Key2GroupLink & object1,const Key2GroupLink & object2){
+      return object1.key_.strcasecmp(object2.key_) == 0 && object1.group_.strcasecmp(object2.group_) == 0;
+    }
+
+    int64_t atime_; // время последнего обращения (для удаления устаревших)
+    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    mutable EmbeddedHashNode<Key2GroupLink> hashNode_;
+    utf8::String key_;
+    utf8::String group_;
+  protected:
+  private:
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class Key2ServerLink {
+  friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2ServerLink & a);
+  friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & a);
+  public:
+    ~Key2ServerLink();
+    Key2ServerLink();
+    Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName = utf8::String());
+    Key2ServerLink(const Key2ServerLink &);
+    Key2ServerLink & operator = (const Key2ServerLink &);
+
+    static EmbeddedHashNode<Key2ServerLink> & hashNode(const Key2ServerLink & object){
+      return object.hashNode_;
+    }
+    static Key2ServerLink & hashNodeObject(const EmbeddedHashNode<Key2ServerLink> & node,Key2ServerLink * p){
+      return node.object(p->hashNode_);
+    }
+    static uintptr_t hashNodeHash(const Key2ServerLink & object){
+      return object.key_.hash(false);
+    }
+    static bool hashNodeEqu(const Key2ServerLink & object1,const Key2ServerLink & object2){
+      return object1.key_.strcasecmp(object2.key_) == 0;
+    }
+
+    int64_t atime_; // время последнего обращения (для удаления устаревших)
+    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    mutable EmbeddedHashNode<Key2ServerLink> hashNode_;
+    utf8::String key_;
+    utf8::String server_;
+  protected:
+  private:
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -345,16 +427,9 @@ class ServerFiber : public ksock::ServerFiber {
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();    
-    void registerUser();
-    void registerKey();
-    void registerGroup();
-    void registerServer();
-    void registerUser2KeyLink();
-    void registerKey2GroupLink();
-    void getUserList();
-    void getKeyList();
-    void getGroupList();
-    void getServerList();
+    void registerClient();
+    void registerDB();
+    void getDB();
     void sendMail();
     void recvMail();
 };
@@ -366,6 +441,7 @@ class SpoolWalker : public Fiber {
     virtual ~SpoolWalker();
     SpoolWalker(Server & server);
   protected:
+    intptr_t processQueue();
     void fiberExecute();
   private:
     Server & server_;
@@ -381,6 +457,23 @@ class MailQueueWalker : public ksock::ClientFiber {
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
+    intptr_t processQueue();
+    void main();
+  private:
+    Server & server_;
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class NodeClient : public ksock::ClientFiber {
+  public:
+    virtual ~NodeClient();
+    NodeClient(Server & server);
+  protected:
+    void checkCode(int32_t code,int32_t noThrowCode = eOK);
+    void getCode(int32_t noThrowCode = eOK);
+    void auth();
+    void clearNodeClient();
     void main();
   private:
     Server & server_;
@@ -392,6 +485,7 @@ class Server : public ksock::Server {
   friend class ServerFiber;
   friend class SpoolWalker;
   friend class MailQueueWalker;
+  friend class NodeClient;
   public:
     virtual ~Server();
     Server(const ConfigSP config);
@@ -404,30 +498,35 @@ class Server : public ksock::Server {
       friend class ServerFiber;
       friend class SpoolWalker;
       friend class MailQueueWalker;
+      friend class NodeClient;
       public:
         ~Data();
         Data();
 
-        template <typename InfoListT>
-        void addRef(InfoListT & list)
-        {
-          AutoLock<FiberInterlockedMutex> lock(mutex_);
-          for( intptr_t i = list.count() - 1; i >= 0; i-- ) list[i].addRef();
-        }
-        template <typename InfoListT,typename InfoHashT>
-        void remRef(InfoListT & list,InfoHashT & hash)
-        {
-          AutoLock<FiberInterlockedMutex> lock(mutex_);
-          for( intptr_t i = list.count() - 1; i >= 0; i-- ){
-            if( list[i].remRef() != NULL ){
-              hash.remove(list[i]);
-              list.remove(i);
-            }
-          }
-        }
+        void registerUserNL(const UserInfo & info);
+        void registerUser(const UserInfo & info);
+        void registerKeyNL(const KeyInfo & info);
+        void registerKey(const KeyInfo & info);
+        void registerGroupNL(const GroupInfo & info);
+        void registerGroup(const GroupInfo & info);
+        void registerServerNL(const ServerInfo & info);
+        void registerServer(const ServerInfo & info);
+        void registerUser2KeyLinkNL(const User2KeyLink & link);
+        void registerUser2KeyLink(const User2KeyLink & link);
+        void registerKey2GroupLinkNL(const Key2GroupLink & link);
+        void registerKey2GroupLink(const Key2GroupLink & link);
+        void registerKey2ServerLinkNL(const Key2ServerLink & link);
+        void registerKey2ServerLink(const Key2ServerLink & link);
+        void sendDatabaseNL(ksock::AsyncSocket & socket);
+        void sendDatabase(ksock::AsyncSocket & socket);
+        void recvDatabaseNL(ksock::AsyncSocket & socket);
+        void recvDatabase(ksock::AsyncSocket & socket);
+        void intersectionNL(const Data & a);
+        void intersection(const Data & a);
       protected:
       private:
-        FiberInterlockedMutex mutex_;
+        int64_t ftime_; // last time when database flushed to node
+        mutable FiberMutex mutex_;
         EmbeddedHash<
           UserInfo,
           UserInfo::hashNode,
@@ -445,6 +544,14 @@ class Server : public ksock::Server {
         > keys_;
         Vector<KeyInfo> keyList_;
         EmbeddedHash<
+          GroupInfo,
+          GroupInfo::hashNode,
+          GroupInfo::hashNodeObject,
+          GroupInfo::hashNodeHash,
+          GroupInfo::hashNodeEqu
+        > groups_;
+        Vector<GroupInfo> groupList_;
+        EmbeddedHash<
           ServerInfo,
           ServerInfo::hashNode,
           ServerInfo::hashNodeObject,
@@ -453,13 +560,29 @@ class Server : public ksock::Server {
         > servers_;
         Vector<ServerInfo> serverList_;
         EmbeddedHash<
-          GroupInfo,
-          GroupInfo::hashNode,
-          GroupInfo::hashNodeObject,
-          GroupInfo::hashNodeHash,
-          GroupInfo::hashNodeEqu
-        > groups_;
-        Vector<GroupInfo> groupList_;
+          User2KeyLink,
+          User2KeyLink::hashNode,
+          User2KeyLink::hashNodeObject,
+          User2KeyLink::hashNodeHash,
+          User2KeyLink::hashNodeEqu
+        > user2KeyLinks_;
+        Vector<User2KeyLink> user2KeyLinkList_;
+        EmbeddedHash<
+          Key2GroupLink,
+          Key2GroupLink::hashNode,
+          Key2GroupLink::hashNodeObject,
+          Key2GroupLink::hashNodeHash,
+          Key2GroupLink::hashNodeEqu
+        > key2GroupLinks_;
+        Vector<Key2GroupLink> key2GroupLinkList_;
+        EmbeddedHash<
+          Key2ServerLink,
+          Key2ServerLink::hashNode,
+          Key2ServerLink::hashNodeObject,
+          Key2ServerLink::hashNodeHash,
+          Key2ServerLink::hashNodeEqu
+        > key2ServerLinks_;
+        Vector<Key2ServerLink> key2ServerLinkList_;
     };
   protected:
     ConfigSP config_;
@@ -467,6 +590,8 @@ class Server : public ksock::Server {
     utf8::String spoolDir() const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
+    utf8::String lckDir() const;
+    void startNodeClient();
   private:
 // списки даных узлового сервера
     Data nodeData_;
@@ -475,6 +600,8 @@ class Server : public ksock::Server {
     Data & data(ServerType type);
     FiberInterlockedMutex rndMutex_;
     SPEIA<Randomizer,FiberInterlockedMutex> rnd_;
+    FiberInterlockedMutex nodeClientMutex_;
+    NodeClient * nodeClient_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

@@ -118,22 +118,16 @@ template< class T> inline Array< T>::~Array()
   clear();
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Array< T>::Array(T * ptr)
-  : ptr_(ptr),
-    count_(0)
+template< class T> inline Array< T>::Array(T * ptr) : ptr_(ptr), count_(0)
 {
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Array< T>::Array(const T & element)
-  : ptr_(NULL),
-    count_(0)
+template< class T> inline Array< T>::Array(const T & element) : ptr_(NULL), count_(0)
 {
   resize(1) = element;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Array< T>::Array(const Array< T> & array)
-  : ptr_(NULL),
-    count_(0)
+template< class T> inline Array< T>::Array(const Array< T> & array) : ptr_(NULL), count_(0)
 {
   *this = array;
 }
@@ -519,6 +513,28 @@ Array< T> & Array< T>::invertBitRange(uintptr_t n, uintptr_t c)
   assert(n < count_ * 8 && n + c <= count_ * 8);
   invertBitRange(ptr_, n, c);
   return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename ST> inline
+ST & operator << (ST & stream,const Array<T> & array)
+{
+  uint64_t u = array.count();
+  stream << u;
+  while( u-- > 0 ) stream << array[(uintptr_t) u];
+  return stream;
+}
+//-----------------------------------------------------------------------------
+template <typename T,typename ST> inline
+ST & operator >> (ST & stream,Array<T> & array)
+{
+  uint64_t u;
+  stream >> u;
+  while( u-- > 0 ){
+    T element;
+    stream >> element;
+    array.add(element);
+  }
+  return stream;
 }
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////

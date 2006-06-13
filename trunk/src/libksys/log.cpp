@@ -151,7 +151,7 @@ void LogFile::rotate(uint64_t size)
       utf8::String fileExt(getFileExt(file_.fileName()));
       Stat st;
       intptr_t i = 0, j;
-      while( statAsync(changeFileExt(file_.fileName(),utf8::int2Str(i)) + fileExt,st) ) i++;
+      while( stat(changeFileExt(file_.fileName(),utf8::int2Str(i)) + fileExt,st) ) i++;
       for( j = --i; j >= (intptr_t) rotatedFileCount_ - 1; j-- )
         remove(changeFileExt(file_.fileName(),utf8::int2Str(j)) + fileExt);
       while( i > 0 ){
