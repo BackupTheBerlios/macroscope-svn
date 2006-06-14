@@ -35,7 +35,7 @@ ServerFiber::~ServerFiber()
 {
 }
 //------------------------------------------------------------------------------
-ServerFiber::ServerFiber(Server & server) : server_(server), serverType_(stNone), monitor_(false)
+ServerFiber::ServerFiber(Server & server) : server_(server), serverType_(stNone)
 {
 }
 //------------------------------------------------------------------------------

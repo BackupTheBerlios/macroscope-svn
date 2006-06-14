@@ -131,6 +131,8 @@ void Server::startNodeClient()
 //------------------------------------------------------------------------------
 void Server::maintainFiber(Fiber * fiber)
 {
+  ServerFiber * sf = dynamic_cast<ServerFiber *>(fiber);
+  if( sf != NULL ) abortNotification(&sf->dcn_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
