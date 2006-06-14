@@ -44,7 +44,7 @@ DirectoryChangeNotification::DirectoryChangeNotification() :
 {
 }
 //---------------------------------------------------------------------------
-void DirectoryChangeNotification::monitor(const utf8::String & pathName)
+void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t timeout)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   assert( 
@@ -95,6 +95,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName)
   currentFiber()->event_.abort_ = false;
   currentFiber()->event_.position_ = 0;
   currentFiber()->event_.directoryChangeNotification_ = this;
+  currentFiber()->event_.timeout_ = timeout;
   currentFiber()->event_.type_ = etDirectoryChangeNotification;
   currentFiber()->thread()->postRequest();
   currentFiber()->switchFiber(currentFiber()->mainFiber());
@@ -1231,6 +1232,18 @@ utf8::String getTimestamp(const utf8::String & date,const utf8::String & time)
     utf8::String(i + 7,i + 7 + 4) + " " +
     time/*.replaceAll(":","")*/
   ;
+}
+//---------------------------------------------------------------------------
+void reverseByteArray(void * array,uintptr_t size)
+{
+  for( intptr_t i = size - 1; i >= 0; i-- )
+    ((uint8_t *) array) [i] = ((uint8_t *) array) [size - i - 1];
+}
+//---------------------------------------------------------------------------
+void reverseByteArray(void * dst,const void * src,uintptr_t size)
+{
+  for( intptr_t i = size - 1; i >= 0; i-- )
+    ((uint8_t *) dst) [i] = ((uint8_t *) src) [size - i - 1];
 }
 //---------------------------------------------------------------------------
 // base64 routines

@@ -68,7 +68,6 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
   int32_t err;
   if( socket_ == INVALID_SOCKET ){
     if( ksys::currentFiber() != NULL ) attach();
-    clearStatistic();
     api.open();
     try {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -192,6 +191,10 @@ AsyncSocket & AsyncSocket::setsockopt(int level,int optname,const void * optval,
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::bind(const SockAddr & sockAddr)
 {
+  int reuse = true;
+  socklen_t rlen = sizeof(reuse);
+  getsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,rlen);
+  setsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,(socklen_t) sizeof(reuse));
   if( api.bind(socket_,(struct sockaddr *) &sockAddr.addr4_,(socklen_t) sockAddr.length()) != 0 ){
     int32_t err = errNo();
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
@@ -271,6 +274,9 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   lg.l_linger = 0;
   setsockopt(SOL_SOCKET,SO_LINGER,&lg,sizeof(lg));
 #endif
+  socket.deActivateCompression();
+  socket.deActivateEncryption();
+  socket.clearStatistic();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -292,6 +298,9 @@ AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
         fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__
       )
     );
+  deActivateCompression();
+  deActivateEncryption();
+  clearStatistic();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -858,6 +867,21 @@ void AsyncSocket::shutdown2()
 void AsyncSocket::flush2()
 {
   flush();
+}
+//------------------------------------------------------------------------------
+void AsyncSocket::close2()
+{
+  close();
+}
+//------------------------------------------------------------------------------
+void AsyncSocket::openAPI()
+{
+  api.open();
+}
+//------------------------------------------------------------------------------
+void AsyncSocket::closeAPI()
+{
+  api.close();
 }
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

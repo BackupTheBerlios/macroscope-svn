@@ -218,6 +218,7 @@
 #endif
 #define NOT_INCLUDE_WINDOWS_H
 #endif
+#include <Iphlpapi.h>
 #endif
 
 #if HAVE_DIRENT_H

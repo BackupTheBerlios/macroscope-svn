@@ -274,6 +274,9 @@ class AsyncDescriptor : public AsyncDescriptorKey {
 #endif
     virtual void shutdown2();
     virtual void flush2();
+    virtual void close2();
+    virtual void openAPI();
+    virtual void closeAPI();
   private:
     Fiber * fiber_;
 
@@ -606,7 +609,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #if HAVE_KQUEUE
     void cancelEvent(const Events & request);
 #endif
-    void abortNotification();
+    bool abortNotification(DirectoryChangeNotification * dcn = NULL);
   protected:
   private:
     AsyncIoSlave(const AsyncIoSlave &){}
@@ -623,6 +626,8 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #else
 #error async io not implemented
 #endif
+    void openAPI(AsyncEvent * object);
+    void closeAPI(AsyncEvent * object);
     void threadExecute();
 };
 //---------------------------------------------------------------------------
@@ -696,7 +701,7 @@ class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semapho
     AsyncWin9xDirectoryChangeNotificationSlave();
 
     bool transplant(AsyncEvent & requests);
-    void abortNotification();
+    bool abortNotification(DirectoryChangeNotification * dcn = NULL);
   protected:
   private:
     AsyncWin9xDirectoryChangeNotificationSlave(const AsyncAcquireSlave &){}
@@ -722,6 +727,7 @@ class Requester {
     Requester();
 
     void abort();
+    bool abortNotification(DirectoryChangeNotification * dcn = NULL);
     void postRequest(AsyncDescriptor * descriptor);
   protected:
   private:
@@ -880,6 +886,9 @@ class BaseServer {
     virtual BaseThread * newThread();
     virtual Fiber * newFiber() = 0;
     virtual void attachFiber(const AutoPtr<Fiber> & fiber);
+    virtual void maintainFiber(Fiber * fiber);
+    void maintainFibers();
+    void abortNotification(DirectoryChangeNotification * dcn = NULL);
     void sweepThreads();
   private:
     mutable InterlockedMutex mutex_;
@@ -950,6 +959,11 @@ inline BaseServer & BaseServer::fiberTimeout(uint64_t fiberTimeout)
 inline const uint64_t & BaseServer::fiberTimeout() const
 {
   return fiberTimeout_;
+}
+//------------------------------------------------------------------------------
+inline void BaseServer::abortNotification(DirectoryChangeNotification * dcn)
+{
+  BaseThread::requester().abortNotification(dcn);
 }
 //------------------------------------------------------------------------------
 } // namespace ksys

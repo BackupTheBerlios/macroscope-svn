@@ -49,6 +49,7 @@ Cmsmail1c::Cmsmail1c() :
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
 {
+//  stdErr.enableDebugLevel(9);
   pBackConnection_ = pBackConnection;
   pBackConnection_->AddRef();
   return S_OK;
@@ -399,7 +400,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
         if( SUCCEEDED(hr) ){
           if( V_I4(varPropVal) != 0 && pAsyncEvent_ == NULL ){
             hr = pBackConnection_->QueryInterface(IID_IAsyncEvent,(void **) &pAsyncEvent_);
-            if( SUCCEEDED(hr) ) hr = pAsyncEvent_->SetEventBufferDepth(1000);
+            if( SUCCEEDED(hr) ) hr = pAsyncEvent_->SetEventBufferDepth(1000000);
           }
           if( SUCCEEDED(hr) ){
             if( V_I4(varPropVal) != 0 ){
@@ -932,7 +933,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
                 V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0)) ? 1 : 0;
-                lastError_ = client_.sendLastError_ - (client_.sendLastError_ >= errorOffset ? errorOffset : 0);
+                lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
               }
             }
             SafeArrayUnlock(*paParams);
@@ -948,7 +949,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
                 V_I4(pvarRetValue) = client_.removeMessage(V_BSTR(pv0));
-                lastError_ = client_.sendLastError_ - (client_.sendLastError_ >= errorOffset ? errorOffset : 0);
+                lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
               }
             }
             SafeArrayUnlock(*paParams);

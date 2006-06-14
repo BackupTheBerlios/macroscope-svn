@@ -67,7 +67,8 @@ enum CmdType {
   cmRegisterDB,
   cmGetDB,
   cmSendMail,
-  cmRecvMail
+  cmRecvMail,
+  cmRemoveMail
 };
 //------------------------------------------------------------------------------
 enum ServerType {
@@ -84,6 +85,7 @@ enum Error {
   eInvalidServerType,
   eInvalidMessage,
   eLastMessage,
+  eInvalidMessageId,
   eCount
 };
 //------------------------------------------------------------------------------
@@ -422,6 +424,7 @@ class ServerFiber : public ksock::ServerFiber {
     Server & server_;
     utf8::String user_;
     ServerType serverType_;
+    DirectoryChangeNotification dcn_;
 
     void putCode(int32_t code);
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
@@ -431,7 +434,15 @@ class ServerFiber : public ksock::ServerFiber {
     void registerDB();
     void getDB();
     void sendMail();
+    intptr_t processMailbox(
+      const utf8::String & userMailBox,
+      const utf8::String & mailForUser,
+      const utf8::String & mailForKey,
+      Array<utf8::String> & mids,
+      uint8_t onlyNewMail
+    );
     void recvMail();
+    void removeMail();
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -441,6 +452,7 @@ class SpoolWalker : public Fiber {
     virtual ~SpoolWalker();
     SpoolWalker(Server & server);
   protected:
+    DirectoryChangeNotification dcn_;
     intptr_t processQueue();
     void fiberExecute();
   private:
@@ -454,6 +466,7 @@ class MailQueueWalker : public ksock::ClientFiber {
     virtual ~MailQueueWalker();
     MailQueueWalker(Server & server);
   protected:
+    DirectoryChangeNotification dcn_;
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
@@ -587,6 +600,7 @@ class Server : public ksock::Server {
   protected:
     ConfigSP config_;
     Fiber * newFiber();
+    void maintainFiber(Fiber * fiber);
     utf8::String spoolDir() const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;

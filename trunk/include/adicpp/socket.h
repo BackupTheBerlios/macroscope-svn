@@ -247,8 +247,11 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     int64_t read2(void * buf, uint64_t len);
     int64_t write2(const void * buf, uint64_t len);
 #endif
-    void    shutdown2();
-    void    flush2();
+    void shutdown2();
+    void flush2();
+    void close2();
+    void openAPI();
+    void closeAPI();
 };
 //---------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::activateEncryption(const uint8_t sha256[32])
@@ -265,7 +268,6 @@ inline AsyncSocket & AsyncSocket::activateEncryption(const void * key, uintptr_t
 //------------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::deActivateEncryption()
 {
-  flush();
   ksys::SHA256Filter::active(false);
   return *this;
 }
@@ -288,7 +290,6 @@ inline AsyncSocket & AsyncSocket::activateCompression(uintptr_t method,uintptr_t
 //------------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::deActivateCompression()
 {
-  flush();
   ksys::LZO1X::active(false);
   return *this;
 }

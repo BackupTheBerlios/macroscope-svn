@@ -110,7 +110,10 @@ inline LZO1X::~LZO1X()
 }
 //---------------------------------------------------------------------------
 inline LZO1X::LZO1X() : 
-  wBufSize_((uint32_t) getpagesize()),
+  rBufPos_(0),
+  rBufSize_(0),
+  wBufPos_(0),
+  wBufSize_((uint32_t) getpagesize() * 2),
   method_(LZO1X_1_15),
   crc_(CRCNone),
   level_(3),

@@ -414,8 +414,10 @@ void BaseServer::closeServer()
       for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
         thread = &BaseThread::serverListNodeObject(*btp);
         AutoLock<InterlockedMutex> lock2(thread->mutex_);
-        for( adp = thread->descriptorsList_.first(); adp != NULL; adp = adp->next() )
+        for( adp = thread->descriptorsList_.first(); adp != NULL; adp = adp->next() ){
           AsyncDescriptor::clusterListNodeObject(*adp).shutdown2();
+          AsyncDescriptor::clusterListNodeObject(*adp).close2();
+        }
       }
       BaseThread::requester().abort();
     }
@@ -465,6 +467,23 @@ void BaseServer::attachFiber(const AutoPtr<Fiber> & fiber)
   }
   fib->event_.type_ = etDispatch;
   thread->postEvent(&fib->event_);
+}
+//------------------------------------------------------------------------------
+void BaseServer::maintainFibers()
+{
+  EmbeddedListNode<BaseThread> * btp;
+  EmbeddedListNode<Fiber> * bfp;
+  AutoLock<InterlockedMutex> lock(mutex_);
+  for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
+    BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
+    AutoLock<InterlockedMutex> lock2(thread->mutex_);
+    for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() )
+      maintainFiber(&Fiber::nodeObject(*bfp));
+  }
+}
+//------------------------------------------------------------------------------
+void BaseServer::maintainFiber(Fiber *)
+{
 }
 //------------------------------------------------------------------------------
 void BaseServer::DispatchWindowMessages()

@@ -59,6 +59,21 @@ void AsyncDescriptor::flush2()
   throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
 }
 //------------------------------------------------------------------------------
+void AsyncDescriptor::close2()
+{
+  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+}
+//------------------------------------------------------------------------------
+void AsyncDescriptor::openAPI()
+{
+  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+}
+//------------------------------------------------------------------------------
+void AsyncDescriptor::closeAPI()
+{
+  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+}
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 void BaseThread::initialize()
@@ -218,6 +233,28 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
   return r;
 }
 //---------------------------------------------------------------------------
+void AsyncIoSlave::openAPI(AsyncEvent * object)
+{
+  switch( object->type_ ){
+    case etRead :
+    case etWrite :
+    case etAccept :
+    case etConnect :
+      object->descriptor_->openAPI();
+  }
+}
+//---------------------------------------------------------------------------
+void AsyncIoSlave::closeAPI(AsyncEvent * object)
+{
+  switch( object->type_ ){
+    case etRead :
+    case etWrite :
+    case etAccept :
+    case etConnect :
+      object->descriptor_->closeAPI();
+  }
+}
+//---------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_HIGHEST);
@@ -237,6 +274,7 @@ void AsyncIoSlave::threadExecute()
     AutoLock<InterlockedMutex> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
+      openAPI(object);
 #if defined(__WIN32__) || defined(__WIN64__)
       assert( sp < MAXIMUM_WAIT_OBJECTS - 1 );
       ++sp;
@@ -388,12 +426,12 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             count = object->descriptor_->accept();
 	        if( errno != EWOULDBLOCK ){
 	          int32_t err = errno;
-	           kevents_[0].flags = EV_DELETE;
-              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
-                perror(NULL);
-                assert( 0 );
+	          kevents_[0].flags = EV_DELETE;
+            if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
+              perror(NULL);
+              assert( 0 );
 	            abort();
-              }
+            }
 	          errno = err;
 	        }
 	        else {
@@ -427,6 +465,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       if( rw == 0 && GetLastError() == ERROR_NO_SYSTEM_RESOURCES )
         if( (object->length_ >>= 1) > 0 ) goto l1;
       if( rw == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != WSAEWOULDBLOCK ){
+        closeAPI(object);
         ResetEvent(events_[sp]);
         newRequests_.remove(*object);
         object->errno_ = GetLastError();
@@ -445,9 +484,9 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       else if( errno != EINPROGRESS ){
         object->descriptor_->cluster()->postEvent(
           object->descriptor_,
-	      errno,
-	      object->ioType_,
-	      errno != 0 ? -1 : 0
+	        errno,
+	        object->ioType_,
+	        errno != 0 ? -1 : 0
         );
         object->ioThread_ = NULL;
         newRequests_.remove(object);
@@ -525,6 +564,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       }
       if( node != NULL ){
         object->errno_ = GetLastError();
+        closeAPI(object);
 
         xchg(events_[wm],events_[sp]);
         eReqs_[wm] = eReqs_[sp];
@@ -642,7 +682,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
   }
 }
 //------------------------------------------------------------------------------
-void AsyncIoSlave::abortNotification()
+bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   assert( !isWin9x() );
@@ -651,12 +691,16 @@ void AsyncIoSlave::abortNotification()
   for( node = requests_.first(); node != NULL; node = node->next() ){
     AsyncEvent & object = AsyncEvent::nodeObject(*node);
     if( object.type_ == etDirectoryChangeNotification ){
-      object.abort_ = true;
-      SetEvent(object.overlapped_.hEvent);
-      post();
+      if( dcn == NULL || object.directoryChangeNotification_ == dcn ){
+        object.abort_ = true;
+        SetEvent(object.overlapped_.hEvent);
+        post();
+        if( object.directoryChangeNotification_ == dcn ) return true;
+      }
     }
   }
 #endif
+  return false;
 }
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -1236,7 +1280,7 @@ void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
   }
 }
 //------------------------------------------------------------------------------
-void AsyncWin9xDirectoryChangeNotificationSlave::abortNotification()
+bool AsyncWin9xDirectoryChangeNotificationSlave::abortNotification(DirectoryChangeNotification * dcn)
 {
   assert( !isWin9x() );
   AutoLock<InterlockedMutex> lock(*this);
@@ -1244,11 +1288,15 @@ void AsyncWin9xDirectoryChangeNotificationSlave::abortNotification()
   for( node = requests_.first(); node != NULL; node = node->next() ){
     AsyncEvent & object = AsyncEvent::nodeObject(*node);
     if( object.type_ == etDirectoryChangeNotification ){
-      object.abort_ = true;
-      object.directoryChangeNotification_->stop();
-      post();
+      if( dcn == NULL || object.directoryChangeNotification_ == dcn ){
+        object.abort_ = true;
+        object.directoryChangeNotification_->stop();
+        post();
+        if( object.directoryChangeNotification_ == dcn ) return true;
+      }
     }
   }
+  return false;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -1304,23 +1352,32 @@ void Requester::abort()
       timerSlave_ = NULL;
     }
   }
+  abortNotification();
+}
+//---------------------------------------------------------------------------
+bool Requester::abortNotification(DirectoryChangeNotification * dcn)
+{
+  bool r = false;
 #if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;
   if( isWin9x() ){
     AutoLock<InterlockedMutex> lock(wdcnRequestsMutex_);
     for( i = wdcnSlaves_.count() - 1; i >= 0; i-- ){
       wdcnSlaves_[i].terminate();
-      wdcnSlaves_[i].abortNotification();
+      r = wdcnSlaves_[i].abortNotification(dcn);
       wdcnSlaves_[i].post();
       wdcnSlaves_[i].Thread::wait();
       wdcnSlaves_.remove(i);
+      if( r ) break;
     }
   }
   else {
     AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
-    for( i = ioSlaves_.count() - 1; i >= 0; i-- ) ioSlaves_[i].abortNotification();
+    for( i = ioSlaves_.count() - 1; i >= 0; i-- )
+      if( (r = ioSlaves_[i].abortNotification(dcn)) ) break;
   }
 #endif
+  return r;
 }
 //---------------------------------------------------------------------------
 void Requester::postRequest(AsyncDescriptor * descriptor)

@@ -254,7 +254,6 @@ LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
 //---------------------------------------------------------------------------
 LZO1X & LZO1X::active(bool active)
 {
-  active_ = active;
   if( active ){
     rBuf_.free();
     wBuf_.realloc(wBufSize_ + sizeof(int32_t));
@@ -266,16 +265,17 @@ LZO1X & LZO1X::active(bool active)
       LZO1X_999_MEM_COMPRESS
     };
     wWrkMem_.realloc(wrksz[method_]);
-    wBufPos_ = 0;
-    rBufPos_ = 0;
-    rBufSize_ = 0;
-    wBufPos_ = 0;
   }
   else{
     wWrkMem_.free();
     wBuf_.free();
     rBuf_.free();
   }
+  wBufPos_ = 0;
+  rBufPos_ = 0;
+  rBufSize_ = 0;
+  wBufPos_ = 0;
+  active_ = active;
   return *this;
 }
 //---------------------------------------------------------------------------

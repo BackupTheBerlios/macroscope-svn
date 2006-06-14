@@ -198,6 +198,10 @@ class API {
     {
       return ::GetNameInfoW(pSockaddr,SockaddrLength,pNodeBuffer,NodeBufferSize,pServiceBuffer,ServiceBufferSize,Flags);
     }
+    int getsockname(SOCKET s,struct sockaddr * name,int * namelen)
+    {
+      return ::getsockname(SOCKET s,name,namelen);
+    }
 #else
 #if _MSC_VER
 #pragma warning(push,3)
@@ -454,6 +458,10 @@ class API {
               );
               void * p_GetNameInfoW;
             };
+            union {
+              int (WSAAPI * getsockname)(SOCKET s,struct sockaddr * name,int * namelen);
+              void * p_getsockname;
+            };
         };
     };
 #if _MSC_VER
@@ -556,6 +564,10 @@ class API {
     void freeaddrinfo(struct addrinfo *ai)
     {
       ::freeaddrinfo(ai);
+    }
+    int getsockname(SOCKET s,struct sockaddr * name,socklen_t * namelen)
+    {
+      return ::getsockname(SOCKET s,name,namelen);
     }
     void open()
     {

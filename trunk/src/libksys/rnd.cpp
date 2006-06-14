@@ -31,24 +31,24 @@ namespace ksys {
 Randomizer & Randomizer::randomize()
 {
   int64_t t = gettimeofday();
-  Inherited::srand(t, t, t, NULL);
+  Inherited::srand(t,t,t,NULL);
   return *this;
 }
 //---------------------------------------------------------------------------
 Randomizer & Randomizer::srand(uint64_t a)
 {
-  Inherited::srand(a, a, a, NULL);
+  Inherited::srand(a,a,a,NULL);
   return *this;
 }
 //---------------------------------------------------------------------------
 uint64_t Randomizer::random(uint64_t m)
 {
-  return rand() % m;
+  return m > 0 ? rand() % m : 0;
 }
 //---------------------------------------------------------------------------
 uint64_t Randomizer::zrandom()
 {
-  uint64_t  m;
+  uint64_t m;
   while( (m = rand()) == 0 );
   return m;
 }

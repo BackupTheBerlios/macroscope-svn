@@ -75,7 +75,14 @@ class SockAddr {
     static utf8::String gethostname();
 
     uintptr_t length() const;
+
+    SockAddr & clear();
   protected:
+    union IpInfo {
+      IP_ADAPTER_ADDRESSES addresses_;
+      IP_ADAPTER_INFO infos_;
+    };
+    static void getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses);
     utf8::String internalGetAddrInfo(
       const utf8::String & host,
       const utf8::String & port,
@@ -93,8 +100,7 @@ inline uintptr_t SockAddr::length() const
   //#else
   if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_);
 #if HAVE_STRUCT_SOCKADDR_IN6
-  else if( addr6_.sin6_family == PF_INET6 )
-    l = sizeof(addr6_);
+  else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_);
 #endif
   //#endif
   return l;

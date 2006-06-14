@@ -35,7 +35,7 @@ ServerFiber::~ServerFiber()
 {
 }
 //------------------------------------------------------------------------------
-ServerFiber::ServerFiber(Server & server) : server_(server), serverType_(stNone)
+ServerFiber::ServerFiber(Server & server) : server_(server), serverType_(stNone), monitor_(false)
 {
 }
 //------------------------------------------------------------------------------
@@ -216,13 +216,55 @@ void ServerFiber::sendMail() // client sending mail
     message->value(relay + "Received",getTimeString(gettimeofday()));
     message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
     message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
-    utf8::String spool(server_.spoolDir());
-    AsyncFile file(spool + message->value(messageIdKey) + ".msg");
+    AsyncFile file(server_.spoolDir() + message->value(messageIdKey) + ".msg");
     file.removeAfterClose(true).exclusive(true).open();
     file << message;
     file.removeAfterClose(false).close();
     putCode(eOK);
   }
+}
+//------------------------------------------------------------------------------
+intptr_t ServerFiber::processMailbox(
+  const utf8::String & userMailBox,
+  const utf8::String &/* mailForUser*/,
+  const utf8::String & mailForKey,
+  Array<utf8::String> & mids,
+  uint8_t onlyNewMail)
+{
+  intptr_t i, j, c, k;
+  Array<utf8::String> ids;
+  Vector<utf8::String> list;
+  getDirListAsync(list,userMailBox + "*.msg",utf8::String(),false);
+  k = list.count();
+  for( i = list.count() - 1; i >= 0; i-- ){
+    AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
+    ctrl.removeAfterClose(true);
+    ctrl.open();
+    AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+    AsyncFile file(list[i]);
+    if( file.tryOpen() ){
+      Message message;
+      file >> message;
+      utf8::String suser, skey;
+      message.separateValue("#Recepient",suser,skey);
+      if( skey.strcasecmp(mailForKey) == 0 && mids.bSearch(message.id()) < 0 ){
+        *this << message;
+        putCode(i > 0 ? eOK : eLastMessage);
+      }
+      file.close();
+      if( onlyNewMail && skey.strcasecmp(mailForKey) == 0 ){
+        //j = mids.bSearch(message.id(),c);
+        //if( c != 0 ) mids.insert(j + (c > 0),message.id());
+        j = ids.bSearch(message.id(),c);
+        if( c != 0 ) ids.insert(j + (c > 0),message.id());
+      }
+      k--;
+    }
+    list.remove(i);
+  }
+  flush();
+  mids = ids;
+  return k;
 }
 //------------------------------------------------------------------------------
 void ServerFiber::recvMail() // client receiving mail
@@ -232,39 +274,51 @@ void ServerFiber::recvMail() // client receiving mail
   *this >> mailForUser >> mailForKey >> waitForMail >> onlyNewMail;
   utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
   createDirectoryAsync(userMailBox);
-  DirectoryChangeNotification dcn;
   putCode(eOK);
+  intptr_t k;
   Array<utf8::String> ids;
   while( !terminated_ ){
-    Vector<utf8::String> list;
-    getDirListAsync(list,userMailBox + "*.msg",utf8::String(),false);
-    for( intptr_t i = list.count() - 1; i >= 0; i-- ){
-      AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
+    k = processMailbox(userMailBox,mailForUser,mailForKey,ids,onlyNewMail);
+    if( !waitForMail ) break;
+    if( k == 0 ){
+      dcn_.monitor(userMailBox);
+/*      try {
+        uint64_t timeout = server_.config_->value("mailbox_processing_interval",5000000u);
+        sleepAsync(timeout);
+        stdErr.debug(9,utf8::String::Stream() <<
+          "Processing mailbox " << mailForUser << " by timer... \n");
+      }
+      catch( ExceptionSP & e ){
+        e->writeStdError();
+#if defined(__WIN32__) || defined(__WIN64__)
+        if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
+#else
+        if( e->code() != EINTR ) throw;
+#endif
+      }*/
+    }
+  }
+}
+//------------------------------------------------------------------------------
+void ServerFiber::removeMail() // client remove mail
+{
+  utf8::String mailForUser, id;
+  *this >> mailForUser >> id;
+  try {
+    utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
+    createDirectoryAsync(userMailBox);
+    {
+      AsyncFile ctrl(server_.lckDir() + id + ".msg" + ".lck");
       ctrl.removeAfterClose(true);
       ctrl.open();
       AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
-      AsyncFile file(list[i]);
-      file.open();
-      Message message;
-      file >> message;
-      if( !onlyNewMail || ids.bSearch(message.id()) < 0 ){
-        stdErr.debug(1,utf8::String::Stream() << "Processing message " << message.id() << " in recvMail.\n");
-        *this << message;
-        putCode(i > 0 ? eOK : eLastMessage);
-      }
-      file.close();
-      if( onlyNewMail ){
-        intptr_t c, j = ids.bSearch(message.id(),c);
-        if( c != 0 ) ids.insert(j + (c > 0),message.id());
-      }
-      list.remove(i);
+      removeAsync(includeTrailingPathDelimiter(userMailBox) + id + ".msg");
     }
-    if( waitForMail ){
-      dcn.monitor(userMailBox);
-    }
-    else {
-      terminate();
-    }
+    putCode(eOK);
+  }
+  catch( ExceptionSP & ){
+    putCode(eInvalidMessageId);
+    throw;
   }
 }
 //------------------------------------------------------------------------------
@@ -350,21 +404,18 @@ intptr_t SpoolWalker::processQueue()
 void SpoolWalker::fiberExecute()
 {
   intptr_t k;
-  DirectoryChangeNotification dcn;
   while( !terminated_ ){
     k = processQueue();
     if( terminated_ ) break;
     if( k == 0 ){
-      processQueue();
-      dcn.monitor(excludeTrailingPathDelimiter(server_.spoolDir()));
-      stdErr.debug(1,utf8::String::Stream() << "Processing spool by monitor... \n");
+      dcn_.monitor(excludeTrailingPathDelimiter(server_.spoolDir()));
+      stdErr.debug(9,utf8::String::Stream() << "Processing spool by monitor... \n");
     }
-    else {
-      processQueue();
+    /*else {
       try {
         uint64_t timeout = server_.config_->value("queue_processing_interval",10000000u);
         sleepAsync(timeout);
-        stdErr.debug(1,utf8::String::Stream() << "Processing spool by timer... \n");
+        stdErr.debug(9,utf8::String::Stream() << "Processing spool by timer... \n");
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
@@ -374,7 +425,7 @@ void SpoolWalker::fiberExecute()
         if( e->code() != EINTR ) throw;
 #endif
       }
-    }
+    }*/
   }
 }
 //------------------------------------------------------------------------------
@@ -557,21 +608,18 @@ intptr_t MailQueueWalker::processQueue()
 void MailQueueWalker::main()
 {
   intptr_t k;
-  DirectoryChangeNotification dcn;
   while( !terminated_ ){
     k = processQueue();
     if( terminated_ ) break;
     if( k == 0 ){
-      processQueue();
-      dcn.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
-      stdErr.debug(1,utf8::String::Stream() << "Processing mqueue by monitor... \n");
+      dcn_.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
+      stdErr.debug(9,utf8::String::Stream() << "Processing mqueue by monitor... \n");
     }
-    else {
-      processQueue();
+/*    else {
       try {
         uint64_t timeout = server_.config_->value("mqueue_processing_interval",10000000u);
         sleepAsync(timeout);
-        stdErr.debug(1,utf8::String::Stream() << "Processing mqueue by timer... \n");
+        stdErr.debug(9,utf8::String::Stream() << "Processing mqueue by timer... \n");
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
@@ -581,7 +629,7 @@ void MailQueueWalker::main()
         if( e->code() != EINTR ) throw;
 #endif
       }
-    }
+    }*/
   }
 }
 //------------------------------------------------------------------------------

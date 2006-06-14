@@ -105,15 +105,18 @@ void LogFile::rotate(uint64_t size)
     if( flock.tryWRLock(0,0) ){
       utf8::String fileExt(getFileExt(afile_->fileName()));
       Stat st;
-      intptr_t i = 0, j;
+      intptr_t i = 0;
       while( statAsync(changeFileExt(afile_->fileName(),utf8::int2Str(i)) + fileExt,st) ) i++;
-      for( j = --i; j >= (intptr_t) rotatedFileCount_ - 1; j-- )
-        removeAsync(changeFileExt(afile_->fileName(),utf8::int2Str(j)) + fileExt);
       while( i > 0 ){
-        renameAsync(
-          changeFileExt(afile_->fileName(),utf8::int2Str(i - 1)) + fileExt,
-          changeFileExt(afile_->fileName(),utf8::int2Str(i)) + fileExt
-        );
+        if( i >= (intptr_t) rotatedFileCount_ ){
+          removeAsync(changeFileExt(afile_->fileName(),utf8::int2Str(i - 1)) + fileExt);
+        }
+        else {
+          renameAsync(
+            changeFileExt(afile_->fileName(),utf8::int2Str(i - 1)) + fileExt,
+            changeFileExt(afile_->fileName(),utf8::int2Str(i)) + fileExt
+          );
+        }
         i--;
       }
       afile_->close();

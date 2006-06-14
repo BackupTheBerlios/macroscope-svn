@@ -117,6 +117,9 @@ class AsyncFile : public AsyncDescriptor {
 #endif
     void shutdown2();
     void flush2();
+    void close2();
+    void openAPI();
+    void closeAPI();
 };
 //---------------------------------------------------------------------------
 inline bool AsyncFile::isOpen() const

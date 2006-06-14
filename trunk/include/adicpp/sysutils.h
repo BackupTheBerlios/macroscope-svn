@@ -42,7 +42,7 @@ class DirectoryChangeNotification {
     FILE_NOTIFY_INFORMATION * const buffer() const;
     const uintptr_t & bufferSize() const; 
 #endif
-    void monitor(const utf8::String & pathName);
+    void monitor(const utf8::String & pathName,uint64_t timeout = ~uint64_t(0));
     void stop();
   protected:
   private:
@@ -87,8 +87,8 @@ inline Array<utf8::String> & argv()
 {
   return *reinterpret_cast<Array<utf8::String> *>(argvPlaceHolder);
 }
-extern char   pathDelimiter;
-extern char   pathDelimiterStr[2];
+extern char pathDelimiter;
+extern char pathDelimiterStr[2];
 //---------------------------------------------------------------------------
 void  initializeArguments(int argc, char ** argv);
 void  initialize();
@@ -102,6 +102,20 @@ inline bool isWin9x()
 {
   DWORD dwVersion = GetVersion();
   return (dwVersion >> 31) == 1 && (dwVersion & 0xFF) == 4;
+}
+inline bool isWinXPorLater()
+{
+  DWORD dwVersion = GetVersion();
+// Get the Windows version.
+  DWORD dwWindowsMajorVersion = (DWORD)(LOBYTE(LOWORD(dwVersion)));
+  DWORD dwWindowsMinorVersion =  (DWORD)(HIBYTE(LOWORD(dwVersion)));
+// Get the build number.
+/*  DWORD dwBuild;
+  if( dwVersion < 0x80000000 )
+    dwBuild = (DWORD)(HIWORD(dwVersion));
+  else // Windows Me/98/95
+    dwBuild = 0;*/
+  return dwWindowsMajorVersion > 5 || (dwWindowsMajorVersion == 5 && dwWindowsMinorVersion >= 1);
 }
 #if !HAVE_UUID
 class UUID : public GUID {
@@ -131,6 +145,9 @@ inline uintptr_t strlen(const char * s)
 {
   return (uintptr_t) ::strlen(s);
 }
+//---------------------------------------------------------------------------
+void reverseByteArray(void * array,uintptr_t size);
+void reverseByteArray(void * dst,const void * src,uintptr_t size);
 //---------------------------------------------------------------------------
 utf8::String  screenChar(const utf8::String::Iterator & ii);
 utf8::String  screenString(const utf8::String & s);
