@@ -533,26 +533,26 @@ class Server : public ksock::Server {
         ~Data();
         Data();
 
-        void registerUserNL(const UserInfo & info);
-        void registerUser(const UserInfo & info);
-        void registerKeyNL(const KeyInfo & info);
-        void registerKey(const KeyInfo & info);
-        void registerGroupNL(const GroupInfo & info);
-        void registerGroup(const GroupInfo & info);
-        void registerServerNL(const ServerInfo & info);
-        void registerServer(const ServerInfo & info);
-        void registerUser2KeyLinkNL(const User2KeyLink & link);
-        void registerUser2KeyLink(const User2KeyLink & link);
-        void registerKey2GroupLinkNL(const Key2GroupLink & link);
-        void registerKey2GroupLink(const Key2GroupLink & link);
-        void registerKey2ServerLinkNL(const Key2ServerLink & link);
-        void registerKey2ServerLink(const Key2ServerLink & link);
+        bool registerUserNL(const UserInfo & info);
+        bool registerUser(const UserInfo & info);
+        bool registerKeyNL(const KeyInfo & info);
+        bool registerKey(const KeyInfo & info);
+        bool registerGroupNL(const GroupInfo & info);
+        bool registerGroup(const GroupInfo & info);
+        bool registerServerNL(const ServerInfo & info);
+        bool registerServer(const ServerInfo & info);
+        bool registerUser2KeyLinkNL(const User2KeyLink & link);
+        bool registerUser2KeyLink(const User2KeyLink & link);
+        bool registerKey2GroupLinkNL(const Key2GroupLink & link);
+        bool registerKey2GroupLink(const Key2GroupLink & link);
+        bool registerKey2ServerLinkNL(const Key2ServerLink & link);
+        bool registerKey2ServerLink(const Key2ServerLink & link);
+        bool intersectionNL(const Data & a);
+        bool intersection(const Data & a);
         void sendDatabaseNL(ksock::AsyncSocket & socket);
         void sendDatabase(ksock::AsyncSocket & socket);
         void recvDatabaseNL(ksock::AsyncSocket & socket);
         void recvDatabase(ksock::AsyncSocket & socket);
-        void intersectionNL(const Data & a);
-        void intersection(const Data & a);
       protected:
       private:
         int64_t ftime_; // last time when database flushed to node

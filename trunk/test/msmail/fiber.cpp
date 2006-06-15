@@ -162,7 +162,7 @@ void ServerFiber::registerClient()
   }
   {
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-    data.intersectionNL(tdata);
+    if( data.intersectionNL(tdata) ) server_.startNodeClient();
   }
   putCode(eOK);
 }
@@ -710,62 +710,64 @@ void NodeClient::clearNodeClient()
 void NodeClient::main()
 {
   try {
-    intptr_t i;
     bool connected = false;
-    utf8::String server(server_.config_->value("node",""));
-    for( i = enumStringParts(server) - 1; i >= 0 && !terminated_; i-- ){
-      ksock::SockAddr remoteAddress;
-      remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
-      try {
-        open();
-        connect(remoteAddress);
+    for(;;){
+      intptr_t i;
+      utf8::String server(server_.config_->value("node","")), host;
+      for( i = enumStringParts(server) - 1; i >= 0 && !terminated_; i-- ){
+        ksock::SockAddr remoteAddress;
+        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+        host = remoteAddress.resolveAsync();
+        try {
+          open();
+          connect(remoteAddress);
+        }
+        catch( ExceptionSP & e ){
+          e->writeStdError();
+          stdErr.debug(3,utf8::String::Stream() <<
+            "Unable connect to node. Host " << host << " unreachable.\n"
+          );
+        }
+        try {
+          auth();
+          connected = true;
+          i = 0;
+        }
+        catch( ExceptionSP & e ){
+          e->writeStdError();
+          stdErr.debug(3,utf8::String::Stream() <<
+            "Authentification to host " << host << " failed.\n"
+          );
+        }
       }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
-        stdErr.debug(3,
-          utf8::String::Stream() << "Unable connect to node. Host " <<
-          stringPartByNo(server,i) <<
-          " unreachable.\n"
+      if( connected ){
+        *this << uint8_t(cmSelectServerType) << uint8_t(stNode);
+        getCode();
+        Server::Data & data = server_.data(stStandalone);
+        Server::Data tdata;
+        tdata.intersection(data);
+        *this << uint8_t(cmRegisterDB);
+        tdata.sendDatabaseNL(*this);
+        getCode();
+        stdErr.debug(2,utf8::String::Stream() <<
+          "Database registered on node " << host << " succefully.\n"
         );
-      }
-      try {
-        auth();
-        connected = true;
-        i = 0;
-      }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
-        stdErr.debug(3,
-          utf8::String::Stream() << "Authentification to host " <<
-          stringPartByNo(server,i) << " failed.\n"
+        *this << uint8_t(cmGetDB);
+        tdata.recvDatabaseNL(*this);
+        getCode();
+        stdErr.debug(2,utf8::String::Stream() <<
+          "Database received from node " << host << " succefully.\n"
         );
+        AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+        data.intersectionNL(tdata);
+        data.ftime_ = gettimeofday();
+        break;
       }
-    }
-    if( connected ){
-      *this << uint8_t(cmSelectServerType) << uint8_t(stNode);
-      getCode();
-      Server::Data & data = server_.data(stStandalone);
-      Server::Data tdata;
-      {
-        AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-        tdata.intersectionNL(data);
-        tdata.ftime_ = data.ftime_;
+      else {
+        stdErr.debug(9,utf8::String::Stream() << "Any node does not answer...\n");
+        uint64_t timeout = server_.config_->value("node_query_interval",60u);
+        sleepAsync(timeout * 1000000u);
       }
-      *this << uint8_t(cmRegisterDB);
-      tdata.sendDatabase(*this);
-      getCode();
-      stdErr.debug(2,utf8::String::Stream() <<
-        "Database registered on node " << stringPartByNo(server,i) << " succefully.\n"
-      );
-      *this << uint8_t(cmGetDB);
-      tdata.recvDatabase(*this);
-      getCode();
-      stdErr.debug(2,utf8::String::Stream() <<
-        "Database received from node " << stringPartByNo(server,i) << " succefully.\n"
-      );
-      AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-      data.intersectionNL(tdata);
-      if( data.ftime_ == tdata.ftime_ ) data.ftime_ = gettimeofday();
     }
   }
   catch( ... ){

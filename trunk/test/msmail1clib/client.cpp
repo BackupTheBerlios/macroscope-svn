@@ -147,6 +147,13 @@ void ClientFiber::main()
         getCode();
         *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << uint8_t(1) << uint8_t(1);
         getCode();
+        {
+          AutoPtr<OLECHAR> source(client_.name_.getOLEString());
+          AutoPtr<OLECHAR> event(utf8::String("Connect").getOLEString());
+          AutoPtr<OLECHAR> data(utf8::ptr2Str(this).getOLEString());
+          HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
+          assert( SUCCEEDED(hr) );
+        }
         while( !terminated_ ){
           Message * msg;
           AutoPtr<Message> message(msg = new Message);
@@ -157,10 +164,10 @@ void ClientFiber::main()
             if( c != 0 ) client_.recvQueue_.safeInsert(i + (c > 0),message.ptr(NULL));
           }
           if( c != 0 ){
-            AutoPtr<OLECHAR> name(client_.name_.getOLEString());
-            AutoPtr<OLECHAR> what(utf8::String("Message").getOLEString());
-            AutoPtr<OLECHAR> id(msg->id().getOLEString());
-            HRESULT hr = client_.pAsyncEvent_->ExternalEvent(name.ptr(NULL),what.ptr(NULL),id.ptr(NULL));
+            AutoPtr<OLECHAR> source(client_.name_.getOLEString());
+            AutoPtr<OLECHAR> event(utf8::String("Message").getOLEString());
+            AutoPtr<OLECHAR> data(msg->id().getOLEString());
+            HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
             assert( SUCCEEDED(hr) );
           }
           getCode2(eLastMessage);
@@ -368,8 +375,9 @@ bool Client::removeMessage(const utf8::String id)
     if( i < 0 ) return false;
   }
   workFiberWait_.acquire();
+  workFiberLastError_ = 0;
   try {
-    attachFiber(new ClientMailRemoverFiber(*this,(*queue)[i].id()));
+    attachFiber(new ClientMailRemoverFiber(*this,id));
   }
   catch( ... ){
     workFiberWait_.release();
