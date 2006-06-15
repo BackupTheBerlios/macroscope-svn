@@ -128,6 +128,9 @@ void ServerFiber::main()
       case cmRecvMail :
         recvMail();
         break;
+      case cmRemoveMail :
+        removeMail();
+        break;
       default : // unrecognized or unsupported command, terminate
         putCode(eInvalidCommand);
         terminate();
@@ -226,8 +229,6 @@ void ServerFiber::sendMail() // client sending mail
 //------------------------------------------------------------------------------
 intptr_t ServerFiber::processMailbox(
   const utf8::String & userMailBox,
-  const utf8::String &/* mailForUser*/,
-  const utf8::String & mailForKey,
   Array<utf8::String> & mids,
   uint8_t onlyNewMail)
 {
@@ -247,12 +248,12 @@ intptr_t ServerFiber::processMailbox(
       file >> message;
       utf8::String suser, skey;
       message.separateValue("#Recepient",suser,skey);
-      if( skey.strcasecmp(mailForKey) == 0 && mids.bSearch(message.id()) < 0 ){
+      if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
         *this << message;
         putCode(i > 0 ? eOK : eLastMessage);
       }
       file.close();
-      if( onlyNewMail && skey.strcasecmp(mailForKey) == 0 ){
+      if( onlyNewMail && skey.strcasecmp(key_) == 0 ){
         //j = mids.bSearch(message.id(),c);
         //if( c != 0 ) mids.insert(j + (c > 0),message.id());
         j = ids.bSearch(message.id(),c);
@@ -272,32 +273,46 @@ void ServerFiber::recvMail() // client receiving mail
   utf8::String mailForUser, mailForKey;
   uint8_t waitForMail, onlyNewMail;
   *this >> mailForUser >> mailForKey >> waitForMail >> onlyNewMail;
+  user_ = mailForUser;
+  key_ = mailForKey;
   utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
   createDirectoryAsync(userMailBox);
   putCode(eOK);
   intptr_t k;
   Array<utf8::String> ids;
-  while( !terminated_ ){
-    k = processMailbox(userMailBox,mailForUser,mailForKey,ids,onlyNewMail);
-    if( !waitForMail ) break;
-    if( k == 0 ){
-      dcn_.monitor(userMailBox);
-/*      try {
-        uint64_t timeout = server_.config_->value("mailbox_processing_interval",5000000u);
-        sleepAsync(timeout);
-        stdErr.debug(9,utf8::String::Stream() <<
-          "Processing mailbox " << mailForUser << " by timer... \n");
-      }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
+  server_.addRecvMailFiber(*this);
+  try {
+    {
+// send notify to wait fibers
+      UUID uuid;
+      createUUID(uuid);
+      utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
+      AsyncFile watchdog(includeTrailingPathDelimiter(userMailBox) + "." + suuid);
+      watchdog.removeAfterClose(true).open();
+    }
+    while( !terminated_ ){
+      k = processMailbox(userMailBox,ids,onlyNewMail);
+      if( !waitForMail ) break;
+      if( k == 0 ){
+        try {
+          dcn_.monitor(userMailBox);
+        }
+        catch( ExceptionSP & e ){
+          e->writeStdError();
 #if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
+          if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
 #else
-        if( e->code() != EINTR ) throw;
+          if( e->code() != EINTR ) throw;
 #endif
-      }*/
+        }
+      }
     }
   }
+  catch( ... ){
+    server_.remRecvMailFiber(*this);
+    throw;
+  }
+  server_.remRecvMailFiber(*this);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::removeMail() // client remove mail

@@ -193,8 +193,56 @@ utf8::String SockAddr::resolve() const
   int32_t err = 0;
   utf8::String s;
   api.open();
-  struct hostent * pent = api.gethostbyaddr((const char *) &addr4_,(int) length(),addr4_.sin_family);
-  if( pent != NULL ) s = pent->h_name; else err = errNo();
+#if defined(__WIN32__) || defined(__WIN64__)
+  union {
+    char hostName[NI_MAXHOST];
+    wchar_t hostNameW[NI_MAXHOST];
+  };
+  union {
+    char servInfo[NI_MAXSERV];
+    wchar_t servInfoW[NI_MAXSERV];
+  };
+  if( ksys::isWin9x() ){
+    err = api.GetNameInfoA(
+      (const sockaddr *) &addr4_,
+      (socklen_t) length(),
+      hostName,
+      sizeof(hostName),
+      servInfo,
+      sizeof(servInfo),
+      NI_NUMERICSERV
+    );
+    if( err == 0 ) s = hostName;
+  }
+  else {
+    err = api.GetNameInfoW(
+      (const sockaddr *) &addr4_,
+      (socklen_t) length(),
+      hostNameW,
+      sizeof(hostNameW),
+      servInfoW,
+      sizeof(servInfoW),
+      NI_NUMERICSERV
+    );
+    if( err == 0 ) s = hostNameW;
+  }
+#else
+  char hostName[NI_MAXHOST];
+  char servInfo[NI_MAXSERV];
+  err = api.GetNameInfoA(
+    (const char *) &addr4_,
+    (socklen_t) length(),
+    hostName,
+    sizeof(hostName),
+    servInfo,
+    sizeof(servInfo),
+    NI_NUMERICSERV
+  );
+  if( err == 0 ) s = hostName;
+#endif
+  if( err != 0 ) err = errNo();
+//  struct hostent * pent = api.gethostbyaddr((const char *) &addr4_,(int) length(),addr4_.sin_family);
+//  if( pent != NULL ) s = pent->h_name; else err = errNo();
   api.close();
   if( err != 0 )
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
@@ -243,7 +291,7 @@ utf8::String SockAddr::resolveAsync() const
   assert( ksys::currentFiber()->event_.type_ == ksys::etResolveAddress );
   if( ksys::currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EAsyncSocket(ksys::currentFiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
+      new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
   return ksys::currentFiber()->event_.string0_;
 }
@@ -394,14 +442,14 @@ utf8::String SockAddr::gethostname()
   try {
     SockAddr addr;
 #if defined(__WIN32__) || defined(__WIN64__)
-    union {
+/*    union {
       char hostName[NI_MAXHOST];
       wchar_t hostNameW[NI_MAXHOST];
     };
     union {
       char servInfo[NI_MAXSERV];
       wchar_t servInfoW[NI_MAXSERV];
-    };
+    };*/
     ksys::AutoPtr<IpInfo> addresses;
     getAdaptersAddresses(addresses);
     if( ksys::isWinXPorLater() ){
@@ -419,7 +467,10 @@ utf8::String SockAddr::gethostname()
             sizeof(pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_data)
           );
           addr.addr4_.sin_family = pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_family;
-          err = api.GetNameInfoW(
+          try {
+            err = 0;
+            s = addr.resolve();
+/*          err = api.GetNameInfoW(
             (const sockaddr *) &addr.addr4_,
             (socklen_t) addr.length(),
             hostNameW,
@@ -428,13 +479,18 @@ utf8::String SockAddr::gethostname()
             sizeof(servInfoW),
             NI_NUMERICSERV
           );
+          if( err == 0 ) break;*/
+          }
+          catch( ksys::ExceptionSP & e ){
+            err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
+          }
           if( err == 0 ) break;
           unicast = unicast->Next;
         }
         if( err == 0 ) break;
         pAddress = pAddress->Next;
       }
-      if( err == 0 ) s = hostNameW;
+//      if( err == 0 ) s = hostNameW;
     }
     else {
       IP_ADAPTER_INFO * pAddress = &addresses->infos_;
@@ -443,7 +499,10 @@ utf8::String SockAddr::gethostname()
         PIP_ADDR_STRING list = &pAddress->IpAddressList;
         while( list != NULL ){
           addr.internalGetAddrInfo(list->IpAddress.String,utf8::String(),0,0);
-          if( ksys::isWin9x() ){
+          try {
+            err = 0;
+            s = addr.resolve();
+/*          if( ksys::isWin9x() ){
             err = api.GetNameInfoA(
               (const sockaddr *) &addr.addr4_,
               (socklen_t) addr.length(),
@@ -465,7 +524,10 @@ utf8::String SockAddr::gethostname()
               sizeof(servInfoW),
               NI_NUMERICSERV
             );
-            if( err == 0 ) s = hostNameW;
+            if( err == 0 ) s = hostNameW;*/
+          }
+          catch( ksys::ExceptionSP & e ){
+            err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
           }
           if( err == 0 ) break;
           list = list->Next;
@@ -486,7 +548,6 @@ utf8::String SockAddr::gethostname()
         err = 0;
       }
       s.resize(s.size());
-    }
 #if !defined(__WIN32__) && !defined(__WIN64__)
     addr.internalGetAddrInfo(s,utf8::String(),0,0);
     err = api.getnameinfo(
@@ -499,8 +560,9 @@ utf8::String SockAddr::gethostname()
       NI_NUMERICSERV
     );
     if( err == 0 ) s = hostName;
-#endif
     if( err != 0 ) err = errNo();
+#endif
+    }
   }
   catch( ... ){
     api.close();

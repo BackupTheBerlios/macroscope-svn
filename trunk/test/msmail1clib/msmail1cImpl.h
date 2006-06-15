@@ -107,6 +107,9 @@ class Client : public ksock::Client {
     utf8::String configFile_;
     utf8::String logFile_;
     ConfigSP config_;
+    mutable FiberInterlockedMutex connectedMutex_;
+    utf8::String connectedToServer_;
+    bool connected_;
 
     const utf8::String & newMessage();
     const utf8::String & value(const utf8::String id,const utf8::String key) const;
@@ -114,6 +117,7 @@ class Client : public ksock::Client {
 
     bool sendMessage(const utf8::String id);
     bool removeMessage(const utf8::String id);
+    utf8::String getReceivedMessageList() const;
 
     InterlockedMutex workFiberWait_;
     int32_t workFiberLastError_;

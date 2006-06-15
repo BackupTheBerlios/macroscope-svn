@@ -684,6 +684,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
 //------------------------------------------------------------------------------
 bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
 {
+  bool r = false;
 #if defined(__WIN32__) || defined(__WIN64__)
   assert( !isWin9x() );
   AutoLock<InterlockedMutex> lock(*this);
@@ -691,16 +692,17 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
   for( node = requests_.first(); node != NULL; node = node->next() ){
     AsyncEvent & object = AsyncEvent::nodeObject(*node);
     if( object.type_ == etDirectoryChangeNotification ){
-      if( dcn == NULL || object.directoryChangeNotification_ == dcn ){
+      r = object.directoryChangeNotification_ == dcn;
+      if( dcn == NULL || r ){
         object.abort_ = true;
         SetEvent(object.overlapped_.hEvent);
         post();
-        if( object.directoryChangeNotification_ == dcn ) return true;
+        if( r ) break;
       }
     }
   }
 #endif
-  return false;
+  return r;
 }
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -1282,21 +1284,23 @@ void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
 //------------------------------------------------------------------------------
 bool AsyncWin9xDirectoryChangeNotificationSlave::abortNotification(DirectoryChangeNotification * dcn)
 {
+  bool r = false;
   assert( !isWin9x() );
   AutoLock<InterlockedMutex> lock(*this);
   EventsNode * node;
   for( node = requests_.first(); node != NULL; node = node->next() ){
     AsyncEvent & object = AsyncEvent::nodeObject(*node);
     if( object.type_ == etDirectoryChangeNotification ){
-      if( dcn == NULL || object.directoryChangeNotification_ == dcn ){
+      r = object.directoryChangeNotification_ == dcn;
+      if( dcn == NULL || r ){
         object.abort_ = true;
         object.directoryChangeNotification_->stop();
         post();
-        if( object.directoryChangeNotification_ == dcn ) return true;
+        if( r ) break;
       }
     }
   }
-  return false;
+  return r;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -1373,8 +1377,10 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
   }
   else {
     AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
-    for( i = ioSlaves_.count() - 1; i >= 0; i-- )
-      if( (r = ioSlaves_[i].abortNotification(dcn)) ) break;
+    for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
+      r = ioSlaves_[i].abortNotification(dcn);
+      if( r ) break;
+    }
   }
 #endif
   return r;

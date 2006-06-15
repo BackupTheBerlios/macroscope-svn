@@ -129,10 +129,23 @@ void Server::startNodeClient()
   }
 }
 //------------------------------------------------------------------------------
-void Server::maintainFiber(Fiber * fiber)
+void Server::addRecvMailFiber(ServerFiber & fiber)
 {
-  ServerFiber * sf = dynamic_cast<ServerFiber *>(fiber);
-  if( sf != NULL ) abortNotification(&sf->dcn_);
+  AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+  ServerFiber * fib = recvMailFibers_.find(fiber);
+  if( fib != NULL ){
+    fib->terminate();
+    //abortNotification(&fib->dcn_);
+    recvMailFibers_.remove(*fib);
+  }
+  recvMailFibers_.insert(fiber);
+}
+//------------------------------------------------------------------------------
+void Server::remRecvMailFiber(ServerFiber & fiber)
+{
+  AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+  ServerFiber * fib = recvMailFibers_.find(fiber);
+  if( fib == &fiber ) recvMailFibers_.remove(fiber);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

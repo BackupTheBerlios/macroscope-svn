@@ -84,7 +84,7 @@ HRESULT Cmsmail1c::RegisterExtensionAs(BSTR * bstrExtensionName)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNProps(long * plProps)
 {
-  *plProps = 15;
+  *plProps = 18;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -149,6 +149,18 @@ HRESULT Cmsmail1c::FindProp(BSTR bstrPropName,long * plPropNum)
   if( _wcsicoll(bstrPropName,L"Version") == 0 ) *plPropNum = 14;
   else
   if( _wcsicoll(bstrPropName,L"Версия") == 0 ) *plPropNum = 14;
+  else
+  if( _wcsicoll(bstrPropName,L"Connected") == 0 ) *plPropNum = 15;
+  else
+  if( _wcsicoll(bstrPropName,L"СоединениеУстановлено") == 0 ) *plPropNum = 15;
+  else
+  if( _wcsicoll(bstrPropName,L"WorkServer") == 0 ) *plPropNum = 16;
+  else
+  if( _wcsicoll(bstrPropName,L"РабочийСервер") == 0 ) *plPropNum = 16;
+  else
+  if( _wcsicoll(bstrPropName,L"ReceivedMessagesList") == 0 ) *plPropNum = 17;
+  else
+  if( _wcsicoll(bstrPropName,L"СписокПолученныхСообщений") == 0 ) *plPropNum = 17;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -277,6 +289,30 @@ HRESULT Cmsmail1c::GetPropName(long lPropNum,long lPropAlias,BSTR * pbstrPropNam
           return (*pbstrPropName = SysAllocString(L"Версия")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 15 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"Connected")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"СоединениеУстановлено")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 16 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"WorkServer")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"РабочийСервер")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 17 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"ReceivedMessagesList")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"СписокПолученныхСообщений")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -375,6 +411,32 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         break;
       case 14 : // Version
         V_BSTR(pvarPropVal) = getTimestamp(__DATE__,__TIME__).getOLEString();
+        V_VT(pvarPropVal) = VT_BSTR;
+        break;
+      case 15 : // Connected
+        if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
+        if( SUCCEEDED(hr) ){
+          V_I4(pvarPropVal) = 0;
+          if( active_ ){
+            AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
+            V_I4(pvarPropVal) = client_.connected_ ? 1 : 0;
+          }
+        }
+        break;
+      case 16 : // WorkServer
+        {
+          AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
+          if( active_ && client_.connected_ ){
+            V_BSTR(pvarPropVal) = client_.connectedToServer_.getOLEString();
+            V_VT(pvarPropVal) = VT_BSTR;
+          }
+          else {
+            if( V_VT(pvarPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_BSTR);
+          }
+        }
+        break;
+      case 17 : // ReceivedMessagesList
+        V_BSTR(pvarPropVal) = client_.getReceivedMessageList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
     }
@@ -526,6 +588,9 @@ HRESULT Cmsmail1c::IsPropReadable(long lPropNum,BOOL * pboolPropRead)
     case 12 : *pboolPropRead = TRUE; break;
     case 13 : *pboolPropRead = TRUE; break;
     case 14 : *pboolPropRead = TRUE; break;
+    case 15 : *pboolPropRead = TRUE; break;
+    case 16 : *pboolPropRead = TRUE; break;
+    case 17 : *pboolPropRead = TRUE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -549,6 +614,9 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
     case 12 : *pboolPropWrite = FALSE; break;
     case 13 : *pboolPropWrite = FALSE; break;
     case 14 : *pboolPropWrite = FALSE; break;
+    case 15 : *pboolPropWrite = FALSE; break;
+    case 16 : *pboolPropWrite = FALSE; break;
+    case 17 : *pboolPropWrite = FALSE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;

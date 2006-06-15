@@ -96,19 +96,25 @@ void ClientFiber::main()
 {
   intptr_t i, c;
   client_.config_->fileName(client_.configFile_).parse();
-  bool connected = false;
   while( !terminated_ ){
+    {
+      AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
+      client_.connected_ = false;
+      client_.connectedToServer_.resize(0);
+    }
     try {
       utf8::String server(client_.config_->value("server",client_.mailServer_));
-      if( !connected ){
-        for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !connected; i-- ){
+      if( !client_.connected_ ){
+        for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !client_.connected_; i-- ){
           ksock::SockAddr remoteAddress;
           remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
           try {
             connect(remoteAddress);
             try {
               auth();
-              connected = true;
+              AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
+              client_.connectedToServer_ = remoteAddress.resolveAsync();
+              client_.connected_ = true;
             }
             catch( ExceptionSP & e ){
               e->writeStdError();
@@ -128,7 +134,7 @@ void ClientFiber::main()
           }
         }
       }
-      if( connected ){
+      if( client_.connected_ ){
         *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
         getCode();
         *this << uint8_t(cmRegisterClient) <<
@@ -166,7 +172,6 @@ void ClientFiber::main()
     }
     shutdown();
     close();
-    connected = false;
   }
 }
 //------------------------------------------------------------------------------
@@ -377,6 +382,19 @@ bool Client::removeMessage(const utf8::String id)
     queue->remove(i);
   }
   return workFiberLastError_ == 0;
+}
+//------------------------------------------------------------------------------
+utf8::String Client::getReceivedMessageList() const
+{
+  utf8::String list;
+  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+  for( intptr_t i = recvQueue_.count() - 1; i >= 0; i-- ){
+    list += "\"";
+    list += recvQueue_[i].id();
+    list += "\"";
+    if( i > 0 ) list += ", ";
+  }
+  return list;
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

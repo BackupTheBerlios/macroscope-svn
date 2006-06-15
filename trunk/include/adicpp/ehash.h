@@ -85,7 +85,7 @@ class EmbeddedHash {
 
     EmbeddedHash<T,N,O,H,E> & clear();
     EmbeddedHash<T,N,O,H,E> & insert(const T & object);
-    T & remove(const T & object);
+    T & remove(const T & object,bool throwIfNotExist = true);
     EmbeddedHash<T,N,O,H,E> & drop();
     EmbeddedHash<T,N,O,H,E> & drop(T & object);
     T & search(const T & object) const;
@@ -223,12 +223,14 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::remove(const T & object)
+T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist)
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,false,true);
-  *head = (*head)->next();
-  N(object).next() = NULL;
-  optimize(optDec);
+  EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist);
+  if( *head != NULL ){
+    *head = (*head)->next();
+    N(object).next() = NULL;
+    optimize(optDec);
+  }
   return *const_cast<T *>(&object);
 }
 //---------------------------------------------------------------------------
@@ -350,25 +352,27 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
     *p0 = NULL;
     p0++;
   }
-  ExceptionSP esp(NULL);
+  Exception * esp = NULL;
   try {
     uintptr_t i;
     switch( o ){
       case optInc :
-        hash_.realloc(size_ << 1);
-        for( i = size_, size_ <<= 1; i < size_; i++ ) hash_[i] = NULL;
+        hash_.realloc(i = (size_ << 1) + (size_ == 0));
+        while( size_ < i ){
+          hash_[size_] = NULL;
+          size_++;
+        }
         break;
       case optDec :
-        if( size_ > 1 ){
-          hash_.realloc(size_ >> 1);
-          size_ >>= 1;
-        }
+        hash_.realloc(size_ >> 1);
+        size_ >>= 1;
         break;
     }
   }
   catch( ExceptionSP & e ){
     // catch ENOMEM
-    esp = e;
+    e->addRef();
+    esp = e.ptr();
   }
   while( head != NULL ){
     a0 = head->next();
@@ -378,7 +382,11 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
     head->next() = NULL;
     head = a0;
   }
-  if( esp.ptr() != NULL ) throw esp;
+  if( esp != NULL ){
+    ExceptionSP e(esp);
+    esp->remRef();
+    throw e;
+  }
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

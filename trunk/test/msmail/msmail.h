@@ -422,8 +422,27 @@ class ServerFiber : public ksock::ServerFiber {
     void main();
   private:
     Server & server_;
-    utf8::String user_;
     ServerType serverType_;
+
+
+    static EmbeddedHashNode<ServerFiber> & hashNode(const ServerFiber & object){
+      return object.hashNode_;
+    }
+    static ServerFiber & hashNodeObject(const EmbeddedHashNode<ServerFiber> & node,ServerFiber * p){
+      return node.object(p->hashNode_);
+    }
+    static uintptr_t hashNodeHash(const ServerFiber & object){
+      uintptr_t h[2];
+      h[0] = object.user_.hash(false);
+      h[1] = object.key_.hash(false);
+      return HF::hash(h,sizeof(h));
+    }
+    static bool hashNodeEqu(const ServerFiber & object1,const ServerFiber & object2){
+      return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
+    }
+    mutable EmbeddedHashNode<ServerFiber> hashNode_;
+    utf8::String user_;
+    utf8::String key_;
     DirectoryChangeNotification dcn_;
 
     void putCode(int32_t code);
@@ -436,8 +455,6 @@ class ServerFiber : public ksock::ServerFiber {
     void sendMail();
     intptr_t processMailbox(
       const utf8::String & userMailBox,
-      const utf8::String & mailForUser,
-      const utf8::String & mailForKey,
       Array<utf8::String> & mids,
       uint8_t onlyNewMail
     );
@@ -598,24 +615,34 @@ class Server : public ksock::Server {
         Vector<Key2ServerLink> key2ServerLinkList_;
     };
   protected:
-    ConfigSP config_;
     Fiber * newFiber();
-    void maintainFiber(Fiber * fiber);
     utf8::String spoolDir() const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;
     void startNodeClient();
   private:
+    ConfigSP config_;
 // списки даных узлового сервера
     Data nodeData_;
 // списки даных рядового сервера
     Data standaloneData_;
+// misc
     Data & data(ServerType type);
     FiberInterlockedMutex rndMutex_;
     SPEIA<Randomizer,FiberInterlockedMutex> rnd_;
     FiberInterlockedMutex nodeClientMutex_;
     NodeClient * nodeClient_;
+    FiberInterlockedMutex recvMailFibersMutex_;
+    EmbeddedHash<
+      ServerFiber,
+      ServerFiber::hashNode,
+      ServerFiber::hashNodeObject,
+      ServerFiber::hashNodeHash,
+      ServerFiber::hashNodeEqu
+    > recvMailFibers_;
+    void addRecvMailFiber(ServerFiber & fiber);
+    void remRecvMailFiber(ServerFiber & fiber);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
