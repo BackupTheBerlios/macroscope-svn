@@ -169,6 +169,9 @@ void ServerFiber::registerClient()
 //------------------------------------------------------------------------------
 void ServerFiber::registerDB()
 {
+  ksock::SockAddr raddr;
+//  getPeerAddr(raddr);
+  utf8::String host/*(raddr.resolveAsync())*/;
   Server::Data tdata;
   tdata.recvDatabase(*this);
   Server::Data & data = server_.data(serverType_);
@@ -178,10 +181,18 @@ void ServerFiber::registerDB()
     data.ftime_ = gettimeofday();
   }
   putCode(eOK);
+  flush();
+  utf8::String::Stream stream;
+  stream << "Database changes received from host " << host << " succefully.\n";
+  tdata.dumpNL(stream);
+  stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::getDB()
 {
+  ksock::SockAddr raddr;
+//  getPeerAddr(raddr);
+  utf8::String host/*(raddr.resolveAsync())*/;
   uint64_t ftime;
   *this >> ftime;
   Server::Data & data = server_.data(serverType_);
@@ -194,6 +205,11 @@ void ServerFiber::getDB()
   tdata.sendDatabase(*this);
   *this << ftime;
   putCode(eOK);
+  flush();
+  utf8::String::Stream stream;
+  stream << "Database changes sended to host " << host << " succefully.\n";
+  tdata.dumpNL(stream);
+  stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::sendMail() // client sending mail
@@ -723,6 +739,7 @@ void NodeClient::main()
       host = server_.data(stNode).getNodeList();
       if( server.strlen() > 0 ) server += ", ";
       server += host;
+      if( server.strlen() > 0 ) server += ", ";
       server += server_.config_->value("node","");
       for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !connected; i-- ){
         uintptr_t tryCount = server_.config_->value("node_exchange_try_count",5u);
@@ -769,20 +786,28 @@ void NodeClient::main()
         *this << uint8_t(cmRegisterDB);
         tdata.sendDatabaseNL(*this);
         getCode();
-        stdErr.debug(2,utf8::String::Stream() <<
-          "Database changes sended to node " << host << " succefully.\n"
-        );
+        utf8::String::Stream stream;
+        stream << "Node client report: database changes sended to node " << host << " succefully.\n";
+        tdata.dumpNL(stream);
+        stdErr.debug(5,stream);
+        tdata.clear();
+//TODO: отправку изменений и получение надо совместить что бы не получать
+// свои же только что посланные изменения
+//TODO: разобраться с ошибкой в AsyncSocket::getSockAddr
         *this << uint8_t(cmGetDB) << uint64_t(tdata.ftime_);
         tdata.recvDatabaseNL(*this);
         uint64_t ftime;
         *this >> ftime;
         getCode();
-        stdErr.debug(2,utf8::String::Stream() <<
-          "Database changes received from node " << host << " succefully.\n"
-        );
+        stream.clear();
+        stream << "Node client report: database changes received from node " << host << " succefully.\n";
+        tdata.dumpNL(stream);
+        stdErr.debug(5,stream);
         AutoMutexWRLock<FiberMutex> lock(data.mutex_);
         data.intersectionNL(tdata);
         data.ftime_ = ftime;
+        *this << uint8_t(cmQuit);
+        getCode();
         break;
       }
     }

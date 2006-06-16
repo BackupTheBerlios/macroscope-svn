@@ -130,6 +130,9 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
 
     AsyncSocket &     flush();
 
+    AsyncSocket & getSockAddr(SockAddr & addr) const;
+    AsyncSocket & getPeerAddr(SockAddr & addr) const;
+
     // high level methods
     AsyncSocket &     read(void * buf, uint64_t len);
     AsyncSocket &     write(const void * buf, uint64_t len);

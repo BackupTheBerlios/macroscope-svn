@@ -132,10 +132,10 @@ template <
 > inline
 EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::clear()
 {
-  if( size_ > 0 ){
-    hash_[0] = NULL;
-    size_ = 1;
-    hash_.realloc(1);
+  if( count_ > 0 ){
+    hash_.free();
+    size_ = 0;
+    count_ = 0;
   }
   return *this;
 }
@@ -163,9 +163,8 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop()
     head++;
   }
   if( size_ > 0 ){
-    hash_[0] = NULL;
-    size_ = 1;
-    hash_.realloc(1);
+    hash_.free();
+    size_ = 0;
   }
   return *this;
 }

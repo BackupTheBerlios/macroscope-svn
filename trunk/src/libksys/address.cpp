@@ -260,7 +260,7 @@ SockAddr & SockAddr::resolveAsync(const utf8::String & addr,const ksys::Mutant &
   assert( ksys::currentFiber()->event_.type_ == ksys::etResolveName );
   if( ksys::currentFiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
-      new EAsyncSocket(ksys::currentFiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
+      new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
     );
   memcpy(&addr4_,&ksys::currentFiber()->event_.address_.addr4_,ksys::currentFiber()->event_.address_.length());
   return *this;

@@ -290,7 +290,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     if( tt == ttLeftBrace ) break;
     if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
       throw ksys::ExceptionSP(new EConfig(this, "invalid section param"));
-    if( param.strlen() > 0 ) param += ", ";
+    if( param.strlen() > 0 ) param += ",";
     if( tt == ttQuotedString ){
       param += screenString(token);
     }
@@ -344,7 +344,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         if( tt == ttSemicolon ) break;
         if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
           throw ksys::ExceptionSP(new EConfig(this, "invalid section key value"));
-        if( value.strlen() > 0 ) value += ", ";
+        if( value.strlen() > 0 ) value += ",";
         if( tt == ttQuotedString ){
           value += screenString(token);
         }

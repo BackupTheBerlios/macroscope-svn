@@ -325,6 +325,7 @@ class String {
         const char * plane() const;
         const uintptr_t & count() const;
         utf8::String string();
+        Stream & clear();
       protected:
       private:
         ksys::AutoPtr<char> stream_;
@@ -565,23 +566,17 @@ inline String::Iterator::~Iterator()
 }
 //---------------------------------------------------------------------------
 inline String::Iterator::Iterator(const ksys::SPRC< Container> & container, uintptr_t cursor, uintptr_t position)
-  : container_(container),
-    cursor_(cursor),
-    position_(position)
+  : container_(container), cursor_(cursor), position_(position)
 {
 }
 //---------------------------------------------------------------------------
 inline String::Iterator::Iterator(const Iterator & i)
-  : container_(i.container_),
-    cursor_(i.cursor_),
-    position_(i.position_)
+  : container_(i.container_), cursor_(i.cursor_), position_(i.position_)
 {
 }
 //---------------------------------------------------------------------------
 inline String::Iterator::Iterator(const String & str)
-  : container_(str.container_),
-    cursor_(0),
-    position_(0)
+  : container_(str.container_), cursor_(0), position_(0)
 {
 }
 //---------------------------------------------------------------------------
@@ -1012,6 +1007,13 @@ inline utf8::String String::Stream::string()
   stream_.ptr(NULL);
   count_ = 0;
   return s;
+}
+//---------------------------------------------------------------------------
+inline String::Stream & String::Stream::clear()
+{
+  stream_.free();
+  count_ = 0;
+  return *this;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

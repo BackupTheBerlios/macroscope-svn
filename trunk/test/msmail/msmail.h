@@ -95,6 +95,8 @@ extern const char messageIdKey[];
 class Message {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a);
+  friend AsyncFile & operator >> (AsyncFile & s,Message & a);
+  friend AsyncFile & operator << (AsyncFile & s,const Message & a);
   public:
     ~Message();
     Message();
@@ -171,6 +173,7 @@ inline const Array<Message::Attribute> & Message::attributes() const
 class UserInfo {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,UserInfo & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a);
+  friend utf8::String::Stream & operator << (utf8::String::Stream & s,const UserInfo & a);
   public:
     ~UserInfo();
     UserInfo();
@@ -204,6 +207,7 @@ class UserInfo {
 class KeyInfo {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,KeyInfo & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a);
+  friend utf8::String::Stream & operator << (utf8::String::Stream & s,const KeyInfo & a);
   public:
     ~KeyInfo();
     KeyInfo();
@@ -237,8 +241,7 @@ class KeyInfo {
 class GroupInfo {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,GroupInfo & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a);
-  friend AsyncFile & operator >> (AsyncFile & s,Message & a);
-  friend AsyncFile & operator << (AsyncFile & s,const Message & a);
+  friend utf8::String::Stream & operator << (utf8::String::Stream & s,const GroupInfo & a);
   public:
     ~GroupInfo();
     GroupInfo();
@@ -272,6 +275,7 @@ class GroupInfo {
 class ServerInfo {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a);
+  friend utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a);
   public:
     ~ServerInfo();
     ServerInfo();
@@ -306,6 +310,7 @@ class ServerInfo {
 class User2KeyLink {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,User2KeyLink & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a);
+  friend utf8::String::Stream & operator << (utf8::String::Stream & s,const User2KeyLink & a);
   public:
     ~User2KeyLink();
     User2KeyLink();
@@ -343,6 +348,7 @@ class User2KeyLink {
 class Key2GroupLink {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2GroupLink & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a);
+  friend utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2GroupLink & a);
   public:
     ~Key2GroupLink();
     Key2GroupLink();
@@ -380,6 +386,7 @@ class Key2GroupLink {
 class Key2ServerLink {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2ServerLink & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & a);
+  friend utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2ServerLink & a);
   public:
     ~Key2ServerLink();
     Key2ServerLink();
@@ -556,6 +563,9 @@ class Server : public ksock::Server {
         void recvDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
         utf8::String getNodeListNL() const;
         utf8::String getNodeList() const;
+        void dumpNL(utf8::String::Stream & stream) const;
+        void dump(utf8::String::Stream & stream) const;
+        Data & clear();
       protected:
       private:
         int64_t ftime_; // last time when database flushed to node

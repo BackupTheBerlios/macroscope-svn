@@ -55,13 +55,15 @@ utf8::String strError(int32_t err)
       err -= errorOffset;
     }
 #endif
-    int32_t         er    = 0;
-    AutoPtr< char>  serr;
+    int32_t er = 0;
+    AutoPtr<char> serr;
 #if HAVE_STRERROR_R
-    size_t          serrs = 1;
-    for( serr.realloc(serrs); strerror_r(err, serr, serrs) != 0 && (er = errno) == ERANGE; serr.realloc(serrs <<= 1),
-                                      memset(serr, 0, serrs) )
-      ;
+    size_t serrs = 1;
+    for( serr.realloc(serrs);
+         strerror_r(err, serr, serrs) != 0 &&
+         (er = errno) == ERANGE;
+         serr.realloc(serrs <<= 1), memset(serr, 0, serrs)
+    );
 #endif
 #if HAVE_STRERROR
     if( er != 0 || serr.ptr() == NULL || strlen(serr) == 0 ){

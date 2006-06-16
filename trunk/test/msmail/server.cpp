@@ -444,5 +444,44 @@ utf8::String Server::Data::getNodeList() const
   return getNodeListNL();
 }
 //------------------------------------------------------------------------------
+void Server::Data::dumpNL(utf8::String::Stream & stream) const
+{
+  intptr_t i;
+  for( i = userList_.count() - 1; i >= 0; i-- ) stream << userList_[i] << "\n";
+  for( i = keyList_.count() - 1; i >= 0; i-- ) stream << keyList_[i] << "\n";
+  for( i = groupList_.count() - 1; i >= 0; i-- ) stream << groupList_[i] << "\n";
+  for( i = serverList_.count() - 1; i >= 0; i-- ) stream << serverList_[i] << "\n";
+  for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- ) stream << user2KeyLinkList_[i] << "\n";
+  for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- ) stream << key2GroupLinkList_[i] << "\n";
+  for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- ) stream << key2ServerLinkList_[i] << "\n";
+}
+//------------------------------------------------------------------------------
+void Server::Data::dump(utf8::String::Stream & stream) const
+{
+  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  dumpNL(stream);
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::clear()
+{
+  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  users_.clear();
+  userList_.clear();
+  keys_.clear();
+  keyList_.clear();
+  groups_.clear();
+  groupList_.clear();
+  servers_.clear();
+  serverList_.clear();
+  user2KeyLinks_.clear();
+  user2KeyLinkList_.clear();
+  key2GroupLinks_.clear();
+  key2GroupLinkList_.clear();
+  key2ServerLinks_.clear();
+  key2ServerLinkList_.clear();
+  ftime_ = 0;
+  return *this;
+}
+//------------------------------------------------------------------------------
 } // namespace msmail
 //------------------------------------------------------------------------------

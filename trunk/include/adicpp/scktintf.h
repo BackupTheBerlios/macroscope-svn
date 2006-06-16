@@ -202,6 +202,10 @@ class API {
     {
       return ::getsockname(SOCKET s,name,namelen);
     }
+    int getpeername(SOCKET s,struct sockaddr* name,int* namelen)
+    {
+      return ::getpeername(s,name,namelen);
+    }
 #else
 #if _MSC_VER
 #pragma warning(push,3)
@@ -462,6 +466,10 @@ class API {
               int (WSAAPI * getsockname)(SOCKET s,struct sockaddr * name,int * namelen);
               void * p_getsockname;
             };
+            union {
+              int (WSAAPI * getpeername)(SOCKET s,struct sockaddr* name,int* namelen);
+              void * p_getpeername;
+            };
         };
     };
 #if _MSC_VER
@@ -568,6 +576,10 @@ class API {
     int getsockname(SOCKET s,struct sockaddr * name,socklen_t * namelen)
     {
       return ::getsockname(SOCKET s,name,namelen);
+    }
+    int getpeername(int s, struct sockaddr * restrict name,socklen_t * namelen)
+    {
+      return ::getpeername(s,name,namelen);
     }
     void open()
     {

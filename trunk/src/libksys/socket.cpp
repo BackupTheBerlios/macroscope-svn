@@ -884,6 +884,46 @@ void AsyncSocket::closeAPI()
   api.close();
 }
 //------------------------------------------------------------------------------
+AsyncSocket & AsyncSocket::getSockAddr(SockAddr & addr) const
+{
+  int32_t err = -1;
+  api.open();
+  socklen_t len;
+#if HAVE_STRUCT_SOCKADDR_IN6
+  len = sizeof(addr.addr6_);
+  err = api.getsockname(socket_,(sockaddr *) &addr.addr6_,&len);
+#endif
+  if( err != 0 ){
+    len = sizeof(addr.addr4_);
+    err = api.getsockname(socket_,(sockaddr *) &addr.addr4_,&len);
+  }
+  if( err != 0 ) err = errNo();
+  api.close();
+  if( err != 0 )
+    throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+  return *const_cast<AsyncSocket *>(this);
+}
+//------------------------------------------------------------------------------
+AsyncSocket & AsyncSocket::getPeerAddr(SockAddr & addr) const
+{
+  int32_t err = -1;
+  api.open();
+  socklen_t len;
+#if HAVE_STRUCT_SOCKADDR_IN6
+  len = sizeof(addr.addr6_);
+  err = api.getpeername(socket_,(sockaddr *) &addr.addr6_,&len);
+#endif
+  if( err != 0 ){
+    len = sizeof(addr.addr4_);
+    err = api.getpeername(socket_,(sockaddr *) &addr.addr4_,&len);
+  }
+  if( err != 0 ) err = errNo();
+  api.close();
+  if( err != 0 )
+    throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+  return *const_cast<AsyncSocket *>(this);
+}
+//------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 EAsyncSocket::EAsyncSocket(int32_t code,const utf8::String & what) : ksys::Exception(code,what)

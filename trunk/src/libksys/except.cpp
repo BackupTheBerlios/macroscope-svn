@@ -54,7 +54,8 @@ const Exception & Exception::writeStdError() const
       if( codes_[i] >= errorOffset ) s << codes_[i] - errorOffset; else s << codes_[i];
       s << " ";
     }
-    s << serr << " " << whats_[i] << "\n";
+    if( serr.strlen() > 0 ) s << serr << " ";
+    s << whats_[i] << "\n";
     stdErr.debug(9,s);
   }
   return *this;

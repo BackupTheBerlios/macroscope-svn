@@ -77,27 +77,28 @@ const char * const  API::symbols_[]   = {
   "FreeAddrInfoW",
   "getnameinfo",
   "GetNameInfoW",
-  "getsockname"
+  "getsockname",
+  "getpeername"
 };
 
-HINSTANCE           API::handle_;
+HINSTANCE API::handle_;
 
 const char * const  APIEx::symbols_[] = {
   "AcceptEx",
   "GetAcceptExSockaddrs"
 };
 
-HINSTANCE           APIEx::handle_;
+HINSTANCE APIEx::handle_;
 #endif
 //---------------------------------------------------------------------------
-WSADATA             API::wsaData_;
-APIEx               apiEx;
-uint8_t             API::mutex_[sizeof(ksys::InterlockedMutex)];
-uintptr_t           API::count_;
+WSADATA API::wsaData_;
+APIEx apiEx;
+uint8_t API::mutex_[sizeof(ksys::InterlockedMutex)];
+uintptr_t API::count_;
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-API                 api;
+API api;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
