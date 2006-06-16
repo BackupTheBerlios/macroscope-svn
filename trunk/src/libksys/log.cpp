@@ -344,5 +344,23 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
   return *this;
 }
 //---------------------------------------------------------------------------
+LogFile & LogFile::setDebugLevels(const utf8::String & levels)
+{
+  for( intptr_t i = enumStringParts(levels) - 1; i >= 0; i-- ){
+    Mutant level(stringPartByNo(levels,i));
+    try {
+      level.changeType(mtInt);
+    }
+    catch( ExceptionSP & e ){
+      if( dynamic_cast<utf8::EStr2Scalar *>(e.ptr()) == NULL ) throw;
+    }
+    if( (intptr_t) level >= 0 )
+      enableDebugLevel((intptr_t) level);
+    else
+      disableDebugLevel((intptr_t) level);
+  }
+  return *this;
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

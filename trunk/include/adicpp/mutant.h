@@ -218,161 +218,115 @@ inline Mutant::~Mutant()
   clear();
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant()
-  : type_(mtNull)
+inline Mutant::Mutant() : type_(mtNull)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(bool a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(bool a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(char a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(char a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(unsigned char a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(unsigned char a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(short a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(short a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(unsigned short a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(unsigned short a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(int a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(int a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(unsigned a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(unsigned a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(long a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(long a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(unsigned long a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(unsigned long a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(intptr_t a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(intptr_t a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(uintptr_t a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(uintptr_t a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT64_T
-inline Mutant::Mutant(intmax_t a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(intmax_t a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(uintmax_t a)
-  : int_(a),
-    type_(mtInt)
+inline Mutant::Mutant(uintmax_t a) : int_(a), type_(mtInt)
 {
 }
 #endif
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(float a)
-  : float_(a),
-    type_(mtFloat)
+inline Mutant::Mutant(float a) : float_(a), type_(mtFloat)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(double a)
-  : float_(a),
-    type_(mtFloat)
+inline Mutant::Mutant(double a) : float_(a), type_(mtFloat)
 {
 }
 //---------------------------------------------------------------------------
 #if HAVE_LONG_DOUBLE
-inline Mutant::Mutant(long double a)
-  : float_(a),
-    type_(mtFloat)
+inline Mutant::Mutant(long double a) : float_(a), type_(mtFloat)
 {
 }
 #endif
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const struct timeval & a)
-  : int_(timeval2Time(a)),
-    type_(mtTime)
+inline Mutant::Mutant(const struct timeval & a) : int_(timeval2Time(a)), type_(mtTime)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const struct tm & a)
-  : int_(tm2Time(a)),
-    type_(mtTime)
+inline Mutant::Mutant(const struct tm & a) : int_(tm2Time(a)), type_(mtTime)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const char * cStr)
-  : cStr_(cStr),
-    type_(mtCStr)
+inline Mutant::Mutant(const char * cStr) : cStr_(cStr), type_(mtCStr)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const wchar_t * wStr)
-  : wStr_(wStr),
-    type_(mtWStr)
+inline Mutant::Mutant(const wchar_t * wStr) : wStr_(wStr), type_(mtWStr)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const char * str, int)
-  : str_(str),
-    type_(mtStr)
+inline Mutant::Mutant(const char * str, int) : str_(str), type_(mtStr)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const utf8::String & string)
-  : type_(mtNull)
+inline Mutant::Mutant(const utf8::String & string) : type_(mtNull)
 {
   new (raw_) utf8::String(string);
   type_ = mtString;
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const MemoryStream & stream)
-  : type_(mtNull)
+inline Mutant::Mutant(const MemoryStream & stream) : type_(mtNull)
 {
   new (raw_) MemoryStream(stream);
   type_ = mtBinary;
 }
 //---------------------------------------------------------------------------
-inline Mutant::Mutant(const Mutant & m)
-  : type_(mtNull)
+inline Mutant::Mutant(const Mutant & m) : type_(mtNull)
 {
   *this = m;
 }
@@ -573,8 +527,7 @@ class EMutant : public Exception {
     EMutant(int32_t code, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
-inline EMutant::EMutant(int32_t code, const utf8::String & what)
-  : Exception(code, what)
+inline EMutant::EMutant(int32_t code, const utf8::String & what) : Exception(code, what)
 {
 }
 //---------------------------------------------------------------------------

@@ -191,8 +191,8 @@ class UserInfo {
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int64_t atime_; // время последнего обращения (для удаления устаревших)
-    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<UserInfo> hashNode_;
     utf8::String name_;
   protected:
@@ -224,8 +224,8 @@ class KeyInfo {
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int64_t atime_; // время последнего обращения (для удаления устаревших)
-    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<KeyInfo> hashNode_;
     utf8::String name_;
   protected:
@@ -259,8 +259,8 @@ class GroupInfo {
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int64_t atime_; // время последнего обращения (для удаления устаревших)
-    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<GroupInfo> hashNode_;
     utf8::String name_;
   protected:
@@ -275,7 +275,7 @@ class ServerInfo {
   public:
     ~ServerInfo();
     ServerInfo();
-    ServerInfo(const utf8::String & name);
+    ServerInfo(const utf8::String & name,bool node = false);
     ServerInfo(const ServerInfo &);
     ServerInfo & operator = (const ServerInfo &);
 
@@ -292,8 +292,8 @@ class ServerInfo {
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
 
-    int64_t atime_; // время последнего обращения (для удаления устаревших)
-    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
     bool node_; // признак того что сервер является узловым
@@ -329,8 +329,8 @@ class User2KeyLink {
       return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
     }
 
-    int64_t atime_; // время последнего обращения (для удаления устаревших)
-    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<User2KeyLink> hashNode_;
     utf8::String user_;
     utf8::String key_;
@@ -366,8 +366,8 @@ class Key2GroupLink {
       return object1.key_.strcasecmp(object2.key_) == 0 && object1.group_.strcasecmp(object2.group_) == 0;
     }
 
-    int64_t atime_; // время последнего обращения (для удаления устаревших)
-    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<Key2GroupLink> hashNode_;
     utf8::String key_;
     utf8::String group_;
@@ -400,8 +400,8 @@ class Key2ServerLink {
       return object1.key_.strcasecmp(object2.key_) == 0;
     }
 
-    int64_t atime_; // время последнего обращения (для удаления устаревших)
-    int64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<Key2ServerLink> hashNode_;
     utf8::String key_;
     utf8::String server_;
@@ -456,7 +456,7 @@ class ServerFiber : public ksock::ServerFiber {
     intptr_t processMailbox(
       const utf8::String & userMailBox,
       Array<utf8::String> & mids,
-      uint8_t onlyNewMail
+      bool onlyNewMail
     );
     void recvMail();
     void removeMail();
@@ -498,7 +498,7 @@ class MailQueueWalker : public ksock::ClientFiber {
 class NodeClient : public ksock::ClientFiber {
   public:
     virtual ~NodeClient();
-    NodeClient(Server & server);
+    NodeClient(Server & server,ServerType dataType);
   protected:
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
@@ -507,6 +507,7 @@ class NodeClient : public ksock::ClientFiber {
     void main();
   private:
     Server & server_;
+    ServerType dataType_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -533,26 +534,28 @@ class Server : public ksock::Server {
         ~Data();
         Data();
 
-        bool registerUserNL(const UserInfo & info);
-        bool registerUser(const UserInfo & info);
-        bool registerKeyNL(const KeyInfo & info);
-        bool registerKey(const KeyInfo & info);
-        bool registerGroupNL(const GroupInfo & info);
-        bool registerGroup(const GroupInfo & info);
-        bool registerServerNL(const ServerInfo & info);
-        bool registerServer(const ServerInfo & info);
-        bool registerUser2KeyLinkNL(const User2KeyLink & link);
-        bool registerUser2KeyLink(const User2KeyLink & link);
-        bool registerKey2GroupLinkNL(const Key2GroupLink & link);
-        bool registerKey2GroupLink(const Key2GroupLink & link);
-        bool registerKey2ServerLinkNL(const Key2ServerLink & link);
-        bool registerKey2ServerLink(const Key2ServerLink & link);
-        bool intersectionNL(const Data & a);
-        bool intersection(const Data & a);
-        void sendDatabaseNL(ksock::AsyncSocket & socket);
-        void sendDatabase(ksock::AsyncSocket & socket);
-        void recvDatabaseNL(ksock::AsyncSocket & socket);
-        void recvDatabase(ksock::AsyncSocket & socket);
+        bool registerUserNL(const UserInfo & info,uint64_t ftime = 0);
+        bool registerUser(const UserInfo & info,uint64_t ftime = 0);
+        bool registerKeyNL(const KeyInfo & info,uint64_t ftime = 0);
+        bool registerKey(const KeyInfo & info,uint64_t ftime = 0);
+        bool registerGroupNL(const GroupInfo & info,uint64_t ftime = 0);
+        bool registerGroup(const GroupInfo & info,uint64_t ftime = 0);
+        bool registerServerNL(const ServerInfo & info,uint64_t ftime = 0);
+        bool registerServer(const ServerInfo & info,uint64_t ftime = 0);
+        bool registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime = 0);
+        bool registerUser2KeyLink(const User2KeyLink & link,uint64_t ftime = 0);
+        bool registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime = 0);
+        bool registerKey2GroupLink(const Key2GroupLink & link,uint64_t ftime = 0);
+        bool registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime = 0);
+        bool registerKey2ServerLink(const Key2ServerLink & link,uint64_t ftime = 0);
+        bool intersectionNL(const Data & a,uint64_t ftime = 0);
+        bool intersection(const Data & a,uint64_t ftime = 0);
+        void sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
+        void sendDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
+        void recvDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
+        void recvDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
+        utf8::String getNodeListNL() const;
+        utf8::String getNodeList() const;
       protected:
       private:
         int64_t ftime_; // last time when database flushed to node
@@ -620,7 +623,7 @@ class Server : public ksock::Server {
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;
-    void startNodeClient();
+    void startNodeClient(ServerType dataType);
   private:
     ConfigSP config_;
 // списки даных узлового сервера

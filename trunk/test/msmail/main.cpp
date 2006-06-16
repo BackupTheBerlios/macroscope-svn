@@ -35,6 +35,7 @@ int main(int _argc,char * _argv[])
 
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
+  autoInitializer = autoInitializer;
 //  stdErr.enableDebugLevel(9);
   try {
     union {
@@ -81,6 +82,14 @@ int main(int _argc,char * _argv[])
       else if( argv()[u].strcmp("--query") == 0 && u + 1 < argv().count() ){
         services.query(argv()[u + 1]);
         dispatch = false;
+      }
+      else if( argv()[u].strcmp("--debug-levels") == 0 && u + 1 < argv().count() ){
+        stdErr.setDebugLevels(argv()[u + 1]);
+      }
+      else if( argv()[u].strcmp("--debug") == 0 && u + 1 < argv().count() ){
+        stdErr.enableDebugLevel(0).enableDebugLevel(1).enableDebugLevel(2).enableDebugLevel(3).
+          enableDebugLevel(4).enableDebugLevel(5).enableDebugLevel(6).enableDebugLevel(7).
+          enableDebugLevel(8).enableDebugLevel(9);
       }
       else if( argv()[u].strcmp("--start-disp") == 0 ){
         dispatch = true;

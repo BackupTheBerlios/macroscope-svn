@@ -506,6 +506,7 @@ int main(int argc,char * argv[])
 {
   int errcode = 0;
   adicpp::Initializer autoInitializer;
+  autoInitializer = autoInitializer;
   try {
     union {
       intptr_t i;

@@ -92,8 +92,7 @@ bool Mutant::isBooleanString(const utf8::String & string, intmax_t * i)
 {
   bool  r, v;
   r = isBooleanString(string, v);
-  if( i != NULL )
-    *i = v;
+  if( i != NULL ) *i = v;
   return r;
 }
 //---------------------------------------------------------------------------
@@ -102,8 +101,7 @@ bool Mutant::isIntegerString(const utf8::String & string, intmax_t & value)
   utf8::String::Iterator i(string);
   while( i.isSpace() && i.next() );
   while( i.isDigit() && i.next() );
-  if( i.eof() )
-    return false;
+  if( i.eof() ) return false;
   switch( i.getUpperChar() ){
     case 'K' :
       value = utf8::str2Int(utf8::String(utf8::String::Iterator(string), i)) * 1024u;
@@ -127,8 +125,7 @@ bool Mutant::isIntegerString(const utf8::String & string, intmax_t * i)
   bool      r;
   intmax_t  v;
   r = isIntegerString(string, v);
-  if( i != NULL )
-    *i = v;
+  if( i != NULL ) *i = v;
   return r;
 }
 //---------------------------------------------------------------------------

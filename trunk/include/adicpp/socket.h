@@ -136,6 +136,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
 
     utf8::String      readString();
 
+    AsyncSocket &     operator <<(bool a);
     AsyncSocket &     operator <<(int8_t a);
     AsyncSocket &     operator <<(uint8_t a);
     AsyncSocket &     operator <<(int16_t a);
@@ -146,6 +147,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     AsyncSocket &     operator <<(uint64_t a);
     AsyncSocket &     operator <<(const utf8::String & s);
 
+    AsyncSocket &     operator >>(bool & a);
     AsyncSocket &     operator >>(int8_t & a);
     AsyncSocket &     operator >>(uint8_t & a);
     AsyncSocket &     operator >>(int16_t & a);
@@ -299,6 +301,12 @@ inline bool AsyncSocket::compressionActive() const
   return ksys::LZO1X::active();
 }
 //------------------------------------------------------------------------------
+inline AsyncSocket & AsyncSocket::operator <<(bool a)
+{ // portable accross network
+  uint8_t v = a ? 1 : 0;
+  return write(&v,sizeof(v));
+}
+//---------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::operator <<(int8_t a)
 {
   return write(&a, sizeof(a));
@@ -337,6 +345,14 @@ inline AsyncSocket & AsyncSocket::operator <<(int64_t a)
 inline AsyncSocket & AsyncSocket::operator <<(uint64_t a)
 {
   return write(&a, sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline AsyncSocket & AsyncSocket::operator >>(bool & a)
+{
+  uint8_t v;
+  read(&v,sizeof(v));
+  a = v != 0 ? true : false;
+  return *this;
 }
 //---------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::operator >>(int8_t & a)

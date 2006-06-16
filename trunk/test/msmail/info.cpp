@@ -201,11 +201,11 @@ UserInfo::~UserInfo()
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo() : atime_(0), mtime_(0)
+UserInfo::UserInfo() : atime_(gettimeofday()), mtime_(atime_)
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo(const utf8::String & name) : atime_(0), mtime_(0), name_(name)
+UserInfo::UserInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
 {
 }
 //------------------------------------------------------------------------------
@@ -223,12 +223,12 @@ UserInfo & UserInfo::operator = (const UserInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,UserInfo & a)
 {
-  return s >> a.name_;
+  return s >> a.name_ >> a.atime_ >> a.mtime_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a)
 {
-  return s << a.name_;
+  return s << a.name_ << a.atime_ << a.mtime_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -237,7 +237,7 @@ KeyInfo::~KeyInfo()
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo() : atime_(0), mtime_(0)
+KeyInfo::KeyInfo() : atime_(gettimeofday()), mtime_(atime_)
 {
 }
 //------------------------------------------------------------------------------
@@ -245,7 +245,7 @@ KeyInfo::KeyInfo(const KeyInfo & a) : atime_(a.atime_), mtime_(a.mtime_), name_(
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo(const utf8::String & name) : atime_(0), mtime_(0), name_(name)
+KeyInfo::KeyInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
 {
 }
 //------------------------------------------------------------------------------
@@ -259,12 +259,12 @@ KeyInfo & KeyInfo::operator = (const KeyInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,KeyInfo & a)
 {
-  return s >> a.name_;
+  return s >> a.name_ >> a.atime_ >> a.mtime_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a)
 {
-  return s << a.name_;
+  return s << a.name_ << a.atime_ << a.mtime_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -273,11 +273,11 @@ GroupInfo::~GroupInfo()
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo() : atime_(0), mtime_(0)
+GroupInfo::GroupInfo() : atime_(gettimeofday()), mtime_(atime_)
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo(const utf8::String & name) : atime_(0), mtime_(0), name_(name)
+GroupInfo::GroupInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
 {
 }
 //------------------------------------------------------------------------------
@@ -295,12 +295,12 @@ GroupInfo & GroupInfo::operator = (const GroupInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,GroupInfo & a)
 {
-  return s >> a.name_;
+  return s >> a.name_ >> a.atime_ >> a.mtime_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a)
 {
-  return s << a.name_;
+  return s << a.name_ << a.atime_ << a.mtime_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -309,11 +309,11 @@ ServerInfo::~ServerInfo()
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo() : atime_(0), mtime_(0), node_(false)
+ServerInfo::ServerInfo() : atime_(gettimeofday()), mtime_(atime_), node_(false)
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo(const utf8::String & name) : atime_(0), mtime_(0), name_(name), node_(false)
+ServerInfo::ServerInfo(const utf8::String & name,bool node) : atime_(gettimeofday()), mtime_(atime_), name_(name), node_(node)
 {
 }
 //------------------------------------------------------------------------------
@@ -332,12 +332,12 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 {
-  return s >> a.name_;
+  return s >> a.name_ >> a.atime_ >> a.mtime_ >> a.node_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 {
-  return s << a.name_;
+  return s << a.name_ << a.atime_ << a.mtime_ << a.node_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -346,11 +346,12 @@ User2KeyLink::~User2KeyLink()
 {
 }
 //------------------------------------------------------------------------------
-User2KeyLink::User2KeyLink() : atime_(0), mtime_(0)
+User2KeyLink::User2KeyLink() : atime_(gettimeofday()), mtime_(atime_)
 {
 }
 //------------------------------------------------------------------------------
-User2KeyLink::User2KeyLink(const utf8::String & userName,const utf8::String & keyName) : atime_(0), mtime_(0), user_(userName), key_(keyName)
+User2KeyLink::User2KeyLink(const utf8::String & userName,const utf8::String & keyName) :
+  atime_(gettimeofday()), mtime_(atime_), user_(userName), key_(keyName)
 {
 }
 //------------------------------------------------------------------------------
@@ -369,12 +370,12 @@ User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,User2KeyLink & a)
 {
-  return s >> a.user_ >> a.key_;
+  return s >> a.user_ >> a.key_ >> a.atime_ >> a.mtime_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a)
 {
-  return s << a.user_ << a.key_;
+  return s << a.user_ << a.key_ << a.atime_ << a.mtime_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -383,11 +384,12 @@ Key2GroupLink::~Key2GroupLink()
 {
 }
 //------------------------------------------------------------------------------
-Key2GroupLink::Key2GroupLink() : atime_(0), mtime_(0)
+Key2GroupLink::Key2GroupLink() : atime_(gettimeofday()), mtime_(atime_)
 {
 }
 //------------------------------------------------------------------------------
-Key2GroupLink::Key2GroupLink(const utf8::String & keyName,const utf8::String & groupName) : atime_(0), mtime_(0), key_(keyName), group_(groupName)
+Key2GroupLink::Key2GroupLink(const utf8::String & keyName,const utf8::String & groupName) :
+  atime_(gettimeofday()), mtime_(atime_), key_(keyName), group_(groupName)
 {
 }
 //------------------------------------------------------------------------------
@@ -406,12 +408,12 @@ Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2GroupLink & a)
 {
-  return s >> a.key_ >> a.group_;
+  return s >> a.key_ >> a.group_ >> a.atime_ >> a.mtime_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a)
 {
-  return s << a.key_ << a.group_;
+  return s << a.key_ << a.group_ << a.atime_ << a.mtime_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -420,11 +422,12 @@ Key2ServerLink::~Key2ServerLink()
 {
 }
 //------------------------------------------------------------------------------
-Key2ServerLink::Key2ServerLink() : atime_(0), mtime_(0)
+Key2ServerLink::Key2ServerLink() : atime_(gettimeofday()), mtime_(atime_)
 {
 }
 //------------------------------------------------------------------------------
-Key2ServerLink::Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName) : atime_(0), mtime_(0), key_(keyName), server_(serverName)
+Key2ServerLink::Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName) :
+  atime_(gettimeofday()), mtime_(atime_), key_(keyName), server_(serverName)
 {
 }
 //------------------------------------------------------------------------------
@@ -443,12 +446,12 @@ Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2ServerLink & a)
 {
-  return s >> a.key_ >> a.server_;
+  return s >> a.key_ >> a.server_ >> a.atime_ >> a.mtime_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & a)
 {
-  return s << a.key_ << a.server_;
+  return s << a.key_ << a.server_ << a.atime_ << a.mtime_;
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

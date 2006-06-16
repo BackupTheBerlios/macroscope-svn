@@ -30,17 +30,6 @@ namespace utf8 {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class EStr2Scalar : public ksys::Exception {
-  public:
-    EStr2Scalar(int32_t code, const utf8::String & what);
-};
-//---------------------------------------------------------------------------
-EStr2Scalar::EStr2Scalar(int32_t code, const utf8::String & what) : ksys::Exception(code, what)
-{
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
 String::Container::Container() : string_(NULL), refCount_(0)/*, mutex_(0)*/
 {
 }
@@ -1031,6 +1020,12 @@ String int2Str0(uintptr_t a,uintptr_t padding)
   return container;
 }
 //---------------------------------------------------------------------------
+static inline uintmax_t sfSHL(uintmax_t c)
+{
+  uintmax_t a = (c << 3) + (c << 1);
+  return a > c ? a : ~uintmax_t(0);
+}
+//---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INTMAX_T
 String int2Str(intmax_t a)
 {
@@ -1059,12 +1054,6 @@ String int2Str(uintmax_t a)
     a /= 10u;
   } while( a != 0 );
   return container;
-}
-//---------------------------------------------------------------------------
-static inline uintmax_t sfSHL(uintmax_t c)
-{
-  uintmax_t a = (c << 3) + (c << 1);
-  return a > c ? a : ~uintmax_t(0);
 }
 //---------------------------------------------------------------------------
 uintptr_t int2StrLen(intmax_t a)

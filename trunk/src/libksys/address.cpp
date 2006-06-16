@@ -304,7 +304,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
   if( ksys::isWinXPorLater() ){
 // Make an initial call to GetAdaptersAddresses to get the 
 // size needed into the outBufLen variable
-    dwRetVal = GetAdaptersAddresses(
+    dwRetVal = ::GetAdaptersAddresses(
       AF_UNSPEC,
       0, 
       NULL, 
@@ -320,7 +320,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
     }
 // Make a second call to GetAdapters Addresses to get the
 // actual data we want
-    dwRetVal = GetAdaptersAddresses(
+    dwRetVal = ::GetAdaptersAddresses(
       AF_UNSPEC,
       0, 
       NULL, 
@@ -333,7 +333,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
     }
   }
   else {
-    dwRetVal = GetAdaptersInfo(NULL,&outBufLen);
+    dwRetVal = ::GetAdaptersInfo(NULL,&outBufLen);
     if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
       addresses.realloc(outBufLen);
     }
@@ -341,7 +341,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
       int32_t err = GetLastError() + ksys::errorOffset;
       throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
     }
-    dwRetVal = GetAdaptersInfo(&addresses->infos_,&outBufLen);
+    dwRetVal = ::GetAdaptersInfo(&addresses->infos_,&outBufLen);
     if( dwRetVal != ERROR_SUCCESS ){
       int32_t err = GetLastError() + ksys::errorOffset;
       throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));

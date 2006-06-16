@@ -63,6 +63,7 @@ class LogFile {
 
     LogFile & enableDebugLevel(uintptr_t level);
     LogFile & disableDebugLevel(uintptr_t level);
+    LogFile & setDebugLevels(const utf8::String & levels);
 
     LogFile & rotationThreshold(uint64_t a);
     const uint64_t & rotationThreshold() const;
@@ -109,13 +110,13 @@ inline const char * const & LogFile::priNick(LogMessagePriority filter) const
 //---------------------------------------------------------------------------
 inline LogFile & LogFile::enableDebugLevel(uintptr_t level)
 {
-  if( level <= 9 ) enabledLevels_ |= 1u << level;
+  if( level <= 9 ) enabledLevels_ |= uintptr_t(1) << level;
   return *this;
 }
 //---------------------------------------------------------------------------
 inline LogFile & LogFile::disableDebugLevel(uintptr_t level)
 {
-  if( level <= 9 ) enabledLevels_ &= ~(1u << level);
+  if( level <= 9 ) enabledLevels_ &= ~(uintptr_t(1) << level);
   return *this;
 }
 //---------------------------------------------------------------------------

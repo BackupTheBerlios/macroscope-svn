@@ -676,6 +676,7 @@ int main(int argc, char * argv[])
 {
   int errcode = -1;
   adicpp::AutoInitializer autoInitializer;
+  autoInitializer = autoInitializer;
   try{
     uintptr_t i;
     ksys::initializeArguments(argc, argv);

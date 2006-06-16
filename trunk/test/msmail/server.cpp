@@ -44,8 +44,10 @@ Server::Server(const ConfigSP config) :
 //------------------------------------------------------------------------------
 void Server::open()
 {
+  stdErr.setDebugLevels(config_->value("debug_levels","+0,+1,+2,+3"));
 //  maxThreads(1);
   ksock::Server::open();
+  startNodeClient(stStandalone);
   uintptr_t i;
   for( i = config_->value("spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
@@ -119,12 +121,12 @@ utf8::String Server::lckDir() const
   return includeTrailingPathDelimiter(lck);
 }
 //------------------------------------------------------------------------------
-void Server::startNodeClient()
+void Server::startNodeClient(ServerType dataType)
 {
   AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
   if( nodeClient_ == NULL ){
     NodeClient * nodeClient;
-    attachFiber(nodeClient = new NodeClient(*this));
+    attachFiber(nodeClient = new NodeClient(*this,dataType));
     nodeClient_ = nodeClient;
   }
 }
@@ -158,120 +160,118 @@ Server::Data::Data() : ftime_(0)
 {
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUserNL(const UserInfo & info)
+bool Server::Data::registerUserNL(const UserInfo & info,uint64_t ftime)
 {
   UserInfo * p = users_.find(info);
   if( p == NULL ){
-    users_.insert(userList_.safeAdd(p = new UserInfo(info)));
-    p->atime_ = p->mtime_ = gettimeofday();
+    if( info.mtime_ > ftime ) users_.insert(userList_.safeAdd(p = new UserInfo(info)));
     return true;
   }
   p->atime_ = gettimeofday();
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUser(const UserInfo & info)
+bool Server::Data::registerUser(const UserInfo & info,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerUserNL(info);
+  return registerUserNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKeyNL(const KeyInfo & info)
+bool Server::Data::registerKeyNL(const KeyInfo & info,uint64_t ftime)
 {
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
-    keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
-    p->atime_ = p->mtime_ = gettimeofday();
+    if( info.mtime_ > ftime ) keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
     return true;
   }
   p->atime_ = gettimeofday();
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey(const KeyInfo & info)
+bool Server::Data::registerKey(const KeyInfo & info,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerKeyNL(info);
+  return registerKeyNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerGroupNL(const GroupInfo & info)
+bool Server::Data::registerGroupNL(const GroupInfo & info,uint64_t ftime)
 {
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
-    groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
-    p->atime_ = p->mtime_ = gettimeofday();
+    if( info.mtime_ > ftime ) groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
     return true;
   }
   p->atime_ = gettimeofday();
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerGroup(const GroupInfo & info)
+bool Server::Data::registerGroup(const GroupInfo & info,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerGroupNL(info);
+  return registerGroupNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerServerNL(const ServerInfo & info)
+bool Server::Data::registerServerNL(const ServerInfo & info,uint64_t ftime)
 {
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
-    servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
-    p->atime_ = p->mtime_ = gettimeofday();
+    if( info.mtime_ > ftime ) servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
     return true;
   }
   p->atime_ = gettimeofday();
+  if( info.node_ != p->node_ ){
+    p->mtime_ = p->atime_;
+    p->node_ = info.node_;
+    return true;
+  }
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerServer(const ServerInfo & info)
+bool Server::Data::registerServer(const ServerInfo & info,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerServerNL(info);
+  return registerServerNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link)
+bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime)
 {
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
-    user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
-    p->atime_ = p->mtime_ = gettimeofday();
+    if( link.mtime_ > ftime ) user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
     return true;
   }
   p->atime_ = gettimeofday();
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUser2KeyLink(const User2KeyLink & link)
+bool Server::Data::registerUser2KeyLink(const User2KeyLink & link,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerUser2KeyLinkNL(link);
+  return registerUser2KeyLinkNL(link,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link)
+bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime)
 {
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
-    key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
-    p->atime_ = p->mtime_ = gettimeofday();
+    if( link.mtime_ > ftime ) key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
     return true;
   }
   p->atime_ = gettimeofday();
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link)
+bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerKey2GroupLinkNL(link);
+  return registerKey2GroupLinkNL(link,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link)
+bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime)
 {
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
-    key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
-    p->atime_ = p->mtime_ = gettimeofday();
+    if( link.mtime_ > ftime ) key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
     return true;
   }
   p->atime_ = gettimeofday();
@@ -283,88 +283,95 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link)
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2ServerLink(const Key2ServerLink & link)
+bool Server::Data::registerKey2ServerLink(const Key2ServerLink & link,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerKey2ServerLinkNL(link);
+  return registerKey2ServerLinkNL(link,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::intersectionNL(const Data & a)
+bool Server::Data::intersectionNL(const Data & a,uint64_t ftime)
 {
   bool r = false;
   intptr_t i;
-  for( i = a.userList_.count() - 1; i >= 0; i-- ) r = registerUserNL(a.userList_[i]) || r;
-  for( i = a.keyList_.count() - 1; i >= 0; i-- ) r = registerKeyNL(a.keyList_[i]) || r;
-  for( i = a.groupList_.count() - 1; i >= 0; i-- ) r = registerGroupNL(a.groupList_[i]) || r;
-  for( i = a.serverList_.count() - 1; i >= 0; i-- ) r = registerServerNL(a.serverList_[i]) || r;
-  for( i = a.user2KeyLinkList_.count() - 1; i >= 0; i-- ) r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i]) || r;
-  for( i = a.key2GroupLinkList_.count() - 1; i >= 0; i-- ) r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i]) || r;
-  for( i = a.key2ServerLinkList_.count() - 1; i >= 0; i-- ) r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i]) || r;
+  for( i = a.userList_.count() - 1; i >= 0; i-- )
+    r = registerUserNL(a.userList_[i],ftime) || r;
+  for( i = a.keyList_.count() - 1; i >= 0; i-- )
+    r = registerKeyNL(a.keyList_[i],ftime) || r;
+  for( i = a.groupList_.count() - 1; i >= 0; i-- )
+    r = registerGroupNL(a.groupList_[i],ftime) || r;
+  for( i = a.serverList_.count() - 1; i >= 0; i-- )
+    r = registerServerNL(a.serverList_[i],ftime) || r;
+  for( i = a.user2KeyLinkList_.count() - 1; i >= 0; i-- )
+    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],ftime) || r;
+  for( i = a.key2GroupLinkList_.count() - 1; i >= 0; i-- )
+    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],ftime_) || r;
+  for( i = a.key2ServerLinkList_.count() - 1; i >= 0; i-- )
+    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],ftime) || r;
   return r;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::intersection(const Data & a)
+bool Server::Data::intersection(const Data & a,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock0(mutex_);
   AutoMutexRDLock<FiberMutex> lock1(a.mutex_);
-  return intersectionNL(a);
+  return intersectionNL(a,ftime);
 }
 //------------------------------------------------------------------------------
-void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket)
+void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime)
 {
   intptr_t i;
   uint64_t u;
   u = 0;
   for( i = userList_.count() - 1; i >= 0; i-- )
-    if( userList_[i].mtime_ > ftime_ ) u++;
+    if( userList_[i].mtime_ > ftime ) u++;
   socket << u;
   for( i = userList_.count() - 1; i >= 0; i-- )
-    if( userList_[i].mtime_ > ftime_ ) socket << userList_[i];
+    if( userList_[i].mtime_ > ftime ) socket << userList_[i];
   u = 0;
   for( i = keyList_.count() - 1; i >= 0; i-- )
-    if( keyList_[i].mtime_ > ftime_ ) u++;
+    if( keyList_[i].mtime_ > ftime ) u++;
   socket << u;
   for( i = keyList_.count() - 1; i >= 0; i-- )
-    if( keyList_[i].mtime_ > ftime_ ) socket << keyList_[i];
+    if( keyList_[i].mtime_ > ftime ) socket << keyList_[i];
   u = 0;
   for( i = groupList_.count() - 1; i >= 0; i-- )
-    if( groupList_[i].mtime_ > ftime_ ) u++;
+    if( groupList_[i].mtime_ > ftime ) u++;
   socket << u;
   for( i = groupList_.count() - 1; i >= 0; i-- )
-    if( groupList_[i].mtime_ > ftime_ ) socket << groupList_[i];
+    if( groupList_[i].mtime_ > ftime ) socket << groupList_[i];
   u = 0;
   for( i = serverList_.count() - 1; i >= 0; i-- )
-    if( serverList_[i].mtime_ > ftime_ ) u++;
+    if( serverList_[i].mtime_ > ftime ) u++;
   socket << u;
   for( i = serverList_.count() - 1; i >= 0; i-- )
-    if( serverList_[i].mtime_ > ftime_ ) socket << serverList_[i];
+    if( serverList_[i].mtime_ > ftime ) socket << serverList_[i];
   u = 0;
   for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList_[i].mtime_ > ftime_ ) u++;
+    if( user2KeyLinkList_[i].mtime_ > ftime ) u++;
   socket << u;
   for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList_[i].mtime_ > ftime_ ) socket << user2KeyLinkList_[i];
+    if( user2KeyLinkList_[i].mtime_ > ftime ) socket << user2KeyLinkList_[i];
   u = 0;
   for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList_[i].mtime_ > ftime_ ) u++;
+    if( key2GroupLinkList_[i].mtime_ > ftime ) u++;
   socket << u;
   for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList_[i].mtime_ > ftime_ ) socket << key2GroupLinkList_[i];
+    if( key2GroupLinkList_[i].mtime_ > ftime ) socket << key2GroupLinkList_[i];
   u = 0;
   for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList_[i].mtime_ > ftime_ ) u++;
+    if( key2ServerLinkList_[i].mtime_ > ftime ) u++;
   socket << u;
   for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList_[i].mtime_ > ftime_ ) socket << key2ServerLinkList_[i];
+    if( key2ServerLinkList_[i].mtime_ > ftime ) socket << key2ServerLinkList_[i];
 }
 //------------------------------------------------------------------------------
-void Server::Data::sendDatabase(ksock::AsyncSocket & socket)
+void Server::Data::sendDatabase(ksock::AsyncSocket & socket,uint64_t ftime)
 {
   AutoMutexRDLock<FiberMutex> lock(mutex_);
-  sendDatabaseNL(socket);
+  sendDatabaseNL(socket,ftime);
 }
 //------------------------------------------------------------------------------
-void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket)
+void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime)
 {
   union {
     intptr_t i;
@@ -374,50 +381,67 @@ void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket)
   while( u-- > 0 ){
     UserInfo info;
     socket >> info;
-    registerUserNL(info);
+    registerUserNL(info,ftime);
   }
   socket >> u;
   while( u-- > 0 ){
     KeyInfo info;
     socket >> info;
-    registerKeyNL(info);
+    registerKeyNL(info,ftime);
   }
   socket >> u;
   while( u-- > 0 ){
     GroupInfo info;
     socket >> info;
-    registerGroupNL(info);
+    registerGroupNL(info,ftime);
   }
   socket >> u;
   while( u-- > 0 ){
     ServerInfo info;
     socket >> info;
-    registerServerNL(info);
+    registerServerNL(info,ftime);
   }
   socket >> u;
   while( u-- > 0 ){
     User2KeyLink link;
     socket >> link;
-    registerUser2KeyLinkNL(link);
+    registerUser2KeyLinkNL(link,ftime);
   }
   socket >> u;
   while( u-- > 0 ){
     Key2GroupLink link;
     socket >> link;
-    registerKey2GroupLinkNL(link);
+    registerKey2GroupLinkNL(link,ftime);
   }
   socket >> u;
   while( u-- > 0 ){
     Key2ServerLink link;
     socket >> link;
-    registerKey2ServerLinkNL(link);
+    registerKey2ServerLinkNL(link,ftime);
   }
 }
 //------------------------------------------------------------------------------
-void Server::Data::recvDatabase(ksock::AsyncSocket & socket)
+void Server::Data::recvDatabase(ksock::AsyncSocket & socket,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  recvDatabaseNL(socket);
+  recvDatabaseNL(socket,ftime);
+}
+//------------------------------------------------------------------------------
+utf8::String Server::Data::getNodeListNL() const
+{
+  utf8::String list;
+  for( intptr_t i = serverList_.count() - 1; i >= 0; i-- ){
+    if( !serverList_[i].node_ ) continue;
+    if( list.strlen() > 0 ) list += ", ";
+    list += serverList_[i].name_;
+  }
+  return list;
+}
+//------------------------------------------------------------------------------
+utf8::String Server::Data::getNodeList() const
+{
+  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  return getNodeListNL();
 }
 //------------------------------------------------------------------------------
 } // namespace msmail
