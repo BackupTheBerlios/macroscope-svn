@@ -335,8 +335,7 @@ intptr_t String::strncmp(const String & s, uintptr_t n) const
   const unsigned char * s1  = container_->ustring_, * s2 = s.container_->ustring_;
   while( n-- > 0 ){
     c = utf82ucs(s1, l1) - utf82ucs(s2, l2);
-    if( c != 0 || *s1 == 0 || *s2 == 0 )
-      break;
+    if( c != 0 || *s1 == 0 || *s2 == 0 ) break;
     s1 += l1;
     s2 += l2;
   }
@@ -350,8 +349,7 @@ intptr_t String::strcasecmp(const String & s) const
   const char *  s1  = container_->string_, * s2 = s.container_->string_;
   for( ; ; ){
     c = utf8c2UpperUCS(s1, l1) - utf8c2UpperUCS(s2, l2);
-    if( c != 0 || *s1 == 0 || *s2 == 0 )
-      break;
+    if( c != 0 || *s1 == 0 || *s2 == 0 ) break;
     s1 += l1;
     s2 += l2;
   }

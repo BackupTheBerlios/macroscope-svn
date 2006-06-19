@@ -53,8 +53,8 @@ template< class T> class Array {
 
     const uintptr_t & count() const;
     Array< T> &       clear();
-    T *&              ptr();
-    T * const &       ptr() const;
+    T * &             ptr();
+    const T * &       ptr() const;
     Array< T> &       resize(uintptr_t newSize);
     Array< T> &       add(const T & element);
     Array< T> &       insert(uintptr_t i, const T & element);
@@ -237,13 +237,13 @@ Array< T> & Array< T>::clear()
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
-T *& Array< T>::ptr()
+T * & Array< T>::ptr()
 {
   return ptr_;
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
-T * const & Array< T>::ptr() const
+const T * & Array< T>::ptr() const
 {
   return ptr_;
 }

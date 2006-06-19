@@ -214,9 +214,22 @@ AsyncSocket & AsyncSocket::listen()
   return *this;
 }
 //------------------------------------------------------------------------------
+const SockAddr & AsyncSocket::remoteAddress() const
+{
+  if( remoteAddress_ == NULL )
+#if defined(__WIN32__) || defined(__WIN64__)
+    throw ksys::ExceptionSP(new EAsyncSocket(ERROR_INVALID_DATA + ksys::errorOffset,__PRETTY_FUNCTION__));
+#else
+    throw ksys::ExceptionSP(new EAsyncSocket(EINVAL,__PRETTY_FUNCTION__));
+#endif
+  return remoteAddress_;
+}
+//---------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
 {
+  if( socket.remoteAddress_ == NULL ) socket.remoteAddress_.alloc(sizeof(SockAddr));
 #if defined(__WIN32__) || defined(__WIN64__)
+  if( pAcceptExBuffer_ == NULL ) pAcceptExBuffer_.alloc(sizeof(AcceptExBuffer));
   assert( socket.socket_ == INVALID_SOCKET );
   socket.open();
   fiber()->event_.socket_ = socket.socket_;
@@ -232,25 +245,25 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
         fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__
       )
     );
-///      LPSOCKADDR plsa, prsa;
-//      INT lsaLen, rsaLen;
-//      apiEx.GetAcceptExSockaddrs(
-//        pAcceptExBuffer_,
-//        0,
-//        sizeof(pAcceptExBuffer_->pLocalAddr4_),
-//        sizeof(pAcceptExBuffer_->pRemoteAddr4_),
-//        &plsa,
-//        &lsaLen,
-//        &prsa,
-//        &rsaLen
-//      );
-//      assert(
-//        lsaLen == sizeof(pAcceptExBuffer_->localAddress_.addr4_) && 
-//        rsaLen == sizeof(pAcceptExBuffer_->remoteAddress_.addr4_)
-//      );
-//      memmove(&socket.localAddress_.addr4_,plsa,sizeof(socket.localAddress_.addr4_));
-//      memmove(&socket.remoteAddress_.addr4_,prsa,sizeof(socket.remoteAddress_.addr4_));
   }
+  LPSOCKADDR plsa, prsa;
+  INT lsaLen, rsaLen;
+  apiEx.GetAcceptExSockaddrs(
+    pAcceptExBuffer_,
+    0,
+    sizeof(pAcceptExBuffer_->pLocalAddr4_),
+    sizeof(pAcceptExBuffer_->pRemoteAddr4_),
+    &plsa,
+    &lsaLen,
+    &prsa,
+    &rsaLen
+  );
+  assert(
+    lsaLen == sizeof(pAcceptExBuffer_->localAddress_.addr4_) && 
+    rsaLen == sizeof(pAcceptExBuffer_->remoteAddress_.addr4_)
+  );
+  //memmove(&socket.localAddress_.addr4_,plsa,sizeof(socket.localAddress_.addr4_));
+  memmove(&socket.remoteAddress_->addr4_,prsa,sizeof(socket.remoteAddress_->addr4_));
   socket.detach();
 #elif HAVE_KQUEUE
   assert( socket.socket_ == INVALID_SOCKET );

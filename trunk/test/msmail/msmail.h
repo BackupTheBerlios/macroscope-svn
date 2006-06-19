@@ -65,18 +65,19 @@ enum CmdType {
   cmSelectServerType,
   cmRegisterClient,
   cmRegisterDB,
-  cmGetDB,
   cmSendMail,
   cmRecvMail,
   cmRemoveMail
 };
 //------------------------------------------------------------------------------
 enum ServerType {
-  stNone,
-  stNode,
-  stStandalone,
+  stNone = -1,
+  stNode = 0,
+  stStandalone = 1,
   stCount
 };
+//------------------------------------------------------------------------------
+extern const char * serverTypeName_[];
 //------------------------------------------------------------------------------
 enum Error {
   eOK,
@@ -115,11 +116,12 @@ class Message {
           value_ = a.value_;
           return *this;
         }
-        bool operator == (const Attribute & a) const { return key_.strcmp(a.key_) == 0; }
-        bool operator >= (const Attribute & a) const { return key_.strcmp(a.key_) >= 0; }
-        bool operator >  (const Attribute & a) const { return key_.strcmp(a.key_) >  0; }
-        bool operator <= (const Attribute & a) const { return key_.strcmp(a.key_) <= 0; }
-        bool operator <  (const Attribute & a) const { return key_.strcmp(a.key_) <  0; }
+        bool operator == (const Attribute & a) const { return key_.strcasecmp(a.key_) == 0; }
+        bool operator != (const Attribute & a) const { return key_.strcasecmp(a.key_) != 0; }
+        bool operator >= (const Attribute & a) const { return key_.strcasecmp(a.key_) >= 0; }
+        bool operator >  (const Attribute & a) const { return key_.strcasecmp(a.key_) >  0; }
+        bool operator <= (const Attribute & a) const { return key_.strcasecmp(a.key_) <= 0; }
+        bool operator <  (const Attribute & a) const { return key_.strcasecmp(a.key_) <  0; }
 
         utf8::String key_;
         utf8::String value_;
@@ -181,6 +183,13 @@ class UserInfo {
     UserInfo(const UserInfo &);
     UserInfo & operator = (const UserInfo &);
 
+    bool operator == (const UserInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    bool operator != (const UserInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
+    bool operator >= (const UserInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
+    bool operator >  (const UserInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
+    bool operator <= (const UserInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
+    bool operator <  (const UserInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
+
     static EmbeddedHashNode<UserInfo> & hashNode(const UserInfo & object){
       return object.hashNode_;
     }
@@ -214,6 +223,13 @@ class KeyInfo {
     KeyInfo(const utf8::String & name);
     KeyInfo(const KeyInfo &);
     KeyInfo & operator = (const KeyInfo &);
+
+    bool operator == (const KeyInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    bool operator != (const KeyInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
+    bool operator >= (const KeyInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
+    bool operator >  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
+    bool operator <= (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
+    bool operator <  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
 
     static EmbeddedHashNode<KeyInfo> & hashNode(const KeyInfo & object){
       return object.hashNode_;
@@ -249,6 +265,13 @@ class GroupInfo {
     GroupInfo(const GroupInfo &);
     GroupInfo & operator = (const GroupInfo &);
 
+    bool operator == (const GroupInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    bool operator != (const GroupInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
+    bool operator >= (const GroupInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
+    bool operator >  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
+    bool operator <= (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
+    bool operator <  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
+
     static EmbeddedHashNode<GroupInfo> & hashNode(const GroupInfo & object){
       return object.hashNode_;
     }
@@ -279,9 +302,16 @@ class ServerInfo {
   public:
     ~ServerInfo();
     ServerInfo();
-    ServerInfo(const utf8::String & name,bool node = false);
+    ServerInfo(const utf8::String & name,ServerType type);
     ServerInfo(const ServerInfo &);
     ServerInfo & operator = (const ServerInfo &);
+
+    bool operator == (const ServerInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    bool operator != (const ServerInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
+    bool operator >= (const ServerInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
+    bool operator >  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
+    bool operator <= (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
+    bool operator <  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
 
     static EmbeddedHashNode<ServerInfo> & hashNode(const ServerInfo & object){
       return object.hashNode_;
@@ -300,7 +330,7 @@ class ServerInfo {
     uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
-    bool node_; // признак того что сервер является узловым
+    ServerType type_;
   protected:
   private:
 };
@@ -317,6 +347,13 @@ class User2KeyLink {
     User2KeyLink(const utf8::String & userName,const utf8::String & keyName);
     User2KeyLink(const User2KeyLink &);
     User2KeyLink & operator = (const User2KeyLink &);
+
+    bool operator == (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) == 0 && key_.strcasecmp(a.key_) == 0; }
+    bool operator != (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) != 0 && key_.strcasecmp(a.key_) != 0; }
+    bool operator >= (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) >= 0 && key_.strcasecmp(a.key_) >= 0; }
+    bool operator >  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) >= 0 && key_.strcasecmp(a.key_) >  0; }
+    bool operator <= (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <= 0; }
+    bool operator <  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <  0; }
 
     static EmbeddedHashNode<User2KeyLink> & hashNode(const User2KeyLink & object){
       return object.hashNode_;
@@ -356,6 +393,13 @@ class Key2GroupLink {
     Key2GroupLink(const Key2GroupLink &);
     Key2GroupLink & operator = (const Key2GroupLink &);
 
+    bool operator == (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) == 0 && group_.strcasecmp(a.group_) == 0; }
+    bool operator != (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) != 0 && group_.strcasecmp(a.group_) != 0; }
+    bool operator >= (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) >= 0 && group_.strcasecmp(a.group_) >= 0; }
+    bool operator >  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) >= 0 && group_.strcasecmp(a.group_) >  0; }
+    bool operator <= (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <= 0; }
+    bool operator <  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <  0; }
+
     static EmbeddedHashNode<Key2GroupLink> & hashNode(const Key2GroupLink & object){
       return object.hashNode_;
     }
@@ -393,6 +437,13 @@ class Key2ServerLink {
     Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName = utf8::String());
     Key2ServerLink(const Key2ServerLink &);
     Key2ServerLink & operator = (const Key2ServerLink &);
+
+    bool operator == (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) == 0; }
+    bool operator != (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) != 0; }
+    bool operator >= (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) >= 0; }
+    bool operator >  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) >= 0; }
+    bool operator <= (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }
+    bool operator <  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }
 
     static EmbeddedHashNode<Key2ServerLink> & hashNode(const Key2ServerLink & object){
       return object.hashNode_;
@@ -505,16 +556,16 @@ class MailQueueWalker : public ksock::ClientFiber {
 class NodeClient : public ksock::ClientFiber {
   public:
     virtual ~NodeClient();
-    NodeClient(Server & server,ServerType dataType);
+    NodeClient(Server & server,ServerType dataType,const utf8::String & nodeHostName);
   protected:
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
-    void clearNodeClient();
     void main();
   private:
     Server & server_;
     ServerType dataType_;
+    utf8::String nodeHostName_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -541,6 +592,9 @@ class Server : public ksock::Server {
         ~Data();
         Data();
 
+        Data(const Data & a);
+        Data & operator = (const Data & a);
+
         bool registerUserNL(const UserInfo & info,uint64_t ftime = 0);
         bool registerUser(const UserInfo & info,uint64_t ftime = 0);
         bool registerKeyNL(const KeyInfo & info,uint64_t ftime = 0);
@@ -555,8 +609,8 @@ class Server : public ksock::Server {
         bool registerKey2GroupLink(const Key2GroupLink & link,uint64_t ftime = 0);
         bool registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime = 0);
         bool registerKey2ServerLink(const Key2ServerLink & link,uint64_t ftime = 0);
-        bool intersectionNL(const Data & a,uint64_t ftime = 0);
-        bool intersection(const Data & a,uint64_t ftime = 0);
+        bool orNL(const Data & a,uint64_t ftime = 0);
+        bool or(const Data & a,uint64_t ftime = 0);
         void sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
         void sendDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
         void recvDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
@@ -566,9 +620,12 @@ class Server : public ksock::Server {
         void dumpNL(utf8::String::Stream & stream) const;
         void dump(utf8::String::Stream & stream) const;
         Data & clear();
+        Data & xorNL(const Data & data1,const Data & data2);
+        Data & xor(const Data & data1,const Data & data2);
       protected:
       private:
-        int64_t ftime_; // last time when database flushed to node
+// last time when database flushed to node and for node last exchage with neighbors
+        uint64_t ftime_;
         mutable FiberMutex mutex_;
         EmbeddedHash<
           UserInfo,
@@ -633,19 +690,23 @@ class Server : public ksock::Server {
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;
-    void startNodeClient(ServerType dataType);
+    bool clearNodeClient(NodeClient * client);
+    void startNodeClient(ServerType dataType,const utf8::String & nodeHostName = utf8::String());
+    void startNodesExchangeNL();
+    void startNodesExchange();
   private:
     ConfigSP config_;
-// списки даных узлового сервера
-    Data nodeData_;
-// списки даных рядового сервера
-    Data standaloneData_;
+// база
+    Data data_[2];
 // misc
     Data & data(ServerType type);
     FiberInterlockedMutex rndMutex_;
     SPEIA<Randomizer,FiberInterlockedMutex> rnd_;
     FiberInterlockedMutex nodeClientMutex_;
     NodeClient * nodeClient_;
+    int32_t skippedNodeClientStarts_;
+    Array<NodeClient *> nodeExchangeClients_;
+    int32_t skippedNodeExchangeStarts_;
     FiberInterlockedMutex recvMailFibersMutex_;
     EmbeddedHash<
       ServerFiber,
@@ -657,6 +718,13 @@ class Server : public ksock::Server {
     void addRecvMailFiber(ServerFiber & fiber);
     void remRecvMailFiber(ServerFiber & fiber);
 };
+//------------------------------------------------------------------------------
+inline Server::Data & Server::data(ServerType type)
+{
+  assert( type == stNode || type == stStandalone );
+//  throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+  return data_[type];
+}
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------

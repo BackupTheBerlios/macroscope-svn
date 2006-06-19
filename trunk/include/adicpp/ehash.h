@@ -93,6 +93,9 @@ class EmbeddedHash {
     EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
   protected:
   private:
+    EmbeddedHash(const EmbeddedHash<T,N,O,H,E> &){}
+    void operator = (const EmbeddedHash<T,N,O,H,E> &){}
+
     mutable AutoPtr<EmbeddedHashNode<T> *> hash_;
     mutable uintptr_t size_;
     uintptr_t count_;

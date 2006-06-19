@@ -30,6 +30,7 @@
 namespace msmail {
 //------------------------------------------------------------------------------
 extern const char messageIdKey[] = "#MessageId";
+extern const char * serverTypeName_[] = { "NODE", "STANDALONE" };
 //------------------------------------------------------------------------------
 Message::~Message()
 {
@@ -233,11 +234,8 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const UserInfo & a)
 {
-  return s <<
-    "user: " << a.name_ <<
-    ", atime: " << getTimeString(a.atime_) <<
-    ", mtime: " << getTimeString(a.mtime_)
-  ;
+  return s << a.name_ << ", atime: " <<
+    getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -278,11 +276,8 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const KeyInfo & a)
 {
-  return s <<
-    "key: " << a.name_ <<
-    ", atime: " << getTimeString(a.atime_) <<
-    ", mtime: " << getTimeString(a.mtime_)
-  ;
+  return s << a.name_ <<
+    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -323,11 +318,8 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const GroupInfo & a)
 {
-  return s <<
-    "group: " << a.name_ <<
-    ", atime: " << getTimeString(a.atime_) <<
-    ", mtime: " << getTimeString(a.mtime_)
-  ;
+  return s << a.name_ <<
+    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -336,15 +328,16 @@ ServerInfo::~ServerInfo()
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo() : atime_(gettimeofday()), mtime_(atime_), node_(false)
+ServerInfo::ServerInfo() : atime_(gettimeofday()), mtime_(atime_), type_(stStandalone)
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo(const utf8::String & name,bool node) : atime_(gettimeofday()), mtime_(atime_), name_(name), node_(node)
+ServerInfo::ServerInfo(const utf8::String & name,ServerType type) :
+  atime_(gettimeofday()), mtime_(atime_), name_(name), type_(type)
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo(const ServerInfo & a) : atime_(a.atime_), mtime_(a.mtime_), name_(a.name_), node_(a.node_)
+ServerInfo::ServerInfo(const ServerInfo & a) : atime_(a.atime_), mtime_(a.mtime_), name_(a.name_), type_(a.type_)
 {
 }
 //------------------------------------------------------------------------------
@@ -353,27 +346,27 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
   atime_ = a.atime_;
   mtime_ = a.mtime_;
   name_ = a.name_;
-  node_ = a.node_;
+  type_ = a.type_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 {
-  return s >> a.name_ >> a.atime_ >> a.mtime_ >> a.node_;
+  uint8_t v;
+  s >> a.name_ >> a.atime_ >> a.mtime_ >> v;
+  a.type_ = ServerType(v);
+  return s;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 {
-  return s << a.name_ << a.atime_ << a.mtime_ << a.node_;
+  return s << a.name_ << a.atime_ << a.mtime_ << (uint8_t) a.type_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a)
 {
-  return s <<
-    "server: " << a.name_ << " " << (a.node_ ? "NODE" : "STANDALONE") <<
-    ", atime: " << getTimeString(a.atime_) <<
-    ", mtime: " << getTimeString(a.mtime_)
-  ;
+  return s << a.name_ << " " << serverTypeName_[a.type_] <<
+    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -416,11 +409,8 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const User2KeyLink & a)
 {
-  return s <<
-    "user --> key link: " << a.user_ << " " << a.key_ <<
-    ", atime: " << getTimeString(a.atime_) <<
-    ", mtime: " << getTimeString(a.mtime_)
-  ;
+  return s << a.user_ << " " << a.key_ <<
+    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -463,11 +453,8 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2GroupLink & a)
 {
-  return s <<
-    "key --> group link: " << a.key_ << " " << a.group_ <<
-    ", atime: " << getTimeString(a.atime_) <<
-    ", mtime: " << getTimeString(a.mtime_)
-  ;
+  return s << a.key_ << " " << a.group_ <<
+    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -510,11 +497,8 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & 
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2ServerLink & a)
 {
-  return s <<
-    "key --> server link: " << a.key_ << " " << a.server_ <<
-    ", atime: " << getTimeString(a.atime_) <<
-    ", mtime: " << getTimeString(a.mtime_)
-  ;
+  return s << a.key_ << " " << a.server_ <<
+    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
 }
 //------------------------------------------------------------------------------
 } // namespace msmail
