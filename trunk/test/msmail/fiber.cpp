@@ -58,7 +58,7 @@ void ServerFiber::putCode(int32_t code)
 //------------------------------------------------------------------------------
 bool ServerFiber::isValidUser(const utf8::String & user)
 {
-  return server_.config_->parse().override().section("users").isSection(user);
+  return server_.config_->section("users").isSection(user);
 }
 //------------------------------------------------------------------------------
 utf8::String ServerFiber::getUserPassword(const utf8::String & user)
@@ -68,7 +68,7 @@ utf8::String ServerFiber::getUserPassword(const utf8::String & user)
 //------------------------------------------------------------------------------
 void ServerFiber::auth()
 {
-  maxSendSize(server_.config_->value("max_send_size",getpagesize()));
+  maxSendSize(server_.config_->parse().override().value("max_send_size",getpagesize()));
   utf8::String encryption(server_.config_->section("encryption").text(utf8::String(),"default"));
   uintptr_t encryptionThreshold = server_.config_->section("encryption").value("threshold",1024 * 1024);
   utf8::String compression(server_.config_->section("compression").text(utf8::String(),"default"));
@@ -92,7 +92,7 @@ void ServerFiber::auth()
 //------------------------------------------------------------------------------
 void ServerFiber::main()
 {
-  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
+  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   union {
     uint8_t cmd;
     uint8_t ui8;
@@ -169,6 +169,14 @@ void ServerFiber::registerClient()
   stream << serverTypeName_[serverType_] << ": changes stored from client " << host << "\n";
   diff.dumpNL(stream);
   stdErr.debug(5,stream);
+// sweep
+  stream.clear() << serverTypeName_[serverType_] << ": sweep\n";
+  if( data.sweep(
+        gettimeofday() -
+          (uint64_t) server_.config_->valueByPath(
+          utf8::String(serverConfSectionName_[serverType_]) + ".ttl","") * 1000000u,
+        &stream)
+    ) stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::registerDB()
@@ -386,7 +394,7 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 //------------------------------------------------------------------------------
 intptr_t SpoolWalker::processQueue()
 {
-  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
+  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   intptr_t i, k;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.spoolDir() + "*.msg",utf8::String(),false);
@@ -508,7 +516,7 @@ void MailQueueWalker::getCode(int32_t noThrowCode)
 void MailQueueWalker::auth()
 {
   utf8::String user, password, encryption, compression, compressionType, crc;
-  maxSendSize(server_.config_->value("max_send_size",getpagesize()));
+  maxSendSize(server_.config_->parse().override().value("max_send_size",getpagesize()));
   user = server_.config_->text("user","system");
   password = server_.config_->text("password","sha256:D7h+DiEkmuy6kSKdj9YoFurRn2Cbqoa2qGdd5kocOjE");
   encryption = server_.config_->section("encryption").text(utf8::String(),"default");
@@ -537,7 +545,7 @@ void MailQueueWalker::auth()
 //------------------------------------------------------------------------------
 intptr_t MailQueueWalker::processQueue()
 {
-  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
+  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   intptr_t i, k;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.mqueueDir() + "*.msg",utf8::String(),false);
@@ -714,7 +722,7 @@ void NodeClient::getCode(int32_t noThrowCode)
 void NodeClient::auth()
 {
   utf8::String user, password, encryption, compression, compressionType, crc;
-  maxSendSize(server_.config_->value("max_send_size",getpagesize()));
+  maxSendSize(server_.config_->parse().override().value("max_send_size",getpagesize()));
   user = server_.config_->text("user","system");
   password = server_.config_->text("password","sha256:D7h+DiEkmuy6kSKdj9YoFurRn2Cbqoa2qGdd5kocOjE");
   encryption = server_.config_->section("encryption").text(utf8::String(),"default");
@@ -743,7 +751,7 @@ void NodeClient::auth()
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
-  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
+  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   intptr_t i;
   utf8::String server, host;
   try {
@@ -759,15 +767,15 @@ void NodeClient::main()
           if( server.strlen() > 0 ) server += ",";
           server += host;
           if( server.strlen() > 0 ) server += ",";
-          server += server_.config_->valueByPath("standalone.node","");
+          server += server_.config_->parse().override().valueByPath("standalone.node","");
         }
         else {
           server = nodeHostName_;
           if( server.strlen() > 0 ) server += ",";
-          server += server_.config_->valueByPath("node.neighbors","");
+          server += server_.config_->parse().override().valueByPath("node.neighbors","");
         }
         for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !connected; i-- ){
-          uintptr_t tryCount = server_.config_->valueByPath("node.exchange_try_count",5u);
+          uintptr_t tryCount = server_.config_->parse().override().valueByPath("node.exchange_try_count",5u);
           while( tryCount >= 0 ){
             try {
               ksock::SockAddr remoteAddress;
@@ -793,7 +801,7 @@ void NodeClient::main()
             }
             if( connected ) break;
             stdErr.debug(9,utf8::String::Stream() << "Node " << host << " does not answer...\n");
-            uint64_t timeout = server_.config_->valueByPath("node.exchange_try_interval",60u);
+            uint64_t timeout = server_.config_->parse().override().valueByPath("node.exchange_try_interval",60u);
             sleepAsync(timeout * 1000000u);
           }
         }

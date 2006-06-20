@@ -408,10 +408,11 @@ Config & Config::parse()
           utf8::String::Stream() << "config file " << file_.fileName() << " parsed\n"
         );
         mtime_ = st.st_mtime;
-        break;
+        i = 0;
       }
       catch( ExceptionSP & e ){
         if( isRunInFiber() ){
+          afile_->detach();
           afile_->close();
         }
         else {
@@ -426,13 +427,16 @@ Config & Config::parse()
           throw;
       }
       if( isRunInFiber() ){
-        afile_->close();
         afile_->detach();
+        afile_->close();
       }
       else {
         file_.close();
       }
-      sleep(rnd->random(maxTimeBetweenTryOpen_ - minTimeBetweenTryOpen_ + 1) + minTimeBetweenTryOpen_);
+      if( i > 0 )
+        sleep(rnd->random(
+          maxTimeBetweenTryOpen_ - minTimeBetweenTryOpen_ + 1) + minTimeBetweenTryOpen_
+        );
     }
   }
   return *this;

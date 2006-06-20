@@ -45,7 +45,7 @@ Server::Server(const ConfigSP config) :
 //------------------------------------------------------------------------------
 void Server::open()
 {
-  stdErr.setDebugLevels(config_->value("debug_levels","+0,+1,+2,+3"));
+  stdErr.setDebugLevels(config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
 //  maxThreads(1);
   ksock::Server::open();
   startNodeClient(stStandalone);
