@@ -394,19 +394,16 @@ Config & Config::parse()
         else {
           file_.readOnly(true).open();
         }
-#ifndef NDEBUG
+/*#ifndef NDEBUG
         fprintf(stderr,"config file %s used\n", (const char *) file_.fileName().getANSIString());
-#endif
+#endif*/
         line_ = 0;
         lastTokenType_ = ttUnknown;
         ahead_.resize(0);
         clear();
         parseSectionBody(*this);
         rs_.free();
-        stdErr.log(
-          lmINFO,
-          utf8::String::Stream() << "config file " << file_.fileName() << " parsed\n"
-        );
+        stdErr.debug(9,utf8::String::Stream() << "config file " << file_.fileName() << " reloaded\n");
         mtime_ = st.st_mtime;
         i = 0;
       }
