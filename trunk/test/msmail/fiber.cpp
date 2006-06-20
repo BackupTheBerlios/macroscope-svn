@@ -1,6 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
- * All rights reserved.
+ * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -139,9 +138,10 @@ void ServerFiber::main()
 void ServerFiber::registerClient()
 {
   utf8::String host(remoteAddress().resolveAsync());
+  ServerInfo server(ksock::SockAddr::gethostname(),stStandalone);
   Server::Data & data = server_.data(serverType_);
   Server::Data tdata, diff;
-  ServerInfo server(ksock::SockAddr::gethostname(),stStandalone);
+  tdata.or(data);
   tdata.registerServerNL(server);
   UserInfo user;
   *this >> user;
@@ -205,6 +205,14 @@ void ServerFiber::registerDB()
   stream.clear() << serverTypeName_[serverType_] << ": changes stored\n";
   diff.dumpNL(stream);
   stdErr.debug(5,stream);
+// sweep
+  stream.clear() << serverTypeName_[serverType_] << ": sweep\n";
+  if( data.sweep(
+        gettimeofday() -
+          (uint64_t) server_.config_->valueByPath(
+          utf8::String(serverConfSectionName_[serverType_]) + ".ttl","") * 1000000u,
+        &stream)
+    ) stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::sendMail() // client sending mail
@@ -246,6 +254,7 @@ intptr_t ServerFiber::processMailbox(
   Array<utf8::String> & mids,
   bool onlyNewMail)
 {
+  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
   intptr_t i, j, c, k;
   Array<utf8::String> ids;
   Vector<utf8::String> list;
@@ -377,6 +386,7 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 //------------------------------------------------------------------------------
 intptr_t SpoolWalker::processQueue()
 {
+  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
   intptr_t i, k;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.spoolDir() + "*.msg",utf8::String(),false);
@@ -527,6 +537,7 @@ void MailQueueWalker::auth()
 //------------------------------------------------------------------------------
 intptr_t MailQueueWalker::processQueue()
 {
+  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
   intptr_t i, k;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.mqueueDir() + "*.msg",utf8::String(),false);
@@ -732,6 +743,7 @@ void NodeClient::auth()
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
+  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
   intptr_t i;
   utf8::String server, host;
   try {
@@ -741,19 +753,21 @@ void NodeClient::main()
       while( !exchanged && !terminated_ ){
         if( dataType_ == stStandalone ){
           server = server_.data(stStandalone).getNodeList();
-          if( server.strlen() > 0 ) server += ", ";
+          if( server.strlen() > 0 ) server += ",";
           server += host;
           host = server_.data(stNode).getNodeList();
-          if( server.strlen() > 0 ) server += ", ";
+          if( server.strlen() > 0 ) server += ",";
           server += host;
-          if( server.strlen() > 0 ) server += ", ";
-          server += server_.config_->value("node","");
+          if( server.strlen() > 0 ) server += ",";
+          server += server_.config_->valueByPath("standalone.node","");
         }
         else {
           server = nodeHostName_;
+          if( server.strlen() > 0 ) server += ",";
+          server += server_.config_->valueByPath("node.neighbors","");
         }
         for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !connected; i-- ){
-          uintptr_t tryCount = server_.config_->value("node_exchange_try_count",5u);
+          uintptr_t tryCount = server_.config_->valueByPath("node.exchange_try_count",5u);
           while( tryCount >= 0 ){
             try {
               ksock::SockAddr remoteAddress;
@@ -779,7 +793,7 @@ void NodeClient::main()
             }
             if( connected ) break;
             stdErr.debug(9,utf8::String::Stream() << "Node " << host << " does not answer...\n");
-            uint64_t timeout = server_.config_->value("node_exchange_try_interval",60u);
+            uint64_t timeout = server_.config_->valueByPath("node.exchange_try_interval",60u);
             sleepAsync(timeout * 1000000u);
           }
         }

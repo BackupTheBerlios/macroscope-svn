@@ -1,6 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
- * All rights reserved.
+ * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +30,7 @@ namespace msmail {
 //------------------------------------------------------------------------------
 extern const char messageIdKey[] = "#MessageId";
 extern const char * serverTypeName_[] = { "NODE", "STANDALONE" };
+extern const char * serverConfSectionName_[] = { "node", "standalone" };
 //------------------------------------------------------------------------------
 Message::~Message()
 {
@@ -210,8 +210,9 @@ UserInfo::UserInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(a
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo(const UserInfo & a) : atime_(a.atime_), mtime_(a.mtime_), name_(a.name_)
+UserInfo::UserInfo(const UserInfo & a)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 UserInfo & UserInfo::operator = (const UserInfo & a)
@@ -248,12 +249,13 @@ KeyInfo::KeyInfo() : atime_(gettimeofday()), mtime_(atime_)
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo(const KeyInfo & a) : atime_(a.atime_), mtime_(a.mtime_), name_(a.name_)
+KeyInfo::KeyInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
+KeyInfo::KeyInfo(const KeyInfo & a)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 KeyInfo & KeyInfo::operator = (const KeyInfo & a)
@@ -294,8 +296,9 @@ GroupInfo::GroupInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo(const GroupInfo & a) : atime_(a.atime_), mtime_(a.mtime_), name_(a.name_)
+GroupInfo::GroupInfo(const GroupInfo & a)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 GroupInfo & GroupInfo::operator = (const GroupInfo & a)
@@ -337,8 +340,9 @@ ServerInfo::ServerInfo(const utf8::String & name,ServerType type) :
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo(const ServerInfo & a) : atime_(a.atime_), mtime_(a.mtime_), name_(a.name_), type_(a.type_)
+ServerInfo::ServerInfo(const ServerInfo & a)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 ServerInfo & ServerInfo::operator = (const ServerInfo & a)
@@ -384,8 +388,9 @@ User2KeyLink::User2KeyLink(const utf8::String & userName,const utf8::String & ke
 {
 }
 //------------------------------------------------------------------------------
-User2KeyLink::User2KeyLink(const User2KeyLink & a) : atime_(a.atime_), mtime_(a.mtime_), user_(a.user_), key_(a.key_)
+User2KeyLink::User2KeyLink(const User2KeyLink & a)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
@@ -428,8 +433,9 @@ Key2GroupLink::Key2GroupLink(const utf8::String & keyName,const utf8::String & g
 {
 }
 //------------------------------------------------------------------------------
-Key2GroupLink::Key2GroupLink(const Key2GroupLink & a) : atime_(a.atime_), mtime_(a.mtime_), key_(a.key_), group_(a.group_)
+Key2GroupLink::Key2GroupLink(const Key2GroupLink & a)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
@@ -472,8 +478,9 @@ Key2ServerLink::Key2ServerLink(const utf8::String & keyName,const utf8::String &
 {
 }
 //------------------------------------------------------------------------------
-Key2ServerLink::Key2ServerLink(const Key2ServerLink & a) : atime_(a.atime_), mtime_(a.mtime_), key_(a.key_), server_(a.server_)
+Key2ServerLink::Key2ServerLink(const Key2ServerLink & a)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)

@@ -1,6 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
- * All rights reserved.
+ * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,6 +77,7 @@ enum ServerType {
 };
 //------------------------------------------------------------------------------
 extern const char * serverTypeName_[];
+extern const char * serverConfSectionName_[];
 //------------------------------------------------------------------------------
 enum Error {
   eOK,
@@ -183,12 +183,12 @@ class UserInfo {
     UserInfo(const UserInfo &);
     UserInfo & operator = (const UserInfo &);
 
-    bool operator == (const UserInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    /*bool operator == (const UserInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
     bool operator != (const UserInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
     bool operator >= (const UserInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
     bool operator >  (const UserInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
     bool operator <= (const UserInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const UserInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
+    bool operator <  (const UserInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
     static EmbeddedHashNode<UserInfo> & hashNode(const UserInfo & object){
       return object.hashNode_;
@@ -224,12 +224,12 @@ class KeyInfo {
     KeyInfo(const KeyInfo &);
     KeyInfo & operator = (const KeyInfo &);
 
-    bool operator == (const KeyInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    /*bool operator == (const KeyInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
     bool operator != (const KeyInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
     bool operator >= (const KeyInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
     bool operator >  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
     bool operator <= (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
+    bool operator <  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
     static EmbeddedHashNode<KeyInfo> & hashNode(const KeyInfo & object){
       return object.hashNode_;
@@ -265,12 +265,12 @@ class GroupInfo {
     GroupInfo(const GroupInfo &);
     GroupInfo & operator = (const GroupInfo &);
 
-    bool operator == (const GroupInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    /*bool operator == (const GroupInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
     bool operator != (const GroupInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
     bool operator >= (const GroupInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
     bool operator >  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
     bool operator <= (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
+    bool operator <  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
     static EmbeddedHashNode<GroupInfo> & hashNode(const GroupInfo & object){
       return object.hashNode_;
@@ -306,12 +306,12 @@ class ServerInfo {
     ServerInfo(const ServerInfo &);
     ServerInfo & operator = (const ServerInfo &);
 
-    bool operator == (const ServerInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
+    /*bool operator == (const ServerInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
     bool operator != (const ServerInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
     bool operator >= (const ServerInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
     bool operator >  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
     bool operator <= (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <  0; }
+    bool operator <  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
     static EmbeddedHashNode<ServerInfo> & hashNode(const ServerInfo & object){
       return object.hashNode_;
@@ -348,12 +348,12 @@ class User2KeyLink {
     User2KeyLink(const User2KeyLink &);
     User2KeyLink & operator = (const User2KeyLink &);
 
-    bool operator == (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) == 0 && key_.strcasecmp(a.key_) == 0; }
+    /*bool operator == (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) == 0 && key_.strcasecmp(a.key_) == 0; }
     bool operator != (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) != 0 && key_.strcasecmp(a.key_) != 0; }
     bool operator >= (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) >= 0 && key_.strcasecmp(a.key_) >= 0; }
     bool operator >  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) >= 0 && key_.strcasecmp(a.key_) >  0; }
     bool operator <= (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <= 0; }
-    bool operator <  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <  0; }
+    bool operator <  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <  0; }*/
 
     static EmbeddedHashNode<User2KeyLink> & hashNode(const User2KeyLink & object){
       return object.hashNode_;
@@ -362,10 +362,7 @@ class User2KeyLink {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const User2KeyLink & object){
-      uintptr_t h[2];
-      h[0] = object.user_.hash(false);
-      h[1] = object.key_.hash(false);
-      return HF::hash(h,sizeof(h));
+      return (object.user_ + object.key_).hash(false);
     }
     static bool hashNodeEqu(const User2KeyLink & object1,const User2KeyLink & object2){
       return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
@@ -393,12 +390,12 @@ class Key2GroupLink {
     Key2GroupLink(const Key2GroupLink &);
     Key2GroupLink & operator = (const Key2GroupLink &);
 
-    bool operator == (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) == 0 && group_.strcasecmp(a.group_) == 0; }
+    /*bool operator == (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) == 0 && group_.strcasecmp(a.group_) == 0; }
     bool operator != (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) != 0 && group_.strcasecmp(a.group_) != 0; }
     bool operator >= (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) >= 0 && group_.strcasecmp(a.group_) >= 0; }
     bool operator >  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) >= 0 && group_.strcasecmp(a.group_) >  0; }
     bool operator <= (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <= 0; }
-    bool operator <  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <  0; }
+    bool operator <  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <  0; }*/
 
     static EmbeddedHashNode<Key2GroupLink> & hashNode(const Key2GroupLink & object){
       return object.hashNode_;
@@ -407,10 +404,7 @@ class Key2GroupLink {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const Key2GroupLink & object){
-      uintptr_t h[2];
-      h[0] = object.key_.hash(false);
-      h[1] = object.group_.hash(false);
-      return HF::hash(h,sizeof(h));
+      return (object.key_ + object.group_).hash(false);
     }
     static bool hashNodeEqu(const Key2GroupLink & object1,const Key2GroupLink & object2){
       return object1.key_.strcasecmp(object2.key_) == 0 && object1.group_.strcasecmp(object2.group_) == 0;
@@ -438,12 +432,12 @@ class Key2ServerLink {
     Key2ServerLink(const Key2ServerLink &);
     Key2ServerLink & operator = (const Key2ServerLink &);
 
-    bool operator == (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) == 0; }
+    /*bool operator == (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) == 0; }
     bool operator != (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) != 0; }
     bool operator >= (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) >= 0; }
     bool operator >  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) >= 0; }
     bool operator <= (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }
-    bool operator <  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }
+    bool operator <  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }*/
 
     static EmbeddedHashNode<Key2ServerLink> & hashNode(const Key2ServerLink & object){
       return object.hashNode_;
@@ -481,7 +475,6 @@ class ServerFiber : public ksock::ServerFiber {
   private:
     Server & server_;
     ServerType serverType_;
-
 
     static EmbeddedHashNode<ServerFiber> & hashNode(const ServerFiber & object){
       return object.hashNode_;
@@ -592,9 +585,6 @@ class Server : public ksock::Server {
         ~Data();
         Data();
 
-        Data(const Data & a);
-        Data & operator = (const Data & a);
-
         bool registerUserNL(const UserInfo & info,uint64_t ftime = 0);
         bool registerUser(const UserInfo & info,uint64_t ftime = 0);
         bool registerKeyNL(const KeyInfo & info,uint64_t ftime = 0);
@@ -609,8 +599,6 @@ class Server : public ksock::Server {
         bool registerKey2GroupLink(const Key2GroupLink & link,uint64_t ftime = 0);
         bool registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime = 0);
         bool registerKey2ServerLink(const Key2ServerLink & link,uint64_t ftime = 0);
-        bool orNL(const Data & a,uint64_t ftime = 0);
-        bool or(const Data & a,uint64_t ftime = 0);
         void sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
         void sendDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
         void recvDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
@@ -620,12 +608,20 @@ class Server : public ksock::Server {
         void dumpNL(utf8::String::Stream & stream) const;
         void dump(utf8::String::Stream & stream) const;
         Data & clear();
-        Data & xorNL(const Data & data1,const Data & data2);
-        Data & xor(const Data & data1,const Data & data2);
+        bool orNL(const Data & a,uint64_t ftime = 0);
+        bool or(const Data & a,uint64_t ftime = 0);
+        Data & xorNL(const Data & data1,const Data & data2,uint64_t ftime = 0);
+        Data & xor(const Data & data1,const Data & data2,uint64_t ftime = 0);
+        bool sweepNL(uint64_t stime,utf8::String::Stream * log = NULL);
+        bool sweep(uint64_t stime,utf8::String::Stream * log = NULL);
       protected:
       private:
+        Data(const Data &){}
+        void operator = (const Data &){}
 // last time when database flushed to node and for node last exchage with neighbors
         uint64_t ftime_;
+// last time when database sweep
+        uint64_t stime_;
         mutable FiberMutex mutex_;
         EmbeddedHash<
           UserInfo,

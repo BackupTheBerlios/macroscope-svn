@@ -1,6 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
- * All rights reserved.
+ * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -118,15 +117,20 @@ bool Server::clearNodeClient(NodeClient * client)
 {
   AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
   if( nodeClient_ == client ){
-    if( skippedNodeClientStarts_ > 0 ) return true;
+    if( skippedNodeClientStarts_ > 0 ){
+      skippedNodeClientStarts_ = 0;
+      return true;
+    }
     nodeClient_ = NULL;
   }
   else {
     intptr_t i = nodeExchangeClients_.bSearch(client);
     assert( i >= 0 );
     nodeExchangeClients_.remove(i);
-    if( nodeExchangeClients_.count() == 0 && skippedNodeExchangeStarts_ > 0 )
+    if( nodeExchangeClients_.count() == 0 && skippedNodeExchangeStarts_ > 0 ){
+      skippedNodeExchangeStarts_ = 0;
       startNodesExchangeNL();
+    }
   }
   return false;
 }
@@ -203,16 +207,16 @@ Server::Data::~Data()
 {
 }
 //------------------------------------------------------------------------------
-Server::Data::Data() : ftime_(0)
+Server::Data::Data() : ftime_(0), stime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
-Server::Data::Data(const Data & a)
+/*Server::Data::Data(const Data & a)
 {
   operator = (a);
-}
+}*/
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::operator = (const Data & a)
+/*Server::Data & Server::Data::operator = (const Data & a)
 {
   intptr_t i;
   ftime_ = a.ftime_;
@@ -231,16 +235,20 @@ Server::Data & Server::Data::operator = (const Data & a)
   key2ServerLinkList_ = a.key2ServerLinkList_;
   for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- ) key2ServerLinks_.insert(key2ServerLinkList_[i]);
   return *this;
-}
+}*/
 //------------------------------------------------------------------------------
 bool Server::Data::registerUserNL(const UserInfo & info,uint64_t ftime)
 {
   UserInfo * p = users_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ) users_.insert(userList_.safeAdd(p = new UserInfo(info)));
-    return true;
+    if( info.mtime_ > ftime ){
+      users_.insert(userList_.safeAdd(p = new UserInfo(info)));
+      return true;
+    }
   }
-  p->atime_ = gettimeofday();
+  else {
+    p->atime_ = gettimeofday();
+  }
   return false;
 }
 //------------------------------------------------------------------------------
@@ -254,10 +262,14 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,uint64_t ftime)
 {
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ) keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
-    return true;
+    if( info.mtime_ > ftime ){
+      keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
+      return true;
+    }
   }
-  p->atime_ = gettimeofday();
+  else {
+    p->atime_ = gettimeofday();
+  }
   return false;
 }
 //------------------------------------------------------------------------------
@@ -271,10 +283,14 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,uint64_t ftime)
 {
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ) groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
-    return true;
+    if( info.mtime_ > ftime ){
+      groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
+      return true;
+    }
   }
-  p->atime_ = gettimeofday();
+  else {
+    p->atime_ = gettimeofday();
+  }
   return false;
 }
 //------------------------------------------------------------------------------
@@ -288,14 +304,18 @@ bool Server::Data::registerServerNL(const ServerInfo & info,uint64_t ftime)
 {
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ) servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
-    return true;
+    if( info.mtime_ > ftime ){
+      servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
+      return true;
+    }
   }
-  p->atime_ = gettimeofday();
-  if( info.type_ == stNode && info.type_ != p->type_ ){
-    p->mtime_ = p->atime_;
-    p->type_ = info.type_;
-    return true;
+  else {
+    p->atime_ = gettimeofday();
+    if( info.mtime_ > ftime && info.type_ == stNode && info.type_ != p->type_ ){
+      p->mtime_ = p->atime_;
+      p->type_ = info.type_;
+      return true;
+    }
   }
   return false;
 }
@@ -310,10 +330,14 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t fti
 {
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
-    if( link.mtime_ > ftime ) user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
-    return true;
+    if( link.mtime_ > ftime ){
+      user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
+      return true;
+    }
   }
-  p->atime_ = gettimeofday();
+  else {
+    p->atime_ = gettimeofday();
+  }
   return false;
 }
 //------------------------------------------------------------------------------
@@ -327,10 +351,14 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t f
 {
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
-    if( link.mtime_ > ftime ) key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
-    return true;
+    if( link.mtime_ > ftime ){
+      key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
+      return true;
+    }
   }
-  p->atime_ = gettimeofday();
+  else {
+    p->atime_ = gettimeofday();
+  }
   return false;
 }
 //------------------------------------------------------------------------------
@@ -344,14 +372,18 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t
 {
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
-    if( link.mtime_ > ftime ) key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
-    return true;
+    if( link.mtime_ > ftime ){
+      key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
+      return true;
+    }
   }
-  p->atime_ = gettimeofday();
-  if( p->server_.strcasecmp(link.server_) != 0 ){
-    p->mtime_ = p->atime_;
-    p->server_ = link.server_;
-    return true;
+  else {
+    p->atime_ = gettimeofday();
+    if( link.mtime_ > ftime && p->server_.strcasecmp(link.server_) != 0 ){
+      p->mtime_ = p->atime_;
+      p->server_ = link.server_;
+      return true;
+    }
   }
   return false;
 }
@@ -360,34 +392,6 @@ bool Server::Data::registerKey2ServerLink(const Key2ServerLink & link,uint64_t f
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
   return registerKey2ServerLinkNL(link,ftime);
-}
-//------------------------------------------------------------------------------
-bool Server::Data::orNL(const Data & a,uint64_t ftime)
-{
-  bool r = false;
-  intptr_t i;
-  for( i = a.userList_.count() - 1; i >= 0; i-- )
-    r = registerUserNL(a.userList_[i],ftime) || r;
-  for( i = a.keyList_.count() - 1; i >= 0; i-- )
-    r = registerKeyNL(a.keyList_[i],ftime) || r;
-  for( i = a.groupList_.count() - 1; i >= 0; i-- )
-    r = registerGroupNL(a.groupList_[i],ftime) || r;
-  for( i = a.serverList_.count() - 1; i >= 0; i-- )
-    r = registerServerNL(a.serverList_[i],ftime) || r;
-  for( i = a.user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],ftime) || r;
-  for( i = a.key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],ftime_) || r;
-  for( i = a.key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],ftime) || r;
-  return r;
-}
-//------------------------------------------------------------------------------
-bool Server::Data::or(const Data & a,uint64_t ftime)
-{
-  AutoMutexWRLock<FiberMutex> lock0(mutex_);
-  AutoMutexRDLock<FiberMutex> lock1(a.mutex_);
-  return orNL(a,ftime);
 }
 //------------------------------------------------------------------------------
 void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime)
@@ -522,37 +526,37 @@ void Server::Data::dumpNL(utf8::String::Stream & stream) const
 {
   intptr_t i;
   if( userList_.count() > 0 ){
-    stream << "users changes:\n";
+    stream << "users:\n";
     for( i = userList_.count() - 1; i >= 0; i-- )
       stream << "  " << userList_[i] << "\n";
   }
   if( keyList_.count() > 0 ){
-    stream << "key changes:\n";
+    stream << "keys:\n";
     for( i = keyList_.count() - 1; i >= 0; i-- )
       stream << "  " << keyList_[i] << "\n";
   }
   if( groupList_.count() > 0 ){
-    stream << "group changes:\n";
+    stream << "groups:\n";
     for( i = groupList_.count() - 1; i >= 0; i-- )
       stream << "  " << groupList_[i] << "\n";
   }
   if( serverList_.count() > 0 ){
-    stream << "server changes:\n";
+    stream << "servers:\n";
     for( i = serverList_.count() - 1; i >= 0; i-- )
       stream << "  " << serverList_[i] << "\n";
   }
   if( user2KeyLinkList_.count() > 0 ){
-    stream << "user2key link changes:\n";
+    stream << "user2key links:\n";
     for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
       stream << "  " << user2KeyLinkList_[i] << "\n";
   }
   if( key2GroupLinkList_.count() > 0 ){
-    stream << "key2group link changes:\n";
+    stream << "key2group links:\n";
     for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
       stream << "  " << key2GroupLinkList_[i] << "\n";
   }
   if( key2ServerLinkList_.count() > 0 ){
-    stream << "key2server link changes:\n";
+    stream << "key2server links:\n";
     for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
       stream << "  " << key2ServerLinkList_[i] << "\n";
   }
@@ -585,39 +589,138 @@ Server::Data & Server::Data::clear()
   return *this;
 }
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::xorNL(const Data & data1,const Data & data2)
+bool Server::Data::orNL(const Data & a,uint64_t ftime)
+{
+  intptr_t i;
+  bool r = false;
+  for( i = a.userList_.count() - 1; i >= 0; i-- )
+    r = registerUserNL(a.userList_[i],ftime) || r;
+  for( i = a.keyList_.count() - 1; i >= 0; i-- )
+    r = registerKeyNL(a.keyList_[i],ftime) || r;
+  for( i = a.groupList_.count() - 1; i >= 0; i-- )
+    r = registerGroupNL(a.groupList_[i],ftime) || r;
+  for( i = a.serverList_.count() - 1; i >= 0; i-- )
+    r = registerServerNL(a.serverList_[i],ftime) || r;
+  for( i = a.user2KeyLinkList_.count() - 1; i >= 0; i-- )
+    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],ftime) || r;
+  for( i = a.key2GroupLinkList_.count() - 1; i >= 0; i-- )
+    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],ftime) || r;
+  for( i = a.key2ServerLinkList_.count() - 1; i >= 0; i-- )
+    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],ftime) || r;
+  return r;
+}
+//------------------------------------------------------------------------------
+bool Server::Data::or(const Data & a,uint64_t ftime)
+{
+  AutoMutexWRLock<FiberMutex> lock0(mutex_);
+  AutoMutexRDLock<FiberMutex> lock1(a.mutex_);
+  return orNL(a,ftime);
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::xorNL(const Data & data1,const Data & data2,uint64_t ftime)
 {
   intptr_t i;
   for( i = data2.userList_.count() - 1; i >= 0; i-- )
-    if( data1.userList_.bSearch(data2.userList_[i]) < 0 )
-      registerUserNL(data2.userList_[i]);
+    if( data1.users_.find(data2.userList_[i]) == NULL )
+      registerUserNL(data2.userList_[i],ftime);
   for( i = data2.keyList_.count() - 1; i >= 0; i-- )
-    if( data1.keyList_.bSearch(data2.keyList_[i]) < 0 )
-      registerKeyNL(data2.keyList_[i]);
+    if( data1.keys_.find(data2.keyList_[i]) == NULL )
+      registerKeyNL(data2.keyList_[i],ftime);
   for( i = data2.groupList_.count() - 1; i >= 0; i-- )
-    if( data1.groupList_.bSearch(data2.groupList_[i]) < 0 )
-      registerGroupNL(data2.groupList_[i]);
+    if( data1.groups_.find(data2.groupList_[i]) == NULL )
+      registerGroupNL(data2.groupList_[i],ftime);
   for( i = data2.serverList_.count() - 1; i >= 0; i-- )
-    if( data1.serverList_.bSearch(data2.serverList_[i]) < 0 )
-      registerServerNL(data2.serverList_[i]);
+    if( data1.servers_.find(data2.serverList_[i]) == NULL )
+      registerServerNL(data2.serverList_[i],ftime);
   for( i = data2.user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( data1.user2KeyLinkList_.bSearch(data2.user2KeyLinkList_[i]) < 0 )
-      registerUser2KeyLinkNL(data2.user2KeyLinkList_[i]);
+    if( data1.user2KeyLinks_.find(data2.user2KeyLinkList_[i]) == NULL )
+      registerUser2KeyLinkNL(data2.user2KeyLinkList_[i],ftime);
   for( i = data2.key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( data1.key2GroupLinkList_.bSearch(data2.key2GroupLinkList_[i]) < 0 )
-      registerKey2GroupLinkNL(data2.key2GroupLinkList_[i]);
+    if( data1.key2GroupLinks_.find(data2.key2GroupLinkList_[i]) == NULL )
+      registerKey2GroupLinkNL(data2.key2GroupLinkList_[i],ftime);
   for( i = data2.key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( data1.key2ServerLinkList_.bSearch(data2.key2ServerLinkList_[i]) < 0 )
-      registerKey2ServerLinkNL(data2.key2ServerLinkList_[i]);
+    if( data1.key2ServerLinks_.find(data2.key2ServerLinkList_[i]) == NULL )
+      registerKey2ServerLinkNL(data2.key2ServerLinkList_[i],ftime);
   return *this;
 }
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::xor(const Data & data1,const Data & data2)
+Server::Data & Server::Data::xor(const Data & data1,const Data & data2,uint64_t ftime)
 {
   AutoMutexWRLock<FiberMutex> lock0(mutex_);
   AutoMutexRDLock<FiberMutex> lock1(data1.mutex_);
   AutoMutexRDLock<FiberMutex> lock2(data2.mutex_);
-  return xorNL(data1,data2);
+  return xorNL(data1,data2,ftime);
+}
+//------------------------------------------------------------------------------
+bool Server::Data::sweepNL(uint64_t stime,utf8::String::Stream * log)
+{
+  if( stime_ >= stime ) return false;
+  intptr_t i;
+  bool r = false;
+  for( i = userList_.count() - 1; i >= 0; i-- ){
+    if( userList_[i].atime_ < stime ){
+      if( log != NULL ) *log << userList_[i] << "\n";
+      users_.remove(userList_[i]);
+      userList_.remove(i);
+      r = true;
+    }
+  }
+  for( i = keyList_.count() - 1; i >= 0; i-- ){
+    if( keyList_[i].atime_ < stime ){
+      if( log != NULL ) *log << keyList_[i] << "\n";
+      keys_.remove(keyList_[i]);
+      keyList_.remove(i);
+      r = true;
+    }
+  }
+  for( i = groupList_.count() - 1; i >= 0; i-- ){
+    if( groupList_[i].atime_ < stime ){
+      if( log != NULL ) *log << groupList_[i] << "\n";
+      groups_.remove(groupList_[i]);
+      groupList_.remove(i);
+      r = true;
+    }
+  }
+  for( i = serverList_.count() - 1; i >= 0; i-- ){
+    if( serverList_[i].atime_ < stime ){
+      if( log != NULL ) *log << serverList_[i] << "\n";
+      servers_.remove(serverList_[i]);
+      serverList_.remove(i);
+      r = true;
+    }
+  }
+  for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- ){
+    if( user2KeyLinkList_[i].atime_ < stime ){
+      if( log != NULL ) *log << user2KeyLinkList_[i] << "\n";
+      user2KeyLinks_.remove(user2KeyLinkList_[i]);
+      user2KeyLinkList_.remove(i);
+      r = true;
+    }
+  }
+  for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- ){
+    if( key2GroupLinkList_[i].atime_ < stime ){
+      if( log != NULL ) *log << key2GroupLinkList_[i] << "\n";
+      key2GroupLinks_.remove(key2GroupLinkList_[i]);
+      key2GroupLinkList_.remove(i);
+      r = true;
+    }
+  }
+  for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- ){
+    if( key2ServerLinkList_[i].atime_ < stime ){
+      if( log != NULL ) *log << key2ServerLinkList_[i] << "\n";
+      key2ServerLinks_.remove(key2ServerLinkList_[i]);
+      key2ServerLinkList_.remove(i);
+      r = true;
+    }
+  }
+  stime_ = stime;
+  return r;
+}
+//------------------------------------------------------------------------------
+bool Server::Data::sweep(uint64_t stime,utf8::String::Stream * log)
+{
+  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  return sweepNL(stime,log);
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

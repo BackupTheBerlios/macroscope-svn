@@ -1,6 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
- * All rights reserved.
+ * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // msmail1cImpl.cpp : Implementation of Cmsmail1c
 
 #include "stdafx.h"

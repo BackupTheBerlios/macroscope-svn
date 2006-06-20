@@ -103,6 +103,7 @@ void LogFile::rotate(uint64_t size)
     flock.removeAfterClose(true);
     flock.open();
     if( flock.tryWRLock(0,0) ){
+      if( afile_->size() <= rotationThreshold_) return;
       utf8::String fileExt(getFileExt(afile_->fileName()));
       Stat st;
       intptr_t i = 0;
