@@ -119,6 +119,9 @@ void ServerFiber::main()
       case cmRegisterDB :
         registerDB();
         break;
+      case cmGetDB :
+        getDB();
+        break;
       case cmSendMail :
         sendMail();
         break;
@@ -137,6 +140,7 @@ void ServerFiber::main()
 //------------------------------------------------------------------------------
 void ServerFiber::registerClient()
 {
+  if( serverType_ != stStandalone && serverType_ != stNode ) return;
   utf8::String host(remoteAddress().resolveAsync());
   ServerInfo server(ksock::SockAddr::gethostname(),stStandalone);
   Server::Data & data = server_.data(serverType_);
@@ -181,6 +185,7 @@ void ServerFiber::registerClient()
 //------------------------------------------------------------------------------
 void ServerFiber::registerDB()
 {
+  if( serverType_ != stStandalone && serverType_ != stNode ) return;
   bool dbChanged = false;
   utf8::String::Stream stream;
   utf8::String host(remoteAddress().resolveAsync());
@@ -188,6 +193,7 @@ void ServerFiber::registerDB()
   *this >> ftime;
   Server::Data rdata, tdata, diff;
   rdata.recvDatabase(*this);
+  rdata.ftime_ = ftime;
   stream << serverTypeName_[serverType_] <<
     ": database changes received from host " << host << "\n";
   rdata.dumpNL(stream);
@@ -197,7 +203,7 @@ void ServerFiber::registerDB()
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
     ftime = gettimeofday();
     diff.xorNL(data,rdata);
-    tdata.orNL(data,ftime); // get local changes for sending
+    tdata.orNL(data,rdata.ftime_); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
     data.ftime_ = ftime--;
   }
@@ -221,6 +227,23 @@ void ServerFiber::registerDB()
           utf8::String(serverConfSectionName_[serverType_]) + ".ttl","") * 1000000u,
         &stream)
     ) stdErr.debug(5,stream);
+}
+//------------------------------------------------------------------------------
+void ServerFiber::getDB()
+{
+  if( serverType_ != stStandalone && serverType_ != stNode ) return;
+  utf8::String host(remoteAddress().resolveAsync());
+  Server::Data tdata;
+  *this >> tdata.ftime_;
+  tdata.or(server_.data(serverType_),tdata.ftime_); // get local changes for sending
+  tdata.sendDatabaseNL(*this);
+  putCode(eOK);
+  flush();
+  utf8::String::Stream stream;
+  stream << serverTypeName_[serverType_] <<
+    ": database sended to client " << host << "\n";
+  tdata.dumpNL(stream);
+  stdErr.debug(7,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::sendMail() // client sending mail

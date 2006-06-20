@@ -88,8 +88,22 @@ class ClientMailRemoverFiber : public ClientFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class ClientDBGetterFiber : public ClientFiber {
+  public:
+    virtual ~ClientDBGetterFiber();
+    ClientDBGetterFiber(Client & client);
+  protected:
+    void main();
+  private:
+    ClientDBGetterFiber(const ClientDBGetterFiber & a) : ClientFiber(a.client_) {}
+    void operator = (const ClientDBGetterFiber &){}
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 class Client : public ksock::Client {
   friend class ClientFiber;
+  friend class ClientDBGetterFiber;
   public:
     virtual ~Client();
     Client();
@@ -117,6 +131,10 @@ class Client : public ksock::Client {
     bool sendMessage(const utf8::String id);
     bool removeMessage(const utf8::String id);
     utf8::String getReceivedMessageList() const;
+    void getDB();
+    utf8::String getDBList() const;
+    utf8::String getDBGroupList() const;
+    utf8::String getUserList() const;
 
     InterlockedMutex workFiberWait_;
     int32_t workFiberLastError_;
@@ -124,6 +142,7 @@ class Client : public ksock::Client {
     mutable FiberInterlockedMutex recvQueueMutex_;
     mutable Vector<Message> recvQueue_;
     mutable Vector<Message> sendQueue_;
+    Server::Data data_;
   private:
     Client(const Client &) : config_(NULL) {}
     void operator = (const Client &){}

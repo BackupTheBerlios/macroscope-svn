@@ -64,6 +64,7 @@ enum CmdType {
   cmSelectServerType,
   cmRegisterClient,
   cmRegisterDB,
+  cmGetDB,
   cmSendMail,
   cmRecvMail,
   cmRemoveMail
@@ -585,6 +586,9 @@ class Server : public ksock::Server {
         ~Data();
         Data();
 
+        uint64_t & ftime() const;
+        uint64_t & stime() const;
+
         bool registerUserNL(const UserInfo & info,uint64_t ftime = 0);
         bool registerUser(const UserInfo & info,uint64_t ftime = 0);
         bool registerKeyNL(const KeyInfo & info,uint64_t ftime = 0);
@@ -614,14 +618,22 @@ class Server : public ksock::Server {
         Data & xor(const Data & data1,const Data & data2,uint64_t ftime = 0);
         bool sweepNL(uint64_t stime,utf8::String::Stream * log = NULL);
         bool sweep(uint64_t stime,utf8::String::Stream * log = NULL);
+        utf8::String getUserListNL(bool quoted = false) const;
+        utf8::String getUserList(bool quoted = false) const;
+        utf8::String getKeyListNL(bool quoted = false) const;
+        utf8::String getKeyList(bool quoted = false) const;
+        utf8::String getKeyGroupListNL(const utf8::String & groups,bool quoted) const;
+        utf8::String getKeyGroupList(const utf8::String & groups,bool quoted) const;
+        bool isEmptyNL() const;
+        bool isEmpty() const;
       protected:
       private:
         Data(const Data &){}
         void operator = (const Data &){}
 // last time when database flushed to node and for node last exchage with neighbors
-        uint64_t ftime_;
+        mutable uint64_t ftime_;
 // last time when database sweep
-        uint64_t stime_;
+        mutable uint64_t stime_;
         mutable FiberMutex mutex_;
         EmbeddedHash<
           UserInfo,
@@ -720,6 +732,16 @@ inline Server::Data & Server::data(ServerType type)
   assert( type == stNode || type == stStandalone );
 //  throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
   return data_[type];
+}
+//------------------------------------------------------------------------------
+inline uint64_t & Server::Data::ftime() const
+{
+  return ftime_;
+}
+//------------------------------------------------------------------------------
+inline uint64_t & Server::Data::stime() const
+{
+  return stime_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

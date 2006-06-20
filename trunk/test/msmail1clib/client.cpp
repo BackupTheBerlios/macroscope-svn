@@ -102,38 +102,35 @@ void ClientFiber::main()
       client_.connectedToServer_.resize(0);
     }
     try {
+      bool connected = false;
+      ksock::SockAddr remoteAddress;
       utf8::String server(client_.config_->value("server",client_.mailServer_));
-      if( !client_.connected_ ){
-        for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !client_.connected_; i-- ){
-          ksock::SockAddr remoteAddress;
-          remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+      for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !client_.connected_; i-- ){
+        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+        try {
+          connect(remoteAddress);
           try {
-            connect(remoteAddress);
-            try {
-              auth();
-              AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
-              client_.connectedToServer_ = remoteAddress.resolveAsync();
-              client_.connected_ = true;
-            }
-            catch( ExceptionSP & e ){
-              e->writeStdError();
-              stdErr.debug(3,
-                utf8::String::Stream() << "Authentification to host " <<
-                stringPartByNo(server,i) << " failed.\n"
-              );
-            }
+            auth();
+            connected = true;
           }
           catch( ExceptionSP & e ){
             e->writeStdError();
             stdErr.debug(3,
-              utf8::String::Stream() << "Unable to connect. Host " <<
-              stringPartByNo(server,i) <<
-              " unreachable.\n"
+              utf8::String::Stream() << "Authentification to host " <<
+              stringPartByNo(server,i) << " failed.\n"
             );
           }
         }
+        catch( ExceptionSP & e ){
+          e->writeStdError();
+          stdErr.debug(3,
+            utf8::String::Stream() << "Unable to connect. Host " <<
+            stringPartByNo(server,i) <<
+            " unreachable.\n"
+          );
+        }
       }
-      if( client_.connected_ ){
+      if( connected ){
         *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
         getCode();
         *this << uint8_t(cmRegisterClient) <<
@@ -152,6 +149,9 @@ void ClientFiber::main()
           AutoPtr<OLECHAR> data(utf8::ptr2Str(this).getOLEString());
           HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
           assert( SUCCEEDED(hr) );
+          AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
+          client_.connectedToServer_ = remoteAddress.resolveAsync();
+          client_.connected_ = true;
         }
         while( !terminated_ ){
           Message * msg;
@@ -279,6 +279,67 @@ void ClientMailRemoverFiber::main()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+ClientDBGetterFiber::~ClientDBGetterFiber()
+{
+}
+//------------------------------------------------------------------------------
+ClientDBGetterFiber::ClientDBGetterFiber(Client & client) : ClientFiber(client)
+{
+}
+//------------------------------------------------------------------------------
+void ClientDBGetterFiber::main()
+{
+  union {
+    intptr_t i;
+    uintptr_t u;
+  };
+  try {
+    for( i = enumStringParts(client_.mailServer_) - 1; i >= 0; i-- ){
+      ksock::SockAddr remoteAddress;
+      try {
+        remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
+        connect(remoteAddress);
+        auth();
+        i = -1;
+      }
+      catch( ExceptionSP & e ){
+        stdErr.debug(2,utf8::String::Stream() <<
+          "Unable to connect. Host " << stringPartByNo(client_.mailServer_,i) <<
+          " unreachable.\n"
+        );
+        if( terminated_ || i == 0 ) throw; else e->writeStdError();
+      }
+    }
+    client_.data_.clear();
+    *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
+    getCode();
+    *this << uint8_t(cmGetDB) << client_.data_.ftime();
+    client_.data_.recvDatabase(*this);
+    getCode();
+    *this << uint8_t(cmQuit);
+    getCode();
+    AutoPtr<OLECHAR> source(client_.name_.getOLEString());
+    AutoPtr<OLECHAR> event(utf8::String("GetDB").getOLEString());
+    bool isEmpty = 
+      client_.data_.getUserList().strlen() == 0 &&
+      client_.data_.getKeyList().strlen() == 0
+    ;
+    AutoPtr<OLECHAR> data(utf8::String(isEmpty ? "" : "DATA").getOLEString());
+    HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
+    assert( SUCCEEDED(hr) );
+  }
+  catch( ExceptionSP & e ){
+    e->writeStdError();
+    AutoPtr<OLECHAR> source(client_.name_.getOLEString());
+    AutoPtr<OLECHAR> event(utf8::String("GetDB").getOLEString());
+    AutoPtr<OLECHAR> data(utf8::int2Str(e->code()).getOLEString());
+    HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
+    assert( SUCCEEDED(hr) );
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 Client::~Client()
 {
 }
@@ -399,9 +460,29 @@ utf8::String Client::getReceivedMessageList() const
     list += "\"";
     list += recvQueue_[i].id();
     list += "\"";
-    if( i > 0 ) list += ", ";
+    if( i > 0 ) list += ",";
   }
   return list;
+}
+//------------------------------------------------------------------------------
+void Client::getDB()
+{
+  attachFiber(new ClientDBGetterFiber(*this));
+}
+//------------------------------------------------------------------------------
+utf8::String Client::getDBList() const
+{
+  return data_.getKeyList(true);
+}
+//------------------------------------------------------------------------------
+utf8::String Client::getDBGroupList() const
+{
+  return data_.getKeyGroupList(groups_,true);
+}
+//------------------------------------------------------------------------------
+utf8::String Client::getUserList() const
+{
+  return data_.getUserList(true);
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

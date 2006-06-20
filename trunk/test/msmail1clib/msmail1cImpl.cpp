@@ -83,7 +83,7 @@ HRESULT Cmsmail1c::RegisterExtensionAs(BSTR * bstrExtensionName)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNProps(long * plProps)
 {
-  *plProps = 18;
+  *plProps = 21;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -160,6 +160,18 @@ HRESULT Cmsmail1c::FindProp(BSTR bstrPropName,long * plPropNum)
   if( _wcsicoll(bstrPropName,L"ReceivedMessagesList") == 0 ) *plPropNum = 17;
   else
   if( _wcsicoll(bstrPropName,L"—писокѕолученных—ообщений") == 0 ) *plPropNum = 17;
+  else
+  if( _wcsicoll(bstrPropName,L"DBList") == 0 ) *plPropNum = 18;
+  else
+  if( _wcsicoll(bstrPropName,L"—писок»Ѕ") == 0 ) *plPropNum = 18;
+  else
+  if( _wcsicoll(bstrPropName,L"DBGroupList") == 0 ) *plPropNum = 19;
+  else
+  if( _wcsicoll(bstrPropName,L"√рупповой—писок»Ѕ") == 0 ) *plPropNum = 19;
+  else
+  if( _wcsicoll(bstrPropName,L"UserList") == 0 ) *plPropNum = 20;
+  else
+  if( _wcsicoll(bstrPropName,L"—писокѕользователей") == 0 ) *plPropNum = 20;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -312,6 +324,30 @@ HRESULT Cmsmail1c::GetPropName(long lPropNum,long lPropAlias,BSTR * pbstrPropNam
           return (*pbstrPropName = SysAllocString(L"—писокѕолученных—ообщений")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 18 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"DBList")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"—писок»Ѕ")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 19 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"DBGroupList")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"√рупповой—писок»Ѕ")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 20 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"UserList")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"—писокѕользователей")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -438,6 +474,18 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         V_BSTR(pvarPropVal) = client_.getReceivedMessageList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
+      case 18 : // DBList
+        V_BSTR(pvarPropVal) = client_.getDBList().getOLEString();
+        V_VT(pvarPropVal) = VT_BSTR;
+        break;
+      case 19 : // DBGroupList
+        V_BSTR(pvarPropVal) = client_.getDBGroupList().getOLEString();
+        V_VT(pvarPropVal) = VT_BSTR;
+        break;
+      case 20 : // UserList
+        V_BSTR(pvarPropVal) = client_.getUserList().getOLEString();
+        V_VT(pvarPropVal) = VT_BSTR;
+        break;
     }
   }
   catch( ExceptionSP & e ){
@@ -561,6 +609,24 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
       case 14 : // Version
         hr = E_NOTIMPL;
         break;
+      case 15 :
+        hr = E_NOTIMPL;
+        break;
+      case 16 :
+        hr = E_NOTIMPL;
+        break;
+      case 17 :
+        hr = E_NOTIMPL;
+        break;
+      case 18 :
+        hr = E_NOTIMPL;
+        break;
+      case 19 :
+        hr = E_NOTIMPL;
+        break;
+      case 20 :
+        hr = E_NOTIMPL;
+        break;
     }
   }
   catch( ExceptionSP & e ){
@@ -590,6 +656,9 @@ HRESULT Cmsmail1c::IsPropReadable(long lPropNum,BOOL * pboolPropRead)
     case 15 : *pboolPropRead = TRUE; break;
     case 16 : *pboolPropRead = TRUE; break;
     case 17 : *pboolPropRead = TRUE; break;
+    case 18 : *pboolPropRead = TRUE; break;
+    case 19 : *pboolPropRead = TRUE; break;
+    case 20 : *pboolPropRead = TRUE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -616,6 +685,9 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
     case 15 : *pboolPropWrite = FALSE; break;
     case 16 : *pboolPropWrite = FALSE; break;
     case 17 : *pboolPropWrite = FALSE; break;
+    case 18 : *pboolPropWrite = FALSE; break;
+    case 19 : *pboolPropWrite = FALSE; break;
+    case 20 : *pboolPropWrite = FALSE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -623,7 +695,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 11;
+  *plMethods = 12;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -672,6 +744,10 @@ HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
   if( _wcsicoll(bstrMethodName,L"RemoveMessage") == 0 ) *plMethodNum = 10;
   else
   if( _wcsicoll(bstrMethodName,L"”далить—ообщение") == 0 ) *plMethodNum = 10;
+  else
+  if( _wcsicoll(bstrMethodName,L"GetDB") == 0 ) *plMethodNum = 11;
+  else
+  if( _wcsicoll(bstrMethodName,L"ѕолучить»Ѕ") == 0 ) *plMethodNum = 11;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -768,6 +844,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"”далить—ообщение")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 11 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"GetDB")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ѕолучить»Ѕ")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -786,6 +870,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 8 : *plParams = 2; break;
     case 9 : *plParams = 1; break;
     case 10 : *plParams = 1; break;
+    case 11 : *plParams = 0; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -1021,6 +1106,11 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             }
             SafeArrayUnlock(*paParams);
           }
+          break;
+        case 11 : // GetDB
+          if( !active_ ) throw ExceptionSP(new Exception(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__));
+          client_.getDB();
+          V_I4(pvarRetValue) = 1;
           break;
         default :
           hr = E_NOTIMPL;
