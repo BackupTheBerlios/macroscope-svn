@@ -78,8 +78,8 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   aiHints.ai_flags |= ai_flag;
   int r;
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::isWin9x() ){
-    r = api.GetAddrInfoA(
+  if( ksys::isWin9x() || api.GetAddrInfoW == NULL ){
+    r = wship6api.GetAddrInfoA(
       host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
       port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
       &aiHints,
@@ -107,12 +107,12 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
   }
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::isWin9x() ){
+  if( ksys::isWin9x() || api.FreeAddrInfoW == NULL ){
     for( res = aiList; res != NULL; res = res->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
       memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
     }
-    api.FreeAddrInfoA(aiList);
+    wship6api.FreeAddrInfoA(aiList);
   }
   else {
     for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
@@ -202,8 +202,8 @@ utf8::String SockAddr::resolve() const
     char servInfo[NI_MAXSERV];
     wchar_t servInfoW[NI_MAXSERV];
   };
-  if( ksys::isWin9x() ){
-    err = api.GetNameInfoA(
+  if( ksys::isWin9x() || api.GetNameInfoW == NULL ){
+    err = wship6api.GetNameInfoA(
       (const sockaddr *) &addr4_,
       (socklen_t) length(),
       hostName,
@@ -304,7 +304,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
   if( ksys::isWinXPorLater() ){
 // Make an initial call to GetAdaptersAddresses to get the 
 // size needed into the outBufLen variable
-    dwRetVal = ::GetAdaptersAddresses(
+    dwRetVal = lphlpapi.GetAdaptersAddresses(
       AF_UNSPEC,
       0, 
       NULL, 
@@ -320,7 +320,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
     }
 // Make a second call to GetAdapters Addresses to get the
 // actual data we want
-    dwRetVal = ::GetAdaptersAddresses(
+    dwRetVal = lphlpapi.GetAdaptersAddresses(
       AF_UNSPEC,
       0, 
       NULL, 
@@ -333,7 +333,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
     }
   }
   else {
-    dwRetVal = ::GetAdaptersInfo(NULL,&outBufLen);
+    dwRetVal = GetAdaptersInfo(NULL,&outBufLen);
     if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
       addresses.realloc(outBufLen);
     }
@@ -341,7 +341,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
       int32_t err = GetLastError() + ksys::errorOffset;
       throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
     }
-    dwRetVal = ::GetAdaptersInfo(&addresses->infos_,&outBufLen);
+    dwRetVal = GetAdaptersInfo(&addresses->infos_,&outBufLen);
     if( dwRetVal != ERROR_SUCCESS ){
       int32_t err = GetLastError() + ksys::errorOffset;
       throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));

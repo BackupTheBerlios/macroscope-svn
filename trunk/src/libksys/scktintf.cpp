@@ -71,19 +71,16 @@ const char * const  API::symbols_[]   = {
   "WSAEventSelect",
   "WSAEnumNetworkEvents",
   "WSAAsyncGetHostByName",
-  "getaddrinfo",
-  "GetAddrInfoW",
-  "freeaddrinfo",
-  "FreeAddrInfoW",
-  "getnameinfo",
-  "GetNameInfoW",
   "getsockname",
-  "getpeername"
+  "getpeername",
+  "GetAddrInfoW",
+  "FreeAddrInfoW",
+  "GetNameInfoW"
 };
 
 HINSTANCE API::handle_;
 
-const char * const  APIEx::symbols_[] = {
+const char * const APIEx::symbols_[] = {
   "AcceptEx",
   "GetAcceptExSockaddrs"
 };
@@ -92,9 +89,23 @@ HINSTANCE APIEx::handle_;
 #endif
 //---------------------------------------------------------------------------
 WSADATA API::wsaData_;
-APIEx apiEx;
 uint8_t API::mutex_[sizeof(ksys::InterlockedMutex)];
 uintptr_t API::count_;
+//---------------------------------------------------------------------------
+APIEx apiEx;
+LPHLPAPI lphlpapi;
+const char * const LPHLPAPI::symbols_[] = {
+  "GetAdaptersAddresses"
+};
+HINSTANCE LPHLPAPI::handle_;
+//---------------------------------------------------------------------------
+WSHIP6API wship6api;
+const char * const WSHIP6API::symbols_[] = {
+  "getaddrinfo",
+  "freeaddrinfo",
+  "getnameinfo"
+};
+HINSTANCE WSHIP6API::handle_;
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
@@ -106,9 +117,9 @@ API api;
 //---------------------------------------------------------------------------
 void API::open()
 {
-  int32_t                                 err;
+  int32_t err;
 
-  ksys::AutoLock< ksys::InterlockedMutex> lock  (mutex());
+  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
   if( count_ == 0 ){
 #ifndef USE_STATIC_SOCKET_LIBRARY
     if( ksys::isWin9x() ){
@@ -133,14 +144,11 @@ void API::open()
         throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
       }
     }
-    else{
+    else {
       handle_ = LoadLibraryExW(L"ws2_32.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       if( handle_ == NULL ){
         err = GetLastError() + ksys::errorOffset;
-        ksys::stdErr.log(
-          ksys::lmERROR,
-          utf8::String::Stream() << "Load 'ws2_32.dll' failed\n"
-        );
+        ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'ws2_32.dll' failed\n");
         throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
       }
       apiEx.handle_ = LoadLibraryExW(L"mswsock.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -148,17 +156,43 @@ void API::open()
         err = GetLastError() + ksys::errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
-        ksys::stdErr.log(
-          ksys::lmERROR,
-          utf8::String::Stream() << "Load 'mswsock.dll' failed\n"
-        );
+        ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'mswsock.dll' failed\n");
         throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+      }
+      if( ksys::isWinXPorLater() ){
+        lphlpapi.handle_ = LoadLibraryExW(L"lphlpapi.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if( lphlpapi.handle_ == NULL ){
+          err = GetLastError() + ksys::errorOffset;
+          FreeLibrary(handle_);
+          handle_ = NULL;
+          FreeLibrary(apiEx.handle_);
+          apiEx.handle_ = NULL;
+          ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'lphlpapi.dll' failed\n");
+          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        }
+      }
+      if( ksys::isWin9x() ){
+        wship6api.handle_ = LoadLibraryExA("wship6.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
+        if( wship6api.handle_ == NULL ){
+          err = GetLastError() + ksys::errorOffset;
+          FreeLibrary(handle_);
+          handle_ = NULL;
+          FreeLibrary(apiEx.handle_);
+          apiEx.handle_ = NULL;
+          FreeLibrary(lphlpapi.handle_);
+          lphlpapi.handle_ = NULL;
+          ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'wship6.dll' failed\n");
+          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        }
       }
     }
     uintptr_t i;
     for( i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
       ((void **) &p_WSAGetLastError)[i] = GetProcAddress(handle_, symbols_[i]);
-      if( ((void **) &p_WSAGetLastError)[i] == NULL ){
+      if( ((void **) &p_WSAGetLastError)[i] == NULL &&
+          (void **) &p_WSAGetLastError + i != &p_GetAddrInfoW &&
+          (void **) &p_WSAGetLastError + i != &p_FreeAddrInfoW &&
+          (void **) &p_WSAGetLastError + i != &p_GetNameInfoW ){
         err = GetLastError() + ksys::errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
@@ -186,6 +220,44 @@ void API::open()
         throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
       }
     }
+    if( ksys::isWinXPorLater() ){
+      for( i = 0; i < sizeof(lphlpapi.symbols_) / sizeof(lphlpapi.symbols_[0]); i++ ){
+        ((void **) &lphlpapi.p_GetAdaptersAddresses)[i] = GetProcAddress(lphlpapi.handle_,lphlpapi.symbols_[i]);
+        if( ((void **) &lphlpapi.p_GetAdaptersAddresses)[i] == NULL ){
+          err = GetLastError() + ksys::errorOffset;
+          FreeLibrary(handle_);
+          handle_ = NULL;
+          FreeLibrary(apiEx.handle_);
+          apiEx.handle_ = NULL;
+          FreeLibrary(lphlpapi.handle_);
+          lphlpapi.handle_ = NULL;
+          ksys::stdErr.debug(9,utf8::String::Stream() <<
+            "GetProcAddress(\"" << lphlpapi.symbols_[i] << "\")\n"
+          );
+          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        }
+      }
+    }
+    if( ksys::isWin9x() ){
+      for( i = 0; i < sizeof(wship6api.symbols_) / sizeof(wship6api.symbols_[0]); i++ ){
+        ((void **) &wship6api.p_getaddrinfo)[i] = GetProcAddress(wship6api.handle_,wship6api.symbols_[i]);
+        if( ((void **) &wship6api.p_getaddrinfo)[i] == NULL ){
+          err = GetLastError() + ksys::errorOffset;
+          FreeLibrary(handle_);
+          handle_ = NULL;
+          FreeLibrary(apiEx.handle_);
+          apiEx.handle_ = NULL;
+          FreeLibrary(lphlpapi.handle_);
+          lphlpapi.handle_ = NULL;
+          FreeLibrary(wship6api.handle_);
+          wship6api.handle_ = NULL;
+          ksys::stdErr.debug(9,utf8::String::Stream() <<
+            "GetProcAddress(\"" << wship6api.symbols_[i] << "\")\n"
+          );
+          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        }
+      }
+    }
 #endif
     if( this->WSAStartup(MAKEWORD(2,2), &wsaData_) != 0 ){
       err = this->WSAGetLastError() + ksys::errorOffset;
@@ -194,26 +266,38 @@ void API::open()
       handle_ = NULL;
       FreeLibrary(apiEx.handle_);
       apiEx.handle_ = NULL;
+      FreeLibrary(lphlpapi.handle_);
+      lphlpapi.handle_ = NULL;
+      FreeLibrary(wship6api.handle_);
+      wship6api.handle_ = NULL;
 #endif
-      ksys::stdErr.log(
-        ksys::lmERROR,
-        utf8::String::Stream() << "WSAStartup failed\n"
-      );
+      ksys::stdErr.debug(9,utf8::String::Stream() << "WSAStartup failed\n");
       throw ksys::ExceptionSP(new ksys::Exception(err,"WSAStartup failed"));
     }
     if( LOBYTE(wsaData_.wVersion) != 2 || HIBYTE(wsaData_.wVersion) != 2 ){
-      ksys::stdErr.log(ksys::lmERROR,utf8::String::Stream() << "The Windows Sockets version requested (2.2) is not supported.\n");
+      ksys::stdErr.debug(9,utf8::String::Stream() <<
+        "The Windows Sockets version requested (2.2) is not supported.\n"
+      );
+#ifndef USE_STATIC_SOCKET_LIBRARY
+      FreeLibrary(handle_);
+      handle_ = NULL;
+      FreeLibrary(apiEx.handle_);
+      apiEx.handle_ = NULL;
+      FreeLibrary(lphlpapi.handle_);
+      lphlpapi.handle_ = NULL;
+      FreeLibrary(wship6api.handle_);
+      wship6api.handle_ = NULL;
+#endif
       throw ksys::ExceptionSP(new ksys::Exception(WSAVERNOTSUPPORTED,__PRETTY_FUNCTION__));
     }
-
   }
   count_++;
 }
 //---------------------------------------------------------------------------
 void API::close()
 {
-  assert(count_ > 0);
-  ksys::AutoLock< ksys::InterlockedMutex> lock  (mutex());
+  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  assert( count_ > 0 );
   if( count_ == 1 ){
     int r = this->WSACleanup();
     assert( r == 0 );
@@ -230,6 +314,16 @@ void API::close()
     for( i = sizeof(apiEx.symbols_) / sizeof(apiEx.symbols_[0]) - 1; i >= 0; i-- )
       ((void **) &apiEx.p_AcceptEx)[i] = NULL;
 #endif
+#endif
+#ifndef NDEBUG
+    FreeLibrary(lphlpapi.handle_);
+    lphlpapi.handle_ = NULL;
+    FreeLibrary(wship6api.handle_);
+    wship6api.handle_ = NULL;
+    for( i = sizeof(lphlpapi.symbols_) / sizeof(lphlpapi.symbols_[0]) - 1; i >= 0; i-- )
+      ((void **) &lphlpapi.p_GetAdaptersAddresses)[i] = NULL;
+    for( i = sizeof(wship6api.symbols_) / sizeof(wship6api.symbols_[0]) - 1; i >= 0; i-- )
+      ((void **) &wship6api.p_getaddrinfo)[i] = NULL;
 #endif
   }
   count_--;
