@@ -423,15 +423,14 @@ bool Client::sendMessage(const utf8::String id)
 bool Client::removeMessage(const utf8::String id)
 {
   Vector<Message> * queue = &sendQueue_;
-  intptr_t i = queue->bSearch(Message(id));
+  intptr_t i = sendQueue_.bSearch(Message(id));
   if( i >= 0 ){
-    queue->remove(i);
+    sendQueue_.remove(i);
     return true;
   }
   {
     AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-    queue = &recvQueue_;
-    i = queue->bSearch(id);
+    i = recvQueue_.bSearch(id);
     if( i < 0 ) return false;
   }
   workFiberWait_.acquire();
@@ -445,9 +444,10 @@ bool Client::removeMessage(const utf8::String id)
   }
   AutoLock<InterlockedMutex> lock(workFiberWait_);
   if( workFiberLastError_ == 0 ){
-    i = queue->bSearch(id);
+    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    i = recvQueue_.bSearch(id);
     assert( i >= 0 );
-    queue->remove(i);
+    recvQueue_.remove(i);
   }
   return workFiberLastError_ == 0;
 }

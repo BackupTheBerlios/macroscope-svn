@@ -124,6 +124,10 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
         lg.l_onoff = 0;
         lg.l_linger = 0;
         setsockopt(SOL_SOCKET,SO_LINGER,&lg,sizeof(lg));
+        int reuse = true;
+//        socklen_t rlen = sizeof(reuse);
+//        getsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,rlen);
+        setsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,(socklen_t) sizeof(reuse));
       }
     }
     catch( ... ){
@@ -191,10 +195,6 @@ AsyncSocket & AsyncSocket::setsockopt(int level,int optname,const void * optval,
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::bind(const SockAddr & sockAddr)
 {
-  int reuse = true;
-  socklen_t rlen = sizeof(reuse);
-  getsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,rlen);
-  setsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,(socklen_t) sizeof(reuse));
   if( api.bind(socket_,(struct sockaddr *) &sockAddr.addr4_,(socklen_t) sockAddr.length()) != 0 ){
     int32_t err = errNo();
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
@@ -286,6 +286,10 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   lg.l_onoff = 0;
   lg.l_linger = 0;
   setsockopt(SOL_SOCKET,SO_LINGER,&lg,sizeof(lg));
+  int reuse = true;
+  socklen_t rlen = sizeof(reuse);
+//  getsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,rlen);
+  setsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,(socklen_t) sizeof(reuse));
 #endif
   socket.deActivateCompression();
   socket.deActivateEncryption();

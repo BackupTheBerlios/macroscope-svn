@@ -470,6 +470,7 @@ void Logger::parseBPFTLogFile(const utf8::String & logFileName)
 void Logger::main()
 {
   config_.parse().override();
+  ksys::stdErr.setDebugLevels(config_.value("debug_levels","+0,+1,+2,+3"));
 
   utf8::String lockFileName(ksys::getTempPath() +
     ksys::unScreenString(
@@ -686,7 +687,7 @@ int main(int argc, char * argv[])
         ksys::Config::defaultFileName(ksys::argv()[i + 1]);
       }
     }
-    macroscope::Logger  logger;
+    macroscope::Logger logger;
     logger.main();
   }
   catch( ksys::ExceptionSP & e ){
