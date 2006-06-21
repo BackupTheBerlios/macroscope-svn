@@ -267,6 +267,7 @@ inline Randomizer::~Randomizer()
 //---------------------------------------------------------------------------
 inline Randomizer::Randomizer()
 {
+  randomize();
 }
 //---------------------------------------------------------------------------
 inline uint64_t Randomizer::random2(uint64_t m)

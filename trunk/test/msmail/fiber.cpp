@@ -256,7 +256,7 @@ void ServerFiber::sendMail() // client sending mail
     putCode(eInvalidMessage);
   }
   else {
-    if( !message->isValue(messageIdKey) || message->value(messageIdKey).trim().strlen() == 0 ){
+    if( !message->isValue(messageIdKey) || message->id().trim().strlen() == 0 ){
       UUID uuid;
       createUUID(uuid);
       utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
@@ -272,11 +272,23 @@ void ServerFiber::sendMail() // client sending mail
     message->value(relay + "Received",getTimeString(gettimeofday()));
     message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
     message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
-    AsyncFile file(server_.spoolDir() + message->value(messageIdKey) + ".msg");
-    file.removeAfterClose(true).exclusive(true).open();
+    AsyncFile ctrl(server_.lckDir() + message->id() + ".msg" + ".lck");
+    ctrl.removeAfterClose(true);
+    ctrl.open();
+    AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+    AsyncFile file(server_.spoolDir() + message->id() + ".msg");
+    file.removeAfterClose(true).open();
     file << message;
     file.removeAfterClose(false).close();
     putCode(eOK);
+    flush();
+    stdErr.debug(0,
+      utf8::String::Stream() << "Message " << message->id() <<
+      " received from " << message->value("#Sender") <<
+      " to " << message->value("#Recepient") <<
+      ", traffic " <<
+      allBytes() << "\n"
+    );
   }
 }
 //------------------------------------------------------------------------------
@@ -464,9 +476,21 @@ intptr_t SpoolWalker::processQueue()
             utf8::String userMailBox(server_.mailDir() + suser);
             createDirectoryAsync(userMailBox);
             renameAsync(list[i],includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
+            stdErr.debug(0,
+              utf8::String::Stream() << "Message " << message.id() <<
+              " received from " << message.value("#Sender") <<
+              " to " << message.value("#Recepient") <<
+              " delivered localy to mailbox: " << userMailBox << "\n"
+            );
           }
           else {
             renameAsync(list[i],server_.mqueueDir() + message.id() + ".msg");
+            stdErr.debug(0,
+              utf8::String::Stream() << "Message " << message.id() <<
+              " received from " << message.value("#Sender") <<
+              " to " << message.value("#Recepient") <<
+              " is put in queue for delivery.\n"
+            );
           }
           k--;
         }
@@ -493,13 +517,14 @@ void SpoolWalker::fiberExecute()
     if( terminated_ ) break;
     if( k == 0 ){
       dcn_.monitor(excludeTrailingPathDelimiter(server_.spoolDir()));
-      stdErr.debug(9,utf8::String::Stream() << "Processing spool by monitor... \n");
+      stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by monitor... \n");
     }
-    /*else {
+    else {
       try {
-        uint64_t timeout = server_.config_->value("queue_processing_interval",10000000u);
-        sleepAsync(timeout);
-        stdErr.debug(9,utf8::String::Stream() << "Processing spool by timer... \n");
+        uint64_t timeout = server_.config_->valueByPath(
+          utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",1u);
+        sleepAsync(timeout * 1000000u);
+        stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by timer... \n");
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
@@ -509,7 +534,7 @@ void SpoolWalker::fiberExecute()
         if( e->code() != EINTR ) throw;
 #endif
       }
-    }*/
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -566,7 +591,7 @@ void MailQueueWalker::auth()
   );
 }
 //------------------------------------------------------------------------------
-intptr_t MailQueueWalker::processQueue()
+intptr_t MailQueueWalker::processQueue(bool & timeWait)
 {
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   intptr_t i, k;
@@ -593,8 +618,8 @@ intptr_t MailQueueWalker::processQueue()
 #error Not implemented
 #endif
     }
-    try {
-      if( file.isOpen() ){
+    if( file.isOpen() ){
+      try {
         Message message;
         file >> message;
         file.close();
@@ -609,6 +634,7 @@ intptr_t MailQueueWalker::processQueue()
           if( key2ServerLink != NULL ) server = key2ServerLink->server_;
         }
         if( server.trim().strlen() == 0 ){
+          timeWait = true;
           stdErr.debug(1,
             utf8::String::Stream() <<
             "Message recepient " << message.value("#Recepient") <<
@@ -622,6 +648,7 @@ intptr_t MailQueueWalker::processQueue()
             resolved = true;
           }
           catch( ExceptionSP & e ){
+            timeWait = true;
             e->writeStdError();
             stdErr.debug(1,
               utf8::String::Stream() <<
@@ -635,6 +662,7 @@ intptr_t MailQueueWalker::processQueue()
               connected = true;
             }
             catch( ExceptionSP & ){
+              timeWait = true;
               stdErr.debug(3,
                 utf8::String::Stream() <<
                 "Unable to connect. Host " << server << " unreachable.\n"
@@ -647,6 +675,7 @@ intptr_t MailQueueWalker::processQueue()
               authentificated = true;
             }
             catch( ExceptionSP & ){
+              timeWait = true;
               stdErr.debug(3,
                 utf8::String::Stream() << "Authentification to host " <<
                 server << " failed.\n"
@@ -660,15 +689,16 @@ intptr_t MailQueueWalker::processQueue()
               getCode();
               *this << uint8_t(cmSendMail) << message;
               getCode();
-              stdErr.debug(0,utf8::String::Stream() <<
-                "Message " << message.id() <<
-                " sended to " << message.value("#Recepient") <<
-                ", traffic " << allBytes() << "\n"
+              stdErr.debug(0,
+                utf8::String::Stream() << "Message " << message.id() <<
+                " sended to " << message.value("#Recepient") << ", traffic " <<
+                allBytes() << "\n"
               );
               sended = true;
               k--;
             }
             catch( ExceptionSP & e ){
+              timeWait = true;
               e->writeStdError();
             }
             shutdown();
@@ -676,14 +706,15 @@ intptr_t MailQueueWalker::processQueue()
           }
         }
       }
-    }
-    catch( ExceptionSP & e ){
+      catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
+        if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
 #else
-      if( e->code() != EINVAL ) throw;
+        if( e->code() != EINVAL ) throw;
 #endif
-      stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
+        removeAsync(list[i]);
+        stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << " removed.\n");
+      }
     }
     list.remove(i);
   }
@@ -694,17 +725,19 @@ void MailQueueWalker::main()
 {
   intptr_t k;
   while( !terminated_ ){
-    k = processQueue();
+    bool timeWait = false;
+    k = processQueue(timeWait);
     if( terminated_ ) break;
     if( k == 0 ){
       dcn_.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
-      stdErr.debug(9,utf8::String::Stream() << "Processing mqueue by monitor... \n");
+      stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by monitor... \n");
     }
-/*    else {
+    else if( timeWait ){
       try {
-        uint64_t timeout = server_.config_->value("mqueue_processing_interval",10000000u);
-        sleepAsync(timeout);
-        stdErr.debug(9,utf8::String::Stream() << "Processing mqueue by timer... \n");
+        uint64_t timeout = server_.config_->valueByPath(
+          utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",1u);
+        sleepAsync(timeout * 1000000u);
+        stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
@@ -714,7 +747,7 @@ void MailQueueWalker::main()
         if( e->code() != EINTR ) throw;
 #endif
       }
-    }*/
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -805,21 +838,21 @@ void NodeClient::main()
               remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
               host = remoteAddress.resolveAsync();
               connect(remoteAddress);
+              try {
+                auth();
+                connected = true;
+              }
+              catch( ExceptionSP & e ){
+                e->writeStdError();
+                stdErr.debug(3,utf8::String::Stream() <<
+                  "Authentification to host " << host << " failed.\n"
+                );
+              }
             }
             catch( ExceptionSP & e ){
               e->writeStdError();
               stdErr.debug(3,utf8::String::Stream() <<
                 "Unable connect to node. Host " << host << " unreachable.\n"
-              );
-            }
-            try {
-              auth();
-              connected = true;
-            }
-            catch( ExceptionSP & e ){
-              e->writeStdError();
-              stdErr.debug(3,utf8::String::Stream() <<
-                "Authentification to host " << host << " failed.\n"
               );
             }
             if( connected ) break;

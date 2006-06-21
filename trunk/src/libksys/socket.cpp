@@ -536,8 +536,8 @@ AsyncSocket & AsyncSocket::operator << (const utf8::String & s)
   if( l > (~uint64_t(0) >> 1) )
     throw ksys::ExceptionSP(new ksys::Exception(EINVAL,__PRETTY_FUNCTION__));
   if( l > 32767 ){
-    for( intptr_t i = sizeof(b) - 1; i >= 0; i-- )
-      ksys::xchg(b[sizeof(b) - i - 1],((uint8_t *) &l)[i]);
+    for( intptr_t i = sizeof(b); i > sizeof(b) / 2; i-- )
+      ksys::xchg(b[sizeof(b) - i],((uint8_t *) &l)[i - 1]);
     b[0] |= uint8_t(0x80);
     return write(b,sizeof(uint64_t)).write(s.c_str(),ll);
   }
@@ -553,13 +553,14 @@ AsyncSocket & AsyncSocket::operator >> (utf8::String & s)
   };
   l = 0;
   read(b,sizeof(int16_t));
-  if( b[0] < 0x80 ){
-    ksys::xchg(b[0],b[1]);
+  if( b[0] & 0x80 ){
+    b[0] &= ~0x80;
+    read(b + sizeof(int16_t),sizeof(uint64_t) - sizeof(int16_t));
+    for( intptr_t i = sizeof(b); i > sizeof(b) / 2; i-- )
+      ksys::xchg(b[sizeof(b) - i],((uint8_t *) &l)[i - 1]);
   }
   else {
-    read(b + sizeof(int16_t),sizeof(uint64_t) - sizeof(int16_t));
-    for( intptr_t i = sizeof(b) - 1; i >= 0; i-- )
-      ksys::xchg(b[sizeof(b) - i - 1],((uint8_t *) &l)[i]);
+    ksys::xchg(b[0],b[1]);
   }
   if( l > (~uint64_t(0) >> 1) || l > ~uintptr_t(0) )
     throw ksys::ExceptionSP(new ksys::Exception(EINVAL,__PRETTY_FUNCTION__));

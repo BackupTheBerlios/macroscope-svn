@@ -214,6 +214,7 @@ int64_t AsyncFile::read(void * buf,uint64_t size)
     if( fiber()->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
       SetLastError(fiber()->event_.errno_);
+      if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
 #else
       errno = fiber()->event_.errno_;
 #endif
@@ -271,6 +272,7 @@ int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
     if( fiber()->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
       SetLastError(fiber()->event_.errno_);
+      if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
 #else
       errno = fiber()->event_.errno_;
 #endif
@@ -553,12 +555,12 @@ AsyncFile & AsyncFile::seek(uint64_t pos)
 uintptr_t AsyncFile::gets(AutoPtr<char> & p,bool * eof)
 {
   uint64_t op = tell();
-  intptr_t r, rr, l = 0;
+  int64_t r, rr, l = 0;
   char * a, * q;
   if( eof != NULL ) *eof = false;
   for(;;){
-    a = p.realloc(l + getpagesize()).ptr() + l;
-    rr = r = (intptr_t) read(a,getpagesize());
+    a = p.realloc(size_t(l + 512)).ptr() + l;
+    rr = r = read(a,512);
     if( r <= 0 ){
       if( eof != NULL ) *eof = true;
       break;
@@ -573,21 +575,21 @@ uintptr_t AsyncFile::gets(AutoPtr<char> & p,bool * eof)
   }
 l1:
   seek(op + l);
-  p.realloc(l + (l > 0));
-  if( l > 0 ) p[l] = '\0';
-  return l;
+  p.realloc(size_t(l + (l > 0)));
+  if( l > 0 ) p[uintptr_t(l)] = '\0';
+  return uintptr_t(l);
 }
 //---------------------------------------------------------------------------
 utf8::String AsyncFile::gets(bool * eof)
 {
   uint64_t op = tell();
-  intptr_t r, rr, l  = 0;
+  int64_t r, rr, l = 0;
   char * a, * q;
-  AutoPtr<char>  p;
+  AutoPtr<char> p;
   if( eof != NULL ) *eof = false;
   for(;;){
-    a = p.realloc(l + getpagesize()).ptr() + l;
-    rr = r = (intptr_t) read(a,getpagesize());
+    a = p.realloc(size_t(l + 512)).ptr() + l;
+    rr = r = read(a,512);
     if( r <= 0 ){
       if( eof != NULL ) *eof = true;
       break;
@@ -602,8 +604,8 @@ utf8::String AsyncFile::gets(bool * eof)
   }
 l1:
   seek(op + l);
-  p.realloc(l + (l > 0));
-  if( l > 0 ) p[l] = '\0';
+  p.realloc(size_t(l + (l > 0)));
+  if( l > 0 ) p[uintptr_t(l)] = '\0';
   utf8::String::Container * container = new utf8::String::Container(0,p.ptr());
   p.ptr(NULL);
   return container;

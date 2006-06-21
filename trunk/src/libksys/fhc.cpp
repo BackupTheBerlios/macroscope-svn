@@ -222,11 +222,11 @@ int64_t FileHandleContainer::read(void * buf, uint64_t size)
   while( size > 0 ){
     DWORD r, a  = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
     if( ReadFile(handle_, buf, a, &r, NULL) == 0 ){
+      if( GetLastError() == ERROR_HANDLE_EOF ) break;
       rr = -1;
       break;
     }
-    if( r == 0 )
-      break;
+    if( r == 0 ) break;
     size -= r;
     rr += r;
   }
@@ -246,8 +246,7 @@ int64_t FileHandleContainer::write(const void * buf, uint64_t size)
       ww = -1;
       break;
     }
-    if( w == 0 )
-      break;
+    if( w == 0 ) break;
     size -= w;
     ww += w;
   }
@@ -266,11 +265,11 @@ int64_t FileHandleContainer::read(uint64_t pos, void * buf, uint64_t size)
   while( size > 0 ){
     DWORD r, a  = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
     if( ReadFile(handle_, buf, a, &r, NULL) == 0 ){
+      if( GetLastError() == ERROR_HANDLE_EOF ) break;
       rr = -1;
       break;
     }
-    if( r == 0 )
-      break;
+    if( r == 0 ) break;
     size -= r;
     rr += r;
   }

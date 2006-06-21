@@ -88,7 +88,6 @@ Message & Message::value(const utf8::String & key,const utf8::String & value)
     UUID uuid;
     createUUID(uuid);
     utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-    i = attributes_.bSearch(Attribute(messageIdKey,utf8::String()),c);
     attributes_.add(Attribute(messageIdKey,suuid));
   }
   i = attributes_.bSearch(Attribute(key,utf8::String()),c);

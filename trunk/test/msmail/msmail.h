@@ -539,7 +539,7 @@ class MailQueueWalker : public ksock::ClientFiber {
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
-    intptr_t processQueue();
+    intptr_t processQueue(bool & timeWait);
     void main();
   private:
     Server & server_;
