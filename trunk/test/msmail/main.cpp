@@ -110,6 +110,10 @@ int main(int _argc,char * _argv[])
       bool daemon;
       {
         ConfigSP config(new InterlockedConfig<FiberInterlockedMutex>);
+        config->parse().override();
+        stdErr.rotationThreshold(config->value("debug_file_rotate_threshold",1024 * 1024));
+        stdErr.rotatedFileCount(config->value("debug_file_rotate_count",10));
+        stdErr.setDebugLevels(config->value("debug_levels","+0,+1,+2,+3"));
         daemon = config->value("daemon",false);
       }
       services.startServiceCtrlDispatcher(daemon);

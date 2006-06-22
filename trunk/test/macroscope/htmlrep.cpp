@@ -29,7 +29,6 @@
 #include "macroscope.h"
 //------------------------------------------------------------------------------
 namespace macroscope {
-
 //------------------------------------------------------------------------------
 static const char * const trafTypeColumnName[]  = {
   "ST_TRAF_SMTP", "ST_TRAF_WWW", "ST_TRAF"
@@ -37,16 +36,20 @@ static const char * const trafTypeColumnName[]  = {
 //------------------------------------------------------------------------------
 void Logger::decoration()
 {
-  static const char * const nicks[] = {
-    ".smtp", ".www", ".all"
-  };
+  static const char * const nicks[] = { ".smtp", ".www", ".all" };
   struct deco {
       const char *    path;
       utf8::String *  colors;
-  }             decos[]                 = {
-  { "heads", trafTypeNick_ }, { "colors.head", trafTypeHeadColor_ }, { "colors.body",  trafTypeBodyColor_ }, { "colors.tail",  trafTypeTailColor_ }, { "colors.details.head", trafTypeHeadDataColor_ }, { "colors.details.body", trafTypeBodyDataColor_ }, { "colors.details.tail", trafTypeTailDataColor_ }
-};
-  utf8::String  basePath  ("macroscope.decoration.");
+  } decos[] = {
+    { "heads", trafTypeNick_ },
+    { "colors.head", trafTypeHeadColor_ },
+    { "colors.body",  trafTypeBodyColor_ },
+    { "colors.tail",  trafTypeTailColor_ },
+    { "colors.details.head", trafTypeHeadDataColor_ },
+    { "colors.details.body", trafTypeBodyDataColor_ },
+    { "colors.details.tail", trafTypeTailDataColor_ }
+  };
+  utf8::String  basePath("macroscope.decoration.");
   for( intptr_t i = sizeof(decos) / sizeof(decos[0]) - 1; i >= 0; i-- )
     for( intptr_t j = ttAll; j >= 0; j-- ){
       decos[i].colors[j] = ksys::unScreenString(config_.valueByPath(basePath + decos[i].path + nicks[j]));
@@ -281,11 +284,11 @@ void Logger::writeHtmlYearOutput()
     beginTime = endTime = ksys::time2tm(getlocaltimeofday());
   }
 #if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String  section ("macroscope.windows.html_report.");
+  utf8::String  section("macroscope.windows.html_report.");
 #else
-  utf8::String  section ("macroscope.unix.html_report.");
+  utf8::String  section("macroscope.unix.html_report.");
 #endif
-  utf8::String  dir     (ksys::excludeTrailingPathDelimiter(ksys::unScreenString(config_.valueByPath(section + "directory"))));
+  utf8::String  dir(ksys::excludeTrailingPathDelimiter(ksys::unScreenString(config_.valueByPath(section + "directory"))));
   ksys::createDirectory(dir);
   ksys::chModOwn(
     dir,
@@ -564,11 +567,14 @@ utf8::String Logger::TrafCacheEntry::id() const
 //------------------------------------------------------------------------------
 void Logger::writeHtmlHead(ksys::FileHandleContainer & f)
 {
-  f << "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n" "<HTML>\n" "<HEAD>\n"
+  f << "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+    "<HTML>\n" "<HEAD>\n"
   //    "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"600\">\n"
   //    "<META HTTP-EQUIV=\"Pragma\" CONTENT=\"no-cache\">\n"
   //    "<META HTTP-EQUIV=\"Cache-Control\" content=\"no-cache\">\n"
-  "<TITLE>Statistics by user</TITLE>\n" "</HEAD>\n" "<BODY lang=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+  "<TITLE>Statistics by user</TITLE>\n"
+  "</HEAD>\n"
+  "<BODY lang=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
   ;
 }
 //------------------------------------------------------------------------------
@@ -579,7 +585,8 @@ void Logger::writeHtmlTail(ksys::FileHandleContainer & f)
   uname(&un);
   f << un.nodename << "\n<BR>\n";
 #endif
-  f << "</BODY>\n" "</HTML>\n";
+  f << "</BODY>\n"
+    "</HTML>\n";
 }
 //------------------------------------------------------------------------------
 int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et, const utf8::String & user)
@@ -622,13 +629,12 @@ int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et,
     trafCache_.add(tce.ptr(), tce->id(), &item);
     tce.ptr(NULL);
   }
-  else{
+  else {
     //    trafCache_.changeIndex(item->index(),0);
   }
   return item->object()->traf_;
 }
 //------------------------------------------------------------------------------
-
 /*  fprintf(fyear,
     "<FONT FACE=\"Arial\">\n"
     "  <A HREF=\"bpft-traf.html\">Статистика пакетного фильтра bpft</A><BR><BR>\n"

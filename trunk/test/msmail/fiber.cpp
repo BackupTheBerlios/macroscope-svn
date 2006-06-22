@@ -430,6 +430,7 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 intptr_t SpoolWalker::processQueue()
 {
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
+  utf8::String myHost(ksock::SockAddr::gethostname());
   intptr_t i, k;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.spoolDir() + "*.msg",utf8::String(),false);
@@ -467,8 +468,7 @@ intptr_t SpoolWalker::processQueue()
           AutoMutexRDLock<FiberMutex> lock(data.mutex_);
           key2ServerLink = data.key2ServerLinks_.find(skey);
           deliverLocaly = 
-            key2ServerLink != NULL && 
-            key2ServerLink->server_.strcasecmp(ksock::SockAddr::gethostname()) == 0;
+            key2ServerLink != NULL && key2ServerLink->server_.strcasecmp(myHost) == 0;
         }
         file.close();
         if( key2ServerLink != NULL ){

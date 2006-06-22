@@ -304,7 +304,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
   if( ksys::isWinXPorLater() ){
 // Make an initial call to GetAdaptersAddresses to get the 
 // size needed into the outBufLen variable
-    dwRetVal = lphlpapi.GetAdaptersAddresses(
+    dwRetVal = iphlpapi.GetAdaptersAddresses(
       AF_UNSPEC,
       0, 
       NULL, 
@@ -320,7 +320,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
     }
 // Make a second call to GetAdapters Addresses to get the
 // actual data we want
-    dwRetVal = lphlpapi.GetAdaptersAddresses(
+    dwRetVal = iphlpapi.GetAdaptersAddresses(
       AF_UNSPEC,
       0, 
       NULL, 

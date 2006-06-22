@@ -84,20 +84,19 @@ const char * const APIEx::symbols_[] = {
   "AcceptEx",
   "GetAcceptExSockaddrs"
 };
-
 HINSTANCE APIEx::handle_;
 #endif
 //---------------------------------------------------------------------------
 WSADATA API::wsaData_;
 uint8_t API::mutex_[sizeof(ksys::InterlockedMutex)];
 uintptr_t API::count_;
-//---------------------------------------------------------------------------
 APIEx apiEx;
-LPHLPAPI lphlpapi;
-const char * const LPHLPAPI::symbols_[] = {
+//---------------------------------------------------------------------------
+IPHLPAPI iphlpapi;
+const char * const IPHLPAPI::symbols_[] = {
   "GetAdaptersAddresses"
 };
-HINSTANCE LPHLPAPI::handle_;
+HINSTANCE IPHLPAPI::handle_;
 //---------------------------------------------------------------------------
 WSHIP6API wship6api;
 const char * const WSHIP6API::symbols_[] = {
@@ -160,8 +159,8 @@ void API::open()
         throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
       }
       if( ksys::isWinXPorLater() ){
-        lphlpapi.handle_ = LoadLibraryExW(L"lphlpapi.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-        if( lphlpapi.handle_ == NULL ){
+        iphlpapi.handle_ = LoadLibraryExW(L"iphlpapi.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+        if( iphlpapi.handle_ == NULL ){
           err = GetLastError() + ksys::errorOffset;
           FreeLibrary(handle_);
           handle_ = NULL;
@@ -179,8 +178,8 @@ void API::open()
           handle_ = NULL;
           FreeLibrary(apiEx.handle_);
           apiEx.handle_ = NULL;
-          FreeLibrary(lphlpapi.handle_);
-          lphlpapi.handle_ = NULL;
+          FreeLibrary(iphlpapi.handle_);
+          iphlpapi.handle_ = NULL;
           ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'wship6.dll' failed\n");
           throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
         }
@@ -198,6 +197,10 @@ void API::open()
         handle_ = NULL;
         FreeLibrary(apiEx.handle_);
         apiEx.handle_ = NULL;
+        FreeLibrary(iphlpapi.handle_);
+        iphlpapi.handle_ = NULL;
+        FreeLibrary(wship6api.handle_);
+        wship6api.handle_ = NULL;
         ksys::stdErr.log(
           ksys::lmERROR,
           utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
@@ -213,6 +216,10 @@ void API::open()
         handle_ = NULL;
         FreeLibrary(apiEx.handle_);
         apiEx.handle_ = NULL;
+        FreeLibrary(iphlpapi.handle_);
+        iphlpapi.handle_ = NULL;
+        FreeLibrary(wship6api.handle_);
+        wship6api.handle_ = NULL;
         ksys::stdErr.log(
           ksys::lmERROR,
           utf8::String::Stream() << "GetProcAddress(\"" << apiEx.symbols_[i] << "\")\n"
@@ -221,18 +228,18 @@ void API::open()
       }
     }
     if( ksys::isWinXPorLater() ){
-      for( i = 0; i < sizeof(lphlpapi.symbols_) / sizeof(lphlpapi.symbols_[0]); i++ ){
-        ((void **) &lphlpapi.p_GetAdaptersAddresses)[i] = GetProcAddress(lphlpapi.handle_,lphlpapi.symbols_[i]);
-        if( ((void **) &lphlpapi.p_GetAdaptersAddresses)[i] == NULL ){
+      for( i = 0; i < sizeof(iphlpapi.symbols_) / sizeof(iphlpapi.symbols_[0]); i++ ){
+        ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] = GetProcAddress(iphlpapi.handle_,iphlpapi.symbols_[i]);
+        if( ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] == NULL ){
           err = GetLastError() + ksys::errorOffset;
           FreeLibrary(handle_);
           handle_ = NULL;
           FreeLibrary(apiEx.handle_);
           apiEx.handle_ = NULL;
-          FreeLibrary(lphlpapi.handle_);
-          lphlpapi.handle_ = NULL;
+          FreeLibrary(iphlpapi.handle_);
+          iphlpapi.handle_ = NULL;
           ksys::stdErr.debug(9,utf8::String::Stream() <<
-            "GetProcAddress(\"" << lphlpapi.symbols_[i] << "\")\n"
+            "GetProcAddress(\"" << iphlpapi.symbols_[i] << "\")\n"
           );
           throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
         }
@@ -247,8 +254,8 @@ void API::open()
           handle_ = NULL;
           FreeLibrary(apiEx.handle_);
           apiEx.handle_ = NULL;
-          FreeLibrary(lphlpapi.handle_);
-          lphlpapi.handle_ = NULL;
+          FreeLibrary(iphlpapi.handle_);
+          iphlpapi.handle_ = NULL;
           FreeLibrary(wship6api.handle_);
           wship6api.handle_ = NULL;
           ksys::stdErr.debug(9,utf8::String::Stream() <<
@@ -266,8 +273,8 @@ void API::open()
       handle_ = NULL;
       FreeLibrary(apiEx.handle_);
       apiEx.handle_ = NULL;
-      FreeLibrary(lphlpapi.handle_);
-      lphlpapi.handle_ = NULL;
+      FreeLibrary(iphlpapi.handle_);
+      iphlpapi.handle_ = NULL;
       FreeLibrary(wship6api.handle_);
       wship6api.handle_ = NULL;
 #endif
@@ -283,8 +290,8 @@ void API::open()
       handle_ = NULL;
       FreeLibrary(apiEx.handle_);
       apiEx.handle_ = NULL;
-      FreeLibrary(lphlpapi.handle_);
-      lphlpapi.handle_ = NULL;
+      FreeLibrary(iphlpapi.handle_);
+      iphlpapi.handle_ = NULL;
       FreeLibrary(wship6api.handle_);
       wship6api.handle_ = NULL;
 #endif
@@ -316,12 +323,12 @@ void API::close()
 #endif
 #endif
 #ifndef NDEBUG
-    FreeLibrary(lphlpapi.handle_);
-    lphlpapi.handle_ = NULL;
+    FreeLibrary(iphlpapi.handle_);
+    iphlpapi.handle_ = NULL;
     FreeLibrary(wship6api.handle_);
     wship6api.handle_ = NULL;
-    for( i = sizeof(lphlpapi.symbols_) / sizeof(lphlpapi.symbols_[0]) - 1; i >= 0; i-- )
-      ((void **) &lphlpapi.p_GetAdaptersAddresses)[i] = NULL;
+    for( i = sizeof(iphlpapi.symbols_) / sizeof(iphlpapi.symbols_[0]) - 1; i >= 0; i-- )
+      ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] = NULL;
     for( i = sizeof(wship6api.symbols_) / sizeof(wship6api.symbols_[0]) - 1; i >= 0; i-- )
       ((void **) &wship6api.p_getaddrinfo)[i] = NULL;
 #endif

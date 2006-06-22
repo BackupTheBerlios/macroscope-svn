@@ -45,9 +45,6 @@ Server::Server(const ConfigSP config) :
 //------------------------------------------------------------------------------
 void Server::open()
 {
-  stdErr.rotationThreshold(config_->parse().override().value("debug_file_rotate_threshold",1024 * 1024));
-  stdErr.rotatedFileCount(config_->value("debug_file_rotate_count",10));
-  stdErr.setDebugLevels(config_->value("debug_levels","+0,+1,+2,+3"));
 //  maxThreads(1);
   ksock::Server::open();
   startNodeClient(stStandalone);

@@ -101,7 +101,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   currentFiber()->switchFiber(currentFiber()->mainFiber());
   assert( currentFiber()->event_.type_ == etDirectoryChangeNotification );
   if( currentFiber()->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
-  if( currentFiber()->event_.errno_ != 0 ){
+  if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
     throw ksys::ExceptionSP(
       new EFileError(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
     );

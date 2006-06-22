@@ -213,19 +213,26 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
 {
   ksys::FileHandleContainer flog(logFileName);
   flog.open();
-  stTrafIns_->text("INSERT INTO INET_USERS_TRAF" "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)" "VALUES (:ST_USER, :ST_TIMESTAMP, :ST_TRAF_WWW, 0)");
-  stTrafUpd_->text("UPDATE INET_USERS_TRAF SET ST_TRAF_WWW = ST_TRAF_WWW + :ST_TRAF_WWW " "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP");
+  stTrafIns_->text(
+    "INSERT INTO INET_USERS_TRAF"
+    "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)"
+    "VALUES (:ST_USER, :ST_TIMESTAMP, :ST_TRAF_WWW, 0)"
+  );
+  stTrafUpd_->text(
+    "UPDATE INET_USERS_TRAF SET ST_TRAF_WWW = ST_TRAF_WWW + :ST_TRAF_WWW "
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP"
+  );
 
   database_->start();
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
 
   ksys::AutoPtr<char> b;
-  int64_t lineNo  = 1;
+  int64_t lineNo = 1;
   uintptr_t size;
   ksys::Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
-  for( ; ; ){
+  for(;;){
     //      printf("%"PRId64"\n",lineNo);
     if( (size = flog.gets(b)) <= 0 ) break;
     if( b[size - 1] == '\n' ){
