@@ -62,10 +62,9 @@ void Logger::writeUserTop(
   const struct tm & beginTime,
   const struct tm & endTime)
 {
-  ksys::FileHandleContainer f(file);
   statement_->text(
     "SELECT"
-    "    *"
+    "    A.*"
     "FROM"
     "    ("
     "        SELECT"
@@ -84,14 +83,47 @@ void Logger::writeUserTop(
     paramAsMutant("BT",beginTime)->
     paramAsMutant("ET",endTime)->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
+    ksys::FileHandleContainer f(file);
     f.open().resize(0);
+    writeHtmlHead(f);
+    f <<
+      "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
+      "<TR>\n"
+      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttAll] << "\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "URL\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttAll] << "\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "KB\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "</TR>\n"
+    ;
+    uint64_t at = 0;
+    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- )
+      at += (uint64_t) statement_->valueAsMutant(1);
     for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
       f <<
-        statement_->valueAsString("ST_URL") << " " <<
-        statement_->valueAsMutant("SUM1")
+        "<TR>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" << trafTypeBodyDataColor_[ttAll] << "\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        statement_->valueAsMutant(0) <<
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" << trafTypeBodyDataColor_[ttAll] << "\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      ;
+      writeTraf(f,statement_->valueAsMutant(1),at);
+      f <<
+        "    </FONT>\n"
+        "  </TH>\n"
+        "</TR>\n"
       ;
     }
+    writeHtmlTail(f);
   }
 }
 //------------------------------------------------------------------------------
@@ -223,12 +255,11 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER")) == 0 ) continue;
         utf8::String user(usersTrafTable(i,"ST_USER"));
         utf8::String topByUserFile(
-          user + 
           utf8::String::print(
-            "-top-%04d%02d.html",
+            "top-%04d%02d-",
             endTime.tm_year + 1900,
             endTime.tm_mon + 1
-          )
+          ) + user + ".html"
         );
         writeUserTop(
           ksys::includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
@@ -268,11 +299,13 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
                 "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[j] << "\" nowrap>\n"
                 "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
               ;
-              writeTraf(f,
+              writeTraf(
+                f,
                 getTraf(TrafType(j),
-                bt,
-                endTime,
-                usersTrafTable(i,"ST_USER")),
+                  bt,
+                  endTime,
+                  usersTrafTable(i,"ST_USER")
+                ),
                 getTraf(ttAll, bt, endTime)
               );
               f << "    </FONT>\n" "  </TH>\n"
