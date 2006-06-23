@@ -30,42 +30,41 @@
 using namespace adicpp;
 //------------------------------------------------------------------------------
 namespace macroscope {
-
 //------------------------------------------------------------------------------
 class Logger {
   public:
-                  ~Logger();
-                  Logger();
+    ~Logger();
+    Logger();
 
-    void          main();
+    void main();
   protected:
-    void          parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl);
-    void          parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear);
-    void          parseBPFTLogFile(const utf8::String & logFileName);
-    void          writeHtmlYearOutput();
+    void parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl);
+    void parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear);
+    void parseBPFTLogFile(const utf8::String & logFileName);
+    void writeHtmlYearOutput();
   private:
-    utf8::String              shortUrl_;
-    ksys::Config              config_;
-    ksys::AutoPtr< Database>  database_;
-    ksys::AutoPtr< Statement> statement_;
-    ksys::AutoPtr< Statement> stTrafIns_;
-    ksys::AutoPtr< Statement> stTrafUpd_;
-    ksys::AutoPtr< Statement> stMonUrlSel_;
-    ksys::AutoPtr< Statement> stMonUrlIns_;
-    ksys::AutoPtr< Statement> stMonUrlUpd_;
-    ksys::AutoPtr< Statement> stFileStatSel_;
-    ksys::AutoPtr< Statement> stFileStatIns_;
-    ksys::AutoPtr< Statement> stFileStatUpd_;
-    ksys::AutoPtr< Statement> stMsgsIns_;
-    ksys::AutoPtr< Statement> stMsgsSel_;
-    ksys::AutoPtr< Statement> stMsgsDel_;
-    ksys::AutoPtr< Statement> stMsgsDel2_;
-    ksys::AutoPtr< Statement> stMsgsSelCount_;
-    int64_t                   ellapsed_;
-    bool                      verbose_;
+    utf8::String shortUrl_;
+    ksys::Config config_;
+    ksys::AutoPtr<Database>  database_;
+    ksys::AutoPtr<Statement> statement_;
+    ksys::AutoPtr<Statement> stTrafIns_;
+    ksys::AutoPtr<Statement> stTrafUpd_;
+    ksys::AutoPtr<Statement> stMonUrlSel_;
+    ksys::AutoPtr<Statement> stMonUrlIns_;
+    ksys::AutoPtr<Statement> stMonUrlUpd_;
+    ksys::AutoPtr<Statement> stFileStatSel_;
+    ksys::AutoPtr<Statement> stFileStatIns_;
+    ksys::AutoPtr<Statement> stFileStatUpd_;
+    ksys::AutoPtr<Statement> stMsgsIns_;
+    ksys::AutoPtr<Statement> stMsgsSel_;
+    ksys::AutoPtr<Statement> stMsgsDel_;
+    ksys::AutoPtr<Statement> stMsgsDel2_;
+    ksys::AutoPtr<Statement> stMsgsSelCount_;
+    int64_t ellapsed_;
+    bool verbose_;
 
-    void          printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl);
-    void          parseSquidLogLine(char * p, uintptr_t size, ksys::Array< const char *> & slcp);
+    void printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl);
+    void parseSquidLogLine(char * p, uintptr_t size, ksys::Array< const char *> & slcp);
     utf8::String  squidStrToWideString(const char * str);
     ksys::Mutant  timeStampRoundToMin(const ksys::Mutant & timeStamp);
     utf8::String  shortUrl(const utf8::String & url);
@@ -82,9 +81,7 @@ class Logger {
         struct tm     et_;
         TrafType      trafType_;
 
-        TrafCacheEntry()
-        {
-        }
+        TrafCacheEntry(){}
         TrafCacheEntry(const utf8::String & user, const struct tm & bt, const struct tm & et, TrafType trafType)
           : user_(user),
             bt_(bt),
@@ -95,26 +92,27 @@ class Logger {
 
         utf8::String  id() const;
 
-        bool hashKeyEqu(const TrafCacheEntry & key, bool caseSensitive) const
-        {
+        bool hashKeyEqu(const TrafCacheEntry & key, bool caseSensitive) const {
           return id().hashKeyEqu(key.id(), caseSensitive);
         }
-        uintptr_t hash(bool caseSensitive) const
-        {
+        uintptr_t hash(bool caseSensitive) const {
           return id().hash(caseSensitive);
         }
     };
-    ksys::HashedObjectList< utf8::String,TrafCacheEntry>  trafCache_;
-    uintptr_t                                             cacheSize_;
+    ksys::HashedObjectList< utf8::String,TrafCacheEntry> trafCache_;
+    uintptr_t cacheSize_;
 
-    int64_t         getTraf(TrafType tt, const struct tm & bt, const struct tm & et, const utf8::String & user = utf8::String());
-    void            writeHtmlHead(ksys::FileHandleContainer & f);
-    void            writeHtmlTail(ksys::FileHandleContainer & f);
-    void            writeMonthHtmlOutput(const utf8::String & file, const struct tm & year);
-    uintptr_t       nonZeroYearMonthsColumns(struct tm byear);
-    uintptr_t       nonZeroMonthDaysColumns(struct tm bmon);
-    static intptr_t sortUsersTrafTable(uintptr_t row1, uintptr_t row2, const ksys::Table< ksys::Mutant> & table);
-    static void     writeTraf(ksys::FileHandleContainer & f, uint64_t qi, uint64_t qj);
+    utf8::String htmlDir_;
+
+    int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String());
+    void writeHtmlHead(ksys::FileHandleContainer & f);
+    void writeHtmlTail(ksys::FileHandleContainer & f);
+    void writeUserTop(const utf8::String & file,const utf8::String & user,const struct tm & beginTime,const struct tm & endTime);
+    void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year);
+    uintptr_t nonZeroYearMonthsColumns(struct tm byear);
+    uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
+    static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const ksys::Table<ksys::Mutant> & table);
+    static void writeTraf(ksys::FileHandleContainer & f,uint64_t qi,uint64_t qj);
 
     utf8::String                                          trafTypeNick_[ttCount];
     utf8::String                                          trafTypeHeadColor_[ttCount];

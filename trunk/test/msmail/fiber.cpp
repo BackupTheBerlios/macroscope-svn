@@ -298,6 +298,11 @@ intptr_t ServerFiber::processMailbox(
   bool onlyNewMail)
 {
   stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
+  stdErr.debug(9,utf8::String::Stream() <<
+    this << " Processing mailbox " <<
+    excludeTrailingPathDelimiter(userMailBox) <<
+    " by monitor... \n"
+  );
   intptr_t i, j, c, k;
   Array<utf8::String> ids;
   Vector<utf8::String> list;
@@ -373,19 +378,7 @@ void ServerFiber::recvMail() // client receiving mail
     while( !terminated_ ){
       k = processMailbox(userMailBox,ids,onlyNewMail);
       if( !waitForMail ) break;
-      if( k == 0 ){
-        try {
-          dcn_.monitor(userMailBox);
-        }
-        catch( ExceptionSP & e ){
-          e->writeStdError();
-#if defined(__WIN32__) || defined(__WIN64__)
-          if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
-#else
-          if( e->code() != EINTR ) throw;
-#endif
-        }
-      }
+      if( k == 0 ) dcn_.monitor(userMailBox);
     }
   }
   catch( ... ){
@@ -520,20 +513,10 @@ void SpoolWalker::fiberExecute()
       stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by monitor... \n");
     }
     else {
-      try {
-        uint64_t timeout = server_.config_->valueByPath(
-          utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",1u);
-        sleepAsync(timeout * 1000000u);
-        stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by timer... \n");
-      }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
-#if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
-#else
-        if( e->code() != EINTR ) throw;
-#endif
-      }
+      uint64_t timeout = server_.config_->valueByPath(
+        utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",1u);
+      sleepAsync(timeout * 1000000u);
+      stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by timer... \n");
     }
   }
 }
@@ -733,20 +716,10 @@ void MailQueueWalker::main()
       stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by monitor... \n");
     }
     else if( timeWait ){
-      try {
-        uint64_t timeout = server_.config_->valueByPath(
-          utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",1u);
-        sleepAsync(timeout * 1000000u);
-        stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
-      }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
-#if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_REQUEST_ABORTED + errorOffset ) throw;
-#else
-        if( e->code() != EINTR ) throw;
-#endif
-      }
+      uint64_t timeout = server_.config_->valueByPath(
+        utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",1u);
+      sleepAsync(timeout * 1000000u);
+      stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
     }
   }
 }

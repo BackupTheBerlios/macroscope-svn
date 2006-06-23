@@ -38,8 +38,8 @@ void Logger::decoration()
 {
   static const char * const nicks[] = { ".smtp", ".www", ".all" };
   struct deco {
-      const char *    path;
-      utf8::String *  colors;
+    const char * path;
+    utf8::String * colors;
   } decos[] = {
     { "heads", trafTypeNick_ },
     { "colors.head", trafTypeHeadColor_ },
@@ -54,6 +54,45 @@ void Logger::decoration()
     for( intptr_t j = ttAll; j >= 0; j-- ){
       decos[i].colors[j] = ksys::unScreenString(config_.valueByPath(basePath + decos[i].path + nicks[j]));
     }
+}
+//------------------------------------------------------------------------------
+void Logger::writeUserTop(
+  const utf8::String & file,
+  const utf8::String & user,
+  const struct tm & beginTime,
+  const struct tm & endTime)
+{
+  ksys::FileHandleContainer f(file);
+  statement_->text(
+    "SELECT"
+    "    *"
+    "FROM"
+    "    ("
+    "        SELECT"
+    "          ST_URL, SUM(ST_URL_TRAF) AS SUM1"
+    "        FROM"
+    "            INET_USERS_MONTHLY_TOP_URL"
+    "        WHERE   ST_USER = :USER AND"
+    "                ST_TIMESTAMP >= :BT AND"
+    "                ST_TIMESTAMP <= :ET"
+    "        GROUP BY ST_URL"
+    "    ) AS A "
+    "ORDER BY A.SUM1"
+  );
+  statement_->prepare()->
+    paramAsMutant("USER",user)->
+    paramAsMutant("BT",beginTime)->
+    paramAsMutant("ET",endTime)->execute()->fetchAll();
+  if( statement_->rowCount() > 0 ){
+    f.open().resize(0);
+    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+      statement_->selectRow(i);
+      f <<
+        statement_->valueAsString("ST_URL") << " " <<
+        statement_->valueAsMutant("SUM1")
+      ;
+    }
+  }
 }
 //------------------------------------------------------------------------------
 void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & year)
@@ -88,8 +127,8 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
     endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
-    if( getTraf(ttAll, beginTime, endTime) > 0 ){
-      utf8::String  trafByMonthFile (utf8::String::print("users-traf-by-%04d%02d.html", endTime.tm_year + 1900, endTime.tm_mon + 1));
+    if( getTraf(ttAll,beginTime,endTime) > 0 ){
+      utf8::String trafByMonthFile(utf8::String::print("users-traf-by-%04d%02d.html", endTime.tm_year + 1900, endTime.tm_mon + 1));
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
@@ -116,7 +155,10 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
       intptr_t  i, j;
       // ѕечатаем заголовки суммарных трафиков пользовател€ за мес€ц
       for( i = ttAll; i >= 0; i-- ){
-        f << "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" << trafTypeHeadColor_[i] << "\" wrap>\n" << "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n" "    </FONT>\n" "  </TH>\n"
+        f << "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" <<
+          trafTypeHeadColor_[i] << "\" wrap>\n" <<
+          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n"
+          "    </FONT>\n" "  </TH>\n"
         ;
       }
       // ѕечатаем заголовки только тех дней мес€ца в которых был не нулевой трафик
@@ -148,9 +190,10 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         bt.tm_sec = 0;
         if( getTraf(ttAll, bt, endTime) > 0 ){
           for( i = ttAll; i >= 0; i-- ){
-            if( getTraf(TrafType(i), bt, endTime) == 0 )
-              continue;
-            f << "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[i] << "\" wrap>\n" << "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n" "    </FONT>\n" "  </TH>\n"
+            if( getTraf(TrafType(i), bt, endTime) == 0 ) continue;
+            f << "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[i] << "\" wrap>\n" <<
+              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n"
+              "    </FONT>\n" "  </TH>\n"
             ;
           }
         }
@@ -159,30 +202,52 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
       f << "</TR>\n";
       endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
       // ѕечатаем трафик пользователей
-      statement_->text("SELECT DISTINCT ST_USER FROM INET_USERS_TRAF " "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET");
-      ksys::Table< ksys::Mutant>  usersTrafTable;
+      statement_->text(
+        "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF " 
+        "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+      );
+      ksys::Table<ksys::Mutant> usersTrafTable;
       statement_->prepare()->
-      paramAsMutant("BT", beginTime)->
-      paramAsMutant("ET", endTime)->
-      execute()->unload(usersTrafTable);
+        paramAsMutant("BT",beginTime)->paramAsMutant("ET",endTime)->
+          execute()->unload(usersTrafTable);
       usersTrafTable.
-      addColumn("ST_TRAF").
-      addColumn("ST_TRAF_WWW").
-      addColumn("ST_TRAF_SMTP");
+        addColumn("ST_TRAF").addColumn("ST_TRAF_WWW").addColumn("ST_TRAF_SMTP");
       for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-        utf8::String  user  (usersTrafTable(i, "ST_USER"));
+        utf8::String  user(usersTrafTable(i, "ST_USER"));
         usersTrafTable(i, "ST_TRAF") = int64_t(usersTrafTable(i, "ST_TRAF_WWW") =
           getTraf(ttWWW, beginTime, endTime, user)) +
           int64_t(usersTrafTable(i, "ST_TRAF_SMTP") = getTraf(ttSMTP, beginTime, endTime, user));
       }
       usersTrafTable.sort(sortUsersTrafTable, usersTrafTable);
       for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-        if( getTraf(ttAll, beginTime, endTime, usersTrafTable(i, "ST_USER")) == 0 )
-          continue;
-        f << "<TR>\n" "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+        if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER")) == 0 ) continue;
+        utf8::String user(usersTrafTable(i,"ST_USER"));
+        utf8::String topByUserFile(
+          user + 
+          utf8::String::print(
+            "-top-%04d%02d.html",
+            endTime.tm_year + 1900,
+            endTime.tm_mon + 1
+          )
+        );
+        writeUserTop(
+          ksys::includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
+          user,
+          beginTime,
+          endTime
+        );
+        f <<
+          "<TR>\n"
+          "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
           "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-          utf8::String(usersTrafTable(i, "ST_USER")) << "\n" "    </FONT>\n" "  </TH>\n"
+          "<A HREF=\"" << topByUserFile << "\">" <<
+            user << "\n"
+          "</A>\n"
+//          utf8::String(usersTrafTable(i,"ST_USER")) << "\n"
+          "    </FONT>\n"
+          "  </TH>\n"
         ;
+
         for( j = ttAll; j >= 0; j-- ){
           f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           ;
@@ -198,11 +263,18 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
           bt.tm_sec = 0;
           if( getTraf(ttAll, bt, endTime) > 0 ){
             for( j = ttAll; j >= 0; j-- ){
-              if( getTraf(TrafType(j), bt, endTime) == 0 )
-                continue;
-              f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+              if( getTraf(TrafType(j), bt, endTime) == 0 ) continue;
+              f <<
+                "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[j] << "\" nowrap>\n"
+                "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
               ;
-              writeTraf(f, getTraf(TrafType(j), bt, endTime, usersTrafTable(i,"ST_USER")), getTraf(ttAll, bt, endTime));
+              writeTraf(f,
+                getTraf(TrafType(j),
+                bt,
+                endTime,
+                usersTrafTable(i,"ST_USER")),
+                getTraf(ttAll, bt, endTime)
+              );
               f << "    </FONT>\n" "  </TH>\n"
               ;
             }
@@ -213,12 +285,17 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
       }
       // ѕечатаем итоговый трафик пользователей за мес€ц
-      f << "<TR>\n" "  <TH ALIGN=right BGCOLOR=\"#00A0FF\" wrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" "Summary traffic of all users: "
+      f <<
+        "<TR>\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00A0FF\" wrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" "Summary traffic of all users: "
       ;
       f << "    </FONT>\n" "  </TH>\n"
       ;
       for( j = ttAll; j >= 0; j-- ){
-        f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        f <<
+          "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailColor_[j] << "\" nowrap>\n"
+          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         ;
         writeTraf(f, getTraf(TrafType(j), beginTime, endTime), getTraf(ttAll, beginTime, endTime));
         f << "    </FONT>\n" "  </TH>\n"
@@ -233,9 +310,10 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         bt.tm_sec = 0;
         if( getTraf(ttAll, bt, et) > 0 ){
           for( j = ttAll; j >= 0; j-- ){
-            if( getTraf(TrafType(j), bt, et) == 0 )
-              continue;
-            f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailDataColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+            if( getTraf(TrafType(j), bt, et) == 0 ) continue;
+            f << 
+              "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailDataColor_[j] << "\" nowrap>\n" 
+              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             ;
             if( j == ttAll ){
               writeTraf(f, getTraf(TrafType(j), bt, et), getTraf(ttAll, beginTime, endTime));
@@ -288,15 +366,21 @@ void Logger::writeHtmlYearOutput()
 #else
   utf8::String  section("macroscope.unix.html_report.");
 #endif
-  utf8::String  dir(ksys::excludeTrailingPathDelimiter(ksys::unScreenString(config_.valueByPath(section + "directory"))));
-  ksys::createDirectory(dir);
+  htmlDir_ = ksys::excludeTrailingPathDelimiter(
+    ksys::unScreenString(
+      config_.valueByPath(section + "directory")
+    )
+  );
+  ksys::createDirectory(htmlDir_);
   ksys::chModOwn(
-    dir,
+    htmlDir_,
     config_.valueByPath(section + "directory_mode", 755),
     config_.valueByPath(section + "directory_user",ksys::getuid()),
     config_.valueByPath(section + "directory_group",ksys::getgid())
   );
-  ksys::FileHandleContainer f (ksys::includeTrailingPathDelimiter(dir) + "users-traf-by-year.html");
+  ksys::FileHandleContainer f(
+    ksys::includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
+  );
   f.open().resize(0);
   ksys::chModOwn(
     f.fileName(),
@@ -471,9 +555,10 @@ void Logger::writeHtmlYearOutput()
         et.tm_mday = (int) ksys::monthDays(et.tm_year + 1900, et.tm_mon);
         if( getTraf(ttAll, bt, et) > 0 ){
           for( j = ttAll; j >= 0; j-- ){
-            if( getTraf(TrafType(j), bt, et) == 0 )
-              continue;
-            f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailDataColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+            if( getTraf(TrafType(j), bt, et) == 0 ) continue;
+            f <<
+              "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailDataColor_[j] << "\" nowrap>\n"
+              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             ;
             if( j == ttAll ){
               writeTraf(f, getTraf(TrafType(j), bt, et), getTraf(ttAll, beginTime, endTime));
@@ -481,14 +566,18 @@ void Logger::writeHtmlYearOutput()
             else{
               writeTraf(f, getTraf(TrafType(j), bt, et), getTraf(ttAll, bt, et));
             }
-            f << "    </FONT>\n" "  </TH>\n"
+            f <<
+              "    </FONT>\n"
+              "  </TH>\n"
             ;
           }
         }
         et.tm_mon--;
       }
       f << "</TR>\n</TABLE>\n<BR>\n<BR>\n";
-      utf8::String  fileName  (ksys::includeTrailingPathDelimiter(dir) + trafByYearFile);
+      utf8::String fileName(
+        ksys::includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
+      );
       writeMonthHtmlOutput(fileName, endTime);
     }
     endTime.tm_year--;
