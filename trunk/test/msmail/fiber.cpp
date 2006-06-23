@@ -329,7 +329,7 @@ intptr_t ServerFiber::processMailbox(
       }
       if( lostSheep ){
         file.close();
-        renameAsync(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]) + ".msg");
+        renameAsync(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
       }
       else {
         if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
