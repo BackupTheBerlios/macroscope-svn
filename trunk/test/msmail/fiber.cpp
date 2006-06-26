@@ -834,7 +834,7 @@ void NodeClient::main()
   intptr_t i;
   utf8::String server, host;
   try {
-    do {
+    for(;;){
       bool connected = false;
       bool exchanged = false;
       while( !exchanged && !terminated_ ){
@@ -880,7 +880,7 @@ void NodeClient::main()
             }
             if( connected ) break;
             stdErr.debug(9,utf8::String::Stream() << "Node " << host << " does not answer...\n");
-            uint64_t timeout = server_.config_->parse().override().valueByPath("node.exchange_try_interval",60u);
+            uint64_t timeout = server_.config_->parse().override().valueByPath("node.exchange_try_interval",3u);
             sleepAsync(timeout * 1000000u);
           }
         }
@@ -928,7 +928,10 @@ void NodeClient::main()
           e->writeStdError();
         }
       }
-    } while( server_.clearNodeClient(this) && !terminated_ );
+      if( !exchanged && dataType_ == stStandalone ) continue;
+      if( server_.clearNodeClient(this) && !terminated_ ) continue;
+      break;
+    }
   }
   catch( ... ){
     server_.clearNodeClient(this);
