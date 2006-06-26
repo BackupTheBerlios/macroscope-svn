@@ -495,11 +495,11 @@ utf8::String changeFileExt(const utf8::String & fileName,const utf8::String & ex
     switch( i.getChar() ){
       case '\\' : case ':' : break;
       case '.'  :
-        return utf8::String(utf8::String::Iterator(fileName),i) + "." + extension;
+        return utf8::String(utf8::String::Iterator(fileName),i) + extension;
       default   : i.prev();
     }
   }
-  return fileName + "." + extension;
+  return fileName + extension;
 }
 //---------------------------------------------------------------------------
 utf8::String getFileExt(const utf8::String & fileName)
@@ -1188,17 +1188,22 @@ int64_t getProcessStartTime(bool toLocalTime)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   int32_t err = 0;
+  SetLastError(ERROR_SUCCESS);
   HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION,FALSE,GetCurrentProcessId());
-  if( hProcess == NULL ) goto done;
-  FILETIME CreationTime, ExitTime, KernelTime, UserTime;
-  if( GetProcessTimes(hProcess,&CreationTime,&ExitTime,&KernelTime,&UserTime) == 0 ) goto done;
-  if( toLocalTime ) FileTimeToLocalFileTime(&CreationTime,&CreationTime);
-  return (*reinterpret_cast<int64_t *>(&CreationTime) + int64_t(10000000) * (1240428288 - 10800)) / 10;
-done:
-  err = GetLastError() + errorOffset;
+  union {
+    FILETIME ft;
+    ULARGE_INTEGER sti;
+  } creationTime, exitTime, kernelTime, userTime;
+  creationTime.sti.QuadPart = 0;
+  if( hProcess != NULL )
+    if( GetProcessTimes(hProcess,&creationTime.ft,&exitTime.ft,&kernelTime.ft,&userTime.ft) != 0 )
+      if( toLocalTime ) FileTimeToLocalFileTime(&creationTime.ft,&creationTime.ft);
+  err = GetLastError();
   if( hProcess != NULL ) CloseHandle(hProcess);
-  throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+  if( err != ERROR_SUCCESS ) throw ksys::ExceptionSP(new ksys::Exception(err + errorOffset,__PRETTY_FUNCTION__));
+  return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
 #else
+#error Not implemented
   throw ksys::ExceptionSP(new ksys::Exception(ENOSYS,__PRETTY_FUNCTION__));
 #endif
 }

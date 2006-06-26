@@ -107,15 +107,15 @@ void LogFile::rotate(uint64_t size)
       utf8::String fileExt(getFileExt(afile_->fileName()));
       Stat st;
       intptr_t i = 0;
-      while( statAsync(changeFileExt(afile_->fileName(),utf8::int2Str(i)) + fileExt,st) ) i++;
+      while( statAsync(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
       while( i > 0 ){
         if( i >= (intptr_t) rotatedFileCount_ ){
-          removeAsync(changeFileExt(afile_->fileName(),utf8::int2Str(i - 1)) + fileExt);
+          removeAsync(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
         }
         else {
           renameAsync(
-            changeFileExt(afile_->fileName(),utf8::int2Str(i - 1)) + fileExt,
-            changeFileExt(afile_->fileName(),utf8::int2Str(i)) + fileExt
+            changeFileExt(afile_->fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
+            changeFileExt(afile_->fileName(),"." + utf8::int2Str(i)) + fileExt
           );
         }
         i--;
@@ -128,7 +128,7 @@ void LogFile::rotate(uint64_t size)
         }
         bool renamed = false;
         try {
-          renameAsync(afile_->fileName(),changeFileExt(afile_->fileName(),"0") + fileExt);
+          renameAsync(afile_->fileName(),changeFileExt(afile_->fileName(),".0") + fileExt);
           renamed = true;
         }
         catch( ExceptionSP & e ){
@@ -154,15 +154,18 @@ void LogFile::rotate(uint64_t size)
     if( flock.tryWRLock(0,0) ){
       utf8::String fileExt(getFileExt(file_.fileName()));
       Stat st;
-      intptr_t i = 0, j;
-      while( stat(changeFileExt(file_.fileName(),utf8::int2Str(i)) + fileExt,st) ) i++;
-      for( j = --i; j >= (intptr_t) rotatedFileCount_ - 1; j-- )
-        remove(changeFileExt(file_.fileName(),utf8::int2Str(j)) + fileExt);
+      intptr_t i = 0;
+      while( stat(changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
       while( i > 0 ){
-        rename(
-          changeFileExt(file_.fileName(),utf8::int2Str(i - 1)) + fileExt,
-          changeFileExt(file_.fileName(),utf8::int2Str(i)) + fileExt
-        );
+        if( i >= (intptr_t) rotatedFileCount_ ){
+          remove(changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
+        }
+        else {
+          rename(
+            changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
+            changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt
+          );
+        }
         i--;
       }
       file_.close();
@@ -173,7 +176,7 @@ void LogFile::rotate(uint64_t size)
         }
         bool renamed = false;
         try {
-          rename(file_.fileName(),changeFileExt(file_.fileName(),"0") + fileExt);
+          rename(file_.fileName(),changeFileExt(file_.fileName(),".0") + fileExt);
           renamed = true;
         }
         catch( ExceptionSP & e ){
@@ -296,7 +299,7 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
     AutoLock<FiberInterlockedMutex> lock(fmutex_);
     if( !afile_->isOpen() ){
       if( afile_->fileName().strlen() == 0 )
-        afile_->fileName(changeFileExt(getExecutableName(),"log"));
+        afile_->fileName(changeFileExt(getExecutableName(),".log"));
       afile_->open();
     }
     else {
@@ -326,7 +329,7 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
     AutoLock<InterlockedMutex> lock(mutex_);
     if( !file_.isOpen() ){
       if( file_.fileName().strlen() == 0 )
-        file_.fileName(changeFileExt(getExecutableName(),"log"));
+        file_.fileName(changeFileExt(getExecutableName(),".log"));
       file_.open();
     }
     uint64_t sz = file_.size();

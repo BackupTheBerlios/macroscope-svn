@@ -162,14 +162,24 @@ void ClientFiber::main()
             i = client_.recvQueue_.bSearch(message,c);
             if( c != 0 ) client_.recvQueue_.safeInsert(i + (c > 0),message.ptr(NULL));
           }
+          bool messageAccepted = true;
           if( c != 0 ){
             AutoPtr<OLECHAR> source(client_.name_.getOLEString());
             AutoPtr<OLECHAR> event(utf8::String("Message").getOLEString());
             AutoPtr<OLECHAR> data(msg->id().getOLEString());
             HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
-            assert( SUCCEEDED(hr) );
+            if( FAILED(hr) ){
+              Exception e((hr & 0xFFFF) + errorOffset,utf8::String());
+              e.writeStdError();
+              messageAccepted = false;
+            }
           }
+          *this << messageAccepted;
           getCode2(eLastMessage);
+          client_.config_->parse();
+          stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
+          stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
+          stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
         }
       }
     }
@@ -358,6 +368,8 @@ void Client::open()
 void Client::close()
 {
   ksock::Client::close();
+  sendQueue_.clear();
+  recvQueue_.clear();
 }
 //------------------------------------------------------------------------------
 const utf8::String & Client::newMessage()

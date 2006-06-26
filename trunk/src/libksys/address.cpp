@@ -300,51 +300,41 @@ utf8::String SockAddr::resolveAsync() const
 void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
 {
   DWORD dwRetVal;
-  ULONG outBufLen = 0;
+  ULONG outBufLen, len = (ULONG) getpagesize();
+  addresses.realloc(len);
   if( ksys::isWinXPorLater() ){
-// Make an initial call to GetAdaptersAddresses to get the 
-// size needed into the outBufLen variable
-    dwRetVal = iphlpapi.GetAdaptersAddresses(
-      AF_UNSPEC,
-      0, 
-      NULL, 
-      &addresses->addresses_,
-      &outBufLen
-    );
-    if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
-      addresses.realloc(outBufLen);
-    }
-    else if( dwRetVal != ERROR_SUCCESS ){
-      int32_t err = GetLastError() + ksys::errorOffset;
-      throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
-    }
-// Make a second call to GetAdapters Addresses to get the
-// actual data we want
-    dwRetVal = iphlpapi.GetAdaptersAddresses(
-      AF_UNSPEC,
-      0, 
-      NULL, 
-      &addresses->addresses_,
-      &outBufLen
-    );
-    if( dwRetVal != ERROR_SUCCESS ){
-      int32_t err = GetLastError() + ksys::errorOffset;
-      throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+    for(;;){
+      outBufLen = len;
+      dwRetVal = iphlpapi.GetAdaptersAddresses(
+        AF_UNSPEC,
+        0, 
+        NULL, 
+        &addresses->addresses_,
+        &outBufLen
+      );
+      if( dwRetVal == ERROR_SUCCESS ) break;
+      if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
+        if( len < (ULONG(1) << (sizeof(ULONG) * CHAR_BIT - 1)) ){
+          len = len << 1;
+          addresses.realloc(len);
+          continue;
+        }
+      }
+      throw ksys::ExceptionSP(new ksys::Exception(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__));
     }
   }
   else {
-    dwRetVal = GetAdaptersInfo(NULL,&outBufLen);
-    if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
-      addresses.realloc(outBufLen);
-    }
-    else if( dwRetVal != ERROR_SUCCESS ){
-      int32_t err = GetLastError() + ksys::errorOffset;
-      throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
-    }
-    dwRetVal = GetAdaptersInfo(&addresses->infos_,&outBufLen);
-    if( dwRetVal != ERROR_SUCCESS ){
-      int32_t err = GetLastError() + ksys::errorOffset;
-      throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
+    for(;;){
+      dwRetVal = GetAdaptersInfo(&addresses->infos_,&outBufLen);
+      if( dwRetVal == ERROR_SUCCESS ) break;
+      if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
+        if( len < (ULONG(1) << (sizeof(ULONG) * CHAR_BIT - 1)) ){
+          len = len << 1;
+          addresses.realloc(len);
+          continue;
+        }
+      }
+      throw ksys::ExceptionSP(new ksys::Exception(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__));
     }
   }
 }

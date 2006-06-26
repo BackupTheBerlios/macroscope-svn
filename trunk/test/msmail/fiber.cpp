@@ -303,6 +303,7 @@ intptr_t ServerFiber::processMailbox(
     excludeTrailingPathDelimiter(userMailBox) <<
     " by monitor... \n"
   );
+  utf8::String myHost(ksock::SockAddr::gethostname());
   intptr_t i, j, c, k;
   Array<utf8::String> ids;
   Vector<utf8::String> list;
@@ -315,33 +316,37 @@ intptr_t ServerFiber::processMailbox(
     AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
     AsyncFile file(list[i]);
     if( file.tryOpen() ){
-      Message message;
-      file >> message;
-      utf8::String suser, skey;
-      message.separateValue("#Recepient",suser,skey);
-      bool lostSheep = true;
-      {
-        Server::Data & data = server_.data(stStandalone);
-        AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-        Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
-        if( key2ServerLink != NULL )
-          lostSheep = key2ServerLink->server_.strcasecmp(ksock::SockAddr::gethostname()) != 0;
-      }
-      if( lostSheep ){
-        file.close();
-        renameAsync(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
-      }
-      else {
-        if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
-          *this << message;
-          putCode(i > 0 ? eOK : eLastMessage);
+      utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
+      if( mids.bSearch(id) < 0 || !onlyNewMail ){
+        Message message;
+        file >> message;
+        assert( message.id().strcmp(id) == 0 );
+        utf8::String suser, skey;
+        message.separateValue("#Recepient",suser,skey);
+        bool lostSheep = true;
+        {
+          Server::Data & data = server_.data(stStandalone);
+          AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+          Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
+          if( key2ServerLink != NULL )
+            lostSheep = key2ServerLink->server_.strcasecmp(myHost) != 0;
         }
-        file.close();
-        if( onlyNewMail && skey.strcasecmp(key_) == 0 ){
-          //j = mids.bSearch(message.id(),c);
-          //if( c != 0 ) mids.insert(j + (c > 0),message.id());
-          j = ids.bSearch(message.id(),c);
-          if( c != 0 ) ids.insert(j + (c > 0),message.id());
+        if( lostSheep ){
+          file.close();
+          renameAsync(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
+        }
+        else {
+          bool messageAccepted = true;
+          if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
+            *this << message >> messageAccepted;
+            putCode(i > 0 ? eOK : eLastMessage);
+            if( onlyNewMail && messageAccepted ){
+              j = ids.bSearch(message.id(),c);
+              if( c != 0 ) ids.insert(j + (c > 0),message.id());
+            }
+          }
+          file.close();
+          k += !messageAccepted;
         }
       }
       k--;
@@ -377,6 +382,7 @@ void ServerFiber::recvMail() // client receiving mail
     }
     while( !terminated_ ){
       k = processMailbox(userMailBox,ids,onlyNewMail);
+      flush();
       if( !waitForMail ) break;
       if( k == 0 ) dcn_.monitor(userMailBox);
     }

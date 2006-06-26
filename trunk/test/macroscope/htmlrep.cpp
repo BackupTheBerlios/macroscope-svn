@@ -677,7 +677,10 @@ void Logger::writeTraf(ksys::FileHandleContainer & f, uint64_t qi, uint64_t qj)
   b = q / 100u;
   c = q % 100u;
   c += b == 0 && c == 0;
-  f << utf8::String::print(qi > 0 ? "%"PRIu64"<FONT FACE=\"Times New Roman\" SIZE=\"0\"> (%"PRIu64".%02"PRIu64"%%)</FONT>\n" : "-", (qi / 1024u) + a, b, c);
+  f << utf8::String::print(
+    qi > 0 ? "%"PRIu64"<FONT FACE=\"Times New Roman\" SIZE=\"0\"> (%"PRIu64".%02"PRIu64"%%)</FONT>\n" :
+    "-", (qi / 1024u) + a, b, c
+  );
 }
 //------------------------------------------------------------------------------
 utf8::String Logger::TrafCacheEntry::id() const

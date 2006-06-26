@@ -368,7 +368,7 @@ Config & Config::parse()
   utf8::String fileName;
   if( file_.fileName().strlen() == 0 ){
     if( defaultFileName().strlen() == 0 ){
-      file_.fileName(changeFileExt(getExecutableName(), "conf"));
+      file_.fileName(changeFileExt(getExecutableName(),".conf"));
     }
     else{
       file_.fileName(defaultFileName());
