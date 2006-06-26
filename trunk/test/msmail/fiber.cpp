@@ -249,47 +249,79 @@ void ServerFiber::getDB()
 void ServerFiber::sendMail() // client sending mail
 {
   uintptr_t i;
+  AutoPtr<Message> message;
+  utf8::String id;
+  Stat st;
+  bool rest, incomplete = false;
 
-  AutoPtr<Message> message(new Message);
-  *this >> message;
-  if( !message->isValue("#Recepient") || message->value("#Recepient").trim().strlen() == 0 ){
-    putCode(eInvalidMessage);
+  *this >> id >> rest;
+  AsyncFile ctrl, file;
+  ctrl.fileName(server_.lckDir() + id + ".msg.lck").removeAfterClose(true).open();
+  AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+  if( rest ){
+    statAsync(incompleteDir() + id + ".msg",st);
+    uint64_t remainder;
+    *this << uint64_t(st.st_size) >> remainder;
+    AutoPtr<uint8_t> b;
+    size_t bl = server_.config_->value("max_send_size",getpagesize());
+    b.alloc(bl);
+    file.fileName(incompleteDir() + id + ".msg").open().seek(st.st_size);
+    while( remainder > 0 ){
+      uint64_t l = remainder > bl ? bl : remainder;
+      read(b,l);
+      file.write(b,l);
+      remainder -= l;
+    }
+    file.seek(0);
+    message = new Message;
+    file >> message;
+    incomplete = true;
   }
   else {
-    if( !message->isValue(messageIdKey) || message->id().trim().strlen() == 0 ){
-      UUID uuid;
-      createUUID(uuid);
-      utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-      message->value(messageIdKey,suuid);
-    }
-    utf8::String relay;
-    for( i = 0; i < ~uintptr_t(0); i++ ){
-      relay = "#Relay." + utf8::int2Str(i);
-      if( !message->isValue(relay) ) break;
-    }
-    message->value(relay,ksock::SockAddr::gethostname());
-    relay = relay + ".";
-    message->value(relay + "Received",getTimeString(gettimeofday()));
-    message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
-    message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
-    AsyncFile ctrl(server_.lckDir() + message->id() + ".msg" + ".lck");
-    ctrl.removeAfterClose(true);
-    ctrl.open();
-    AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
-    AsyncFile file(server_.spoolDir() + message->id() + ".msg");
+    message = new Message;
+    *this >> message;
+  }
+  if( !message->isValue("#Recepient") || 
+      message->value("#Recepient").trim().strlen() == 0 ||
+      !message->isValue(messageIdKey) ||
+      id.strcmp(message->id()) != 0 ){
+    putCode(eInvalidMessage);
+    return;
+  }
+  utf8::String relay;
+  for( i = 0; i < ~uintptr_t(0); i++ ){
+    relay = "#Relay." + utf8::int2Str(i);
+    if( !message->isValue(relay) ) break;
+  }
+  message->value(relay,ksock::SockAddr::gethostname());
+  relay = relay + ".";
+  message->value(relay + "Received",getTimeString(gettimeofday()));
+  message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
+  message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
+  AsyncFile ctrl(server_.lckDir() + message->id() + ".msg.lck");
+  ctrl.removeAfterClose(true);
+  ctrl.open();
+  AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+  if( incomplete ){
+    file.seek(0).resize(0) << message;
+    file.close();
+    renameAsync(file.fileName(),server_.spoolDir() + id + ".msg");
+  }
+  else {
+    file.fileName(server_.spoolDir() + id + ".msg");
     file.removeAfterClose(true).open();
     file << message;
     file.removeAfterClose(false).close();
-    putCode(eOK);
-    flush();
-    stdErr.debug(0,
-      utf8::String::Stream() << "Message " << message->id() <<
-      " received from " << message->value("#Sender") <<
-      " to " << message->value("#Recepient") <<
-      ", traffic " <<
-      allBytes() << "\n"
-    );
   }
+  putCode(eOK);
+  flush();
+  stdErr.debug(0,
+    utf8::String::Stream() << "Message " << message->id() <<
+    " received from " << message->value("#Sender") <<
+    " to " << message->value("#Recepient") <<
+    ", traffic " <<
+    allBytes() << "\n"
+  );
 }
 //------------------------------------------------------------------------------
 intptr_t ServerFiber::processMailbox(
@@ -611,7 +643,6 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
       try {
         Message message;
         file >> message;
-        file.close();
         utf8::String server, suser, skey;
         message.separateValue("#Recepient",suser,skey);
         bool resolved = false, connected = false, authentificated = false, sended = false;
@@ -673,10 +704,21 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
           }
           if( authentificated ){ // and now we can send message
             sended = false;
+            uint64_t restFrom, remainder;
             try {
               *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
               getCode();
-              *this << uint8_t(cmSendMail) << message;
+              *this << uint8_t(cmSendMail) << message.id() << true >> restFrom;
+              file.seek(restFrom);
+              *this << remainder = file.size() - restFrom;
+              size_t bl = server_.config_->value("max_send_size",getpagesize());
+              b.alloc(bl);
+              while( remainder > 0 ){
+                uint64_t l = remainder > bl ? bl : remainder;
+                read(b,l);
+                file.write(b,l);
+                remainder -= l;
+              }
               getCode();
               stdErr.debug(0,
                 utf8::String::Stream() << "Message " << message.id() <<
@@ -704,6 +746,10 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
         removeAsync(list[i]);
         stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << " removed.\n");
       }
+    }
+    if( sended ){
+      file.close();
+      removeAsync(list[i]);
     }
     list.remove(i);
   }

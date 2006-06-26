@@ -698,6 +698,7 @@ class Server : public ksock::Server {
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;
+    utf8::String incompleteDir() const;
     bool clearNodeClient(NodeClient * client);
     void startNodeClient(ServerType dataType,const utf8::String & nodeHostName = utf8::String());
     void startNodesExchangeNL();

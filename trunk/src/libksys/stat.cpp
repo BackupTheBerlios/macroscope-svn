@@ -33,6 +33,7 @@ namespace ksys {
 bool stat(const utf8::String & pathName,struct Stat & st)
 {
   int32_t err = 0;
+  memset(&st,0,sizeof(st));
 #if defined(__WIN32__) || defined(__WIN64__)
   WIN32_FILE_ATTRIBUTE_DATA fData;
   memset(&fData, 0, sizeof(fData));

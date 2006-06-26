@@ -112,6 +112,18 @@ utf8::String Server::lckDir() const
   return includeTrailingPathDelimiter(lck);
 }
 //------------------------------------------------------------------------------
+utf8::String Server::incompleteDir() const
+{
+  utf8::String lck(
+    includeTrailingPathDelimiter(
+      config_->value("spool",getExecutablePath() + "spool")
+    ) +
+    "incomplete"
+  );
+  createDirectoryAsync(lck);
+  return includeTrailingPathDelimiter(lck);
+}
+//------------------------------------------------------------------------------
 bool Server::clearNodeClient(NodeClient * client)
 {
   AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);

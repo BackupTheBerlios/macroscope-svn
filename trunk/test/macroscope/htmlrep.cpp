@@ -99,6 +99,11 @@ void Logger::writeUserTop(
       "HIT\n"
       "    </FONT>\n"
       "  </TH>\n"
+      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttSMTP] << "\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "KB/HIT\n"
+      "    </FONT>\n"
+      "  </TH>\n"
       "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttWWW] << "\" nowrap>\n"
       "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
       "KB\n"
@@ -125,6 +130,11 @@ void Logger::writeUserTop(
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttSMTP] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
         statement_->valueAsMutant(2) <<
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttSMTP] << "\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        (uint64_t) statement_->valueAsMutant(1) / (uint64_t) statement_->valueAsMutant(2) <<
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttWWW] << "\" nowrap>\n"
