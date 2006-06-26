@@ -134,7 +134,7 @@ void Logger::writeUserTop(
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttSMTP] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        (uint64_t) statement_->valueAsMutant(1) / (uint64_t) statement_->valueAsMutant(2) <<
+        utf8::int2Str((uint64_t) statement_->valueAsMutant(1) / (uint64_t) statement_->valueAsMutant(2)) <<
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttWWW] << "\" nowrap>\n"

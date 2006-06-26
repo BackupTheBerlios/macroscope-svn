@@ -259,13 +259,14 @@ void ServerFiber::sendMail() // client sending mail
   ctrl.fileName(server_.lckDir() + id + ".msg.lck").removeAfterClose(true).open();
   AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
   if( rest ){
-    statAsync(incompleteDir() + id + ".msg",st);
+    file.fileName(server_.incompleteDir() + id + ".msg");
+    statAsync(file.fileName(),st);
     uint64_t remainder;
     *this << uint64_t(st.st_size) >> remainder;
     AutoPtr<uint8_t> b;
     size_t bl = server_.config_->value("max_send_size",getpagesize());
     b.alloc(bl);
-    file.fileName(incompleteDir() + id + ".msg").open().seek(st.st_size);
+    file.open().seek(st.st_size);
     while( remainder > 0 ){
       uint64_t l = remainder > bl ? bl : remainder;
       read(b,l);
@@ -298,10 +299,6 @@ void ServerFiber::sendMail() // client sending mail
   message->value(relay + "Received",getTimeString(gettimeofday()));
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
   message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
-  AsyncFile ctrl(server_.lckDir() + message->id() + ".msg.lck");
-  ctrl.removeAfterClose(true);
-  ctrl.open();
-  AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
   if( incomplete ){
     file.seek(0).resize(0) << message;
     file.close();
@@ -640,12 +637,12 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
 #endif
     }
     if( file.isOpen() ){
+      bool resolved = false, connected = false, authentificated = false, sended = false;
       try {
         Message message;
         file >> message;
         utf8::String server, suser, skey;
         message.separateValue("#Recepient",suser,skey);
-        bool resolved = false, connected = false, authentificated = false, sended = false;
         ksock::SockAddr address;
         {
           Server::Data & data = server_.data(stStandalone);
@@ -710,7 +707,8 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
               getCode();
               *this << uint8_t(cmSendMail) << message.id() << true >> restFrom;
               file.seek(restFrom);
-              *this << remainder = file.size() - restFrom;
+              *this << (remainder = file.size() - restFrom);
+              AutoPtr<uint8_t> b;
               size_t bl = server_.config_->value("max_send_size",getpagesize());
               b.alloc(bl);
               while( remainder > 0 ){
@@ -746,10 +744,10 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
         removeAsync(list[i]);
         stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << " removed.\n");
       }
-    }
-    if( sended ){
-      file.close();
-      removeAsync(list[i]);
+      if( sended ){
+        file.close();
+        removeAsync(list[i]);
+      }
     }
     list.remove(i);
   }
