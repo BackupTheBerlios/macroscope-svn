@@ -165,11 +165,15 @@ void Logger::parseSquidLogLine(char * p, uintptr_t size, ksys::Array< const char
 utf8::String Logger::shortUrl(const utf8::String & url)
 {
   utf8::String s(url);
-  utf8::String::Iterator  i (url.strstr(shortUrl_));
-  if( i.position() >= 0 ){
-    i += 3;
-    while( i.next() && i.getChar() != '/' );
-    s = utf8::String(utf8::String::Iterator(s), i);
+  utf8::String::Iterator j(url);
+  j.last().prev();
+  if( j.getChar() == '?' ){
+    utf8::String::Iterator i(url.strstr(shortUrl_));
+    if( i.position() >= 0 ){
+      i += 3;
+      while( i.next() && i.getChar() != '/' );
+      s = utf8::String(utf8::String::Iterator(s),i);
+    }
   }
   return s;
 }
@@ -522,11 +526,14 @@ void Logger::main()
   );
   stMonUrlIns_->text(
     "INSERT INTO INET_USERS_MONTHLY_TOP_URL " 
-    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_TRAF) VALUES" 
-    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_TRAF)"
+    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
+    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_TRAF, 1)"
   );
   stMonUrlUpd_->text(
-    "UPDATE INET_USERS_MONTHLY_TOP_URL SET ST_URL_TRAF = :ST_URL_TRAF + :ST_URL_TRAF " 
+    "UPDATE INET_USERS_MONTHLY_TOP_URL "
+    "SET "
+    "ST_URL_TRAF = :ST_URL_TRAF + :ST_URL_TRAF," 
+    "ST_URL_COUNT = ST_URL_COUNT + 1 "
     "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND " 
     "ST_URL = :ST_URL"
   );
@@ -609,7 +616,8 @@ void Logger::main()
       " ST_TIMESTAMP          DATETIME NOT NULL,"
       " ST_URL                VARCHAR(1000) NOT NULL,"
 //      " ST_URL_HASH           BIGINT NOT NULL,"
-      " ST_URL_TRAF           INTEGER NOT NULL"
+      " ST_URL_TRAF           INTEGER NOT NULL,"
+      " ST_URL_COUNT          INTEGER NOT NULL"
       ")" << 
       "CREATE TABLE INET_SENDMAIL_MESSAGES ("
       " ST_FROM               VARCHAR(240) NOT NULL,"
@@ -617,7 +625,8 @@ void Logger::main()
       " ST_MSGSIZE            INTEGER NOT NULL" ")" <<
       "CREATE TABLE INET_LOG_FILE_STAT ("
       " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
-      " ST_LAST_OFFSET        BIGINT NOT NULL" ")" <<
+      " ST_LAST_OFFSET        BIGINT NOT NULL"
+      ")" <<
       "CREATE TABLE INET_STAT ("
       " st_bpft_start         DATETIME NOT NULL,"
       " st_bpft_stop          DATETIME NOT NULL,"

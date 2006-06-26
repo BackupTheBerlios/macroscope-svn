@@ -68,7 +68,7 @@ void Logger::writeUserTop(
     "FROM"
     "    ("
     "        SELECT"
-    "          ST_URL, SUM(ST_URL_TRAF) AS SUM1"
+    "          ST_URL, SUM(ST_URL_TRAF) AS SUM1, SUM(ST_URL_COUNT) AS SUM2"
     "        FROM"
     "            INET_USERS_MONTHLY_TOP_URL"
     "        WHERE   ST_USER = :USER AND"
@@ -94,7 +94,12 @@ void Logger::writeUserTop(
       "URL\n"
       "    </FONT>\n"
       "  </TH>\n"
-      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttAll] << "\" nowrap>\n"
+      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttSMTP] << "\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "HIT\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttWWW] << "\" nowrap>\n"
       "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
       "KB\n"
       "    </FONT>\n"
@@ -102,18 +107,27 @@ void Logger::writeUserTop(
       "</TR>\n"
     ;
     uint64_t at = 0;
-    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- )
+    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+      statement_->selectRow(i);
       at += (uint64_t) statement_->valueAsMutant(1);
+    }
     for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
       f <<
         "<TR>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" << trafTypeBodyDataColor_[ttAll] << "\" nowrap>\n"
+        "  <TH ALIGN=left BGCOLOR=\"" << trafTypeBodyDataColor_[ttAll] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        "      <A HREF=\"" << statement_->valueAsMutant(0) << "\">\n" <<
         statement_->valueAsMutant(0) <<
+        "      </A>\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" << trafTypeBodyDataColor_[ttAll] << "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttSMTP] << "\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        statement_->valueAsMutant(2) <<
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttWWW] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
       ;
       writeTraf(f,statement_->valueAsMutant(1),at);
