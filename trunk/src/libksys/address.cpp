@@ -76,15 +76,39 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   aiHints.ai_protocol = IPPROTO_TCP;
   aiHints.ai_flags |= host.strlen() == 0 ? AI_PASSIVE : 0;
   aiHints.ai_flags |= ai_flag;
-  int r;
+  int r = 0;
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::isWin9x() || api.GetAddrInfoW == NULL ){
+  if( ksys::isWin9x() ){
     r = wship6api.GetAddrInfoA(
       host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
       port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
       &aiHints,
       &aiList
     );
+  }
+  else if( api.GetAddrInfoW == NULL ){
+#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+    addr4_.sin_len = sizeof(addr4_);
+#endif
+    addr4_.sin_family = PF_INET;
+	addr4_.sin_port = api.htons((u_short) utf8::str2Int(port));
+	if( host.strlen() > 0 ){
+	  struct hostent * he = api.gethostbyname(host.getANSIString());
+	  if( he == NULL ){
+		r = -1;
+	  }
+	  else {
+		s = he->h_name;
+		memcpy(&addr4_.sin_addr,he->h_addr_list,he->h_length);
+	  }
+	}
+	else {
+#if defined(__WIN32__) || defined(__WIN64__)
+      addr4_.sin_addr.S_un.S_addr = INADDR_ANY;
+#else
+      addr4_.sin_addr.s_addr = INADDR_ANY;
+#endif
+	}
   }
   else {
     r = api.GetAddrInfoW(
@@ -107,12 +131,14 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
   }
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::isWin9x() || api.FreeAddrInfoW == NULL ){
+  if( ksys::isWin9x() ){
     for( res = aiList; res != NULL; res = res->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
       memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
     }
     wship6api.FreeAddrInfoA(aiList);
+  }
+  else if( api.FreeAddrInfoW == NULL ){
   }
   else {
     for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
@@ -134,7 +160,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort)
 {
   clear();
-/*  unsigned a1 = 0, a2 = 0, a3 = 0, a4 = 0, port = (unsigned) defPort;
+  unsigned a1 = 0, a2 = 0, a3 = 0, a4 = 0, port = (unsigned) defPort;
   int r = sscanf(addr.c_str(), "%u.%u.%u.%u:%u", &a1, &a2, &a3, &a4, &port);
   if( r >= 4 && a1 < 256 && a2 < 256 && a3 < 256 && a4 < 256 ){
 #if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
@@ -152,7 +178,7 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
 #endif
     api.close();
   }
-  else {*/
+  else {
     utf8::String::Iterator  pi(addr.strstr(":"));
     if( pi.position() < 0 ) pi.last();
     utf8::String host(utf8::String::Iterator(addr), pi);
@@ -169,7 +195,7 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
       throw;
     }
     api.close();
-  //}
+  }
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -202,7 +228,7 @@ utf8::String SockAddr::resolve() const
     char servInfo[NI_MAXSERV];
     wchar_t servInfoW[NI_MAXSERV];
   };
-  if( ksys::isWin9x() || api.GetNameInfoW == NULL ){
+  if( ksys::isWin9x() ){
     err = wship6api.GetNameInfoA(
       (const sockaddr *) &addr4_,
       (socklen_t) length(),
@@ -213,6 +239,19 @@ utf8::String SockAddr::resolve() const
       NI_NUMERICSERV
     );
     if( err == 0 ) s = hostName;
+  }
+  else if( api.GetNameInfoW == NULL ){
+	  struct hostent * he = api.gethostbyaddr(
+      (const char *) &addr4_.sin_addr,
+      sizeof(addr4_.sin_addr),
+      PF_INET
+	  );
+	  if( he == NULL ){
+	    err = -1;
+	  }
+	  else {
+	    s = he->h_name;
+	  }
   }
   else {
     err = api.GetNameInfoW(
@@ -325,6 +364,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
   }
   else {
     for(;;){
+      outBufLen = len;
       dwRetVal = GetAdaptersInfo(&addresses->infos_,&outBufLen);
       if( dwRetVal == ERROR_SUCCESS ) break;
       if( dwRetVal == ERROR_BUFFER_OVERFLOW ){

@@ -170,7 +170,7 @@ void API::open()
           throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
         }
       }
-      if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
+      /*if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
         wship6api.handle_ = LoadLibraryExA("wship6.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
         if( wship6api.handle_ == NULL ){
           err = GetLastError() + ksys::errorOffset;
@@ -183,7 +183,7 @@ void API::open()
           ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'wship6.dll' failed\n");
           throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
         }
-      }
+      }*/
     }
     uintptr_t i;
     for( i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
@@ -245,7 +245,7 @@ void API::open()
         }
       }
     }
-    if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
+    /*if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
       for( i = 0; i < sizeof(wship6api.symbols_) / sizeof(wship6api.symbols_[0]); i++ ){
         ((void **) &wship6api.p_getaddrinfo)[i] = GetProcAddress(wship6api.handle_,wship6api.symbols_[i]);
         if( ((void **) &wship6api.p_getaddrinfo)[i] == NULL ){
@@ -264,7 +264,7 @@ void API::open()
           throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
         }
       }
-    }
+    }*/
 #endif
     if( this->WSAStartup(MAKEWORD(2,2), &wsaData_) != 0 ){
       err = this->WSAGetLastError() + ksys::errorOffset;
