@@ -325,6 +325,7 @@ void ClientDBGetterFiber::main()
     getCode();
     *this << uint8_t(cmGetDB) << client_.data_.ftime();
     client_.data_.recvDatabase(*this);
+    *this >> client_.data_.ftime();
     getCode();
     *this << uint8_t(cmQuit);
     getCode();

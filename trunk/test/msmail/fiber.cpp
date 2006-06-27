@@ -235,8 +235,13 @@ void ServerFiber::getDB()
   utf8::String host(remoteAddress().resolveAsync());
   Server::Data tdata;
   *this >> tdata.ftime_;
-  tdata.or(server_.data(serverType_),tdata.ftime_); // get local changes for sending
+  {
+    AutoMutexRDLock<FiberMutex> lock(server_.data(serverType_).mutex_);
+    tdata.orNL(server_.data(serverType_),tdata.ftime_); // get local changes for sending
+    tdata.ftime_ = gettimeofday();
+  }
   tdata.sendDatabaseNL(*this);
+  *this << tdata.ftime_;
   putCode(eOK);
   flush();
   utf8::String::Stream stream;

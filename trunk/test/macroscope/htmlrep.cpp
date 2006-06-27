@@ -87,9 +87,9 @@ void Logger::writeUserTop(
     f.open().resize(0);
     writeHtmlHead(f);
     f <<
-      "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
+      "<TABLE WIDTH=100 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
       "<TR>\n"
-      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttAll] << "\" nowrap>\n"
+      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[ttAll] << "\" wrap>\n"
       "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
       "URL\n"
       "    </FONT>\n"
@@ -120,28 +120,31 @@ void Logger::writeUserTop(
       statement_->selectRow(i);
       f <<
         "<TR>\n"
-        "  <TH ALIGN=left BGCOLOR=\"" << trafTypeBodyDataColor_[ttAll] << "\" nowrap>\n"
-        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        "      <A HREF=\"" << statement_->valueAsMutant(0) << "\">\n" <<
-        statement_->valueAsMutant(0) <<
+        "  <TH WITH=10 ALIGN=left BGCOLOR=\"" << trafTypeBodyDataColor_[ttAll] << "\" wrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\" wrap>\n" <<
+        "      <A HREF=\"" << statement_->valueAsMutant(0) << "\" wrap>\n" <<
+        statement_->valueAsMutant(0) << "\n"
         "      </A>\n"
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttSMTP] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        statement_->valueAsMutant(2) <<
+        statement_->valueAsMutant(2) << "\n"
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttSMTP] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        utf8::int2Str((uint64_t) statement_->valueAsMutant(1) / (uint64_t) statement_->valueAsMutant(2)) <<
+        utf8::int2Str(
+          ((uint64_t) statement_->valueAsMutant(1) / 
+          (uint64_t) statement_->valueAsMutant(2)) / 1024u
+        ) << "\n"
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttWWW] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
       ;
       writeTraf(f,statement_->valueAsMutant(1),at);
-      f <<
+      f << "\n"
         "    </FONT>\n"
         "  </TH>\n"
         "</TR>\n"
