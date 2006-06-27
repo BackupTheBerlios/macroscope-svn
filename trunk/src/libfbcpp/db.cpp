@@ -326,7 +326,7 @@ Database & Database::create(const utf8::String & name)
       ksys::AutoPtr<EDBCreate> e(new EDBCreate(status,__PRETTY_FUNCTION__));
       if( !e->searchCode(isc_db_or_file_exists) ) exceptionHandler(e.ptr(NULL));
     }
-    else{
+    else {
       api.isc_detach_database(status, &newdb);
     }
   }

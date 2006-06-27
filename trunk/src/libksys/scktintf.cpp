@@ -170,7 +170,7 @@ void API::open()
           throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
         }
       }
-      if( ksys::isWin9x() ){
+      if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
         wship6api.handle_ = LoadLibraryExA("wship6.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
         if( wship6api.handle_ == NULL ){
           err = GetLastError() + ksys::errorOffset;
@@ -245,7 +245,7 @@ void API::open()
         }
       }
     }
-    if( ksys::isWin9x() ){
+    if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
       for( i = 0; i < sizeof(wship6api.symbols_) / sizeof(wship6api.symbols_[0]); i++ ){
         ((void **) &wship6api.p_getaddrinfo)[i] = GetProcAddress(wship6api.handle_,wship6api.symbols_[i]);
         if( ((void **) &wship6api.p_getaddrinfo)[i] == NULL ){

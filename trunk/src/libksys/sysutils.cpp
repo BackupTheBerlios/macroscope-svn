@@ -384,8 +384,8 @@ HMODULE getModuleHandleByAddr(void * addr)
   if( (hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE,0)) != INVALID_HANDLE_VALUE ){
     me.dwSize = sizeof(me);
     if( Module32First(hSnapshot,&me) == TRUE ) do {
-      if( (uintptr_t) me.modBaseAddr                  <= (uintptr_t) addr &&
-          (uintptr_t) me.modBaseAddr + me.modBaseSize >  (uintptr_t) addr ){
+      if( (uint8_t *) me.modBaseAddr                  <= (uint8_t *) addr &&
+          (uint8_t *) me.modBaseAddr + me.modBaseSize >  (uint8_t *) addr ){
         h = me.hModule;
         break;
       }

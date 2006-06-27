@@ -27,7 +27,7 @@
 #ifndef _bootconf_H_
 #define _bootconf_H_
 
-#if   defined(_MSC_VER)
+#if (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && (defined(_WIN32) || defined(_WIN32_WINNT))
 #include <adicpp/config.h.msvc>
 #elif defined(__MINGW32__)
 #include <adicpp/config.h.mingw>

@@ -51,16 +51,12 @@ AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 //------------------------------------------------------------------------------
 void Fiber::initialize()
 {
-#if !defined(__WIN32__) && !defined(__WIN64__)
   new (currentFiberPlaceHolder) ThreadLocalVariable<Fiber>;
-#endif
 }
 //------------------------------------------------------------------------------
 void Fiber::cleanup()
 {
-#if !defined(__WIN32__) && !defined(__WIN64__)
   reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder)->~ThreadLocalVariable<Fiber>();
-#endif
 }
 //------------------------------------------------------------------------------
 Fiber::~Fiber()

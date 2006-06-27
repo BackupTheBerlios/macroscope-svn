@@ -135,8 +135,13 @@ void Logger::writeUserTop(
         "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[ttSMTP] << "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
         utf8::int2Str(
-          ((uint64_t) statement_->valueAsMutant(1) / 
-          (uint64_t) statement_->valueAsMutant(2)) / 1024u
+          (
+           (uint64_t) statement_->valueAsMutant(1) / 
+            (
+              (uint64_t) statement_->valueAsMutant(2) > 0 ? 
+              (uint64_t) statement_->valueAsMutant(2) : 1u
+            )
+          ) / 1024u
         ) << "\n"
         "    </FONT>\n"
         "  </TH>\n"
@@ -159,9 +164,9 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
   ksys::FileHandleContainer f(file);
   f.open().resize(0);
 #if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String  section ("macroscope.windows.html_report.");
+  utf8::String section("macroscope.windows.html_report.");
 #else
-  utf8::String  section ("macroscope.unix.html_report.");
+  utf8::String section("macroscope.unix.html_report.");
 #endif
   ksys::chModOwn(
     file,
@@ -348,9 +353,13 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
       f <<
         "<TR>\n"
         "  <TH ALIGN=right BGCOLOR=\"#00A0FF\" wrap>\n"
-        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" "Summary traffic of all users: "
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        "Summary traffic of all users:"
       ;
-      f << "    </FONT>\n" "  </TH>\n"
+      f <<
+        "\n"
+        "    </FONT>\n"
+        "  </TH>\n"
       ;
       for( j = ttAll; j >= 0; j-- ){
         f <<

@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
+#include <adicpp/bootconf.h>
 #include <windows.h>
 #include <tchar.h>
 #include <math.h>
@@ -105,7 +106,7 @@ intptr_t  CPEnumCount;
 
 #define DST_DIR "..\\..\\..\\src\\libutf8"
 
-void GenEmbed()
+static void GenEmbed()
 {
   struct stat st;
   char        bfile[64];
@@ -117,7 +118,7 @@ void GenEmbed()
   assert( file != NULL );
   fprintf(file,"%s",lic);
   k = UpperCount * 2;
-  fprintf(file, "extern const uint16_t upperTable[%d] = {\n", k);
+  fprintf(file, "extern const uint16_t upperTable["PRIdPTR"] = {\n", k);
   for( i = 0; i < k; ){
     fprintf(file, "  ");
     for( j = 0; j < 8 && i < k; j++, i++ ){
@@ -141,7 +142,7 @@ void GenEmbed()
   assert( file != NULL );
   fprintf(file,"%s",lic);
   k = LowerCount * 2;
-  fprintf(file, "extern const uint16_t lowerTable[%d] = {\n", k);
+  fprintf(file, "extern const uint16_t lowerTable["PRIdPTR"] = {\n", k);
   for( i = 0; i < k; ){
     fprintf(file, "  ");
     for( j = 0; j < 8 && i < k; j++, i++ ){
@@ -189,7 +190,7 @@ void GenEmbed()
   assert( file != NULL );
   fprintf(file,"%s",lic);
   k = sizeof(C2Table) / sizeof(uint32_t);
-  fprintf(file, "extern const uint32_t C2Table[%d] = {\n", k);
+  fprintf(file, "extern const uint32_t C2Table["PRIdPTR"] = {\n", k);
   for( i = 0; i < k; ){
     fprintf(file, "  ");
     for( j = 0; j < 4 && i < k; j++, i++ ){
@@ -213,7 +214,7 @@ void GenEmbed()
   assert( file != NULL );
   fprintf(file,"%s",lic);
   k = sizeof(C3Table) / sizeof(uint32_t);
-  fprintf(file, "extern const uint32_t C3Table[%d] = {\n", k);
+  fprintf(file, "extern const uint32_t C3Table["PRIdPTR"] = {\n", k);
   for( i = 0; i < k; ){
     fprintf(file, "  ");
     for( j = 0; j < 4 && i < k; j++, i++ ){
@@ -234,11 +235,11 @@ void GenEmbed()
   );
   fclose(file);
   for( i = 0; i < CPEnumCount; i++ ){
-    sprintf(bfile, DST_DIR "\\cp%d.cpp", CPEnums[i].cp);
+    sprintf(bfile, DST_DIR "\\cp"PRIu32".cpp", CPEnums[i].cp);
     file = fopen(bfile, "wb");
     assert( file != NULL );
     fprintf(file,"%s",lic);
-    sprintf(bfile, DST_DIR "\\cp%dutf8.bin", CPEnums[i].cp);
+    sprintf(bfile, DST_DIR "\\cp"PRIu32"utf8.bin", CPEnums[i].cp);
     stat(bfile, &st);
     f = fopen(bfile, "rb");
     assert( file != NULL );
@@ -247,8 +248,8 @@ void GenEmbed()
     fclose(f);
     k = st.st_size;
     fprintf(file,
-      "#if defined(EMBED_CP%d_SUPPORT) || defined(EMBED_ALL_CP)\n"
-      "extern const uint8_t cp%ds2utf8s[%d] = {\n",
+      "#if defined(EMBED_CP"PRIu32"_SUPPORT) || defined(EMBED_ALL_CP)\n"
+      "extern const uint8_t cp"PRIu32"s2utf8s["PRIdPTR"] = {\n",
       CPEnums[i].cp,
       CPEnums[i].cp,
       k
@@ -270,7 +271,7 @@ void GenEmbed()
       "\n};\n"
       "//---------------------------------------------------------------------------\n"
     );
-    sprintf(bfile,DST_DIR "\\utf8cp%d.bin", CPEnums[i].cp);
+    sprintf(bfile,DST_DIR "\\utf8cp"PRIu32".bin", CPEnums[i].cp);
     stat(bfile, &st);
     f = fopen(bfile, "rb");
     assert( file != NULL );
@@ -278,7 +279,7 @@ void GenEmbed()
     fread(b, st.st_size, 1, f);
     fclose(f);
     k = st.st_size;
-    fprintf(file, "extern const uint8_t utf8s2cp%ds[%d] = {\n", CPEnums[i].cp, k);
+    fprintf(file, "extern const uint8_t utf8s2cp"PRIu32"s["PRIdPTR"] = {\n", CPEnums[i].cp, k);
     for( g = 0; g < k; ){
       fprintf(file, "  ");
       for( j = 0; j < 8 && g < k; j++, g++ ){
@@ -303,9 +304,10 @@ void GenEmbed()
   fprintf(file,"%s",lic);
   for( i = 0; i < CPEnumCount; i++ ){
     fprintf(file,
-      "extern const uint8_t utf8s2cp%ds[];\n"
-      "extern const uint8_t cp%ds2utf8s[];\n",
-      CPEnums[i].cp, CPEnums[i].cp
+      "extern const uint8_t utf8s2cp"PRIu32"s[];\n"
+      "extern const uint8_t cp"PRIu32"s2utf8s[];\n",
+      CPEnums[i].cp,
+      CPEnums[i].cp
     );
   }
   fprintf(file, "extern const utf8cp utf8cps[] = {\n");
@@ -313,12 +315,18 @@ void GenEmbed()
     if( i > 0 )
       fprintf(file, ",\n#endif\n");
     fprintf(file,
-      "#if defined(EMBED_CP%d_SUPPORT) || defined(EMBED_ALL_CP)\n"
-      "  { cp%ds2utf8s, utf8s2cp%ds }",
-      CPEnums[i].cp, CPEnums[i].cp, CPEnums[i].cp
+      "#if defined(EMBED_CP"PRIu32"_SUPPORT) || defined(EMBED_ALL_CP)\n"
+      "  { cp"PRIu32"s2utf8s, utf8s2cp"PRIu32"s }",
+      CPEnums[i].cp,
+      CPEnums[i].cp,
+      CPEnums[i].cp
     );
   }
-  fprintf(file, "\n" "#endif\n" "};\n");
+  fprintf(file,
+    "\n"
+    "#endif\n"
+    "};\n"
+  );
   fprintf(file,
     "//---------------------------------------------------------------------------\n"
     "extern const uintptr_t utf8cpsCount = sizeof(utf8cps) / sizeof(utf8cps[0]);\n"
@@ -333,12 +341,12 @@ struct Sequence {
     intptr_t Len;
 };
 
-intptr_t sortCPSequences(const void * a, const void * b)
+static intptr_t sortCPSequences(const void * a, const void * b)
 {
   return -(((Sequence *) a)->Len - ((Sequence *) b)->Len);
 } 
 
-intptr_t sortCPSequences2(const void * a, const void * b)
+static intptr_t sortCPSequences2(const void * a, const void * b)
 {
   return ((Sequence *) a)->Pos - ((Sequence *) b)->Pos;
 } 
@@ -354,6 +362,7 @@ struct cp2ucs {
     int         SeqCount;
 };
 
+static
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -368,7 +377,7 @@ bool isLeadByte(const CPINFOEX & info, intptr_t byte)
   return false;
 }
 
-void findCPSequences(Sequence *& Seqs, intptr_t & SeqCount, intptr_t & mSeqCount, const cp2ucs * cp)
+static void findCPSequences(Sequence *& Seqs, intptr_t & SeqCount, intptr_t & mSeqCount, const cp2ucs * cp)
 {
   Seqs = NULL;
   SeqCount = 0;
@@ -435,7 +444,7 @@ uint8_t * strchr(const uint8_t * s, uintptr_t c)
   return NULL;
 }
 
-void findLBCPSequences(Sequence *& Seqs, intptr_t & SeqCount, intptr_t & mSeqCount, const cp2ucs * cp)
+static void findLBCPSequences(Sequence *& Seqs, intptr_t & SeqCount, intptr_t & mSeqCount, const cp2ucs * cp)
 {
   Seqs = NULL;
   SeqCount = 0;
@@ -458,7 +467,7 @@ void findLBCPSequences(Sequence *& Seqs, intptr_t & SeqCount, intptr_t & mSeqCou
   }
 }
 
-void findCPSequencesR(Sequence *& Seqs, intptr_t & SeqCount, const cp2ucs * cp)
+static void findCPSequencesR(Sequence *& Seqs, intptr_t & SeqCount, const cp2ucs * cp)
 {
   Seqs = NULL;
   SeqCount = 0;
@@ -476,7 +485,7 @@ void findCPSequencesR(Sequence *& Seqs, intptr_t & SeqCount, const cp2ucs * cp)
   }
 }
 
-void dumpCP2UCS()
+static void dumpCP2UCS()
 {
   char      bfile[256];
   FILE *    file;
@@ -745,7 +754,7 @@ void dumpCP2UCS()
   //remove(DST_DIR "\\utf8mod.bin");
 }
 
-BOOL CALLBACK EnumCodePagesProc(LPTSTR lpCodePageString)
+static BOOL CALLBACK EnumCodePagesProc(LPTSTR lpCodePageString)
 {
   CPEnums = (CPEnum *) realloc(CPEnums, sizeof(CPEnum) * (CPEnumCount + 1));
   CPEnums[CPEnumCount].cp = _ttol(lpCodePageString);
@@ -758,7 +767,7 @@ BOOL CALLBACK EnumCodePagesProc(LPTSTR lpCodePageString)
   return TRUE;
 } 
 
-int sortCodePages(const void * a, const void * b)
+static int sortCodePages(const void * a, const void * b)
 {
   return ((const CPEnum *) a)->cp > ((const CPEnum *) b)->cp ? 1 : ((const CPEnum *) a)->cp < ((const CPEnum *) b)->cp ? -1 : 0;
 }

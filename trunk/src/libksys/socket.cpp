@@ -566,7 +566,7 @@ AsyncSocket & AsyncSocket::operator >> (utf8::String & s)
   else {
     ksys::xchg(b[0],b[1]);
   }
-  if( l > (~uint64_t(0) >> 1) || l > ~uintptr_t(0) )
+  if( l > ~uintptr_t(0) )
     throw ksys::ExceptionSP(new ksys::Exception(EINVAL,__PRETTY_FUNCTION__));
   utf8::String t;
   t.resize((size_t) l);
