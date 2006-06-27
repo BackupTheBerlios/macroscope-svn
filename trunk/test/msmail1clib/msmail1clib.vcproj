@@ -116,6 +116,7 @@
 			UseOfATL="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -144,6 +145,12 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				Optimization="3"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="true"
+				FavorSizeOrSpeed="1"
+				OmitFramePointers="true"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="../../include;../msmail"
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;_USRDLL;_MERGE_PROXYSTUB;HAVE_STDAFX_H;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
 				UsePrecompiledHeader="2"
