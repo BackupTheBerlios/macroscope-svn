@@ -380,90 +380,6 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
 }
 #endif	
 //------------------------------------------------------------------------------
-/*utf8::String SockAddr::gethostname()
-{
-  int32_t err = 0;
-  utf8::String s;
-#if defined(__WIN32__) || defined(__WIN64__)
-  union {
-    char hostName[NI_MAXHOST];
-    wchar_t hostNameW[NI_MAXHOST];
-  };
-  union {
-    char servInfo[NI_MAXSERV];
-    wchar_t servInfoW[NI_MAXSERV];
-  };
-  ksys::AutoPtr<IpInfo> addresses;
-  getAdaptersAddresses(addresses);
-  if( ksys::isWinXPorLater() ){
-    IP_ADAPTER_ADDRESSES * pAddress = &addresses->addresses_;
-    while( pAddress != NULL ){
-// exclude loopback interface
-      if( pAddress->PhysicalAddressLength > 0 ){
-        PIP_ADAPTER_UNICAST_ADDRESS unicast = pAddress->FirstUnicastAddress;
-        while( unicast != NULL ){
-          SockAddr addr;
-          addr.clear();
-          for( intptr_t i = sizeof(pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_data) - 1; i >= 0; i-- ){
-            ((uint8_t *) &addr.addr4_.sin_addr)[i] = 
-              pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_data[sizeof(pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_data) - 1 - i];
-          }
-          addr.addr4_.sin_family = pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_family;
-          err = api.GetNameInfoW(
-            (const sockaddr *) &addr.addr4_,
-            (socklen_t) addr.length(),
-            hostNameW,
-            sizeof(hostNameW),
-            servInfoW,
-            sizeof(servInfoW),
-            NI_NUMERICSERV
-          );
-          if( err == 0 ) break;
-          unicast = unicast->Next;
-        }
-      }
-      if( err == 0 ) break;
-      pAddress = pAddress->Next;
-    }
-    if( err == 0 ) s = hostNameW;
-  }
-  else {
-  }
-#else
-  try {
-    api.open();
-    while( api.gethostname(s.c_str(),(int) s.size()) != 0 ){
-      if( (err = errNo()) != EFAULT ) break;
-      s.resize((s.size() << 1) + (s.size() == 0));
-      err = 0;
-    }
-    if( err == 0 ){
-      s.resize(s.size());
-      err = api.getnameinfo(
-        (const sockaddr *) &addr.addr4_,
-        (socklen_t) addr.length(),
-        hostName,
-        sizeof(hostName),
-        servInfo,
-        sizeof(servInfo),
-        NI_NUMERICSERV
-      );
-      if( err == 0 ) s = hostName;
-    }
-  }
-  catch( ... ){
-    api.close();
-    throw;
-  }
-  api.close();
-#endif
-  if( err != 0 ){
-    err = errNo() + ksys::errorOffset;
-    throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
-  }
-  return s;
-}*/
-//------------------------------------------------------------------------------
 utf8::String SockAddr::gethostname()
 {
   int32_t err = 0;
@@ -472,14 +388,6 @@ utf8::String SockAddr::gethostname()
   try {
     SockAddr addr;
 #if defined(__WIN32__) || defined(__WIN64__)
-/*    union {
-      char hostName[NI_MAXHOST];
-      wchar_t hostNameW[NI_MAXHOST];
-    };
-    union {
-      char servInfo[NI_MAXSERV];
-      wchar_t servInfoW[NI_MAXSERV];
-    };*/
     ksys::AutoPtr<IpInfo> addresses;
     getAdaptersAddresses(addresses);
     if( ksys::isWinXPorLater() ){
@@ -500,16 +408,6 @@ utf8::String SockAddr::gethostname()
           try {
             err = 0;
             s = addr.resolve();
-/*          err = api.GetNameInfoW(
-            (const sockaddr *) &addr.addr4_,
-            (socklen_t) addr.length(),
-            hostNameW,
-            sizeof(hostNameW),
-            servInfoW,
-            sizeof(servInfoW),
-            NI_NUMERICSERV
-          );
-          if( err == 0 ) break;*/
           }
           catch( ksys::ExceptionSP & e ){
             err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
@@ -528,10 +426,9 @@ utf8::String SockAddr::gethostname()
         if( pAddress->Type == MIB_IF_TYPE_LOOPBACK ) continue;
         PIP_ADDR_STRING list = &pAddress->IpAddressList;
         while( list != NULL ){
-//          addr.internalGetAddrInfo(list->IpAddress.String,utf8::String(),0,0);
           try {
             err = 0;
-			s = addr.resolve(list->IpAddress.String).resolve();
+			      s = addr.resolve(list->IpAddress.String).resolve();
           }
           catch( ksys::ExceptionSP & e ){
             err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
