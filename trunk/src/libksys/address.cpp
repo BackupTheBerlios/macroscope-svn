@@ -528,33 +528,10 @@ utf8::String SockAddr::gethostname()
         if( pAddress->Type == MIB_IF_TYPE_LOOPBACK ) continue;
         PIP_ADDR_STRING list = &pAddress->IpAddressList;
         while( list != NULL ){
-          addr.internalGetAddrInfo(list->IpAddress.String,utf8::String(),0,0);
+//          addr.internalGetAddrInfo(list->IpAddress.String,utf8::String(),0,0);
           try {
             err = 0;
-            s = addr.resolve();
-/*          if( ksys::isWin9x() ){
-            err = api.GetNameInfoA(
-              (const sockaddr *) &addr.addr4_,
-              (socklen_t) addr.length(),
-              hostName,
-              sizeof(hostName),
-              servInfo,
-              sizeof(servInfo),
-              NI_NUMERICSERV
-            );
-            if( err == 0 ) s = hostName;
-          }
-          else {
-            err = api.GetNameInfoW(
-              (const sockaddr *) &addr.addr4_,
-              (socklen_t) addr.length(),
-              hostNameW,
-              sizeof(hostNameW),
-              servInfoW,
-              sizeof(servInfoW),
-              NI_NUMERICSERV
-            );
-            if( err == 0 ) s = hostNameW;*/
+			s = addr.resolve(list->IpAddress.String).resolve();
           }
           catch( ksys::ExceptionSP & e ){
             err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
