@@ -74,14 +74,14 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   aiHints.ai_family = PF_UNSPEC;
   aiHints.ai_socktype = SOCK_STREAM;
   aiHints.ai_protocol = IPPROTO_TCP;
-  aiHints.ai_flags |= host.strlen() == 0 ? AI_PASSIVE : 0;
-  aiHints.ai_flags |= ai_flag;
+  aiHints.ai_flags = ai_flag;
   int r = 0;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( ksys::isWin9x() ){
+    utf8::AnsiString ap(port.strlen() > 0 ? port.getANSIString() : ((utf8::String) defPort).getANSIString());
     r = wship6api.GetAddrInfoA(
       host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
-      port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
+      port.strlen() == 0 && (uintptr_t) defPort == 0 ? NULL : (const char *) ap,
       &aiHints,
       &aiList
     );
@@ -91,7 +91,12 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
     addr4_.sin_len = sizeof(addr4_);
 #endif
     addr4_.sin_family = PF_INET;
-	  addr4_.sin_port = api.htons((u_short) utf8::str2Int(port));
+    if( port.strlen() > 0 ){
+	    addr4_.sin_port = api.htons((u_short) utf8::str2Int(port));
+    }
+    else {
+	    addr4_.sin_port = api.htons(defPort);
+    }
 	  if( host.strlen() > 0 ){
 	    struct hostent * he = api.gethostbyname(host.getANSIString());
 	    if( he == NULL ){
@@ -112,9 +117,10 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 	  }
   }
   else {
+    utf8::WideString ap(port.strlen() > 0 ? port.getUNICODEString() : ((utf8::String) defPort).getUNICODEString());
     r = api.GetAddrInfoW(
       host.strlen() > 0 ? (const wchar_t *) host.getUNICODEString() : NULL,
-      port.strlen() > 0 && (uintptr_t) defPort != 0 ? (const wchar_t *) port.getUNICODEString() : NULL,
+      port.strlen() == 0 && (uintptr_t) defPort == 0 ? NULL : (const wchar_t *) ap,
       &aiHintsW,
       &aiListW
     );
@@ -158,7 +164,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   return s;
 }
 //------------------------------------------------------------------------------
-SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort)
+SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort,int ai_flag)
 {
   clear();
   unsigned a1 = 0, a2 = 0, a3 = 0, a4 = 0, port = (unsigned) defPort;
@@ -189,7 +195,7 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
     port = port.trim();
     api.open();
     try {
-      internalGetAddrInfo(host,port,defPort,0);
+      internalGetAddrInfo(host,port,defPort,ai_flag);
     }
     catch( ... ){
       api.close();
@@ -200,12 +206,12 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
   return *this;
 }
 //------------------------------------------------------------------------------
-void SockAddr::resolve(const utf8::String & bind, ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort)
+void SockAddr::resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort)
 {
   intptr_t i = ksys::enumStringParts(bind);
   if( i <= 0 ){
     addrs.resize(1);
-    addrs[0].resolve(utf8::String(),defPort);
+    addrs[0].resolve(utf8::String(),defPort,AI_PASSIVE);
   }
   else {
     for( intptr_t j = 0; j < i; j++ ){
@@ -215,7 +221,7 @@ void SockAddr::resolve(const utf8::String & bind, ksys::Array<SockAddr> & addrs,
   }
 }
 //------------------------------------------------------------------------------
-utf8::String SockAddr::resolve() const
+utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
 {
   int32_t err = 0;
   utf8::String s;
@@ -239,7 +245,13 @@ utf8::String SockAddr::resolve() const
       sizeof(servInfo),
       NI_NUMERICSERV
     );
-    if( err == 0 ) s = hostName;
+    if( err == 0 ){
+      s = hostName;
+      if( (uintptr_t) defPort != 0 && (uintptr_t) defPort != utf8::str2Int(servInfo) ){
+        s += ":";
+        s += servInfo;
+      }
+    }
   }
   else if( api.GetNameInfoW == NULL ){
 	  struct hostent * he = api.gethostbyaddr(
@@ -252,6 +264,10 @@ utf8::String SockAddr::resolve() const
 	  }
 	  else {
 	    s = he->h_name;
+      if( (uintptr_t) defPort != 0 && (uintptr_t) defPort != api.ntohs(addr4_.sin_port) ){
+        s += ":";
+        s += utf8::int2Str(api.ntohs(addr4_.sin_port));
+      }
 	  }
   }
   else {
@@ -264,7 +280,13 @@ utf8::String SockAddr::resolve() const
       sizeof(servInfoW),
       NI_NUMERICSERV
     );
-    if( err == 0 ) s = hostNameW;
+    if( err == 0 ){
+      s = hostNameW;
+      if( (uintptr_t) defPort != 0 && (uintptr_t) defPort != utf8::str2Int(servInfoW) ){
+        s += ":";
+        s += servInfoW;
+      }
+    }
   }
 #else
   char hostName[NI_MAXHOST];
@@ -321,10 +343,11 @@ void SockAddr::resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & ad
   }
 }
 //------------------------------------------------------------------------------
-utf8::String SockAddr::resolveAsync() const
+utf8::String SockAddr::resolveAsync(const ksys::Mutant & defPort) const
 {
   assert( ksys::currentFiber() != NULL );
   ksys::currentFiber()->event_.address_ = *this;
+  ksys::currentFiber()->event_.defPort_ = defPort;
   ksys::currentFiber()->event_.type_ = ksys::etResolveAddress;
   ksys::currentFiber()->thread()->postRequest();
   ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());

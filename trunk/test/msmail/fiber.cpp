@@ -666,7 +666,7 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
         }
         else {
           try {
-            address.resolveAsync(server);
+            address.resolveAsync(server,defaultPort);
             resolved = true;
           }
           catch( ExceptionSP & e ){
@@ -720,8 +720,8 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
               b.alloc(bl);
               while( remainder > 0 ){
                 uint64_t l = remainder > bl ? bl : remainder;
-                read(b,l);
-                file.write(b,l);
+                file.read(b,l);
+                write(b,l);
                 remainder -= l;
               }
               getCode();
