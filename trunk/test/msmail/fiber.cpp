@@ -847,103 +847,111 @@ void NodeClient::main()
   utf8::String server, host;
   try {
     do {
-      if( dataType_ == stStandalone ){
-        server = server_.data(stStandalone).getNodeList();
-        if( server.strlen() > 0 ) server += ",";
-        server += host;
-        host = server_.data(stNode).getNodeList();
-        if( server.strlen() > 0 ) server += ",";
-        server += host;
-        if( server.strlen() > 0 ) server += ",";
-        server += server_.config_->parse().override().valueByPath("standalone.node","");
+      bool doWork;
+      {
+        AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
+        doWork = dataType_ != stStandalone ||
+                  (server_.nodeClient_ != NULL && server_.nodeClient_ == this);
       }
-      else {
-        server = nodeHostName_;
-      }
-      bool connected = false, exchanged = false;
-      i = enumStringParts(server);
-      while( !exchanged && !terminated_ && --i >= 0 ){
-        try {
-          ksock::SockAddr remoteAddress;
-          remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
-          host = remoteAddress.resolveAsync();
-          close();
-          connect(remoteAddress);
+      if( doWork ){
+        if( dataType_ == stStandalone ){
+          server = server_.data(stStandalone).getNodeList();
+          if( server.strlen() > 0 ) server += ",";
+          server += host;
+          host = server_.data(stNode).getNodeList();
+          if( server.strlen() > 0 ) server += ",";
+          server += host;
+          if( server.strlen() > 0 ) server += ",";
+          server += server_.config_->parse().override().valueByPath("standalone.node","");
+        }
+        else {
+          server = nodeHostName_;
+        }
+        bool connected = false, exchanged = false;
+        i = enumStringParts(server);
+        while( !exchanged && !terminated_ && --i >= 0 ){
           try {
-            auth();
-            connected = true;
+            ksock::SockAddr remoteAddress;
+            remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+            host = remoteAddress.resolveAsync();
+            close();
+            connect(remoteAddress);
+            try {
+              auth();
+              connected = true;
+            }
+            catch( ExceptionSP & e ){
+              e->writeStdError();
+              stdErr.debug(3,utf8::String::Stream() <<
+                "Authentification to host " << host << " failed.\n"
+              );
+            }
           }
           catch( ExceptionSP & e ){
             e->writeStdError();
             stdErr.debug(3,utf8::String::Stream() <<
-              "Authentification to host " << host << " failed.\n"
+              "Unable connect to node. Host " << host << " unreachable.\n"
             );
           }
-        }
-        catch( ExceptionSP & e ){
-          e->writeStdError();
-          stdErr.debug(3,utf8::String::Stream() <<
-            "Unable connect to node. Host " << host << " unreachable.\n"
-          );
-        }
-        if( connected ){
-          try {
-            utf8::String::Stream stream;
-            *this << uint8_t(cmSelectServerType) << uint8_t(stNode);
-            getCode();
-            Server::Data & data = server_.data(dataType_);
-            data.registerServer(ServerInfo(host,stNode));
-            Server::Data tdata, diff, dump;
-            uint64_t rStartTime;
-            *this << uint8_t(cmRegisterDB) >> rStartTime;
-            bool fullDump = false;
-            {
-              AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-              ServerInfo * si = data.servers_.find(host);
-              fullDump = si != NULL && si->stime_ != rStartTime;
+          if( connected ){
+            try {
+              utf8::String::Stream stream;
+              *this << uint8_t(cmSelectServerType) << uint8_t(stNode);
+              getCode();
+              Server::Data & data = server_.data(dataType_);
+              data.registerServer(ServerInfo(host,stNode));
+              Server::Data tdata, diff, dump;
+              uint64_t rStartTime;
+              *this << uint8_t(cmRegisterDB) >> rStartTime;
+              bool fullDump = false;
+              {
+                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+                ServerInfo * si = data.servers_.find(host);
+                fullDump = si != NULL && si->stime_ != rStartTime;
+              }
+              {
+                AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+                dump = data;
+                tdata.orNL(data,fullDump ? 0 : data.ftime_);
+                tdata.ftime_ = data.ftime_;
+              }
+              *this << tdata.ftime_;
+              tdata.sendDatabaseNL(*this);
+              stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
+                " database " << (fullDump ? "full dump" : "changes") <<
+                " sended to node " << host << "\n";
+              tdata.dumpNL(stream);
+              stdErr.debug(6,stream);
+              tdata.clear();
+              tdata.recvDatabaseNL(*this);
+              *this >> tdata.ftime_;
+              getCode();
+              {
+                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+                data.orNL(tdata);
+                data.ftime_ = tdata.ftime_;
+              }
+              *this << uint8_t(cmQuit);
+              getCode();
+              exchanged = true;
+              if( fullDump ){
+                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+                ServerInfo * si = data.servers_.find(host);
+                if( si != NULL ) si->stime_ = rStartTime;
+              }
+              stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
+                " database changes received from node " << host << "\n";
+              tdata.dumpNL(stream);
+              stdErr.debug(6,stream);
+              diff.xorNL(dump,tdata);
+              stream.clear() << "NODE client: changes stored in " <<
+                serverTypeName_[dataType_] << " database.\n";
+              diff.dumpNL(stream);
+              stdErr.debug(5,stream);
             }
-            {
-              AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-              dump = data;
-              tdata.orNL(data,fullDump ? 0 : data.ftime_);
-              tdata.ftime_ = data.ftime_;
+            catch( ExceptionSP & e ){
+              e->writeStdError();
             }
-            *this << tdata.ftime_;
-            tdata.sendDatabaseNL(*this);
-            stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
-              " database " << (fullDump ? "full dump" : "changes") <<
-              " sended to node " << host << "\n";
-            tdata.dumpNL(stream);
-            stdErr.debug(6,stream);
-            tdata.clear();
-            tdata.recvDatabaseNL(*this);
-            *this >> tdata.ftime_;
-            getCode();
-            {
-              AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-              data.orNL(tdata);
-              data.ftime_ = tdata.ftime_;
-            }
-            *this << uint8_t(cmQuit);
-            getCode();
-            exchanged = true;
-            if( fullDump ){
-              AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-              ServerInfo * si = data.servers_.find(host);
-              if( si != NULL ) si->stime_ = rStartTime;
-            }
-            stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
-              " database changes received from node " << host << "\n";
-            tdata.dumpNL(stream);
-            stdErr.debug(6,stream);
-            diff.xorNL(dump,tdata);
-            stream.clear() << "NODE client: changes stored in " <<
-              serverTypeName_[dataType_] << " database.\n";
-            diff.dumpNL(stream);
-            stdErr.debug(5,stream);
-          }
-          catch( ExceptionSP & e ){
-            e->writeStdError();
           }
         }
       }
