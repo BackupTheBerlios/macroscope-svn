@@ -850,8 +850,11 @@ void NodeClient::main()
       bool doWork;
       {
         AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
-        doWork = dataType_ != stStandalone ||
-                  (server_.nodeClient_ != NULL && server_.nodeClient_ == this);
+        doWork = 
+          dataType_ != stStandalone ||
+          server_.nodeClient_ == NULL || 
+          server_.nodeClient_ == this
+        ;
       }
       if( doWork ){
         if( dataType_ == stStandalone ){
