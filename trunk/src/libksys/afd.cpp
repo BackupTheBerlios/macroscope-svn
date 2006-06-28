@@ -76,7 +76,7 @@ AsyncFile & AsyncFile::open()
     assert( currentFiber() != NULL );
     attach();
     fiber()->event_.string0_ = fileName_;
-    fiber()->event_.createIfNotExist_ = true;
+    fiber()->event_.createIfNotExist_ = createIfNotExist_;
     fiber()->event_.exclusive_ = exclusive_;
     fiber()->event_.readOnly_ = readOnly_;
     fiber()->event_.type_ = etOpenFile;

@@ -52,7 +52,7 @@ void Server::open()
   uintptr_t i;
   for( i = config_->value("spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
-  for( i = config_->value("mqueue_fibers",1); i > 0; i-- )
+  for( i = config_->value("mqueue_fibers",5); i > 0; i-- )
     attachFiber(new MailQueueWalker(*this));
 }
 //------------------------------------------------------------------------------

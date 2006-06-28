@@ -55,7 +55,9 @@ LogFile::LogFile() :
   rotationThreshold_(1024 * 1024),
   rotatedFileCount_(10)
 {
+  file_.createIfNotExist(true);
   afile_ = new AsyncFile;
+  afile_->createIfNotExist(true);
   fmutex_ = new FiberInterlockedMutex;
 }
 //---------------------------------------------------------------------------

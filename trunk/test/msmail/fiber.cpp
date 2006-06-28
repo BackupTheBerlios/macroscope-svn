@@ -260,8 +260,10 @@ void ServerFiber::sendMail() // client sending mail
 
   *this >> id >> rest;
   AsyncFile ctrl, file;
-  ctrl.fileName(server_.lckDir() + id + ".msg.lck").removeAfterClose(true).open();
+  ctrl.fileName(server_.lckDir() + id + ".msg.lck").
+    createIfNotExist(true).removeAfterClose(true).open();
   AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+  file.createIfNotExist(true);
   if( rest ){
     file.fileName(server_.incompleteDir() + id + ".msg");
     statAsync(file.fileName(),st);
@@ -344,11 +346,23 @@ intptr_t ServerFiber::processMailbox(
   k = list.count();
   for( i = list.count() - 1; i >= 0; i-- ){
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
-    ctrl.removeAfterClose(true);
-    ctrl.open();
+    ctrl.createIfNotExist(true).removeAfterClose(true).open();
     AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
     AsyncFile file(list[i]);
-    if( file.tryOpen() ){
+    try {
+      file.open();
+    }
+    catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+          e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
+          e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
+      e->writeStdError();
+#else
+#error Not implemented
+#endif
+    }
+    if( file.isOpen() ){
       utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
       if( mids.bSearch(id) < 0 || !onlyNewMail ){
         Message message;
@@ -411,7 +425,7 @@ void ServerFiber::recvMail() // client receiving mail
       createUUID(uuid);
       utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
       AsyncFile watchdog(includeTrailingPathDelimiter(userMailBox) + "." + suuid);
-      watchdog.removeAfterClose(true).open();
+      watchdog.createIfNotExist(true).removeAfterClose(true).open();
     }
     while( !terminated_ ){
       k = processMailbox(userMailBox,ids,onlyNewMail);
@@ -436,8 +450,7 @@ void ServerFiber::removeMail() // client remove mail
     createDirectoryAsync(userMailBox);
     {
       AsyncFile ctrl(server_.lckDir() + id + ".msg" + ".lck");
-      ctrl.removeAfterClose(true);
-      ctrl.open();
+      ctrl.createIfNotExist(true).removeAfterClose(true).open();
       AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
       removeAsync(includeTrailingPathDelimiter(userMailBox) + id + ".msg");
     }
@@ -470,8 +483,7 @@ intptr_t SpoolWalker::processQueue()
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
-    ctrl.removeAfterClose(true);
-    ctrl.open();
+    ctrl.createIfNotExist(true).removeAfterClose(true).open();
     AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
     AsyncFile file(list[i]);
     try {
@@ -623,8 +635,7 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
-    ctrl.removeAfterClose(true);
-    ctrl.open();
+    ctrl.createIfNotExist(true).removeAfterClose(true).open();
     AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
     AsyncFile file(list[i]);
     try {
@@ -679,6 +690,7 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
           }
           if( resolved ){
             try {
+              close();
               connect(address);
               connected = true;
             }
@@ -705,44 +717,44 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
               );
             }
           }
-          if( authentificated ){ // and now we can send message
-            sended = false;
-            uint64_t restFrom, remainder;
-            try {
-              *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
-              getCode();
-              *this << uint8_t(cmSendMail) << message.id() << true >> restFrom;
-              file.seek(restFrom);
-              *this << (remainder = file.size() - restFrom);
-              AutoPtr<uint8_t> b;
-              size_t bl = server_.config_->value("max_send_size",getpagesize());
-              b.alloc(bl);
-              while( remainder > 0 ){
-                uint64_t l = remainder > bl ? bl : remainder;
-                file.read(b,l);
-                write(b,l);
-                remainder -= l;
-              }
-              getCode();
-              *this << uint8_t(cmQuit);
-              getCode();
-              stdErr.debug(0,
-                utf8::String::Stream() << "Message " << message.id() <<
-                " sended to " << message.value("#Recepient") <<
-                " via " << server << ", traffic " <<
-                allBytes() << "\n"
-              );
-              sended = true;
-              k--;
+        }
+        if( authentificated ){ // and now we can send message
+          sended = false;
+          uint64_t restFrom, remainder;
+          try {
+            *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
+            getCode();
+            *this << uint8_t(cmSendMail) << message.id() << true >> restFrom;
+            file.seek(restFrom);
+            *this << (remainder = file.size() - restFrom);
+            AutoPtr<uint8_t> b;
+            size_t bl = server_.config_->value("max_send_size",getpagesize());
+            b.alloc(bl);
+            while( remainder > 0 ){
+              uint64_t l = remainder > bl ? bl : remainder;
+              file.read(b,l);
+              write(b,l);
+              remainder -= l;
             }
-            catch( ExceptionSP & e ){
-              timeWait = true;
-              e->writeStdError();
-            }
-            shutdown();
-            close();
+            getCode();
+            *this << uint8_t(cmQuit);
+            getCode();
+            stdErr.debug(0,
+              utf8::String::Stream() << "Message " << message.id() <<
+              " sended to " << message.value("#Recepient") <<
+              " via " << server << ", traffic " <<
+              allBytes() << "\n"
+            );
+            sended = true;
+            k--;
+          }
+          catch( ExceptionSP & e ){
+            timeWait = true;
+            e->writeStdError();
           }
         }
+        shutdown();
+        close();
       }
       catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)

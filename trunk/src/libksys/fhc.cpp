@@ -72,16 +72,45 @@ FileHandleContainer & FileHandleContainer::open()
       if( isWin9x() ){
         utf8::AnsiString  ansiFileName  (anyPathName2HostPathName(fileName_).getANSIString());
         if( !readOnly_ )
-          handle_ = CreateFileA(ansiFileName,GENERIC_READ | GENERIC_WRITE, exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS, NULL);
+          handle_ = CreateFileA(
+            ansiFileName,GENERIC_READ | GENERIC_WRITE,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
         if( handle_ == INVALID_HANDLE_VALUE )
-          handle_ = CreateFileA(ansiFileName,GENERIC_READ, exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS, NULL);
+          handle_ = CreateFileA(
+            ansiFileName,GENERIC_READ,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
       }
       else{
-        utf8::WideString  unicodeFileName (anyPathName2HostPathName(fileName_).getUNICODEString());
+        utf8::WideString unicodeFileName(anyPathName2HostPathName(fileName_).getUNICODEString());
         if( !readOnly_ )
-          handle_ = CreateFileW(unicodeFileName,GENERIC_READ | GENERIC_WRITE, exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS, NULL);
+          handle_ = CreateFileW(
+            unicodeFileName,
+            GENERIC_READ | GENERIC_WRITE,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
         if( handle_ == INVALID_HANDLE_VALUE )
-          handle_ = CreateFileW(unicodeFileName,GENERIC_READ,exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS, NULL);
+          handle_ = CreateFileW(
+            unicodeFileName,GENERIC_READ,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
       }
       if( handle_ != INVALID_HANDLE_VALUE ) break;
       switch( err = GetLastError() ){

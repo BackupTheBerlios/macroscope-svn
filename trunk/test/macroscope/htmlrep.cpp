@@ -84,7 +84,7 @@ void Logger::writeUserTop(
     paramAsMutant("ET",endTime)->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
     ksys::FileHandleContainer f(file);
-    f.open().resize(0);
+    f.createIfNotExist(true).open().resize(0);
     writeHtmlHead(f);
     f <<
       "<TABLE WIDTH=100 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
@@ -162,7 +162,7 @@ void Logger::writeUserTop(
 void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & year)
 {
   ksys::FileHandleContainer f(file);
-  f.open().resize(0);
+  f.createIfNotExist(true).open().resize(0);
 #if defined(__WIN32__) || defined(__WIN64__)
   utf8::String section("macroscope.windows.html_report.");
 #else
@@ -450,7 +450,7 @@ void Logger::writeHtmlYearOutput()
   ksys::FileHandleContainer f(
     ksys::includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
   );
-  f.open().resize(0);
+  f.createIfNotExist(true).open().resize(0);
   ksys::chModOwn(
     f.fileName(),
     config_.valueByPath(section + "file_mode", 755),
