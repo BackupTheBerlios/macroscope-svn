@@ -227,7 +227,7 @@ void ClientMailSenderFiber::main()
     }
     *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
     getCode();
-    *this << uint8_t(cmSendMail) << false /* no rest flag */ << message_;
+    *this << uint8_t(cmSendMail) << message_.id() << false /* no rest flag */ << message_;
     getCode();
     *this << uint8_t(cmQuit);
     getCode();
