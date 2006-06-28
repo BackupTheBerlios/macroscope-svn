@@ -163,11 +163,13 @@ void ServerFiber::registerClient()
     tdata.registerGroupNL(group);
     tdata.registerKey2GroupLinkNL(Key2GroupLink(key.name_,group.name_));
   }
+  bool startNodeClient = false;
   if( serverType_ == stStandalone ){
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
     diff.xorNL(data,tdata);
-    if( data.orNL(tdata) ) server_.startNodeClient(stStandalone);
+    startNodeClient = data.orNL(tdata);
   }
+  if( startNodeClient ) server_.startNodeClient(stStandalone);
   putCode(serverType_ == stStandalone ? eOK : eInvalidServerType);
   utf8::String::Stream stream;
   stream << serverTypeName_[serverType_] << ": changes stored from client " << host << "\n";
