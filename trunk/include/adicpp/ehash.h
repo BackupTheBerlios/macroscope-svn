@@ -217,6 +217,7 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object)
     hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
     hash_[0] = NULL;
     size_ = 1;
+    head = &hash_[0];
   }
   *head = &N(object);
   optimize(optInc);
