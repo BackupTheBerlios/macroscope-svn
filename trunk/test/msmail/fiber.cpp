@@ -205,7 +205,7 @@ void ServerFiber::registerDB()
     diff.xorNL(data,rdata);
     tdata.orNL(data,rdata.ftime_); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
-    data.ftime_ = ftime--;
+    data.ftime_ = ftime;
   }
   tdata.sendDatabaseNL(*this);
   *this << ftime;
@@ -683,8 +683,9 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
               connect(address);
               connected = true;
             }
-            catch( ExceptionSP & ){
+            catch( ExceptionSP & e ){
               timeWait = true;
+              e->writeStdError();
               stdErr.debug(3,
                 utf8::String::Stream() <<
                 "Unable to connect. Host " << server << " unreachable.\n"
@@ -696,8 +697,9 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
               auth();
               authentificated = true;
             }
-            catch( ExceptionSP & ){
+            catch( ExceptionSP & e ){
               timeWait = true;
+              e->writeStdError();
               stdErr.debug(3,
                 utf8::String::Stream() << "Authentification to host " <<
                 server << " failed.\n"
