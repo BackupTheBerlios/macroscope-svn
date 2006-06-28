@@ -637,6 +637,7 @@ class Server : public ksock::Server {
         mutable uint64_t ftime_;
 // last time when database sweep
         mutable uint64_t stime_;
+        mutable uint64_t mtime_;
         mutable FiberMutex mutex_;
         EmbeddedHash<
           UserInfo,

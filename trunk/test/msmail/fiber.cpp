@@ -933,6 +933,7 @@ void NodeClient::main()
                 dump = data;
                 tdata.orNL(data,fullDump ? 0 : data.ftime_);
                 tdata.ftime_ = data.ftime_;
+                data.mtime_ = ~uint64_t(0);
               }
               *this << tdata.ftime_;
               tdata.sendDatabaseNL(*this);
@@ -948,7 +949,7 @@ void NodeClient::main()
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 data.orNL(tdata);
-                data.ftime_ = tdata.ftime_;
+                data.ftime_ = data.mtime_ < tdata.ftime_ ? data.mtime_ : tdata.ftime_;
               }
               *this << uint8_t(cmQuit);
               getCode();
