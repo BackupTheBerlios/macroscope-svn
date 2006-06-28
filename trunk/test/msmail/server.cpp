@@ -168,7 +168,7 @@ void Server::startNodeClient(ServerType dataType,const utf8::String & nodeHostNa
 void Server::startNodesExchangeNL()
 {
   intptr_t i, j, c;
-  utf8::String me(ksock::SockAddr::gethostname());
+  utf8::String me(bindAddrs()[0].resolveAsync(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;
   if( hosts.strlen() > 0 ) hosts += ",";
   hosts += config_->parse().override().valueByPath("node.neighbors","");

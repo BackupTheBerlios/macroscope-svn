@@ -511,11 +511,23 @@ class Server : public ksys::BaseServer {
 
     Server & clearBind();
     Server & addBind(const SockAddr & addr);
+    const ksys::Array<SockAddr> & bindAddrs() const;
+    const AcceptFiber * const & acceptFiber() const;
   protected:
   private:
-    ksys::Array<SockAddr>  bindAddrs_;
+    ksys::Array<SockAddr> bindAddrs_;
     AcceptFiber * acceptFiber_;
 };
+//------------------------------------------------------------------------------
+inline const ksys::Array<SockAddr> & Server::bindAddrs() const
+{
+  return bindAddrs_;
+}
+//------------------------------------------------------------------------------
+inline const AcceptFiber * const & Server::acceptFiber() const
+{
+  return acceptFiber_;
+}
 //------------------------------------------------------------------------------
 inline Server & Server::clearBind()
 {

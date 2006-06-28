@@ -345,18 +345,20 @@ void SockAddr::resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & ad
 //------------------------------------------------------------------------------
 utf8::String SockAddr::resolveAsync(const ksys::Mutant & defPort) const
 {
-  assert( ksys::currentFiber() != NULL );
-  ksys::currentFiber()->event_.address_ = *this;
-  ksys::currentFiber()->event_.defPort_ = defPort;
-  ksys::currentFiber()->event_.type_ = ksys::etResolveAddress;
-  ksys::currentFiber()->thread()->postRequest();
-  ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-  assert( ksys::currentFiber()->event_.type_ == ksys::etResolveAddress );
-  if( ksys::currentFiber()->event_.errno_ != 0 )
-    throw ksys::ExceptionSP(
-      new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-    );
-  return ksys::currentFiber()->event_.string0_;
+  if( ksys::currentFiber() != NULL ){
+    ksys::currentFiber()->event_.address_ = *this;
+    ksys::currentFiber()->event_.defPort_ = defPort;
+    ksys::currentFiber()->event_.type_ = ksys::etResolveAddress;
+    ksys::currentFiber()->thread()->postRequest();
+    ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
+    assert( ksys::currentFiber()->event_.type_ == ksys::etResolveAddress );
+    if( ksys::currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    return ksys::currentFiber()->event_.string0_;
+  }
+  return resolve(defPort);
 }
 //------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

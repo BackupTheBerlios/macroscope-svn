@@ -142,7 +142,7 @@ void ServerFiber::registerClient()
 {
   if( serverType_ != stStandalone && serverType_ != stNode ) return;
   utf8::String host(remoteAddress().resolveAsync());
-  ServerInfo server(ksock::SockAddr::gethostname(),stStandalone);
+  ServerInfo server(server_.bindAddrs()[0].resolveAsync(defaultPort),stStandalone);
   Server::Data & data = server_.data(serverType_);
   Server::Data tdata, diff;
   tdata.or(data);
@@ -299,7 +299,7 @@ void ServerFiber::sendMail() // client sending mail
     relay = "#Relay." + utf8::int2Str(i);
     if( !message->isValue(relay) ) break;
   }
-  message->value(relay,ksock::SockAddr::gethostname());
+  message->value(relay,server_.bindAddrs()[0].resolveAsync(defaultPort));
   relay = relay + ".";
   message->value(relay + "Received",getTimeString(gettimeofday()));
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
@@ -337,7 +337,7 @@ intptr_t ServerFiber::processMailbox(
     excludeTrailingPathDelimiter(userMailBox) <<
     " by monitor... \n"
   );
-  utf8::String myHost(ksock::SockAddr::gethostname());
+  utf8::String myHost(server_.bindAddrs()[0].resolveAsync(defaultPort));
   intptr_t i, j, c, k;
   Array<utf8::String> ids;
   Vector<utf8::String> list;
@@ -463,7 +463,7 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 intptr_t SpoolWalker::processQueue()
 {
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
-  utf8::String myHost(ksock::SockAddr::gethostname());
+  utf8::String myHost(server_.bindAddrs()[0].resolveAsync(defaultPort));
   intptr_t i, k;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.spoolDir() + "*.msg",utf8::String(),false);
@@ -725,9 +725,12 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
                 remainder -= l;
               }
               getCode();
+              *this << uint8_t(cmQuit);
+              getCode();
               stdErr.debug(0,
                 utf8::String::Stream() << "Message " << message.id() <<
-                " sended to " << message.value("#Recepient") << ", traffic " <<
+                " sended to " << message.value("#Recepient") <<
+                " via " << server << ", traffic " <<
                 allBytes() << "\n"
               );
               sended = true;
