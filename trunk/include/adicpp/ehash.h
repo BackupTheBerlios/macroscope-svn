@@ -212,7 +212,12 @@ inline
 EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object)
 {
   assert( N(object).next() == NULL );
-  EmbeddedHashNode<T> ** head  = internalFind(object, true);
+  EmbeddedHashNode<T> ** head = internalFind(object,true);
+  if( size_ == 0 ){
+    hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
+    hash_[0] = NULL;
+    size_ = 1;
+  }
   *head = &N(object);
   optimize(optInc);
   return *this;
@@ -228,7 +233,7 @@ template <
 T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist)
 {
   EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist);
-  if( *head != NULL ){
+  if( head != NULL && *head != NULL ){
     *head = (*head)->next();
     N(object).next() = NULL;
     optimize(optDec);
@@ -275,7 +280,7 @@ template <
 T * EmbeddedHash<T,N,O,H,E>::find(const T & object) const
 {
   EmbeddedHashNode<T> ** p = internalFind(object);
-  return *p == NULL ? NULL : &O(**p,NULL);
+  return p == NULL || *p == NULL ? NULL : &O(**p,NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -287,26 +292,23 @@ template <
 >
 EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object, bool throwIfExist, bool throwIfNotExist) const
 {
-  EmbeddedHashNode<T> ** head;
-  if( size_ == 0 ){
-    hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
-    hash_[0] = NULL;
-    size_ = 1;
-  }
-  head = hash_.ptr() + (H(object) & (size_ - 1));
-  while( *head != NULL ){
-    if( E(O(**head,NULL), object) ) break;
-    head = &(*head)->next();
+  EmbeddedHashNode<T> ** head = NULL;
+  if( size_ > 0 ){
+    head = hash_.ptr() + (H(object) & (size_ - 1));
+    while( *head != NULL ){
+      if( E(O(**head,NULL), object) ) break;
+      head = &(*head)->next();
+    }
   }
   int32_t err = 0;
-  if( *head != NULL && throwIfExist ){
+  if( head != NULL && *head != NULL && throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
     err = ERROR_ALREADY_EXISTS;
 #else
     err = EEXIST;
 #endif
   }
-  else if( *head == NULL && throwIfNotExist ){
+  else if( (head == NULL || *head == NULL) && throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
     err = ERROR_NOT_FOUND;
 #else

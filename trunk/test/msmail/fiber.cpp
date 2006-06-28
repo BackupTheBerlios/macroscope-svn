@@ -206,7 +206,7 @@ void ServerFiber::registerDB()
     diff.xorNL(data,rdata);
     tdata.orNL(data,rdata.ftime_); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
-    data.ftime_ = ftime = gettimeofday();
+    ftime = gettimeofday();
   }
   tdata.sendDatabaseNL(*this);
   *this << ftime;
@@ -921,7 +921,7 @@ void NodeClient::main()
               getCode();
               Server::Data & data = server_.data(dataType_);
               data.registerServer(ServerInfo(host,stNode));
-              Server::Data tdata, diff, dump;
+              Server::Data tdata, ldata, diff, dump;
               uint64_t rStartTime;
               *this << uint8_t(cmRegisterDB) >> rStartTime;
               bool fullDump = false;
@@ -933,29 +933,23 @@ void NodeClient::main()
               {
                 AutoMutexRDLock<FiberMutex> lock(data.mutex_);
                 dump = data;
-                tdata.orNL(data,fullDump ? 0 : data.ftime_);
-                tdata.ftime_ = data.ftime_;
-                data.mtime_ = ~uint64_t(0);
+                *this << data.ftime_;
+                ldata.orNL(data,fullDump ? 0 : data.ftime_);
+                ldata.sendDatabaseNL(*this);
+                tdata.recvDatabaseNL(*this);
+                *this >> tdata.ftime_;
+                getCode();
+                data.orNL(tdata);
+                data.ftime_ = tdata.ftime_;
               }
-              *this << tdata.ftime_;
-              tdata.sendDatabaseNL(*this);
+              exchanged = true;
+              *this << uint8_t(cmQuit);
+              getCode();
               stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
                 " database " << (fullDump ? "full dump" : "changes") <<
                 " sended to node " << host << "\n";
-              tdata.dumpNL(stream);
+              ldata.dumpNL(stream);
               stdErr.debug(6,stream);
-              tdata.clear();
-              tdata.recvDatabaseNL(*this);
-              *this >> tdata.ftime_;
-              getCode();
-              {
-                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-                data.orNL(tdata);
-                data.ftime_ = data.mtime_ < tdata.ftime_ ? data.mtime_ : tdata.ftime_;
-              }
-              *this << uint8_t(cmQuit);
-              getCode();
-              exchanged = true;
               if( fullDump ){
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 ServerInfo * si = data.servers_.find(host);
