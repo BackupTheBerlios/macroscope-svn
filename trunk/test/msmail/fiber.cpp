@@ -910,8 +910,9 @@ void NodeClient::main()
             }
             *this << tdata.ftime_;
             tdata.sendDatabaseNL(*this);
-            stream << "NODE client: " << serverTypeName_[dataType_] <<
-              " database changes sended to node " << host << "\n";
+            stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
+              " database " << (fullDump ? "full dump" : "changes") <<
+              " sended to node " << host << "\n";
             tdata.dumpNL(stream);
             stdErr.debug(6,stream);
             tdata.clear();
