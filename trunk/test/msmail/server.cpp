@@ -47,7 +47,8 @@ void Server::open()
 {
 //  maxThreads(1);
   ksock::Server::open();
-  startNodeClient(stStandalone);
+  startNodesExchange();
+  attachFiber(new NodeClient(*this,stStandalone,utf8::String(),true));
   uintptr_t i;
   for( i = config_->value("spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
@@ -124,15 +125,15 @@ utf8::String Server::incompleteDir() const
   return includeTrailingPathDelimiter(lck);
 }
 //------------------------------------------------------------------------------
-bool Server::clearNodeClient(NodeClient * client)
+void Server::clearNodeClient(NodeClient * client)
 {
   AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
   if( nodeClient_ == client ){
+    nodeClient_ = NULL;
     if( skippedNodeClientStarts_ > 0 ){
       skippedNodeClientStarts_ = 0;
-      return true;
+      startNodeClientNL(client->dataType_,client->nodeHostName_);
     }
-    nodeClient_ = NULL;
   }
   else {
     intptr_t i = nodeExchangeClients_.bSearch(client);
@@ -143,15 +144,14 @@ bool Server::clearNodeClient(NodeClient * client)
       startNodesExchangeNL();
     }
   }
-  return false;
 }
 //------------------------------------------------------------------------------
-void Server::startNodeClient(ServerType dataType,const utf8::String & nodeHostName)
+void Server::startNodeClientNL(ServerType dataType,const utf8::String & nodeHostName)
 {
-  AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
   if( nodeClient_ == NULL ){
+    assert( skippedNodeClientStarts_ == 0 );
     NodeClient * nodeClient;
-    attachFiber(nodeClient = new NodeClient(*this,dataType,nodeHostName));
+    attachFiber(nodeClient = new NodeClient(*this,dataType,nodeHostName,false));
     nodeClient_ = nodeClient;
   }
   else {
@@ -159,17 +159,26 @@ void Server::startNodeClient(ServerType dataType,const utf8::String & nodeHostNa
   }
 }
 //------------------------------------------------------------------------------
+void Server::startNodeClient(ServerType dataType,const utf8::String & nodeHostName)
+{
+  AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
+  startNodeClientNL(dataType,nodeHostName);
+}
+//------------------------------------------------------------------------------
 void Server::startNodesExchangeNL()
 {
   intptr_t i, j, c;
   utf8::String me(ksock::SockAddr::gethostname());
   utf8::String hosts(data(stNode).getNodeList()), host;
+  if( hosts.strlen() > 0 ) hosts += ",";
+  hosts += config_->parse().override().valueByPath("node.neighbors","");
   if( nodeExchangeClients_.count() == 0 ){
+    assert( skippedNodeExchangeStarts_ == 0 );
     try {
       for( j = enumStringParts(hosts) - 1; j >= 0; j-- ){
         host = stringPartByNo(hosts,j);
         if( host.strcasecmp(me) == 0 ) continue;
-        AutoPtr<NodeClient> nodeClient(new NodeClient(*this,stNode,host));
+        AutoPtr<NodeClient> nodeClient(new NodeClient(*this,stNode,host,false));
         i = nodeExchangeClients_.bSearch(nodeClient,c);
         assert( c != 0 );
         nodeExchangeClients_.insert(i += (c > 0),nodeClient);

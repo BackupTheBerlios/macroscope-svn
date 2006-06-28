@@ -330,7 +330,8 @@ ServerInfo::~ServerInfo()
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo() : atime_(gettimeofday()), mtime_(atime_), type_(stStandalone)
+ServerInfo::ServerInfo() :
+  atime_(gettimeofday()), mtime_(atime_), stime_(0), type_(stStandalone)
 {
 }
 //------------------------------------------------------------------------------

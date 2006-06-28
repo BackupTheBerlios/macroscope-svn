@@ -303,7 +303,7 @@ class ServerInfo {
   public:
     ~ServerInfo();
     ServerInfo();
-    ServerInfo(const utf8::String & name,ServerType type);
+    ServerInfo(const utf8::String & name,ServerType type = stNone);
     ServerInfo(const ServerInfo &);
     ServerInfo & operator = (const ServerInfo &);
 
@@ -329,6 +329,7 @@ class ServerInfo {
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t mtime_; // время последней регистрации (для передачи обновлений)
+    uint64_t stime_; // время старта процесса
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
     ServerType type_;
@@ -548,9 +549,10 @@ class MailQueueWalker : public ksock::ClientFiber {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class NodeClient : public ksock::ClientFiber {
+  friend class Server;
   public:
     virtual ~NodeClient();
-    NodeClient(Server & server,ServerType dataType,const utf8::String & nodeHostName);
+    NodeClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly);
   protected:
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
@@ -560,6 +562,7 @@ class NodeClient : public ksock::ClientFiber {
     Server & server_;
     ServerType dataType_;
     utf8::String nodeHostName_;
+    bool periodicaly_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -699,7 +702,8 @@ class Server : public ksock::Server {
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;
     utf8::String incompleteDir() const;
-    bool clearNodeClient(NodeClient * client);
+    void clearNodeClient(NodeClient * client);
+    void startNodeClientNL(ServerType dataType,const utf8::String & nodeHostName = utf8::String());
     void startNodeClient(ServerType dataType,const utf8::String & nodeHostName = utf8::String());
     void startNodesExchangeNL();
     void startNodesExchange();
