@@ -201,11 +201,10 @@ void ServerFiber::registerDB()
   Server::Data & data = server_.data(serverType_);
   {
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-    ftime = gettimeofday();
     diff.xorNL(data,rdata);
     tdata.orNL(data,rdata.ftime_); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
-    data.ftime_ = ftime;
+    data.ftime_ = ftime = gettimeofday();
   }
   tdata.sendDatabaseNL(*this);
   *this << ftime;
