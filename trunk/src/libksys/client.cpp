@@ -51,9 +51,16 @@ void Client::close()
 //------------------------------------------------------------------------------
 void ClientFiber::fiberExecute()
 {
-  open();
-  main();
-  flush();
+  try {
+    open();
+    main();
+    flush();
+  }
+  catch( ... ){
+    close();
+    throw;
+  }
+  close();
 }
 //------------------------------------------------------------------------------
 } // namespace ksock

@@ -355,7 +355,7 @@ template <
 >
 void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head)
 {
-  EmbeddedHashNode<T> ** p0, ** p1, * a0, * a1;
+  EmbeddedHashNode<T> ** p0, * a0;
   while( head != NULL ){
     a0 = head->next();
     p0 = internalFind(O(*head,NULL));

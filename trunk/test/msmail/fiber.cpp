@@ -212,7 +212,7 @@ void ServerFiber::registerDB()
   *this << ftime;
   putCode(eOK);
   flush();
-  if( dbChanged ) server_.startNodesExchange();
+//  if( dbChanged ) server_.startNodesExchange();
   stream.clear() << serverTypeName_[serverType_] <<
     ": database changes sended to host " << host << "\n";
   tdata.dumpNL(stream);
@@ -945,16 +945,16 @@ void NodeClient::main()
               exchanged = true;
               *this << uint8_t(cmQuit);
               getCode();
-              stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
-                " database " << (fullDump ? "full dump" : "changes") <<
-                " sended to node " << host << "\n";
-              ldata.dumpNL(stream);
-              stdErr.debug(6,stream);
               if( fullDump ){
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ) si->stime_ = rStartTime;
               }
+              stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
+                " database " << (fullDump ? "full dump" : "changes") <<
+                " sended to node " << host << "\n";
+              ldata.dumpNL(stream);
+              stdErr.debug(6,stream);
               stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
                 " database changes received from node " << host << "\n";
               tdata.dumpNL(stream);
