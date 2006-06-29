@@ -29,10 +29,57 @@
 namespace ksys {
 //---------------------------------------------------------------------------
 extern const char __monthDays[2][12]  = {
-  { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }, { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+  { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+  { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 };
 //---------------------------------------------------------------------------
 extern size_t sizeOf_timeval_tv_sec = sizeof(((struct timeval *) NULL)->tv_sec);
+//---------------------------------------------------------------------------
+int64_t timeFromTimeString(const utf8::String & s)
+{
+  struct timeval tv;
+  struct tm tma;
+  unsigned int usec = 0;
+  memset(&tv,0,sizeof(tv));
+  memset(&tma,0,sizeof(tma));
+#if HAVE_SSCANF
+  int a = sscanf(
+#elif HAVE__SSCANF
+  int a = _sscanf(
+#endif
+    s.c_str(),
+    "%02u.%02u.%04u %02u:%02u:%02u.%06u",
+    (unsigned int *) &tma.tm_mday,
+    (unsigned int *) &tma.tm_mon,
+    (unsigned int *) &tma.tm_year,
+    (unsigned int *) &tma.tm_hour,
+    (unsigned int *) &tma.tm_min,
+    (unsigned int *) &tma.tm_sec,
+    &usec
+  );
+  if( a == -1 ){
+    int32_t err = errno;
+    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+  }
+  tma.tm_mon -= 1;
+  tma.tm_year -= 1900;
+  if( ksys::sizeOf_timeval_tv_sec == 4 ){
+    *(int32_t *) &tv.tv_sec = (int32_t) mktime(&tma);
+  }
+  if( ksys::sizeOf_timeval_tv_sec == 8 ){
+    *(int64_t *) &tv.tv_sec = (int64_t) mktime(&tma);
+  }
+  if( tv.tv_sec < 0 ){
+    int32_t err = errno;
+    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+  }
+  struct timeval tv2;
+  struct timezone tz;
+  gettimeofday(&tv2,&tz);
+  tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+  tv.tv_usec = usec;
+  return timeval2Time(tv);
+}
 //---------------------------------------------------------------------------
 utf8::String getTimeString(int64_t t)
 {
@@ -61,6 +108,52 @@ utf8::String getTimeString(int64_t t)
     throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
   }
   return s;
+}
+//---------------------------------------------------------------------------
+int64_t timeFromTimeCodeString(const utf8::String & s)
+{
+  struct timeval tv;
+  struct tm tma;
+  unsigned int usec = 0;
+  memset(&tv,0,sizeof(tv));
+  memset(&tma,0,sizeof(tma));
+#if HAVE_SSCANF
+  int a = sscanf(
+#elif HAVE__SSCANF
+  int a = _sscanf(
+#endif
+    s.c_str(),
+    "%04u%02u%02u%02u%02u%02u%06u",
+    (unsigned int *) &tma.tm_year,
+    (unsigned int *) &tma.tm_mon,
+    (unsigned int *) &tma.tm_mday,
+    (unsigned int *) &tma.tm_hour,
+    (unsigned int *) &tma.tm_min,
+    (unsigned int *) &tma.tm_sec,
+    &usec
+  );
+  if( a == -1 ){
+    int32_t err = errno;
+    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+  }
+  tma.tm_mon -= 1;
+  tma.tm_year -= 1900;
+  if( ksys::sizeOf_timeval_tv_sec == 4 ){
+    *(int32_t *) &tv.tv_sec = (int32_t) mktime(&tma);
+  }
+  if( ksys::sizeOf_timeval_tv_sec == 8 ){
+    *(int64_t *) &tv.tv_sec = (int64_t) mktime(&tma);
+  }
+  if( tv.tv_sec < 0 ){
+    int32_t err = errno;
+    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+  }
+  struct timeval tv2;
+  struct timezone tz;
+  gettimeofday(&tv2,&tz);
+  tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+  tv.tv_usec = usec;
+  return timeval2Time(tv);
 }
 //---------------------------------------------------------------------------
 utf8::String getTimeCode(int64_t t)
@@ -115,10 +208,10 @@ int gettimeofday(struct timeval * tvp, struct timezone * tzp)
 
   sti.QuadPart -= UINT64_C(11644473600) * 10000000u; // January 1, 1970 (UTC) - January 1, 1601 (UTC)
 //  st2i.QuadPart -= UINT64_C(11644473600) * 10000000u; // January 1, 1970 (UTC) - January 1, 1601 (UTC)
-  if( ksys::sizeOf_timeval_tv_sec < 8 ){
+  if( ksys::sizeOf_timeval_tv_sec == 4 ){
     *(uint32_t *) &tvp->tv_sec = (uint32_t) (sti.QuadPart / 10000000u);
   }
-  else {
+  if( ksys::sizeOf_timeval_tv_sec == 8 ){
     *(uint64_t *) &tvp->tv_sec = (uint64_t) (sti.QuadPart / 10000000u);
   }
   tvp->tv_usec = long((sti.QuadPart % 10000000u) / 10u);

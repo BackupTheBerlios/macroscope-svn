@@ -324,11 +324,15 @@ strchr \
 strncasecmp \
 strstr \
 sprintf \
+_sprintf \
 vsprintf \
 snprintf \
+_snprintf \
 vsnprintf \
 sscanf \
+_sscanf \
 snscanf \
+_snscanf \
 chsize \
 fstat \
 nanosleep \

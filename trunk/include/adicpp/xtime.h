@@ -132,10 +132,9 @@ inline int64_t getlocaltimeofday()
   struct timeval tv;
   struct timezone tz;
   uint64_t a = ~(~uint64_t(0) >> 1);
-  if( gettimeofday(&tv,&tz) == 0 ){
-    a = tv.tv_sec - tz.tz_minuteswest * 60u + tz.tz_dsttime * 60u * 60u;
-    a = a * 1000000u + tv.tv_usec;
-  }
+  gettimeofday(&tv,&tz);
+  a = tv.tv_sec - tz.tz_minuteswest * 60u + tz.tz_dsttime * 60u * 60u;
+  a = a * 1000000u + tv.tv_usec;
   return a;
 }
 //---------------------------------------------------------------------------

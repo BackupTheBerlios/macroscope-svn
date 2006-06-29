@@ -36,6 +36,9 @@ int main(int _argc,char * _argv[])
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
 //  stdErr.enableDebugLevel(9);
+  uint64_t t = gettimeofday();
+  utf8::String st(getTimeString(t));
+  uint64_t t2 = timeFromTimeString(st);
   try {
     union {
       intptr_t i;

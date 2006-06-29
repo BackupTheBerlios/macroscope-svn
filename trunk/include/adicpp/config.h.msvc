@@ -50,12 +50,12 @@
 #ifndef SIZE_MAX
 #define SIZE_MAX        UINT32_MAX
 #endif
-#ifndef WCHAR_MIN
+/*#ifndef WCHAR_MIN
 #define WCHAR_MIN       INT32_MIN
 #endif
 #ifndef WCHAR_MAX
 #define WCHAR_MAX       INT32_MAX
-#endif
+#endif*/
 #define WINT_MIN        INT32_MIN
 #define WINT_MAX        INT32_MAX
 
@@ -253,6 +253,8 @@ typedef uint64_t                uintmax_t;
 #define HAVE_STRICMP 1
 #define HAVE_STRERROR 1
 #define HAVE__SNPRINTF 1
+#define HAVE_SSCANF 1
+#define HAVE__SSCANF 1
 #define HAVE__VSNPRINTF 1
 #define HAVE__GETPID 1
 #define HAVE_GETPID 1

@@ -284,7 +284,9 @@ MFA GetMFA(const T & ptr,A * obj)
   return MFA_<T,A>(ptr,obj).a;
 } */
 //---------------------------------------------------------------------------
+int64_t timeFromTimeString(const utf8::String & s);
 utf8::String getTimeString(int64_t t);
+int64_t timeFromTimeCodeString(const utf8::String & s);
 utf8::String getTimeCode(int64_t t);
 //---------------------------------------------------------------------------
 } // namespace ksys

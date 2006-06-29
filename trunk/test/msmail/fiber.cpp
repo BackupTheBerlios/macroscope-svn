@@ -541,7 +541,22 @@ intptr_t SpoolWalker::processQueue()
             key2ServerLink != NULL && key2ServerLink->server_.strcasecmp(myHost) == 0;
         }
         file.close();
-        if( key2ServerLink != NULL ){
+        if( key2ServerLink == NULL ){
+          uint64_t messageTTL = server_.config_->valueByPath(
+            utf8::String(serverConfSectionName_[stStandalone]) +
+            ".message_ttl",
+            2678400u // 31 day
+          );
+          uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
+          if( gettimeofday() - messageTime >= messageTTL ){
+            file.close();
+            removeAsync(list[i]);
+            stdErr.debug(1,utf8::String::Stream() << "Message " <<
+              message.id() << "TTL exhausted, removed.\n"
+            );
+          }
+        }
+        else {
           if( deliverLocaly ){
             utf8::String userMailBox(server_.mailDir() + suser);
             createDirectoryAsync(userMailBox);
@@ -591,7 +606,7 @@ void SpoolWalker::fiberExecute()
     }
     else {
       uint64_t timeout = server_.config_->valueByPath(
-        utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",1u);
+        utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",60u);
       sleepAsync(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by timer... \n");
     }
@@ -699,6 +714,19 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
             " not found in database.\n"
           );
           server_.startNodeClient(stStandalone);
+          uint64_t messageTTL = server_.config_->valueByPath(
+            utf8::String(serverConfSectionName_[stStandalone]) +
+            ".message_ttl",
+            2678400u // 31 day
+          );
+          uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
+          if( gettimeofday() - messageTime >= messageTTL ){
+            file.close();
+            removeAsync(list[i]);
+            stdErr.debug(1,utf8::String::Stream() << "Message " <<
+              list[i] << "TTL exhausted, removed.\n"
+            );
+          }
         }
         else {
           try {
@@ -710,7 +738,8 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
             e->writeStdError();
             stdErr.debug(1,
               utf8::String::Stream() <<
-                "Invalid message " << message.id() <<
+                "Unable to resolve " << server <<
+                ", message " << message.id() <<
                 " recepient " << message.value("#Recepient") << "\n"
             );
           }
@@ -794,6 +823,7 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
       if( sended ){
         file.close();
         removeAsync(list[i]);
+        stdErr.debug(9,utf8::String::Stream() << "Message " << list[i] << "sended, removed.\n");
       }
     }
     list.remove(i);
@@ -814,7 +844,7 @@ void MailQueueWalker::main()
     }
     else if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(
-        utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",1u);
+        utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",60u);
       sleepAsync(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
     }
