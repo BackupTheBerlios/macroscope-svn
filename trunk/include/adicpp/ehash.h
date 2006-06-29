@@ -101,6 +101,8 @@ class EmbeddedHash {
     uintptr_t count_;
     EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist = false,bool throwIfNotExist = false) const;
     enum OptType { optInc, optDec };
+    EmbeddedHashNode<T> * getChain();
+    void putChain(EmbeddedHashNode<T> * head);
     void optimize(OptType o);
 };
 //---------------------------------------------------------------------------
@@ -179,9 +181,6 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 >
-#ifndef __BCPLUSPLUS__
-inline
-#endif
 EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::list(Array<T *> & l) const
 {
   l.resize(count_);
@@ -328,21 +327,8 @@ template <
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
-#ifndef __BCPLUSPLUS__
-inline
-#endif
-void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
+EmbeddedHashNode<T> * EmbeddedHash<T,N,O,H,E>::getChain()
 {
-  // using golden section == 5/8 as optimization threshold
-  uintptr_t count = size_ << 4, c = ((count << 2) + count) >> 3;
-  switch( o ){
-    case optInc :
-      if( ++count_ < count + c ) return;
-      break;
-    case optDec :
-      if( --count_ > count - c ) return;
-      break;
-  }
   EmbeddedHashNode<T> * head = NULL, ** p0, ** p1, * a0, * a1;
   p0 = hash_;
   p1 = p0 + size_;
@@ -357,28 +343,19 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
     *p0 = NULL;
     p0++;
   }
-  Exception * esp = NULL;
-  try {
-    uintptr_t i;
-    switch( o ){
-      case optInc :
-        hash_.realloc(i = (size_ << 1) + (size_ == 0));
-        while( size_ < i ){
-          hash_[size_] = NULL;
-          size_++;
-        }
-        break;
-      case optDec :
-        hash_.realloc(size_ >> 1);
-        size_ >>= 1;
-        break;
-    }
-  }
-  catch( ExceptionSP & e ){
-    // catch ENOMEM
-    e->addRef();
-    esp = e.ptr();
-  }
+  return head;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+>
+void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head)
+{
+  EmbeddedHashNode<T> ** p0, ** p1, * a0, * a1;
   while( head != NULL ){
     a0 = head->next();
     p0 = internalFind(O(*head,NULL));
@@ -387,10 +364,43 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
     head->next() = NULL;
     head = a0;
   }
-  if( esp != NULL ){
-    ExceptionSP e(esp);
-    esp->remRef();
-    throw e;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
+{
+  EmbeddedHashNode<T> * head = NULL;
+// using golden section == 5/8 as optimization threshold
+  uintptr_t count = size_ << 4, c = ((count << 2) + count) >> 3, i;
+  switch( o ){
+    case optInc :
+      if( ++count_ < count + c ) return;
+      head = getChain();
+      hash_.realloc(i = (size_ << 1) + (size_ == 0));
+      while( size_ < i ){
+        hash_[size_] = NULL;
+        size_++;
+      }
+      putChain(head);
+      break;
+    case optDec :
+      if( --count_ > count - c ) return;
+      if( size_ > 1 || count_ == 0 ){
+        head = getChain();
+        hash_.realloc(size_ >> 1);
+        size_ >>= 1;
+        putChain(head);
+      }
+      break;
   }
 }
 //---------------------------------------------------------------------------
