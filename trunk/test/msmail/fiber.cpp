@@ -167,6 +167,7 @@ void ServerFiber::registerClient()
   if( serverType_ == stStandalone ){
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
     diff.xorNL(data,tdata);
+    while( data.ftime_ == gettimeofday() );
     startNodeClient = data.orNL(tdata);
   }
   if( startNodeClient ) server_.startNodeClient(stStandalone);
