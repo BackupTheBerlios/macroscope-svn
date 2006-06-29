@@ -25,7 +25,13 @@
  */
 //------------------------------------------------------------------------------
 #include <adicpp/adicpp.h>
+#ifdef __INTEL_COMPILER
+#pragma warning(push,2)
+#endif
 #include "msmail.h"
+#ifdef __INTEL_COMPILER
+#pragma warning(pop)
+#endif
 //------------------------------------------------------------------------------
 namespace msmail {
 //------------------------------------------------------------------------------

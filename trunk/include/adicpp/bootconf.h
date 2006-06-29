@@ -49,6 +49,10 @@
 #endif
 #endif
 
+#if HAVE_STDAFX_H
+#include <stdafx.h>
+#endif
+
 #if HAVE_STDDEF_H
 #include <stddef.h>
 #endif

@@ -161,7 +161,7 @@ LZO1X & LZO1X::compress(AutoPtr<uint8_t> & buf,uint8_t * & p,int32_t & len)
   else {
 l1: ((int32_t *) wBuf_.ptr())[0] = -int32_t(wBufPos_);
     p = wBuf_;
-    len = wBufPos_ + sizeof(int32_t);
+    len = (lzo_uint) (wBufPos_ + sizeof(int32_t));
   }
   return *this;
 }
@@ -178,7 +178,7 @@ LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
     uint8_t * i8;
   };
   i8 = buf;
-  int32_t a = i32[0] - sizeof(int32_t) * 2 - (crc_ != CRCNone) * sizeof(uint32_t);
+  int32_t a = (int32_t) (i32[0] - sizeof(int32_t) * 2 - (crc_ != CRCNone) * sizeof(uint32_t));
   if( crc_ != CRCNone && a > 0 ){
     lzo_uint32 checksum = 0;
     if( crc_ == CRC32 ){

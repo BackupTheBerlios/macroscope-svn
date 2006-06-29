@@ -28,11 +28,13 @@ Project("{EAF909A5-FA59-4C3D-9431-0FCC20D5BCF9}") = "msmail", "msmail.icproj", "
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "msmail1clib", "..\..\..\test\msmail1clib\msmail1clib.vcproj", "{17B2605E-9537-4EB9-B42D-18B49009E4A7}"
 	ProjectSection(ProjectDependencies) = postProject
-		{D904A106-BDBE-4F0D-B33B-9CE0EF94DFE8} = {D904A106-BDBE-4F0D-B33B-9CE0EF94DFE8}
+		{A7718B02-1E77-49CF-A743-503FABB8351C} = {A7718B02-1E77-49CF-A743-503FABB8351C}
 		{0DC5727F-0A76-4230-A06D-51EEFB176B31} = {0DC5727F-0A76-4230-A06D-51EEFB176B31}
 	EndProjectSection
 EndProject
 Project("{EAF909A5-FA59-4C3D-9431-0FCC20D5BCF9}") = "genutf8", "genutf8.icproj", "{2C113549-6A7E-4979-93D1-B6FE1C911A97}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libadicpp2", "libadicpp2.vcproj", "{A7718B02-1E77-49CF-A743-503FABB8351C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -144,6 +146,14 @@ Global
 		{931E5319-BD16-46D8-9C58-95EFF141B9DC}.release|Win32.Build.0 = Release|Win32
 		{931E5319-BD16-46D8-9C58-95EFF141B9DC}.release|x64.ActiveCfg = Release|x64
 		{931E5319-BD16-46D8-9C58-95EFF141B9DC}.release|x64.Build.0 = Release|x64
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.debug|Win32.ActiveCfg = Debug|Win32
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.debug|Win32.Build.0 = Debug|Win32
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.debug|x64.ActiveCfg = Debug|x64
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.debug|x64.Build.0 = Debug|x64
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.release|Win32.ActiveCfg = Release|Win32
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.release|Win32.Build.0 = Release|Win32
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.release|x64.ActiveCfg = Release|x64
+		{A7718B02-1E77-49CF-A743-503FABB8351C}.release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

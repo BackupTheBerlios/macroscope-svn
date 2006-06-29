@@ -1109,9 +1109,10 @@ void AsyncAcquireSlave::threadExecute()
       release();
       object = NULL;
       node = NULL;
-      DWORD wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,INFINITE,FALSE);
+      DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,INFINITE,FALSE);
       acquire();
-      if( wm >= WAIT_OBJECT_0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
+      wm0 = WAIT_OBJECT_0;
+      if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
         wm -= WAIT_OBJECT_0;
         assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
         object = eSems_[wm];
@@ -1242,9 +1243,10 @@ void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
       release();
       object = NULL;
       node = NULL;
-      DWORD wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,INFINITE,FALSE);
+      DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,INFINITE,FALSE);
       acquire();
-      if( wm >= WAIT_OBJECT_0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
+      wm0 = WAIT_OBJECT_0;
+      if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
         wm -= WAIT_OBJECT_0;
         assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
         object = eSems_[wm];

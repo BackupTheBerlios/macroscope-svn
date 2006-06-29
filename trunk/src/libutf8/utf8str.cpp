@@ -498,7 +498,9 @@ WideString String::getUNICODEString() const
 BSTR String::getOLEString() const
 {
   uintptr_t l = strlen();
-  if( l > ~UINT(0) ) throw ksys::ExceptionSP(
+  UINT t = 0;
+  t = ~t;
+  if( l > t ) throw ksys::ExceptionSP(
     new ksys::Exception(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)
   );
   BSTR p = SysAllocStringLen(NULL,UINT(l));

@@ -34,6 +34,10 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef __INTEL_COMPILER
+#pragma warning disable 268 810
+#endif
+
 const char lic[] =
 "/*-\n"
 " * Copyright 2005 Guram Dukashvili\n"
