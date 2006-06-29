@@ -140,7 +140,10 @@ void ServerFiber::main()
 //------------------------------------------------------------------------------
 void ServerFiber::registerClient()
 {
-  if( serverType_ != stStandalone && serverType_ != stNode ) return;
+  if( serverType_ != stStandalone && serverType_ != stNode ){
+    terminate();
+    return;
+  }
   utf8::String host(remoteAddress().resolveAsync());
   ServerInfo server(server_.bindAddrs()[0].resolveAsync(defaultPort),stStandalone);
   Server::Data & data = server_.data(serverType_);
@@ -166,37 +169,54 @@ void ServerFiber::registerClient()
   bool startNodeClient = false;
   if( serverType_ == stStandalone ){
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+    ServerInfo * si = data.servers_.find(server);
+    while( si != NULL && si->ftime_ == gettimeofday() ) sleepAsync(0);
     diff.xorNL(data,tdata);
-    while( data.ftime_ == gettimeofday() );
     startNodeClient = data.orNL(tdata);
   }
   if( startNodeClient ) server_.startNodeClient(stStandalone);
   putCode(serverType_ == stStandalone ? eOK : eInvalidServerType);
-  utf8::String::Stream stream;
-  stream << serverTypeName_[serverType_] << ": changes stored from client " << host << "\n";
-  diff.dumpNL(stream);
-  stdErr.debug(5,stream);
+  if( serverType_ == stStandalone ){
+    utf8::String::Stream stream;
+    stream << serverTypeName_[serverType_] << ": changes stored from client " << host << "\n";
+    diff.dumpNL(stream);
+    stdErr.debug(5,stream);
 // sweep
-  stream.clear() << serverTypeName_[serverType_] << ": sweep\n";
-  if( data.sweep(
-        gettimeofday() -
-          (uint64_t) server_.config_->valueByPath(
-          utf8::String(serverConfSectionName_[serverType_]) + ".ttl","") * 1000000u,
-        &stream)
-    ) stdErr.debug(5,stream);
+    stream.clear() << serverTypeName_[serverType_] << ": sweep\n";
+    if( data.sweep(
+          gettimeofday() -
+            (uint64_t) server_.config_->valueByPath(
+            utf8::String(serverConfSectionName_[serverType_]) + ".ttl","") * 1000000u,
+          &stream)
+      ) stdErr.debug(5,stream);
+  }
 }
 //------------------------------------------------------------------------------
 void ServerFiber::registerDB()
 {
-  if( serverType_ != stStandalone && serverType_ != stNode ) return;
-  bool dbChanged = false;
   utf8::String::Stream stream;
   utf8::String host(remoteAddress().resolveAsync());
-  uint64_t ftime = getProcessStartTime();
+  if( serverType_ != stNode ){
+    terminate();
+    stream << serverTypeName_[serverType_] <<
+      ": host " << host << " ask for " << serverTypeName_[serverType_] << " database\n";
+    stdErr.debug(6,stream);
+    return;
+  }
+  if( !(bool) server_.config_->parse().override().valueByPath(
+        utf8::String(serverConfSectionName_[serverType_]) + ".enabled",false) ){
+    terminate();
+    stream << serverTypeName_[serverType_] <<
+      ": functional disabled, but host " << host << " attempt to register own database.\n";
+    stdErr.debug(6,stream);
+    return;
+  }
+  bool dbChanged = false;
+  uint64_t ftime = getProcessStartTime(), rftime;
   *this << ftime >> ftime;
   Server::Data rdata, tdata, diff;
   rdata.recvDatabase(*this);
-  rdata.ftime_ = ftime;
+  rftime = ftime;
   stream << serverTypeName_[serverType_] <<
     ": database changes received from host " << host << "\n";
   rdata.dumpNL(stream);
@@ -205,7 +225,7 @@ void ServerFiber::registerDB()
   {
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
     diff.xorNL(data,rdata);
-    tdata.orNL(data,rdata.ftime_); // get local changes for sending
+    tdata.orNL(data,rftime); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
     ftime = gettimeofday();
   }
@@ -236,14 +256,15 @@ void ServerFiber::getDB()
   if( serverType_ != stStandalone && serverType_ != stNode ) return;
   utf8::String host(remoteAddress().resolveAsync());
   Server::Data tdata;
-  *this >> tdata.ftime_;
+  uint64_t ftime;
+  *this >> ftime;
   {
     AutoMutexRDLock<FiberMutex> lock(server_.data(serverType_).mutex_);
-    tdata.orNL(server_.data(serverType_),tdata.ftime_); // get local changes for sending
-    tdata.ftime_ = gettimeofday();
+    tdata.orNL(server_.data(serverType_),ftime); // get local changes for sending
+    ftime = gettimeofday();
   }
   tdata.sendDatabaseNL(*this);
-  *this << tdata.ftime_;
+  *this << ftime;
   putCode(eOK);
   flush();
   utf8::String::Stream stream;
@@ -865,31 +886,32 @@ void NodeClient::main()
   intptr_t i;
   utf8::String server, host;
   try {
+    bool connected, exchanged, doWork;
     do {
-      bool doWork;
+      connected = exchanged = false;
       {
         AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
         doWork = 
           dataType_ != stStandalone ||
-          server_.nodeClient_ == NULL || 
+          (server_.nodeClient_ == NULL && periodicaly_) ||
           server_.nodeClient_ == this
         ;
       }
-      if( !periodicaly_ || doWork ){
+      if( doWork ){
         if( dataType_ == stStandalone ){
           server = server_.data(stStandalone).getNodeList();
-          if( server.strlen() > 0 ) server += ",";
-          server += host;
           host = server_.data(stNode).getNodeList();
-          if( server.strlen() > 0 ) server += ",";
+          if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
           server += host;
-          if( server.strlen() > 0 ) server += ",";
-          server += server_.config_->parse().override().valueByPath("standalone.node","");
+          host = server_.config_->parse().override().valueByPath(
+            utf8::String(serverConfSectionName_[stStandalone]) + ".node",""
+          );
+          if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
+          server += host;
         }
         else {
           server = nodeHostName_;
         }
-        bool connected = false, exchanged = false;
         i = enumStringParts(server);
         while( !exchanged && !terminated_ && --i >= 0 ){
           try {
@@ -923,34 +945,36 @@ void NodeClient::main()
               Server::Data & data = server_.data(dataType_);
               data.registerServer(ServerInfo(host,stNode));
               Server::Data tdata, ldata, diff, dump;
-              uint64_t rStartTime;
+              uint64_t rStartTime, ftime = 0, rftime;
               *this << uint8_t(cmRegisterDB) >> rStartTime;
               bool fullDump = false;
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 ServerInfo * si = data.servers_.find(host);
-                fullDump = si != NULL && si->stime_ != rStartTime;
+                if( si != NULL ){
+                  fullDump = si->stime_ != rStartTime;
+                  ftime = si->ftime_;
+                }
               }
               {
                 AutoMutexRDLock<FiberMutex> lock(data.mutex_);
                 dump = data;
-                *this << data.ftime_;
-                ldata.orNL(data,fullDump ? 0 : data.ftime_);
+                *this << ftime;
+                ldata.orNL(data,fullDump ? 0 : ftime);
                 ldata.sendDatabaseNL(*this);
                 tdata.recvDatabaseNL(*this);
-                *this >> tdata.ftime_;
+                *this >> rftime;
                 getCode();
                 data.orNL(tdata);
-                data.ftime_ = tdata.ftime_;
+                ServerInfo * si = data.servers_.find(host);
+                if( si != NULL ){
+                  si->ftime_ = rftime;
+                  if( fullDump ) si->stime_ = rStartTime;
+                }
               }
               exchanged = true;
               *this << uint8_t(cmQuit);
               getCode();
-              if( fullDump ){
-                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-                ServerInfo * si = data.servers_.find(host);
-                if( si != NULL ) si->stime_ = rStartTime;
-              }
               stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
                 " database " << (fullDump ? "full dump" : "changes") <<
                 " sended to node " << host << "\n";
@@ -974,10 +998,18 @@ void NodeClient::main()
       }
       if( periodicaly_ ){
         uint64_t timeout = server_.config_->parse().override().
-          valueByPath("node.exchange_try_interval",60u);
+          valueByPath(
+            utf8::String(serverConfSectionName_[stStandalone]) + ".exchange_interval",
+            60u
+          );
         sleepAsync(timeout * 1000000u);
       }
     } while( periodicaly_ && !terminated_ );
+    AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
+    if( !periodicaly_ && !exchanged ){
+      if( dataType_ == stStandalone ) server_.skippedNodeClientStarts_++;
+      if( dataType_ == stNode ) server_.skippedNodeExchangeStarts_++;
+    }
   }
   catch( ... ){
     if( !periodicaly_ ) server_.clearNodeClient(this);

@@ -143,6 +143,7 @@ class Client : public ksock::Client {
     mutable Vector<Message> recvQueue_;
     mutable Vector<Message> sendQueue_;
     Server::Data data_;
+    uint64_t ftime_;
   private:
     Client(const Client &) : config_(NULL) {}
     void operator = (const Client &){}

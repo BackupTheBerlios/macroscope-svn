@@ -320,12 +320,11 @@ void ClientDBGetterFiber::main()
         if( terminated_ || i == 0 ) throw; else e->writeStdError();
       }
     }
-    client_.data_.clear();
     *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
     getCode();
-    *this << uint8_t(cmGetDB) << client_.data_.ftime();
+    *this << uint8_t(cmGetDB) << client_.ftime_;
     client_.data_.recvDatabase(*this);
-    *this >> client_.data_.ftime();
+    *this >> client_.ftime_;
     getCode();
     *this << uint8_t(cmQuit);
     getCode();
@@ -355,7 +354,9 @@ Client::~Client()
 {
 }
 //------------------------------------------------------------------------------
-Client::Client() : pAsyncEvent_(NULL), config_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>)
+Client::Client() :
+  pAsyncEvent_(NULL),
+  config_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>)
 {
   howCloseServer(csTerminate | csShutdown | csAbort);
   fiberTimeout(0);
@@ -363,6 +364,8 @@ Client::Client() : pAsyncEvent_(NULL), config_(new ksys::InterlockedConfig<ksys:
 //------------------------------------------------------------------------------
 void Client::open()
 {
+  data_.clear();
+  ftime_ = 0;
   attachFiber(new ClientFiber(*this));
 }
 //------------------------------------------------------------------------------

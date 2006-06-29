@@ -52,7 +52,7 @@ void Server::open()
   uintptr_t i;
   for( i = config_->value("spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
-  for( i = config_->value("mqueue_fibers",5); i > 0; i-- )
+  for( i = config_->value("mqueue_fibers",1); i > 0; i-- )
     attachFiber(new MailQueueWalker(*this));
 }
 //------------------------------------------------------------------------------
@@ -171,7 +171,10 @@ void Server::startNodesExchangeNL()
   utf8::String me(bindAddrs()[0].resolveAsync(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;
   if( hosts.strlen() > 0 ) hosts += ",";
-  hosts += config_->parse().override().valueByPath("node.neighbors","");
+  hosts += config_->parse().override().valueByPath(
+    utf8::String(serverConfSectionName_[stNode]) + ".neighbors",
+    ""
+  );
   if( nodeExchangeClients_.count() == 0 ){
     assert( skippedNodeExchangeStarts_ == 0 );
     try {

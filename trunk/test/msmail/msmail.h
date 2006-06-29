@@ -330,6 +330,7 @@ class ServerInfo {
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     uint64_t stime_; // время старта процесса
+    uint64_t ftime_; // время последнего обмена с сервером
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
     ServerType type_;
@@ -406,7 +407,10 @@ class Key2GroupLink {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const Key2GroupLink & object){
-      return (object.key_ + object.group_).hash(false);
+      uintptr_t h[2];
+      h[0] = object.key_.hash(false);
+      h[1] = object.group_.hash(false);
+      return HF::hash(h,sizeof(h));
     }
     static bool hashNodeEqu(const Key2GroupLink & object1,const Key2GroupLink & object2){
       return object1.key_.strcasecmp(object2.key_) == 0 && object1.group_.strcasecmp(object2.group_) == 0;
@@ -589,7 +593,7 @@ class Server : public ksock::Server {
         ~Data();
         Data();
 
-        uint64_t & ftime() const;
+        FiberMutex & mutex() const;
         uint64_t & stime() const;
 
         bool registerUserNL(const UserInfo & info,uint64_t ftime = 0);
@@ -633,11 +637,9 @@ class Server : public ksock::Server {
       private:
         Data(const Data &){}
         void operator = (const Data &){}
-// last time when database flushed to node and for node last exchage with neighbors
-        mutable uint64_t ftime_;
+
 // last time when database sweep
         mutable uint64_t stime_;
-        mutable uint64_t mtime_;
         mutable FiberMutex mutex_;
         EmbeddedHash<
           UserInfo,
@@ -740,9 +742,9 @@ inline Server::Data & Server::data(ServerType type)
   return data_[type];
 }
 //------------------------------------------------------------------------------
-inline uint64_t & Server::Data::ftime() const
+inline FiberMutex & Server::Data::mutex() const
 {
-  return ftime_;
+  return mutex_;
 }
 //------------------------------------------------------------------------------
 inline uint64_t & Server::Data::stime() const
