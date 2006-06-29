@@ -202,7 +202,7 @@ void LogFile::rotate(uint64_t size)
 LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8::String::Stream & stream)
 {
   assert( level <= 9 || level == ~uintptr_t(0) );
-  if( level <= 9 && (enabledLevels_ & (1u << level)) == 0 ) return *this;
+  if( level <= 9 && (enabledLevels_ & (uintptr_t(1) << level)) == 0 ) return *this;
 
   struct timeval tv = time2Timeval(getlocaltimeofday());
   struct tm t = time2tm(timeval2Time(tv));
