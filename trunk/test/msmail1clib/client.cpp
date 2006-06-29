@@ -145,7 +145,7 @@ void ClientFiber::main()
         uint64_t u = enumStringParts(groups);
         *this << u;
         for( i = intptr_t(u - 1); i >= 0 && !terminated_; i-- )
-          *this << GroupInfo(stringPartByNo(client_.groups_,i));
+          *this << GroupInfo(stringPartByNo(groups,i));
         if( terminated_ ) break;
         getCode();
         *this << uint8_t(cmRecvMail) << client_.user_ << key << bool(true) << bool(true);

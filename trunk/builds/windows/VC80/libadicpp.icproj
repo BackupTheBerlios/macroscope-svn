@@ -650,6 +650,33 @@
 		<File 
 			RelativePath="..\..\..\src\libutf8\cp950.cpp"/>
 		<File 
+			RelativePath="..\..\..\src\libmycpp\db.cpp">
+			<FileConfiguration 
+				Name="Debug|Win32">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Debug|x64">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Release|Win32">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Release|x64">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
+			</FileConfiguration>
+		</File>
+		<File 
 			RelativePath="..\..\..\src\libfbcpp\db.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libadicpp\db.cpp">
@@ -676,33 +703,6 @@
 				<Tool 
 					Name="CppCmplrTool"
 					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
-			</FileConfiguration>
-		</File>
-		<File 
-			RelativePath="..\..\..\src\libmycpp\db.cpp">
-			<FileConfiguration 
-				Name="Debug|Win32">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Debug|x64">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Release|Win32">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Release|x64">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
 			</FileConfiguration>
 		</File>
 		<File 
@@ -836,6 +836,33 @@
 		<File 
 			RelativePath="..\..\..\src\libksys\socket.cpp"/>
 		<File 
+			RelativePath="..\..\..\src\libadicpp\st.cpp">
+			<FileConfiguration 
+				Name="Debug|Win32">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Debug|x64">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Release|Win32">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Release|x64">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
+			</FileConfiguration>
+		</File>
+		<File 
 			RelativePath="..\..\..\src\libmycpp\st.cpp">
 			<FileConfiguration 
 				Name="Debug|Win32">
@@ -864,33 +891,6 @@
 		</File>
 		<File 
 			RelativePath="..\..\..\src\libfbcpp\st.cpp"/>
-		<File 
-			RelativePath="..\..\..\src\libadicpp\st.cpp">
-			<FileConfiguration 
-				Name="Debug|Win32">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Debug|x64">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Release|Win32">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Release|x64">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
-			</FileConfiguration>
-		</File>
 		<File 
 			RelativePath="..\..\..\src\libksys\stat.cpp"/>
 		<File 
