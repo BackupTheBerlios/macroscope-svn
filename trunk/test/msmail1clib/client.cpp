@@ -137,15 +137,18 @@ void ClientFiber::main()
       if( connected ){
         *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
         getCode();
+        utf8::String key(client_.config_->value("key",client_.key_));
         *this << uint8_t(cmRegisterClient) <<
-          UserInfo(client_.user_) << KeyInfo(client_.key_);
-        uint64_t u = enumStringParts(client_.groups_);
+          UserInfo(client_.user_) <<
+          KeyInfo(key);
+        utf8::String groups(client_.config_->value("groups",client_.groups_));
+        uint64_t u = enumStringParts(groups);
         *this << u;
         for( i = intptr_t(u - 1); i >= 0 && !terminated_; i-- )
           *this << GroupInfo(stringPartByNo(client_.groups_,i));
         if( terminated_ ) break;
         getCode();
-        *this << uint8_t(cmRecvMail) << client_.user_ << client_.key_ << bool(true) << bool(true);
+        *this << uint8_t(cmRecvMail) << client_.user_ << key << bool(true) << bool(true);
         getCode();
         {
           AutoPtr<OLECHAR> source(client_.name_.getOLEString());
@@ -212,17 +215,18 @@ void ClientMailSenderFiber::main()
     uintptr_t u;
   };
   try {
-    for( i = enumStringParts(client_.mailServer_) - 1; i >= 0; i-- ){
+    utf8::String server(client_.config_->value("server",client_.mailServer_));
+    for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
+        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
         connect(remoteAddress);
         auth();
         i = -1;
       }
       catch( ExceptionSP & e ){
         stdErr.debug(2,utf8::String::Stream() <<
-          "Unable to connect. Host " << stringPartByNo(client_.mailServer_,i) <<
+          "Unable to connect. Host " << stringPartByNo(server,i) <<
           " unreachable.\n"
         );
         if( terminated_ || i == 0 ) throw; else e->writeStdError();
@@ -260,17 +264,18 @@ void ClientMailRemoverFiber::main()
     uintptr_t u;
   };
   try {
-    for( i = enumStringParts(client_.mailServer_) - 1; i >= 0; i-- ){
+    utf8::String server(client_.config_->value("server",client_.mailServer_));
+    for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
+        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
         connect(remoteAddress);
         auth();
         i = -1;
       }
       catch( ExceptionSP & e ){
         stdErr.debug(2,utf8::String::Stream() <<
-          "Unable to connect. Host " << stringPartByNo(client_.mailServer_,i) <<
+          "Unable to connect. Host " << stringPartByNo(server,i) <<
           " unreachable.\n"
         );
         if( terminated_ || i == 0 ) throw; else e->writeStdError();
@@ -314,17 +319,18 @@ void ClientDBGetterFiber::main()
     }
     if( !registered )
       throw ExceptionSP(new Exception(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__));
-    for( i = enumStringParts(client_.mailServer_) - 1; i >= 0; i-- ){
+    utf8::String server(client_.config_->value("server",client_.mailServer_));
+    for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolveAsync(stringPartByNo(client_.mailServer_,i),defaultPort);
+        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
         connect(remoteAddress);
         auth();
         i = -1;
       }
       catch( ExceptionSP & e ){
         stdErr.debug(2,utf8::String::Stream() <<
-          "Unable to connect. Host " << stringPartByNo(client_.mailServer_,i) <<
+          "Unable to connect. Host " << stringPartByNo(server,i) <<
           " unreachable.\n"
         );
         if( terminated_ || i == 0 ) throw; else e->writeStdError();
@@ -429,7 +435,7 @@ bool Client::sendMessage(const utf8::String id)
   intptr_t i = sendQueue_.bSearch(id);
   if( i < 0 ) return false;
   workFiberLastError_ = 0;
-  sendQueue_[i].value("#Sender",user_ + "@" + key_);
+  sendQueue_[i].value("#Sender",user_ + "@" + config_->value("key",key_));
   sendQueue_[i].value("#Sender.Sended",getTimeString(gettimeofday()));
   sendQueue_[i].value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
   sendQueue_[i].value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
