@@ -874,7 +874,7 @@ void NodeClient::main()
           server_.nodeClient_ == this
         ;
       }
-      if( doWork ){
+      if( !periodicaly_ || doWork ){
         if( dataType_ == stStandalone ){
           server = server_.data(stStandalone).getNodeList();
           if( server.strlen() > 0 ) server += ",";
