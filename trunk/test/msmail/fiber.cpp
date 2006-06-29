@@ -357,11 +357,6 @@ intptr_t ServerFiber::processMailbox(
   bool onlyNewMail)
 {
   stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
-  stdErr.debug(9,utf8::String::Stream() <<
-    this << " Processing mailbox " <<
-    excludeTrailingPathDelimiter(userMailBox) <<
-    " by monitor... \n"
-  );
   utf8::String myHost(server_.bindAddrs()[0].resolveAsync(defaultPort));
   intptr_t i, j, c, k;
   Array<utf8::String> ids;
@@ -455,7 +450,14 @@ void ServerFiber::recvMail() // client receiving mail
       k = processMailbox(userMailBox,ids,onlyNewMail);
       flush();
       if( !waitForMail ) break;
-      if( k == 0 ) dcn_.monitor(userMailBox);
+      if( k == 0 ){
+        dcn_.monitor(userMailBox);
+        stdErr.debug(9,utf8::String::Stream() <<
+          this << " Processing mailbox " <<
+          excludeTrailingPathDelimiter(userMailBox) <<
+          " by monitor... \n"
+        );
+      }
     }
   }
   catch( ... ){

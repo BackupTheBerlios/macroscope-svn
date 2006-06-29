@@ -94,8 +94,12 @@ void ClientFiber::auth()
 void ClientFiber::main()
 {
   intptr_t i, c;
-  client_.config_->fileName(client_.configFile_).parse();
+  client_.config_->fileName(client_.configFile_);
   while( !terminated_ ){
+    client_.config_->parse();
+    stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
+    stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
+    stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
     {
       AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
       client_.connected_ = false;
@@ -172,14 +176,13 @@ void ClientFiber::main()
               Exception e((hr & 0xFFFF) + errorOffset,utf8::String());
               e.writeStdError();
               messageAccepted = false;
+              AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+              i = client_.recvQueue_.bSearch(message);
+              if( i >= 0 ) client_.recvQueue_.remove(i);
             }
           }
           *this << messageAccepted;
           getCode2(eLastMessage);
-          client_.config_->parse();
-          stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
-          stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
-          stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
         }
       }
     }
