@@ -31,13 +31,7 @@
 using namespace ksys;
 #include "msmail1clib.h"
 #include <adicpp/adicpp.h>
-#ifdef __INTEL_COMPILER
-#pragma warning(push,2)
-#endif
 #include "../msmail/msmail.h"
-#ifdef __INTEL_COMPILER
-#pragma warning(pop)
-#endif
 //------------------------------------------------------------------------------
 namespace msmail {
 //------------------------------------------------------------------------------
