@@ -119,13 +119,14 @@
 				IntermediateDirectory="$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="1"
 				CharacterSet="1"
-				WholeProgramOptimization="0"/>
+				WholeProgramOptimization="1"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
 				WholeProgramOptimization="1"
 				Optimization="3"
+				GlobalOptimizations="1"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="1"
 				FavorSizeOrSpeed="1"
@@ -134,7 +135,8 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="1"/>
+				Detect64BitPortabilityProblems="1"
+				UseProcExt="4"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""
@@ -169,13 +171,14 @@
 				IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="1"
 				CharacterSet="1"
-				WholeProgramOptimization="0"/>
+				WholeProgramOptimization="1"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
 				WholeProgramOptimization="1"
 				Optimization="3"
+				GlobalOptimizations="1"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="1"
 				FavorSizeOrSpeed="1"
@@ -183,7 +186,8 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="1"/>
+				Detect64BitPortabilityProblems="1"
+				UseProcExt="4"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""

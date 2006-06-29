@@ -121,12 +121,18 @@
 				IntermediateDirectory="$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="1"
 				CharacterSet="1"
-				WholeProgramOptimization="0"/>
+				WholeProgramOptimization="1"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
-				WholeProgramOptimization="0"
+				WholeProgramOptimization="1"
+				Optimization="3"
+				GlobalOptimizations="1"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="1"
+				FavorSizeOrSpeed="1"
+				OmitFramePointers="1"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="1"
@@ -135,7 +141,8 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="1"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="0"
+				UseProcExt="4"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""
@@ -171,12 +178,17 @@
 				IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="1"
 				CharacterSet="1"
-				WholeProgramOptimization="0"/>
+				WholeProgramOptimization="1"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
-				WholeProgramOptimization="0"
+				WholeProgramOptimization="1"
+				Optimization="3"
+				GlobalOptimizations="1"
+				InlineFunctionExpansion="2"
+				EnableIntrinsicFunctions="1"
+				FavorSizeOrSpeed="1"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="1"
@@ -185,7 +197,8 @@
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="1"
-				DebugInformationFormat="0"/>
+				DebugInformationFormat="0"
+				UseProcExt="4"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""
