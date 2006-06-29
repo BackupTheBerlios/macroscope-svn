@@ -3,7 +3,7 @@
 	ProjectType="Intel C++ Project"
 	Version="9.1"
 	Name="msmail"
-	ProjectGUID="{0DC5727F-0A76-4230-A06D-51EEFB176B31}"
+	ProjectGUID="{E63A7C11-D1C8-4399-AC87-8ADC575D41ED}"
 	VCNestedProjectGUID="{60B92BDA-6FA2-4B31-A4F8-4BE526A62412}"
 	VCNestedProjectFileName="msmail.vcproj"
 	Keyword="Win32Proj">
@@ -119,14 +119,13 @@
 				IntermediateDirectory="$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="1"
 				CharacterSet="1"
-				WholeProgramOptimization="1"/>
+				WholeProgramOptimization="0"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
 				WholeProgramOptimization="1"
 				Optimization="3"
-				GlobalOptimizations="1"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="1"
 				FavorSizeOrSpeed="1"
@@ -135,8 +134,7 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="1"
-				UseProcExt="4"/>
+				Detect64BitPortabilityProblems="1"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""
@@ -171,14 +169,13 @@
 				IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="1"
 				CharacterSet="1"
-				WholeProgramOptimization="1"/>
+				WholeProgramOptimization="0"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
 				WholeProgramOptimization="1"
 				Optimization="3"
-				GlobalOptimizations="1"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="1"
 				FavorSizeOrSpeed="1"
@@ -186,8 +183,7 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="1"
-				UseProcExt="4"/>
+				Detect64BitPortabilityProblems="1"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""

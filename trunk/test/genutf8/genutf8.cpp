@@ -170,7 +170,7 @@ static void GenEmbed()
   assert( file != NULL );
   fprintf(file,"%s",lic);
   k = sizeof(C1Table) / sizeof(uint32_t);
-  fprintf(file, "extern const uint32_t C1Table[%d] = {\n", k);
+  fprintf(file, "extern const uint32_t C1Table["PRIdPTR"] = {\n", k);
   for( i = 0; i < k; ){
     fprintf(file, "  ");
     for( j = 0; j < 4 && i < k; j++, i++ ){

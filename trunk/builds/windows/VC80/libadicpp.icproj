@@ -3,7 +3,7 @@
 	ProjectType="Intel C++ Project"
 	Version="9.1"
 	Name="libadicpp"
-	ProjectGUID="{D904A106-BDBE-4F0D-B33B-9CE0EF94DFE8}"
+	ProjectGUID="{B5F2F589-262C-4451-A3A6-E993D1E289DE}"
 	VCNestedProjectGUID="{699C55AF-E43D-48AE-9496-77D183B93940}"
 	VCNestedProjectFileName="libadicpp.vcproj"
 	Keyword="Win32Proj">
@@ -112,14 +112,13 @@
 				OutputDirectory="$(SolutionDir)$(ConfigurationName)"
 				IntermediateDirectory="$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="4"
-				WholeProgramOptimization="1"/>
+				WholeProgramOptimization="0"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
 				WholeProgramOptimization="1"
 				Optimization="3"
-				GlobalOptimizations="1"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="1"
 				FavorSizeOrSpeed="1"
@@ -128,8 +127,7 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="1"
-				UseProcExt="4"/>
+				Detect64BitPortabilityProblems="1"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""/>
@@ -161,14 +159,13 @@
 				OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
 				IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 				ConfigurationType="4"
-				WholeProgramOptimization="1"/>
+				WholeProgramOptimization="0"/>
 			<Tool 
 				Name="DebugTool"/>
 			<Tool 
 				Name="CppCmplrTool"
 				WholeProgramOptimization="1"
 				Optimization="3"
-				GlobalOptimizations="1"
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="1"
 				FavorSizeOrSpeed="1"
@@ -176,8 +173,7 @@
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="1"
-				UseProcExt="4"/>
+				Detect64BitPortabilityProblems="1"/>
 			<Tool 
 				Name="LinkerTool"
 				DelayImpLib=""/>

@@ -1362,7 +1362,7 @@ STDMETHODIMP Cmsmail1c::textToFile(IN BSTR name,IN BSTR text,OUT LONG * pLastErr
   );
   if( handle == INVALID_HANDLE_VALUE ) goto err;
   DWORD NumberOfBytesWritten;
-  uint8_t unicodeDocMarker[2] = { 0xFE, 0xFF };
+  static const uint8_t unicodeDocMarker[2] = { 0xFE, 0xFF };
   if( WriteFile(handle,unicodeDocMarker,sizeof(unicodeDocMarker),&NumberOfBytesWritten,NULL) == 0 ) goto err;
   if( WriteFile(handle,text,DWORD(wcslen(text) * sizeof(text[0])),&NumberOfBytesWritten,NULL) == 0 ) goto err;
   if( SetEndOfFile(handle) == 0 ) goto err;

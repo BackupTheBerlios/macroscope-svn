@@ -3,7 +3,7 @@
 	ProjectType="Intel C++ Project"
 	Version="9.1"
 	Name="genutf8"
-	ProjectGUID="{2C113549-6A7E-4979-93D1-B6FE1C911A97}"
+	ProjectGUID="{F643B8C6-5581-4D0F-904F-0A0284E44CE0}"
 	VCNestedProjectGUID="{931E5319-BD16-46D8-9C58-95EFF141B9DC}"
 	VCNestedProjectFileName="genutf8.vcproj"
 	Keyword="Win32Proj">
