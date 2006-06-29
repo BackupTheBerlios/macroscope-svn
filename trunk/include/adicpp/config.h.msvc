@@ -168,9 +168,9 @@ typedef uint64_t                uintmax_t;
 
 #define SIZE_MAX        UINT64_MAX
 
-#define WCHAR_MIN       INT32_MIN
+/*#define WCHAR_MIN       INT32_MIN
 #define WCHAR_MAX       INT32_MAX
-
+*/
 #define WINT_MIN        INT32_MIN
 #define WINT_MAX        INT32_MAX
 
