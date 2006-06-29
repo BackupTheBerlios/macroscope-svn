@@ -330,9 +330,10 @@ void ClientDBGetterFiber::main()
         if( terminated_ || i == 0 ) throw; else e->writeStdError();
       }
     }
+    client_.data_.clear();
     *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
     getCode();
-    *this << uint8_t(cmGetDB) << client_.ftime_;
+    *this << uint8_t(cmGetDB) << (client_.ftime_ = 0);
     client_.data_.recvDatabase(*this);
     *this >> client_.ftime_;
     getCode();
