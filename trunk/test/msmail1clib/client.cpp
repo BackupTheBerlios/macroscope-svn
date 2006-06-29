@@ -304,6 +304,13 @@ void ClientDBGetterFiber::main()
     uintptr_t u;
   };
   try {
+    bool registered;
+    {
+      AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
+      registered = client_.connected_;
+    }
+    if( !registered )
+      throw ExceptionSP(new Exception(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__));
     for( i = enumStringParts(client_.mailServer_) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
