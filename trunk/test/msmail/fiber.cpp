@@ -227,11 +227,8 @@ void ServerFiber::registerDB()
     diff.xorNL(data,rdata);
     tdata.orNL(data,rftime); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
-    while( ftime == gettimeofday() ) sleepAsync(0);
-    ftime = gettimeofday();
   }
   tdata.sendDatabaseNL(*this);
-  *this << ftime;
   putCode(eOK);
   flush();
 //  if( dbChanged ) server_.startNodesExchange();
@@ -995,10 +992,10 @@ void NodeClient::main()
               *this << ftime;
               ldata.sendDatabaseNL(*this);
               tdata.recvDatabaseNL(*this);
-              *this >> rftime;
               getCode();
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+                rftime = gettimeofday();
                 if( data.mtime_ < ~uint64_t(0) && data.mtime_ >= ftime )
                   rftime = data.mtime_ - 1;
                 data.mtime_ = 0;
