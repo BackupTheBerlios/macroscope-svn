@@ -25,7 +25,7 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
-#include <adicpp/pwerrs.h>
+//#include <adicpp/pwerrs.h>
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
@@ -45,7 +45,58 @@ utf8::String strError(int32_t err)
       if( se.strlen() > 0 ) return se;
     }
 #if defined(__WIN32__) || defined(__WIN64__)
-    intptr_t  c = sizeof(winErrsDesc) / sizeof(winErrsDesc[0]) - 1;
+    if( err >= errorOffset ){
+      DWORD bytes;
+      LPVOID lpMsgBuf = NULL;
+      utf8::String wes;
+      try {
+        if( isWin9x() ){
+          bytes = FormatMessageA(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL,
+            err - errorOffset,
+            LANG_USER_DEFAULT, // Default language
+            (LPSTR) &lpMsgBuf,
+            0,
+            NULL 
+          );
+          if( bytes > 0 ){
+            ((LPSTR) lpMsgBuf)[bytes - 1] = '\0';
+            LPSTR nl = strchr((LPSTR) lpMsgBuf,'\r');
+            if( nl != NULL ) *nl = '\0';
+            nl = strchr((LPSTR) lpMsgBuf,'\n');
+            if( nl != NULL ) *nl = '\0';
+            wes = (LPCSTR) lpMsgBuf;
+          }
+        }
+        else {
+          bytes = FormatMessageW(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL,
+            err - errorOffset,
+            LANG_USER_DEFAULT, // Default language
+            (LPWSTR) &lpMsgBuf,
+            0,
+            NULL 
+          );
+          if( bytes > 0 ){
+            ((LPWSTR) lpMsgBuf)[bytes - 1] = L'\0';
+            LPWSTR nl = wcschr((LPWSTR) lpMsgBuf,L'\r');
+            if( nl != NULL ) *nl = L'\0';
+            nl = wcschr((LPWSTR) lpMsgBuf,L'\n');
+            if( nl != NULL ) *nl = L'\0';
+            wes = (LPCWSTR) lpMsgBuf;
+          }
+        }
+      }
+      catch( ... ){
+        LocalFree(lpMsgBuf);
+        throw;
+      }
+      LocalFree(lpMsgBuf);
+      if( bytes > 0 ) return wes;
+    }
+/*    intptr_t c = sizeof(winErrsDesc) / sizeof(winErrsDesc[0]) - 1;
     if( err >= errorOffset && err < winErrsDesc[c].code_ + errorOffset ){
       struct WinErrDesc bs;
       bs.code_ = err - errorOffset;
@@ -53,7 +104,7 @@ utf8::String strError(int32_t err)
       i = bSearch<WinErrDesc>(winErrsDesc, bs, c);
       if( c == 0 ) return winErrsDesc[i].text_;
       err -= errorOffset;
-    }
+    }*/
 #endif
     int32_t er = 0;
     AutoPtr<char> serr;
@@ -87,9 +138,9 @@ utf8::String strError(int32_t err)
 //---------------------------------------------------------------------------
 void strErrorInitialize()
 {
-  new (strErrorHandlersHolder) Array< StrErrorHandler>;
+  new (strErrorHandlersHolder) Array<StrErrorHandler>;
 #if defined(__WIN32__) || defined(__WIN64__)
-  qSort(winErrsDesc, 0, sizeof(winErrsDesc) / sizeof(winErrsDesc[0]) - 1);
+//  qSort(winErrsDesc, 0, sizeof(winErrsDesc) / sizeof(winErrsDesc[0]) - 1);
 #endif
 }
 //---------------------------------------------------------------------------

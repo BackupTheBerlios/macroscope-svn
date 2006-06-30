@@ -51,9 +51,9 @@ void Server::open()
 //  startNodesExchange();
   attachFiber(new NodeClient(*this,stStandalone,utf8::String(),true));
   uintptr_t i;
-  for( i = config_->value("spool_fibers",1); i > 0; i-- )
+  for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
-  for( i = config_->value("mqueue_fibers",1); i > 0; i-- )
+  for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fibers",1); i > 0; i-- )
     attachFiber(new MailQueueWalker(*this));
 }
 //------------------------------------------------------------------------------

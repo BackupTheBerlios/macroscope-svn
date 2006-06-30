@@ -80,133 +80,21 @@ static struct WinErrDesc  winErrsDesc[] = {
   { "SHARING_VIOLATION", "The process cannot access the file because it is being used by another process.", ERROR_SHARING_VIOLATION },
   { "LOCK_VIOLATION", "The process cannot access the file because another process has locked a portion of the file.", ERROR_LOCK_VIOLATION },
   { "WRONG_DISK", "The wrong diskette is in the drive.", ERROR_WRONG_DISK },
+  { "SHARING_BUFFER_EXCEEDED", "Too many files opened for sharing.", ERROR_SHARING_BUFFER_EXCEEDED },
+  { "HANDLE_EOF", "Reached the end of the file.", ERROR_HANDLE_EOF },
+  { "HANDLE_DISK_FULL", "The disk is full.", ERROR_HANDLE_DISK_FULL },
+  { "NOT_SUPPORTED", "The request is not supported.", ERROR_NOT_SUPPORTED },
+  { "REM_NOT_LIST", "Windows cannot find the network path. Verify that the network path is correct and the destination computer is not busy or turned off. If Windows still cannot find the network path, contact your network administrator.", ERROR_REM_NOT_LIST },
+  { "DUP_NAME", "You were not connected because a duplicate name exists on the network. Go to System in Control Panel to change the computer name and try again.", ERROR_DUP_NAME },
+  { "BAD_NETPATH", "The network path was not found.", ERROR_BAD_NETPATH },
+  { "NETWORK_BUSY", "The network is busy.", ERROR_NETWORK_BUSY },
+  { "DEV_NOT_EXIST", "The specified network resource or device is no longer available.", ERROR_DEV_NOT_EXIST },
+  { "TOO_MANY_CMDS", "The network BIOS command limit has been reached.", ERROR_TOO_MANY_CMDS },
+  { "ADAP_HDW_ERR", "A network adapter hardware error occurred.", ERROR_ADAP_HDW_ERR },
+  { "BAD_NET_RESP", "The specified server cannot perform the requested operation.", ERROR_BAD_NET_RESP },
+  { "UNEXP_NET_ERR", "An unexpected network error occurred.", ERROR_UNEXP_NET_ERR },
+  { "BAD_REM_ADAP", "The remote adapter is not compatible.", ERROR_BAD_REM_ADAP },
 /*
-  //
-  // MessageId: ERROR_SHARING_BUFFER_EXCEEDED
-  //
-  // MessageText:
-  //
-  //  Too many files opened for sharing.
-  //
-  #define ERROR_SHARING_BUFFER_EXCEEDED    36L
-
-  //
-  // MessageId: ERROR_HANDLE_EOF
-  //
-  // MessageText:
-  //
-  //  Reached the end of the file.
-  //
-  #define ERROR_HANDLE_EOF                 38L
-
-  //
-  // MessageId: ERROR_HANDLE_DISK_FULL
-  //
-  // MessageText:
-  //
-  //  The disk is full.
-  //
-  #define ERROR_HANDLE_DISK_FULL           39L
-
-  //
-  // MessageId: ERROR_NOT_SUPPORTED
-  //
-  // MessageText:
-  //
-  //  The request is not supported.
-  //
-  #define ERROR_NOT_SUPPORTED              50L
-
-  //
-  // MessageId: ERROR_REM_NOT_LIST
-  //
-  // MessageText:
-  //
-  //  Windows cannot find the network path. Verify that the network path is correct and the destination computer is not busy or turned off. If Windows still cannot find the network path, contact your network administrator.
-  //
-  #define ERROR_REM_NOT_LIST               51L
-
-  //
-  // MessageId: ERROR_DUP_NAME
-  //
-  // MessageText:
-  //
-  //  You were not connected because a duplicate name exists on the network. Go to System in Control Panel to change the computer name and try again.
-  //
-  #define ERROR_DUP_NAME                   52L
-
-  //
-  // MessageId: ERROR_BAD_NETPATH
-  //
-  // MessageText:
-  //
-  //  The network path was not found.
-  //
-  #define ERROR_BAD_NETPATH                53L
-
-  //
-  // MessageId: ERROR_NETWORK_BUSY
-  //
-  // MessageText:
-  //
-  //  The network is busy.
-  //
-  #define ERROR_NETWORK_BUSY               54L
-
-  //
-  // MessageId: ERROR_DEV_NOT_EXIST
-  //
-  // MessageText:
-  //
-  //  The specified network resource or device is no longer available.
-  //
-  #define ERROR_DEV_NOT_EXIST              55L    // dderror
-
-  //
-  // MessageId: ERROR_TOO_MANY_CMDS
-  //
-  // MessageText:
-  //
-  //  The network BIOS command limit has been reached.
-  //
-  #define ERROR_TOO_MANY_CMDS              56L
-
-  //
-  // MessageId: ERROR_ADAP_HDW_ERR
-  //
-  // MessageText:
-  //
-  //  A network adapter hardware error occurred.
-  //
-  #define ERROR_ADAP_HDW_ERR               57L
-
-  //
-  // MessageId: ERROR_BAD_NET_RESP
-  //
-  // MessageText:
-  //
-  //  The specified server cannot perform the requested operation.
-  //
-  #define ERROR_BAD_NET_RESP               58L
-
-  //
-  // MessageId: ERROR_UNEXP_NET_ERR
-  //
-  // MessageText:
-  //
-  //  An unexpected network error occurred.
-  //
-  #define ERROR_UNEXP_NET_ERR              59L
-
-  //
-  // MessageId: ERROR_BAD_REM_ADAP
-  //
-  // MessageText:
-  //
-  //  The remote adapter is not compatible.
-  //
-  #define ERROR_BAD_REM_ADAP               60L
-
   //
   // MessageId: ERROR_PRINTQ_FULL
   //
