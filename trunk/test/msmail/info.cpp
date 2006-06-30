@@ -603,7 +603,8 @@ bool Server::Data::registerServerNL(const ServerInfo & info,uint64_t ftime,uint6
   else {
     p->atime_ = gettimeofday();
     if( info.mtime_ > ftime && info.type_ == stNode && info.type_ != p->type_ ){
-      p->mtime_ = p->atime_;
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       p->type_ = info.type_;
       return true;
     }
@@ -678,7 +679,7 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t
     p->atime_ = gettimeofday();
     if( link.mtime_ > ftime && p->server_.strcasecmp(link.server_) != 0 ){
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       p->server_ = link.server_;
       return true;
     }
