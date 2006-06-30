@@ -226,7 +226,7 @@ void ServerFiber::registerDB()
     ftime = gettimeofday();
     diff.xorNL(data,rdata);
     tdata.orNL(data,rftime); // get local changes for sending
-    dbChanged = data.orNL(rdata,0,rftime); // apply remote changes localy
+    dbChanged = data.orNL(rdata); // apply remote changes localy
   }
   tdata.sendDatabaseNL(*this);
   putCode(eOK);
