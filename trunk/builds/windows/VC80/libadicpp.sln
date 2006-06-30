@@ -2,9 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 9.00
 # Visual Studio 2005
 Project("{EAF909A5-FA59-4C3D-9431-0FCC20D5BCF9}") = "libadicpp", "libadicpp.icproj", "{B5F2F589-262C-4451-A3A6-E993D1E289DE}"
-	ProjectSection(ProjectDependencies) = postProject
-		{F643B8C6-5581-4D0F-904F-0A0284E44CE0} = {F643B8C6-5581-4D0F-904F-0A0284E44CE0}
-	EndProjectSection
 EndProject
 Project("{EAF909A5-FA59-4C3D-9431-0FCC20D5BCF9}") = "msftp", "msftp.icproj", "{18AA9A05-12DF-4FA2-A623-5CC1CE719BE3}"
 	ProjectSection(ProjectDependencies) = postProject
