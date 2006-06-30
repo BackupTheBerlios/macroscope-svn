@@ -45,6 +45,9 @@ extern msmail_version_t msmail_version;
 #if _MSC_VER
 #pragma warning(push,3)
 #endif
+#if __INTEL_COMPILER
+#pragma warning disable 411
+#endif
 #include "version.h"
 #if _MSC_VER
 #pragma warning(pop)
@@ -638,6 +641,7 @@ class Server : public ksock::Server {
         Data(const Data &){}
         void operator = (const Data &){}
 
+        mutable uint64_t mtime_;
 // last time when database sweep
         mutable uint64_t stime_;
         mutable FiberMutex mutex_;

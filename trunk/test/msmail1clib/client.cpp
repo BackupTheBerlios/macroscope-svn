@@ -510,7 +510,8 @@ utf8::String Client::getDBList() const
 //------------------------------------------------------------------------------
 utf8::String Client::getDBGroupList() const
 {
-  return data_.getKeyGroupList(groups_,true);
+  utf8::String groups(config_->value("groups",groups_));
+  return data_.getKeyGroupList(groups,true);
 }
 //------------------------------------------------------------------------------
 utf8::String Client::getUserList() const

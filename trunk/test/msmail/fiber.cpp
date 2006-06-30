@@ -171,7 +171,8 @@ void ServerFiber::registerClient()
   if( serverType_ == stStandalone ){
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
     ServerInfo * si = data.servers_.find(server);
-    while( si != NULL && si->ftime_ == gettimeofday() ) sleepAsync(0);
+    while( si != NULL && si->ftime_ >= gettimeofday() )
+      sleepAsync(si->ftime_ - gettimeofday());
     diff.xorNL(data,tdata);
     startNodeClient = data.orNL(tdata);
   }
@@ -225,9 +226,11 @@ void ServerFiber::registerDB()
   Server::Data & data = server_.data(serverType_);
   {
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+    ftime = gettimeofday();
     diff.xorNL(data,rdata);
     tdata.orNL(data,rftime); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
+    while( ftime == gettimeofday() ) sleepAsync(0);
     ftime = gettimeofday();
   }
   tdata.sendDatabaseNL(*this);
@@ -982,25 +985,26 @@ void NodeClient::main()
               *this << uint8_t(cmRegisterDB) >> rStartTime;
               bool fullDump = false;
               {
-                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+                AutoMutexRDLock<FiberMutex> lock(data.mutex_);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ){
                   fullDump = si->stime_ != rStartTime;
                   ftime = si->ftime_;
                 }
-              }
-              {
-                AutoMutexRDLock<FiberMutex> lock(data.mutex_);
                 dump = data;
-                *this << ftime;
                 ldata.orNL(data,fullDump ? 0 : ftime);
-                ldata.sendDatabaseNL(*this);
-                tdata.recvDatabaseNL(*this);
-                *this >> rftime;
-                getCode();
+              }
+              *this << ftime;
+              ldata.sendDatabaseNL(*this);
+              tdata.recvDatabaseNL(*this);
+              *this >> rftime;
+              getCode();
+              {
+                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 data.orNL(tdata);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ){
+                  if( si->mtime_ >= rftime ) rftime = si->mtime_ - 1;
                   si->ftime_ = rftime;
                   if( fullDump ) si->stime_ = rStartTime;
                 }

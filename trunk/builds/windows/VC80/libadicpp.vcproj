@@ -1189,6 +1189,46 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libadicpp\db.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libmycpp\db.cpp"
 				>
 				<FileConfiguration
@@ -1233,51 +1273,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libadicpp\db.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libadicpp\dllmain.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
 				>
 			</File>
 			<File
@@ -1321,6 +1317,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libfbcpp\event.cpp"
 				>
 			</File>
@@ -1342,10 +1342,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\fiber.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\intf.cpp"
 				>
 			</File>
 			<File
@@ -1387,6 +1383,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\intf.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\log.cpp"
@@ -1505,6 +1505,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\st.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libadicpp\st.cpp"
 				>
 				<FileConfiguration
@@ -1585,10 +1589,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\st.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libksys\stat.cpp"
 				>
 			</File>
@@ -1637,10 +1637,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
 				>
 				<FileConfiguration
@@ -1679,6 +1675,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\svc.cpp"
