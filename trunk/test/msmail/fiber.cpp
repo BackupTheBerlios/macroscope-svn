@@ -991,7 +991,7 @@ void NodeClient::main()
                   fullDump = si->stime_ != rStartTime;
                   ftime = si->ftime_;
                 }
-                dump = data;
+                dump.orNL(data);
                 ldata.orNL(data,fullDump ? 0 : ftime);
                 data.mtime_ = ~uint64_t(0);
               }
@@ -1002,10 +1002,10 @@ void NodeClient::main()
               getCode();
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-                data.orNL(tdata,rftime);
                 if( data.mtime_ < ~uint64_t(0) && data.mtime_ >= rftime )
                   rftime = data.mtime_ - 1;
                 data.mtime_ = 0;
+                data.orNL(tdata);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ){
                   si->ftime_ = rftime;
