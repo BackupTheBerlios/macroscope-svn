@@ -650,8 +650,6 @@
 		<File 
 			RelativePath="..\..\..\src\libutf8\cp950.cpp"/>
 		<File 
-			RelativePath="..\..\..\src\libfbcpp\db.cpp"/>
-		<File 
 			RelativePath="..\..\..\src\libadicpp\db.cpp">
 			<FileConfiguration 
 				Name="Debug|Win32">
@@ -706,9 +704,9 @@
 			</FileConfiguration>
 		</File>
 		<File 
-			RelativePath="..\..\..\src\libadicpp\dllmain.cpp"/>
+			RelativePath="..\..\..\src\libfbcpp\db.cpp"/>
 		<File 
-			RelativePath="..\..\..\src\libfbcpp\ecs.cpp"/>
+			RelativePath="..\..\..\src\libadicpp\dllmain.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libmycpp\ecs.cpp">
 			<FileConfiguration 
@@ -737,6 +735,8 @@
 			</FileConfiguration>
 		</File>
 		<File 
+			RelativePath="..\..\..\src\libfbcpp\ecs.cpp"/>
+		<File 
 			RelativePath="..\..\..\src\libfbcpp\event.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libksys\except.cpp"/>
@@ -748,8 +748,6 @@
 			RelativePath="..\..\..\src\libksys\fhc.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libksys\fiber.cpp"/>
-		<File 
-			RelativePath="..\..\..\src\libfbcpp\intf.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libmycpp\intf.cpp">
 			<FileConfiguration 
@@ -777,6 +775,8 @@
 					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
 			</FileConfiguration>
 		</File>
+		<File 
+			RelativePath="..\..\..\src\libfbcpp\intf.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libksys\log.cpp"/>
 		<File 
@@ -836,33 +836,6 @@
 		<File 
 			RelativePath="..\..\..\src\libksys\socket.cpp"/>
 		<File 
-			RelativePath="..\..\..\src\libmycpp\st.cpp">
-			<FileConfiguration 
-				Name="Debug|Win32">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Debug|x64">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Release|Win32">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
-			</FileConfiguration>
-			<FileConfiguration 
-				Name="Release|x64">
-				<Tool 
-					Name="CppCmplrTool"
-					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
-			</FileConfiguration>
-		</File>
-		<File 
 			RelativePath="..\..\..\src\libfbcpp\st.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libadicpp\st.cpp">
@@ -889,6 +862,33 @@
 				<Tool 
 					Name="CppCmplrTool"
 					ObjectFile="$(IntDir)\$(InputName)2.obj"/>
+			</FileConfiguration>
+		</File>
+		<File 
+			RelativePath="..\..\..\src\libmycpp\st.cpp">
+			<FileConfiguration 
+				Name="Debug|Win32">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Debug|x64">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Release|Win32">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
+			</FileConfiguration>
+			<FileConfiguration 
+				Name="Release|x64">
+				<Tool 
+					Name="CppCmplrTool"
+					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
 			</FileConfiguration>
 		</File>
 		<File 
@@ -923,8 +923,6 @@
 			</FileConfiguration>
 		</File>
 		<File 
-			RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"/>
-		<File 
 			RelativePath="..\..\..\src\libmycpp\stvalue.cpp">
 			<FileConfiguration 
 				Name="Debug|Win32">
@@ -951,6 +949,8 @@
 					ObjectFile="$(IntDir)\$(InputName)1.obj"/>
 			</FileConfiguration>
 		</File>
+		<File 
+			RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"/>
 		<File 
 			RelativePath="..\..\..\src\libfbcpp\svc.cpp"/>
 		<File 

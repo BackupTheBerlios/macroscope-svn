@@ -1005,6 +1005,7 @@ void NodeClient::main()
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ){
                   if( si->mtime_ >= rftime ) rftime = si->mtime_ - 1;
+                  si->mtime_ = ~uint64_t(0);
                   si->ftime_ = rftime;
                   if( fullDump ) si->stime_ = rStartTime;
                 }

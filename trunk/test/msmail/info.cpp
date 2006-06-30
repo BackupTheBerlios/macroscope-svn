@@ -516,7 +516,7 @@ Server::Data::~Data()
 {
 }
 //------------------------------------------------------------------------------
-Server::Data::Data() : mtime_(0), stime_(gettimeofday())
+Server::Data::Data() : mtime_(~uint64_t(0)), stime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
@@ -527,7 +527,7 @@ bool Server::Data::registerUserNL(const UserInfo & info,uint64_t ftime,uint64_t 
     if( info.mtime_ > ftime ){
       users_.insert(userList_.safeAdd(p = new UserInfo(info)));
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -550,7 +550,7 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,uint64_t ftime,uint64_t mt
     if( info.mtime_ > ftime ){
       keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -573,7 +573,7 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,uint64_t ftime,uint64_
     if( info.mtime_ > ftime ){
       groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -596,7 +596,7 @@ bool Server::Data::registerServerNL(const ServerInfo & info,uint64_t ftime,uint6
     if( info.mtime_ > ftime ){
       servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -624,7 +624,7 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t fti
     if( link.mtime_ > ftime ){
       user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -647,7 +647,7 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t f
     if( link.mtime_ > ftime ){
       key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -670,14 +670,15 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t
     if( link.mtime_ > ftime ){
       key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
       p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
+      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
     if( link.mtime_ > ftime && p->server_.strcasecmp(link.server_) != 0 ){
-      p->mtime_ = p->atime_;
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
+      if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       p->server_ = link.server_;
       return true;
     }
