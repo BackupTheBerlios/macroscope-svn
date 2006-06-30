@@ -1003,10 +1003,11 @@ void NodeClient::main()
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 data.orNL(tdata,rftime);
+                if( data.mtime_ < ~uint64_t(0) && data.mtime_ >= rftime )
+                  rftime = data.mtime_ - 1;
+                data.mtime_ = 0;
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ){
-                  if( si->mtime_ >= rftime ) rftime = si->mtime_ - 1;
-                  si->mtime_ = 0;
                   si->ftime_ = rftime;
                   if( fullDump ) si->stime_ = rStartTime;
                 }

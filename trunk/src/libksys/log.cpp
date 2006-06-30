@@ -102,8 +102,7 @@ void LogFile::rotate(uint64_t size)
   if( rotatedFileCount_ > 0 && size <= rotationThreshold_) return;
   if( isRunInFiber() ){
     AsyncFile flock(afile_->fileName() + ".lck");
-    flock.removeAfterClose(true);
-    flock.open();
+    flock.createIfNotExist(true).removeAfterClose(true).open();
     if( flock.tryWRLock(0,0) ){
       if( afile_->size() <= rotationThreshold_) return;
       utf8::String fileExt(getFileExt(afile_->fileName()));
@@ -151,8 +150,7 @@ void LogFile::rotate(uint64_t size)
   }
   else {
     FileHandleContainer flock(file_.fileName() + ".lck");
-    flock.removeAfterClose(true);
-    flock.open();
+    flock.createIfNotExist(true).removeAfterClose(true).open();
     if( flock.tryWRLock(0,0) ){
       utf8::String fileExt(getFileExt(file_.fileName()));
       Stat st;
