@@ -599,19 +599,19 @@ class Server : public ksock::Server {
         FiberMutex & mutex() const;
         uint64_t & stime() const;
 
-        bool registerUserNL(const UserInfo & info,uint64_t ftime = 0);
+        bool registerUserNL(const UserInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
         bool registerUser(const UserInfo & info,uint64_t ftime = 0);
-        bool registerKeyNL(const KeyInfo & info,uint64_t ftime = 0);
+        bool registerKeyNL(const KeyInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
         bool registerKey(const KeyInfo & info,uint64_t ftime = 0);
-        bool registerGroupNL(const GroupInfo & info,uint64_t ftime = 0);
+        bool registerGroupNL(const GroupInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
         bool registerGroup(const GroupInfo & info,uint64_t ftime = 0);
-        bool registerServerNL(const ServerInfo & info,uint64_t ftime = 0);
+        bool registerServerNL(const ServerInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
         bool registerServer(const ServerInfo & info,uint64_t ftime = 0);
-        bool registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime = 0);
+        bool registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime = 0,uint64_t mtime = 0);
         bool registerUser2KeyLink(const User2KeyLink & link,uint64_t ftime = 0);
-        bool registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime = 0);
+        bool registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime = 0,uint64_t mtime = 0);
         bool registerKey2GroupLink(const Key2GroupLink & link,uint64_t ftime = 0);
-        bool registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime = 0);
+        bool registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime = 0,uint64_t mtime = 0);
         bool registerKey2ServerLink(const Key2ServerLink & link,uint64_t ftime = 0);
         void sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
         void sendDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
@@ -622,7 +622,7 @@ class Server : public ksock::Server {
         void dumpNL(utf8::String::Stream & stream) const;
         void dump(utf8::String::Stream & stream) const;
         Data & clear();
-        bool orNL(const Data & a,uint64_t ftime = 0);
+        bool orNL(const Data & a,uint64_t ftime = 0,uint64_t mtime = 0);
         bool or(const Data & a,uint64_t ftime = 0);
         Data & xorNL(const Data & data1,const Data & data2,uint64_t ftime = 0);
         Data & xor(const Data & data1,const Data & data2,uint64_t ftime = 0);

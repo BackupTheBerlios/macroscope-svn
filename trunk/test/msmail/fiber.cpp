@@ -1001,7 +1001,7 @@ void NodeClient::main()
               getCode();
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-                data.orNL(tdata);
+                data.orNL(tdata,rftime);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ){
                   if( si->mtime_ >= rftime ) rftime = si->mtime_ - 1;

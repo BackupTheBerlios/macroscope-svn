@@ -520,13 +520,13 @@ Server::Data::Data() : mtime_(0), stime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUserNL(const UserInfo & info,uint64_t ftime)
+bool Server::Data::registerUserNL(const UserInfo & info,uint64_t ftime,uint64_t mtime)
 {
   UserInfo * p = users_.find(info);
   if( p == NULL ){
     if( info.mtime_ > ftime ){
       users_.insert(userList_.safeAdd(p = new UserInfo(info)));
-      p->mtime_ = gettimeofday();
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
       if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       return true;
     }
@@ -543,13 +543,13 @@ bool Server::Data::registerUser(const UserInfo & info,uint64_t ftime)
   return registerUserNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKeyNL(const KeyInfo & info,uint64_t ftime)
+bool Server::Data::registerKeyNL(const KeyInfo & info,uint64_t ftime,uint64_t mtime)
 {
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
     if( info.mtime_ > ftime ){
       keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
-      p->mtime_ = gettimeofday();
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
       if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       return true;
     }
@@ -566,13 +566,13 @@ bool Server::Data::registerKey(const KeyInfo & info,uint64_t ftime)
   return registerKeyNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerGroupNL(const GroupInfo & info,uint64_t ftime)
+bool Server::Data::registerGroupNL(const GroupInfo & info,uint64_t ftime,uint64_t mtime)
 {
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
     if( info.mtime_ > ftime ){
       groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
-      p->mtime_ = gettimeofday();
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
       if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       return true;
     }
@@ -589,13 +589,13 @@ bool Server::Data::registerGroup(const GroupInfo & info,uint64_t ftime)
   return registerGroupNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerServerNL(const ServerInfo & info,uint64_t ftime)
+bool Server::Data::registerServerNL(const ServerInfo & info,uint64_t ftime,uint64_t mtime)
 {
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
     if( info.mtime_ > ftime ){
       servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
-      p->mtime_ = gettimeofday();
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
       if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       return true;
     }
@@ -617,13 +617,13 @@ bool Server::Data::registerServer(const ServerInfo & info,uint64_t ftime)
   return registerServerNL(info,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime)
+bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime,uint64_t mtime)
 {
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
     if( link.mtime_ > ftime ){
       user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
-      p->mtime_ = gettimeofday();
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
       if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       return true;
     }
@@ -640,13 +640,13 @@ bool Server::Data::registerUser2KeyLink(const User2KeyLink & link,uint64_t ftime
   return registerUser2KeyLinkNL(link,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime)
+bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime,uint64_t mtime)
 {
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
     if( link.mtime_ > ftime ){
       key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
-      p->mtime_ = gettimeofday();
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
       if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       return true;
     }
@@ -663,13 +663,13 @@ bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link,uint64_t fti
   return registerKey2GroupLinkNL(link,ftime);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime)
+bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime,uint64_t mtime)
 {
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
     if( link.mtime_ > ftime ){
       key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
-      p->mtime_ = gettimeofday();
+      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
       if( p->mtime_ > mtime_ ) mtime_ = p->mtime_;
       return true;
     }
@@ -885,24 +885,24 @@ Server::Data & Server::Data::clear()
   return *this;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::orNL(const Data & a,uint64_t ftime)
+bool Server::Data::orNL(const Data & a,uint64_t ftime,uint64_t mtime)
 {
   intptr_t i;
   bool r = false;
   for( i = a.userList_.count() - 1; i >= 0; i-- )
-    r = registerUserNL(a.userList_[i],ftime) || r;
+    r = registerUserNL(a.userList_[i],ftime,mtime) || r;
   for( i = a.keyList_.count() - 1; i >= 0; i-- )
-    r = registerKeyNL(a.keyList_[i],ftime) || r;
+    r = registerKeyNL(a.keyList_[i],ftime,mtime) || r;
   for( i = a.groupList_.count() - 1; i >= 0; i-- )
-    r = registerGroupNL(a.groupList_[i],ftime) || r;
+    r = registerGroupNL(a.groupList_[i],ftime,mtime) || r;
   for( i = a.serverList_.count() - 1; i >= 0; i-- )
-    r = registerServerNL(a.serverList_[i],ftime) || r;
+    r = registerServerNL(a.serverList_[i],ftime,mtime) || r;
   for( i = a.user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],ftime) || r;
+    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],ftime,mtime) || r;
   for( i = a.key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],ftime) || r;
+    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],ftime,mtime) || r;
   for( i = a.key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],ftime) || r;
+    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],ftime,mtime) || r;
   return r;
 }
 //------------------------------------------------------------------------------
