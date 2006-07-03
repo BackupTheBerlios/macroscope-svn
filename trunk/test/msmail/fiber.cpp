@@ -228,11 +228,11 @@ void ServerFiber::registerDB()
     diff.xorNL(data,rdata);
     tdata.orNL(data,host); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
+    data.setSendedToNL(host);
   }
   tdata.sendDatabaseNL(*this);
   putCode(eOK);
   flush();
-  data.setSendedTo(host);
 //  if( dbChanged ) server_.startNodesExchange();
   stream.clear() << serverTypeName_[serverType_] <<
     ": database changes sended to " << host << "\n";
@@ -1002,12 +1002,12 @@ void NodeClient::main()
                 ldata.orNL(data,fullDump ? utf8::String() : host);
               }
               ldata.sendDatabaseNL(*this);
-              data.setSendedTo(host);
               tdata.recvDatabaseNL(*this);
               getCode();
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 data.orNL(tdata);
+                data.setSendedTo(host);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL && fullDump ) si->stime_ = rStartTime;
               }
