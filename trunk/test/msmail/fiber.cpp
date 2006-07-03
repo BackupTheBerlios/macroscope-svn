@@ -218,7 +218,7 @@ void ServerFiber::registerDB()
   host = server;
   if( port != defaultPort ) host += ":" + utf8::int2Str(port);
   Server::Data rdata, tdata, diff;
-  rdata.recvDatabase(*this);
+  rdata.recvDatabaseNL(*this);
   stream << serverTypeName_[serverType_] <<
     ": database changes received from " << host << "\n";
   rdata.dumpNL(stream);

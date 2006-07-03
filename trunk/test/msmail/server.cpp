@@ -49,7 +49,7 @@ void Server::open()
 //  maxThreads(1);
   ksock::Server::open();
 //  startNodesExchange();
-//  attachFiber(new NodeClient(*this,stStandalone,utf8::String(),true));
+  attachFiber(new NodeClient(*this,stStandalone,utf8::String(),true));
   uintptr_t i;
   for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",1); i > 0; i-- )
     attachFiber(new SpoolWalker(*this));
