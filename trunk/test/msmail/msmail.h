@@ -208,9 +208,9 @@ class UserInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
-    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<UserInfo> hashNode_;
     utf8::String name_;
+    Array<utf8::String> sendedTo_;
   protected:
   private:
 };
@@ -249,9 +249,9 @@ class KeyInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
-    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<KeyInfo> hashNode_;
     utf8::String name_;
+    Array<utf8::String> sendedTo_;
   protected:
   private:
 };
@@ -290,9 +290,9 @@ class GroupInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
-    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<GroupInfo> hashNode_;
     utf8::String name_;
+    Array<utf8::String> sendedTo_;
   protected:
   private:
 };
@@ -331,12 +331,11 @@ class ServerInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
-    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     uint64_t stime_; // время старта процесса
-    uint64_t ftime_; // время последнего обмена с сервером
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
     ServerType type_;
+    Array<utf8::String> sendedTo_;
   protected:
   private:
 };
@@ -375,10 +374,10 @@ class User2KeyLink {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
-    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<User2KeyLink> hashNode_;
     utf8::String user_;
     utf8::String key_;
+    Array<utf8::String> sendedTo_;
   protected:
   private:
 };
@@ -420,10 +419,10 @@ class Key2GroupLink {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
-    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<Key2GroupLink> hashNode_;
     utf8::String key_;
     utf8::String group_;
+    Array<utf8::String> sendedTo_;
   protected:
   private:
 };
@@ -462,10 +461,10 @@ class Key2ServerLink {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
-    uint64_t mtime_; // время последней регистрации (для передачи обновлений)
     mutable EmbeddedHashNode<Key2ServerLink> hashNode_;
     utf8::String key_;
     utf8::String server_;
+    Array<utf8::String> sendedTo_;
   protected:
   private:
 };
@@ -599,33 +598,35 @@ class Server : public ksock::Server {
         FiberMutex & mutex() const;
         uint64_t & stime() const;
 
-        bool registerUserNL(const UserInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool registerUser(const UserInfo & info,uint64_t ftime = 0);
-        bool registerKeyNL(const KeyInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool registerKey(const KeyInfo & info,uint64_t ftime = 0);
-        bool registerGroupNL(const GroupInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool registerGroup(const GroupInfo & info,uint64_t ftime = 0);
-        bool registerServerNL(const ServerInfo & info,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool registerServer(const ServerInfo & info,uint64_t ftime = 0);
-        bool registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool registerUser2KeyLink(const User2KeyLink & link,uint64_t ftime = 0);
-        bool registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool registerKey2GroupLink(const Key2GroupLink & link,uint64_t ftime = 0);
-        bool registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool registerKey2ServerLink(const Key2ServerLink & link,uint64_t ftime = 0);
-        void sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
-        void sendDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
-        void recvDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime = 0);
-        void recvDatabase(ksock::AsyncSocket & socket,uint64_t ftime = 0);
+        bool registerUserNL(const UserInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerUser(const UserInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerKeyNL(const KeyInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerKey(const KeyInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerGroupNL(const GroupInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerGroup(const GroupInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerServerNL(const ServerInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerServer(const ServerInfo & info,const utf8::String & sendingTo = utf8::String());
+        bool registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::String & sendingTo = utf8::String());
+        bool registerUser2KeyLink(const User2KeyLink & link,const utf8::String & sendingTo = utf8::String());
+        bool registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8::String & sendingTo = utf8::String());
+        bool registerKey2GroupLink(const Key2GroupLink & link,const utf8::String & sendingTo = utf8::String());
+        bool registerKey2ServerLinkNL(const Key2ServerLink & link,const utf8::String & sendingTo = utf8::String());
+        bool registerKey2ServerLink(const Key2ServerLink & link,const utf8::String & sendingTo = utf8::String());
+        void sendDatabaseNL(ksock::AsyncSocket & socket,const utf8::String & sendingTo = utf8::String());
+        void sendDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo = utf8::String());
+        void recvDatabaseNL(ksock::AsyncSocket & socket,const utf8::String & sendingTo = utf8::String());
+        void recvDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo = utf8::String());
         utf8::String getNodeListNL() const;
         utf8::String getNodeList() const;
         void dumpNL(utf8::String::Stream & stream) const;
         void dump(utf8::String::Stream & stream) const;
         Data & clear();
-        bool orNL(const Data & a,uint64_t ftime = 0,uint64_t mtime = 0);
-        bool or(const Data & a,uint64_t ftime = 0);
-        Data & xorNL(const Data & data1,const Data & data2,uint64_t ftime = 0);
-        Data & xor(const Data & data1,const Data & data2,uint64_t ftime = 0);
+        bool orNL(const Data & a,const utf8::String & sendingTo = utf8::String());
+        bool or(const Data & a,const utf8::String & sendingTo = utf8::String());
+        Data & xorNL(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
+        Data & xor(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
+        Data & setSendedToNL(const utf8::String & sendingTo);
+        Data & setSendedTo(const utf8::String & sendingTo);
         bool sweepNL(uint64_t stime,utf8::String::Stream * log = NULL);
         bool sweep(uint64_t stime,utf8::String::Stream * log = NULL);
         utf8::String getUserListNL(bool quoted = false) const;
@@ -641,7 +642,6 @@ class Server : public ksock::Server {
         Data(const Data &){}
         void operator = (const Data &){}
 
-        mutable uint64_t mtime_;
 // last time when database sweep
         mutable uint64_t stime_;
         mutable FiberMutex mutex_;

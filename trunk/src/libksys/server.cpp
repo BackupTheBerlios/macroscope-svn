@@ -102,6 +102,7 @@ void Server::open()
   acceptFiber->listen();
   acceptFiber->mutex_.acquire();
   attachFiber(fiber);
+  acceptFiber->thread()->maxFibersPerThread(1);
   acceptFiber_ = acceptFiber;
 }
 //------------------------------------------------------------------------------

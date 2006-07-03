@@ -374,6 +374,14 @@ utf8::String stringPartByNo(const utf8::String & s,uintptr_t n,const char * deli
   return i.bof() || n > 0 ? utf8::String() : s;
 }
 //---------------------------------------------------------------------------
+utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String & s1,const utf8::String & separator)
+{
+  utf8::String::Iterator i(s.strcasestr(separator));
+  s0 = utf8::String(s,i);
+  s1 = i + 1;
+  return s;
+}
+//---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 HMODULE getModuleHandleByAddr(void * addr)
 {

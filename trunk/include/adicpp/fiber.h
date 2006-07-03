@@ -772,6 +772,8 @@ class BaseThread : public Thread, public Fiber {
 
     void postRequest(AsyncDescriptor * descriptor = NULL);
     void postEvent(AsyncEvent * event);
+    const uintptr_t & maxFibersPerThread() const;
+    BaseThread & maxFibersPerThread(uintptr_t mfpt);
   protected:
   private:
     BaseServer * server_;
@@ -789,6 +791,7 @@ class BaseThread : public Thread, public Fiber {
       AsyncDescriptor::clusterListNodeObject
     > descriptorsList_;
 //    uintptr_t maxStackSize_;
+    uintptr_t mfpt_;
 
     static uint8_t requester_[];
     static Requester & requester();
@@ -851,6 +854,17 @@ inline Fiber * const Fiber::mainFiber() const
   return thread_;
 }
 //---------------------------------------------------------------------------
+inline const uintptr_t & BaseThread::maxFibersPerThread() const
+{
+  return mfpt_;
+}
+//------------------------------------------------------------------------------
+inline BaseThread & BaseThread::maxFibersPerThread(uintptr_t mfpt)
+{
+  mfpt_ = mfpt;
+  return *this;
+}
+//------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class BaseServer {
@@ -860,8 +874,6 @@ class BaseServer {
     virtual ~BaseServer();
     BaseServer();
 
-    const uintptr_t & maxFibersPerThread() const;
-    BaseServer &      maxFibersPerThread(uintptr_t mfpt);
     const uintptr_t & maxThreads() const;
     BaseServer &      maxThreads(uintptr_t mt);
     const uintptr_t & fiberStackSize() const;
@@ -897,7 +909,6 @@ class BaseServer {
       BaseThread::serverListNode,
       BaseThread::serverListNodeObject
     > threads_;
-    uintptr_t mfpt_;
     uintptr_t mt_;
     uintptr_t fiberStackSize_;
     uint64_t fiberTimeout_;
@@ -914,17 +925,6 @@ inline const BaseServer::HowCloseServer & BaseServer::howCloseServer() const
 inline BaseServer & BaseServer::howCloseServer(uintptr_t how)
 {
   howCloseServer_ = (HowCloseServer) how;
-  return *this;
-}
-//------------------------------------------------------------------------------
-inline const uintptr_t & BaseServer::maxFibersPerThread() const
-{
-  return mfpt_;
-}
-//------------------------------------------------------------------------------
-inline BaseServer & BaseServer::maxFibersPerThread(uintptr_t mfpt)
-{
-  mfpt_ = mfpt;
   return *this;
 }
 //------------------------------------------------------------------------------

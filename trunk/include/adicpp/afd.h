@@ -188,10 +188,12 @@ inline AsyncFile & AsyncFile::createIfNotExist(bool v)
 template <typename T> class AutoFileWRLock {
   public:
     ~AutoFileWRLock();
-    AutoFileWRLock(T & file,uint64_t pos,uint64_t size);
+    AutoFileWRLock();
+    AutoFileWRLock(T & file,uint64_t pos = 0,uint64_t size = 0);
+    AutoFileWRLock<T> & setLocked(T & file,uint64_t pos = 0,uint64_t size = 0);
   protected:
   private:
-    T & file_;
+    T * file_;
     uint64_t pos_;
     uint64_t size_;
 
@@ -201,13 +203,29 @@ template <typename T> class AutoFileWRLock {
 //---------------------------------------------------------------------------
 template<typename T> inline AutoFileWRLock<T>::~AutoFileWRLock()
 {
-  file_.unLock(pos_,size_);
+  if( file_ != NULL ) file_->unLock(pos_,size_);
 }
 //---------------------------------------------------------------------------
-template<typename T> inline AutoFileWRLock<T>::AutoFileWRLock(T & file,uint64_t pos,uint64_t size) :
-  file_(file), pos_(pos), size_(size)
+template<typename T> inline
+AutoFileWRLock<T>::AutoFileWRLock() : file_(NULL), pos_(0), size_(0)
 {
-  file_.wrLock(pos,size);
+}
+//---------------------------------------------------------------------------
+template<typename T> inline
+AutoFileWRLock<T>::AutoFileWRLock(T & file,uint64_t pos,uint64_t size) :
+  file_(&file), pos_(pos), size_(size)
+{
+  file_->wrLock(pos,size);
+}
+//---------------------------------------------------------------------------
+template<typename T> inline
+AutoFileWRLock<T> & AutoFileWRLock<T>::setLocked(T & file,uint64_t pos,uint64_t size)
+{
+  assert( file_ == NULL );
+  file_ = &file;
+  pos_ = pos;
+  size_ = size;
+  return *this;
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

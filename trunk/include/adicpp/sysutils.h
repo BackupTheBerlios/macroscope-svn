@@ -155,6 +155,7 @@ utf8::String  unScreenChar(const utf8::String::Iterator & ii, uintptr_t & screen
 utf8::String  unScreenString(const utf8::String & s);
 uintptr_t     enumStringParts(const utf8::String & s, const char * delim = ",;");
 utf8::String  stringPartByNo(const utf8::String & s, uintptr_t n, const char * delim = ",;");
+utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String & s1,const utf8::String & separator);
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 HMODULE       getModuleHandleByAddr(void * addr = NULL);

@@ -908,7 +908,7 @@ void AsyncOpenFileSlave::threadExecute()
       else if( request->type_ == etResolveAddress ){
         int32_t err = 0;
         try {
-          request->string0_ = request->address_.resolve();
+          request->string0_ = request->address_.resolve(request->defPort_);
         }
         catch( ExceptionSP & e ){
           err = e->code();

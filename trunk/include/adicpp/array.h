@@ -52,12 +52,12 @@ template< class T> class Array {
     const T &  operator [] (uintptr_t i) const;
 
     const uintptr_t & count() const;
-    Array< T> &       clear();
+    Array<T> &       clear();
     T * &             ptr();
     const T * &       ptr() const;
-    Array< T> &       resize(uintptr_t newSize);
-    Array< T> &       add(const T & element);
-    Array< T> &       insert(uintptr_t i, const T & element);
+    Array<T> &       resize(uintptr_t newSize);
+    Array<T> &       add(const T & element);
+    Array<T> &       insert(uintptr_t i, const T & element);
 
     intptr_t          search(const T & element) const;
     intptr_t          bSearch(const T & element) const;
@@ -65,27 +65,27 @@ template< class T> class Array {
     intptr_t          searchCase(const T & element) const;
     intptr_t          bSearchCase(const T & element) const;
     uintptr_t         bSearchCase(const T & element, intptr_t & c) const;
-    Array< T> &       remove(uintptr_t i);
+    Array<T> &       remove(uintptr_t i);
 
-    Array< T> &       setBit(uintptr_t n);
-    Array< T> &       resetBit(uintptr_t n);
-    Array< T> &       invertBit(uintptr_t n);
+    Array<T> &       setBit(uintptr_t n);
+    Array<T> &       resetBit(uintptr_t n);
+    Array<T> &       invertBit(uintptr_t n);
     uintptr_t         bit(uintptr_t n) const;
 #if !HAVE_INTPTR_T_AS_INTMAX_T
-    Array< T> &       setBit(uintmax_t n);
-    Array< T> &       resetBit(uintmax_t n);
-    Array< T> &       invertBit(uintmax_t n);
+    Array<T> &       setBit(uintmax_t n);
+    Array<T> &       resetBit(uintmax_t n);
+    Array<T> &       invertBit(uintmax_t n);
     uintptr_t         bit(uintmax_t n) const;
 #endif
-    Array< T> &       setBitRange(uintptr_t n, uintptr_t c);
-    Array< T> &       resetBitRange(uintptr_t n, uintptr_t c);
-    Array< T> &       invertBitRange(uintptr_t n, uintptr_t c);
+    Array<T> &       setBitRange(uintptr_t n, uintptr_t c);
+    Array<T> &       resetBitRange(uintptr_t n, uintptr_t c);
+    Array<T> &       invertBitRange(uintptr_t n, uintptr_t c);
+    Array<T> & replace(Array< T> & array);
   protected:
     T *       ptr_;
     uintptr_t count_;
 
-                      Array(uintptr_t count);
-    Array< T> &       replace(Array< T> & array);
+    Array(uintptr_t count);
   private:
 };
 //-----------------------------------------------------------------------------
@@ -527,13 +527,12 @@ ST & operator << (ST & stream,const Array<T> & array)
 template <typename T,typename ST> inline
 ST & operator >> (ST & stream,Array<T> & array)
 {
+  Array<T> t;
   uint64_t u;
   stream >> u;
-  while( u-- > 0 ){
-    T element;
-    stream >> element;
-    array.add(element);
-  }
+  t.resize((uintptr_t) u);
+  while( u > 0 ) stream >> t[(uintptr_t) --u];
+  array.replace(t);
   return stream;
 }
 //-----------------------------------------------------------------------------

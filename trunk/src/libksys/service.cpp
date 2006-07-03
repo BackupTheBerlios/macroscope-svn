@@ -292,7 +292,7 @@ Services::Services(const utf8::String &
 #if defined(__WIN32__) || defined(__WIN64__)
   handle_ = NULL;
   serviceStartTable_.resize(sizeof(services_) / sizeof(services_[0]) + 1);
-  handle_ = OpenSCManagerW(NULL,NULL,SC_MANAGER_ALL_ACCESS | GENERIC_READ | GENERIC_READ | GENERIC_EXECUTE);
+  handle_ = OpenSCManagerW(NULL,NULL,SC_MANAGER_ALL_ACCESS | GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE);
   if( handle_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
     throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));

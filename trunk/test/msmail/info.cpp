@@ -201,11 +201,11 @@ UserInfo::~UserInfo()
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo() : atime_(gettimeofday()), mtime_(atime_)
+UserInfo::UserInfo() : atime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
+UserInfo::UserInfo(const utf8::String & name) : atime_(gettimeofday()), name_(name)
 {
 }
 //------------------------------------------------------------------------------
@@ -217,25 +217,24 @@ UserInfo::UserInfo(const UserInfo & a)
 UserInfo & UserInfo::operator = (const UserInfo & a)
 {
   atime_ = a.atime_;
-  mtime_ = a.mtime_;
   name_ = a.name_;
+  sendedTo_ = a.sendedTo_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,UserInfo & a)
 {
-  return s >> a.name_ >> a.atime_ >> a.mtime_;
+  return s >> a.name_ >> a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a)
 {
-  return s << a.name_ << a.atime_ << a.mtime_;
+  return s << a.name_ << a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const UserInfo & a)
 {
-  return s << a.name_ << ", atime: " <<
-    getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
+  return s << a.name_ << ", atime: " << getTimeString(a.atime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -244,11 +243,11 @@ KeyInfo::~KeyInfo()
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo() : atime_(gettimeofday()), mtime_(atime_)
+KeyInfo::KeyInfo() : atime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
+KeyInfo::KeyInfo(const utf8::String & name) : atime_(gettimeofday()), name_(name)
 {
 }
 //------------------------------------------------------------------------------
@@ -260,25 +259,24 @@ KeyInfo::KeyInfo(const KeyInfo & a)
 KeyInfo & KeyInfo::operator = (const KeyInfo & a)
 {
   atime_ = a.atime_;
-  mtime_ = a.mtime_;
   name_ = a.name_;
+  sendedTo_ = a.sendedTo_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,KeyInfo & a)
 {
-  return s >> a.name_ >> a.atime_ >> a.mtime_;
+  return s >> a.name_ >> a.atime_ >> a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a)
 {
-  return s << a.name_ << a.atime_ << a.mtime_;
+  return s << a.name_ << a.atime_ << a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const KeyInfo & a)
 {
-  return s << a.name_ <<
-    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
+  return s << a.name_ << ", atime: " << getTimeString(a.atime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -287,11 +285,11 @@ GroupInfo::~GroupInfo()
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo() : atime_(gettimeofday()), mtime_(atime_)
+GroupInfo::GroupInfo() : atime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo(const utf8::String & name) : atime_(gettimeofday()), mtime_(atime_), name_(name)
+GroupInfo::GroupInfo(const utf8::String & name) : atime_(gettimeofday()), name_(name)
 {
 }
 //------------------------------------------------------------------------------
@@ -303,25 +301,24 @@ GroupInfo::GroupInfo(const GroupInfo & a)
 GroupInfo & GroupInfo::operator = (const GroupInfo & a)
 {
   atime_ = a.atime_;
-  mtime_ = a.mtime_;
   name_ = a.name_;
+  sendedTo_ = a.sendedTo_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,GroupInfo & a)
 {
-  return s >> a.name_ >> a.atime_ >> a.mtime_;
+  return s >> a.name_ >> a.atime_ >> a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a)
 {
-  return s << a.name_ << a.atime_ << a.mtime_;
+  return s << a.name_ << a.atime_ << a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const GroupInfo & a)
 {
-  return s << a.name_ <<
-    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
+  return s << a.name_ << ", atime: " << getTimeString(a.atime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -331,12 +328,12 @@ ServerInfo::~ServerInfo()
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo() :
-  atime_(gettimeofday()), mtime_(atime_), stime_(0), ftime_(0), type_(stStandalone)
+  atime_(gettimeofday()), stime_(0), type_(stStandalone)
 {
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo(const utf8::String & name,ServerType type) :
-  atime_(gettimeofday()), mtime_(atime_), stime_(0), ftime_(0), name_(name), type_(type)
+  atime_(gettimeofday()), stime_(0), name_(name), type_(type)
 {
 }
 //------------------------------------------------------------------------------
@@ -348,31 +345,29 @@ ServerInfo::ServerInfo(const ServerInfo & a)
 ServerInfo & ServerInfo::operator = (const ServerInfo & a)
 {
   atime_ = a.atime_;
-  mtime_ = a.mtime_;
   stime_ = a.stime_;
-  ftime_ = a.ftime_;
   name_ = a.name_;
   type_ = a.type_;
+  sendedTo_ = a.sendedTo_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 {
   uint8_t v;
-  s >> a.name_ >> a.atime_ >> a.mtime_ >> v;
+  s >> a.name_ >> a.atime_ >> v >> a.sendedTo_;
   a.type_ = ServerType(v);
   return s;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 {
-  return s << a.name_ << a.atime_ << a.mtime_ << (uint8_t) a.type_;
+  return s << a.name_ << a.atime_ << (uint8_t) a.type_ << a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a)
 {
-  return s << a.name_ << " " << serverTypeName_[a.type_] <<
-    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
+  return s << a.name_ << " " << serverTypeName_[a.type_] << ", atime: " << getTimeString(a.atime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -381,12 +376,12 @@ User2KeyLink::~User2KeyLink()
 {
 }
 //------------------------------------------------------------------------------
-User2KeyLink::User2KeyLink() : atime_(gettimeofday()), mtime_(atime_)
+User2KeyLink::User2KeyLink() : atime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
 User2KeyLink::User2KeyLink(const utf8::String & userName,const utf8::String & keyName) :
-  atime_(gettimeofday()), mtime_(atime_), user_(userName), key_(keyName)
+  atime_(gettimeofday()), user_(userName), key_(keyName)
 {
 }
 //------------------------------------------------------------------------------
@@ -398,26 +393,25 @@ User2KeyLink::User2KeyLink(const User2KeyLink & a)
 User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
 {
   atime_ = a.atime_;
-  mtime_ = a.mtime_;
   user_ = a.user_;
   key_ = a.key_;
+  sendedTo_ = a.sendedTo_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,User2KeyLink & a)
 {
-  return s >> a.user_ >> a.key_ >> a.atime_ >> a.mtime_;
+  return s >> a.user_ >> a.key_ >> a.atime_ >> a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a)
 {
-  return s << a.user_ << a.key_ << a.atime_ << a.mtime_;
+  return s << a.user_ << a.key_ << a.atime_ << a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const User2KeyLink & a)
 {
-  return s << a.user_ << " " << a.key_ <<
-    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
+  return s << a.user_ << " " << a.key_ << ", atime: " << getTimeString(a.atime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -426,12 +420,12 @@ Key2GroupLink::~Key2GroupLink()
 {
 }
 //------------------------------------------------------------------------------
-Key2GroupLink::Key2GroupLink() : atime_(gettimeofday()), mtime_(atime_)
+Key2GroupLink::Key2GroupLink() : atime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
 Key2GroupLink::Key2GroupLink(const utf8::String & keyName,const utf8::String & groupName) :
-  atime_(gettimeofday()), mtime_(atime_), key_(keyName), group_(groupName)
+  atime_(gettimeofday()), key_(keyName), group_(groupName)
 {
 }
 //------------------------------------------------------------------------------
@@ -443,26 +437,25 @@ Key2GroupLink::Key2GroupLink(const Key2GroupLink & a)
 Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
 {
   atime_ = a.atime_;
-  mtime_ = a.mtime_;
   key_ = a.key_;
   group_ = a.group_;
+  sendedTo_ = a.sendedTo_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2GroupLink & a)
 {
-  return s >> a.key_ >> a.group_ >> a.atime_ >> a.mtime_;
+  return s >> a.key_ >> a.group_ >> a.atime_ >> a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a)
 {
-  return s << a.key_ << a.group_ << a.atime_ << a.mtime_;
+  return s << a.key_ << a.group_ << a.atime_ << a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2GroupLink & a)
 {
-  return s << a.key_ << " " << a.group_ <<
-    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
+  return s << a.key_ << " " << a.group_ << ", atime: " << getTimeString(a.atime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -471,12 +464,12 @@ Key2ServerLink::~Key2ServerLink()
 {
 }
 //------------------------------------------------------------------------------
-Key2ServerLink::Key2ServerLink() : atime_(gettimeofday()), mtime_(atime_)
+Key2ServerLink::Key2ServerLink() : atime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
 Key2ServerLink::Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName) :
-  atime_(gettimeofday()), mtime_(atime_), key_(keyName), server_(serverName)
+  atime_(gettimeofday()), key_(keyName), server_(serverName)
 {
 }
 //------------------------------------------------------------------------------
@@ -488,26 +481,25 @@ Key2ServerLink::Key2ServerLink(const Key2ServerLink & a)
 Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)
 {
   atime_ = a.atime_;
-  mtime_ = a.mtime_;
   key_ = a.key_;
   server_ = a.server_;
+  sendedTo_ = a.sendedTo_;
   return *this;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2ServerLink & a)
 {
-  return s >> a.key_ >> a.server_ >> a.atime_ >> a.mtime_;
+  return s >> a.key_ >> a.server_ >> a.atime_ >> a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & a)
 {
-  return s << a.key_ << a.server_ << a.atime_ << a.mtime_;
+  return s << a.key_ << a.server_ << a.atime_ << a.sendedTo_;
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2ServerLink & a)
 {
-  return s << a.key_ << " " << a.server_ <<
-    ", atime: " << getTimeString(a.atime_) << ", mtime: " << getTimeString(a.mtime_);
+  return s << a.key_ << " " << a.server_ << ", atime: " << getTimeString(a.atime_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -516,18 +508,16 @@ Server::Data::~Data()
 {
 }
 //------------------------------------------------------------------------------
-Server::Data::Data() : mtime_(0), stime_(gettimeofday())
+Server::Data::Data() : stime_(gettimeofday())
 {
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUserNL(const UserInfo & info,uint64_t ftime,uint64_t mtime)
+bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sendingTo)
 {
   UserInfo * p = users_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ){
+    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
       users_.insert(userList_.safeAdd(p = new UserInfo(info)));
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -537,20 +527,18 @@ bool Server::Data::registerUserNL(const UserInfo & info,uint64_t ftime,uint64_t 
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUser(const UserInfo & info,uint64_t ftime)
+bool Server::Data::registerUser(const UserInfo & info,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerUserNL(info,ftime);
+  return registerUserNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKeyNL(const KeyInfo & info,uint64_t ftime,uint64_t mtime)
+bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendingTo)
 {
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ){
+    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
       keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -560,20 +548,18 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,uint64_t ftime,uint64_t mt
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey(const KeyInfo & info,uint64_t ftime)
+bool Server::Data::registerKey(const KeyInfo & info,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerKeyNL(info,ftime);
+  return registerKeyNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerGroupNL(const GroupInfo & info,uint64_t ftime,uint64_t mtime)
+bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & sendingTo)
 {
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ){
+    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
       groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -583,49 +569,44 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,uint64_t ftime,uint64_
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerGroup(const GroupInfo & info,uint64_t ftime)
+bool Server::Data::registerGroup(const GroupInfo & info,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerGroupNL(info,ftime);
+  return registerGroupNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerServerNL(const ServerInfo & info,uint64_t ftime,uint64_t mtime)
+bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String & sendingTo)
 {
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
-    if( info.mtime_ > ftime ){
+    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
       servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    if( info.mtime_ > ftime && info.type_ == stNode && info.type_ != p->type_ ){
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
+    if( info.type_ == stNode && info.type_ != p->type_ ){
       p->type_ = info.type_;
+      p->sendedTo_.clear();
       return true;
     }
   }
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerServer(const ServerInfo & info,uint64_t ftime)
+bool Server::Data::registerServer(const ServerInfo & info,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerServerNL(info,ftime);
+  return registerServerNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t ftime,uint64_t mtime)
+bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::String & sendingTo)
 {
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
-    if( link.mtime_ > ftime ){
+    if( link.sendedTo_.bSearchCase(sendingTo) < 0 ){
       user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -635,20 +616,18 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,uint64_t fti
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerUser2KeyLink(const User2KeyLink & link,uint64_t ftime)
+bool Server::Data::registerUser2KeyLink(const User2KeyLink & link,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerUser2KeyLinkNL(link,ftime);
+  return registerUser2KeyLinkNL(link,sendingTo);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t ftime,uint64_t mtime)
+bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8::String & sendingTo)
 {
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
-    if( link.mtime_ > ftime ){
+    if( link.sendedTo_.bSearchCase(sendingTo) < 0 ){
       key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
@@ -658,97 +637,94 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,uint64_t f
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link,uint64_t ftime)
+bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerKey2GroupLinkNL(link,ftime);
+  return registerKey2GroupLinkNL(link,sendingTo);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,uint64_t ftime,uint64_t mtime)
+bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const utf8::String & sendingTo)
 {
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
-    if( link.mtime_ > ftime ){
+    if( link.sendedTo_.bSearchCase(sendingTo) < 0 ){
       key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    if( link.mtime_ > ftime && p->server_.strcasecmp(link.server_) != 0 ){
-      p->mtime_ = mtime > 0 ? mtime : gettimeofday();
-      if( p->mtime_ < mtime_ ) mtime_ = p->mtime_;
+    if( p->server_.strcasecmp(link.server_) != 0 ){
       p->server_ = link.server_;
+      p->sendedTo_.clear();
       return true;
     }
   }
   return false;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::registerKey2ServerLink(const Key2ServerLink & link,uint64_t ftime)
+bool Server::Data::registerKey2ServerLink(const Key2ServerLink & link,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return registerKey2ServerLinkNL(link,ftime);
+  return registerKey2ServerLinkNL(link,sendingTo);
 }
 //------------------------------------------------------------------------------
-void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime)
+void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
 {
   intptr_t i;
   uint64_t u;
 
   u = 0;
   for( i = userList_.count() - 1; i >= 0; i-- )
-    if( userList_[i].mtime_ > ftime ) u++;
+    if( userList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
   socket << u;
   for( i = userList_.count() - 1; i >= 0; i-- )
-    if( userList_[i].mtime_ > ftime ) socket << userList_[i];
+    if( userList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << userList_[i];
   u = 0;
   for( i = keyList_.count() - 1; i >= 0; i-- )
-    if( keyList_[i].mtime_ > ftime ) u++;
+    if( keyList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
   socket << u;
   for( i = keyList_.count() - 1; i >= 0; i-- )
-    if( keyList_[i].mtime_ > ftime ) socket << keyList_[i];
+    if( keyList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << keyList_[i];
   u = 0;
   for( i = groupList_.count() - 1; i >= 0; i-- )
-    if( groupList_[i].mtime_ > ftime ) u++;
+    if( groupList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
   socket << u;
   for( i = groupList_.count() - 1; i >= 0; i-- )
-    if( groupList_[i].mtime_ > ftime ) socket << groupList_[i];
+    if( groupList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << groupList_[i];
   u = 0;
   for( i = serverList_.count() - 1; i >= 0; i-- )
-    if( serverList_[i].mtime_ > ftime ) u++;
+    if( serverList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
   socket << u;
   for( i = serverList_.count() - 1; i >= 0; i-- )
-    if( serverList_[i].mtime_ > ftime ) socket << serverList_[i];
+    if( serverList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << serverList_[i];
   u = 0;
   for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList_[i].mtime_ > ftime ) u++;
+    if( user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
   socket << u;
   for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList_[i].mtime_ > ftime ) socket << user2KeyLinkList_[i];
+    if( user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << user2KeyLinkList_[i];
   u = 0;
   for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList_[i].mtime_ > ftime ) u++;
+    if( key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
   socket << u;
   for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList_[i].mtime_ > ftime ) socket << key2GroupLinkList_[i];
+    if( key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << key2GroupLinkList_[i];
   u = 0;
   for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList_[i].mtime_ > ftime ) u++;
+    if( key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
   socket << u;
   for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList_[i].mtime_ > ftime ) socket << key2ServerLinkList_[i];
+    if( key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << key2ServerLinkList_[i];
 }
 //------------------------------------------------------------------------------
-void Server::Data::sendDatabase(ksock::AsyncSocket & socket,uint64_t ftime)
+void Server::Data::sendDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
 {
   AutoMutexRDLock<FiberMutex> lock(mutex_);
-  sendDatabaseNL(socket,ftime);
+  sendDatabaseNL(socket,sendingTo);
 }
 //------------------------------------------------------------------------------
-void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime)
+void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
 {
   union {
     intptr_t i;
@@ -758,50 +734,50 @@ void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket,uint64_t ftime)
   while( u-- > 0 ){
     UserInfo info;
     socket >> info;
-    registerUserNL(info,ftime);
+    registerUserNL(info,sendingTo);
   }
   socket >> u;
   while( u-- > 0 ){
     KeyInfo info;
     socket >> info;
-    registerKeyNL(info,ftime);
+    registerKeyNL(info,sendingTo);
   }
   socket >> u;
   while( u-- > 0 ){
     GroupInfo info;
     socket >> info;
-    registerGroupNL(info,ftime);
+    registerGroupNL(info,sendingTo);
   }
   socket >> u;
   while( u-- > 0 ){
     ServerInfo info;
     socket >> info;
-    registerServerNL(info,ftime);
+    registerServerNL(info,sendingTo);
   }
   socket >> u;
   while( u-- > 0 ){
     User2KeyLink link;
     socket >> link;
-    registerUser2KeyLinkNL(link,ftime);
+    registerUser2KeyLinkNL(link,sendingTo);
   }
   socket >> u;
   while( u-- > 0 ){
     Key2GroupLink link;
     socket >> link;
-    registerKey2GroupLinkNL(link,ftime);
+    registerKey2GroupLinkNL(link,sendingTo);
   }
   socket >> u;
   while( u-- > 0 ){
     Key2ServerLink link;
     socket >> link;
-    registerKey2ServerLinkNL(link,ftime);
+    registerKey2ServerLinkNL(link,sendingTo);
   }
 }
 //------------------------------------------------------------------------------
-void Server::Data::recvDatabase(ksock::AsyncSocket & socket,uint64_t ftime)
+void Server::Data::recvDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  recvDatabaseNL(socket,ftime);
+  recvDatabaseNL(socket,sendingTo);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::Data::getNodeListNL() const
@@ -887,67 +863,107 @@ Server::Data & Server::Data::clear()
   return *this;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::orNL(const Data & a,uint64_t ftime,uint64_t mtime)
+bool Server::Data::orNL(const Data & a,const utf8::String & sendingTo)
 {
   intptr_t i;
   bool r = false;
   for( i = a.userList_.count() - 1; i >= 0; i-- )
-    r = registerUserNL(a.userList_[i],ftime,mtime) || r;
+    r = registerUserNL(a.userList_[i],sendingTo) || r;
   for( i = a.keyList_.count() - 1; i >= 0; i-- )
-    r = registerKeyNL(a.keyList_[i],ftime,mtime) || r;
+    r = registerKeyNL(a.keyList_[i],sendingTo) || r;
   for( i = a.groupList_.count() - 1; i >= 0; i-- )
-    r = registerGroupNL(a.groupList_[i],ftime,mtime) || r;
+    r = registerGroupNL(a.groupList_[i],sendingTo) || r;
   for( i = a.serverList_.count() - 1; i >= 0; i-- )
-    r = registerServerNL(a.serverList_[i],ftime,mtime) || r;
+    r = registerServerNL(a.serverList_[i],sendingTo) || r;
   for( i = a.user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],ftime,mtime) || r;
+    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],sendingTo) || r;
   for( i = a.key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],ftime,mtime) || r;
+    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],sendingTo) || r;
   for( i = a.key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],ftime,mtime) || r;
+    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],sendingTo) || r;
   return r;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::or(const Data & a,uint64_t ftime)
+bool Server::Data::or(const Data & a,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock0(mutex_);
   AutoMutexRDLock<FiberMutex> lock1(a.mutex_);
-  return orNL(a,ftime);
+  return orNL(a,sendingTo);
 }
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::xorNL(const Data & data1,const Data & data2,uint64_t ftime)
+Server::Data & Server::Data::xorNL(const Data & data1,const Data & data2,const utf8::String & sendingTo)
 {
   intptr_t i;
   for( i = data2.userList_.count() - 1; i >= 0; i-- )
     if( data1.users_.find(data2.userList_[i]) == NULL )
-      registerUserNL(data2.userList_[i],ftime);
+      registerUserNL(data2.userList_[i],sendingTo);
   for( i = data2.keyList_.count() - 1; i >= 0; i-- )
     if( data1.keys_.find(data2.keyList_[i]) == NULL )
-      registerKeyNL(data2.keyList_[i],ftime);
+      registerKeyNL(data2.keyList_[i],sendingTo);
   for( i = data2.groupList_.count() - 1; i >= 0; i-- )
     if( data1.groups_.find(data2.groupList_[i]) == NULL )
-      registerGroupNL(data2.groupList_[i],ftime);
+      registerGroupNL(data2.groupList_[i],sendingTo);
   for( i = data2.serverList_.count() - 1; i >= 0; i-- )
     if( data1.servers_.find(data2.serverList_[i]) == NULL )
-      registerServerNL(data2.serverList_[i],ftime);
+      registerServerNL(data2.serverList_[i],sendingTo);
   for( i = data2.user2KeyLinkList_.count() - 1; i >= 0; i-- )
     if( data1.user2KeyLinks_.find(data2.user2KeyLinkList_[i]) == NULL )
-      registerUser2KeyLinkNL(data2.user2KeyLinkList_[i],ftime);
+      registerUser2KeyLinkNL(data2.user2KeyLinkList_[i],sendingTo);
   for( i = data2.key2GroupLinkList_.count() - 1; i >= 0; i-- )
     if( data1.key2GroupLinks_.find(data2.key2GroupLinkList_[i]) == NULL )
-      registerKey2GroupLinkNL(data2.key2GroupLinkList_[i],ftime);
+      registerKey2GroupLinkNL(data2.key2GroupLinkList_[i],sendingTo);
   for( i = data2.key2ServerLinkList_.count() - 1; i >= 0; i-- )
     if( data1.key2ServerLinks_.find(data2.key2ServerLinkList_[i]) == NULL )
-      registerKey2ServerLinkNL(data2.key2ServerLinkList_[i],ftime);
+      registerKey2ServerLinkNL(data2.key2ServerLinkList_[i],sendingTo);
   return *this;
 }
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::xor(const Data & data1,const Data & data2,uint64_t ftime)
+Server::Data & Server::Data::xor(const Data & data1,const Data & data2,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock0(mutex_);
   AutoMutexRDLock<FiberMutex> lock1(data1.mutex_);
   AutoMutexRDLock<FiberMutex> lock2(data2.mutex_);
-  return xorNL(data1,data2,ftime);
+  return xorNL(data1,data2,sendingTo);
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::setSendedToNL(const utf8::String & sendingTo)
+{
+  intptr_t i, j, c;
+  for( i = userList_.count() - 1; i >= 0; i-- ){
+    j = userList_[i].sendedTo_.bSearchCase(sendingTo,c);
+    if( c != 0 ) userList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+  }
+  for( i = keyList_.count() - 1; i >= 0; i-- ){
+    j = keyList_[i].sendedTo_.bSearchCase(sendingTo,c);
+    if( c != 0 ) keyList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+  }
+  for( i = groupList_.count() - 1; i >= 0; i-- ){
+    j = groupList_[i].sendedTo_.bSearchCase(sendingTo,c);
+    if( c != 0 ) groupList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+  }
+  for( i = serverList_.count() - 1; i >= 0; i-- ){
+    j = serverList_[i].sendedTo_.bSearchCase(sendingTo,c);
+    if( c != 0 ) serverList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+  }
+  for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- ){
+    j = user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
+    if( c != 0 ) user2KeyLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+  }
+  for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- ){
+    j = key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
+    if( c != 0 ) key2GroupLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+  }
+  for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- ){
+    j = key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
+    if( c != 0 ) key2ServerLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::setSendedTo(const utf8::String & sendingTo)
+{
+  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  return setSendedToNL(sendingTo);
 }
 //------------------------------------------------------------------------------
 bool Server::Data::sweepNL(uint64_t stime,utf8::String::Stream * log)

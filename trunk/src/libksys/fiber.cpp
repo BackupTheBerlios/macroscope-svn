@@ -237,7 +237,7 @@ BaseThread::~BaseThread()
   assert( fibers_.count() == 0 );
 }
 //---------------------------------------------------------------------------
-BaseThread::BaseThread() : server_(NULL)//, maxStackSize_(0)
+BaseThread::BaseThread() : server_(NULL)/*, maxStackSize_(0) */, mfpt_(~uintptr_t(0))
 {
 }
 //---------------------------------------------------------------------------
@@ -309,7 +309,6 @@ BaseServer::~BaseServer()
 }
 //------------------------------------------------------------------------------
 BaseServer::BaseServer() :
-  mfpt_(numberOfProcessors() * 4),
   mt_(numberOfProcessors() * 4),
   fiberStackSize_(PTHREAD_STACK_MIN),
   fiberTimeout_(10000000),
@@ -431,7 +430,7 @@ BaseThread * BaseServer::selectThread()
     for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
       BaseThread * athread = &BaseThread::serverListNodeObject(*btp);
       AutoLock<InterlockedMutex> lock2(athread->mutex_);
-      if( athread->fibers_.count() < msc ){
+      if( athread->fibers_.count() < athread->mfpt_ && athread->fibers_.count() < msc ){
         msc = athread->fibers_.count();
         thread = athread;
       }
