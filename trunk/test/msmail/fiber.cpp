@@ -211,8 +211,9 @@ void ServerFiber::registerDB()
     return;
   }
   uint32_t port;
+  uint64_t rStartTime;
   bool dbChanged = false;
-  *this >> port << uint64_t(getProcessStartTime());
+  *this >> port >> rStartTime << uint64_t(getProcessStartTime());
   splitString(host,server,service,":");
   host = server;
   if( port != defaultPort ) host += ":" + utf8::int2Str(port);
@@ -223,12 +224,16 @@ void ServerFiber::registerDB()
   rdata.dumpNL(stream);
   stdErr.debug(6,stream);
   Server::Data & data = server_.data(serverType_);
+  bool fullDump;
   {
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+    ServerInfo * si = data.servers_.find(host);
+    fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
-    tdata.orNL(data,host); // get local changes for sending
+    tdata.orNL(data,fullDump ? utf8::String() : host); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
     data.setSendedToNL(host);
+    if( si != NULL && fullDump ) si->stime_ = rStartTime;
   }
   tdata.sendDatabaseNL(*this);
   putCode(eOK);
@@ -991,13 +996,14 @@ void NodeClient::main()
               Server::Data tdata, ldata, diff, dump;
               uint64_t rStartTime;
               *this << uint8_t(cmRegisterDB) <<
-                uint32_t(ksock::api.ntohs(server_.bindAddrs()[0].addr4_.sin_port)) >>
-                rStartTime ;
+                uint32_t(ksock::api.ntohs(server_.bindAddrs()[0].addr4_.sin_port)) <<
+                uint64_t(getProcessStartTime()) >>
+                rStartTime;
               bool fullDump = false;
               {
                 AutoMutexRDLock<FiberMutex> lock(data.mutex_);
                 ServerInfo * si = data.servers_.find(host);
-                if( si != NULL ) fullDump = si->stime_ != rStartTime;
+                fullDump = si == NULL || si->stime_ != rStartTime;
                 dump.orNL(data);
                 ldata.orNL(data,fullDump ? utf8::String() : host);
               }
@@ -1007,7 +1013,7 @@ void NodeClient::main()
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
                 data.orNL(tdata);
-                data.setSendedTo(host);
+                data.setSendedToNL(host);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL && fullDump ) si->stime_ = rStartTime;
               }
@@ -1032,6 +1038,8 @@ void NodeClient::main()
             catch( ExceptionSP & e ){
               e->writeStdError();
             }
+            shutdown();
+            close();
           }
         }
       }
