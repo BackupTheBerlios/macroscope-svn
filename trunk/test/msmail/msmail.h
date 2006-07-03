@@ -627,6 +627,8 @@ class Server : public ksock::Server {
         Data & xor(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
         Data & setSendedToNL(const utf8::String & sendingTo);
         Data & setSendedTo(const utf8::String & sendingTo);
+        Data & setSendedToNL(const Data & data,const utf8::String & sendingTo);
+        Data & setSendedTo(const Data & data,const utf8::String & sendingTo);
         bool sweepNL(uint64_t stime,utf8::String::Stream * log = NULL);
         bool sweep(uint64_t stime,utf8::String::Stream * log = NULL);
         utf8::String getUserListNL(bool quoted = false) const;

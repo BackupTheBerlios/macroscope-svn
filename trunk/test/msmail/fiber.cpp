@@ -217,7 +217,7 @@ void ServerFiber::registerDB()
   splitString(host,server,service,":");
   host = server;
   if( port != defaultPort ) host += ":" + utf8::int2Str(port);
-  Server::Data rdata, tdata, diff;
+  Server::Data rdata, ldata, diff;
   rdata.recvDatabaseNL(*this);
   stream << serverTypeName_[serverType_] <<
     ": database changes received from " << host << "\n";
@@ -230,19 +230,20 @@ void ServerFiber::registerDB()
     ServerInfo * si = data.servers_.find(host);
     fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
-    tdata.orNL(data,fullDump ? utf8::String() : host); // get local changes for sending
-    tdata.setSendedToNL(host);
+    ldata.orNL(data,fullDump ? utf8::String() : host); // get local changes for sending
+    rdata.setSendedToNL(host);
     dbChanged = data.orNL(rdata); // apply remote changes localy
     si = data.servers_.find(host);
     if( si != NULL && fullDump ) si->stime_ = rStartTime;
   }
-  tdata.sendDatabaseNL(*this);
+  ldata.sendDatabaseNL(*this);
   putCode(eOK);
   flush();
+  data.setSendedTo(ldata,host);
 //  if( dbChanged ) server_.startNodesExchange();
   stream.clear() << serverTypeName_[serverType_] <<
     ": database " << (fullDump ? "full dump" : "changes") << " sended to " << host << "\n";
-  tdata.dumpNL(stream);
+  ldata.dumpNL(stream);
   stdErr.debug(6,stream);
   stream.clear() << serverTypeName_[serverType_] << ": changes stored\n";
   diff.dumpNL(stream);
@@ -994,7 +995,7 @@ void NodeClient::main()
               getCode();
               Server::Data & data = server_.data(dataType_);
               data.registerServer(ServerInfo(host,stNode));
-              Server::Data tdata, ldata, diff, dump;
+              Server::Data rdata, ldata, diff, dump;
               uint64_t rStartTime;
               *this << uint8_t(cmRegisterDB) <<
                 uint32_t(ksock::api.ntohs(server_.bindAddrs()[0].addr4_.sin_port)) <<
@@ -1009,12 +1010,13 @@ void NodeClient::main()
                 ldata.orNL(data,fullDump ? utf8::String() : host);
               }
               ldata.sendDatabaseNL(*this);
-              tdata.recvDatabaseNL(*this);
+              rdata.recvDatabaseNL(*this);
               getCode();
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-                tdata.setSendedToNL(host);
-                data.orNL(tdata);
+                rdata.setSendedToNL(host);
+                data.setSendedToNL(ldata,host);
+                data.orNL(rdata);
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL && fullDump ) si->stime_ = rStartTime;
               }
@@ -1028,9 +1030,9 @@ void NodeClient::main()
               stdErr.debug(6,stream);
               stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
                 " database changes received from node " << host << "\n";
-              tdata.dumpNL(stream);
+              rdata.dumpNL(stream);
               stdErr.debug(6,stream);
-              diff.xorNL(dump,tdata);
+              diff.xorNL(dump,rdata);
               stream.clear() << "NODE client: changes stored in " <<
                 serverTypeName_[dataType_] << " database.\n";
               diff.dumpNL(stream);

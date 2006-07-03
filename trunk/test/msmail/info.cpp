@@ -966,6 +966,54 @@ Server::Data & Server::Data::setSendedTo(const utf8::String & sendingTo)
   return setSendedToNL(sendingTo);
 }
 //------------------------------------------------------------------------------
+Server::Data & Server::Data::setSendedToNL(const Data & data,const utf8::String & sendingTo)
+{
+  intptr_t i, j, c;
+  for( i = data.userList_.count() - 1; i >= 0; i-- )
+    if( users_.find(data.userList_[i]) != NULL ){
+      j = userList_[i].sendedTo_.bSearchCase(sendingTo,c);
+      if( c != 0 ) userList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+    }
+  for( i = data.keyList_.count() - 1; i >= 0; i-- )
+    if( keys_.find(data.keyList_[i]) != NULL ){
+      j = keyList_[i].sendedTo_.bSearchCase(sendingTo,c);
+      if( c != 0 ) keyList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+    }
+  for( i = data.groupList_.count() - 1; i >= 0; i-- )
+    if( groups_.find(data.groupList_[i]) != NULL ){
+      j = groupList_[i].sendedTo_.bSearchCase(sendingTo,c);
+      if( c != 0 ) groupList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+    }
+  for( i = data.serverList_.count() - 1; i >= 0; i-- )
+    if( servers_.find(data.serverList_[i]) != NULL ){
+      j = serverList_[i].sendedTo_.bSearchCase(sendingTo,c);
+      if( c != 0 ) serverList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+    }
+  for( i = data.user2KeyLinkList_.count() - 1; i >= 0; i-- )
+    if( user2KeyLinks_.find(data.user2KeyLinkList_[i]) != NULL ){
+      j = user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
+      if( c != 0 ) user2KeyLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+    }
+  for( i = data.key2GroupLinkList_.count() - 1; i >= 0; i-- )
+    if( key2GroupLinks_.find(data.key2GroupLinkList_[i]) != NULL ){
+      j = key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
+      if( c != 0 ) key2GroupLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+    }
+  for( i = data.key2ServerLinkList_.count() - 1; i >= 0; i-- )
+    if( key2ServerLinks_.find(data.key2ServerLinkList_[i]) != NULL ){
+      j = key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
+      if( c != 0 ) key2ServerLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
+    }
+  return *this;
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::setSendedTo(const Data & data,const utf8::String & sendingTo)
+{
+  AutoMutexWRLock<FiberMutex> lock0(mutex_);
+  AutoMutexRDLock<FiberMutex> lock1(data.mutex_);
+  return setSendedToNL(data,sendingTo);
+}
+//------------------------------------------------------------------------------
 bool Server::Data::sweepNL(uint64_t stime,utf8::String::Stream * log)
 {
   if( stime_ >= stime ) return false;
