@@ -761,6 +761,8 @@ inline uint64_t & Server::Data::stime() const
 class Service : public ksys::Service {
   public:
     Service();
+
+    const ConfigSP & msmailConfig() const;
   protected:
   private:
     ConfigSP msmailConfig_;
@@ -770,6 +772,11 @@ class Service : public ksys::Service {
     void stop();
     bool active();
 };
+//------------------------------------------------------------------------------
+inline const ConfigSP & Service::msmailConfig() const
+{
+  return msmailConfig_;
+}
 //------------------------------------------------------------------------------
 } // namespace msmail
 //------------------------------------------------------------------------------

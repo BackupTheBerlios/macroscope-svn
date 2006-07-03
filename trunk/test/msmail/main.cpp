@@ -36,7 +36,6 @@ int main(int _argc,char * _argv[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
-//  stdErr.enableDebugLevel(9);
   try {
     union {
       intptr_t i;
@@ -45,7 +44,9 @@ int main(int _argc,char * _argv[])
     initializeArguments(_argc,_argv);
     Config::defaultFileName(SYSCONF_DIR + "msmail.conf");
     Services services(msmail_version.v_gnu);
-    services.add(new msmail::Service);
+    AutoPtr<msmail::Service> serviceAP(new msmail::Service);
+    services.add(serviceAP);
+    msmail::Service * service = serviceAP.ptr(NULL);
 #if defined(__WIN32__) || defined(__WIN64__)
     bool dispatch = true;
 #else
@@ -108,16 +109,17 @@ int main(int _argc,char * _argv[])
       }
     }
     if( dispatch ){
-      bool daemon;
-      {
-        ConfigSP config(new InterlockedConfig<FiberInterlockedMutex>);
-        config->parse().override();
-        stdErr.rotationThreshold(config->value("debug_file_rotate_threshold",1024 * 1024));
-        stdErr.rotatedFileCount(config->value("debug_file_rotate_count",10));
-        stdErr.setDebugLevels(config->value("debug_levels","+0,+1,+2,+3"));
-        daemon = config->value("daemon",false);
-      }
-      services.startServiceCtrlDispatcher(daemon);
+      service->msmailConfig()->parse().override();
+      stdErr.rotationThreshold(
+        service->msmailConfig()->value("debug_file_rotate_threshold",1024 * 1024)
+      );
+      stdErr.rotatedFileCount(
+        service->msmailConfig()->value("debug_file_rotate_count",10)
+      );
+      stdErr.setDebugLevels(
+        service->msmailConfig()->value("debug_levels","+0,+1,+2,+3")
+      );
+      services.startServiceCtrlDispatcher();
     }
   }
   catch( ExceptionSP & e ){
