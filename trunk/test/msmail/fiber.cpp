@@ -233,6 +233,7 @@ void ServerFiber::registerDB()
     tdata.orNL(data,fullDump ? utf8::String() : host); // get local changes for sending
     dbChanged = data.orNL(rdata); // apply remote changes localy
     data.setSendedToNL(host);
+    si = data.servers_.find(host);
     if( si != NULL && fullDump ) si->stime_ = rStartTime;
   }
   tdata.sendDatabaseNL(*this);
@@ -240,7 +241,7 @@ void ServerFiber::registerDB()
   flush();
 //  if( dbChanged ) server_.startNodesExchange();
   stream.clear() << serverTypeName_[serverType_] <<
-    ": database changes sended to " << host << "\n";
+    ": database " << (fullDump ? "full dump" : "changes") << " sended to " << host << "\n";
   tdata.dumpNL(stream);
   stdErr.debug(6,stream);
   stream.clear() << serverTypeName_[serverType_] << ": changes stored\n";
