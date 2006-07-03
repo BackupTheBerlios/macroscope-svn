@@ -523,6 +523,10 @@ bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sen
   }
   else {
     p->atime_ = gettimeofday();
+    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
+      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
+      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
+    }
   }
   return false;
 }
@@ -544,6 +548,10 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendi
   }
   else {
     p->atime_ = gettimeofday();
+    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
+      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
+      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
+    }
   }
   return false;
 }
@@ -565,6 +573,10 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & s
   }
   else {
     p->atime_ = gettimeofday();
+    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
+      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
+      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
+    }
   }
   return false;
 }
@@ -586,6 +598,10 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
   }
   else {
     p->atime_ = gettimeofday();
+    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
+      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
+      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
+    }
     if( info.type_ == stNode && info.type_ != p->type_ ){
       p->type_ = info.type_;
       p->sendedTo_.clear();
@@ -612,6 +628,10 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::
   }
   else {
     p->atime_ = gettimeofday();
+    for( intptr_t c, j, i = link.sendedTo_.count() - 1; i >= 0; i-- ){
+      j = p->sendedTo_.bSearchCase(link.sendedTo_[i],c);
+      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),link.sendedTo_[i]);
+    }
   }
   return false;
 }
@@ -633,6 +653,10 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8
   }
   else {
     p->atime_ = gettimeofday();
+    for( intptr_t c, j, i = link.sendedTo_.count() - 1; i >= 0; i-- ){
+      j = p->sendedTo_.bSearchCase(link.sendedTo_[i],c);
+      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),link.sendedTo_[i]);
+    }
   }
   return false;
 }
@@ -654,6 +678,10 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
   }
   else {
     p->atime_ = gettimeofday();
+    for( intptr_t c, j, i = link.sendedTo_.count() - 1; i >= 0; i-- ){
+      j = p->sendedTo_.bSearchCase(link.sendedTo_[i],c);
+      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),link.sendedTo_[i]);
+    }
     if( p->server_.strcasecmp(link.server_) != 0 ){
       p->server_ = link.server_;
       p->sendedTo_.clear();
