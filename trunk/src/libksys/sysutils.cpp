@@ -1435,6 +1435,23 @@ gid_t getgid()
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+bool isWow64()
+{
+  typedef BOOL (WINAPI *LPFN_ISWOW64PROCESS) (HANDLE, PBOOL);
+  LPFN_ISWOW64PROCESS fnIsWow64Process = (LPFN_ISWOW64PROCESS) GetProcAddress(
+    GetModuleHandle("kernel32"),
+    "IsWow64Process"
+  );
+  BOOL bIsWow64 = FALSE;
+  if( fnIsWow64Process != NULL && fnIsWow64Process(GetCurrentProcess(),&bIsWow64) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+  }
+  return bIsWow64 == FALSE ? false : true;
+}
+#endif
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // System initialization and finalization ///////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////

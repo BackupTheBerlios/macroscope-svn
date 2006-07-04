@@ -117,6 +117,8 @@ inline bool isWinXPorLater()
     dwBuild = 0;*/
   return dwWindowsMajorVersion > 5 || (dwWindowsMajorVersion == 5 && dwWindowsMinorVersion >= 1);
 }
+
+bool isWow64();
 #if !HAVE_UUID
 class UUID : public GUID {
 };
@@ -124,6 +126,13 @@ class UUID : public GUID {
 #else
 inline bool isWin9x()
 {
+  return false;
+}
+inline bool isWinXPorLater()
+{
+  return false;
+}
+inline bool isWow64(){
   return false;
 }
 #if HAVE_SYS_UUID_H

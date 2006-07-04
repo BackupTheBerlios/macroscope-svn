@@ -398,6 +398,31 @@ class API {
         void * p_getpeername;
       };
       union {
+        int (WSAAPI * GetAddrInfoA)(
+            const char FAR * nodename,
+            const char FAR * servname,
+            const struct addrinfo FAR * hints,
+            struct addrinfo FAR * FAR * res
+        );
+        void * p_getaddrinfo;
+      };
+      union {
+        void (WSAAPI * FreeAddrInfoA)(LPADDRINFO pAddrInfo);
+        void * p_freeaddrinfo;
+      };
+      union {
+        int (WSAAPI * GetNameInfoA)(
+            const struct sockaddr FAR * sa,
+            socklen_t       salen,
+            char FAR *      host,
+            DWORD           hostlen,
+            char FAR *      serv,
+            DWORD           servlen,
+            int             flags
+        );
+        void * p_getnameinfo;
+      };
+      union {
         int (WSAAPI * GetAddrInfoW)(
           PCWSTR pNodeName,
           PCWSTR pServiceName,

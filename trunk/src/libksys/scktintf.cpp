@@ -73,6 +73,9 @@ const char * const  API::symbols_[]   = {
   "WSAAsyncGetHostByName",
   "getsockname",
   "getpeername",
+  "getaddrinfo",
+  "freeaddrinfo",
+  "getnameinfo",
   "GetAddrInfoW",
   "FreeAddrInfoW",
   "GetNameInfoW"

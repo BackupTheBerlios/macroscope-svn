@@ -79,7 +79,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 #if defined(__WIN32__) || defined(__WIN64__)
   if( ksys::isWin9x() ){
     utf8::AnsiString ap(port.strlen() > 0 ? port.getANSIString() : ((utf8::String) defPort).getANSIString());
-    r = wship6api.GetAddrInfoA(
+    r = api.GetAddrInfoA(
       host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
       port.strlen() == 0 && (uintptr_t) defPort == 0 ? NULL : (const char *) ap,
       &aiHints,
@@ -143,7 +143,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
       memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
     }
-    wship6api.FreeAddrInfoA(aiList);
+    api.FreeAddrInfoA(aiList);
   }
   else if( api.FreeAddrInfoW == NULL ){
   }
@@ -236,7 +236,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
     wchar_t servInfoW[NI_MAXSERV];
   };
   if( ksys::isWin9x() ){
-    err = wship6api.GetNameInfoA(
+    err = api.GetNameInfoA(
       (const sockaddr *) &addr4_,
       (socklen_t) length(),
       hostName,
