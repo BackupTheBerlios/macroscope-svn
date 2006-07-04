@@ -20,8 +20,8 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)_$(ProjectName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="4"
 			>
 			<Tool
@@ -44,6 +44,7 @@
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
+				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -64,7 +65,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib"
-				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
+				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -84,7 +85,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="4"
 			>
@@ -109,6 +110,7 @@
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
+				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
@@ -149,8 +151,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)_$(ProjectName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="4"
 			WholeProgramOptimization="0"
 			>
@@ -178,6 +180,7 @@
 				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
+				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="true"
@@ -194,7 +197,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib"
-				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
+				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -214,7 +217,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|x64"
-			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="4"
 			WholeProgramOptimization="0"
@@ -241,8 +244,10 @@
 				InlineFunctionExpansion="2"
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
+				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
+				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				Detect64BitPortabilityProblems="true"
@@ -259,7 +264,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib"
-				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
+				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1187,46 +1192,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libadicpp\db.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\db.cpp"
 				>
 				<FileConfiguration
@@ -1271,11 +1236,47 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libadicpp\dllmain.cpp"
+				RelativePath="..\..\..\src\libadicpp\db.cpp"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				RelativePath="..\..\..\src\libadicpp\dllmain.cpp"
 				>
 			</File>
 			<File
@@ -1319,6 +1320,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libfbcpp\event.cpp"
 				>
 			</File>
@@ -1340,10 +1345,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\fiber.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\intf.cpp"
 				>
 			</File>
 			<File
@@ -1385,6 +1386,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\intf.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\log.cpp"
@@ -1503,10 +1508,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\st.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libadicpp\st.cpp"
 				>
 				<FileConfiguration
@@ -1587,6 +1588,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\st.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libksys\stat.cpp"
 				>
 			</File>
@@ -1635,10 +1640,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
 				>
 				<FileConfiguration
@@ -1677,6 +1678,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\svc.cpp"

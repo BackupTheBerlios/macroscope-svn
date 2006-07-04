@@ -161,7 +161,7 @@ LZO1X & LZO1X::compress(AutoPtr<uint8_t> & buf,uint8_t * & p,int32_t & len)
   else {
 l1: ((int32_t *) wBuf_.ptr())[0] = -int32_t(wBufPos_);
     p = wBuf_;
-    len = (lzo_uint) (wBufPos_ + sizeof(int32_t));
+    len = (int32_t) (wBufPos_ + sizeof(int32_t));
   }
   return *this;
 }
