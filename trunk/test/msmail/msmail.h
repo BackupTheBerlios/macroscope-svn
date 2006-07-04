@@ -140,11 +140,13 @@ class Message {
     bool operator <  (const Message & a) const { return id().strcmp(a.id()) <  0; }
 
     const utf8::String & id() const;
+    Message & id(const utf8::String & id);
     const utf8::String & value(const utf8::String & key) const;
     bool isValue(const utf8::String & key) const;
     Message & value(const utf8::String & key,const utf8::String & value);
     const Array<Attribute> & attributes() const;
-    utf8::String separateValue(const utf8::String & key,utf8::String & s0,utf8::String & s1,const utf8::String & separator = "@") const;
+    utf8::String removeValue(const utf8::String & key);
+    Message & removeValueByLeft(const utf8::String & key);
 
 /*    static EmbeddedHashNode<Message> & idNode(const Message & object){
       return object.idNode_;

@@ -424,11 +424,11 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 10 : // LocalTime
-        V_BSTR(pvarPropVal) = getTimeCode(getlocaltimeofday()).getOLEString();
+        V_BSTR(pvarPropVal) = utf8::int2Str(getlocaltimeofday()).getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 11 : // SystemTime
-        V_BSTR(pvarPropVal) = getTimeCode(gettimeofday()).getOLEString();
+        V_BSTR(pvarPropVal) = utf8::int2Str(gettimeofday()).getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 12 : // UUID
@@ -699,7 +699,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 12;
+  *plMethods = 15;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -752,6 +752,18 @@ HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
   if( _wcsicoll(bstrMethodName,L"GetDB") == 0 ) *plMethodNum = 11;
   else
   if( _wcsicoll(bstrMethodName,L"ѕолучить»Ѕ") == 0 ) *plMethodNum = 11;
+  else
+  if( _wcsicoll(bstrMethodName,L"CopyMessage") == 0 ) *plMethodNum = 12;
+  else
+  if( _wcsicoll(bstrMethodName,L"—копировать—ообщение") == 0 ) *plMethodNum = 12;
+  else
+  if( _wcsicoll(bstrMethodName,L"RemoveMessageAttribute") == 0 ) *plMethodNum = 13;
+  else
+  if( _wcsicoll(bstrMethodName,L"”далитьјтрибут—ообщени€") == 0 ) *plMethodNum = 13;
+  else
+  if( _wcsicoll(bstrMethodName,L"DebugMessage") == 0 ) *plMethodNum = 14;
+  else
+  if( _wcsicoll(bstrMethodName,L"ќтладочное—ообщение") == 0 ) *plMethodNum = 14;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -856,6 +868,30 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"ѕолучить»Ѕ")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 12 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"CopyMessage")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"—копировать—ообщение")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 13 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RemoveMessageAttribute")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"”далитьјтрибут—ообщени€")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 14 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"DebugMessage")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ќтладочное—ообщение")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -875,6 +911,9 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 9 : *plParams = 1; break;
     case 10 : *plParams = 1; break;
     case 11 : *plParams = 0; break;
+    case 12 : *plParams = 1; break;
+    case 13 : *plParams = 2; break;
+    case 14 : *plParams = 2; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -1069,10 +1108,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
-                  if( SUCCEEDED(hr) ){
-                    V_BSTR(pvarRetValue) = client_.value(V_BSTR(pv0),V_BSTR(pv1)).getOLEString();
-                    V_VT(pvarRetValue) = VT_BSTR;
-                  }
+                  if( SUCCEEDED(hr) )
+                    hr = client_.value(V_BSTR(pv0),V_BSTR(pv1),pvarRetValue);
                 }
               }
             }
@@ -1115,6 +1152,67 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           if( !active_ ) throw ExceptionSP(new Exception(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__));
           client_.getDB();
           V_I4(pvarRetValue) = 1;
+          break;
+        case 12 : // CopyMessage
+          if( !active_ ) throw ExceptionSP(new Exception(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__));
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                V_BSTR(pvarRetValue) = client_.copyMessage(V_BSTR(pv0)).getOLEString();
+                V_VT(pvarRetValue) = VT_BSTR;
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 13 : // RemoveMessageAttribute
+          if( !active_ ) throw ExceptionSP(new Exception(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__));
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0; // UUID of Message
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              lIndex = 1; // Key of attribute
+              hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+              if( SUCCEEDED(hr) ){
+                if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
+                    V_BSTR(pvarRetValue) = client_.removeValue(V_BSTR(pv0),V_BSTR(pv1)).getOLEString();
+                    V_VT(pvarRetValue) = VT_BSTR;
+                  }
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 14 : // DebugMessage
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0; // UUID of Message
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              lIndex = 1; // Key of attribute
+              hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+              if( SUCCEEDED(hr) ){
+                if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
+                    stdErr.debug(V_I4(pv0),utf8::String::Stream() << utf8::String(V_BSTR(pv1)));
+                    V_I4(pvarRetValue) = 1;
+                  }
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
           break;
         default :
           hr = E_NOTIMPL;

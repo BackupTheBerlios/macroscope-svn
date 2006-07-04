@@ -392,7 +392,7 @@ intptr_t ServerFiber::processMailbox(
           file >> message;
           assert( message.id().strcmp(id) == 0 );
           utf8::String suser, skey;
-          message.separateValue("#Recepient",suser,skey);
+          splitString(message.value("#Recepient"),suser,skey,"@");
           bool lostSheep = true;
           {
             Server::Data & data = server_.data(stStandalone);
@@ -540,7 +540,7 @@ intptr_t SpoolWalker::processQueue()
           Message message;
           file >> message;
           utf8::String suser, skey;
-          message.separateValue("#Recepient",suser,skey);
+          splitString(message.value("#Recepient"),suser,skey,"@");
           bool deliverLocaly;
           Key2ServerLink * key2ServerLink = NULL;
           {
@@ -714,7 +714,7 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
           Message message;
           file >> message;
           utf8::String server, suser, skey;
-          message.separateValue("#Recepient",suser,skey);
+          splitString(message.value("#Recepient"),suser,skey,"@");
           ksock::SockAddr address;
           {
             Server::Data & data = server_.data(stStandalone);

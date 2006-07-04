@@ -377,8 +377,8 @@ utf8::String stringPartByNo(const utf8::String & s,uintptr_t n,const char * deli
 utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String & s1,const utf8::String & separator)
 {
   utf8::String::Iterator i(s.strcasestr(separator));
-  s0 = utf8::String(s,i);
-  s1 = i + 1;
+  if( i.eof() ) s0 = s; else s0 = utf8::String(s,i);
+  s1 = i + separator.strlen();
   return s;
 }
 //---------------------------------------------------------------------------

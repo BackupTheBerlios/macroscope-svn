@@ -335,14 +335,15 @@ void ClientDBGetterFiber::main()
         if( terminated_ || i == 0 ) throw; else e->writeStdError();
       }
     }
-    client_.data_.clear();
+    Server::Data tdata;
     *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
     getCode();
     *this << uint8_t(cmGetDB);
-    client_.data_.recvDatabase(*this);
+    tdata.recvDatabase(*this);
     getCode();
     *this << uint8_t(cmQuit);
     getCode();
+    client_.data_.clear().or(tdata);
     AutoPtr<OLECHAR> source(client_.name_.getOLEString());
     AutoPtr<OLECHAR> event(utf8::String("GetDB").getOLEString());
     bool isEmpty = 
@@ -399,7 +400,7 @@ const utf8::String & Client::newMessage()
   return message.ptr(NULL)->id();
 }
 //------------------------------------------------------------------------------
-const utf8::String & Client::value(const utf8::String id,const utf8::String key) const
+HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pvarRetValue) const
 {
   AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
   const Vector<Message> * queue = &sendQueue_;
@@ -408,8 +409,17 @@ const utf8::String & Client::value(const utf8::String id,const utf8::String key)
     queue = &recvQueue_;
     i = queue->bSearch(Message(id));
   }
-  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
-  return (*queue)[i].value(key);
+  if( i < 0 )
+    throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+  HRESULT hr = S_OK;
+  if( (*queue)[i].isValue(key) ){
+    V_BSTR(pvarRetValue) = (*queue)[i].value(key).getOLEString();
+    V_VT(pvarRetValue) = VT_BSTR;
+  }
+  else {
+    hr = VariantChangeTypeEx(pvarRetValue,pvarRetValue,0,0,VT_EMPTY);
+  }
+  return hr;
 }
 //------------------------------------------------------------------------------
 utf8::String Client::value(const utf8::String id,const utf8::String key,const utf8::String value)
@@ -515,6 +525,41 @@ utf8::String Client::getDBGroupList() const
 utf8::String Client::getUserList() const
 {
   return data_.getUserList(true);
+}
+//------------------------------------------------------------------------------
+utf8::String Client::copyMessage(const utf8::String id)
+{
+  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+  const Vector<Message> * queue = &sendQueue_;
+  intptr_t c, i = queue->bSearch(Message(id));
+  if( i < 0 ){
+    queue = &recvQueue_;
+    i = queue->bSearch(Message(id));
+  }
+  if( i < 0 )
+    throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+  AutoPtr<Message> message(new Message);
+  utf8::String newId(message->id());
+  *message = (*queue)[i];
+  message->removeValueByLeft("#Relay");
+  message->id(newId);
+  i = sendQueue_.bSearch(message->id(),c);
+  sendQueue_.insert(i + (c > 0),message.ptr());
+  return message.ptr(NULL)->id();
+}
+//------------------------------------------------------------------------------
+utf8::String Client::removeValue(const utf8::String id,const utf8::String key)
+{
+  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+  Vector<Message> * queue = &sendQueue_;
+  intptr_t i = queue->bSearch(Message(id));
+  if( i < 0 ){
+    queue = &recvQueue_;
+    i = queue->bSearch(Message(id));
+  }
+  if( i < 0 )
+    throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+  return (*queue)[i].removeValue(key);
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

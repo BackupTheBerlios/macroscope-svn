@@ -55,6 +55,12 @@ Message & Message::operator = (const Message & a)
   return *this;
 }
 //------------------------------------------------------------------------------
+Message & Message::id(const utf8::String & id)
+{
+  value(messageIdKey,id);
+  return *this;
+}
+//------------------------------------------------------------------------------
 bool Message::isValue(const utf8::String & key) const
 {
   return attributes_.bSearch(Attribute(key,utf8::String())) >= 0;
@@ -100,15 +106,30 @@ Message & Message::value(const utf8::String & key,const utf8::String & value)
   return *this;
 }
 //------------------------------------------------------------------------------
-utf8::String Message::separateValue(const utf8::String & key,utf8::String & s0,utf8::String & s1,const utf8::String & separator) const
+utf8::String Message::removeValue(const utf8::String & key)
 {
-  utf8::String value(value(key));
-  utf8::String::Iterator i(value.strcasestr(separator));
-  s0 = utf8::String(value,i);
-  s1 = i + 1;
-  return value;
+  intptr_t i = attributes_.bSearch(Attribute(key,utf8::String()));
+  if( i < 0 )
+    throw ExceptionSP(new Exception(
+#if defined(__WIN32__) || defined(__WIN64__)
+      ERROR_NOT_FOUND + errorOffset
+#else
+      ENOENT
+#endif
+      ,__PRETTY_FUNCTION__
+    ));
+  utf8::String oldValue(attributes_[i].value_);
+  attributes_.remove(i);
+  return oldValue;
 }
-//---------------------------------------------------------------------------
+//------------------------------------------------------------------------------
+Message & Message::removeValueByLeft(const utf8::String & key)
+{
+  for( intptr_t l = key.strlen(), i = attributes_.count() - 1; i >= 0; i-- )
+    if( attributes_[i].key_.strncmp(key,l) == 0 ) attributes_.remove(i);
+  return *this;
+}
+//------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 {
   uint64_t i;

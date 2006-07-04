@@ -126,11 +126,13 @@ class Client : public ksock::Client {
     bool connected_;
 
     const utf8::String & newMessage();
-    const utf8::String & value(const utf8::String id,const utf8::String key) const;
+    HRESULT value(const utf8::String id,const utf8::String key,VARIANT * pvarRetValue) const;
     utf8::String value(const utf8::String id,const utf8::String key,const utf8::String value);
+    utf8::String removeValue(const utf8::String id,const utf8::String key);
 
     bool sendMessage(const utf8::String id);
     bool removeMessage(const utf8::String id);
+    utf8::String Client::copyMessage(const utf8::String id);
     utf8::String getReceivedMessageList() const;
     void getDB();
     utf8::String getDBList() const;
