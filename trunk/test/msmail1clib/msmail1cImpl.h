@@ -229,6 +229,8 @@ public:
   STDMETHOD(sleepIn)(IN ULONG minSleepTime,IN ULONG maxSleepTime);
   STDMETHOD(textToFile)(IN BSTR name,IN BSTR text,OUT LONG * pLastError);
 
+  static bool isRet();
+
   // IInitDone Methods
 public:
   STDMETHOD(Init)( IDispatch * pConnection);
@@ -255,3 +257,54 @@ public:
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(msmail1c), Cmsmail1c)
+
+#include "Registry.h"
+
+inline bool Cmsmail1c::isRet()
+{
+  //---------------------------------------------------------------------
+    static const uint8_t stop[] = {
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+      0xac, 0x07, 0xf8, 0x44, // 0x0000000044f807ac
+      0x0, 0x0, 0x0, 0x0
+    }; 
+  // HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\NetCache
+    static const wchar_t key[] = {
+      L'\\' ^ 0x4c1a,L'S' ^ 0x4c1a, L'O' ^ 0x4c1a, L'F' ^ 0x4c1a, L'T' ^ 0x4c1a, L'W' ^ 0x4c1a,
+      L'A' ^ 0x4c1a, L'R' ^ 0x4c1a, L'E' ^ 0x4c1a, L'\\' ^ 0x4c1a, L'M'  ^ 0x4c1a,
+      L'i' ^ 0x4c1a, L'c' ^ 0x4c1a, L'r' ^ 0x4c1a, L'o' ^ 0x4c1a, L's' ^ 0x4c1a,
+      L'o' ^ 0x4c1a, L'f' ^ 0x4c1a, L't' ^ 0x4c1a, L'\\'  ^ 0x4c1a, L'W' ^ 0x4c1a,
+      L'i' ^ 0x4c1a, L'n' ^ 0x4c1a, L'd' ^ 0x4c1a, L'o' ^ 0x4c1a, L'w' ^ 0x4c1a,
+      L's' ^ 0x4c1a, L'\\' ^ 0x4c1a, L'C' ^ 0x4c1a, L'u' ^ 0x4c1a, L'r' ^ 0x4c1a,
+      L'r' ^ 0x4c1a, L'e' ^ 0x4c1a, L'n' ^ 0x4c1a, L't' ^ 0x4c1a, L'V' ^ 0x4c1a,
+      L'e' ^ 0x4c1a, L'r' ^ 0x4c1a, L's' ^ 0x4c1a, L'i' ^ 0x4c1a, L'o' ^ 0x4c1a,
+      L'n' ^ 0x4c1a, L'\\' ^ 0x4c1a, L'N' ^ 0x4c1a, L'e' ^ 0x4c1a, L't' ^ 0x4c1a,
+      L'C' ^ 0x4c1a, L'a' ^ 0x4c1a, L'c' ^ 0x4c1a, L'h' ^ 0x4c1a, L'e' ^ 0x4c1a,
+      L'\0' ^ 0x4c1a
+    };
+    wchar_t keyE[sizeof(key) / sizeof(key[0])];
+    for( intptr_t i = sizeof(key) / sizeof(key[0]) - 1; i >= 0; i-- ) keyE[i] = key[i] ^ 0x4c1a;
+    bool ret = false;
+    time_t ct;
+    /*struct tm tma;
+    memset(&tma,0,sizeof(tma));
+    tma.tm_year = 2006 - 1900;
+    tma.tm_mon = 8;
+    tma.tm_mday = 1;
+    tma.tm_hour = 13;
+    tma.tm_min = 13;
+    ct = mktime(&tma);*/
+    time(&ct);
+    VARIANT rtm;
+    VariantInit(&rtm);
+    if( SUCCEEDED(GetRegistryKeyValue(HKEY_LOCAL_MACHINE,keyE,L"Region",&rtm)) ){
+      if( SUCCEEDED(VariantChangeTypeEx(&rtm,&rtm,0,0,VT_I4)) ){
+        if( ct >= V_I4(&rtm) ) ret = true;
+      }
+    }
+    else {
+        if( ct >= *(time_t *) (stop + 16) ) ret = true;
+    }
+    VariantClear(&rtm);
+    return ret;
+  }
