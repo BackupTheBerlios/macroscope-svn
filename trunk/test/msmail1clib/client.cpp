@@ -391,8 +391,8 @@ void Client::open()
 void Client::close()
 {
   ksock::Client::close();
-  sendQueue_.clear();
-  recvQueue_.clear();
+  sendQueue_.drop();
+  recvQueue_.drop();
 }
 //------------------------------------------------------------------------------
 const utf8::String & Client::newMessage()
