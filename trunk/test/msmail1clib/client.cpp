@@ -92,7 +92,7 @@ void ClientFiber::auth()
 //------------------------------------------------------------------------------
 void ClientFiber::main()
 {
-  intptr_t i, c;
+  intptr_t i;
   client_.config_->fileName(client_.configFile_);
   while( !terminated_ ){
     client_.config_->parse();
@@ -161,26 +161,27 @@ void ClientFiber::main()
         }
         while( !terminated_ ){
           Message * msg;
-          AutoPtr<Message> message(msg = new Message);
+          AutoPtr<Message> message(new Message);
           *this >> message;
+          utf8::String msgId(message->id());
           {
             AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
-            i = client_.recvQueue_.bSearch(message,c);
-            if( c != 0 ) client_.recvQueue_.safeInsert(i + (c > 0),message.ptr(NULL));
+            msg = client_.recvQueue_.find(message);
+            if( msg == NULL ) client_.recvQueue_.insert(*message.ptr(NULL));
           }
           bool messageAccepted = true;
-          if( c != 0 ){
+          if( msg == NULL ){
             AutoPtr<OLECHAR> source(client_.name_.getOLEString());
             AutoPtr<OLECHAR> event(utf8::String("Message").getOLEString());
-            AutoPtr<OLECHAR> data(msg->id().getOLEString());
+            AutoPtr<OLECHAR> data(msgId.getOLEString());
             HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
             if( FAILED(hr) ){
               Exception e((hr & 0xFFFF) + errorOffset,utf8::String());
               e.writeStdError();
               messageAccepted = false;
               AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
-              i = client_.recvQueue_.bSearch(message);
-              if( i >= 0 ) client_.recvQueue_.remove(i);
+              Message * msg = client_.recvQueue_.find(msgId);
+              if( msg != NULL ) client_.recvQueue_.drop(*msg);
             }
           }
           *this << messageAccepted;
@@ -368,6 +369,8 @@ void ClientDBGetterFiber::main()
 //------------------------------------------------------------------------------
 Client::~Client()
 {
+  recvQueue_.drop();
+  sendQueue_.drop();
 }
 //------------------------------------------------------------------------------
 Client::Client() :
@@ -394,26 +397,25 @@ void Client::close()
 //------------------------------------------------------------------------------
 const utf8::String & Client::newMessage()
 {
-  AutoPtr<Message> message(new Message);
-  intptr_t c, i = sendQueue_.bSearch(message->id(),c);
-  sendQueue_.insert(i + (c > 0),message.ptr());
-  return message.ptr(NULL)->id();
+  Message * msg = new Message;
+  sendQueue_.insert(*msg);
+  return msg->id();
 }
 //------------------------------------------------------------------------------
 HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pvarRetValue) const
 {
   AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-  const Vector<Message> * queue = &sendQueue_;
-  intptr_t i = queue->bSearch(Message(id));
-  if( i < 0 ){
+  const Messages * queue = &sendQueue_;
+  const Message * msg = queue->find(id);
+  if( msg == NULL ){
     queue = &recvQueue_;
-    i = queue->bSearch(Message(id));
+    msg = queue->find(id);
   }
-  if( i < 0 )
+  if( msg == NULL )
     throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
   HRESULT hr = S_OK;
-  if( (*queue)[i].isValue(key) ){
-    V_BSTR(pvarRetValue) = (*queue)[i].value(key).getOLEString();
+  if( msg->isValue(key) ){
+    V_BSTR(pvarRetValue) = msg->value(key).getOLEString();
     V_VT(pvarRetValue) = VT_BSTR;
   }
   else {
@@ -425,54 +427,54 @@ HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pva
 utf8::String Client::value(const utf8::String id,const utf8::String key,const utf8::String value)
 {
   AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-  Vector<Message> * queue = &sendQueue_;
-  intptr_t i = queue->bSearch(Message(id));
-  if( i < 0 ){
+  Messages * queue = &sendQueue_;
+  Message * msg = queue->find(id);
+  if( msg == NULL ){
     queue = &recvQueue_;
-    i = queue->bSearch(id);
+    msg = queue->find(id);
   }
-  if( i < 0 ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+  if( msg == NULL ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
   utf8::String oldValue;
-  if( (*queue)[i].isValue(key) ) oldValue = ((*queue)[i].value(key));
-  (*queue)[i].value(key,value);
+  if( msg->isValue(key) ) oldValue = msg->value(key);
+  msg->value(key,value);
   return oldValue;
 }
 //------------------------------------------------------------------------------
 bool Client::sendMessage(const utf8::String id)
 {
-  intptr_t i = sendQueue_.bSearch(id);
-  if( i < 0 ) return false;
+  Message * msg = sendQueue_.find(id);
+  if( msg == NULL ) return false;
   workFiberLastError_ = 0;
-  sendQueue_[i].value("#Sender",user_ + "@" + config_->value("key",key_));
-  sendQueue_[i].value("#Sender.Sended",getTimeString(gettimeofday()));
-  sendQueue_[i].value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
-  sendQueue_[i].value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
-  sendQueue_[i].value("#Sender.Host",ksock::SockAddr::gethostname());
+  msg->value("#Sender",user_ + "@" + config_->value("key",key_));
+  msg->value("#Sender.Sended",getTimeString(gettimeofday()));
+  msg->value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
+  msg->value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
+  msg->value("#Sender.Host",ksock::SockAddr::gethostname());
   workFiberWait_.acquire();
   try {
-    attachFiber(new ClientMailSenderFiber(*this,sendQueue_[i]));
+    attachFiber(new ClientMailSenderFiber(*this,*msg));
   }
   catch( ... ){
     workFiberWait_.release();
     throw;
   }
   AutoLock<InterlockedMutex> lock(workFiberWait_);
-  if( workFiberLastError_ == 0 ) sendQueue_.remove(i);
+  if( workFiberLastError_ == 0 ) sendQueue_.drop(*msg);
   return workFiberLastError_ == 0;
 }
 //------------------------------------------------------------------------------
 bool Client::removeMessage(const utf8::String id)
 {
-  Vector<Message> * queue = &sendQueue_;
-  intptr_t i = sendQueue_.bSearch(Message(id));
-  if( i >= 0 ){
-    sendQueue_.remove(i);
+  Messages * queue = &sendQueue_;
+  Message * msg = sendQueue_.find(id);
+  if( msg != NULL ){
+    sendQueue_.drop(*msg);
     return true;
   }
   {
     AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-    i = recvQueue_.bSearch(id);
-    if( i < 0 ) return false;
+    msg = recvQueue_.find(id);
+    if( msg == NULL ) return false;
   }
   workFiberWait_.acquire();
   workFiberLastError_ = 0;
@@ -486,24 +488,26 @@ bool Client::removeMessage(const utf8::String id)
   AutoLock<InterlockedMutex> lock(workFiberWait_);
   if( workFiberLastError_ == 0 ){
     AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-    i = recvQueue_.bSearch(id);
-    assert( i >= 0 );
-    recvQueue_.remove(i);
+    msg = recvQueue_.find(id);
+    assert( msg != NULL );
+    recvQueue_.drop(*msg);
   }
   return workFiberLastError_ == 0;
 }
 //------------------------------------------------------------------------------
 utf8::String Client::getReceivedMessageList() const
 {
-  utf8::String list;
+  utf8::String slist;
   AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-  for( intptr_t i = recvQueue_.count() - 1; i >= 0; i-- ){
-    list += "\"";
-    list += recvQueue_[i].id();
-    list += "\"";
-    if( i > 0 ) list += ",";
+  Array<Message *> list;
+  recvQueue_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+    slist += "\"";
+    slist += list[i]->id();
+    slist += "\"";
+    if( i > 0 ) slist += ",";
   }
-  return list;
+  return slist;
 }
 //------------------------------------------------------------------------------
 void Client::getDB()
@@ -530,36 +534,35 @@ utf8::String Client::getUserList() const
 utf8::String Client::copyMessage(const utf8::String id)
 {
   AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-  const Vector<Message> * queue = &sendQueue_;
-  intptr_t c, i = queue->bSearch(Message(id));
-  if( i < 0 ){
+  const Messages * queue = &sendQueue_;
+  Message * msg = queue->find(id);
+  if( msg == NULL ){
     queue = &recvQueue_;
-    i = queue->bSearch(Message(id));
+    msg = queue->find(id);
   }
-  if( i < 0 )
+  if( msg == NULL )
     throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
   AutoPtr<Message> message(new Message);
   utf8::String newId(message->id());
-  *message = (*queue)[i];
+  *message = *msg;
   message->removeValueByLeft("#Relay");
   message->id(newId);
-  i = sendQueue_.bSearch(message->id(),c);
-  sendQueue_.insert(i + (c > 0),message.ptr());
-  return message.ptr(NULL)->id();
+  sendQueue_.insert(*message.ptr(NULL));
+  return newId;
 }
 //------------------------------------------------------------------------------
 utf8::String Client::removeValue(const utf8::String id,const utf8::String key)
 {
   AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-  Vector<Message> * queue = &sendQueue_;
-  intptr_t i = queue->bSearch(Message(id));
-  if( i < 0 ){
+  Messages * queue = &sendQueue_;
+  Message * msg = queue->find(id);
+  if( msg == NULL ){
     queue = &recvQueue_;
-    i = queue->bSearch(Message(id));
+    msg = queue->find(id);
   }
-  if( i < 0 )
+  if( msg == NULL )
     throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
-  return (*queue)[i].removeValue(key);
+  return msg->removeValue(key);
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

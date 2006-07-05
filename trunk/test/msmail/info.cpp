@@ -39,6 +39,10 @@ Message::~Message()
 //------------------------------------------------------------------------------
 Message::Message()
 {
+  UUID uuid;
+  createUUID(uuid);
+  utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
+  attributes_.insert(*new Attribute(messageIdKey,suuid));
 }
 //------------------------------------------------------------------------------
 Message::Message(const utf8::String & sid)
@@ -69,12 +73,6 @@ bool Message::isValue(const utf8::String & key) const
 //------------------------------------------------------------------------------
 const utf8::String & Message::value(const utf8::String & key) const
 {
-  if( attributes_.count() == 0 ){
-    UUID uuid;
-    createUUID(uuid);
-    utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-    attributes_.insert(*new Attribute(messageIdKey,suuid));
-  }
   Attribute * p = attributes_.find(key);
   if( p == NULL )
     throw ExceptionSP(new Exception(
@@ -90,12 +88,6 @@ const utf8::String & Message::value(const utf8::String & key) const
 //------------------------------------------------------------------------------
 Message & Message::value(const utf8::String & key,const utf8::String & value)
 {
-  if( attributes_.count() == 0 && key.strcmp(messageIdKey) == 0 && value.strlen() == 0 ){
-    UUID uuid;
-    createUUID(uuid);
-    utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-    attributes_.insert(*new Attribute(messageIdKey,suuid));
-  }
   Attribute * p = attributes_.find(key);
   if( p == NULL ){
     attributes_.insert(*new Attribute(key,value));

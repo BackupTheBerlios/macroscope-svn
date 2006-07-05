@@ -143,8 +143,15 @@ class Client : public ksock::Client {
     int32_t workFiberLastError_;
   protected:
     mutable FiberInterlockedMutex recvQueueMutex_;
-    mutable Vector<Message> recvQueue_;
-    mutable Vector<Message> sendQueue_;
+    typedef EmbeddedHash<
+      Message,
+      Message::idNode,
+      Message::idNodeObject,
+      Message::idNodeHash,
+      Message::idHashNodeEqu
+    > Messages;
+    Messages recvQueue_;
+    Messages sendQueue_;
     Server::Data data_;
     uint64_t ftime_;
   private:

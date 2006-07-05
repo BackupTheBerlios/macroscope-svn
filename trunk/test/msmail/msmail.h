@@ -162,7 +162,7 @@ class Message {
     utf8::String removeValue(const utf8::String & key);
     Message & removeValueByLeft(const utf8::String & key);
 
-/*    static EmbeddedHashNode<Message> & idNode(const Message & object){
+    static EmbeddedHashNode<Message> & idNode(const Message & object){
       return object.idNode_;
     }
     static Message & idNodeObject(const EmbeddedHashNode<Message> & node,Message * p){
@@ -171,12 +171,12 @@ class Message {
     static uintptr_t idNodeHash(const Message & object){
       return object.id().hash(true);
     }
-    static bool hashNodeEqu(const Message & object1,const Message & object2){
+    static bool idHashNodeEqu(const Message & object1,const Message & object2){
       return object1.id().strcmp(object2.id()) == 0;
     }
-    mutable EmbeddedHashNode<Message> idNode_;*/
   protected:
   private:
+    mutable EmbeddedHashNode<Message> idNode_;
     mutable EmbeddedHash<
       Attribute,
       Attribute::keyNode,
