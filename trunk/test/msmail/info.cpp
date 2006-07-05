@@ -34,6 +34,7 @@ extern const char * serverConfSectionName_[] = { "node", "standalone" };
 //------------------------------------------------------------------------------
 Message::~Message()
 {
+  attributes_.drop();
 }
 //------------------------------------------------------------------------------
 Message::Message()
@@ -63,7 +64,7 @@ Message & Message::id(const utf8::String & id)
 //------------------------------------------------------------------------------
 bool Message::isValue(const utf8::String & key) const
 {
-  return attributes_.bSearch(Attribute(key,utf8::String())) >= 0;
+  return attributes_.find(key) != NULL;
 }
 //------------------------------------------------------------------------------
 const utf8::String & Message::value(const utf8::String & key) const
@@ -72,10 +73,10 @@ const utf8::String & Message::value(const utf8::String & key) const
     UUID uuid;
     createUUID(uuid);
     utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-    attributes_.add(Attribute(messageIdKey,suuid));
+    attributes_.insert(*new Attribute(messageIdKey,suuid));
   }
-  intptr_t i = attributes_.bSearch(Attribute(key,utf8::String()));
-  if( i < 0 )
+  Attribute * p = attributes_.find(key);
+  if( p == NULL )
     throw ExceptionSP(new Exception(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
@@ -84,32 +85,31 @@ const utf8::String & Message::value(const utf8::String & key) const
 #endif
       ,__PRETTY_FUNCTION__
     ));
-  return attributes_[i].value_;
+  return p->value_;
 }
 //------------------------------------------------------------------------------
 Message & Message::value(const utf8::String & key,const utf8::String & value)
 {
-  intptr_t i, c;
   if( attributes_.count() == 0 && key.strcmp(messageIdKey) == 0 && value.strlen() == 0 ){
     UUID uuid;
     createUUID(uuid);
     utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-    attributes_.add(Attribute(messageIdKey,suuid));
+    attributes_.insert(*new Attribute(messageIdKey,suuid));
   }
-  i = attributes_.bSearch(Attribute(key,utf8::String()),c);
-  if( c != 0 ){
-    attributes_.insert(i + (c > 0),Attribute(key,value));
+  Attribute * p = attributes_.find(key);
+  if( p == NULL ){
+    attributes_.insert(*new Attribute(key,value));
   }
   else {
-    attributes_[i].value_ = value;
+    p->value_ = value;
   }
   return *this;
 }
 //------------------------------------------------------------------------------
 utf8::String Message::removeValue(const utf8::String & key)
 {
-  intptr_t i = attributes_.bSearch(Attribute(key,utf8::String()));
-  if( i < 0 )
+  Attribute * p = attributes_.find(key);
+  if( p == NULL )
     throw ExceptionSP(new Exception(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
@@ -118,15 +118,17 @@ utf8::String Message::removeValue(const utf8::String & key)
 #endif
       ,__PRETTY_FUNCTION__
     ));
-  utf8::String oldValue(attributes_[i].value_);
-  attributes_.remove(i);
+  utf8::String oldValue(p->value_);
+  attributes_.drop(*p);
   return oldValue;
 }
 //------------------------------------------------------------------------------
 Message & Message::removeValueByLeft(const utf8::String & key)
 {
-  for( intptr_t l = key.strlen(), i = attributes_.count() - 1; i >= 0; i-- )
-    if( attributes_[i].key_.strncmp(key,l) == 0 ) attributes_.remove(i);
+  Array<Attribute *> list;
+  attributes_.list(list);
+  for( intptr_t l = key.strlen(), i = list.count() - 1; i >= 0; i-- )
+    if( list[i]->key_.strncmp(key,l) == 0 ) attributes_.drop(*list[i]);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -145,11 +147,13 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
 {
+  Array<Message::Attribute *> list;
+  a.attributes_.list(list);
   uintptr_t i;
-  s << uint64_t(i = a.attributes().count());
+  s << uint64_t(i = list.count());
   while( i > 0 ){
     i--;
-    s << a.attributes()[i].key_ << a.attributes()[i].value_;
+    s << list[i]->key_ << list[i]->value_;
   }
   return s;
 }
@@ -195,21 +199,23 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
 //------------------------------------------------------------------------------
 AsyncFile & operator << (AsyncFile & s,const Message & a)
 {
+  Array<Message::Attribute *> list;
+  a.attributes_.list(list);
   uintptr_t i;
   utf8::String v = a.id();
-  for( i = 0; i < a.attributes().count(); i++ ){
-    if( a.attributes()[i].key_.strncmp("#",1) != 0 ) continue;
+  for( i = 0; i < list.count(); i++ ){
+    if( list[i]->key_.strncmp("#",1) != 0 ) continue;
     v =
-      /*screenString(*/a.attributes()[i].key_/*)*/ + ": " +
-      /*screenString(*/a.attributes()[i].value_/*)*/ + "\n"
+      /*screenString(*/list[i]->key_/*)*/ + ": " +
+      /*screenString(*/list[i]->value_/*)*/ + "\n"
     ;
     s.writeBuffer(v.c_str(),v.size());
   }
-  for( i = 0; i < a.attributes().count(); i++ ){
-    if( a.attributes()[i].key_.strncmp("#",1) == 0 ) continue;
+  for( i = 0; i < list.count(); i++ ){
+    if( list[i]->key_.strncmp("#",1) == 0 ) continue;
     v =
-      screenString(a.attributes()[i].key_) + ": " +
-      screenString(a.attributes()[i].value_) + "\n"
+      screenString(list[i]->key_) + ": " +
+      screenString(list[i]->value_) + "\n"
     ;
     s.writeBuffer(v.c_str(),v.size());
   }

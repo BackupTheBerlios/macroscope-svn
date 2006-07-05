@@ -368,61 +368,55 @@ intptr_t ServerFiber::processMailbox(
   for( i = list.count() - 1; i >= 0; i-- ){
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
     ctrl.createIfNotExist(true).removeAfterClose(true).open();
-    AutoFileWRLock<AsyncFile> flock;
-    if( ctrl.tryWRLock(0,0) ){
-      flock.setLocked(ctrl);
-      AsyncFile file(list[i]);
-      try {
-        file.open();
-      }
-      catch( ExceptionSP & e ){
+    AutoFileWRLock<AsyncFile> flock(ctrl);
+    AsyncFile file(list[i]);
+    try {
+      file.open();
+    }
+    catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-            e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
-            e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-        e->writeStdError();
+      if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+          e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
+          e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
+      e->writeStdError();
 #else
 #error Not implemented
 #endif
-      }
-      if( file.isOpen() ){
-        utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
-        if( mids.bSearch(id) < 0 || !onlyNewMail ){
-          Message message;
-          file >> message;
-          assert( message.id().strcmp(id) == 0 );
-          utf8::String suser, skey;
-          splitString(message.value("#Recepient"),suser,skey,"@");
-          bool lostSheep = true;
-          {
-            Server::Data & data = server_.data(stStandalone);
-            AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-            Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
-            if( key2ServerLink != NULL )
-              lostSheep = key2ServerLink->server_.strcasecmp(myHost) != 0;
-          }
-          if( lostSheep ){
-            file.close();
-            renameAsync(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
-          }
-          else {
-            bool messageAccepted = true;
-            if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
-              *this << message >> messageAccepted;
-              putCode(i > 0 ? eOK : eLastMessage);
-              if( onlyNewMail && messageAccepted ){
-                j = ids.bSearch(message.id(),c);
-                if( c != 0 ) ids.insert(j + (c > 0),message.id());
-              }
-            }
-            file.close();
-            k += !messageAccepted;
-          }
-        }
-        k--;
-      }
     }
-    else {
+    if( file.isOpen() ){
+      utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
+      if( mids.bSearch(id) < 0 || !onlyNewMail ){
+        Message message;
+        file >> message;
+        assert( message.id().strcmp(id) == 0 );
+        utf8::String suser, skey;
+        splitString(message.value("#Recepient"),suser,skey,"@");
+        bool lostSheep = true;
+        {
+          Server::Data & data = server_.data(stStandalone);
+          AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+          Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
+          if( key2ServerLink != NULL )
+            lostSheep = key2ServerLink->server_.strcasecmp(myHost) != 0;
+        }
+        if( lostSheep ){
+          file.close();
+          renameAsync(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
+        }
+        else {
+          bool messageAccepted = true;
+          if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
+            *this << message >> messageAccepted;
+            putCode(i > 0 ? eOK : eLastMessage);
+            if( onlyNewMail && messageAccepted ){
+              j = ids.bSearch(message.id(),c);
+              if( c != 0 ) ids.insert(j + (c > 0),message.id());
+            }
+          }
+          file.close();
+          k += !messageAccepted;
+        }
+      }
       k--;
     }
     list.remove(i);

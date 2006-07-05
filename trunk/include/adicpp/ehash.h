@@ -82,6 +82,9 @@ class EmbeddedHash {
   public:
     ~EmbeddedHash();
     EmbeddedHash();
+    EmbeddedHash(const EmbeddedHash<T,N,O,H,E> & a);
+
+    EmbeddedHash<T,N,O,H,E> & operator = (const EmbeddedHash<T,N,O,H,E> & a);
 
     EmbeddedHash<T,N,O,H,E> & clear();
     EmbeddedHash<T,N,O,H,E> & insert(const T & object);
@@ -91,11 +94,9 @@ class EmbeddedHash {
     T & search(const T & object) const;
     T * find(const T & object) const;
     EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
+    const uintptr_t & count() const;
   protected:
   private:
-    EmbeddedHash(const EmbeddedHash<T,N,O,H,E> &){}
-    void operator = (const EmbeddedHash<T,N,O,H,E> &){}
-
     mutable AutoPtr<EmbeddedHashNode<T> *> hash_;
     mutable uintptr_t size_;
     uintptr_t count_;
@@ -126,6 +127,46 @@ template <
 > inline
 EmbeddedHash<T,N,O,H,E>::EmbeddedHash() : size_(0), count_(0)
 {
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t (*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+EmbeddedHash<T,N,O,H,E>::EmbeddedHash(const EmbeddedHash<T,N,O,H,E> & a) : size_(0), count_(0)
+{
+  operator = (a);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t (*H)(const T &),
+  bool (*E) (const T &, const T &)
+>
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::operator = (const EmbeddedHash<T,N,O,H,E> & a)
+{
+  EmbeddedHash<T,N,O,H,E> t;
+  EmbeddedHashNode<T> ** head = a.hash_, ** tail = head + a.size_, * walk;
+  while( head < tail ){
+    walk = *head;
+    while( walk != NULL ){
+      t.insert(*new T(O(*walk,NULL)));
+      walk = walk->next();
+    }
+    head++;
+  }
+  clear();
+  hash_.ptr(t.hash_.ptr(NULL));
+  size_ = t.size_;
+  t.size_ = 0;
+  count_ = t.count_;
+  t.count_ = 0;
+  return *this;
 }
 //---------------------------------------------------------------------------
 template <
@@ -171,6 +212,7 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop()
     hash_.free();
     size_ = 0;
   }
+  count_ = 0;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -184,16 +226,15 @@ template <
 EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::list(Array<T *> & l) const
 {
   l.resize(count_);
-  for( intptr_t i = count_ - 1; i >= 0; i-- ){
-    EmbeddedHashNode<T> ** head = hash_.ptr(), ** tail = head + size_, * walk;
-    while( head < tail ){
-      walk = *head;
-      while( walk != NULL ){
-        l[i] = &O(*walk,NULL);
-        walk = walk->next();
-      }
-      head++;
+  intptr_t i = 0;
+  EmbeddedHashNode<T> ** head = hash_.ptr(), ** tail = head + size_, * walk;
+  while( head < tail ){
+    walk = *head;
+    while( walk != NULL ){
+      l[i++] = &O(*walk,NULL);
+      walk = walk->next();
     }
+    head++;
   }
   return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
@@ -385,7 +426,7 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
     case optInc :
       if( ++count_ < count + c ) return;
       head = getChain();
-      hash_.realloc(i = (size_ << 1) + (size_ == 0));
+      hash_.realloc((i = (size_ << 1) + (size_ == 0)) * sizeof(EmbeddedHashNode<T> *));
       while( size_ < i ){
         hash_[size_] = NULL;
         size_++;
@@ -396,12 +437,24 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
       if( --count_ > count - c ) return;
       if( size_ > 1 || count_ == 0 ){
         head = getChain();
-        hash_.realloc(size_ >> 1);
+        hash_.realloc((size_ >> 1) * sizeof(EmbeddedHashNode<T> *));
         size_ >>= 1;
         putChain(head);
       }
       break;
   }
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+const uintptr_t & EmbeddedHash<T,N,O,H,E>::count() const
+{
+  return count_;
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

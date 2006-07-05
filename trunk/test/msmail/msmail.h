@@ -110,27 +110,42 @@ class Message {
     Message & operator = (const Message & a);
 
     class Attribute {
+      friend class Message;
       public:
         ~Attribute(){}
         Attribute(){}
         Attribute(const Attribute & a) : key_(a.key_), value_(a.value_) {}
-        Attribute(const utf8::String & key,const utf8::String & value) : key_(key), value_(value) {}
+        Attribute(const utf8::String & key,const utf8::String & value = utf8::String()) :
+          key_(key), value_(value) {}
         Attribute & operator = (const Attribute & a){
           key_ = a.key_;
           value_ = a.value_;
           return *this;
         }
-        bool operator == (const Attribute & a) const { return key_.strcasecmp(a.key_) == 0; }
-        bool operator != (const Attribute & a) const { return key_.strcasecmp(a.key_) != 0; }
-        bool operator >= (const Attribute & a) const { return key_.strcasecmp(a.key_) >= 0; }
-        bool operator >  (const Attribute & a) const { return key_.strcasecmp(a.key_) >  0; }
-        bool operator <= (const Attribute & a) const { return key_.strcasecmp(a.key_) <= 0; }
-        bool operator <  (const Attribute & a) const { return key_.strcasecmp(a.key_) <  0; }
+        bool operator == (const Attribute & a) const { return key_.strcmp(a.key_) == 0; }
+        bool operator != (const Attribute & a) const { return key_.strcmp(a.key_) != 0; }
+        bool operator >= (const Attribute & a) const { return key_.strcmp(a.key_) >= 0; }
+        bool operator >  (const Attribute & a) const { return key_.strcmp(a.key_) >  0; }
+        bool operator <= (const Attribute & a) const { return key_.strcmp(a.key_) <= 0; }
+        bool operator <  (const Attribute & a) const { return key_.strcmp(a.key_) <  0; }
 
         utf8::String key_;
         utf8::String value_;
       protected:
       private:
+        static EmbeddedHashNode<Attribute> & keyNode(const Attribute & object){
+          return object.keyNode_;
+        }
+        static Attribute & keyNodeObject(const EmbeddedHashNode<Attribute> & node,Attribute * p){
+          return node.object(p->keyNode_);
+        }
+        static uintptr_t keyNodeHash(const Attribute & object){
+          return object.key_.hash(true);
+        }
+        static bool keyHashNodeEqu(const Attribute & object1,const Attribute & object2){
+          return object1.key_.strcmp(object2.key_) == 0;
+        }
+        mutable EmbeddedHashNode<Attribute> keyNode_;
     };
 
     bool operator == (const Message & a) const { return id().strcmp(a.id()) == 0; }
@@ -144,7 +159,6 @@ class Message {
     const utf8::String & value(const utf8::String & key) const;
     bool isValue(const utf8::String & key) const;
     Message & value(const utf8::String & key,const utf8::String & value);
-    const Array<Attribute> & attributes() const;
     utf8::String removeValue(const utf8::String & key);
     Message & removeValueByLeft(const utf8::String & key);
 
@@ -155,25 +169,26 @@ class Message {
       return node.object(p->idNode_);
     }
     static uintptr_t idNodeHash(const Message & object){
-      return object.id().hash(false);
+      return object.id().hash(true);
     }
     static bool hashNodeEqu(const Message & object1,const Message & object2){
-      return object1.id().strcasecmp(object2.id()) == 0;
+      return object1.id().strcmp(object2.id()) == 0;
     }
     mutable EmbeddedHashNode<Message> idNode_;*/
   protected:
   private:
-    mutable Array<Attribute> attributes_;
+    mutable EmbeddedHash<
+      Attribute,
+      Attribute::keyNode,
+      Attribute::keyNodeObject,
+      Attribute::keyNodeHash,
+      Attribute::keyHashNodeEqu
+    > attributes_;
 };
 //------------------------------------------------------------------------------
 inline const utf8::String & Message::id() const
 {
   return value(messageIdKey);
-}
-//------------------------------------------------------------------------------
-inline const Array<Message::Attribute> & Message::attributes() const
-{
-  return attributes_;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
