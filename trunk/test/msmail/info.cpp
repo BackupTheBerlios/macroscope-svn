@@ -140,6 +140,16 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
   while( i > 0 ){
     i--;
     s >> key >> value;
+    if( key.strncmp("#",1) == 0 ){
+      utf8::String::Iterator i(key);
+      while( i.eof() )
+        if( i.isSpace() )
+#if defined(__WIN32__) || defined(__WIN64__)
+          throw ExceptionSP(new Exception(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__));
+#else
+          throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+#endif
+    }
     a.value(key,value);
   }
   return s;
@@ -160,31 +170,26 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
 //------------------------------------------------------------------------------
 AsyncFile & operator >> (AsyncFile & s,Message & a)
 {
-  utf8::String key, value;
+  utf8::String str, key, value;
   bool eof;
 
   for(;;){
-    key = s.gets(&eof);
+    str = s.gets(&eof);
     if( eof ) break;
-    utf8::String::Iterator i(key);
-    i.last().prev();
-    if( i.getChar() == '\n' ){
-      key.remove(i);
-      i.prev();
-    }
-    if( i.getChar() == '\r' ) key.remove(i);
-    i = key.strstr(": ");
+    utf8::String::Iterator i(str), ia(i);
+    ia.last();
+    if( (ia - 1).getChar() == '\n' ) ia.prev();
+    i = str.strstr(": ");
     if( !i.eof() ){
-      a.value(
-        /*unScreenString(*/utf8::String(key,i)/*)*/,
-        /*unScreenString(*/i + 2/*)*/
-      );
-    }
-    else if( !(i = key.strstr(": ")).eof() ){
-      a.value(
-        unScreenString(utf8::String(key,i)),
-        unScreenString(i + 2)
-      );
+      if( str.strncmp("#",1) == 0 ){
+        key = utf8::String(str,i);
+        value = unScreenString(utf8::String(i + 2,ia));
+      }
+      else {
+        key = unScreenString(utf8::String(str,i));
+        value = unScreenString(utf8::String(i + 2,ia));
+      }
+      a.value(key,value);
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -205,10 +210,7 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   utf8::String v = a.id();
   for( i = 0; i < list.count(); i++ ){
     if( list[i]->key_.strncmp("#",1) != 0 ) continue;
-    v =
-      /*screenString(*/list[i]->key_/*)*/ + ": " +
-      /*screenString(*/list[i]->value_/*)*/ + "\n"
-    ;
+    v = list[i]->key_ + ": " + unScreenString(list[i]->value_) + "\n";
     s.writeBuffer(v.c_str(),v.size());
   }
   for( i = 0; i < list.count(); i++ ){
@@ -1183,10 +1185,10 @@ utf8::String Server::Data::getKeyGroupListNL(const utf8::String & groups,bool qu
     for( j = enumStringParts(groups) - 1; j >= 0; j-- )
       if( key2GroupLinks_.find(Key2GroupLink(keyList_[i].name_,stringPartByNo(groups,j))) != NULL ) break;
     if( j >= 0 ){
+      if( list.strlen() > 0 ) list += ",";
       if( quoted ) list += "\"";
       list += keyList_[i].name_;
       if( quoted ) list += "\"";
-      if( i > 0 ) list += ",";
     }
   }
   return list;
