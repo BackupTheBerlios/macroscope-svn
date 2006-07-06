@@ -398,7 +398,7 @@ class API {
         void * p_getpeername;
       };
       union {
-        int (WSAAPI * GetAddrInfoA)(
+        int (WSAAPI * getaddrinfo)(
             const char FAR * nodename,
             const char FAR * servname,
             const struct addrinfo FAR * hints,
@@ -407,11 +407,11 @@ class API {
         void * p_getaddrinfo;
       };
       union {
-        void (WSAAPI * FreeAddrInfoA)(LPADDRINFO pAddrInfo);
+        void (WSAAPI * freeaddrinfo)(LPADDRINFO pAddrInfo);
         void * p_freeaddrinfo;
       };
       union {
-        int (WSAAPI * GetNameInfoA)(
+        int (WSAAPI * getnameinfo)(
             const struct sockaddr FAR * sa,
             socklen_t       salen,
             char FAR *      host,

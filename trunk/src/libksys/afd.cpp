@@ -614,9 +614,9 @@ l1:
   else {
     int64_t r;
     if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
-    if( buffer->buffer_ == NULL ){
+    if( buffer->buffer_ == (const uint8_t *) NULL ){
       buffer->buffer_.alloc(buffer->size_);
-      r = read(a,buffer->size_);
+      r = read(buffer->buffer_,buffer->size_);
       if( r <= 0 ){
         if( eof != NULL ) *eof = true;
         return utf8::String();

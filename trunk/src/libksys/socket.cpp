@@ -195,7 +195,7 @@ AsyncSocket & AsyncSocket::setsockopt(int level,int optname,const void * optval,
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::bind(const SockAddr & sockAddr)
 {
-  if( api.bind(socket_,(struct sockaddr *) &sockAddr.addr4_,(socklen_t) sockAddr.length()) != 0 ){
+  if( api.bind(socket_,(struct sockaddr *) &sockAddr.addr4_,sockAddr.sockAddrSize()) != 0 ){
     int32_t err = errNo();
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
   }
@@ -808,7 +808,7 @@ BOOL AsyncSocket::Connect(HANDLE event,ksys::AsyncEvent * request)
     api.connect(
       socket_,
       (struct sockaddr *) &request->address_,
-      (socklen_t) request->address_.length()
+      request->address_.sockAddrSize()
     ) != SOCKET_ERROR ? TRUE : FALSE;
 }
 //---------------------------------------------------------------------------

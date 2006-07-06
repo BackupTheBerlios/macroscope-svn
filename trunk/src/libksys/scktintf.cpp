@@ -192,6 +192,9 @@ void API::open()
     for( i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
       ((void **) &p_WSAGetLastError)[i] = GetProcAddress(handle_, symbols_[i]);
       if( ((void **) &p_WSAGetLastError)[i] == NULL &&
+          (void **) &p_WSAGetLastError + i != &p_getaddrinfo &&
+          (void **) &p_WSAGetLastError + i != &p_freeaddrinfo &&
+          (void **) &p_WSAGetLastError + i != &p_getnameinfo &&
           (void **) &p_WSAGetLastError + i != &p_GetAddrInfoW &&
           (void **) &p_WSAGetLastError + i != &p_FreeAddrInfoW &&
           (void **) &p_WSAGetLastError + i != &p_GetNameInfoW ){

@@ -77,7 +77,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   aiHints.ai_flags = ai_flag;
   int r = 0;
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::isWin9x() ){
+  if( ksys::isWin9x() && api.getaddrinfo != NULL ){
     utf8::AnsiString ap(port.strlen() > 0 ? port.getANSIString() : ((utf8::String) defPort).getANSIString());
     r = api.GetAddrInfoA(
       host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
@@ -86,7 +86,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
       &aiList
     );
   }
-  else if( api.GetAddrInfoW == NULL ){
+  else if( api.getaddrinfo == NULL || api.GetAddrInfoW == NULL ){
 #if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
     addr4_.sin_len = sizeof(addr4_);
 #endif
@@ -138,14 +138,14 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
   }
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::isWin9x() ){
+  if( ksys::isWin9x() && api.FreeAddrInfoA != NULL ){
     for( res = aiList; res != NULL; res = res->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
       memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
     }
     api.FreeAddrInfoA(aiList);
   }
-  else if( api.FreeAddrInfoW == NULL ){
+  else if( api.FreeAddrInfoA || api.FreeAddrInfoW == NULL ){
   }
   else {
     for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
@@ -235,10 +235,10 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
     char servInfo[NI_MAXSERV];
     wchar_t servInfoW[NI_MAXSERV];
   };
-  if( ksys::isWin9x() ){
+  if( ksys::isWin9x() && api.GetNameInfoA != NULL ){
     err = api.GetNameInfoA(
       (const sockaddr *) &addr4_,
-      (socklen_t) sockAddrSize(),
+      sockAddrSize(),
       hostName,
       sizeof(hostName),
       servInfo,
@@ -253,7 +253,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
       }
     }
   }
-  else if( api.GetNameInfoW == NULL ){
+  else if( api.GetNameInfoA == NULL || api.GetNameInfoW == NULL ){
 	  struct hostent * he = api.gethostbyaddr(
       (const char *) &addr4_.sin_addr,
       addrSize(),

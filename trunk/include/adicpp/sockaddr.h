@@ -115,7 +115,7 @@ inline socklen_t SockAddr::addrSize() const
   //#else
   if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_.sin_addr);
 #if HAVE_STRUCT_SOCKADDR_IN6
-  else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_.sin_addr);
+  else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_.sin6_addr);
 #endif
   //#endif
   return l;
