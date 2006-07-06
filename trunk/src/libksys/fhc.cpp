@@ -331,8 +331,7 @@ int64_t FileHandleContainer::write(uint64_t pos, const void * buf, uint64_t size
       ww = -1;
       break;
     }
-    if( w == 0 )
-      break;
+    if( w == 0 ) break;
     size -= w;
     ww += w;
   }

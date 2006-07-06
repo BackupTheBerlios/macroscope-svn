@@ -279,6 +279,7 @@ int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
       return -1;
     }
     buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+    pos += fiber()->event_.count_;
     r += fiber()->event_.count_;
     size -= fiber()->event_.count_;
     if( r == 0 ) break;
@@ -306,6 +307,7 @@ int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
       return -1;
     }
     buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+    pos += fiber()->event_.count_;
     w += fiber()->event_.count_;
     size -= fiber()->event_.count_;
     if( w == 0 ) break;
@@ -637,9 +639,9 @@ l1:
     bool nl = false;
     for( i = buffer->pos_; i < buffer->len_; i++ )
       if( buffer->buffer_[i] == '\n' ){ i++; nl = true; break; }
-    s.realloc(ss + i - buffer->pos_ + 1 - buffer->removeNewLine_);
-    memcpy(&s[ss],&buffer->buffer_[i],i - buffer->pos_ - buffer->removeNewLine_);
-    ss += i - buffer->pos_ - buffer->removeNewLine_;
+    s.realloc(ss + i - buffer->pos_ + 1 - (nl && buffer->removeNewLine_));
+    memcpy(&s[ss],&buffer->buffer_[buffer->pos_],i - buffer->pos_ - (nl && buffer->removeNewLine_));
+    ss += i - buffer->pos_ - (nl && buffer->removeNewLine_);
     s[ss] = '\0';
     buffer->pos_ = i;
     seek(buffer->bufferFilePos_ + i);
