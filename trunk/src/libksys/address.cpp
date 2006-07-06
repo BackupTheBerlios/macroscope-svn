@@ -138,14 +138,14 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
   }
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::isWin9x() && api.FreeAddrInfoA != NULL ){
+  if( ksys::isWin9x() && api.freeaddrinfo != NULL ){
     for( res = aiList; res != NULL; res = res->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
       memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
     }
-    api.FreeAddrInfoA(aiList);
+    api.freeaddrinfo(aiList);
   }
-  else if( api.FreeAddrInfoA || api.FreeAddrInfoW == NULL ){
+  else if( api.freeaddrinfo == NULL || api.FreeAddrInfoW == NULL ){
   }
   else {
     for( resW = aiListW; resW != NULL; resW = resW->ai_next ){

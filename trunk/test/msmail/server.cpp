@@ -152,6 +152,7 @@ void Server::clearNodeClient(NodeClient * client)
 //------------------------------------------------------------------------------
 void Server::startNodeClientNL(ServerType dataType,const utf8::String & nodeHostName)
 {
+  if( shutdown_ ) return;
   if( nodeClient_ == NULL ){
     assert( skippedNodeClientStarts_ == 0 );
     NodeClient * nodeClient;
@@ -171,6 +172,7 @@ void Server::startNodeClient(ServerType dataType,const utf8::String & nodeHostNa
 //------------------------------------------------------------------------------
 void Server::startNodesExchangeNL()
 {
+  if( shutdown_ ) return;
   intptr_t i, j, c;
   utf8::String me(bindAddrs()[0].resolveAsync(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;

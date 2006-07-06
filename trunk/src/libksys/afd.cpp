@@ -611,24 +611,43 @@ l1:
     p.ptr(NULL);
     return container;
   }
-  else {
-    int64_t r;
-    if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
-    if( buffer->buffer_ == (const uint8_t *) NULL ){
-      buffer->buffer_.alloc(buffer->size_);
-      r = read(buffer->buffer_,buffer->size_);
-      if( r <= 0 ){
-        if( eof != NULL ) *eof = true;
-        return utf8::String();
+  int64_t r;
+  if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
+  if( buffer->buffer_ == (const uint8_t *) NULL ) buffer->buffer_.alloc(buffer->size_);
+  uintptr_t i, ss = 0;
+  AutoPtr<char> s;
+  for(;;){
+    if( buffer->pos_ >= buffer->len_ ){
+      if( buffer->len_ == 0 ){
+        buffer->bufferFilePos_ = tell();
+        r = read(buffer->buffer_,buffer->size_);
       }
+      else {
+        r = read(buffer->bufferFilePos_ + buffer->len_,buffer->buffer_,buffer->size_);
+        buffer->bufferFilePos_ += buffer->len_;
+      }
+      if( r <= 0 ){
+        if( ss == 0 && eof != NULL ) *eof = true;
+        break;
+      }
+      seek(buffer->bufferFilePos_);
       buffer->len_ = (uintptr_t) r;
       buffer->pos_ = 0;
     }
-    uintptr_t i;
-    utf8::String s;
-    for( i = buffer->pos_; i < buffer->len_ && buffer->buffer_[i] != '\n'; i++ );
-
+    bool nl = false;
+    for( i = buffer->pos_; i < buffer->len_; i++ )
+      if( buffer->buffer_[i] == '\n' ){ i++; nl = true; break; }
+    s.realloc(ss + i - buffer->pos_ + 1 - buffer->removeNewLine_);
+    memcpy(&s[ss],&buffer->buffer_[i],i - buffer->pos_ - buffer->removeNewLine_);
+    ss += i - buffer->pos_ - buffer->removeNewLine_;
+    s[ss] = '\0';
+    buffer->pos_ = i;
+    seek(buffer->bufferFilePos_ + i);
+    if( nl ) break;
   }
+  utf8::String::Container * container = new utf8::String::Container(0,s.ptr());
+  s.ptr(NULL);
+  return container;
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

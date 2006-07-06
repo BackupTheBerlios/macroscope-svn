@@ -312,7 +312,8 @@ BaseServer::BaseServer() :
   mt_(numberOfProcessors() * 4),
   fiberStackSize_(PTHREAD_STACK_MIN),
   fiberTimeout_(10000000),
-  howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbort))
+  howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbort)),
+  shutdown_(false)
 {
 }
 //------------------------------------------------------------------------------
@@ -353,6 +354,7 @@ void BaseServer::closeServer()
   EmbeddedListNode<Fiber> * bfp;
   EmbeddedListNode<AsyncDescriptor> * adp;
   BaseThread * thread;
+  shutdown_ = true;
   if( how & csTerminate ){
     AutoLock<InterlockedMutex> lock(mutex_);
     for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
@@ -419,6 +421,7 @@ void BaseServer::closeServer()
   }
   sweepThreads();
   assert( threads_.count() == 0 );
+  shutdown_ = false;
 }
 //------------------------------------------------------------------------------
 BaseThread * BaseServer::selectThread()

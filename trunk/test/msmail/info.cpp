@@ -162,11 +162,16 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
 //------------------------------------------------------------------------------
 AsyncFile & operator >> (AsyncFile & s,Message & a)
 {
+  AsyncFile::LineGetBuffer buffer;
+  buffer.removeNewLine_ = true;
+  uint64_t lastHeaderPos;
+
   utf8::String str, key, value;
-  bool eof;
+  bool eof, header = false;
 
   for(;;){
-    str = s.gets(&eof);
+    lastHeaderPos = s.tell();
+    str = s.gets(&eof,&buffer);
     if( eof ) break;
     utf8::String::Iterator i(str), ia(i);
     ia.last();
@@ -174,10 +179,15 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
     i = str.strstr(": ");
     if( !i.eof() ){
       if( str.strncmp("#",1) == 0 ){
+        header = true;
         key = utf8::String(str,i);
         value = unScreenString(utf8::String(i + 2,ia));
       }
       else {
+        if( header ){
+          s.seek(lastHeaderPos);
+          break;
+        }
         key = unScreenString(utf8::String(str,i));
         value = unScreenString(utf8::String(i + 2,ia));
       }

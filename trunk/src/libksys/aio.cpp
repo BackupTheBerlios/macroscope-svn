@@ -572,7 +572,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
 
         requests_.remove(*object);
 
-        object->count_ = object->errno_ != ERROR_SUCCESS ? ~uint64_t(0) : nb;
+        object->count_ = object->errno_ != ERROR_SUCCESS && object->errno_ != ERROR_HANDLE_EOF ? ~uint64_t(0) : nb;
         object->fiber_->thread()->postEvent(object);
         sp--;
       }

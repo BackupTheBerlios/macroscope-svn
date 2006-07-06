@@ -902,6 +902,7 @@ class BaseServer {
     void maintainFibers();
     void abortNotification(DirectoryChangeNotification * dcn = NULL);
     void sweepThreads();
+    bool shutdown_;
   private:
     mutable InterlockedMutex mutex_;
     EmbeddedList<

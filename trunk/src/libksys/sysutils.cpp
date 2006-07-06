@@ -1464,6 +1464,27 @@ void initializeArguments(int argc,char ** argv)
 //---------------------------------------------------------------------------
 void initialize()
 {
+// runtime checks for system or compiler incompatibilities
+  assert( sizeof(char) == 1 );
+  if( sizeof(char) != 1 ){
+    fprintf(stderr,"sizeof(char) != 1\n");
+    abort();
+  }
+  assert( (unsigned int) false == 0 );
+  if( (unsigned int) false != 0 ){
+    fprintf(stderr,"(unsigned int) false != 0\n");
+    abort();
+  }
+  assert( (unsigned int) !1 == 0 );
+  if( (unsigned int) !1 != 0 ){
+    fprintf(stderr,"(unsigned int) !1 != 0\n");
+    abort();
+  }
+  assert( (unsigned int) !0 == 1 );
+  if( (unsigned int) !0 != 1 ){
+    fprintf(stderr,"(unsigned int) !0 != 1\n");
+    abort();
+  }
 #if defined(__WIN32__) || defined(__WIN64__)
 // force the system to create the message queue for main thread (if not already created)
   MSG msg;

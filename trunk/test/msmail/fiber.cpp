@@ -387,7 +387,7 @@ intptr_t ServerFiber::processMailbox(
       utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
       if( mids.bSearch(id) < 0 || !onlyNewMail ){
         Message message;
-        file >> message;
+        file >> message; // read system attributes
         assert( message.id().strcmp(id) == 0 );
         utf8::String suser, skey;
         splitString(message.value("#Recepient"),suser,skey,"@");
@@ -406,6 +406,7 @@ intptr_t ServerFiber::processMailbox(
         else {
           bool messageAccepted = true;
           if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
+            file >> message; // read user attributes
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
             if( onlyNewMail && messageAccepted ){
