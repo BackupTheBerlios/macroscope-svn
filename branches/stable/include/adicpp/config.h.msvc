@@ -1,0 +1,302 @@
+#if (defined(_WIN32) || defined (WIN32)) && !defined(__WIN32__)
+#define __WIN32__ 1
+#endif
+
+#if (defined(_WIN64) || defined (WIN64)) && !defined(__WIN64__)
+#define __WIN64__ 1
+#endif
+
+#if defined(__WIN32__) && !defined(__WIN64__)
+#define SIZEOF_CHAR 1
+#define SIZEOF_SHORT 2
+#define SIZEOF_INT 4
+#define SIZEOF_LONG 4
+#define SIZEOF_VOID_P 4
+#define SIZEOF_WCHAR_T 2
+#define SIZEOF_INTMAX_T 8
+
+#define INT8_C(c)               (c)
+#define INT16_C(c)              (c)
+#define INT32_C(c)              (c)
+#define INT64_C(c)              (c ## i64)
+#define UINT8_C(c)              (c)
+#define UINT16_C(c)             (c)
+#define UINT32_C(c)             (c ## u)
+#define UINT64_C(c)             (c ## ui64)
+#define INTMAX_C(c)             (c ## i64)
+#define UINTMAX_C(c)            (c ## ui64)
+
+#define INT8_MIN        (-0x7f-1)
+#define INT16_MIN       (-0x7fff-1)
+#define INT32_MIN       (-0x7fffffff-1)
+#define INT64_MIN       (-0x7fffffffffffffffi64-1)
+#define INT8_MAX        0x7f
+#define INT16_MAX       0x7fff
+#define INT32_MAX       0x7fffffff
+#define INT64_MAX       0x7fffffffffffffffi64
+#define UINT8_MAX       0xff
+#define UINT16_MAX      0xffff
+#define UINT32_MAX      0xffffffffi64
+#define UINT64_MAX      0xffffffffffffffffui64
+
+#define INTPTR_MIN      INT32_MIN
+#define INTPTR_MAX      INT32_MAX
+#define UINTPTR_MAX     UINT32_MAX
+#define INTMAX_MIN      INT64_MIN
+#define INTMAX_MAX      INT64_MAX
+#define UINTMAX_MAX     UINT64_MAX
+#define PTRDIFF_MIN     INT32_MIN
+#define PTRDIFF_MAX     INT32_MAX
+#ifndef SIZE_MAX
+#define SIZE_MAX        UINT32_MAX
+#endif
+/*#ifndef WCHAR_MIN
+#define WCHAR_MIN       INT32_MIN
+#endif
+#ifndef WCHAR_MAX
+#define WCHAR_MAX       INT32_MAX
+#endif*/
+#define WINT_MIN        INT32_MIN
+#define WINT_MAX        INT32_MAX
+
+#define PRId8           "d"     /* int8_t */
+#define PRId16          "d"     /* int16_t */
+#define PRId32          "d"     /* int32_t */
+#define PRId64          "I64d"  /* int64_t */
+#define PRIdLEAST8      "d"     /* int_least8_t */
+#define PRIdLEAST16     "d"     /* int_least16_t */
+#define PRIdLEAST32     "d"     /* int_least32_t */
+#define PRIdLEAST64     "I64d"  /* int_least64_t */
+#define PRIdFAST8       "d"     /* int_fast8_t */
+#define PRIdFAST16      "d"     /* int_fast16_t */
+#define PRIdFAST32      "d"     /* int_fast32_t */
+#define PRIdFAST64      "I64d"  /* int_fast64_t */
+#define PRIdMAX         "I64d"  /* intmax_t */
+#define PRIdPTR         "d"     /* intptr_t */
+
+#define PRIu8           "u"     /* uint8_t */
+#define PRIu16          "u"     /* uint16_t */
+#define PRIu32          "u"     /* uint32_t */
+#define PRIu64          "I64u"  /* uint64_t */
+#define PRIuMAX         "I64u"  /* uintmax_t */
+#define PRIuPTR         "u"     /* uintptr_t */
+
+#define PRIx8           "x"     /* uint8_t */
+#define PRIx16          "x"     /* uint16_t */
+#define PRIx32          "x"     /* uint32_t */
+#define PRIx64          "I64x"  /* uint64_t */
+#define PRIxMAX         "I64x"  /* uintmax_t */
+#define PRIxPTR         "x"     /* uintptr_t */
+
+#define PRIX8           "X"     /* uint8_t */
+#define PRIX16          "X"     /* uint16_t */
+#define PRIX32          "X"     /* uint32_t */
+#define PRIX64          "I64X"   /* uint64_t */
+#define PRIXMAX         "I64X"    /* uintmax_t */
+#define PRIXPTR         "X"     /* uintptr_t */
+
+typedef __int8                   int8_t;
+typedef unsigned __int8         uint8_t;
+typedef __int16                 int16_t;
+typedef unsigned __int16       uint16_t;
+typedef __int32                 int32_t;
+typedef unsigned __int32       uint32_t;
+#ifdef __INTEL_COMPILER
+typedef long long               int64_t;
+typedef unsigned long long      uint64_t;
+#else
+typedef __int64                int64_t;
+typedef unsigned __int64       uint64_t;
+#endif
+
+typedef int64_t                 intmax_t;
+typedef uint64_t                uintmax_t;
+
+//typedef _w64 int                      intptr_t;
+//typedef _w64 unsigned int            uintptr_t;
+
+//typedef _w64 int               ptrdiff_t;
+
+#define HAVE_INTPTR_T_AS_INT 1
+#define HAVE_INT32_T_AS_INT 1
+#define HAVE_INT64_T_AS_INTMAX_T 1
+#endif
+
+#ifdef __WIN64__
+#define SIZEOF_CHAR 1
+#define SIZEOF_SHORT 2
+#define SIZEOF_INT 4
+#define SIZEOF_LONG 4
+#define SIZEOF_VOID_P 8
+#define SIZEOF_WCHAR_T 2
+#define SIZEOF_INTMAX_T 8
+
+#define INT8_C(c)               (c)
+#define INT16_C(c)              (c)
+#define INT32_C(c)              (c)
+#define INT64_C(c)              (c ## i64)
+#define UINT8_C(c)              (c)
+#define UINT16_C(c)             (c)
+#define UINT32_C(c)             (c ## ui64)
+#define UINT64_C(c)             (c ## ui64)
+#define INTMAX_C(c)             (c ## i64)
+#define UINTMAX_C(c)            (c ## ui64)
+
+#define INT8_MIN        (-0x7f-1)
+#define INT16_MIN       (-0x7fff-1)
+#define INT32_MIN       (-0x7fffffff-1)
+#define INT64_MIN       (-0x7fffffffffffffffL-1)
+#define INT8_MAX        0x7f
+#define INT16_MAX       0x7fff
+#define INT32_MAX       0x7fffffff
+#define INT64_MAX       0x7fffffffffffffffL
+#define UINT8_MAX       0xff
+#define UINT16_MAX      0xffff
+#define UINT32_MAX      0xffffffffU
+#define UINT64_MAX      0xffffffffffffffffUL
+
+#define INTPTR_MIN      INT64_MIN
+#define INTPTR_MAX      INT64_MAX
+#define UINTPTR_MAX     UINT64_MAX
+
+#define INTMAX_MIN      INT64_MIN
+#define INTMAX_MAX      INT64_MAX
+#define UINTMAX_MAX     UINT64_MAX
+
+#define PTRDIFF_MIN     INT64_MIN
+#define PTRDIFF_MAX     INT64_MAX
+
+/*#define SIZE_MAX        UINT64_MAX
+
+#define WCHAR_MIN       INT32_MIN
+#define WCHAR_MAX       INT32_MAX
+*/
+#define WINT_MIN        INT32_MIN
+#define WINT_MAX        INT32_MAX
+
+#define PRId8           "d"     /* int8_t */
+#define PRId16          "d"     /* int16_t */
+#define PRId32          "d"     /* int32_t */
+#define PRId64          "I64d"    /* int64_t */
+#define PRIdMAX         "I64d"    /* intmax_t */
+#define PRIdPTR         "I64d"    /* intptr_t */
+
+#define PRIu8           "u"     /* uint8_t */
+#define PRIu16          "u"     /* uint16_t */
+#define PRIu32          "u"     /* uint32_t */
+#define PRIu64          "I64u"    /* uint64_t */
+#define PRIuMAX         "I64u"    /* uintmax_t */
+#define PRIuPTR         "I64u"    /* uintptr_t */
+
+#define PRIx8           "x"     /* uint8_t */
+#define PRIx16          "x"     /* uint16_t */
+#define PRIx32          "x"     /* uint32_t */
+#define PRIx64          "I64x"    /* uint64_t */
+#define PRIxMAX         "I64x"    /* uintmax_t */
+#define PRIxPTR         "I64x"    /* uintptr_t */
+
+#define PRIX8           "X"     /* uint8_t */
+#define PRIX16          "X"     /* uint16_t */
+#define PRIX32          "X"     /* uint32_t */
+#define PRIX64          "I64X"    /* uint64_t */
+#define PRIXMAX         "I64X"    /* uintmax_t */
+#define PRIXPTR         "I64X"    /* uintptr_t */
+
+typedef __int8                   int8_t;
+typedef unsigned __int8         uint8_t;
+typedef __int16                 int16_t;
+typedef unsigned __int16       uint16_t;
+typedef __int32                 int32_t;
+typedef unsigned __int32       uint32_t;
+typedef __int64                 int64_t;
+typedef unsigned __int64        uint64_t;
+typedef int64_t                 intmax_t;
+typedef uint64_t                uintmax_t;
+
+//typedef __int64                intptr_t;
+//typedef unsigned __int64       uintptr_t;
+
+//typedef __int64                ptrdiff_t;
+
+#define HAVE_INTPTR_T_AS_INTMAX_T 1
+#define HAVE_INTPTR_T_AS_INT64_T 1
+#define HAVE_INT32_T_AS_INT 1
+#endif
+
+#define HAVE_POW 1
+#define HAVE_POWL 1
+#define HAVE_NEW 1
+#define HAVE_MATH_H 1
+#define HAVE_TIME_H 1
+#define HAVE_ERRNO_H 1
+#define HAVE_STDDEF_H 1
+#define HAVE_STDARG_H 1
+#define HAVE_VARARGS_H 1
+#define HAVE_DIRECT_H 1
+#define HAVE_SYS_UTIME_H 1
+#define HAVE_SYS_TIMEB_H 1
+#define HAVE_IO_H 1
+#define HAVE_STDIO_H 1
+#define HAVE_STRING_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_LIMITS_H 1
+#define HAVE_ASSERT_H 1
+#define HAVE_TYPEINFO 1
+#define HAVE_PROCESS_H 1
+#define HAVE_ERRNO_H 1
+#define HAVE_SYS_STAT_H 1
+#define HAVE_STDEXCEPT 1
+#define HAVE_WINERROR_H 1
+#define HAVE_WINDOWS_H 1
+#define HAVE_LONG_DOUBLE 1
+#define HAVE__STRICMP 1
+#define HAVE_STRICMP 1
+#define HAVE_STRERROR 1
+#define HAVE__SNPRINTF 1
+#define HAVE_SSCANF 1
+#define HAVE__SSCANF 1
+#define HAVE__VSNPRINTF 1
+#define HAVE__GETPID 1
+#define HAVE_GETPID 1
+#define HAVE__STATI64 1
+#define S_IFIFO _S_IFIFO
+#define HAVE__UTIME 1
+#define HAVE__WUTIME 1
+#define HAVE__DOSMAPERR 1
+#define HAVE_ISATTY 1
+#define HAVE__ISATTY 1
+#define HAVE__FILENO 1
+#define HAVE__GETPID 1
+#define HAVE__ABS64 1
+#define HAVE_LOCALTIME_S 1
+#define HAVE_GMTIME_S 1
+#define PACKED
+#define HAVE_LZO1X_DECOMPRESS_SAFE 1
+#define HAVE_UUID 1
+#define HAVE_STRUCT_SOCKADDR_IN6 1
+
+#define SIZEOF_TIMEVAL 8
+#define SIZEOF_TIMEZONE 0
+
+typedef int32_t socklen_t;
+
+#if _MSC_VER < 1300 && !defined(__PRETTY_FUNCTION__)
+#define __PRETTY_FUNCTION__ ""
+#elif _MSC_VER >= 1300 && !defined(__PRETTY_FUNCTION__)
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
+
+#if _MSC_VER >= 1400
+//#define USE_STATIC_SOCKET_LIBRARY 1
+#endif
+
+#define EMPTY_ARRAY_SIZE 0
+
+// _MSC_VER == 1200 for VC60
+// _MSC_VER == 1300 for VC70
+// _MSC_VER == 1400 for VC80
+
+// disable security warnings for Visual Studio 2005
+#define _CRT_SECURE_NO_DEPRECATE 1
+
+#define _WIN32_WINNT 0x0501
