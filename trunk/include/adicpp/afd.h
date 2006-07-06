@@ -60,7 +60,18 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile &           unLock(uint64_t pos, uint64_t size);
 
     uintptr_t             gets(AutoPtr< char> & p,bool * eof = NULL);
-    utf8::String          gets(bool * eof = NULL);
+
+    class LineGetBuffer {
+      public:
+        ~LineGetBuffer() {}
+        LineGetBuffer(uintptr_t size = getpagesize()) : size_(size), pos_(0), len_(0) {}
+
+        AutoPtr<uint8_t> buffer_;
+        uintptr_t size_;
+        uintptr_t pos_;
+        uintptr_t len_;
+    };
+    utf8::String gets(bool * eof = NULL,LineGetBuffer * buffer = NULL);
 
     const utf8::String & fileName() const;
     AsyncFile & fileName(const utf8::String & name);

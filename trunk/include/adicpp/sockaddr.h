@@ -74,7 +74,8 @@ class SockAddr {
 
     static utf8::String gethostname();
 
-    uintptr_t length() const;
+    socklen_t sockAddrSize() const;
+    socklen_t addrSize() const;
 
     SockAddr & clear();
   protected:
@@ -92,15 +93,29 @@ class SockAddr {
   private:
 };
 //---------------------------------------------------------------------------
-inline uintptr_t SockAddr::length() const
+inline socklen_t SockAddr::sockAddrSize() const
 {
-  uintptr_t l = 0;
+  socklen_t l = 0;
   //#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
   //  return addr4_.sin_len;
   //#else
   if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_);
 #if HAVE_STRUCT_SOCKADDR_IN6
   else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_);
+#endif
+  //#endif
+  return l;
+}
+//---------------------------------------------------------------------------
+inline socklen_t SockAddr::addrSize() const
+{
+  socklen_t l = 0;
+  //#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+  //  return addr4_.sin_len;
+  //#else
+  if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_.sin_addr);
+#if HAVE_STRUCT_SOCKADDR_IN6
+  else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_.sin_addr);
 #endif
   //#endif
   return l;

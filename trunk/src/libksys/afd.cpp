@@ -580,35 +580,55 @@ l1:
   return uintptr_t(l);
 }
 //---------------------------------------------------------------------------
-utf8::String AsyncFile::gets(bool * eof)
+utf8::String AsyncFile::gets(bool * eof,LineGetBuffer * buffer)
 {
-  uint64_t op = tell();
-  int64_t r, rr, l = 0;
-  char * a, * q;
-  AutoPtr<char> p;
   if( eof != NULL ) *eof = false;
-  for(;;){
-    a = p.realloc(size_t(l + 512)).ptr() + l;
-    rr = r = read(a,512);
-    if( r <= 0 ){
-      if( eof != NULL ) *eof = true;
-      break;
-    }
-    for( q = a; r > 0; q++, r-- ){
-      if( *q == '\n' ){
-        l = intptr_t(q - p.ptr() + 1);
-        goto l1;
+  if( buffer == NULL ){
+    uint64_t op = tell();
+    int64_t r, rr, l = 0;
+    char * a, * q;
+    AutoPtr<char> p;
+    for(;;){
+      a = p.realloc(size_t(l + 512)).ptr() + l;
+      rr = r = read(a,512);
+      if( r <= 0 ){
+        if( eof != NULL ) *eof = true;
+        break;
       }
+      for( q = a; r > 0; q++, r-- ){
+        if( *q == '\n' ){
+          l = intptr_t(q - p.ptr() + 1);
+          goto l1;
+        }
+      }
+      l += rr;
     }
-    l += rr;
-  }
 l1:
-  seek(op + l);
-  p.realloc(size_t(l + (l > 0)));
-  if( l > 0 ) p[uintptr_t(l)] = '\0';
-  utf8::String::Container * container = new utf8::String::Container(0,p.ptr());
-  p.ptr(NULL);
-  return container;
+    seek(op + l);
+    p.realloc(size_t(l + (l > 0)));
+    if( l > 0 ) p[uintptr_t(l)] = '\0';
+    utf8::String::Container * container = new utf8::String::Container(0,p.ptr());
+    p.ptr(NULL);
+    return container;
+  }
+  else {
+    int64_t r;
+    if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
+    if( buffer->buffer_ == NULL ){
+      buffer->buffer_.alloc(buffer->size_);
+      r = read(a,buffer->size_);
+      if( r <= 0 ){
+        if( eof != NULL ) *eof = true;
+        return utf8::String();
+      }
+      buffer->len_ = (uintptr_t) r;
+      buffer->pos_ = 0;
+    }
+    uintptr_t i;
+    utf8::String s;
+    for( i = buffer->pos_; i < buffer->len_ && buffer->buffer_[i] != '\n'; i++ );
+
+  }
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

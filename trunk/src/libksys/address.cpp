@@ -238,7 +238,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
   if( ksys::isWin9x() ){
     err = api.GetNameInfoA(
       (const sockaddr *) &addr4_,
-      (socklen_t) length(),
+      (socklen_t) sockAddrSize(),
       hostName,
       sizeof(hostName),
       servInfo,
@@ -256,7 +256,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
   else if( api.GetNameInfoW == NULL ){
 	  struct hostent * he = api.gethostbyaddr(
       (const char *) &addr4_.sin_addr,
-      (socklen_t) ((uint8_t *)(this + 1) - (uint8_t *) &addr4_.sin_addr),
+      addrSize(),
 	    addr4_.sin_family
 	  );
 	  if( he == NULL ){
@@ -273,7 +273,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
   else {
     err = api.GetNameInfoW(
       (const sockaddr *) &addr4_,
-      (socklen_t) length(),
+      (socklen_t) sockAddrSize(),
       hostNameW,
       sizeof(hostNameW),
       servInfoW,
@@ -293,7 +293,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
   char servInfo[NI_MAXSERV];
   err = api.getnameinfo(
     (const char *) &addr4_,
-    (socklen_t) length(),
+    (socklen_t) sockAddrSize(),
     hostName,
     sizeof(hostName),
     servInfo,
@@ -303,7 +303,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
   if( err == 0 ) s = hostName;
 #endif
   if( err != 0 ) err = errNo();
-//  struct hostent * pent = api.gethostbyaddr((const char *) &addr4_,(int) length(),addr4_.sin_family);
+//  struct hostent * pent = api.gethostbyaddr((const char *) &addr4_,(int) sockAddrSize(),addr4_.sin_family);
 //  if( pent != NULL ) s = pent->h_name; else err = errNo();
   api.close();
   if( err != 0 )
@@ -324,7 +324,7 @@ SockAddr & SockAddr::resolveAsync(const utf8::String & addr,const ksys::Mutant &
       throw ksys::ExceptionSP(
         new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
       );
-    memcpy(&addr4_,&ksys::currentFiber()->event_.address_.addr4_,ksys::currentFiber()->event_.address_.length());
+    memcpy(&addr4_,&ksys::currentFiber()->event_.address_.addr4_,ksys::currentFiber()->event_.address_.sockAddrSize());
   }
   else {
     resolve(addr,defPort);
@@ -485,7 +485,7 @@ utf8::String SockAddr::gethostname()
     addr.internalGetAddrInfo(s,utf8::String(),0,0);
     err = api.getnameinfo(
       (const sockaddr *) &addr.addr4_,
-      (socklen_t) addr.length(),
+      (socklen_t) addr.sockAddrSize(),
       hostName,
       sizeof(hostName),
       servInfo,
