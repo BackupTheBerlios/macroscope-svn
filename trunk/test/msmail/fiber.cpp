@@ -332,9 +332,32 @@ void ServerFiber::sendMail() // client sending mail
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
   message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
   if( incomplete ){
-    file.seek(0).resize(0) << message;
-    file.close();
-    renameAsync(file.fileName(),server_.spoolDir() + id + ".msg");
+    AutoPtr<uint8_t> b;
+    b.alloc(getpagesize());
+    AsyncFile file2(file.fileName() + ".tmp");
+    file2.createIfNotExist(true).removeAfterClose(true).open();
+    file2 << message;
+    for( uint64_t ll, l = file.size() - file.tell(); l > 0; l -= ll ){
+      ll = l > getpagesize() ? getpagesize() : l;
+      file.readBuffer(b,ll);
+      file2.writeBuffer(b,ll);
+    }
+    file2.removeAfterClose(false).close();
+    try {
+      renameAsync(file2.fileName(),server_.spoolDir() + id + ".msg");
+    }
+    catch( ... ){
+      try {
+        removeAsync(file2.fileName());
+      }
+      catch( ExceptionSP & e ){
+        e->writeStdError();
+        throw;
+      }
+      catch( ... ){}
+      throw;
+    }
+    file.removeAfterClose(true).close();
   }
   else {
     file.fileName(server_.spoolDir() + id + ".msg");
@@ -834,7 +857,7 @@ intptr_t MailQueueWalker::processQueue(bool & timeWait)
         if( sended ){
           file.close();
           removeAsync(list[i]);
-          stdErr.debug(9,utf8::String::Stream() << "Message " << list[i] << "sended, removed.\n");
+          stdErr.debug(9,utf8::String::Stream() << "Message " << list[i] << " sended, removed.\n");
         }
       }
       list.remove(i);
