@@ -546,7 +546,7 @@ class SpoolWalker : public Fiber {
     SpoolWalker(Server & server);
   protected:
     DirectoryChangeNotification dcn_;
-    intptr_t processQueue();
+    void processQueue(bool & timeWait);
     void fiberExecute();
   private:
     Server & server_;
@@ -563,7 +563,7 @@ class MailQueueWalker : public ksock::ClientFiber {
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
-    intptr_t processQueue(bool & timeWait);
+    void processQueue(bool & timeWait);
     void main();
   private:
     Server & server_;

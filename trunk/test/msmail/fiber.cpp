@@ -524,123 +524,115 @@ SpoolWalker::SpoolWalker(Server & server) : server_(server)
 {
 }
 //------------------------------------------------------------------------------
-intptr_t SpoolWalker::processQueue()
+void SpoolWalker::processQueue(bool & timeWait)
 {
+  timeWait = false;
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   utf8::String myHost(server_.bindAddrs()[0].resolveAsync(defaultPort));
-  intptr_t i, k;
+  intptr_t i;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.spoolDir() + "*.msg",utf8::String(),false);
-  k = list.count();
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
     ctrl.createIfNotExist(true).removeAfterClose(true).open();
-    AutoFileWRLock<AsyncFile> flock;
-    if( ctrl.tryWRLock(0,0) ){
-      flock.setLocked(ctrl);
-      AsyncFile file(list[i]);
-      try {
-        file.open();
-      }
-      catch( ExceptionSP & e ){
+    AutoFileWRLock<AsyncFile> flock(ctrl);
+    AsyncFile file(list[i]);
+    try {
+      file.open();
+    }
+    catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-            e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
-            e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-        e->writeStdError();
+      if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+          e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
+          e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
+      e->writeStdError();
 #else
 #error Not implemented
 #endif
-      }
-      try {
-        if( file.isOpen() ){
-          Message message;
-          file >> message;
-          utf8::String suser, skey;
-          splitString(message.value("#Recepient"),suser,skey,"@");
-          bool deliverLocaly;
-          Key2ServerLink * key2ServerLink = NULL;
-          {
-            Server::Data & data = server_.data(stStandalone);
-            AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-            key2ServerLink = data.key2ServerLinks_.find(skey);
-            deliverLocaly = 
-              key2ServerLink != NULL && key2ServerLink->server_.strcasecmp(myHost) == 0;
-          }
-          file.close();
-          if( key2ServerLink == NULL ){
-            uint64_t messageTTL = server_.config_->valueByPath(
-              utf8::String(serverConfSectionName_[stStandalone]) +
-              ".message_ttl",
-              2678400u // 31 day
+    }
+    try {
+      if( file.isOpen() ){
+        Message message;
+        file >> message;
+        utf8::String suser, skey;
+        splitString(message.value("#Recepient"),suser,skey,"@");
+        bool deliverLocaly;
+        Key2ServerLink * key2ServerLink = NULL;
+        {
+          Server::Data & data = server_.data(stStandalone);
+          AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+          key2ServerLink = data.key2ServerLinks_.find(skey);
+          deliverLocaly = 
+            key2ServerLink != NULL && key2ServerLink->server_.strcasecmp(myHost) == 0;
+        }
+        file.close();
+        if( key2ServerLink == NULL ){
+          uint64_t messageTTL = server_.config_->valueByPath(
+            utf8::String(serverConfSectionName_[stStandalone]) +
+            ".message_ttl",
+            2678400u // 31 day
+          );
+          uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
+          if( gettimeofday() - messageTime >= messageTTL ){
+            removeAsync(list[i]);
+            stdErr.debug(1,utf8::String::Stream() << "Message " <<
+              message.id() << "TTL exhausted, removed.\n"
             );
-            uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
-            if( gettimeofday() - messageTime >= messageTTL ){
-              file.close();
-              removeAsync(list[i]);
-              stdErr.debug(1,utf8::String::Stream() << "Message " <<
-                message.id() << "TTL exhausted, removed.\n"
-              );
-            }
+          }
+          timeWait = true;
+        }
+        else {
+          if( deliverLocaly ){
+            utf8::String userMailBox(server_.mailDir() + suser);
+            createDirectoryAsync(userMailBox);
+            renameAsync(list[i],includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
+            stdErr.debug(0,
+              utf8::String::Stream() << "Message " << message.id() <<
+              " received from " << message.value("#Sender") <<
+              " to " << message.value("#Recepient") <<
+              " delivered localy to mailbox: " << userMailBox << "\n"
+            );
           }
           else {
-            if( deliverLocaly ){
-              utf8::String userMailBox(server_.mailDir() + suser);
-              createDirectoryAsync(userMailBox);
-              renameAsync(list[i],includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
-              stdErr.debug(0,
-                utf8::String::Stream() << "Message " << message.id() <<
-                " received from " << message.value("#Sender") <<
-                " to " << message.value("#Recepient") <<
-                " delivered localy to mailbox: " << userMailBox << "\n"
-              );
-            }
-            else {
-              renameAsync(list[i],server_.mqueueDir() + message.id() + ".msg");
-              stdErr.debug(0,
-                utf8::String::Stream() << "Message " << message.id() <<
-                " received from " << message.value("#Sender") <<
-                " to " << message.value("#Recepient") <<
-                " is put in queue for delivery.\n"
-              );
-            }
-            k--;
+            renameAsync(list[i],server_.mqueueDir() + message.id() + ".msg");
+            stdErr.debug(0,
+              utf8::String::Stream() << "Message " << message.id() <<
+              " received from " << message.value("#Sender") <<
+              " to " << message.value("#Recepient") <<
+              " is put in queue for delivery.\n"
+            );
           }
         }
       }
-      catch( ExceptionSP & e ){
+    }
+    catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
+      if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
 #else
-        if( e->code() != EINVAL ) throw;
+      if( e->code() != EINVAL ) throw;
 #endif
-        stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
-      }
-      list.remove(i);
+      stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
     }
-    else {
-      k--;
-    }
+    list.remove(i);
   }
-  return k;
 }
 //------------------------------------------------------------------------------
 void SpoolWalker::fiberExecute()
 {
-  intptr_t k;
+  bool timeWait;
   while( !terminated_ ){
-    k = processQueue();
+    processQueue(timeWait);
     if( terminated_ ) break;
-    if( k == 0 ){
-      dcn_.monitor(excludeTrailingPathDelimiter(server_.spoolDir()));
-      stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by monitor... \n");
-    }
-    else {
+    if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",60u);
       sleepAsync(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by timer... \n");
+    }
+    else {
+      dcn_.monitor(excludeTrailingPathDelimiter(server_.spoolDir()));
+      stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by monitor... \n");
     }
   }
 }
@@ -698,194 +690,184 @@ void MailQueueWalker::auth()
   );
 }
 //------------------------------------------------------------------------------
-intptr_t MailQueueWalker::processQueue(bool & timeWait)
+void MailQueueWalker::processQueue(bool & timeWait)
 {
+  timeWait = false;
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
-  intptr_t i, k;
+  intptr_t i;
   Vector<utf8::String> list;
   getDirListAsync(list,server_.mqueueDir() + "*.msg",utf8::String(),false);
-  k = list.count();
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
     ctrl.createIfNotExist(true).removeAfterClose(true).open();
-    AutoFileWRLock<AsyncFile> flock;
-    if( ctrl.tryWRLock(0,0) ){
-      flock.setLocked(ctrl);
-      AsyncFile file(list[i]);
-      try {
-        file.open();
-      }
-      catch( ExceptionSP & e ){
+    AutoFileWRLock<AsyncFile> flock(ctrl);
+    AsyncFile file(list[i]);
+    try {
+      file.open();
+    }
+    catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-            e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
-            e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-        if( e->code() == ERROR_ACCESS_DENIED ) e->writeStdError();
+      if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
+          e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
+          e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
+      if( e->code() == ERROR_ACCESS_DENIED ) e->writeStdError();
 #else
 #error Not implemented
 #endif
-      }
-      if( file.isOpen() ){
-        bool resolved = false, connected = false, authentificated = false, sended = false;
-        try {
-          Message message;
-          file >> message;
-          utf8::String server, suser, skey;
-          splitString(message.value("#Recepient"),suser,skey,"@");
-          ksock::SockAddr address;
-          {
-            Server::Data & data = server_.data(stStandalone);
-            AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-            Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
-            if( key2ServerLink != NULL ) server = key2ServerLink->server_;
+    }
+    if( file.isOpen() ){
+      bool resolved = false, connected = false, authentificated = false, sended = false;
+      try {
+        Message message;
+        file >> message;
+        utf8::String server, suser, skey;
+        splitString(message.value("#Recepient"),suser,skey,"@");
+        ksock::SockAddr address;
+        {
+          Server::Data & data = server_.data(stStandalone);
+          AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+          Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
+          if( key2ServerLink != NULL ) server = key2ServerLink->server_;
+        }
+        if( server.trim().strlen() == 0 ){
+          timeWait = true;
+          stdErr.debug(1,
+            utf8::String::Stream() <<
+            "Message recepient " << message.value("#Recepient") <<
+            " not found in database.\n"
+          );
+          server_.startNodeClient(stStandalone);
+          uint64_t messageTTL = server_.config_->valueByPath(
+            utf8::String(serverConfSectionName_[stStandalone]) +
+            ".message_ttl",
+            2678400u // 31 day
+          );
+          uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
+          if( gettimeofday() - messageTime >= messageTTL ){
+            file.close();
+            removeAsync(list[i]);
+            stdErr.debug(1,utf8::String::Stream() << "Message " <<
+              list[i] << "TTL exhausted, removed.\n"
+            );
           }
-          if( server.trim().strlen() == 0 ){
+        }
+        else {
+          try {
+            address.resolveAsync(server,defaultPort);
+            resolved = true;
+          }
+          catch( ExceptionSP & e ){
             timeWait = true;
+            e->writeStdError();
             stdErr.debug(1,
               utf8::String::Stream() <<
-              "Message recepient " << message.value("#Recepient") <<
-              " not found in database.\n"
+                "Unable to resolve " << server <<
+                ", message " << message.id() <<
+                " recepient " << message.value("#Recepient") << "\n"
             );
-            server_.startNodeClient(stStandalone);
-            uint64_t messageTTL = server_.config_->valueByPath(
-              utf8::String(serverConfSectionName_[stStandalone]) +
-              ".message_ttl",
-              2678400u // 31 day
-            );
-            uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
-            if( gettimeofday() - messageTime >= messageTTL ){
-              file.close();
-              removeAsync(list[i]);
-              stdErr.debug(1,utf8::String::Stream() << "Message " <<
-                list[i] << "TTL exhausted, removed.\n"
-              );
-            }
           }
-          else {
+          if( resolved ){
             try {
-              address.resolveAsync(server,defaultPort);
-              resolved = true;
+              close();
+              connect(address);
+              connected = true;
             }
             catch( ExceptionSP & e ){
               timeWait = true;
               e->writeStdError();
-              stdErr.debug(1,
+              stdErr.debug(3,
                 utf8::String::Stream() <<
-                  "Unable to resolve " << server <<
-                  ", message " << message.id() <<
-                  " recepient " << message.value("#Recepient") << "\n"
+                "Unable to connect. Host " << server << " unreachable.\n"
               );
-            }
-            if( resolved ){
-              try {
-                close();
-                connect(address);
-                connected = true;
-              }
-              catch( ExceptionSP & e ){
-                timeWait = true;
-                e->writeStdError();
-                stdErr.debug(3,
-                  utf8::String::Stream() <<
-                  "Unable to connect. Host " << server << " unreachable.\n"
-                );
-              }
-            }
-            if( connected ){
-              try {
-                auth();
-                authentificated = true;
-              }
-              catch( ExceptionSP & e ){
-                timeWait = true;
-                e->writeStdError();
-                stdErr.debug(3,
-                  utf8::String::Stream() << "Authentification to host " <<
-                  server << " failed.\n"
-                );
-              }
             }
           }
-          if( authentificated ){ // and now we can send message
-            sended = false;
-            uint64_t restFrom, remainder;
+          if( connected ){
             try {
-              *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
-              getCode();
-              *this << uint8_t(cmSendMail) << message.id() << true >> restFrom;
-              file.seek(restFrom);
-              *this << (remainder = file.size() - restFrom);
-              AutoPtr<uint8_t> b;
-              size_t bl = server_.config_->value("max_send_size",getpagesize());
-              b.alloc(bl);
-              while( remainder > 0 ){
-                uint64_t l = remainder > bl ? bl : remainder;
-                file.read(b,l);
-                write(b,l);
-                remainder -= l;
-              }
-              getCode();
-              *this << uint8_t(cmQuit);
-              getCode();
-              stdErr.debug(0,
-                utf8::String::Stream() << "Message " << message.id() <<
-                " sended to " << message.value("#Recepient") <<
-                " via " << server << ", traffic " <<
-                allBytes() << "\n"
-              );
-              sended = true;
-              k--;
+              auth();
+              authentificated = true;
             }
             catch( ExceptionSP & e ){
               timeWait = true;
               e->writeStdError();
+              stdErr.debug(3,
+                utf8::String::Stream() << "Authentification to host " <<
+                server << " failed.\n"
+              );
             }
           }
-          shutdown();
-          close();
         }
-        catch( ExceptionSP & e ){
-#if defined(__WIN32__) || defined(__WIN64__)
-          if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
-#else
-          if( e->code() != EINVAL ) throw;
-#endif
-          removeAsync(list[i]);
-          stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << " removed.\n");
+        if( authentificated ){ // and now we can send message
+          sended = false;
+          uint64_t restFrom, remainder;
+          try {
+            *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
+            getCode();
+            *this << uint8_t(cmSendMail) << message.id() << true >> restFrom;
+            file.seek(restFrom);
+            *this << (remainder = file.size() - restFrom);
+            AutoPtr<uint8_t> b;
+            size_t bl = server_.config_->value("max_send_size",getpagesize());
+            b.alloc(bl);
+            while( remainder > 0 ){
+              uint64_t l = remainder > bl ? bl : remainder;
+              file.read(b,l);
+              write(b,l);
+              remainder -= l;
+            }
+            getCode();
+            *this << uint8_t(cmQuit);
+            getCode();
+            stdErr.debug(0,
+              utf8::String::Stream() << "Message " << message.id() <<
+              " sended to " << message.value("#Recepient") <<
+              " via " << server << ", traffic " <<
+              allBytes() << "\n"
+            );
+            sended = true;
+          }
+          catch( ExceptionSP & e ){
+            timeWait = true;
+            e->writeStdError();
+          }
         }
-        if( sended ){
-          file.close();
-          removeAsync(list[i]);
-          stdErr.debug(9,utf8::String::Stream() << "Message " << list[i] << " sended, removed.\n");
-        }
+        shutdown();
+        close();
       }
-      list.remove(i);
+      catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
+#else
+        if( e->code() != EINVAL ) throw;
+#endif
+        removeAsync(list[i]);
+        stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << " removed.\n");
+      }
+      if( sended ){
+        file.close();
+        removeAsync(list[i]);
+        stdErr.debug(9,utf8::String::Stream() << "Message " << list[i] << " sended, removed.\n");
+      }
     }
-    else {
-      timeWait = true;
-      k--;
-    }
+    list.remove(i);
   }
-  return k;
 }
 //------------------------------------------------------------------------------
 void MailQueueWalker::main()
 {
-  intptr_t k;
+  bool timeWait;
   while( !terminated_ ){
-    bool timeWait = false;
-    k = processQueue(timeWait);
+    processQueue(timeWait);
     if( terminated_ ) break;
-    if( k == 0 ){
-      dcn_.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
-      stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by monitor... \n");
-    }
-    else if( timeWait ){
+    if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",60u);
       sleepAsync(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
+    }
+    else {
+      dcn_.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
+      stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by monitor... \n");
     }
   }
 }
