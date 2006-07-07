@@ -369,13 +369,13 @@ void ClientDBGetterFiber::main()
 //------------------------------------------------------------------------------
 Client::~Client()
 {
-  recvQueue_.drop();
-  sendQueue_.drop();
 }
 //------------------------------------------------------------------------------
 Client::Client() :
   pAsyncEvent_(NULL),
-  config_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>)
+  config_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>),
+  recvQueueAutoDrop_(recvQueue_),
+  sendQueueAutoDrop_(sendQueue_)
 {
   howCloseServer(csTerminate | csShutdown | csAbort);
   fiberTimeout(0);

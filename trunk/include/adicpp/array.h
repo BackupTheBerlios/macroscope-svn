@@ -515,7 +515,7 @@ Array< T> & Array< T>::invertBitRange(uintptr_t n, uintptr_t c)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <typename T,typename ST> inline
+template <typename T,typename ST>
 ST & operator << (ST & stream,const Array<T> & array)
 {
   uint64_t u = array.count();
@@ -524,7 +524,7 @@ ST & operator << (ST & stream,const Array<T> & array)
   return stream;
 }
 //-----------------------------------------------------------------------------
-template <typename T,typename ST> inline
+template <typename T,typename ST>
 ST & operator >> (ST & stream,Array<T> & array)
 {
   Array<T> t;

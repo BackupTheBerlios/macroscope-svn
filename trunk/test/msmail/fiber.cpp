@@ -231,8 +231,8 @@ void ServerFiber::registerDB()
     fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
     ldata.orNL(data,fullDump ? utf8::String() : host); // get local changes for sending
-    rdata.setSendedToNL(host);
     ldata.setSendedToNL(host);
+    rdata.setSendedToNL(host);
     dbChanged = data.orNL(rdata); // apply remote changes localy
     data.orNL(ldata);
     si = data.servers_.find(host);
@@ -241,8 +241,7 @@ void ServerFiber::registerDB()
   ldata.sendDatabaseNL(*this);
   putCode(eOK);
   flush();
-  data.setSendedTo(ldata,host);
-//  if( dbChanged ) server_.startNodesExchange();
+  if( dbChanged ) server_.startNodesExchange();
   stream.clear() << serverTypeName_[serverType_] <<
     ": database " << (fullDump ? "full dump" : "changes") << " sended to " << host << "\n";
   ldata.dumpNL(stream);
@@ -376,19 +375,22 @@ void ServerFiber::sendMail() // client sending mail
   );
 }
 //------------------------------------------------------------------------------
-intptr_t ServerFiber::processMailbox(
+void ServerFiber::processMailbox(
   const utf8::String & userMailBox,
-  Array<utf8::String> & mids,
-  bool onlyNewMail)
+  Message::Keys & mids,
+  bool onlyNewMail,
+  bool & wait)
 {
+  wait = true;
   stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
   utf8::String myHost(server_.bindAddrs()[0].resolveAsync(defaultPort));
-  intptr_t i, j, c, k;
-  Array<utf8::String> ids;
+  intptr_t i;
+  Message::Keys ids;
+  AutoHashDrop<Message::Keys> idsAutoDrop(ids);
   Vector<utf8::String> list;
   getDirListAsync(list,userMailBox + "*.msg",utf8::String(),false);
-  k = list.count();
-  for( i = list.count() - 1; i >= 0; i-- ){
+  while( !terminated_ && list.count() > 0 ){
+    i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
     ctrl.createIfNotExist(true).removeAfterClose(true).open();
     AutoFileWRLock<AsyncFile> flock(ctrl);
@@ -408,7 +410,7 @@ intptr_t ServerFiber::processMailbox(
     }
     if( file.isOpen() ){
       utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
-      if( mids.bSearch(id) < 0 || !onlyNewMail ){
+      if( mids.find(id) == NULL || !onlyNewMail ){
         Message message;
         file >> message; // read system attributes
         assert( message.id().strcmp(id) == 0 );
@@ -428,26 +430,22 @@ intptr_t ServerFiber::processMailbox(
         }
         else {
           bool messageAccepted = true;
-          if( skey.strcasecmp(key_) == 0 && mids.bSearch(message.id()) < 0 ){
+          if( skey.strcasecmp(key_) == 0 && mids.find(message.id()) == NULL ){
             file >> message; // read user attributes
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
-            if( onlyNewMail && messageAccepted ){
-              j = ids.bSearch(message.id(),c);
-              if( c != 0 ) ids.insert(j + (c > 0),message.id());
-            }
+            if( onlyNewMail && messageAccepted )
+              ids.insert(*new Message::Key(message.id()),false);
           }
           file.close();
-          k += !messageAccepted;
+          if( wait && !messageAccepted ) wait = false;
         }
       }
-      k--;
     }
     list.remove(i);
   }
   flush();
   mids = ids;
-  return k;
 }
 //------------------------------------------------------------------------------
 void ServerFiber::recvMail() // client receiving mail
@@ -460,8 +458,8 @@ void ServerFiber::recvMail() // client receiving mail
   utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
   createDirectoryAsync(userMailBox);
   putCode(eOK);
-  intptr_t k;
-  Array<utf8::String> ids;
+  Message::Keys ids;
+  AutoHashDrop<Message::Keys> idsAutoDrop(ids);
   server_.addRecvMailFiber(*this);
   try {
     {
@@ -472,11 +470,11 @@ void ServerFiber::recvMail() // client receiving mail
       AsyncFile watchdog(includeTrailingPathDelimiter(userMailBox) + "." + suuid);
       watchdog.createIfNotExist(true).removeAfterClose(true).open();
     }
+    bool wait;
     while( !terminated_ ){
-      k = processMailbox(userMailBox,ids,onlyNewMail);
-      flush();
+      processMailbox(userMailBox,ids,onlyNewMail,wait);
       if( !waitForMail ) break;
-      if( k == 0 ){
+      if( wait ){
         dcn_.monitor(userMailBox);
         stdErr.debug(9,utf8::String::Stream() <<
           this << " Processing mailbox " <<

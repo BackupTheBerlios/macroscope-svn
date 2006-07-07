@@ -87,7 +87,7 @@ class EmbeddedHash {
     EmbeddedHash<T,N,O,H,E> & operator = (const EmbeddedHash<T,N,O,H,E> & a);
 
     EmbeddedHash<T,N,O,H,E> & clear();
-    EmbeddedHash<T,N,O,H,E> & insert(const T & object);
+    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true);
     T & remove(const T & object,bool throwIfNotExist = true);
     EmbeddedHash<T,N,O,H,E> & drop();
     EmbeddedHash<T,N,O,H,E> & drop(T & object);
@@ -95,6 +95,34 @@ class EmbeddedHash {
     T * find(const T & object) const;
     EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
     const uintptr_t & count() const;
+
+    template <typename ST> ST & put(ST & stream) const
+    {
+      Array<T *> lst;
+      list(lst);
+      uint64_t u = lst.count();
+      stream << u;
+      while( u-- > 0 ) stream << *lst[(uintptr_t) u];
+      return stream;
+    }
+    template <typename ST> ST & get(ST & stream)
+    {
+      EmbeddedHash<T,N,O,H,E> t;
+      uint64_t u;
+      stream >> u;
+      while( u-- > 0 ){
+        AutoPtr<T> p(new T);
+        stream >> *p.ptr();
+        t.insert(*p.ptr(NULL));
+      }
+      drop();
+      hash_.ptr(t.hash_.ptr(NULL));
+      size_ = t.size_;
+      t.size_ = 0;
+      count_ = t.count_;
+      t.count_ = 0;
+      return stream;
+    }
   protected:
   private:
     mutable AutoPtr<EmbeddedHashNode<T> *> hash_;
@@ -116,6 +144,7 @@ template <
 > inline
 EmbeddedHash<T,N,O,H,E>::~EmbeddedHash()
 {
+  clear();
 }
 //---------------------------------------------------------------------------
 template <
@@ -160,7 +189,7 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::operator = (const EmbeddedHas
     }
     head++;
   }
-  clear();
+  drop();
   hash_.ptr(t.hash_.ptr(NULL));
   size_ = t.size_;
   t.size_ = 0;
@@ -249,18 +278,23 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist)
 {
-  assert( N(object).next() == NULL );
-  EmbeddedHashNode<T> ** head = internalFind(object,true);
-  if( size_ == 0 ){
-    hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
-    hash_[0] = NULL;
-    size_ = 1;
-    head = &hash_[0];
+  EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist);
+  if( head == NULL || *head == NULL ){
+    if( size_ == 0 ){
+      hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
+      hash_[0] = NULL;
+      size_ = 1;
+      head = &hash_[0];
+      *head = &N(object);
+    }
+    else if( *head == NULL ){
+      *head = &N(object);
+    }
+    N(object).next() = NULL;
+    optimize(optInc);
   }
-  *head = &N(object);
-  optimize(optInc);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -455,6 +489,30 @@ template <
 const uintptr_t & EmbeddedHash<T,N,O,H,E>::count() const
 {
   return count_;
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T> class AutoHashDrop {
+  public:
+    ~AutoHashDrop();
+    AutoHashDrop(T & hash);
+  protected:
+  private:
+    T * hash_;
+
+    AutoHashDrop(const AutoHashDrop<T> &){}
+    void operator =(const AutoHashDrop<T> &){}
+};
+//---------------------------------------------------------------------------
+template <typename T> inline AutoHashDrop<T>::~AutoHashDrop()
+{
+  hash_->drop();
+}
+//---------------------------------------------------------------------------
+template <typename T> inline
+AutoHashDrop<T>::AutoHashDrop(T & hash) : hash_(&hash)
+{
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

@@ -109,6 +109,57 @@ class Message {
     Message(const Message & a);
     Message & operator = (const Message & a);
 
+    class Key {
+      public:
+        ~Key(){}
+        Key(){}
+        Key(const Key & a) : key_(a.key_) {}
+        Key(const utf8::String & key) : key_(key) {}
+
+        Key & operator = (const Key & a){
+          key_ = a.key_;
+          return *this;
+        }
+
+        Key & operator = (const utf8::String & key){
+          key_ = key_;
+          return *this;
+        }
+
+        bool operator == (const Key & a) const { return key_.strcmp(a.key_) == 0; }
+        bool operator != (const Key & a) const { return key_.strcmp(a.key_) != 0; }
+        bool operator >= (const Key & a) const { return key_.strcmp(a.key_) >= 0; }
+        bool operator >  (const Key & a) const { return key_.strcmp(a.key_) >  0; }
+        bool operator <= (const Key & a) const { return key_.strcmp(a.key_) <= 0; }
+        bool operator <  (const Key & a) const { return key_.strcmp(a.key_) <  0; }
+
+        operator const utf8::String & () const { return key_; }
+
+        static EmbeddedHashNode<Key> & keyNode(const Key & object){
+          return object.keyNode_;
+        }
+        static Key & keyNodeObject(const EmbeddedHashNode<Key> & node,Key * p){
+          return node.object(p->keyNode_);
+        }
+        static uintptr_t keyNodeHash(const Key & object){
+          return object.key_.hash(true);
+        }
+        static bool keyHashNodeEqu(const Key & object1,const Key & object2){
+          return object1.key_.strcmp(object2.key_) == 0;
+        }
+      protected:
+      private:
+        mutable EmbeddedHashNode<Key> keyNode_;
+        utf8::String key_;
+    };
+    typedef EmbeddedHash<
+      Key,
+      Key::keyNode,
+      Key::keyNodeObject,
+      Key::keyNodeHash,
+      Key::keyHashNodeEqu
+    > Keys;
+
     class Attribute {
       friend class Message;
       public:
@@ -117,19 +168,21 @@ class Message {
         Attribute(const Attribute & a) : key_(a.key_), value_(a.value_) {}
         Attribute(const utf8::String & key,const utf8::String & value = utf8::String()) :
           key_(key), value_(value) {}
+        Attribute(const Key & key,const utf8::String & value = utf8::String()) :
+          key_(key), value_(value) {}
         Attribute & operator = (const Attribute & a){
           key_ = a.key_;
           value_ = a.value_;
           return *this;
         }
-        bool operator == (const Attribute & a) const { return key_.strcmp(a.key_) == 0; }
-        bool operator != (const Attribute & a) const { return key_.strcmp(a.key_) != 0; }
-        bool operator >= (const Attribute & a) const { return key_.strcmp(a.key_) >= 0; }
-        bool operator >  (const Attribute & a) const { return key_.strcmp(a.key_) >  0; }
-        bool operator <= (const Attribute & a) const { return key_.strcmp(a.key_) <= 0; }
-        bool operator <  (const Attribute & a) const { return key_.strcmp(a.key_) <  0; }
+        bool operator == (const Attribute & a) const { return key_ == a.key_; }
+        bool operator != (const Attribute & a) const { return key_ != a.key_; }
+        bool operator >= (const Attribute & a) const { return key_ >= a.key_; }
+        bool operator >  (const Attribute & a) const { return key_ >  a.key_; }
+        bool operator <= (const Attribute & a) const { return key_ <= a.key_; }
+        bool operator <  (const Attribute & a) const { return key_ <  a.key_; }
 
-        utf8::String key_;
+        Key key_;
         utf8::String value_;
       protected:
       private:
@@ -140,10 +193,10 @@ class Message {
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const Attribute & object){
-          return object.key_.hash(true);
+          return utf8::String(object.key_).hash(true);
         }
         static bool keyHashNodeEqu(const Attribute & object1,const Attribute & object2){
-          return object1.key_.strcmp(object2.key_) == 0;
+          return object1.key_ == object2.key_;
         }
         mutable EmbeddedHashNode<Attribute> keyNode_;
     };
@@ -177,19 +230,105 @@ class Message {
   protected:
   private:
     mutable EmbeddedHashNode<Message> idNode_;
-    mutable EmbeddedHash<
+    typedef EmbeddedHash<
       Attribute,
       Attribute::keyNode,
       Attribute::keyNodeObject,
       Attribute::keyNodeHash,
       Attribute::keyHashNodeEqu
-    > attributes_;
+    > Attributes;
+    mutable Attributes attributes_;
+    AutoHashDrop<Attributes> attributesAutoDrop_;
 };
 //------------------------------------------------------------------------------
 inline const utf8::String & Message::id() const
 {
   return value(messageIdKey);
 }
+//------------------------------------------------------------------------------
+typedef EmbeddedHash<
+  Message,
+  Message::idNode,
+  Message::idNodeObject,
+  Message::idNodeHash,
+  Message::idHashNodeEqu
+> Messages;
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class InfoLinkKey {
+  friend AsyncFile & operator >> (AsyncFile & s,InfoLinkKey & a);
+  friend AsyncFile & operator << (AsyncFile & s,const InfoLinkKey & a);
+  friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,InfoLinkKey & a);
+  friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const InfoLinkKey & a);
+  public:
+    ~InfoLinkKey(){}
+    InfoLinkKey(){}
+    InfoLinkKey(const InfoLinkKey & a) : key_(a.key_) {}
+    InfoLinkKey(const utf8::String & key) : key_(key) {}
+
+    InfoLinkKey & operator = (const InfoLinkKey & a){
+      key_ = a.key_;
+      return *this;
+    }
+    InfoLinkKey & operator = (const utf8::String & key){
+      key_ = key_;
+      return *this;
+    }
+    bool operator == (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) == 0; }
+    bool operator != (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) != 0; }
+    bool operator >= (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) >= 0; }
+    bool operator >  (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) >  0; }
+    bool operator <= (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) <= 0; }
+    bool operator <  (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) <  0; }
+    operator const utf8::String & () const { return key_; }
+
+    static EmbeddedHashNode<InfoLinkKey> & keyNode(const InfoLinkKey & object){
+      return object.keyNode_;
+    }
+    static InfoLinkKey & keyNodeObject(const EmbeddedHashNode<InfoLinkKey> & node,InfoLinkKey * p){
+      return node.object(p->keyNode_);
+    }
+    static uintptr_t keyNodeHash(const InfoLinkKey & object){
+      return object.key_.hash(false);
+    }
+    static bool keyHashNodeEqu(const InfoLinkKey & object1,const InfoLinkKey & object2){
+      return object1.key_.strcasecmp(object2.key_) == 0;
+    }
+
+  protected:
+  private:
+    mutable EmbeddedHashNode<InfoLinkKey> keyNode_;
+    utf8::String key_;
+};
+//------------------------------------------------------------------------------
+/*inline AsyncFile & operator >> (AsyncFile & s,InfoLinkKey & a)
+{
+  return s >> a.key_;
+}
+//------------------------------------------------------------------------------
+inline AsyncFile & operator << (AsyncFile & s,const InfoLinkKey & a)
+{
+  return s << a.key_;
+}*/
+//------------------------------------------------------------------------------
+inline ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,InfoLinkKey & a)
+{
+  return s >> a.key_;
+}
+//------------------------------------------------------------------------------
+inline ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const InfoLinkKey & a)
+{
+  return s << a.key_;
+}
+//------------------------------------------------------------------------------
+typedef EmbeddedHash<
+  InfoLinkKey,
+  InfoLinkKey::keyNode,
+  InfoLinkKey::keyNodeObject,
+  InfoLinkKey::keyNodeHash,
+  InfoLinkKey::keyHashNodeEqu
+> InfoLinkKeys;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -227,7 +366,8 @@ class UserInfo {
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     mutable EmbeddedHashNode<UserInfo> hashNode_;
     utf8::String name_;
-    Array<utf8::String> sendedTo_;
+    InfoLinkKeys sendedTo_;
+    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -268,7 +408,8 @@ class KeyInfo {
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     mutable EmbeddedHashNode<KeyInfo> hashNode_;
     utf8::String name_;
-    Array<utf8::String> sendedTo_;
+    InfoLinkKeys sendedTo_;
+    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -309,7 +450,8 @@ class GroupInfo {
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     mutable EmbeddedHashNode<GroupInfo> hashNode_;
     utf8::String name_;
-    Array<utf8::String> sendedTo_;
+    InfoLinkKeys sendedTo_;
+    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -352,7 +494,8 @@ class ServerInfo {
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
     ServerType type_;
-    Array<utf8::String> sendedTo_;
+    InfoLinkKeys sendedTo_;
+    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -394,7 +537,8 @@ class User2KeyLink {
     mutable EmbeddedHashNode<User2KeyLink> hashNode_;
     utf8::String user_;
     utf8::String key_;
-    Array<utf8::String> sendedTo_;
+    InfoLinkKeys sendedTo_;
+    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -439,7 +583,8 @@ class Key2GroupLink {
     mutable EmbeddedHashNode<Key2GroupLink> hashNode_;
     utf8::String key_;
     utf8::String group_;
-    Array<utf8::String> sendedTo_;
+    InfoLinkKeys sendedTo_;
+    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -481,7 +626,8 @@ class Key2ServerLink {
     mutable EmbeddedHashNode<Key2ServerLink> hashNode_;
     utf8::String key_;
     utf8::String server_;
-    Array<utf8::String> sendedTo_;
+    InfoLinkKeys sendedTo_;
+    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -529,10 +675,11 @@ class ServerFiber : public ksock::ServerFiber {
     void registerDB();
     void getDB();
     void sendMail();
-    intptr_t processMailbox(
+    void processMailbox(
       const utf8::String & userMailBox,
-      Array<utf8::String> & mids,
-      bool onlyNewMail
+      Message::Keys & mids,
+      bool onlyNewMail,
+      bool & wait
     );
     void recvMail();
     void removeMail();
@@ -644,8 +791,6 @@ class Server : public ksock::Server {
         Data & xor(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
         Data & setSendedToNL(const utf8::String & sendingTo);
         Data & setSendedTo(const utf8::String & sendingTo);
-        Data & setSendedToNL(const Data & data,const utf8::String & sendingTo);
-        Data & setSendedTo(const Data & data,const utf8::String & sendingTo);
         bool sweepNL(uint64_t stime,utf8::String::Stream * log = NULL);
         bool sweep(uint64_t stime,utf8::String::Stream * log = NULL);
         utf8::String getUserListNL(bool quoted = false) const;
@@ -658,68 +803,75 @@ class Server : public ksock::Server {
         bool isEmpty() const;
       protected:
       private:
-        Data(const Data &){}
+        Data(const Data &);
         void operator = (const Data &){}
 
 // last time when database sweep
         mutable uint64_t stime_;
         mutable FiberMutex mutex_;
-        EmbeddedHash<
+        typedef EmbeddedHash<
           UserInfo,
           UserInfo::hashNode,
           UserInfo::hashNodeObject,
           UserInfo::hashNodeHash,
           UserInfo::hashNodeEqu
-        > users_;
-        Vector<UserInfo> userList_;
-        EmbeddedHash<
+        > Users;
+        Users users_;
+        AutoHashDrop<Users> usersAutoDrop_;
+        typedef EmbeddedHash<
           KeyInfo,
           KeyInfo::hashNode,
           KeyInfo::hashNodeObject,
           KeyInfo::hashNodeHash,
           KeyInfo::hashNodeEqu
-        > keys_;
-        Vector<KeyInfo> keyList_;
-        EmbeddedHash<
+        > Keys;
+        Keys keys_;
+        AutoHashDrop<Keys> keysAutoDrop_;
+        typedef EmbeddedHash<
           GroupInfo,
           GroupInfo::hashNode,
           GroupInfo::hashNodeObject,
           GroupInfo::hashNodeHash,
           GroupInfo::hashNodeEqu
-        > groups_;
-        Vector<GroupInfo> groupList_;
-        EmbeddedHash<
+        > Groups;
+        Groups groups_;
+        AutoHashDrop<Groups> groupsAutoDrop_;
+        typedef EmbeddedHash<
           ServerInfo,
           ServerInfo::hashNode,
           ServerInfo::hashNodeObject,
           ServerInfo::hashNodeHash,
           ServerInfo::hashNodeEqu
-        > servers_;
-        Vector<ServerInfo> serverList_;
-        EmbeddedHash<
+        > Servers;
+        Servers servers_;
+        AutoHashDrop<Servers> serversAutoDrop_;
+        typedef EmbeddedHash<
           User2KeyLink,
           User2KeyLink::hashNode,
           User2KeyLink::hashNodeObject,
           User2KeyLink::hashNodeHash,
           User2KeyLink::hashNodeEqu
-        > user2KeyLinks_;
-        Vector<User2KeyLink> user2KeyLinkList_;
-        EmbeddedHash<
+        > User2KeyLinks;
+        User2KeyLinks user2KeyLinks_;
+        AutoHashDrop<User2KeyLinks> user2KeyLinksAutoDrop_;
+        typedef EmbeddedHash<
           Key2GroupLink,
           Key2GroupLink::hashNode,
           Key2GroupLink::hashNodeObject,
           Key2GroupLink::hashNodeHash,
           Key2GroupLink::hashNodeEqu
-        > key2GroupLinks_;
-        Vector<Key2GroupLink> key2GroupLinkList_;
-        EmbeddedHash<
+        > Key2GroupLinks;
+        Key2GroupLinks key2GroupLinks_;
+        AutoHashDrop<Key2GroupLinks> key2GroupLinksAutoDrop_;
+        typedef EmbeddedHash<
           Key2ServerLink,
           Key2ServerLink::hashNode,
           Key2ServerLink::hashNodeObject,
           Key2ServerLink::hashNodeHash,
           Key2ServerLink::hashNodeEqu
-        > key2ServerLinks_;
-        Vector<Key2ServerLink> key2ServerLinkList_;
+        > Key2ServerLinks;
+        Key2ServerLinks key2ServerLinks_;
+        AutoHashDrop<Key2ServerLinks> key2ServerLinksAutoDrop_;
     };
   protected:
     Fiber * newFiber();

@@ -176,11 +176,14 @@ void Server::startNodesExchangeNL()
   intptr_t i, j, c;
   utf8::String me(bindAddrs()[0].resolveAsync(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;
-  if( hosts.strlen() > 0 ) hosts += ",";
-  hosts += config_->parse().override().valueByPath(
+  host = config_->parse().override().valueByPath(
     utf8::String(serverConfSectionName_[stNode]) + ".neighbors",
     ""
   );
+  if( host.strlen() > 0 ){
+    if( hosts.strlen() > 0 ) hosts += ",";
+    hosts += host;
+  }
   if( nodeExchangeClients_.count() == 0 ){
     assert( skippedNodeExchangeStarts_ == 0 );
     try {

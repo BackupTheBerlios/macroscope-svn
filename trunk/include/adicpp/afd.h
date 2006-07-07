@@ -64,7 +64,7 @@ class AsyncFile : public AsyncDescriptor {
     class LineGetBuffer {
       public:
         ~LineGetBuffer() {}
-        LineGetBuffer(uintptr_t size = getpagesize()) : 
+        LineGetBuffer(uintptr_t size = 0) : 
           bufferFilePos_(0), size_(size), pos_(0), len_(0), removeNewLine_(false) {}
 
         AutoPtr<uint8_t> buffer_;

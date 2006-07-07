@@ -34,10 +34,9 @@ extern const char * serverConfSectionName_[] = { "node", "standalone" };
 //------------------------------------------------------------------------------
 Message::~Message()
 {
-  attributes_.drop();
 }
 //------------------------------------------------------------------------------
-Message::Message()
+Message::Message() : attributesAutoDrop_(attributes_)
 {
   UUID uuid;
   createUUID(uuid);
@@ -45,12 +44,12 @@ Message::Message()
   attributes_.insert(*new Attribute(messageIdKey,suuid));
 }
 //------------------------------------------------------------------------------
-Message::Message(const utf8::String & sid)
+Message::Message(const utf8::String & sid) : attributesAutoDrop_(attributes_)
 {
   value(messageIdKey,sid);
 }
 //------------------------------------------------------------------------------
-Message::Message(const Message & a) : attributes_(a.attributes_)
+Message::Message(const Message & a) : attributes_(a.attributes_), attributesAutoDrop_(attributes_)
 {
 }
 //------------------------------------------------------------------------------
@@ -120,7 +119,7 @@ Message & Message::removeValueByLeft(const utf8::String & key)
   Array<Attribute *> list;
   attributes_.list(list);
   for( intptr_t l = key.strlen(), i = list.count() - 1; i >= 0; i-- )
-    if( list[i]->key_.strncmp(key,l) == 0 ) attributes_.drop(*list[i]);
+    if( utf8::String(list[i]->key_).strncmp(key,l) == 0 ) attributes_.drop(*list[i]);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -155,7 +154,7 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
   s << uint64_t(i = list.count());
   while( i > 0 ){
     i--;
-    s << list[i]->key_ << list[i]->value_;
+    s << utf8::String(list[i]->key_) << list[i]->value_;
   }
   return s;
 }
@@ -211,12 +210,12 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   uintptr_t i;
   utf8::String v = a.id();
   for( i = 0; i < list.count(); i++ ){
-    if( list[i]->key_.strncmp("#",1) != 0 ) continue;
-    v = list[i]->key_ + ": " + unScreenString(list[i]->value_) + "\n";
+    if( utf8::String(list[i]->key_).strncmp("#",1) != 0 ) continue;
+    v = utf8::String(list[i]->key_) + ": " + unScreenString(list[i]->value_) + "\n";
     s.writeBuffer(v.c_str(),v.size());
   }
   for( i = 0; i < list.count(); i++ ){
-    if( list[i]->key_.strncmp("#",1) == 0 ) continue;
+    if( utf8::String(list[i]->key_).strncmp("#",1) == 0 ) continue;
     v =
       screenString(list[i]->key_) + ": " +
       screenString(list[i]->value_) + "\n"
@@ -232,15 +231,17 @@ UserInfo::~UserInfo()
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo() : atime_(gettimeofday())
+UserInfo::UserInfo() :
+  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo(const utf8::String & name) : atime_(gettimeofday()), name_(name)
+UserInfo::UserInfo(const utf8::String & name) :
+  atime_(gettimeofday()), name_(name), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-UserInfo::UserInfo(const UserInfo & a)
+UserInfo::UserInfo(const UserInfo & a) : sendedToAutoDrop_(sendedTo_)
 {
   operator = (a);
 }
@@ -255,12 +256,15 @@ UserInfo & UserInfo::operator = (const UserInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,UserInfo & a)
 {
-  return s >> a.name_ >> a.sendedTo_;
+  s >> a.name_;
+  a.sendedTo_.get(s);
+  return s;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a)
 {
-  return s << a.name_ << a.sendedTo_;
+  s << a.name_;
+  return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const UserInfo & a)
@@ -274,15 +278,17 @@ KeyInfo::~KeyInfo()
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo() : atime_(gettimeofday())
+KeyInfo::KeyInfo() :
+  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo(const utf8::String & name) : atime_(gettimeofday()), name_(name)
+KeyInfo::KeyInfo(const utf8::String & name) :
+  atime_(gettimeofday()), name_(name), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-KeyInfo::KeyInfo(const KeyInfo & a)
+KeyInfo::KeyInfo(const KeyInfo & a) : sendedToAutoDrop_(sendedTo_)
 {
   operator = (a);
 }
@@ -297,12 +303,14 @@ KeyInfo & KeyInfo::operator = (const KeyInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,KeyInfo & a)
 {
-  return s >> a.name_ >> a.atime_ >> a.sendedTo_;
+  s >> a.name_ >> a.atime_;
+  return a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a)
 {
-  return s << a.name_ << a.atime_ << a.sendedTo_;
+  s << a.name_ << a.atime_;
+  return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const KeyInfo & a)
@@ -316,15 +324,17 @@ GroupInfo::~GroupInfo()
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo() : atime_(gettimeofday())
+GroupInfo::GroupInfo() :
+  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo(const utf8::String & name) : atime_(gettimeofday()), name_(name)
+GroupInfo::GroupInfo(const utf8::String & name) :
+  atime_(gettimeofday()), name_(name), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-GroupInfo::GroupInfo(const GroupInfo & a)
+GroupInfo::GroupInfo(const GroupInfo & a) : sendedToAutoDrop_(sendedTo_)
 {
   operator = (a);
 }
@@ -339,12 +349,14 @@ GroupInfo & GroupInfo::operator = (const GroupInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,GroupInfo & a)
 {
-  return s >> a.name_ >> a.atime_ >> a.sendedTo_;
+  s >> a.name_ >> a.atime_;
+  return a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a)
 {
-  return s << a.name_ << a.atime_ << a.sendedTo_;
+  s << a.name_ << a.atime_;
+  return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const GroupInfo & a)
@@ -359,16 +371,16 @@ ServerInfo::~ServerInfo()
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo() :
-  atime_(gettimeofday()), stime_(0), type_(stStandalone)
+  atime_(gettimeofday()), stime_(0), type_(stStandalone), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo(const utf8::String & name,ServerType type) :
-  atime_(gettimeofday()), stime_(0), name_(name), type_(type)
+  atime_(gettimeofday()), stime_(0), name_(name), type_(type), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-ServerInfo::ServerInfo(const ServerInfo & a)
+ServerInfo::ServerInfo(const ServerInfo & a) : sendedToAutoDrop_(sendedTo_)
 {
   operator = (a);
 }
@@ -386,14 +398,16 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 {
   uint8_t v;
-  s >> a.name_ >> a.atime_ >> v >> a.sendedTo_;
+  s >> a.name_ >> a.atime_ >> v;
+  a.sendedTo_.get(s);
   a.type_ = ServerType(v);
   return s;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 {
-  return s << a.name_ << a.atime_ << (uint8_t) a.type_ << a.sendedTo_;
+  s << a.name_ << a.atime_ << (uint8_t) a.type_;
+  return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a)
@@ -407,16 +421,17 @@ User2KeyLink::~User2KeyLink()
 {
 }
 //------------------------------------------------------------------------------
-User2KeyLink::User2KeyLink() : atime_(gettimeofday())
+User2KeyLink::User2KeyLink() :
+  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 User2KeyLink::User2KeyLink(const utf8::String & userName,const utf8::String & keyName) :
-  atime_(gettimeofday()), user_(userName), key_(keyName)
+  atime_(gettimeofday()), user_(userName), key_(keyName), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-User2KeyLink::User2KeyLink(const User2KeyLink & a)
+User2KeyLink::User2KeyLink(const User2KeyLink & a) : sendedToAutoDrop_(sendedTo_)
 {
   operator = (a);
 }
@@ -432,12 +447,14 @@ User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,User2KeyLink & a)
 {
-  return s >> a.user_ >> a.key_ >> a.atime_ >> a.sendedTo_;
+  s >> a.user_ >> a.key_ >> a.atime_;
+  return a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a)
 {
-  return s << a.user_ << a.key_ << a.atime_ << a.sendedTo_;
+  s << a.user_ << a.key_ << a.atime_;
+  return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const User2KeyLink & a)
@@ -451,16 +468,17 @@ Key2GroupLink::~Key2GroupLink()
 {
 }
 //------------------------------------------------------------------------------
-Key2GroupLink::Key2GroupLink() : atime_(gettimeofday())
+Key2GroupLink::Key2GroupLink() :
+  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 Key2GroupLink::Key2GroupLink(const utf8::String & keyName,const utf8::String & groupName) :
-  atime_(gettimeofday()), key_(keyName), group_(groupName)
+  atime_(gettimeofday()), key_(keyName), group_(groupName), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-Key2GroupLink::Key2GroupLink(const Key2GroupLink & a)
+Key2GroupLink::Key2GroupLink(const Key2GroupLink & a) : sendedToAutoDrop_(sendedTo_)
 {
   operator = (a);
 }
@@ -476,12 +494,14 @@ Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2GroupLink & a)
 {
-  return s >> a.key_ >> a.group_ >> a.atime_ >> a.sendedTo_;
+  s >> a.key_ >> a.group_ >> a.atime_;
+  return a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a)
 {
-  return s << a.key_ << a.group_ << a.atime_ << a.sendedTo_;
+  s << a.key_ << a.group_ << a.atime_;
+  return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2GroupLink & a)
@@ -495,16 +515,17 @@ Key2ServerLink::~Key2ServerLink()
 {
 }
 //------------------------------------------------------------------------------
-Key2ServerLink::Key2ServerLink() : atime_(gettimeofday())
+Key2ServerLink::Key2ServerLink() :
+  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 Key2ServerLink::Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName) :
-  atime_(gettimeofday()), key_(keyName), server_(serverName)
+  atime_(gettimeofday()), key_(keyName), server_(serverName), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
-Key2ServerLink::Key2ServerLink(const Key2ServerLink & a)
+Key2ServerLink::Key2ServerLink(const Key2ServerLink & a) : sendedToAutoDrop_(sendedTo_)
 {
   operator = (a);
 }
@@ -520,12 +541,14 @@ Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2ServerLink & a)
 {
-  return s >> a.key_ >> a.server_ >> a.atime_ >> a.sendedTo_;
+  s >> a.key_ >> a.server_ >> a.atime_;
+  return a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & a)
 {
-  return s << a.key_ << a.server_ << a.atime_ << a.sendedTo_;
+  s << a.key_ << a.server_ << a.atime_;
+  return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2ServerLink & a)
@@ -539,7 +562,15 @@ Server::Data::~Data()
 {
 }
 //------------------------------------------------------------------------------
-Server::Data::Data() : stime_(gettimeofday())
+Server::Data::Data() :
+  stime_(gettimeofday()),
+  usersAutoDrop_(users_),
+  keysAutoDrop_(keys_),
+  groupsAutoDrop_(groups_),
+  serversAutoDrop_(servers_),
+  user2KeyLinksAutoDrop_(user2KeyLinks_),
+  key2GroupLinksAutoDrop_(key2GroupLinks_),
+  key2ServerLinksAutoDrop_(key2ServerLinks_)
 {
 }
 //------------------------------------------------------------------------------
@@ -547,17 +578,17 @@ bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sen
 {
   UserInfo * p = users_.find(info);
   if( p == NULL ){
-    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
-      users_.insert(userList_.safeAdd(p = new UserInfo(info)));
+    if( info.sendedTo_.find(sendingTo) == NULL ){
+      users_.insert(*new UserInfo(info));
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
-      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
-      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
-    }
+    Array<InfoLinkKey *> list;
+    info.sendedTo_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
   }
   return false;
 }
@@ -572,17 +603,17 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendi
 {
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
-    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
-      keys_.insert(keyList_.safeAdd(p = new KeyInfo(info)));
+    if( info.sendedTo_.find(sendingTo) == NULL ){
+      keys_.insert(*new KeyInfo(info));
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
-      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
-      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
-    }
+    Array<InfoLinkKey *> list;
+    info.sendedTo_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
   }
   return false;
 }
@@ -597,17 +628,17 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & s
 {
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
-    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
-      groups_.insert(groupList_.safeAdd(p = new GroupInfo(info)));
+    if( info.sendedTo_.find(sendingTo) == NULL ){
+      groups_.insert(*new GroupInfo(info));
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
-      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
-      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
-    }
+    Array<InfoLinkKey *> list;
+    info.sendedTo_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
   }
   return false;
 }
@@ -622,20 +653,20 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
 {
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
-    if( info.sendedTo_.bSearchCase(sendingTo) < 0 ){
-      servers_.insert(serverList_.safeAdd(p = new ServerInfo(info)));
+    if( info.sendedTo_.find(sendingTo) == NULL ){
+      servers_.insert(*new ServerInfo(info));
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    for( intptr_t c, j, i = info.sendedTo_.count() - 1; i >= 0; i-- ){
-      j = p->sendedTo_.bSearchCase(info.sendedTo_[i],c);
-      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),info.sendedTo_[i]);
-    }
+    Array<InfoLinkKey *> list;
+    info.sendedTo_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
     if( info.type_ == stNode && info.type_ != p->type_ ){
       p->type_ = info.type_;
-      p->sendedTo_.clear();
+      p->sendedTo_.drop();
       return true;
     }
   }
@@ -652,17 +683,17 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::
 {
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
-    if( link.sendedTo_.bSearchCase(sendingTo) < 0 ){
-      user2KeyLinks_.insert(user2KeyLinkList_.safeAdd(p = new User2KeyLink(link)));
+    if( link.sendedTo_.find(sendingTo) == NULL ){
+      user2KeyLinks_.insert(*new User2KeyLink(link));
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    for( intptr_t c, j, i = link.sendedTo_.count() - 1; i >= 0; i-- ){
-      j = p->sendedTo_.bSearchCase(link.sendedTo_[i],c);
-      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),link.sendedTo_[i]);
-    }
+    Array<InfoLinkKey *> list;
+    link.sendedTo_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
   }
   return false;
 }
@@ -677,17 +708,17 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8
 {
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
-    if( link.sendedTo_.bSearchCase(sendingTo) < 0 ){
-      key2GroupLinks_.insert(key2GroupLinkList_.safeAdd(p = new Key2GroupLink(link)));
+    if( link.sendedTo_.find(sendingTo) == NULL ){
+      key2GroupLinks_.insert(*new Key2GroupLink(link));
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    for( intptr_t c, j, i = link.sendedTo_.count() - 1; i >= 0; i-- ){
-      j = p->sendedTo_.bSearchCase(link.sendedTo_[i],c);
-      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),link.sendedTo_[i]);
-    }
+    Array<InfoLinkKey *> list;
+    link.sendedTo_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
   }
   return false;
 }
@@ -702,20 +733,20 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
 {
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
-    if( link.sendedTo_.bSearchCase(sendingTo) < 0 ){
-      key2ServerLinks_.insert(key2ServerLinkList_.safeAdd(p = new Key2ServerLink(link)));
+    if( link.sendedTo_.find(sendingTo) == NULL ){
+      key2ServerLinks_.insert(*new Key2ServerLink(link));
       return true;
     }
   }
   else {
     p->atime_ = gettimeofday();
-    for( intptr_t c, j, i = link.sendedTo_.count() - 1; i >= 0; i-- ){
-      j = p->sendedTo_.bSearchCase(link.sendedTo_[i],c);
-      if( c != 0 ) p->sendedTo_.insert(j + (c > 0),link.sendedTo_[i]);
-    }
+    Array<InfoLinkKey *> list;
+    link.sendedTo_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
     if( p->server_.strcasecmp(link.server_) != 0 ){
       p->server_ = link.server_;
-      p->sendedTo_.clear();
+      p->sendedTo_.drop();
       return true;
     }
   }
@@ -734,47 +765,61 @@ void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket,const utf8::String
   uint64_t u;
 
   u = 0;
-  for( i = userList_.count() - 1; i >= 0; i-- )
-    if( userList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
+  Array<UserInfo *> userList;
+  users_.list(userList);
+  for( i = userList.count() - 1; i >= 0; i-- )
+    if( userList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
-  for( i = userList_.count() - 1; i >= 0; i-- )
-    if( userList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << userList_[i];
+  for( i = userList.count() - 1; i >= 0; i-- )
+    if( userList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *userList[i];
   u = 0;
-  for( i = keyList_.count() - 1; i >= 0; i-- )
-    if( keyList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
+  Array<KeyInfo *> keyList;
+  keys_.list(keyList);
+  for( i = keyList.count() - 1; i >= 0; i-- )
+    if( keyList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
-  for( i = keyList_.count() - 1; i >= 0; i-- )
-    if( keyList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << keyList_[i];
+  for( i = keyList.count() - 1; i >= 0; i-- )
+    if( keyList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *keyList[i];
   u = 0;
-  for( i = groupList_.count() - 1; i >= 0; i-- )
-    if( groupList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
+  Array<GroupInfo *> groupList;
+  groups_.list(groupList);
+  for( i = groupList.count() - 1; i >= 0; i-- )
+    if( groupList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
-  for( i = groupList_.count() - 1; i >= 0; i-- )
-    if( groupList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << groupList_[i];
+  for( i = groupList.count() - 1; i >= 0; i-- )
+    if( groupList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *groupList[i];
   u = 0;
-  for( i = serverList_.count() - 1; i >= 0; i-- )
-    if( serverList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
+  Array<ServerInfo *> serverList;
+  servers_.list(serverList);
+  for( i = serverList.count() - 1; i >= 0; i-- )
+    if( serverList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
-  for( i = serverList_.count() - 1; i >= 0; i-- )
-    if( serverList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << serverList_[i];
+  for( i = serverList.count() - 1; i >= 0; i-- )
+    if( serverList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *serverList[i];
   u = 0;
-  for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
+  Array<User2KeyLink *> user2KeyLinkList;
+  user2KeyLinks_.list(user2KeyLinkList);
+  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
+    if( user2KeyLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
-  for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << user2KeyLinkList_[i];
+  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
+    if( user2KeyLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *user2KeyLinkList[i];
   u = 0;
-  for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
+  Array<Key2GroupLink *> key2GroupLinkList;
+  key2GroupLinks_.list(key2GroupLinkList);
+  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
+    if( key2GroupLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
-  for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << key2GroupLinkList_[i];
+  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
+    if( key2GroupLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *key2GroupLinkList[i];
   u = 0;
-  for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) u++;
+  Array<Key2ServerLink *> key2ServerLinkList;
+  key2ServerLinks_.list(key2ServerLinkList);
+  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
+    if( key2ServerLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
-  for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo) < 0 ) socket << key2ServerLinkList_[i];
+  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
+    if( key2ServerLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *key2ServerLinkList[i];
 }
 //------------------------------------------------------------------------------
 void Server::Data::sendDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
@@ -842,10 +887,12 @@ void Server::Data::recvDatabase(ksock::AsyncSocket & socket,const utf8::String &
 utf8::String Server::Data::getNodeListNL() const
 {
   utf8::String list;
-  for( intptr_t i = serverList_.count() - 1; i >= 0; i-- ){
-    if( !serverList_[i].type_ == stNode ) continue;
+  Array<ServerInfo *> serverList;
+  servers_.list(serverList);
+  for( intptr_t i = serverList.count() - 1; i >= 0; i-- ){
+    if( !serverList[i]->type_ == stNode ) continue;
     if( list.strlen() > 0 ) list += ", ";
-    list += serverList_[i].name_;
+    list += serverList[i]->name_;
   }
   return list;
 }
@@ -859,40 +906,54 @@ utf8::String Server::Data::getNodeList() const
 void Server::Data::dumpNL(utf8::String::Stream & stream) const
 {
   intptr_t i;
-  if( userList_.count() > 0 ){
+  if( users_.count() > 0 ){
     stream << "users:\n";
-    for( i = userList_.count() - 1; i >= 0; i-- )
-      stream << "  " << userList_[i] << "\n";
+    Array<UserInfo *> list;
+    users_.list(list);
+    for( i = list.count() - 1; i >= 0; i-- )
+      stream << "  " << *list[i] << "\n";
   }
-  if( keyList_.count() > 0 ){
+  if( keys_.count() > 0 ){
     stream << "keys:\n";
-    for( i = keyList_.count() - 1; i >= 0; i-- )
-      stream << "  " << keyList_[i] << "\n";
+    Array<KeyInfo *> list;
+    keys_.list(list);
+    for( i = list.count() - 1; i >= 0; i-- )
+      stream << "  " << *list[i] << "\n";
   }
-  if( groupList_.count() > 0 ){
+  if( groups_.count() > 0 ){
     stream << "groups:\n";
-    for( i = groupList_.count() - 1; i >= 0; i-- )
-      stream << "  " << groupList_[i] << "\n";
+    Array<GroupInfo *> list;
+    groups_.list(list);
+    for( i = list.count() - 1; i >= 0; i-- )
+      stream << "  " << *list[i] << "\n";
   }
-  if( serverList_.count() > 0 ){
+  if( servers_.count() > 0 ){
     stream << "servers:\n";
-    for( i = serverList_.count() - 1; i >= 0; i-- )
-      stream << "  " << serverList_[i] << "\n";
+    Array<ServerInfo *> list;
+    servers_.list(list);
+    for( i = list.count() - 1; i >= 0; i-- )
+      stream << "  " << *list[i] << "\n";
   }
-  if( user2KeyLinkList_.count() > 0 ){
+  if( user2KeyLinks_.count() > 0 ){
     stream << "user2key links:\n";
-    for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- )
-      stream << "  " << user2KeyLinkList_[i] << "\n";
+    Array<User2KeyLink *> list;
+    user2KeyLinks_.list(list);
+    for( i = list.count() - 1; i >= 0; i-- )
+      stream << "  " << *list[i] << "\n";
   }
-  if( key2GroupLinkList_.count() > 0 ){
+  if( key2GroupLinks_.count() > 0 ){
     stream << "key2group links:\n";
-    for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- )
-      stream << "  " << key2GroupLinkList_[i] << "\n";
+    Array<Key2GroupLink *> list;
+    key2GroupLinks_.list(list);
+    for( i = list.count() - 1; i >= 0; i-- )
+      stream << "  " << *list[i] << "\n";
   }
-  if( key2ServerLinkList_.count() > 0 ){
+  if( key2ServerLinks_.count() > 0 ){
     stream << "key2server links:\n";
-    for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- )
-      stream << "  " << key2ServerLinkList_[i] << "\n";
+    Array<Key2ServerLink *> list;
+    key2ServerLinks_.list(list);
+    for( i = list.count() - 1; i >= 0; i-- )
+      stream << "  " << *list[i] << "\n";
   }
 }
 //------------------------------------------------------------------------------
@@ -905,20 +966,13 @@ void Server::Data::dump(utf8::String::Stream & stream) const
 Server::Data & Server::Data::clear()
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  users_.clear();
-  userList_.clear();
-  keys_.clear();
-  keyList_.clear();
-  groups_.clear();
-  groupList_.clear();
-  servers_.clear();
-  serverList_.clear();
-  user2KeyLinks_.clear();
-  user2KeyLinkList_.clear();
-  key2GroupLinks_.clear();
-  key2GroupLinkList_.clear();
-  key2ServerLinks_.clear();
-  key2ServerLinkList_.clear();
+  users_.drop();
+  keys_.drop();
+  groups_.drop();
+  servers_.drop();
+  user2KeyLinks_.drop();
+  key2GroupLinks_.drop();
+  key2ServerLinks_.drop();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -926,20 +980,34 @@ bool Server::Data::orNL(const Data & a,const utf8::String & sendingTo)
 {
   intptr_t i;
   bool r = false;
-  for( i = a.userList_.count() - 1; i >= 0; i-- )
-    r = registerUserNL(a.userList_[i],sendingTo) || r;
-  for( i = a.keyList_.count() - 1; i >= 0; i-- )
-    r = registerKeyNL(a.keyList_[i],sendingTo) || r;
-  for( i = a.groupList_.count() - 1; i >= 0; i-- )
-    r = registerGroupNL(a.groupList_[i],sendingTo) || r;
-  for( i = a.serverList_.count() - 1; i >= 0; i-- )
-    r = registerServerNL(a.serverList_[i],sendingTo) || r;
-  for( i = a.user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    r = registerUser2KeyLinkNL(a.user2KeyLinkList_[i],sendingTo) || r;
-  for( i = a.key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2GroupLinkNL(a.key2GroupLinkList_[i],sendingTo) || r;
-  for( i = a.key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    r = registerKey2ServerLinkNL(a.key2ServerLinkList_[i],sendingTo) || r;
+  Array<UserInfo *> userList;
+  a.users_.list(userList);
+  for( i = userList.count() - 1; i >= 0; i-- )
+    r = registerUserNL(*userList[i],sendingTo) || r;
+  Array<KeyInfo *> keyList;
+  a.keys_.list(keyList);
+  for( i = keyList.count() - 1; i >= 0; i-- )
+    r = registerKeyNL(*keyList[i],sendingTo) || r;
+  Array<GroupInfo *> groupList;
+  a.groups_.list(groupList);
+  for( i = groupList.count() - 1; i >= 0; i-- )
+    r = registerGroupNL(*groupList[i],sendingTo) || r;
+  Array<ServerInfo *> serverList;
+  a.servers_.list(serverList);
+  for( i = serverList.count() - 1; i >= 0; i-- )
+    r = registerServerNL(*serverList[i],sendingTo) || r;
+  Array<User2KeyLink *> user2KeyLinkList;
+  a.user2KeyLinks_.list(user2KeyLinkList);
+  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
+    r = registerUser2KeyLinkNL(*user2KeyLinkList[i],sendingTo) || r;
+  Array<Key2GroupLink *> key2GroupLinkList;
+  a.key2GroupLinks_.list(key2GroupLinkList);
+  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
+    r = registerKey2GroupLinkNL(*key2GroupLinkList[i],sendingTo) || r;
+  Array<Key2ServerLink *> key2ServerLinkList;
+  a.key2ServerLinks_.list(key2ServerLinkList);
+  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
+    r = registerKey2ServerLinkNL(*key2ServerLinkList[i],sendingTo) || r;
   return r;
 }
 //------------------------------------------------------------------------------
@@ -953,27 +1021,41 @@ bool Server::Data::or(const Data & a,const utf8::String & sendingTo)
 Server::Data & Server::Data::xorNL(const Data & data1,const Data & data2,const utf8::String & sendingTo)
 {
   intptr_t i;
-  for( i = data2.userList_.count() - 1; i >= 0; i-- )
-    if( data1.users_.find(data2.userList_[i]) == NULL )
-      registerUserNL(data2.userList_[i],sendingTo);
-  for( i = data2.keyList_.count() - 1; i >= 0; i-- )
-    if( data1.keys_.find(data2.keyList_[i]) == NULL )
-      registerKeyNL(data2.keyList_[i],sendingTo);
-  for( i = data2.groupList_.count() - 1; i >= 0; i-- )
-    if( data1.groups_.find(data2.groupList_[i]) == NULL )
-      registerGroupNL(data2.groupList_[i],sendingTo);
-  for( i = data2.serverList_.count() - 1; i >= 0; i-- )
-    if( data1.servers_.find(data2.serverList_[i]) == NULL )
-      registerServerNL(data2.serverList_[i],sendingTo);
-  for( i = data2.user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( data1.user2KeyLinks_.find(data2.user2KeyLinkList_[i]) == NULL )
-      registerUser2KeyLinkNL(data2.user2KeyLinkList_[i],sendingTo);
-  for( i = data2.key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( data1.key2GroupLinks_.find(data2.key2GroupLinkList_[i]) == NULL )
-      registerKey2GroupLinkNL(data2.key2GroupLinkList_[i],sendingTo);
-  for( i = data2.key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( data1.key2ServerLinks_.find(data2.key2ServerLinkList_[i]) == NULL )
-      registerKey2ServerLinkNL(data2.key2ServerLinkList_[i],sendingTo);
+  Array<UserInfo *> userList;
+  data2.users_.list(userList);
+  for( i = userList.count() - 1; i >= 0; i-- )
+    if( data1.users_.find(*userList[i]) == NULL )
+      registerUserNL(*userList[i],sendingTo);
+  Array<KeyInfo *> keyList;
+  data2.keys_.list(keyList);
+  for( i = keyList.count() - 1; i >= 0; i-- )
+    if( data1.keys_.find(*keyList[i]) == NULL )
+      registerKeyNL(*keyList[i],sendingTo);
+  Array<GroupInfo *> groupList;
+  data2.groups_.list(groupList);
+  for( i = groupList.count() - 1; i >= 0; i-- )
+    if( data1.groups_.find(*groupList[i]) == NULL )
+      registerGroupNL(*groupList[i],sendingTo);
+  Array<ServerInfo *> serverList;
+  data2.servers_.list(serverList);
+  for( i = serverList.count() - 1; i >= 0; i-- )
+    if( data1.servers_.find(*serverList[i]) == NULL )
+      registerServerNL(*serverList[i],sendingTo);
+  Array<User2KeyLink *> user2KeyLinkList;
+  data2.user2KeyLinks_.list(user2KeyLinkList);
+  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
+    if( data1.user2KeyLinks_.find(*user2KeyLinkList[i]) == NULL )
+      registerUser2KeyLinkNL(*user2KeyLinkList[i],sendingTo);
+  Array<Key2GroupLink *> key2GroupLinkList;
+  data2.key2GroupLinks_.list(key2GroupLinkList);
+  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
+    if( data1.key2GroupLinks_.find(*key2GroupLinkList[i]) == NULL )
+      registerKey2GroupLinkNL(*key2GroupLinkList[i],sendingTo);
+  Array<Key2ServerLink *> key2ServerLinkList;
+  data2.key2ServerLinks_.list(key2ServerLinkList);
+  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
+    if( data1.key2ServerLinks_.find(*key2ServerLinkList[i]) == NULL )
+      registerKey2ServerLinkNL(*key2ServerLinkList[i],sendingTo);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -987,35 +1069,35 @@ Server::Data & Server::Data::xor(const Data & data1,const Data & data2,const utf
 //------------------------------------------------------------------------------
 Server::Data & Server::Data::setSendedToNL(const utf8::String & sendingTo)
 {
-  intptr_t i, j, c;
-  for( i = userList_.count() - 1; i >= 0; i-- ){
-    j = userList_[i].sendedTo_.bSearchCase(sendingTo,c);
-    if( c != 0 ) userList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-  }
-  for( i = keyList_.count() - 1; i >= 0; i-- ){
-    j = keyList_[i].sendedTo_.bSearchCase(sendingTo,c);
-    if( c != 0 ) keyList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-  }
-  for( i = groupList_.count() - 1; i >= 0; i-- ){
-    j = groupList_[i].sendedTo_.bSearchCase(sendingTo,c);
-    if( c != 0 ) groupList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-  }
-  for( i = serverList_.count() - 1; i >= 0; i-- ){
-    j = serverList_[i].sendedTo_.bSearchCase(sendingTo,c);
-    if( c != 0 ) serverList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-  }
-  for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- ){
-    j = user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
-    if( c != 0 ) user2KeyLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-  }
-  for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- ){
-    j = key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
-    if( c != 0 ) key2GroupLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-  }
-  for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- ){
-    j = key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
-    if( c != 0 ) key2ServerLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-  }
+  intptr_t i;
+  Array<UserInfo *> userList;
+  users_.list(userList);
+  for( i = userList.count() - 1; i >= 0; i-- )
+    userList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+  Array<KeyInfo *> keyList;
+  keys_.list(keyList);
+  for( i = keyList.count() - 1; i >= 0; i-- )
+    keyList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+  Array<GroupInfo *> groupList;
+  groups_.list(groupList);
+  for( i = groupList.count() - 1; i >= 0; i-- )
+    groupList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+  Array<ServerInfo *> serverList;
+  servers_.list(serverList);
+  for( i = serverList.count() - 1; i >= 0; i-- )
+    serverList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+  Array<User2KeyLink *> user2KeyLinkList;
+  user2KeyLinks_.list(user2KeyLinkList);
+  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
+    user2KeyLinkList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+  Array<Key2GroupLink *> key2GroupLinkList;
+  key2GroupLinks_.list(key2GroupLinkList);
+  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
+    key2GroupLinkList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+  Array<Key2ServerLink *> key2ServerLinkList;
+  key2ServerLinks_.list(key2ServerLinkList);
+  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
+    key2ServerLinkList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -1025,112 +1107,71 @@ Server::Data & Server::Data::setSendedTo(const utf8::String & sendingTo)
   return setSendedToNL(sendingTo);
 }
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::setSendedToNL(const Data & data,const utf8::String & sendingTo)
-{
-  intptr_t i, j, c;
-  for( i = data.userList_.count() - 1; i >= 0; i-- )
-    if( users_.find(data.userList_[i]) != NULL ){
-      j = userList_[i].sendedTo_.bSearchCase(sendingTo,c);
-      if( c != 0 ) userList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-    }
-  for( i = data.keyList_.count() - 1; i >= 0; i-- )
-    if( keys_.find(data.keyList_[i]) != NULL ){
-      j = keyList_[i].sendedTo_.bSearchCase(sendingTo,c);
-      if( c != 0 ) keyList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-    }
-  for( i = data.groupList_.count() - 1; i >= 0; i-- )
-    if( groups_.find(data.groupList_[i]) != NULL ){
-      j = groupList_[i].sendedTo_.bSearchCase(sendingTo,c);
-      if( c != 0 ) groupList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-    }
-  for( i = data.serverList_.count() - 1; i >= 0; i-- )
-    if( servers_.find(data.serverList_[i]) != NULL ){
-      j = serverList_[i].sendedTo_.bSearchCase(sendingTo,c);
-      if( c != 0 ) serverList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-    }
-  for( i = data.user2KeyLinkList_.count() - 1; i >= 0; i-- )
-    if( user2KeyLinks_.find(data.user2KeyLinkList_[i]) != NULL ){
-      j = user2KeyLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
-      if( c != 0 ) user2KeyLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-    }
-  for( i = data.key2GroupLinkList_.count() - 1; i >= 0; i-- )
-    if( key2GroupLinks_.find(data.key2GroupLinkList_[i]) != NULL ){
-      j = key2GroupLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
-      if( c != 0 ) key2GroupLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-    }
-  for( i = data.key2ServerLinkList_.count() - 1; i >= 0; i-- )
-    if( key2ServerLinks_.find(data.key2ServerLinkList_[i]) != NULL ){
-      j = key2ServerLinkList_[i].sendedTo_.bSearchCase(sendingTo,c);
-      if( c != 0 ) key2ServerLinkList_[i].sendedTo_.insert(j + (c > 0),sendingTo);
-    }
-  return *this;
-}
-//------------------------------------------------------------------------------
-Server::Data & Server::Data::setSendedTo(const Data & data,const utf8::String & sendingTo)
-{
-  AutoMutexWRLock<FiberMutex> lock0(mutex_);
-  AutoMutexRDLock<FiberMutex> lock1(data.mutex_);
-  return setSendedToNL(data,sendingTo);
-}
-//------------------------------------------------------------------------------
 bool Server::Data::sweepNL(uint64_t stime,utf8::String::Stream * log)
 {
   if( stime_ >= stime ) return false;
   intptr_t i;
   bool r = false;
-  for( i = userList_.count() - 1; i >= 0; i-- ){
-    if( userList_[i].atime_ < stime ){
-      if( log != NULL ) *log << userList_[i] << "\n";
-      users_.remove(userList_[i]);
-      userList_.remove(i);
+  Array<UserInfo *> userList;
+  users_.list(userList);
+  for( i = userList.count() - 1; i >= 0; i-- ){
+    if( userList[i]->atime_ < stime ){
+      if( log != NULL ) *log << *userList[i] << "\n";
+      users_.drop(*userList[i]);
       r = true;
     }
   }
-  for( i = keyList_.count() - 1; i >= 0; i-- ){
-    if( keyList_[i].atime_ < stime ){
-      if( log != NULL ) *log << keyList_[i] << "\n";
-      keys_.remove(keyList_[i]);
-      keyList_.remove(i);
+  Array<KeyInfo *> keyList;
+  keys_.list(keyList);
+  for( i = keyList.count() - 1; i >= 0; i-- ){
+    if( keyList[i]->atime_ < stime ){
+      if( log != NULL ) *log << *keyList[i] << "\n";
+      keys_.drop(*keyList[i]);
       r = true;
     }
   }
-  for( i = groupList_.count() - 1; i >= 0; i-- ){
-    if( groupList_[i].atime_ < stime ){
-      if( log != NULL ) *log << groupList_[i] << "\n";
-      groups_.remove(groupList_[i]);
-      groupList_.remove(i);
+  Array<GroupInfo *> groupList;
+  groups_.list(groupList);
+  for( i = groupList.count() - 1; i >= 0; i-- ){
+    if( groupList[i]->atime_ < stime ){
+      if( log != NULL ) *log << *groupList[i] << "\n";
+      groups_.drop(*groupList[i]);
       r = true;
     }
   }
-  for( i = serverList_.count() - 1; i >= 0; i-- ){
-    if( serverList_[i].atime_ < stime ){
-      if( log != NULL ) *log << serverList_[i] << "\n";
-      servers_.remove(serverList_[i]);
-      serverList_.remove(i);
+  Array<ServerInfo *> serverList;
+  servers_.list(serverList);
+  for( i = serverList.count() - 1; i >= 0; i-- ){
+    if( serverList[i]->atime_ < stime ){
+      if( log != NULL ) *log << *serverList[i] << "\n";
+      servers_.drop(*serverList[i]);
       r = true;
     }
   }
-  for( i = user2KeyLinkList_.count() - 1; i >= 0; i-- ){
-    if( user2KeyLinkList_[i].atime_ < stime ){
-      if( log != NULL ) *log << user2KeyLinkList_[i] << "\n";
-      user2KeyLinks_.remove(user2KeyLinkList_[i]);
-      user2KeyLinkList_.remove(i);
+  Array<User2KeyLink *> user2KeyLinkList;
+  user2KeyLinks_.list(user2KeyLinkList);
+  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- ){
+    if( user2KeyLinkList[i]->atime_ < stime ){
+      if( log != NULL ) *log << *user2KeyLinkList[i] << "\n";
+      user2KeyLinks_.drop(*user2KeyLinkList[i]);
       r = true;
     }
   }
-  for( i = key2GroupLinkList_.count() - 1; i >= 0; i-- ){
-    if( key2GroupLinkList_[i].atime_ < stime ){
-      if( log != NULL ) *log << key2GroupLinkList_[i] << "\n";
-      key2GroupLinks_.remove(key2GroupLinkList_[i]);
-      key2GroupLinkList_.remove(i);
+  Array<Key2GroupLink *> key2GroupLinkList;
+  key2GroupLinks_.list(key2GroupLinkList);
+  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- ){
+    if( key2GroupLinkList[i]->atime_ < stime ){
+      if( log != NULL ) *log << *key2GroupLinkList[i] << "\n";
+      key2GroupLinks_.drop(*key2GroupLinkList[i]);
       r = true;
     }
   }
-  for( i = key2ServerLinkList_.count() - 1; i >= 0; i-- ){
-    if( key2ServerLinkList_[i].atime_ < stime ){
-      if( log != NULL ) *log << key2ServerLinkList_[i] << "\n";
-      key2ServerLinks_.remove(key2ServerLinkList_[i]);
-      key2ServerLinkList_.remove(i);
+  Array<Key2ServerLink *> key2ServerLinkList;
+  key2ServerLinks_.list(key2ServerLinkList);
+  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- ){
+    if( key2ServerLinkList[i]->atime_ < stime ){
+      if( log != NULL ) *log << *key2ServerLinkList[i] << "\n";
+      key2ServerLinks_.drop(*key2ServerLinkList[i]);
       r = true;
     }
   }
@@ -1147,9 +1188,11 @@ bool Server::Data::sweep(uint64_t stime,utf8::String::Stream * log)
 utf8::String Server::Data::getUserListNL(bool quoted) const
 {
   utf8::String list;
-  for( intptr_t i = userList_.count() - 1; i >= 0; i-- ){
+  Array<UserInfo *> userList;
+  users_.list(userList);
+  for( intptr_t i = userList.count() - 1; i >= 0; i-- ){
     if( quoted ) list += "\"";
-    list += userList_[i].name_;
+    list += userList[i]->name_;
     if( quoted ) list += "\"";
     if( i > 0 ) list += ",";
   }
@@ -1165,9 +1208,11 @@ utf8::String Server::Data::getUserList(bool quoted) const
 utf8::String Server::Data::getKeyListNL(bool quoted) const
 {
   utf8::String list;
-  for( intptr_t i = keyList_.count() - 1; i >= 0; i-- ){
+  Array<KeyInfo *> keyList;
+  keys_.list(keyList);
+  for( intptr_t i = keyList.count() - 1; i >= 0; i-- ){
     if( quoted ) list += "\"";
-    list += keyList_[i].name_;
+    list += keyList[i]->name_;
     if( quoted ) list += "\"";
     if( i > 0 ) list += ",";
   }
@@ -1183,13 +1228,15 @@ utf8::String Server::Data::getKeyList(bool quoted) const
 utf8::String Server::Data::getKeyGroupListNL(const utf8::String & groups,bool quoted) const
 {
   utf8::String list;
-  for( intptr_t j, i = keyList_.count() - 1; i >= 0; i-- ){
+  Array<KeyInfo *> keyList;
+  keys_.list(keyList);
+  for( intptr_t j, i = keyList.count() - 1; i >= 0; i-- ){
     for( j = enumStringParts(groups) - 1; j >= 0; j-- )
-      if( key2GroupLinks_.find(Key2GroupLink(keyList_[i].name_,stringPartByNo(groups,j))) != NULL ) break;
+      if( key2GroupLinks_.find(Key2GroupLink(keyList[i]->name_,stringPartByNo(groups,j))) != NULL ) break;
     if( j >= 0 ){
       if( list.strlen() > 0 ) list += ",";
       if( quoted ) list += "\"";
-      list += keyList_[i].name_;
+      list += keyList[i]->name_;
       if( quoted ) list += "\"";
     }
   }
@@ -1205,13 +1252,13 @@ utf8::String Server::Data::getKeyGroupList(const utf8::String & groups,bool quot
 bool Server::Data::isEmptyNL() const
 {
   return
-    userList_.count() == 0 &&
-    keyList_.count() == 0 &&
-    groupList_.count() == 0 &&
-    serverList_.count() == 0 &&
-    user2KeyLinkList_.count() == 0 &&
-    key2GroupLinkList_.count() == 0 &&
-    key2ServerLinkList_.count() == 0
+    users_.count() == 0 &&
+    keys_.count() == 0 &&
+    groups_.count() == 0 &&
+    servers_.count() == 0 &&
+    user2KeyLinks_.count() == 0 &&
+    key2GroupLinks_.count() == 0 &&
+    key2ServerLinks_.count() == 0
   ;
 }
 //------------------------------------------------------------------------------
