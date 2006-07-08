@@ -964,6 +964,7 @@ void NodeClient::main()
           server = nodeHostName_;
         }
         i = enumStringParts(server);
+        if( i <= 0 ) exchanged = true;
         while( !exchanged && !terminated_ && --i >= 0 ){
           try {
             ksock::SockAddr remoteAddress;
