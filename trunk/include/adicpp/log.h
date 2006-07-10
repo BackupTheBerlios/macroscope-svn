@@ -61,6 +61,7 @@ class LogFile {
     LogFile & log(LogMessagePriority pri,const utf8::String::Stream & stream);
     LogFile & debug(uintptr_t level,const utf8::String::Stream & stream);
 
+    bool isDebugLevelEnabled(uintptr_t level) const;
     LogFile & enableDebugLevel(uintptr_t level);
     LogFile & disableDebugLevel(uintptr_t level);
     LogFile & setDebugLevels(const utf8::String & levels);
@@ -106,6 +107,11 @@ inline const utf8::String & LogFile::fileName() const
 inline const char * const & LogFile::priNick(LogMessagePriority filter) const
 {
   return priNicks_[filter];
+}
+//---------------------------------------------------------------------------
+inline bool LogFile::isDebugLevelEnabled(uintptr_t level) const
+{
+  return (enabledLevels_ & (uintptr_t(1) << (level & (sizeof(uintptr_t) * CHAR_BIT - 1)))) != 0;
 }
 //---------------------------------------------------------------------------
 inline LogFile & LogFile::enableDebugLevel(uintptr_t level)
