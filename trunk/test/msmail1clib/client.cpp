@@ -510,6 +510,20 @@ utf8::String Client::getReceivedMessageList() const
   return slist;
 }
 //------------------------------------------------------------------------------
+utf8::String Client::getSendingMessageList() const
+{
+  utf8::String slist;
+  Array<Message *> list;
+  sendQueue_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+    slist += "\"";
+    slist += list[i]->id();
+    slist += "\"";
+    if( i > 0 ) slist += ",";
+  }
+  return slist;
+}
+//------------------------------------------------------------------------------
 void Client::getDB()
 {
   attachFiber(new ClientDBGetterFiber(*this));

@@ -134,6 +134,7 @@ class Client : public ksock::Client {
     bool removeMessage(const utf8::String id);
     utf8::String Client::copyMessage(const utf8::String id);
     utf8::String getReceivedMessageList() const;
+    utf8::String getSendingMessageList() const;
     void getDB();
     utf8::String getDBList() const;
     utf8::String getDBGroupList() const;

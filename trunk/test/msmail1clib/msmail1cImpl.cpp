@@ -82,7 +82,7 @@ HRESULT Cmsmail1c::RegisterExtensionAs(BSTR * bstrExtensionName)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNProps(long * plProps)
 {
-  *plProps = 21;
+  *plProps = 22;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -171,6 +171,10 @@ HRESULT Cmsmail1c::FindProp(BSTR bstrPropName,long * plPropNum)
   if( _wcsicoll(bstrPropName,L"UserList") == 0 ) *plPropNum = 20;
   else
   if( _wcsicoll(bstrPropName,L"—писокѕользователей") == 0 ) *plPropNum = 20;
+  else
+  if( _wcsicoll(bstrPropName,L"SendingMessagesList") == 0 ) *plPropNum = 21;
+  else
+  if( _wcsicoll(bstrPropName,L"—писокЌеотправленных—ообщений") == 0 ) *plPropNum = 21;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -347,6 +351,14 @@ HRESULT Cmsmail1c::GetPropName(long lPropNum,long lPropAlias,BSTR * pbstrPropNam
           return (*pbstrPropName = SysAllocString(L"—писокѕользователей")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 21 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"SendingMessagesList")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"—писокЌеотправленных—ообщений")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -483,6 +495,10 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         break;
       case 20 : // UserList
         V_BSTR(pvarPropVal) = client_.getUserList().getOLEString();
+        V_VT(pvarPropVal) = VT_BSTR;
+        break;
+      case 21 : // SendingMessagesList
+        V_BSTR(pvarPropVal) = client_.getSendingMessageList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
     }
@@ -630,6 +646,9 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
       case 20 :
         hr = E_NOTIMPL;
         break;
+      case 21 :
+        hr = E_NOTIMPL;
+        break;
     }
   }
   catch( ExceptionSP & e ){
@@ -662,6 +681,7 @@ HRESULT Cmsmail1c::IsPropReadable(long lPropNum,BOOL * pboolPropRead)
     case 18 : *pboolPropRead = TRUE; break;
     case 19 : *pboolPropRead = TRUE; break;
     case 20 : *pboolPropRead = TRUE; break;
+    case 21 : *pboolPropRead = TRUE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -691,6 +711,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
     case 18 : *pboolPropWrite = FALSE; break;
     case 19 : *pboolPropWrite = FALSE; break;
     case 20 : *pboolPropWrite = FALSE; break;
+    case 21 : *pboolPropWrite = FALSE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -698,7 +719,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 15;
+  *plMethods = 17;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -764,6 +785,14 @@ HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
   if( _wcsicoll(bstrMethodName,L"DebugMessage") == 0 ) *plMethodNum = 14;
   else
   if( _wcsicoll(bstrMethodName,L"ќтладочное—ообщение") == 0 ) *plMethodNum = 14;
+  else
+  if( _wcsicoll(bstrMethodName,L"IsDirectory") == 0 ) *plMethodNum = 15;
+  else
+  if( _wcsicoll(bstrMethodName,L"Ёто аталог") == 0 ) *plMethodNum = 15;
+  else
+  if( _wcsicoll(bstrMethodName,L"RemoveDirectory") == 0 ) *plMethodNum = 16;
+  else
+  if( _wcsicoll(bstrMethodName,L"”далить аталог") == 0 ) *plMethodNum = 16;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -892,6 +921,22 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"ќтладочное—ообщение")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 15 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"IsDirectory")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"Ёто аталог")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 16 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RemoveDirectory")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"”далить аталог")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -914,6 +959,8 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 12 : *plParams = 1; break;
     case 13 : *plParams = 2; break;
     case 14 : *plParams = 2; break;
+    case 15 : *plParams = 1; break;
+    case 16 : *plParams = 1; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -1216,6 +1263,38 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                   }
                 }
               }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 15 : // IsDirectory
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0; // »м€ каталога
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                Stat st;
+                if( stat(V_BSTR(pv0),st) ){
+                  V_I4(pvarRetValue) = (st.st_mode & S_IFDIR) != 0 ? 1 : 0;
+                }
+                else {
+                  lastError_ = GetLastError();
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 16 : // RemoveDirectory
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0; // »м€ каталога
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ) removeDirectory(V_BSTR(pv0),true);
             }
             SafeArrayUnlock(*paParams);
           }
