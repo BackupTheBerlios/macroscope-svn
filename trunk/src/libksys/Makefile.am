@@ -22,6 +22,7 @@ libksys_la_SOURCES = \
 	aio.cpp \
 	conf.cpp \
 	except.cpp \
+	fetch.cpp \
 	fhc.cpp \
 	fiber.cpp \
 	log.cpp \
@@ -45,7 +46,10 @@ libksys_la_SOURCES = \
 	scktintf.cpp \
 	client.cpp \
 	server.cpp \
-	socket.cpp
+	socket.cpp \
+	nsFTPConn.cpp \
+	nsHTTPConn.cpp \
+	nsSocket.cpp 
 
 if BUILD_LZO_LIB
 libksys_la_SOURCES += \

@@ -76,5 +76,6 @@ template< typename T> inline void xchg(T & v1, T & v2)
 #include <adicpp/socket.h>
 #include <adicpp/shmem.h>
 #include <adicpp/service.h>
+#include <adicpp/fetch.h>
 
 #endif /* ksysH */

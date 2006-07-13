@@ -404,7 +404,7 @@ bool MSFTPService::active()
 int main(int argc,char * argv[])
 {
   int errcode = 0;
-  adicpp::Initializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
   try {
     union {

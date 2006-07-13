@@ -117,9 +117,10 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 	  }
   }
   else {
+    utf8::WideString hp(host.getUNICODEString());
     utf8::WideString ap(port.strlen() > 0 ? port.getUNICODEString() : ((utf8::String) defPort).getUNICODEString());
     r = api.GetAddrInfoW(
-      host.strlen() > 0 ? (const wchar_t *) host.getUNICODEString() : NULL,
+      host.strlen() > 0 ? (const wchar_t *) hp : NULL,
       port.strlen() == 0 && (uintptr_t) defPort == 0 ? NULL : (const wchar_t *) ap,
       &aiHintsW,
       &aiListW

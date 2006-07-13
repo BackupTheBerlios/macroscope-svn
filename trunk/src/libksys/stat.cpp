@@ -66,7 +66,7 @@ bool stat(const utf8::String & pathName,struct Stat & st)
     if( GetLastError() == ERROR_SUCCESS && (fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 )
       hFile = CreateFileA(s,FILE_READ_ATTRIBUTES,FILE_SHARE_READ | FILE_SHARE_WRITE,NULL,OPEN_EXISTING,0,NULL);
   }
-  else{
+  else {
     utf8::WideString s(anyPathName2HostPathName(pathName).getUNICODEString());
     SetLastError(ERROR_SUCCESS);
     GetFileAttributesExW(s, GetFileExInfoStandard, &fData);

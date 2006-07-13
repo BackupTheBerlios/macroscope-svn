@@ -22,7 +22,7 @@ CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 #ksys.h.gch: ksys.h
 #	$(CXXCOMPILE) -c ksys.h
 
-SUBDIRS = fbapi lzo myapi sha
+SUBDIRS = fbapi lzo myapi sha xpnet
 
 pkginclude_HEADERS = \
 	adicpp.h \

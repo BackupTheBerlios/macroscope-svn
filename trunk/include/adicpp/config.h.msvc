@@ -6,6 +6,10 @@
 #define __WIN64__ 1
 #endif
 
+#ifndef _WINDOWS
+#define _WINDOWS 1
+#endif
+
 #if defined(__WIN32__) && !defined(__WIN64__)
 #define SIZEOF_CHAR 1
 #define SIZEOF_SHORT 2

@@ -380,6 +380,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\include\adicpp\fetch.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\include\adicpp\fhc.h"
 				>
 			</File>
@@ -521,6 +525,18 @@
 			</File>
 			<File
 				RelativePath="..\..\..\include\adicpp\mytr.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\include\adicpp\xpnet\nsFTPConn.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\include\adicpp\xpnet\nsHTTPConn.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\include\adicpp\xpnet\nsSocket.h"
 				>
 			</File>
 			<File
@@ -1340,11 +1356,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libksys\fetch.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libksys\fhc.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\fiber.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\intf.cpp"
 				>
 			</File>
 			<File
@@ -1386,10 +1410,6 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\intf.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\log.cpp"
@@ -1465,6 +1485,18 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\libmycpp\mylibic.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libksys\nsFTPConn.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libksys\nsHTTPConn.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libksys\nsSocket.cpp"
 				>
 			</File>
 			<File
@@ -1596,10 +1628,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\stparam.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\stparam.cpp"
 				>
 				<FileConfiguration
@@ -1640,6 +1668,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\stparam.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
 				>
 				<FileConfiguration
@@ -1678,10 +1714,6 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\svc.cpp"

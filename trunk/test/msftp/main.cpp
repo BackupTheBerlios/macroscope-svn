@@ -439,6 +439,14 @@ void KFTPClient::get()
 //------------------------------------------------------------------------------
 void KFTPClient::main()
 {
+// test
+  ksys::Fetcher fetch;
+  fetch.url("http://www.firebirdsql.org/download/prerelease/rlsnotes20rc3_0200_82.zip");
+  fetch.proxy("korvin:WFa1PXt-@192.168.201.2:3128");
+  fetch.fetch("rlsnotes20rc3_0200_82.zip");
+
+
+
   remoteAddress_.resolve(host_,MSFTPDefaultPort);
   connect(remoteAddress_);
 
@@ -495,6 +503,15 @@ void KFTPShell::open()
 {
   intptr_t i;
   config_->parse().override();
+  ksys::stdErr.rotationThreshold(
+    config_->value("debug_file_rotate_threshold",1024 * 1024)
+  );
+  ksys::stdErr.rotatedFileCount(
+    config_->value("debug_file_rotate_count",10)
+  );
+  ksys::stdErr.setDebugLevels(
+    config_->value("debug_levels","+0,+1,+2,+3")
+  );
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )
@@ -505,7 +522,7 @@ void KFTPShell::open()
 int main(int argc,char * argv[])
 {
   int errcode = 0;
-  adicpp::Initializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
   try {
     union {

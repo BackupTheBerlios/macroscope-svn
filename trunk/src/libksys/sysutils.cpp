@@ -846,21 +846,8 @@ utf8::String getNameFromPathName(const utf8::String & pathName)
 //---------------------------------------------------------------------------
 utf8::String anyPathName2HostPathName(const utf8::String & pathName)
 {
-  utf8::String::Iterator i(
-    pathName.strstr(pathDelimiter == '\\' ? "/" : "\\")
-  );
-  utf8::String s(pathName);
-  if( i.position() >= 0 ){
-    s = s.unique();
-    i = s;
-    uintptr_t c = pathDelimiter == '\\' ? '/' : '\\';
-    while( !i.eof() ){
-      if( i.getChar() == c )
-        s = s.replace(i,i + 1,pathDelimiterStr);
-      i.prev(); 
-    }
-  }
-  return s;
+  if( pathDelimiter == '\\' ) return pathName.replaceAll("/",pathDelimiterStr);
+  return pathName.replaceAll("\\",pathDelimiterStr);
 }
 //---------------------------------------------------------------------------
 bool nameFitMask(const utf8::String & name,const utf8::String & mask)
@@ -1266,10 +1253,14 @@ void reverseByteArray(void * dst,const void * src,uintptr_t size)
 // base64 routines
 //---------------------------------------------------------------------------
 static const char base64Table[64] = {
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q',
-  'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
-  'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y',
-  'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-'
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+  'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+  'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+  'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+  'w', 'x', 'y', 'z', '0', '1', '2', '3',
+  '4', '5', '6', '7', '8', '9', '+', '/'
 };
 //---------------------------------------------------------------------------
 static uint8_t base64DecodeTable[256];
