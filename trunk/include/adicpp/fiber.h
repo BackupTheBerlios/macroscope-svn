@@ -123,7 +123,6 @@ class AsyncEvent {
           uint64_t count_;
           uintptr_t data_;
           Vector<utf8::String> * dirList_;
-          uint64_t timeout_;
         };
         LockFileType lockType_;
       };
@@ -137,6 +136,7 @@ class AsyncEvent {
 #endif
     Fiber * fiber_;
     AsyncDescriptor * descriptor_;
+    uint64_t timeout_;
     int32_t errno_;
     AsyncEventType type_;
   private:
@@ -144,6 +144,21 @@ class AsyncEvent {
     void operator = (const AsyncEvent &){}
 };
 //---------------------------------------------------------------------------
+inline AsyncEvent::~AsyncEvent()
+{
+}
+//---------------------------------------------------------------------------
+inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
+  fiber_(NULL), descriptor_(NULL), timeout_(~uint64_t(0)), errno_(0), type_(etNone)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  memset(&overlapped_,0,sizeof(overlapped_));
+#endif
+#if HAVE_KQUEUE
+  memset(&iocb_, 0, sizeof(iocb_));
+#endif
+}
+//------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class AsyncDescriptorKey {

@@ -109,7 +109,7 @@ void ClientFiber::main()
       ksock::SockAddr remoteAddress;
       utf8::String server(client_.config_->value("server",client_.mailServer_));
       for( i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !client_.connected_; i-- ){
-        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+        remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
         try {
           connect(remoteAddress);
           try {
@@ -156,7 +156,7 @@ void ClientFiber::main()
           HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
           assert( SUCCEEDED(hr) );
           AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
-          client_.connectedToServer_ = remoteAddress.resolveAsync();
+          client_.connectedToServer_ = remoteAddress.resolve();
           client_.connected_ = true;
         }
         while( !terminated_ ){
@@ -219,7 +219,7 @@ void ClientMailSenderFiber::main()
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+        remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
         connect(remoteAddress);
         auth();
         i = -1;
@@ -268,7 +268,7 @@ void ClientMailRemoverFiber::main()
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+        remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
         connect(remoteAddress);
         auth();
         i = -1;
@@ -323,7 +323,7 @@ void ClientDBGetterFiber::main()
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
+        remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
         connect(remoteAddress);
         auth();
         i = -1;

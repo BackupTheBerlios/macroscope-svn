@@ -179,25 +179,35 @@ utf8::String  getExecutableName();
 utf8::String  getExecutablePath();
 utf8::String  excludeTrailingPathDelimiter(const utf8::String & path);
 utf8::String  includeTrailingPathDelimiter(const utf8::String & path);
-bool          createDirectory(const utf8::String & name);
-void          chModOwn(const utf8::String & pathName, const Mutant & mode, const Mutant & user, const Mutant & group);
-bool          removeDirectory(const utf8::String & name, bool recursive = true);
-bool          remove(const utf8::String & name);
+void chModOwn(const utf8::String & pathName, const Mutant & mode, const Mutant & user, const Mutant & group);
 utf8::String  getPathFromPathName(const utf8::String & pathName);
 utf8::String  getNameFromPathName(const utf8::String & pathName);
 utf8::String  anyPathName2HostPathName(const utf8::String & pathName);
-bool          isPathNameRelative(const utf8::String & pathName);
+bool isPathNameRelative(const utf8::String & pathName);
 utf8::String  absolutePathNameFromWorkDir(const utf8::String & workDir, const utf8::String & pathName);
-bool          utime(const utf8::String & pathName, const struct utimbuf & times);
-//---------------------------------------------------------------------------
-bool createDirectoryAsync(const utf8::String & name);
-bool removeDirectoryAsync(const utf8::String & name,bool recursive);
-bool removeAsync(const utf8::String & name);
+bool utime(const utf8::String & pathName,const struct utimbuf & times);
+bool createDirectory(const utf8::String & name);
+bool removeDirectory(const utf8::String & name,bool recursive = true);
 void rename(const utf8::String & oldPathName,const utf8::String & newPathName);
-void renameAsync(const utf8::String & oldPathName,const utf8::String & newPathName);
-void sleepAsync(uint64_t timeout);
+bool remove(const utf8::String & name);
 void getDirList(Vector<utf8::String> & list,const utf8::String & dirAndMask,const utf8::String & exMask = utf8::String(),bool recursive = true,bool includeDirs = false);
-void getDirListAsync(Vector<utf8::String> & list,const utf8::String & dirAndMask,const utf8::String & exMask = utf8::String(),bool recursive = true,bool includeDirs = false);
+//---------------------------------------------------------------------------
+void sleep(uint64_t timeout);
+inline void sleep1()
+{
+#if HAVE_NANOSLEEP
+  struct timespec rqtp;
+  rqtp.tv_sec = 0;
+  rqtp.tv_nsec = 1;
+  nanosleep(&rqtp, NULL);
+#elif defined(__WIN32__) || defined(__WIN64__)
+  Sleep(1);
+#elif HAVE_USLEEP
+  usleep(1);
+#elif HAVE_SLEEP
+  sleep(1);
+#endif
+}
 //---------------------------------------------------------------------------
 utf8::String base64Encode(const void * p,uintptr_t l);
 uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size);
@@ -227,7 +237,6 @@ stat
 {
 };
 bool stat(const utf8::String & pathName,struct Stat & st);
-bool statAsync(const utf8::String & pathName,struct Stat & st);
 //---------------------------------------------------------------------------
 typedef utf8::String (* StrErrorHandler)(int32_t);
 typedef Array< StrErrorHandler> StrErrorHandlers;

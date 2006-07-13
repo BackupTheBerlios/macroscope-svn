@@ -166,42 +166,57 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 //------------------------------------------------------------------------------
 SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort,int ai_flag)
 {
-  clear();
-  unsigned a1 = 0, a2 = 0, a3 = 0, a4 = 0, port = (unsigned) defPort;
-  int r = sscanf(addr.c_str(), "%u.%u.%u.%u:%u", &a1, &a2, &a3, &a4, &port);
-  if( r >= 4 && a1 < 256 && a2 < 256 && a3 < 256 && a4 < 256 ){
-#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-    addr4_.sin_len = sizeof(addr4_);
-#endif
-    addr4_.sin_family = PF_INET;
-    char  b[4 + 4 + 4 + 3 + 1];
-    sprintf(b, "%u.%u.%u.%u", a1, a2, a3, a4);
-    api.open();
-    addr4_.sin_port = api.htons((u_short) port);
-#if defined(__WIN32__) || defined(__WIN64__)
-    addr4_.sin_addr.S_un.S_addr = api.inet_addr(b);
-#else
-    addr4_.sin_addr.s_addr = api.inet_addr(b);
-#endif
-    api.close();
+  if( ksys::currentFiber() != NULL ){
+    ksys::currentFiber()->event_.string0_ = addr;
+    ksys::currentFiber()->event_.string1_ = defPort;
+    ksys::currentFiber()->event_.type_ = ksys::etResolveName;
+    ksys::currentFiber()->thread()->postRequest();
+    ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
+    assert( ksys::currentFiber()->event_.type_ == ksys::etResolveName );
+    if( ksys::currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    memcpy(&addr4_,&ksys::currentFiber()->event_.address_.addr4_,ksys::currentFiber()->event_.address_.sockAddrSize());
   }
   else {
-    utf8::String::Iterator  pi(addr.strstr(":"));
-    if( pi.position() < 0 ) pi.last();
-    utf8::String host(utf8::String::Iterator(addr), pi);
-    utf8::String port(pi + 1);
-    if( port.trim().strlen() == 0 ) port = defPort;
-    host = host.trim();
-    port = port.trim();
-    api.open();
-    try {
-      internalGetAddrInfo(host,port,defPort,ai_flag);
-    }
-    catch( ... ){
+    clear();
+    unsigned a1 = 0, a2 = 0, a3 = 0, a4 = 0, port = (unsigned) defPort;
+    int r = sscanf(addr.c_str(), "%u.%u.%u.%u:%u", &a1, &a2, &a3, &a4, &port);
+    if( r >= 4 && a1 < 256 && a2 < 256 && a3 < 256 && a4 < 256 ){
+#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+      addr4_.sin_len = sizeof(addr4_);
+#endif
+      addr4_.sin_family = PF_INET;
+      char  b[4 + 4 + 4 + 3 + 1];
+      sprintf(b, "%u.%u.%u.%u", a1, a2, a3, a4);
+      api.open();
+      addr4_.sin_port = api.htons((u_short) port);
+#if defined(__WIN32__) || defined(__WIN64__)
+      addr4_.sin_addr.S_un.S_addr = api.inet_addr(b);
+#else
+      addr4_.sin_addr.s_addr = api.inet_addr(b);
+#endif
       api.close();
-      throw;
     }
-    api.close();
+    else {
+      utf8::String::Iterator  pi(addr.strstr(":"));
+      if( pi.position() < 0 ) pi.last();
+      utf8::String host(utf8::String::Iterator(addr), pi);
+      utf8::String port(pi + 1);
+      if( port.trim().strlen() == 0 ) port = defPort;
+      host = host.trim();
+      port = port.trim();
+      api.open();
+      try {
+        internalGetAddrInfo(host,port,defPort,ai_flag);
+      }
+      catch( ... ){
+        api.close();
+        throw;
+      }
+      api.close();
+    }
   }
   return *this;
 }
@@ -223,6 +238,19 @@ void SockAddr::resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,c
 //------------------------------------------------------------------------------
 utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
 {
+  if( ksys::currentFiber() != NULL ){
+    ksys::currentFiber()->event_.address_ = *this;
+    ksys::currentFiber()->event_.defPort_ = defPort;
+    ksys::currentFiber()->event_.type_ = ksys::etResolveAddress;
+    ksys::currentFiber()->thread()->postRequest();
+    ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
+    assert( ksys::currentFiber()->event_.type_ == ksys::etResolveAddress );
+    if( ksys::currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    return ksys::currentFiber()->event_.string0_;
+  }
   int32_t err = 0;
   utf8::String s;
   api.open();
@@ -309,60 +337,6 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
   if( err != 0 )
     throw ksys::ExceptionSP(new EAsyncSocket(err,__PRETTY_FUNCTION__));
   return s;
-}
-//------------------------------------------------------------------------------
-SockAddr & SockAddr::resolveAsync(const utf8::String & addr,const ksys::Mutant & defPort)
-{
-  if( ksys::currentFiber() != NULL ){
-    ksys::currentFiber()->event_.string0_ = addr;
-    ksys::currentFiber()->event_.string1_ = defPort;
-    ksys::currentFiber()->event_.type_ = ksys::etResolveName;
-    ksys::currentFiber()->thread()->postRequest();
-    ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-    assert( ksys::currentFiber()->event_.type_ == ksys::etResolveName );
-    if( ksys::currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
-    memcpy(&addr4_,&ksys::currentFiber()->event_.address_.addr4_,ksys::currentFiber()->event_.address_.sockAddrSize());
-  }
-  else {
-    resolve(addr,defPort);
-  }
-  return *this;
-}
-//------------------------------------------------------------------------------
-void SockAddr::resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort)
-{
-  intptr_t i = ksys::enumStringParts(bind);
-  if( i <= 0 ){
-    addrs.resize(1);
-    addrs[0].resolveAsync(utf8::String(),defPort);
-  }
-  else {
-    for( intptr_t j = 0; j < i; j++ ){
-      addrs.resize(j + 1);
-      addrs[j].resolve(ksys::stringPartByNo(bind,j),defPort);
-    }
-  }
-}
-//------------------------------------------------------------------------------
-utf8::String SockAddr::resolveAsync(const ksys::Mutant & defPort) const
-{
-  if( ksys::currentFiber() != NULL ){
-    ksys::currentFiber()->event_.address_ = *this;
-    ksys::currentFiber()->event_.defPort_ = defPort;
-    ksys::currentFiber()->event_.type_ = ksys::etResolveAddress;
-    ksys::currentFiber()->thread()->postRequest();
-    ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-    assert( ksys::currentFiber()->event_.type_ == ksys::etResolveAddress );
-    if( ksys::currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EAsyncSocket(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
-    return ksys::currentFiber()->event_.string0_;
-  }
-  return resolve(defPort);
 }
 //------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

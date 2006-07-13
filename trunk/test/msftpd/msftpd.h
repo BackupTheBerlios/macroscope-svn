@@ -97,7 +97,7 @@ inline bool MSFTPStat::statAsync(const utf8::String & pathName)
 {
   memset(this,0,sizeof(MSFTPStat));
   ksys::Stat st;
-  bool isSt = ksys::statAsync(pathName,st);
+  bool isSt = ksys::stat(pathName,st);
   if( isSt ){
     st_dev_ = (int16_t) st.st_dev;
     st_ino_ = st.st_ino;

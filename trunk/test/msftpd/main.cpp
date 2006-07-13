@@ -171,7 +171,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
   try {
     if( !file.tryOpen() ){
       try {
-        ksys::createDirectoryAsync(
+        ksys::createDirectory(
           ksys::excludeTrailingPathDelimiter(
             ksys::getPathFromPathName(file.fileName())
           )
@@ -257,7 +257,7 @@ MSFTPServerFiber & MSFTPServerFiber::list()
   uint8_t recursive;
   *this >> localPath >> exclude >> recursive;
   ksys::Vector<utf8::String> list;
-  getDirListAsync(list,localPath,exclude,recursive != 0);
+  getDirList(list,localPath,exclude,recursive != 0);
   putCode(eOK);
   *this << (uint64_t) list.count();
   uintptr_t l = ksys::includeTrailingPathDelimiter(ksys::getPathFromPathName(localPath)).strlen();

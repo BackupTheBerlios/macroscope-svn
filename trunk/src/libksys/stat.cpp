@@ -32,6 +32,21 @@ namespace ksys {
 //---------------------------------------------------------------------------
 bool stat(const utf8::String & pathName,struct Stat & st)
 {
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.string0_ = pathName;
+    currentFiber()->event_.stat_ = &st;
+    currentFiber()->event_.type_ = etStat;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etStat );
+    if( currentFiber()->event_.errno_ != 0 &&
+        currentFiber()->event_.errno_ != ERROR_PATH_NOT_FOUND + errorOffset &&
+        currentFiber()->event_.errno_ != ERROR_FILE_NOT_FOUND + errorOffset )
+      throw ksys::ExceptionSP(
+        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    return currentFiber()->event_.rval_;
+  }
   int32_t err = 0;
   memset(&st,0,sizeof(st));
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -151,25 +166,5 @@ done:
   return err == 0;
 }
 //---------------------------------------------------------------------------
-bool statAsync(const utf8::String & pathName,struct Stat & st)
-{
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.string0_ = pathName;
-  currentFiber()->event_.stat_ = &st;
-  currentFiber()->event_.type_ = etStat;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etStat );
-  if( currentFiber()->event_.errno_ != 0 &&
-      currentFiber()->event_.errno_ != ERROR_PATH_NOT_FOUND + errorOffset &&
-      currentFiber()->event_.errno_ != ERROR_FILE_NOT_FOUND + errorOffset )
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-    );
-  return currentFiber()->event_.rval_;
-}
-//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
-
-

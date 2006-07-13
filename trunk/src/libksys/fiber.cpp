@@ -32,23 +32,6 @@ uint8_t Fiber::currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber>)];
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-AsyncEvent::~AsyncEvent()
-{
-}
-//---------------------------------------------------------------------------
-AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
-  fiber_(NULL), descriptor_(NULL), errno_(0), type_(etNone)
-{
-#if defined(__WIN32__) || defined(__WIN64__)
-  memset(&overlapped_,0,sizeof(overlapped_));
-#endif
-#if HAVE_KQUEUE
-  memset(&iocb_, 0, sizeof(iocb_));
-#endif
-}
-//------------------------------------------------------------------------------
-////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
 void Fiber::initialize()
 {
   new (currentFiberPlaceHolder) ThreadLocalVariable<Fiber>;

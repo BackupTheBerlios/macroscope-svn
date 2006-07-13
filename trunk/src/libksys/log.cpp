@@ -108,13 +108,13 @@ void LogFile::rotate(uint64_t size)
       utf8::String fileExt(getFileExt(afile_->fileName()));
       Stat st;
       intptr_t i = 0;
-      while( statAsync(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
+      while( stat(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
       while( i > 0 ){
         if( i >= (intptr_t) rotatedFileCount_ ){
-          removeAsync(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
+          remove(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
         }
         else {
-          renameAsync(
+          rename(
             changeFileExt(afile_->fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
             changeFileExt(afile_->fileName(),"." + utf8::int2Str(i)) + fileExt
           );
@@ -129,7 +129,7 @@ void LogFile::rotate(uint64_t size)
         }
         bool renamed = false;
         try {
-          renameAsync(afile_->fileName(),changeFileExt(afile_->fileName(),".0") + fileExt);
+          rename(afile_->fileName(),changeFileExt(afile_->fileName(),".0") + fileExt);
           renamed = true;
         }
         catch( ExceptionSP & e ){

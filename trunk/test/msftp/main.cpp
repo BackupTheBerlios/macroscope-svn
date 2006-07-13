@@ -159,7 +159,7 @@ void KFTPClient::put()
   recursive = config_->section(section_).section("put").value("recursive",recursive);
 
   ksys::Vector<utf8::String> list;
-  getDirListAsync(list,local,exclude,recursive);
+  getDirList(list,local,exclude,recursive);
   utf8::String mode(config_->text("mode","auto"));
   mode = config_->section(section_).section("put").text("mode",mode);
   utf8::String remotePath(
@@ -326,7 +326,7 @@ void KFTPClient::get()
     try {
       ksys::AsyncFile file(localPath + list[i]);
       if( !file.tryOpen() ){
-        ksys::createDirectoryAsync(
+        ksys::createDirectory(
           ksys::excludeTrailingPathDelimiter(
             ksys::getPathFromPathName(file.fileName())
           )
@@ -439,7 +439,7 @@ void KFTPClient::get()
 //------------------------------------------------------------------------------
 void KFTPClient::main()
 {
-  remoteAddress_.resolveAsync(host_,MSFTPDefaultPort);
+  remoteAddress_.resolve(host_,MSFTPDefaultPort);
   connect(remoteAddress_);
 
 /*  ksys::AsyncFile file("c:\\dump.tmp");

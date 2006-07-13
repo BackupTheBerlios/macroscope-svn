@@ -61,7 +61,7 @@ AsyncFile & AsyncFile::close(bool calledFromDestructor)
   }
   if( removeAfterClose_ ){
     try {
-      removeAsync(fileName_);
+      remove(fileName_);
     }
     catch( ... ){
       if( !calledFromDestructor ) throw;

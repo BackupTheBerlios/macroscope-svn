@@ -68,10 +68,6 @@ class SockAddr {
     static void resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
     utf8::String resolve(const ksys::Mutant & defPort = 0) const;
 
-    SockAddr & resolveAsync(const utf8::String & addr,const ksys::Mutant & defPort = 0);
-    static void resolveAsync(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
-    utf8::String resolveAsync(const ksys::Mutant & defPort = 0) const;
-
     static utf8::String gethostname();
 
     socklen_t sockAddrSize() const;

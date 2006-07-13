@@ -509,6 +509,12 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         wm = ~DWORD(0);
       }
       else {
+        /*intptr_t i, j = -1;
+        uint64_t timeout = ~uint64_t(0);
+        for( intptr_t i = sp; i >= 0; i-- ) if( eReqs_[i]->timeout_ < timeout ){
+          timeout = eReqs_[i]->timeout_;
+          j = i;
+        }*/
         release();
         wm = WaitForMultipleObjectsEx(MAXIMUM_WAIT_OBJECTS,events_,FALSE,INFINITE,TRUE);
         DWORD err0 = GetLastError();

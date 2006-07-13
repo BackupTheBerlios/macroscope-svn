@@ -380,9 +380,7 @@ Config & Config::parse()
     afile_->fileName(fileName);
   }
   struct Stat st;
-  bool stf;
-  if( isRunInFiber() ) stf = statAsync(fileName,st); else stf = stat(fileName,st);
-  if( stf && mtime_ != st.st_mtime ){
+  if( stat(fileName,st) && mtime_ != st.st_mtime ){
     AutoPtr<Randomizer> rnd(new Randomizer);
     rnd->randomize();
     for( intptr_t i = isRunInFiber() ? 0 : maxTryOpenCount_ - 1; i >= 0; i-- ){

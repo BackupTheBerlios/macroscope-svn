@@ -145,8 +145,8 @@ void ServerFiber::registerClient()
     terminate();
     return;
   }
-  utf8::String host(remoteAddress().resolveAsync(~uintptr_t(0)));
-  ServerInfo server(server_.bindAddrs()[0].resolveAsync(defaultPort),stStandalone);
+  utf8::String host(remoteAddress().resolve(~uintptr_t(0)));
+  ServerInfo server(server_.bindAddrs()[0].resolve(defaultPort),stStandalone);
   Server::Data & data = server_.data(serverType_);
   Server::Data tdata, diff;
   tdata.or(data);
@@ -194,7 +194,7 @@ void ServerFiber::registerClient()
 void ServerFiber::registerDB()
 {
   utf8::String::Stream stream;
-  utf8::String host(remoteAddress().resolveAsync(~uintptr_t(0))), server, service;
+  utf8::String host(remoteAddress().resolve(~uintptr_t(0))), server, service;
   if( serverType_ != stNode ){
     terminate();
     stream << serverTypeName_[serverType_] <<
@@ -262,7 +262,7 @@ void ServerFiber::registerDB()
 void ServerFiber::getDB()
 {
   if( serverType_ != stStandalone && serverType_ != stNode ) return;
-  utf8::String host(remoteAddress().resolveAsync(defaultPort));
+  utf8::String host(remoteAddress().resolve(defaultPort));
   Server::Data tdata;
   tdata.or(server_.data(serverType_));
   tdata.sendDatabaseNL(*this);
@@ -291,7 +291,7 @@ void ServerFiber::sendMail() // client sending mail
   file.createIfNotExist(true);
   if( rest ){
     file.fileName(server_.incompleteDir() + id + ".msg");
-    statAsync(file.fileName(),st);
+    stat(file.fileName(),st);
     uint64_t remainder;
     *this << uint64_t(st.st_size) >> remainder;
     AutoPtr<uint8_t> b;
@@ -325,7 +325,7 @@ void ServerFiber::sendMail() // client sending mail
     relay = "#Relay." + utf8::int2Str(i);
     if( !message->isValue(relay) ) break;
   }
-  message->value(relay,server_.bindAddrs()[0].resolveAsync(defaultPort));
+  message->value(relay,server_.bindAddrs()[0].resolve(defaultPort));
   relay = relay + ".";
   message->value(relay + "Received",getTimeString(gettimeofday()));
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
@@ -343,11 +343,11 @@ void ServerFiber::sendMail() // client sending mail
     }
     file2.removeAfterClose(false).close();
     try {
-      renameAsync(file2.fileName(),server_.spoolDir() + id + ".msg");
+      rename(file2.fileName(),server_.spoolDir() + id + ".msg");
     }
     catch( ... ){
       try {
-        removeAsync(file2.fileName());
+        remove(file2.fileName());
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
@@ -383,12 +383,12 @@ void ServerFiber::processMailbox(
 {
   wait = true;
   stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
-  utf8::String myHost(server_.bindAddrs()[0].resolveAsync(defaultPort));
+  utf8::String myHost(server_.bindAddrs()[0].resolve(defaultPort));
   intptr_t i;
   Message::Keys ids;
   AutoHashDrop<Message::Keys> idsAutoDrop(ids);
   Vector<utf8::String> list;
-  getDirListAsync(list,userMailBox + "*.msg",utf8::String(),false);
+  getDirList(list,userMailBox + "*.msg",utf8::String(),false);
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
@@ -426,7 +426,7 @@ void ServerFiber::processMailbox(
         }
         if( lostSheep ){
           file.close();
-          renameAsync(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
+          rename(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
         }
         else {
           bool messageAccepted = true;
@@ -456,7 +456,7 @@ void ServerFiber::recvMail() // client receiving mail
   user_ = mailForUser;
   key_ = mailForKey;
   utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
-  createDirectoryAsync(userMailBox);
+  createDirectory(userMailBox);
   putCode(eOK);
   Message::Keys ids;
   AutoHashDrop<Message::Keys> idsAutoDrop(ids);
@@ -497,12 +497,12 @@ void ServerFiber::removeMail() // client remove mail
   *this >> mailForUser >> id;
   try {
     utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
-    createDirectoryAsync(userMailBox);
+    createDirectory(userMailBox);
     {
       AsyncFile ctrl(server_.lckDir() + id + ".msg" + ".lck");
       ctrl.createIfNotExist(true).removeAfterClose(true).open();
       AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
-      removeAsync(includeTrailingPathDelimiter(userMailBox) + id + ".msg");
+      remove(includeTrailingPathDelimiter(userMailBox) + id + ".msg");
     }
     putCode(eOK);
   }
@@ -526,10 +526,10 @@ void SpoolWalker::processQueue(bool & timeWait)
 {
   timeWait = false;
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
-  utf8::String myHost(server_.bindAddrs()[0].resolveAsync(defaultPort));
+  utf8::String myHost(server_.bindAddrs()[0].resolve(defaultPort));
   intptr_t i;
   Vector<utf8::String> list;
-  getDirListAsync(list,server_.spoolDir() + "*.msg",utf8::String(),false);
+  getDirList(list,server_.spoolDir() + "*.msg",utf8::String(),false);
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
@@ -573,7 +573,7 @@ void SpoolWalker::processQueue(bool & timeWait)
           );
           uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
           if( gettimeofday() - messageTime >= messageTTL ){
-            removeAsync(list[i]);
+            remove(list[i]);
             stdErr.debug(1,utf8::String::Stream() << "Message " <<
               message.id() << "TTL exhausted, removed.\n"
             );
@@ -583,8 +583,8 @@ void SpoolWalker::processQueue(bool & timeWait)
         else {
           if( deliverLocaly ){
             utf8::String userMailBox(server_.mailDir() + suser);
-            createDirectoryAsync(userMailBox);
-            renameAsync(list[i],includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
+            createDirectory(userMailBox);
+            rename(list[i],includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
             stdErr.debug(0,
               utf8::String::Stream() << "Message " << message.id() <<
               " received from " << message.value("#Sender") <<
@@ -593,7 +593,7 @@ void SpoolWalker::processQueue(bool & timeWait)
             );
           }
           else {
-            renameAsync(list[i],server_.mqueueDir() + message.id() + ".msg");
+            rename(list[i],server_.mqueueDir() + message.id() + ".msg");
             stdErr.debug(0,
               utf8::String::Stream() << "Message " << message.id() <<
               " received from " << message.value("#Sender") <<
@@ -625,7 +625,7 @@ void SpoolWalker::fiberExecute()
     if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",60u);
-      sleepAsync(timeout * 1000000u);
+      sleep(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by timer... \n");
     }
     else {
@@ -694,7 +694,7 @@ void MailQueueWalker::processQueue(bool & timeWait)
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   intptr_t i;
   Vector<utf8::String> list;
-  getDirListAsync(list,server_.mqueueDir() + "*.msg",utf8::String(),false);
+  getDirList(list,server_.mqueueDir() + "*.msg",utf8::String(),false);
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
@@ -744,7 +744,7 @@ void MailQueueWalker::processQueue(bool & timeWait)
           uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
           if( gettimeofday() - messageTime >= messageTTL ){
             file.close();
-            removeAsync(list[i]);
+            remove(list[i]);
             stdErr.debug(1,utf8::String::Stream() << "Message " <<
               list[i] << "TTL exhausted, removed.\n"
             );
@@ -752,7 +752,7 @@ void MailQueueWalker::processQueue(bool & timeWait)
         }
         else {
           try {
-            address.resolveAsync(server,defaultPort);
+            address.resolve(server,defaultPort);
             resolved = true;
           }
           catch( ExceptionSP & e ){
@@ -838,12 +838,12 @@ void MailQueueWalker::processQueue(bool & timeWait)
 #else
         if( e->code() != EINVAL ) throw;
 #endif
-        removeAsync(list[i]);
+        remove(list[i]);
         stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << " removed.\n");
       }
       if( sended ){
         file.close();
-        removeAsync(list[i]);
+        remove(list[i]);
         stdErr.debug(9,utf8::String::Stream() << "Message " << list[i] << " sended, removed.\n");
       }
     }
@@ -860,7 +860,7 @@ void MailQueueWalker::main()
     if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",60u);
-      sleepAsync(timeout * 1000000u);
+      sleep(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
     }
     else {
@@ -968,8 +968,8 @@ void NodeClient::main()
         while( !exchanged && !terminated_ && --i >= 0 ){
           try {
             ksock::SockAddr remoteAddress;
-            remoteAddress.resolveAsync(stringPartByNo(server,i),defaultPort);
-            host = remoteAddress.resolveAsync();
+            remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
+            host = remoteAddress.resolve();
             close();
             connect(remoteAddress);
             try {
@@ -1054,7 +1054,7 @@ void NodeClient::main()
             utf8::String(serverConfSectionName_[stStandalone]) + ".exchange_interval",
             60u
           );
-        sleepAsync(timeout * 1000000u);
+        sleep(timeout * 1000000u);
       }
     } while( periodicaly_ && !terminated_ );
     AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);

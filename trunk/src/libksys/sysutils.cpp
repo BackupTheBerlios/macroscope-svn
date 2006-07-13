@@ -602,6 +602,23 @@ utf8::String absolutePathNameFromWorkDir(
 //---------------------------------------------------------------------------
 bool createDirectory(const utf8::String & name)
 {
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.string0_ = name;
+    currentFiber()->event_.type_ = etCreateDir;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etCreateDir );
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( currentFiber()->event_.errno_ - errorOffset == ERROR_ALREADY_EXISTS ) return false;
+#else
+    if( currentFiber()->event_.errno_ == EEXIST ) return false;
+#endif
+    if( currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    return currentFiber()->event_.rval_;
+  }
   int32_t err = 0;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( isWin9x() ){
@@ -654,6 +671,25 @@ static int32_t removeDirectoryHelper(const utf8::String & name)
 //---------------------------------------------------------------------------
 bool removeDirectory(const utf8::String & name,bool recursive)
 {
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.string0_ = name;
+    currentFiber()->event_.recursive_ = recursive;
+    currentFiber()->event_.type_ = etRemoveDir;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etRemoveDir );
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
+        currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
+#else
+    if( currentFiber()->event_.errno_ == ENOENT ) return false;
+#endif
+    if( currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    return currentFiber()->event_.rval_;
+  }
   int32_t err = removeDirectoryHelper(name);
 #if defined(__WIN32__) || defined(__WIN64__)
   if( err == ERROR_DIR_NOT_EMPTY ){
@@ -705,6 +741,24 @@ bool removeDirectory(const utf8::String & name,bool recursive)
 //---------------------------------------------------------------------------
 bool remove(const utf8::String & name)
 {
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.string0_ = name;
+    currentFiber()->event_.type_ = etRemoveFile;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etRemoveFile );
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
+        currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
+#else
+    if( currentFiber()->event_.errno_ == ENOENT ) return false;
+#endif
+    if( currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    return currentFiber()->event_.rval_;
+  }
   int32_t err = 0;
   oserror(0);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -841,138 +895,66 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
   return ni.eof() && mi.eof();
 }
 //---------------------------------------------------------------------------
-bool createDirectoryAsync(const utf8::String & name)
-{
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.string0_ = name;
-  currentFiber()->event_.type_ = etCreateDir;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etCreateDir );
-#if defined(__WIN32__) || defined(__WIN64__)
-  if( currentFiber()->event_.errno_ - errorOffset == ERROR_ALREADY_EXISTS ) return false;
-#else
-  if( currentFiber()->event_.errno_ == EEXIST ) return false;
-#endif
-  if( currentFiber()->event_.errno_ != 0 )
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-    );
-  return currentFiber()->event_.rval_;
-}
-//---------------------------------------------------------------------------
-bool removeDirectoryAsync(const utf8::String & name,bool recursive)
-{
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.string0_ = name;
-  currentFiber()->event_.recursive_ = recursive;
-  currentFiber()->event_.type_ = etRemoveDir;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etRemoveDir );
-#if defined(__WIN32__) || defined(__WIN64__)
-  if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
-      currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
-#else
-  if( currentFiber()->event_.errno_ == ENOENT ) return false;
-#endif
-  if( currentFiber()->event_.errno_ != 0 )
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-    );
-  return currentFiber()->event_.rval_;
-}
-//---------------------------------------------------------------------------
-bool removeAsync(const utf8::String & name)
-{
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.string0_ = name;
-  currentFiber()->event_.type_ = etRemoveFile;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etRemoveFile );
-#if defined(__WIN32__) || defined(__WIN64__)
-  if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
-      currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
-#else
-  if( currentFiber()->event_.errno_ == ENOENT ) return false;
-#endif
-  if( currentFiber()->event_.errno_ != 0 )
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-    );
-  return currentFiber()->event_.rval_;
-}
-//---------------------------------------------------------------------------
 void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
 {
-#if defined(__WIN32__) || defined(__WIN64__)
-  BOOL r;
-  if( isWin9x() ){
-    r = MoveFileA(oldPathName.getANSIString(),newPathName.getANSIString());
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.string0_ = oldPathName;
+    currentFiber()->event_.string1_ = newPathName;
+    currentFiber()->event_.type_ = etRename;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etRename );
+    if( currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
   }
   else {
-    r = MoveFileExW(oldPathName.getUNICODEString(),newPathName.getUNICODEString(),MOVEFILE_COPY_ALLOWED);
-  }
-  if( r == 0 )
+#if defined(__WIN32__) || defined(__WIN64__)
+    BOOL r;
+    if( isWin9x() ){
+      r = MoveFileA(oldPathName.getANSIString(),newPathName.getANSIString());
+    }
+    else {
+      r = MoveFileExW(oldPathName.getUNICODEString(),newPathName.getUNICODEString(),MOVEFILE_COPY_ALLOWED);
+    }
+    if( r == 0 )
 #else
-  if( rename(oldPathName.getANSIString(),newPathName.getANSIString()) != 0 )
+    if( rename(oldPathName.getANSIString(),newPathName.getANSIString()) != 0 )
 #endif
-    throw ExceptionSP(new Exception(oserror() + errorOffset,utf8::String(__PRETTY_FUNCTION__)));
+      throw ExceptionSP(new Exception(oserror() + errorOffset,utf8::String(__PRETTY_FUNCTION__)));
+  }
 }
 //---------------------------------------------------------------------------
-void renameAsync(const utf8::String & oldPathName,const utf8::String & newPathName)
+void sleep(uint64_t timeout)
 {
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.string0_ = oldPathName;
-  currentFiber()->event_.string1_ = newPathName;
-  currentFiber()->event_.type_ = etRename;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etRename );
-  if( currentFiber()->event_.errno_ != 0 )
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-    );
-}
-//---------------------------------------------------------------------------
-void sleepAsync(uint64_t timeout)
-{
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.abort_ = false;
-  currentFiber()->event_.timerStartTime_ = gettimeofday();
-  currentFiber()->event_.timeout_ = timeout;
-  currentFiber()->event_.type_ = etTimer;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etTimer );
-  if( currentFiber()->event_.errno_ != 0 )
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
-    );
-}
-//---------------------------------------------------------------------------
-void getDirListAsync(
-  Vector<utf8::String> & list,
-  const utf8::String & dirAndMask,
-  const utf8::String & exMask,
-  bool recursive,
-  bool includeDirs)
-{
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.dirList_ = &list;
-  currentFiber()->event_.string0_ = dirAndMask;
-  currentFiber()->event_.string1_ = exMask;
-  currentFiber()->event_.recursive_ = recursive;
-  currentFiber()->event_.includeDirs_ = includeDirs;
-  currentFiber()->event_.type_ = etDirList;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etDirList );
-  if( currentFiber()->event_.errno_ != 0 )
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-    );
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.abort_ = false;
+    currentFiber()->event_.timerStartTime_ = gettimeofday();
+    currentFiber()->event_.timeout_ = timeout;
+    currentFiber()->event_.type_ = etTimer;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etTimer );
+    if( currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EFileError(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
+      );
+  }
+  else {
+#if HAVE_NANOSLEEP
+    struct timespec rqtp;
+    rqtp.tv_sec = timeout / 1000000u;
+    rqtp.tv_nsec = timeout % 1000000u;
+    nanosleep(&rqtp, NULL);
+#elif defined(__WIN32__) || defined(__WIN64__)
+    Sleep((DWORD) (timeout / 1000u + (timeout < 1000000u)));
+#elif HAVE_USLEEP
+    usleep(timeout / 1000u);
+#elif HAVE_SLEEP
+    sleep(timeout / 1000000u);
+#endif
+  }
 }
 //---------------------------------------------------------------------------
 void getDirList(
@@ -982,6 +964,22 @@ void getDirList(
   bool recursive,
   bool includeDirs)
 {
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.dirList_ = &list;
+    currentFiber()->event_.string0_ = dirAndMask;
+    currentFiber()->event_.string1_ = exMask;
+    currentFiber()->event_.recursive_ = recursive;
+    currentFiber()->event_.includeDirs_ = includeDirs;
+    currentFiber()->event_.type_ = etDirList;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etDirList );
+    if( currentFiber()->event_.errno_ != 0 )
+      throw ksys::ExceptionSP(
+        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+    return;
+  }
   int32_t err;
   utf8::String path(getPathFromPathName(dirAndMask));
   utf8::String mask(getNameFromPathName(dirAndMask));

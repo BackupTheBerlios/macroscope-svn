@@ -49,7 +49,7 @@ void Server::open()
 //  maxThreads(1);
   ksock::Server::open();
   data(stStandalone).registerServer(
-    ServerInfo(bindAddrs()[0].resolveAsync(defaultPort),stStandalone)
+    ServerInfo(bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
 //  startNodesExchange();
   attachFiber(new NodeClient(*this,stStandalone,utf8::String(),true));
@@ -77,7 +77,7 @@ utf8::String Server::spoolDir() const
       config_->value("spool",getExecutablePath() + "spool")
     )
   );
-  createDirectoryAsync(spool);
+  createDirectory(spool);
   return includeTrailingPathDelimiter(spool);
 }
 //------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ utf8::String Server::mailDir() const
       "mail"
     )
   );
-  createDirectoryAsync(mail);
+  createDirectory(mail);
   return includeTrailingPathDelimiter(mail);
 }
 //------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ utf8::String Server::mqueueDir() const
     ) +
     "mqueue"
   );
-  createDirectoryAsync(mqueue);
+  createDirectory(mqueue);
   return includeTrailingPathDelimiter(mqueue);
 }
 //------------------------------------------------------------------------------
@@ -113,7 +113,7 @@ utf8::String Server::lckDir() const
     ) +
     "lck"
   );
-  createDirectoryAsync(lck);
+  createDirectory(lck);
   return includeTrailingPathDelimiter(lck);
 }
 //------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ utf8::String Server::incompleteDir() const
     ) +
     "incomplete"
   );
-  createDirectoryAsync(lck);
+  createDirectory(lck);
   return includeTrailingPathDelimiter(lck);
 }
 //------------------------------------------------------------------------------
@@ -174,7 +174,7 @@ void Server::startNodesExchangeNL()
 {
   if( shutdown_ ) return;
   intptr_t i, j, c;
-  utf8::String me(bindAddrs()[0].resolveAsync(defaultPort));
+  utf8::String me(bindAddrs()[0].resolve(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;
   host = config_->parse().override().valueByPath(
     utf8::String(serverConfSectionName_[stNode]) + ".neighbors",

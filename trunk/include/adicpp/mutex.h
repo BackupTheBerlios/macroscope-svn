@@ -29,38 +29,6 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-inline void sleep(uint64_t milisec)
-{
-#if HAVE_NANOSLEEP
-  struct timespec rqtp;
-  rqtp.tv_sec = milisec / 1000000u;
-  rqtp.tv_nsec = milisec % 1000000u;
-  nanosleep(&rqtp, NULL);
-#elif defined(__WIN32__) || defined(__WIN64__)
-  Sleep((DWORD) (milisec / 1000u));
-#elif HAVE_USLEEP
-  usleep(milisec / 1000u);
-#elif HAVE_SLEEP
-  sleep(milisec / 1000000u);
-#endif
-}
-//---------------------------------------------------------------------------
-inline void sleep1()
-{
-#if HAVE_NANOSLEEP
-  struct timespec rqtp;
-  rqtp.tv_sec = 0;
-  rqtp.tv_nsec = 1;
-  nanosleep(&rqtp, NULL);
-#elif defined(__WIN32__) || defined(__WIN64__)
-  Sleep(1);
-#elif HAVE_USLEEP
-  usleep(1);
-#elif HAVE_SLEEP
-  sleep(1);
-#endif
-}
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 #if __i386__ || __x86_64__
