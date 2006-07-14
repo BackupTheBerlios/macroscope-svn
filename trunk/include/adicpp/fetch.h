@@ -67,6 +67,7 @@ class Fetcher {
       utf8::String & name,
       utf8::String & port
     );
+    static void setmtime(const utf8::String & fileName,uint64_t atime,uint64_t mtime);
   private:
 };
 //---------------------------------------------------------------------------
