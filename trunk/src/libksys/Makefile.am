@@ -46,10 +46,7 @@ libksys_la_SOURCES = \
 	scktintf.cpp \
 	client.cpp \
 	server.cpp \
-	socket.cpp \
-	nsFTPConn.cpp \
-	nsHTTPConn.cpp \
-	nsSocket.cpp 
+	socket.cpp
 
 if BUILD_LZO_LIB
 libksys_la_SOURCES += \

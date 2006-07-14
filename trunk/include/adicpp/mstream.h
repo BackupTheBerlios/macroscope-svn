@@ -441,13 +441,13 @@ inline uintptr_t MemoryStream::pos() const
 inline MemoryStream & MemoryStream::clear()
 {
   container_ = &nullContainer();
+  pos_ = 0;
   return *this;
 }
 //---------------------------------------------------------------------------
 inline intptr_t MemoryStream::read(void * buffer, uintptr_t count)
 {
-  if( pos_ + count > container_->count_ )
-    count = container_->count_ - pos_;
+  if( pos_ + count > container_->count_ ) count = container_->count_ - pos_;
   memcpy(buffer, container_->uptr_ + pos_, count);
   pos_ += count;
   return count;

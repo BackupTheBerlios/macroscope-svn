@@ -33,6 +33,26 @@ extern const char __monthDays[2][12]  = {
   { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
 };
 //---------------------------------------------------------------------------
+intptr_t str2Month(const char * month)
+{
+  if( strncmp(month, "Jan", 3) == 0 ) return 0;
+  if( strncmp(month, "Feb", 3) == 0 ) return 1;
+  if( strncmp(month, "Mar", 3) == 0 ) return 2;
+  if( strncmp(month, "Apr", 3) == 0 ) return 3;
+  if( strncmp(month, "Mai", 3) == 0 ) return 4;
+  if( strncmp(month, "May", 3) == 0 ) return 4;
+  if( strncmp(month, "Jun", 3) == 0 ) return 5;
+  if( strncmp(month, "Jul", 3) == 0 ) return 6;
+  if( strncmp(month, "Aug", 3) == 0 ) return 7;
+  if( strncmp(month, "Sep", 3) == 0 ) return 8;
+  if( strncmp(month, "Okt", 3) == 0 ) return 9;
+  if( strncmp(month, "Oct", 3) == 0 ) return 9;
+  if( strncmp(month, "Nov", 3) == 0 ) return 10;
+  if( strncmp(month, "Dez", 3) == 0 ) return 11;
+  if( strncmp(month, "Dec", 3) == 0 ) return 11;
+  return -1;
+}
+//------------------------------------------------------------------------------
 extern size_t sizeOf_timeval_tv_sec = sizeof(((struct timeval *) NULL)->tv_sec);
 //---------------------------------------------------------------------------
 int64_t timeFromTimeString(const utf8::String & s)

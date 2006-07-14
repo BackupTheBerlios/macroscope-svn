@@ -70,7 +70,6 @@ class Logger {
     utf8::String  shortUrl(const utf8::String & url);
     int64_t       fetchLogFileLastOffset(const utf8::String & logFileName);
     Logger &      updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset);
-    intptr_t      strToMonth(const char * month);
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
     class TrafCacheEntry {

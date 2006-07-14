@@ -1263,6 +1263,56 @@ static const char base64Table[64] = {
   '4', '5', '6', '7', '8', '9', '+', '/'
 };
 //---------------------------------------------------------------------------
+uintptr_t rfcBase64Encode(
+  const uint8_t * inStr,
+  size_t inLen, 
+  uint8_t * outStr,
+  size_t outLen)
+{
+  size_t currOutLen = 0, i = 0;
+  while( i < inLen ){
+    uint8_t a = inStr[i];
+    uint8_t b = (i + 1 >= inLen) ? 0 : inStr[i + 1];
+    uint8_t c = (i + 2 >= inLen) ? 0 : inStr[i + 2];
+    if( i + 2 < inLen ){
+      if( currOutLen + 4 <= outLen ){
+        outStr[currOutLen++] = base64Table[(a >> 2) & 0x3F];
+        outStr[currOutLen++] = base64Table[((a << 4) & 0x30) + ((b >> 4) & 0xf)];
+        outStr[currOutLen++] = base64Table[((b << 2) & 0x3c) + ((c >> 6) & 0x3)];
+        outStr[currOutLen++] = base64Table[c & 0x3F];
+      }
+      else {
+        currOutLen += 4;
+      }
+    }
+    else if( i + 1 < inLen ){
+      if( currOutLen + 4 <= outLen ){
+        outStr[currOutLen++] = base64Table[(a >> 2) & 0x3F];
+        outStr[currOutLen++] = base64Table[((a << 4) & 0x30) + ((b >> 4) & 0xf)];
+        outStr[currOutLen++] = base64Table[((b << 2) & 0x3c) + ((c >> 6) & 0x3)];
+        outStr[currOutLen++] = '=';
+      }
+      else {
+        currOutLen += 4;
+      }
+    }
+    else {
+      if( currOutLen + 4 <= outLen ){
+        outStr[currOutLen++] = base64Table[(a >> 2) & 0x3F];
+        outStr[currOutLen++] = base64Table[((a << 4) & 0x30) + ((b >> 4) & 0xf)];
+        outStr[currOutLen++] = '=';
+        outStr[currOutLen++] = '=';
+      }
+      else {
+        currOutLen += 4;
+      }
+    }
+    i += 3;
+  }
+  if( currOutLen < outLen ) outStr[currOutLen] = '\0';
+  return currOutLen;
+}
+//---------------------------------------------------------------------------
 static uint8_t base64DecodeTable[256];
 //---------------------------------------------------------------------------
 static inline uint8_t base64Encode6(const uint8_t * p,uintptr_t i)

@@ -185,12 +185,25 @@ intptr_t memncmp(const void * m1, const void * m2, uintptr_t n)
   intptr_t  c = 0;
   while( n-- > 0 ){
     c = intptr_t(*(const uint8_t *) m1) - intptr_t(*(const uint8_t *) m2);
-    if( c != 0 )
-      break;
+    if( c != 0 ) break;
     m1 = *(const unsigned char **) m1 + 1;
     m2 = *(const unsigned char **) m2 + 1;
   }
   return c;
+}
+//---------------------------------------------------------------------------
+char * strnstr(const char * s1,const char * s2,uintptr_t n)
+{
+  uintptr_t k;
+  while( n > 0 ){
+    for( k = 0;; k++ ){
+      if( s2[k] == '\0' ) return (char *) s1;
+      if( k >= n || s1[k] != s2[k] ) break;
+    }
+    s1++;
+    n--;
+  }
+  return NULL;
 }
 //---------------------------------------------------------------------------
 intptr_t mbcs2utf8s(uintptr_t cp, char * utf8s, uintptr_t utf8l, const char * s, uintptr_t l)

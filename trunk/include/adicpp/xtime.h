@@ -29,6 +29,8 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+intptr_t str2Month(const char * month);
+//---------------------------------------------------------------------------
 inline int64_t timeval2Time(const struct timeval & tv)
 {
   return tv.tv_sec * UINT64_C(1000000) + tv.tv_usec;
@@ -136,6 +138,11 @@ inline int64_t getlocaltimeofday()
   a = tv.tv_sec - tz.tz_minuteswest * 60u + tz.tz_dsttime * 60u * 60u;
   a = a * 1000000u + tv.tv_usec;
   return a;
+}
+//---------------------------------------------------------------------------
+inline int64_t getgmtoffset()
+{
+  return getlocaltimeofday() - gettimeofday();
 }
 //---------------------------------------------------------------------------
 #endif /* _Sysutils_H_ */

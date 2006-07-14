@@ -46,26 +46,6 @@ ksys::Mutant Logger::timeStampRoundToMin(const ksys::Mutant & timeStamp)
   return t;
 }
 //------------------------------------------------------------------------------
-intptr_t Logger::strToMonth(const char * month)
-{
-  if( strncmp(month, "Jan", 3) == 0 ) return 0;
-  if( strncmp(month, "Feb", 3) == 0 ) return 1;
-  if( strncmp(month, "Mar", 3) == 0 ) return 2;
-  if( strncmp(month, "Apr", 3) == 0 ) return 3;
-  if( strncmp(month, "Mai", 3) == 0 ) return 4;
-  if( strncmp(month, "May", 3) == 0 ) return 4;
-  if( strncmp(month, "Jun", 3) == 0 ) return 5;
-  if( strncmp(month, "Jul", 3) == 0 ) return 6;
-  if( strncmp(month, "Aug", 3) == 0 ) return 7;
-  if( strncmp(month, "Sep", 3) == 0 ) return 8;
-  if( strncmp(month, "Okt", 3) == 0 ) return 9;
-  if( strncmp(month, "Oct", 3) == 0 ) return 9;
-  if( strncmp(month, "Nov", 3) == 0 ) return 10;
-  if( strncmp(month, "Dez", 3) == 0 ) return 11;
-  if( strncmp(month, "Dec", 3) == 0 ) return 11;
-  return -1;
-}
-//------------------------------------------------------------------------------
 void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl)
 {
   if( verbose_ ){
@@ -335,7 +315,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         // get time
         tm  lt;
         memset(&lt, 0, sizeof(lt));
-        lt.tm_mon = (int) strToMonth(b);
+        lt.tm_mon = (int) str2Month(b);
         if( lt.tm_mon < mon )
           startYear++;
         mon = lt.tm_mon;

@@ -209,6 +209,12 @@ inline void sleep1()
 #endif
 }
 //---------------------------------------------------------------------------
+uintptr_t rfcBase64Encode(
+  const uint8_t * inStr,
+  size_t inLen, 
+  uint8_t * outStr,
+  size_t outLen
+);
 utf8::String base64Encode(const void * p,uintptr_t l);
 uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size);
 utf8::String base32Encode(const void * p,uintptr_t l);

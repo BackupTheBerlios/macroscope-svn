@@ -24,16 +24,10 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#include <adicpp/xpnet/nsHTTPConn.h>
-#include <adicpp/xpnet/nsFTPConn.h>
-//---------------------------------------------------------------------------
 #ifndef fetchH
 #define fetchH
 //---------------------------------------------------------------------------
 namespace ksys {
-//---------------------------------------------------------------------------
-using xpnet::nsHTTPConn;
-using xpnet::nsFTPConn;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -46,13 +40,21 @@ class Fetcher {
     Fetcher & url(const utf8::String & a);
     const utf8::String & proxy() const;
     Fetcher & proxy(const utf8::String & a);
+    const utf8::String & localPath() const;
+    Fetcher & localPath(const utf8::String & a);
+    const bool & storeHostPath() const;
+    Fetcher & storeHostPath(bool a);
     const bool & resume() const;
     Fetcher & resume(bool a);
 
-    Fetcher & fetch(const utf8::String & localPathName);
+    Fetcher & fetch(const utf8::String & localName = utf8::String());
+    static utf8::String asctime2HttpTime(const char * tm);
+    static time_t httpTime2asctime(const char * ht);
   protected:
     utf8::String url_;
     utf8::String proxy_;
+    utf8::String localPath_;
+    bool storeHostPath_;
     bool resume_;
 
     void parseUrl(
@@ -66,8 +68,6 @@ class Fetcher {
       utf8::String & port
     );
   private:
-//    nsHTTPConn http_;
-//    nsFTPConn ftp_;
 };
 //---------------------------------------------------------------------------
 inline const utf8::String & Fetcher::url() const
@@ -89,6 +89,28 @@ inline const utf8::String & Fetcher::proxy() const
 inline Fetcher & Fetcher::proxy(const utf8::String & a)
 {
   proxy_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const utf8::String & Fetcher::localPath() const
+{
+  return localPath_;
+}
+//---------------------------------------------------------------------------
+inline Fetcher & Fetcher::localPath(const utf8::String & a)
+{
+  localPath_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const bool & Fetcher::storeHostPath() const
+{
+  return storeHostPath_;
+}
+//---------------------------------------------------------------------------
+inline Fetcher & Fetcher::storeHostPath(bool a)
+{
+  storeHostPath_ = a;
   return *this;
 }
 //---------------------------------------------------------------------------
