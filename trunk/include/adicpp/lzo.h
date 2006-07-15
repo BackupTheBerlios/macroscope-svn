@@ -38,20 +38,20 @@ class LZO1X {
     LZO1X();
 
     uint8_t *         rBuf() const;
-    LZO1X &           rBufPos(uint32_t rBufPos);
+    LZO1X &           rBufPos(uintptr_t rBufPos);
     const uint32_t &  rBufPos() const;
-    LZO1X &           rBufSize(uint32_t rBufSize);
+    LZO1X &           rBufSize(uintptr_t rBufSize);
     const uint32_t &  rBufSize() const;
     uint32_t          rBufSpace() const;
-    int64_t           read(void * buf, uint64_t len);
+    int64_t           read(void * buf,uint64_t len);
 
     uint8_t *         wBuf() const;
-    LZO1X &           wBufPos(uint32_t wBufPos);
+    LZO1X &           wBufPos(uintptr_t wBufPos);
     const uint32_t &  wBufPos() const;
-    LZO1X &           wBufSize(uint32_t wBufSize);
+    LZO1X &           wBufSize(uintptr_t wBufSize);
     const uint32_t &  wBufSize() const;
     uint32_t          wBufSpace() const;
-    int64_t           write(const void * buf, uint64_t len);
+    int64_t           write(const void * buf,uint64_t len);
 
     LZO1X & method(uintptr_t m);
     uint8_t method() const;
@@ -127,9 +127,9 @@ inline uint8_t * LZO1X::rBuf() const
   return rBuf_.ptr();
 }
 //---------------------------------------------------------------------------
-inline LZO1X & LZO1X::rBufPos(uint32_t rBufPos)
+inline LZO1X & LZO1X::rBufPos(uintptr_t rBufPos)
 {
-  rBufPos_ = rBufPos;
+  rBufPos_ = rBufPos > rBufSize_ ? rBufSize_ : (uint32_t) rBufPos;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -138,10 +138,11 @@ inline const uint32_t & LZO1X::rBufPos() const
   return rBufPos_;
 }
 //---------------------------------------------------------------------------
-inline LZO1X & LZO1X::rBufSize(uint32_t rBufSize)
+inline LZO1X & LZO1X::rBufSize(uintptr_t rBufSize)
 {
+  assert( rBufSize <= 1024u * 1024u * 1024u );
   rBuf_.realloc(rBufSize);
-  rBufSize_ = rBufSize;
+  rBufSize_ = (uint32_t) rBufSize;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -155,7 +156,7 @@ inline uint32_t LZO1X::rBufSpace() const
   return rBufSize_ - rBufPos_;
 }
 //---------------------------------------------------------------------------
-inline int64_t LZO1X::read(void * buf, uint64_t len)
+inline int64_t LZO1X::read(void * buf,uint64_t len)
 {
   if( rBufSpace() < len ) len = rBufSpace();
   memcpy(buf,rBuf_.ptr() + rBufPos_, (size_t) len);
@@ -168,9 +169,9 @@ inline uint8_t * LZO1X::wBuf() const
   return wBuf_.ptr();
 }
 //---------------------------------------------------------------------------
-inline LZO1X & LZO1X::wBufPos(uint32_t wBufPos)
+inline LZO1X & LZO1X::wBufPos(uintptr_t wBufPos)
 {
-  wBufPos_ = wBufPos;
+  wBufPos_ = wBufPos > wBufSize_ ? wBufSize_ : (uint32_t) wBufPos;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -179,9 +180,9 @@ inline const uint32_t & LZO1X::wBufPos() const
   return wBufPos_;
 }
 //---------------------------------------------------------------------------
-inline LZO1X & LZO1X::wBufSize(uint32_t wBufSize)
+inline LZO1X & LZO1X::wBufSize(uintptr_t wBufSize)
 {
-  wBufSize_ = (uintptr_t) wBufSize > 1024 * 1024 * 1024 ? wBufSize_ : wBufSize;
+  wBufSize_ = wBufSize > 256u * 1024u ? wBufSize_ : wBufSize;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -195,7 +196,7 @@ inline uint32_t LZO1X::wBufSpace() const
   return wBufSize_ - wBufPos_;
 }
 //---------------------------------------------------------------------------
-inline int64_t LZO1X::write(const void * buf, uint64_t len)
+inline int64_t LZO1X::write(const void * buf,uint64_t len)
 {
   if( wBufSpace() < len ) len = wBufSpace();
   memcpy(wBuf_.ptr() + wBufPos_ + sizeof(int32_t), buf, (size_t) len);

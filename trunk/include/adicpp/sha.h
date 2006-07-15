@@ -35,14 +35,13 @@ extern "C" {
 #else
 #include <adicpp/sha/sha256.h>
 #endif
-  //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 #undef __BEGIN_DECLS
 #undef __END_DECLS
-  //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------
 namespace ksys {
-
 //---------------------------------------------------------------------------
 inline void sha256(const void * src, uintptr_t len, uint8_t sha[32])
 {
@@ -56,8 +55,8 @@ inline void sha256(const void * src, uintptr_t len, uint8_t sha[32])
 //---------------------------------------------------------------------------
 class SHA256 : private SHA256_CTX {
   public:
-                    ~SHA256();
-                    SHA256();
+    ~SHA256();
+    SHA256();
 
     SHA256 &        init();
     SHA256 &        update(const void * src, uintptr_t len);
@@ -110,8 +109,8 @@ inline const uint8_t * SHA256::sha256() const
 //---------------------------------------------------------------------------
 class SHA256Cryptor : private SHA256 {
   public:
-                      ~SHA256Cryptor();
-                      SHA256Cryptor();
+    ~SHA256Cryptor();
+    SHA256Cryptor();
 
     SHA256Cryptor &   init(const uint8_t sha256[32]);
     SHA256Cryptor &   init(const void * key, uintptr_t len);
@@ -131,8 +130,7 @@ inline SHA256Cryptor::~SHA256Cryptor()
 {
 }
 //---------------------------------------------------------------------------
-inline SHA256Cryptor::SHA256Cryptor()
-  : threshold_(1024 * 1024)
+inline SHA256Cryptor::SHA256Cryptor() : threshold_(1024 * 1024)
 {
 }
 //---------------------------------------------------------------------------
@@ -232,8 +230,7 @@ inline SHA256Filter::~SHA256Filter()
 {
 }
 //---------------------------------------------------------------------------
-inline SHA256Filter::SHA256Filter()
-  : active_(false)
+inline SHA256Filter::SHA256Filter() : active_(false)
 {
 }
 //---------------------------------------------------------------------------
