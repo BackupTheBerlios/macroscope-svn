@@ -30,7 +30,9 @@ pkginclude_HEADERS = \
 	adiexcpt.h \
 	adist.h \
 	afd.h \
+	archive.h \
 	array.h \
+	async.h \
 	autoptr.h \
 	bits.h \
 	conf.h \

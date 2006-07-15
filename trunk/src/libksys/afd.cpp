@@ -32,7 +32,6 @@ namespace ksys {
 //---------------------------------------------------------------------------
 AsyncFile::~AsyncFile()
 {
-  detach();
   close(true);
 }
 //---------------------------------------------------------------------------
@@ -44,6 +43,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   createIfNotExist_(false)
 {
   file_ = INVALID_HANDLE_VALUE;
+  handle_ = INVALID_HANDLE_VALUE;
 #if defined(__WIN32__) || defined(__WIN64__)
   specification_ = 1;
 #endif
@@ -51,6 +51,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::close(bool calledFromDestructor)
 {
+  detach();
   if( file_ != INVALID_HANDLE_VALUE ){
 #if defined(__WIN32__) || defined(__WIN64__)
     CloseHandle(file_);
@@ -58,6 +59,14 @@ AsyncFile & AsyncFile::close(bool calledFromDestructor)
     ::close(file_);
 #endif
     file_ = INVALID_HANDLE_VALUE;
+  }
+  if( handle_ != INVALID_HANDLE_VALUE ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    CloseHandle(handle_);
+#else
+    ::close(handle_);
+#endif
+    handle_ = INVALID_HANDLE_VALUE;
   }
   if( removeAfterClose_ ){
     try {
@@ -72,97 +81,225 @@ AsyncFile & AsyncFile::close(bool calledFromDestructor)
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::open()
 {
-  if( file_ == INVALID_HANDLE_VALUE ){
-    assert( currentFiber() != NULL );
-    attach();
-    fiber()->event_.string0_ = fileName_;
-    fiber()->event_.createIfNotExist_ = createIfNotExist_;
-    fiber()->event_.exclusive_ = exclusive_;
-    fiber()->event_.readOnly_ = readOnly_;
-    fiber()->event_.type_ = etOpenFile;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    assert( fiber()->event_.type_ == etOpenFile );
-    descriptor_ = fiber()->event_.fileDescriptor_;
-    if( fiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EFileError(fiber()->event_.errno_ + errorOffset, fileName_)
-      );
-/*#if defined(__WIN32__) || defined(__WIN64__)
-    switch( event().errno_ ){
-      case ERROR_INVALID_DRIVE       :
-      case ERROR_ACCESS_DENIED       :
-      case ERROR_TOO_MANY_OPEN_FILES :
-      case ERROR_PATH_NOT_FOUND      :
-      case ERROR_FILE_NOT_FOUND      :
-      case ERROR_INVALID_NAME        :
-      case ERROR_INVALID_FLAGS       :
-      case ERROR_INVALID_ADDRESS     :
-      case ERROR_INSUFFICIENT_BUFFER :
-        throw ksys::ExceptionSP(new EFileError(err + errorOffset, fileName_));
+  if( currentFiber() != NULL ){
+    if( file_ == INVALID_HANDLE_VALUE ){
+      attach();
+      fiber()->event_.string0_ = fileName_;
+      fiber()->event_.createIfNotExist_ = createIfNotExist_;
+      fiber()->event_.exclusive_ = exclusive_;
+      fiber()->event_.readOnly_ = readOnly_;
+      fiber()->event_.type_ = etOpenFile;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      assert( fiber()->event_.type_ == etOpenFile );
+      descriptor_ = fiber()->event_.fileDescriptor_;
+      if( fiber()->event_.errno_ != 0 )
+        throw ksys::ExceptionSP(
+          new EFileError(fiber()->event_.errno_ + errorOffset, fileName_)
+        );
     }
+  }
+  else {
+    if( handle_ == INVALID_HANDLE_VALUE ){
+      for(;;){
+#if defined(__WIN32__) || defined(__WIN64__)
+        int32_t err;
+        if( isWin9x() ){
+          utf8::AnsiString  ansiFileName  (anyPathName2HostPathName(fileName_).getANSIString());
+          if( !readOnly_ )
+            handle_ = CreateFileA(
+              ansiFileName,GENERIC_READ | GENERIC_WRITE,
+              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+              NULL,
+              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+              NULL
+            );
+          if( handle_ == INVALID_HANDLE_VALUE )
+            handle_ = CreateFileA(
+              ansiFileName,GENERIC_READ,
+              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+              NULL,
+              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+              NULL
+            );
+        }
+        else{
+          utf8::WideString unicodeFileName(anyPathName2HostPathName(fileName_).getUNICODEString());
+          if( !readOnly_ )
+            handle_ = CreateFileW(
+              unicodeFileName,
+              GENERIC_READ | GENERIC_WRITE,
+              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+              NULL,
+              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+              NULL
+            );
+          if( handle_ == INVALID_HANDLE_VALUE )
+            handle_ = CreateFileW(
+              unicodeFileName,GENERIC_READ,
+              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+              NULL,
+              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+              NULL
+            );
+        }
+        if( handle_ != INVALID_HANDLE_VALUE ) break;
+        switch( err = GetLastError() ){
+          case ERROR_INVALID_DRIVE       :
+          case ERROR_ACCESS_DENIED       :
+          case ERROR_TOO_MANY_OPEN_FILES :
+          case ERROR_PATH_NOT_FOUND      :
+          case ERROR_FILE_NOT_FOUND      :
+          case ERROR_INVALID_NAME        :
+          case ERROR_INVALID_FLAGS       :
+          case ERROR_INVALID_ADDRESS     :
+          case ERROR_INSUFFICIENT_BUFFER :
+            throw ksys::ExceptionSP(new EFileError(err + errorOffset, fileName_));
+        }
 #else
-      switch( err = errno ){
-        case ENOTDIR      :
-        case ENOENT       :
-        case ENAMETOOLONG :
-        case EACCES       :
-        case ELOOP        :
-        case EISDIR       :
-        case EROFS        :
-        case EMFILE       :
-        case ENFILE       :
-        case EINTR        :
-        case ENOSPC       :
-        case EDQUOT       :
-        case EIO          :
-        case ETXTBSY      :
-        case EFAULT       :
-        case EOPNOTSUPP   :
-        case EINVAL       :
-          throw ksys::ExceptionSP(new EFileError(err, fileName_));
-      }
+        utf8::AnsiString  ansiFileName  (anyPathName2HostPathName(fileName_).getANSIString());
+        mode_t            um            = umask(0);
+        umask(um);
+        if( !readOnly_ )
+          handle_ = ::open(ansiFileName, O_RDWR | O_CREAT | (exclusive_ ? O_EXLOCK : 0), um | S_IRUSR | S_IWUSR);
+        if( handle_ < 0 )
+          handle_ = ::open(ansiFileName, O_RDONLY | O_CREAT | (exclusive_ ? O_EXLOCK : 0), um | S_IRUSR | S_IWUSR);
+        if( handle_ >= 0 )
+          break;
+        switch( errno ){
+          case ENOTDIR      :
+          case ENOENT       :
+          case ENAMETOOLONG :
+          case EACCES       :
+          case ELOOP        :
+          case EISDIR       :
+          case EROFS        :
+          case EMFILE       :
+          case ENFILE       :
+          case EINTR        :
+          case ENOSPC       :
+          case EDQUOT       :
+          case EIO          :
+          case ETXTBSY      :
+          case EFAULT       :
+          case EOPNOTSUPP   :
+          case EINVAL       :
+            throw ksys::ExceptionSP(new EFileError(errno, fileName_));
+        }
 #endif
-    }*/
+        ksys::sleep1();
+      }
+    }
   }
   return *this;
 }
 //---------------------------------------------------------------------------
 bool AsyncFile::tryOpen()
 {
-  if( file_ == INVALID_HANDLE_VALUE ){
-    assert( currentFiber() != NULL );
-    attach();
-    fiber()->event_.string0_ = fileName_;
-    fiber()->event_.createIfNotExist_ = createIfNotExist_;
-    fiber()->event_.exclusive_ = exclusive_;
-    fiber()->event_.readOnly_ = readOnly_;
-    fiber()->event_.type_ = etOpenFile;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    assert( fiber()->event_.type_ == etOpenFile );
-    descriptor_ = fiber()->event_.fileDescriptor_;
+  if( currentFiber() != NULL ){
+    if( file_ == INVALID_HANDLE_VALUE ){
+      attach();
+      fiber()->event_.string0_ = fileName_;
+      fiber()->event_.createIfNotExist_ = createIfNotExist_;
+      fiber()->event_.exclusive_ = exclusive_;
+      fiber()->event_.readOnly_ = readOnly_;
+      fiber()->event_.type_ = etOpenFile;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      assert( fiber()->event_.type_ == etOpenFile );
+      file_ = fiber()->event_.fileDescriptor_;
+    }
+    return file_ != INVALID_HANDLE_VALUE;
   }
-  return isOpen();
+  else {
+    if( handle_ == INVALID_HANDLE_VALUE ){
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( isWin9x() ){
+        utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
+        if( !readOnly_ )
+          handle_ = CreateFileA(
+            ansiFileName,
+            GENERIC_READ | GENERIC_WRITE,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
+        if( handle_ == INVALID_HANDLE_VALUE )
+          handle_ = CreateFileA(
+            ansiFileName,
+            GENERIC_READ,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
+      }
+      else{
+        utf8::WideString unicodeFileName(anyPathName2HostPathName(fileName_).getUNICODEString());
+        if( !readOnly_ )
+          handle_ = CreateFileW(
+            unicodeFileName,
+            GENERIC_READ | GENERIC_WRITE,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
+        if( handle_ == INVALID_HANDLE_VALUE )
+          handle_ = CreateFileW(
+            unicodeFileName,
+            GENERIC_READ,
+            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+            NULL
+          );
+      }
+#else
+      utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
+      mode_t um = umask(0);
+      umask(um);
+      if( !readOnly_ )
+        handle_ = ::open(
+          ansiFileName,
+          O_RDWR | (createIfNotExist_ ? O_CREAT : 0) | (exclusive_ ? O_EXLOCK : 0),
+          um | S_IRUSR | S_IWUSR
+        );
+      if( handle_ < 0 )
+        handle_ = ::open(
+          ansiFileName,O_RDONLY | (createIfNotExist_ ? O_CREAT : 0) | (exclusive_ ? O_EXLOCK : 0),
+          um | S_IRUSR | S_IWUSR
+        );
+#endif
+    }
+    return handle_ != INVALID_HANDLE_VALUE;
+  }
 }
 //---------------------------------------------------------------------------
 uint64_t AsyncFile::size() const
 {
-  assert( isOpen() );
 #if defined(__WIN32__) || defined(__WIN64__)
-  uint64  i;
+  uint64 i;
   SetLastError(NO_ERROR);
-  i.lo = GetFileSize(file_, &i.hi);
+  i.lo = GetFileSize(currentFiber() != NULL ? file_ : handle_, &i.hi);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(new EFileError(err,__PRETTY_FUNCTION__));
   }
   return i.a;
 #else
   struct stat st;
-  if( fstat(file_,&st) != 0 ){
+  if( fstat(currentFiber() != NULL ? file_ : handle_,&st) != 0 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(new EFileError(err,__PRETTY_FUNCTION__));
   }
   return st.st_size;
 #endif
@@ -170,19 +307,18 @@ uint64_t AsyncFile::size() const
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::resize(uint64_t nSize)
 {
-  assert( isOpen() );
   uint64_t oldPos = tell();
   try{
     int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
     seek(nSize);
 // TODO: check for SetFileValidData working (may be faster then SetEndOfFile)
-    if( SetEndOfFile(file_) == 0 ){
+    if( SetEndOfFile(currentFiber() != NULL ? file_ : handle_) == 0 ){
       err = GetLastError() + errorOffset;
       throw ksys::ExceptionSP(new EDiskFull(err, __PRETTY_FUNCTION__));
     }
 #elif HAVE_FTRUNCATE
-    if( ftruncate(file_, nSize) == -1 ){
+    if( ftruncate(currentFiber() != NULL ? file_ : handle_, nSize) == -1 ){
       err = errno;
       throw ksys::ExceptionSP(new EDiskFull(err, __PRETTY_FUNCTION__));
     }
@@ -201,310 +337,531 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
 //---------------------------------------------------------------------------
 int64_t AsyncFile::read(void * buf,uint64_t size)
 {
-  assert( isOpen() );
+  if( currentFiber() != NULL ){
+    int64_t r = 0;
+    while( size > 0 ){
+      int64_t pos = tell();
+      fiber()->event_.position_ = pos;
+      fiber()->event_.cbuffer_ = buf;
+      fiber()->event_.length_ = size;
+      fiber()->event_.type_ = etRead;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        SetLastError(fiber()->event_.errno_);
+        if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
+#else
+        errno = fiber()->event_.errno_;
+#endif
+        return -1;
+      }
+      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+      r += fiber()->event_.count_;
+      size -= fiber()->event_.count_;
+      seek(pos + fiber()->event_.count_);
+      if( (uint64_t) r < size ) break;
+    }
+    return r;
+  }
+#if defined(__WIN32__) || defined(__WIN64__)
   int64_t r = 0;
   while( size > 0 ){
-    int64_t pos = tell();
-    fiber()->event_.position_ = pos;
-    fiber()->event_.cbuffer_ = buf;
-    fiber()->event_.length_ = size;
-    fiber()->event_.type_ = etRead;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event_.errno_);
-      if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
-#else
-      errno = fiber()->event_.errno_;
-#endif
-      return -1;
+    DWORD rr, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
+l1: if( ReadFile(handle_,buf,a,&rr,NULL) == 0 ){
+      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
+        a >>= 1;
+        goto l1;
+      }
+      if( GetLastError() == ERROR_HANDLE_EOF ) break;
+      r = -1;
+      break;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-    r += fiber()->event_.count_;
-    size -= fiber()->event_.count_;
-    seek(pos + fiber()->event_.count_);
-    if( (uint64_t) r < size ) break;
+    if( rr == 0 ) break;
+    size -= rr;
+    r += rr;
   }
   return r;
+#else
+  return ::read(handle_,buf,size);
+#endif
 }
 //---------------------------------------------------------------------------
 int64_t AsyncFile::write(const void * buf,uint64_t size)
 {
-  assert( isOpen() );
+  if( currentFiber() != NULL ){
+    int64_t w = 0;
+    while( size > 0 ){
+      int64_t pos = tell();
+      fiber()->event_.position_ = pos;
+      fiber()->event_.cbuffer_ = buf;
+      fiber()->event_.length_ = size;
+      fiber()->event_.type_ = etWrite;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        SetLastError(fiber()->event_.errno_);
+#else
+        errno = fiber()->event_.errno_;
+#endif
+        return -1;
+      }
+      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+      w += fiber()->event_.count_;
+      size -= fiber()->event_.count_;
+      seek(pos + fiber()->event_.count_);
+      if( (uint64_t) w < size ) break;
+    }
+    return w;
+  }
+#if defined(__WIN32__) || defined(__WIN64__)
   int64_t w = 0;
   while( size > 0 ){
-    int64_t pos = tell();
-    fiber()->event_.position_ = pos;
-    fiber()->event_.cbuffer_ = buf;
-    fiber()->event_.length_ = size;
-    fiber()->event_.type_ = etWrite;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event_.errno_);
-#else
-      errno = fiber()->event_.errno_;
-#endif
-      return -1;
+    DWORD ww, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
+l1: if( WriteFile(handle_,buf,a,&ww,NULL) == 0 ){
+      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
+        a >>= 1;
+        goto l1;
+      }
+      w = -1;
+      break;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-    w += fiber()->event_.count_;
-    size -= fiber()->event_.count_;
-    seek(pos + fiber()->event_.count_);
-    if( (uint64_t) w < size ) break;
+    if( ww == 0 ) break;
+    size -= ww;
+    w += ww;
   }
   return w;
+#else
+  return ::write(handle_,buf,size);
+#endif
 }
 //---------------------------------------------------------------------------
 int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
 {
-  assert( isOpen() );
+  if( currentFiber() != NULL ){
+    int64_t r = 0;
+    while( size > 0 ){
+      fiber()->event_.position_ = pos;
+      fiber()->event_.cbuffer_ = buf;
+      fiber()->event_.length_ = size;
+      fiber()->event_.type_ = etRead;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        SetLastError(fiber()->event_.errno_);
+        if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
+#else
+        errno = fiber()->event_.errno_;
+#endif
+        return -1;
+      }
+      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+      pos += fiber()->event_.count_;
+      r += fiber()->event_.count_;
+      size -= fiber()->event_.count_;
+      if( r == 0 ) break;
+    }
+    return r;
+  }
+#if defined(__WIN32__) || defined(__WIN64__)
+  uint64_t ps(tell());
+  seek(pos);
   int64_t r = 0;
   while( size > 0 ){
-    fiber()->event_.position_ = pos;
-    fiber()->event_.cbuffer_ = buf;
-    fiber()->event_.length_ = size;
-    fiber()->event_.type_ = etRead;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event_.errno_);
-      if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
-#else
-      errno = fiber()->event_.errno_;
-#endif
-      return -1;
+    DWORD rr, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
+l1: if( ReadFile(handle_,buf,a,&rr,NULL) == 0 ){
+      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
+        a >>= 1;
+        goto l1;
+      }
+      if( GetLastError() == ERROR_HANDLE_EOF ) break;
+      r = -1;
+      break;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-    pos += fiber()->event_.count_;
-    r += fiber()->event_.count_;
-    size -= fiber()->event_.count_;
-    if( r == 0 ) break;
+    if( rr == 0 ) break;
+    size -= rr;
+    r += rr;
   }
+  seek(ps);
   return r;
+#elif HAVE_PREAD
+  return pread(handle_,buf,size,pos);
+#else
+  intptr_t r = -1;
+  uint64_t OldPos = tell();
+  int err;
+  seek(pos);
+  r = ::read(handle_,buf,size);
+  err = errno;
+  seek(OldPos);
+  errno = err;
+  return r;
+#endif
 }
 //---------------------------------------------------------------------------
 int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
 {
-  assert( isOpen() );
+  if( currentFiber() != NULL ){
+    int64_t w = 0;
+    while( size > 0 ){
+      fiber()->event_.position_ = pos;
+      fiber()->event_.cbuffer_ = buf;
+      fiber()->event_.length_ = size;
+      fiber()->event_.type_ = etWrite;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        SetLastError(fiber()->event_.errno_);
+#else
+        errno = fiber()->event_.errno_;
+#endif
+        return -1;
+      }
+      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
+      pos += fiber()->event_.count_;
+      w += fiber()->event_.count_;
+      size -= fiber()->event_.count_;
+      if( w == 0 ) break;
+    }
+    return w;
+  }
+#if defined(__WIN32__) || defined(__WIN64__)
+  uint64_t ps(tell());
+  seek(pos);
   int64_t w = 0;
   while( size > 0 ){
-    fiber()->event_.position_ = pos;
-    fiber()->event_.cbuffer_ = buf;
-    fiber()->event_.length_ = size;
-    fiber()->event_.type_ = etWrite;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      SetLastError(fiber()->event_.errno_);
-#else
-      errno = fiber()->event_.errno_;
-#endif
-      return -1;
+    DWORD ww, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
+l1: if( WriteFile(handle_,buf,a,&ww,NULL) == 0 ){
+      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
+        a >>= 1;
+        goto l1;
+      }
+      w = -1;
+      break;
     }
-    buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-    pos += fiber()->event_.count_;
-    w += fiber()->event_.count_;
-    size -= fiber()->event_.count_;
-    if( w == 0 ) break;
+    if( ww == 0 ) break;
+    size -= ww;
+    w += ww;
   }
+  seek(ps);
   return w;
+#elif HAVE_PWRITE
+  return pwrite(handle_,buf,size,pos);
+#else
+  intptr_t r = -1;
+  uint64_t OldPos = tell();
+  int err;
+  seek(pos);
+  r = ::write(handle_,buf,size);
+  err = errno;
+  seek(OldPos);
+  errno = err;
+  return r;
+#endif
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::readBuffer(void * buf, uint64_t size)
+AsyncFile & AsyncFile::readBuffer(void * buf,uint64_t size)
 {
-  assert( isOpen() );
-  int64_t r = read(buf, size);
+  int64_t r = read(buf,size);
   if( r == 0 && size > 0 )
-    throw ksys::ExceptionSP(new EFileEOF(EIO, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(new EFileEOF(EIO,__PRETTY_FUNCTION__));
   if( r < 0 || (uint64_t) r != size )
     throw ksys::ExceptionSP(new EFileError(
-      fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::writeBuffer(const void * buf, uint64_t size)
+AsyncFile & AsyncFile::writeBuffer(const void * buf,uint64_t size)
 {
-  assert( isOpen() );
-  int64_t w = write(buf, size);
+  int64_t w = write(buf,size);
   if( w < 0 && size > 0 )
     throw ksys::ExceptionSP(new EFileError(
-      fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
   if( (uint64_t) w != size && size > 0 )
     throw ksys::ExceptionSP(new EFileError(EIO, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::readBuffer(uint64_t pos, void * buf, uint64_t size)
+AsyncFile & AsyncFile::readBuffer(uint64_t pos,void * buf,uint64_t size)
 {
-  assert( isOpen() );
-  int64_t r = read(pos, buf, size);
+  int64_t r = read(pos,buf,size);
   if( r == 0 && size > 0 )
-    throw ksys::ExceptionSP(new EFileEOF(EIO, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(new EFileEOF(EIO,__PRETTY_FUNCTION__));
   if( r < 0 || (uint64_t) r != size )
     throw ksys::ExceptionSP(new EFileError(
-      fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::writeBuffer(uint64_t pos, const void * buf, uint64_t size)
+AsyncFile & AsyncFile::writeBuffer(uint64_t pos,const void * buf,uint64_t size)
 {
-  assert( isOpen() );
   int64_t w = write(pos, buf, size);
   if( w < 0 && size > 0 )
     throw ksys::ExceptionSP(
-      new EFileError(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+      new EFileError(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
   if( (uint64_t) w != size && size > 0 )
-    throw ksys::ExceptionSP(new EFileError(EIO, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(new EFileError(EIO,__PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
 bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
 {
-  assert( isOpen() );
+  if( currentFiber() != NULL ){
 #if defined(__WIN32__) || defined(__WIN64__)
-  fiber()->event_.errno_ = 0;
-  if( !exclusive_ ){
-    fiber()->event_.type_ = etLockFile;
-    fiber()->event_.lockType_ = AsyncEvent::tryRDLock;
-    fiber()->event_.position_ = pos;
-    fiber()->event_.length_ = size;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
-      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
-  }
-  return fiber()->event_.errno_ == 0;
+    fiber()->event_.errno_ = 0;
+    if( !exclusive_ ){
+      fiber()->event_.type_ = etLockFile;
+      fiber()->event_.lockType_ = AsyncEvent::tryRDLock;
+      fiber()->event_.position_ = pos;
+      fiber()->event_.length_ = size;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
+        throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+    }
+    return fiber()->event_.errno_ == 0;
 #else
+    if( !exclusive_ ){
+      struct flock fl;
+      fl.l_start = pos;
+      fl.l_len = size;
+      fl.l_type = F_RDLCK;
+      fl.l_whence = SEEK_SET;
+      if( fcntl(file_,F_SETLKW,&fl) == 0 ) return true;
+      if( errno != EAGAIN ){
+        int32_t err = errno;
+        throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      }
+      return false;
+    }
+    return true;
+#endif
+  }
   if( !exclusive_ ){
-    struct flock  fl;
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( size == 0 ) size = ~UINT64_C(0);
+    OVERLAPPED Overlapped;
+    Overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+    Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+    SetLastError(0);
+    LockFileEx(handle_,LOCKFILE_FAIL_IMMEDIATELY,0,reinterpret_cast< uint64 *>(&size)->lo,reinterpret_cast< uint64 *>(&size)->hi,&Overlapped);
+    DWORD err = GetLastError();
+    switch( err ){
+      case 0                : return true;
+      case ERROR_IO_PENDING : return false;
+      default               :
+        throw ksys::ExceptionSP(new EFLock(err + errorOffset, __PRETTY_FUNCTION__));
+    }
+#else
+    struct flock fl;
     fl.l_start = pos;
     fl.l_len = size;
     fl.l_type = F_RDLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(file_, F_SETLKW, &fl) == 0 ) return true;
+    if( fcntl(handle_,F_SETLKW,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
       throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
     }
-  }
-  return false;
+    return false;
 #endif
+  }
+  return true;
 }
 //---------------------------------------------------------------------------
 bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
 {
-  assert( isOpen() );
+  if( currentFiber() != NULL ){
 #if defined(__WIN32__) || defined(__WIN64__)
-  fiber()->event_.errno_ = 0;
-  if( !exclusive_ ){
-    fiber()->event_.type_ = etLockFile;
-    fiber()->event_.lockType_ = AsyncEvent::tryWRLock;
-    fiber()->event_.position_ = pos;
-    fiber()->event_.length_ = size;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
-      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
-  }
-  return fiber()->event_.errno_ == 0;
+    fiber()->event_.errno_ = 0;
+    if( !exclusive_ ){
+      fiber()->event_.type_ = etLockFile;
+      fiber()->event_.lockType_ = AsyncEvent::tryWRLock;
+      fiber()->event_.position_ = pos;
+      fiber()->event_.length_ = size;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
+        throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+    }
+    return fiber()->event_.errno_ == 0;
 #else
+    if( !exclusive_ ){
+      struct flock fl;
+      fl.l_start = pos;
+      fl.l_len = size;
+      fl.l_type = F_WRLCK;
+      fl.l_whence = SEEK_SET;
+      if( fcntl(file_,F_SETLK,&fl) == 0 ) return true;
+      if( errno != EAGAIN ){
+        int32_t err = errno;
+        throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      }
+      return false;
+    }
+    return true;
+#endif
+  }
   if( !exclusive_ ){
-    struct flock  fl;
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( size == 0 ) size = ~UINT64_C(0);
+    OVERLAPPED  Overlapped;
+    Overlapped.Offset = reinterpret_cast< uint64 *>(&pos)->lo;
+    Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
+    SetLastError(0);
+    LockFileEx(handle_, LOCKFILE_FAIL_IMMEDIATELY | LOCKFILE_EXCLUSIVE_LOCK, 0, reinterpret_cast< uint64 *>(&size)->lo, reinterpret_cast< uint64 *>(&size)->hi, &Overlapped);
+    DWORD err = GetLastError();
+    switch( err ){
+      case 0                : return true;
+      case ERROR_IO_PENDING : return false;
+      default               :
+        throw ksys::ExceptionSP(new EFLock(err + errorOffset, __PRETTY_FUNCTION__));
+    }
+#else
+    struct flock fl;
     fl.l_start = pos;
     fl.l_len = size;
     fl.l_type = F_WRLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(file_, F_SETLK, &fl) == 0 ) return true;
+    if( fcntl(handle_,F_SETLK,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
       throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
     }
+    return false;
+#endif
   }
   return true;
-#endif
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::rdLock(uint64_t pos, uint64_t size)
+AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
 {
-  assert( isOpen() );
-  if( !exclusive_ ){
+  if( currentFiber() != NULL ){
+    if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    fiber()->event_.type_ = etLockFile;
-    fiber()->event_.lockType_ = AsyncEvent::rdLock;
-    fiber()->event_.position_ = pos;
-    fiber()->event_.length_ = size;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.type_ = etLockFile;
+      fiber()->event_.lockType_ = AsyncEvent::rdLock;
+      fiber()->event_.position_ = pos;
+      fiber()->event_.length_ = size;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 )
+        throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
 #else
-    struct flock  fl;
-    fl.l_start = pos;
-    fl.l_len = size;
-    fl.l_type = F_RDLCK;
-    fl.l_whence = SEEK_SET;
-    if( fcntl(file_, F_SETLKW, &fl) != 0 ){
-      int32_t err = errno;
-      throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
-    }
+      struct flock fl;
+      fl.l_start = pos;
+      fl.l_len = size;
+      fl.l_type = F_RDLCK;
+      fl.l_whence = SEEK_SET;
+      if( fcntl(file_,F_SETLKW,&fl) != 0 ){
+        int32_t err = errno;
+        throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      }
 #endif
+    }
+  }
+  else {
+    if( !exclusive_ ){
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( size == 0 ) size = ~UINT64_C(0);
+      OVERLAPPED Overlapped;
+      Overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+      Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+      if( LockFileEx(handle_, 0, 0, reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast< uint64 *>(&size)->hi,&Overlapped) == 0 ){
+        int32_t err = GetLastError() + errorOffset;
+        throw ksys::ExceptionSP(new EFileError(err,__PRETTY_FUNCTION__));
+      }
+#else
+      struct flock  fl;
+      fl.l_start = pos;
+      fl.l_len = size;
+      fl.l_type = F_RDLCK;
+      fl.l_whence = SEEK_SET;
+      if( fcntl(handle_, F_SETLKW, &fl) != 0 ){
+        int32_t err = errno;
+        throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      }
+#endif
+    }
   }
   return *this;
 }
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
 {
-  assert( isOpen() );
-  if( !exclusive_ ){
+  if( currentFiber() != NULL ){
+    if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    fiber()->event_.type_ = etLockFile;
-    fiber()->event_.lockType_ = AsyncEvent::wrLock;
-    fiber()->event_.position_ = pos;
-    fiber()->event_.length_ = size;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+      fiber()->event_.type_ = etLockFile;
+      fiber()->event_.lockType_ = AsyncEvent::wrLock;
+      fiber()->event_.position_ = pos;
+      fiber()->event_.length_ = size;
+      fiber()->thread()->postRequest(this);
+      fiber()->switchFiber(fiber()->mainFiber());
+      if( fiber()->event_.errno_ != 0 )
+        throw ksys::ExceptionSP(new EFLock(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
 #else
-    struct flock  fl;
-    fl.l_start = pos;
-    fl.l_len = size;
-    fl.l_type = F_WRLCK;
-    fl.l_whence = SEEK_SET;
-    if( fcntl(file_, F_SETLKW, &fl) != 0 ){
-      int32_t err = errno;
-      throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
-    }
+      struct flock  fl;
+      fl.l_start = pos;
+      fl.l_len = size;
+      fl.l_type = F_WRLCK;
+      fl.l_whence = SEEK_SET;
+      if( fcntl(file_, F_SETLKW, &fl) != 0 ){
+        int32_t err = errno;
+        throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      }
 #endif
+    }
+  }
+  else {
+    if( !exclusive_ ){
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( size == 0 ) size = ~UINT64_C(0);
+      OVERLAPPED Overlapped;
+      Overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+      Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+      if( LockFileEx(handle_,LOCKFILE_EXCLUSIVE_LOCK,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
+        int32_t err = GetLastError() + errorOffset;
+        throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+      }
+#else
+      struct flock  fl;
+      fl.l_start = pos;
+      fl.l_len = size;
+      fl.l_type = F_WRLCK;
+      fl.l_whence = SEEK_SET;
+      if( fcntl(handle_,F_SETLKW,&fl) != 0 ){
+        int32_t err = errno;
+        throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      }
+#endif
+    }
   }
   return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::unLock(uint64_t pos, uint64_t size)
+AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
 {
-  assert( isOpen() );
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
     if( size == 0 ) size = ~UINT64_C(0);
     OVERLAPPED Overlapped;
     Overlapped.Offset = reinterpret_cast< uint64 *>(&pos)->lo;
     Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
-    if( UnlockFileEx(file_,0,reinterpret_cast< uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
+    if( UnlockFileEx(currentFiber() != NULL ? file_ : handle_,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+      throw ksys::ExceptionSP(new EFileError(err,__PRETTY_FUNCTION__));
     }
 #else
-    struct flock  fl;
+    struct flock fl;
     fl.l_start = pos;
     fl.l_len = size;
     fl.l_type = F_UNLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(file_, F_SETLK, &fl) != 0 ){
+    if( fcntl(currentFiber() != NULL ? file_ : handle_,F_SETLK,&fl) != 0 ){
       int32_t err = errno;
       throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
     }
@@ -519,17 +876,17 @@ uint64_t AsyncFile::tell() const
   int64 i;
   i.hi = 0;
   SetLastError(NO_ERROR);
-  i.lo = SetFilePointer(file_, 0, &i.hi, FILE_CURRENT);
+  i.lo = SetFilePointer(currentFiber() != NULL ? file_ : handle_,0,&i.hi,FILE_CURRENT);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(new EFileError(err,__PRETTY_FUNCTION__));
   }
   return i.a;
 #else
-  int64_t pos = lseek(file_,0,SEEK_CUR);
+  int64_t pos = lseek(currentFiber() != NULL ? file_ : handle_,0,SEEK_CUR);
   if( pos < 0 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(new EFileError(err,__PRETTY_FUNCTION__));
   }
   return pos;
 #endif
@@ -539,13 +896,13 @@ AsyncFile & AsyncFile::seek(uint64_t pos)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   SetLastError(NO_ERROR);
-  reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(file_, reinterpret_cast< uint64 *>(&pos)->lo, (PLONG) &reinterpret_cast< uint64 *>(&pos)->hi, FILE_BEGIN);
+  reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(currentFiber() != NULL ? file_ : handle_,reinterpret_cast< uint64 *>(&pos)->lo,(PLONG) &reinterpret_cast<uint64 *>(&pos)->hi,FILE_BEGIN);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
     throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
   }
 #else
-  int64_t lp = lseek(file_,pos,SEEK_SET);
+  int64_t lp = lseek(currentFiber() != NULL ? file_ : handle_,pos,SEEK_SET);
   if( lp < 0 || (uint64_t) lp != pos ){
     int32_t err = errno;
     throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));

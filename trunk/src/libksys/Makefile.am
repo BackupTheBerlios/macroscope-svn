@@ -20,6 +20,7 @@ lib_LTLIBRARIES = libksys.la
 libksys_la_SOURCES = \
 	afd.cpp \
 	aio.cpp \
+	archive.cpp \
 	conf.cpp \
 	except.cpp \
 	fetch.cpp \

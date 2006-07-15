@@ -478,15 +478,15 @@ bool FileHandleContainer::tryRDLock(uint64_t pos, uint64_t size)
     fl.l_len = size;
     fl.l_type = F_RDLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(handle_, F_SETLKW, &fl) == 0 )
-      return true;
+    if( fcntl(handle_, F_SETLKW, &fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
       throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
     }
+    return false;
 #endif
   }
-  return false;
+  return true;
 }
 //---------------------------------------------------------------------------
 bool FileHandleContainer::tryWRLock(uint64_t pos, uint64_t size)
@@ -512,12 +512,12 @@ bool FileHandleContainer::tryWRLock(uint64_t pos, uint64_t size)
     fl.l_len = size;
     fl.l_type = F_WRLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(handle_, F_SETLK, &fl) == 0 )
-      return true;
+    if( fcntl(handle_, F_SETLK, &fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
       throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
     }
+    return false;
 #endif
   }
   return true;

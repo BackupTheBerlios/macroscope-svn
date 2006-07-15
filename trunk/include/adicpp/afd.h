@@ -36,30 +36,30 @@ class AsyncFile : public AsyncDescriptor {
     virtual ~AsyncFile();
     AsyncFile(const utf8::String & fileName = utf8::String());
 
-    bool                  isOpen() const;
-    AsyncFile &           open();
-    bool                  tryOpen();
-    AsyncFile &           close(bool calledFromDestructor = false);
-    AsyncFile &           seek(uint64_t pos);
-    uint64_t              size() const;
-    AsyncFile &           resize(uint64_t nSize);
-    uint64_t              tell() const;
-    int64_t               read(void * buf, uint64_t size);
-    int64_t               write(const void * buf, uint64_t size);
-    int64_t               read(uint64_t pos, void * buf, uint64_t size);
-    int64_t               write(uint64_t pos, const void * buf, uint64_t size);
-    AsyncFile &           readBuffer(void * buf, uint64_t size);
-    AsyncFile &           writeBuffer(const void * buf, uint64_t size);
-    AsyncFile &           readBuffer(uint64_t pos, void * buf, uint64_t size);
-    AsyncFile &           writeBuffer(uint64_t pos, const void * buf, uint64_t size);
+    bool isOpen() const;
+    AsyncFile & open();
+    bool tryOpen();
+    AsyncFile & close(bool calledFromDestructor = false);
+    AsyncFile & seek(uint64_t pos);
+    uint64_t size() const;
+    AsyncFile & resize(uint64_t nSize);
+    uint64_t tell() const;
+    int64_t read(void * buf, uint64_t size);
+    int64_t write(const void * buf, uint64_t size);
+    int64_t read(uint64_t pos, void * buf, uint64_t size);
+    int64_t write(uint64_t pos, const void * buf, uint64_t size);
+    AsyncFile & readBuffer(void * buf, uint64_t size);
+    AsyncFile & writeBuffer(const void * buf, uint64_t size);
+    AsyncFile & readBuffer(uint64_t pos, void * buf, uint64_t size);
+    AsyncFile & writeBuffer(uint64_t pos, const void * buf, uint64_t size);
 
-    bool                  tryRDLock(uint64_t pos, uint64_t size);
-    bool                  tryWRLock(uint64_t pos, uint64_t size);
-    AsyncFile &           rdLock(uint64_t pos, uint64_t size);
-    AsyncFile &           wrLock(uint64_t pos, uint64_t size);
-    AsyncFile &           unLock(uint64_t pos, uint64_t size);
+    bool tryRDLock(uint64_t pos, uint64_t size);
+    bool tryWRLock(uint64_t pos, uint64_t size);
+    AsyncFile & rdLock(uint64_t pos, uint64_t size);
+    AsyncFile & wrLock(uint64_t pos, uint64_t size);
+    AsyncFile & unLock(uint64_t pos, uint64_t size);
 
-    uintptr_t             gets(AutoPtr< char> & p,bool * eof = NULL);
+    uintptr_t gets(AutoPtr<char> & p,bool * eof = NULL);
 
     class LineGetBuffer {
       public:
@@ -93,19 +93,22 @@ class AsyncFile : public AsyncDescriptor {
 #endif
 #if defined(__WIN32__) || defined(__WIN64__)
     union int64 {
-        int64_t a;
-        struct {
-            ULONG lo;
-            LONG  hi;
-        };
+      int64_t a;
+      struct {
+        ULONG lo;
+        LONG  hi;
+      };
     };
     union uint64 {
-        uint64_t  a;
-        struct {
-            ULONG lo;
-            ULONG hi;
-        };
+      uint64_t  a;
+      struct {
+        ULONG lo;
+        ULONG hi;
+      };
     };
+    HANDLE handle_;
+#else
+    int handle_;
 #endif
     utf8::String fileName_;
     struct {
@@ -138,7 +141,7 @@ class AsyncFile : public AsyncDescriptor {
 //---------------------------------------------------------------------------
 inline bool AsyncFile::isOpen() const
 {
-  return file_ != INVALID_HANDLE_VALUE;
+  return file_ != INVALID_HANDLE_VALUE || handle_ != INVALID_HANDLE_VALUE;
 }
 //---------------------------------------------------------------------------
 inline const utf8::String & AsyncFile::fileName() const

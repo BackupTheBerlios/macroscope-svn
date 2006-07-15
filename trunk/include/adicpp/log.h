@@ -74,10 +74,8 @@ class LogFile {
     const char * const & priNick(LogMessagePriority filter) const;
   protected:
     static const char * const priNicks_[];
-    FileHandleContainer file_;
-    InterlockedMutex mutex_;
-    AutoPtr<AsyncFile> afile_;
-    AutoPtr<FiberInterlockedMutex> fmutex_;
+    AsyncFile file_;
+    FiberInterlockedMutex mutex_;
     uintptr_t enabledLevels_;
     uint64_t rotationThreshold_;
     uintptr_t rotatedFileCount_;

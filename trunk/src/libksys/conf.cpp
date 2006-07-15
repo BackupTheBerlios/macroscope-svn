@@ -142,12 +142,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   for(;;){
     if( aheadi_.eof() ){
       uintptr_t size;
-      if( isRunInFiber() ){
-        size = afile_->gets(rs_);
-      }
-      else {
-        size = file_.gets(rs_);
-      }
+      size = file_.gets(rs_);
       if( size == 0 ){
         ahead_.resize(0);
         t = ttEof;
@@ -375,23 +370,14 @@ Config & Config::parse()
     }
   }
   fileName = file_.fileName();
-  if( isRunInFiber() ){
-    if( afile_ == NULL ) afile_ = new AsyncFile;
-    afile_->fileName(fileName);
-  }
   struct Stat st;
   if( stat(fileName,st) && mtime_ != st.st_mtime ){
     AutoPtr<Randomizer> rnd(new Randomizer);
     rnd->randomize();
-    for( intptr_t i = isRunInFiber() ? 0 : maxTryOpenCount_ - 1; i >= 0; i-- ){
+    for( intptr_t i = maxTryOpenCount_ - 1; i >= 0; i-- ){
       try {
-        if( isRunInFiber() ){
-          afile_->detach();
-          afile_->readOnly(true).open();
-        }
-        else {
-          file_.readOnly(true).open();
-        }
+        file_.detach();
+        file_.readOnly(true).open();
 /*#ifndef NDEBUG
         fprintf(stderr,"config file %s used\n", (const char *) file_.fileName().getANSIString());
 #endif*/
@@ -406,13 +392,7 @@ Config & Config::parse()
         i = 0;
       }
       catch( ExceptionSP & e ){
-        if( isRunInFiber() ){
-          afile_->detach();
-          afile_->close();
-        }
-        else {
-          file_.close();
-        }
+        file_.close();
 #if defined(__WIN32__) || defined(__WIN64__)
         if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
             e->code() != ERROR_LOCK_VIOLATION + errorOffset )
@@ -421,13 +401,7 @@ Config & Config::parse()
 #endif
           throw;
       }
-      if( isRunInFiber() ){
-        afile_->detach();
-        afile_->close();
-      }
-      else {
-        file_.close();
-      }
+      file_.close();
       if( i > 0 )
         sleep(rnd->random(
           maxTimeBetweenTryOpen_ - minTimeBetweenTryOpen_ + 1) + minTimeBetweenTryOpen_
@@ -439,7 +413,7 @@ Config & Config::parse()
 //---------------------------------------------------------------------------
 Config & Config::override(const Array< utf8::String> & oargv)
 {
-  const Array< utf8::String> &  pargv = oargv.count() > 0 ? oargv : argv();
+  const Array< utf8::String> & pargv = oargv.count() > 0 ? oargv : argv();
   for( uintptr_t arg = 0; arg < pargv.count(); arg++ ){
     if( pargv[arg].strcmp("-co") == 0 && arg + 2 < pargv.count() ){
       valueRefByPath(pargv[arg + 1]) = pargv[arg + 2];

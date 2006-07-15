@@ -56,9 +56,6 @@ LogFile::LogFile() :
   rotatedFileCount_(10)
 {
   file_.createIfNotExist(true);
-  afile_ = new AsyncFile;
-  afile_->createIfNotExist(true);
-  fmutex_ = new FiberInterlockedMutex;
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::open()
@@ -68,20 +65,13 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-  afile_->close();
   file_.close();
   return *this;
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::fileName(const utf8::String & name)
 {
-  {
-    AutoLock<FiberInterlockedMutex> lock(fmutex_);
-    afile_->close();
-    afile_->fileName(name);
-  }
-  AutoLock<InterlockedMutex> lock(mutex_);
-  file_.close();
+  AutoLock<FiberInterlockedMutex> lock(mutex_);
   file_.fileName(name);
   return *this;
 }
@@ -100,100 +90,30 @@ const char * const  LogFile::priNicks_[]  = {
 void LogFile::rotate(uint64_t size)
 {
   if( rotatedFileCount_ > 0 && size <= rotationThreshold_) return;
-  if( isRunInFiber() ){
-    AsyncFile flock(afile_->fileName() + ".lck");
-    flock.createIfNotExist(true).removeAfterClose(true).open();
-    if( flock.tryWRLock(0,0) ){
-      if( afile_->size() <= rotationThreshold_) return;
-      utf8::String fileExt(getFileExt(afile_->fileName()));
-      Stat st;
-      intptr_t i = 0;
-      while( stat(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
-      while( i > 0 ){
-        if( i >= (intptr_t) rotatedFileCount_ ){
-          remove(changeFileExt(afile_->fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
-        }
-        else {
-          rename(
-            changeFileExt(afile_->fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
-            changeFileExt(afile_->fileName(),"." + utf8::int2Str(i)) + fileExt
-          );
-        }
-        i--;
+  AsyncFile lockFile(file_.fileName() + ".lck");
+  lockFile.createIfNotExist(true).removeAfterClose(true).open();
+  AutoFileWRLock<AsyncFile> flock;
+  if( lockFile.tryWRLock(0,0) ){
+    flock.setLocked(lockFile,0,0);
+    if( file_.size() <= rotationThreshold_) return;
+    utf8::String fileExt(getFileExt(file_.fileName()));
+    Stat st;
+    intptr_t i = 0;
+    while( stat(changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
+    while( i > 0 ){
+      if( i >= (intptr_t) rotatedFileCount_ ){
+        remove(changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
       }
-      afile_->close();
-      for(;;){
-        {
-          AutoLock<InterlockedMutex> lock(mutex_);
-          file_.close();
-        }
-        bool renamed = false;
-        try {
-          rename(afile_->fileName(),changeFileExt(afile_->fileName(),".0") + fileExt);
-          renamed = true;
-        }
-        catch( ExceptionSP & e ){
-#if defined(__WIN32__) || defined(__WIN64__)
-          if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-              e->code() != ERROR_LOCK_VIOLATION + errorOffset ) throw;
-#else
-          if( e->code() != EAGAIN && e->code() != EDEADLK ) throw;
-#endif
-        }
-        if( renamed ) break;
+      else {
+        rename(
+          changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
+          changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt
+        );
       }
-      flock.unLock(0,0);
+      i--;
     }
-    else {
-      afile_->close();
-    }
-  }
-  else {
-    FileHandleContainer flock(file_.fileName() + ".lck");
-    flock.createIfNotExist(true).removeAfterClose(true).open();
-    if( flock.tryWRLock(0,0) ){
-      utf8::String fileExt(getFileExt(file_.fileName()));
-      Stat st;
-      intptr_t i = 0;
-      while( stat(changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
-      while( i > 0 ){
-        if( i >= (intptr_t) rotatedFileCount_ ){
-          remove(changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
-        }
-        else {
-          rename(
-            changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
-            changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt
-          );
-        }
-        i--;
-      }
-      file_.close();
-      for(;;){
-        {
-          AutoLock<FiberInterlockedMutex> lock(fmutex_);
-          afile_->close();
-        }
-        bool renamed = false;
-        try {
-          rename(file_.fileName(),changeFileExt(file_.fileName(),".0") + fileExt);
-          renamed = true;
-        }
-        catch( ExceptionSP & e ){
-#if defined(__WIN32__) || defined(__WIN64__)
-          if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-              e->code() != ERROR_LOCK_VIOLATION + errorOffset ) throw;
-#else
-          if( e->code() != EAGAIN && e->code() != EDEADLK ) throw;
-#endif
-        }
-        if( renamed ) break;
-      }
-      flock.unLock(0,0);
-    }
-    else {
-      file_.close();
-    }
+    file_.close();
+    rename(file_.fileName(),changeFileExt(file_.fileName(),".0") + fileExt);
   }
 }
 //---------------------------------------------------------------------------
@@ -295,56 +215,29 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
   }
   buf.realloc(a + l);
   utf8::utf8s2mbcs(CP_OEMCP,buf.ptr() + a,l,stream.plane(),stream.count());
-  if( isRunInFiber() ){
-    AutoLock<FiberInterlockedMutex> lock(fmutex_);
-    if( !afile_->isOpen() ){
-      if( afile_->fileName().strlen() == 0 )
-        afile_->fileName(changeFileExt(getExecutableName(),".log"));
-      afile_->open();
+  AutoLock<FiberInterlockedMutex> lock(mutex_);
+  if( file_.fileName().strlen() == 0 )
+    file_.fileName(changeFileExt(getExecutableName(),".log"));
+  file_.open();
+  file_.detach();
+  file_.attach();
+  uint64_t sz = 0;
+  try {
+    AutoFileWRLock<AsyncFile> flock(file_,0,0);
+    if( pri == lmDIRECT ){
+      file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
     }
     else {
-      afile_->detach();
-      afile_->attach();
+      file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
     }
-    uint64_t sz = afile_->size();
-    try {
-      AutoFileWRLock<AsyncFile> flock(afile_,sz,0);
-      if( pri == lmDIRECT ){
-        afile_->writeBuffer(afile_->size(),buf.ptr() + a,l * sizeof(char));
-      }
-      else {
-        afile_->writeBuffer(afile_->size(),buf.ptr(),(a + l) * sizeof(char));
-      }
-      sz = afile_->size();
-    }
-    catch( ... ){
-      afile_->detach();
-      afile_->close();
-      throw;
-    }
-    rotate(sz);
-    afile_->detach();
+    sz = file_.size();
   }
-  else {
-    AutoLock<InterlockedMutex> lock(mutex_);
-    if( !file_.isOpen() ){
-      if( file_.fileName().strlen() == 0 )
-        file_.fileName(changeFileExt(getExecutableName(),".log"));
-      file_.open();
-    }
-    uint64_t sz = file_.size();
-    {
-      AutoFileWRLock<FileHandleContainer> flock(file_,sz,0);
-      if( pri == lmDIRECT ){
-        file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
-      }
-      else {
-        file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
-      }
-      sz = file_.size();
-    }
-    rotate(sz);
+  catch( ... ){
+    file_.close();
+    throw;
   }
+  rotate(sz);
+  file_.detach();
   return *this;
 }
 //---------------------------------------------------------------------------

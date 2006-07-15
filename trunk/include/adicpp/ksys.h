@@ -64,12 +64,13 @@ template< typename T> inline void xchg(T & v1, T & v2)
 #include <adicpp/mutant.h>
 #include <adicpp/sysutils.h>
 #include <adicpp/fhc.h>
+#include <adicpp/sockaddr.h>
+#include <adicpp/async.h>
+#include <adicpp/afd.h>
 #include <adicpp/log.h>
 #include <adicpp/conf.h>
 #include <adicpp/shsem.h>
-#include <adicpp/sockaddr.h>
 #include <adicpp/fiber.h>
-#include <adicpp/afd.h>
 #include <adicpp/scktintf.h>
 #include <adicpp/sha.h>
 #include <adicpp/lzo.h>

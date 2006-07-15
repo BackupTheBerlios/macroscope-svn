@@ -183,14 +183,13 @@ class Config : public ConfigSection {
     Config &                    parseSectionHeader(ConfigSection & root);
     Config &                    parseSectionBody(ConfigSection & root);
   private:
-    static uint8_t        defaultFileName_[];
-    FileHandleContainer   file_;
-    AutoPtr<AsyncFile>    afile_;
-    time_t                mtime_;
-    Array<utf8::String>   security_;
-    uintptr_t             maxTryOpenCount_;
-    int64_t               minTimeBetweenTryOpen_;
-    int64_t               maxTimeBetweenTryOpen_;
+    static uint8_t defaultFileName_[];
+    AsyncFile file_;
+    time_t mtime_;
+    Array<utf8::String> security_;
+    uintptr_t maxTryOpenCount_;
+    int64_t minTimeBetweenTryOpen_;
+    int64_t maxTimeBetweenTryOpen_;
 
     enum TokenType { 
       ttUnknown, 
