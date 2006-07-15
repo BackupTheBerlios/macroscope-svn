@@ -443,10 +443,9 @@ void KFTPClient::main()
   ksys::Fetcher fetch;
   fetch.url("http://www.firebirdsql.org/download/prerelease/rlsnotes20rc3_0200_82.zip");
   fetch.url("http://system.folium.local:8010/top-200401-ira.html");
-  fetch.proxy("korvin:WFa1PXt-@192.168.201.2:3128");
+//  fetch.proxy("korvin:WFa1PXt-@192.168.201.2:3128");
   fetch.resume(true);
   fetch.fetch();
-
 
 
   remoteAddress_.resolve(host_,MSFTPDefaultPort);
