@@ -182,7 +182,7 @@ inline const uint32_t & LZO1X::wBufPos() const
 //---------------------------------------------------------------------------
 inline LZO1X & LZO1X::wBufSize(uintptr_t wBufSize)
 {
-  wBufSize_ = wBufSize > 256u * 1024u ? wBufSize_ : wBufSize;
+  wBufSize_ = (uint32_t) (wBufSize > 256u * 1024u ? wBufSize_ : wBufSize);
   return *this;
 }
 //---------------------------------------------------------------------------
