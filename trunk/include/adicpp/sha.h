@@ -64,6 +64,7 @@ class SHA256 : private SHA256_CTX {
     SHA256 &        make(const void * src, uintptr_t len);
 
     const uint8_t * sha256() const;
+    uintptr_t size() const;
   protected:
     uint8_t sha256_[32];
   private:
@@ -103,6 +104,11 @@ inline SHA256 & SHA256::make(const void * src, uintptr_t len)
 inline const uint8_t * SHA256::sha256() const
 {
   return sha256_;
+}
+//---------------------------------------------------------------------------
+inline uintptr_t SHA256::size() const
+{
+  return sizeof(sha256_);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

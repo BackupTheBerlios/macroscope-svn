@@ -30,6 +30,11 @@ namespace ksys {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+const uint8_t Archive::magic_[16] = {
+  0x08, 0xC2, 0x10, 0x35, 0x24, 0x17, 0x48, 0x99,
+  0x87, 0x0E, 0xD9, 0x2F, 0xC2, 0x23, 0xAE, 0x8B
+};
+//------------------------------------------------------------------------------
 Archive::~Archive()
 {
 }
@@ -37,6 +42,57 @@ Archive::~Archive()
 Archive::Archive()
 {
   wBufSize(getpagesize() * 64).method(LZO1X_999).crc(ADLER32).level(9).optimize(true);
+}
+//------------------------------------------------------------------------------
+Archive & Archive::clear()
+{
+  return *this;
+}
+//------------------------------------------------------------------------------
+Archive & Archive::pack(const Vector<utf8::String> & fileList)
+{
+  LZO1X::active(false);
+  if( password_.strlen() > 0 ){
+    if( password_.strncasecmp("sha256:",7) == 0 ){
+      uint8_t sha256[32];
+      base64Decode(
+        utf8::String::Iterator(password_) + 7,
+        sha256,
+        sizeof(sha256)
+      );
+      init(sha256);
+    }
+    else {
+      init(password_.c_str(),password_.size());
+    }
+    SHA256Filter::active(true);
+  }
+  for( intptr_t i = fileList.count() - 1; i >= 0; i-- ){
+    AsyncFile file(fileList[i]);
+    file.readOnly(true).open();
+/*    int64_t w = write(buf,len);
+    if( w == 0 ){
+      AutoPtr<uint8_t> cbuf;
+      uint8_t * p;
+      int32_t ll;
+      compress(cbuf,p,ll);
+      if( SHA256Filter::active() ) encrypt(p,ll);
+      file.writeBuffer(p,ll);
+      wBufPos(0);
+    }*/
+  }
+  LZO1X::active(false);
+  return *this;
+}
+//------------------------------------------------------------------------------
+Archive & Archive::unpack(const utf8::String & path)
+{
+  return *this;
+}
+//------------------------------------------------------------------------------
+Archive & Archive::list(Vector<utf8::String> & list)
+{
+  return *this;
 }
 //------------------------------------------------------------------------------
 } // namespace ksys
