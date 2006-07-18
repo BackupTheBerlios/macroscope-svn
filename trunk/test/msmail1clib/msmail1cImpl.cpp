@@ -1324,7 +1324,8 @@ Cmsmail1c::LockedFile::~LockedFile()
   CloseHandle(hEvent_);
 }
 //---------------------------------------------------------------------------
-Cmsmail1c::LockedFile::LockedFile() : handle_(INVALID_HANDLE_VALUE), hEvent_(NULL), lastError_(0)
+Cmsmail1c::LockedFile::LockedFile() :
+  handle_(INVALID_HANDLE_VALUE), hEvent_(NULL), lastError_(0), locked_(false)
 {
 }
 //---------------------------------------------------------------------------
@@ -1386,34 +1387,37 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
           throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
       }
     }
-    memset(&Overlapped,0,sizeof(Overlapped));
-    Overlapped.hEvent = file->hEvent_;
-    SetLastError(0);
-    BOOL lk = LockFileEx(file->handle_,LOCKFILE_EXCLUSIVE_LOCK,0,~DWORD(0),~DWORD(0),&Overlapped);
-    if( lk == 0 && GetLastError() != ERROR_IO_PENDING ){
-        err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
-    }
-    if( GetLastError() == ERROR_IO_PENDING ){
-      DWORD st = (DWORD) rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
-      st = maxSleepTime == 0 && minSleepTime == 0 ? 0 : st;
-      DWORD state = WaitForSingleObject(file->hEvent_,st);
-      if( state == WAIT_TIMEOUT ){
-        CancelIo(file->handle_);
-        SetLastError(WAIT_TIMEOUT);
-        err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    if( !file->locked_ ){
+      memset(&Overlapped,0,sizeof(Overlapped));
+      Overlapped.hEvent = file->hEvent_;
+      SetLastError(0);
+      BOOL lk = LockFileEx(file->handle_,LOCKFILE_EXCLUSIVE_LOCK,0,~DWORD(0),~DWORD(0),&Overlapped);
+      if( lk == 0 && GetLastError() != ERROR_IO_PENDING ){
+          err = GetLastError() + errorOffset;
+          throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
       }
-      else if( state == WAIT_ABANDONED ){
-        SetLastError(WAIT_TIMEOUT);
-        err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      if( GetLastError() == ERROR_IO_PENDING ){
+        DWORD st = (DWORD) rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
+        st = maxSleepTime == 0 && minSleepTime == 0 ? 0 : st;
+        DWORD state = WaitForSingleObject(file->hEvent_,st);
+        if( state == WAIT_TIMEOUT ){
+          CancelIo(file->handle_);
+          SetLastError(WAIT_TIMEOUT);
+          err = GetLastError() + errorOffset;
+          throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        }
+        else if( state == WAIT_ABANDONED ){
+          SetLastError(WAIT_TIMEOUT);
+          err = GetLastError() + errorOffset;
+          throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        }
+        DWORD NumberOfBytesTransferred;
+        if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE) == 0 ){
+          err = GetLastError() + errorOffset;
+          throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        }
       }
-      DWORD NumberOfBytesTransferred;
-      if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE) == 0 ){
-        err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
-      }
+      file->locked_ = true;
     }
   }
   catch( ExceptionSP & e ){
@@ -1429,13 +1433,16 @@ STDMETHODIMP Cmsmail1c::unlockFile(IN BSTR name,OUT LONG * pLastError)
   *pLastError = 0;
   try {
     file = findFileByName(name);
-    if( file != NULL ){
+    if( file != NULL && file->locked_ ){
       OVERLAPPED Overlapped;
       memset(&Overlapped,0,sizeof(Overlapped));
       if( UnlockFileEx(file->handle_,0,~DWORD(0),~DWORD(0),&Overlapped) == 0 ){
         int32_t err = GetLastError() + errorOffset;
         throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
       }
+//      CloseHandle(file->handle_);
+//      file->handle_ = INVALID_HANDLE_VALUE;
+      file->locked_ = false;
     }
     else {
       *pLastError = ERROR_FILE_NOT_FOUND;

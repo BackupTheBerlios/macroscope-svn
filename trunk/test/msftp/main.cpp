@@ -439,6 +439,7 @@ void KFTPClient::get()
 //------------------------------------------------------------------------------
 void KFTPClient::main()
 {
+#ifndef NDEBUG
 // test
   ksys::Fetcher fetch;
   fetch.url("http://www.firebirdsql.org/download/prerelease/rlsnotes20rc3_0200_82.zip");
@@ -446,8 +447,7 @@ void KFTPClient::main()
 //  fetch.proxy("korvin:WFa1PXt-@192.168.201.2:3128");
   fetch.resume(true);
   fetch.fetch();
-
-
+#endif
   remoteAddress_.resolve(host_,MSFTPDefaultPort);
   connect(remoteAddress_);
 

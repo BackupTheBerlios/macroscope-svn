@@ -217,6 +217,7 @@ public:
       HANDLE hEvent_;
       utf8::String name_;
       DWORD lastError_;
+      bool locked_;
 
       ~LockedFile();
       LockedFile();
