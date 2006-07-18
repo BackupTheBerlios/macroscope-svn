@@ -38,16 +38,19 @@ class Archive : protected LZO1X, protected SHA256Filter {
 
     Archive & clear();
     Archive & pack(const Vector<utf8::String> & fileList);
-    Archive & unpack(const utf8::String & path);
-    Archive & list(Vector<utf8::String> & list);
+    Archive & unpack(const utf8::String & path,Vector<utf8::String> * pList = NULL);
 
     static const uint8_t magic_[16];
   protected:
     utf8::String fileName_;
     utf8::String password_;
+
+    Archive & readBuffer(void * buffer,uint64_t len,AsyncFile & archive);
+    Archive & writeBuffer(const void * buffer,uint64_t len,AsyncFile & archive);
+    Archive & flush(AsyncFile & archive);
+    Archive & activateFeatures();
   private:
 };
-//---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

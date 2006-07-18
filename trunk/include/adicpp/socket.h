@@ -135,7 +135,9 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
 
     // high level methods
     AsyncSocket &     read(void * buf, uint64_t len);
+    AsyncSocket &     readBuffer(void * buf, uint64_t len);
     AsyncSocket &     write(const void * buf, uint64_t len);
+    AsyncSocket &     writeBuffer(const void * buf, uint64_t len);
 
     utf8::String      readString();
 
@@ -261,6 +263,16 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     void openAPI();
     void closeAPI();
 };
+//---------------------------------------------------------------------------
+inline AsyncSocket & AsyncSocket::readBuffer(void * buf,uint64_t len)
+{
+  return read(buf,len);
+}
+//---------------------------------------------------------------------------
+inline AsyncSocket & AsyncSocket::writeBuffer(const void * buf,uint64_t len)
+{
+  return write(buf,len);
+}
 //---------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::activateEncryption(const uint8_t sha256[32])
 {

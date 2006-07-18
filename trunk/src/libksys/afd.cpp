@@ -352,15 +352,16 @@ int64_t AsyncFile::read(void * buf,uint64_t size)
         SetLastError(fiber()->event_.errno_);
         if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
 #else
-        errno = fiber()->event_.errno_;
+        if( fiber()->event_.count_ == 0 ) break;
 #endif
-        return -1;
+        if( r == 0 ) r = -1;
+        break;
       }
+      if( fiber()->event_.count_ == 0 ) break;
       buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
       r += fiber()->event_.count_;
       size -= fiber()->event_.count_;
       seek(pos + fiber()->event_.count_);
-      if( (uint64_t) r < size ) break;
     }
     return r;
   }

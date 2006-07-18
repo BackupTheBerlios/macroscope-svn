@@ -72,7 +72,7 @@ LZO1X & LZO1X::compress(AutoPtr<uint8_t> & buf,uint8_t * & p,int32_t & len)
   int r = 0;
   lzo_uint dst_len = 0;
   if( level_ > 0 ){
-    buf.alloc(wBufPos_ + wBufPos_ / 16 + 64 + 3 + sizeof(int32_t) * 2 + (crc_ != CRCNone) * sizeof(uint32_t));
+    buf.realloc(wBufPos_ + wBufPos_ / 16 + 64 + 3 + sizeof(int32_t) * 2 + (crc_ != CRCNone) * sizeof(uint32_t));
     switch( method_ ){
       case LZO1X_1    :
         r = lzo1x_1_compress(

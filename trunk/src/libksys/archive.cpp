@@ -49,9 +49,62 @@ Archive & Archive::clear()
   return *this;
 }
 //------------------------------------------------------------------------------
-Archive & Archive::pack(const Vector<utf8::String> & fileList)
+Archive & Archive::flush(AsyncFile & archive)
+{
+  uint8_t * p;
+  int32_t ll;
+  AutoPtr<uint8_t> cbuf;
+  compress(cbuf,p,ll);
+  if( SHA256Filter::active() ) encrypt(p,ll);
+  archive.writeBuffer(p,ll);
+  wBufPos(0);
+  return *this;
+}
+//------------------------------------------------------------------------------
+Archive & Archive::writeBuffer(const void * buffer,uint64_t len,AsyncFile & archive)
+{
+  while( len > 0 ){
+    int64_t w = write(buffer,len);
+    if( w == 0 ) flush(archive);
+    buffer = (const uint8_t *) buffer + (uintptr_t) w;
+    len -= (uintptr_t) w;
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+Archive & Archive::readBuffer(void * buffer,uint64_t len,AsyncFile & archive)
+{
+  while( len > 0 ){
+    int64_t r = read(buffer,len);
+    if( r == 0 ){
+      int32_t cps; // compressed packet size
+      archive.readBuffer(&cps,sizeof(cps));
+      if( SHA256Filter::active() ) decrypt(&cps,sizeof(cps));
+      if( cps < 0 ){
+        rBufSize(-cps);
+        archive.readBuffer(rBuf(),-cps);
+        if( SHA256Filter::active() ) decrypt(rBuf(),-cps);
+      }
+      else if( cps >= 0 ){
+        AutoPtr<uint8_t> buf;
+        buf.alloc(cps);
+        archive.readBuffer(buf.ptr() + sizeof(int32_t),cps);
+        *(int32_t *) buf.ptr() = cps;
+        if( SHA256Filter::active() ) decrypt(buf.ptr() + sizeof(cps),cps - sizeof(cps));
+        decompress(buf);
+      }
+      rBufPos(0);
+    }
+    buffer = (uint8_t *) buffer + (uintptr_t) r;
+    len -= (uintptr_t) r;
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+Archive & Archive::activateFeatures()
 {
   LZO1X::active(false);
+  SHA256Filter::active(false);
   if( password_.strlen() > 0 ){
     if( password_.strncasecmp("sha256:",7) == 0 ){
       uint8_t sha256[32];
@@ -67,31 +120,97 @@ Archive & Archive::pack(const Vector<utf8::String> & fileList)
     }
     SHA256Filter::active(true);
   }
-  for( intptr_t i = fileList.count() - 1; i >= 0; i-- ){
+  LZO1X::active(true);
+  return *this;
+}
+//------------------------------------------------------------------------------
+Archive & Archive::pack(const Vector<utf8::String> & fileList)
+{
+  activateFeatures();
+  intptr_t i;
+  AutoPtr<uint8_t> cbuf;
+  AsyncFile archive(fileName_);
+  archive.createIfNotExist(true).open();
+  AutoFileWRLock<AsyncFile> lock(archive);
+  if( archive.size() == 0 ) archive.writeBuffer(magic_,sizeof(magic_));
+  for( i = fileList.count() - 1; i >= 0; i-- ){
     AsyncFile file(fileList[i]);
     file.readOnly(true).open();
-/*    int64_t w = write(buf,len);
-    if( w == 0 ){
-      AutoPtr<uint8_t> cbuf;
-      uint8_t * p;
-      int32_t ll;
+    uint64_t sz = file.size(), l, la;
+    l = fileList[i].size();
+    writeBuffer(&l,sizeof(l),archive);
+    writeBuffer(fileList[i].c_str(),l,archive);
+    writeBuffer(&sz,sizeof(sz),archive);
+    for( l = 0; l < sz; l += la ){
+      la = l > wBufSpace() ? wBufSpace() : l;
+      file.readBuffer(wBuf() + wBufShift() + wBufPos(),la);
+      wBufPos(wBufPos() + (uintptr_t) la);
+      flush(archive);
+    }
+  }
+/*  for( i = fileList.count() - 1; i >= -1; i-- ){
+    if( i < 0 || write(fileList[i].c_str(),fileList[i].size() + 1) == 0 ){
       compress(cbuf,p,ll);
       if( SHA256Filter::active() ) encrypt(p,ll);
-      file.writeBuffer(p,ll);
-      wBufPos(0);
-    }*/
-  }
+      archive.writeBuffer(p,ll);
+    }
+  }*/
   LZO1X::active(false);
+  SHA256Filter::active(false);
   return *this;
 }
 //------------------------------------------------------------------------------
-Archive & Archive::unpack(const utf8::String & path)
+Archive & Archive::unpack(const utf8::String & path,Vector<utf8::String> * pList)
 {
-  return *this;
-}
-//------------------------------------------------------------------------------
-Archive & Archive::list(Vector<utf8::String> & list)
-{
+  Vector<utf8::String> list;
+  if( pList == NULL ) pList = &list;
+  AsyncFile archive(fileName_);
+  archive.open();
+  AutoFileWRLock<AsyncFile> lock(archive);
+  uint8_t magic[sizeof(magic_)];
+  archive.readBuffer(magic,sizeof(magic));
+  if( memcmp(magic,magic_,sizeof(magic)) != 0 )
+    throw ksys::ExceptionSP(
+      new Exception(
+#if defined(__WIN32__) || defined(__WIN64__)
+        ERROR_INVALID_DATA,
+#else
+        EINVAL,
+#endif
+        __PRETTY_FUNCTION__
+      )
+    );
+  for(;;){
+    uint64_t sz, l, la;
+    try {
+      readBuffer(&l,sizeof(l),archive);
+    }
+    catch( ExceptionSP & e ){
+      if( dynamic_cast<EFileEOF *>(e.ptr()) != NULL ) break;
+      throw;
+    }
+    utf8::String fileName;
+    fileName.resize((uintptr_t) l);
+    readBuffer(fileName.c_str(),l,archive);
+    pList->add(fileName);
+    readBuffer(&sz,sizeof(sz),archive);
+    AutoPtr<uint8_t> buf;
+    buf.alloc(wBufSize());
+    AsyncFile file(includeTrailingPathDelimiter(path) + fileName);
+    file.createIfNotExist(true);
+    try {
+      file.open();
+    }
+    catch( ... ){
+      createDirectory(getPathFromPathName(includeTrailingPathDelimiter(path) + fileName));
+    }
+    file.open().resize(0);
+    for( l = 0; l < sz; l += la ){
+      la = l > wBufSize() ? wBufSize() : l;
+      readBuffer(buf,la,archive);
+      file.writeBuffer(buf,la);
+    }
+  }  
   return *this;
 }
 //------------------------------------------------------------------------------

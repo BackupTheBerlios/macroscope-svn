@@ -264,10 +264,7 @@ inline SHA256Filter & SHA256Filter::encrypt(void * data, uintptr_t len)
 //---------------------------------------------------------------------------
 inline SHA256Filter & SHA256Filter::encrypt(void * dst, const void * src, uintptr_t len)
 {
-  if( active_ )
-    encryptor_.crypt(dst, src, len);
-  else
-    memcpy(dst, src, len);
+  encryptor_.crypt(dst, src, len);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -279,10 +276,7 @@ inline SHA256Filter & SHA256Filter::decrypt(void * data, uintptr_t len)
 //---------------------------------------------------------------------------
 inline SHA256Filter & SHA256Filter::decrypt(void * dst, const void * src, uintptr_t len)
 {
-  if( active_ )
-    decryptor_.crypt(dst, src, len);
-  else
-    memcpy(dst, src, len);
+  decryptor_.crypt(dst, src, len);
   return *this;
 }
 //---------------------------------------------------------------------------

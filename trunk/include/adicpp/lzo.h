@@ -46,6 +46,7 @@ class LZO1X {
     int64_t           read(void * buf,uint64_t len);
 
     uint8_t *         wBuf() const;
+    uint32_t          wBufShift() const;
     LZO1X &           wBufPos(uintptr_t wBufPos);
     const uint32_t &  wBufPos() const;
     LZO1X &           wBufSize(uintptr_t wBufSize);
@@ -180,6 +181,11 @@ inline const uint32_t & LZO1X::wBufPos() const
   return wBufPos_;
 }
 //---------------------------------------------------------------------------
+inline uint32_t LZO1X::wBufShift() const
+{
+  return (uint32_t) sizeof(int32_t);
+}
+//---------------------------------------------------------------------------
 inline LZO1X & LZO1X::wBufSize(uintptr_t wBufSize)
 {
   wBufSize_ = (uint32_t) (wBufSize > 256u * 1024u ? wBufSize_ : wBufSize);
@@ -199,7 +205,7 @@ inline uint32_t LZO1X::wBufSpace() const
 inline int64_t LZO1X::write(const void * buf,uint64_t len)
 {
   if( wBufSpace() < len ) len = wBufSpace();
-  memcpy(wBuf_.ptr() + wBufPos_ + sizeof(int32_t), buf, (size_t) len);
+  memcpy(wBuf_.ptr() + wBufPos_ + wBufShift(), buf, (size_t) len);
   wBufPos_ += (uint32_t) len;
   return len;
 }
