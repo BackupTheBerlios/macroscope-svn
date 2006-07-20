@@ -66,7 +66,7 @@ Transaction & Transaction::detach()
 Transaction & Transaction::start()
 {
   if( !attached() )
-    throw ksys::ExceptionSP(new ETrNotAttached(EINVAL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__));
   if( startCount_ == 0 ){
     utf8::String  trSQL ("START TRANSACTION WITH ");
     if( isolation_.strcasecmp("REPEATABLE") == 0 )
@@ -78,7 +78,7 @@ Transaction & Transaction::start()
     else
       trSQL += "CONSISTENT SNAPSHOT";
     if( api.mysql_query(database_->handle_, trSQL.c_str()) != 0 )
-      database_->exceptionHandler(new EDSQLStExecute(
+      database_->exceptionHandler(newObject<EDSQLStExecute>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   startCount_++;
@@ -88,11 +88,11 @@ Transaction & Transaction::start()
 Transaction & Transaction::commit()
 {
   if( !active() )
-    throw ksys::ExceptionSP(new ETrNotActive(EINVAL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__));
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
     if( api.mysql_commit(database_->handle_) != 0 )
-      exceptionHandler(new ETrCommit(
+      exceptionHandler(newObject<ETrCommit>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   startCount_--;
@@ -102,11 +102,11 @@ Transaction & Transaction::commit()
 Transaction & Transaction::rollback()
 {
   if( !active() )
-    throw ksys::ExceptionSP(new ETrNotActive(EINVAL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__));
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
     if( api.mysql_rollback(database_->handle_) != 0 )
-      exceptionHandler(new ETrRollback(
+      exceptionHandler(newObject<ETrRollback>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   startCount_--;

@@ -344,7 +344,9 @@ Service & Service::attach(const utf8::String & name)
     api.open();
     ISC_STATUS_ARRAY  status;
     if( api.isc_service_attach(status, 0, (char *) name.c_str(), &handle_, (short) spb_.spbLen_, spb_.spb_) != 0 ){
-      ksys::AutoPtr<ksys::Exception> e(new EServiceAttach(status, __PRETTY_FUNCTION__));
+      ksys::AutoPtr<ksys::Exception> e(
+        newObject<EServiceAttach>(status, __PRETTY_FUNCTION__)
+      );
       api.close();
       exceptionHandler(e.ptr(NULL));
     }
@@ -358,7 +360,7 @@ Service & Service::detach()
   if( attached() ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_service_detach(status, &handle_) != 0 && !iscIsFatalError(status) )
-      exceptionHandler(new EServiceDetach(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObject<EServiceDetach>(status, __PRETTY_FUNCTION__));
     handle_ = 0;
     api.close();
   }
@@ -385,7 +387,7 @@ Service & Service::invoke()
           ret = api.isc_service_start(status,&handle_,NULL,(short) request_.requestLen_,request_.request_);
           if( ret == 0 ) break;
           if( status[1] != isc_svc_in_use )
-            exceptionHandler(new EServiceStart(status, __PRETTY_FUNCTION__));
+            exceptionHandler(newObject<EServiceStart>(status, __PRETTY_FUNCTION__));
           ksys::sleep1();
         }
         break;
@@ -395,7 +397,7 @@ Service & Service::invoke()
         queryResponseLen_ = getpagesize();
         for( ; ; ){
           if( api.isc_service_query(status, &handle_, NULL, (short) spb_.spbLen_, spb_.spb_, (short) queryResponseLen_, queryResponse_, (short) request_.requestLen_, request_.request_) != 0 )
-            exceptionHandler(new EServiceQuery(status, __PRETTY_FUNCTION__));
+            exceptionHandler(newObject<EServiceQuery>(status,__PRETTY_FUNCTION__));
           if( *queryResponse_ != isc_info_truncated ) break;
           ksys::xrealloc(queryResponse_, queryResponseLen_ << 1);
           queryResponseLen_ <<= 1;

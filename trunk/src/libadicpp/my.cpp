@@ -47,12 +47,12 @@ void MYSQLDatabase::exceptionHandler(ksys::Exception * e)
 //---------------------------------------------------------------------------
 Statement * MYSQLDatabase::newStatement()
 {
-  return new MYSQLStatement;
+  return newObject<MYSQLStatement>();
 }
 //---------------------------------------------------------------------------
 Statement * MYSQLDatabase::newAttachedStatement()
 {
-  ksys::AutoPtr< MYSQLStatement>  p (new MYSQLStatement);
+  ksys::AutoPtr< MYSQLStatement> p(newObject<MYSQLStatement>());
   p->attach(*this);
   return p.ptr(NULL);
 }
@@ -151,7 +151,7 @@ MYSQLStatement * MYSQLStatement::attach(Database & database)
 {
   MYSQLDatabase * p = dynamic_cast< MYSQLDatabase *>(&database);
   if( p == NULL )
-    throw ksys::ExceptionSP(new ksys::Exception(EINVAL, __PRETTY_FUNCTION__));
+    ksys::Exception::throwSP(EINVAL, __PRETTY_FUNCTION__);
   static_cast< mycpp::DSQLStatement *>(this)->attach(*p);
   return this;
 }

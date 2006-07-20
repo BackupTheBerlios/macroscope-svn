@@ -39,39 +39,39 @@ bool AsyncDescriptor::isSocket() const
 //------------------------------------------------------------------------------
 int64_t AsyncDescriptor::read2(void *,uint64_t)
 {
-  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 int64_t AsyncDescriptor::write2(const void *,uint64_t)
 {
-  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
 void AsyncDescriptor::shutdown2()
 {
-  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::flush2()
 {
-  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::close2()
 {
-  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::openAPI()
 {
-  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::closeAPI()
 {
-  throw ExceptionSP(new Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,13 +105,13 @@ void BaseThread::attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber)
     descriptor.fiber_ = &toFiber;
   }
   else if( descriptor.fiber_->thread_ != this ){
-    throw ExceptionSP(new Exception(
+    Exception::throwSP(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_INVALID_DATA + errorOffset
 #else
       EINVAL
 #endif
-      ,__PRETTY_FUNCTION__)
+      ,__PRETTY_FUNCTION__
     );
   }
 }
@@ -126,13 +126,13 @@ void BaseThread::detachDescriptor(AsyncDescriptor & descriptor)
       descriptor.fiber_ = NULL;
     }
     else {
-      throw ExceptionSP(new Exception(
+      Exception::throwSP(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_INVALID_DATA + errorOffset
 #else
         EINVAL
 #endif
-        ,__PRETTY_FUNCTION__)
+        ,__PRETTY_FUNCTION__
       );
     }
   }
@@ -165,18 +165,14 @@ AsyncIoSlave::AsyncIoSlave()
     if( events_[i] != NULL ) continue;
     if( (events_[i] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
       err = GetLastError() + errorOffset;
-      throw ExceptionSP(
-        new Exception(err,__PRETTY_FUNCTION__)
-      );
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
   }
 #elif HAVE_KQUEUE
   kqueue_ = kqueue();
   if( kqueue < 0 ){
     int32_t err = errno;
-    throw ExceptionSP(
-      new Exception(err,__PRETTY_FUNCTION__)
-    );
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   kevents_.resize(64);
 #endif
@@ -1055,7 +1051,7 @@ AsyncAcquireSlave::AsyncAcquireSlave() : sp_(-1)
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
   if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 #endif
 }
@@ -1197,7 +1193,7 @@ AsyncWin9xDirectoryChangeNotificationSlave::AsyncWin9xDirectoryChangeNotificatio
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
   if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //------------------------------------------------------------------------------
@@ -1425,7 +1421,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = ofSlaves_.count() - 1; i >= 0; i-- )
           if( ofSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AsyncOpenFileSlave * p = new AsyncOpenFileSlave;
+          AsyncOpenFileSlave * p = newObject<AsyncOpenFileSlave>();
           AutoPtr<AsyncOpenFileSlave> slave(p);
           if( ofSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
@@ -1449,7 +1445,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = wdcnSlaves_.count() - 1; i >= 0; i-- )
           if( wdcnSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AsyncWin9xDirectoryChangeNotificationSlave * p = new AsyncWin9xDirectoryChangeNotificationSlave;
+          AsyncWin9xDirectoryChangeNotificationSlave * p = newObject<AsyncWin9xDirectoryChangeNotificationSlave>();
           AutoPtr<AsyncWin9xDirectoryChangeNotificationSlave> slave(p);
           if( wdcnSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
@@ -1478,7 +1474,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = ioSlaves_.count() - 1; i >= 0; i-- )
           if( ioSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AsyncIoSlave * p = new AsyncIoSlave;
+          AsyncIoSlave * p = newObject<AsyncIoSlave>();
           AutoPtr<AsyncIoSlave> slave(p);
           if( ioSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
@@ -1495,7 +1491,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
       {
         AutoLock<InterlockedMutex> lock(timerRequestsMutex_);
         if( timerSlave_ == NULL ){
-          AutoPtr<AsyncTimerSlave> slave(new AsyncTimerSlave);
+          AutoPtr<AsyncTimerSlave> slave(newObject<AsyncTimerSlave>());
           slave->resume();
           timerSlave_ = slave.ptr(NULL);
         }
@@ -1516,7 +1512,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
           if( acquireSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AsyncAcquireSlave * p = new AsyncAcquireSlave;
+          AsyncAcquireSlave * p = newObject<AsyncAcquireSlave>();
           AutoPtr<AsyncAcquireSlave> slave(p);
           if( acquireSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
@@ -1526,7 +1522,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
       }
       return;
   }
-  throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+  Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
 }
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

@@ -183,7 +183,7 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
             clear().int_ = i;
             break;
           case    mtBinary :
-            throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+            throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         }
         break;
       case      mtTime :
@@ -217,7 +217,7 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
             clear().int_ = i;
             break;
           case    mtBinary :
-            throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+            throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         }
         break;
       case     mtFloat :
@@ -255,24 +255,24 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
             clear().float_ = f;
             break;
           case    mtBinary :
-            throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+            throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         }
         break;
       case      mtCStr :
         if( m.type_ != mtCStr )
-          throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+          throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         cStr = m.cStr_;
         clear().cStr_ = cStr;
         break;
       case      mtWStr :
         if( m.type_ != mtWStr )
-          throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+          throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         wStr = m.wStr_;
         clear().wStr_ = wStr;
         break;
       case       mtStr :
         if( m.type_ != mtStr )
-          throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+          throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         str = m.str_;
         clear().str_ = str;
         break;
@@ -310,12 +310,12 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
             new (clear().raw_) utf8::String(s);
             break;
           case    mtBinary :
-            throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+            throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         }
         break;
       case    mtBinary :
         if( m.type_ != mtBinary )
-          throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+          throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
         ms = m.stream();
         clear().stream() = ms;
     }
@@ -356,7 +356,7 @@ Mutant::operator bool() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator char() const
@@ -391,7 +391,7 @@ Mutant::operator char() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned char() const
@@ -426,7 +426,7 @@ Mutant::operator unsigned char() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator short() const
@@ -461,7 +461,7 @@ Mutant::operator short() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned short() const
@@ -496,7 +496,7 @@ Mutant::operator unsigned short() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT
@@ -533,7 +533,7 @@ Mutant::operator int() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned() const
@@ -568,7 +568,7 @@ Mutant::operator unsigned() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 #endif
@@ -605,7 +605,7 @@ Mutant::operator long() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned long() const
@@ -640,7 +640,7 @@ Mutant::operator unsigned long() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator intptr_t() const
@@ -675,7 +675,7 @@ Mutant::operator intptr_t() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator uintptr_t() const
@@ -710,7 +710,7 @@ Mutant::operator uintptr_t() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT64_T
@@ -746,7 +746,7 @@ Mutant::operator intmax_t() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator uintmax_t() const
@@ -781,7 +781,7 @@ Mutant::operator uintmax_t() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 #endif
 //---------------------------------------------------------------------------
@@ -808,7 +808,7 @@ Mutant::operator float() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator double() const
@@ -834,7 +834,7 @@ Mutant::operator double() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 #if HAVE_LONG_DOUBLE
@@ -861,7 +861,7 @@ Mutant::operator long double() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 #endif
 //---------------------------------------------------------------------------
@@ -891,7 +891,7 @@ Mutant::operator struct timeval() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator struct tm() const
@@ -919,7 +919,7 @@ Mutant::operator struct tm() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator utf8::String() const
@@ -945,7 +945,7 @@ Mutant::operator utf8::String() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 Mutant::operator MemoryStream() const
@@ -972,7 +972,7 @@ Mutant::operator MemoryStream() const
     default       :
       ;
   }
-  throw ksys::ExceptionSP(new EMutant(EINVAL, __PRETTY_FUNCTION__));
+  throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

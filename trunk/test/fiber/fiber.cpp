@@ -44,7 +44,7 @@ ClientShell::ClientShell()
 void ClientShell::main()
 {
   for( intptr_t i = 10; i > 0; i-- ){
-    ksys::AutoPtr< TestClient>  client  (new TestClient);
+    ksys::AutoPtr< TestClient> client(newObject<TestClient>);
     attachFiber(*client.ptr());
     client.ptr(NULL);
   }

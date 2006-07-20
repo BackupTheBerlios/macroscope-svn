@@ -177,7 +177,7 @@ Vector< T> & Vector< T>::resize(uintptr_t asize)
     xrealloc(ptr_, sizeof(T *) * max);
     max_ = max;
   }
-  while( count_ < asize ) ptr_[count_++] = new T;
+  while( count_ < asize ) ptr_[count_++] = newObject<T>();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -199,7 +199,7 @@ T & Vector< T>::add(const T & val)
     xrealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
-  return *(ptr_[count_++] = new T(val));
+  return *(ptr_[count_++] = newObject<T>(val));
 }
 //-----------------------------------------------------------------------------
 template< class T>
@@ -229,7 +229,7 @@ T & Vector< T>::add()
     xrealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
-  return *(ptr_[count_++] = new T);
+  return *(ptr_[count_++] = newObject<T>);
 }
 //-----------------------------------------------------------------------------
 template< class T>
@@ -267,7 +267,7 @@ T & Vector< T>::insert(uintptr_t i, const T & val)
     max_ = amax;
   }
   memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
-  ptr_[i] = new T(val);
+  ptr_[i] = newObject<T>(val);
   count_++;
   return *ptr_[i];
 }

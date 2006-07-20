@@ -182,7 +182,7 @@ void Fiber::start(Fiber * fiber,void * param,void (* ip)(void *))
     ip(param);
 #endif
   }
-  catch( ksys::ExceptionSP & e ){
+  catch( ExceptionSP & e ){
     e->writeStdError();
   }
   catch( ... ){
@@ -302,7 +302,7 @@ BaseServer::BaseServer() :
 //------------------------------------------------------------------------------
 BaseThread * BaseServer::newThread()
 {
-  return new BaseThread;
+  return newObject<BaseThread>();
 }
 //------------------------------------------------------------------------------
 void BaseServer::sweepThreads()
@@ -379,13 +379,13 @@ void BaseServer::closeServer()
             }
           }
           else if( WaitMessage() == 0 ){
-            int32_t err = GetLastError() + ksys::errorOffset;
-            throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+            int32_t err = GetLastError() + errorOffset;
+            Exception::throwSP(err,__PRETTY_FUNCTION__);
           }
         }
         else
 #endif
-        ksys::sleep(fbtmd);
+        sleep(fbtmd);
       }
     }
     if( btp == NULL ) break;
@@ -479,10 +479,8 @@ void BaseServer::DispatchWindowMessages()
     if( msg.message == fiberFinishMessage ) sweepThreads();
     if( msg.message == WM_QUIT || !active() ) break;
     if( WaitMessage() == 0 ){
-      int32_t err = GetLastError() + ksys::errorOffset;
-      throw ksys::ExceptionSP(
-        new ksys::Exception(err,__PRETTY_FUNCTION__)
-      );
+      int32_t err = GetLastError() + errorOffset;
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
   }
 #endif
@@ -513,7 +511,7 @@ FiberInterlockedMutex::FiberInterlockedMutex()
   sem_ = CreateSemaphoreA(NULL,1,~(ULONG) 0 >> 1, NULL);
   if( sem_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //---------------------------------------------------------------------------
@@ -522,7 +520,7 @@ bool FiberInterlockedMutex::tryAcquireHelper()
   DWORD r = WaitForSingleObject(sem_,0);
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 }
@@ -545,9 +543,7 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
       currentFiber()->switchFiber(currentFiber()->mainFiber());
       assert( currentFiber()->event_.type_ == etAcquire );
       if( currentFiber()->event_.errno_ != 0 )
-        throw ksys::ExceptionSP(
-          new Exception(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-        );
+        Exception::throwSP(currentFiber()->event_.errno_,__PRETTY_FUNCTION__);
       return true;
     }
   }
@@ -557,7 +553,7 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
       DWORD r = WaitForSingleObject(sem_,INFINITE);
       if( r == WAIT_FAILED || (r != WAIT_OBJECT_0 && r != WAIT_ABANDONED) ){
         int32_t err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        Exception::throwSP(err,__PRETTY_FUNCTION__);
       }
 #else
       mutex_.acquire();
@@ -577,7 +573,7 @@ void FiberInterlockedMutex::release()
 {
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 #endif

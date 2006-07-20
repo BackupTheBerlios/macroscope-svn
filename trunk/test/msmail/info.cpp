@@ -41,7 +41,7 @@ Message::Message() : attributesAutoDrop_(attributes_)
   UUID uuid;
   createUUID(uuid);
   utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-  attributes_.insert(*new Attribute(messageIdKey,suuid));
+  attributes_.insert(*newObject<Attribute>(messageIdKey,suuid));
 }
 //------------------------------------------------------------------------------
 Message::Message(const utf8::String & sid) : attributesAutoDrop_(attributes_)
@@ -74,14 +74,14 @@ const utf8::String & Message::value(const utf8::String & key) const
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL )
-    throw ExceptionSP(new Exception(
+    Exception::throwSP(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
 #else
       ENOENT
 #endif
       ,__PRETTY_FUNCTION__
-    ));
+    );
   return p->value_;
 }
 //------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ Message & Message::value(const utf8::String & key,const utf8::String & value)
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL ){
-    attributes_.insert(*new Attribute(key,value));
+    attributes_.insert(*newObject<Attribute>(key,value));
   }
   else {
     p->value_ = value;
@@ -101,14 +101,14 @@ utf8::String Message::removeValue(const utf8::String & key)
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL )
-    throw ExceptionSP(new Exception(
+    Exception::throwSP(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
 #else
       ENOENT
 #endif
       ,__PRETTY_FUNCTION__
-    ));
+    );
   utf8::String oldValue(p->value_);
   attributes_.drop(*p);
   return oldValue;
@@ -136,9 +136,9 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
       while( i.eof() )
         if( i.isSpace() )
 #if defined(__WIN32__) || defined(__WIN64__)
-          throw ExceptionSP(new Exception(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__));
+          Exception::throwSP(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__);
 #else
-          throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+          Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
 #endif
     }
     a.value(key,value);
@@ -194,9 +194,9 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
-      throw ExceptionSP(new Exception(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__));
+      Exception::throwSP(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__);
 #else
-      throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+      Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
 #endif
     }
   }
@@ -579,7 +579,7 @@ bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sen
   UserInfo * p = users_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      users_.insert(*new UserInfo(info));
+      users_.insert(*newObject<UserInfo>(info));
       return true;
     }
   }
@@ -588,7 +588,7 @@ bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sen
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
+      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
   return false;
 }
@@ -604,7 +604,7 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendi
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      keys_.insert(*new KeyInfo(info));
+      keys_.insert(*newObject<KeyInfo>(info));
       return true;
     }
   }
@@ -613,7 +613,7 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendi
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
+      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
   return false;
 }
@@ -629,7 +629,7 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & s
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      groups_.insert(*new GroupInfo(info));
+      groups_.insert(*newObject<GroupInfo>(info));
       return true;
     }
   }
@@ -638,7 +638,7 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & s
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
+      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
   return false;
 }
@@ -654,7 +654,7 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      servers_.insert(*new ServerInfo(info));
+      servers_.insert(*newObject<ServerInfo>(info));
       return true;
     }
   }
@@ -663,7 +663,7 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
+      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
     if( info.type_ == stNode && info.type_ != p->type_ ){
       p->type_ = info.type_;
       p->sendedTo_.drop();
@@ -684,7 +684,7 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
-      user2KeyLinks_.insert(*new User2KeyLink(link));
+      user2KeyLinks_.insert(*newObject<User2KeyLink>(link));
       return true;
     }
   }
@@ -693,7 +693,7 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
+      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
   return false;
 }
@@ -709,7 +709,7 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
-      key2GroupLinks_.insert(*new Key2GroupLink(link));
+      key2GroupLinks_.insert(*newObject<Key2GroupLink>(link));
       return true;
     }
   }
@@ -718,7 +718,7 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
+      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
   return false;
 }
@@ -734,7 +734,7 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
-      key2ServerLinks_.insert(*new Key2ServerLink(link));
+      key2ServerLinks_.insert(*newObject<Key2ServerLink>(link));
       return true;
     }
   }
@@ -743,7 +743,7 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*new InfoLinkKey(*list[i]),false);
+      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
     if( p->server_.strcasecmp(link.server_) != 0 ){
       p->server_ = link.server_;
       p->sendedTo_.drop();
@@ -1073,31 +1073,31 @@ Server::Data & Server::Data::setSendedToNL(const utf8::String & sendingTo)
   Array<UserInfo *> userList;
   users_.list(userList);
   for( i = userList.count() - 1; i >= 0; i-- )
-    userList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+    userList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
   Array<KeyInfo *> keyList;
   keys_.list(keyList);
   for( i = keyList.count() - 1; i >= 0; i-- )
-    keyList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+    keyList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
   Array<GroupInfo *> groupList;
   groups_.list(groupList);
   for( i = groupList.count() - 1; i >= 0; i-- )
-    groupList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+    groupList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
   Array<ServerInfo *> serverList;
   servers_.list(serverList);
   for( i = serverList.count() - 1; i >= 0; i-- )
-    serverList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+    serverList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
   Array<User2KeyLink *> user2KeyLinkList;
   user2KeyLinks_.list(user2KeyLinkList);
   for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
-    user2KeyLinkList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+    user2KeyLinkList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
   Array<Key2GroupLink *> key2GroupLinkList;
   key2GroupLinks_.list(key2GroupLinkList);
   for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
-    key2GroupLinkList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+    key2GroupLinkList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
   Array<Key2ServerLink *> key2ServerLinkList;
   key2ServerLinks_.list(key2ServerLinkList);
   for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
-    key2ServerLinkList[i]->sendedTo_.insert(*new InfoLinkKey(sendingTo),false);
+    key2ServerLinkList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
   return *this;
 }
 //------------------------------------------------------------------------------

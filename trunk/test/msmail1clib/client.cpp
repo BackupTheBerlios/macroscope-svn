@@ -41,7 +41,7 @@ ClientFiber::ClientFiber(Client & client) : client_(client)
 void ClientFiber::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    throw ksys::ExceptionSP(new ksys::Exception(code,__PRETTY_FUNCTION__));
+    Exception::throwSP(code,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void ClientFiber::getCode(int32_t noThrowCode)
@@ -56,7 +56,7 @@ int32_t ClientFiber::getCode2(int32_t noThrowCode0,int32_t noThrowCode1)
   int32_t r;
   *this >> r;
   if( r != eOK && r != noThrowCode0 && r != noThrowCode1 )
-    throw ksys::ExceptionSP(new ksys::Exception(r,__PRETTY_FUNCTION__));
+    Exception::throwSP(r,__PRETTY_FUNCTION__);
   return r;
 }
 //------------------------------------------------------------------------------
@@ -161,7 +161,7 @@ void ClientFiber::main()
         }
         while( !terminated_ ){
           Message * msg;
-          AutoPtr<Message> message(new Message);
+          AutoPtr<Message> message(newObject<Message>());
           *this >> message;
           utf8::String msgId(message->id());
           {
@@ -318,7 +318,7 @@ void ClientDBGetterFiber::main()
       registered = client_.connected_;
     }
     if( !registered )
-      throw ExceptionSP(new Exception(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__));
+      Exception::throwSP(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__);
     utf8::String server(client_.config_->value("server",client_.mailServer_));
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
@@ -367,15 +367,30 @@ void ClientDBGetterFiber::main()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+MK1100ClientFiber::~MK1100ClientFiber()
+{
+}
+//------------------------------------------------------------------------------
+MK1100ClientFiber::MK1100ClientFiber(Client & client) : client_(client)
+{
+}
+//------------------------------------------------------------------------------
+void MK1100ClientFiber::main()
+{
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 Client::~Client()
 {
 }
 //------------------------------------------------------------------------------
 Client::Client() :
   pAsyncEvent_(NULL),
-  config_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>),
+  config_(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()),
   recvQueueAutoDrop_(recvQueue_),
-  sendQueueAutoDrop_(sendQueue_)
+  sendQueueAutoDrop_(sendQueue_),
+  mk1100Port_(0)
 {
   howCloseServer(csTerminate | csShutdown | csAbort);
   fiberTimeout(0);
@@ -385,7 +400,9 @@ void Client::open()
 {
   data_.clear();
   ftime_ = 0;
-  attachFiber(new ClientFiber(*this));
+  attachFiber(newObject<ClientFiber>(*this));
+  if( mk1100Port_ != 0 )
+    attachFiber(newObject<MK1100ClientFiber>(*this));
 }
 //------------------------------------------------------------------------------
 void Client::close()
@@ -397,7 +414,7 @@ void Client::close()
 //------------------------------------------------------------------------------
 const utf8::String & Client::newMessage()
 {
-  Message * msg = new Message;
+  Message * msg = newObject<Message>();
   sendQueue_.insert(*msg);
   return msg->id();
 }
@@ -412,7 +429,7 @@ HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pva
     msg = queue->find(id);
   }
   if( msg == NULL )
-    throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+    Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
   HRESULT hr = S_OK;
   if( msg->isValue(key) ){
     V_BSTR(pvarRetValue) = msg->value(key).getOLEString();
@@ -433,7 +450,7 @@ utf8::String Client::value(const utf8::String id,const utf8::String key,const ut
     queue = &recvQueue_;
     msg = queue->find(id);
   }
-  if( msg == NULL ) throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+  if( msg == NULL ) Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
   utf8::String oldValue;
   if( msg->isValue(key) ) oldValue = msg->value(key);
   msg->value(key,value);
@@ -452,7 +469,7 @@ bool Client::sendMessage(const utf8::String id)
   msg->value("#Sender.Host",ksock::SockAddr::gethostname());
   workFiberWait_.acquire();
   try {
-    attachFiber(new ClientMailSenderFiber(*this,*msg));
+    attachFiber(newObject<ClientMailSenderFiber>(*this,*msg));
   }
   catch( ... ){
     workFiberWait_.release();
@@ -479,7 +496,7 @@ bool Client::removeMessage(const utf8::String id)
   workFiberWait_.acquire();
   workFiberLastError_ = 0;
   try {
-    attachFiber(new ClientMailRemoverFiber(*this,id));
+    attachFiber(newObject<ClientMailRemoverFiber>(*this,id));
   }
   catch( ... ){
     workFiberWait_.release();
@@ -526,7 +543,7 @@ utf8::String Client::getSendingMessageList() const
 //------------------------------------------------------------------------------
 void Client::getDB()
 {
-  attachFiber(new ClientDBGetterFiber(*this));
+  attachFiber(newObject<ClientDBGetterFiber>(*this));
 }
 //------------------------------------------------------------------------------
 utf8::String Client::getDBList() const
@@ -555,8 +572,8 @@ utf8::String Client::copyMessage(const utf8::String id)
     msg = queue->find(id);
   }
   if( msg == NULL )
-    throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
-  AutoPtr<Message> message(new Message);
+    Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
+  AutoPtr<Message> message(newObject<Message>());
   utf8::String newId(message->id());
   *message = *msg;
   message->removeValueByLeft("#Relay");
@@ -575,7 +592,7 @@ utf8::String Client::removeValue(const utf8::String id,const utf8::String key)
     msg = queue->find(id);
   }
   if( msg == NULL )
-    throw ExceptionSP(new Exception(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__));
+    Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
   return msg->removeValue(key);
 }
 //------------------------------------------------------------------------------

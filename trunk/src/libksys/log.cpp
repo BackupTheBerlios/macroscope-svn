@@ -166,7 +166,7 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
   }
   if( a == -1 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   AutoPtr<char> buf;
   buf.alloc(a);
@@ -206,12 +206,12 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
 #undef SNPRINTF
   if( a == -1 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   intptr_t l = utf8::utf8s2mbcs(CP_OEMCP,NULL,0,stream.plane(),stream.count());
   if( l < 0 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   buf.realloc(a + l);
   utf8::utf8s2mbcs(CP_OEMCP,buf.ptr() + a,l,stream.plane(),stream.count());

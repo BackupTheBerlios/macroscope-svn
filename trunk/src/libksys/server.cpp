@@ -94,7 +94,7 @@ void ServerFiber::fiberExecute()
 void Server::open()
 {
   assert( acceptFiber_ == NULL );
-  AcceptFiber * acceptFiber = new AcceptFiber;
+  AcceptFiber * acceptFiber = newObject<AcceptFiber>();
   ksys::AutoPtr<ksys::Fiber> fiber(acceptFiber);
   acceptFiber->open();
   for( intptr_t i = bindAddrs_.count() - 1; i >= 0; i-- )

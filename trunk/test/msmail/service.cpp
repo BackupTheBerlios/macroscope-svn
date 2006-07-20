@@ -38,7 +38,7 @@ namespace msmail {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 Service::Service() :
-  msmailConfig_(new InterlockedConfig<FiberInterlockedMutex>),
+  msmailConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >()),
   msmail_(msmailConfig_)
 {
   serviceName_ = "msmail";

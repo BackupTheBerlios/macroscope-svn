@@ -34,14 +34,14 @@ namespace fbcpp {
 ksys::Mutant DSQLValue::getMutant()
 {
   if( sqlind_ >= 0 )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   return ksys::Mutant();
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLValue::getString()
 {
   if( sqlind_ >= 0 )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   return utf8::String();
 }
 //---------------------------------------------------------------------------
@@ -57,8 +57,7 @@ DSQLValueText::~DSQLValueText()
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLValueText::getMutant()
 {
-  if( sqlind_ < 0 )
-    return ksys::Mutant();
+  if( sqlind_ < 0 ) return ksys::Mutant();
   return text_;
 }
 //---------------------------------------------------------------------------
@@ -125,7 +124,7 @@ ksys::Mutant DSQLValueScalar::getMutant()
       }
       return bigInt_;
   }
-  throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+  throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLValueScalar::getString()
@@ -161,7 +160,7 @@ utf8::String DSQLValueScalar::getString()
       case SQL_TIMESTAMP   :
         return utf8::time2Str(iscTimeStamp2Time(timeStamp_));
       default              :
-        throw ksys::ExceptionSP(new EDSQLStInvalidParamValue(NULL, __PRETTY_FUNCTION__));
+        throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
     }
   }
   return utf8::String();
@@ -190,7 +189,7 @@ DSQLValueArray & DSQLValueArray::clear()
 DSQLValueArray & DSQLValueArray::checkDim(bool inRange)
 {
   if( !inRange )
-    throw ksys::ExceptionSP(new EDSQLStInvalidArrayDim(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidArrayDim>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -247,7 +246,7 @@ ksys::Mutant DSQLValueArray::getMutantFromArray(uintptr_t absIndex)
         return *(int64_t *) data;
     }
   }
-  throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+  throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 DSQLValueArray & DSQLValueArray::getSlice()
@@ -327,7 +326,9 @@ intptr_t DSQLValueBlob::readBuffer(void * buf, uintptr_t size)
           continue;
         if( status[1] == isc_segstr_eof )
           break;
-        statement_->database_->exceptionHandler(new EDSQLStGetSegment(status, __PRETTY_FUNCTION__));
+        statement_->database_->exceptionHandler(
+          newObject<EDSQLStGetSegment>(status, __PRETTY_FUNCTION__)
+        );
       }
     }
   }
@@ -351,7 +352,7 @@ DSQLValueBlob & DSQLValues::asBlob(uintptr_t i)
 {
   DSQLValueBlob * blob  = dynamic_cast< DSQLValueBlob *>(&rows_[row_][checkValueIndex(i)]);
   if( blob == NULL )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   return *blob;
 }
 //---------------------------------------------------------------------------
@@ -359,7 +360,7 @@ DSQLValueBlob & DSQLValues::asBlob(const utf8::String & valueName)
 {
   DSQLValueBlob * blob  = dynamic_cast< DSQLValueBlob *>(&rows_[row_][checkValueIndex(valuesIndex_.indexOfKey(valueName))]);
   if( blob == NULL )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   return *blob;
 }
 //---------------------------------------------------------------------------
@@ -367,7 +368,7 @@ DSQLValueArray & DSQLValues::asArray(uintptr_t i)
 {
   DSQLValueArray *  array = dynamic_cast< DSQLValueArray *>(&rows_[row_][checkValueIndex(i)]);
   if( array == NULL )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   return *array;
 }
 //---------------------------------------------------------------------------
@@ -375,13 +376,13 @@ DSQLValueArray & DSQLValues::asArray(const utf8::String & valueName)
 {
   DSQLValueArray *  array = dynamic_cast< DSQLValueArray *>(&rows_[row_][checkValueIndex(valuesIndex_.indexOfKey(valueName))]);
   if( array == NULL )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValue(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   return *array;
 }
 //---------------------------------------------------------------------------
 ksys::Vector< DSQLValue> * DSQLValues::bind()
 {
-  ksys::AutoPtr< ksys::Vector< DSQLValue> > row (new ksys::Vector< DSQLValue>);
+  ksys::AutoPtr<ksys::Vector<DSQLValue> > row(newObject<ksys::Vector<DSQLValue> >());
   union {
       DSQLValue *       value;
       DSQLValueText *   valueText;
@@ -394,11 +395,11 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
     XSQLVAR & v = sqlda_.sqlda()->sqlvar[i];
     switch( v.sqltype & ~1 ){
       case SQL_VARYING     :
-        row->safeAdd(valueText = new DSQLValueText);
+        row->safeAdd(valueText = newObject<DSQLValueText>());
         v.sqldata = valueText->text_.resize(v.sqllen + 2).c_str();
         break;
       case SQL_TEXT        :
-        row->safeAdd(valueText = new DSQLValueText);
+        row->safeAdd(valueText = newObject<DSQLValueText>());
         v.sqldata = valueText->text_.resize(v.sqllen).c_str();
         break;
       case SQL_SHORT       :
@@ -411,18 +412,18 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
       case SQL_TIMESTAMP   :
       case SQL_QUAD        :
       case SQL_INT64       :
-        row->safeAdd(valueScalar = new DSQLValueScalar);
+        row->safeAdd(valueScalar = newObject<DSQLValueScalar>());
         v.sqldata = (char *) &valueScalar->timeStamp_;
         valueScalar->sqlscale_ = (char) v.sqlscale;
         break;
       case SQL_BLOB        :
-        row->safeAdd(valueBlob = new DSQLValueBlob(*statement_));
+        row->safeAdd(valueBlob = newObject<DSQLValueBlob>(*statement_));
         valueBlob->handle_ = 0;
         statement_->blobLookupDesc(v.relname, v.sqlname, valueBlob->desc_, NULL);
         v.sqldata = (char *) &valueBlob->id_;
         break;
       case SQL_ARRAY       :
-        row->safeAdd(valueArray = new DSQLValueArray(*statement_));
+        row->safeAdd(valueArray = newObject<DSQLValueArray>(*statement_));
         valueArray->id_.gds_quad_low = 0;
         valueArray->id_.gds_quad_high = 0;
         statement_->arrayLookupBounds(v.relname, v.sqlname, valueArray->desc_);
@@ -516,7 +517,7 @@ DSQLValues & DSQLValues::fetchAll()
 DSQLValues & DSQLValues::selectRow(uintptr_t i)
 {
   if( i >= rows_.count() )
-    throw ksys::ExceptionSP(new EDSQLStInvalidRowIndex(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidRowIndex>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   row_ = i;
   return *this;
 }
@@ -524,10 +525,10 @@ DSQLValues & DSQLValues::selectRow(uintptr_t i)
 uintptr_t DSQLValues::checkValueIndex(uintptr_t i)
 {
   if( row_ < 0 )
-    throw ksys::ExceptionSP(new EDSQLStInvalidRowIndex(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidRowIndex>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   if( i >= valuesIndex_.count() )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValueIndex(
-      NULL, utf8::String(__PRETTY_FUNCTION__) + ", index = " + utf8::int2Str((intmax_t) i)));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValueIndex>(
+      (ISC_STATUS *) NULL, utf8::String(__PRETTY_FUNCTION__) + ", index = " + utf8::int2Str((intmax_t) i)));
   return i;
 }
 //---------------------------------------------------------------------------

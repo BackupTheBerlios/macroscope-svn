@@ -37,7 +37,7 @@ Server::~Server()
 //------------------------------------------------------------------------------
 Server::Server(const ConfigSP config) :
   config_(config),
-  rnd_(new Randomizer,rndMutex_),
+  rnd_(newObject<Randomizer>(),rndMutex_),
   nodeClient_(NULL),
   skippedNodeClientStarts_(0),
   skippedNodeExchangeStarts_(0)
@@ -52,12 +52,12 @@ void Server::open()
     ServerInfo(bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
 //  startNodesExchange();
-  attachFiber(new NodeClient(*this,stStandalone,utf8::String(),true));
+  attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
   uintptr_t i;
   for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",1); i > 0; i-- )
-    attachFiber(new SpoolWalker(*this));
+    attachFiber(newObject<SpoolWalker>(*this));
   for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fibers",1); i > 0; i-- )
-    attachFiber(new MailQueueWalker(*this));
+    attachFiber(newObject<MailQueueWalker>(*this));
 }
 //------------------------------------------------------------------------------
 void Server::close()
@@ -67,7 +67,7 @@ void Server::close()
 //------------------------------------------------------------------------------
 Fiber * Server::newFiber()
 {
-  return new ServerFiber(*this);
+  return newObject<ServerFiber>(*this);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::spoolDir() const
@@ -156,7 +156,7 @@ void Server::startNodeClientNL(ServerType dataType,const utf8::String & nodeHost
   if( nodeClient_ == NULL ){
     assert( skippedNodeClientStarts_ == 0 );
     NodeClient * nodeClient;
-    attachFiber(nodeClient = new NodeClient(*this,dataType,nodeHostName,false));
+    attachFiber(nodeClient = NodeClient::newClient(*this,dataType,nodeHostName,false));
     nodeClient_ = nodeClient;
   }
   else {
@@ -190,7 +190,7 @@ void Server::startNodesExchangeNL()
       for( j = enumStringParts(hosts) - 1; j >= 0; j-- ){
         host = stringPartByNo(hosts,j);
         if( host.strcasecmp(me) == 0 ) continue;
-        AutoPtr<NodeClient> nodeClient(new NodeClient(*this,stNode,host,false));
+        AutoPtr<NodeClient> nodeClient(NodeClient::newClient(*this,stNode,host,false));
         i = nodeExchangeClients_.bSearch(nodeClient,c);
         assert( c != 0 );
         nodeExchangeClients_.insert(i += (c > 0),nodeClient);

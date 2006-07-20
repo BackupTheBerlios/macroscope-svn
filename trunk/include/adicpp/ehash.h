@@ -111,7 +111,7 @@ class EmbeddedHash {
       uint64_t u;
       stream >> u;
       while( u-- > 0 ){
-        AutoPtr<T> p(new T);
+        AutoPtr<T> p(newObject<T>());
         stream >> *p.ptr();
         t.insert(*p.ptr(NULL));
       }
@@ -184,7 +184,7 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::operator = (const EmbeddedHas
   while( head < tail ){
     walk = *head;
     while( walk != NULL ){
-      t.insert(*new T(O(*walk,NULL)));
+      t.insert(*newObject<T>(O(*walk,NULL)));
       walk = walk->next();
     }
     head++;
@@ -391,7 +391,7 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object, b
 #endif
   }
   if( err != 0 )
-    throw ExceptionSP(new Exception(err + errorOffset, __PRETTY_FUNCTION__));
+    Exception::throwSP(err + errorOffset, __PRETTY_FUNCTION__);
   return head;
 }
 //---------------------------------------------------------------------------

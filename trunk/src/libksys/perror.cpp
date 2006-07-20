@@ -124,7 +124,7 @@ utf8::String strError(int32_t err)
     }
 #endif
     if( er != 0 )
-      throw ExceptionSP(new Exception(er, __PRETTY_FUNCTION__));
+      Exception::throwSP(er, __PRETTY_FUNCTION__);
     if( strchr(serr.ptr(), '\r') != NULL )
       *strchr(serr.ptr(), '\r') = '\0';
     if( strchr(serr.ptr(), '\n') != NULL )

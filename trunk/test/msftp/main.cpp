@@ -85,7 +85,7 @@ KFTPClient::KFTPClient(const ksys::ConfigSP & config,const utf8::String & sectio
 KFTPClient & KFTPClient::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    throw ksys::ExceptionSP(new ksys::Exception(code,__PRETTY_FUNCTION__));
+    ksys::Exception::throwSP(code,__PRETTY_FUNCTION__);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -496,7 +496,10 @@ KFTPShell::~KFTPShell()
   close();
 }
 //------------------------------------------------------------------------------
-KFTPShell::KFTPShell() : config_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>)
+KFTPShell::KFTPShell() :
+  config_(
+    newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()
+  )
 {
 }
 //------------------------------------------------------------------------------
@@ -516,7 +519,7 @@ void KFTPShell::open()
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )
-      attachFiber(new KFTPClient(config_,sectionName));
+      attachFiber(newObject<KFTPClient>(config_,sectionName));
   }
 }
 //------------------------------------------------------------------------------

@@ -60,13 +60,13 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
       );
       if( hFFCNotification_ == INVALID_HANDLE_VALUE ){
         int32_t err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        Exception::throwSP(err,__PRETTY_FUNCTION__);
       }
     }
     else if( FindNextChangeNotification(hFFCNotification_) == 0 ){
       int32_t err = GetLastError() + errorOffset;
       stop();
-      throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
   }
   else {
@@ -87,7 +87,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
       );
       if( hDirectory_ == INVALID_HANDLE_VALUE ){
         int32_t err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        Exception::throwSP(err,__PRETTY_FUNCTION__);
       }
     }
   }
@@ -102,8 +102,8 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   assert( currentFiber()->event_.type_ == etDirectoryChangeNotification );
   if( currentFiber()->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
   if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
-    throw ksys::ExceptionSP(
-      new EFileError(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
+    throw ExceptionSP(
+      newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
     );
   }
 #endif
@@ -153,7 +153,7 @@ void createUUID(UUID & uuid)
   if( uuidgen(&uuid,1) != 0 ){
     int32_t err = errno;
 #endif
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //---------------------------------------------------------------------------
@@ -469,7 +469,7 @@ void changeCurrentDir(const utf8::String & name)
   err = errno;
 #endif
   if( err != 0 )
-    throw ExceptionSP(new Exception(err + errorOffset,__PRETTY_FUNCTION__));
+    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
 }
 //---------------------------------------------------------------------------
 utf8::String getTempPath()
@@ -614,8 +614,8 @@ bool createDirectory(const utf8::String & name)
     if( currentFiber()->event_.errno_ == EEXIST ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      throw ExceptionSP(
+        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
       );
     return currentFiber()->event_.rval_;
   }
@@ -645,7 +645,7 @@ bool createDirectory(const utf8::String & name)
 #else
   if( err != 0 && err != EEXIST )
 #endif
-    throw ExceptionSP(new Exception(err + errorOffset,__PRETTY_FUNCTION__));
+    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
   oserror(err);
   return err == 0;
 }
@@ -685,8 +685,8 @@ bool removeDirectory(const utf8::String & name,bool recursive)
     if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      throw ExceptionSP(
+        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
       );
     return currentFiber()->event_.rval_;
   }
@@ -735,7 +735,7 @@ bool removeDirectory(const utf8::String & name,bool recursive)
 #endif
   oserror(err);
   if( err != 0 )
-    throw ExceptionSP(new Exception(err + errorOffset,__PRETTY_FUNCTION__));
+    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
   return true;
 }
 //---------------------------------------------------------------------------
@@ -754,8 +754,8 @@ bool remove(const utf8::String & name)
     if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      throw ExceptionSP(
+        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
       );
     return currentFiber()->event_.rval_;
   }
@@ -782,7 +782,7 @@ bool remove(const utf8::String & name)
       if( removeDirectory(name,true) ) return remove(name);
       err = oserror();
     }
-    throw ExceptionSP(new Exception(err + errorOffset,__PRETTY_FUNCTION__));
+    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
   }
   return true;
 }
@@ -803,7 +803,7 @@ void chModOwn(
   }
   if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m) != 0 ){
     err = errno;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   const struct passwd * u = getpwnam(utf8::String(user).getANSIString());
   uid_t userID(u != NULL ? u->pw_uid : (uid_t) user);
@@ -811,7 +811,7 @@ void chModOwn(
   gid_t groupID(g != NULL ? g->gr_gid : (gid_t) group);
   if( chown(anyPathName2HostPathName(pathName).getANSIString(),userID,groupID) != 0 ){
     err = errno;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 #else
@@ -866,9 +866,7 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
     }
     else if( mi.getChar() == '[' ){
 //      mi.next();
-      throw ExceptionSP(
-        new Exception(EINVAL,utf8::String(__PRETTY_FUNCTION__) + " FIXME")
-      );
+      Exception::throwSP(EINVAL,utf8::String(__PRETTY_FUNCTION__) + " FIXME");
     }
     else
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -892,8 +890,8 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etRename );
     if( currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      throw ExceptionSP(
+        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
       );
   }
   else {
@@ -909,7 +907,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
 #else
     if( rename(oldPathName.getANSIString(),newPathName.getANSIString()) != 0 )
 #endif
-      throw ExceptionSP(new Exception(oserror() + errorOffset,utf8::String(__PRETTY_FUNCTION__)));
+      Exception::throwSP(oserror() + errorOffset,utf8::String(__PRETTY_FUNCTION__));
   }
 }
 //---------------------------------------------------------------------------
@@ -924,8 +922,8 @@ void sleep(uint64_t timeout)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etTimer );
     if( currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EFileError(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
+      throw ExceptionSP(
+        newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
       );
   }
   else {
@@ -962,8 +960,8 @@ void getDirList(
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etDirList );
     if( currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        new EFileError(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      throw ExceptionSP(
+        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
       );
     return;
   }
@@ -981,7 +979,7 @@ void getDirList(
     handle = FindFirstFileA(anyPathName2HostPathName(path + pathDelimiterStr + "*").getANSIString(),&fda);
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError() + errorOffset;
-      throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     try {
       do {
@@ -994,7 +992,7 @@ void getDirList(
     DIR * dir = opendir(anyPathName2HostPathName(path).getANSIString());
     if( dir == NULL ){
       err = errno;
-      throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     try {
       struct dirent * ent;
@@ -1004,7 +1002,7 @@ void getDirList(
       for(;;){
         if( readdir_r(dir,ent,&result) != 0 ){
           err = errno;
-          throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+          Exception::throwSP(err,__PRETTY_FUNCTION__);
         }
         if( result == NULL ) break;
 #else
@@ -1037,7 +1035,7 @@ void getDirList(
       } while( FindNextFileA(handle,&fda) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        Exception::throwSP(err,__PRETTY_FUNCTION__);
       }
     }
     catch( ... ){
@@ -1050,7 +1048,7 @@ void getDirList(
     handle = FindFirstFileW(anyPathName2HostPathName(path + pathDelimiterStr + "*").getUNICODEString(),&fdw);
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError() + errorOffset;
-      throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     try {
       do {
@@ -1070,7 +1068,7 @@ void getDirList(
       } while( FindNextFileW(handle,&fdw) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+        Exception::throwSP(err,__PRETTY_FUNCTION__);
       }
     }
     catch( ... ){
@@ -1099,13 +1097,13 @@ void copyStrToClipboard(const utf8::String & s)
   int32_t err;
   if( OpenClipboard(NULL) == 0 ){
     err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   if( EmptyClipboard() == 0 ){
     err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
-  if( ksys::isWin9x() ){
+  if( isWin9x() ){
     utf8::AnsiString pass(s.getANSIString());
     HGLOBAL w = GlobalAlloc(
       GMEM_MOVEABLE | GMEM_DDESHARE,
@@ -1114,13 +1112,13 @@ void copyStrToClipboard(const utf8::String & s)
     if( w == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     LPVOID ww = GlobalLock(w);
     if( ww == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     memcpy(ww,(const char *) pass,(strlen(pass) + 1) * sizeof(char));
     GlobalUnlock(ww);
@@ -1128,7 +1126,7 @@ void copyStrToClipboard(const utf8::String & s)
       err = GetLastError() + errorOffset;
       GlobalFree(w);
       CloseClipboard();
-      throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
   }
   else {
@@ -1140,13 +1138,13 @@ void copyStrToClipboard(const utf8::String & s)
     if( w == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     LPVOID ww = GlobalLock(w);
     if( ww == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     memcpy(ww,(const wchar_t *) pass,(lstrlenW(pass) + 1) * sizeof(wchar_t));
     GlobalUnlock(ww);
@@ -1154,7 +1152,7 @@ void copyStrToClipboard(const utf8::String & s)
       err = GetLastError() + errorOffset;
       GlobalFree(w);
       CloseClipboard();
-      throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
   }
   CloseClipboard();
@@ -1193,11 +1191,11 @@ int64_t getProcessStartTime(bool toLocalTime)
       if( toLocalTime ) FileTimeToLocalFileTime(&creationTime.ft,&creationTime.ft);
   err = GetLastError();
   if( hProcess != NULL ) CloseHandle(hProcess);
-  if( err != ERROR_SUCCESS ) throw ksys::ExceptionSP(new ksys::Exception(err + errorOffset,__PRETTY_FUNCTION__));
+  if( err != ERROR_SUCCESS ) Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
   return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
 #else
 #error Not implemented
-  throw ksys::ExceptionSP(new ksys::Exception(ENOSYS,__PRETTY_FUNCTION__));
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1351,9 +1349,9 @@ uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size)
   size <<= 3;
   while( !sp.eof() ){
     uintptr_t c = sp.getChar();
-    if( c < 1 || c >= 256 ) throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+    if( c < 1 || c >= 256 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
     c = base64DecodeTable[c];
-    if( c >= 64 ) throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+    if( c >= 64 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
     if( i < size ){
       if( size - i <= 8 ){
         *(uint8_t *) ((uint8_t *) p + (i >> 3)) &= (uint8_t) (~(63u << (i & 7)));
@@ -1417,9 +1415,9 @@ uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size)
   size <<= 3;
   while( !sp.eof() ){
     uintptr_t c = sp.getChar();
-    if( c < 1 || c >= 256 ) throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+    if( c < 1 || c >= 256 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
     c = base32DecodeTable[c];
-    if( c >= 32 ) throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+    if( c >= 32 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
     if( i < size ){
       if( size - i <= 8 ){
         *(uint8_t *) ((uint8_t *) p + (i >> 3)) &= (uint8_t) (~(31u << (i & 7)));
@@ -1485,7 +1483,7 @@ bool isWow64()
   BOOL bIsWow64 = FALSE;
   if( fnIsWow64Process != NULL && fnIsWow64Process(GetCurrentProcess(),&bIsWow64) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   return bIsWow64 == FALSE ? false : true;
 }

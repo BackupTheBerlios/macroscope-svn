@@ -476,8 +476,7 @@ void Logger::main()
   if( !lf.tryOpen(true) ){
     int32_t err = errno;
     fprintf(stderr, "lower frequency of program starting needed\n");
-    throw ksys::ExceptionSP(new ksys::Exception(
-      err, "lower frequency of program starting needed"));
+    ksys::Exception::throwSP(err,"lower frequency of program starting needed");
   }
   lf << utf8::int2Str(ksys::getpid());
 

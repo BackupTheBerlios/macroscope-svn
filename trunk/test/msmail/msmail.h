@@ -722,7 +722,8 @@ class NodeClient : public ksock::ClientFiber {
   friend class Server;
   public:
     virtual ~NodeClient();
-    NodeClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly);
+    NodeClient(Server & server);
+    static NodeClient * newClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly);
   protected:
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
@@ -913,7 +914,7 @@ class Server : public ksock::Server {
 inline Server::Data & Server::data(ServerType type)
 {
   assert( type == stNode || type == stStandalone );
-//  throw ExceptionSP(new Exception(EINVAL,__PRETTY_FUNCTION__));
+//  Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
   return data_[type];
 }
 //------------------------------------------------------------------------------

@@ -51,10 +51,6 @@ template <class T> inline void xfree(T * lp)
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
-//#ifdef _MSC_VER
-//#pragma warning(disable:522)               // re-enable below
-//#endif
-//---------------------------------------------------------------------------
 inline void * operator new(size_t size)
 {
   return ksys::kmalloc(size);
@@ -89,8 +85,107 @@ inline void operator delete[](void * ptr)
   ksys::kfree(ptr);
 }
 //---------------------------------------------------------------------------
-//#ifdef _MSC_VER
-//#pragma warning(default:522)
-//#endif
+template <typename T> inline T * newObject()
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T;
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1
+> inline
+T * newObject(Param1 & p1)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1
+> inline
+T * newObject(const Param1 & p1)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2
+> inline T * newObject(Param1 & p1,Param2 & p2)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2
+> inline T * newObject(const Param1 & p1,const Param2 & p2)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2,
+  typename Param3
+> inline T * newObject(Param1 & p1,Param2 & p2,Param3 & p3)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2,p3);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2,
+  typename Param3
+> inline T * newObject(const Param1 & p1,const Param2 & p2,const Param3 & p3)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2,p3);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2,
+  typename Param3,
+  typename Param4
+> inline T * newObject(Param1 & p1,Param2 & p2,Param3 & p3,Param4 & p4)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2,p3,p4);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2,
+  typename Param3,
+  typename Param4
+> inline T * newObject(const Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2,p3,p4);
+  return (T *) safe.ptr(NULL);
+}
 //---------------------------------------------------------------------------
 #endif /* _XAlloc_H_ */
+//---------------------------------------------------------------------------

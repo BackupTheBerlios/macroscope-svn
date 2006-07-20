@@ -752,7 +752,7 @@ void Logger::writeHtmlTail(ksys::FileHandleContainer & f)
 //------------------------------------------------------------------------------
 int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et, const utf8::String & user)
 {
-  ksys::AutoPtr< TrafCacheEntry>  tce (new TrafCacheEntry(user, bt, et, tt));
+  ksys::AutoPtr< TrafCacheEntry> tce(newObject<TrafCacheEntry>(user, bt, et, tt));
   tce->bt_.tm_wday = 0;
   tce->bt_.tm_yday = 0;
   tce->et_.tm_wday = 0;

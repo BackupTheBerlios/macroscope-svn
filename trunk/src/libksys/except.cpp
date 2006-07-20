@@ -32,7 +32,7 @@ Exception::~Exception()
 {
 }
 //---------------------------------------------------------------------------
-Exception::Exception(int32_t code, const utf8::String what) : refCount_(0)
+Exception::Exception(int32_t code, const utf8::String & what) : refCount_(0)
 {
   codes_.add(code);
   whats_.add(what);
@@ -41,6 +41,21 @@ Exception::Exception(int32_t code, const utf8::String what) : refCount_(0)
 bool Exception::isFatalError() const
 {
   return false;
+}
+//---------------------------------------------------------------------------
+Exception * Exception::newException(int32_t code,const utf8::String & what)
+{
+  return newObject<Exception>(code,what);
+}
+//---------------------------------------------------------------------------
+void Exception::throwSP(int32_t code,const utf8::String & what)
+{
+  throw ExceptionSP(newObject<Exception>(code,what));
+}
+//---------------------------------------------------------------------------
+void Exception::throwSP(int32_t code,const char * what)
+{
+  throw ExceptionSP(newObject<Exception>(code,what));
 }
 //---------------------------------------------------------------------------
 const Exception & Exception::writeStdError() const

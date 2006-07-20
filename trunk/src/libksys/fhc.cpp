@@ -123,7 +123,7 @@ FileHandleContainer & FileHandleContainer::open()
         case ERROR_INVALID_FLAGS       :
         case ERROR_INVALID_ADDRESS     :
         case ERROR_INSUFFICIENT_BUFFER :
-          throw ksys::ExceptionSP(new EFileError(err + errorOffset, fileName_));
+          throw ksys::ExceptionSP(newObject<EFileError>(err + errorOffset, fileName_));
       }
 #else
       utf8::AnsiString  ansiFileName  (anyPathName2HostPathName(fileName_).getANSIString());
@@ -153,7 +153,7 @@ FileHandleContainer & FileHandleContainer::open()
         case EFAULT       :
         case EOPNOTSUPP   :
         case EINVAL       :
-          throw ksys::ExceptionSP(new EFileError(errno, fileName_));
+          throw ksys::ExceptionSP(newObject<EFileError>(errno, fileName_));
       }
 #endif
       ksys::sleep1();
@@ -201,14 +201,14 @@ uint64_t FileHandleContainer::size() const
   i.lo = GetFileSize(handle_,&i.hi);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   return i.a;
 #else
   struct stat st;
   if( fstat(handle_,&st) != 0 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   return st.st_size;
 #endif
@@ -224,12 +224,12 @@ FileHandleContainer & FileHandleContainer::resize(uint64_t nSize)
 // TODO: check for SetFileValidData working (may be faster then SetEndOfFile)
     if( SetEndOfFile(handle_) == 0 ){
       err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new EDiskFull(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EDiskFull>(err, __PRETTY_FUNCTION__));
     }
 #elif HAVE_FTRUNCATE
     if( ftruncate(handle_, nSize) == -1 ){
       err = errno;
-      throw ksys::ExceptionSP(new EDiskFull(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EDiskFull>(err, __PRETTY_FUNCTION__));
     }
 #else
 #error resize not implemented
@@ -358,22 +358,22 @@ FileHandleContainer & FileHandleContainer::readBuffer(void * buf, uint64_t size)
   int64_t r = read(buf, size);
   if( r < 0 ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   if( r == 0 )
-    throw ksys::ExceptionSP(new EFileEOF(EIO, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileEOF>(EIO, __PRETTY_FUNCTION__));
   if( (uint64_t) r < size )
-    throw ksys::ExceptionSP(new EFileError(EIO, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(EIO, __PRETTY_FUNCTION__));
 #else
   ssize_t r;
   if( (r = ::read(handle_, buf, size) < 0) ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   if( r == 0 )
-    throw ksys::ExceptionSP(new EFileEOF(EIO, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileEOF>(EIO, __PRETTY_FUNCTION__));
   if( (uint64_t) r < size )
-    throw ksys::ExceptionSP(new EFileError(EIO, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(EIO, __PRETTY_FUNCTION__));
 #endif
   return *this;
 }
@@ -384,14 +384,14 @@ FileHandleContainer & FileHandleContainer::writeBuffer(const void * buf, uint64_
   int64_t w = write(buf, size);
   if( w < 0 ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   if( (uint64_t) w < size )
-    throw ksys::ExceptionSP(new EFileError(EIO, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(EIO, __PRETTY_FUNCTION__));
 #else
   if( (uint64_t) ::write(handle_, buf, size) != size ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
 #endif
   return *this;
@@ -403,7 +403,7 @@ FileHandleContainer & FileHandleContainer::readBuffer(uint64_t pos, void * buf, 
   int64_t r = read(pos, buf, size);
   if( r < 0 || (uint64_t) r != size ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
 #else
   ssize_t r;
@@ -417,9 +417,9 @@ FileHandleContainer & FileHandleContainer::readBuffer(uint64_t pos, void * buf, 
   errno = err;
 #endif
   if( r < 0 || (uint64_t) r < size )
-    throw ksys::ExceptionSP(new EFileError(errno, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(errno, __PRETTY_FUNCTION__));
   if( r == 0 )
-    throw ksys::ExceptionSP(new EFileEOF(errno, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileEOF>(errno, __PRETTY_FUNCTION__));
 #endif
   return *this;
 }
@@ -430,7 +430,7 @@ FileHandleContainer & FileHandleContainer::writeBuffer(uint64_t pos, const void 
   int64_t w = write(pos, buf, size);
   if( w < 0 || (uint64_t) w != size ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
 #else
   ssize_t w;
@@ -445,11 +445,11 @@ FileHandleContainer & FileHandleContainer::writeBuffer(uint64_t pos, const void 
 #endif
   if( w < 0 || (uint64_t) w < size ){
     int err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   if( w == 0 ){
     int err = errno;
-    throw ksys::ExceptionSP(new EFileEOF(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileEOF>(err, __PRETTY_FUNCTION__));
   }
 #endif
   return *this;
@@ -470,7 +470,7 @@ bool FileHandleContainer::tryRDLock(uint64_t pos, uint64_t size)
       case 0                : return true;
       case ERROR_IO_PENDING : return false;
       default               :
-        throw ksys::ExceptionSP(new EFLock(err + errorOffset, __PRETTY_FUNCTION__));
+        throw ExceptionSP(newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__));
     }
 #else
     struct flock  fl;
@@ -481,7 +481,7 @@ bool FileHandleContainer::tryRDLock(uint64_t pos, uint64_t size)
     if( fcntl(handle_, F_SETLKW, &fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
     }
     return false;
 #endif
@@ -504,7 +504,7 @@ bool FileHandleContainer::tryWRLock(uint64_t pos, uint64_t size)
       case 0                : return true;
       case ERROR_IO_PENDING : return false;
       default               :
-        throw ksys::ExceptionSP(new EFLock(err + errorOffset, __PRETTY_FUNCTION__));
+        throw ExceptionSP(newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__));
     }
 #else
     struct flock  fl;
@@ -515,7 +515,7 @@ bool FileHandleContainer::tryWRLock(uint64_t pos, uint64_t size)
     if( fcntl(handle_, F_SETLK, &fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
     }
     return false;
 #endif
@@ -533,7 +533,7 @@ FileHandleContainer & FileHandleContainer::rdLock(uint64_t pos, uint64_t size)
     Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
     if( LockFileEx(handle_, 0, 0, reinterpret_cast< uint64 *>(&size)->lo, reinterpret_cast< uint64 *>(&size)->hi, &Overlapped) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
     }
 #else
     struct flock  fl;
@@ -543,7 +543,7 @@ FileHandleContainer & FileHandleContainer::rdLock(uint64_t pos, uint64_t size)
     fl.l_whence = SEEK_SET;
     if( fcntl(handle_, F_SETLKW, &fl) != 0 ){
       int32_t err = errno;
-      throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
     }
 #endif
   }
@@ -560,7 +560,7 @@ FileHandleContainer & FileHandleContainer::wrLock(uint64_t pos, uint64_t size)
     Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
     if( LockFileEx(handle_, LOCKFILE_EXCLUSIVE_LOCK, 0, reinterpret_cast< uint64 *>(&size)->lo, reinterpret_cast< uint64 *>(&size)->hi, &Overlapped) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
     }
 #else
     struct flock  fl;
@@ -570,7 +570,7 @@ FileHandleContainer & FileHandleContainer::wrLock(uint64_t pos, uint64_t size)
     fl.l_whence = SEEK_SET;
     if( fcntl(handle_, F_SETLKW, &fl) != 0 ){
       int32_t err = errno;
-      throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
     }
 #endif
   }
@@ -587,7 +587,7 @@ FileHandleContainer & FileHandleContainer::unLock(uint64_t pos, uint64_t size)
     Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
     if( UnlockFileEx(handle_, 0, reinterpret_cast< uint64 *>(&size)->lo, reinterpret_cast< uint64 *>(&size)->hi, &Overlapped) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
     }
 #else
     struct flock  fl;
@@ -597,7 +597,7 @@ FileHandleContainer & FileHandleContainer::unLock(uint64_t pos, uint64_t size)
     fl.l_whence = SEEK_SET;
     if( fcntl(handle_, F_SETLK, &fl) != 0 ){
       int32_t err = errno;
-      throw ksys::ExceptionSP(new EFLock(err, __PRETTY_FUNCTION__));
+      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
     }
 #endif
   }
@@ -613,14 +613,14 @@ uint64_t FileHandleContainer::tell() const
   i.lo = SetFilePointer(handle_, 0, &i.hi, FILE_CURRENT);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   return i.a;
 #else
   int64_t pos = lseek(handle_, 0, SEEK_CUR);
   if( pos < 0 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
   return pos;
 #endif
@@ -633,13 +633,13 @@ FileHandleContainer & FileHandleContainer::seek(uint64_t pos)
   reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(handle_, reinterpret_cast< uint64 *>(&pos)->lo, (PLONG) &reinterpret_cast< uint64 *>(&pos)->hi, FILE_BEGIN);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
 #else
   int64_t lp = lseek(handle_, pos, SEEK_SET);
   if( lp < 0 || (uint64_t) lp != pos ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new EFileError(err, __PRETTY_FUNCTION__));
+    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
 #endif
   return *this;

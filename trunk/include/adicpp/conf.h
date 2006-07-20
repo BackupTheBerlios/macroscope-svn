@@ -130,7 +130,7 @@ inline const ConfigSection & ConfigSection::section(const utf8::String & section
   HashedObjectListItem< utf8::String,ConfigSection> * item;
   item = subSections_.itemOfKey(section);
   if( item == NULL )
-    subSections_.add(new ConfigSection(section), section, &item);
+    subSections_.add(newObject<ConfigSection>(section), section, &item);
   return *item->object();
 }
 //---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ inline Mutant & ConfigSection::valueRef(const utf8::String & key) const
 {
   HashedObjectListItem< utf8::String,Mutant> *  item;
   if( (item = values_.itemOfKey(key)) == NULL )
-    values_.add(new Mutant, key, &item);
+    values_.add(newObject<Mutant>(),key,&item);
   return *item->object();
 }
 //---------------------------------------------------------------------------

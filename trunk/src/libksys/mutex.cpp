@@ -164,7 +164,7 @@ InterlockedMutex::InterlockedMutex()
   sem_ = CreateSemaphoreA(NULL,1,~(ULONG) 0 >> 1, NULL);
   if( sem_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //---------------------------------------------------------------------------
@@ -174,7 +174,7 @@ void InterlockedMutex::acquire()
   DWORD r = WaitForSingleObject(sem_,INFINITE);
   if( r == WAIT_FAILED || (r != WAIT_OBJECT_0 && r != WAIT_ABANDONED) ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //---------------------------------------------------------------------------
@@ -184,7 +184,7 @@ bool InterlockedMutex::tryAcquire()
   DWORD r = WaitForSingleObject(sem_,0);
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 }
@@ -194,7 +194,7 @@ void InterlockedMutex::release()
 //  LeaveCriticalSection(&cs_);
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //---------------------------------------------------------------------------
@@ -204,7 +204,7 @@ InterlockedMutex::InterlockedMutex() : mutex_(NULL)
 {
   if( pthread_mutex_init(&mutex_,NULL) != 0 ){
     int32_t err = errno;
-    throw ExceptionSP(new Exception(err,utf8::string(__PRETTY_FUNCTION__)));
+    Exception::throwSP(err,utf8::string(__PRETTY_FUNCTION__)));
   }
 }
 //---------------------------------------------------------------------------
@@ -218,7 +218,7 @@ Mutex::Mutex()
   mutex_ = NULL;
   if( pthread_rwlock_init(&mutex_,NULL) != 0 ){
     int32_t err = errno;
-    throw ExceptionSP(new Exception(err,utf8::string(__PRETTY_FUNCTION__)));
+    Exception::throwSP(err,utf8::string(__PRETTY_FUNCTION__)));
   }
 #endif
 }
@@ -320,7 +320,7 @@ Event::Event()
   if( handle_ == NULL ){
     err = GetLastError() + errorOffset;
 #endif
-    throw ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //---------------------------------------------------------------------------

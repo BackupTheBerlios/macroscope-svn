@@ -44,7 +44,7 @@ int main(int _argc,char * _argv[])
     initializeArguments(_argc,_argv);
     Config::defaultFileName(SYSCONF_DIR + "msmail.conf");
     Services services(msmail_version.v_gnu);
-    AutoPtr<msmail::Service> serviceAP(new msmail::Service);
+    AutoPtr<msmail::Service> serviceAP(newObject<msmail::Service>());
     services.add(serviceAP);
     msmail::Service * service = serviceAP.ptr(NULL);
 #if defined(__WIN32__) || defined(__WIN64__)

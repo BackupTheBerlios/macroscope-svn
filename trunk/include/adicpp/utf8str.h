@@ -75,7 +75,7 @@ template <typename T> inline StringT<T>::~StringT()
 }
 //---------------------------------------------------------------------------
 template <typename T> inline
-StringT<T>::StringT(T * string) : container_(new Container(string))
+StringT<T>::StringT(T * string) : container_(newObject<Container>(string))
 {
 }
 //---------------------------------------------------------------------------
@@ -1003,7 +1003,7 @@ inline utf8::String String::Stream::string()
 {
   stream_.realloc(count_ + 1);
   stream_[count_] = '\0';
-  String s(new String::Container(1,stream_));
+  String s(newObject<String::Container>(1,stream_));
   stream_.ptr(NULL);
   count_ = 0;
   return s;

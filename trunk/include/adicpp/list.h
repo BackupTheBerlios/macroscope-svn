@@ -230,49 +230,49 @@ ListNode< T> & List< T>::insTo(ListNode< T> * node)
 template< class T> inline
 ListNode< T> & List< T>::insToHead()
 {
-  return insTo(new ListNode< T>(NULL, first_));
+  return insTo(newObject<ListNode<T> >(NULL, first_));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ListNode< T> & List< T>::insToHead(const T & object)
 {
-  return insTo(new ListNode< T>(object, NULL, first_));
+  return insTo(newObject<ListNode<T> >(object, NULL, first_));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ListNode< T> & List< T>::insToTail()
 {
-  return insTo(new ListNode< T>(last_, NULL));
+  return insTo(newObject<ListNode<T> >(last_, NULL));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ListNode< T> & List< T>::insToTail(const T & object)
 {
-  return insTo(new ListNode< T>(object, last_, NULL));
+  return insTo(newObject<ListNode<T> >(object, last_, NULL));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ListNode< T> & List< T>::insBefore(ListNode< T> * node)
 {
-  return insTo(new ListNode< T>(node != NULL ? node->prev() : NULL, node));
+  return insTo(newObject<ListNode<T> >(node != NULL ? node->prev() : NULL, node));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ListNode< T> & List< T>::insBefore(ListNode< T> * node, const T & object)
 {
-  return insTo(new ListNode< T>(object, node != NULL ? node->prev() : NULL, node));
+  return insTo(newObject<ListNode<T> >(object, node != NULL ? node->prev() : NULL, node));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ListNode< T> & List< T>::insAfter(ListNode< T> * node)
 {
-  return insTo(new ListNode< T>(node, node != NULL ? node->next() : NULL));
+  return insTo(newObject<ListNode<T> >(node, node != NULL ? node->next() : NULL));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ListNode< T> & List< T>::insAfter(ListNode< T> * node, const T & object)
 {
-  return insTo(new ListNode< T>(object, node, node != NULL ? node->next() : NULL));
+  return insTo(newObject<ListNode<T> >(object, node, node != NULL ? node->next() : NULL));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
@@ -437,7 +437,7 @@ ObjectList< T> & ObjectList< T>::assign(const ObjectList< T> & s)
 {
   clear();
   for( ObjectListNode< T> * p = s.first_; p != NULL; p = p->next() )
-    insToTail(new T(*p->object_));
+    insToTail(newObject<T>(*p->object_));
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -498,25 +498,25 @@ ObjectListNode< T> * ObjectList< T>::insTo(ObjectListNode< T> * node)
 template< class T> inline
 ObjectListNode< T> * ObjectList< T>::insToHead(T * object)
 {
-  return insTo(new ObjectListNode< T>(object, NULL, first_));
+  return insTo(newObject<ObjectListNode<T> >(object, NULL, first_));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ObjectListNode< T> * ObjectList< T>::insToTail(T * object)
 {
-  return insTo(new ObjectListNode< T>(object, last_, NULL));
+  return insTo(newObject<ObjectListNode<T> >(object, last_, NULL));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ObjectListNode< T> * ObjectList< T>::insBefore(ObjectListNode< T> * node, T * object)
 {
-  return insTo(new ObjectListNode< T>(object, node != NULL ? node->prev() : NULL, node));
+  return insTo(newObject<ObjectListNode<T> >(object, node != NULL ? node->prev() : NULL, node));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
 ObjectListNode< T> * ObjectList< T>::insAfter(ObjectListNode< T> * node, T * object)
 {
-  return insTo(new ObjectListNode< T>(object, node, node != NULL ? node->next() : NULL));
+  return insTo(newObject<ObjectListNode<T> >(object, node, node != NULL ? node->next() : NULL));
 }
 //-----------------------------------------------------------------------------
 template< class T> inline

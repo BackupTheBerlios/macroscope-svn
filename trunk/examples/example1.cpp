@@ -44,7 +44,7 @@ ThreadTester::ThreadTester()
 void ThreadTester::execute()
 {
   try{
-    AutoPtr< Randomizer>  rnd (new Randomizer);
+    AutoPtr< Randomizer>  rnd (newObject<Randomizer>);
     rnd->randomize();
 
     Config  config;
@@ -119,7 +119,7 @@ void ThreadTester::execute()
 int main(int, char **)
 {
   /*  {
-      SP<SPTest> sp(new SPTest);
+      SP<SPTest> sp(newObject<SPTest>);
       sp->method();
     }*/
   /*  

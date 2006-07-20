@@ -470,15 +470,14 @@ inline MemoryStream & MemoryStream::writeBuffer(const void * buffer, uintptr_t c
 //---------------------------------------------------------------------------
 inline MemoryStream & MemoryStream::seek(uintptr_t newPos)
 {
-  if( newPos > container_->count_ )
-    resize(newPos);
+  if( newPos > container_->count_ ) resize(newPos);
   pos_ = newPos;
   return *this;
 }
 //---------------------------------------------------------------------------
 inline MemoryStream MemoryStream::unique() const
 {
-  Container * container = new Container(container_->count_);
+  Container * container = newObject<Container>(container_->count_);
   memcpy(container->ptr_, container_->ptr_, container_->count_);
   return container;
 }

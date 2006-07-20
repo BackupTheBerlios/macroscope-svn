@@ -125,7 +125,7 @@ MSFTPServerFiber & MSFTPServerFiber::auth()
     bufferSize
   );
   if( e != eOK )
-    throw ksys::ExceptionSP(new ksys::Exception(e,__PRETTY_FUNCTION__));
+    ksys::Exception::throwSP(e,__PRETTY_FUNCTION__);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -324,7 +324,7 @@ MSFTPServer::MSFTPServer(const ksys::ConfigSP config) : config_(config)
 //------------------------------------------------------------------------------
 ksys::Fiber * MSFTPServer::newFiber()
 {
-  return new MSFTPServerFiber(config_);
+  return newObject<MSFTPServerFiber>(config_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -343,7 +343,7 @@ class MSFTPService : public ksys::Service {
 };
 //------------------------------------------------------------------------------
 MSFTPService::MSFTPService() :
-  msftpConfig_(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>),
+  msftpConfig_(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()),
   msftp_(msftpConfig_)
 {
   serviceName_ = "msftp";
@@ -414,7 +414,7 @@ int main(int argc,char * argv[])
     ksys::initializeArguments(argc,argv);
     ksys::Config::defaultFileName(SYSCONF_DIR + "msftpd.conf");
     ksys::Services services(msftpd_version.v_gnu);
-    services.add(new MSFTPService);
+    services.add(newObject<MSFTPService>());
 #if defined(__WIN32__) || defined(__WIN64__)
     bool dispatch = true;
 #else
@@ -471,7 +471,7 @@ int main(int argc,char * argv[])
     if( dispatch ){
       bool daemon;
       {
-        ksys::ConfigSP config(new ksys::InterlockedConfig<ksys::FiberInterlockedMutex>);
+        ksys::ConfigSP config(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >());
         daemon = config->value("daemon",false);
       }
       services.startServiceCtrlDispatcher(daemon);

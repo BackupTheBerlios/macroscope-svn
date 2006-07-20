@@ -37,7 +37,7 @@ Database * Database::newDatabase(ksys::Config * config)
   const ksys::ConfigSection & section = config->section("libadicpp").section("default_connection");
   utf8::String stype(section.value("server_type", "FIREBIRD"));
   if( stype.strcasecmp("FIREBIRD") == 0 ){
-    FirebirdDatabase * p = new FirebirdDatabase;
+    FirebirdDatabase * p = newObject<FirebirdDatabase>();
     ksys::AutoPtr< FirebirdDatabase> fb(p);
     const ksys::ConfigSection & section2  = section.section("firebird");
     p->name(ksys::unScreenString(section2.value("database")));
@@ -52,7 +52,7 @@ Database * Database::newDatabase(ksys::Config * config)
     return p;
   }
   if( stype.strcasecmp("MYSQL") == 0 ){
-    MYSQLDatabase * p = new MYSQLDatabase;
+    MYSQLDatabase * p = newObject<MYSQLDatabase>();
     ksys::AutoPtr< MYSQLDatabase> my(p);
     const ksys::ConfigSection & section2  = section.section("mysql");
     p->name(ksys::unScreenString(section2.value("database")));
@@ -62,7 +62,7 @@ Database * Database::newDatabase(ksys::Config * config)
     my.ptr(NULL);
     return p;
   }
-  throw ksys::ExceptionSP(new ksys::Exception(EINVAL, "unknown or unsupported server type"));
+  throw ksys::ExceptionSP(ksys::Exception::newException(EINVAL, "unknown or unsupported server type"));
 }
 //---------------------------------------------------------------------------
 } // namespace adicpp

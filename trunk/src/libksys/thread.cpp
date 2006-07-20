@@ -120,7 +120,7 @@ Thread & Thread::resume()
     handle_ = CreateThread(NULL,stackSize_,threadFunc,this,CREATE_SUSPENDED,&id_);
     if( handle_ == NULL ){
       int32_t err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
 #elif HAVE_PTHREAD_H
   pthread_attr_t attr = NULL;
@@ -154,7 +154,7 @@ l1:
   pthread_attr_destroy(&attr);
   pthread_mutex_destroy(&mutex_);
   mutex_ = NULL;
-  throw ksys::ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+  Exception::throwSP(err,__PRETTY_FUNCTION__);
 #endif
 }
 //---------------------------------------------------------------------------
@@ -196,14 +196,14 @@ Thread & Thread::priority(uintptr_t pri)
     struct sched_param param;
     if( pthread_getschedparam(handle_,&policy,&param) != 0 ){
 l1:   int32_t err = errno;
-      throw ksys::ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     param.sched_priority = pri;
     if( pthread_setschedparam(handle_,policy,&param) != 0 ) goto l1;
 #elif defined(__WIN32__) || defined(__WIN64__)
     if( SetThreadPriority(handle_,(int) pri) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
 #endif
   }
@@ -219,14 +219,14 @@ uintptr_t Thread::priority() const
     struct sched_param param;
     if( pthread_getschedparam(handle_,&policy,&param) != 0 ){
       int32_t err = errno;
-      throw ksys::ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     pri = param.sched_priority;
 #elif defined(__WIN32__) || defined(__WIN64__)
     pri = GetThreadPriority(handle_);
     if( pri == THREAD_PRIORITY_ERROR_RETURN ){
       int32_t err = GetLastError() + errorOffset;
-      throw ksys::ExceptionSP(new Exception(err,__PRETTY_FUNCTION__));
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
 #endif
   }

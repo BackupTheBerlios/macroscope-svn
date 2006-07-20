@@ -44,7 +44,7 @@ bool utime(const utf8::String & path, const struct utimbuf & times)
   }
   if( hFile == INVALID_HANDLE_VALUE ){
     err = GetLastError() + errorOffset;
-    throw ExceptionSP(new Exception(err, __PRETTY_FUNCTION__));
+    Exception::throwSP(err, __PRETTY_FUNCTION__);
   }
   union {
       LARGE_INTEGER lat;
@@ -59,13 +59,13 @@ bool utime(const utf8::String & path, const struct utimbuf & times)
   if( SetFileTime(hFile, NULL, &lastAccessTime, &lastWriteTime) == 0 ){
     err = GetLastError() + errorOffset;
     CloseHandle(hFile);
-    throw ExceptionSP(new Exception(err, __PRETTY_FUNCTION__));
+    Exception::throwSP(err, __PRETTY_FUNCTION__);
   }
   CloseHandle(hFile);
 #else
   if( utime(anyPathName2HostPathName(path).getANSIString(), &times) != 0 ){
     err = errno;
-    throw ExceptionSP(new Exception(err, __PRETTY_FUNCTION__));
+    Exception::throwSP(err, __PRETTY_FUNCTION__);
   }
 #endif
   return err == 0;

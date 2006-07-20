@@ -99,7 +99,7 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
       b = ++e;
     }
   }
-  throw ksys::ExceptionSP(new Exception(ENOENT, __PRETTY_FUNCTION__));
+  throw ExceptionSP(Exception::newException(ENOENT,__PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -253,7 +253,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   }
   lastTokenType_ = tt;
   if( throwUnexpectedEof && tt == ttEof )
-    throw ksys::ExceptionSP(new EConfig(this, "unexpected end of file"));
+    throw ksys::ExceptionSP(newObject<EConfig>(this, "unexpected end of file"));
   return token;
 }
 //---------------------------------------------------------------------------
@@ -284,7 +284,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     token = getToken(tt);
     if( tt == ttLeftBrace ) break;
     if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
-      throw ksys::ExceptionSP(new EConfig(this, "invalid section param"));
+      throw ksys::ExceptionSP(newObject<EConfig>(this, "invalid section param"));
     if( param.strlen() > 0 ) param += ",";
     if( tt == ttQuotedString ){
       param += screenString(token);
@@ -296,11 +296,11 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     if( tt == ttLeftBrace )
       break;
     if( tt != ttColon )
-      throw ksys::ExceptionSP(new EConfig(
+      throw ksys::ExceptionSP(newObject<EConfig>(
         this, "unexpected token '" + token + "', expecting colon"));
   }
   if( param.strlen() > 0 )
-    root.values_.add(new Mutant(param), utf8::String());
+    root.values_.add(newObject<Mutant>(param), utf8::String());
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -316,17 +316,17 @@ Config & Config::parseSectionBody(ConfigSection & root)
     }
     if( tt == ttRightBrace ){
       if( &root == this )
-        throw ksys::ExceptionSP(new EConfig(this, "unexpected token '" + token + "'"));
+        throw ksys::ExceptionSP(newObject<EConfig>(this, "unexpected token '" + token + "'"));
       break;
     }
     if( (tt != ttString && tt != ttQuotedString && tt != ttNumeric) || token.strlen() == 0 )
-      throw ksys::ExceptionSP(new EConfig(this, "invalid section or key name"));
+      throw ksys::ExceptionSP(newObject<EConfig>(this, "invalid section or key name"));
     utf8::String key(token);
     token = getToken(tt);
     if( tt != ttEqual ){
       // try new subsection
       HashedObjectListItem<utf8::String,ConfigSection> * item;
-      root.subSections_.add(new ConfigSection(key),key,&item);
+      root.subSections_.add(newObject<ConfigSection>(key),key,&item);
       putToken(token,tt);
       parseSectionHeader(*item->object());
       parseSectionBody(*item->object());
@@ -338,7 +338,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
         if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
-          throw ksys::ExceptionSP(new EConfig(this, "invalid section key value"));
+          throw ksys::ExceptionSP(newObject<EConfig>(this, "invalid section key value"));
         if( value.strlen() > 0 ) value += ",";
         if( tt == ttQuotedString ){
           value += screenString(token);
@@ -349,10 +349,10 @@ Config & Config::parseSectionBody(ConfigSection & root)
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
         if( tt != ttColon )
-          throw ksys::ExceptionSP(new EConfig(
+          throw ksys::ExceptionSP(newObject<EConfig>(
             this, "unexpected token '" + token + "', expecting colon"));
       }
-      root.values_.add(new Mutant(value), key);
+      root.values_.add(newObject<Mutant>(value), key);
     }
   }
   return *this;
@@ -372,7 +372,7 @@ Config & Config::parse()
   fileName = file_.fileName();
   struct Stat st;
   if( stat(fileName,st) && mtime_ != st.st_mtime ){
-    AutoPtr<Randomizer> rnd(new Randomizer);
+    AutoPtr<Randomizer> rnd(newObject<Randomizer>());
     rnd->randomize();
     for( intptr_t i = maxTryOpenCount_ - 1; i >= 0; i-- ){
       try {

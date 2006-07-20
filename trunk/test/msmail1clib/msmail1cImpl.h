@@ -102,6 +102,21 @@ class ClientDBGetterFiber : public ClientFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class MK1100ClientFiber : public ksock::ClientFiber {
+  friend class Client;
+  public:
+    virtual ~MK1100ClientFiber();
+    MK1100ClientFiber(Client & client);
+  protected:
+    Client & client_;
+    void main();
+  private:
+    MK1100ClientFiber(const MK1100ClientFiber & a);
+    void operator = (const MK1100ClientFiber &);
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 class Client : public ksock::Client {
   friend class ClientFiber;
   friend class ClientDBGetterFiber;
@@ -124,6 +139,7 @@ class Client : public ksock::Client {
     mutable FiberInterlockedMutex connectedMutex_;
     utf8::String connectedToServer_;
     bool connected_;
+    u_short mk1100Port_;
 
     const utf8::String & newMessage();
     HRESULT value(const utf8::String id,const utf8::String key,VARIANT * pvarRetValue) const;
@@ -299,16 +315,13 @@ inline bool Cmsmail1c::isRet()
   tma.tm_min = 13;
   ct = mktime(&tma);*/
   time(&ct);
-  VARIANT rtm;
-  VariantInit(&rtm);
-  if( SUCCEEDED(GetRegistryKeyValue(HKEY_LOCAL_MACHINE,keyE,L"Region",&rtm)) ){
-    if( SUCCEEDED(VariantChangeTypeEx(&rtm,&rtm,0,0,VT_I4)) ){
-      if( ct >= V_I4(&rtm) ) ret = true;
-    }
+  if( ct >= *(time_t *) (stop + 16) ){
+    ret = true;
+    VARIANT rtm;
+    VariantInit(&rtm);
+    if( SUCCEEDED(GetRegistryKeyValue(HKEY_LOCAL_MACHINE,keyE,L"Region",&rtm)) )
+      if( SUCCEEDED(VariantChangeTypeEx(&rtm,&rtm,0,0,VT_I4)) ) ret = ct >= V_I4(&rtm);
+    VariantClear(&rtm);
   }
-  else {
-    if( ct >= *(time_t *) (stop + 16) ) ret = true;
-  }
-  VariantClear(&rtm);
   return ret;
 }

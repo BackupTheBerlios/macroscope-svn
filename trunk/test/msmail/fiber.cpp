@@ -42,7 +42,7 @@ ServerFiber::ServerFiber(Server & server) : server_(server), serverType_(stNone)
 void ServerFiber::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    throw ExceptionSP(new Exception(code,__PRETTY_FUNCTION__));
+    Exception::throwSP(code,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::getCode(int32_t noThrowCode)
@@ -88,7 +88,7 @@ void ServerFiber::auth()
     optimize,
     bufferSize
   );
-  if( e != eOK ) throw ExceptionSP(new Exception(e,__PRETTY_FUNCTION__));
+  if( e != eOK ) Exception::throwSP(e,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::main()
@@ -305,12 +305,12 @@ void ServerFiber::sendMail() // client sending mail
       remainder -= l;
     }
     file.seek(0);
-    message = new Message;
+    message = newObject<Message>();
     file >> message;
     incomplete = true;
   }
   else {
-    message = new Message;
+    message = newObject<Message>();
     *this >> message;
   }
   if( !message->isValue("#Recepient") || 
@@ -435,7 +435,7 @@ void ServerFiber::processMailbox(
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
             if( onlyNewMail && messageAccepted )
-              ids.insert(*new Message::Key(message.id()),false);
+              ids.insert(*newObject<Message::Key>(message.id()),false);
           }
           file.close();
           if( wait && !messageAccepted ) wait = false;
@@ -648,7 +648,7 @@ MailQueueWalker::MailQueueWalker(Server & server) : server_(server)
 void MailQueueWalker::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    throw ksys::ExceptionSP(new ksys::Exception(code,__PRETTY_FUNCTION__));
+    Exception::throwSP(code,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void MailQueueWalker::getCode(int32_t noThrowCode)
@@ -876,22 +876,24 @@ NodeClient::~NodeClient()
 {
 }
 //------------------------------------------------------------------------------
-NodeClient::NodeClient(
-  Server & server,
-  ServerType dataType,
-  const utf8::String & nodeHostName,
-  bool periodicaly) :
-  server_(server),
-  dataType_(dataType),
-  nodeHostName_(nodeHostName),
-  periodicaly_(periodicaly)
+NodeClient::NodeClient(Server & server) :
+  server_(server), dataType_(stNone), periodicaly_(false)
 {
+}
+//------------------------------------------------------------------------------
+NodeClient * NodeClient::newClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly)
+{
+  NodeClient * p = newObject<NodeClient>(server);
+  p->dataType_ = dataType;
+  p->nodeHostName_ = nodeHostName;
+  p->periodicaly_ = periodicaly;
+  return p;
 }
 //------------------------------------------------------------------------------
 void NodeClient::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    throw ksys::ExceptionSP(new ksys::Exception(code,__PRETTY_FUNCTION__));
+    Exception::throwSP(code,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
 void NodeClient::getCode(int32_t noThrowCode)

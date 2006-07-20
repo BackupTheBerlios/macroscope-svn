@@ -376,14 +376,14 @@ void AVLTree<T>::Destroyer(AVLTreeNode<T> * ANode)
 template <class T>
 AVLTreeNode<T> * AVLTree<T>::Insert(const T AData)
 {
-  AVLTreeNodeLink<LT> ANode = new AVLTreeNode<T>(AData);
+  AVLTreeNodeLink<LT> ANode = newObject<AVLTreeNode<T> >(AData);
   return ANode->Insert(&RootNode,f);
 }
 
 template <class T>
 AVLTreeNode<T> * AVLTree<T>::InsertObject(const T AData)
 {
-  AVLTreeNode<T> * ANode = new AVLTreeNode<T>(AData);
+  AVLTreeNode<T> * ANode = newObject<AVLTreeNode<T> >(AData);
   AVLTreeNode<T> * ANode2 = ANode->InsertObject(&RootNode,f,true);
   if( ANode != ANode2 ) delete AData;
   return ANode2;

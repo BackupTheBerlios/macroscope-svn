@@ -32,12 +32,31 @@ namespace fbcpp {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 TPB::TPBParam TPB::params[] = {
-  {             "version1",               isc_tpb_version1 }, {             "version3",               isc_tpb_version3 }, {          "consistency",            isc_tpb_consistency }, {          "concurrency",            isc_tpb_concurrency }, {               "shared",                 isc_tpb_shared }, {            "protected",              isc_tpb_protected }, {            "exclusive",              isc_tpb_exclusive }, {                 "wait",                   isc_tpb_wait }, {               "nowait",                 isc_tpb_nowait }, {                 "read",                   isc_tpb_read }, {                "write",                  isc_tpb_write }, {            "lock_read",              isc_tpb_lock_read }, {           "lock_write",             isc_tpb_lock_write }, {            "verb_time",              isc_tpb_verb_time }, {          "commit_time",            isc_tpb_commit_time }, {         "ignore_limbo",           isc_tpb_ignore_limbo }, {       "read_committed",         isc_tpb_read_committed }, {           "autocommit",             isc_tpb_autocommit }, {          "rec_version",            isc_tpb_rec_version }, {       "no_rec_version",         isc_tpb_no_rec_version }, {     "restart_requests",       isc_tpb_restart_requests }, {         "no_auto_undo",           isc_tpb_no_auto_undo },
+  {             "version1",               isc_tpb_version1 },
+  {             "version3",               isc_tpb_version3 },
+  {          "consistency",            isc_tpb_consistency },
+  {          "concurrency",            isc_tpb_concurrency },
+  {               "shared",                 isc_tpb_shared },
+  {            "protected",              isc_tpb_protected },
+  {            "exclusive",              isc_tpb_exclusive },
+  {                 "wait",                   isc_tpb_wait },
+  {               "nowait",                 isc_tpb_nowait },
+  {                 "read",                   isc_tpb_read },
+  {                "write",                  isc_tpb_write },
+  {            "lock_read",              isc_tpb_lock_read },
+  {           "lock_write",             isc_tpb_lock_write },
+  {            "verb_time",              isc_tpb_verb_time },
+  {          "commit_time",            isc_tpb_commit_time },
+  {         "ignore_limbo",           isc_tpb_ignore_limbo },
+  {       "read_committed",         isc_tpb_read_committed },
+  {           "autocommit",             isc_tpb_autocommit },
+  {          "rec_version",            isc_tpb_rec_version },
+  {       "no_rec_version",         isc_tpb_no_rec_version },
+  {     "restart_requests",       isc_tpb_restart_requests },
+  {         "no_auto_undo",           isc_tpb_no_auto_undo }
 };
 //---------------------------------------------------------------------------
-TPB::TPB()
-  : tpb_(NULL),
-    tpbLen_(0)
+TPB::TPB() : tpb_(NULL), tpbLen_(0)
 {
 }
 //---------------------------------------------------------------------------
@@ -119,7 +138,7 @@ Transaction::~Transaction()
 Transaction & Transaction::attach(Database & database)
 {
   utf8::String  dbKey (utf8::ptr2Str(&database));
-  tpbs_.add(new TPB, dbKey);
+  tpbs_.add(newObject<TPB>(), dbKey);
   try{
 #if __GNUG__
     databases_.add(&database);
@@ -167,11 +186,11 @@ Transaction & Transaction::retainingHelper()
       break;
     case lrtCommit :
       if( api.isc_commit_transaction(status, &handle_) != 0 )
-        exceptionHandler(new ETrCommit(status, __PRETTY_FUNCTION__));
+        exceptionHandler(newObject<ETrCommit>(status, __PRETTY_FUNCTION__));
       break;
     case lrtRollback :
       if( api.isc_rollback_transaction(status, &handle_) != 0 )
-        exceptionHandler(new ETrRollback(status, __PRETTY_FUNCTION__));
+        exceptionHandler(newObject<ETrRollback>(status, __PRETTY_FUNCTION__));
       break;
   }
   lastRetainingTransaction_ = lrtNone;
@@ -181,7 +200,7 @@ Transaction & Transaction::retainingHelper()
 Transaction & Transaction::start()
 {
   if( !attached() )
-    throw ksys::ExceptionSP(new ETrNotActive(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   if( startCount_ == 0 ){
     retainingHelper(); // pumping retaining transactions
     ksys::AutoPtr< ISC_TEB> tebVector;
@@ -205,7 +224,7 @@ Transaction & Transaction::start()
     }
     ISC_STATUS_ARRAY  status;
     if( api.isc_start_multiple(status, &handle_, (short) databases_.count(), tebVector.ptr()) != 0 )
-      exceptionHandler(new ETrStart(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObject<ETrStart>(status, __PRETTY_FUNCTION__));
   }
   startCount_++;
   lastRetainingTransaction_ = lrtNone;
@@ -215,21 +234,21 @@ Transaction & Transaction::start()
 Transaction & Transaction::prepare()
 {
   if( !active() )
-    exceptionHandler(new ETrNotActive(NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   ISC_STATUS_ARRAY  status;
   if( api.isc_prepare_transaction(status, &handle_) != 0 )
-    exceptionHandler(new ETrPrepare(status, __PRETTY_FUNCTION__));
+    exceptionHandler(newObject<ETrPrepare>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::commit()
 {
   if( !active() )
-    exceptionHandler(new ETrNotActive(NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   ISC_STATUS_ARRAY  status;
   if( startCount_ == 1 ){
     if( api.isc_commit_transaction(status, &handle_) != 0 )
-      exceptionHandler(new ETrCommit(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObject<ETrCommit>(status, __PRETTY_FUNCTION__));
     startCount_--;
   }
   else if( startCount_ == 0 ){
@@ -245,11 +264,11 @@ Transaction & Transaction::commit()
 Transaction & Transaction::commitRetaining()
 {
   if( !active() )
-    exceptionHandler(new ETrNotActive(NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   if( startCount_ == 1 ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_commit_retaining(status, &handle_) != 0 )
-      exceptionHandler(new ETrCommit(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObject<ETrCommit>(status, __PRETTY_FUNCTION__));
     lastRetainingTransaction_ = lrtCommit;
     startCount_--;
   }
@@ -266,11 +285,11 @@ Transaction & Transaction::commitRetaining()
 Transaction & Transaction::rollback()
 {
   if( !active() )
-    exceptionHandler(new ETrNotActive(NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   ISC_STATUS_ARRAY  status;
   if( startCount_ == 1 ){
     if( api.isc_rollback_transaction(status, &handle_) != 0 )
-      exceptionHandler(new ETrRollback(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObject<ETrRollback>(status, __PRETTY_FUNCTION__));
     startCount_--;
   }
   else if( startCount_ == 0 ){
@@ -286,11 +305,11 @@ Transaction & Transaction::rollback()
 Transaction & Transaction::rollbackRetaining()
 {
   if( !active() )
-    exceptionHandler(new ETrNotActive(NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   if( startCount_ == 1 ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_rollback_retaining(status, &handle_) != 0 )
-      exceptionHandler(new ETrRollback(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObject<ETrRollback>(status, __PRETTY_FUNCTION__));
     lastRetainingTransaction_ = lrtRollback;
     startCount_--;
   }

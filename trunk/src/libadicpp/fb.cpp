@@ -47,12 +47,12 @@ void FirebirdDatabase::exceptionHandler(ksys::Exception * e)
 //---------------------------------------------------------------------------
 Statement * FirebirdDatabase::newStatement()
 {
-  return new FirebirdStatement;
+  return newObject<FirebirdStatement>();
 }
 //---------------------------------------------------------------------------
 Statement * FirebirdDatabase::newAttachedStatement()
 {
-  ksys::AutoPtr< FirebirdStatement> p (new FirebirdStatement);
+  ksys::AutoPtr<FirebirdStatement> p(newObject<FirebirdStatement>());
   p->attach(*this);
   return p.ptr(NULL);
 }
@@ -151,8 +151,8 @@ FirebirdStatement * FirebirdStatement::attach(Database & database)
 {
   FirebirdDatabase *  p = dynamic_cast< FirebirdDatabase *>(&database);
   if( p == NULL )
-    throw ksys::ExceptionSP(new ksys::Exception(EINVAL, __PRETTY_FUNCTION__));
-  static_cast< fbcpp::DSQLStatement *>(this)->attach(*p, *p);
+    ksys::Exception::throwSP(EINVAL, __PRETTY_FUNCTION__);
+  static_cast<fbcpp::DSQLStatement *>(this)->attach(*p, *p);
   return this;
 }
 //---------------------------------------------------------------------------

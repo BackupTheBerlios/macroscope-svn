@@ -40,10 +40,10 @@ void * kmalloc(size_t size)
     p = malloc(size);
 #endif
     if( p == NULL ){
-      throw ksys::ExceptionSP(
-        new EOutOfMemory(
+      throw ExceptionSP(
+        newObject<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
-          ERROR_NOT_ENOUGH_MEMORY + ksys::errorOffset,
+          ERROR_NOT_ENOUGH_MEMORY + errorOffset,
 #else
           ENOMEM,
 #endif
@@ -75,10 +75,10 @@ void * krealloc(void * p, size_t size)
     a = realloc(p,size);
 #endif
     if( a == NULL )
-      throw ksys::ExceptionSP(
-        new EOutOfMemory(
+      throw ExceptionSP(
+        newObject<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
-          ERROR_NOT_ENOUGH_MEMORY + ksys::errorOffset,
+          ERROR_NOT_ENOUGH_MEMORY + errorOffset,
 #else
           ENOMEM,
 #endif

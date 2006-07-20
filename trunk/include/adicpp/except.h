@@ -32,7 +32,7 @@ namespace ksys {
 class Exception {
   public:
     virtual ~Exception();
-    Exception(int32_t code, const utf8::String what);
+    Exception(int32_t code, const utf8::String & what);
     int32_t                       code() const;
     const utf8::String &          what() const;
     const Array< int32_t> &       codes() const;
@@ -47,6 +47,10 @@ class Exception {
     Exception &                   remRef();
 
     virtual bool                  isFatalError() const;
+
+    static Exception * newException(int32_t code,const utf8::String & what);
+    static void throwSP(int32_t code,const utf8::String & what);
+    static void throwSP(int32_t code,const char * what);
   protected:
     Array<int32_t>                codes_;
     Array<utf8::String>           whats_;

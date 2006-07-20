@@ -79,7 +79,7 @@ int64_t timeFromTimeString(const utf8::String & s)
   );
   if( a == -1 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   tma.tm_mon -= 1;
   tma.tm_year -= 1900;
@@ -91,7 +91,7 @@ int64_t timeFromTimeString(const utf8::String & s)
   }
   if( tv.tv_sec < 0 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   struct timeval tv2;
   struct timezone tz;
@@ -125,7 +125,7 @@ utf8::String getTimeString(int64_t t)
   );
   if( a == -1 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   return s;
 }
@@ -154,7 +154,7 @@ int64_t timeFromTimeCodeString(const utf8::String & s)
   );
   if( a == -1 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   tma.tm_mon -= 1;
   tma.tm_year -= 1900;
@@ -166,7 +166,7 @@ int64_t timeFromTimeCodeString(const utf8::String & s)
   }
   if( tv.tv_sec < 0 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   struct timeval tv2;
   struct timezone tz;
@@ -200,7 +200,7 @@ utf8::String getTimeCode(int64_t t)
   );
   if( a == -1 ){
     int32_t err = errno;
-    throw ksys::ExceptionSP(new ksys::Exception(err,__PRETTY_FUNCTION__));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   return s;
 }

@@ -132,7 +132,7 @@ void API::open()
           ksys::lmERROR,
           utf8::String::Stream() << "Load 'ws2_32.dll' failed\n"
         );
-        throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
       apiEx.handle_ = LoadLibraryExA("mswsock.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       if( apiEx.handle_ == NULL ){
@@ -143,7 +143,7 @@ void API::open()
           ksys::lmERROR,
           utf8::String::Stream() << "Load 'mswsock.dll' failed\n"
         );
-        throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
     }
     else {
@@ -151,7 +151,7 @@ void API::open()
       if( handle_ == NULL ){
         err = GetLastError() + ksys::errorOffset;
         ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'ws2_32.dll' failed\n");
-        throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
       apiEx.handle_ = LoadLibraryExW(L"mswsock.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       if( apiEx.handle_ == NULL ){
@@ -159,7 +159,7 @@ void API::open()
         FreeLibrary(handle_);
         handle_ = NULL;
         ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'mswsock.dll' failed\n");
-        throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
       if( ksys::isWinXPorLater() ){
         iphlpapi.handle_ = LoadLibraryExW(L"iphlpapi.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -170,7 +170,7 @@ void API::open()
           FreeLibrary(apiEx.handle_);
           apiEx.handle_ = NULL;
           ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'lphlpapi.dll' failed\n");
-          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+          ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
         }
       }
       /*if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
@@ -184,7 +184,7 @@ void API::open()
           FreeLibrary(iphlpapi.handle_);
           iphlpapi.handle_ = NULL;
           ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'wship6.dll' failed\n");
-          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+          Exception::throwSP(err, __PRETTY_FUNCTION__);
         }
       }*/
     }
@@ -211,7 +211,7 @@ void API::open()
           ksys::lmERROR,
           utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
         );
-        throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
     }
     for( i = 0; i < sizeof(apiEx.symbols_) / sizeof(apiEx.symbols_[0]); i++ ){
@@ -230,7 +230,7 @@ void API::open()
           ksys::lmERROR,
           utf8::String::Stream() << "GetProcAddress(\"" << apiEx.symbols_[i] << "\")\n"
         );
-        throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
     }
     if( ksys::isWinXPorLater() ){
@@ -247,7 +247,7 @@ void API::open()
           ksys::stdErr.debug(9,utf8::String::Stream() <<
             "GetProcAddress(\"" << iphlpapi.symbols_[i] << "\")\n"
           );
-          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+          ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
         }
       }
     }
@@ -267,7 +267,7 @@ void API::open()
           ksys::stdErr.debug(9,utf8::String::Stream() <<
             "GetProcAddress(\"" << wship6api.symbols_[i] << "\")\n"
           );
-          throw ksys::ExceptionSP(new ksys::Exception(err, __PRETTY_FUNCTION__));
+          Exception::throwSP(err, __PRETTY_FUNCTION__);
         }
       }
     }*/
@@ -285,7 +285,7 @@ void API::open()
       wship6api.handle_ = NULL;
 #endif
       ksys::stdErr.debug(9,utf8::String::Stream() << "WSAStartup failed\n");
-      throw ksys::ExceptionSP(new ksys::Exception(err,"WSAStartup failed"));
+      ksys::Exception::throwSP(err,"WSAStartup failed");
     }
     if( LOBYTE(wsaData_.wVersion) != 2 || HIBYTE(wsaData_.wVersion) != 2 ){
       ksys::stdErr.debug(9,utf8::String::Stream() <<
@@ -301,7 +301,7 @@ void API::open()
       FreeLibrary(wship6api.handle_);
       wship6api.handle_ = NULL;
 #endif
-      throw ksys::ExceptionSP(new ksys::Exception(WSAVERNOTSUPPORTED,__PRETTY_FUNCTION__));
+      ksys::Exception::throwSP(WSAVERNOTSUPPORTED,__PRETTY_FUNCTION__);
     }
   }
   count_++;

@@ -368,7 +368,7 @@ FileDriver & FileDriver::open(const utf8::String & name)
       return *this;
     }
   }
-  throw ksys::ExceptionSP(new ksys::Exception(EINVAL,__PRETTY_FUNCTION__));
+  Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
 }
 //---------------------------------------------------------------------------
 FileDriver & FileDriver::close()
@@ -856,7 +856,7 @@ FileDriver & FileDriver::setDirty(Cache::Line * line)
 StorageDriver & StorageDriver::attach(const utf8::String & name)
 {
   if( files_.count() > 0 )
-    throw ksys::ExceptionSP(new ksys::Exception(EALREADY,__PRETTY_FUNCTION__));
+    Exception::throwSP(EALREADY,__PRETTY_FUNCTION__);
   try {
     File & file = files_.add();
     FileDriver & driver = file.handles_.insToTail().object();
@@ -926,7 +926,7 @@ Test::Test()
 //---------------------------------------------------------------------------
 ksys::BaseFiber * Test::newFiber()
 {
-  return new TestFiber;
+  return newObject<TestFiber>;
 }
 //---------------------------------------------------------------------------
 void Test::execute()

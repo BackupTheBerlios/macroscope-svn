@@ -33,7 +33,7 @@ namespace mycpp {
 //---------------------------------------------------------------------------
 DSQLRow * DSQLValues::bind()
 {
-  ksys::AutoPtr< DSQLRow> row (new DSQLRow);
+  ksys::AutoPtr<DSQLRow> row(newObject<DSQLRow>());
   row->index_.resize(bind_.count());
   row->isNulls_.resize(bind_.count());
   uintptr_t i;
@@ -245,7 +245,7 @@ DSQLValues & DSQLValues::freeRes()
   if( res_ != NULL ){
     api.mysql_free_result(res_);
     if( api.mysql_stmt_free_result(statement_.handle_) != 0 )
-      statement_.database_->exceptionHandler(new EDSQLStFreeResult(
+      statement_.database_->exceptionHandler(newObject<EDSQLStFreeResult>(
         api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
     res_ = NULL;
   }
@@ -257,11 +257,11 @@ bool DSQLValues::fetch()
   long                    code;
   ksys::AutoPtr< DSQLRow> row (bind());
   if( api.mysql_stmt_bind_result(statement_.handle_, bind_.bind()) != 0 )
-    statement_.database_->exceptionHandler(new EDSQLStBindResult(
+    statement_.database_->exceptionHandler(newObject<EDSQLStBindResult>(
       api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
   code = api.mysql_stmt_fetch(statement_.handle_);
   if( code == 1 )
-    statement_.database_->exceptionHandler(new EDSQLStFetch(
+    statement_.database_->exceptionHandler(newObject<EDSQLStFetch>(
       api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
   if( code != MYSQL_NO_DATA ){
     fillRow(row);
@@ -338,7 +338,7 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
     default :
       ;
   }
-  throw ksys::ExceptionSP(new EDSQLStInvalidValue(EINVAL, __PRETTY_FUNCTION__));
+  throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLValues::asString(uintptr_t i)
@@ -400,13 +400,13 @@ utf8::String DSQLValues::asString(uintptr_t i)
     default :
       ;
   }
-  throw ksys::ExceptionSP(new EDSQLStInvalidValue(EINVAL, __PRETTY_FUNCTION__));
+  throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
 DSQLValues & DSQLValues::selectRow(uintptr_t i)
 {
   if( i >= rows_.count() )
-    throw ksys::ExceptionSP(new EDSQLStInvalidRowIndex(EINVAL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidRowIndex>(EINVAL, __PRETTY_FUNCTION__));
   row_ = i;
   return *this;
 }
@@ -414,9 +414,9 @@ DSQLValues & DSQLValues::selectRow(uintptr_t i)
 uintptr_t DSQLValues::checkValueIndex(uintptr_t i)
 {
   if( (uintptr_t) (intptr_t) row_ >= rows_.count() )
-    throw ksys::ExceptionSP(new EDSQLStInvalidRowIndex(NULL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__));
   if( i >= valuesIndex_.count() )
-    throw ksys::ExceptionSP(new EDSQLStInvalidValueIndex(EINVAL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValueIndex>(EINVAL, __PRETTY_FUNCTION__));
   return i;
 }
 //---------------------------------------------------------------------------

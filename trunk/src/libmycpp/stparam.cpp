@@ -242,7 +242,7 @@ DSQLParams & DSQLParams::asString(const utf8::String & paramName, const utf8::St
 DSQLParams & DSQLParams::checkParamIndex(uintptr_t i)
 {
   if( i >= params_.count() )
-    throw ksys::ExceptionSP(new EDSQLStInvalidParamIndex(EINVAL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamIndex>(EINVAL, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -250,7 +250,7 @@ DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
 {
   DSQLParam * param = params_.objectOfKey(paramName);
   if( param == NULL )
-    throw ksys::ExceptionSP(new EDSQLStInvalidParamName(EINVAL, __PRETTY_FUNCTION__));
+    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamName>(EINVAL, __PRETTY_FUNCTION__));
   return param;
 }
 //---------------------------------------------------------------------------
@@ -274,7 +274,7 @@ ksys::HashedObjectListItem< utf8::String,DSQLParam> * DSQLParams::add(const utf8
   ksys::HashedObjectListItem< utf8::String,DSQLParam> * item;
   item = params_.itemOfKey(paramName);
   if( item == NULL )
-    params_.add(new DSQLParam(statement_), paramName, &item);
+    params_.add(newObject<DSQLParam>(statement_), paramName, &item);
   item->object()->changed_ = true;
   return item;
 }

@@ -65,6 +65,7 @@ inline EDBNotAttached::EDBNotAttached(ISC_STATUS_ARRAY status, const utf8::Strin
   : EClientServer(status, what)
 {
 }
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class EDBAttach : public EClientServer {
