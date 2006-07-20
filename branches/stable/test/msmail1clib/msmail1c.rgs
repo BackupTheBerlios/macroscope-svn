@@ -1,0 +1,27 @@
+HKCR
+{
+	AddIn.msmail1c.1 = s 'msmail1c Class'
+	{
+		CLSID = s '{2F1A8B1C-DF62-4A85-A782-8E236FE335FA}'
+	}
+	AddIn.msmail1c = s 'msmail1c Class'
+	{
+		CLSID = s '{2F1A8B1C-DF62-4A85-A782-8E236FE335FA}'
+		CurVer = s 'AddIn.msmail1c.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {2F1A8B1C-DF62-4A85-A782-8E236FE335FA} = s 'msmail1c Class'
+		{
+			ProgID = s 'AddIn.msmail1c.1'
+			VersionIndependentProgID = s 'AddIn.msmail1c'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Free'
+			}
+			val AppID = s '%APPID%'
+			'TypeLib' = s '{4BC03D2E-0898-4A3A-ACEC-335FEFFE3D24}'
+		}
+	}
+}
