@@ -589,7 +589,7 @@ static uint8_t authChannelHelper(const utf8::String & s)
   if( s.strcasecmp("allow") == 0 ) return radAllow;
   if( s.strcasecmp("disabled") == 0) return radDisabled;
   if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return radAllow;
-  ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  throw ksys::ExceptionSP(ksys::Exception::newException(EINVAL,__PRETTY_FUNCTION__));
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper2(const utf8::String & s)
@@ -600,7 +600,7 @@ static uint8_t authChannelHelper2(const utf8::String & s)
   if( s.strcasecmp("LZO1X_1_15") == 0 ) return ksys::LZO1X::LZO1X_1_15;
   if( s.strcasecmp("LZO1X_999") == 0 ) return ksys::LZO1X::LZO1X_999;
   if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::LZO1X_1_15;
-  ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  throw ksys::ExceptionSP(ksys::Exception::newException(EINVAL,__PRETTY_FUNCTION__));
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper3(const utf8::String & s)
@@ -609,7 +609,7 @@ static uint8_t authChannelHelper3(const utf8::String & s)
   if( s.strcasecmp("CRC32") == 0 ) return ksys::LZO1X::CRC32;
   if( s.strcasecmp("ADLER32") == 0 ) return ksys::LZO1X::ADLER32;
   if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::ADLER32;
-  ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  throw ksys::ExceptionSP(ksys::Exception::newException(EINVAL,__PRETTY_FUNCTION__));
 }
 //------------------------------------------------------------------------------
 AsyncSocket::AuthErrorType AsyncSocket::serverAuth(
