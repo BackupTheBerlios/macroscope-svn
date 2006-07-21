@@ -1,8 +1,8 @@
 #!/bin/sh
 
-versions="msftp"
+versions="msmail"
 
-version_msftp="."
+version_msmail="."
 
 wd=`pwd`;
 

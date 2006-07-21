@@ -8,7 +8,7 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define MSFTP_VERSION 0x1002D3
+#define MSMAIL_VERSION 0x1002D3
 
 typedef struct {
     const int   v_hex;
@@ -19,9 +19,9 @@ typedef struct {
     const char *v_web;
     const char *v_sccs;
     const char *v_rcs;
-} msftp_version_t;
+} msmail_version_t;
 
-extern msftp_version_t msftp_version;
+extern msmail_version_t msmail_version;
 
 #endif /* _VERSION_H_ */
 
@@ -31,15 +31,15 @@ extern msftp_version_t msftp_version;
 #include "version.h"
 #undef  _VERSION_H_AS_HEADER_
 
-msftp_version_t msftp_version = {
+msmail_version_t msmail_version = {
     0x1002D3,
     "1.0.211",
     "1.0.211 (21-Jul-2006)",
-    "This is msftp, Version 1.0.211 (21-Jul-2006)",
-    "msftp 1.0.211 (21-Jul-2006)",
-    "msftp/1.0.211",
-    "@(#)msftp 1.0.211 (21-Jul-2006)",
-    "$Id: msftp 1.0.211 (21-Jul-2006) $"
+    "This is msmail, Version 1.0.211 (21-Jul-2006)",
+    "msmail 1.0.211 (21-Jul-2006)",
+    "msmail/1.0.211",
+    "@(#)msmail 1.0.211 (21-Jul-2006)",
+    "$Id: msmail 1.0.211 (21-Jul-2006) $"
 };
 
 #endif /* _VERSION_H_AS_HEADER_ */
