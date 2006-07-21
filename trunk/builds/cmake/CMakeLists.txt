@@ -1,0 +1,6 @@
+PROJECT(libadicpp)
+ADD_SUBDIRECTORY(src/libadicpp)
+ADD_SUBDIRECTORY(src/libfbcpp)
+ADD_SUBDIRECTORY(src/libksys)
+ADD_SUBDIRECTORY(src/libmycpp)
+ADD_SUBDIRECTORY(src/libutf8)
