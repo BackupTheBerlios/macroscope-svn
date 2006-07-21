@@ -27,15 +27,15 @@
 #ifndef _bootconf_H_
 #define _bootconf_H_
 
-#if (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && (defined(_WIN32) || defined(_WIN32_WINNT))
+#if HAVE_CONFIG_H
+#include <adicpp/config.h>
+#elif (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && (defined(_WIN32) || defined(_WIN32_WINNT))
 #include <adicpp/config.h.msvc>
 #elif defined(__MINGW32__)
 #include <adicpp/config.h.mingw>
 #include <adicpp/config.h.cygwin>
 #elif defined(__BORLANDC__)
 #include <adicpp/config.h.borland>
-#elif HAVE_CONFIG_H
-#include <adicpp/config.h>
 #else
 #error Not configured
 #endif
