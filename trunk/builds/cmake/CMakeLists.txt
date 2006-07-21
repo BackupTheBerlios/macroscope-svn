@@ -1,10 +1,28 @@
+INCLUDE (CheckIncludeFiles)
+
+IF (NOT ROOT)
+  SET (ROOT ../..)
+ENDIF (NOT ROOT)
+
+SET (CMAKE_BUILD_TYPE Debug Release RelWithDebInf MinSizeRel)
+SET (EXECUTABLE_OUTPUT_PATH ${ROOT}/binaries)
+SET (LIBRARY_OUTPUT_PATH ${ROOT}/binaries)
+
 PROJECT(libadicpp)
-INCLUDE_DIRECTORIES(include)
-ADD_SUBDIRECTORY(src/libadicpp)
-ADD_SUBDIRECTORY(src/libfbcpp)
-ADD_SUBDIRECTORY(src/libksys)
-ADD_SUBDIRECTORY(src/libmycpp)
-ADD_SUBDIRECTORY(src/libutf8)
+INCLUDE_DIRECTORIES(${ROOT}/include)
+ADD_SUBDIRECTORY(${ROOT}/src/libadicpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libksys)
+ADD_SUBDIRECTORY(${ROOT}/src/libmycpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libutf8)
+
+
+CHECK_INCLUDE_FILES(malloc.h HAVE_MALLOC_H)
+CHECK_INCLUDE_FILES("sys/param.h;sys/mount.h" HAVE_SYS_MOUNT_H)
+CONFIGURE_FILE(${ROOT}/include/adicpp/config.h.cmake ${ROOT}/include/adicpp/config.h)
+
+ADD_DEFINITIONS()
+
 
 # ------------------------- Begin Generic CMake Variable Logging ------------------
 
