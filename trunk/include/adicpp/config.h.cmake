@@ -53,3 +53,4 @@
 #cmakedefine HAVE_STDEXCEPT 1
 #cmakedefine HAVE_NEW 1
 #cmakedefine HAVE_TYPEINFO 1
+#cmakedefine BYTE_ORDER

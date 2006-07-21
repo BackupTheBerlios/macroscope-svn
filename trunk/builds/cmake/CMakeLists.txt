@@ -1,14 +1,11 @@
-INCLUDE (CheckIncludeFiles)
+PROJECT(libadicpp)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.0)
 
 IF (NOT ROOT)
   SET (ROOT ../..)
 ENDIF (NOT ROOT)
+# PROJECT DEFINITIONS
 
-SET (CMAKE_BUILD_TYPE Debug Release RelWithDebInf MinSizeRel)
-SET (EXECUTABLE_OUTPUT_PATH ${ROOT}/binaries)
-SET (LIBRARY_OUTPUT_PATH ${ROOT}/binaries)
-
-PROJECT(libadicpp)
 INCLUDE_DIRECTORIES(${ROOT}/include)
 ADD_SUBDIRECTORY(${ROOT}/src/libadicpp)
 ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp)
@@ -17,213 +14,142 @@ ADD_SUBDIRECTORY(${ROOT}/src/libmycpp)
 ADD_SUBDIRECTORY(${ROOT}/src/libutf8)
 
 
-CHECK_INCLUDE_FILES(malloc.h HAVE_MALLOC_H)
-CHECK_INCLUDE_FILES("sys/mount.h" HAVE_SYS_MOUNT_H)
-CHECK_INCLUDE_FILES(dirent.h HAVE_DIRENT_H)
-CHECK_INCLUDE_FILES(error.h HAVE_ERROR_H)
-CHECK_INCLUDE_FILES(ibase.h HAVE_IBASE_H)
-CHECK_INCLUDE_FILES(mysql.h HAVE_MYSQL_H)
-CHECK_INCLUDE_FILES(lzo1x.h HAVE_LZO1X_H)
-CHECK_INCLUDE_FILES(lzo_asm.h HAVE_LZO_ASM_H)
-CHECK_INCLUDE_FILES(utime.h HAVE_UTIME_H)
-CHECK_INCLUDE_FILES(sysexits.h HAVE_SYSEXITS_H)
-CHECK_INCLUDE_FILES("sys/endian.h" HAVE_SYS_ENDIAN_H)
-CHECK_INCLUDE_FILES("sys/types.h" HAVE_SYS_TYPES_H)
-CHECK_INCLUDE_FILES("sys/ipc.h" HAVE_SYS_IPC_H)
-CHECK_INCLUDE_FILES("sys/sem.h" HAVE_SYS_SEM_H)
-CHECK_INCLUDE_FILES("sys/param.h" HAVE_SYS_PARAM_H)
-CHECK_INCLUDE_FILES("sys/utsname.h" HAVE_SYS_UTSNAME_H)
-CHECK_INCLUDE_FILES("sys/socket.h" HAVE_SYS_SOCKET_H)
-CHECK_INCLUDE_FILES("sys/event.h" HAVE_SYS_EVENT_H)
-CHECK_INCLUDE_FILES("sys/mman.h" HAVE_SYS_MMAN_H)
-CHECK_INCLUDE_FILES("sys/uuid.h" HAVE_SYS_UUID_H)
-CHECK_INCLUDE_FILES("sys/timeb.h" HAVE_SYSTIMEB_H)
-CHECK_INCLUDE_FILES(aio.h HAVE_AIO_H)
-CHECK_INCLUDE_FILES(sha256.h HAVE_SHA256_H)
-CHECK_INCLUDE_FILES("netinet/in.h" HAVE_NETINET_IN_H)
-CHECK_INCLUDE_FILES("arpa/inet.h" HAVE_ARPA_INET_H)
-CHECK_INCLUDE_FILES(netdb.h HAVE_NETDB_H)
-CHECK_INCLUDE_FILES(pwd.h HAVE_PWD_H)
-CHECK_INCLUDE_FILES(grp.h HAVE_GRP_H)
-CHECK_INCLUDE_FILES(limits.h HAVE_LIMITS_H)
-CHECK_INCLUDE_FILES(io.h HAVE_IO_H)
-CHECK_INCLUDE_FILES(err.h HAVE_ERR_H)
-CHECK_INCLUDE_FILES(errno.h HAVE_ERRNO_H)
-CHECK_INCLUDE_FILES(float.h HAVE_FLOAT_H)
-CHECK_INCLUDE_FILES(fcntl.h HAVE_FCNTL_H)
-CHECK_INCLUDE_FILES(stdarg.h HAVE_STDARG_H)
-CHECK_INCLUDE_FILES(stdio.h HAVE_STDIO_H)
-CHECK_INCLUDE_FILES(math.h HAVE_MATH_H)
-CHECK_INCLUDE_FILES(locale.h HAVE_LOCALE_H)
-CHECK_INCLUDE_FILES(pthread.h HAVE_PTHREAD_H)
-CHECK_INCLUDE_FILES(signal.h HAVE_SIGNAL_H)
-CHECK_INCLUDE_FILES(windows.h HAVE_WINDOWS_H)
-CHECK_INCLUDE_FILES(typeinfo.h HAVE_TYPEINFO_H)
-CHECK_INCLUDE_FILES(dlfcn.h HAVE_DLFCN_H)
-CHECK_INCLUDE_FILES(assert.h HAVE_ASSERT_H)
-CHECK_INCLUDE_FILES(semaphore.h HAVE_SEMAPHORE_H)
-CHECK_INCLUDE_FILES(process.h HAVE_PROCESS_H)
-CHECK_INCLUDE_FILES(ctype.h HAVE_CTYPE_H)
-CHECK_INCLUDE_FILES(stdint.h HAVE_STDINT_H)
-CHECK_INCLUDE_FILES(inttypes.h HAVE_INTTYPES_H)
-CHECK_INCLUDE_FILES(unistd.h HAVE_UNISTD_H)
-CHECK_INCLUDE_FILES(stddef.h HAVE_STDDEF_H)
-CHECK_INCLUDE_FILES(paths.h HAVE_PATHS_H)
-CHECK_INCLUDE_FILES(stdexept HAVE_STDEXCEPT)
-CHECK_INCLUDE_FILES(new HAVE_NEW)
-CHECK_INCLUDE_FILES(typeinfo HAVE_TYPEINFO)
+SET (BUILD_SHARED_LIBS OFF)
+SET (CMAKE_BUILD_TYPE Debug Release RelWithDebInf MinSizeRel)
+SET (EXECUTABLE_OUTPUT_PATH ${ROOT}/binaries)
+SET (LIBRARY_OUTPUT_PATH ${ROOT}/binaries)
+# Disable deprecation warnings for standard C functions.
+IF(CMAKE_COMPILER_2005)
+#  ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE)
+  ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
+ENDIF(CMAKE_COMPILER_2005)
+
+INCLUDE (CMakeBackwardCompatibilityC)
+INCLUDE (CMakeBackwardCompatibilityCXX)
+# Include the standard Dart testing module
+INCLUDE (Dart)
+
+IF (UNIX)
+  FIND_PACKAGE(sha256 lzo lzo2)
+ENDIF (UNIX)
+
+INCLUDE(InstallRequiredSystemLibraries)
+IF(WIN32 AND NOT UNIX)
+  # There is a bug in NSI that does not handle full unix paths properly. Make
+  # sure there is at least one set of four (4) backlasshes.
+#  SET(MSMAIL_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\CMakeInstall.bmp")
+  SET(MSMAIL_PACKAGE_EXECUTABLES "msmailSetup" "msmail")
+  SET(MSMAIL_NSIS_INSTALLED_ICON_NAME "msmailSetup.exe")
+  SET(MSMAIL_NSIS_DISPLAY_NAME "${MSMAIL_PACKAGE_INSTALL_DIRECTORY} a cross-platform, open-source message exchanging system")
+  SET(MSMAIL_NSIS_HELP_LINK "http://macroscope.berlios.de")
+  SET(MSMAIL_NSIS_URL_INFO_ABOUT "http://developer.berlios.de/projects/macroscope/")
+  SET(MSMAIL_NSIS_CONTACT "white_raven@users.berlios.de")
+  SET(MSMAIL_NSIS_MODIFY_PATH ON)
+ENDIF(WIN32 AND NOT UNIX)
+
+#INCLUDE (TestBigEndian)
+#TEST_BIG_ENDIAN(BYTE_ORDER)
+IF (CMAKE_WORDS_BIGENDIAN EQUAL 0)
+  SET (BYTE_ORDER "LITTLE_ENDIAN" CACHE INTERNAL "System little endian")
+ELSE  (CMAKE_WORDS_BIGENDIAN EQUAL 0)
+  SET (BYTE_ORDER "BIG_ENDIAN" CACHE INTERNAL "System big endian")
+ENDIF (CMAKE_WORDS_BIGENDIAN EQUAL 0)
+
+INCLUDE (CheckIncludeFiles)
+INCLUDE (CheckIncludeFile)
+INCLUDE (CheckIncludeFileCXX)
+
+CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
+CHECK_INCLUDE_FILE("sys/mount.h" HAVE_SYS_MOUNT_H)
+CHECK_INCLUDE_FILE(dirent.h HAVE_DIRENT_H)
+CHECK_INCLUDE_FILE(error.h HAVE_ERROR_H)
+CHECK_INCLUDE_FILE(ibase.h HAVE_IBASE_H)
+CHECK_INCLUDE_FILE(mysql.h HAVE_MYSQL_H)
+CHECK_INCLUDE_FILE(lzo1x.h HAVE_LZO1X_H)
+CHECK_INCLUDE_FILE(lzo_asm.h HAVE_LZO_ASM_H)
+CHECK_INCLUDE_FILE(utime.h HAVE_UTIME_H)
+CHECK_INCLUDE_FILE(sysexits.h HAVE_SYSEXITS_H)
+CHECK_INCLUDE_FILE("sys/endian.h" HAVE_SYS_ENDIAN_H)
+CHECK_INCLUDE_FILE("sys/types.h" HAVE_SYS_TYPES_H)
+CHECK_INCLUDE_FILE("sys/ipc.h" HAVE_SYS_IPC_H)
+CHECK_INCLUDE_FILE("sys/sem.h" HAVE_SYS_SEM_H)
+CHECK_INCLUDE_FILE("sys/param.h" HAVE_SYS_PARAM_H)
+CHECK_INCLUDE_FILE("sys/utsname.h" HAVE_SYS_UTSNAME_H)
+CHECK_INCLUDE_FILE("sys/socket.h" HAVE_SYS_SOCKET_H)
+CHECK_INCLUDE_FILE("sys/event.h" HAVE_SYS_EVENT_H)
+CHECK_INCLUDE_FILE("sys/mman.h" HAVE_SYS_MMAN_H)
+CHECK_INCLUDE_FILE("sys/uuid.h" HAVE_SYS_UUID_H)
+CHECK_INCLUDE_FILE("sys/timeb.h" HAVE_SYSTIMEB_H)
+CHECK_INCLUDE_FILE(aio.h HAVE_AIO_H)
+CHECK_INCLUDE_FILE(sha256.h HAVE_SHA256_H)
+CHECK_INCLUDE_FILE("netinet/in.h" HAVE_NETINET_IN_H)
+CHECK_INCLUDE_FILE("arpa/inet.h" HAVE_ARPA_INET_H)
+CHECK_INCLUDE_FILE(netdb.h HAVE_NETDB_H)
+CHECK_INCLUDE_FILE(pwd.h HAVE_PWD_H)
+CHECK_INCLUDE_FILE(grp.h HAVE_GRP_H)
+CHECK_INCLUDE_FILE(limits.h HAVE_LIMITS_H)
+CHECK_INCLUDE_FILE(io.h HAVE_IO_H)
+CHECK_INCLUDE_FILE(err.h HAVE_ERR_H)
+CHECK_INCLUDE_FILE(errno.h HAVE_ERRNO_H)
+CHECK_INCLUDE_FILE(float.h HAVE_FLOAT_H)
+CHECK_INCLUDE_FILE(fcntl.h HAVE_FCNTL_H)
+CHECK_INCLUDE_FILE(stdarg.h HAVE_STDARG_H)
+CHECK_INCLUDE_FILE(stdio.h HAVE_STDIO_H)
+CHECK_INCLUDE_FILE(math.h HAVE_MATH_H)
+CHECK_INCLUDE_FILE(locale.h HAVE_LOCALE_H)
+CHECK_INCLUDE_FILE(pthread.h HAVE_PTHREAD_H)
+CHECK_INCLUDE_FILE(signal.h HAVE_SIGNAL_H)
+CHECK_INCLUDE_FILE(windows.h HAVE_WINDOWS_H)
+CHECK_INCLUDE_FILE(typeinfo.h HAVE_TYPEINFO_H)
+CHECK_INCLUDE_FILE(dlfcn.h HAVE_DLFCN_H)
+CHECK_INCLUDE_FILE(assert.h HAVE_ASSERT_H)
+CHECK_INCLUDE_FILE(semaphore.h HAVE_SEMAPHORE_H)
+CHECK_INCLUDE_FILE(process.h HAVE_PROCESS_H)
+CHECK_INCLUDE_FILE(ctype.h HAVE_CTYPE_H)
+CHECK_INCLUDE_FILE(stdint.h HAVE_STDINT_H)
+CHECK_INCLUDE_FILE(inttypes.h HAVE_INTTYPES_H)
+CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
+CHECK_INCLUDE_FILE(stddef.h HAVE_STDDEF_H)
+CHECK_INCLUDE_FILE(paths.h HAVE_PATHS_H)
+CHECK_INCLUDE_FILE_CXX(stdexept HAVE_STDEXCEPT)
+CHECK_INCLUDE_FILE_CXX(new HAVE_NEW)
+CHECK_INCLUDE_FILE_CXX(typeinfo HAVE_TYPEINFO)
+
+#INCLUDE (1.txt)
+
+INCLUDE (CheckTypeSize)
+
+MACRO(KCHECK_TYPE_SIZE type variable)
+  CHECK_TYPE_SIZE (${type} ${variable})
+  IF (NOT HAVE_${variable})
+    SET (HAVE_${variable} 1)
+    SET (${variable} 0)
+  ENDIF(NOT HAVE_${variable})
+ENDMACRO(KCHECK_TYPE_SIZE)
+
+KCHECK_TYPE_SIZE (ptrdiff_t SIZEOF_PTRDIFF_T)
+KCHECK_TYPE_SIZE ("struct sockaddr_in6" SIZEOF_SOCKADDR_IN6)
+KCHECK_TYPE_SIZE ("struct aiocb" SIZEOF_AIOCB)
+KCHECK_TYPE_SIZE ("void *" SIZEOF_VOID_P)
+KCHECK_TYPE_SIZE (bool SIZEOF_BOOL)
+KCHECK_TYPE_SIZE (char SIZEOF_CHAR)
+KCHECK_TYPE_SIZE (wchar_t SIZEOF_WCHAR_T)
+KCHECK_TYPE_SIZE (short SIZEOF_SHORT)
+KCHECK_TYPE_SIZE (int SIZEOF_INT)
+KCHECK_TYPE_SIZE (long SIZEOF_LONG)
+KCHECK_TYPE_SIZE ("long long" SIZEOF_LONG_LONG)
+KCHECK_TYPE_SIZE ("long int" SIZEOF_LONG_INT)
+KCHECK_TYPE_SIZE ("long double" SIZEOF_LONG_DOUBLE)
+KCHECK_TYPE_SIZE (intptr_t SIZEOF_INTPTR_T)
+KCHECK_TYPE_SIZE (intmax_t SIZEOF_INTMAX_T)
+KCHECK_TYPE_SIZE (socklen_t SIZEOF_SOCKLEN_T)
+KCHECK_TYPE_SIZE ("struct timeval" SIZEOF_TIMEVAL)
+KCHECK_TYPE_SIZE ("struct timezone" SIZEOF_TIMEZONE)
+KCHECK_TYPE_SIZE (uid_t SIZEOF_UID_T)
+KCHECK_TYPE_SIZE (gid_t SIZEOF_GID_T)
+
+ENABLE_TESTING()
 
 CONFIGURE_FILE(${ROOT}/include/adicpp/config.h.cmake ${ROOT}/include/adicpp/config.h)
 
 ADD_DEFINITIONS(-DHAVE_CONFIG_H -DCMAKE_BUILD)
-
-
-# ------------------------- Begin Generic CMake Variable Logging ------------------
-
-# if you are building in-source, this is the same as CMAKE_SOURCE_DIR, otherwise 
-# this is the top level directory of your build tree 
-MESSAGE( STATUS "CMAKE_BINARY_DIR:         " ${CMAKE_BINARY_DIR} )
-
-# if you are building in-source, this is the same as CMAKE_CURRENT_SOURCE_DIR, otherwise this 
-# is the directory where the compiled or generated files from the current CMakeLists.txt will go to 
-MESSAGE( STATUS "CMAKE_CURRENT_BINARY_DIR: " ${CMAKE_CURRENT_BINARY_DIR} )
-
-# this is the directory, from which cmake was started, i.e. the top level source directory 
-MESSAGE( STATUS "CMAKE_SOURCE_DIR:         " ${CMAKE_SOURCE_DIR} )
-
-# this is the directory where the currently processed CMakeLists.txt is located in 
-MESSAGE( STATUS "CMAKE_CURRENT_SOURCE_DIR: " ${CMAKE_CURRENT_SOURCE_DIR} )
-
-# contains the full path to the top level directory of your build tree 
-MESSAGE( STATUS "PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR} )
-
-# contains the full path to the root of your project source directory,
-# i.e. to the nearest directory where CMakeLists.txt contains the PROJECT() command 
-MESSAGE( STATUS "PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR} )
-
-# set this variable to specify a common place where CMake should put all executable files
-# (instead of CMAKE_CURRENT_BINARY_DIR)
-MESSAGE( STATUS "EXECUTABLE_OUTPUT_PATH: " ${EXECUTABLE_OUTPUT_PATH} )
-
-# set this variable to specify a common place where CMake should put all libraries 
-# (instead of CMAKE_CURRENT_BINARY_DIR)
-MESSAGE( STATUS "LIBRARY_OUTPUT_PATH:     " ${LIBRARY_OUTPUT_PATH} )
-
-# tell CMake to search first in directories listed in CMAKE_MODULE_PATH
-# when you use FIND_PACKAGE() or INCLUDE()
-MESSAGE( STATUS "CMAKE_MODULE_PATH: " ${CMAKE_MODULE_PATH} )
-
-# this is the complete path of the cmake which runs currently (e.g. /usr/local/bin/cmake) 
-MESSAGE( STATUS "CMAKE_COMMAND: " ${CMAKE_COMMAND} )
-
-# this is the CMake installation directory 
-MESSAGE( STATUS "CMAKE_ROOT: " ${CMAKE_ROOT} )
-
-# this is the filename including the complete path of the file where this variable is used. 
-MESSAGE( STATUS "CMAKE_CURRENT_LIST_FILE: " ${CMAKE_CURRENT_LIST_FILE} )
-
-# this is linenumber where the variable is used
-MESSAGE( STATUS "CMAKE_CURRENT_LIST_LINE: " ${CMAKE_CURRENT_LIST_LINE} )
-
-# this is used when searching for include files e.g. using the FIND_PATH() command.
-MESSAGE( STATUS "CMAKE_INCLUDE_PATH: " ${CMAKE_INCLUDE_PATH} )
-
-# this is used when searching for libraries e.g. using the FIND_LIBRARY() command.
-MESSAGE( STATUS "CMAKE_LIBRARY_PATH: " ${CMAKE_LIBRARY_PATH} )
-
-# the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1" 
-MESSAGE( STATUS "CMAKE_SYSTEM: " ${CMAKE_SYSTEM} )
-
-# the short system name, e.g. "Linux", "FreeBSD" or "Windows"
-MESSAGE( STATUS "CMAKE_SYSTEM_NAME: " ${CMAKE_SYSTEM_NAME} )
-
-# only the version part of CMAKE_SYSTEM 
-MESSAGE( STATUS "CMAKE_SYSTEM_VERSION: " ${CMAKE_SYSTEM_VERSION} )
-
-# the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz") 
-MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
-
-# is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
-MESSAGE( STATUS "UNIX: " ${UNIX} )
-
-# is TRUE on Windows, including CygWin 
-MESSAGE( STATUS "WIN32: " ${WIN32} )
-
-# is TRUE on Apple OS X
-MESSAGE( STATUS "APPLE: " ${APPLE} )
-
-# is TRUE when using the MinGW compiler in Windows
-MESSAGE( STATUS "MINGW: " ${MINGW} )
-
-# is TRUE on Windows when using the CygWin version of cmake
-MESSAGE( STATUS "CYGWIN: " ${CYGWIN} )
-
-# is TRUE on Windows when using a Borland compiler 
-MESSAGE( STATUS "BORLAND: " ${BORLAND} )
-
-# Microsoft compiler 
-MESSAGE( STATUS "MSVC: " ${MSVC} )
-MESSAGE( STATUS "MSVC_IDE: " ${MSVC_IDE} )
-MESSAGE( STATUS "MSVC60: " ${MSVC60} )
-MESSAGE( STATUS "MSVC70: " ${MSVC70} )
-MESSAGE( STATUS "MSVC71: " ${MSVC71} )
-MESSAGE( STATUS "MSVC80: " ${MSVC80} )
-MESSAGE( STATUS "CMAKE_COMPILER_2005: " ${CMAKE_COMPILER_2005} )
-
-
-# set this to true if you don't want to rebuild the object files if the rules have changed, 
-# but not the actual source files or headers (e.g. if you changed the some compiler switches) 
-MESSAGE( STATUS "CMAKE_SKIP_RULE_DEPENDENCY: " ${CMAKE_SKIP_RULE_DEPENDENCY} )
-
-# since CMake 2.1 the install rule depends on all, i.e. everything will be built before installing. 
-# If you don't like this, set this one to true.
-MESSAGE( STATUS "CMAKE_SKIP_INSTALL_ALL_DEPENDENCY: " ${CMAKE_SKIP_INSTALL_ALL_DEPENDENCY} )
-
-# If set, runtime paths are not added when using shared libraries. Default it is set to OFF
-MESSAGE( STATUS "CMAKE_SKIP_RPATH: " ${CMAKE_SKIP_RPATH} )
-
-# set this to true if you are using makefiles and want to see the full compile and link 
-# commands instead of only the shortened ones 
-MESSAGE( STATUS "CMAKE_VERBOSE_MAKEFILE: " ${CMAKE_VERBOSE_MAKEFILE} )
-
-# this will cause CMake to not put in the rules that re-run CMake. This might be useful if 
-# you want to use the generated build files on another machine. 
-MESSAGE( STATUS "CMAKE_SUPPRESS_REGENERATION: " ${CMAKE_SUPPRESS_REGENERATION} )
-
-
-# A simple way to get switches to the compiler is to use ADD_DEFINITIONS(). 
-# But there are also two variables exactly for this purpose: 
-
-# the compiler flags for compiling C sources 
-MESSAGE( STATUS "CMAKE_C_FLAGS: " ${CMAKE_C_FLAGS} )
-
-# the compiler flags for compiling C++ sources 
-MESSAGE( STATUS "CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS} )
-
-
-# Choose the type of build.  Example: SET(CMAKE_BUILD_TYPE Debug) 
-MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
-
-# if this is set to ON, then all libraries are built as shared libraries by default.
-MESSAGE( STATUS "BUILD_SHARED_LIBS: " ${BUILD_SHARED_LIBS} )
-
-# the compiler used for C files 
-MESSAGE( STATUS "CMAKE_C_COMPILER: " ${CMAKE_C_COMPILER} )
-
-# the compiler used for C++ files 
-MESSAGE( STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER} )
-
-# if the compiler is a variant of gcc, this should be set to 1 
-MESSAGE( STATUS "CMAKE_COMPILER_IS_GNUCC: " ${CMAKE_COMPILER_IS_GNUCC} )
-
-# if the compiler is a variant of g++, this should be set to 1 
-MESSAGE( STATUS "CMAKE_COMPILER_IS_GNUCXX : " ${CMAKE_COMPILER_IS_GNUCXX} )
-
-# the tools for creating libraries 
-MESSAGE( STATUS "CMAKE_AR: " ${CMAKE_AR} )
-MESSAGE( STATUS "CMAKE_RANLIB: " ${CMAKE_RANLIB} )
-
-#
-#MESSAGE( STATUS ": " ${} )
-
-# ------------------------- End of Generic CMake Variable Logging ------------------
