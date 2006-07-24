@@ -1,0 +1,9 @@
+ADD_EXECUTABLE(msftpd main.cpp)
+
+TARGET_LINK_LIBRARIES(msftpd
+  libadicpp
+  libfbcpp
+  libksys
+  libmycpp
+  libutf8
+)

@@ -225,6 +225,10 @@
 #include <dirent.h>
 #endif
 
+#ifndef SIZEOF_WCHAR_T
+#define SIZEOF_WCHAR_T 0
+#endif
+
 #if SIZEOF_WCHAR_T == 0
 typedef short wchar_t;
 #undef SIZEOF_WCHAR_T
@@ -233,6 +237,10 @@ typedef short wchar_t;
 
 #if !defined(PACKED) && defined(__GNUG__)
 #define PACKED __attribute__ ((packed))
+#endif
+
+#ifndef SIZEOF_CHAR
+#define SIZEOF_CHAR 0
 #endif
 
 #if SIZEOF_CHAR != 1
@@ -247,12 +255,24 @@ typedef short wchar_t;
 #define SYSCONF_DIR ksys::getExecutablePath()
 #endif
 
-#if !HAVE_PID_T
+#ifndef SIZEOF_PID_T
+#define SIZEOF_PID_T 0
+#endif
+
+#if SIZEOF_PID_T == 0
 typedef int32_t pid_t;
+#endif
+
+#ifndef SIZEOF_UID_T
+#define SIZEOF_UID_T 0
 #endif
 
 #if SIZEOF_UID_T == 0
 typedef int32_t uid_t;
+#endif
+
+#ifndef SIZEOF_GID_T
+#define SIZEOF_GID_T 0
 #endif
 
 #if SIZEOF_GID_T == 0

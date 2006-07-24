@@ -110,6 +110,8 @@ libutf8_la_SOURCES = \
 	cp57009.cpp \
 	cp57010.cpp \
 	cp57011.cpp \
+	cp54936.cpp \
+	cp28603.cpp \
 	cp708.cpp \
 	cp720.cpp \
 	cp737.cpp \
