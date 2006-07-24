@@ -1,4 +1,6 @@
-ADD_LIBRARY(msmail1clib SHARED
+ADD_DEFINITIONS (-DDISABLE_FIREBIRD_INTERFACE -DDISABLE_MYSQL_INTERFACE)
+
+ADD_LIBRARY (msmail1clib SHARED
   client.cpp
   Registry.cpp
   msmail1cImpl.cpp
@@ -15,7 +17,7 @@ ADD_LIBRARY(msmail1clib SHARED
   stdafx.cpp
 )
 
-TARGET_LINK_LIBRARIES(msmail1clib
+TARGET_LINK_LIBRARIES (msmail1clib
   libadicpp
   libfbcpp
   libksys
@@ -23,12 +25,12 @@ TARGET_LINK_LIBRARIES(msmail1clib
   libutf8
 )
 
-ADD_DEPENDENCIES(msmail1clib msmail)
+ADD_DEPENDENCIES (msmail1clib msmail)
 
-INSTALL(
+INSTALL (
   TARGETS msmail1clib LIBRARY
   DESTINATION ""
   CONFIGURATIONS Debug Release RelWithDebInf MinSizeRel
 )
 
-INSTALL(FILES msmail1c.conf DESTINATION "")
+INSTALL (FILES msmail1c.conf DESTINATION "")

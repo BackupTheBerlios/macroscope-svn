@@ -1,6 +1,6 @@
-ADD_EXECUTABLE(msftpd main.cpp)
+ADD_EXECUTABLE (msftpd main.cpp)
 
-TARGET_LINK_LIBRARIES(msftpd
+TARGET_LINK_LIBRARIES (msftpd
   libadicpp
   libfbcpp
   libksys
@@ -8,10 +8,10 @@ TARGET_LINK_LIBRARIES(msftpd
   libutf8
 )
 
-INSTALL(
+INSTALL (
   TARGETS msftpd RUNTIME
   DESTINATION ""
   CONFIGURATIONS Debug Release RelWithDebInf MinSizeRel
 )
 
-INSTALL(FILES msftpd.conf DESTINATION "")
+INSTALL (FILES msftpd.conf DESTINATION "")

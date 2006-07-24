@@ -1,4 +1,4 @@
-ADD_EXECUTABLE(msmail
+ADD_EXECUTABLE (msmail
   main.cpp
   server.cpp
   fiber.cpp
@@ -6,7 +6,7 @@ ADD_EXECUTABLE(msmail
   service.cpp
 )
 
-TARGET_LINK_LIBRARIES(msmail
+TARGET_LINK_LIBRARIES (msmail
   libadicpp
   libfbcpp
   libksys
@@ -14,11 +14,11 @@ TARGET_LINK_LIBRARIES(msmail
   libutf8
 )
 
-INSTALL(
+INSTALL (
   TARGETS msmail
   RUNTIME
   DESTINATION ""
   CONFIGURATIONS Debug Release RelWithDebInf MinSizeRel
 )
 
-INSTALL(FILES msmail.conf DESTINATION "")
+INSTALL (FILES msmail.conf DESTINATION "")

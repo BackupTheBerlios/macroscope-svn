@@ -1,9 +1,9 @@
-ADD_EXECUTABLE(macroscope
+ADD_EXECUTABLE (macroscope
   macroscope.cpp
   htmlrep.cpp
 )
 
-TARGET_LINK_LIBRARIES(macroscope
+TARGET_LINK_LIBRARIES (macroscope
   libadicpp
   libfbcpp
   libksys
@@ -11,10 +11,10 @@ TARGET_LINK_LIBRARIES(macroscope
   libutf8
 )
 
-INSTALL(
+INSTALL (
   TARGETS macroscope RUNTIME
   DESTINATION ""
   CONFIGURATIONS Debug Release RelWithDebInf MinSizeRel
 )
 
-INSTALL(FILES macroscope.conf DESTINATION "")
+INSTALL (FILES macroscope.conf DESTINATION "")

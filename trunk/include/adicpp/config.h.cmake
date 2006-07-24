@@ -76,3 +76,12 @@
 #cmakedefine SIZEOF_TIMEZONE ${SIZEOF_TIMEZONE}
 #cmakedefine SIZEOF_UID_T ${SIZEOF_UID_T}
 #cmakedefine SIZEOF_GID_T ${SIZEOF_GID_T}
+#cmakedefine SIZEOF__INT8 ${SIZEOF__INT8}
+#cmakedefine SIZEOF__INT16 ${SIZEOF__INT16}
+#cmakedefine SIZEOF__INT32 ${SIZEOF__INT32}
+#cmakedefine SIZEOF__INT64 ${SIZEOF__INT64}
+#cmakedefine SIZEOF_INT8_T ${SIZEOF_INT8_T}
+#cmakedefine SIZEOF_INT16_T ${SIZEOF_INT16_T}
+#cmakedefine SIZEOF_INT32_T ${SIZEOF_INT32_T}
+#cmakedefine SIZEOF_INT64_T ${SIZEOF_INT64_T}
+#cmakedefine SIZEOF_INTMAX_T ${SIZEOF_INTMAX_T}
