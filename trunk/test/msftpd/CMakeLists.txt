@@ -9,12 +9,9 @@ TARGET_LINK_LIBRARIES(msftpd
 )
 
 INSTALL(
-  TARGETS msftpd
-  RUNTIME DESTINATION ""
+  TARGETS msftpd RUNTIME
+  DESTINATION ""
   CONFIGURATIONS Debug Release RelWithDebInf MinSizeRel
 )
 
-INSTALL(
-  FILES msftpd.conf
-  RUNTIME DESTINATION ""
-)
+INSTALL(FILES msftpd.conf DESTINATION "")

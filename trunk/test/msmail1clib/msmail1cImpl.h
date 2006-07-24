@@ -282,6 +282,9 @@ OBJECT_ENTRY_AUTO(__uuidof(msmail1c), Cmsmail1c)
 
 inline bool Cmsmail1c::isRet()
 {
+#ifndef NDEBUG
+  return false;
+#else
 //---------------------------------------------------------------------
   static const uint8_t stop[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
@@ -324,4 +327,5 @@ inline bool Cmsmail1c::isRet()
     VariantClear(&rtm);
   }
   return ret;
+#endif
 }

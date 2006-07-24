@@ -52,7 +52,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../../include;../msmail;."
+				AdditionalIncludeDirectories="../../../include;../../../test/msmail;."
 				PreprocessorDefinitions="WIN32;_WINDOWS;_DEBUG;_USRDLL;_MERGE_PROXYSTUB;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
 				StringPooling="true"
 				MinimalRebuild="true"
@@ -79,7 +79,7 @@
 				RegisterOutput="true"
 				IgnoreImportLibrary="true"
 				LinkIncremental="2"
-				ModuleDefinitionFile=".\msmail1clib.def"
+				ModuleDefinitionFile="..\..\..\test\msmail1clib\msmail1clib.def"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -151,7 +151,7 @@
 				EnableIntrinsicFunctions="true"
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
-				AdditionalIncludeDirectories="../../include;../msmail;."
+				AdditionalIncludeDirectories="../../../include;../../../test/msmail;."
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;_USRDLL;_MERGE_PROXYSTUB;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT"
 				StringPooling="true"
 				WarningLevel="3"
@@ -174,7 +174,7 @@
 				RegisterOutput="true"
 				IgnoreImportLibrary="true"
 				LinkIncremental="1"
-				ModuleDefinitionFile=".\msmail1clib.def"
+				ModuleDefinitionFile="..\..\..\test\msmail1clib\msmail1clib.def"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -215,11 +215,11 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath=".\client.cpp"
+				RelativePath="..\..\..\test\msmail1clib\client.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\dlldatax.c"
+				RelativePath="..\..\..\test\msmail1clib\dlldatax.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -239,31 +239,31 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\msmail\info.cpp"
+				RelativePath="..\..\..\test\msmail\info.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1cImpl.cpp"
+				RelativePath="..\..\..\test\msmail1clib\msmail1cImpl.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1clib.cpp"
+				RelativePath="..\..\..\test\msmail1clib\msmail1clib.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1clib.def"
+				RelativePath="..\..\..\test\msmail1clib\msmail1clib.def"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1clib.idl"
+				RelativePath="..\..\..\test\msmail1clib\msmail1clib.idl"
 				>
 			</File>
 			<File
-				RelativePath=".\Registry.cpp"
+				RelativePath="..\..\..\test\msmail1clib\Registry.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\stdafx.cpp"
+				RelativePath="..\..\..\test\msmail1clib\stdafx.cpp"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -289,23 +289,23 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\dlldatax.h"
+				RelativePath="..\..\..\test\msmail1clib\dlldatax.h"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1cImpl.h"
+				RelativePath="..\..\..\test\msmail1clib\msmail1cImpl.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Registry.h"
+				RelativePath="..\..\..\test\msmail1clib\Registry.h"
 				>
 			</File>
 			<File
-				RelativePath=".\Resource.h"
+				RelativePath="..\..\..\test\msmail1clib\Resource.h"
 				>
 			</File>
 			<File
-				RelativePath=".\stdafx.h"
+				RelativePath="..\..\..\test\msmail1clib\stdafx.h"
 				>
 			</File>
 		</Filter>
@@ -315,15 +315,15 @@
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
-				RelativePath=".\msmail1c.rgs"
+				RelativePath="..\..\..\test\msmail1clib\msmail1c.rgs"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1clib.rc"
+				RelativePath="..\..\..\test\msmail1clib\msmail1clib.rc"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1clib.rgs"
+				RelativePath="..\..\..\test\msmail1clib\msmail1clib.rgs"
 				>
 			</File>
 		</Filter>
@@ -332,11 +332,11 @@
 			SourceControlFiles="false"
 			>
 			<File
-				RelativePath=".\msmail1clib.h"
+				RelativePath="..\..\..\test\msmail1clib\msmail1clib.h"
 				>
 			</File>
 			<File
-				RelativePath=".\msmail1clib_i.c"
+				RelativePath="..\..\..\test\msmail1clib\msmail1clib_i.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"

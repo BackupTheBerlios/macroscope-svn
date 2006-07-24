@@ -17,7 +17,4 @@ INSTALL(
   CONFIGURATIONS Debug Release RelWithDebInf MinSizeRel
 )
 
-INSTALL(
-  FILES macroscope.conf
-  RUNTIME DESTINATION ""
-)
+INSTALL(FILES macroscope.conf DESTINATION "")
