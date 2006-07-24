@@ -12,6 +12,12 @@ TARGET_LINK_LIBRARIES(macroscope
 )
 
 INSTALL(
-  TARGETS macroscope
-  RUNTIME DESTINATION bin
+  TARGETS macroscope RUNTIME
+  DESTINATION ""
+  CONFIGURATIONS Debug Release RelWithDebInf MinSizeRel
+)
+
+INSTALL(
+  FILES macroscope.conf
+  RUNTIME DESTINATION ""
 )
