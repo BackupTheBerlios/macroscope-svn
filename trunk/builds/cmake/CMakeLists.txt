@@ -1,4 +1,4 @@
-PROJECT(libadicpp)
+PROJECT(macroscope)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.0)
 
 SET (BUILD_SHARED_LIBS OFF)
@@ -24,6 +24,11 @@ ADD_SUBDIRECTORY(${ROOT}/test/msftp)
 ADD_SUBDIRECTORY(${ROOT}/test/msftpd)
 ADD_SUBDIRECTORY(${ROOT}/test/msmail)
 
+#INSTALL(TARGETS macroscope msftp msftpd msmail
+#        RUNTIME DESTINATION bin
+#        LIBRARY DESTINATION lib
+#        ARCHIVE DESTINATION lib/static)
+
 # Disable deprecation warnings for standard C functions.
 IF(CMAKE_COMPILER_2005)
 #  ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE)
@@ -34,20 +39,6 @@ INCLUDE (CMakeBackwardCompatibilityC)
 INCLUDE (CMakeBackwardCompatibilityCXX)
 # Include the standard Dart testing module
 INCLUDE (Dart)
-
-#INCLUDE(InstallRequiredSystemLibraries)
-#IF(WIN32 AND NOT UNIX)
-  # There is a bug in NSI that does not handle full unix paths properly. Make
-  # sure there is at least one set of four (4) backlasshes.
-#  SET(MSMAIL_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\CMakeInstall.bmp")
-#  SET(MSMAIL_PACKAGE_EXECUTABLES "msmailSetup" "msmail")
-#  SET(MSMAIL_NSIS_INSTALLED_ICON_NAME "msmailSetup.exe")
-#  SET(MSMAIL_NSIS_DISPLAY_NAME "${MSMAIL_PACKAGE_INSTALL_DIRECTORY} a cross-platform, open-source message exchanging system")
-#  SET(MSMAIL_NSIS_HELP_LINK "http://macroscope.berlios.de")
-#  SET(MSMAIL_NSIS_URL_INFO_ABOUT "http://developer.berlios.de/projects/macroscope/")
-#  SET(MSMAIL_NSIS_CONTACT "white_raven@users.berlios.de")
-#  SET(MSMAIL_NSIS_MODIFY_PATH ON)
-#ENDIF(WIN32 AND NOT UNIX)
 
 #INCLUDE (TestBigEndian)
 #TEST_BIG_ENDIAN(BYTE_ORDER)
@@ -117,17 +108,7 @@ CHECK_INCLUDE_FILE_CXX(stdexept HAVE_STDEXCEPT)
 CHECK_INCLUDE_FILE_CXX(new HAVE_NEW)
 CHECK_INCLUDE_FILE_CXX(typeinfo HAVE_TYPEINFO)
 
-#INCLUDE (1.txt)
-
 INCLUDE (CheckTypeSize)
-
-#MACRO(KCHECK_TYPE_SIZE type variable)
-#  CHECK_TYPE_SIZE (${type} ${variable})
-#  IF (NOT HAVE_${variable})
-#    SET (HAVE_${variable} 1)
-#    SET (${variable} 0)
-#  ENDIF(NOT HAVE_${variable})
-#ENDMACRO(KCHECK_TYPE_SIZE)
 
 CHECK_TYPE_SIZE (ptrdiff_t SIZEOF_PTRDIFF_T)
 CHECK_TYPE_SIZE ("struct sockaddr_in6" SIZEOF_SOCKADDR_IN6)
@@ -155,3 +136,73 @@ ENABLE_TESTING()
 CONFIGURE_FILE(${ROOT}/include/adicpp/config.h.cmake ${ROOT}/include/adicpp/config.h)
 
 ADD_DEFINITIONS(-DHAVE_CONFIG_H -DCMAKE_BUILD)
+
+# Install
+
+IF (WIN32 AND NOT UNIX)
+  FIND_PROGRAM(NSIS_MAKENSIS NAMES makensis
+    PATHS [HKEY_LOCAL_MACHINE\\SOFTWARE\\NSIS]
+    DOC "Where is makensis.exe located"
+  )
+  IF (NOT NSIS_MAKENSIS)
+    SET (CPACK_GENERATOR TGZ)
+  ENDIF (NOT NSIS_MAKENSIS)
+  # There is a bug in NSI that does not handle full unix paths properly. Make
+  # sure there is at least one set of four (4) backlasshes.
+#  SET(MSMAIL_PACKAGE_ICON "${CMake_SOURCE_DIR}/Utilities/Release\\\\CMakeInstall.bmp")
+#  SET(MSMAIL_PACKAGE_EXECUTABLES "msmailSetup" "msmail")
+#  SET(MSMAIL_NSIS_INSTALLED_ICON_NAME "msmailSetup.exe")
+#  SET(MSMAIL_NSIS_DISPLAY_NAME "${MSMAIL_PACKAGE_INSTALL_DIRECTORY} a cross-platform, open-source message exchanging system")
+#  SET(MSMAIL_NSIS_HELP_LINK "http://macroscope.berlios.de")
+#  SET(MSMAIL_NSIS_URL_INFO_ABOUT "http://developer.berlios.de/projects/macroscope/")
+#  SET(MSMAIL_NSIS_CONTACT "white_raven@users.berlios.de")
+#  SET(MSMAIL_NSIS_MODIFY_PATH ON)
+ENDIF(WIN32 AND NOT UNIX)
+
+SET (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Test of packaging with cpack")
+SET (CPACK_PACKAGE_VENDOR "Kitware")
+SET (CPACK_PACKAGE_EXECUTABLES "macroscope" "Macroscope")
+SET (CPACK_PACKAGE_VERSION_MAJOR "1")
+SET (CPACK_PACKAGE_VERSION_MINOR "0")
+SET (CPACK_PACKAGE_VERSION_PATCH "1")
+
+SET(install_target macroscope)
+
+INCLUDE (InstallRequiredSystemLibraries)
+INCLUDE (CPack)
+
+IF (APPLE)
+  # Issue with packaging on the mac, so disable it for now
+  ADD_CUSTOM_COMMAND(
+    TARGET ${install_target}
+    POST_BUILD
+    COMMAND ${CMAKE_CTEST_COMMAND}
+    ARGS ${SI_CONFIG}
+    --build-and-test
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}
+    --build-generator ${CMAKE_GENERATOR}
+    --build-project ${PROJECT_NAME}
+    --build-makeprogram ${CMAKE_MAKE_PROGRAM}
+    --build-noclean
+    --build-target install
+    COMMENT "Install Project"
+  )
+ELSE (APPLE)
+  ADD_CUSTOM_COMMAND(
+    TARGET ${install_target}
+    POST_BUILD
+    COMMAND ${CMAKE_CTEST_COMMAND}
+    ARGS ${SI_CONFIG}
+    --build-and-test
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}
+    --build-generator ${CMAKE_GENERATOR}
+    --build-project ${PROJECT_NAME}
+    --build-makeprogram ${CMAKE_MAKE_PROGRAM}
+    --build-noclean
+    --build-target install
+    --build-target package
+    COMMENT "Install Project"
+  )
+ENDIF (APPLE)

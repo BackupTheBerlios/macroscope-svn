@@ -13,3 +13,8 @@ TARGET_LINK_LIBRARIES(msmail
   libmycpp
   libutf8
 )
+
+INSTALL(
+  TARGETS msmail
+  RUNTIME DESTINATION bin
+)

@@ -7,3 +7,8 @@ TARGET_LINK_LIBRARIES(msftp
   libmycpp
   libutf8
 )
+
+INSTALL(
+  TARGETS msftp
+  RUNTIME DESTINATION bin
+)
