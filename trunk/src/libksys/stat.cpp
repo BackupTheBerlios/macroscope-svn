@@ -94,7 +94,7 @@ bool stat(const utf8::String & pathName,struct Stat & st)
         if( isdev == FILE_TYPE_CHAR )
           st.st_mode = S_IFCHR;
         else
-          st.st_mode = S_IFIFO;
+          st.st_mode = _S_IFIFO;
         //        st.st_rdev = st.st_dev = (dev_t) hFile;
         st.st_nlink = 1;
         st.st_uid = st.st_gid = st.st_ino = 0;
