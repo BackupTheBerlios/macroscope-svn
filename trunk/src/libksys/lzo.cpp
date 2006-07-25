@@ -235,7 +235,8 @@ LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
     &dst_len,
     NULL
   );
-#elif HAVE_LZO1X_DECOMPRESS
+//#elif HAVE_LZO1X_DECOMPRESS
+#else
   int r = lzo1x_decompress(
     (const lzo_bytep) (i8 + sizeof(int32_t) * 2),
     srcLen,
@@ -243,8 +244,8 @@ LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
     &dst_len,
     NULL
   );
-#else
-#error broken lzo library
+//#else
+//#error broken lzo library
 #endif
   assert( r == LZO_E_OK && dst_len == rBufSize_ );
   if( r != LZO_E_OK || dst_len != rBufSize_ )

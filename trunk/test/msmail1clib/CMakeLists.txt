@@ -1,6 +1,7 @@
 ADD_DEFINITIONS (-DDISABLE_FIREBIRD_INTERFACE -DDISABLE_MYSQL_INTERFACE)
 
 ADD_LIBRARY (msmail1clib SHARED
+  ../msmail/info.cpp
   client.cpp
   Registry.cpp
   msmail1cImpl.cpp
@@ -10,10 +11,10 @@ ADD_LIBRARY (msmail1clib SHARED
   msmail1clib.rc
   msmail1c.rgs
   msmail1clib.rgs
-  dlldata.c
+#  dlldata.c
   dlldatax.c
   msmail1clib_i.c
-  msmail1clib_p.c
+#  msmail1clib_p.c
   stdafx.cpp
 )
 

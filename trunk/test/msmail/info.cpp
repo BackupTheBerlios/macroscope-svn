@@ -38,7 +38,7 @@ Message::~Message()
 //------------------------------------------------------------------------------
 Message::Message() : attributesAutoDrop_(attributes_)
 {
-  UUID uuid;
+  ksys::UUID uuid;
   createUUID(uuid);
   utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
   attributes_.insert(*newObject<Attribute>(messageIdKey,suuid));

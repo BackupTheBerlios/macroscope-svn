@@ -464,7 +464,7 @@ void ServerFiber::recvMail() // client receiving mail
   try {
     {
 // send notify to wait fibers
-      UUID uuid;
+      ksys::UUID uuid;
       createUUID(uuid);
       utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
       AsyncFile watchdog(includeTrailingPathDelimiter(userMailBox) + "." + suuid);
