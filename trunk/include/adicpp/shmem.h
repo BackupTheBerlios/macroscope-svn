@@ -169,7 +169,7 @@ class SharedMemoryQueue : public SharedMemory {
     SharedMemoryQueue & operator <<(int a);
     SharedMemoryQueue & operator <<(unsigned int a);
 #endif
-#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTPTR_T_AS_INT
     SharedMemoryQueue & operator <<(intptr_t a);
     SharedMemoryQueue & operator <<(uintptr_t a);
 #endif
@@ -242,20 +242,20 @@ class SharedMemoryQueue : public SharedMemory {
     bool            wrQueueRDLockedV_;
     bool            wrQueueWRLockedV_;
     struct Queue {
-        intptr_t  pid_;
-        uintptr_t head_;
-        uintptr_t tail_;
-        uintptr_t bound_;
-#ifdef _MSC_VER
+      intptr_t  pid_;
+      uintptr_t head_;
+      uintptr_t tail_;
+      uintptr_t bound_;
+#if _MSC_VER
 #pragma warning(disable:4200)
 #endif
-        uint8_t   data_[EMPTY_ARRAY_SIZE];
-#ifdef _MSC_VER
+      uint8_t   data_[EMPTY_ARRAY_SIZE];
+#if _MSC_VER
 #pragma warning(default:4200)
 #endif
 
-        SharedMemoryQueue & read(SharedMemoryQueue * queue, void * buf, uintptr_t len);
-        SharedMemoryQueue & write(SharedMemoryQueue * queue, const void * buf, uintptr_t len);
+      SharedMemoryQueue & read(SharedMemoryQueue * queue, void * buf, uintptr_t len);
+      SharedMemoryQueue & write(SharedMemoryQueue * queue, const void * buf, uintptr_t len);
     };
     friend struct Queue;
     SharedSemaphore * rdQueueRDLock_;

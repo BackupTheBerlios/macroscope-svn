@@ -199,7 +199,33 @@
 
 #endif // C++ headers
 
-#if defined(HAVE_WINDOWS_H) && !defined(__CYGWIN__)
+#if HAVE_WINSOCK2_H
+#include <winsock2.h>
+#elif HAVE_WINSOCK_H
+#include <winsock.h>
+#endif
+
+#if HAVE_MSWSOCK_H
+#include <mswsock.h>
+#endif
+
+#if HAVE_WS2TCPIP_H
+#include <ws2tcpip.h>
+#endif
+
+#if HAVE_WINDOWS_H
+#include <windows.h>
+#endif
+
+#if HAVE_TLHELP32_H
+#include <tlhelp32.h>
+#endif
+
+#if HAVE_IPHLPAPI_H
+#include <Iphlpapi.h>
+#endif
+
+/*#if defined(HAVE_WINDOWS_H) && !defined(__CYGWIN__)
 #if !defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0502
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0502
@@ -219,7 +245,7 @@
 #define NOT_INCLUDE_WINDOWS_H
 #endif
 #include <Iphlpapi.h>
-#endif
+#endif*/
 
 #if HAVE_DIRENT_H
 #include <dirent.h>
@@ -349,6 +375,7 @@ typedef unsigned short uint16_t;
 #if SIZEOF__INT32 == 4
 typedef __int32 int32_t;
 typedef unsigned __int32 uint32_t;
+#define HAVE_INT32_T_AS_INT 1
 #elif SIZEOF_INT == 4
 typedef int int32_t;
 typedef unsigned int uint32_t;
@@ -615,6 +642,16 @@ typedef int32_t gid_t;
 #define PRIX64          "I64X"    /* uint64_t */
 #define PRIXMAX         "I64X"    /* uintmax_t */
 #define PRIXPTR         "I64X"    /* uintptr_t */
+#endif
+
+#if _MSC_VER < 1300 && !defined(__PRETTY_FUNCTION__)
+#define __PRETTY_FUNCTION__ ""
+#elif _MSC_VER >= 1300 && !defined(__PRETTY_FUNCTION__)
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
+
+#ifndef PACKED
+#define PACKED
 #endif
 
 #endif /* _lconfig_H_ */
