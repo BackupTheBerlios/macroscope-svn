@@ -233,10 +233,10 @@ inline UUID base642uuid(const utf8::String & s)
 }
 //---------------------------------------------------------------------------
 struct Stat : public
-#if HAVE_STATI64
-stati64
-#elif HAVE__STATI64
-_stati64
+#if HAVE_STAT64
+stat64
+#elif HAVE__STAT64
+_stat64
 #else
 stat
 #endif

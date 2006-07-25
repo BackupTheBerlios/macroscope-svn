@@ -315,6 +315,10 @@ typedef short wchar_t;
 #define SIZEOF_INTMAX_T 0
 #endif
 
+#ifndef SIZEOF_LONG_DOUBLE
+#define SIZEOF_LONG_DOUBLE 0
+#endif
+
 #if SIZEOF_INT8_T == 0
 #if SIZEOF__INT8 == 1
 typedef __int8 int8_t;
@@ -381,6 +385,8 @@ typedef int64_t intmax_t;
 typedef uint64_t uintmax_t;
 #undef SIZEOF_INTMAX_T
 #define SIZEOF_INTMAX_T 8
+#define HAVE_INTMAX_T_AS_INT64_T 1
+#define HAVE_INT64_T_AS_INTMAX_T 1
 #endif
 
 #if SIZEOF_INTPTR_T == 0
@@ -395,6 +401,7 @@ typedef int64_t intptr_t;
 typedef unsigned int64_t uintptr_t;
 #define SIZEOF_INTPTR_T 8
 #define HAVE_INTPTR_T_AS_INT64_T 1
+#define HAVE_INTPTR_T_AS_INTMAX_T 1
 #endif
 #endif
 
@@ -407,6 +414,56 @@ typedef int32_t ptrdiff_t;
 typedef int64_t ptrdiff_t;
 #define SIZEOF_PTRDIFF_T 8
 #endif
+#endif
+
+#if SIZEOF_LONG_DOUBLE > 0
+#define HAVE_LONG_DOUBLE 1
+#endif
+
+#ifndef NDEBUG
+#undef SYSCONF_DIR
+#endif
+
+#ifndef SYSCONF_DIR
+#define SYSCONF_DIR ksys::getExecutablePath()
+#endif
+
+#ifndef SIZEOF_PID_T
+#define SIZEOF_PID_T 0
+#endif
+
+#if SIZEOF_PID_T == 0
+typedef int32_t pid_t;
+#undef SIZEOF_PID_T
+#define SIZEOF_PID_T sizeof(int32_t)
+#endif
+
+#ifndef SIZEOF_UID_T
+#define SIZEOF_UID_T 0
+#endif
+
+#if SIZEOF_UID_T == 0
+typedef int32_t uid_t;
+#undef SIZEOF_UID_T
+#define SIZEOF_UID_T sizeof(int32_t)
+#endif
+
+#ifndef SIZEOF_GID_T
+#define SIZEOF_GID_T 0
+#endif
+
+#if SIZEOF_GID_T == 0
+typedef int32_t gid_t;
+#undef SIZEOF_GID_T
+#define SIZEOF_GID_T sizeof(int32_t)
+#endif
+
+#if SIZEOF_STAT64 > 0
+#define HAVE_STAT64 1
+#endif
+
+#if SIZEOF__STAT64 > 0
+#define HAVE__STAT64 1
 #endif
 
 #if (defined(_WIN32) || defined (WIN32)) && !defined(__WIN32__)
@@ -558,44 +615,6 @@ typedef int64_t ptrdiff_t;
 #define PRIX64          "I64X"    /* uint64_t */
 #define PRIXMAX         "I64X"    /* uintmax_t */
 #define PRIXPTR         "I64X"    /* uintptr_t */
-#endif
-
-#ifndef NDEBUG
-#undef SYSCONF_DIR
-#endif
-
-#ifndef SYSCONF_DIR
-#define SYSCONF_DIR ksys::getExecutablePath()
-#endif
-
-#ifndef SIZEOF_PID_T
-#define SIZEOF_PID_T 0
-#endif
-
-#if SIZEOF_PID_T == 0
-typedef int32_t pid_t;
-#undef SIZEOF_PID_T
-#define SIZEOF_PID_T sizeof(int32_t)
-#endif
-
-#ifndef SIZEOF_UID_T
-#define SIZEOF_UID_T 0
-#endif
-
-#if SIZEOF_UID_T == 0
-typedef int32_t uid_t;
-#undef SIZEOF_UID_T
-#define SIZEOF_UID_T sizeof(int32_t)
-#endif
-
-#ifndef SIZEOF_GID_T
-#define SIZEOF_GID_T 0
-#endif
-
-#if SIZEOF_GID_T == 0
-typedef int32_t gid_t;
-#undef SIZEOF_GID_T
-#define SIZEOF_GID_T sizeof(int32_t)
 #endif
 
 #endif /* _lconfig_H_ */

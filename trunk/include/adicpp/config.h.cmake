@@ -4,7 +4,9 @@
 #cmakedefine HAVE_ERROR_H 1
 #cmakedefine HAVE_IBASE_H 1
 #cmakedefine HAVE_MYSQL_H 1
+#cmakedefine HAVE_LZO_LZO1X_H 1
 #cmakedefine HAVE_LZO1X_H 1
+#cmakedefine HAVE_LZO_LZO_ASM_H 1
 #cmakedefine HAVE_LZO_ASM_H 1
 #cmakedefine HAVE_UTIME_H 1
 #cmakedefine HAVE_SYSEXITS_H 1
@@ -18,7 +20,8 @@
 #cmakedefine HAVE_SYS_EVENT_H 1
 #cmakedefine HAVE_SYS_MMAN_H 1
 #cmakedefine HAVE_SYS_UUID_H 1
-#cmakedefine HAVE_SYSTIMEB_H 1
+#cmakedefine HAVE_SYS_TIMEB_H 1
+#cmakedefine HAVE_SYS_STAT_H 1
 #cmakedefine HAVE_AIO_H 1
 #cmakedefine HAVE_SHA256_H 1
 #cmakedefine HAVE_NETINET_IN_H 1
@@ -38,6 +41,9 @@
 #cmakedefine HAVE_LOCALE_H 1
 #cmakedefine HAVE_PTHREAD_H 1
 #cmakedefine HAVE_SIGNAL_H 1
+#cmakedefine HAVE_WS2TCPIP_H 1
+#cmakedefine HAVE_WINSOCK_H 1
+#cmakedefine HAVE_WINSOCK2_H 1
 #cmakedefine HAVE_WINDOWS_H 1
 #cmakedefine HAVE_TYPEINFO_H 1
 #cmakedefine HAVE_DLFCN_H 1
@@ -85,6 +91,12 @@
 #cmakedefine SIZEOF_INT32_T ${SIZEOF_INT32_T}
 #cmakedefine SIZEOF_INT64_T ${SIZEOF_INT64_T}
 #cmakedefine SIZEOF_INTMAX_T ${SIZEOF_INTMAX_T}
+#cmakedefine SIZEOF_TIMEVAL ${SIZEOF_TIMEVAL}
+#cmakedefine SIZEOF_TIMEZONE ${SIZEOF_TIMEZONE}
+#cmakedefine SIZEOF_SOCKADDR_IN6 ${SIZEOF_SOCKADDR_IN6}
+#cmakedefine SIZEOF_AIOCB ${SIZEOF_AIOCB}
+#cmakedefine SIZEOF_STAT64 ${SIZEOF_STAT64}
+#cmakedefine SIZEOF__STAT64 ${SIZEOF__STAT64}
 #cmakedefine HAVE_INTPTR_T_AS_INT ${HAVE_INTPTR_T_AS_INT}
 #cmakedefine HAVE_INTPTR_T_AS_LONG_INT ${HAVE_INTPTR_T_AS_LONG_INT}
 #cmakedefine HAVE_INTPTR_T_AS_LONG_LONG ${HAVE_INTPTR_T_AS_LONG_LONG}

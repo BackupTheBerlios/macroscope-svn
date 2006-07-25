@@ -37,20 +37,20 @@ class MemoryStream {
     static void cleanup();
   protected:
     class Container {
-        friend class MemoryStream;
+      friend class MemoryStream;
       private:
         union {
-            void *          ptr_;
-            char *          sptr_;
-            unsigned char * uptr_;
+          void *          ptr_;
+          char *          sptr_;
+          unsigned char * uptr_;
         };
         uintptr_t count_;
         uintptr_t mcount_;
         int32_t   refCount_;
       public:
-                    ~Container();
-                    Container(uintptr_t count);
-                    Container(int32_t refCount, void * ptr, uintptr_t count);
+        ~Container();
+        Container(uintptr_t count);
+        Container(int32_t refCount, void * ptr, uintptr_t count);
 
         Container & addRef();
         Container & remRef();
@@ -61,11 +61,11 @@ class MemoryStream {
     static uint8_t    nullContainer_[];
 
     static Container &  nullContainer();
-                        MemoryStream(Container * container);
+    MemoryStream(Container * container);
   public:
-                        ~MemoryStream();
-                        MemoryStream();
-                        MemoryStream(const MemoryStream & stream);
+    ~MemoryStream();
+    MemoryStream();
+    MemoryStream(const MemoryStream & stream);
 
     MemoryStream &      operator =(const MemoryStream & stream);
 
@@ -75,20 +75,20 @@ class MemoryStream {
     MemoryStream &      operator >>(unsigned short & n);
     MemoryStream &      operator >>(long & n);
     MemoryStream &      operator >>(unsigned long & n);
-#if !HAVE_INTPTR_T_AS_INT
     MemoryStream &      operator >>(int & n);
     MemoryStream &      operator >>(unsigned int & n);
+#if !HAVE_INTPTR_T_AS_INT
+    MemoryStream &      operator >>(intptr_t & n);
+    MemoryStream &      operator >>(uintptr_t & n);
 #endif
 #if !HAVE_INTPTR_T_AS_INTMAX_T
     MemoryStream &      operator >>(intmax_t & n);
     MemoryStream &      operator >>(uintmax_t & n);
 #endif
-#if !HAVE_INTPTR_T_AS_INT64_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INT64_T_AS_INTMAX_T
     MemoryStream &      operator >>(int64_t & n);
     MemoryStream &      operator >>(uint64_t & n);
 #endif
-    MemoryStream &      operator >>(intptr_t & n);
-    MemoryStream &      operator >>(uintptr_t & n);
     MemoryStream &      operator >>(float & n);
     MemoryStream &      operator >>(double & n);
 #if HAVE_LONG_DOUBLE
@@ -102,20 +102,20 @@ class MemoryStream {
     MemoryStream &      operator <<(unsigned short n);
     MemoryStream &      operator <<(long n);
     MemoryStream &      operator <<(unsigned long n);
-#if !HAVE_INTPTR_T_AS_INT    
     MemoryStream &      operator <<(int n);
     MemoryStream &      operator <<(unsigned int n);
+#if !HAVE_INTPTR_T_AS_INT
+    MemoryStream &      operator <<(intptr_t n);
+    MemoryStream &      operator <<(uintptr_t n);
 #endif
 #if !HAVE_INTPTR_T_AS_INTMAX_T
     MemoryStream &      operator <<(intmax_t n);
     MemoryStream &      operator <<(uintmax_t n);
 #endif
-#if !HAVE_INTPTR_T_AS_INT64_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INT64_T_AS_INTMAX_T
     MemoryStream &      operator <<(int64_t n);
     MemoryStream &      operator <<(uint64_t n);
 #endif
-    MemoryStream &      operator <<(intptr_t n);
-    MemoryStream &      operator <<(uintptr_t n);
     MemoryStream &      operator <<(float n);
     MemoryStream &      operator <<(double n);
 #if HAVE_LONG_DOUBLE
@@ -168,8 +168,7 @@ inline MemoryStream::Container & MemoryStream::Container::addRef()
 //---------------------------------------------------------------------------
 inline MemoryStream::Container & MemoryStream::Container::remRef()
 {
-  if( interlockedIncrement(refCount_, -1) == 1 )
-    delete this;
+  if( interlockedIncrement(refCount_, -1) == 1 ) delete this;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -180,8 +179,7 @@ inline MemoryStream::Container & MemoryStream::nullContainer()
   return *reinterpret_cast< Container *>(nullContainer_);
 }
 //---------------------------------------------------------------------------
-inline MemoryStream::MemoryStream(Container * container)
-  : container_(container)
+inline MemoryStream::MemoryStream(Container * container) : container_(container)
 {
 }
 //---------------------------------------------------------------------------
@@ -189,14 +187,11 @@ inline MemoryStream::~MemoryStream()
 {
 }
 //---------------------------------------------------------------------------
-inline MemoryStream::MemoryStream()
-  : container_(&nullContainer()),
-    pos_(0)
+inline MemoryStream::MemoryStream() : container_(&nullContainer()), pos_(0)
 {
 }
 //---------------------------------------------------------------------------
-inline MemoryStream::MemoryStream(const MemoryStream & stream)
-  : container_(stream.container_)
+inline MemoryStream::MemoryStream(const MemoryStream & stream) : container_(stream.container_)
 {
 }
 //---------------------------------------------------------------------------
@@ -242,8 +237,6 @@ inline MemoryStream & MemoryStream::operator >>(unsigned long & n)
   return *this;
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT
-//---------------------------------------------------------------------------
 inline MemoryStream & MemoryStream::operator >>(int & n)
 {
   readBuffer(&n, sizeof(n));
@@ -256,6 +249,18 @@ inline MemoryStream & MemoryStream::operator >>(unsigned int & n)
   return *this;
 }
 //---------------------------------------------------------------------------
+#if !HAVE_INTPTR_T_AS_INT
+inline MemoryStream & MemoryStream::operator >>(intptr_t & n)
+{
+  readBuffer(&n, sizeof(n));
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline MemoryStream & MemoryStream::operator >>(uintptr_t & n)
+{
+  readBuffer(&n, sizeof(n));
+  return *this;
+}
 #endif
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INTMAX_T
@@ -272,7 +277,7 @@ inline MemoryStream & MemoryStream::operator >>(uintmax_t & n)
 }
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT64_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INT64_T_AS_INTMAX_T
 inline MemoryStream & MemoryStream::operator >>(int64_t & n)
 {
   readBuffer(&n, sizeof(n));
@@ -285,18 +290,6 @@ inline MemoryStream & MemoryStream::operator >>(uint64_t & n)
   return *this;
 }
 #endif
-//---------------------------------------------------------------------------
-inline MemoryStream & MemoryStream::operator >>(intptr_t & n)
-{
-  readBuffer(&n, sizeof(n));
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline MemoryStream & MemoryStream::operator >>(uintptr_t & n)
-{
-  readBuffer(&n, sizeof(n));
-  return *this;
-}
 //---------------------------------------------------------------------------
 inline MemoryStream & MemoryStream::operator >>(float & n)
 {
@@ -348,8 +341,6 @@ inline MemoryStream & MemoryStream::operator <<(unsigned long n)
   return writeBuffer(&n, sizeof(n));
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT
-//---------------------------------------------------------------------------
 inline MemoryStream & MemoryStream::operator <<(int n)
 {
   return writeBuffer(&n, sizeof(n));
@@ -360,6 +351,16 @@ inline MemoryStream & MemoryStream::operator <<(unsigned int n)
   return writeBuffer(&n, sizeof(n));
 }
 //---------------------------------------------------------------------------
+#if !HAVE_INTPTR_T_AS_INT
+inline MemoryStream & MemoryStream::operator <<(intptr_t n)
+{
+  return writeBuffer(&n, sizeof(n));
+}
+//---------------------------------------------------------------------------
+inline MemoryStream & MemoryStream::operator <<(uintptr_t n)
+{
+  return writeBuffer(&n, sizeof(n));
+}
 #endif
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INTMAX_T
@@ -374,7 +375,7 @@ inline MemoryStream & MemoryStream::operator <<(uintmax_t n)
 }
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT64_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INT64_T_AS_INTMAX_T
 inline MemoryStream & MemoryStream::operator <<(int64_t n)
 {
   return writeBuffer(&n, sizeof(n));
@@ -385,16 +386,6 @@ inline MemoryStream & MemoryStream::operator <<(uint64_t n)
   return writeBuffer(&n, sizeof(n));
 }
 #endif
-//---------------------------------------------------------------------------
-inline MemoryStream & MemoryStream::operator <<(intptr_t n)
-{
-  return writeBuffer(&n, sizeof(n));
-}
-//---------------------------------------------------------------------------
-inline MemoryStream & MemoryStream::operator <<(uintptr_t n)
-{
-  return writeBuffer(&n, sizeof(n));
-}
 //---------------------------------------------------------------------------
 inline MemoryStream & MemoryStream::operator <<(float n)
 {
