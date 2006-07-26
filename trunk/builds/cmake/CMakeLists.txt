@@ -56,6 +56,7 @@ INCLUDE_DIRECTORIES(${ROOT}/include)
 
 # Targets definition
 
+ADD_SUBDIRECTORY(${ROOT}/utils/version)
 ADD_SUBDIRECTORY(${ROOT}/src/libadicpp)
 ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp)
 ADD_SUBDIRECTORY(${ROOT}/src/libksys)

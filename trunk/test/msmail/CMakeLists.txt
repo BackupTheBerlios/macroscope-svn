@@ -14,6 +14,15 @@ TARGET_LINK_LIBRARIES (msmail
   libutf8
 )
 
+ADD_DEPENDENCIES (version msmail)
+
+ADD_CUSTOM_COMMAND (
+  TARGET msmail PRE_BUILD
+  COMMAND ../../utils/version/version version.in version.h
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  COMMENT Version generator
+)
+
 IF (WIN32 AND NOT UNIX)
   SET (INSTALL_BIN_DIR "")
   SET (INSTALL_ETC_DIR "")
