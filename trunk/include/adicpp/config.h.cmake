@@ -178,7 +178,9 @@
 #cmakedefine HAVE_SYSCONF 1
 #cmakedefine HAVE_SIGWAIT 1
 #cmakedefine HAVE_RMDIR 1
+#cmakedefine HAVE__ISATTY 1
 #cmakedefine HAVE_ISATTY 1
+#cmakedefine HAVE__FILENO 1
 #cmakedefine HAVE_FILENO 1
 #cmakedefine HAVE_KQUEUE 1
 #cmakedefine HAVE_KEVENT 1
