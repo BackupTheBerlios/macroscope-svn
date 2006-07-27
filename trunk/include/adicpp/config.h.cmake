@@ -1,4 +1,5 @@
 #cmakedefine HAVE_MALLOC_H 1
+#cmakedefine HAVE_MEMORY_H 1
 #cmakedefine HAVE_SYS_MOUNT_H 1
 #cmakedefine HAVE_DIRENT_H 1
 #cmakedefine HAVE_ERROR_H 1
@@ -148,6 +149,7 @@
 #cmakedefine HAVE__SSCANF 1
 #cmakedefine HAVE_SNSCANF 1
 #cmakedefine HAVE__SNSCANF 1
+#cmakedefine HAVE__CHSIZE 1
 #cmakedefine HAVE_CHSIZE 1
 #cmakedefine HAVE_FSTAT 1
 #cmakedefine HAVE_NANOSLEEP 1
@@ -199,6 +201,8 @@
 #cmakedefine HAVE_SEMCTL 1
 #cmakedefine HAVE_FTOK 1
 #cmakedefine HAVE_EXIT 1
+#cmakedefine HAVE__TZSET 1
+#cmakedefine HAVE_TZSET 1
 #cmakedefine HAVE_PTHREAD_CREATE 1
 #cmakedefine HAVE_PTHREAD_DETACH 1
 #cmakedefine HAVE_PTHREAD_SELF 1

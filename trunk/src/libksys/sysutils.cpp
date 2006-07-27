@@ -1522,6 +1522,11 @@ void initialize()
     fprintf(stderr,"(unsigned int) !0 != 1\n");
     abort();
   }
+#if HAVE__TZSET
+  _tzset();
+#elif HAVE_TZSET
+  tzset();
+#endif
 #if defined(__WIN32__) || defined(__WIN64__)
 // force the system to create the message queue for main thread (if not already created)
   MSG msg;
