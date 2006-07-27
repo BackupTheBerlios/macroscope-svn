@@ -14,7 +14,25 @@
 
 #define ENTRY_PREFIX	Prx
 
+#ifndef CMAKE_BUILD
 #include "dlldata.c"
 #include "msmail1clib_p.c"
+#elif CMAKE_BUILD_TYPE == 1
+#include "msmail1clib.dir/Debug/dlldata.c"
+#include "msmail1clib.dir/Debug/msmail1clib_i.c"
+#include "msmail1clib.dir/Debug/msmail1clib_p.c"
+#elif CMAKE_BUILD_TYPE == 2
+#include "msmail1clib.dir/Release/dlldata.c"
+#include "msmail1clib.dir/Release/msmail1clib_i.c"
+#include "msmail1clib.dir/Release/msmail1clib_p.c"
+#elif CMAKE_BUILD_TYPE == 3
+#include "msmail1clib.dir/RelWithDebInf/dlldata.c"
+#include "msmail1clib.dir/RelWithDebInf/msmail1clib_i.c"
+#include "msmail1clib.dir/RelWithDebInf/msmail1clib_p.c"
+#elif CMAKE_BUILD_TYPE == 4
+#include "msmail1clib.dir/MinSizeRel/dlldata.c"
+#include "msmail1clib.dir/MinSizeRel/msmail1clib_i.c"
+#include "msmail1clib.dir/MinSizeRel/msmail1clib_p.c"
+#endif
 
 #endif //_MERGE_PROXYSTUB
