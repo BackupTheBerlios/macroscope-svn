@@ -26,6 +26,10 @@
 #include <adicpp/adicpp.h>
 #include "msmail.h"
 //------------------------------------------------------------------------------
+#define _VERSION_C_AS_HEADER_
+#include "version.c"
+#undef _VERSION_C_AS_HEADER_
+//------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
 //  sleep(15000000);

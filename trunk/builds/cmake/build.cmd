@@ -2,10 +2,10 @@
 
 set devenv="C:\Program Files (x86)\Microsoft Visual Studio 8\Common7\IDE\devenv.exe"
 
-rem cmake -DCMAKE_BUILD_TYPE=Debug
-
-cmake -DCMAKE_BUILD_TYPE=Release
-%devenv% macroscope.sln /Build Release /Project ALL_BUILD.vcproj
+cmake -DCMAKE_BUILD_TYPE=Debug
+%devenv% macroscope.sln /Build Debug /Project ALL_BUILD.vcproj /Log debug.log
+rem cmake -DCMAKE_BUILD_TYPE=Release
+rem %devenv% macroscope.sln /Build Release /Project ALL_BUILD.vcproj /Log release.log
 
 rem cmake -DCMAKE_BUILD_TYPE=RelWithDebInf
 rem cmake -DCMAKE_BUILD_TYPE=MinSizeRel

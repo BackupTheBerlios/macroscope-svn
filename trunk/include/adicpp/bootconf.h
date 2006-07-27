@@ -364,6 +364,9 @@ typedef int32_t gid_t;
 #endif
 
 #if defined(__WIN32__) || defined(__WIN64__)
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0502
+#endif
 #define INT8_C(c)               (c)
 #define UINT8_C(c)              (c)
 #define INT16_C(c)              (c)

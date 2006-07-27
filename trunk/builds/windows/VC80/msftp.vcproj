@@ -27,6 +27,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -44,7 +45,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -94,6 +95,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -105,6 +107,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -123,7 +126,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -173,6 +176,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -185,6 +189,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -206,7 +211,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -253,6 +258,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -265,6 +271,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -287,7 +294,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -334,6 +341,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -361,6 +369,14 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+		</Filter>
+		<Filter
+			Name="Generated Files"
+			>
+			<File
+				RelativePath="..\..\..\test\msftp\version.c"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

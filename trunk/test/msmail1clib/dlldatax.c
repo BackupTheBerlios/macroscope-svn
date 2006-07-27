@@ -4,7 +4,9 @@
 
 #define REGISTER_PROXY_DLL //DllRegisterServer, etc.
 
+#ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0500	//for WinNT 4.0 or Win95 with DCOM
+#endif
 #define USE_STUBLESS_PROXY	//defined only with MIDL switch /Oicf
 
 #pragma comment(lib, "rpcns4.lib")

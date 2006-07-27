@@ -123,6 +123,7 @@
 #cmakedefine HAVE_UTIME 1
 #cmakedefine HAVE_VPRINTF 1
 #cmakedefine HAVE_LOCALTIME 1
+#cmakedefine HAVE_GMTIME_S 1
 #cmakedefine HAVE_GMTIME 1
 #cmakedefine HAVE_GETPWNAM 1
 #cmakedefine HAVE_GETGRNAM 1

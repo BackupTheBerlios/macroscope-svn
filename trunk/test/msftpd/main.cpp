@@ -363,7 +363,7 @@ void MSFTPService::start()
   msftp_.open();
   ksys::stdErr.log(
     ksys::lmINFO,
-    utf8::String::Stream() << msftpd_version.v_gnu << " started\n"
+    utf8::String::Stream() << msftpd_version.gnu_ << " started\n"
   );
 }
 //------------------------------------------------------------------------------
@@ -372,7 +372,7 @@ void MSFTPService::stop()
   msftp_.close();
   ksys::stdErr.log(
     ksys::lmINFO,
-    utf8::String::Stream() << msftpd_version.v_gnu << " stopped\n"
+    utf8::String::Stream() << msftpd_version.gnu_ << " stopped\n"
   );
 }
 //------------------------------------------------------------------------------
@@ -393,7 +393,7 @@ int main(int argc,char * argv[])
     };
     ksys::initializeArguments(argc,argv);
     ksys::Config::defaultFileName(SYSCONF_DIR + "msftpd.conf");
-    ksys::Services services(msftpd_version.v_gnu);
+    ksys::Services services(msftpd_version.gnu_);
     services.add(newObject<MSFTPService>());
 #if defined(__WIN32__) || defined(__WIN64__)
     bool dispatch = true;
@@ -401,8 +401,8 @@ int main(int argc,char * argv[])
     bool dispatch = false;
 #endif
     for( u = 1; u < ksys::argv().count(); u++ ){
-      if( argv()[u].strcmp("--version") == 0 ){
-        stdErr.debug(9,utf8::String::Stream() << msftpd_version.tex_ << "\n");
+      if( ksys::argv()[u].strcmp("--version") == 0 ){
+        ksys::stdErr.debug(9,utf8::String::Stream() << msftpd_version.tex_ << "\n");
         fprintf(stdout,"%s\n",msftpd_version.tex_);
         dispatch = false;
         continue;

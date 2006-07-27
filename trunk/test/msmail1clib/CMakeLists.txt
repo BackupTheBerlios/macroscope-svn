@@ -1,28 +1,24 @@
-SET (EXTRA_SOURCE_FILES)
-IF (SITE STREQUAL "${MAIN_SITE}")
-  SET (EXTRA_SOURCE_FILES "version.c")
-ENDIF (SITE STREQUAL "${MAIN_SITE}")
-
 ADD_LIBRARY (msmail1clib SHARED
-  ../msmail/info.cpp
   client.cpp
-  Registry.cpp
+  dlldatax.c
   msmail1cImpl.cpp
   msmail1clib.cpp 
   msmail1clib.def
   msmail1clib.idl
+  Registry.cpp
+  stdafx.cpp
   msmail1clib.rc
   msmail1c.rgs
   msmail1clib.rgs
-#  dlldata.c
-  dlldatax.c
-  msmail1clib_i.c
-#  msmail1clib_p.c
-  stdafx.cpp
-  ${EXTRA_SOURCE_FILES}
+  version.c
 )
 
-ADD_DEFINITIONS (-DDISABLE_FIREBIRD_INTERFACE -DDISABLE_MYSQL_INTERFACE)
+ADD_DEFINITIONS (
+  -DDISABLE_FIREBIRD_INTERFACE
+  -DDISABLE_MYSQL_INTERFACE
+  -D_USRDLL
+  -D_MERGE_PROXYSTUB
+)
 
 TARGET_LINK_LIBRARIES (msmail1clib
   libadicpp
@@ -34,15 +30,16 @@ TARGET_LINK_LIBRARIES (msmail1clib
 
 ADD_DEPENDENCIES (msmail1clib msmail)
 
+SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
+ADD_DEPENDENCIES (msmail1clib version)
+ADD_CUSTOM_COMMAND (
+  TARGET msmail1clib PRE_BUILD
+  COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.c
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  COMMENT "Generate version file"
+)
+
 IF (SITE STREQUAL "${MAIN_SITE}")
-  SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
-  ADD_DEPENDENCIES (msmail1clib version)
-  ADD_CUSTOM_COMMAND (
-    TARGET msmail1clib PRE_BUILD
-    COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.c
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generate version file"
-  )
   ADD_CUSTOM_COMMAND (
     TARGET msmail1clib POST_BUILD
     COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.in
