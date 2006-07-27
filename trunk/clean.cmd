@@ -67,6 +67,8 @@ del /s /f /q builds\windows\VC80\Win32\Debug_msmail1clib\* 2>nul
 rd builds\windows\VC80\Win32\Debug_msmail1clib 2>nul
 del /s /f /q builds\windows\VC80\Win32\Release_msmail1clib\* 2>nul
 rd builds\windows\VC80\Win32\Release_msmail1clib 2>nul
+rd builds\windows\VC80\Win32\Debug_version 2>nul
+rd builds\windows\VC80\Win32\Release_version 2>nul
 rd builds\windows\VC80\Win32 2>nul
 rd builds\windows\VC80\x64\Debug_genutf8 2>nul
 rd builds\windows\VC80\x64\Release_genutf8 2>nul
