@@ -18,10 +18,16 @@ ADD_DEPENDENCIES (msmail version)
 
 ADD_CUSTOM_COMMAND (
   TARGET msmail PRE_BUILD
-  COMMAND ${VERSION_EXECUTABLE} ARGS version.in.test version.in.test
-  COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.h.test
+  COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.h
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  COMMENT "Version generator"
+  COMMENT "Generate version filer"
+)
+
+ADD_CUSTOM_COMMAND (
+  TARGET msmail POST_BUILD
+  COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.in
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  COMMENT "Increase version level"
 )
 
 IF (WIN32 AND NOT UNIX)

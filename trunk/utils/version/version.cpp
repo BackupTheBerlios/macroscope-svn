@@ -29,16 +29,16 @@ int main(int ac, char*av[]){
     if( upperOutName[i] == '.' || isspace(upperOutName[i]) ) upperOutName[i] = '_';
     if( av[2][i] == '\0' ) break;
   }
+  version = (ver << 22) | (rev << 12) | lev;
+  version++;
+  if( ++lev >= (1u << 12) ){
+    lev = 0;
+    if( ++rev >= (1u << 10) ){
+      rev = 0;
+      ver++;
+    }
+  }
   if( strcmp(av[1],av[2]) == 0 ){ // increase level
-    version = (ver << 22) | (rev << 12) | lev;
-    version++;
-    /*if( ++lev >= (1u << 12) ){
-      lev = 0;
-      if( ++rev >= (1u << 10) ){
-        rev = 0;
-        ver++;
-      }
-    }*/
     if( fprintf(out,"%s %s %u.%u.%u\n",versionString,target,ver,rev,lev) == -1 ) return errno;
   }
   else {
@@ -55,7 +55,6 @@ int main(int ac, char*av[]){
     ts[10] = '\0';
     ts[19] = '\0';
     ts[24] = '\0';
-    version = (ver << 22) | (rev << 12) | lev;
     if( fprintf(out,
       "#ifdef _%s_AS_HEADER_\n\n"
       "#ifndef _%s_\n"

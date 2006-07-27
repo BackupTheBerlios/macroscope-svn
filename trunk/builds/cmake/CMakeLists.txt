@@ -45,28 +45,6 @@ IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
   SET (CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Oi /Oy /GF")
 ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
 
-IF (NOT ROOT)
-  SET (ROOT ../..)
-ENDIF (NOT ROOT)
-
-INCLUDE_DIRECTORIES(${ROOT}/include)
-
-# Targets definition
-
-ADD_SUBDIRECTORY(${ROOT}/utils/version)
-ADD_SUBDIRECTORY(${ROOT}/src/libadicpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libksys)
-ADD_SUBDIRECTORY(${ROOT}/src/libmycpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libutf8)
-ADD_SUBDIRECTORY(${ROOT}/test/macroscope)
-ADD_SUBDIRECTORY(${ROOT}/test/msftp)
-ADD_SUBDIRECTORY(${ROOT}/test/msftpd)
-ADD_SUBDIRECTORY(${ROOT}/test/msmail)
-IF (WIN32 AND NOT UNIX)
-  ADD_SUBDIRECTORY(${ROOT}/test/msmail1clib)
-ENDIF (WIN32 AND NOT UNIX)
-
 INCLUDE (CMakeBackwardCompatibilityC)
 INCLUDE (CMakeBackwardCompatibilityCXX)
 # Include the standard Dart testing module
@@ -365,7 +343,34 @@ CHECK_EMPTY_ARRAY_SIZE (EMPTY_ARRAY_SIZE)
 
 #ENABLE_TESTING()
 
+IF (NOT ROOT)
+  SET (ROOT ../..)
+ENDIF (NOT ROOT)
+
+IF (NOT CMAKE_BUILD_TYPE)
+  SET (CMAKE_BUILD_TYPE Release)
+ENDIF (NOT CMAKE_BUILD_TYPE)
+
+
+INCLUDE_DIRECTORIES(${ROOT}/include)
+
 CONFIGURE_FILE(${ROOT}/include/adicpp/config.h.cmake ${ROOT}/include/adicpp/config.h)
+
+# Targets definition
+
+ADD_SUBDIRECTORY(${ROOT}/utils/version)
+ADD_SUBDIRECTORY(${ROOT}/src/libadicpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libksys)
+ADD_SUBDIRECTORY(${ROOT}/src/libmycpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libutf8)
+ADD_SUBDIRECTORY(${ROOT}/test/macroscope)
+ADD_SUBDIRECTORY(${ROOT}/test/msftp)
+ADD_SUBDIRECTORY(${ROOT}/test/msftpd)
+ADD_SUBDIRECTORY(${ROOT}/test/msmail)
+IF (WIN32 AND NOT UNIX)
+  ADD_SUBDIRECTORY(${ROOT}/test/msmail1clib)
+ENDIF (WIN32 AND NOT UNIX)
 
 # Install
 
