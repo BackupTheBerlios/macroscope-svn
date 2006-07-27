@@ -11,14 +11,17 @@ int main(int ac, char*av[]){
   if( ac < 3 ) return EINVAL;
   FILE * inp = fopen(av[1],"rb");
   if( inp == NULL ) return errno;
-  FILE * out = fopen(av[2],"w+b");
+  FILE * out = fopen(av[2],"r+b");
+  if( out == NULL ) out = fopen(av[2],"w+b");
   if( out == NULL ) return errno;
+  if( fseek(out,0,SEEK_SET) != 0 ) return errno;
   if( fseek(inp,0,SEEK_END) != 0 ) return errno;
   long inpSize = ftell(inp);
   if( fseek(inp,0,SEEK_SET) != 0 ) return errno;
   char * inpBuffer = (char *) malloc(inpSize + 1);
   if( inpBuffer == NULL ) return errno;
   if( fread(inpBuffer,inpSize,1,inp) != 1 ) return errno;
+  fclose(inp);
   inpBuffer[inpSize] = '\0';
   char versionString[256], target[256], upperTarget[256], upperOutName[256];
   unsigned int version, ver, rev, lev;
@@ -60,6 +63,9 @@ int main(int ac, char*av[]){
       "#ifndef _%s_\n"
       "#define _%s_\n\n"
       "#define %s_VERSION 0x%x\n\n"
+      "#ifdef __cplusplus\n"
+      "extern \"C\" {\n"
+      "#endif\n\n"
       "typedef struct {\n"
       "  unsigned int hex_;\n"
       "  unsigned short version_;\n"
@@ -74,11 +80,17 @@ int main(int ac, char*av[]){
       "  const char * rcs_;\n"
       "} %s_version_t;\n\n"
       "extern %s_version_t %s_version;\n\n"
+      "#ifdef __cplusplus\n"
+      "} // extern \"C\"\n"
+      "#endif\n\n"
       "#endif /* _%s_ */\n\n"
       "#else /* _%s_AS_HEADER_ */\n\n"
       "#define _%s_AS_HEADER_\n"
       "#include \"%s\"\n"
       "#undef  _%s_AS_HEADER_\n\n"
+      "#ifdef __cplusplus\n"
+      "extern \"C\" {\n"
+      "#endif\n\n"
       "%s_version_t %s_version = {\n"
       "  0x%X,\n"
       "  0x%X,\n"
@@ -92,6 +104,9 @@ int main(int ac, char*av[]){
       "  \"@(#)%s %u.%u.%u (%s-%s-%s %s)\",\n"
       "  \"$Id: %s %u.%u.%u (%s-%s-%s %s) $\"\n"
       "};\n\n"
+      "#ifdef __cplusplus\n"
+      "} // extern \"C\"\n"
+      "#endif\n\n"
       "#endif /* _%s_AS_HEADER_ */\n",
       upperOutName,
       upperOutName,

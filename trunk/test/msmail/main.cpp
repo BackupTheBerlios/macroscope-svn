@@ -24,9 +24,7 @@
  */
 //------------------------------------------------------------------------------
 #include <adicpp/adicpp.h>
-#include <adicpp/adicpp.h>
 #include "msmail.h"
-#include "version.h"
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
@@ -43,7 +41,7 @@ int main(int _argc,char * _argv[])
     };
     initializeArguments(_argc,_argv);
     Config::defaultFileName(SYSCONF_DIR + "msmail.conf");
-    Services services(msmail_version.v_gnu);
+    Services services(msmail_version.gnu_);
     AutoPtr<msmail::Service> serviceAP(newObject<msmail::Service>());
     services.add(serviceAP);
     msmail::Service * service = serviceAP.ptr(NULL);
@@ -53,6 +51,12 @@ int main(int _argc,char * _argv[])
     bool dispatch = false;
 #endif
     for( u = 1; u < argv().count(); u++ ){
+      if( argv()[u].strcmp("--version") == 0 ){
+        stdErr.debug(9,utf8::String::Stream() << msmail_version.tex_ << "\n");
+        fprintf(stdout,"%s\n",msmail_version.tex_);
+        dispatch = false;
+        continue;
+      }
       if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
         Config::defaultFileName(argv()[u + 1]);
       }

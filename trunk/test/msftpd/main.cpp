@@ -27,29 +27,9 @@
 #include <adicpp/adicpp.h>
 #include "msftpd.h"
 //------------------------------------------------------------------------------
-extern "C" {
-#if __BCPLUSPLUS__
-typedef struct {
-  int   v_hex;
-  const char *v_short;
-  const char *v_long;
-  const char *v_tex;
-  const char *v_gnu;
-  const char *v_web;
-  const char *v_sccs;
-  const char *v_rcs;
-} msftpd_version_t;
-extern msftpd_version_t msftpd_version;
-#define _VERSION_H_
-#endif
-#if _MSC_VER
-#pragma warning(push,3)
-#endif
-#include "version.h"
-#if _MSC_VER
-#pragma warning(pop)
-#endif
-};
+#define _VERSION_C_AS_HEADER_
+#include "version.c"
+#undef _VERSION_C_AS_HEADER_
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -421,6 +401,12 @@ int main(int argc,char * argv[])
     bool dispatch = false;
 #endif
     for( u = 1; u < ksys::argv().count(); u++ ){
+      if( argv()[u].strcmp("--version") == 0 ){
+        stdErr.debug(9,utf8::String::Stream() << msftpd_version.tex_ << "\n");
+        fprintf(stdout,"%s\n",msftpd_version.tex_);
+        dispatch = false;
+        continue;
+      }
       if( ksys::argv()[u].strcmp("-c") == 0 && u + 1 < ksys::argv().count() ){
         ksys::Config::defaultFileName(ksys::argv()[u + 1]);
       }

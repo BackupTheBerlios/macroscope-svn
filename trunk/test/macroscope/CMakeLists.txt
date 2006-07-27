@@ -1,6 +1,12 @@
+SET (EXTRA_SOURCE_FILES)
+IF (SITE STREQUAL "${MAIN_SITE}")
+  SET (EXTRA_SOURCE_FILES "version.c")
+ENDIF (SITE STREQUAL "${MAIN_SITE}")
+
 ADD_EXECUTABLE (macroscope
   macroscope.cpp
   htmlrep.cpp
+  ${EXTRA_SOURCE_FILES}
 )
 
 TARGET_LINK_LIBRARIES (macroscope
@@ -10,6 +16,23 @@ TARGET_LINK_LIBRARIES (macroscope
   libmycpp
   libutf8
 )
+
+IF (SITE STREQUAL "${MAIN_SITE}")
+  SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
+  ADD_DEPENDENCIES (macroscope version)
+  ADD_CUSTOM_COMMAND (
+    TARGET macroscope PRE_BUILD
+    COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.c
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generate version file"
+  )
+  ADD_CUSTOM_COMMAND (
+    TARGET macroscope POST_BUILD
+    COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.in
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Increase version level"
+  )
+ENDIF (SITE STREQUAL "${MAIN_SITE}")
 
 IF (WIN32 AND NOT UNIX)
   SET (INSTALL_BIN_DIR "")

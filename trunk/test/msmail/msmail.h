@@ -26,34 +26,9 @@
 #ifndef _msmail_H_
 #define _msmail_H_
 //------------------------------------------------------------------------------
-#define _VERSION_H_AS_HEADER_
-extern "C" {
-#if __BCPLUSPLUS__
-typedef struct {
-  int   v_hex;
-  const char *v_short;
-  const char *v_long;
-  const char *v_tex;
-  const char *v_gnu;
-  const char *v_web;
-  const char *v_sccs;
-  const char *v_rcs;
-} msmail_version_t;
-extern msmail_version_t msmail_version;
-#define _VERSION_H_
-#endif
-#if _MSC_VER
-#pragma warning(push,3)
-#endif
-#if __INTEL_COMPILER
-#pragma warning disable 411
-#endif
-#include "version.h"
-#if _MSC_VER
-#pragma warning(pop)
-#endif
-};
-#undef _VERSION_H_AS_HEADER_
+#define _VERSION_C_AS_HEADER_
+#include "version.c"
+#undef _VERSION_C_AS_HEADER_
 //------------------------------------------------------------------------------
 using namespace ksys;
 //------------------------------------------------------------------------------

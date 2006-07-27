@@ -27,6 +27,10 @@
 #ifndef _macroscopeH_
 #define _macroscopeH_
 //------------------------------------------------------------------------------
+#define _VERSION_C_AS_HEADER_
+#include "version.c"
+#undef _VERSION_C_AS_HEADER_
+//------------------------------------------------------------------------------
 using namespace adicpp;
 //------------------------------------------------------------------------------
 namespace macroscope {

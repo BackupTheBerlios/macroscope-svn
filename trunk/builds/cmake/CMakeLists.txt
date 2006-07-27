@@ -1,5 +1,8 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.0)
 
+SITE_NAME (SITE)
+SET (MAIN_SITE "AMBER")
+
 PROJECT(macroscope)
 
 # the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1" 
@@ -358,7 +361,9 @@ CONFIGURE_FILE(${ROOT}/include/adicpp/config.h.cmake ${ROOT}/include/adicpp/conf
 
 # Targets definition
 
-ADD_SUBDIRECTORY(${ROOT}/utils/version)
+IF (SITE STREQUAL "${MAIN_SITE}")
+  ADD_SUBDIRECTORY(${ROOT}/utils/version)
+ENDIF (SITE STREQUAL "${MAIN_SITE}")
 ADD_SUBDIRECTORY(${ROOT}/src/libadicpp)
 ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp)
 ADD_SUBDIRECTORY(${ROOT}/src/libksys)

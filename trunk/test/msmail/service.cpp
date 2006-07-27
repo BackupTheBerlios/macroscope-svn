@@ -25,13 +25,7 @@
  */
 //------------------------------------------------------------------------------
 #include <adicpp/adicpp.h>
-#ifdef __INTEL_COMPILER
-#pragma warning(push,2)
-#endif
 #include "msmail.h"
-#ifdef __INTEL_COMPILER
-#pragma warning(pop)
-#endif
 //------------------------------------------------------------------------------
 namespace msmail {
 //------------------------------------------------------------------------------
@@ -72,13 +66,13 @@ void Service::start()
   ksock::SockAddr::resolve(msmailConfig_->text("bind"),addrs,defaultPort);
   for( intptr_t i = addrs.count() - 1; i >= 0; i-- ) msmail_.addBind(addrs[i]);
   msmail_.open();
-  stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.v_gnu << " started\n");
+  stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
 }
 //------------------------------------------------------------------------------
 void Service::stop()
 {
   msmail_.close();
-  stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.v_gnu << " stopped\n");
+  stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " stopped\n");
 }
 //------------------------------------------------------------------------------
 bool Service::active()

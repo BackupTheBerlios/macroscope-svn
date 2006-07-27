@@ -24,10 +24,13 @@
  */
 //------------------------------------------------------------------------------
 // msmail1cImpl.cpp : Implementation of Cmsmail1c
-
+//------------------------------------------------------------------------------
 #include "stdafx.h"
 #include "msmail1cImpl.h"
-
+//------------------------------------------------------------------------------
+#define _VERSION_C_AS_HEADER_
+#include "version.c"
+#undef _VERSION_C_AS_HEADER_
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -468,7 +471,7 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 14 : // Version
-        V_BSTR(pvarPropVal) = getTimestamp(__DATE__,__TIME__).getOLEString();
+        V_BSTR(pvarPropVal) = utf8::String(msmail1clib_version.gnu_).getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 15 : // Connected

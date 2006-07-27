@@ -463,7 +463,7 @@ void Logger::main()
   config_.parse().override();
   ksys::stdErr.setDebugLevels(config_.value("debug_levels","+0,+1,+2,+3"));
 
-  utf8::String lockFileName(ksys::getTempPath() +
+/*  utf8::String lockFileName(ksys::getTempPath() +
     ksys::unScreenString(
       config_.section("macroscope").text(
         "lock_file_name", "F2BC263F-C902-4398-AF11-5173F2B6B4F4")
@@ -478,7 +478,7 @@ void Logger::main()
     fprintf(stderr, "lower frequency of program starting needed\n");
     ksys::Exception::throwSP(err,"lower frequency of program starting needed");
   }
-  lf << utf8::int2Str(ksys::getpid());
+  lf << utf8::int2Str(ksys::getpid());*/
 
   verbose_ = config_.section("macroscope").value("verbose", false);
 
@@ -677,13 +677,24 @@ int main(int argc, char * argv[])
     uintptr_t i;
     ksys::initializeArguments(argc, argv);
     ksys::Config::defaultFileName(SYSCONF_DIR + "macroscope.conf");
+    bool dispatch = true;
     for( i = 1; i < ksys::argv().count(); i++ ){
+      if( ksys::argv()[i].strcmp("--version") == 0 ){
+        ksys::stdErr.debug(9,utf8::String::Stream() << macroscope_version.tex_ << "\n");
+        fprintf(stdout,"%s\n",macroscope_version.tex_);
+        dispatch = false;
+        continue;
+      }
       if( ksys::argv()[i].strcmp("-c") == 0 && i + 1 < ksys::argv().count() ){
         ksys::Config::defaultFileName(ksys::argv()[i + 1]);
       }
     }
-    macroscope::Logger logger;
-    logger.main();
+    if( dispatch ){
+      macroscope::Logger logger;
+      ksys::stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
+      logger.main();
+      ksys::stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
+    }
   }
   catch( ksys::ExceptionSP & e ){
     e->writeStdError();
