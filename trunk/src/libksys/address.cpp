@@ -370,7 +370,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
   else {
     for(;;){
       outBufLen = len;
-      dwRetVal = GetAdaptersInfo(&addresses->infos_,&outBufLen);
+      dwRetVal = iphlpapi.GetAdaptersInfo(&addresses->infos_,&outBufLen);
       if( dwRetVal == ERROR_SUCCESS ) break;
       if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
         if( len < (ULONG(1) << (sizeof(ULONG) * CHAR_BIT - 1)) ){

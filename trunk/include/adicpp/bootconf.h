@@ -272,6 +272,12 @@ typedef uint64_t uintmax_t;
 #define SIZEOF_INTMAX_T 8
 #define HAVE_INTMAX_T_AS_INT64_T 1
 #define HAVE_INT64_T_AS_INTMAX_T 1
+#if SIZEOF_INTPTR_T == SIZEOF_INTMAX_T
+#define HAVE_INTPTR_T_AS_INTMAX_T 1
+#endif
+#if SIZEOF_INTPTR_T == 8
+#define HAVE_INTPTR_T_AS_INT64_T 1
+#endif
 #endif
 
 #if SIZEOF_INTPTR_T == 0

@@ -97,7 +97,8 @@ APIEx apiEx;
 //---------------------------------------------------------------------------
 IPHLPAPI iphlpapi;
 const char * const IPHLPAPI::symbols_[] = {
-  "GetAdaptersAddresses"
+  "GetAdaptersAddresses",
+  "GetAdaptersInfo"
 };
 HINSTANCE IPHLPAPI::handle_;
 //---------------------------------------------------------------------------

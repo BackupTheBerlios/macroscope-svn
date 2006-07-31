@@ -26,9 +26,9 @@
 #include "msmail1clib.dir/Release/msmail1clib_i.c"
 #include "msmail1clib.dir/Release/msmail1clib_p.c"
 #elif CMAKE_BUILD_TYPE == 3
-#include "msmail1clib.dir/RelWithDebInf/dlldata.c"
-#include "msmail1clib.dir/RelWithDebInf/msmail1clib_i.c"
-#include "msmail1clib.dir/RelWithDebInf/msmail1clib_p.c"
+#include "msmail1clib.dir/RelWithDebInfo/dlldata.c"
+#include "msmail1clib.dir/RelWithDebInfo/msmail1clib_i.c"
+#include "msmail1clib.dir/RelWithDebInfo/msmail1clib_p.c"
 #elif CMAKE_BUILD_TYPE == 4
 #include "msmail1clib.dir/MinSizeRel/dlldata.c"
 #include "msmail1clib.dir/MinSizeRel/msmail1clib_i.c"

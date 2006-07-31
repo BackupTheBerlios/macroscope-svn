@@ -51,6 +51,8 @@ del /s /f /q *.manifest 2>nul
 del /s /f /q *.manifest.res 2>nul
 del /s /f /q *.vcproj.*.user 2>nul
 del /s /f /q *.log 2>nul
+del /s /f /q *.cod 2>nul
+del /s /f /q *.xdc 2>nul
 rd builds\windows\VC80\Win32\Debug_genutf8 2>nul
 rd builds\windows\VC80\Win32\Release_genutf8 2>nul
 rd builds\windows\VC80\Win32\Debug_libadicpp 2>nul
@@ -97,17 +99,17 @@ del /s /f /q builds\cmake\*.sln 2>nul
 del /s /f /q /a:H builds\cmake\*.suo 2>nul
 rd builds\cmake\ALL_BUILD.dir\Debug 2>nul
 rd builds\cmake\ALL_BUILD.dir\Release 2>nul
-rd builds\cmake\ALL_BUILD.dir\RelWithDebInf 2>nul
+rd builds\cmake\ALL_BUILD.dir\RelWithDebInfo 2>nul
 rd builds\cmake\ALL_BUILD.dir\MinSizeRel 2>nul
 rd builds\cmake\ALL_BUILD.dir 2>nul
 rd builds\cmake\PACKAGE.dir\Debug 2>nul
 rd builds\cmake\PACKAGE.dir\Release 2>nul
-rd builds\cmake\PACKAGE.dir\RelWithDebInf 2>nul
+rd builds\cmake\PACKAGE.dir\RelWithDebInfo 2>nul
 rd builds\cmake\PACKAGE.dir\MinSizeRel 2>nul
 rd builds\cmake\PACKAGE.dir 2>nul
 rd builds\cmake\ZERO_CHECK.dir\Debug 2>nul
 rd builds\cmake\ZERO_CHECK.dir\Release 2>nul
-rd builds\cmake\ZERO_CHECK.dir\RelWithDebInf 2>nul
+rd builds\cmake\ZERO_CHECK.dir\RelWithDebInfo 2>nul
 rd builds\cmake\ZERO_CHECK.dir\MinSizeRel 2>nul
 rd builds\cmake\ZERO_CHECK.dir 2>nul
 del /s /f /q builds\cmake\CMakeFiles\* 2>nul

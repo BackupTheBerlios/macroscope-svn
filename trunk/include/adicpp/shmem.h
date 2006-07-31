@@ -169,7 +169,7 @@ class SharedMemoryQueue : public SharedMemory {
     SharedMemoryQueue & operator <<(int a);
     SharedMemoryQueue & operator <<(unsigned int a);
 #endif
-#if !HAVE_INTPTR_T_AS_INT
+#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT64_T
     SharedMemoryQueue & operator <<(intptr_t a);
     SharedMemoryQueue & operator <<(uintptr_t a);
 #endif

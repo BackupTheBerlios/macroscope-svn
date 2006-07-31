@@ -63,12 +63,12 @@ class Exception {
 //---------------------------------------------------------------------------
 inline int32_t Exception::code() const
 {
-  return codes_[0];
+  return codes_[(uintptr_t) 0];
 }
 //---------------------------------------------------------------------------
 inline const utf8::String & Exception::what() const
 {
-  return whats_[0];
+  return whats_[(uintptr_t) 0];
 }
 //---------------------------------------------------------------------------
 inline const Array< int32_t> & Exception::codes() const

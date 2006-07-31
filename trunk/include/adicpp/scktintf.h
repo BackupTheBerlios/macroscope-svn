@@ -687,6 +687,10 @@ class IPHLPAPI {
         );
         void * p_GetAdaptersAddresses;
       };
+      union {
+        DWORD (WINAPI * GetAdaptersInfo)(PIP_ADAPTER_INFO pAdapterInfo,PULONG pOutBufLen);
+        void * p_GetAdaptersInfo;
+      };
     };
 #if _MSC_VER
 #pragma warning(pop)

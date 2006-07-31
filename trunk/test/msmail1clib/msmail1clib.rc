@@ -119,8 +119,19 @@ END
 //
 // Generated from the TEXTINCLUDE 3 resource.
 //
-1 TYPELIB "msmail1clib.tlb"
+//1 TYPELIB "msmail1clib.tlb"
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
+#ifndef CMAKE_BUILD
+1 TYPELIB "msmail1clib.tlb"
+#elif CMAKE_BUILD_TYPE == 1
+1 TYPELIB "msmail1clib.dir/Debug/msmail1clib.tlb"
+#elif CMAKE_BUILD_TYPE == 2
+1 TYPELIB "msmail1clib.dir/Release/msmail1clib.tlb"
+#elif CMAKE_BUILD_TYPE == 3
+1 TYPELIB "msmail1clib.dir/RelWithDebInfo/msmail1clib.tlb"
+#elif CMAKE_BUILD_TYPE == 4
+1 TYPELIB "msmail1clib.dir/MinSizeRel/msmail1clib.tlb"
+#endif
