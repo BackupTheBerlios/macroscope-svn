@@ -122,3 +122,8 @@ del /s /f /q test\msftp\*.vcproj 2>nul
 del /s /f /q test\msftpd\*.vcproj 2>nul
 del /s /f /q test\msmail\*.vcproj 2>nul
 del /s /f /q test\msmail1clib\*.vcproj 2>nul
+del /s /f /q test\msmail1clib\dlldata.c 2>nul
+del /s /f /q test\msmail1clib\*_i.c 2>nul
+del /s /f /q test\msmail1clib\*_p.c 2>nul
+del /s /f /q test\msmail1clib\*.res 2>nul
+del /s /f /q test\msmail1clib\*.tlb 2>nul

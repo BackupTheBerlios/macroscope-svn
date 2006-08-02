@@ -360,7 +360,7 @@ void ClientDBGetterFiber::main()
     e->writeStdError();
     AutoPtr<OLECHAR> source(client_.name_.getOLEString());
     AutoPtr<OLECHAR> event(utf8::String("GetDB").getOLEString());
-    AutoPtr<OLECHAR> data(utf8::int2Str(e->code()).getOLEString());
+    AutoPtr<OLECHAR> data(utf8::int2Str(e->code() - (e->code() >= errorOffset) * errorOffset).getOLEString());
     HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
     assert( SUCCEEDED(hr) );
   }

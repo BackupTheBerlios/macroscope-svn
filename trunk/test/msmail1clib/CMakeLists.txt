@@ -1,5 +1,3 @@
-IF (NOT ${CMAKE_GENERATOR} MATCHES "Win64")
-
 ADD_LIBRARY (msmail1clib SHARED
   client.cpp
   dlldatax.c
@@ -64,5 +62,3 @@ INSTALL (
 )
 
 INSTALL (FILES msmail1c.conf DESTINATION "${INSTALL_ETC_DIR}")
-
-ENDIF (NOT ${CMAKE_GENERATOR} MATCHES "Win64")

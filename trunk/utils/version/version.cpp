@@ -32,7 +32,7 @@ int main(int ac, char*av[]){
     if( upperOutName[i] == '.' || isspace(upperOutName[i]) ) upperOutName[i] = '_';
     if( av[2][i] == '\0' ) break;
   }
-  version = (ver << 22) | (rev << 12) | lev;
+  version = (ver << 22) + (rev << 12) + lev;
   version++;
   if( ++lev >= (1u << 12) ){
     lev = 0;

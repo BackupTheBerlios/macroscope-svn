@@ -63,11 +63,14 @@ int64_t timeFromTimeString(const utf8::String & s)
   memset(&tv,0,sizeof(tv));
   memset(&tma,0,sizeof(tma));
 #if HAVE_SSCANF
-  int a = sscanf(
+  int a = sscanf(s.c_str(),
 #elif HAVE__SSCANF
-  int a = _sscanf(
+  int a = _sscanf(s.c_str(),
+#elif HAVE_SNSCANF
+  int a = snscanf(s.c_str(),s.size() + 1,
+#elif HAVE__SNSCANF
+  int a = _snscanf(s.c_str(),s.size() + 1,
 #endif
-    s.c_str(),
     "%02u.%02u.%04u %02u:%02u:%02u.%06u",
     (unsigned int *) &tma.tm_mday,
     (unsigned int *) &tma.tm_mon,
@@ -138,11 +141,14 @@ int64_t timeFromTimeCodeString(const utf8::String & s)
   memset(&tv,0,sizeof(tv));
   memset(&tma,0,sizeof(tma));
 #if HAVE_SSCANF
-  int a = sscanf(
+  int a = sscanf(s.c_str(),
 #elif HAVE__SSCANF
-  int a = _sscanf(
+  int a = _sscanf(s.c_str(),
+#elif HAVE_SNSCANF
+  int a = snscanf(s.c_str(),s.size() + 1,
+#elif HAVE__SNSCANF
+  int a = _snscanf(s.c_str(),s.size() + 1,
 #endif
-    s.c_str(),
     "%04u%02u%02u%02u%02u%02u%06u",
     (unsigned int *) &tma.tm_year,
     (unsigned int *) &tma.tm_mon,
