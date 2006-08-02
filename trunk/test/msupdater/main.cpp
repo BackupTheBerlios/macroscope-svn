@@ -52,6 +52,9 @@ void MSUpdater::fiberExecute()
       fetch.url(config_->valueByPath("update.url"));
       fetch.proxy(config_->valueByPath("update.proxy"));
       fetch.resume(config_->valueByPath("update.resume",true));
+      fetch.localPath(includeTrailingPathDelimiter(
+        config_->valueByPath("update.storage",getExecutablePath() + "updates")
+      ));
       fetch.fetch();
       lastCheckUpdate = getlocaltimeofday();
     }
