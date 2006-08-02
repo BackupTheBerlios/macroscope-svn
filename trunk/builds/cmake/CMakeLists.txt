@@ -18,8 +18,7 @@ SET (CMAKE_CXX_CREATE_STATIC_LIBRARY "xilib ${CMAKE_CL_NOLOGO} <LINK_FLAGS> /out
 # the compiler used for C files 
 #MESSAGE( STATUS "CMAKE_C_COMPILER: " ${CMAKE_C_COMPILER} )
 # the compiler used for C++ files 
-#
-MESSAGE( STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER} )
+#MESSAGE( STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER} )
 
 # Shared settings
 
