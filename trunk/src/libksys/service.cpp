@@ -53,7 +53,7 @@ Service & Service::serviceMain(uintptr_t n,DWORD dwArgc,LPWSTR * lpszArgv)
   uintptr_t i;
   int32_t err;
   try {
-    for( i = 0; i < dwArgc; i++ ) argv_.add(lpszArgv[i]);
+    for( i = 0; i < dwArgc; i++ ) argv().add(lpszArgv[i]);
     statusHandle_ = RegisterServiceCtrlHandlerW(
       serviceName_.getUNICODEString(),
       Services::handlers_[n]

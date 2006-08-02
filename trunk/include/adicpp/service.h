@@ -45,9 +45,7 @@ class Service {
     Service &             handler(uintptr_t n, DWORD fdwControl);
 #endif
   protected:
-#if defined(__WIN32__) || defined(__WIN64__)
-    Array< utf8::String>  argv_;
-#else
+#if !defined(__WIN32__) && !defined(__WIN64__)
     utf8::String          serviceName_;
     utf8::String          displayName_;
 #endif

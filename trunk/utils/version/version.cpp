@@ -1,5 +1,9 @@
 #include <adicpp/lconfig.h>
 
+#if HAVE_TIME_H
+#include <time.h>
+#endif
+
 #ifdef __CLASSIC_C__
 int main(){
   int ac;
