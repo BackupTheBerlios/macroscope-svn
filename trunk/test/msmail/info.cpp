@@ -1249,6 +1249,27 @@ utf8::String Server::Data::getKeyGroupList(const utf8::String & groups,bool quot
   return getKeyGroupListNL(groups,quoted);
 }
 //------------------------------------------------------------------------------
+utf8::String Server::Data::getKeyInGroupListNL(const utf8::String & group,bool quoted) const
+{
+  utf8::String list;
+  Array<KeyInfo *> keyList;
+  keys_.list(keyList);
+  for( intptr_t i = keyList.count() - 1; i >= 0; i-- ){
+    if( key2GroupLinks_.find(Key2GroupLink(keyList[i]->name_,group)) == NULL ) continue;
+    if( list.strlen() > 0 ) list += ",";
+    if( quoted ) list += "\"";
+    list += keyList[i]->name_;
+    if( quoted ) list += "\"";
+  }
+  return list;
+}
+//------------------------------------------------------------------------------
+utf8::String Server::Data::getKeyInGroupList(const utf8::String & group,bool quoted) const
+{
+  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  return getKeyInGroupListNL(group,quoted);
+}
+//------------------------------------------------------------------------------
 bool Server::Data::isEmptyNL() const
 {
   return

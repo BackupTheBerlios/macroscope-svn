@@ -398,6 +398,9 @@ int main(int argc,char * argv[])
       if( ksys::argv()[u].strcmp("-c") == 0 && u + 1 < ksys::argv().count() ){
         ksys::Config::defaultFileName(ksys::argv()[u + 1]);
       }
+      else if( ksys::argv()[u].strcmp("--log") == 0 && u + 1 < ksys::argv().count() ){
+        ksys::stdErr.fileName(ksys::argv()[u + 1]);
+      }
       else if( ksys::argv()[u].strcmp("--install") == 0 ){
         services.install();
         dispatch = false;

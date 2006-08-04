@@ -683,6 +683,9 @@ int main(int argc, char * argv[])
       if( ksys::argv()[i].strcmp("-c") == 0 && i + 1 < ksys::argv().count() ){
         ksys::Config::defaultFileName(ksys::argv()[i + 1]);
       }
+      else if( ksys::argv()[i].strcmp("--log") == 0 && i + 1 < ksys::argv().count() ){
+        ksys::stdErr.fileName(ksys::argv()[i + 1]);
+      }
     }
     if( dispatch ){
       macroscope::Logger logger;

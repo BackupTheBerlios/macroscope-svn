@@ -563,6 +563,11 @@ utf8::String Client::getUserList() const
   return data_.getUserList(true);
 }
 //------------------------------------------------------------------------------
+utf8::String Client::getDBInGroupList(const utf8::String & group) const
+{
+  return data_.getKeyInGroupList(group,true);
+}
+//------------------------------------------------------------------------------
 utf8::String Client::copyMessage(const utf8::String id)
 {
   AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);

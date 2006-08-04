@@ -529,7 +529,10 @@ int main(int argc,char * argv[])
       if( ksys::argv()[u].strcmp("-c") == 0 && u + 1 < ksys::argv().count() ){
         ksys::Config::defaultFileName(ksys::argv()[u + 1]);
       }
-      else if( ksys::argv()[i].strcmp("--sha256") == 0 && u + 1 < ksys::argv().count() ){
+      else if( ksys::argv()[u].strcmp("--log") == 0 && u + 1 < ksys::argv().count() ){
+        ksys::stdErr.fileName(ksys::argv()[u + 1]);
+      }
+      else if( ksys::argv()[u].strcmp("--sha256") == 0 && u + 1 < ksys::argv().count() ){
         ksys::SHA256 passwordSHA256;
         passwordSHA256.make(ksys::argv()[u + 1].c_str(),ksys::argv()[u + 1].size());
         utf8::String b64(ksys::base64Encode(passwordSHA256.sha256(),32));

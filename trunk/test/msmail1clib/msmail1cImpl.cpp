@@ -743,7 +743,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 18;
+  *plMethods = 19;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -821,6 +821,10 @@ HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
   if( _wcsicoll(bstrMethodName,L"MK1100SendBarCodeInfo") == 0 ) *plMethodNum = 17;
   else
   if( _wcsicoll(bstrMethodName,L"MK1100ѕослать»нформациюЎтрихкода") == 0 ) *plMethodNum = 17;
+  else
+  if( _wcsicoll(bstrMethodName,L"GetDBInGroupList") == 0 ) *plMethodNum = 18;
+  else
+  if( _wcsicoll(bstrMethodName,L"—писок»Ѕ¬√руппе") == 0 ) *plMethodNum = 18;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -973,6 +977,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"MK1100ѕослать»нформациюЎтрихкода")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 18 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"GetDBInGroupList")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"—писок»Ѕ¬√руппе")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -998,6 +1010,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 15 : *plParams = 1; break;
     case 16 : *plParams = 1; break;
     case 17 : *plParams = 2; break;
+    case 18 : *plParams = 1; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -1352,6 +1365,21 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
 //                  if( SUCCEEDED(hr) )
 //                    hr = client_.value(V_BSTR(pv0),V_BSTR(pv1),pvarRetValue);
                 }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 18 : // GetDBInGroupList
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                V_BSTR(pvarRetValue) = client_.getDBInGroupList(V_BSTR(pv0)).getOLEString();
+                V_VT(pvarRetValue) = VT_BSTR;
               }
             }
             SafeArrayUnlock(*paParams);

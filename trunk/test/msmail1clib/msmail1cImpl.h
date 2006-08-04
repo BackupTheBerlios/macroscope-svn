@@ -155,6 +155,7 @@ class Client : public ksock::Client {
     utf8::String getDBList() const;
     utf8::String getDBGroupList() const;
     utf8::String getUserList() const;
+    utf8::String getDBInGroupList(const utf8::String & group) const;
 
     InterlockedMutex workFiberWait_;
     int32_t workFiberLastError_;

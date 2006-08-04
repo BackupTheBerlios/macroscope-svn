@@ -771,6 +771,8 @@ class Server : public ksock::Server {
         utf8::String getKeyList(bool quoted = false) const;
         utf8::String getKeyGroupListNL(const utf8::String & groups,bool quoted) const;
         utf8::String getKeyGroupList(const utf8::String & groups,bool quoted) const;
+        utf8::String getKeyInGroupListNL(const utf8::String & group,bool quoted) const;
+        utf8::String getKeyInGroupList(const utf8::String & group,bool quoted) const;
         bool isEmptyNL() const;
         bool isEmpty() const;
       protected:

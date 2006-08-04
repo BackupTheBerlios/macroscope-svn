@@ -64,6 +64,9 @@ int main(int _argc,char * _argv[])
       if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
         Config::defaultFileName(argv()[u + 1]);
       }
+      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+        stdErr.fileName(argv()[u + 1]);
+      }
       else if( argv()[u].strcmp("--install") == 0 ){
         services.install();
         dispatch = false;
