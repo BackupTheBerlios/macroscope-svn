@@ -43,19 +43,46 @@ MSUpdater::MSUpdater(const ConfigSP & config) : config_(config)
 //------------------------------------------------------------------------------
 void MSUpdater::fiberExecute()
 {
+  Fetcher fetch;
   uint64_t lastCheckUpdate = 0;
   while( !terminated_ ){
-    if( terminated_ ) break;
     if( getlocaltimeofday() - lastCheckUpdate >= (uint64_t) config_->valueByPath("update.interval",180) / 60000000u ){
-      stdErr.debug(9,utf8::String::Stream() << this << " Check for update...\n");
-      Fetcher fetch;
       fetch.url(config_->valueByPath("update.url"));
       fetch.proxy(config_->valueByPath("update.proxy"));
       fetch.resume(config_->valueByPath("update.resume",true));
       fetch.localPath(includeTrailingPathDelimiter(
         config_->valueByPath("update.storage",getExecutablePath() + "updates")
       ));
-      fetch.fetch();
+      stdErr.debug(3,utf8::String::Stream() << this <<
+        "Check for new updates on " << fetch.url() << " ...\n"
+      );
+      try {
+        fetch.fetch("updates.lst");
+        Array<utf8::String> updateURLs;
+        if( fetch.fetched() || fetch.resumed() || fetch.modified() ){
+          AsyncFile updateList(fetch.localPath() + "updates.lst");
+          AsyncFile::LineGetBuffer buffer;
+          utf8::String s;
+          while( !updateList.gets(s,&buffer) ) updateURLs.add(s);
+        }
+        if( updateURLs.count() == 0 ){
+          stdErr.debug(3,utf8::String::Stream() << this <<
+            "New updates on " << fetch.url() << " semifresh.\n"
+          );
+        }
+        else {
+          for( intptr_t i = updateURLs.count() - 1; i >= 0; i-- ){
+            fetch.url(updateURLs[i]);
+            fetch.fetch();
+          }
+        }
+      }
+      catch( ExceptionSP & e ){
+        e->writeStdError();
+        stdErr.debug(3,utf8::String::Stream() << this <<
+          "Check for new updates on " << fetch.url() << " failed.\n"
+        );
+      }
       lastCheckUpdate = getlocaltimeofday();
     }
     sleep(6000000);
@@ -169,6 +196,9 @@ int main(int ac,char * av[])
         fprintf(stdout,"%s\n",b64.c_str());
         copyStrToClipboard(b64);
         dispatch = false;
+      }
+      else if( argv()[u].strcmp("--generate-update-package") == 0 && u + 1 < argv().count() ){
+// TODO:
       }
     }
     if( dispatch ){

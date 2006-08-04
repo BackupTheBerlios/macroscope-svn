@@ -74,7 +74,7 @@ class AsyncFile : public AsyncDescriptor {
         uintptr_t len_;
         bool removeNewLine_;
     };
-    utf8::String gets(bool * eof = NULL,LineGetBuffer * buffer = NULL);
+    bool gets(utf8::String & str,LineGetBuffer * buffer = NULL);
 
     const utf8::String & fileName() const;
     AsyncFile & fileName(const utf8::String & name);

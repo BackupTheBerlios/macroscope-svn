@@ -97,47 +97,38 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
   }
 }
 //------------------------------------------------------------------------------
-void Logger::parseSquidLogLine(char * p, uintptr_t size, ksys::Array< const char *> & slcp)
+void Logger::parseSquidLogLine(char * p, uintptr_t size,ksys::Array<const char *> & slcp)
 {
   char *  rb  = p + size, * a, * s;
-  for( a = p; *a != '\r' && *a != '\n' && a < rb; a++ )
-    ;
+  for( a = p; *a != '\r' && *a != '\n' && a < rb; a++ );
   slcp = NULL;
   for( uintptr_t i = 0; p < a; i++ ){
-    while( p < a && *p == ' ' )
-      p++;
+    while( p < a && *p == ' ' ) p++;
     s = p;
     while( s < a ){
       if( *s == '[' ){
-        while( s < a && *s != ']' )
-          s++;
+        while( s < a && *s != ']' ) s++;
       }
       else if( *s == '(' ){
         while( s < a && *s != ')' ){
           if( *s == '\'' ){
-            for( ++s; s < a && *s != '\''; s++ )
-              ;
-            if( *s == '\'' )
-              s++;
+            for( ++s; s < a && *s != '\''; s++ );
+            if( *s == '\'' ) s++;
           }
-          else{
+          else {
             s++;
           }
         }
       }
       if( s < a ){
-        if( *s == ' ' )
-          break;
+        if( *s == ' ' ) break;
         s++;
       }
     }
-    if( i >= slcp.count() )
-      slcp.resize(i + 1);
+    if( i >= slcp.count() ) slcp.resize(i + 1);
     slcp[i] = p;
     *s++ = '\0';
-    if( i > 0 )
-      if( strcmp(slcp[i - 1], slcp[i]) == 0 )
-        i--;
+    if( i > 0 ) if( strcmp(slcp[i - 1], slcp[i]) == 0 ) i--;
     p = s;
   }
 }
@@ -195,7 +186,7 @@ Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName, int64
 //------------------------------------------------------------------------------
 void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl)
 {
-  ksys::FileHandleContainer flog(logFileName);
+  ksys::AsyncFile flog(logFileName);
   flog.open();
   stTrafIns_->text(
     "INSERT INTO INET_USERS_TRAF"
@@ -211,16 +202,20 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
 
-  ksys::AutoPtr<char> b;
+//  ksys::AutoPtr<char> b;
   int64_t lineNo = 1;
   uintptr_t size;
   ksys::Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
+  ksys::AsyncFile::LineGetBuffer lgb;
   for(;;){
-    //      printf("%"PRId64"\n",lineNo);
-    if( (size = flog.gets(b)) <= 0 ) break;
-    if( b[size - 1] == '\n' ){
-      parseSquidLogLine(b, size, slcp);
+//    if( (size = flog.gets(b)) <= 0 ) break;
+//    if( b[size - 1] == '\n' ){
+    utf8::String sb;
+    if( flog.gets(sb,&lgb) ) break;
+    size = sb.size();
+    if( size > 0 && sb.c_str()[size - 1] == '\n' ){
+      parseSquidLogLine(sb.c_str(),size,slcp);
       intmax_t  traf  (utf8::str2Int(slcp[4]));
       if( traf > 0 && slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7], '%') == NULL && strcmp(slcp[7], "-") != 0 && strncmp(slcp[3], "NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
         double timeStamp1;
@@ -291,12 +286,12 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
 //------------------------------------------------------------------------------
 void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear)
 {
-  ksys::FileHandleContainer flog(logFileName);
+  ksys::AsyncFile flog(logFileName);
   flog.open();
   stTrafIns_->text("INSERT INTO INET_USERS_TRAF" "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)" "VALUES (:ST_USER, :ST_TIMESTAMP, 0, :ST_TRAF_SMTP)");
   stTrafUpd_->text("UPDATE INET_USERS_TRAF SET ST_TRAF_SMTP = ST_TRAF_SMTP + :ST_TRAF_SMTP " "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP");
 
-  ksys::AutoPtr< char>  b;
+//  ksys::AutoPtr< char>  b;
   database_->start();
   int64_t offset  = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
@@ -304,23 +299,26 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   uintptr_t size;
   intptr_t  mon     = 0;
   int64_t   cl      = getlocaltimeofday();
+  ksys::AsyncFile::LineGetBuffer lgb;
   for( ; ; ){
-    if( (size = flog.gets(b)) <= 0 )
-      break;
-    if( b[size - 1] == '\n' ){
-      char *  a, * id, * idl, * prefix, * prefixl, * from, * to, * stat; //* relay;
-      from = strstr(b.ptr(), "from=");
-      to = strstr(b.ptr(), " to=");
-      if( ((from != NULL || to != NULL)) && (id = strstr(b.ptr(), "sm-mta[")) != NULL ){
+//    if( (size = flog.gets(b)) <= 0 ) break;
+//    if( b[size - 1] == '\n' ){
+    utf8::String sb;
+    if( flog.gets(sb,&lgb) ) break;
+    size = sb.size();
+    if( size > 0 && sb.c_str()[size - 1] == '\n' ){
+      char * a, * id, * idl, * prefix, * prefixl, * from, * to, * stat; //* relay;
+      from = strstr(sb.c_str(), "from=");
+      to = strstr(sb.c_str(), " to=");
+      if( ((from != NULL || to != NULL)) && (id = strstr(sb.c_str(), "sm-mta[")) != NULL ){
         // get time
         tm  lt;
         memset(&lt, 0, sizeof(lt));
-        lt.tm_mon = (int) str2Month(b);
-        if( lt.tm_mon < mon )
-          startYear++;
+        lt.tm_mon = (int) ksys::str2Month(sb.c_str());
+        if( lt.tm_mon < mon ) startYear++;
         mon = lt.tm_mon;
         lt.tm_year = int(startYear - 1900);
-        sscanf(b.ptr() + 4, "%u %u:%u:%u", &lt.tm_mday, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
+        sscanf(sb.c_str() + 4, "%u %u:%u:%u", &lt.tm_mday, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
         // get msgid
         prefix = id;
         for( prefixl = prefix; *prefixl != '['; prefixl++ )
@@ -329,8 +327,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
           id++;
         while( *++id == ':' );
         while( *++id == ' ' );
-        for( idl = id; *idl != ':'; idl++ )
-          ;
+        for( idl = id; *idl != ':'; idl++ );
         utf8::String  st_user;
         // get from
         if( from != NULL ){
@@ -338,8 +335,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
             from += 6;
             a = from;
             while( *a != '@' && *a != '>' && *a != ',' ){
-              if( *a == ':' )
-                from = a + 1;
+              if( *a == ':' ) from = a + 1;
               a++;
             }
             if( *a == '@' && utf8::String(a,domain.strlen()).strcasecmp(domain) == 0 ){
@@ -353,8 +349,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
             to += 5;
             a = to;
             while( *a != '@' && *a != '>' && *a != ',' ){
-              if( *a == ':' )
-                to = a + 1;
+              if( *a == ':' ) to = a + 1;
               a++;
             }
             if( *a == '@' && utf8::String(a, domain.strlen()).strcasecmp(domain) == 0 ){
@@ -364,16 +359,16 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         }
         // get size
         uintptr_t msgSize = 0;
-        if( (a = strstr(b.ptr(), "size=")) != NULL ){
+        if( (a = strstr(sb.c_str(), "size=")) != NULL ){
           sscanf(a + 5, "%"PRIuPTR, &msgSize);
         }
         // get nrcpts
         uintptr_t nrcpts  = 0;
-        if( (a = strstr(b.ptr(), "nrcpts=")) != NULL ){
+        if( (a = strstr(sb.c_str(), "nrcpts=")) != NULL ){
           sscanf(a + 7, "%"PRIuPTR, &nrcpts);
         }
         // get stat
-        if( (stat = strstr(b.ptr(), "stat=")) != NULL ){
+        if( (stat = strstr(sb.c_str(), "stat=")) != NULL ){
           stat += 5;
         }
         if( from != NULL && msgSize > 0 ){

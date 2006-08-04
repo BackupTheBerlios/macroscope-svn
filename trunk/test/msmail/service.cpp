@@ -53,19 +53,7 @@ Service::Service() :
 //------------------------------------------------------------------------------
 void Service::start()
 {
-#if defined(__WIN32__) || defined(__WIN64__)
-#ifndef NDEBUG
-//  Sleep(20000);
-//  Config::defaultFileName(
-//    includeTrailingPathDelimiter(
-//      getPathFromPathName(
-//        getExecutableName())) + "..\\test\\msmail\\msmail.conf"
-//  );
-#endif
-  msmailConfig_->parse().override(argv_);
-#else
   msmailConfig_->parse().override();
-#endif
   Array<ksock::SockAddr> addrs;
   ksock::SockAddr::resolve(msmailConfig_->text("bind"),addrs,defaultPort);
   for( intptr_t i = addrs.count() - 1; i >= 0; i-- ) msmail_.addBind(addrs[i]);

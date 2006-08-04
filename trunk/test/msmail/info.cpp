@@ -170,7 +170,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
 
   for(;;){
     lastHeaderPos = s.tell();
-    str = s.gets(&eof,&buffer);
+    eof = s.gets(str,&buffer);
     if( eof ) break;
     utf8::String::Iterator i(str), ia(i);
     ia.last();

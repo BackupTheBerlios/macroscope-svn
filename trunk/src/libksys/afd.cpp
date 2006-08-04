@@ -940,9 +940,9 @@ l1:
   return uintptr_t(l);
 }
 //---------------------------------------------------------------------------
-utf8::String AsyncFile::gets(bool * eof,LineGetBuffer * buffer)
+bool AsyncFile::gets(utf8::String & str,LineGetBuffer * buffer)
 {
-  if( eof != NULL ) *eof = false;
+  bool eof = false;
   if( buffer == NULL ){
     uint64_t op = tell();
     int64_t r, rr, l = 0;
@@ -952,7 +952,7 @@ utf8::String AsyncFile::gets(bool * eof,LineGetBuffer * buffer)
       a = p.realloc(size_t(l + 512)).ptr() + l;
       rr = r = read(a,512);
       if( r <= 0 ){
-        if( eof != NULL ) *eof = true;
+        eof = true;
         break;
       }
       for( q = a; r > 0; q++, r-- ){
@@ -969,7 +969,8 @@ l1:
     if( l > 0 ) p[uintptr_t(l)] = '\0';
     utf8::String::Container * container = newObject<utf8::String::Container>(0,p.ptr());
     p.ptr(NULL);
-    return container;
+    str = container;
+    return eof;
   }
   int64_t r;
   if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
@@ -987,7 +988,7 @@ l1:
         buffer->bufferFilePos_ += buffer->len_;
       }
       if( r <= 0 ){
-        if( ss == 0 && eof != NULL ) *eof = true;
+        if( ss == 0 ) eof = true;
         break;
       }
       seek(buffer->bufferFilePos_);
@@ -1007,7 +1008,8 @@ l1:
   }
   utf8::String::Container * container = newObject<utf8::String::Container>(0,s.ptr());
   s.ptr(NULL);
-  return container;
+  str = container;
+  return eof;
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

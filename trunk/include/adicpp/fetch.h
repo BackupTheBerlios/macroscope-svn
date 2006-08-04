@@ -42,22 +42,18 @@ class Fetcher {
     Fetcher & proxy(const utf8::String & a);
     const utf8::String & localPath() const;
     Fetcher & localPath(const utf8::String & a);
-    const bool & storeHostPath() const;
+    bool storeHostPath() const;
     Fetcher & storeHostPath(bool a);
-    const bool & resume() const;
+    bool resume() const;
     Fetcher & resume(bool a);
+    bool resumed() const;
+    bool fetched() const;
+    bool modified() const;
 
     Fetcher & fetch(const utf8::String & localName = utf8::String());
     static utf8::String asctime2HttpTime(const char * tm);
     static time_t httpTime2asctime(const char * ht);
-  protected:
-    utf8::String url_;
-    utf8::String proxy_;
-    utf8::String localPath_;
-    bool storeHostPath_;
-    bool resume_;
-
-    void parseUrl(
+    static void parseUrl(
       const utf8::String & url,
       utf8::String & proto,
       utf8::String & user,
@@ -67,6 +63,18 @@ class Fetcher {
       utf8::String & name,
       utf8::String & port
     );
+  protected:
+    utf8::String url_;
+    utf8::String proxy_;
+    utf8::String localPath_;
+    struct {
+      uint8_t storeHostPath_ : 1;
+      uint8_t resume_ : 1;
+      uint8_t resumed_ : 1;
+      uint8_t fetched_ : 1;
+      uint8_t modified_ : 1;
+    };
+
     static void setmtime(const utf8::String & fileName,uint64_t atime,uint64_t mtime);
   private:
 };
@@ -104,7 +112,7 @@ inline Fetcher & Fetcher::localPath(const utf8::String & a)
   return *this;
 }
 //---------------------------------------------------------------------------
-inline const bool & Fetcher::storeHostPath() const
+inline bool Fetcher::storeHostPath() const
 {
   return storeHostPath_;
 }
@@ -115,7 +123,7 @@ inline Fetcher & Fetcher::storeHostPath(bool a)
   return *this;
 }
 //---------------------------------------------------------------------------
-inline const bool & Fetcher::resume() const
+inline bool Fetcher::resume() const
 {
   return resume_;
 }
@@ -124,6 +132,21 @@ inline Fetcher & Fetcher::resume(bool a)
 {
   resume_ = a;
   return *this;
+}
+//---------------------------------------------------------------------------
+inline bool Fetcher::resumed() const
+{
+  return resumed_;
+}
+//---------------------------------------------------------------------------
+inline bool Fetcher::fetched() const
+{
+  return fetched_;
+}
+//---------------------------------------------------------------------------
+inline bool Fetcher::modified() const
+{
+  return modified_;
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

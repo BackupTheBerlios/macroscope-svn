@@ -340,19 +340,7 @@ MSFTPService::MSFTPService() :
 //------------------------------------------------------------------------------
 void MSFTPService::start()
 {
-#if defined(__WIN32__) || defined(__WIN64__)
-#ifndef NDEBUG
-//  Sleep(20000);
-//  ksys::Config::defaultFileName(
-//    ksys::includeTrailingPathDelimiter(
-//      ksys::getPathFromPathName(
-//        ksys::getExecutableName())) + "..\\test\\msftpd\\msftpd.conf"
-//  );
-#endif
-  msftpConfig_->parse().override(argv_);
-#else
   msftpConfig_->parse().override();
-#endif
   ksys::Array<ksock::SockAddr> addrs;
   ksock::SockAddr::resolve(
     msftpConfig_->text("bind"),
