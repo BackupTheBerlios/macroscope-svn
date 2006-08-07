@@ -232,12 +232,12 @@ UserInfo::~UserInfo()
 }
 //------------------------------------------------------------------------------
 UserInfo::UserInfo() :
-  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 UserInfo::UserInfo(const utf8::String & name) :
-  atime_(gettimeofday()), name_(name), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), name_(name), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
@@ -249,6 +249,7 @@ UserInfo::UserInfo(const UserInfo & a) : sendedToAutoDrop_(sendedTo_)
 UserInfo & UserInfo::operator = (const UserInfo & a)
 {
   atime_ = a.atime_;
+  rtime_ = atime_;
   name_ = a.name_;
   sendedTo_ = a.sendedTo_;
   return *this;
@@ -269,7 +270,9 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const UserInfo & a)
 {
-  return s << a.name_ << ", atime: " << getTimeString(a.atime_);
+  return s << a.name_ <<
+    ", atime: " << getTimeString(a.atime_) <<
+    (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -279,12 +282,12 @@ KeyInfo::~KeyInfo()
 }
 //------------------------------------------------------------------------------
 KeyInfo::KeyInfo() :
-  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 KeyInfo::KeyInfo(const utf8::String & name) :
-  atime_(gettimeofday()), name_(name), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), name_(name), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
@@ -296,6 +299,7 @@ KeyInfo::KeyInfo(const KeyInfo & a) : sendedToAutoDrop_(sendedTo_)
 KeyInfo & KeyInfo::operator = (const KeyInfo & a)
 {
   atime_ = a.atime_;
+  rtime_ = atime_;
   name_ = a.name_;
   sendedTo_ = a.sendedTo_;
   return *this;
@@ -315,7 +319,9 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const KeyInfo & a)
 {
-  return s << a.name_ << ", atime: " << getTimeString(a.atime_);
+  return s << a.name_ <<
+    ", atime: " << getTimeString(a.atime_) <<
+    (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -325,12 +331,12 @@ GroupInfo::~GroupInfo()
 }
 //------------------------------------------------------------------------------
 GroupInfo::GroupInfo() :
-  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 GroupInfo::GroupInfo(const utf8::String & name) :
-  atime_(gettimeofday()), name_(name), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), name_(name), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
@@ -342,6 +348,7 @@ GroupInfo::GroupInfo(const GroupInfo & a) : sendedToAutoDrop_(sendedTo_)
 GroupInfo & GroupInfo::operator = (const GroupInfo & a)
 {
   atime_ = a.atime_;
+  rtime_ = a.rtime_;
   name_ = a.name_;
   sendedTo_ = a.sendedTo_;
   return *this;
@@ -361,7 +368,9 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const GroupInfo & a)
 {
-  return s << a.name_ << ", atime: " << getTimeString(a.atime_);
+  return s << a.name_ <<
+    ", atime: " << getTimeString(a.atime_) <<
+    (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -371,12 +380,12 @@ ServerInfo::~ServerInfo()
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo() :
-  atime_(gettimeofday()), stime_(0), type_(stStandalone), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), stime_(0), type_(stStandalone), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo(const utf8::String & name,ServerType type) :
-  atime_(gettimeofday()), stime_(0), name_(name), type_(type), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), stime_(0), name_(name), type_(type), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
@@ -388,6 +397,7 @@ ServerInfo::ServerInfo(const ServerInfo & a) : sendedToAutoDrop_(sendedTo_)
 ServerInfo & ServerInfo::operator = (const ServerInfo & a)
 {
   atime_ = a.atime_;
+  rtime_ = a.rtime_;
   stime_ = a.stime_;
   name_ = a.name_;
   type_ = a.type_;
@@ -406,13 +416,15 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 {
-  s << a.name_ << a.atime_ << (uint8_t) a.type_;
+  s << a.name_ << a.atime_ << a.rtime_ << (uint8_t) a.type_;
   return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a)
 {
-  return s << a.name_ << " " << serverTypeName_[a.type_] << ", atime: " << getTimeString(a.atime_);
+  return s << a.name_ << " " << serverTypeName_[a.type_] <<
+    ", atime: " << getTimeString(a.atime_) <<
+    (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -422,12 +434,12 @@ User2KeyLink::~User2KeyLink()
 }
 //------------------------------------------------------------------------------
 User2KeyLink::User2KeyLink() :
-  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 User2KeyLink::User2KeyLink(const utf8::String & userName,const utf8::String & keyName) :
-  atime_(gettimeofday()), user_(userName), key_(keyName), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), user_(userName), key_(keyName), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
@@ -439,6 +451,7 @@ User2KeyLink::User2KeyLink(const User2KeyLink & a) : sendedToAutoDrop_(sendedTo_
 User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
 {
   atime_ = a.atime_;
+  rtime_ = a.rtime_;
   user_ = a.user_;
   key_ = a.key_;
   sendedTo_ = a.sendedTo_;
@@ -459,7 +472,9 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const User2KeyLink & a)
 {
-  return s << a.user_ << " " << a.key_ << ", atime: " << getTimeString(a.atime_);
+  return s << a.user_ << " " << a.key_ <<
+    ", atime: " << getTimeString(a.atime_) <<
+    (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -469,12 +484,12 @@ Key2GroupLink::~Key2GroupLink()
 }
 //------------------------------------------------------------------------------
 Key2GroupLink::Key2GroupLink() :
-  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 Key2GroupLink::Key2GroupLink(const utf8::String & keyName,const utf8::String & groupName) :
-  atime_(gettimeofday()), key_(keyName), group_(groupName), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), key_(keyName), group_(groupName), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
@@ -486,6 +501,7 @@ Key2GroupLink::Key2GroupLink(const Key2GroupLink & a) : sendedToAutoDrop_(sended
 Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
 {
   atime_ = a.atime_;
+  rtime_ = a.rtime_;
   key_ = a.key_;
   group_ = a.group_;
   sendedTo_ = a.sendedTo_;
@@ -506,7 +522,9 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2GroupLink & a)
 {
-  return s << a.key_ << " " << a.group_ << ", atime: " << getTimeString(a.atime_);
+  return s << a.key_ << " " << a.group_ <<
+    ", atime: " << getTimeString(a.atime_) <<
+    (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -516,12 +534,12 @@ Key2ServerLink::~Key2ServerLink()
 }
 //------------------------------------------------------------------------------
 Key2ServerLink::Key2ServerLink() :
-  atime_(gettimeofday()), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
 Key2ServerLink::Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName) :
-  atime_(gettimeofday()), key_(keyName), server_(serverName), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), key_(keyName), server_(serverName), sendedToAutoDrop_(sendedTo_)
 {
 }
 //------------------------------------------------------------------------------
@@ -533,6 +551,7 @@ Key2ServerLink::Key2ServerLink(const Key2ServerLink & a) : sendedToAutoDrop_(sen
 Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)
 {
   atime_ = a.atime_;
+  rtime_ = a.rtime_;
   key_ = a.key_;
   server_ = a.server_;
   sendedTo_ = a.sendedTo_;
@@ -553,7 +572,9 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & 
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2ServerLink & a)
 {
-  return s << a.key_ << " " << a.server_ << ", atime: " << getTimeString(a.atime_);
+  return s << a.key_ << " " << a.server_ <<
+    ", atime: " << getTimeString(a.atime_) <<
+    (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -768,58 +789,58 @@ void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket,const utf8::String
   Array<UserInfo *> userList;
   users_.list(userList);
   for( i = userList.count() - 1; i >= 0; i-- )
-    if( userList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
+    if( userList[i]->rtime_ == 0 && userList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
   for( i = userList.count() - 1; i >= 0; i-- )
-    if( userList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *userList[i];
+    if( userList[i]->rtime_ == 0 && userList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *userList[i];
   u = 0;
   Array<KeyInfo *> keyList;
   keys_.list(keyList);
   for( i = keyList.count() - 1; i >= 0; i-- )
-    if( keyList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
+    if( keyList[i]->rtime_ == 0 && keyList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
   for( i = keyList.count() - 1; i >= 0; i-- )
-    if( keyList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *keyList[i];
+    if( keyList[i]->rtime_ == 0 && keyList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *keyList[i];
   u = 0;
   Array<GroupInfo *> groupList;
   groups_.list(groupList);
   for( i = groupList.count() - 1; i >= 0; i-- )
-    if( groupList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
+    if( groupList[i]->rtime_ == 0 && groupList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
   for( i = groupList.count() - 1; i >= 0; i-- )
-    if( groupList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *groupList[i];
+    if( groupList[i]->rtime_ == 0 && groupList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *groupList[i];
   u = 0;
   Array<ServerInfo *> serverList;
   servers_.list(serverList);
   for( i = serverList.count() - 1; i >= 0; i-- )
-    if( serverList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
+    if( serverList[i]->rtime_ == 0 && serverList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
   for( i = serverList.count() - 1; i >= 0; i-- )
-    if( serverList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *serverList[i];
+    if( serverList[i]->rtime_ == 0 && serverList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *serverList[i];
   u = 0;
   Array<User2KeyLink *> user2KeyLinkList;
   user2KeyLinks_.list(user2KeyLinkList);
   for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
+    if( user2KeyLinkList[i]->rtime_ == 0 && user2KeyLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
   for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
-    if( user2KeyLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *user2KeyLinkList[i];
+    if( user2KeyLinkList[i]->rtime_ == 0 && user2KeyLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *user2KeyLinkList[i];
   u = 0;
   Array<Key2GroupLink *> key2GroupLinkList;
   key2GroupLinks_.list(key2GroupLinkList);
   for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
+    if( key2GroupLinkList[i]->rtime_ == 0 && key2GroupLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
   for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
-    if( key2GroupLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *key2GroupLinkList[i];
+    if( key2GroupLinkList[i]->rtime_ == 0 && key2GroupLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *key2GroupLinkList[i];
   u = 0;
   Array<Key2ServerLink *> key2ServerLinkList;
   key2ServerLinks_.list(key2ServerLinkList);
   for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
+    if( key2ServerLinkList[i]->rtime_ == 0 && key2ServerLinkList[i]->sendedTo_.find(sendingTo) == NULL ) u++;
   socket << u;
   for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
-    if( key2ServerLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *key2ServerLinkList[i];
+    if( key2ServerLinkList[i]->rtime_ == 0 && key2ServerLinkList[i]->sendedTo_.find(sendingTo) == NULL ) socket << *key2ServerLinkList[i];
 }
 //------------------------------------------------------------------------------
 void Server::Data::sendDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
@@ -1107,16 +1128,30 @@ Server::Data & Server::Data::setSendedTo(const utf8::String & sendingTo)
   return setSendedToNL(sendingTo);
 }
 //------------------------------------------------------------------------------
-bool Server::Data::sweepNL(uint64_t stime,utf8::String::Stream * log)
+bool Server::Data::sweepNL(uint64_t stime,uint64_t rtime,utf8::String::Stream * log)
 {
+  stime = gettimeofday() - stime;
+  rtime = gettimeofday() - rtime;
   if( stime_ >= stime ) return false;
   intptr_t i;
   bool r = false;
   Array<UserInfo *> userList;
   users_.list(userList);
   for( i = userList.count() - 1; i >= 0; i-- ){
-    if( userList[i]->atime_ < stime ){
-      if( log != NULL ) *log << *userList[i] << "\n";
+// проверить если помечен на удаление но произошло обновление после пометки на удаление
+// то удалить историю пересылки что бы обновить на узлах для того что бы узлы не удалили
+    if( userList[i]->rtime_ != 0 && userList[i]->atime_ >= userList[i]->rtime_ ){
+      userList[i]->sendedTo_.drop();
+      userList[i]->rtime_ = 0;
+    }
+// иначе если ещё не помечен на удаление то помечаем
+    else if( userList[i]->rtime_ != 0 && userList[i]->atime_ < stime ){
+      if( log != NULL ) *log << ", rtime: " + getTimeString(a.rtime_) << *userList[i] << "\n";
+      r = true;
+    }
+// иначе если уже помечен на удаление то удаляем
+    else if( userList[i]->rtime_ != 0 && userList[i]->rtime_ < rtime ){
+      if( log != NULL ) *log << *userList[i] << "removed\n";
       users_.drop(*userList[i]);
       r = true;
     }
@@ -1179,10 +1214,10 @@ bool Server::Data::sweepNL(uint64_t stime,utf8::String::Stream * log)
   return r;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::sweep(uint64_t stime,utf8::String::Stream * log)
+bool Server::Data::sweep(uint64_t stime,uint64_t rtime,utf8::String::Stream * log)
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
-  return sweepNL(stime,log);
+  return sweepNL(stime,rtime,log);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::Data::getUserListNL(bool quoted) const

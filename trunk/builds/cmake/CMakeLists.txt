@@ -460,6 +460,7 @@ IF (WIN32 AND NOT UNIX)
     SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
       "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}!insertmacro InstallLib DLL SHARED REBOOT_NOTPROTECTED \\\${INST_DIR}\\\\msmail1clib.dll \\\$SYSDIR\\\\msmail1clib.dll $SYSDIR\\n"
     )
+#    nsExec::ExecToLog '"$INSTDIR\bin\openvpnserv.exe" -remove'
     SET (CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
       "!include \\\"Library.nsh\\\"\\n"
     )

@@ -179,14 +179,6 @@ void ServerFiber::registerClient()
     stream << serverTypeName_[serverType_] << ": changes stored from client " << host << "\n";
     diff.dumpNL(stream);
     stdErr.debug(5,stream);
-// sweep
-    stream.clear() << serverTypeName_[serverType_] << ": sweep\n";
-    if( data.sweep(
-          gettimeofday() -
-            (uint64_t) server_.config_->valueByPath(
-            utf8::String(serverConfSectionName_[serverType_]) + ".ttl","") * 1000000u,
-          &stream)
-      ) stdErr.debug(5,stream);
   }
 }
 //------------------------------------------------------------------------------
@@ -248,14 +240,6 @@ void ServerFiber::registerDB()
   stream.clear() << serverTypeName_[serverType_] << ": changes stored\n";
   diff.dumpNL(stream);
   stdErr.debug(5,stream);
-// sweep
-  stream.clear() << serverTypeName_[serverType_] << ": sweep\n";
-  if( data.sweep(
-        gettimeofday() -
-          (uint64_t) server_.config_->valueByPath(
-          utf8::String(serverConfSectionName_[serverType_]) + ".ttl","") * 1000000u,
-        &stream)
-    ) stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::getDB()
@@ -932,14 +916,30 @@ void NodeClient::auth()
   );
 }
 //------------------------------------------------------------------------------
+void NodeClient::sweepHelper(ServerType serverType)
+{
+  utf8::String::Stream stream;
+  stream << serverTypeName_[serverType] << ": sweep in " << serverTypeName_[serverType] << " database\n";
+  if( server_.data(serverType).sweep(
+        (uint64_t) server_.config_->valueByPath(
+          utf8::String(serverConfSectionName_[serverType]) + ".ttl",""
+        ) * 1000000u,
+        (uint64_t) server_.config_->valueByPath(
+          utf8::String(serverConfSectionName_[serverType]) + ".ttr",""
+        ) * 1000000u,
+        &stream)
+    ) stdErr.debug(5,stream);
+}
+//------------------------------------------------------------------------------
 void NodeClient::main()
 {
-  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   intptr_t i;
   utf8::String server, host;
   try {
     bool connected, exchanged, doWork;
     do {
+      if( periodicaly_ )
+        stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
       connected = exchanged = false;
       {
         AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
@@ -1050,6 +1050,8 @@ void NodeClient::main()
         }
       }
       if( periodicaly_ ){
+        sweepHelper(stStandalone);
+        sweepHelper(stNode);
         uint64_t timeout = server_.config_->parse().override().
           valueByPath(
             utf8::String(serverConfSectionName_[stStandalone]) + ".exchange_interval",

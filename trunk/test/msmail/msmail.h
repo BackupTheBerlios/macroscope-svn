@@ -335,6 +335,7 @@ class UserInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t rtime_; // время пометки на удаление
     mutable EmbeddedHashNode<UserInfo> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
@@ -377,6 +378,7 @@ class KeyInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t rtime_; // время пометки на удаление
     mutable EmbeddedHashNode<KeyInfo> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
@@ -419,6 +421,7 @@ class GroupInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t rtime_; // время пометки на удаление
     mutable EmbeddedHashNode<GroupInfo> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
@@ -461,6 +464,7 @@ class ServerInfo {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t rtime_; // время пометки на удаление
     uint64_t stime_; // время старта процесса
     mutable EmbeddedHashNode<ServerInfo> hashNode_;
     utf8::String name_;
@@ -505,6 +509,7 @@ class User2KeyLink {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t rtime_; // время пометки на удаление
     mutable EmbeddedHashNode<User2KeyLink> hashNode_;
     utf8::String user_;
     utf8::String key_;
@@ -551,6 +556,7 @@ class Key2GroupLink {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t rtime_; // время пометки на удаление
     mutable EmbeddedHashNode<Key2GroupLink> hashNode_;
     utf8::String key_;
     utf8::String group_;
@@ -594,6 +600,7 @@ class Key2ServerLink {
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
+    uint64_t rtime_; // время пометки на удаление
     mutable EmbeddedHashNode<Key2ServerLink> hashNode_;
     utf8::String key_;
     utf8::String server_;
@@ -699,6 +706,7 @@ class NodeClient : public ksock::ClientFiber {
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
+    void sweepHelper(ServerType serverType);
     void main();
   private:
     Server & server_;
@@ -763,8 +771,8 @@ class Server : public ksock::Server {
         Data & xor(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
         Data & setSendedToNL(const utf8::String & sendingTo);
         Data & setSendedTo(const utf8::String & sendingTo);
-        bool sweepNL(uint64_t stime,utf8::String::Stream * log = NULL);
-        bool sweep(uint64_t stime,utf8::String::Stream * log = NULL);
+        bool sweepNL(uint64_t stime,uint64_t rtime,utf8::String::Stream * log = NULL);
+        bool sweep(uint64_t stime,uint64_t rtime,utf8::String::Stream * log = NULL);
         utf8::String getUserListNL(bool quoted = false) const;
         utf8::String getUserList(bool quoted = false) const;
         utf8::String getKeyListNL(bool quoted = false) const;
