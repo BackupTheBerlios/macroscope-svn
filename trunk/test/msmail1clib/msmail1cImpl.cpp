@@ -1503,6 +1503,14 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
           Exception::throwSP(err,__PRETTY_FUNCTION__);
         }
       }
+      wchar_t pid[2 + 10 + 1];
+      memset(pid,'\0',sizeof(pid));
+      pid[0] = (wchar_t) 0xFFFE;
+      _snwprintf(pid + 1,sizeof(pid) / sizeof(pid[0]),L"%d",ksys::getpid());
+      DWORD NumberOfBytesWritten = 0;
+      WriteFile(file->handle_,pid,DWORD(wcslen(pid) * sizeof(pid[0])),&NumberOfBytesWritten,NULL);
+//      SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
+      SetEndOfFile(file->handle_);
       file->locked_ = true;
     }
   }

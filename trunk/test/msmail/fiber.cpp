@@ -34,7 +34,8 @@ ServerFiber::~ServerFiber()
 {
 }
 //------------------------------------------------------------------------------
-ServerFiber::ServerFiber(Server & server) : server_(server), serverType_(stNone)
+ServerFiber::ServerFiber(Server & server) :
+  server_(server), serverType_(stNone), protocol_(0)
 {
 }
 //------------------------------------------------------------------------------
@@ -131,6 +132,11 @@ void ServerFiber::main()
       case cmRemoveMail :
         removeMail();
         break;
+      case cmSelectProtocol :
+        *this >> ui8;
+        putCode(ui8 < 2 ? eOK : eInvalidProtocol);
+        protocol_ = ui8;
+        break;
       default : // unrecognized or unsupported command, terminate
         putCode(eInvalidCommand);
         terminate();
@@ -205,9 +211,25 @@ void ServerFiber::registerDB()
   uint64_t rStartTime;
   bool dbChanged = false;
   *this >> port >> rStartTime << uint64_t(getProcessStartTime());
+  uint8_t rdbt;
+  if( protocol_ > 0 ){
+    *this >> rdbt;
+    if( rdbt >= stCount ){
+      terminate();
+      stream << serverTypeName_[serverType_] <<
+        ": remote host " << host << " send invalid own database type.\n";
+      stdErr.debug(6,stream);
+      return;
+    }
+  }
   splitString(host,server,service,":");
   host = server;
   if( port != defaultPort ) host += ":" + utf8::int2Str(port);
+  utf8::String hostDB(host);
+  if( protocol_ > 0 ){
+    hostDB += " ";
+    hostDB += serverTypeName_[rdbt];
+  }
   Server::Data rdata, ldata, diff;
   rdata.recvDatabaseNL(*this);
   stream << serverTypeName_[serverType_] <<
@@ -221,9 +243,9 @@ void ServerFiber::registerDB()
     ServerInfo * si = data.servers_.find(host);
     fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
-    ldata.orNL(data,fullDump ? utf8::String() : host); // get local changes for sending
-    ldata.setSendedToNL(host);
-    rdata.setSendedToNL(host);
+    ldata.orNL(data,fullDump ? utf8::String() : hostDB); // get local changes for sending
+    ldata.setSendedToNL(hostDB);
+    rdata.setSendedToNL(hostDB);
     dbChanged = data.orNL(rdata); // apply remote changes localy
     data.orNL(ldata);
     si = data.servers_.find(host);
@@ -234,7 +256,7 @@ void ServerFiber::registerDB()
   flush();
   if( dbChanged ) server_.startNodesExchange();
   stream.clear() << serverTypeName_[serverType_] <<
-    ": database " << (fullDump ? "full dump" : "changes") << " sended to " << host << "\n";
+    ": database " << (fullDump ? "full dump" : "changes") << " sended to " << hostDB << "\n";
   ldata.dumpNL(stream);
   stdErr.debug(6,stream);
   stream.clear() << serverTypeName_[serverType_] << ": changes stored\n";
@@ -678,6 +700,7 @@ void MailQueueWalker::processQueue(bool & timeWait)
   intptr_t i;
   Vector<utf8::String> list;
   getDirList(list,server_.mqueueDir() + "*.msg",utf8::String(),false);
+  Server::Data & data = server_.data(stStandalone);
   while( !terminated_ && list.count() > 0 ){
     i = (intptr_t) server_.rnd_->random(list.count());
     AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
@@ -706,7 +729,6 @@ void MailQueueWalker::processQueue(bool & timeWait)
         splitString(message.value("#Recepient"),suser,skey,"@");
         ksock::SockAddr address;
         {
-          Server::Data & data = server_.data(stStandalone);
           AutoMutexRDLock<FiberMutex> lock(data.mutex_);
           Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
           if( key2ServerLink != NULL ) server = key2ServerLink->server_;
@@ -751,6 +773,26 @@ void MailQueueWalker::processQueue(bool & timeWait)
           if( resolved ){
             try {
               close();
+              uintptr_t cec = 0;
+              {
+                AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+                ServerInfo * si = data.servers_.find(server);
+                if( si != NULL ) cec = si->connectErrorCount_;
+              }
+              if( cec > 0 ){
+                uintptr_t mwt = server_.config_->parse().override().valueByPath(
+                  utf8::String(serverConfSectionName_[stStandalone]) +
+                  ".max_wait_time_before_try_connect",
+                  600u
+                );
+                cec = fibonacci(cec);
+                if( cec > mwt ) cec = mwt;
+                stdErr.debug(7,utf8::String::Stream() <<
+                  "mqueue: Wait " << cec << "seconds before connect to host " <<
+                  server << " because previous connect try failed.\n"
+                );
+                sleep(cec * 1000000u);
+              }
               connect(address);
               connected = true;
             }
@@ -775,6 +817,16 @@ void MailQueueWalker::processQueue(bool & timeWait)
                 utf8::String::Stream() << "Authentification to host " <<
                 server << " failed.\n"
               );
+            }
+          }
+          {
+            AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+            ServerInfo * si = data.servers_.find(server);
+            if( si != NULL ) if( connected && authentificated ){
+              si->connectErrorCount_ = 0;
+            }
+            else {
+              si->connectErrorCount_++;
             }
           }
         }
@@ -935,6 +987,7 @@ void NodeClient::main()
 {
   intptr_t i;
   utf8::String server, host;
+  Server::Data & data = server_.data(dataType_);
   try {
     bool connected, exchanged, doWork;
     do {
@@ -972,6 +1025,26 @@ void NodeClient::main()
             remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
             host = remoteAddress.resolve();
             close();
+            uintptr_t cec = 0;
+            if( !periodicaly_ ){
+              AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+              ServerInfo * si = data.servers_.find(host);
+              if( si != NULL ) cec = si->connectErrorCount_;
+            }
+            if( cec > 0 ){
+              uintptr_t mwt = server_.config_->parse().override().valueByPath(
+                utf8::String(serverConfSectionName_[dataType_]) +
+                ".max_wait_time_before_try_connect",
+                600u
+              );
+              cec = fibonacci(cec);
+              if( cec > mwt ) cec = mwt;
+              stdErr.debug(7,utf8::String::Stream() <<
+                "NODE client: Wait " << cec << "seconds before connect to host " <<
+                host << " because previous connect try failed.\n"
+              );
+              sleep(cec * 1000000u);
+            }
             connect(remoteAddress);
             try {
               auth();
@@ -992,36 +1065,43 @@ void NodeClient::main()
           }
           if( connected ){
             try {
+              utf8::String hostDB(host + " " + serverTypeName_[stNode]);
               utf8::String::Stream stream;
               *this << uint8_t(cmSelectServerType) << uint8_t(stNode);
               getCode();
-              Server::Data & data = server_.data(dataType_);
+              *this << uint8_t(cmSelectProtocol) << uint8_t(1);
+              getCode();
               data.registerServer(ServerInfo(host,stNode));
               Server::Data rdata, ldata, diff, dump;
               uint64_t rStartTime;
               *this << uint8_t(cmRegisterDB) <<
                 uint32_t(ksock::api.ntohs(server_.bindAddrs()[0].addr4_.sin_port)) <<
                 uint64_t(getProcessStartTime()) >>
-                rStartTime;
+                rStartTime <<
+                uint8_t(dataType_)
+              ;
               bool fullDump = false;
               {
                 AutoMutexRDLock<FiberMutex> lock(data.mutex_);
                 ServerInfo * si = data.servers_.find(host);
                 fullDump = si == NULL || si->stime_ != rStartTime;
                 dump.orNL(data);
-                ldata.orNL(data,fullDump ? utf8::String() : host);
+                ldata.orNL(data,fullDump ? utf8::String() : hostDB);
               }
               ldata.sendDatabaseNL(*this);
               rdata.recvDatabaseNL(*this);
               getCode();
               {
                 AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-                rdata.setSendedToNL(host);
-                ldata.setSendedToNL(host);
+                rdata.setSendedToNL(hostDB);
+                ldata.setSendedToNL(hostDB);
                 data.orNL(rdata);
                 data.orNL(ldata);
                 ServerInfo * si = data.servers_.find(host);
-                if( si != NULL && fullDump ) si->stime_ = rStartTime;
+                if( si != NULL ){
+                  if( fullDump ) si->stime_ = rStartTime;
+                  if( !periodicaly_ ) si->connectErrorCount_ = 0;
+                }
               }
               exchanged = true;
               *this << uint8_t(cmQuit);
@@ -1047,6 +1127,11 @@ void NodeClient::main()
             shutdown();
             close();
           }
+          else if( !periodicaly_ ){
+            AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+            ServerInfo * si = data.servers_.find(host);
+            if( si != NULL ) si->connectErrorCount_++;
+          }
         }
       }
       if( periodicaly_ ){
@@ -1055,7 +1140,7 @@ void NodeClient::main()
         uint64_t timeout = server_.config_->parse().override().
           valueByPath(
             utf8::String(serverConfSectionName_[stStandalone]) + ".exchange_interval",
-            60u
+            600u
           );
         sleep(timeout * 1000000u);
       }

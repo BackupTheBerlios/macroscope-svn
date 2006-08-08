@@ -41,7 +41,8 @@ enum CmdType {
   cmGetDB,
   cmSendMail,
   cmRecvMail,
-  cmRemoveMail
+  cmRemoveMail,
+  cmSelectProtocol
 };
 //------------------------------------------------------------------------------
 enum ServerType {
@@ -62,6 +63,7 @@ enum Error {
   eInvalidMessage,
   eLastMessage,
   eInvalidMessageId,
+  eInvalidProtocol,
   eCount
 };
 //------------------------------------------------------------------------------
@@ -471,6 +473,7 @@ class ServerInfo {
     ServerType type_;
     InfoLinkKeys sendedTo_;
     AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    uintptr_t connectErrorCount_;
   protected:
   private:
 };
@@ -624,6 +627,7 @@ class ServerFiber : public ksock::ServerFiber {
   private:
     Server & server_;
     ServerType serverType_;
+    uint8_t protocol_;
 
     static EmbeddedHashNode<ServerFiber> & hashNode(const ServerFiber & object){
       return object.hashNode_;

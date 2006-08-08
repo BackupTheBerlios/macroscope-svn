@@ -380,12 +380,16 @@ ServerInfo::~ServerInfo()
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo() :
-  atime_(gettimeofday()), rtime_(0), stime_(0), type_(stStandalone), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), stime_(0),
+  type_(stStandalone), sendedToAutoDrop_(sendedTo_),
+  connectErrorCount_(0)
 {
 }
 //------------------------------------------------------------------------------
 ServerInfo::ServerInfo(const utf8::String & name,ServerType type) :
-  atime_(gettimeofday()), rtime_(0), stime_(0), name_(name), type_(type), sendedToAutoDrop_(sendedTo_)
+  atime_(gettimeofday()), rtime_(0), stime_(0), name_(name),
+  type_(type), sendedToAutoDrop_(sendedTo_),
+  connectErrorCount_(0)
 {
 }
 //------------------------------------------------------------------------------
@@ -402,6 +406,7 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
   name_ = a.name_;
   type_ = a.type_;
   sendedTo_ = a.sendedTo_;
+  connectErrorCount_ = connectErrorCount_;
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -1128,88 +1133,47 @@ Server::Data & Server::Data::setSendedTo(const utf8::String & sendingTo)
   return setSendedToNL(sendingTo);
 }
 //------------------------------------------------------------------------------
+template <typename T,typename LT> static inline
+bool sweepT(LT & list,uint64_t stime,uint64_t rtime,utf8::String::Stream * log)
+{
+  bool r = false;
+  Array<T *> ist;
+  list.list(ist);
+  for( intptr_t i = ist.count() - 1; i >= 0; i-- ){
+// проверить если помечен на удаление но произошло обновление после пометки на удаление
+// то удалить историю пересылки что бы обновить на узлах для того что бы узлы не удалили
+    if( ist[i]->rtime_ != 0 && ist[i]->atime_ >= ist[i]->rtime_ ){
+      ist[i]->sendedTo_.drop();
+      ist[i]->rtime_ = 0;
+    }
+// иначе если ещё не помечен на удаление то помечаем
+    else if( ist[i]->rtime_ == 0 && ist[i]->atime_ < stime ){
+      ist[i]->rtime_ = gettimeofday();
+      if( log != NULL ) *log << *ist[i] << ", rtime: " + getTimeString(ist[i]->rtime_) << "\n";
+      r = true;
+    }
+// иначе если уже помечен на удаление то удаляем
+    else if( ist[i]->rtime_ != 0 && ist[i]->rtime_ < rtime ){
+      if( log != NULL ) *log << *ist[i] << "removed\n";
+      list.drop(*ist[i]);
+      r = true;
+    }
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
 bool Server::Data::sweepNL(uint64_t stime,uint64_t rtime,utf8::String::Stream * log)
 {
   stime = gettimeofday() - stime;
   rtime = gettimeofday() - rtime;
   if( stime_ >= stime ) return false;
-  intptr_t i;
-  bool r = false;
-  Array<UserInfo *> userList;
-  users_.list(userList);
-  for( i = userList.count() - 1; i >= 0; i-- ){
-// проверить если помечен на удаление но произошло обновление после пометки на удаление
-// то удалить историю пересылки что бы обновить на узлах для того что бы узлы не удалили
-    if( userList[i]->rtime_ != 0 && userList[i]->atime_ >= userList[i]->rtime_ ){
-      userList[i]->sendedTo_.drop();
-      userList[i]->rtime_ = 0;
-    }
-// иначе если ещё не помечен на удаление то помечаем
-    else if( userList[i]->rtime_ != 0 && userList[i]->atime_ < stime ){
-      if( log != NULL ) *log << ", rtime: " + getTimeString(a.rtime_) << *userList[i] << "\n";
-      r = true;
-    }
-// иначе если уже помечен на удаление то удаляем
-    else if( userList[i]->rtime_ != 0 && userList[i]->rtime_ < rtime ){
-      if( log != NULL ) *log << *userList[i] << "removed\n";
-      users_.drop(*userList[i]);
-      r = true;
-    }
-  }
-  Array<KeyInfo *> keyList;
-  keys_.list(keyList);
-  for( i = keyList.count() - 1; i >= 0; i-- ){
-    if( keyList[i]->atime_ < stime ){
-      if( log != NULL ) *log << *keyList[i] << "\n";
-      keys_.drop(*keyList[i]);
-      r = true;
-    }
-  }
-  Array<GroupInfo *> groupList;
-  groups_.list(groupList);
-  for( i = groupList.count() - 1; i >= 0; i-- ){
-    if( groupList[i]->atime_ < stime ){
-      if( log != NULL ) *log << *groupList[i] << "\n";
-      groups_.drop(*groupList[i]);
-      r = true;
-    }
-  }
-  Array<ServerInfo *> serverList;
-  servers_.list(serverList);
-  for( i = serverList.count() - 1; i >= 0; i-- ){
-    if( serverList[i]->atime_ < stime ){
-      if( log != NULL ) *log << *serverList[i] << "\n";
-      servers_.drop(*serverList[i]);
-      r = true;
-    }
-  }
-  Array<User2KeyLink *> user2KeyLinkList;
-  user2KeyLinks_.list(user2KeyLinkList);
-  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- ){
-    if( user2KeyLinkList[i]->atime_ < stime ){
-      if( log != NULL ) *log << *user2KeyLinkList[i] << "\n";
-      user2KeyLinks_.drop(*user2KeyLinkList[i]);
-      r = true;
-    }
-  }
-  Array<Key2GroupLink *> key2GroupLinkList;
-  key2GroupLinks_.list(key2GroupLinkList);
-  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- ){
-    if( key2GroupLinkList[i]->atime_ < stime ){
-      if( log != NULL ) *log << *key2GroupLinkList[i] << "\n";
-      key2GroupLinks_.drop(*key2GroupLinkList[i]);
-      r = true;
-    }
-  }
-  Array<Key2ServerLink *> key2ServerLinkList;
-  key2ServerLinks_.list(key2ServerLinkList);
-  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- ){
-    if( key2ServerLinkList[i]->atime_ < stime ){
-      if( log != NULL ) *log << *key2ServerLinkList[i] << "\n";
-      key2ServerLinks_.drop(*key2ServerLinkList[i]);
-      r = true;
-    }
-  }
+  bool r = sweepT<UserInfo,Users>(users_,stime,rtime,log);
+  r = sweepT<KeyInfo,Keys>(keys_,stime,rtime,log) || r;
+  r = sweepT<GroupInfo,Groups>(groups_,stime,rtime,log) || r;
+  r = sweepT<ServerInfo,Servers>(servers_,stime,rtime,log) || r;
+  r = sweepT<User2KeyLink,User2KeyLinks>(user2KeyLinks_,stime,rtime,log) || r;
+  r = sweepT<Key2GroupLink,Key2GroupLinks>(key2GroupLinks_,stime,rtime,log) || r;
+  r = sweepT<Key2ServerLink,Key2ServerLinks>(key2ServerLinks_,stime,rtime,log) || r;
   stime_ = stime;
   return r;
 }

@@ -144,6 +144,18 @@ UINT fiberFinishMessage;
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
+uintptr_t fibonacci(uintptr_t n)
+{
+  if( n == 0 ) return 0;
+  uintptr_t prev = 0, curr = 1, next;
+  while( --n > 0 ){
+    next = curr + prev;
+    prev = curr;
+    curr = next;
+  }
+  return curr;
+}
+//---------------------------------------------------------------------------
 void createUUID(UUID & uuid)
 {
 #if defined(__WIN32__) || defined(__WIN64__)

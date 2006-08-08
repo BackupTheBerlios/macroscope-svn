@@ -143,6 +143,7 @@ class UUID : public uuid {
 #endif
 #endif
 //---------------------------------------------------------------------------
+uintptr_t fibonacci(uintptr_t n);
 void createUUID(UUID & uuid);
 inline UUID createUUID(){ UUID uuid; createUUID(uuid); return uuid; }
 void copyStrToClipboard(const utf8::String & s);

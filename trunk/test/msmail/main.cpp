@@ -34,7 +34,6 @@ int main(int _argc,char * _argv[])
 {
 //  sleep(15000000);
 //  _set_amblksiz(1024);
-
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
