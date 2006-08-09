@@ -229,6 +229,7 @@ inline const utf8::String & Config::fileName() const
 inline Config & Config::fileName(const utf8::String & name)
 {
   file_.fileName(name).exclusive(true);
+  mtime_ = 0;
   return *this;
 }
 //---------------------------------------------------------------------------

@@ -455,12 +455,12 @@ l1:
 uint64_t AsyncSocket::send(const void * buf,uint64_t len)
 {
   uint64_t w = 0;
-  ksys::AutoPtr<char> p;
   if( ksys::LZO1X::active() ){
     while( (w = ksys::LZO1X::write(buf,len)) == 0 ) flush();
   }
   else if( ksys::SHA256Filter::active() ){
     len = len > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : len;
+    ksys::AutoPtr<char> p;
     p.alloc((size_t) len);
     encrypt(p,buf,(uintptr_t) len);
     buf = p.ptr();

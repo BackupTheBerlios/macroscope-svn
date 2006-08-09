@@ -406,7 +406,7 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
   name_ = a.name_;
   type_ = a.type_;
   sendedTo_ = a.sendedTo_;
-  connectErrorCount_ = connectErrorCount_;
+  connectErrorCount_ = a.connectErrorCount_;
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -421,7 +421,7 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 {
-  s << a.name_ << a.atime_ << a.rtime_ << (uint8_t) a.type_;
+  s << a.name_ << a.atime_ << (uint8_t) a.type_;
   return a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------

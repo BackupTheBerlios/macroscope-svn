@@ -39,8 +39,6 @@ Service::Service() :
   msmailConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >()),
   msmail_(msmailConfig_)
 {
-  serviceName_ = msmailConfig_->text("service_name","msmail");
-  displayName_ = msmailConfig_->text("service_display_name","Macroscope MAIL Service");
 #if defined(__WIN32__) || defined(__WIN64__)
   serviceType_ = SERVICE_WIN32_OWN_PROCESS;
   startType_ = SERVICE_AUTO_START;
@@ -49,6 +47,18 @@ Service::Service() :
   serviceStatus_.dwControlsAccepted = SERVICE_ACCEPT_STOP;
   serviceStatus_.dwWaitHint = 60000; // give me 60 seconds for start or stop 
 #endif
+}
+//------------------------------------------------------------------------------
+void Service::install()
+{
+  msmailConfig()->parse().override();
+  serviceName_ = unScreenString(msmailConfig_->text("service_name","msmail"));
+  displayName_ = unScreenString(msmailConfig_->text("service_display_name","Macroscope MAIL Service"));
+}
+//------------------------------------------------------------------------------
+void Service::uninstall()
+{
+  install();
 }
 //------------------------------------------------------------------------------
 void Service::start()

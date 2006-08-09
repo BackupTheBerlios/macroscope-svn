@@ -46,12 +46,10 @@ Server::Server(const ConfigSP config) :
 //------------------------------------------------------------------------------
 void Server::open()
 {
-//  maxThreads(1);
   ksock::Server::open();
   data(stStandalone).registerServer(
     ServerInfo(bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
-//  startNodesExchange();
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
   uintptr_t i;
   for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",10); i > 0; i-- )
@@ -176,21 +174,29 @@ void Server::startNodesExchangeNL()
   intptr_t i, j, c;
   utf8::String me(bindAddrs()[0].resolve(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;
-  host = config_->parse().override().valueByPath(
+  utf8::String neighbors = config_->parse().override().valueByPath(
     utf8::String(serverConfSectionName_[stNode]) + ".neighbors",
     ""
   );
-  if( host.strlen() > 0 ){
-    if( hosts.strlen() > 0 ) hosts += ",";
-    hosts += host;
+  if( hosts.strlen() > 0 ){
+    if( neighbors.strlen() > 0 ) neighbors += ",";
+    neighbors += hosts;
+  }
+  Array<utf8::String> nodes;
+  for( i = enumStringParts(neighbors) - 1; i >= 0; i-- ){
+    host = stringPartByNo(neighbors,i);
+    ksock::SockAddr addr;
+    addr.resolve(host,defaultPort);
+    host = addr.resolve(defaultPort);
+    if( host.strcasecmp(me) == 0 ) continue;
+    j = nodes.bSearchCase(host,c);
+    if( c != 0 ) nodes.insert(j + (c > 0),host);
   }
   if( nodeExchangeClients_.count() == 0 ){
     assert( skippedNodeExchangeStarts_ == 0 );
     try {
-      for( j = enumStringParts(hosts) - 1; j >= 0; j-- ){
-        host = stringPartByNo(hosts,j);
-        if( host.strcasecmp(me) == 0 ) continue;
-        AutoPtr<NodeClient> nodeClient(NodeClient::newClient(*this,stNode,host,false));
+      for( j = nodes.count() - 1; j >= 0; j-- ){
+        AutoPtr<NodeClient> nodeClient(NodeClient::newClient(*this,stNode,nodes[j],false));
         i = nodeExchangeClients_.bSearch(nodeClient,c);
         assert( c != 0 );
         nodeExchangeClients_.insert(i += (c > 0),nodeClient);

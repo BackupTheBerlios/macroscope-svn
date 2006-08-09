@@ -51,6 +51,9 @@ class Service {
 #endif
     ServiceStatus         status_;
 
+    virtual void          install();
+    virtual void          uninstall();
+
     virtual void          start();
     virtual void          stop();
     virtual void          suspend();

@@ -232,7 +232,7 @@ void SockAddr::resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,c
   else {
     for( intptr_t j = 0; j < i; j++ ){
       addrs.resize(j + 1);
-      addrs[j].resolve(ksys::stringPartByNo(bind,j),defPort);
+      addrs[j].resolve(ksys::stringPartByNo(bind,j),defPort,AI_PASSIVE);
     }
   }
 }

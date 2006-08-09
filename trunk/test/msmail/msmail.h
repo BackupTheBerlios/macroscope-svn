@@ -708,7 +708,9 @@ class NodeClient : public ksock::ClientFiber {
     static NodeClient * newClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly);
   protected:
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
-    void getCode(int32_t noThrowCode = eOK);
+    void checkCode(int32_t code,int32_t noThrowCode1,int32_t noThrowCode2);
+    int32_t getCode(int32_t noThrowCode = eOK);
+    int32_t getCode(int32_t noThrowCode1,int32_t noThrowCode2);
     void auth();
     void sweepHelper(ServerType serverType);
     void main();
@@ -925,6 +927,8 @@ class Service : public ksys::Service {
     ConfigSP msmailConfig_;
     Server msmail_;
 
+    void install();
+    void uninstall();
     void start();
     void stop();
     bool active();

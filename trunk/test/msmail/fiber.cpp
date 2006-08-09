@@ -226,10 +226,7 @@ void ServerFiber::registerDB()
   host = server;
   if( port != defaultPort ) host += ":" + utf8::int2Str(port);
   utf8::String hostDB(host);
-  if( protocol_ > 0 ){
-    hostDB += " ";
-    hostDB += serverTypeName_[rdbt];
-  }
+  if( protocol_ > 0 ) hostDB = hostDB + " " + serverTypeName_[rdbt];
   Server::Data rdata, ldata, diff;
   rdata.recvDatabaseNL(*this);
   stream << serverTypeName_[serverType_] <<
@@ -929,11 +926,26 @@ void NodeClient::checkCode(int32_t code,int32_t noThrowCode)
     Exception::throwSP(code,__PRETTY_FUNCTION__);
 }
 //------------------------------------------------------------------------------
-void NodeClient::getCode(int32_t noThrowCode)
+void NodeClient::checkCode(int32_t code,int32_t noThrowCode1,int32_t noThrowCode2)
+{
+  if( code != eOK && code != noThrowCode1 && code != noThrowCode1)
+    Exception::throwSP(code,__PRETTY_FUNCTION__);
+}
+//------------------------------------------------------------------------------
+int32_t NodeClient::getCode(int32_t noThrowCode)
 {
   int32_t r;
   *this >> r;
   checkCode(r,noThrowCode);
+  return r;
+}
+//------------------------------------------------------------------------------
+int32_t NodeClient::getCode(int32_t noThrowCode1,int32_t noThrowCode2)
+{
+  int32_t r;
+  *this >> r;
+  checkCode(r,noThrowCode1,noThrowCode2);
+  return r;
 }
 //------------------------------------------------------------------------------
 void NodeClient::auth()
@@ -970,15 +982,10 @@ void NodeClient::sweepHelper(ServerType serverType)
 {
   utf8::String::Stream stream;
   stream << serverTypeName_[serverType] << ": sweep in " << serverTypeName_[serverType] << " database\n";
-  if( server_.data(serverType).sweep(
-        (uint64_t) server_.config_->valueByPath(
-          utf8::String(serverConfSectionName_[serverType]) + ".ttl",""
-        ) * 1000000u,
-        (uint64_t) server_.config_->valueByPath(
-          utf8::String(serverConfSectionName_[serverType]) + ".ttr",""
-        ) * 1000000u,
-        &stream)
-    ) stdErr.debug(5,stream);
+  uint64_t ttl = server_.config_->valueByPath(utf8::String(serverConfSectionName_[serverType]) + ".ttl","");
+  uint64_t ttr = server_.config_->valueByPath(utf8::String(serverConfSectionName_[serverType]) + ".ttr","");
+  if( server_.data(serverType).sweep(ttl * 1000000u,ttr * 1000000u,&stream) )
+    stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
 void NodeClient::main()
@@ -989,8 +996,7 @@ void NodeClient::main()
   try {
     bool connected, exchanged, doWork;
     do {
-      if( periodicaly_ )
-        stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
+      stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
       connected = exchanged = false;
       {
         AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
@@ -1021,13 +1027,19 @@ void NodeClient::main()
           try {
             ksock::SockAddr remoteAddress;
             remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
-            host = remoteAddress.resolve();
+            host = remoteAddress.resolve(defaultPort);
             close();
             uintptr_t cec = 0;
             if( !periodicaly_ ){
-              AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+              AutoMutexWRLock<FiberMutex> lock(data.mutex_);
               ServerInfo * si = data.servers_.find(host);
-              if( si != NULL ) cec = si->connectErrorCount_;
+              if( si == NULL ){
+                assert( dataType_ == stNode );
+                data.registerServerNL(ServerInfo(host,dataType_));
+                si = data.servers_.find(host);
+                assert( si != NULL );
+              }
+              cec = si->connectErrorCount_;
             }
             if( cec > 0 ){
               uintptr_t mwt = server_.config_->parse().override().valueByPath(
@@ -1038,7 +1050,7 @@ void NodeClient::main()
               cec = fibonacci(cec);
               if( cec > mwt ) cec = mwt;
               stdErr.debug(7,utf8::String::Stream() <<
-                "NODE client: Wait " << cec << "seconds before connect to host " <<
+                "NODE client: Wait " << cec << " seconds before connect to host " <<
                 host << " because previous connect try failed.\n"
               );
               sleep(cec * 1000000u);
@@ -1063,21 +1075,22 @@ void NodeClient::main()
           }
           if( connected ){
             try {
-              utf8::String hostDB(host + " " + serverTypeName_[stNode]);
               utf8::String::Stream stream;
               *this << uint8_t(cmSelectServerType) << uint8_t(stNode);
               getCode();
               *this << uint8_t(cmSelectProtocol) << uint8_t(1);
-              getCode();
+              bool useProto1 = getCode(eInvalidCommand,eInvalidProtocol) == eOK;
+              utf8::String hostDB(host);
+              if( useProto1 ) hostDB = hostDB + " " + serverTypeName_[stNode];
               data.registerServer(ServerInfo(host,stNode));
               Server::Data rdata, ldata, diff, dump;
               uint64_t rStartTime;
               *this << uint8_t(cmRegisterDB) <<
                 uint32_t(ksock::api.ntohs(server_.bindAddrs()[0].addr4_.sin_port)) <<
                 uint64_t(getProcessStartTime()) >>
-                rStartTime <<
-                uint8_t(dataType_)
+                rStartTime;
               ;
+              if( useProto1 ) *this << uint8_t(dataType_);
               bool fullDump = false;
               {
                 AutoMutexRDLock<FiberMutex> lock(data.mutex_);

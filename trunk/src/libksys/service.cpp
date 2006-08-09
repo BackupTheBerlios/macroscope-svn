@@ -121,6 +121,7 @@ Service & Service::handler(uintptr_t /*n*/,DWORD fdwControl)
 //---------------------------------------------------------------------------
 Service & Service::install(SC_HANDLE hSCManager)
 {
+  install();
   utf8::WideString serviceNameW(serviceName_.getUNICODEString());
   utf8::WideString displayNameW(displayName_.getUNICODEString());
   utf8::WideString binaryPathNameW(binaryPathName_.getUNICODEString());
@@ -177,6 +178,7 @@ Service & Service::install(SC_HANDLE hSCManager)
 //---------------------------------------------------------------------------
 Service & Service::uninstall(SC_HANDLE hSCManager)
 {
+  uninstall();
   utf8::WideString serviceNameW(serviceName_.getUNICODEString());
   SC_HANDLE handle = OpenServiceW(
     hSCManager,
@@ -197,6 +199,14 @@ Service & Service::uninstall(SC_HANDLE hSCManager)
 }
 //---------------------------------------------------------------------------
 #endif
+//---------------------------------------------------------------------------
+void Service::install()
+{
+}
+//---------------------------------------------------------------------------
+void Service::uninstall()
+{
+}
 //---------------------------------------------------------------------------
 void Service::start()
 {

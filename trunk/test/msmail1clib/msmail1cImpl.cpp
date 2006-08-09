@@ -1476,6 +1476,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
     if( !file->locked_ ){
       memset(&Overlapped,0,sizeof(Overlapped));
       Overlapped.hEvent = file->hEvent_;
+      Overlapped.Offset = 1024u * 1024u;
       SetLastError(0);
       BOOL lk = LockFileEx(file->handle_,LOCKFILE_EXCLUSIVE_LOCK,0,~DWORD(0),~DWORD(0),&Overlapped);
       if( lk == 0 && GetLastError() != ERROR_IO_PENDING ){
@@ -1503,13 +1504,25 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
           Exception::throwSP(err,__PRETTY_FUNCTION__);
         }
       }
-      wchar_t pid[2 + 10 + 1];
+      char pid[10 + 1];
       memset(pid,'\0',sizeof(pid));
-      pid[0] = (wchar_t) 0xFFFE;
-      _snwprintf(pid + 1,sizeof(pid) / sizeof(pid[0]),L"%d",ksys::getpid());
+      _snprintf(pid,sizeof(pid) / sizeof(pid[0]),"%d",ksys::getpid());
       DWORD NumberOfBytesWritten = 0;
-      WriteFile(file->handle_,pid,DWORD(wcslen(pid) * sizeof(pid[0])),&NumberOfBytesWritten,NULL);
-//      SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
+      memset(&Overlapped,0,sizeof(Overlapped));
+      Overlapped.hEvent = file->hEvent_;
+      SetLastError(0);
+      lk = WriteFile(file->handle_,pid,DWORD(::strlen(pid) * sizeof(pid[0])),&NumberOfBytesWritten,&Overlapped);
+      if( lk == 0 && GetLastError() == ERROR_IO_PENDING ){
+        DWORD state = WaitForSingleObject(file->hEvent_,INFINITE);
+        if( state == WAIT_TIMEOUT ){
+          CancelIo(file->handle_);
+        }
+        else if( state == WAIT_ABANDONED ){
+        }
+        if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesWritten,FALSE) == 0 ){
+        }
+      }
+      SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
       SetEndOfFile(file->handle_);
       file->locked_ = true;
     }
