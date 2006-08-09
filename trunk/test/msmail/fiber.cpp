@@ -771,33 +771,32 @@ void MailQueueWalker::processQueue(bool & timeWait)
             );
           }
           if( resolved ){
+            close();
+            uintptr_t cec = 0;
+            {
+              AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+              ServerInfo * si = data.servers_.find(server);
+              if( si != NULL ) cec = si->connectErrorCount_;
+            }
+            if( cec > 0 ){
+              uintptr_t mwt = server_.config_->parse().override().valueByPath(
+                utf8::String(serverConfSectionName_[stStandalone]) +
+                ".max_wait_time_before_try_connect",
+                600u
+              );
+              cec = fibonacci(cec);
+              if( cec > mwt ) cec = mwt;
+              stdErr.debug(7,utf8::String::Stream() <<
+                "mqueue: Wait " << cec << "seconds before connect to host " <<
+                server << " because previous connect try failed.\n"
+              );
+              sleep(cec * 1000000u);
+            }
             try {
-              close();
-              uintptr_t cec = 0;
-              {
-                AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-                ServerInfo * si = data.servers_.find(server);
-                if( si != NULL ) cec = si->connectErrorCount_;
-              }
-              if( cec > 0 ){
-                uintptr_t mwt = server_.config_->parse().override().valueByPath(
-                  utf8::String(serverConfSectionName_[stStandalone]) +
-                  ".max_wait_time_before_try_connect",
-                  600u
-                );
-                cec = fibonacci(cec);
-                if( cec > mwt ) cec = mwt;
-                stdErr.debug(7,utf8::String::Stream() <<
-                  "mqueue: Wait " << cec << "seconds before connect to host " <<
-                  server << " because previous connect try failed.\n"
-                );
-                sleep(cec * 1000000u);
-              }
               connect(address);
               connected = true;
             }
             catch( ExceptionSP & e ){
-              timeWait = true;
               e->writeStdError();
               stdErr.debug(3,
                 utf8::String::Stream() <<
@@ -811,7 +810,6 @@ void MailQueueWalker::processQueue(bool & timeWait)
               authentificated = true;
             }
             catch( ExceptionSP & e ){
-              timeWait = true;
               e->writeStdError();
               stdErr.debug(3,
                 utf8::String::Stream() << "Authentification to host " <<
@@ -822,11 +820,11 @@ void MailQueueWalker::processQueue(bool & timeWait)
           {
             AutoMutexWRLock<FiberMutex> lock(data.mutex_);
             ServerInfo * si = data.servers_.find(server);
-            if( si != NULL ) if( connected && authentificated ){
-              si->connectErrorCount_ = 0;
-            }
-            else {
-              si->connectErrorCount_++;
+            if( si != NULL ){
+              if( authentificated )
+                si->connectErrorCount_ = 0;
+              else
+                si->connectErrorCount_++;
             }
           }
         }

@@ -39,8 +39,8 @@ Service::Service() :
   msmailConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >()),
   msmail_(msmailConfig_)
 {
-  serviceName_ = "msmail";
-  displayName_ = "Macroscope MAIL Service";
+  serviceName_ = msmailConfig_->text("service_name","msmail");
+  displayName_ = msmailConfig_->text("service_display_name","Macroscope MAIL Service");
 #if defined(__WIN32__) || defined(__WIN64__)
   serviceType_ = SERVICE_WIN32_OWN_PROCESS;
   startType_ = SERVICE_AUTO_START;
@@ -56,7 +56,7 @@ void Service::start()
   msmailConfig_->parse().override();
   Array<ksock::SockAddr> addrs;
   ksock::SockAddr::resolve(msmailConfig_->text("bind"),addrs,defaultPort);
-  for( intptr_t i = addrs.count() - 1; i >= 0; i-- ) msmail_.addBind(addrs[i]);
+  for( uintptr_t i = 0; i < addrs.count(); i++ ) msmail_.addBind(addrs[i]);
   msmail_.open();
   stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
 }
