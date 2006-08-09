@@ -460,18 +460,18 @@ IF (WIN32 AND NOT UNIX)
     SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
       "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}!insertmacro InstallLib DLL SHARED REBOOT_NOTPROTECTED \\\${INST_DIR}\\\\msmail1clib.dll \\\$SYSDIR\\\\msmail1clib.dll $SYSDIR\\n"
     )
-    SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-      "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}nsExec::ExecToLog '\\\"$INSTDIR\\bin\\msmail.exe\\\" --install'\\n"
-    )
+#    SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
+#      "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}nsExec::ExecToLog '\\\"$INSTDIR\\\\bin\\\\msmail.exe\\\" --install'\\n"
+#    )
     SET (CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
       "!include \\\"Library.nsh\\\"\\n"
     )
     SET (CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
       "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}!insertmacro UnInstallLib DLL SHARED REBOOT_NOTPROTECTED \\\$SYSDIR\\\\msmail1clib.dll\\n"
     )
-    SET (CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
-      "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}nsExec::ExecToLog '\\\"$INSTDIR\\bin\\msmail.exe\\\" --uninstall'\\n"
-    )
+#    SET (CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
+#      "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}nsExec::ExecToLog '\\\"$INSTDIR\\\\bin\\\\msmail.exe\\\" --uninstall'\\n"
+#    )
     SET (CPACK_NSIS_MODIFY_PATH OFF)
   ELSE (NSIS_MAKENSIS)
     SET (CPACK_GENERATOR TGZ)

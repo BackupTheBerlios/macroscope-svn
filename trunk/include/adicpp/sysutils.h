@@ -119,10 +119,7 @@ inline bool isWinXPorLater()
 }
 
 bool isWow64();
-#if !HAVE_UUID
-class UUID : public GUID {
-};
-#endif
+class UUID : public GUID {};
 #else
 inline bool isWin9x()
 {
