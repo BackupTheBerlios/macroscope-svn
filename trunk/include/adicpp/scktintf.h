@@ -404,21 +404,10 @@ class API {
             const struct addrinfo FAR * hints,
             struct addrinfo FAR * FAR * res
         );
-#ifdef getaddrinfo
-        int (WSAAPI * GetAddrInfoA)(
-            const char FAR * nodename,
-            const char FAR * servname,
-            const struct addrinfo FAR * hints,
-            struct addrinfo FAR * FAR * res
-        );
-#endif
         void * p_getaddrinfo;
       };
       union {
         void (WSAAPI * freeaddrinfo)(LPADDRINFO pAddrInfo);
-#ifdef freeaddrinfo
-        void (WSAAPI * FreeAddrInfoA)(LPADDRINFO pAddrInfo);
-#endif
         void * p_freeaddrinfo;
       };
       union {
@@ -431,17 +420,6 @@ class API {
             DWORD           servlen,
             int             flags
         );
-#ifdef getnameinfo
-        int (WSAAPI * GetNameInfoA)(
-            const struct sockaddr FAR * sa,
-            socklen_t       salen,
-            char FAR *      host,
-            DWORD           hostlen,
-            char FAR *      serv,
-            DWORD           servlen,
-            int             flags
-        );
-#endif
         void * p_getnameinfo;
       };
       union {

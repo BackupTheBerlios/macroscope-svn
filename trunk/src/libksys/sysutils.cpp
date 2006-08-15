@@ -1377,7 +1377,7 @@ uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size)
     i += 6;
     sp++;
   }
-  return (i >> 3) + ((i & 7) != 0);
+  return i >> 3;
 }
 //---------------------------------------------------------------------------
 // base32 routines
@@ -1443,7 +1443,7 @@ uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size)
     i += 5;
     sp++;
   }
-  return (i >> 3) + ((i & 7) != 0);
+  return i >> 3;
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

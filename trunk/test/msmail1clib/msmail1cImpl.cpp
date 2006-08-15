@@ -743,7 +743,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 19;
+  *plMethods = 21;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -825,6 +825,14 @@ HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
   if( _wcsicoll(bstrMethodName,L"GetDBInGroupList") == 0 ) *plMethodNum = 18;
   else
   if( _wcsicoll(bstrMethodName,L"СписокИБВГруппе") == 0 ) *plMethodNum = 18;
+  else
+  if( _wcsicoll(bstrMethodName,L"File2String") == 0 ) *plMethodNum = 19;
+  else
+  if( _wcsicoll(bstrMethodName,L"ФайлВСтроку") == 0 ) *plMethodNum = 19;
+  else
+  if( _wcsicoll(bstrMethodName,L"String2File") == 0 ) *plMethodNum = 20;
+  else
+  if( _wcsicoll(bstrMethodName,L"СтрокуВФайл") == 0 ) *plMethodNum = 20;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -985,6 +993,22 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"СписокИБВГруппе")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 19 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"File2String")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ФайлВСтроку")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 20 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"String2File")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"СтрокуВФайл")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1011,6 +1035,8 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 16 : *plParams = 1; break;
     case 17 : *plParams = 2; break;
     case 18 : *plParams = 1; break;
+    case 19 : *plParams = 1; break;
+    case 20 : *plParams = 2; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -1380,6 +1406,59 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( SUCCEEDED(hr) ){
                 V_BSTR(pvarRetValue) = client_.getDBInGroupList(V_BSTR(pv0)).getOLEString();
                 V_VT(pvarRetValue) = VT_BSTR;
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 19 : // File2String
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                AutoPtr<uint8_t> buffer;
+                Stat st;
+                if( stat(V_BSTR(pv0),st) ){
+                  buffer.alloc((size_t) st.st_size);
+                  AsyncFile file(V_BSTR(pv0));
+                  file.readOnly(true).open().readBuffer(buffer,st.st_size).close();
+                  V_BSTR(pvarRetValue) = base64Encode(buffer,(uintptr_t) st.st_size).getOLEString();
+                  V_VT(pvarRetValue) = VT_BSTR;
+                }
+                else {
+                  V_BSTR(pvarRetValue) = SysAllocString(L"");
+                  V_VT(pvarRetValue) = VT_BSTR;
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 20 : // String2File
+          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              lIndex = 1;
+              hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+              if( SUCCEEDED(hr) ){
+                if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
+                    AutoPtr<uint8_t> buffer;
+                    uintptr_t fsize = base64Decode(V_BSTR(pv0),buffer,0);
+                    buffer.alloc(fsize);
+                    base64Decode(V_BSTR(pv0),buffer,fsize);
+                    AsyncFile file(V_BSTR(pv1));
+                    file.createIfNotExist(true).open().writeBuffer(buffer,fsize).resize(fsize).close();
+                  }
+                }
               }
             }
             SafeArrayUnlock(*paParams);

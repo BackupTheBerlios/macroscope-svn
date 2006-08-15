@@ -79,7 +79,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 #if defined(__WIN32__) || defined(__WIN64__)
   if( ksys::isWin9x() && api.getaddrinfo != NULL ){
     utf8::AnsiString ap(port.strlen() > 0 ? port.getANSIString() : ((utf8::String) defPort).getANSIString());
-    r = api.GetAddrInfoA(
+    r = api.getaddrinfo(
       host.strlen() > 0 ? (const char *) host.getANSIString() : NULL,
       port.strlen() == 0 && (uintptr_t) defPort == 0 ? NULL : (const char *) ap,
       &aiHints,
@@ -264,8 +264,8 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
     char servInfo[NI_MAXSERV];
     wchar_t servInfoW[NI_MAXSERV];
   };
-  if( ksys::isWin9x() && api.GetNameInfoA != NULL ){
-    err = api.GetNameInfoA(
+  if( ksys::isWin9x() && api.getnameinfo != NULL ){
+    err = api.getnameinfo(
       (const sockaddr *) &addr4_,
       sockAddrSize(),
       hostName,
@@ -282,7 +282,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
       }
     }
   }
-  else if( api.GetNameInfoA == NULL || api.GetNameInfoW == NULL ){
+  else if( api.getnameinfo == NULL || api.GetNameInfoW == NULL ){
 	  struct hostent * he = api.gethostbyaddr(
       (const char *) &addr4_.sin_addr,
       addrSize(),

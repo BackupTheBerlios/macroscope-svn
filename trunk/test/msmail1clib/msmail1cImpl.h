@@ -283,7 +283,8 @@ OBJECT_ENTRY_AUTO(__uuidof(msmail1c), Cmsmail1c)
 
 inline bool Cmsmail1c::isRet()
 {
-#ifndef NDEBUG
+  return false;
+/*#ifndef NDEBUG
   return false;
 #else
 //---------------------------------------------------------------------
@@ -310,14 +311,14 @@ inline bool Cmsmail1c::isRet()
   for( intptr_t i = sizeof(key) / sizeof(key[0]) - 1; i >= 0; i-- ) keyE[i] = key[i] ^ 0x4c1a;
   bool ret = false;
   time_t ct;
-  /*struct tm tma;
-  memset(&tma,0,sizeof(tma));
-  tma.tm_year = 2006 - 1900;
-  tma.tm_mon = 8;
-  tma.tm_mday = 1;
-  tma.tm_hour = 13;
-  tma.tm_min = 13;
-  ct = mktime(&tma);*/
+//  struct tm tma;
+//  memset(&tma,0,sizeof(tma));
+//  tma.tm_year = 2006 - 1900;
+//  tma.tm_mon = 8;
+//  tma.tm_mday = 1;
+//  tma.tm_hour = 13;
+//  tma.tm_min = 13;
+  ct = mktime(&tma);
   time(&ct);
   if( ct >= *(time_t *) (stop + 16) ){
     ret = true;
@@ -328,5 +329,5 @@ inline bool Cmsmail1c::isRet()
     VariantClear(&rtm);
   }
   return ret;
-#endif
+#endif*/
 }
