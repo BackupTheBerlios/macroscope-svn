@@ -240,10 +240,10 @@ void ServerFiber::registerDB()
     ServerInfo * si = data.servers_.find(host);
     fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
-    ldata.orNL(data,fullDump ? utf8::String() : hostDB); // get local changes for sending
-    ldata.setSendedToNL(hostDB);
     rdata.setSendedToNL(hostDB);
     dbChanged = data.orNL(rdata); // apply remote changes localy
+    ldata.orNL(data,fullDump ? utf8::String() : hostDB); // get local changes for sending
+    ldata.setSendedToNL(hostDB);
     data.orNL(ldata);
     si = data.servers_.find(host);
     if( si != NULL && fullDump ) si->stime_ = rStartTime;
