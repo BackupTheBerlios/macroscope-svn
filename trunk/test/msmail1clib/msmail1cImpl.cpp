@@ -1555,7 +1555,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
     if( !file->locked_ ){
       memset(&Overlapped,0,sizeof(Overlapped));
       Overlapped.hEvent = file->hEvent_;
-      Overlapped.Offset = 1024u * 1024u;
+      Overlapped.Offset = 0;//1024u * 1024u;
       SetLastError(0);
       BOOL lk = LockFileEx(file->handle_,LOCKFILE_EXCLUSIVE_LOCK,0,~DWORD(0),~DWORD(0),&Overlapped);
       if( lk == 0 && GetLastError() != ERROR_IO_PENDING ){
@@ -1583,7 +1583,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
           Exception::throwSP(err,__PRETTY_FUNCTION__);
         }
       }
-      char pid[10 + 1];
+      /*char pid[10 + 1];
       memset(pid,'\0',sizeof(pid));
       _snprintf(pid,sizeof(pid) / sizeof(pid[0]),"%d",ksys::getpid());
       DWORD NumberOfBytesWritten = 0;
@@ -1602,7 +1602,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
         }
       }
       SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
-      SetEndOfFile(file->handle_);
+      SetEndOfFile(file->handle_);*/
       file->locked_ = true;
     }
   }
