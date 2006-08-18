@@ -249,7 +249,7 @@ UserInfo::UserInfo(const UserInfo & a) : sendedToAutoDrop_(sendedTo_)
 UserInfo & UserInfo::operator = (const UserInfo & a)
 {
   atime_ = a.atime_;
-  rtime_ = atime_;
+  rtime_ = a.rtime_;
   name_ = a.name_;
   sendedTo_ = a.sendedTo_;
   return *this;
@@ -299,7 +299,7 @@ KeyInfo::KeyInfo(const KeyInfo & a) : sendedToAutoDrop_(sendedTo_)
 KeyInfo & KeyInfo::operator = (const KeyInfo & a)
 {
   atime_ = a.atime_;
-  rtime_ = atime_;
+  rtime_ = a.rtime_;
   name_ = a.name_;
   sendedTo_ = a.sendedTo_;
   return *this;
