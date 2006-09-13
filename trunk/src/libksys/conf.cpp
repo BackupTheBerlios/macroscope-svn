@@ -390,6 +390,7 @@ Config & Config::parse()
         stdErr.debug(9,utf8::String::Stream() << "config file " << file_.fileName() << " reloaded\n");
         mtime_ = st.st_mtime;
         i = 0;
+        checkMachineBinding(value("machine_key"));
       }
       catch( ExceptionSP & e ){
         file_.close();

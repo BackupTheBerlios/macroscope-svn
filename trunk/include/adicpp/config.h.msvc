@@ -262,6 +262,7 @@ typedef uint64_t                uintmax_t;
 #define HAVE_MSWSOCK_H 1
 #define HAVE_TLHELP32_H 1
 #define HAVE_IPHLPAPI_H 1
+#define HAVE_WBEMIDL_H 1
 
 #define SIZEOF__STAT64 56
 

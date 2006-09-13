@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2006 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1501,6 +1501,270 @@ bool isWow64()
 }
 #endif
 //---------------------------------------------------------------------------
+utf8::String getMachineUniqueKey()
+{
+#if PRIVATE_RELEASE
+#pragma comment(lib,"wbemuuid.lib")
+  utf8::String s;
+
+  VARIANT vtName;
+  VariantInit(&vtName);
+  VARIANT vtDeviceId;
+  VariantInit(&vtDeviceId);
+  VARIANT vtDescription;
+  VariantInit(&vtDescription);
+  VARIANT vtProcessorId;
+  VariantInit(&vtProcessorId);
+  VARIANT vtMACAddress;
+  VariantInit(&vtMACAddress);
+  VARIANT vtAdapterTypeId;
+  VariantInit(&vtAdapterTypeId);
+  try {
+    HRESULT hres;
+    // Step 1: --------------------------------------------------
+    // Initialize COM. ------------------------------------------
+    hres = CoInitializeEx(0,COINIT_MULTITHREADED);
+    if( FAILED(hres) )
+      Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+    try {
+      // Step 2: --------------------------------------------------
+      // Set general COM security levels --------------------------
+      // Note: If you are using Windows 2000, you need to specify -
+      // the default authentication credentials for a user by using
+      // a SOLE_AUTHENTICATION_LIST structure in the pAuthList ----
+      // parameter of CoInitializeSecurity ------------------------
+      hres = CoInitializeSecurity(
+        NULL, 
+        -1,                          // COM authentication
+        NULL,                        // Authentication services
+        NULL,                        // Reserved
+        RPC_C_AUTHN_LEVEL_DEFAULT,   // Default authentication 
+        RPC_C_IMP_LEVEL_IMPERSONATE, // Default Impersonation  
+        NULL,                        // Authentication info
+        EOAC_NONE,                   // Additional capabilities 
+        NULL                         // Reserved
+      );
+      if( FAILED(hres) )
+        Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+      // Step 3: ---------------------------------------------------
+      // Obtain the initial locator to WMI -------------------------
+      IWbemLocator *pLoc = NULL;
+      hres = CoCreateInstance(
+        CLSID_WbemLocator,             
+        0, 
+        CLSCTX_INPROC_SERVER, 
+        IID_IWbemLocator, (LPVOID *) &pLoc
+      );
+      if( FAILED(hres) )
+        Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+      try {
+        // Step 4: -----------------------------------------------------
+        // Connect to WMI through the IWbemLocator::ConnectServer method
+        IWbemServices *pSvc = NULL;
+        // Connect to the root\cimv2 namespace with
+        // the current user and obtain pointer pSvc
+        // to make IWbemServices calls.
+        hres = pLoc->ConnectServer(
+          L"ROOT\\CIMV2", // Object path of WMI namespace
+          NULL,                    // User name. NULL = current user
+          NULL,                    // User password. NULL = current
+          0,                       // Locale. NULL indicates current
+          NULL,                    // Security flags.
+          0,                       // Authority (e.g. Kerberos)
+          0,                       // Context object 
+          &pSvc                    // pointer to IWbemServices proxy
+        );
+        if( FAILED(hres) )
+          Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+        try {
+          // Step 5: --------------------------------------------------
+          // Set security levels on the proxy -------------------------
+          hres = CoSetProxyBlanket(
+             pSvc,                        // Indicates the proxy to set
+             RPC_C_AUTHN_WINNT,           // RPC_C_AUTHN_xxx
+             RPC_C_AUTHZ_NONE,            // RPC_C_AUTHZ_xxx
+             NULL,                        // Server principal name 
+             RPC_C_AUTHN_LEVEL_CALL,      // RPC_C_AUTHN_LEVEL_xxx 
+             RPC_C_IMP_LEVEL_IMPERSONATE, // RPC_C_IMP_LEVEL_xxx
+             NULL,                        // client identity
+             EOAC_NONE                    // proxy capabilities 
+          );
+          if( FAILED(hres) )
+            Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+          // Step 6: --------------------------------------------------
+          // Use the IWbemServices pointer to make requests of WMI ----
+          IEnumWbemClassObject * pEnumerator = NULL;
+          hres = pSvc->ExecQuery(
+            L"WQL", 
+            L"SELECT * FROM Win32_Processor",
+            WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, 
+            NULL,
+            &pEnumerator
+          );
+          if( FAILED(hres) )
+            Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+          try {
+            // Step 7: -------------------------------------------------
+            // Get the data from the query in step 6 -------------------
+            IWbemClassObject * pclsObj;
+            ULONG uReturn = 0;
+            while( pEnumerator != NULL ){
+              HRESULT hr = pEnumerator->Next(WBEM_INFINITE,1,&pclsObj,&uReturn);
+              if( uReturn == 0 ) break;
+              try {
+                hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);
+                if( FAILED(hr) )
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                if( V_VT(&vtName) != VT_BSTR ){
+                  hr = VariantChangeTypeEx(&vtName,&vtName,0,0,VT_BSTR);
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                }
+                hr = pclsObj->Get(L"DeviceId", 0, &vtDeviceId, 0, 0);
+                if( FAILED(hr) )
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                if( V_VT(&vtDeviceId) != VT_BSTR ){
+                  hr = VariantChangeTypeEx(&vtDeviceId,&vtDeviceId,0,0,VT_BSTR);
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                }
+                hr = pclsObj->Get(L"Description", 0, &vtDescription, 0, 0);
+                if( FAILED(hr) )
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                if( V_VT(&vtDescription) != VT_BSTR ){
+                  hr = VariantChangeTypeEx(&vtDescription,&vtDescription,0,0,VT_BSTR);
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                }
+                hr = pclsObj->Get(L"ProcessorId", 0, &vtProcessorId, 0, 0);
+                if( FAILED(hr) )
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                if( V_VT(&vtProcessorId) != VT_BSTR ){
+                  hr = VariantChangeTypeEx(&vtProcessorId,&vtProcessorId,0,0,VT_BSTR);
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                }
+                if( s.strlen() > 0 ) s += "\n";
+                s += utf8::String(V_BSTR(&vtDeviceId)) + " " +
+                  V_BSTR(&vtName) + " " +
+                  V_BSTR(&vtDescription) + " " +
+                  V_BSTR(&vtProcessorId)
+                ;
+              }
+              catch( ... ){
+                pclsObj->Release();
+                throw;
+              }
+              pclsObj->Release();
+            }
+          }
+          catch( ... ){
+            pEnumerator->Release();
+            throw;
+          }
+          pEnumerator->Release();
+
+          hres = pSvc->ExecQuery(
+            L"WQL", 
+            L"SELECT * FROM Win32_NetworkAdapter",
+            WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, 
+            NULL,
+            &pEnumerator
+          );
+          if( FAILED(hres) )
+            Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+          try {
+            // Step 7: -------------------------------------------------
+            // Get the data from the query in step 6 -------------------
+            IWbemClassObject * pclsObj;
+            ULONG uReturn = 0;
+            while( pEnumerator != NULL ){
+              HRESULT hr = pEnumerator->Next(WBEM_INFINITE,1,&pclsObj,&uReturn);
+              if( uReturn == 0 ) break;
+              try {
+                hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);
+                if( FAILED(hr) )
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                if( V_VT(&vtName) != VT_BSTR ){
+                  hr = VariantChangeTypeEx(&vtName,&vtName,0,0,VT_BSTR);
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                }
+                hr = pclsObj->Get(L"AdapterTypeId", 0, &vtAdapterTypeId, 0, 0);
+                if( FAILED(hr) )
+                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                if( V_VT(&vtAdapterTypeId) != VT_NULL ){
+                  if( V_VT(&vtAdapterTypeId) != VT_I4 ){
+                    hr = VariantChangeTypeEx(&vtAdapterTypeId,&vtAdapterTypeId,0,0,VT_I4);
+                    Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  }
+                  if( V_I4(&vtAdapterTypeId) >= 0 && V_I4(&vtAdapterTypeId) != 3 ){
+                    hr = pclsObj->Get(L"MACAddress", 0, &vtMACAddress, 0, 0);
+                    if( FAILED(hr) )
+                      Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                    if( V_VT(&vtMACAddress) != VT_NULL ){
+                      if( V_VT(&vtMACAddress) != VT_BSTR ){
+                        hr = VariantChangeTypeEx(&vtMACAddress,&vtMACAddress,0,0,VT_BSTR);
+                        Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                      }
+                      if( s.strlen() > 0 ) s += "\n";
+                      s += utf8::String(V_BSTR(&vtName)) + " " + V_BSTR(&vtMACAddress);
+                    }
+                  }
+                }
+              }
+              catch( ... ){
+                pclsObj->Release();
+                throw;
+              }
+              pclsObj->Release();
+            }
+          }
+          catch( ... ){
+            pEnumerator->Release();
+            throw;
+          }
+          pEnumerator->Release();
+        }
+        catch( ... ){
+          pSvc->Release();
+          throw;
+        }
+        pSvc->Release();
+      }
+      catch( ... ){
+        pLoc->Release();
+        throw;
+      }
+      pLoc->Release();
+    }
+    catch( ... ){
+      CoUninitialize();
+      throw;
+    }
+    CoUninitialize();
+  }
+  catch( ... ){
+    VariantClear(&vtProcessorId);
+    VariantClear(&vtDescription);
+    VariantClear(&vtDeviceId);
+    VariantClear(&vtName);
+    VariantClear(&vtMACAddress);
+    throw;
+  }
+  VariantClear(&vtProcessorId);
+  VariantClear(&vtDescription);
+  VariantClear(&vtDeviceId);
+  VariantClear(&vtName);
+  VariantClear(&vtMACAddress);
+  return s;
+#else
+  return utf8::String();
+#endif
+}
+//---------------------------------------------------------------------------
+utf8::String getMachineCryptedUniqueKey(const utf8::String & text)
+{
+  SHA256 sha;
+  sha.make(text.c_str(),text.size());
+  return base64Encode(sha.sha256(),sha.size());
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // System initialization and finalization ///////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
@@ -1508,7 +1772,7 @@ bool isWow64()
 void initializeArguments(int argc,char ** argv)
 {
   ksys::argv().clear();
-  for( int i = 0; i < argc; i++ ) ksys::argv().add(argv[i]);
+  for( intptr_t i = 0; i < argc; i++ ) ksys::argv().add(argv[i]);
 }
 //---------------------------------------------------------------------------
 void initialize()

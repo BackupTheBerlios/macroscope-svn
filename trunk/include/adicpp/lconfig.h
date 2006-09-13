@@ -225,6 +225,10 @@
 #include <Iphlpapi.h>
 #endif
 
+#if HAVE_WBEMIDL_H
+#include <WbemIdl.h>
+#endif
+
 /*#if defined(HAVE_WINDOWS_H) && !defined(__CYGWIN__)
 #if !defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0502
 #undef _WIN32_WINNT

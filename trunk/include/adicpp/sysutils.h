@@ -80,6 +80,29 @@ inline const uintptr_t & DirectoryChangeNotification::bufferSize() const
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
+uintptr_t rfcBase64Encode(
+  const uint8_t * inStr,
+  size_t inLen, 
+  uint8_t * outStr,
+  size_t outLen
+);
+utf8::String base64Encode(const void * p,uintptr_t l);
+uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size);
+utf8::String base32Encode(const void * p,uintptr_t l);
+uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size);
+//---------------------------------------------------------------------------
+inline utf8::String uuid2base64(const UUID & u)
+{
+  return base64Encode(&u, sizeof(u));
+}
+//---------------------------------------------------------------------------
+inline UUID base642uuid(const utf8::String & s)
+{
+  UUID  uuid;
+  base64Decode(s, &uuid, sizeof(uuid));
+  return uuid;
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 extern uint8_t argvPlaceHolder[sizeof(Array< utf8::String>)];
@@ -119,6 +142,27 @@ inline bool isWinXPorLater()
 }
 
 bool isWow64();
+
+utf8::String getMachineUniqueKey();
+
+inline utf8::String getMachineCleanUniqueKey()
+{
+  utf8::String key(getMachineUniqueKey());
+  return base64Encode(key.c_str(),key.size());
+}
+
+utf8::String getMachineCryptedUniqueKey(const utf8::String & text);
+
+#if PRIVATE_RELEASE
+inline void checkMachineBinding(const utf8::String & key)
+{
+  if( getMachineCryptedUniqueKey(getMachineCleanUniqueKey()).strcmp(key) != 0 )
+    Exception::throwSP(EINVAL,"Pirate copy detected");
+}
+#else
+inline void checkMachineBinding(const utf8::String &){}
+#endif
+
 class UUID : public GUID {};
 #else
 inline bool isWin9x()
@@ -205,29 +249,6 @@ inline void sleep1()
 #elif HAVE_SLEEP
   sleep(1);
 #endif
-}
-//---------------------------------------------------------------------------
-uintptr_t rfcBase64Encode(
-  const uint8_t * inStr,
-  size_t inLen, 
-  uint8_t * outStr,
-  size_t outLen
-);
-utf8::String base64Encode(const void * p,uintptr_t l);
-uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size);
-utf8::String base32Encode(const void * p,uintptr_t l);
-uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size);
-//---------------------------------------------------------------------------
-inline utf8::String uuid2base64(const UUID & u)
-{
-  return base64Encode(&u, sizeof(u));
-}
-//---------------------------------------------------------------------------
-inline UUID base642uuid(const utf8::String & s)
-{
-  UUID  uuid;
-  base64Decode(s, &uuid, sizeof(uuid));
-  return uuid;
 }
 //---------------------------------------------------------------------------
 struct Stat : public

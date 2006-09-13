@@ -195,7 +195,7 @@ int main(int ac,char * av[])
       else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
         SHA256 passwordSHA256;
         passwordSHA256.make(argv()[u + 1].c_str(),argv()[u + 1].size());
-        utf8::String b64(base64Encode(passwordSHA256.sha256(),32));
+        utf8::String b64(base64Encode(passwordSHA256.sha256(),passwordSHA256.size()));
         fprintf(stdout,"%s\n",b64.c_str());
         copyStrToClipboard(b64);
         dispatch = false;
@@ -203,6 +203,14 @@ int main(int ac,char * av[])
       else if( argv()[u].strcmp("--generate-update-package") == 0 && u + 1 < argv().count() ){
 // TODO:
       }
+#if PRIVATE_RELEASE
+      else if( argv()[u].strcmp("--machine-key") == 0 ){
+        utf8::String key(getMachineCleanUniqueKey());
+        fprintf(stdout,"%s\n",key.c_str());
+        copyStrToClipboard(key);
+        dispatch = false;
+      }
+#endif
     }
     if( dispatch ){
       bool daemon;
