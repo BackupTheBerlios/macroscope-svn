@@ -1519,13 +1519,14 @@ utf8::String getMachineUniqueKey()
   VariantInit(&vtMACAddress);
   VARIANT vtAdapterTypeId;
   VariantInit(&vtAdapterTypeId);
+  HRESULT CoInit_hres;
   try {
     HRESULT hres;
     // Step 1: --------------------------------------------------
     // Initialize COM. ------------------------------------------
-    hres = CoInitializeEx(0,COINIT_MULTITHREADED);
-    if( FAILED(hres) )
-      Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+    CoInit_hres = CoInitializeEx(0,COINIT_MULTITHREADED);
+    if( FAILED(CoInit_hres) )
+      Exception::throwSP(HRESULT_CODE(CoInit_hres) + errorOffset,__PRETTY_FUNCTION__);
     try {
       // Step 2: --------------------------------------------------
       // Set general COM security levels --------------------------
@@ -1533,19 +1534,21 @@ utf8::String getMachineUniqueKey()
       // the default authentication credentials for a user by using
       // a SOLE_AUTHENTICATION_LIST structure in the pAuthList ----
       // parameter of CoInitializeSecurity ------------------------
-      hres = CoInitializeSecurity(
-        NULL, 
-        -1,                          // COM authentication
-        NULL,                        // Authentication services
-        NULL,                        // Reserved
-        RPC_C_AUTHN_LEVEL_DEFAULT,   // Default authentication 
-        RPC_C_IMP_LEVEL_IMPERSONATE, // Default Impersonation  
-        NULL,                        // Authentication info
-        EOAC_NONE,                   // Additional capabilities 
-        NULL                         // Reserved
-      );
-      if( FAILED(hres) )
-        Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+      if( CoInit_hres == S_OK ){
+        hres = CoInitializeSecurity(
+          NULL, 
+          -1,                          // COM authentication
+          NULL,                        // Authentication services
+          NULL,                        // Reserved
+          RPC_C_AUTHN_LEVEL_DEFAULT,   // Default authentication 
+          RPC_C_IMP_LEVEL_IMPERSONATE, // Default Impersonation  
+          NULL,                        // Authentication info
+          EOAC_NONE,                   // Additional capabilities 
+          NULL                         // Reserved
+        );
+        if( FAILED(hres) )
+          Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+      }
       // Step 3: ---------------------------------------------------
       // Obtain the initial locator to WMI -------------------------
       IWbemLocator *pLoc = NULL;
@@ -1734,10 +1737,10 @@ utf8::String getMachineUniqueKey()
       pLoc->Release();
     }
     catch( ... ){
-      CoUninitialize();
+      if( CoInit_hres == S_OK ) CoUninitialize();
       throw;
     }
-    CoUninitialize();
+    if( CoInit_hres == S_OK ) CoUninitialize();
   }
   catch( ... ){
     VariantClear(&vtProcessorId);
@@ -1758,12 +1761,29 @@ utf8::String getMachineUniqueKey()
 #endif
 }
 //---------------------------------------------------------------------------
+utf8::String getMachineCleanUniqueKey()
+{
+  utf8::String key(getMachineUniqueKey());
+  return base64Encode(key.c_str(),key.size());
+}
+//---------------------------------------------------------------------------
 utf8::String getMachineCryptedUniqueKey(const utf8::String & text)
 {
   SHA256 sha;
   sha.make(text.c_str(),text.size());
   return base64Encode(sha.sha256(),sha.size());
 }
+//---------------------------------------------------------------------------
+void checkMachineBinding(const utf8::String & key)
+{
+  AutoLock<InterlockedMutex> lock(giant());
+  if( machineUniqueCryptedKey().strlen() == 0 )
+    machineUniqueCryptedKey() = getMachineCryptedUniqueKey(getMachineCleanUniqueKey());
+  if( machineUniqueCryptedKey().strcmp(key) != 0 )
+    Exception::throwSP(EINVAL,"Pirate copy detected");
+}
+//---------------------------------------------------------------------------
+uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // System initialization and finalization ///////////////////////////////////
@@ -1869,10 +1889,12 @@ void initialize()
   }
   catch( ... ){
   }
+  new (machineUniqueCryptedKeyHolder) utf8::String();
 }
 //---------------------------------------------------------------------------
 void cleanup()
 {
+  machineUniqueCryptedKey().~String();
   ksock::api.cleanup();
   BaseThread::cleanup();
   Fiber::cleanup();

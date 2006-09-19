@@ -118,6 +118,14 @@ int main(int _argc,char * _argv[])
         copyStrToClipboard(b64);
         dispatch = false;
       }
+#if PRIVATE_RELEASE
+      else if( argv()[u].strcmp("--machine-key") == 0 ){
+        utf8::String key(getMachineCleanUniqueKey());
+        fprintf(stdout,"%s\n",key.c_str());
+        copyStrToClipboard(key);
+        dispatch = false;
+      }
+#endif
     }
     if( dispatch ){
       service->msmailConfig()->parse().override();
@@ -130,6 +138,7 @@ int main(int _argc,char * _argv[])
       stdErr.setDebugLevels(
         service->msmailConfig()->value("debug_levels","+0,+1,+2,+3")
       );
+      checkMachineBinding(service->msmailConfig()->value("machine_key"));
       services.startServiceCtrlDispatcher();
     }
   }

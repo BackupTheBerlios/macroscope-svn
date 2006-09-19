@@ -144,21 +144,15 @@ inline bool isWinXPorLater()
 bool isWow64();
 
 utf8::String getMachineUniqueKey();
-
-inline utf8::String getMachineCleanUniqueKey()
-{
-  utf8::String key(getMachineUniqueKey());
-  return base64Encode(key.c_str(),key.size());
-}
-
+utf8::String getMachineCleanUniqueKey();
 utf8::String getMachineCryptedUniqueKey(const utf8::String & text);
-
-#if PRIVATE_RELEASE
-inline void checkMachineBinding(const utf8::String & key)
+extern uint8_t machineUniqueCryptedKeyHolder[];
+inline utf8::String & machineUniqueCryptedKey()
 {
-  if( getMachineCryptedUniqueKey(getMachineCleanUniqueKey()).strcmp(key) != 0 )
-    Exception::throwSP(EINVAL,"Pirate copy detected");
+  return *reinterpret_cast<utf8::String *>(machineUniqueCryptedKeyHolder);
 }
+#if PRIVATE_RELEASE
+void checkMachineBinding(const utf8::String & key);
 #else
 inline void checkMachineBinding(const utf8::String &){}
 #endif

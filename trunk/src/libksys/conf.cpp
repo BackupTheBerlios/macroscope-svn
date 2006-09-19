@@ -388,9 +388,8 @@ Config & Config::parse()
         parseSectionBody(*this);
         rs_.free();
         stdErr.debug(9,utf8::String::Stream() << "config file " << file_.fileName() << " reloaded\n");
-        mtime_ = st.st_mtime;
         i = 0;
-        checkMachineBinding(value("machine_key"));
+        mtime_ = st.st_mtime;
       }
       catch( ExceptionSP & e ){
         file_.close();
