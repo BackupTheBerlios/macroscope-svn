@@ -10,6 +10,7 @@ del /q CMakeCache.txt
 set conf=Debug
 set cmd=Clean
 call build-helper.cmd
+exit
 set cmd=Build
 call build-helper.cmd
 set conf=Release

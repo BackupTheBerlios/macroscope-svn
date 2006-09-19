@@ -47,6 +47,7 @@
 #cmakedefine HAVE_WINSOCK2_H 1
 #cmakedefine HAVE_WINDOWS_H 1
 #cmakedefine HAVE_MSWSOCK_H 1
+#cmakedefine HAVE_WBEMIDLE_H 1
 #cmakedefine HAVE_TLHELP32_H 1
 #cmakedefine HAVE_IPHLPAPI_H 1
 #cmakedefine HAVE_TYPEINFO_H 1
