@@ -1598,8 +1598,8 @@ utf8::String getMachineUniqueKey()
           // Use the IWbemServices pointer to make requests of WMI ----
           IEnumWbemClassObject * pEnumerator = NULL;
           hres = pSvc->ExecQuery(
-            L"WQL", 
-            L"SELECT * FROM Win32_Processor",
+            SysAllocString(L"WQL"),
+            SysAllocString(L"SELECT * FROM Win32_Processor"),
             WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, 
             NULL,
             &pEnumerator
@@ -1664,8 +1664,8 @@ utf8::String getMachineUniqueKey()
           pEnumerator->Release();
 
           hres = pSvc->ExecQuery(
-            L"WQL", 
-            L"SELECT * FROM Win32_NetworkAdapter",
+            SysAllocString(L"WQL"),
+            SysAllocString(L"SELECT * FROM Win32_NetworkAdapter"),
             WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY, 
             NULL,
             &pEnumerator
@@ -1689,9 +1689,32 @@ utf8::String getMachineUniqueKey()
                   Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
                 }
                 hr = pclsObj->Get(L"AdapterTypeId", 0, &vtAdapterTypeId, 0, 0);
-                if( FAILED(hr) )
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                if( FAILED(hr) ){
+                  HRESULT hr2 = pclsObj->Get(L"AdapterType", 0, &vtAdapterTypeId, 0, 0);
+                  if( FAILED(hr2) ){
+                    hr = hr2;
+                    Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  }
+                  if( V_VT(&vtAdapterTypeId) != VT_NULL ){
+                    if( V_VT(&vtAdapterTypeId) != VT_BSTR ){
+                      hr = VariantChangeTypeEx(&vtAdapterTypeId,&vtAdapterTypeId,0,0,VT_BSTR);
+                      Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                    }
+                  }
+                }
                 if( V_VT(&vtAdapterTypeId) != VT_NULL ){
+                  if( V_VT(&vtAdapterTypeId) == VT_BSTR ){
+                    if( utf8::String("Ethernet").strncasecmp(V_BSTR(&vtAdapterTypeId),8) == 0 ){
+                      VariantClear(&vtAdapterTypeId);
+                      V_VT(&vtAdapterTypeId) = VT_I4;
+                      V_I4(&vtAdapterTypeId) = 0;
+                    }
+                    else {
+                      VariantClear(&vtAdapterTypeId);
+                      V_VT(&vtAdapterTypeId) = VT_I4;
+                      V_I4(&vtAdapterTypeId) = 3;
+                    }
+                  }
                   if( V_VT(&vtAdapterTypeId) != VT_I4 ){
                     hr = VariantChangeTypeEx(&vtAdapterTypeId,&vtAdapterTypeId,0,0,VT_I4);
                     Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);

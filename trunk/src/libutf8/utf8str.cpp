@@ -320,8 +320,7 @@ intptr_t String::strcmp(const String & s) const
   const unsigned char * s1  = container_->ustring_, * s2 = s.container_->ustring_;
   for( ; ; ){
     c = utf82ucs(s1, l1) - utf82ucs(s2, l2);
-    if( c != 0 || *s1 == 0 || *s2 == 0 )
-      break;
+    if( c != 0 || *s1 == 0 || *s2 == 0 ) break;
     s1 += l1;
     s2 += l2;
   }
