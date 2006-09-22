@@ -990,6 +990,14 @@ void NodeClient::sweepHelper(ServerType serverType)
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
+  AsyncFile file1, file2;
+
+  file1.fileName("c:\\locktest.lck").createIfNotExist(true).open();
+  file2.fileName("c:\\locktest.lck").createIfNotExist(true).open();
+
+  file1.wrLock(0,0);
+  bool r = file2.tryWRLock(0,0);
+
   intptr_t i;
   utf8::String server, host;
   Server::Data & data = server_.data(dataType_);

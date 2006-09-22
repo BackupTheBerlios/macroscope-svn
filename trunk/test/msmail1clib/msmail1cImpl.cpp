@@ -1557,8 +1557,10 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
       Overlapped.hEvent = file->hEvent_;
       Overlapped.Offset = 0;//1024u * 1024u;
       SetLastError(0);
-      BOOL lk = LockFileEx(file->handle_,LOCKFILE_EXCLUSIVE_LOCK,0,~DWORD(0),~DWORD(0),&Overlapped);
-      if( lk == 0 && GetLastError() != ERROR_IO_PENDING ){
+      DWORD flags = LOCKFILE_EXCLUSIVE_LOCK;
+      if( maxSleepTime == 0 && minSleepTime == 0 ) flags |= LOCKFILE_FAIL_IMMEDIATELY;
+      BOOL lk = LockFileEx(file->handle_,flags,0,~DWORD(0),~DWORD(0),&Overlapped);
+      if( lk == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != ERROR_LOCK_VIOLATION ){
           err = GetLastError() + errorOffset;
           Exception::throwSP(err,__PRETTY_FUNCTION__);
       }
@@ -1582,6 +1584,11 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
           err = GetLastError() + errorOffset;
           Exception::throwSP(err,__PRETTY_FUNCTION__);
         }
+      }
+      else if( GetLastError() == ERROR_LOCK_VIOLATION ){
+          SetLastError(WAIT_TIMEOUT);
+          err = GetLastError() + errorOffset;
+          Exception::throwSP(err,__PRETTY_FUNCTION__);
       }
       /*char pid[10 + 1];
       memset(pid,'\0',sizeof(pid));

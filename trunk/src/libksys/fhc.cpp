@@ -467,9 +467,11 @@ bool FileHandleContainer::tryRDLock(uint64_t pos, uint64_t size)
     LockFileEx(handle_, LOCKFILE_FAIL_IMMEDIATELY, 0, reinterpret_cast< uint64 *>(&size)->lo, reinterpret_cast< uint64 *>(&size)->hi, &Overlapped);
     DWORD err = GetLastError();
     switch( err ){
-      case 0                : return true;
-      case ERROR_IO_PENDING : return false;
-      default               :
+      case 0                    : return true;
+      case ERROR_IO_PENDING     :
+      case ERROR_LOCK_VIOLATION :
+        return false;
+      default                   :
         throw ExceptionSP(newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__));
     }
 #else
@@ -501,9 +503,11 @@ bool FileHandleContainer::tryWRLock(uint64_t pos, uint64_t size)
     LockFileEx(handle_, LOCKFILE_FAIL_IMMEDIATELY | LOCKFILE_EXCLUSIVE_LOCK, 0, reinterpret_cast< uint64 *>(&size)->lo, reinterpret_cast< uint64 *>(&size)->hi, &Overlapped);
     DWORD err = GetLastError();
     switch( err ){
-      case 0                : return true;
-      case ERROR_IO_PENDING : return false;
-      default               :
+      case 0                    : return true;
+      case ERROR_IO_PENDING     :
+      case ERROR_LOCK_VIOLATION :
+        return false;
+      default                   :
         throw ExceptionSP(newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__));
     }
 #else
