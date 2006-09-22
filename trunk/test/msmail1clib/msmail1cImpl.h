@@ -288,7 +288,7 @@ inline bool Cmsmail1c::isRet()
 //---------------------------------------------------------------------
   static const uint8_t stop[] = {
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-    0x2c, 0xd2, 0x7f, 0x45, // 0x00000000457fd22c
+    0x2c, 0xa7, 0xe6, 0x45, // 0x45E6A72C
     0x0, 0x0, 0x0, 0x0
   }; 
 // HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\NetCache
@@ -309,14 +309,16 @@ inline bool Cmsmail1c::isRet()
   for( intptr_t i = sizeof(key) / sizeof(key[0]) - 1; i >= 0; i-- ) keyE[i] = key[i] ^ 0x4c1a;
   bool ret = false;
   time_t ct;
-//  struct tm tma;
-//  memset(&tma,0,sizeof(tma));
-//  tma.tm_year = 2006 - 1900;
-//  tma.tm_mon = 8;
-//  tma.tm_mday = 1;
-//  tma.tm_hour = 13;
-//  tma.tm_min = 13;
-//  ct = mktime(&tma);
+
+  /*struct tm tma;
+  memset(&tma,0,sizeof(tma));
+  tma.tm_year = 2007 - 1900;
+  tma.tm_mon = 2;
+  tma.tm_mday = 1;
+  tma.tm_hour = 13;
+  tma.tm_min = 13;
+  ct = mktime(&tma);*/
+
   time(&ct);
   if( ct >= *(time_t *) (stop + 16) ){
     ret = true;
