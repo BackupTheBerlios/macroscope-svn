@@ -36,7 +36,7 @@ ADD_CUSTOM_COMMAND (
 IF (SITE STREQUAL "${MAIN_SITE}" AND CMAKE_BUILD_TYPE STREQUAL "Release")
   ADD_CUSTOM_COMMAND (
     TARGET msmail POST_BUILD
-    COMMAND "C:\\Program Files (x86)\\ASProtect 1.35 Demo\\ASProtect.exe" ARGS -process msmail.aspr
+    COMMAND aspr12r ARGS -process msmail.aspr
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT ""
   )
