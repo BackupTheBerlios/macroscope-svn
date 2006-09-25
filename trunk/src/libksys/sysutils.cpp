@@ -1797,6 +1797,7 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text)
   return base64Encode(sha.sha256(),sha.size());
 }
 //---------------------------------------------------------------------------
+#if PRIVATE_RELEASE
 void checkMachineBinding(const utf8::String & key)
 {
   AutoLock<InterlockedMutex> lock(giant());
@@ -1805,6 +1806,7 @@ void checkMachineBinding(const utf8::String & key)
   if( machineUniqueCryptedKey().strcmp(key) != 0 )
     Exception::throwSP(EINVAL,"Pirate copy detected");
 }
+#endif
 //---------------------------------------------------------------------------
 uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];
 //---------------------------------------------------------------------------

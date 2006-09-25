@@ -3,6 +3,8 @@
 set devenv="%VS80COMNTOOLS%..\IDE\devenv.exe"
 rem "C:\Program Files (x86)\Microsoft Visual Studio 8\Common7\IDE\devenv.exe"
 
+rem set cmakeDefs=-DPRIVATE_RELEASE
+
 rem goto test
 
 del /q CMakeCache.txt
@@ -10,6 +12,7 @@ del /q CMakeCache.txt
 set conf=Debug
 set cmd=Clean
 call build-helper.cmd
+exit
 set cmd=Build
 call build-helper.cmd
 set conf=Release
