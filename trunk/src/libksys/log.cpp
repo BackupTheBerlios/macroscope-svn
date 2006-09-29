@@ -61,8 +61,6 @@ LogFile::LogFile() :
 //---------------------------------------------------------------------------
 LogFile & LogFile::open()
 {
-  if( file_.fileName().strlen() == 0 )
-    fileName(changeFileExt(getExecutableName(),".log"));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -223,12 +221,14 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
     buf.realloc(a + l);
     utf8::utf8s2mbcs(CP_OEMCP,buf.ptr() + a,l,stream.plane(),stream.count());
     uint64_t sz = 0;
-    {
-      AutoLock<FiberInterlockedMutex> lock(mutex_);
-      lockFile_.open();
-      lockFile_.detach();
-      lockFile_.attach();
+    AutoLock<FiberInterlockedMutex> lock(mutex_);
+    if( file_.fileName().strlen() == 0 ){
+      file_.fileName(changeFileExt(getExecutableName(),".log"));
+      lockFile_.fileName(file_.fileName() + ".lck");
     }
+    lockFile_.open();
+    lockFile_.detach();
+    lockFile_.attach();
     AutoFileWRLock<AsyncFile> flock;
     if( lockFile_.tryWRLock(0,0) ){
       flock.setLocked(lockFile_);
@@ -254,7 +254,6 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
     else {
       file_.close();
     }
-    AutoLock<FiberInterlockedMutex> lock(mutex_);
     lockFile_.detach();
   }
 /*  catch( ExceptionSP & e ){
