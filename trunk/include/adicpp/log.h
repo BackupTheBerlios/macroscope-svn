@@ -75,6 +75,7 @@ class LogFile {
   protected:
     static const char * const priNicks_[];
     AsyncFile file_;
+    AsyncFile lockFile_;
     FiberInterlockedMutex mutex_;
     uintptr_t enabledLevels_;
     uint64_t rotationThreshold_;

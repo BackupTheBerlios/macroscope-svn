@@ -56,16 +56,20 @@ LogFile::LogFile() :
   rotatedFileCount_(10)
 {
   file_.createIfNotExist(true);
+  lockFile_.createIfNotExist(true).removeAfterClose(true);
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::open()
 {
+  if( file_.fileName().strlen() == 0 )
+    fileName(changeFileExt(getExecutableName(),".log"));
   return *this;
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
   file_.close();
+  lockFile_.close();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -73,6 +77,7 @@ LogFile & LogFile::fileName(const utf8::String & name)
 {
   AutoLock<FiberInterlockedMutex> lock(mutex_);
   file_.fileName(name);
+  lockFile_.fileName(name + ".lck");
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -90,12 +95,10 @@ const char * const  LogFile::priNicks_[]  = {
 void LogFile::rotate(uint64_t size)
 {
   if( rotatedFileCount_ > 0 && size <= rotationThreshold_) return;
-  AsyncFile lockFile(file_.fileName() + ".lck");
-  lockFile.createIfNotExist(true).removeAfterClose(true).open();
-  AutoFileWRLock<AsyncFile> flock;
-  if( lockFile.tryWRLock(0,0) ){
-    flock.setLocked(lockFile,0,0);
-    if( file_.size() <= rotationThreshold_) return;
+  file_.close();
+  utf8::String name(file_.fileName() + ".rename");
+  rename(file_.fileName(),name);
+  try {
     utf8::String fileExt(getFileExt(file_.fileName()));
     Stat st;
     intptr_t i = 0;
@@ -112,8 +115,11 @@ void LogFile::rotate(uint64_t size)
       }
       i--;
     }
-    file_.close();
-    rename(file_.fileName(),changeFileExt(file_.fileName(),".0") + fileExt);
+    rename(name,changeFileExt(file_.fileName(),".0") + fileExt);
+  }
+  catch( ... ){
+    rename(name,file_.fileName());
+    throw;
   }
 }
 //---------------------------------------------------------------------------
@@ -121,123 +127,141 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
 {
   assert( level <= 9 || level == ~uintptr_t(0) );
   if( level <= 9 && (enabledLevels_ & (uintptr_t(1) << level)) == 0 ) return *this;
-
-  struct timeval tv = time2Timeval(getlocaltimeofday());
-  struct tm t = time2tm(timeval2Time(tv));
-  int a;
+  
+  try {
+    struct timeval tv = time2Timeval(getlocaltimeofday());
+    struct tm t = time2tm(timeval2Time(tv));
+    int a;
 
 #if HAVE_SNPRINTF
 #define SNPRINTF snprintf
 #elif HAVE__SNPRINTF
 #define SNPRINTF _snprintf
 #endif
-  if( pri == lmDEBUG ){
-    a = SNPRINTF(
-      NULL,
-      0,
-      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
-      t.tm_mday,
-      t.tm_mon + 1,
-      t.tm_year + 1900,
-      t.tm_hour,
-      t.tm_min,
-      t.tm_sec,
-      tv.tv_usec,
-      priNicks_[pri],
-      getpid(),
-      (unsigned int) level
-    );
-  }
-  else {
-    a = SNPRINTF(
-      NULL,
-      0,
-      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-      t.tm_mday,
-      t.tm_mon + 1,
-      t.tm_year + 1900,
-      t.tm_hour,
-      t.tm_min,
-      t.tm_sec,
-      tv.tv_usec,
-      priNicks_[pri],
-      getpid()
-    );
-  }
-  if( a == -1 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
-  AutoPtr<char> buf;
-  buf.alloc(a);
-  if( pri == lmDEBUG ){
-    a = SNPRINTF(
-      buf.ptr(),
-      a,
-      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
-      t.tm_mday,
-      t.tm_mon + 1,
-      t.tm_year + 1900,
-      t.tm_hour,
-      t.tm_min,
-      t.tm_sec,
-      tv.tv_usec,
-      priNicks_[pri],
-      getpid(),
-      (unsigned int) level
-    );
-  }
-  else {
-    a = SNPRINTF(
-      buf.ptr(),
-      a,
-      "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-      t.tm_mday,
-      t.tm_mon + 1,
-      t.tm_year + 1900,
-      t.tm_hour,
-      t.tm_min,
-      t.tm_sec,
-      tv.tv_usec,
-      priNicks_[pri],
-      getpid()
-    );
-  }
-#undef SNPRINTF
-  if( a == -1 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
-  intptr_t l = utf8::utf8s2mbcs(CP_OEMCP,NULL,0,stream.plane(),stream.count());
-  if( l < 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
-  buf.realloc(a + l);
-  utf8::utf8s2mbcs(CP_OEMCP,buf.ptr() + a,l,stream.plane(),stream.count());
-  AutoLock<FiberInterlockedMutex> lock(mutex_);
-  if( file_.fileName().strlen() == 0 )
-    file_.fileName(changeFileExt(getExecutableName(),".log"));
-  file_.open();
-  file_.detach();
-  file_.attach();
-  uint64_t sz = 0;
-  try {
-    AutoFileWRLock<AsyncFile> flock(file_,0,0);
-    if( pri == lmDIRECT ){
-      file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
+    if( pri == lmDEBUG ){
+      a = SNPRINTF(
+        NULL,
+        0,
+        "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
+        t.tm_mday,
+        t.tm_mon + 1,
+        t.tm_year + 1900,
+        t.tm_hour,
+        t.tm_min,
+        t.tm_sec,
+        tv.tv_usec,
+        priNicks_[pri],
+        getpid(),
+        (unsigned int) level
+      );
     }
     else {
-      file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
+      a = SNPRINTF(
+        NULL,
+        0,
+        "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
+        t.tm_mday,
+        t.tm_mon + 1,
+        t.tm_year + 1900,
+        t.tm_hour,
+        t.tm_min,
+        t.tm_sec,
+        tv.tv_usec,
+        priNicks_[pri],
+        getpid()
+      );
     }
-    sz = file_.size();
+    if( a == -1 ){
+      int32_t err = errno;
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
+    }
+    AutoPtr<char> buf;
+    buf.alloc(a);
+    if( pri == lmDEBUG ){
+      a = SNPRINTF(
+        buf.ptr(),
+        a,
+        "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
+        t.tm_mday,
+        t.tm_mon + 1,
+        t.tm_year + 1900,
+        t.tm_hour,
+        t.tm_min,
+        t.tm_sec,
+        tv.tv_usec,
+        priNicks_[pri],
+        getpid(),
+        (unsigned int) level
+      );
+    }
+    else {
+      a = SNPRINTF(
+        buf.ptr(),
+        a,
+        "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
+        t.tm_mday,
+        t.tm_mon + 1,
+        t.tm_year + 1900,
+        t.tm_hour,
+        t.tm_min,
+        t.tm_sec,
+        tv.tv_usec,
+        priNicks_[pri],
+        getpid()
+      );
+    }
+#undef SNPRINTF
+    if( a == -1 ){
+      int32_t err = errno;
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
+    }
+    intptr_t l = utf8::utf8s2mbcs(CP_OEMCP,NULL,0,stream.plane(),stream.count());
+    if( l < 0 ){
+      int32_t err = errno;
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
+    }
+    buf.realloc(a + l);
+    utf8::utf8s2mbcs(CP_OEMCP,buf.ptr() + a,l,stream.plane(),stream.count());
+    uint64_t sz = 0;
+    {
+      AutoLock<FiberInterlockedMutex> lock(mutex_);
+      lockFile_.open();
+      lockFile_.detach();
+      lockFile_.attach();
+    }
+    AutoFileWRLock<AsyncFile> flock;
+    if( lockFile_.tryWRLock(0,0) ){
+      flock.setLocked(lockFile_);
+      file_.open();
+      file_.detach();
+      file_.attach();
+      try {
+        if( pri == lmDIRECT ){
+          file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
+        }
+        else {
+          file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
+        }
+        sz = file_.size();
+      }
+      catch( ... ){
+        file_.close();
+        throw;
+      }
+      file_.detach();
+      rotate(sz);
+    }
+    else {
+      file_.close();
+    }
+    AutoLock<FiberInterlockedMutex> lock(mutex_);
+    lockFile_.detach();
   }
+/*  catch( ExceptionSP & e ){
+    e->code();
+  }*/
   catch( ... ){
-    file_.close();
-    throw;
   }
-  rotate(sz);
-  file_.detach();
   return *this;
 }
 //---------------------------------------------------------------------------
