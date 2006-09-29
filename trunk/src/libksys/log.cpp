@@ -230,30 +230,29 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
     lockFile_.detach();
     lockFile_.attach();
     AutoFileWRLock<AsyncFile> flock;
-    if( lockFile_.tryWRLock(0,0) ){
-      flock.setLocked(lockFile_);
-      file_.open();
-      file_.detach();
-      file_.attach();
-      try {
-        if( pri == lmDIRECT ){
-          file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
-        }
-        else {
-          file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
-        }
-        sz = file_.size();
-      }
-      catch( ... ){
-        file_.close();
-        throw;
-      }
-      file_.detach();
-      rotate(sz);
-    }
-    else {
+    if( !lockFile_.tryWRLock(0,0) ){
       file_.close();
+      lockFile_.wrLock(0,0);
     }
+    flock.setLocked(lockFile_);
+    file_.open();
+    file_.detach();
+    file_.attach();
+    try {
+      if( pri == lmDIRECT ){
+        file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
+      }
+      else {
+        file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
+      }
+      sz = file_.size();
+    }
+    catch( ... ){
+      file_.close();
+      throw;
+    }
+    file_.detach();
+    rotate(sz);
     lockFile_.detach();
   }
 /*  catch( ExceptionSP & e ){
