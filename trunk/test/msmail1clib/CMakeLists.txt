@@ -61,4 +61,4 @@ INSTALL (
   DESTINATION "${INSTALL_BIN_DIR}"
 )
 
-INSTALL (FILES msmail1c.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME msmail1c.conf.distrib)
+INSTALL (FILES msmail1c.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME msmail1c.conf.template)

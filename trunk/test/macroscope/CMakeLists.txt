@@ -43,4 +43,4 @@ INSTALL (
   DESTINATION "${INSTALL_BIN_DIR}"
 )
 
-INSTALL (FILES macroscope.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME macroscope.conf.distrib)
+INSTALL (FILES macroscope.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME macroscope.conf.template)

@@ -3,7 +3,7 @@
 set devenv="%VS80COMNTOOLS%..\IDE\devenv.exe"
 rem "C:\Program Files (x86)\Microsoft Visual Studio 8\Common7\IDE\devenv.exe"
 
-set cmakeDefs=-DPRIVATE_RELEASE=1
+rem set cmakeDefs=-DPRIVATE_RELEASE=1
 
 rem goto test
 
