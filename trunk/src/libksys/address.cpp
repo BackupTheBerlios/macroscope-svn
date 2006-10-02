@@ -346,7 +346,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
   DWORD dwRetVal;
   ULONG outBufLen, len = (ULONG) getpagesize();
   addresses.realloc(len);
-  if( ksys::isWinXPorLater() ){
+  if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
     for(;;){
       outBufLen = len;
       dwRetVal = iphlpapi.GetAdaptersAddresses(
@@ -397,7 +397,7 @@ utf8::String SockAddr::gethostname()
 #if defined(__WIN32__) || defined(__WIN64__)
     ksys::AutoPtr<IpInfo> addresses;
     getAdaptersAddresses(addresses);
-    if( ksys::isWinXPorLater() ){
+    if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
       IP_ADAPTER_ADDRESSES * pAddress = &addresses->addresses_;
       while( pAddress != NULL ){
 // exclude loopback interface

@@ -162,17 +162,15 @@ void API::open()
         ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'mswsock.dll' failed\n");
         ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
-      if( ksys::isWinXPorLater() ){
-        iphlpapi.handle_ = LoadLibraryExW(L"iphlpapi.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-        if( iphlpapi.handle_ == NULL ){
-          err = GetLastError() + ksys::errorOffset;
-          FreeLibrary(handle_);
-          handle_ = NULL;
-          FreeLibrary(apiEx.handle_);
-          apiEx.handle_ = NULL;
-          ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'lphlpapi.dll' failed\n");
-          ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
-        }
+      iphlpapi.handle_ = LoadLibraryExW(L"iphlpapi.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+      if( iphlpapi.handle_ == NULL ){
+        err = GetLastError() + ksys::errorOffset;
+        FreeLibrary(handle_);
+        handle_ = NULL;
+        FreeLibrary(apiEx.handle_);
+        apiEx.handle_ = NULL;
+        ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'lphlpapi.dll' failed\n");
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
       /*if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
         wship6api.handle_ = LoadLibraryExA("wship6.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -234,22 +232,21 @@ void API::open()
         ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
     }
-    if( ksys::isWinXPorLater() ){
-      for( i = 0; i < sizeof(iphlpapi.symbols_) / sizeof(iphlpapi.symbols_[0]); i++ ){
-        ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] = GetProcAddress(iphlpapi.handle_,iphlpapi.symbols_[i]);
-        if( ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] == NULL ){
-          err = GetLastError() + ksys::errorOffset;
-          FreeLibrary(handle_);
-          handle_ = NULL;
-          FreeLibrary(apiEx.handle_);
-          apiEx.handle_ = NULL;
-          FreeLibrary(iphlpapi.handle_);
-          iphlpapi.handle_ = NULL;
-          ksys::stdErr.debug(9,utf8::String::Stream() <<
-            "GetProcAddress(\"" << iphlpapi.symbols_[i] << "\")\n"
-          );
-          ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
-        }
+    for( i = 0; i < sizeof(iphlpapi.symbols_) / sizeof(iphlpapi.symbols_[0]); i++ ){
+      ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] = GetProcAddress(iphlpapi.handle_,iphlpapi.symbols_[i]);
+      if( ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] == NULL &&
+          ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] != iphlpapi.p_GetAdaptersAddresses ){
+        err = GetLastError() + ksys::errorOffset;
+        FreeLibrary(handle_);
+        handle_ = NULL;
+        FreeLibrary(apiEx.handle_);
+        apiEx.handle_ = NULL;
+        FreeLibrary(iphlpapi.handle_);
+        iphlpapi.handle_ = NULL;
+        ksys::stdErr.debug(9,utf8::String::Stream() <<
+          "GetProcAddress(\"" << iphlpapi.symbols_[i] << "\")\n"
+        );
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
     }
     /*if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
