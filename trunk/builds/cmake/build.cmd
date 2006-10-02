@@ -7,7 +7,7 @@ rem set cmakeDefs=-DPRIVATE_RELEASE=1
 
 rem goto test
 
-del /q CMakeCache.txt
+del /q CMakeCache.txt ..\..\include\adicpp\config.h
 
 set conf=Debug
 set cmd=Clean
@@ -31,7 +31,7 @@ set cmd=Build
 call build-helper.cmd
 
 set generator=-G "Visual Studio 8 2005 Win64"
-del /q CMakeCache.txt
+del /q CMakeCache.txt ..\..\include\adicpp\config.h
 
 set conf=Debug
 set cmd=Clean
