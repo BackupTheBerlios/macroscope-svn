@@ -387,7 +387,12 @@ Config & Config::parse()
         clear();
         parseSectionBody(*this);
         rs_.free();
-        stdErr.debug(9,utf8::String::Stream() << "config file " << file_.fileName() << " reloaded\n");
+        stdErr.debug(9,
+          utf8::String::Stream() <<
+          "config file " <<
+          file_.fileName() <<
+          (mtime_ == 0 ? " loaded\n" : " reloaded\n")
+        );
         i = 0;
         mtime_ = st.st_mtime;
       }
