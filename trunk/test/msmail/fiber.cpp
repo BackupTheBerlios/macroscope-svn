@@ -1034,7 +1034,7 @@ void NodeClient::main()
               AutoMutexWRLock<FiberMutex> lock(data.mutex_);
               ServerInfo * si = data.servers_.find(host);
               if( si == NULL ){
-                assert( dataType_ == stNode );
+                //assert( dataType_ == stNode );
                 data.registerServerNL(ServerInfo(host,dataType_));
                 si = data.servers_.find(host);
                 assert( si != NULL );
