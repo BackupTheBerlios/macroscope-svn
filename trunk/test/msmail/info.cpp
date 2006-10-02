@@ -757,26 +757,27 @@ bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link,const utf8::
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const utf8::String & sendingTo)
 {
+  bool r = false;
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
       key2ServerLinks_.insert(*newObject<Key2ServerLink>(link));
-      return true;
+      r = true;
     }
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->server_.strcasecmp(link.server_) != 0 ){
+      p->server_ = link.server_;
+      p->sendedTo_.drop();
+      r = true;
+    }
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
       p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
-    if( p->server_.strcasecmp(link.server_) != 0 ){
-      p->server_ = link.server_;
-      p->sendedTo_.drop();
-      return true;
-    }
   }
-  return false;
+  return r;
 }
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey2ServerLink(const Key2ServerLink & link,const utf8::String & sendingTo)
