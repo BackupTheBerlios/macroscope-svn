@@ -574,10 +574,10 @@ void SpoolWalker::processQueue(bool & timeWait)
             2678400u // 31 day
           );
           uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
-          if( gettimeofday() - messageTime >= messageTTL ){
+          if( gettimeofday() - messageTime >= messageTTL * 1000000u ){
             remove(list[i]);
             stdErr.debug(1,utf8::String::Stream() << "Message " <<
-              message.id() << "TTL exhausted, removed.\n"
+              message.id() << " TTL exhausted, removed.\n"
             );
           }
           timeWait = true;
@@ -744,11 +744,11 @@ void MailQueueWalker::processQueue(bool & timeWait)
             2678400u // 31 day
           );
           uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
-          if( gettimeofday() - messageTime >= messageTTL ){
+          if( gettimeofday() - messageTime >= messageTTL * 1000000u ){
             file.close();
             remove(list[i]);
             stdErr.debug(1,utf8::String::Stream() << "Message " <<
-              list[i] << "TTL exhausted, removed.\n"
+              list[i] << " TTL exhausted, removed.\n"
             );
           }
         }
