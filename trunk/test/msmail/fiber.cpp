@@ -230,7 +230,7 @@ void ServerFiber::registerDB()
   Server::Data rdata, ldata, diff;
   rdata.recvDatabaseNL(*this);
   stream << serverTypeName_[serverType_] <<
-    ": database changes received from " << host << "\n";
+    ": database changes received from " << hostDB << "\n";
   rdata.dumpNL(stream);
   stdErr.debug(6,stream);
   Server::Data & data = server_.data(serverType_);
