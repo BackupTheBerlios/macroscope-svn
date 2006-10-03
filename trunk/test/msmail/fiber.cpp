@@ -243,7 +243,7 @@ void ServerFiber::registerDB()
     ServerInfo * si = data.servers_.find(host);
     fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
-    if( irsl ){
+    if( irsl /*|| fullDump*/ /*rStartTime < getProcessStartTime()*/ ){
       rdata.clearSendedToNL();
     }
     rdata.setSendedToNL(hostDB);
