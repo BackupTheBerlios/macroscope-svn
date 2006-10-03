@@ -602,21 +602,27 @@ Server::Data::Data() :
 //------------------------------------------------------------------------------
 bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sendingTo)
 {
+  bool r = false;
   UserInfo * p = users_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
       users_.insert(*newObject<UserInfo>(info));
-      return true;
+      r = true;
     }
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->rtime_ != 0 ){
+      p->sendedTo_.drop();
+      p->rtime_ = 0;
+      r = true;
+    }
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
       p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
-  return false;
+  return r;
 }
 //------------------------------------------------------------------------------
 bool Server::Data::registerUser(const UserInfo & info,const utf8::String & sendingTo)
@@ -627,21 +633,27 @@ bool Server::Data::registerUser(const UserInfo & info,const utf8::String & sendi
 //------------------------------------------------------------------------------
 bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendingTo)
 {
+  bool r = false;
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
       keys_.insert(*newObject<KeyInfo>(info));
-      return true;
+      r = true;
     }
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->rtime_ != 0 ){
+      p->sendedTo_.drop();
+      p->rtime_ = 0;
+      r = true;
+    }
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
       p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
-  return false;
+  return r;
 }
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey(const KeyInfo & info,const utf8::String & sendingTo)
@@ -652,21 +664,27 @@ bool Server::Data::registerKey(const KeyInfo & info,const utf8::String & sending
 //------------------------------------------------------------------------------
 bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & sendingTo)
 {
+  bool r = false;
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
       groups_.insert(*newObject<GroupInfo>(info));
-      return true;
+      r = true;
     }
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->rtime_ != 0 ){
+      p->sendedTo_.drop();
+      p->rtime_ = 0;
+      r = true;
+    }
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
       p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
-  return false;
+  return r;
 }
 //------------------------------------------------------------------------------
 bool Server::Data::registerGroup(const GroupInfo & info,const utf8::String & sendingTo)
@@ -677,15 +695,21 @@ bool Server::Data::registerGroup(const GroupInfo & info,const utf8::String & sen
 //------------------------------------------------------------------------------
 bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String & sendingTo)
 {
+  bool r = false;
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
       servers_.insert(*newObject<ServerInfo>(info));
-      return true;
+      r = true;
     }
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->rtime_ != 0 ){
+      p->sendedTo_.drop();
+      p->rtime_ = 0;
+      r = true;
+    }
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
@@ -693,10 +717,10 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
     if( info.type_ == stNode && info.type_ != p->type_ ){
       p->type_ = info.type_;
       p->sendedTo_.drop();
-      return true;
+      r = true;
     }
   }
-  return false;
+  return r;
 }
 //------------------------------------------------------------------------------
 bool Server::Data::registerServer(const ServerInfo & info,const utf8::String & sendingTo)
@@ -707,21 +731,27 @@ bool Server::Data::registerServer(const ServerInfo & info,const utf8::String & s
 //------------------------------------------------------------------------------
 bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::String & sendingTo)
 {
+  bool r = false;
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
       user2KeyLinks_.insert(*newObject<User2KeyLink>(link));
-      return true;
+      r = true;
     }
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->rtime_ != 0 ){
+      p->sendedTo_.drop();
+      p->rtime_ = 0;
+      r = true;
+    }
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
       p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
-  return false;
+  return r;
 }
 //------------------------------------------------------------------------------
 bool Server::Data::registerUser2KeyLink(const User2KeyLink & link,const utf8::String & sendingTo)
@@ -732,21 +762,27 @@ bool Server::Data::registerUser2KeyLink(const User2KeyLink & link,const utf8::St
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8::String & sendingTo)
 {
+  bool r = false;
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
       key2GroupLinks_.insert(*newObject<Key2GroupLink>(link));
-      return true;
+      r = true;
     }
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->rtime_ != 0 ){
+      p->sendedTo_.drop();
+      p->rtime_ = 0;
+      r = true;
+    }
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
       p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   }
-  return false;
+  return r;
 }
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link,const utf8::String & sendingTo)
@@ -767,6 +803,11 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
   }
   else {
     p->atime_ = gettimeofday();
+    if( p->rtime_ != 0 ){
+      p->sendedTo_.drop();
+      p->rtime_ = 0;
+      r = true;
+    }
     if( p->server_.strcasecmp(link.server_) != 0 ){
       p->server_ = link.server_;
       p->sendedTo_.drop();
