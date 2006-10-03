@@ -207,6 +207,9 @@ void ServerFiber::registerDB()
     stdErr.debug(6,stream);
     return;
   }
+  bool irsl = server_.config_->valueByPath(
+    utf8::String(serverConfSectionName_[serverType_]) + ".ignore_remote_send_list",false
+  );
   uint32_t port;
   uint64_t rStartTime;
   bool dbChanged = false;
@@ -240,6 +243,9 @@ void ServerFiber::registerDB()
     ServerInfo * si = data.servers_.find(host);
     fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
+    if( irsl ){
+      rdata.clearSendedToNL();
+    }
     rdata.setSendedToNL(hostDB);
     dbChanged = data.orNL(rdata); // apply remote changes localy
     ldata.orNL(data,fullDump ? utf8::String() : hostDB); // get local changes for sending

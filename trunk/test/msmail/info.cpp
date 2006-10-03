@@ -1134,6 +1134,39 @@ Server::Data & Server::Data::setSendedTo(const utf8::String & sendingTo)
   return setSendedToNL(sendingTo);
 }
 //------------------------------------------------------------------------------
+Server::Data & Server::Data::clearSendedToNL()
+{
+  intptr_t i;
+  Array<UserInfo *> userList;
+  users_.list(userList);
+  for( i = userList.count() - 1; i >= 0; i-- ) userList[i]->sendedTo_.drop();
+  Array<KeyInfo *> keyList;
+  keys_.list(keyList);
+  for( i = keyList.count() - 1; i >= 0; i-- ) keyList[i]->sendedTo_.drop();
+  Array<GroupInfo *> groupList;
+  groups_.list(groupList);
+  for( i = groupList.count() - 1; i >= 0; i-- ) groupList[i]->sendedTo_.drop();
+  Array<ServerInfo *> serverList;
+  servers_.list(serverList);
+  for( i = serverList.count() - 1; i >= 0; i-- ) serverList[i]->sendedTo_.drop();
+  Array<User2KeyLink *> user2KeyLinkList;
+  user2KeyLinks_.list(user2KeyLinkList);
+  for( i = user2KeyLinkList.count() - 1; i >= 0; i-- ) user2KeyLinkList[i]->sendedTo_.drop();
+  Array<Key2GroupLink *> key2GroupLinkList;
+  key2GroupLinks_.list(key2GroupLinkList);
+  for( i = key2GroupLinkList.count() - 1; i >= 0; i-- ) key2GroupLinkList[i]->sendedTo_.drop();
+  Array<Key2ServerLink *> key2ServerLinkList;
+  key2ServerLinks_.list(key2ServerLinkList);
+  for( i = key2ServerLinkList.count() - 1; i >= 0; i-- ) key2ServerLinkList[i]->sendedTo_.drop();
+  return *this;
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::clearSendedTo()
+{
+  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  return clearSendedToNL();
+}
+//------------------------------------------------------------------------------
 template <typename T,typename LT> static inline
 bool sweepT(LT & list,uint64_t stime,uint64_t rtime,utf8::String::Stream * log)
 {

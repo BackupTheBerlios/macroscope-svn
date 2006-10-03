@@ -50,6 +50,17 @@ void Server::open()
   data(stStandalone).registerServer(
     ServerInfo(bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
+  /*bool nodeFunctionEnabled = config_->parse().override().valueByPath(
+    utf8::String(serverConfSectionName_[stNode]) + ".enabled",false
+  );
+  data(stStandalone).registerServer(
+    ServerInfo(bindAddrs()[0].resolve(defaultPort),nodeFunctionEnabled ? stNode : stStandalone)
+  );
+  if( nodeFunctionEnabled ){
+    data(stNode).registerServer(
+      ServerInfo(bindAddrs()[0].resolve(defaultPort),stNode)
+    );
+  }*/
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
   uintptr_t i;
   for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",10); i > 0; i-- )
