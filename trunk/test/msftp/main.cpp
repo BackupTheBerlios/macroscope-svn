@@ -137,6 +137,8 @@ void KFTPClient::put()
   utf8::String exclude(config_->section(section_).section("put").text("exclude"));
   bool recursive = config_->value("recursive",true);
   recursive = config_->section(section_).section("put").value("recursive",recursive);
+  uint64_t partialBlockSize = config_->value("min_partial_block_size",getpagesize());
+  partialBlockSize = config_->section(section_).section("put").value("partial_block_size",partialBlockSize);
 
   ksys::Vector<utf8::String> list;
   getDirList(list,local,exclude,recursive);
@@ -198,7 +200,7 @@ void KFTPClient::put()
             *this << int8_t(cmResize) << rfile << ll;
             getCode();
           }
-          *this << int8_t(cmGetFileHash) << rfile >> hashBlockSize >> hashBlockCount;
+          *this << int8_t(cmGetFileHash) << rfile << partialBlockSize >> hashBlockSize >> hashBlockCount;
           while( hashBlockCount > 0 ){
             ksys::SHA256 & blockHash = hash.add();
             read(blockHash.sha256(),blockHash.size());
@@ -206,7 +208,7 @@ void KFTPClient::put()
           }
           getCode();
           ll = file.size();
-          if( hashBlockSize == 0 ) hashBlockSize = partialBlockSize(ll);
+          if( hashBlockSize == 0 ) hashBlockSize = partialBlockSize /*partialBlockSize(ll)*/;
           cmd = cmPutFilePartial;
         }
         if( bs > ll ) bs = ll;

@@ -262,12 +262,14 @@ MSFTPServerFiber & MSFTPServerFiber::list()
 MSFTPServerFiber & MSFTPServerFiber::getFileHash()
 {
   utf8::String name;
-  uint64_t l, ll, lp, bs;
-  *this >> name;
+  uint64_t l, ll, lp, bs, partialBlockSize;
+  *this >> name >> partialBlockSize;
+  if( partialBlockSize < getpagesize() ) partialBlockSize = getpagesize();
+  if( partialBlockSize > 4u * 1024u * 1024u ) partialBlockSize = 4u * 1024u * 1024u;
   ksys::AsyncFile file(name);
   if( file.tryOpen() ){
     lp = file.size();
-    ll = partialBlockSize(lp);
+    ll = partialBlockSize /*partialBlockSize(lp)*/;
     bs = ll;
     l = lp / bs;
     l += lp > 0 && lp % bs != 0;
