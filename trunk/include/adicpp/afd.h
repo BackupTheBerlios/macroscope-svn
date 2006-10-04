@@ -36,6 +36,10 @@ class AsyncFile : public AsyncDescriptor {
     virtual ~AsyncFile();
     AsyncFile(const utf8::String & fileName = utf8::String());
 
+    // override AsyncDescriptor
+    AsyncFile & attach();
+    AsyncFile & detach();
+
     bool isOpen() const;
     AsyncFile & open();
     bool tryOpen();
@@ -86,6 +90,11 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & readOnly(bool v);
     bool createIfNotExist() const;
     AsyncFile & createIfNotExist(bool v);
+
+    AsyncFile & redirectToStdin();
+    AsyncFile & redirectToStdout();
+    AsyncFile & redirectToStderr();
+    bool std() const;
   protected:
   private:
 #if _MSC_VER
@@ -116,6 +125,7 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t removeAfterClose_ : 1;
       uint8_t readOnly_         : 1;
       uint8_t createIfNotExist_ : 1;
+      uint8_t std_              : 1;
     };
 #if _MSC_VER
 #pragma warning(pop)
@@ -137,7 +147,14 @@ class AsyncFile : public AsyncDescriptor {
     void close2();
     void openAPI();
     void closeAPI();
+    bool fileMember() const;
+    bool redirectByName();
 };
+//---------------------------------------------------------------------------
+inline bool AsyncFile::std() const
+{
+  return std_ != 0;
+}
 //---------------------------------------------------------------------------
 inline bool AsyncFile::isOpen() const
 {
@@ -200,6 +217,18 @@ inline AsyncFile & AsyncFile::createIfNotExist(bool v)
   return *this;
 }
 //---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::attach()
+{
+  if( !std_ ) AsyncDescriptor::attach();
+  return *this;
+}
+//------------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::detach()
+{
+  if( !std_ ) AsyncDescriptor::attach();
+  return *this;
+}
+//------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 template <typename T> class AutoFileWRLock {

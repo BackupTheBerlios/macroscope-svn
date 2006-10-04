@@ -229,7 +229,7 @@ T & Vector< T>::add()
     xrealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
-  return *(ptr_[count_++] = newObject<T>);
+  return *(ptr_[count_++] = newObject<T>());
 }
 //-----------------------------------------------------------------------------
 template< class T>

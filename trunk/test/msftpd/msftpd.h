@@ -38,7 +38,9 @@ enum MSFTPCmdType {
   cmSetTimes,
   cmResize,
   cmPutFile,
-  cmGetFile
+  cmPutFilePartial,
+  cmGetFile,
+  cmGetFileHash,
 };
 //------------------------------------------------------------------------------
 enum MSFTPError {
@@ -69,7 +71,6 @@ struct MSFTPStat {
   int64_t st_ctime_;
 
   bool stat(const utf8::String & pathName);
-  bool statAsync(const utf8::String & pathName);
 };
 //---------------------------------------------------------------------------
 inline bool MSFTPStat::stat(const utf8::String & pathName)
@@ -93,27 +94,18 @@ inline bool MSFTPStat::stat(const utf8::String & pathName)
   return isSt;
 }
 //---------------------------------------------------------------------------
-inline bool MSFTPStat::statAsync(const utf8::String & pathName)
-{
-  memset(this,0,sizeof(MSFTPStat));
-  ksys::Stat st;
-  bool isSt = ksys::stat(pathName,st);
-  if( isSt ){
-    st_dev_ = (int16_t) st.st_dev;
-    st_ino_ = st.st_ino;
-    st_mode_ = st.st_mode;
-    st_nlink_ = st.st_nlink;
-    st_uid_ = st.st_uid;
-    st_gid_ = st.st_gid;
-    st_rdev_ = (int16_t) st.st_rdev;
-    st_size_ = st.st_size;
-    st_atime_ = st.st_atime;
-    st_mtime_ = st.st_mtime;
-    st_ctime_ = st.st_ctime;
-  }
-  return isSt;
-}
-//---------------------------------------------------------------------------
 const int MSFTPDefaultPort = 2121;
+//---------------------------------------------------------------------------
+static inline uint64_t partialBlockSize(uint64_t fileSize)
+{
+  uint64_t ll;
+  for( ll = 1; (uint64_t(1) << ll) < fileSize; ll++ );
+  ll = ksys::fibonacci(ll);
+// block size must be greater system physical page size
+  if( ll < getpagesize() ) ll = getpagesize();
+// block size must be lesser 64 Mb
+  if( ll > 64u * 1024u * 1024u ) ll = 64u * 1024u * 1024u;
+  return ll;
+}
 //---------------------------------------------------------------------------
 #endif

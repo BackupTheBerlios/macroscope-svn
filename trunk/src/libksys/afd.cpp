@@ -40,7 +40,8 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   exclusive_(false),
   removeAfterClose_(false),
   readOnly_(false),
-  createIfNotExist_(false)
+  createIfNotExist_(false),
+  std_(false)
 {
   file_ = INVALID_HANDLE_VALUE;
   handle_ = INVALID_HANDLE_VALUE;
@@ -53,19 +54,23 @@ AsyncFile & AsyncFile::close(bool calledFromDestructor)
 {
   detach();
   if( file_ != INVALID_HANDLE_VALUE ){
+    if( !std_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    CloseHandle(file_);
+      CloseHandle(file_);
 #else
-    ::close(file_);
+      ::close(file_);
 #endif
+    }
     file_ = INVALID_HANDLE_VALUE;
   }
   if( handle_ != INVALID_HANDLE_VALUE ){
+    if( !std_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    CloseHandle(handle_);
+      CloseHandle(handle_);
 #else
-    ::close(handle_);
+      ::close(handle_);
 #endif
+    }
     handle_ = INVALID_HANDLE_VALUE;
   }
   if( removeAfterClose_ ){
@@ -81,7 +86,8 @@ AsyncFile & AsyncFile::close(bool calledFromDestructor)
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::open()
 {
-  if( currentFiber() != NULL ){
+  if( redirectByName() ) return *this;
+  if( fileMember() ){
     if( file_ == INVALID_HANDLE_VALUE ){
       attach();
       fiber()->event_.string0_ = fileName_;
@@ -94,7 +100,7 @@ AsyncFile & AsyncFile::open()
       assert( fiber()->event_.type_ == etOpenFile );
       descriptor_ = fiber()->event_.fileDescriptor_;
       if( fiber()->event_.errno_ != 0 )
-        throw ksys::ExceptionSP(
+        throw ExceptionSP(
           newObject<EFileError>(fiber()->event_.errno_ + errorOffset, fileName_)
         );
     }
@@ -161,8 +167,8 @@ AsyncFile & AsyncFile::open()
             throw ksys::ExceptionSP(newObject<EFileError>(err + errorOffset, fileName_));
         }
 #else
-        utf8::AnsiString  ansiFileName  (anyPathName2HostPathName(fileName_).getANSIString());
-        mode_t            um            = umask(0);
+        utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
+        mode_t um = umask(0);
         umask(um);
         if( !readOnly_ )
           handle_ = ::open(ansiFileName, O_RDWR | O_CREAT | (exclusive_ ? O_EXLOCK : 0), um | S_IRUSR | S_IWUSR);
@@ -200,7 +206,8 @@ AsyncFile & AsyncFile::open()
 //---------------------------------------------------------------------------
 bool AsyncFile::tryOpen()
 {
-  if( currentFiber() != NULL ){
+  if( redirectByName() ) return true;
+  if( fileMember() ){
     if( file_ == INVALID_HANDLE_VALUE ){
       attach();
       fiber()->event_.string0_ = fileName_;
@@ -289,7 +296,7 @@ uint64_t AsyncFile::size() const
 #if defined(__WIN32__) || defined(__WIN64__)
   uint64 i;
   SetLastError(NO_ERROR);
-  i.lo = GetFileSize(currentFiber() != NULL ? file_ : handle_, &i.hi);
+  i.lo = GetFileSize(fileMember() ? file_ : handle_, &i.hi);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
     throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
@@ -297,7 +304,7 @@ uint64_t AsyncFile::size() const
   return i.a;
 #else
   struct stat st;
-  if( fstat(currentFiber() != NULL ? file_ : handle_,&st) != 0 ){
+  if( fstat(fileMember() ? file_ : handle_,&st) != 0 ){
     int32_t err = errno;
     throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
   }
@@ -313,12 +320,12 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
 #if defined(__WIN32__) || defined(__WIN64__)
     seek(nSize);
 // TODO: check for SetFileValidData working (may be faster then SetEndOfFile)
-    if( SetEndOfFile(currentFiber() != NULL ? file_ : handle_) == 0 ){
+    if( SetEndOfFile(fileMember() ? file_ : handle_) == 0 ){
       err = GetLastError() + errorOffset;
       throw ExceptionSP(newObject<EDiskFull>(err, __PRETTY_FUNCTION__));
     }
 #elif HAVE_FTRUNCATE
-    if( ftruncate(currentFiber() != NULL ? file_ : handle_, nSize) == -1 ){
+    if( ftruncate(fileMember() ? file_ : handle_, nSize) == -1 ){
       err = errno;
       throw ExceptionSP(newObject<EDiskFull>(err, __PRETTY_FUNCTION__));
     }
@@ -337,7 +344,7 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
 //---------------------------------------------------------------------------
 int64_t AsyncFile::read(void * buf,uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
     int64_t r = 0;
     while( size > 0 ){
       int64_t pos = tell();
@@ -390,7 +397,7 @@ l1: if( ReadFile(handle_,buf,a,&rr,NULL) == 0 ){
 //---------------------------------------------------------------------------
 int64_t AsyncFile::write(const void * buf,uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
     int64_t w = 0;
     while( size > 0 ){
       int64_t pos = tell();
@@ -440,7 +447,7 @@ l1: if( WriteFile(handle_,buf,a,&ww,NULL) == 0 ){
 //---------------------------------------------------------------------------
 int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
     int64_t r = 0;
     while( size > 0 ){
       fiber()->event_.position_ = pos;
@@ -504,7 +511,7 @@ l1: if( ReadFile(handle_,buf,a,&rr,NULL) == 0 ){
 //---------------------------------------------------------------------------
 int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
     int64_t w = 0;
     while( size > 0 ){
       fiber()->event_.position_ = pos;
@@ -610,7 +617,7 @@ AsyncFile & AsyncFile::writeBuffer(uint64_t pos,const void * buf,uint64_t size)
 //---------------------------------------------------------------------------
 bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
 #if defined(__WIN32__) || defined(__WIN64__)
     fiber()->event_.errno_ = 0;
     if( !exclusive_ ){
@@ -677,7 +684,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
 //---------------------------------------------------------------------------
 bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
 #if defined(__WIN32__) || defined(__WIN64__)
     fiber()->event_.errno_ = 0;
     if( !exclusive_ ){
@@ -744,7 +751,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
       fiber()->event_.type_ = etLockFile;
@@ -797,7 +804,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
 {
-  if( currentFiber() != NULL ){
+  if( fileMember() ){
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
       fiber()->event_.type_ = etLockFile;
@@ -856,7 +863,7 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
     OVERLAPPED Overlapped;
     Overlapped.Offset = reinterpret_cast< uint64 *>(&pos)->lo;
     Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
-    if( UnlockFileEx(currentFiber() != NULL ? file_ : handle_,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
+    if( UnlockFileEx(fileMember() ? file_ : handle_,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
       int32_t err = GetLastError() + errorOffset;
       throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
     }
@@ -866,7 +873,7 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
     fl.l_len = size;
     fl.l_type = F_UNLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(currentFiber() != NULL ? file_ : handle_,F_SETLK,&fl) != 0 ){
+    if( fcntl(fileMember() ? file_ : handle_,F_SETLK,&fl) != 0 ){
       int32_t err = errno;
       throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
     }
@@ -881,14 +888,14 @@ uint64_t AsyncFile::tell() const
   int64 i;
   i.hi = 0;
   SetLastError(NO_ERROR);
-  i.lo = SetFilePointer(currentFiber() != NULL ? file_ : handle_,0,&i.hi,FILE_CURRENT);
+  i.lo = SetFilePointer(fileMember() ? file_ : handle_,0,&i.hi,FILE_CURRENT);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
     throw ksys::ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
   }
   return i.a;
 #else
-  int64_t pos = lseek(currentFiber() != NULL ? file_ : handle_,0,SEEK_CUR);
+  int64_t pos = lseek(fileMember() ? file_ : handle_,0,SEEK_CUR);
   if( pos < 0 ){
     int32_t err = errno;
     throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
@@ -901,13 +908,13 @@ AsyncFile & AsyncFile::seek(uint64_t pos)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   SetLastError(NO_ERROR);
-  reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(currentFiber() != NULL ? file_ : handle_,reinterpret_cast< uint64 *>(&pos)->lo,(PLONG) &reinterpret_cast<uint64 *>(&pos)->hi,FILE_BEGIN);
+  reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(fileMember() ? file_ : handle_,reinterpret_cast< uint64 *>(&pos)->lo,(PLONG) &reinterpret_cast<uint64 *>(&pos)->hi,FILE_BEGIN);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
     throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
   }
 #else
-  int64_t lp = lseek(currentFiber() != NULL ? file_ : handle_,pos,SEEK_SET);
+  int64_t lp = lseek(fileMember() ? file_ : handle_,pos,SEEK_SET);
   if( lp < 0 || (uint64_t) lp != pos ){
     int32_t err = errno;
     throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
@@ -1086,5 +1093,83 @@ void AsyncFile::closeAPI()
 {
 }
 //------------------------------------------------------------------------------
+AsyncFile & AsyncFile::redirectToStdin()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
+  if( handle == INVALID_HANDLE_VALUE ){
+    int32_t err = GetLastError() + errorOffset;
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
+  }
+  if( handle != NULL ){
+    fileName("stdin");
+    handle_ = handle;
+    file_ = handle;
+    std_ = true;
+  }
+#else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
+  return *this;
+}
+//------------------------------------------------------------------------------
+AsyncFile & AsyncFile::redirectToStdout()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+  if( handle == INVALID_HANDLE_VALUE ){
+    int32_t err = GetLastError() + errorOffset;
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
+  }
+  if( handle != NULL ){
+    fileName("stdout");
+    handle_ = handle;
+    file_ = handle;
+    std_ = true;
+  }
+#else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
+  return *this;
+}
+//---------------------------------------------------------------------------
+AsyncFile & AsyncFile::redirectToStderr()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  HANDLE handle = GetStdHandle(STD_ERROR_HANDLE);
+  if( handle == INVALID_HANDLE_VALUE ){
+    int32_t err = GetLastError() + errorOffset;
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
+  }
+  if( handle != NULL ){
+    fileName("stderr");
+    handle_ = handle;
+    file_ = handle;
+    std_ = true;
+  }
+#else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
+  return *this;
+}
+//---------------------------------------------------------------------------
+bool AsyncFile::fileMember() const
+{
+  return currentFiber() != NULL && !std_;
+}
+//---------------------------------------------------------------------------
+bool AsyncFile::redirectByName()
+{
+  bool r = true;
+  if( fileName_.strcmp("stdin") == 0 ) redirectToStdin();
+  else
+  if( fileName_.strcmp("stdout") == 0 ) redirectToStdout();
+  else
+  if( fileName_.strcmp("stderr") == 0 ) redirectToStderr();
+  else
+    r = false;
+  return r;
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

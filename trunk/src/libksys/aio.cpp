@@ -787,7 +787,10 @@ void AsyncOpenFileSlave::threadExecute()
                 request->exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
                 NULL,
                 request->createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-                FILE_FLAG_OVERLAPPED | FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+                FILE_FLAG_OVERLAPPED |
+                FILE_ATTRIBUTE_NORMAL |
+                FILE_ATTRIBUTE_ARCHIVE |
+                FILE_FLAG_RANDOM_ACCESS/* | FILE_FLAG_BACKUP_SEMANTICS*/,
                 NULL
               );
             if( file == INVALID_HANDLE_VALUE ){
@@ -799,7 +802,10 @@ void AsyncOpenFileSlave::threadExecute()
                 request->exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
                 NULL,
                 request->createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-                FILE_FLAG_OVERLAPPED | FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
+                FILE_FLAG_OVERLAPPED |
+                FILE_ATTRIBUTE_NORMAL |
+                FILE_ATTRIBUTE_ARCHIVE |
+                FILE_FLAG_RANDOM_ACCESS/* | FILE_FLAG_BACKUP_SEMANTICS*/,
                 NULL
               );
             }

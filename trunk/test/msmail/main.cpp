@@ -138,6 +138,12 @@ int main(int _argc,char * _argv[])
       stdErr.setDebugLevels(
         service->msmailConfig()->value("debug_levels","+0,+1,+2,+3")
       );
+      stdErr.fileName(
+        service->msmailConfig()->value("log_file",stdErr.fileName())
+      );
+      stdErr.setRedirect(
+        service->msmailConfig()->value("log_redirect",utf8::String())
+      );
       checkMachineBinding(service->msmailConfig()->value("machine_key"));
       services.startServiceCtrlDispatcher();
     }

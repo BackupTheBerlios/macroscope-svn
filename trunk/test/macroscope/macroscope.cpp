@@ -455,8 +455,22 @@ void Logger::parseBPFTLogFile(const utf8::String & logFileName)
 //------------------------------------------------------------------------------
 void Logger::main()
 {
-  config_.parse().override();
-  ksys::stdErr.setDebugLevels(config_.value("debug_levels","+0,+1,+2,+3"));
+  config_->parse().override();
+  ksys::stdErr.rotationThreshold(
+    config_->value("debug_file_rotate_threshold",1024 * 1024)
+  );
+  ksys::stdErr.rotatedFileCount(
+    config_->value("debug_file_rotate_count",10)
+  );
+  ksys::stdErr.setDebugLevels(
+    config_->value("debug_levels","+0,+1,+2,+3")
+  );
+  ksys::stdErr.setRedirect(
+    config_->value("log_redirect",utf8::String())
+  );
+  ksys::stdErr.fileName(
+    config_->value("log_file",ksys::stdErr.fileName())
+  );
 
 /*  utf8::String lockFileName(ksys::getTempPath() +
     ksys::unScreenString(

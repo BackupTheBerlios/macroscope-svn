@@ -562,6 +562,12 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
               stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
               stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
+              stdErr.fileName(
+                client_.config_->value("log_file",stdErr.fileName())
+              );
+              stdErr.setRedirect(
+                client_.config_->value("log_redirect",utf8::String())
+              );
               if( !isRet() ) client_.open();
               active_ = true;
             }

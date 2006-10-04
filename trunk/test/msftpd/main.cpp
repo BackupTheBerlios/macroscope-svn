@@ -43,6 +43,7 @@ class MSFTPServerFiber : public ksock::ServerFiber {
     ksys::ConfigSP config_;
     utf8::String workDir_;
     utf8::String user_;
+    int8_t cmd_;
 
     bool isValidUser(const utf8::String & user);
     utf8::String getUserPassword(const utf8::String & user);
@@ -55,6 +56,7 @@ class MSFTPServerFiber : public ksock::ServerFiber {
     MSFTPServerFiber & put();
     MSFTPServerFiber & get();
     MSFTPServerFiber & list();
+    MSFTPServerFiber & getFileHash();
 };
 //------------------------------------------------------------------------------
 MSFTPServerFiber::~MSFTPServerFiber()
@@ -113,7 +115,7 @@ MSFTPServerFiber & MSFTPServerFiber::stat()
 {
   MSFTPStat mst;
   utf8::String file(ksys::absolutePathNameFromWorkDir(workDir_,readString()));
-  bool isSt = mst.statAsync(file);
+  bool isSt = mst.stat(file);
   write(&mst,sizeof(mst));
   return putCode(isSt ? eOK : eBadPathName);
 }
@@ -143,6 +145,7 @@ MSFTPServerFiber & MSFTPServerFiber::resize()
 MSFTPServerFiber & MSFTPServerFiber::put()
 {
   ksys::AsyncFile file(ksys::absolutePathNameFromWorkDir(workDir_,readString()));
+  file.createIfNotExist(true);
   uint64_t l, lp, ll, pos;
   int64_t mtime;
   uint64_t bs;
@@ -181,10 +184,18 @@ MSFTPServerFiber & MSFTPServerFiber::put()
   if( file.size() < pos ) file.resize(pos);
   file.seek(pos);
   ksys::AutoPtr<uint8_t> b;
-  if( bs > ll ) bs = (uint32_t) ll; else if( bs == 0 ) bs = (uint32_t) ll;
-  if( bs > 0x40000000 ) bs = 0x40000000;
+  if( cmd_ != cmPutFilePartial ){
+    if( bs > ll ) bs = (uint32_t) ll; else if( bs == 0 ) bs = (uint32_t) ll;
+    if( bs > 0x40000000 ) bs = 0x40000000;
+  }
   b.alloc((size_t) bs);
-  for( l = 0; l < ll; l += lp ){
+  for( l = 0; l < ll || (ll > 0 && cmd_ == cmPutFilePartial); l += lp ){
+    if( cmd_ == cmPutFilePartial ){
+      *this >> l >> lp;
+      if( l == 0 && lp == 0 ) break;
+      //if( file.size() < l ) file.resize(l);
+      file.seek(l);
+    }
     read(b.ptr(),lp = ll - l > bs ? bs : ll - l);
     err = eOK;
     try {
@@ -201,10 +212,10 @@ MSFTPServerFiber & MSFTPServerFiber::put()
     putCode(err);
     if( err != eOK || terminated() ) return *this;
   }
-  if( l != ll ) return putCode(eFileWrite);
+  if( cmd_ != cmPutFilePartial && l != ll ) return putCode(eFileWrite);
   file.close();
   MSFTPStat mst;
-  if( !mst.statAsync(file.fileName()) ) return putCode(eFileStat);
+  if( !mst.stat(file.fileName()) ) return putCode(eFileStat);
   struct utimbuf ut;
   ut.actime = (time_t) mst.st_atime_;
   ut.modtime = (time_t) mtime;
@@ -248,33 +259,84 @@ MSFTPServerFiber & MSFTPServerFiber::list()
   return *this;
 }
 //------------------------------------------------------------------------------
+MSFTPServerFiber & MSFTPServerFiber::getFileHash()
+{
+  utf8::String name;
+  uint64_t l, ll, lp, bs;
+  *this >> name;
+  ksys::AsyncFile file(name);
+  if( file.tryOpen() ){
+    lp = file.size();
+    ll = partialBlockSize(lp);
+    bs = ll;
+    l = lp / bs;
+    l += lp > 0 && lp % bs != 0;
+  }
+  else {
+    l = ll = 0;
+  }
+  *this << ll << l;
+  if( file.isOpen() ){
+    ksys::SHA256 hash;
+    ksys::AutoPtr<uint8_t> b;
+    b.alloc((size_t) bs);
+    ll = lp;
+    for( l = 0; l < ll; l += lp ){
+      file.readBuffer(b,lp = ll - l > bs ? bs : ll - l);
+      hash.make(b,(uintptr_t) lp);
+      write(hash.sha256(),hash.size());
+    }
+  }
+  putCode(eOK);
+  return *this;
+}
+//------------------------------------------------------------------------------
 void MSFTPServerFiber::main()
 {
+  config_->parse().override();
+  ksys::stdErr.rotationThreshold(
+    config_->value("debug_file_rotate_threshold",1024 * 1024)
+  );
+  ksys::stdErr.rotatedFileCount(
+    config_->value("debug_file_rotate_count",10)
+  );
+  ksys::stdErr.setDebugLevels(
+    config_->value("debug_levels","+0,+1,+2,+3")
+  );
+  ksys::stdErr.fileName(
+    config_->value("log_file",ksys::stdErr.fileName())
+  );
+  ksys::stdErr.setRedirect(
+    config_->value("log_redirect",utf8::String())
+  );
+
   auth();
   while( !terminated() ){
-    int8_t cmd;
-    *this >> cmd;
-    if( cmd == cmQuit ){
+    *this >> cmd_;
+    if( cmd_ == cmQuit ){
       putCode(eOK);
       break;
     }
-    else if( cmd == cmList ){
+    else if( cmd_ == cmList ){
       list();
     }
-    else if( cmd == cmStat ){
+    else if( cmd_ == cmStat ){
       stat();
     }
-    else if( cmd == cmSetTimes ){
+    else if( cmd_ == cmSetTimes ){
       setTimes();
     }
-    else if( cmd == cmResize ){
+    else if( cmd_ == cmResize ){
       resize();
     }
-    else if( cmd == cmPutFile ){
+    else if( cmd_ == cmPutFile || cmd_ == cmPutFilePartial ){
       put();
     }
-    else if( cmd == cmGetFile ){
+    else if( cmd_ == cmGetFile ){
       get();
+    }
+    else if( cmd_ == cmGetFileHash ){
+      getFileHash();
     }
     else { // unrecognized or unsupported command, terminate
       break;
@@ -326,8 +388,9 @@ MSFTPService::MSFTPService() :
   msftpConfig_(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()),
   msftp_(msftpConfig_)
 {
-  serviceName_ = "msftp";
-  displayName_ = "Macroscope FTP Service";
+  msftpConfig_->parse().override();
+  serviceName_ = msftpConfig_->value("service_name","msftp");
+  displayName_ = msftpConfig_->value("service_display_name","Macroscope FTP Service");
 #if defined(__WIN32__) || defined(__WIN64__)
   serviceType_ = SERVICE_WIN32_OWN_PROCESS;
   startType_ = SERVICE_AUTO_START;
@@ -349,8 +412,7 @@ void MSFTPService::start()
   );
   for( intptr_t i = addrs.count() - 1; i >= 0; i-- ) msftp_.addBind(addrs[i]);
   msftp_.open();
-  ksys::stdErr.log(
-    ksys::lmINFO,
+  ksys::stdErr.debug(0,
     utf8::String::Stream() << msftpd_version.gnu_ << " started\n"
   );
 }
@@ -358,8 +420,7 @@ void MSFTPService::start()
 void MSFTPService::stop()
 {
   msftp_.close();
-  ksys::stdErr.log(
-    ksys::lmINFO,
+  ksys::stdErr.debug(0,
     utf8::String::Stream() << msftpd_version.gnu_ << " stopped\n"
   );
 }

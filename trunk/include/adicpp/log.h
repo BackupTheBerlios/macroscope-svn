@@ -72,6 +72,11 @@ class LogFile {
     const uintptr_t & rotatedFileCount() const;
 
     const char * const & priNick(LogMessagePriority filter) const;
+
+    LogFile & redirectToStdin();
+    LogFile & redirectToStdout();
+    LogFile & redirectToStderr();
+    LogFile & setRedirect(const utf8::String & redirect);
   protected:
     static const char * const priNicks_[];
     AsyncFile file_;

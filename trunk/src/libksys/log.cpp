@@ -92,7 +92,7 @@ const char * const  LogFile::priNicks_[]  = {
 //---------------------------------------------------------------------------
 void LogFile::rotate(uint64_t size)
 {
-  if( rotatedFileCount_ > 0 && size <= rotationThreshold_) return;
+  if( (rotatedFileCount_ > 0 && size <= rotationThreshold_) || file_.std() ) return;
   file_.close();
   utf8::String name(file_.fileName() + ".rename");
   rename(file_.fileName(),name);
@@ -125,7 +125,6 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
 {
   assert( level <= 9 || level == ~uintptr_t(0) );
   if( level <= 9 && (enabledLevels_ & (uintptr_t(1) << level)) == 0 ) return *this;
-  
   try {
     struct timeval tv = time2Timeval(getlocaltimeofday());
     struct tm t = time2tm(timeval2Time(tv));
@@ -226,24 +225,34 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
       file_.fileName(changeFileExt(getExecutableName(),".log"));
       lockFile_.fileName(file_.fileName() + ".lck");
     }
-    lockFile_.open();
-    lockFile_.detach();
-    lockFile_.attach();
-    AutoFileWRLock<AsyncFile> flock;
-    if( !lockFile_.tryWRLock(0,0) ){
-      file_.close();
-      lockFile_.wrLock(0,0);
+    if( !file_.std() ){
+      lockFile_.open();
+      lockFile_.detach();
+      lockFile_.attach();
     }
-    flock.setLocked(lockFile_);
+    AutoFileWRLock<AsyncFile> flock;
+    if( !file_.std() ){
+      if( !lockFile_.tryWRLock(0,0) ){
+        file_.close();
+        lockFile_.wrLock(0,0);
+      }
+      flock.setLocked(lockFile_);
+    }
     file_.open();
     file_.detach();
     file_.attach();
     try {
       if( pri == lmDIRECT ){
-        file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
+        if( file_.std() )
+          file_.writeBuffer(buf.ptr() + a,l * sizeof(char));
+        else
+          file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
       }
       else {
-        file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
+        if( file_.std() )
+          file_.writeBuffer(buf.ptr(),(a + l) * sizeof(char));
+        else
+          file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
       }
       sz = file_.size();
     }
@@ -278,6 +287,38 @@ LogFile & LogFile::setDebugLevels(const utf8::String & levels)
     else
       disableDebugLevel((intptr_t) level);
   }
+  return *this;
+}
+//---------------------------------------------------------------------------
+LogFile & LogFile::redirectToStdout()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  AutoLock<FiberInterlockedMutex> lock(mutex_);
+  lockFile_.close();
+  file_.close().redirectToStdout();
+#else
+  throw ExceptionSP(newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__));
+#endif
+  return *this;
+}
+//---------------------------------------------------------------------------
+LogFile & LogFile::redirectToStderr()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  AutoLock<FiberInterlockedMutex> lock(mutex_);
+  lockFile_.close();
+  file_.close().redirectToStderr();
+#else
+  throw ExceptionSP(newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__));
+#endif
+  return *this;
+}
+//---------------------------------------------------------------------------
+LogFile & LogFile::setRedirect(const utf8::String & redirect)
+{
+  if( redirect.strcasecmp("stdout") == 0 ) redirectToStdout();
+  else
+  if( redirect.strcasecmp("stderr") == 0 ) redirectToStderr();
   return *this;
 }
 //---------------------------------------------------------------------------

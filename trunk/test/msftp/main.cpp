@@ -94,7 +94,7 @@ void KFTPClient::auth()
   compressionType = config_->section("compression").value("type","default");
   compressionType = config_->section(section_).section("compression").value("type",compressionType);
   crc = config_->section("compression").value("crc","default");
-  crc = config_->section(section_).section("compression").value("crc",compressionType);
+  crc = config_->section(section_).section("compression").value("crc",crc);
   uintptr_t compressionLevel = config_->section("compression").value("level",3);
   compressionLevel = config_->section(section_).section("compression").value("level",compressionLevel);
   bool optimize = config_->section("compression").value("optimize",false);
@@ -149,17 +149,20 @@ void KFTPClient::put()
   );
   int64_t all = 0, ptime = getlocaltimeofday(), atime = 0, ttime;
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
-    uint64_t l, ll, lp;
+    uint64_t l, ll, lp, rl;
     utf8::String rfile(
       remotePath + utf8::String(utf8::String::Iterator(list[i]) + localPath.strlen())
     );
     try {
+      int8_t cmd = int8_t(cmPutFile);
+      ksys::Vector<ksys::SHA256> hash;
+      uint64_t hashBlockSize, hashBlockCount;
       uint64_t bs = (uint64_t) config_->value("buffer_size",getpagesize());
       bs = (uint64_t) config_->section(section_).section("put").value("buffer_size",bs);
       if( bs == 0 ) bs = getpagesize();
       ksys::AsyncFile file(list[i]);
       MSFTPStat rmst, lmst;
-      if( lmst.statAsync(file.fileName()) ){
+      if( lmst.stat(file.fileName()) ){
         file.open();
         ll = 0;
         int64_t mtime = lmst.st_mtime_;
@@ -186,24 +189,66 @@ void KFTPClient::put()
             getCode(eResize);
           }
         }
+        else if( mode.strcasecmp("partial") == 0 ){
+          *this << int8_t(cmStat) << rfile;
+          read(&rmst,sizeof(rmst));
+          getCode(eBadPathName);
+          if( rmst.st_size_ > lmst.st_size_ ){
+            ll = file.size();
+            *this << int8_t(cmResize) << rfile << ll;
+            getCode();
+          }
+          *this << int8_t(cmGetFileHash) << rfile >> hashBlockSize >> hashBlockCount;
+          while( hashBlockCount > 0 ){
+            ksys::SHA256 & blockHash = hash.add();
+            read(blockHash.sha256(),blockHash.size());
+            hashBlockCount--;
+          }
+          getCode();
+          ll = file.size();
+          if( hashBlockSize == 0 ) hashBlockSize = partialBlockSize(ll);
+          cmd = cmPutFilePartial;
+        }
         if( bs > ll ) bs = ll;
-        *this << int8_t(cmPutFile) << rfile << file.tell() << ll << mtime << bs;
+        if( cmd == cmPutFilePartial ) bs = hashBlockSize;
+        *this << cmd << rfile << file.tell() << ll << mtime << bs;
         getCode();
         ksys::AutoPtr<uint8_t> b;
         b.alloc((size_t) bs);
         ttime = getlocaltimeofday();
-        for( l = 0; l < ll; l += lp ){
+        ksys::SHA256 chash;
+        for( rl = l = 0; l < ll; l += lp ){
           file.readBuffer(b,lp = ll - l > bs ? bs : ll - l);
-          write(b.ptr(),lp);
-          getCode();
+          if( cmd == cmPutFilePartial ){
+            if( l / bs >= hash.count() ||
+                memcmp(
+                  chash.make(b,(uintptr_t) lp).sha256(),
+                  hash[uintptr_t(l / bs)].sha256(),
+                  chash.size()) != 0 )
+            {
+              *this << l << lp;
+              write(b.ptr(),lp);
+              getCode();
+              rl += lp;
+            }
+          }
+          else {
+            write(b.ptr(),lp);
+            getCode();
+            rl += lp;
+          }
           if( terminated_ ) return;
+        }
+        if( cmd == cmPutFilePartial && ll > 0 ){
+          hashBlockSize = hashBlockCount = 0;
+          *this << hashBlockSize << hashBlockCount;
         }
         getCode();
         ttime = getlocaltimeofday() - ttime;
         atime += ttime;
         if( ttime == 0 ) ttime = 1;
-        ksys::stdErr.log(
-          ksys::lmDIRECT,
+        l = rl;
+        ksys::stdErr.debug(l > 0 ? 1 : 2,
           utf8::String::Stream() <<
           section_ << " " << host_ << " elapsed: " << utf8::elapsedTime2Str(ttime) <<
           ", avg speed " << (l * 1000000u / ttime) / 1024u << "." <<
@@ -235,8 +280,7 @@ void KFTPClient::put()
         default :
           if( e->code() < ksock::AsyncSocket::aeMagic || e->code() >= eCount ) throw;
       }
-      ksys::stdErr.log(
-        ksys::lmDIRECT,
+      ksys::stdErr.debug(3,
         utf8::String::Stream() << "job " << host_ << " failed: " <<
         ksys::strError(e->code()) << ", " << list[i] << "\n"
       );
@@ -245,8 +289,7 @@ void KFTPClient::put()
   }
   if( (ptime = getlocaltimeofday() - ptime) == 0 ) ptime = 1;
   if( atime == 0 ) atime = 1;
-  ksys::stdErr.log(
-    ksys::lmDIRECT,
+  ksys::stdErr.debug(0,
     utf8::String::Stream() <<
     section_ << " " << host_ << " operation put complete.\n" <<
     "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
@@ -305,6 +348,7 @@ void KFTPClient::get()
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
     try {
       ksys::AsyncFile file(localPath + list[i]);
+      file.createIfNotExist(true);
       if( !file.tryOpen() ){
         ksys::createDirectory(
           ksys::excludeTrailingPathDelimiter(
@@ -314,7 +358,7 @@ void KFTPClient::get()
         file.open();
       }
       MSFTPStat rmst, lmst;
-      lmst.statAsync(file.fileName());
+      lmst.stat(file.fileName());
       ll = 0;
       *this << int8_t(cmStat) << remotel + list[i];
       read(&rmst,sizeof(rmst));
@@ -347,8 +391,7 @@ void KFTPClient::get()
       ttime = getlocaltimeofday() - ttime;
       atime += ttime;
       if( ttime == 0 ) ttime = 1;
-      ksys::stdErr.log(
-        ksys::lmDIRECT,
+      ksys::stdErr.debug(l > 0 ? 1 : 2,
         utf8::String::Stream() <<
         section_ << " " << host_ << " elapsed: " << utf8::elapsedTime2Str(ttime) <<
         ", avg speed " << (l * 1000000u / ttime) / 1024u << "." <<
@@ -379,8 +422,7 @@ void KFTPClient::get()
         default :
           if( e->code() < ksock::AsyncSocket::aeMagic || e->code() >= eCount ) throw;
       }
-      ksys::stdErr.log(
-        ksys::lmDIRECT,
+      ksys::stdErr.debug(3,
         utf8::String::Stream() << "job " << host_ << " failed: " <<
         ksys::strError(e->code()) << ", " << list[i] << "\n"
       );
@@ -389,8 +431,7 @@ void KFTPClient::get()
   }
   if( (ptime = getlocaltimeofday() - ptime) == 0 ) ptime = 1;
   if( atime == 0 ) atime = 1;
-  ksys::stdErr.log(
-    ksys::lmDIRECT,
+  ksys::stdErr.debug(0,
     utf8::String::Stream() <<
     section_ << " " << host_ << " operation get complete.\n" <<
     "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
@@ -421,12 +462,12 @@ void KFTPClient::main()
 {
 #ifndef NDEBUG
 // test
-  ksys::Fetcher fetch;
+/*  ksys::Fetcher fetch;
   fetch.url("http://www.firebirdsql.org/download/prerelease/rlsnotes20rc3_0200_82.zip");
   fetch.url("http://system.folium.local:8010/top-200401-ira.html");
 //  fetch.proxy("korvin:WFa1PXt-@192.168.201.2:3128");
   fetch.resume(true);
-  fetch.fetch();
+  fetch.fetch();*/
 #endif
   remoteAddress_.resolve(host_,MSFTPDefaultPort);
   connect(remoteAddress_);
@@ -496,6 +537,12 @@ void KFTPShell::open()
   ksys::stdErr.setDebugLevels(
     config_->value("debug_levels","+0,+1,+2,+3")
   );
+  ksys::stdErr.fileName(
+    config_->value("log_file",ksys::stdErr.fileName())
+  );
+  ksys::stdErr.setRedirect(
+    config_->value("log_redirect",utf8::String())
+  );
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )
@@ -508,6 +555,7 @@ int main(int argc,char * argv[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
+
   try {
     union {
       intptr_t i;
