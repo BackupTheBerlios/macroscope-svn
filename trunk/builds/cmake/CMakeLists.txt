@@ -380,11 +380,7 @@ CHECK_EMPTY_ARRAY_SIZE (EMPTY_ARRAY_SIZE)
 #ENABLE_TESTING()
 
 IF (NOT ROOT)
-  IF (UNIX)
-    SET (ROOT "${CMAKE_CURRENT_BINARY_DIR}/../..")
-  ELSE (UNIX)
-    SET (ROOT "../..")
-  ENDIF (UNIX)
+  SET (ROOT "../..")
 ENDIF (NOT ROOT)
 
 INCLUDE_DIRECTORIES(${ROOT}/include)
@@ -393,18 +389,18 @@ CONFIGURE_FILE(${ROOT}/include/adicpp/config.h.cmake ${ROOT}/include/adicpp/conf
 
 # Targets definition
 
-ADD_SUBDIRECTORY(${ROOT}/utils/version)
-ADD_SUBDIRECTORY(${ROOT}/src/libadicpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libksys)
-ADD_SUBDIRECTORY(${ROOT}/src/libmycpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libutf8)
-ADD_SUBDIRECTORY(${ROOT}/test/macroscope)
-ADD_SUBDIRECTORY(${ROOT}/test/msftp)
-ADD_SUBDIRECTORY(${ROOT}/test/msftpd)
-ADD_SUBDIRECTORY(${ROOT}/test/msmail)
+ADD_SUBDIRECTORY(${ROOT}/utils/version ${ROOT}/utils/version)
+ADD_SUBDIRECTORY(${ROOT}/src/libadicpp ${ROOT}/src/libadicpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp ${ROOT}/src/libfbcpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libksys ${ROOT}/src/libksys)
+ADD_SUBDIRECTORY(${ROOT}/src/libmycpp ${ROOT}/src/libmycpp)
+ADD_SUBDIRECTORY(${ROOT}/src/libutf8 ${ROOT}/src/libutf8)
+ADD_SUBDIRECTORY(${ROOT}/test/macroscope ${ROOT}/test/macroscope)
+ADD_SUBDIRECTORY(${ROOT}/test/msftp ${ROOT}/test/msftp)
+ADD_SUBDIRECTORY(${ROOT}/test/msftpd ${ROOT}/test/msftpd)
+ADD_SUBDIRECTORY(${ROOT}/test/msmail ${ROOT}/test/msmail)
 IF (WIN32 AND NOT UNIX)
-  ADD_SUBDIRECTORY(${ROOT}/test/msmail1clib)
+  ADD_SUBDIRECTORY(${ROOT}/test/msmail1clib ${ROOT}/test/msmail1clib)
 ENDIF (WIN32 AND NOT UNIX)
 
 # Install
