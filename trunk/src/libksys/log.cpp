@@ -285,7 +285,7 @@ LogFile & LogFile::setDebugLevels(const utf8::String & levels)
     if( (intptr_t) level >= 0 )
       enableDebugLevel((intptr_t) level);
     else
-      disableDebugLevel((intptr_t) level);
+      disableDebugLevel(-(intptr_t) level);
   }
   return *this;
 }
