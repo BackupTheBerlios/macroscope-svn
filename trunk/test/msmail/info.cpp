@@ -125,12 +125,19 @@ Message & Message::removeValueByLeft(const utf8::String & key)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 {
+/*  AsyncFile f;
+  f.fileName("c:\\operatorToMessage.log").createIfNotExist(true).open().resize(0);*/
+
   uint64_t i;
   utf8::String key, value;
   s >> i;
   while( i > 0 ){
     i--;
     s >> key >> value;
+    /*f.writeBuffer(key.c_str(),key.size());
+    f.writeBuffer("\n",1);
+    f.writeBuffer(value.c_str(),value.size());
+    f.writeBuffer("\n",1);*/
     if( key.strncmp("#",1) == 0 ){
       utf8::String::Iterator i(key);
       while( i.eof() )
@@ -148,13 +155,21 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
 {
+/*  AsyncFile f;
+  f.fileName("c:\\operatorFromMessage.log").createIfNotExist(true).open().resize(0);*/
+
   Array<Message::Attribute *> list;
   a.attributes_.list(list);
   uintptr_t i;
   s << uint64_t(i = list.count());
   while( i > 0 ){
     i--;
-    s << utf8::String(list[i]->key_) << list[i]->value_;
+    utf8::String key(list[i]->key_), value(list[i]->value_);
+    /*f.writeBuffer(key.c_str(),key.size());
+    f.writeBuffer("\n",1);
+    f.writeBuffer(value.c_str(),value.size());
+    f.writeBuffer("\n",1);*/
+    s << key << value;
   }
   return s;
 }

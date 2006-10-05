@@ -405,6 +405,7 @@ void ServerFiber::processMailbox(
     AsyncFile file(list[i]);
     try {
       file.open();
+      if( file.size() == 0 ) file.removeAfterClose(true).close();
     }
     catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -787,7 +788,7 @@ void MailQueueWalker::processQueue(bool & timeWait)
                 ".max_wait_time_before_try_connect",
                 600u
               );
-              cec = fibonacci(cec);
+              cec = (uintptr_t) fibonacci(cec);
               if( cec > mwt ) cec = mwt;
               stdErr.debug(7,utf8::String::Stream() <<
                 "mqueue: Wait " << cec << "seconds before connect to host " <<
@@ -1053,7 +1054,7 @@ void NodeClient::main()
                 ".max_wait_time_before_try_connect",
                 600u
               );
-              cec = fibonacci(cec);
+              cec = (uintptr_t) fibonacci(cec);
               if( cec > mwt ) cec = mwt;
               stdErr.debug(7,utf8::String::Stream() <<
                 "NODE client: Wait " << cec << " seconds before connect to host " <<

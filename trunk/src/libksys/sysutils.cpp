@@ -174,7 +174,6 @@ void createUUID(UUID & uuid)
 //---------------------------------------------------------------------------
 utf8::String screenChar(const utf8::String::Iterator & ii)
 {
-  utf8::String a;
   char * p, b[12];
   switch( ii.getChar() ){
     case '\a' :
@@ -221,6 +220,97 @@ utf8::String screenChar(const utf8::String::Iterator & ii)
       p = b;
   }
   return utf8::plane(p);
+}
+//---------------------------------------------------------------------------
+/*utf8::String screenString(const utf8::String & s)
+{
+  utf8::String a;
+  utf8::String::Iterator i(s);
+  while( !i.eof() ){
+    a += screenChar(i);
+    i.next();
+  }
+  return a;
+}*/
+//---------------------------------------------------------------------------
+static inline void screenChar(const char * seq,uintptr_t & seql,char * b,uintptr_t & l)
+{
+  uintptr_t c;
+  switch( c = utf8::utf82ucs(seq,seql) ){
+    case '\a' :
+      if( b != NULL ) memcpy(b,"\\a",2);
+      l = 2;
+      break;
+    case '\b' :
+      if( b != NULL ) memcpy(b,"\\b",2);
+      l = 2;
+      break;
+    case '\t' :
+      if( b != NULL ) memcpy(b,"\\t",2);
+      l = 2;
+      break;
+    case '\v' :
+      if( b != NULL ) memcpy(b,"\\v",2);
+      l = 2;
+      break;
+    case '\f' :
+      if( b != NULL ) memcpy(b,"\\f",2);
+      l = 2;
+      break;
+    case '\r' :
+      if( b != NULL ) memcpy(b,"\\r",2);
+      l = 2;
+      break;
+    case '\n' :
+      if( b != NULL ) memcpy(b,"\\n",2);
+      l = 2;
+      break;
+    case '\\' :
+      if( b != NULL ) memcpy(b,"\\\\",2);
+      l = 2;
+      break;
+    case ',' :
+      if( b != NULL ) memcpy(b,"\\,",2);
+      l = 2;
+      break;
+    case ';' :
+      if( b != NULL ) memcpy(b,"\\;",2);
+      l = 2;
+      break;
+    case '\"' :
+      if( b != NULL ) memcpy(b,"\\\"",2);
+      l = 2;
+      break;
+    case '=' :
+      if( b != NULL ) memcpy(b,"\\=",2);
+      l = 2;
+      break;
+    default  :
+      if( (utf8::getC1Type(c) & (C1_CNTRL | C1_SPACE)) != 0 ){
+        if( b != NULL ) memcpy(b,"\\0x",3);
+        utf8::String s(utf8::int2HexStr(c,SIZEOF_WCHAR_T * 2));
+        l = s.size();
+        if( b != NULL ) memcpy(b + 3,s.c_str(),l);
+        l += 3;
+      }
+      else {
+        l = seql;
+        if( b != NULL ) memcpy(b,seq,l);
+      }
+  }
+}
+//---------------------------------------------------------------------------
+utf8::String screenString(const utf8::String & s)
+{
+  const char * p;
+  uintptr_t seql, l, len = 0;
+  AutoPtr<char> a;
+  for( p = s.c_str(); *p != '\0'; p += seql, len += l ) screenChar(p,seql,NULL,l);
+  a.alloc(len + 1);
+  char * q = a;
+  for( p = s.c_str(); *p != '\0'; p += seql, q += l ) screenChar(p,seql,q,l);
+  a[len] = '\0';
+  return newObject<utf8::String::Container>(1,a.ptr(NULL));
 }
 //---------------------------------------------------------------------------
 utf8::String unScreenChar(const utf8::String::Iterator & ii,uintptr_t & screenLen)
@@ -286,7 +376,7 @@ l1:   s = utf8::String(ii,ii + 1);
   return s;
 }
 //---------------------------------------------------------------------------
-utf8::String unScreenString(const utf8::String & s)
+/*utf8::String unScreenString(const utf8::String & s)
 {
   utf8::String a;
   utf8::String::Iterator i(s);
@@ -302,17 +392,97 @@ utf8::String unScreenString(const utf8::String & s)
     }
   }
   return a;
+}*/
+//---------------------------------------------------------------------------
+static inline void unScreenChar(uintptr_t c,const char * seq,uintptr_t & seql,char * b,uintptr_t & l)
+{
+  uintptr_t i;
+  switch( c ){
+    case '0' :
+      if( utf8::utf8c2UpperUCS(seq + seql) == 'X' ){
+        for( i = 0; i < SIZEOF_WCHAR_T * 2; i++ ){
+          if( (utf8::getC1Type(utf8::utf82ucs(seq + seql + i + 1)) & (C1_XDIGIT | C1_DIGIT)) == 0 ) break;
+        }
+        if( i == SIZEOF_WCHAR_T * 2 ){
+          intmax_t a;
+          if( utf8::tryStr2Int(utf8::String(seq + seql + 1,SIZEOF_WCHAR_T * 2),a,16) ){
+            char buf[6];
+            buf[l = utf8::ucs2utf8seq(buf,(uintptr_t) a)] = '\0';
+            if( b != NULL ) memcpy(b,buf,l);
+            seql = SIZEOF_WCHAR_T * 2 + 2;
+            break;
+          }
+        }
+      }
+      goto l1;
+    case 'a' :
+      if( b != NULL ) *b = '\a';
+      l = 1;
+      break;
+    case 'b' :
+      if( b != NULL ) *b = '\b';
+      l = 1;
+      break;
+    case 't' :
+      if( b != NULL ) *b = '\t';
+      l = 1;
+      break;
+    case 'v' :
+      if( b != NULL ) *b = '\v';
+      l = 1;
+      break;
+    case 'f' :
+      if( b != NULL ) *b = '\f';
+      l = 1;
+      break;
+    case 'r' :
+      if( b != NULL ) *b = '\r';
+      l = 1;
+      break;
+    case 'n' :
+      if( b != NULL ) *b = '\n';
+      l = 1;
+      break;
+    case '\\' :
+      if( b != NULL ) *b = '\\';
+      l = 1;
+      break;
+    default :
+l1:   if( b != NULL ) memcpy(b,seq,seql);
+      l = seql;
+  }
 }
 //---------------------------------------------------------------------------
-utf8::String screenString(const utf8::String & s)
+utf8::String unScreenString(const utf8::String & s)
 {
-  utf8::String a;
-  utf8::String::Iterator i(s);
-  while( !i.eof() ){
-    a += screenChar(i);
-    i.next();
+  const char * p;
+  uintptr_t seql, l, len = 0, c;
+  AutoPtr<char> a;
+  for( p = s.c_str(); *p != '\0'; p += seql, len += l ){
+    c = utf8::utf82ucs(p,seql);
+    l = seql;
+    if( c == '\\' && p[1] != '\0' ){
+      p += seql;
+      c = utf8::utf82ucs(p,seql);
+      unScreenChar(c,p,seql,NULL,l);
+    }
   }
-  return a;
+  a.alloc(len + 1);
+  char * q = a;
+  for( p = s.c_str(); *p != '\0'; p += seql, q += l ){
+    c = utf8::utf82ucs(p,seql);
+    l = seql;
+    if( c == '\\' && p[1] != '\0' ){
+      p += seql;
+      c = utf8::utf82ucs(p,seql);
+      unScreenChar(c,p,seql,q,l);
+    }
+    else {
+      memcpy(q,p,seql);
+    }
+  }
+  a[len] = '\0';
+  return newObject<utf8::String::Container>(1,a.ptr(NULL));
 }
 //---------------------------------------------------------------------------
 uintptr_t enumStringParts(const utf8::String & s,const char * delim)

@@ -38,6 +38,18 @@ int main(int _argc,char * _argv[])
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
   try {
+    /*AsyncFile file;
+    file.fileName("c:\\1234").open();
+    AutoPtr<char> b;
+    b.alloc((size_t) file.size() + 1);
+    file.readBuffer(b,file.size());
+    b.ptr()[file.size()] = '\0';
+    size_t l = ::strlen(b.ptr());
+    utf8::String orig(newObject<utf8::String::Container>(2,b));
+    utf8::String s(screenString(orig));
+    utf8::String rst(unScreenString(s));
+    intptr_t c = orig.strcmp(rst);*/
+
     union {
       intptr_t i;
       uintptr_t u;

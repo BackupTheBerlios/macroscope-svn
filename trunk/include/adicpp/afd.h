@@ -225,7 +225,7 @@ inline AsyncFile & AsyncFile::attach()
 //------------------------------------------------------------------------------
 inline AsyncFile & AsyncFile::detach()
 {
-  if( !std_ ) AsyncDescriptor::attach();
+  /*if( !std_ )*/ AsyncDescriptor::detach();
   return *this;
 }
 //------------------------------------------------------------------------------
