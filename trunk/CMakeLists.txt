@@ -3,9 +3,12 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 SITE_NAME (SITE)
 SET (MAIN_SITE "AMBER")
 
+#SET (CMAKE_BINARY_DIR "builds/cmake")
+#SET (CMAKE_MODULE_PATH "builds/cmake")
+
 PROJECT(macroscope)
 
-SET (CMAKE_CXX_CREATE_STATIC_LIBRARY "xilib ${CMAKE_CL_NOLOGO} <LINK_FLAGS> /out:<TARGET> <OBJECTS> ")
+#SET (CMAKE_CXX_CREATE_STATIC_LIBRARY "xilib ${CMAKE_CL_NOLOGO} <LINK_FLAGS> /out:<TARGET> <OBJECTS> ")
 
 # the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1" 
 #MESSAGE( STATUS "CMAKE_SYSTEM: " ${CMAKE_SYSTEM} )
@@ -95,7 +98,7 @@ ENDIF (CMAKE_WORDS_BIGENDIAN EQUAL 0)
 # Check for headers
 
 #INCLUDE (CheckIncludeFiles)
-INCLUDE (CheckIncludeFile.cmake)
+INCLUDE (builds/cmake/CheckIncludeFile.cmake)
 INCLUDE (CheckIncludeFileCXX)
 
 CHECK_INCLUDE_FILE(malloc.h HAVE_MALLOC_H)
@@ -179,7 +182,7 @@ SET (CMAKE_EXTRA_INCLUDE_FILES)
 
 # Check for types
 
-INCLUDE (CheckTypeSize.cmake)
+INCLUDE (builds/cmake/CheckTypeSize.cmake)
 
 SET (CMAKE_EXTRA_INCLUDE_FILES inttypes.h)
 
@@ -237,7 +240,7 @@ CHECK_TYPE_SIZE ("struct _stat64" SIZEOF__STAT64)
 
 SET (CMAKE_EXTRA_INCLUDE_FILES)
 
-INCLUDE (CheckTypeEqual.cmake)
+INCLUDE (builds/cmake/CheckTypeEqual.cmake)
 
 CHECK_TYPE_EQUAL (intptr_t int HAVE_INTPTR_T_AS_INT)
 CHECK_TYPE_EQUAL (intptr_t "long int" HAVE_INTPTR_T_AS_LONG_INT)
@@ -373,34 +376,34 @@ CHECK_FUNCTION_EXISTS (lzo1x_decompress_asm_fast_safe HAVE_LZO1X_DECOMPRESS_ASM_
 
 # Check for compiler features
 
-INCLUDE (CheckEmptyArraySize.cmake)
+INCLUDE (builds/cmake/CheckEmptyArraySize.cmake)
 
 CHECK_EMPTY_ARRAY_SIZE (EMPTY_ARRAY_SIZE)
 
 #ENABLE_TESTING()
 
-IF (NOT ROOT)
-  SET (ROOT "../..")
-ENDIF (NOT ROOT)
+#IF (NOT ROOT)
+#  SET (ROOT "../..")
+#ENDIF (NOT ROOT)
 
-INCLUDE_DIRECTORIES(${ROOT}/include)
+INCLUDE_DIRECTORIES(include)
 
-CONFIGURE_FILE(${ROOT}/include/adicpp/config.h.cmake ${ROOT}/include/adicpp/config.h)
+CONFIGURE_FILE(include/adicpp/config.h.cmake include/adicpp/config.h)
 
 # Targets definition
 
-ADD_SUBDIRECTORY(${ROOT}/utils/version ${ROOT}/utils/version)
-ADD_SUBDIRECTORY(${ROOT}/src/libadicpp ${ROOT}/src/libadicpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libfbcpp ${ROOT}/src/libfbcpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libksys ${ROOT}/src/libksys)
-ADD_SUBDIRECTORY(${ROOT}/src/libmycpp ${ROOT}/src/libmycpp)
-ADD_SUBDIRECTORY(${ROOT}/src/libutf8 ${ROOT}/src/libutf8)
-ADD_SUBDIRECTORY(${ROOT}/test/macroscope ${ROOT}/test/macroscope)
-ADD_SUBDIRECTORY(${ROOT}/test/msftp ${ROOT}/test/msftp)
-ADD_SUBDIRECTORY(${ROOT}/test/msftpd ${ROOT}/test/msftpd)
-ADD_SUBDIRECTORY(${ROOT}/test/msmail ${ROOT}/test/msmail)
+ADD_SUBDIRECTORY(utils/version)
+ADD_SUBDIRECTORY(src/libadicpp)
+ADD_SUBDIRECTORY(src/libfbcpp)
+ADD_SUBDIRECTORY(src/libksys)
+ADD_SUBDIRECTORY(src/libmycpp)
+ADD_SUBDIRECTORY(src/libutf8)
+ADD_SUBDIRECTORY(test/macroscope)
+ADD_SUBDIRECTORY(test/msftp)
+ADD_SUBDIRECTORY(test/msftpd)
+ADD_SUBDIRECTORY(test/msmail)
 IF (WIN32 AND NOT UNIX)
-  ADD_SUBDIRECTORY(${ROOT}/test/msmail1clib ${ROOT}/test/msmail1clib)
+  ADD_SUBDIRECTORY(test/msmail1clib)
 ENDIF (WIN32 AND NOT UNIX)
 
 # Install

@@ -42,7 +42,7 @@ MACRO(CHECK_INCLUDE_FILE INCLUDE VARIABLE)
       SET(CHECK_INCLUDE_FILE_PREINCLUDE
         "${CHECK_INCLUDE_FILE_PREINCLUDE}#if ${IF_PRAGMA}\n#include <${def}>\n#endif\n")
     ENDFOREACH(def)
-    CONFIGURE_FILE(${CMAKE_BINARY_DIR}/CheckIncludeFile.c.in
+    CONFIGURE_FILE(${CMAKE_BINARY_DIR}/builds/cmake/CheckIncludeFile.c.in
       "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckIncludeFile.c" IMMEDIATE)
 
     TRY_COMPILE(${VARIABLE}
