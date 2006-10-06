@@ -159,8 +159,8 @@ void API::open()
 #elif HAVE_DLFCN_H
       err = errno;
 #endif
-      ksys::stdErr.log(
-        ksys::lmERROR,
+      ksys::stdErr.debug(
+        9,
         utf8::String::Stream() << "Load " << libFileName << " failed\n"
       );
       ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
@@ -173,8 +173,8 @@ void API::open()
           err = GetLastError() + ksys::errorOffset;
           FreeLibrary(handle_);
           handle_ = NULL;
-          ksys::stdErr.log(
-            ksys::lmERROR,
+          ksys::stdErr.debug(
+            9,
             utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
           );
           ksys::Exception::throwSP(err + ksys::errorOffset, __PRETTY_FUNCTION__);
@@ -187,8 +187,10 @@ void API::open()
           err = errno;
           dlclose(handle_);
           handle_ = NULL;
-          ksys::stdErr.log(ksys::lmERROR, "dlsym(\"%s\")\n", symbols_[i]);
-          Exception::throwSP(err, __PRETTY_FUNCTION__);
+          ksys::stdErr.debug(9,
+	    utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
+	  );
+          ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
         }
       }
 #endif

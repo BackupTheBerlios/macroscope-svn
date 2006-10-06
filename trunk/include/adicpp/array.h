@@ -85,7 +85,7 @@ template< class T> class Array {
     T *       ptr_;
     uintptr_t count_;
 
-    Array(uintptr_t count);
+    Array(uintptr_t count,int);
   private:
 };
 //-----------------------------------------------------------------------------
@@ -102,9 +102,9 @@ Array< T> & Array< T>::replace(Array< T> & array)
 //-----------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Array< T>::Array(uintptr_t count) : ptr_(NULL), count_(0)
+Array<T>::Array(uintptr_t count,int) : ptr_(NULL), count_(0)
 {
   xmalloc(ptr_, sizeof(T) * count);
   while( count_ < count ){
@@ -138,7 +138,7 @@ template< class T>
 #endif
 Array< T> & Array<T>::operator =(const Array< T> & array)
 {
-  Array< T> newArray  (array.count_);
+  Array< T> newArray(array.count_,0);
   for( intptr_t i = array.count_ - 1; i >= 0; i-- )
     newArray.ptr_[i] = array.ptr_[i];
   return replace(newArray);
@@ -150,8 +150,7 @@ template< class T>
 #endif
 Array< T> & Array<T>::operator =(const T & element)
 {
-  for( intptr_t i = count_ - 1; i >= 0; i-- )
-    ptr_[i] = element;
+  for( intptr_t i = count_ - 1; i >= 0; i-- ) ptr_[i] = element;
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -250,11 +249,11 @@ const T * & Array< T>::ptr() const
 //-----------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Array< T> & Array< T>::resize(uintptr_t newSize)
+Array<T> & Array<T>::resize(uintptr_t newSize)
 {
-  Array< T> newArray(newSize);
+  Array<T> newArray(newSize,0);
   for( intptr_t i = (newSize > count_ ? count_ : newSize) - 1; i >= 0; i-- )
     newArray.ptr_[i] = ptr_[i];
   return replace(newArray);
@@ -262,13 +261,12 @@ Array< T> & Array< T>::resize(uintptr_t newSize)
 //-----------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 Array< T> & Array< T>::add(const T & element)
 {
-  Array< T> newArray  (count_ + 1);
-  for( intptr_t i = count_ - 1; i >= 0; i-- )
-    newArray.ptr_[i] = ptr_[i];
+  Array< T> newArray(count_ + 1,0);
+  for( intptr_t i = count_ - 1; i >= 0; i-- ) newArray.ptr_[i] = ptr_[i];
   newArray.ptr_[count_] = element;
   return replace(newArray);
 }
@@ -280,7 +278,7 @@ template< class T>
 Array< T> & Array< T>::insert(uintptr_t i, const T & element)
 {
   assert((uintptr_t) i <= count_);
-  Array< T> newArray  (count_ + 1);
+  Array<T> newArray(count_ + 1,0);
   uintptr_t j;
   for( j = 0; j < i; j++ ) newArray.ptr_[j] = ptr_[j];
   newArray.ptr_[j] = element;
@@ -416,12 +414,10 @@ inline
 Array<T> & Array<T>::remove(uintptr_t i)
 {
   assert(i < count_);
-  Array<T> newArray  (count_ - 1);
+  Array<T> newArray(count_ - 1,0);
   uintptr_t j;
-  for( j = 0; j < i; j++ )
-    newArray.ptr_[j] = ptr_[j];
-  for( j = i + 1; j < count_; j++ )
-    newArray.ptr_[j - 1] = ptr_[j];
+  for( j = 0; j < i; j++ ) newArray.ptr_[j] = ptr_[j];
+  for( j = i + 1; j < count_; j++ ) newArray.ptr_[j - 1] = ptr_[j];
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------

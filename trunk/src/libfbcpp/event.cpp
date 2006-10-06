@@ -27,7 +27,6 @@
 #include <adicpp/fbcpp.h>
 //---------------------------------------------------------------------------
 namespace fbcpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -83,23 +82,22 @@ void EventHandler::execute()
 {
   for( intptr_t i = epbs_.count() - 1; i >= 0; i-- ){
     EPB & epb = epbs_[i];
-    if( ksys::interlockedIncrement(epb.eventFlag_, 0) == 0 )
-      continue;
+    if( ksys::interlockedIncrement(epb.eventFlag_, 0) == 0 ) continue;
     if( epb.firstEvent_ ){
       epb.firstEvent_ = false;
       epb.eventFlag_ = 0;
-      api.isc_event_counts(epb.vector_, (short) epb.resultBufferLen_, epb.eventBuffer_, epb.resultBuffer_);
+      api.isc_event_counts((ISC_LONG *) epb.vector_, (short) epb.resultBufferLen_, epb.eventBuffer_, epb.resultBuffer_);
     }
     else{
       epb.eventFlag_ = 0;
-      api.isc_event_counts(epb.vector_, (short) epb.resultBufferLen_, epb.eventBuffer_, epb.resultBuffer_);
+      api.isc_event_counts((ISC_LONG *) epb.vector_, (short) epb.resultBufferLen_, epb.eventBuffer_, epb.resultBuffer_);
       for( intptr_t j = epb.eventCount_ - 1; j >= 0; j-- ){
         if( epb.vector_[j] > 0 ){
           epb.eventHandler_->eventHandler(epb.eventNames_[j], epb.vector_[j]);
         }
       }
     }
-    ISC_STATUS_ARRAY  status;
+    ISC_STATUS_ARRAY status;
     if( api.isc_que_events(status, &epb.eventHandler_->database_->handle_, &epb.eventId_, (short) epb.resultBufferLen_, epb.eventBuffer_, (isc_callback) epb.eventHandler_->eventFunction, &epb) != 0 )
       break;
   }

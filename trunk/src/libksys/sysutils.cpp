@@ -170,6 +170,9 @@ void createUUID(UUID & uuid)
 #elif HAVE_UUIDGEN
   if( uuidgen(&uuid,1) != 0 ){
     int32_t err = errno;
+#else
+  int32_t err = ENOSYS;
+  {
 #endif
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }

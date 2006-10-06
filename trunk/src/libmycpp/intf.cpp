@@ -150,11 +150,11 @@ void API::open()
 #elif HAVE_DLFCN_H
       err = errno;
 #endif
-      ksys::stdErr.log(
-        ksys::lmERROR,
+      ksys::stdErr.debug(
+        9,
         utf8::String::Stream() << "Load " << libFileName << " failed\n"
       );
-      Exception::throwSP(err, __PRETTY_FUNCTION__);
+      ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -163,11 +163,11 @@ void API::open()
         err = GetLastError() + errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
-        ksys::stdErr.log(
-          ksys::lmERROR,
+        ksys::stdErr.debug(
+          9,
           utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
         );
-        Exception::throwSP(err + ksys::errorOffset, __PRETTY_FUNCTION__);
+        ksys::Exception::throwSP(err + ksys::errorOffset, __PRETTY_FUNCTION__);
       }
 #elif HAVE_DLFCN_H
       (&p_mysql_thread_safe)[i] = dlsym(handle_, symbols_[i]);
@@ -175,8 +175,10 @@ void API::open()
         err = errno;
         dlclose(handle_);
         handle_ = NULL;
-        ksys::stdErr.log(ksys::lmERROR, "dlsym(\"%s\")\n", symbols_[i]);
-        Exception::throwSP(err, __PRETTY_FUNCTION__);
+        ksys::stdErr.debug(9,
+	  utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
+	);
+        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
       }
 #endif
     }

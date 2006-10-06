@@ -199,7 +199,7 @@ T & Vector< T>::add(const T & val)
     xrealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
-  return *(ptr_[count_++] = newObject<T>(val));
+  return *(ptr_[count_++] = newObject<T>()) = val;
 }
 //-----------------------------------------------------------------------------
 template< class T>

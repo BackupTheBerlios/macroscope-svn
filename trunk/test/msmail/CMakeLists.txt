@@ -7,6 +7,8 @@ ADD_EXECUTABLE (msmail
   version.c
 )
 
+ADD_DEFINITIONS(-DDISABLE_FIREBIRD_INTERFACE -DDISABLE_MYSQL_INTERFACE)
+
 TARGET_LINK_LIBRARIES (msmail
   libadicpp
   libfbcpp
@@ -85,3 +87,4 @@ INSTALL (
 )
 
 INSTALL (FILES msmail.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME msmail.conf.template)
+
