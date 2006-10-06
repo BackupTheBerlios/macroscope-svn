@@ -1040,18 +1040,27 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
   utf8::String::Iterator ni(name), mi(mask);
   while( !ni.eof() && !mi.eof() ){
     if( mi.getChar() == '?' ){
+      Exception::throwSP(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME");
     }
     else if( mi.getChar() == '*' ){
       mi.next();
 #if defined(__WIN32__) || defined(__WIN64__)
-      while( ni.getUpperChar() != mi.getUpperChar() ) ni.next();
+      while( ni.getUpperChar() != mi.getUpperChar() ){
+        ni.next();
+        if( ni.eof() ) break;
+      }
+      if( utf8::String(ni).strcasecmp(mi) != 0 ) mi.prev();
 #else
-      while( ni.getChar() != mi.getChar() ) ni.next();
+      while( !mi.eof() && !ni.eof() && ni.getChar() != mi.getChar() ){
+        ni.next();
+        if( ni.eof() ) break;
+      }
+      if( utf8::String(ni).strcmp(mi) != 0 ) mi.prev();
 #endif
     }
     else if( mi.getChar() == '[' ){
 //      mi.next();
-      Exception::throwSP(EINVAL,utf8::String(__PRETTY_FUNCTION__) + " FIXME");
+      Exception::throwSP(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME");
     }
     else
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1127,12 +1136,36 @@ void sleep(uint64_t timeout)
   }
 }
 //---------------------------------------------------------------------------
+static bool getDirListHelper(
+  const utf8::String & name,
+  const utf8::String & mask,
+  const utf8::String & exMask,
+  bool exMaskAsList)
+{
+  bool add = false;
+  if( nameFitMask(name,mask) ){
+    if( exMaskAsList ){
+      add = true;
+      for( intptr_t i = enumStringParts(exMask) - 1; i >= 0; i-- )
+        if( nameFitMask(name,stringPartByNo(exMask,i)) ){
+          add = false;
+          break;
+        }
+    }
+    else {
+      add = !nameFitMask(name,exMask);
+    }
+  }
+  return add;
+}
+//---------------------------------------------------------------------------
 void getDirList(
   Vector<utf8::String> & list,
   const utf8::String & dirAndMask,
   const utf8::String & exMask,
   bool recursive,
-  bool includeDirs)
+  bool includeDirs,
+  bool exMaskAsList)
 {
   if( currentFiber() != NULL ){
     currentFiber()->event_.dirList_ = &list;
@@ -1140,6 +1173,7 @@ void getDirList(
     currentFiber()->event_.string1_ = exMask;
     currentFiber()->event_.recursive_ = recursive;
     currentFiber()->event_.includeDirs_ = includeDirs;
+    currentFiber()->event_.exMaskAsList_ = exMaskAsList;
     currentFiber()->event_.type_ = etDirList;
     currentFiber()->thread()->postRequest();
     currentFiber()->switchFiber(currentFiber()->mainFiber());
@@ -1171,8 +1205,10 @@ void getDirList(
         if( strcmp(fda.cFileName,".") == 0 || strcmp(fda.cFileName,"..") == 0 ) continue;
         const char * d_name = fda.cFileName;
         if( (fda.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ){
-          if( includeDirs ) list.add(path + pathDelimiterStr + d_name);
-          if( recursive )
+          bool fit = getDirListHelper(d_name,mask,exMask,exMaskAsList);
+          if( includeDirs && fit )
+            list.add(path + pathDelimiterStr + d_name);
+          if( recursive && fit )
 #else
     DIR * dir = opendir(anyPathName2HostPathName(path).getANSIString());
     if( dir == NULL ){
@@ -1197,8 +1233,10 @@ void getDirList(
         const char * d_name = ent->d_name;
 #ifdef DT_DIR
         if( ent->d_type == DT_DIR ){
-          if( includeDirs ) list.add(path + pathDelimiterStr + d_name);
-          if( recursive )
+          bool fit = getDirListHelper(d_name,maskmexMask,exMaskAsList);
+          if( includeDirs && fit )
+            list.add(path + pathDelimiterStr + d_name);
+          if( recursive && fit )
 #else
         struct Stat st;
         stat(path + pathDelimiterStr + ent->d_name,st);
@@ -1210,10 +1248,12 @@ void getDirList(
               list,
               path + pathDelimiterStr + d_name + pathDelimiterStr + mask,
               exMask,
-              recursive
+              recursive,
+              includeDirs,
+              exMaskAsList
             );
         }
-        else if( nameFitMask(d_name,mask) && !nameFitMask(d_name,exMask) ){
+        else if( getDirListHelper(d_name,mask,exMask,exMaskAsList) ){
           list.add(path + pathDelimiterStr + d_name);
         }
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1239,15 +1279,20 @@ void getDirList(
       do {
         if( lstrcmpW(fdw.cFileName,L".") == 0 || lstrcmpW(fdw.cFileName,L"..") == 0 ) continue;
         if( (fdw.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ){
-          if( recursive )
+          bool fit = getDirListHelper(fdw.cFileName,mask,exMask,exMaskAsList);
+          if( includeDirs && fit )
+            list.add(path + pathDelimiterStr + fdw.cFileName);
+          if( recursive && fit )
             getDirList(
               list,
               path + pathDelimiterStr + fdw.cFileName + pathDelimiterStr + mask,
               exMask,
-              recursive
+              recursive,
+              includeDirs,
+              exMaskAsList
             );
         }
-        else if( nameFitMask(fdw.cFileName,mask) && !nameFitMask(fdw.cFileName,exMask) ){
+        else if( getDirListHelper(fdw.cFileName,mask,exMask,exMaskAsList) ){
           list.add(path + pathDelimiterStr + fdw.cFileName);
         }
       } while( FindNextFileW(handle,&fdw) != 0 );

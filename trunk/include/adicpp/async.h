@@ -115,6 +115,7 @@ class AsyncEvent {
             bool exclusive_;
             bool recursive_;
             bool includeDirs_;
+            bool exMaskAsList_;
             bool abort_;
             bool rval_;
           };

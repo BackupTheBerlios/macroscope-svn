@@ -146,10 +146,11 @@ MSFTPServerFiber & MSFTPServerFiber::put()
 {
   ksys::AsyncFile file(ksys::absolutePathNameFromWorkDir(workDir_,readString()));
   file.createIfNotExist(true);
-  uint64_t l, lp, ll, pos;
+  uint64_t l, lp, ll, pos, r;
   int64_t mtime;
   uint64_t bs;
   *this >> pos >> ll >> mtime >> bs;
+  if( cmd_ == cmPutFilePartial ) *this >> bs;
   MSFTPError err = eOK;
   try {
     if( !file.tryOpen() ){
@@ -172,6 +173,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
     }
   }
   catch( ksys::ExceptionSP & e ){
+    e->writeStdError();
 #if defined(__WIN32__) || defined(__WIN64__)
     if( e->code() != ERROR_DISK_FULL + ksys::errorOffset ) throw;
 #else
@@ -189,27 +191,45 @@ MSFTPServerFiber & MSFTPServerFiber::put()
     if( bs > 0x40000000 ) bs = 0x40000000;
   }
   b.alloc((size_t) bs);
+  ksys::SHA256 lhash, rhash;
+  memset(lhash.sha256(),0,lhash.size());
+  memset(rhash.sha256(),1,rhash.size());
   for( l = 0; l < ll || (ll > 0 && cmd_ == cmPutFilePartial); l += lp ){
+    lp = ll - l > bs ? bs : ll - l;
     if( cmd_ == cmPutFilePartial ){
       *this >> l >> lp;
       if( l == 0 && lp == 0 ) break;
-      //if( file.size() < l ) file.resize(l);
-      file.seek(l);
+      r = file.size();
+      if( l < r ){
+        r = l + lp > r ? r - l : lp;
+        file.readBuffer(l,b.ptr(),r);
+      }
+      else {
+        r = 0;
+      }
+      if( r < bs ) memset(b.ptr() + r,0,(size_t) (bs - r));
+      lhash.make(b,(uintptr_t) lp);
+      readBuffer(rhash.sha256(),rhash.size());
+      writeBuffer(lhash.sha256(),lhash.size());
     }
-    read(b.ptr(),lp = ll - l > bs ? bs : ll - l);
     err = eOK;
-    try {
-      file.writeBuffer(b.ptr(),lp);
-    }
-    catch( ksys::ExceptionSP & e ){
+    if( memcmp(lhash.sha256(),rhash.sha256(),rhash.size()) != 0 ){
+      read(b.ptr(),lp);
+      try {
+        if( file.size() < l ) file.resize(l);
+        file.writeBuffer(l,b.ptr(),lp);
+      }
+      catch( ksys::ExceptionSP & e ){
+        e->writeStdError();
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_DISK_FULL + ksys::errorOffset ) throw;
+        if( e->code() != ERROR_DISK_FULL + ksys::errorOffset ) throw;
 #else
-      if( e->code() != ENOSPC ) throw;
+        if( e->code() != ENOSPC ) throw;
 #endif
-      err = eDiskFull;
+        err = eDiskFull;
+      }
+      putCode(err);
     }
-    putCode(err);
     if( err != eOK || terminated() ) return *this;
   }
   if( cmd_ != cmPutFilePartial && l != ll ) return putCode(eFileWrite);
@@ -225,20 +245,38 @@ MSFTPServerFiber & MSFTPServerFiber::put()
 MSFTPServerFiber & MSFTPServerFiber::get()
 {
   utf8::String name;
-  uint64_t l, ll, lp;
+  uint64_t l, ll, lp, bs = config_->value("buffer_size",getpagesize());
   *this >> name >> l >> ll;
+  if( cmd_ == cmGetFilePartial ) *this >> bs;
   ksys::AsyncFile file(name);
-  putCode(file.tryOpen() ? eOK : eFileOpen);
+  file.readOnly(true);
+  try {
+    file.open();
+  }
+  catch( ksys::ExceptionSP & e ){
+    e->writeStdError();
+  }
+  putCode(file.isOpen() ? eOK : eFileOpen);
   if( file.isOpen() ){
     file.seek(l);
-    uint64_t bs = (uint64_t) config_->value("buffer_size",getpagesize());
     ksys::AutoPtr<uint8_t> b;
     b.alloc((size_t) bs);
+    ksys::SHA256 lhash, rhash;
+    memset(lhash.sha256(),0,lhash.size());
+    memset(rhash.sha256(),1,rhash.size());
     for( l = 0; l < ll; l += lp ){
       file.readBuffer(b,lp = ll - l > bs ? bs : ll - l);
-      write(b.ptr(),lp);
+      if( cmd_ == cmGetFilePartial ){
+        lhash.make(b,(uintptr_t) lp);
+        *this << l << lp;
+        writeBuffer(lhash.sha256(),lhash.size());
+        readBuffer(rhash.sha256(),rhash.size());
+      }
+      if( memcmp(lhash.sha256(),rhash.sha256(),rhash.size()) != 0 ) write(b.ptr(),lp);
     }
+    if( cmd_ == cmPutFilePartial && ll > 0 ) *this << uint64_t(0) << uint64_t(0);
   }
+  flush();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -248,7 +286,7 @@ MSFTPServerFiber & MSFTPServerFiber::list()
   uint8_t recursive;
   *this >> localPath >> exclude >> recursive;
   ksys::Vector<utf8::String> list;
-  getDirList(list,localPath,exclude,recursive != 0);
+  getDirList(list,localPath,exclude,recursive != 0,false,true);
   putCode(eOK);
   *this << (uint64_t) list.count();
   uintptr_t l = ksys::includeTrailingPathDelimiter(ksys::getPathFromPathName(localPath)).strlen();
@@ -334,7 +372,7 @@ void MSFTPServerFiber::main()
     else if( cmd_ == cmPutFile || cmd_ == cmPutFilePartial ){
       put();
     }
-    else if( cmd_ == cmGetFile ){
+    else if( cmd_ == cmGetFile || cmd_ == cmGetFilePartial ){
       get();
     }
     else if( cmd_ == cmGetFileHash ){

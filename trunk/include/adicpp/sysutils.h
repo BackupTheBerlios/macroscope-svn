@@ -226,7 +226,13 @@ bool createDirectory(const utf8::String & name);
 bool removeDirectory(const utf8::String & name,bool recursive = true);
 void rename(const utf8::String & oldPathName,const utf8::String & newPathName);
 bool remove(const utf8::String & name);
-void getDirList(Vector<utf8::String> & list,const utf8::String & dirAndMask,const utf8::String & exMask = utf8::String(),bool recursive = true,bool includeDirs = false);
+void getDirList(
+  Vector<utf8::String> & list,
+  const utf8::String & dirAndMask,
+  const utf8::String & exMask = utf8::String(),
+  bool recursive = true,
+  bool includeDirs = false,
+  bool exMaskAsList = false);
 //---------------------------------------------------------------------------
 void sleep(uint64_t timeout);
 inline void sleep1()

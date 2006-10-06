@@ -40,6 +40,7 @@ enum MSFTPCmdType {
   cmPutFile,
   cmPutFilePartial,
   cmGetFile,
+  cmGetFilePartial,
   cmGetFileHash,
 };
 //------------------------------------------------------------------------------

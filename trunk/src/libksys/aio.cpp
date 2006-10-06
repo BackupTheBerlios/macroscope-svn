@@ -850,7 +850,14 @@ void AsyncOpenFileSlave::threadExecute()
       else if( request->type_ == etDirList ){
         int32_t err = 0;
         try {
-          getDirList(*request->dirList_,request->string0_,request->string1_,request->recursive_,request->includeDirs_);
+          getDirList(
+            *request->dirList_,
+            request->string0_,
+            request->string1_,
+            request->recursive_,
+            request->includeDirs_,
+            request->exMaskAsList_
+          );
         }
         catch( ExceptionSP & e ){
           err = e->code();
