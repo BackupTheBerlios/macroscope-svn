@@ -253,7 +253,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     BOOL    GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD lpdwFlags);
 #elif HAVE_KQUEUE
     int     accept();
-    void    connect(ksys::IoRequest * request);
+    void    connect(ksys::AsyncEvent * request);
     int64_t read2(void * buf, uint64_t len);
     int64_t write2(const void * buf, uint64_t len);
 #endif
@@ -524,7 +524,7 @@ class Server : public ksys::BaseServer {
     Server & clearBind();
     Server & addBind(const SockAddr & addr);
     const ksys::Array<SockAddr> & bindAddrs() const;
-    const AcceptFiber * const & acceptFiber() const;
+    const AcceptFiber * acceptFiber() const;
   protected:
   private:
     ksys::Array<SockAddr> bindAddrs_;
@@ -536,7 +536,7 @@ inline const ksys::Array<SockAddr> & Server::bindAddrs() const
   return bindAddrs_;
 }
 //------------------------------------------------------------------------------
-inline const AcceptFiber * const & Server::acceptFiber() const
+inline const AcceptFiber * Server::acceptFiber() const
 {
   return acceptFiber_;
 }

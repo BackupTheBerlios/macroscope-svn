@@ -51,8 +51,6 @@ class DirectoryChangeNotification {
     HANDLE hDirectory_; // for ReadDirectoryChangesW
     AutoPtr<FILE_NOTIFY_INFORMATION> buffer_; // for ReadDirectoryChangesW
     uintptr_t bufferSize_;
-#else
-#error Not implemented
 #endif
 };
 //---------------------------------------------------------------------------
@@ -90,18 +88,6 @@ utf8::String base64Encode(const void * p,uintptr_t l);
 uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size);
 utf8::String base32Encode(const void * p,uintptr_t l);
 uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size);
-//---------------------------------------------------------------------------
-inline utf8::String uuid2base64(const UUID & u)
-{
-  return base64Encode(&u, sizeof(u));
-}
-//---------------------------------------------------------------------------
-inline UUID base642uuid(const utf8::String & s)
-{
-  UUID  uuid;
-  base64Decode(s, &uuid, sizeof(uuid));
-  return uuid;
-}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -156,8 +142,6 @@ void checkMachineBinding(const utf8::String & key);
 #else
 inline void checkMachineBinding(const utf8::String &){}
 #endif
-
-class UUID : public GUID {};
 #else
 inline bool isWin9x()
 {
@@ -170,13 +154,30 @@ inline bool isWinXPorLater()
 inline bool isWow64(){
   return false;
 }
-#if HAVE_SYS_UUID_H
-class UUID : public uuid {
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_UUID
+class UUID
+#if HAVE_UUID_T
+ : public uuid_t
+#elif HAVE_GUID
+ : public GUID
+#endif
+{
 };
-#else
-#error you system not have sys/uuid.h
 #endif
-#endif
+//---------------------------------------------------------------------------
+inline utf8::String uuid2base64(const UUID & u)
+{
+  return base64Encode(&u, sizeof(u));
+}
+//---------------------------------------------------------------------------
+inline UUID base642uuid(const utf8::String & s)
+{
+  UUID  uuid;
+  base64Decode(s, &uuid, sizeof(uuid));
+  return uuid;
+}
 //---------------------------------------------------------------------------
 uintmax_t fibonacci(uintmax_t n);
 void createUUID(UUID & uuid);
@@ -274,16 +275,6 @@ void          addStrErrorHandler(StrErrorHandler strErrorHandler);
 utf8::String  strError(int32_t err);
 void          strErrorInitialize();
 void          strErrorCleanup();
-//---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-const int errorOffset = 5000;
-inline int32_t oserror(){ return GetLastError(); }
-inline void oserror(int32_t err){ SetLastError(err); }
-#else
-const int errorOffset = 0;
-inline int32_t oserror(){ return errno; }
-inline void oserror(int32_t err){ errno = err; }
-#endif
 //---------------------------------------------------------------------------
 pid_t getpid();
 uid_t getuid();

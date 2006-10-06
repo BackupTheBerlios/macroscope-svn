@@ -29,6 +29,16 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+const int errorOffset = 5000;
+inline int32_t oserror(){ return GetLastError(); }
+inline void oserror(int32_t err){ SetLastError(err); }
+#else
+const int errorOffset = 0;
+inline int32_t oserror(){ return errno; }
+inline void oserror(int32_t err){ errno = err; }
+#endif
+//---------------------------------------------------------------------------
 class Exception {
   public:
     virtual ~Exception();

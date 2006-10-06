@@ -140,7 +140,7 @@ class AsyncFile : public AsyncDescriptor {
     BOOL GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD lpdwFlags);
 #elif HAVE_KQUEUE
     int accept();
-    void connect(ksys::IoRequest * request);
+    void connect(AsyncEvent * request);
 #endif
     void shutdown2();
     void flush2();

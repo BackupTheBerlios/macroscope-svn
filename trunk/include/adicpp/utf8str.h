@@ -238,8 +238,10 @@ class String {
             Format(unsigned char n,const char * fmt = "%c");
             Format(short n,const char * fmt = "%hd");
             Format(unsigned short n,const char * fmt = "%hd");
+#if !HAVE_INTPTR_T_AS_LONG
             Format(long n,const char * fmt = "%ld");
             Format(unsigned long n,const char * fmt = "%ld");
+#endif
 #if !HAVE_INTPTR_T_AS_INT
             Format(int n,const char * fmt = "%d");
             Format(unsigned int n,const char * fmt = "%d");
@@ -300,8 +302,10 @@ class String {
         Stream & operator << (unsigned char n);
         Stream & operator << (short n);
         Stream & operator << (unsigned short n);
+#if !HAVE_INTPTR_T_AS_LONG
         Stream & operator << (long n);
         Stream & operator << (unsigned long n);
+#endif
 #if !HAVE_INTPTR_T_AS_INT    
         Stream & operator << (int n);
         Stream & operator << (unsigned int n);
@@ -895,6 +899,8 @@ inline String::Stream & String::Stream::operator << (unsigned short n)
   return *this << Format(n);
 }
 //---------------------------------------------------------------------------
+#if !HAVE_INTPTR_T_AS_LONG
+//---------------------------------------------------------------------------
 inline String::Stream & String::Stream::operator << (long n)
 {
   return *this << Format(n);
@@ -904,6 +910,8 @@ inline String::Stream & String::Stream::operator << (unsigned long n)
 {
   return *this << Format(n);
 }
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT    
 //---------------------------------------------------------------------------
@@ -1041,6 +1049,8 @@ inline String::Stream::Format::Format(unsigned short n,const char * fmt) : su_(n
   strncpy0(fmt_,sizeof(fmt_),fmt);
 }
 //---------------------------------------------------------------------------
+#if !HAVE_INTPTR_T_AS_LONG
+//---------------------------------------------------------------------------
 inline String::Stream::Format::Format(long n,const char * fmt) : li_(n), type_(LI)
 {
   strncpy0(fmt_,sizeof(fmt_),fmt);
@@ -1050,6 +1060,8 @@ inline String::Stream::Format::Format(unsigned long n,const char * fmt) : lu_(n)
 {
   strncpy0(fmt_,sizeof(fmt_),fmt);
 }
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT
 //---------------------------------------------------------------------------

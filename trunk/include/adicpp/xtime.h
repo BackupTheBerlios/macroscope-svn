@@ -100,14 +100,14 @@ inline uintptr_t monthDays(uintptr_t year, uintptr_t mon)
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
-#if SIZEOF_STRUCT_TIMEVAL == 0 && !HAVE_WINDOWS_H
+#if SIZEOF_TIMEVAL == 0 && !HAVE_WINDOWS_H
 struct timeval {
     long  tv_sec;         /* seconds since Jan. 1, 1970 */
     long  tv_usec;        /* and microseconds */
 };
 #endif
 //---------------------------------------------------------------------------
-#if SIZEOF_STRUCT_TIMEZONE == 0/* && !HAVE_WINDOWS_H*/
+#if SIZEOF_TIMEZONE == 0/* && !HAVE_WINDOWS_H*/
 struct timezone {
     int tz_minuteswest; /* minutes west of Greenwich */
     int tz_dsttime;     /* type of dst correction */

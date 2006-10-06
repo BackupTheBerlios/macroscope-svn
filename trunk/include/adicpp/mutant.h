@@ -57,8 +57,10 @@ class Mutant {
     Mutant(int a);
     Mutant(unsigned a);
 #endif
+#if !HAVE_INTPTR_T_AS_LONG
     Mutant(long a);
     Mutant(unsigned long a);
+#endif
     Mutant(intptr_t a);
     Mutant(uintptr_t a);
 #if !HAVE_INTPTR_T_AS_INT64_T
@@ -89,8 +91,10 @@ class Mutant {
     Mutant &            operator =(int a);
     Mutant &            operator =(unsigned a);
 #endif
+#if !HAVE_INTPTR_T_AS_LONG
     Mutant &            operator =(long a);
     Mutant &            operator =(unsigned long a);
+#endif
     Mutant &            operator =(intptr_t a);
     Mutant &            operator =(uintptr_t a);
 #if !HAVE_INTPTR_T_AS_INT64_T
@@ -111,17 +115,19 @@ class Mutant {
 
     Mutant &            operator =(const Mutant & m);
 
-                        operator bool() const;
-                        operator char() const;
-    operator            unsigned char() const;
-                        operator short() const;
-    operator            unsigned short() const;
+    operator bool() const;
+    operator char() const;
+    operator unsigned char() const;
+    operator short() const;
+    operator unsigned short() const;
 #if !HAVE_INTPTR_T_AS_INT
-                        operator int() const;
-    operator            unsigned() const;
+    operator int() const;
+    operator unsigned() const;
 #endif
-                        operator long() const;
-    operator            unsigned long() const;
+#if !HAVE_INTPTR_T_AS_LONG
+    operator long() const;
+    operator unsigned long() const;
+#endif
     operator intptr_t() const;
     operator uintptr_t() const;
 #if !HAVE_INTPTR_T_AS_INT64_T
@@ -169,7 +175,7 @@ class Mutant {
             long            lint_;
 #if HAVE_LONG_DOUBLE
             long
-            #endif
+#endif
             double float_;
             const char *    cStr_;
             const wchar_t * wStr_;
@@ -254,6 +260,8 @@ inline Mutant::Mutant(unsigned a) : int_(a), type_(mtInt)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
+#if !HAVE_INTPTR_T_AS_LONG
+//---------------------------------------------------------------------------
 inline Mutant::Mutant(long a) : int_(a), type_(mtInt)
 {
 }
@@ -261,6 +269,8 @@ inline Mutant::Mutant(long a) : int_(a), type_(mtInt)
 inline Mutant::Mutant(unsigned long a) : int_(a), type_(mtInt)
 {
 }
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 inline Mutant::Mutant(intptr_t a) : int_(a), type_(mtInt)
 {
@@ -384,6 +394,8 @@ inline Mutant & Mutant::operator =(unsigned a)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
+#if !HAVE_INTPTR_T_AS_LONG
+//---------------------------------------------------------------------------
 inline Mutant & Mutant::operator =(long a)
 {
   clear().int_ = a;
@@ -397,6 +409,8 @@ inline Mutant & Mutant::operator =(unsigned long a)
   type_ = mtInt;
   return *this;
 }
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 inline Mutant & Mutant::operator =(intptr_t a)
 {
@@ -535,4 +549,3 @@ inline EMutant::EMutant(int32_t code, const utf8::String & what) : Exception(cod
 //---------------------------------------------------------------------------
 #endif /* _mutant_H_ */
 //---------------------------------------------------------------------------
-

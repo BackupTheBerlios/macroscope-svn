@@ -71,6 +71,8 @@ class ConfigSection {
     Mutant &              valueRefByPath(const utf8::String & path) const;
     Mutant &              valueRef(const utf8::String & key) const;
   private:
+    ConfigSection(const ConfigSection &);
+    void operator = (const ConfigSection &);
     utf8::String                                          name_;
     mutable HashedObjectList< utf8::String,ConfigSection> subSections_;
     mutable HashedObjectList< utf8::String,Mutant>        values_;
@@ -112,25 +114,25 @@ inline bool ConfigSection::isSection(const utf8::String & section, const HashedO
 {
   HashedObjectListItem<utf8::String,ConfigSection> * item;
   item = subSections_.itemOfKey(section);
-  if( pItem != NULL )
-    *pItem = item;
+  if( pItem != NULL ) *pItem = item;
   return item != NULL;
 }
 //---------------------------------------------------------------------------
 inline bool ConfigSection::isValue(const utf8::String & key, const HashedObjectListItem< utf8::String,Mutant> ** pItem) const
 {
   HashedObjectListItem< utf8::String,Mutant> *  item  = values_.itemOfKey(key);
-  if( pItem != NULL )
-    *pItem = item;
+  if( pItem != NULL ) *pItem = item;
   return item != NULL;
 }
 //---------------------------------------------------------------------------
 inline const ConfigSection & ConfigSection::section(const utf8::String & section) const
 {
-  HashedObjectListItem< utf8::String,ConfigSection> * item;
+  HashedObjectListItem<utf8::String,ConfigSection> * item;
   item = subSections_.itemOfKey(section);
-  if( item == NULL )
-    subSections_.add(newObject<ConfigSection>(section), section, &item);
+  if( item == NULL ){
+    utf8::String s(section);
+    subSections_.add(newObject<ConfigSection>(s),section,&item);
+  }
   return *item->object();
 }
 //---------------------------------------------------------------------------

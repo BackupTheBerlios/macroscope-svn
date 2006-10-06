@@ -182,7 +182,7 @@ inline void Fiber::switchFiber(Fiber * fiber)
 //---------------------------------------------------------------------------
 inline void Fiber::switchFiber(Fiber * fiber)
 {
-  currentFiber() = fiber;
+  *reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder) = fiber;
   switchFiber2(fiber);
 }
 //---------------------------------------------------------------------------

@@ -549,11 +549,11 @@ class API {
     {
       ::freeaddrinfo(ai);
     }
-    int getsockname(SOCKET s,struct sockaddr * name,socklen_t * namelen)
+    int getsockname(int s,struct sockaddr * name,socklen_t * namelen)
     {
-      return ::getsockname(SOCKET s,name,namelen);
+      return ::getsockname(s,name,namelen);
     }
-    int getpeername(int s, struct sockaddr * restrict name,socklen_t * namelen)
+    int getpeername(int s, struct sockaddr * name,socklen_t * namelen)
     {
       return ::getpeername(s,name,namelen);
     }

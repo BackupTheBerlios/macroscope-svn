@@ -79,13 +79,11 @@ class AsyncEvent {
   public:
     utf8::String string0_;
     utf8::String string1_;
-#if defined(__WIN32__) || defined(__WIN64__)
     enum LockFileType { rdLock, wrLock, tryRDLock, tryWRLock };
+#if defined(__WIN32__) || defined(__WIN64__)
     OVERLAPPED overlapped_;
-#elif HAVE_KQUEUE && HAVE_STRUCT_AIOCB
+#elif HAVE_AIOCB
     struct aiocb iocb_;
-#else
-#error async io not implemented because you system headers not have struct aiocb definition
 #endif
 #if _MSC_VER
 #pragma warning(push,3)
@@ -156,7 +154,7 @@ inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 #if defined(__WIN32__) || defined(__WIN64__)
   memset(&overlapped_,0,sizeof(overlapped_));
 #endif
-#if HAVE_KQUEUE
+#if HAVE_AIOCB
   memset(&iocb_, 0, sizeof(iocb_));
 #endif
 }
@@ -192,8 +190,8 @@ class AsyncDescriptorKey {
     };
     AsyncDescriptorKey(int descriptor);
 #endif
-    bool                  hashKeyEqu(const AsyncDescriptorKey & key) const;
-    uintptr_t             hash() const;
+    bool hashKeyEqu(const AsyncDescriptorKey & key) const;
+    uintptr_t hash() const;
   protected:
   private:
     AsyncDescriptorKey(const AsyncDescriptorKey &){}
@@ -241,14 +239,14 @@ inline AsyncDescriptorKey::AsyncDescriptorKey(int descriptor) : descriptor_(desc
 {
 }
 //---------------------------------------------------------------------------
-inline bool AsyncDescriptorKey::hashKeyEqu(const AsyncDescriptorKey & key, bool) const
+inline bool AsyncDescriptorKey::hashKeyEqu(const AsyncDescriptorKey & key) const
 {
   return descriptor_ == key.descriptor_;
 }
 //---------------------------------------------------------------------------
-inline uintptr_t AsyncDescriptorKey::hash(bool) const
+inline uintptr_t AsyncDescriptorKey::hash() const
 {
-  return HF::hash(descriptor_);
+  return HF::hash(&descriptor_,sizeof(descriptor_));
 }
 //---------------------------------------------------------------------------
 #endif
@@ -284,7 +282,7 @@ class AsyncDescriptor : public AsyncDescriptorKey {
   protected:
 #if HAVE_KQUEUE
     virtual int accept() = 0;
-    virtual void connect(ksys::IoRequest * request) = 0;
+    virtual void connect(AsyncEvent * request) = 0;
     virtual int64_t read2(void * buf, uint64_t len);
     virtual int64_t write2(const void * buf, uint64_t len);
 #endif

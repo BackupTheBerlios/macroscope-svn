@@ -34,14 +34,14 @@ namespace ksys {
 //---------------------------------------------------------------------------
 class SharedMemory {
   public:
-                    ~SharedMemory();
-                    SharedMemory(const utf8::String & name = utf8::String(), uintptr_t len = 0, const void * address = NULL,
+    ~SharedMemory();
+    SharedMemory(const utf8::String & name = utf8::String(), uintptr_t len = 0, const void * address = NULL,
 #if HAVE_SYS_MMAN_H
       uintptr_t mode = S_IRWXU
 #elif defined(__WIN32__) || defined(__WIN64__)
                     uintptr_t mode = 0   // not used only for compatability
 #endif
-                    );
+    );
     static void     unlink(const utf8::String & name);
     void *&         memory();
     void * const &  memory() const;
@@ -71,18 +71,8 @@ class SharedMemory {
 #endif
     SharedSemaphore   semaphore_;
   private:
-    SharedMemory(const SharedMemory &)
-    #if HAVE_SYS_MMAN_H
-
-      : name_(utf8::String().getANSIString())
-#endif
-
-    {
-    }
-    SharedMemory & operator =(const SharedMemory &)
-    {
-      return *this;
-    }
+    SharedMemory(const SharedMemory &);
+    void operator =(const SharedMemory &);
 };
 //---------------------------------------------------------------------------
 inline void *& SharedMemory::memory()
@@ -118,14 +108,14 @@ extern ClassSMQWRULK  SMQ_WRU;
 //---------------------------------------------------------------------------
 class SharedMemoryQueue : public SharedMemory {
   public:
-                        ~SharedMemoryQueue();
-                        SharedMemoryQueue(const utf8::String & name = utf8::String(), uintptr_t len = 0, const void * address = NULL,
+    ~SharedMemoryQueue();
+    SharedMemoryQueue(const utf8::String & name = utf8::String(), uintptr_t len = 0, const void * address = NULL,
 #if HAVE_SYS_MMAN_H
       uintptr_t mode = S_IRWXU
 #elif defined(__WIN32__) || defined(__WIN64__)
                         uintptr_t mode = 0   // not used only for compatability
 #endif
-                        );
+    );
 
     static void         unlink(const utf8::String & name);
     SharedMemoryQueue & ref();
@@ -165,7 +155,7 @@ class SharedMemoryQueue : public SharedMemory {
     SharedMemoryQueue & operator <<(uint32_t a);
     SharedMemoryQueue & operator <<(int64_t a);
     SharedMemoryQueue & operator <<(uint64_t a);
-#if !HAVE_INT32_T_AS_INT
+#if !HAVE_INT_AS_INT32_T
     SharedMemoryQueue & operator <<(int a);
     SharedMemoryQueue & operator <<(unsigned int a);
 #endif
@@ -173,7 +163,7 @@ class SharedMemoryQueue : public SharedMemory {
     SharedMemoryQueue & operator <<(intptr_t a);
     SharedMemoryQueue & operator <<(uintptr_t a);
 #endif
-#if !HAVE_INTPTR_T_AS_INTMAX_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T && !HAVE_INTMAX_T_AS_INT64_T
     SharedMemoryQueue & operator <<(intmax_t a);
     SharedMemoryQueue & operator <<(uintmax_t a);
 #endif
@@ -192,15 +182,15 @@ class SharedMemoryQueue : public SharedMemory {
     SharedMemoryQueue & operator >>(uint32_t & a);
     SharedMemoryQueue & operator >>(int64_t & a);
     SharedMemoryQueue & operator >>(uint64_t & a);
-#if !HAVE_INT32_T_AS_INT
+#if !HAVE_INT_AS_INT32_T
     SharedMemoryQueue & operator >>(int & a);
     SharedMemoryQueue & operator >>(unsigned int & a);
 #endif
-#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT64_T
     SharedMemoryQueue & operator >>(intptr_t & a);
     SharedMemoryQueue & operator >>(uintptr_t & a);
 #endif
-#if !HAVE_INTPTR_T_AS_INTMAX_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T && !HAVE_INTMAX_T_AS_INT64_T
     SharedMemoryQueue & operator >>(intmax_t & a);
     SharedMemoryQueue & operator >>(uintmax_t & a);
 #endif
@@ -212,20 +202,10 @@ class SharedMemoryQueue : public SharedMemory {
     SharedMemoryQueue & operator >>(utf8::String & a);
   protected:
   private:
-    SharedMemoryQueue(const SharedMemory &)
-    {
-    }
-    SharedMemoryQueue(const SharedMemoryQueue &)
-    {
-    }
-    SharedMemoryQueue & operator =(const SharedMemory &)
-    {
-      return *this;
-    }
-    SharedMemoryQueue & operator =(const SharedMemoryQueue &)
-    {
-      return *this;
-    }
+    SharedMemoryQueue(const SharedMemory &);
+    SharedMemoryQueue(const SharedMemoryQueue &);
+    SharedMemoryQueue & operator =(const SharedMemory &);
+    SharedMemoryQueue & operator =(const SharedMemoryQueue &);
 
     SharedSemaphore rdQueueRDLockObject_;
     SharedSemaphore rdQueueWRLockObject_;
@@ -408,7 +388,7 @@ inline SharedMemoryQueue & SharedMemoryQueue::operator <<(uint64_t a)
   return write(&a, sizeof(a));
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INT32_T_AS_INT
+#if !HAVE_INT_AS_INT32_T
 //---------------------------------------------------------------------------
 inline SharedMemoryQueue & SharedMemoryQueue::operator <<(int a)
 {
@@ -422,7 +402,7 @@ inline SharedMemoryQueue & SharedMemoryQueue::operator <<(unsigned int a)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT64_T
 //---------------------------------------------------------------------------
 inline SharedMemoryQueue & SharedMemoryQueue::operator <<(intptr_t a)
 {
@@ -436,7 +416,7 @@ inline SharedMemoryQueue & SharedMemoryQueue::operator <<(uintptr_t a)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INTMAX_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T && !HAVE_INTMAX_T_AS_INT64_T
 //---------------------------------------------------------------------------
 inline SharedMemoryQueue & SharedMemoryQueue::operator <<(intmax_t a)
 {
@@ -515,7 +495,7 @@ inline SharedMemoryQueue & SharedMemoryQueue::operator >>(uint64_t & a)
   return read(&a, sizeof(a));
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INT32_T_AS_INT
+#if !HAVE_INT_AS_INT32_T
 //---------------------------------------------------------------------------
 inline SharedMemoryQueue & SharedMemoryQueue::operator >>(int & a)
 {
@@ -529,7 +509,7 @@ inline SharedMemoryQueue & SharedMemoryQueue::operator >>(unsigned int & a)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTPTR_T_AS_INT && !HAVE_INTPTR_T_AS_INT64_T
 //---------------------------------------------------------------------------
 inline SharedMemoryQueue & SharedMemoryQueue::operator >>(intptr_t & a)
 {
@@ -543,7 +523,7 @@ inline SharedMemoryQueue & SharedMemoryQueue::operator >>(uintptr_t & a)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INTMAX_T && !HAVE_INT64_T_AS_INTMAX_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T && !HAVE_INTMAX_T_AS_INT64_T
 //---------------------------------------------------------------------------
 inline SharedMemoryQueue & SharedMemoryQueue::operator >>(intmax_t & a)
 {

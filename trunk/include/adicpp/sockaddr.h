@@ -75,6 +75,7 @@ class SockAddr {
 
     SockAddr & clear();
   protected:
+#if defined(__WIN32__) || defined(__WIN64__)
     union IpInfo {
       IP_ADAPTER_ADDRESSES addresses_;
       IP_ADAPTER_INFO infos_;
@@ -86,6 +87,7 @@ class SockAddr {
       const ksys::Mutant & defPort,
       int ai_flag
     );
+#endif
   private:
 };
 //---------------------------------------------------------------------------

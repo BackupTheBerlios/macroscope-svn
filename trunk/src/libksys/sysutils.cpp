@@ -45,6 +45,9 @@ DirectoryChangeNotification::DirectoryChangeNotification() :
   bufferSize_(0)
 #endif
 {
+#if !defined(__WIN32__) && !defined(__WIN64__)
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
 }
 //---------------------------------------------------------------------------
 void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t timeout)

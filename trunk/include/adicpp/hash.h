@@ -44,7 +44,7 @@ template< class T> class HashFuncContainer {
     static uintptr_t  hash(intptr_t key, uintptr_t h = 0);
     static uintptr_t  hash(uintptr_t key, uintptr_t h = 0);
 };
-typedef HashFuncContainer< int> HF;
+typedef HashFuncContainer<int> HF;
 //---------------------------------------------------------------------------
 //#define HASH4(h,k,d) (h) = ((h) << 5) + (h) + *(const unsigned char *) (k); *reinterpret_cast<const void **>(&(k)) = (const unsigned char *) (k) + (d);
 //#define HASH5(h,k,d) (h) = ((h) << 5) + (h) + *((const unsigned char *) (k) + (d));

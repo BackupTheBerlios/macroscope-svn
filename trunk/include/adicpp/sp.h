@@ -475,10 +475,10 @@ T * const & SPIA< T>::ptr() const
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template<typename T,typename M> class SPEIA {
+template <typename T,typename M> class SPEIA {
   public:
     ~SPEIA();
-    SPEIA(T * object,M & mutex = *object);
+    SPEIA(T * object,M & mutex);
 
     SPEIA<T,M> & operator = (T * object);
     LockedAction<T,M> operator -> () const;
@@ -486,7 +486,7 @@ template<typename T,typename M> class SPEIA {
     bool operator == (const SPEIA<T,M> & object) const;
     bool operator != (const SPEIA<T,M> & object) const;
 
-    T * ptr(T * ptr);
+    T * ptr(T * object);
     T * const & ptr() const;
   protected:
   private:
@@ -524,19 +524,19 @@ LockedAction<T,M> SPEIA<T,M>::operator -> () const
 }
 //-----------------------------------------------------------------------------
 template <typename T,typename M> inline
-bool SPEIA<T,M>::operator == (const SPEIA<T,M> & ptr) const
+bool SPEIA<T,M>::operator == (const SPEIA<T,M> & object) const
 {
   return object_ == object.object_;
 }
 //-----------------------------------------------------------------------------
 template <typename T,typename M> inline
-bool SPEIA<T,M>::operator != (const SPEIA<T,M> & ptr) const
+bool SPEIA<T,M>::operator != (const SPEIA<T,M> & object) const
 {
   return object_ != object.object_;
 }
 //-----------------------------------------------------------------------------
 template <typename T,typename M> inline
-T * SPEIA<T,M>::ptr(T * ptr)
+T * SPEIA<T,M>::ptr(T * object)
 {
   xchg(object_,object);
   return object;
@@ -593,7 +593,7 @@ SPIARC<T> & SPIARC<T>::SPIARC(const SPIARC<T> & ptr)
 template< typename T> inline
 LockedAction<T,T> SPIARC<T>::operator -> () const
 {
-  return LockedAction<T,T>(*ptr_,*ptr_);
+  return LockedAction<T,T>(SPRC<T>::ptr_,SPRC<T>::ptr_);
 }
 //-----------------------------------------------------------------------------
 }
