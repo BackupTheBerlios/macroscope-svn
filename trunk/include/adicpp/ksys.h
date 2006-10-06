@@ -41,10 +41,10 @@ template <typename T> inline void xchg(T & v1, T & v2)
 }
 //---------------------------------------------------------------------------
 #include <adicpp/lconfig.h>
-#include <adicpp/xalloc.h>
-#include <adicpp/xtime.h>
 #include <adicpp/bits.h>
 #include <adicpp/autoptr.h>
+#include <adicpp/xalloc.h>
+#include <adicpp/xtime.h>
 #include <adicpp/sp.h>
 #include <adicpp/rnd.h>
 #include <adicpp/tlv.h>

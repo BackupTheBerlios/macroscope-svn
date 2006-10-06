@@ -131,6 +131,14 @@
 #include <unistd.h>
 #endif
 
+#if HAVE_STDIO_H
+#include <stdio.h>
+#endif
+
+#if HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 #if HAVE_SEMAPHORE_H
 #include <semaphore.h>
 #endif

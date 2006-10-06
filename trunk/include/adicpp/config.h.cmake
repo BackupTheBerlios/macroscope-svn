@@ -1,3 +1,5 @@
+#cmakedefine HAVE_STDIO_H 1
+#cmakedefine HAVE_STDLIB_H 1
 #cmakedefine HAVE_MALLOC_H 1
 #cmakedefine HAVE_MEMORY_H 1
 #cmakedefine HAVE_SYS_MOUNT_H 1
@@ -37,7 +39,6 @@
 #cmakedefine HAVE_FLOAT_H 1
 #cmakedefine HAVE_FCNTL_H 1
 #cmakedefine HAVE_STDARG_H 1
-#cmakedefine HAVE_STDIO_H 1
 #cmakedefine HAVE_MATH_H 1
 #cmakedefine HAVE_LOCALE_H 1
 #cmakedefine HAVE_PTHREAD_H 1

@@ -29,9 +29,9 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-void *  kmalloc(size_t size);
-void *  krealloc(void * p, size_t size);
-void    kfree(void * p);
+void * kmalloc(size_t size);
+void * krealloc(void * p, size_t size);
+void kfree(void * p);
 //---------------------------------------------------------------------------
 template <class T> inline T * xmalloc(T *& lp, size_t size)
 {
