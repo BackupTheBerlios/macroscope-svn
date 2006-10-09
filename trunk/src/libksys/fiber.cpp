@@ -158,7 +158,7 @@ void Fiber::switchFiber2(Fiber * fiber)
     "pop   %%rax\n"
     "pop   %%rdx\n"
     "pop   %%rdx\n"
-    "jmp   %%rax\n"
+    "jmp   *%%rax\n"
     :
     : "d" (&fiber->stackPointer_), // rdx
       "a" (&stackPointer_)  // rax
@@ -193,17 +193,12 @@ void Fiber::start(Fiber * fiber,void * param,void (* ip)(void *))
 }
 //------------------------------------------------------------------------------
 #if !defined(__WIN32__) && !defined(__WIN64__)
+//------------------------------------------------------------------------------
 void Fiber::fiber2(Fiber * fiber)
 {
-  try {
-    fiber->execute();
-  }
-  catch( ... ){
-    fiber->detachDescriptors();
-    throw;
-  }
-  fiber->detachDescriptors();
+  fiber->fiberExecute();
 }
+//------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
 void Fiber::detachDescriptors()
@@ -436,7 +431,7 @@ void BaseServer::attachFiber(const AutoPtr<Fiber> & fiber)
 {
   AutoLock<InterlockedMutex> lock(mutex_);
   BaseThread * thread = selectThread();
-  fiber->allocateStack(Fiber::start,fiber,fiberStackSize_,thread);
+  fiber->allocateStack((void *) Fiber::start,fiber,fiberStackSize_,thread);
 #if defined(__WIN32__) || defined(__WIN64__)
   fiber->createFiber(fiberStackSize_);
 #endif

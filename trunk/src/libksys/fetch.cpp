@@ -148,12 +148,7 @@ time_t Fetcher::httpTime2asctime(const char * ht)
 void Fetcher::setmtime(const utf8::String & fileName,uint64_t atime,uint64_t mtime)
 {
   Stat st;
-  if( stat(fileName,st) ){
-    utimbuf ut;
-    ut.actime = atime;
-    ut.modtime = mtime + getgmtoffset() / 1000000u;
-    utime(fileName,ut);
-  }
+  if( stat(fileName,st) ) utime(fileName,atime,mtime + getgmtoffset() / 1000000u);
 }
 //------------------------------------------------------------------------------
 Fetcher & Fetcher::fetch(const utf8::String & localName)

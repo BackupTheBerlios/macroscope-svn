@@ -1,24 +1,24 @@
 IF (UNIX)
   FIND_LIBRARY(sha256 NAMES sha256)
-  FIND_LIBRARY(lzo NAMES lzo)
-  FIND_LIBRARY(lzo2 NAMES lzo2)
+  FIND_LIBRARY(lzo NAMES lzo PATHS /usr/lib /usr/local/lib)
+  FIND_LIBRARY(lzo2 NAMES lzo2 PATHS /usr/lib /usr/local/lib)
 ENDIF (UNIX)
 
-IF (sha256_FOUND)
-  INCLUDE_DIRECTORIES(${sha256_INCLUDE_DIR})
-ELSE (sha256_FOUND)
+IF (sha256)
+  #INCLUDE_DIRECTORIES(${sha256_INCLUDE_DIR})
+ELSE (sha256)
   SET (sha256_SOURCES sha256c.c)
-ENDIF (sha256_FOUND)
+ENDIF (sha256)
 
-IF (lzo2_FOUND)
-  INCLUDE_DIRECTORIES(${lzo2_INCLUDE_DIR})
-ELSE (lzo2_FOUND)
+IF (lzo2)
+  #INCLUDE_DIRECTORIES(${lzo2_INCLUDE_DIR})
+ELSE (lzo2)
   SET (lzo_SOURCES_NAME lzo2)
-  IF (lzo_FOUND)
-    INCLUDE_DIRECTORIES(${lzo_INCLUDE_DIR})
-  ELSE (lzo_FOUND)
+  IF (lzo)
+    #INCLUDE_DIRECTORIES(${lzo_INCLUDE_DIR})
+  ELSE (lzo)
     SET (lzo_SOURCES_NAME lzo)
-  ENDIF (lzo_FOUND)
+  ENDIF (lzo)
   SET (${lzo_SOURCES_NAME}_SOURCES
     lzo1x_1.c
     lzo1x_1k.c
@@ -33,7 +33,7 @@ ELSE (lzo2_FOUND)
     lzo_crc.c
     lzo_util.c
   )
-ENDIF (lzo2_FOUND)
+ENDIF (lzo2)
 
 ADD_LIBRARY(ksys STATIC
   afd.cpp
@@ -71,6 +71,7 @@ ADD_LIBRARY(ksys STATIC
   ${lzo_SOURCES}
 )
 
+
 IF (WIN32)
 #  FIND_LIBRARY(ws2_32_LIBRARY
 #    NAMES ws2_32
@@ -84,18 +85,16 @@ IF (WIN32)
   )
 ENDIF (WIN32)
 
-TARGET_LINK_LIBRARIES(libksys ${ADD_LIBS})
+IF (sha256)
+  SET (ADD_LIBS ${ADD_LIBS} ${sha256})
+ENDIF (sha256)
 
-IF (sha256_FOUND)
-  SET (ADD_LIBS ${ADD_LIBS} ${sha256_LIBRARY})
-ENDIF (sha256_FOUND)
+IF (lzo2)
+  SET (ADD_LIBS ${ADD_LIBS} ${lzo2})
+ENDIF (lzo2)
 
-IF (lzo2_FOUND)
-  SET (ADD_LIBS ${ADD_LIBS} ${lzo2_LIBRARY})
-ENDIF (lzo2_FOUND)
+IF (lzo)
+  SET (ADD_LIBS ${ADD_LIBS} ${lzo})
+ENDIF (lzo)
 
-IF (lzo_FOUND)
-  SET (ADD_LIBS ${ADD_LIBS} ${lzo_LIBRARY})
-ENDIF (lzo_FOUND)
-
-TARGET_LINK_LIBRARIES(libksys ${ADD_LIBS})
+#TARGET_LINK_LIBRARIES(libksys ${ADD_LIBS})

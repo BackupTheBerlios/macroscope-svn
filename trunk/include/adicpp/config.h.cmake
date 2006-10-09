@@ -68,7 +68,9 @@
 #cmakedefine HAVE_NEW 1
 #cmakedefine HAVE_TYPEINFO 1
 
+#ifndef BYTE_ORDER
 #cmakedefine BYTE_ORDER ${BYTE_ORDER}
+#endif
 
 #cmakedefine SIZEOF_PTRDIFF_T ${SIZEOF_PTRDIFF_T}
 #cmakedefine SIZEOF_SOCKADDR_IN6 ${SIZEOF_SOCKADDR_IN6}

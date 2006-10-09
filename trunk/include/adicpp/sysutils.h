@@ -222,7 +222,7 @@ utf8::String  getNameFromPathName(const utf8::String & pathName);
 utf8::String  anyPathName2HostPathName(const utf8::String & pathName);
 bool isPathNameRelative(const utf8::String & pathName);
 utf8::String  absolutePathNameFromWorkDir(const utf8::String & workDir, const utf8::String & pathName);
-bool utime(const utf8::String & pathName,const struct utimbuf & times);
+bool utime(const utf8::String & pathName,uint64_t atime,uint64_t mtime);
 bool createDirectory(const utf8::String & name);
 bool removeDirectory(const utf8::String & name,bool recursive = true);
 void rename(const utf8::String & oldPathName,const utf8::String & newPathName);

@@ -31,9 +31,9 @@ namespace ksys {
 //---------------------------------------------------------------------------
 #define EPOCH_BIAS  UINT64_C(116444592000000000)
 //---------------------------------------------------------------------------
-bool utime(const utf8::String & path, const struct utimbuf & times)
+bool utime(const utf8::String & path,uint64_t atime,uint64_t mtime)
 {
-  long    err = 0;
+  long err = 0;
 #if defined(__WIN32__) || defined(__WIN64__)
   HANDLE  hFile;
   if( isWin9x() ){
@@ -54,19 +54,36 @@ bool utime(const utf8::String & path, const struct utimbuf & times)
       LARGE_INTEGER lwt;
       FILETIME      lastWriteTime;
   };
-  lat.QuadPart = times.actime * UINT64_C(10000000) + EPOCH_BIAS;
-  lwt.QuadPart = times.modtime * UINT64_C(10000000) + EPOCH_BIAS;
+//  lat.QuadPart = times.actime * UINT64_C(10000000) + EPOCH_BIAS;
+//  lwt.QuadPart = times.modtime * UINT64_C(10000000) + EPOCH_BIAS;
+  lat.QuadPart = atime + EPOCH_BIAS;
+  lwt.QuadPart = mtime + EPOCH_BIAS;
   if( SetFileTime(hFile, NULL, &lastAccessTime, &lastWriteTime) == 0 ){
     err = GetLastError() + errorOffset;
     CloseHandle(hFile);
     Exception::throwSP(err, __PRETTY_FUNCTION__);
   }
   CloseHandle(hFile);
-#else
+#elif HAVE_UTIMES
+  struct timeval tms[2];
+  tms[0].tv_sec = long(atime / 1000000u);
+  tms[0].tv_usec = long(atime % 1000000u);
+  tms[1].tv_sec = long(mtime / 1000000u);
+  tms[1].tv_usec = long(mtime % 1000000u);
+  if( utimes(fileName.getANSIString(),tms) == 0 ){
+    err = errno;
+    Exception::throwSP(errno,__PRETTY_FUNCTION__);
+  }
+#elif HAVE_UTIME
+  struct utimbuf times;
+  times.actime = atime;
+  times.modtime = mtime;
   if( utime(anyPathName2HostPathName(path).getANSIString(), &times) != 0 ){
     err = errno;
     Exception::throwSP(err, __PRETTY_FUNCTION__);
   }
+#else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
   return err == 0;
 }
