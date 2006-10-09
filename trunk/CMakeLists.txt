@@ -11,17 +11,19 @@ PROJECT(macroscope)
 #SET (CMAKE_CXX_CREATE_STATIC_LIBRARY "xilib ${CMAKE_CL_NOLOGO} <LINK_FLAGS> /out:<TARGET> <OBJECTS> ")
 
 # the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1" 
-#MESSAGE( STATUS "CMAKE_SYSTEM: " ${CMAKE_SYSTEM} )
+MESSAGE( STATUS "CMAKE_SYSTEM: " ${CMAKE_SYSTEM} )
 # the short system name, e.g. "Linux", "FreeBSD" or "Windows"
-#MESSAGE( STATUS "CMAKE_SYSTEM_NAME: " ${CMAKE_SYSTEM_NAME} )
+MESSAGE( STATUS "CMAKE_SYSTEM_NAME: " ${CMAKE_SYSTEM_NAME} )
 # only the version part of CMAKE_SYSTEM 
-#MESSAGE( STATUS "CMAKE_SYSTEM_VERSION: " ${CMAKE_SYSTEM_VERSION} )
-# the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz") 
-#MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
-# the compiler used for C files 
-#MESSAGE( STATUS "CMAKE_C_COMPILER: " ${CMAKE_C_COMPILER} )
-# the compiler used for C++ files 
-#MESSAGE( STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER} )
+MESSAGE( STATUS "CMAKE_SYSTEM_VERSION: " ${CMAKE_SYSTEM_VERSION} )
+# the processor name (e.g. "Intel(R) Pentium(R) M processor 2.00GHz")
+MESSAGE( STATUS "CMAKE_SYSTEM_PROCESSOR: " ${CMAKE_SYSTEM_PROCESSOR} )
+# the compiler used for C files
+MESSAGE( STATUS "CMAKE_C_COMPILER: " ${CMAKE_C_COMPILER} )
+MESSAGE( STATUS "CMAKE_C_FLAGS: " ${CMAKE_C_FLAGS} )
+# the compiler used for C++ files
+MESSAGE( STATUS "CMAKE_CXX_COMPILER: " ${CMAKE_CXX_COMPILER} )
+MESSAGE( STATUS "CMAKE_CXX_FLAGS: " ${CMAKE_CXX_FLAGS} )
 
 # Shared settings
 
@@ -189,7 +191,17 @@ SET (CMAKE_EXTRA_INCLUDE_FILES)
 
 INCLUDE (builds/cmake/CheckTypeSize.cmake)
 
-SET (CMAKE_EXTRA_INCLUDE_FILES sys/types.h inttypes.h sys/time.h sys/uuid.h uuid.h sys/event.h)
+SET (CMAKE_EXTRA_INCLUDE_FILES
+  sys/types.h
+  inttypes.h
+  sys/time.h
+  sys/uuid.h
+  sys/event.h
+  sys/utime.h
+  utime.h
+  uuid.h
+  aio.h
+)
 
 CHECK_TYPE_SIZE (ptrdiff_t SIZEOF_PTRDIFF_T)
 CHECK_TYPE_SIZE ("void *" SIZEOF_VOID_P)
@@ -224,6 +236,7 @@ CHECK_TYPE_SIZE ("struct aiocb" SIZEOF_AIOCB)
 CHECK_TYPE_SIZE ("struct UUID" SIZEOF_UUID)
 CHECK_TYPE_SIZE ("struct GUID" SIZEOF_GUID)
 CHECK_TYPE_SIZE ("struct kevent" SIZEOF_KEVENT)
+CHECK_TYPE_SIZE ("struct utimbuf" SIZEOF_UTIMBUF)
 
 IF (${HAVE_WINSOCK2_H})
   SET (CMAKE_EXTRA_INCLUDE_FILES winsock2.h)

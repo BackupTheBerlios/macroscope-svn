@@ -3,11 +3,11 @@ ADD_EXECUTABLE (msftpd main.cpp version.c)
 ADD_DEFINITIONS(-DDISABLE_FIREBIRD_INTERFACE -DDISABLE_MYSQL_INTERFACE)
 
 TARGET_LINK_LIBRARIES (msftpd
-  libadicpp
-  libfbcpp
-  libksys
-  libmycpp
-  libutf8
+  adicpp
+  fbcpp
+  ksys
+  mycpp
+  utf8
 )
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)

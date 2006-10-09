@@ -5,11 +5,11 @@ ADD_EXECUTABLE (macroscope
 )
 
 TARGET_LINK_LIBRARIES (macroscope
-  libadicpp
-  libfbcpp
-  libksys
-  libmycpp
-  libutf8
+  adicpp
+  fbcpp
+  ksys
+  mycpp
+  utf8
 )
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)

@@ -21,11 +21,11 @@ ADD_DEFINITIONS (
 )
 
 TARGET_LINK_LIBRARIES (msmail1clib
-  libadicpp
-  libfbcpp
-  libksys
-  libmycpp
-  libutf8
+  adicpp
+  fbcpp
+  ksys
+  mycpp
+  utf8
 )
 
 ADD_DEPENDENCIES (msmail1clib msmail)

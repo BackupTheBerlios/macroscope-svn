@@ -1066,7 +1066,7 @@ int AsyncFile::accept()
   return -1;
 }
 //---------------------------------------------------------------------------
-void AsyncFile::connect(ksys::IoRequest * /*request*/)
+void AsyncFile::connect(AsyncEvent * /*request*/)
 {
   errno = ENOSYS;
 }

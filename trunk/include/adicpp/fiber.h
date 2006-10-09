@@ -223,7 +223,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 
     bool transplant(AsyncEvent & requests);
 #if HAVE_KQUEUE
-    void cancelEvent(const Events & request);
+    void cancelEvent(const AsyncEvent & request);
 #endif
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
   protected:

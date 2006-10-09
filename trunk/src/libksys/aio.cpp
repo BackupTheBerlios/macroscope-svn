@@ -175,12 +175,14 @@ AsyncIoSlave::AsyncIoSlave()
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   kevents_.resize(64);
+#else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
 }
 //---------------------------------------------------------------------------
 #if HAVE_KQUEUE
 //---------------------------------------------------------------------------
-void AsyncIoSlave::cancelEvent(const IoRequest & request)
+void AsyncIoSlave::cancelEvent(const AsyncEvent & request)
 {
   struct kevent ke;
   EV_SET(&ke,request.descriptor_->socket_,EVFILT_READ | EVFILT_WRITE,EV_DELETE,0,0,0);
@@ -192,6 +194,8 @@ void AsyncIoSlave::cancelEvent(const IoRequest & request)
   EV_SET(&ke,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,&request.node(request));
   if( kevent(kqueue_,&ke,1,NULL,0,NULL) == -1 ){
     perror(NULL);
+    assert( 0 );
+    abort();
   }
 }
 //---------------------------------------------------------------------------
@@ -251,19 +255,15 @@ void AsyncIoSlave::closeAPI(AsyncEvent * object)
   }
 }
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+//---------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_HIGHEST);
-#if defined(__WIN32__) || defined(__WIN64__)
   BOOL rw = FALSE;
   DWORD nb = 0;
   intptr_t sp = -1;
   bool isw9x = isWin9x();
-#elif HAVE_KQUEUE
-  struct aiocb * iocb;
-  int32_t error;
-  uint64_t count;
-#endif
   EventsNode * node;
   AsyncEvent * object = NULL;
   for(;;){
@@ -271,7 +271,6 @@ void AsyncIoSlave::threadExecute()
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
       openAPI(object);
-#if defined(__WIN32__) || defined(__WIN64__)
       assert( sp < MAXIMUM_WAIT_OBJECTS - 1 );
       ++sp;
       eReqs_[sp] = object;
@@ -281,10 +280,8 @@ void AsyncIoSlave::threadExecute()
       object->overlapped_.hEvent = events_[sp];
 l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       SetLastError(ERROR_SUCCESS);
-#endif
       switch( object->type_ ){
         case etDirectoryChangeNotification :
-#if defined(__WIN32__) || defined(__WIN64__)
           assert( !isw9x && object->directoryChangeNotification_->hDirectory() != INVALID_HANDLE_VALUE );
           if( object->abort_ ){
             rw = 0;
@@ -302,9 +299,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
               NULL
             );
           }
-#endif
           break;
-#if defined(__WIN32__) || defined(__WIN64__)
         case etLockFile :
           if( object->length_ == 0 ) object->length_ = ~UINT64_C(0);
           switch( object->lockType_ ){
@@ -332,10 +327,8 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             isw9x ? NULL : &object->overlapped_
           );
           break;
-#endif
         case etRead     :
-		      if( object->length_ > 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
+	  if( object->length_ > 0 ){
             if( object->length_ > 0x40000000 ) object->length_ = 0x40000000;
             rw = object->descriptor_->Read(
               object->buffer_,
@@ -343,35 +336,13 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
               &nb,
               isw9x ? NULL : &object->overlapped_
             );
-#elif HAVE_KQUEUE
-            if( object->descriptor_->isSocket() ){
-              EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
-              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
-	          }
-	          else {
-              iocb = &object->iocb_;
-              memset(iocb,0,sizeof(*iocb));
-              iocb->aio_fildes = object->descriptor_->descriptor_;
-              iocb->aio_nbytes = object->length_;
-	            iocb->aio_buf = object->buffer_;
-              iocb->aio_offset = object->position_;
-	            iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
-              iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
-              iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
-#if !HAVE_AIO_READ
-#error async io not implemented because you system not have aio_read system call
-#endif
-              if( aio_read(iocb) == 0 ) errno = EINPROGRESS;
-            }
-#endif
-	        }
-	        else {
-	          errno = EINVAL;
-	        }
+          }
+	  else {
+	    errno = EINVAL;
+	  }
           break;
         case etWrite  :
-	        if( object->length_ > 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
+	  if( object->length_ > 0 ){
             if( object->length_ > 0x40000000 ) object->length_ = 0x40000000;
             rw = object->descriptor_->Write(
               object->buffer_,
@@ -379,34 +350,12 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
               &nb,
               isw9x ? NULL : &object->overlapped_
             );
-#elif HAVE_KQUEUE
-            if( object->descriptor_->isSocket() ){
-              EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_WRITE,EV_ADD | EV_ONESHOT,0,0,node);
-              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
-	          }
-	          else {
-              iocb = &object->iocb_;
-      	      memset(iocb,0,sizeof(*iocb));
-              iocb->aio_fildes = object->descriptor_->descriptor_;
-              iocb->aio_nbytes = object->length_;
-	            iocb->aio_buf = object->buffer_;
-              iocb->aio_offset = object->position_;
-	            iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
-              iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
-              iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
-#if !HAVE_AIO_WRITE
-#error async io not implemented because you system not have aio_write system call
-#endif
-              if( aio_write(iocb) == 0 ) errno = EINPROGRESS;
-            }
-#endif
-	        }
-	        else {
-	          errno = EINVAL;
-	        }
+	  }
+	  else {
+            errno = EINVAL;
+	  }
           break;
         case etAccept :
-#if defined(__WIN32__) || defined(__WIN64__)
           rw = object->descriptor_->AcceptEx(
             object->socket_,
             NULL,
@@ -416,48 +365,13 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             NULL,
             isw9x ? NULL : &object->overlapped_
           );
-#elif HAVE_KQUEUE
-          EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
-          if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
-            count = object->descriptor_->accept();
-	        if( errno != EWOULDBLOCK ){
-	          int32_t err = errno;
-	          kevents_[0].flags = EV_DELETE;
-            if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
-              perror(NULL);
-              assert( 0 );
-	            abort();
-            }
-	          errno = err;
-	        }
-	        else {
-	          errno = EINPROGRESS;
-	        }
-#endif
           break;
         case etConnect :
-#if defined(__WIN32__) || defined(__WIN64__)
           rw = object->descriptor_->Connect(events_[sp],object);
-#elif HAVE_KQUEUE
-          EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
-          if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
-            object->descriptor_->connect(&object);
-  	      if( errno != EINPROGRESS ){
-	          int32_t err = errno;
-	          kevents_[0].flags = EV_DELETE;
-            if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
-              perror(NULL);
-              assert( 0 );
-	            abort();
-            }
-	          errno = err;
-	        }
-#endif
           break;
         default :
           assert( 0 );
       }
-#if defined(__WIN32__) || defined(__WIN64__)
       if( rw == 0 && GetLastError() == ERROR_NO_SYSTEM_RESOURCES )
         if( (object->length_ >>= 1) > 0 ) goto l1;
       if( rw == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != WSAEWOULDBLOCK ){
@@ -473,21 +387,6 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         requests_.insToTail(newRequests_.remove(*object));
         SetLastError(ERROR_SUCCESS);
       }
-#elif HAVE_KQUEUE
-      if( errno == EINPROGRESS ){
-        requests_.insToTail(newRequests_.remove(*object));
-      }
-      else if( errno != EINPROGRESS ){
-        object->descriptor_->cluster()->postEvent(
-          object->descriptor_,
-	        errno,
-	        object->ioType_,
-	        errno != 0 ? -1 : 0
-        );
-        object->ioThread_ = NULL;
-        newRequests_.remove(object);
-      }
-#endif
     }
     if( requests_.count() == 0 ){
       if( terminated_ ) break;
@@ -497,11 +396,10 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
     }
     else {
       node = NULL;
-#if defined(__WIN32__) || defined(__WIN64__)
       DWORD wm;
       if( isw9x ){
         node = requests_.first();
-	      object = &AsyncEvent::nodeObject(*node);
+        object = &AsyncEvent::nodeObject(*node);
         wm = ~DWORD(0);
       }
       else {
@@ -579,7 +477,143 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         sp--;
       }
     }
+  }
+}
+//------------------------------------------------------------------------------
 #elif HAVE_KQUEUE
+//------------------------------------------------------------------------------
+void AsyncIoSlave::threadExecute()
+{
+  priority(THREAD_PRIORITY_HIGHEST);
+  intptr_t sp = -1;
+#if SIZEOF_AIOCB
+  struct aiocb * iocb;
+#endif
+  int32_t error;
+  uint64_t count;
+  EventsNode * node;
+  AsyncEvent * object = NULL;
+  for(;;){
+    AutoLock<InterlockedMutex> lock(*this);
+    for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
+      object = &AsyncEvent::nodeObject(*node);
+      openAPI(object);
+      errno = 0;
+      switch( object->type_ ){
+        case etDirectoryChangeNotification :
+	  error = ENOSYS;
+          break;
+        case etLockFile :
+	  error = ENOSYS;
+          break;
+        case etRead     :
+	  if( object->length_ > 0 ){
+            if( object->descriptor_->isSocket() ){
+              EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
+              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
+	    }
+	    else {
+              iocb = &object->iocb_;
+              memset(iocb,0,sizeof(*iocb));
+              iocb->aio_fildes = object->descriptor_->descriptor_;
+              iocb->aio_nbytes = object->length_;
+	      iocb->aio_buf = object->buffer_;
+              iocb->aio_offset = object->position_;
+	      iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
+              iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
+              iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
+#if HAVE_AIO_READ
+              if( aio_read(iocb) == 0 ) errno = EINPROGRESS;
+#else
+	      error = ENOSYS;
+#endif
+            }
+          }
+	  else {
+	    errno = EINVAL;
+	  }
+          break;
+        case etWrite  :
+	  if( object->length_ > 0 ){
+            if( object->descriptor_->isSocket() ){
+              EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_WRITE,EV_ADD | EV_ONESHOT,0,0,node);
+              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
+	    }
+	    else {
+              iocb = &object->iocb_;
+      	      memset(iocb,0,sizeof(*iocb));
+              iocb->aio_fildes = object->descriptor_->descriptor_;
+              iocb->aio_nbytes = object->length_;
+              iocb->aio_buf = object->buffer_;
+              iocb->aio_offset = object->position_;
+              iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
+              iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
+              iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
+#if HAVE_AIO_WRITE
+              if( aio_write(iocb) == 0 ) errno = EINPROGRESS;
+#else
+	      error = ENOSYS;
+#endif
+            }
+	  }
+	  else {
+            errno = EINVAL;
+	  }
+          break;
+        case etAccept :
+          EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
+          if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
+            count = object->descriptor_->accept();
+	  if( errno != EWOULDBLOCK ){
+	    int32_t err = errno;
+	    kevents_[0].flags = EV_DELETE;
+            if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
+              perror(NULL);
+              assert( 0 );
+              abort();
+            }
+            errno = err;
+	  }
+	  else {
+	    errno = EINPROGRESS;
+	  }
+          break;
+        case etConnect :
+          EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
+          if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
+            object->descriptor_->connect(object);
+          if( errno != EINPROGRESS ){
+	    int32_t err = errno;
+	    kevents_[0].flags = EV_DELETE;
+            if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
+              perror(NULL);
+              assert( 0 );
+	      abort();
+            }
+	    errno = err;
+	  }
+          break;
+        default :
+          assert( 0 );
+      }
+      if( errno == EINPROGRESS ){
+        requests_.insToTail(newRequests_.remove(*object));
+      }
+      else if( errno != EINPROGRESS ){
+        closeAPI(object);
+        newRequests_.remove(*object);
+        object->errno_ = errno;
+        object->count_ = ~(uint64_t) 0;
+        object->fiber_->thread()->postEvent(object);
+        sp--;
+      }
+    }
+    if( requests_.count() == 0 ){
+      if( terminated_ ) break;
+      release();
+      Semaphore::wait();
+      acquire();
+    }
     else {
       int evCount = kevent(kqueue_,NULL,0,&kevents_[0],kevents_.count(),NULL);
       if( evCount == -1 ){
@@ -589,100 +623,111 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       }
       while( --evCount >= 0 ){
         struct kevent * kev = &kevents_[evCount];
-        node = (EmbeddedListNode<IoRequest> *) kev->udata;
-	      if( node == NULL ) continue;
-	      object = &IoRequest::nodeObject(*node);
+        node = (EventsNode *) kev->udata;
+	if( node == NULL ) continue;
+	object = &AsyncEvent::nodeObject(*node);
         if( kev->filter == EVFILT_TIMER ){
           if( !requests_.nodeInserted(*node) ) continue;
-          assert( object->ioType_ == etAccept );
-	        kev->filter = EVFILT_READ;
+          assert( object->event_ == etAccept );
+	  kev->filter = EVFILT_READ;
           kev->flags |= EV_ERROR;
           kev->data = EINTR;
         }
-        switch( object->ioType_ ){
+        switch( object->type_ ){
           case etRead    :
             if( kev->filter == EVFILT_READ ){
-	            count = -1;
+	      count = ~uint64_t(0);
               if( kev->flags & EV_ERROR ){
-	              error = kev->data;
-	              if( error == 0 ) error = ESHUTDOWN;
-	            }
-	            else if( kev->flags & EV_EOF ){
-	              error = kev->fflags;
-	              if( error == 0 ) error = ESHUTDOWN;
-	            }
-	            else {
-  	            count = object->descriptor_->read2(
-		              object->buffer_,
-		              object->length_ > (uint64_t) kev->data ? kev->data : object->length_
-		            );
-		            error = errno;
-	            }
-	          }
-	          else {
-	            assert( kev->filter == EVFILT_AIO );
-	            error = aio_error(&object->iocb_);
-	            assert( error != EINPROGRESS );
-	            count = aio_return(&object->iocb_);
-	          }
-	          break;
+	        error = kev->data;
+	        if( error == 0 ) error = ESHUTDOWN;
+	      }
+              else if( kev->flags & EV_EOF ){
+                error = kev->fflags;
+	        if( error == 0 ) error = ESHUTDOWN;
+	      }
+	      else {
+  	        count = object->descriptor_->read2(
+		  object->buffer_,
+		  object->length_ > (uint64_t) kev->data ? kev->data : object->length_
+		);
+		error = errno;
+	      }
+	    }
+	    else {
+              assert( kev->filter == EVFILT_AIO );
+              error = aio_error(&object->iocb_);
+              assert( error != EINPROGRESS );
+              count = aio_return(&object->iocb_);
+	    }
+	    break;
           case etWrite   :
             if( kev->filter == EVFILT_WRITE ){
-	            count = -1;
+              count = ~uint64_t(0);
               if( kev->flags & EV_ERROR ){
-	              error = kev->data;
-	              if( error == 0 ) error = ESHUTDOWN;
-	            }
-	            else if( kev->flags & EV_EOF ){
-	              error = kev->fflags;
-	              if( error == 0 ) error = ESHUTDOWN;
-	            }
-	            else {
-  	            count = object->descriptor_->write2(
-		              object->cbuffer_,
-		              object->length_ > (uint64_t) kev->data ? kev->data : object->length_
-		            );
-		            error = errno;
-	            }
-	          }
-	          else {
-	            assert( kev->filter == EVFILT_AIO );
-	            error = aio_error(&object->iocb_);
-	            assert( error != EINPROGRESS );
-	            count = aio_return(&object->iocb_);
-	          }
-	          break;
+                error = kev->data;
+                if( error == 0 ) error = ESHUTDOWN;
+	      }
+	      else if( kev->flags & EV_EOF ){
+                error = kev->fflags;
+                if( error == 0 ) error = ESHUTDOWN;
+	      }
+	      else {
+  	        count = object->descriptor_->write2(
+		  object->cbuffer_,
+		  object->length_ > (uint64_t) kev->data ? kev->data : object->length_
+		);
+		error = errno;
+	      }
+	    }
+	    else {
+	      assert( kev->filter == EVFILT_AIO );
+              error = aio_error(&object->iocb_);
+              assert( error != EINPROGRESS );
+              count = aio_return(&object->iocb_);
+            }
+	    break;
           case etAccept  :
-	          assert( kev->filter == EVFILT_READ );
+            assert( kev->filter == EVFILT_READ );
             if( kev->flags & EV_ERROR ){
-	            error = kev->data;
-	            count = -1;
-	          }
-	          else {
-	            count = object->descriptor_->accept();
-	            error = errno;
-	          }
+              error = kev->data;
+              count = ~uint64_t(0);
+            }
+            else {
+	      count = object->descriptor_->accept();
+	      error = errno;
+	    }
             break;
           case etConnect :
-	          assert( kev->filter == EVFILT_READ );
+            assert( kev->filter == EVFILT_READ );
             if( kev->flags & EV_ERROR ) error = kev->data;
             if( kev->flags & EV_EOF ) error = kev->fflags;
-	          count = 0;
+            count = 0;
             break;
           default        :
-                assert( 0 );
+            assert( 0 );
         }
         acquire();
         requests_.remove(*object);
         release();
         object->errno_ = error;
-        object->count = count;
+        object->count_ = count;
         object->fiber_->thread()->postEvent(object);
       }
     }
-#endif
   }
 }
+//------------------------------------------------------------------------------
+#else
+//------------------------------------------------------------------------------
+void AsyncIoSlave::threadExecute()
+{
+  errno = ENOSYS;
+  perror(NULL);
+  assert( 0 );
+  abort();
+}
+//------------------------------------------------------------------------------
+#endif
 //------------------------------------------------------------------------------
 bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
 {
@@ -703,6 +748,8 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
       }
     }
   }
+#else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
   return r;
 }
@@ -812,34 +859,29 @@ void AsyncOpenFileSlave::threadExecute()
           }
           if( file != INVALID_HANDLE_VALUE && GetLastError() == ERROR_ALREADY_EXISTS ) SetLastError(0);
           request->errno_ = GetLastError();
-          request->fileDescriptor_ = file;
-          request->fiber_->thread()->postEvent(request);
 #else
           int file;
-          utf8::AnsiString ansiFileName(anyPathName2HostPathName(request->string()).getANSIString());
+          utf8::AnsiString ansiFileName(anyPathName2HostPathName(anyPathName2HostPathName(request->string0_)).getANSIString());
           mode_t um = umask(0);
           umask(um);
           errno = 0;
           file = ::open(
             ansiFileName,
-            O_RDWR | (createIfNotExist ? O_CREAT : 0) | (exclusive_ ? O_EXLOCK : 0),
+            O_RDWR | (request->createIfNotExist_ ? O_CREAT : 0) | (request->exclusive_ ? O_EXLOCK : 0),
             um | S_IRUSR | S_IWUSR
           );
           if( file < 0 ){
             errno = 0;
             file = ::open(
               ansiFileName,
-              O_RDONLY | (createIfNotExist ? O_CREAT : 0) | (exclusive_ ? O_EXLOCK : 0),
+              O_RDONLY | (request->createIfNotExist_ ? O_CREAT : 0) | (request->exclusive_ ? O_EXLOCK : 0),
               um | S_IRUSR | S_IWUSR
             );
           }
-          request->descriptor_->cluster()->postEvent(
-            request->descriptor_,
-            errno,
-            etOpenFile,
-            file
-          );
+          request->errno_ = errno;
 #endif
+          request->fileDescriptor_ = file;
+          request->fiber_->thread()->postEvent(request);
         }
         catch( ExceptionSP & e ){
           request->errno_ = e->code();
@@ -1056,9 +1098,10 @@ AsyncAcquireSlave::~AsyncAcquireSlave()
 #endif
 }
 //------------------------------------------------------------------------------
-AsyncAcquireSlave::AsyncAcquireSlave() : sp_(-1)
+AsyncAcquireSlave::AsyncAcquireSlave()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
+  sp_ = -1;
   intptr_t i;
   for( i = sizeof(eSems_) / sizeof(eSems_[0]) - 1; i >= 0; i-- ) eSems_[i] = NULL;
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
@@ -1183,7 +1226,7 @@ void AsyncAcquireSlave::threadExecute()
         request->errno_ = e->code();
       }
       assert( request->fiber_ != NULL );
-      request->fiber_->thread()->postEvent();
+      request->fiber_->thread()->postEvent(request);
     }
   }
 #endif
@@ -1344,11 +1387,13 @@ Requester::~Requester()
     acquireSlaves_[i].post();
     acquireSlaves_[i].Thread::wait();
   }
+#if defined(__WIN32__) || defined(__WIN64__)
   for( i = wdcnSlaves_.count() - 1; i >= 0; i-- ){
     wdcnSlaves_[i].terminate();
     wdcnSlaves_[i].post();
     wdcnSlaves_[i].Thread::wait();
   }
+#endif
 }
 //---------------------------------------------------------------------------
 Requester::Requester() :
@@ -1399,6 +1444,8 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
       if( r ) break;
     }
   }
+#else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
   return r;
 }

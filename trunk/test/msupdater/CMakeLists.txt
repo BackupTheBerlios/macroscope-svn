@@ -1,11 +1,11 @@
 ADD_EXECUTABLE (msupdater main.cpp version.c)
 
 TARGET_LINK_LIBRARIES (msupdater
-  libadicpp
-  libfbcpp
-  libksys
-  libmycpp
-  libutf8
+  adicpp
+  fbcpp
+  ksys
+  mycpp
+  utf8
 )
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)

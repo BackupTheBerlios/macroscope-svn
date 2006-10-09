@@ -1,4 +1,4 @@
-ADD_LIBRARY(libadicpp STATIC
+ADD_LIBRARY(adicpp STATIC
   adilibic.cpp
   db.cpp
   dllmain.cpp

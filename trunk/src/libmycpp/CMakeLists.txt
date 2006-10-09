@@ -1,4 +1,4 @@
-ADD_LIBRARY(libmycpp STATIC
+ADD_LIBRARY(mycpp STATIC
   db.cpp
   ecs.cpp
   intf.cpp

@@ -1,5 +1,7 @@
 IF (UNIX)
-  FIND_PACKAGE(sha256 lzo lzo2)
+  FIND_LIBRARY(sha256 NAMES sha256)
+  FIND_LIBRARY(lzo NAMES lzo)
+  FIND_LIBRARY(lzo2 NAMES lzo2)
 ENDIF (UNIX)
 
 IF (sha256_FOUND)
@@ -33,7 +35,7 @@ ELSE (lzo2_FOUND)
   )
 ENDIF (lzo2_FOUND)
 
-ADD_LIBRARY(libksys STATIC
+ADD_LIBRARY(ksys STATIC
   afd.cpp
   aio.cpp
   archive.cpp

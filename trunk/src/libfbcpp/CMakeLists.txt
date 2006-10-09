@@ -1,4 +1,4 @@
-ADD_LIBRARY(libfbcpp STATIC
+ADD_LIBRARY(fbcpp STATIC
   db.cpp
   ecs.cpp
   event.cpp

@@ -316,6 +316,9 @@ typedef SPIARC<InterlockedConfig<FiberInterlockedMutex> > ConfigSP;
 class EConfig : public Exception {
   public:
     EConfig(Config * config, const utf8::String & what);
+    static EConfig * newException(Config * config,const utf8::String & what);
+    static void throwSP(Config * config,const utf8::String & what);
+    static void throwSP(Config * config,const char * what);
 };
 //---------------------------------------------------------------------------
 } // namespace ksys

@@ -82,7 +82,7 @@ class AsyncEvent {
     enum LockFileType { rdLock, wrLock, tryRDLock, tryWRLock };
 #if defined(__WIN32__) || defined(__WIN64__)
     OVERLAPPED overlapped_;
-#elif HAVE_AIOCB
+#elif SIZEOF_AIOCB
     struct aiocb iocb_;
 #endif
 #if _MSC_VER
@@ -154,7 +154,7 @@ inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 #if defined(__WIN32__) || defined(__WIN64__)
   memset(&overlapped_,0,sizeof(overlapped_));
 #endif
-#if HAVE_AIOCB
+#if SIZEOF_AIOCB
   memset(&iocb_, 0, sizeof(iocb_));
 #endif
 }

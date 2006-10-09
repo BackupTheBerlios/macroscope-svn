@@ -1,4 +1,4 @@
-ADD_LIBRARY(libutf8 STATIC
+ADD_LIBRARY(utf8 STATIC
 	cp10000.cpp
 	cp10001.cpp
 	cp10002.cpp
