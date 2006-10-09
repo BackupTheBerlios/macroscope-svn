@@ -44,7 +44,6 @@ MACRO(CHECK_INCLUDE_FILE INCLUDE VARIABLE)
     ENDFOREACH(def)
     CONFIGURE_FILE(${CMAKE_BINARY_DIR}/builds/cmake/CheckIncludeFile.c.in
       "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckIncludeFile.c" IMMEDIATE)
-
     TRY_COMPILE(${VARIABLE}
       ${CMAKE_BINARY_DIR}
       ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckIncludeFile.c
