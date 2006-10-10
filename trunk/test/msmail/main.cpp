@@ -156,7 +156,6 @@ int main(int _argc,char * _argv[])
       stdErr.setRedirect(
         service->msmailConfig()->value("log_redirect",utf8::String())
       );
-      checkMachineBinding(service->msmailConfig()->value("machine_key"));
       services.startServiceCtrlDispatcher();
     }
   }

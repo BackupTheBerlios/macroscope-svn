@@ -98,6 +98,7 @@ void ServerFiber::main()
     uint8_t cmd;
     uint8_t ui8;
   };
+  checkMachineBinding(server_.config_->value("machine_key"));
   auth();
   while( !terminated_ ){
     *this >> cmd;
