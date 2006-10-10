@@ -639,3 +639,5 @@ ELSE (APPLE)
     COMMENT "Install Project"
   )
 ENDIF (APPLE)
+
+cmake -P GetVariablesFromCMakeDashboards.cmake > CMakeVars.xml 2>&1
