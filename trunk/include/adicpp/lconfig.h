@@ -180,10 +180,12 @@
 #include <sys/timeb.h>
 #endif
 
+#if HAVE_SYS_UUID_H
+#include <sys/uuid.h>
+#endif
+
 #if HAVE_UUID_H
 #include <uuid.h>
-#elif HAVE_SYS_UUID_H
-#include <sys/uuid.h>
 #endif
 
 #if HAVE_SYS_EVENT_H
