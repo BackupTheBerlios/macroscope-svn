@@ -166,9 +166,9 @@ AsyncSocket & AsyncSocket::shutdown(int how)
         throw ksys::ExceptionSP(newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__));
     }
 #if HAVE_KQUEUE
-    if( fiber()->io().ioType_ == ksys::etAccept ){
-      ksys::AsyncIoSlave * ioThread = dynamic_cast<ksys::AsyncIoSlave *>(fiber()->io().ioThread_);
-      if( ioThread != NULL ) ioThread->cancelEvent(fiber()->io());
+    if( fiber()->event_.type_ == ksys::etAccept ){
+      ksys::AsyncIoSlave * slave = dynamic_cast<ksys::AsyncIoSlave *>(fiber()->event_.ioSlave_);
+      if( slave != NULL ) slave->cancelEvent(fiber()->event_);
     }
 #endif
   }
@@ -277,7 +277,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
     );
   socket.socket_ = (int) fiber()->event_.data_;
   if( fcntl(socket.socket_,F_SETFL,fcntl(socket.socket_,F_GETFL,0) | O_NONBLOCK) != 0 ){
-    err = errno;
+    int32_t err = errno;
     throw ksys::ExceptionSP(newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__));
   }
   int ka = true;
@@ -856,13 +856,13 @@ int AsyncSocket::accept()
   return api.accept(socket_,NULL,0);
 }
 //---------------------------------------------------------------------------
-void AsyncSocket::connect(ksys::IoRequest * request)
+void AsyncSocket::connect(ksys::AsyncEvent * request)
 {
   errno = 0;
   api.connect(
     socket_,
     (const struct sockaddr *) &request->address_,
-    (socklen_t) request->address_.length()
+    (socklen_t) request->address_.sockAddrSize()
   );
 }
 //---------------------------------------------------------------------------

@@ -84,6 +84,7 @@ class AsyncEvent {
     OVERLAPPED overlapped_;
 #elif SIZEOF_AIOCB
     struct aiocb iocb_;
+    Thread * ioSlave_;
 #endif
 #if _MSC_VER
 #pragma warning(push,3)
@@ -156,6 +157,7 @@ inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 #endif
 #if SIZEOF_AIOCB
   memset(&iocb_, 0, sizeof(iocb_));
+  ioSlave_ = NULL;
 #endif
 }
 //------------------------------------------------------------------------------

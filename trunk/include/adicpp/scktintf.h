@@ -537,7 +537,7 @@ class API {
     {
       return ::gethostbyname(name);
     }
-    int getnameinfo(const struct sockaddr *sa,socklen_t salen,char *host,size_t hostlen,char *serv,size_t servlen,int flags)
+    int getnameinfo(const struct sockaddr *sa, socklen_t salen, char *host, size_t hostlen, char *serv, size_t servlen, int flags)
     {
       return ::getnameinfo(sa,salen,host,hostlen,serv,servlen,flags);
     }
@@ -556,6 +556,10 @@ class API {
     int getpeername(int s, struct sockaddr * name,socklen_t * namelen)
     {
       return ::getpeername(s,name,namelen);
+    }
+    int gethostname(char *name, size_t namelen)
+    {
+      return ::gethostname(name,namelen);
     }
     void open()
     {

@@ -1,25 +1,11 @@
-IF (UNIX)
-  FIND_LIBRARY(sha256 NAMES sha256)
-  FIND_LIBRARY(lzo NAMES lzo PATHS /usr/lib /usr/local/lib)
-  FIND_LIBRARY(lzo2 NAMES lzo2 PATHS /usr/lib /usr/local/lib)
-ENDIF (UNIX)
+IF (NOT LIB_MD)
+  SET (ADD_SOURCES
+    sha256.c
+  )
+ENDIF (NOT LIB_MD)
 
-IF (sha256)
-  #INCLUDE_DIRECTORIES(${sha256_INCLUDE_DIR})
-ELSE (sha256)
-  SET (sha256_SOURCES sha256c.c)
-ENDIF (sha256)
-
-IF (lzo2)
-  #INCLUDE_DIRECTORIES(${lzo2_INCLUDE_DIR})
-ELSE (lzo2)
-  SET (lzo_SOURCES_NAME lzo2)
-  IF (lzo)
-    #INCLUDE_DIRECTORIES(${lzo_INCLUDE_DIR})
-  ELSE (lzo)
-    SET (lzo_SOURCES_NAME lzo)
-  ENDIF (lzo)
-  SET (${lzo_SOURCES_NAME}_SOURCES
+IF (NOT LIB_LZO AND NOT LIB_LZO2)
+  SET (ADD_SOURCES ${ADD_SOURCES}
     lzo1x_1.c
     lzo1x_1k.c
     lzo1x_1l.c
@@ -33,7 +19,7 @@ ELSE (lzo2)
     lzo_crc.c
     lzo_util.c
   )
-ENDIF (lzo2)
+ENDIF (NOT LIB_LZO AND NOT LIB_LZO2)
 
 ADD_LIBRARY(ksys STATIC
   afd.cpp
@@ -66,9 +52,7 @@ ADD_LIBRARY(ksys STATIC
   client.cpp
   server.cpp
   socket.cpp
-  ${sha256_SOURCES}
-  ${lzo2_SOURCES}
-  ${lzo_SOURCES}
+  ${ADD_SOURCES}
 )
 
 INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ../../include/libadicpp)
@@ -85,17 +69,3 @@ IF (WIN32)
     iphlpapi
   )
 ENDIF (WIN32)
-
-IF (sha256)
-  SET (ADD_LIBS ${ADD_LIBS} ${sha256})
-ENDIF (sha256)
-
-IF (lzo2)
-  SET (ADD_LIBS ${ADD_LIBS} ${lzo2})
-ENDIF (lzo2)
-
-IF (lzo)
-  SET (ADD_LIBS ${ADD_LIBS} ${lzo})
-ENDIF (lzo)
-
-#TARGET_LINK_LIBRARIES(libksys ${ADD_LIBS})

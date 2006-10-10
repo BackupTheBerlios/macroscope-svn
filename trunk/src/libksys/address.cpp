@@ -321,7 +321,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
   char hostName[NI_MAXHOST];
   char servInfo[NI_MAXSERV];
   err = api.getnameinfo(
-    (const char *) &addr4_,
+    (const sockaddr *) &addr4_,
     (socklen_t) sockAddrSize(),
     hostName,
     sizeof(hostName),
@@ -459,18 +459,20 @@ utf8::String SockAddr::gethostname()
       }
       s.resize(s.size());
 #if !defined(__WIN32__) && !defined(__WIN64__)
-    addr.internalGetAddrInfo(s,utf8::String(),0,0);
-    err = api.getnameinfo(
-      (const sockaddr *) &addr.addr4_,
-      (socklen_t) addr.sockAddrSize(),
-      hostName,
-      sizeof(hostName),
-      servInfo,
-      sizeof(servInfo),
-      NI_NUMERICSERV
-    );
-    if( err == 0 ) s = hostName;
-    if( err != 0 ) err = errNo();
+      addr.internalGetAddrInfo(s,utf8::String(),0,0);
+      char hostName[NI_MAXHOST];
+      char servInfo[NI_MAXSERV];
+      err = api.getnameinfo(
+        (const sockaddr *) &addr.addr4_,
+        (socklen_t) addr.sockAddrSize(),
+        hostName,
+        sizeof(hostName),
+        servInfo,
+        sizeof(servInfo),
+        NI_NUMERICSERV
+      );
+      if( err == 0 ) s = hostName;
+      if( err != 0 ) err = errNo();
 #endif
     }
   }

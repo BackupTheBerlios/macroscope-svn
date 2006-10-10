@@ -53,7 +53,7 @@ intptr_t str2Month(const char * month)
   return -1;
 }
 //------------------------------------------------------------------------------
-extern size_t sizeOf_timeval_tv_sec = sizeof(((struct timeval *) NULL)->tv_sec);
+size_t sizeOf_timeval_tv_sec = sizeof(((struct timeval *) NULL)->tv_sec);
 //---------------------------------------------------------------------------
 int64_t timeFromTimeString(const utf8::String & s)
 {

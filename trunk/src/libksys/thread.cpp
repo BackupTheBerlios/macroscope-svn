@@ -94,7 +94,7 @@ void * Thread::threadFunc(void * thread)
 //  while( PostThreadMessage(mainThreadId,threadFinishMessage,0,0) == 0 ) Sleep(1);
   return (DWORD) reinterpret_cast<Thread *>(thread)->exitCode_;
 #elif HAVE_PTHREAD_H
-  return (void *) reinterpret_cast<Thread *>(thread)->exitCode_;
+  return (void *) (intptr_t) reinterpret_cast<Thread *>(thread)->exitCode_;
 #endif
 }
 //---------------------------------------------------------------------------

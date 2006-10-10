@@ -597,6 +597,7 @@ void AsyncIoSlave::threadExecute()
           assert( 0 );
       }
       if( errno == EINPROGRESS ){
+        object->ioSlave_ = this;
         requests_.insToTail(newRequests_.remove(*object));
       }
       else if( errno != EINPROGRESS ){
@@ -709,6 +710,7 @@ void AsyncIoSlave::threadExecute()
         acquire();
         requests_.remove(*object);
         release();
+        object->ioSlave_ = NULL;
         object->errno_ = error;
         object->count_ = count;
         object->fiber_->thread()->postEvent(object);

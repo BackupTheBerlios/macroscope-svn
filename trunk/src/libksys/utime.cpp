@@ -70,7 +70,7 @@ bool utime(const utf8::String & path,uint64_t atime,uint64_t mtime)
   tms[0].tv_usec = long(atime % 1000000u);
   tms[1].tv_sec = long(mtime / 1000000u);
   tms[1].tv_usec = long(mtime % 1000000u);
-  if( utimes(fileName.getANSIString(),tms) == 0 ){
+  if( utimes(path.getANSIString(),tms) == 0 ){
     err = errno;
     Exception::throwSP(errno,__PRETTY_FUNCTION__);
   }

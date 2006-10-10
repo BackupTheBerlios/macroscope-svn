@@ -26,6 +26,7 @@
 #cmakedefine HAVE_SYS_TIME_H 1
 #cmakedefine HAVE_SYS_TIMEB_H 1
 #cmakedefine HAVE_SYS_STAT_H 1
+#cmakedefine HAVE_TIME_H 1
 #cmakedefine HAVE_UUID_H 1
 #cmakedefine HAVE_AIO_H 1
 #cmakedefine HAVE_SHA256_H 1
@@ -122,6 +123,7 @@
 #cmakedefine HAVE_STAT 1
 #cmakedefine HAVE_STRERROR_R 1
 #cmakedefine HAVE_UTIME 1
+#cmakedefine HAVE_UTIMES 1
 #cmakedefine HAVE_VPRINTF 1
 #cmakedefine HAVE_LOCALTIME 1
 #cmakedefine HAVE_GMTIME_S 1
@@ -225,6 +227,7 @@
 #cmakedefine HAVE_PTHREAD_WRLOCK 1
 #cmakedefine HAVE_PTHREAD_TRYWRLOCK 1
 #cmakedefine HAVE_PTHREAD_UNLOCK 1
+#cmakedefine HAVE_SHA256_INIT 1
 #cmakedefine HAVE_LZO1X_999_COMPRESS_LEVEL 1
 #cmakedefine HAVE_LZO1X_DECOMPRESS 1
 #cmakedefine HAVE_LZO1X_DECOMPRESS_SAFE 1
