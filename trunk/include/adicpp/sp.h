@@ -593,7 +593,7 @@ SPIARC<T> & SPIARC<T>::SPIARC(const SPIARC<T> & ptr)
 template< typename T> inline
 LockedAction<T,T> SPIARC<T>::operator -> () const
 {
-  return LockedAction<T,T>(SPRC<T>::ptr_,SPRC<T>::ptr_);
+  return LockedAction<T,T>(*SPRC<T>::ptr_,*SPRC<T>::ptr_);
 }
 //-----------------------------------------------------------------------------
 }

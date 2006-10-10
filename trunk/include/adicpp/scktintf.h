@@ -574,22 +574,20 @@ class API {
     static WSADATA            wsaData_;
     static HINSTANCE          handle_;
 
-    static uint8_t            mutex_[];
     static uintptr_t          count_;
 
     static const char * const symbols_[];
 #endif
+    static uint8_t            mutex_[];
   private:
     void                            initialize();
     void                            cleanup();
 };
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
 inline ksys::InterlockedMutex & API::mutex()
 {
   return *reinterpret_cast< ksys::InterlockedMutex *>(mutex_);
 }
-#endif
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 //---------------------------------------------------------------------------
