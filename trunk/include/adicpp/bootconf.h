@@ -365,7 +365,7 @@ typedef int32_t gid_t;
 #define __WIN64__ 1
 #endif
 
-#ifndef _WINDOWS
+#if !defined(_WINDOWS) && (defined(__WIN32__) || defined(__WIN64__))
 #define _WINDOWS 1
 #endif
 

@@ -27,19 +27,23 @@
 #include <adicpp/ksys.h>
 //---------------------------------------------------------------------------
 extern "C" {
-  //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+#if (defined(_DEBUG) || defined(DEBUG)) && !defined(NDEBUG)
+#define LZO_DEBUG 1
+#endif
+#if HAVE_LZO_LZO_ASM_H
+#include <lzo/lzo_asm.h>
+#elif HAVE_LZO_ASM_H
+#include <lzo_asm.h>
+#endif
+#if HAVE_LZO_LZO1X_H
+#include <lzo/lzo1x.h>
+#elif HAVE_LZO1X_H
+#include <lzo1x.h>
+#else
 #if HAVE_CONFIG_H
 #define LZO_HAVE_CONFIG_H 1
 #endif
-#if defined(_DEBUG) || defined(DEBUG)
-#define LZO_DEBUG 1
-#endif
-#if HAVE_LZO_ASM_H
-#include <lzo_asm.h>
-#endif
-#if HAVE_LZO1X_H
-#include <lzo1x.h>
-#else
 #include <adicpp/lzo/lzo1x.h>
 //#include "lzo1x_9x.c"
 //#include "lzo1x_d1.c"

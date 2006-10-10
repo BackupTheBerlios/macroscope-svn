@@ -28,17 +28,26 @@
 #define _service_H_
 //---------------------------------------------------------------------------
 namespace ksys {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-enum ServiceStatus { svcReady, svcStarting, svcStarted, svcSuspending, svcSuspended, svcResuming, svcResumed, svcStoping, svcStoped };
+enum ServiceStatus {
+  svcReady,
+  svcStarting,
+  svcStarted,
+  svcSuspending,
+  svcSuspended,
+  svcResuming,
+  svcResumed,
+  svcStoping,
+  svcStoped
+};
 //---------------------------------------------------------------------------
 class Service {
-    friend class Services;
+  friend class Services;
   public:
-    virtual               ~Service();
-                          Service();
+    virtual ~Service();
+    Service();
 
 #if defined(__WIN32__) || defined(__WIN64__)
     Service &             serviceMain(uintptr_t n, DWORD dwArgc, LPWSTR * lpszArgv);
@@ -90,10 +99,10 @@ class Services
  : public Thread
 #endif
 {
-    friend class Service;
+  friend class Service;
   public:
-                ~Services();
-                Services(const utf8::String & name = utf8::String() /* not used under windows */);
+    ~Services();
+    Services(const utf8::String & name = utf8::String() /* not used under windows */);
 
     Services &  clear();
     Services &  add(Service * service);

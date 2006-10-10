@@ -91,10 +91,6 @@
 #include <sys/event.h>
 #endif
 
-#if HAVE_SYS_UUID_H
-#include <sys/uuid.h>
-#endif
-
 #if HAVE_AIO_H
 #include <aio.h>
 #endif
@@ -184,12 +180,10 @@
 #include <sys/timeb.h>
 #endif
 
-#if HAVE_SYS_UUID_H
-#include <sys/uuid.h>
-#endif
-
 #if HAVE_UUID_H
 #include <uuid.h>
+#elif HAVE_SYS_UUID_H
+#include <sys/uuid.h>
 #endif
 
 #if HAVE_SYS_EVENT_H

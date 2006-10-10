@@ -98,7 +98,9 @@ void InterlockedMutex::initialize()
 #endif
   }
 #endif
+#if defined(__WIN32__) || defined(__WIN64__)
   memset(&staticCS_,0,sizeof(staticCS_));
+#endif
   new (giantPlaceHolder) InterlockedMutex;
 }
 //---------------------------------------------------------------------------

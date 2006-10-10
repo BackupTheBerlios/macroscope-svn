@@ -25,9 +25,6 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
-#if defined(__WIN32__) || defined(__WIN64__)
-#include <Winternl.h>
-#endif
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
@@ -38,9 +35,9 @@ DirectoryChangeNotification::~DirectoryChangeNotification()
   stop();
 }
 //---------------------------------------------------------------------------
-DirectoryChangeNotification::DirectoryChangeNotification() :
+DirectoryChangeNotification::DirectoryChangeNotification()
 #if defined(__WIN32__) || defined(__WIN64__)
-  hFFCNotification_(INVALID_HANDLE_VALUE),
+  : hFFCNotification_(INVALID_HANDLE_VALUE),
   hDirectory_(INVALID_HANDLE_VALUE),
   bufferSize_(0)
 #endif
@@ -167,15 +164,27 @@ void createUUID(UUID & uuid)
 #if defined(__WIN32__) || defined(__WIN64__)
   if( FAILED(CoCreateGuid(&uuid)) ){
     int32_t err = GetLastError() + errorOffset;
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
+  }
 #elif HAVE_UUIDGEN
   if( uuidgen(&uuid,1) != 0 ){
     int32_t err = errno;
-#else
-  int32_t err = ENOSYS;
-  {
-#endif
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
+#elif HAVE_UUID_CREATE
+  uuid_t * u;
+  uint32_t status;
+  uuid_create(&u,&status);
+  if( status != uuid_s_ok ){
+    int32_t err = errno;
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
+  }
+  uuid = *u;
+  free(u);
+#else
+  int32_t err = ENOSYS;
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
 }
 //---------------------------------------------------------------------------
 utf8::String screenChar(const utf8::String::Iterator & ii)
@@ -656,7 +665,7 @@ void changeCurrentDir(const utf8::String & name)
   err = GetLastError();
 #else
   errno = 0;
-  chdir((const char *) dirName.getANSIString());
+  chdir((const char *) name.getANSIString());
   err = errno;
 #endif
   if( err != 0 )
@@ -1103,11 +1112,13 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
     else {
       r = MoveFileExW(oldPathName.getUNICODEString(),newPathName.getUNICODEString(),MOVEFILE_COPY_ALLOWED);
     }
-    if( r == 0 )
+    if( r == 0 ){
 #else
-    if( rename(oldPathName.getANSIString(),newPathName.getANSIString()) != 0 )
+    if( ::rename(oldPathName.getANSIString(),newPathName.getANSIString()) != 0 ){
 #endif
-      Exception::throwSP(oserror() + errorOffset,utf8::String(__PRETTY_FUNCTION__));
+      int32_t err = oserror() + errorOffset;
+      Exception::throwSP(err,utf8::String(__PRETTY_FUNCTION__));
+    }
   }
 }
 //---------------------------------------------------------------------------
@@ -1239,7 +1250,7 @@ void getDirList(
         const char * d_name = ent->d_name;
 #ifdef DT_DIR
         if( ent->d_type == DT_DIR ){
-          bool fit = getDirListHelper(d_name,maskmexMask,exMaskAsList);
+          bool fit = getDirListHelper(d_name,mask,exMask,exMaskAsList);
           if( includeDirs && fit )
             list.add(path + pathDelimiterStr + d_name);
           if( recursive && fit )
@@ -1430,7 +1441,6 @@ int64_t getProcessStartTime(bool toLocalTime)
   if( err != ERROR_SUCCESS ) Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
   return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
 #else
-#error Not implemented
   Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
 }
@@ -1728,6 +1738,7 @@ bool isWow64()
 utf8::String getMachineUniqueKey()
 {
 #if PRIVATE_RELEASE
+#if defined(__WIN32__) || defined(__WIN64__)
 #pragma comment(lib,"wbemuuid.lib")
   utf8::String s;
 
@@ -2004,6 +2015,9 @@ utf8::String getMachineUniqueKey()
   VariantClear(&vtMACAddress);
   return s;
 #else
+  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
+#else
   return utf8::String();
 #endif
 }
@@ -2033,11 +2047,6 @@ void checkMachineBinding(const utf8::String & key)
 #endif
 //---------------------------------------------------------------------------
 uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];
-//---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-//---------------------------------------------------------------------------
-//---------------------------------------------------------------------------
-#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // System initialization and finalization ///////////////////////////////////

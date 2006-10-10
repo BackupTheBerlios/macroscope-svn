@@ -198,6 +198,7 @@
 #cmakedefine HAVE_SHM_UNLINK 1
 #cmakedefine HAVE_DAEMON 1
 #cmakedefine HAVE_UUIDGEN 1
+#cmakedefine HAVE_UUID_CREATE 1
 #cmakedefine HAVE_SEMGET 1
 #cmakedefine HAVE_SEMOP 1
 #cmakedefine HAVE_SEMCTL 1

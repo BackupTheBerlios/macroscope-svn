@@ -129,19 +129,6 @@ inline bool isWinXPorLater()
 
 bool isWow64();
 
-utf8::String getMachineUniqueKey();
-utf8::String getMachineCleanUniqueKey();
-utf8::String getMachineCryptedUniqueKey(const utf8::String & text);
-extern uint8_t machineUniqueCryptedKeyHolder[];
-inline utf8::String & machineUniqueCryptedKey()
-{
-  return *reinterpret_cast<utf8::String *>(machineUniqueCryptedKeyHolder);
-}
-#if PRIVATE_RELEASE
-void checkMachineBinding(const utf8::String & key);
-#else
-inline void checkMachineBinding(const utf8::String &){}
-#endif
 #else
 inline bool isWin9x()
 {
@@ -156,16 +143,30 @@ inline bool isWow64(){
 }
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_UUID
+utf8::String getMachineUniqueKey();
+utf8::String getMachineCleanUniqueKey();
+utf8::String getMachineCryptedUniqueKey(const utf8::String & text);
+extern uint8_t machineUniqueCryptedKeyHolder[];
+inline utf8::String & machineUniqueCryptedKey()
+{
+  return *reinterpret_cast<utf8::String *>(machineUniqueCryptedKeyHolder);
+}
+#if PRIVATE_RELEASE
+void checkMachineBinding(const utf8::String & key);
+#else
+inline void checkMachineBinding(const utf8::String &){}
+#endif
+//---------------------------------------------------------------------------
 class UUID
-#if HAVE_UUID_T
+#if SIZEOF_UUID
+ : public uuid
+#elif HAVE_UUID_T
  : public uuid_t
-#elif HAVE_GUID
+#elif SIZEOF_GUID
  : public GUID
 #endif
 {
 };
-#endif
 //---------------------------------------------------------------------------
 inline utf8::String uuid2base64(const UUID & u)
 {

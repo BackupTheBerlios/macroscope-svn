@@ -393,7 +393,7 @@ Services & Services::start(const utf8::String &
 #if !defined(__WIN32__) && !defined(__WIN64__)
   control_ = newObject<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    Exception::throwSP(EAGAIN,"dispatcher not started"));
+    Exception::throwSP(EAGAIN,"dispatcher not started");
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcStart << serviceName;
@@ -402,7 +402,7 @@ Services & Services::start(const utf8::String &
   control_->ref() << SMQ_RDU << SMQ_WRU;
   if( err != 0 ){
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
-    Exception::throwSP(err,error));
+    Exception::throwSP(err,error);
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -420,7 +420,7 @@ Services & Services::stop(const utf8::String &
 #if !defined(__WIN32__) && !defined(__WIN64__)
   control_ = newObject<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    Exception::throwSP(EAGAIN,"dispatcher not started"));
+    Exception::throwSP(EAGAIN,"dispatcher not started");
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcStop << serviceName;
@@ -429,7 +429,7 @@ Services & Services::stop(const utf8::String &
   control_->ref() << SMQ_RDU << SMQ_WRU;
   if( err != 0 ){
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
-    Exception::throwSP(err,error));
+    Exception::throwSP(err,error);
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -447,7 +447,7 @@ Services & Services::suspend(const utf8::String &
 #if !defined(__WIN32__) && !defined(__WIN64__)
   control_ = newObject<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    Exception::throwSP(EAGAIN,"dispatcher not started"));
+    Exception::throwSP(EAGAIN,"dispatcher not started");
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcSuspend << serviceName;
@@ -456,7 +456,7 @@ Services & Services::suspend(const utf8::String &
   control_->ref() << SMQ_RDU << SMQ_WRU;
   if( err != 0 ){
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
-    Exception::throwSP(err,error));
+    Exception::throwSP(err,error);
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -474,7 +474,7 @@ Services & Services::resume(const utf8::String &
 #if !defined(__WIN32__) && !defined(__WIN64__)
   control_ = newObject<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    Exception::throwSP(EAGAIN,"dispatcher not started"));
+    Exception::throwSP(EAGAIN,"dispatcher not started");
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcResume << serviceName;
@@ -483,7 +483,7 @@ Services & Services::resume(const utf8::String &
   control_->ref() << SMQ_RDU << SMQ_WRU;
   if( err != 0 ){
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
-    Exception::throwSP(err,error));
+    Exception::throwSP(err,error);
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -501,7 +501,7 @@ Services & Services::query(const utf8::String &
 #if !defined(__WIN32__) && !defined(__WIN64__)
   control_ = newObject<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    Exception::throwSP(EAGAIN,"dispatcher not started"));
+    Exception::throwSP(EAGAIN,"dispatcher not started");
   utf8::String sn(serviceName.strcasecmp("all") == 0 ? utf8::String() : serviceName);
   int32_t err;
   utf8::String error;
@@ -526,7 +526,7 @@ Services & Services::query(const utf8::String &
   control_->ref() << SMQ_RDU << SMQ_WRU;
   if( err != 0 ){
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
-    Exception::throwSP(err,error));
+    Exception::throwSP(err,error);
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -540,7 +540,7 @@ Services & Services::stopServiceCtrlDispatcher()
 #if !defined(__WIN32__) && !defined(__WIN64__)
   control_ = newObject<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    Exception::throwSP(EAGAIN,"dispatcher not started"));
+    Exception::throwSP(EAGAIN,"dispatcher not started");
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcStopDispatcher << utf8::String();
@@ -549,7 +549,7 @@ Services & Services::stopServiceCtrlDispatcher()
   control_->ref() << SMQ_RDU << SMQ_WRU;
   if( err != 0 ){
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
-    Exception::throwSP(err,error));
+    Exception::throwSP(err,error);
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -603,7 +603,7 @@ Services & Services::startServiceCtrlDispatcher(
 //---------------------------------------------------------------------------
 #if !defined(__WIN32__) && !defined(__WIN64__)
 //---------------------------------------------------------------------------
-void Services::execute()
+void Services::threadExecute()
 {
 #ifndef NDEBUG
   fprintf(stderr,"services dispatcher started\n");
@@ -755,7 +755,7 @@ void Services::execute()
         terminate();
       }
       else {
-        Exception::throwSP(EINVAL,"Unknown command"));
+        Exception::throwSP(EINVAL,"Unknown command");
       }
     }
     catch( ExceptionSP & e ){

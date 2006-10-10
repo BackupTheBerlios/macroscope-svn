@@ -40,8 +40,13 @@ bool stat(const utf8::String & pathName,struct Stat & st)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etStat );
     if( currentFiber()->event_.errno_ != 0 &&
+#if defined(__WIN32__) || defined(__WIN64__)
         currentFiber()->event_.errno_ != ERROR_PATH_NOT_FOUND + errorOffset &&
         currentFiber()->event_.errno_ != ERROR_FILE_NOT_FOUND + errorOffset )
+#else
+        currentFiber()->event_.errno_ != ENOENT &&
+	currentFiber()->event_.errno_ != ENOTDIR )
+#endif
       throw ksys::ExceptionSP(
         newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
       );
