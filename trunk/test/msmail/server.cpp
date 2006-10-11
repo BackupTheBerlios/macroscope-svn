@@ -76,7 +76,7 @@ void Server::close()
 //------------------------------------------------------------------------------
 Fiber * Server::newFiber()
 {
-  return newObject<ServerFiber>(*this);
+  return newObjectV<ServerFiber>(*this);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::spoolDir() const
