@@ -629,7 +629,7 @@ void AsyncIoSlave::threadExecute()
 	object = &AsyncEvent::nodeObject(*node);
         if( kev->filter == EVFILT_TIMER ){
           if( !requests_.nodeInserted(*node) ) continue;
-          assert( object->event_ == etAccept );
+          assert( object->type_ == etAccept );
 	  kev->filter = EVFILT_READ;
           kev->flags |= EV_ERROR;
           kev->data = EINTR;
