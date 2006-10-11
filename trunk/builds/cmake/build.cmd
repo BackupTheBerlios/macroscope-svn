@@ -71,4 +71,3 @@ nmake all
 rem "%intel%\EM64T\Bin\ICLVars.bat"
 
 :exit0
-

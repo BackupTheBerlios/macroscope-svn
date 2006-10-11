@@ -157,32 +157,32 @@ void checkMachineBinding(const utf8::String & key);
 inline void checkMachineBinding(const utf8::String &){}
 #endif
 //---------------------------------------------------------------------------
-class UUID
+class guid_t
 #if SIZEOF_UUID_T
  : public uuid_t
 #elif SIZEOF_UUID
  : public uuid
 #elif SIZEOF_GUID
- : public ::GUID
+ : public GUID
 #endif
 {
 };
 //---------------------------------------------------------------------------
-inline utf8::String uuid2base64(const UUID & u)
+inline utf8::String uuid2base64(const guid_t & u)
 {
   return base64Encode(&u, sizeof(u));
 }
 //---------------------------------------------------------------------------
-inline UUID base642uuid(const utf8::String & s)
+inline guid_t base642uuid(const utf8::String & s)
 {
-  UUID  uuid;
+  guid_t uuid;
   base64Decode(s, &uuid, sizeof(uuid));
   return uuid;
 }
 //---------------------------------------------------------------------------
 uintmax_t fibonacci(uintmax_t n);
-void createUUID(UUID & uuid);
-inline UUID createUUID(){ UUID uuid; createUUID(uuid); return uuid; }
+void createGUID(guid_t & uuid);
+inline guid_t createGUID(){ guid_t uuid; createGUID(uuid); return uuid; }
 void copyStrToClipboard(const utf8::String & s);
 int64_t getProcessStartTime(bool toLocalTime = false);
 intptr_t strToMonth(const utf8::String & month);

@@ -159,10 +159,10 @@ uintmax_t fibonacci(uintmax_t n)
   return curr;
 }
 //---------------------------------------------------------------------------
-void createUUID(UUID & uuid)
+void createGUID(guid_t & uuid)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( FAILED(CoCreateGuid((GUID *) &uuid)) ){
+  if( FAILED(CoCreateGuid(&uuid)) ){
     int32_t err = GetLastError() + errorOffset;
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }

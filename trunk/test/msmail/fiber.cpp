@@ -478,8 +478,8 @@ void ServerFiber::recvMail() // client receiving mail
   try {
     {
 // send notify to wait fibers
-      ksys::UUID uuid;
-      createUUID(uuid);
+      guid_t uuid;
+      createGUID(uuid);
       utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
       AsyncFile watchdog(includeTrailingPathDelimiter(userMailBox) + "." + suuid);
       watchdog.createIfNotExist(true).removeAfterClose(true).open();
@@ -1007,6 +1007,9 @@ void NodeClient::sweepHelper(ServerType serverType)
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
+  server_.data(stStandalone).registerServer(
+    ServerInfo(server_.bindAddrs()[0].resolve(defaultPort),stStandalone)
+  );
   intptr_t i;
   utf8::String server, host;
   Server::Data & data = server_.data(dataType_);
@@ -1014,6 +1017,7 @@ void NodeClient::main()
     bool connected, exchanged, doWork;
     do {
       stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
+      checkMachineBinding(server_.config_->value("machine_key"));
       connected = exchanged = false;
       {
         AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);

@@ -459,8 +459,8 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         break;
       case 12 : // UUID
         {
-          ksys::UUID uuid;
-          createUUID(uuid);
+          guid_t uuid;
+          createGUID(uuid);
           utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
           V_BSTR(pvarPropVal) = suuid.getOLEString();
           V_VT(pvarPropVal) = VT_BSTR;
