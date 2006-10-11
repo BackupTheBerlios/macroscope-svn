@@ -270,7 +270,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   fiber()->event_.type_ = ksys::etAccept;
   fiber()->thread()->postRequest(this);
   fiber()->switchFiber(fiber()->mainFiber());
-  assert( fiber()->event_.event_ == ksys::etAccept );
+  assert( fiber()->event_.type_ == ksys::etAccept );
   if( fiber()->event_.errno_ != 0 )
     throw ksys::ExceptionSP(
       newObject<EAsyncSocket>(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)
