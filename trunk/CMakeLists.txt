@@ -219,6 +219,7 @@ INCLUDE (builds/cmake/CheckTypeSize.cmake)
 
 SET (CMAKE_EXTRA_INCLUDE_FILES
   sys/types.h
+  stdint.h
   inttypes.h
   sys/time.h
   sys/uuid.h
@@ -227,6 +228,7 @@ SET (CMAKE_EXTRA_INCLUDE_FILES
   utime.h
   uuid.h
   aio.h
+  guiddef.h
 )
 
 CHECK_TYPE_SIZE (ptrdiff_t SIZEOF_PTRDIFF_T)
@@ -260,9 +262,11 @@ CHECK_TYPE_SIZE ("struct timeval" SIZEOF_TIMEVAL)
 CHECK_TYPE_SIZE ("struct timezone" SIZEOF_TIMEZONE)
 CHECK_TYPE_SIZE ("struct aiocb" SIZEOF_AIOCB)
 CHECK_TYPE_SIZE ("struct uuid" SIZEOF_UUID)
-CHECK_TYPE_SIZE ("struct GUID" SIZEOF_GUID)
 CHECK_TYPE_SIZE ("struct kevent" SIZEOF_KEVENT)
 CHECK_TYPE_SIZE ("struct utimbuf" SIZEOF_UTIMBUF)
+
+SET (CMAKE_EXTRA_INCLUDE_FILES windows.h guiddef.h)
+CHECK_TYPE_SIZE (GUID SIZEOF_GUID)
 
 IF (${HAVE_WINSOCK2_H})
   SET (CMAKE_EXTRA_INCLUDE_FILES winsock2.h)

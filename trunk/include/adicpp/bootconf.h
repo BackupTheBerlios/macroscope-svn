@@ -234,6 +234,7 @@ typedef unsigned short uint16_t;
 typedef __int32 int32_t;
 typedef unsigned __int32 uint32_t;
 #define HAVE_INT32_T_AS_INT 1
+#define HAVE_INT_AS_INT32_T 1
 #elif SIZEOF_INT == 4
 typedef int int32_t;
 typedef unsigned int uint32_t;

@@ -158,12 +158,12 @@ inline void checkMachineBinding(const utf8::String &){}
 #endif
 //---------------------------------------------------------------------------
 class UUID
-#if HAVE_UUID_T
+#if SIZEOF_UUID_T
  : public uuid_t
 #elif SIZEOF_UUID
  : public uuid
 #elif SIZEOF_GUID
- : public GUID
+ : public ::GUID
 #endif
 {
 };

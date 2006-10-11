@@ -162,7 +162,7 @@ uintmax_t fibonacci(uintmax_t n)
 void createUUID(UUID & uuid)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( FAILED(CoCreateGuid(&uuid)) ){
+  if( FAILED(CoCreateGuid((GUID *) &uuid)) ){
     int32_t err = GetLastError() + errorOffset;
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }

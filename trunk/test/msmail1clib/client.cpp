@@ -345,7 +345,7 @@ void ClientDBGetterFiber::main()
     getCode();
     *this << uint8_t(cmQuit);
     getCode();
-    client_.data_.clear().or(tdata);
+    client_.data_.clear().ore(tdata);
     AutoPtr<OLECHAR> source(client_.name_.getOLEString());
     AutoPtr<OLECHAR> event(utf8::String("GetDB").getOLEString());
     bool isEmpty = 
@@ -401,9 +401,9 @@ void Client::open()
 {
   data_.clear();
   ftime_ = 0;
-  attachFiber(newObject<ClientFiber>(*this));
+  attachFiber(newObjectV<ClientFiber>(*this));
   if( mk1100Port_ != 0 )
-    attachFiber(newObject<MK1100ClientFiber>(*this));
+    attachFiber(newObjectV<MK1100ClientFiber>(*this));
 }
 //------------------------------------------------------------------------------
 void Client::close()
@@ -470,7 +470,7 @@ bool Client::sendMessage(const utf8::String id)
   msg->value("#Sender.Host",ksock::SockAddr::gethostname());
   workFiberWait_.acquire();
   try {
-    attachFiber(newObject<ClientMailSenderFiber>(*this,*msg));
+    attachFiber(newObjectV<ClientMailSenderFiber>(*this,*msg));
   }
   catch( ... ){
     workFiberWait_.release();
@@ -497,7 +497,7 @@ bool Client::removeMessage(const utf8::String id)
   workFiberWait_.acquire();
   workFiberLastError_ = 0;
   try {
-    attachFiber(newObject<ClientMailRemoverFiber>(*this,id));
+    attachFiber(newObjectV<ClientMailRemoverFiber>(*this,id));
   }
   catch( ... ){
     workFiberWait_.release();
@@ -544,7 +544,7 @@ utf8::String Client::getSendingMessageList() const
 //------------------------------------------------------------------------------
 void Client::getDB()
 {
-  attachFiber(newObject<ClientDBGetterFiber>(*this));
+  attachFiber(newObjectV<ClientDBGetterFiber>(*this));
 }
 //------------------------------------------------------------------------------
 utf8::String Client::getDBList() const

@@ -100,6 +100,7 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
     }
   }
   Exception::throwSP(ENOENT,__PRETTY_FUNCTION__);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

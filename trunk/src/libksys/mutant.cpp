@@ -498,7 +498,7 @@ Mutant::operator unsigned short() const
   throw ExceptionSP(newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__));
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INT_AS_INTPTR_T
+#if !HAVE_INTPTR_T_AS_INT
 //---------------------------------------------------------------------------
 Mutant::operator int() const
 {

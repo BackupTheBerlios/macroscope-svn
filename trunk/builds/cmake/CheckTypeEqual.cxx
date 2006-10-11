@@ -24,7 +24,7 @@ int main(){
 int main(int ac, char*av[]){
 #endif
   if(ac > 1000){return *av[0];}
-  struct intptr_t_check {
+  struct CHECK_TYPE_EQUAL1_AS_CHECK_TYPE_EQUAL2_check {
     void f(CHECK_TYPE_EQUAL1){}
     void f(CHECK_TYPE_EQUAL2){}
   };
