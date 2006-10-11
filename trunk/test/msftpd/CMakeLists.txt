@@ -11,10 +11,11 @@ TARGET_LINK_LIBRARIES (msftpd
 )
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
-ADD_DEPENDENCIES (msftpd version version_c)
+ADD_DEPENDENCIES (msftpd version msftpd_version)
 
-ADD_CUSTOM_TARGET(version_c
+ADD_CUSTOM_TARGET(msftpd_version
   COMMAND ${VERSION_EXECUTABLE} version.in version.c
+  DEPENDS version.in
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 

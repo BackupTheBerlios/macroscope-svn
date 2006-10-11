@@ -14,10 +14,11 @@ TARGET_LINK_LIBRARIES (macroscope
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
 
-ADD_DEPENDENCIES (macroscope version version_c)
+ADD_DEPENDENCIES (macroscope version macroscope_version)
 
-ADD_CUSTOM_TARGET(version_c
+ADD_CUSTOM_TARGET(macroscope_version
   COMMAND ${VERSION_EXECUTABLE} version.in version.c
+  DEPENDS version.in
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 

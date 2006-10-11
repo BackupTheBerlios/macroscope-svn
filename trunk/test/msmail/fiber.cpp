@@ -930,7 +930,7 @@ NodeClient::NodeClient(Server & server) :
 //------------------------------------------------------------------------------
 NodeClient * NodeClient::newClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly)
 {
-  NodeClient * p = newObject<NodeClient>(server);
+  NodeClient * p = newObjectV<NodeClient>(server);
   p->dataType_ = dataType;
   p->nodeHostName_ = nodeHostName;
   p->periodicaly_ = periodicaly;

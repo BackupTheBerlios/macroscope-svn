@@ -1094,7 +1094,7 @@ bool Server::Data::orNL(const Data & a,const utf8::String & sendingTo)
   return r;
 }
 //------------------------------------------------------------------------------
-bool Server::Data::or(const Data & a,const utf8::String & sendingTo)
+bool Server::Data::ore(const Data & a,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock0(mutex_);
   AutoMutexRDLock<FiberMutex> lock1(a.mutex_);
@@ -1142,7 +1142,7 @@ Server::Data & Server::Data::xorNL(const Data & data1,const Data & data2,const u
   return *this;
 }
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::xor(const Data & data1,const Data & data2,const utf8::String & sendingTo)
+Server::Data & Server::Data::xore(const Data & data1,const Data & data2,const utf8::String & sendingTo)
 {
   AutoMutexWRLock<FiberMutex> lock0(mutex_);
   AutoMutexRDLock<FiberMutex> lock1(data1.mutex_);

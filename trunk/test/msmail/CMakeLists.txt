@@ -18,10 +18,11 @@ TARGET_LINK_LIBRARIES (msmail
 )
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
-ADD_DEPENDENCIES (msmail version version_c)
+ADD_DEPENDENCIES (msmail version msmail_version)
 
-ADD_CUSTOM_TARGET(version_c
+ADD_CUSTOM_TARGET(msmail_version
   COMMAND ${VERSION_EXECUTABLE} version.in version.c
+  DEPENDS version.in version.c
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
     

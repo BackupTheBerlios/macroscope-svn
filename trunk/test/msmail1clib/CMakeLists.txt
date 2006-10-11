@@ -31,13 +31,21 @@ TARGET_LINK_LIBRARIES (msmail1clib
 ADD_DEPENDENCIES (msmail1clib msmail)
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
-ADD_DEPENDENCIES (msmail1clib version)
-ADD_CUSTOM_COMMAND (
-  TARGET msmail1clib PRE_BUILD
-  COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.c
+ADD_DEPENDENCIES (msmail1clib version msmail1clib_version)
+
+ADD_CUSTOM_TARGET(msmail1clib_version
+  COMMAND ${VERSION_EXECUTABLE} version.in version.c
+  DEPENDS version.in
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  COMMENT "Generate version file"
 )
+      
+ADD_DEPENDENCIES (msmail1clib version)
+#ADD_CUSTOM_COMMAND (
+#  TARGET msmail1clib PRE_BUILD
+#  COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.c
+#  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+#  COMMENT "Generate version file"
+#)
 
 #IF (SITE STREQUAL "${MAIN_SITE}")
 #  ADD_CUSTOM_COMMAND (
