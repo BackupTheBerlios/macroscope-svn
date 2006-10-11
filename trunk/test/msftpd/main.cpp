@@ -125,10 +125,7 @@ MSFTPServerFiber & MSFTPServerFiber::setTimes()
   utf8::String file(ksys::absolutePathNameFromWorkDir(workDir_,readString()));
   MSFTPStat mst;
   read(&mst,sizeof(mst));
-  struct utimbuf ut;
-  ut.actime = (time_t) mst.st_atime_;
-  ut.modtime = (time_t) mst.st_mtime_;
-  return putCode(ksys::utime(file,ut) ? eOK : eSetTimes);
+  return putCode(ksys::utime(file,mst.st_atime_,mst.st_mtime_) ? eOK : eSetTimes);
 }
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::resize()
@@ -236,10 +233,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
   file.close();
   MSFTPStat mst;
   if( !mst.stat(file.fileName()) ) return putCode(eFileStat);
-  struct utimbuf ut;
-  ut.actime = (time_t) mst.st_atime_;
-  ut.modtime = (time_t) mtime;
-  return putCode(ksys::utime(file.fileName(),ut) ? eOK : eSetTimes);
+  return putCode(ksys::utime(file.fileName(),mst.st_atime_,mtime) ? eOK : eSetTimes);
 }
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::get()

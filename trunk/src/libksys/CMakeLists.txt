@@ -1,6 +1,6 @@
 IF (NOT LIB_MD)
   SET (ADD_SOURCES
-    sha256.c
+    sha256c.c
   )
 ENDIF (NOT LIB_MD)
 

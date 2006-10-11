@@ -563,7 +563,7 @@ void KFTPShell::open()
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )
-      attachFiber(newObject<KFTPClient>(config_,sectionName,errorCode_));
+      attachFiber(newObjectV<KFTPClient>(config_,sectionName,errorCode_));
   }
 }
 //------------------------------------------------------------------------------

@@ -193,7 +193,7 @@ DSQLStatement & DSQLStatement::allocate()
   if( !allocated() ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_dsql_allocate_statement(status, &database_->handle_, &handle_) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStAllocate>(status,__PRETTY_FUNCTION__));
+      database_->exceptionHandler(newObjectV<EDSQLStAllocate>(status,__PRETTY_FUNCTION__));
   }
   return *this;
 }
@@ -202,7 +202,7 @@ DSQLStatement & DSQLStatement::describe(XSQLDAHolder & sqlda)
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_dsql_describe(status, &handle_, (short) database_->dpb_.dialect(), sqlda.sqlda()) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStDescribe>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStDescribe>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -210,7 +210,7 @@ DSQLStatement & DSQLStatement::describeBind(XSQLDAHolder & sqlda)
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_dsql_describe_bind(status, &handle_, (short) database_->dpb_.dialect(), sqlda.sqlda()) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStDescribeBind>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStDescribeBind>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -257,7 +257,7 @@ DSQLStatement & DSQLStatement::prepare()
       if( api.isc_dsql_prepare(status, &transaction_->handle_, &handle_, 0, compileSQLParameters().c_str(), (short) database_->dpb_.dialect(), values_.sqlda_.sqlda()) == 0 )
         break;
       if( !findISCCode(status, isc_dsql_open_cursor_request) )
-        database_->exceptionHandler(newObject<EDSQLStPrepare>(status, __PRETTY_FUNCTION__));
+        database_->exceptionHandler(newObjectV<EDSQLStPrepare>(status, __PRETTY_FUNCTION__));
       dropCursor();
     }
     info();
@@ -301,7 +301,7 @@ DSQLStatement & DSQLStatement::execute()
     if( api.isc_dsql_execute(status, &transaction_->handle_, &handle_, (short) database_->dpb_.dialect(), params_.sqlda_.sqlda()) == 0 )
       break;
     if( !findISCCode(status, isc_dsql_cursor_open_err) )
-      database_->exceptionHandler(newObject<EDSQLStExecute>(status, __PRETTY_FUNCTION__));
+      database_->exceptionHandler(newObjectV<EDSQLStExecute>(status, __PRETTY_FUNCTION__));
     dropCursor();
   }
   values_.clear();
@@ -316,7 +316,7 @@ DSQLStatement & DSQLStatement::createCursor(const utf8::String & name)
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_dsql_set_cursor_name(status, &handle_, (char *) name.c_str(), 0) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStCreateCursor>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStCreateCursor>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -324,7 +324,7 @@ DSQLStatement & DSQLStatement::dropCursor()
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_dsql_free_statement(status, &handle_, DSQL_close) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStDropCursor>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStDropCursor>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -333,7 +333,7 @@ ISC_STATUS DSQLStatement::fetch(ISC_STATUS_ARRAY status)
   ISC_STATUS  code;
   code = api.isc_dsql_fetch(status, &handle_, (short) database_->dpb_.dialect(), values_.sqlda_.sqlda());
   if( code != 100 && code != isc_req_sync && code != 0 )
-    database_->exceptionHandler(newObject<EDSQLStFetch>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStFetch>(status, __PRETTY_FUNCTION__));
   return code;
 }
 //---------------------------------------------------------------------------
@@ -345,7 +345,7 @@ DSQLStatement & DSQLStatement::info()
   char              infoBuffer[20];
   ISC_STATUS_ARRAY  status;
   if( api.isc_dsql_sql_info(status, &handle_, sizeof(stmtInfo), stmtInfo, sizeof(infoBuffer), infoBuffer) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStInfo>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStInfo>(status, __PRETTY_FUNCTION__));
   short l = (short) api.isc_vax_integer(infoBuffer + 1, 2);
   stmtType = (Stmt) api.isc_vax_integer(infoBuffer + 3, l);
   return *this;
@@ -355,7 +355,7 @@ DSQLStatement & DSQLStatement::arrayLookupBounds(char * tableName, char * arrayC
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_array_lookup_bounds(status, &database_->handle_, &transaction_->handle_, tableName, arrayColumnName, &desc) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStArrayLookupBounds>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStArrayLookupBounds>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -363,7 +363,7 @@ DSQLStatement & DSQLStatement::arrayPutSlice(ISC_QUAD & arrayId, ISC_ARRAY_DESC 
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_array_put_slice(status, &database_->handle_, &transaction_->handle_, &arrayId, &desc, data, &count) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStArrayPutSlice>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStArrayPutSlice>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -371,7 +371,7 @@ DSQLStatement & DSQLStatement::arrayGetSlice(ISC_QUAD & arrayId, ISC_ARRAY_DESC 
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_array_get_slice(status, &database_->handle_, &transaction_->handle_, &arrayId, &desc, data, &count) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStArrayGetSlice>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStArrayGetSlice>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -379,7 +379,7 @@ DSQLStatement & DSQLStatement::createBlob(isc_blob_handle & blobHandle, ISC_QUAD
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_create_blob2(status, &database_->handle_, &transaction_->handle_, &blobHandle, &blobId, bpbLength, bpbAddress) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStCreateBlob>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStCreateBlob>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -387,7 +387,7 @@ DSQLStatement & DSQLStatement::openBlob(isc_blob_handle & blobHandle, ISC_QUAD &
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_open_blob2(status, &database_->handle_, &transaction_->handle_, &blobHandle, &blobId, bpbLength, bpbAddress) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStOpenBlob>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStOpenBlob>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -396,7 +396,7 @@ DSQLStatement & DSQLStatement::closeBlob(isc_blob_handle & blobHandle)
   if( blobHandle != 0 ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_close_blob(status, &blobHandle) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStCloseBlob>(status, __PRETTY_FUNCTION__));
+      database_->exceptionHandler(newObjectV<EDSQLStCloseBlob>(status, __PRETTY_FUNCTION__));
   }
   return *this;
 }
@@ -406,7 +406,7 @@ DSQLStatement & DSQLStatement::cancelBlob(isc_blob_handle & blobHandle)
   if( blobHandle != 0 ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_cancel_blob(status, &blobHandle) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStCancelBlob>(status, __PRETTY_FUNCTION__));
+      database_->exceptionHandler(newObjectV<EDSQLStCancelBlob>(status, __PRETTY_FUNCTION__));
   }
   return *this;
 }
@@ -415,7 +415,7 @@ DSQLStatement & DSQLStatement::blobLookupDesc(char * tableName, char * columnNam
 {
   ISC_STATUS_ARRAY  status;
   if( api.isc_blob_lookup_desc(status, &database_->handle_, &transaction_->handle_, tableName, columnName, &desc, globalColumnName) != 0 )
-    database_->exceptionHandler(newObject<EDSQLStPutSegment>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV<EDSQLStPutSegment>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -424,7 +424,7 @@ DSQLStatement & DSQLStatement::free()
   if( allocated() ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_dsql_free_statement(status, &handle_, DSQL_drop) != 0 && status[1] != isc_bad_stmt_handle )
-      database_->exceptionHandler(newObject<EDSQLStFree>(status, __PRETTY_FUNCTION__));
+      database_->exceptionHandler(newObjectV<EDSQLStFree>(status, __PRETTY_FUNCTION__));
     handle_ = 0;
   }
   return *this;

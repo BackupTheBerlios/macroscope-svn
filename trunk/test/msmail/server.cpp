@@ -64,9 +64,9 @@ void Server::open()
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
   uintptr_t i;
   for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",10); i > 0; i-- )
-    attachFiber(newObject<SpoolWalker>(*this));
+    attachFiber(newObjectV<SpoolWalker>(*this));
   for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fibers",10); i > 0; i-- )
-    attachFiber(newObject<MailQueueWalker>(*this));
+    attachFiber(newObjectV<MailQueueWalker>(*this));
 }
 //------------------------------------------------------------------------------
 void Server::close()

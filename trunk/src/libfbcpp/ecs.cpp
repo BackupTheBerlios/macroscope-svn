@@ -809,9 +809,10 @@ EClientServer::~EClientServer()
 {
 }
 //---------------------------------------------------------------------------
-EClientServer::EClientServer(ISC_STATUS_ARRAY status, const utf8::String what)
+EClientServer::EClientServer(const ISC_STATUS_ARRAY stat, const utf8::String what)
   : ksys::Exception(-1, what)
 {
+  ISC_STATUS_ARRAY status;
   if( status != NULL ){
     codes_.resize(0);
     whats_.resize(0);

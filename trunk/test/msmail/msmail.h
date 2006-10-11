@@ -772,9 +772,9 @@ class Server : public ksock::Server {
         void dump(utf8::String::Stream & stream) const;
         Data & clear();
         bool orNL(const Data & a,const utf8::String & sendingTo = utf8::String());
-        bool or(const Data & a,const utf8::String & sendingTo = utf8::String());
+        bool ore(const Data & a,const utf8::String & sendingTo = utf8::String());
         Data & xorNL(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
-        Data & xor(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
+        Data & xore(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
         Data & setSendedToNL(const utf8::String & sendingTo);
         Data & setSendedTo(const utf8::String & sendingTo);
         Data & clearSendedToNL();

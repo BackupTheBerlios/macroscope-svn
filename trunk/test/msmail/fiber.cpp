@@ -155,7 +155,7 @@ void ServerFiber::registerClient()
   ServerInfo server(server_.bindAddrs()[0].resolve(defaultPort),stStandalone);
   Server::Data & data = server_.data(serverType_);
   Server::Data tdata, diff;
-  tdata.or(data);
+  tdata.ore(data);
   tdata.registerServerNL(server);
   UserInfo user;
   *this >> user;
@@ -273,7 +273,7 @@ void ServerFiber::getDB()
   if( serverType_ != stStandalone && serverType_ != stNode ) return;
   utf8::String host(remoteAddress().resolve(defaultPort));
   Server::Data tdata;
-  tdata.or(server_.data(serverType_));
+  tdata.ore(server_.data(serverType_));
   tdata.sendDatabaseNL(*this);
   putCode(eOK);
   flush();
@@ -409,13 +409,15 @@ void ServerFiber::processMailbox(
       if( file.size() == 0 ) file.removeAfterClose(true).close();
     }
     catch( ExceptionSP & e ){
+      e->writeStdError();
 #if defined(__WIN32__) || defined(__WIN64__)
       if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
           e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
           e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-      e->writeStdError();
 #else
-#error Not implemented
+      if( e->code() != EWOULDBLOCK &&
+          e->code() != ENOENT &&
+          e->code() != EACCES ) throw;
 #endif
     }
     if( file.isOpen() ){
@@ -444,8 +446,10 @@ void ServerFiber::processMailbox(
             file >> message; // read user attributes
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
-            if( onlyNewMail && messageAccepted )
-              ids.insert(*newObject<Message::Key>(message.id()),false);
+            if( onlyNewMail && messageAccepted ){
+	      Message::Key key(message.id());
+              ids.insert(*newObject<Message::Key>(key),false);
+	    }
           }
           file.close();
           if( wait && !messageAccepted ) wait = false;
@@ -554,10 +558,12 @@ void SpoolWalker::processQueue(bool & timeWait)
       if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
           e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
           e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-      e->writeStdError();
 #else
-#error Not implemented
+      if( e->code() != EWOULDBLOCK &&
+          e->code() != ENOENT &&
+          e->code() != EACCES ) throw;
 #endif
+      e->writeStdError();
     }
     try {
       if( file.isOpen() ){
@@ -722,7 +728,10 @@ void MailQueueWalker::processQueue(bool & timeWait)
           e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
       if( e->code() == ERROR_ACCESS_DENIED ) e->writeStdError();
 #else
-#error Not implemented
+      if( e->code() != EWOULDBLOCK &&
+          e->code() != ENOENT &&
+          e->code() != EACCES ) throw;
+      if( e->code() == EACCES ) e->writeStdError();
 #endif
     }
     if( file.isOpen() ){

@@ -133,10 +133,10 @@ EventHandler & EventHandler::queue()
       epb.firstEvent_ = true;
       ISC_STATUS_ARRAY  status;
       if( api.isc_que_events(status, &database_->handle_, &epb.eventId_, (short) epb.resultBufferLen_, epb.eventBuffer_, (isc_callback) eventFunction, &epb) != 0 )
-        database_->exceptionHandler(newObject<EEventQueue>(status, __PRETTY_FUNCTION__));
+        database_->exceptionHandler(newObjectV<EEventQueue>(status, __PRETTY_FUNCTION__));
     }
     try{
-      thread_ = newObject<EventThread>(*this);
+      thread_ = newObjectV<EventThread>(*this);
       thread_->resume();
     }
     catch( ksys::ExceptionSP & ){
@@ -161,7 +161,7 @@ EventHandler & EventHandler::cancel()
       EPB &             epb = epbs_[i];
       ISC_STATUS_ARRAY  status;
       if( api.isc_cancel_events(status, &database_->handle_, &epb.eventId_) != 0 )
-        database_->exceptionHandler(newObject<EEventCancel>(status, __PRETTY_FUNCTION__));
+        database_->exceptionHandler(newObjectV<EEventCancel>(status, __PRETTY_FUNCTION__));
       epb.eventId_ = 0;
     }
   }
@@ -178,7 +178,7 @@ EventHandler & EventHandler::add(const utf8::String & eventName)
 {
   EPB * pEPB;
   if( epbs_.count() == 0 || epbs_[epbs_.count() - 1].eventCount_ == 15 ){
-    epbs_.add(pEPB = newObject<EPB>(*this));
+    epbs_.add(pEPB = newObjectV<EPB>(*this));
   }
   else{
     pEPB = &epbs_[epbs_.count() - 1];

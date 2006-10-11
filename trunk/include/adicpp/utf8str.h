@@ -234,6 +234,10 @@ class String {
           friend class Stream;
           public:
             ~Format();
+
+            Format(const Format & a){ operator = (a); }
+            Format & operator = (const Format & a){ memcpy(fmt_,a.fmt_,sizeof(fmt_)); return *this; }
+
             Format(char n,const char * fmt = "%c");
             Format(unsigned char n,const char * fmt = "%c");
             Format(short n,const char * fmt = "%hd");
@@ -288,8 +292,6 @@ class String {
             intptr_t format(char * buffer) const;
           private:
             Format(){}
-            Format(const Format &){}
-            void operator = (const Format &){}
             void checkFormat2(const char * v0,const char * v1) const;
             void checkFormat3(const char * v0,const char * v1,const char * v2) const;
             int print(char * buffer,size_t count) const;
