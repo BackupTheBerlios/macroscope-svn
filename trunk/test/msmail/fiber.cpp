@@ -181,6 +181,7 @@ void ServerFiber::registerClient()
   }
   if( startNodeClient ) server_.startNodeClient(stStandalone);
   putCode(serverType_ == stStandalone ? eOK : eInvalidServerType);
+  flush();
   if( serverType_ == stStandalone ){
     utf8::String::Stream stream;
     stream << serverTypeName_[serverType_] << ": changes stored from client " << host << "\n";
