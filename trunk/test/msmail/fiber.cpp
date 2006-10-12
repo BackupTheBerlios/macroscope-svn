@@ -429,6 +429,7 @@ void ServerFiber::processMailbox(
         assert( message.id().strcmp(id) == 0 );
         utf8::String suser, skey;
         splitString(message.value("#Recepient"),suser,skey,"@");
+        //stdErr.debug(9,utf8::String::Stream() << message.value("#Recepient") << "\n");
         bool lostSheep = true;
         {
           Server::Data & data = server_.data(stStandalone);
@@ -437,6 +438,8 @@ void ServerFiber::processMailbox(
           if( key2ServerLink != NULL )
             lostSheep = key2ServerLink->server_.strcasecmp(myHost) != 0;
         }
+        lostSheep = user_.strcasecmp(suser) != 0 || lostSheep;
+        //lostSheep = false;
         if( lostSheep ){
           file.close();
           rename(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
@@ -448,9 +451,9 @@ void ServerFiber::processMailbox(
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
             if( onlyNewMail && messageAccepted ){
-	      Message::Key key(message.id());
+	            Message::Key key(message.id());
               ids.insert(*newObject<Message::Key>(key),false);
-	    }
+	          }
           }
           file.close();
           if( wait && !messageAccepted ) wait = false;
