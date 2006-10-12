@@ -389,11 +389,11 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
 //------------------------------------------------------------------------------
 utf8::String SockAddr::gethostname()
 {
+  SockAddr addr;
   int32_t err = 0;
   utf8::String s;
   api.open();
   try {
-    SockAddr addr;
 #if defined(__WIN32__) || defined(__WIN64__)
     ksys::AutoPtr<IpInfo> addresses;
     getAdaptersAddresses(addresses);
@@ -405,21 +405,24 @@ utf8::String SockAddr::gethostname()
         if( pAddress->PhysicalAddressLength == 0 ) continue;
         PIP_ADAPTER_UNICAST_ADDRESS unicast = pAddress->FirstUnicastAddress;
         while( unicast != NULL ){
-          addr.clear();
-          ksys::reverseByteArray(
-            &addr.addr4_.sin_addr,
-            pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_data,
-            sizeof(pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_data)
-          );
-          addr.addr4_.sin_family = pAddress->FirstUnicastAddress->Address.lpSockaddr->sa_family;
-          try {
-            err = 0;
-            s = addr.resolve();
+          if( unicast->Flags & (IP_ADAPTER_ADDRESS_DNS_ELIGIBLE | IP_ADAPTER_ADDRESS_PRIMARY) ){
+            addr.clear();
+            //ksys::reverseByteArray(
+            memcpy(
+              &addr.addr4_,
+              unicast->Address.lpSockaddr,
+              unicast->Address.iSockaddrLength
+            );
+            //addr.addr4_.sin_family = unicast->Address.lpSockaddr->sa_family;
+            try {
+              err = 0;
+              s = addr.resolve();
+            }
+            catch( ksys::ExceptionSP & e ){
+              err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
+            }
+            if( err == 0 ) break;
           }
-          catch( ksys::ExceptionSP & e ){
-            err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
-          }
-          if( err == 0 ) break;
           unicast = unicast->Next;
         }
         if( err == 0 ) break;
