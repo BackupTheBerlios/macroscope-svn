@@ -2,10 +2,10 @@
 
 echo %cmd% configuration %conf% %generator%
 if Exist "CMakeCache.txt" goto silentCMake
-cmake %cmakeDefs% -DCMAKE_BUILD_TYPE=%conf% %generator%
+cmake %cmakeDefs% -DCMAKE_BUILD_TYPE=%conf% %generator% .
 goto ifErrorCMake
 :silentCMake
-cmake %cmakeDefs% -DCMAKE_BUILD_TYPE=%conf% %generator% 1>nul
+cmake %cmakeDefs% -DCMAKE_BUILD_TYPE=%conf% %generator% . 1>nul
 :ifErrorCMake
 if errorlevel 0 goto execCmd
 echo cmake execution failed
