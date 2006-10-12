@@ -524,6 +524,7 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
   }
   catch( ExceptionSP & e ){
     hr = HRESULT_FROM_WIN32(e->code() - errorOffset);
+    e->writeStdError();
   }
   return hr;
 }
@@ -681,6 +682,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
   }
   catch( ExceptionSP & e ){
     hr = HRESULT_FROM_WIN32(e->code() - errorOffset);
+    e->writeStdError();
   }
   return hr;
 }
@@ -1622,6 +1624,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
   catch( ExceptionSP & e ){
     *pLastError = e->code() - errorOffset;
     if( file != NULL ) file->lastError_ = *pLastError;
+    e->writeStdError();
   }
   return S_OK;
 }

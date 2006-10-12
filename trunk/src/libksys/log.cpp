@@ -66,16 +66,22 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-  file_.close();
-  lockFile_.close();
+  try {
+    file_.close();
+    lockFile_.close();
+  }
+  catch( ... ){}
   return *this;
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::fileName(const utf8::String & name)
 {
   AutoLock<FiberInterlockedMutex> lock(mutex_);
-  file_.fileName(name);
-  lockFile_.fileName(name + ".lck");
+  try {
+    file_.fileName(name);
+    lockFile_.fileName(name + ".lck");
+  }
+  catch( ... ){}
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -294,8 +300,11 @@ LogFile & LogFile::redirectToStdout()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   AutoLock<FiberInterlockedMutex> lock(mutex_);
-  lockFile_.close();
-  file_.close().redirectToStdout();
+  try {
+    lockFile_.close();
+    file_.close().redirectToStdout();
+  }
+  catch( ... ){}
 #else
   throw ExceptionSP(newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__));
 #endif
@@ -306,8 +315,11 @@ LogFile & LogFile::redirectToStderr()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   AutoLock<FiberInterlockedMutex> lock(mutex_);
-  lockFile_.close();
-  file_.close().redirectToStderr();
+  try {
+    lockFile_.close();
+    file_.close().redirectToStderr();
+  }
+  catch( ... ){}
 #else
   throw ExceptionSP(newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__));
 #endif
