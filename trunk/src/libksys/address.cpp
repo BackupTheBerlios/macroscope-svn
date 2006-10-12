@@ -36,9 +36,9 @@ namespace ksock {
 //------------------------------------------------------------------------------
 SockAddr & SockAddr::clear()
 {
-#if HAVE_STRUCT_SOCKADDR_IN6
+#if SIZEOF_SOCKADDR_IN6
   memset(&addr6_,0,sizeof(addr6_));
-#if HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN
+#if SIZEOF_SOCKADDR_IN6_SIN6_LEN
   addr6_.sin6_len = sizeof(addr6_);
 #endif
   addr6_.sin6_family = PF_INET6;

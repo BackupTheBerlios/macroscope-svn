@@ -36,7 +36,7 @@ class InAddr {
   public:
     union {
         struct in_addr  addr4_;
-#if HAVE_STRUCT_SOCKADDR_IN6
+#if SIZEOF_SOCKADDR_IN6
         struct in6_addr addr6_;
 #endif
     };
@@ -48,7 +48,7 @@ class SockAddr {
   public:
     union {
         struct sockaddr_in  addr4_;
-#if HAVE_STRUCT_SOCKADDR_IN6
+#if SIZEOF_SOCKADDR_IN6
         struct sockaddr_in6 addr6_;
 #endif
     };
@@ -57,7 +57,7 @@ class SockAddr {
     operator const struct sockaddr_in * () const { return &addr4_; }
     operator struct sockaddr_in & () { return addr4_; }
     operator const struct sockaddr_in & () const { return addr4_; }
-#if HAVE_STRUCT_SOCKADDR_IN6
+#if SIZEOF_SOCKADDR_IN6
     operator struct sockaddr_in6 * () { return &addr6_; }
     operator const struct sockaddr_in6 * () const { return &addr6_; }
     operator struct sockaddr_in6 & () { return addr6_; }
@@ -98,7 +98,7 @@ inline socklen_t SockAddr::sockAddrSize() const
   //  return addr4_.sin_len;
   //#else
   if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_);
-#if HAVE_STRUCT_SOCKADDR_IN6
+#if SIZEOF_SOCKADDR_IN6
   else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_);
 #endif
   //#endif
@@ -112,7 +112,7 @@ inline socklen_t SockAddr::addrSize() const
   //  return addr4_.sin_len;
   //#else
   if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_.sin_addr);
-#if HAVE_STRUCT_SOCKADDR_IN6
+#if SIZEOF_SOCKADDR_IN6
   else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_.sin6_addr);
 #endif
   //#endif

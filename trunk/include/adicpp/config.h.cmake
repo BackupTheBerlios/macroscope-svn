@@ -74,7 +74,6 @@
 #endif
 
 #cmakedefine SIZEOF_PTRDIFF_T ${SIZEOF_PTRDIFF_T}
-#cmakedefine SIZEOF_SOCKADDR_IN6 ${SIZEOF_SOCKADDR_IN6}
 #cmakedefine SIZEOF_AIOCB ${SIZEOF_AIOCB}
 #cmakedefine SIZEOF_UUID ${SIZEOF_UUID}
 #cmakedefine SIZEOF_GUID ${SIZEOF_GUID}
