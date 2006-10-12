@@ -32,7 +32,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 uint8_t giantPlaceHolder[sizeof(InterlockedMutex)];
 //---------------------------------------------------------------------------
-#if !defined(__i386__) && !defined(_MSC_VER) && !defined(__BCPLUSPLUS__)
+#if !defined(__GNUG__) && !defined(__i386__) && !defined(_MSC_VER) && !defined(__BCPLUSPLUS__)
 int32_t interlockedIncrement(int32_t & v,int32_t a)
 {
   giant().acquire();
@@ -206,7 +206,7 @@ InterlockedMutex::InterlockedMutex() : mutex_(NULL)
 {
   if( pthread_mutex_init(&mutex_,NULL) != 0 ){
     int32_t err = errno;
-    Exception::throwSP(err,utf8::string(__PRETTY_FUNCTION__)));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 }
 //---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ Mutex::Mutex()
   mutex_ = NULL;
   if( pthread_rwlock_init(&mutex_,NULL) != 0 ){
     int32_t err = errno;
-    Exception::throwSP(err,utf8::string(__PRETTY_FUNCTION__)));
+    Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
 #endif
 }
