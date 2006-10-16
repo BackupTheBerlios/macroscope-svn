@@ -750,8 +750,6 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
       }
     }
   }
-#else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
   return r;
 }
