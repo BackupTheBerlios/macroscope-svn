@@ -46,7 +46,10 @@ void MSUpdater::fiberExecute()
   Fetcher fetch;
   uint64_t lastCheckUpdate = 0;
   while( !terminated_ ){
-    if( getlocaltimeofday() - lastCheckUpdate >= (uint64_t) config_->valueByPath("update.interval",180) / 60000000u ){
+    config_->parse().override();
+    uint64_t interval = config_->valueByPath("update.interval",180);
+    interval *= 60000000u;
+    if( getlocaltimeofday() - lastCheckUpdate >= interval ){
       fetch.url(config_->valueByPath("update.url"));
       fetch.proxy(config_->valueByPath("update.proxy"));
       fetch.resume(config_->valueByPath("update.resume",true));
@@ -85,7 +88,7 @@ void MSUpdater::fiberExecute()
       }
       lastCheckUpdate = getlocaltimeofday();
     }
-    sleep(6000000);
+    sleep(interval);
   }
 }
 //------------------------------------------------------------------------------
@@ -124,6 +127,13 @@ bool MSUpdaterService::active()
 {
   return active();
 }
+//------------------------------------------------------------------------------
+void MSUpdaterService::genUpdatePackage()
+{
+
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 int main(int ac,char * av[])
 {
@@ -201,7 +211,7 @@ int main(int ac,char * av[])
         dispatch = false;
       }
       else if( argv()[u].strcmp("--generate-update-package") == 0 && u + 1 < argv().count() ){
-// TODO:
+        MSUpdaterService::genUpdatePackage();
       }
 #if PRIVATE_RELEASE
       else if( argv()[u].strcmp("--machine-key") == 0 ){

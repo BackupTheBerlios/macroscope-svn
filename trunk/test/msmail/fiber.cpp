@@ -98,7 +98,6 @@ void ServerFiber::main()
     uint8_t cmd;
     uint8_t ui8;
   };
-  checkMachineBinding(server_.config_->value("machine_key"));
   auth();
   while( !terminated_ ){
     *this >> cmd;
@@ -1011,6 +1010,7 @@ void NodeClient::sweepHelper(ServerType serverType)
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
+  if( periodicaly_ ) checkMachineBinding(server_.config_->value("machine_key"),true);
   server_.data(stStandalone).registerServer(
     ServerInfo(server_.bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
@@ -1021,7 +1021,6 @@ void NodeClient::main()
     bool connected, exchanged, doWork;
     do {
       stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
-      checkMachineBinding(server_.config_->value("machine_key"));
       connected = exchanged = false;
       {
         AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);

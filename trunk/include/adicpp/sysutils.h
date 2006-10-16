@@ -152,9 +152,9 @@ inline utf8::String & machineUniqueCryptedKey()
   return *reinterpret_cast<utf8::String *>(machineUniqueCryptedKeyHolder);
 }
 #if PRIVATE_RELEASE
-void checkMachineBinding(const utf8::String & key);
+void checkMachineBinding(const utf8::String & key,bool abortProgram = false);
 #else
-inline void checkMachineBinding(const utf8::String &){}
+inline void checkMachineBinding(const utf8::String &,bool abortProgram = false){}
 #endif
 //---------------------------------------------------------------------------
 class guid_t

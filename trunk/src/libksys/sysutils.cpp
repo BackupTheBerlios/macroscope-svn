@@ -2036,13 +2036,17 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text)
 }
 //---------------------------------------------------------------------------
 #if PRIVATE_RELEASE
-void checkMachineBinding(const utf8::String & key)
+void checkMachineBinding(const utf8::String & key,bool abortProgram)
 {
-  AutoLock<InterlockedMutex> lock(giant());
   if( machineUniqueCryptedKey().strlen() == 0 )
     machineUniqueCryptedKey() = getMachineCryptedUniqueKey(getMachineCleanUniqueKey());
-  if( machineUniqueCryptedKey().strcmp(key) != 0 )
+  if( machineUniqueCryptedKey().strcmp(key) != 0 ){
+    if( abortProgram ){
+      stdErr.debug(9,utf8::String::Stream() << "Pirate copy detected. Aborted...\n");
+      exit(EINVAL);
+    }
     Exception::throwSP(EINVAL,"Pirate copy detected");
+  }
 }
 #endif
 //---------------------------------------------------------------------------

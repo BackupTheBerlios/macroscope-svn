@@ -46,6 +46,8 @@ class MSUpdater : public Fiber {
 class MSUpdaterService : public Service, protected BaseServer {
   public:
     MSUpdaterService();
+
+    static void genUpdatePackage();
   protected:
   private:
     ConfigSP config_;
