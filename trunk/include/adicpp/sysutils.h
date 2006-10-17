@@ -145,7 +145,8 @@ inline bool isWow64(){
 //---------------------------------------------------------------------------
 utf8::String getMachineUniqueKey();
 utf8::String getMachineCleanUniqueKey();
-utf8::String getMachineCryptedUniqueKey(const utf8::String & text);
+class SHA256Cryptor;
+utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::String & info = utf8::String(),SHA256Cryptor * decryptor = NULL);
 extern uint8_t machineUniqueCryptedKeyHolder[];
 inline utf8::String & machineUniqueCryptedKey()
 {

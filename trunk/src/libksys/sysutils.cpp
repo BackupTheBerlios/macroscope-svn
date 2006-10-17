@@ -2028,19 +2028,36 @@ utf8::String getMachineCleanUniqueKey()
   return base64Encode(key.c_str(),key.size());
 }
 //---------------------------------------------------------------------------
-utf8::String getMachineCryptedUniqueKey(const utf8::String & text)
+utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::String & info,SHA256Cryptor * decryptor)
 {
+  SHA256Cryptor crypt;
+  SHA256Cryptor & cryptor = decryptor != NULL ? *decryptor : crypt;
+  cryptor.threshold(~(uintptr_t) 0);
+  cryptor.init(text.c_str(),text.size());
   SHA256 sha;
-  sha.make(text.c_str(),text.size());
-  return base64Encode(sha.sha256(),sha.size());
+  sha.make(sha.sha256(),sha.size());
+  utf8::String key(base64Encode(cryptor.sha256(),cryptor.size()));
+  utf8::String info2;
+  info2.resize(info.size());
+  cryptor.crypt(info2.c_str(),info.c_str(),info.size());
+  return key + base64Encode(info2.c_str(),info2.size());
 }
 //---------------------------------------------------------------------------
 #if PRIVATE_RELEASE
 void checkMachineBinding(const utf8::String & key,bool abortProgram)
 {
+  SHA256Cryptor decryptor;
   if( machineUniqueCryptedKey().strlen() == 0 )
-    machineUniqueCryptedKey() = getMachineCryptedUniqueKey(getMachineCleanUniqueKey());
-  if( machineUniqueCryptedKey().strcmp(key) != 0 ){
+    machineUniqueCryptedKey() = getMachineCryptedUniqueKey(getMachineCleanUniqueKey(),utf8::String(),&decryptor);
+  bool pirate = machineUniqueCryptedKey().left(43).strcmp(key.left(43)) != 0;
+  if( !pirate && machineUniqueCryptedKey().strlen() > 43 ){ // check expiration date
+    utf8::String info(machineUniqueCryptedKey().right(machineUniqueCryptedKey().size() - 43));
+    utf8::String info2;
+    info2.resize(info.size());
+    decryptor.crypt(info2.c_str(),info.c_str(),info.size());
+// now this is expiration date text from keymaker command line as plain text in info2
+  }
+  if( pirate ){
     if( abortProgram ){
       stdErr.debug(9,utf8::String::Stream() << "Pirate copy detected. Aborted...\n");
       exit(EINVAL);

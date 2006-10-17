@@ -50,7 +50,11 @@ int main(int ac,char * av[])
         fprintf(stdout,"%s\n",mskey_version.tex_);
         continue;
       }
-      utf8::String key(getMachineCryptedUniqueKey(argv()[u]));
+      utf8::String expirationDate;
+      if( argv()[u].strcmp("--expiration-date") == 0 && u + 1 < argv().count() ){
+        expirationDate = argv()[u + 1];
+      }
+      utf8::String key(getMachineCryptedUniqueKey(argv()[u],expirationDate));
       fprintf(stdout,(const char *) key.getANSIString());
       copyStrToClipboard(key);
     }
