@@ -346,7 +346,7 @@ void ServerFiber::sendMail() // client sending mail
     file2.createIfNotExist(true).removeAfterClose(true).open();
     file2 << message;
     for( uint64_t ll, l = file.size() - file.tell(); l > 0; l -= ll ){
-      ll = l > getpagesize() ? getpagesize() : l;
+      ll = l > (uintptr_t) getpagesize() ? getpagesize() : l;
       file.readBuffer(b,ll);
       file2.writeBuffer(b,ll);
     }

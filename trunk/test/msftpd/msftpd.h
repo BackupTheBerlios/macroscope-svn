@@ -103,7 +103,7 @@ static inline uint64_t partialBlockSize(uint64_t fileSize)
   for( ll = 1; (uint64_t(1) << ll) < fileSize; ll++ );
   ll = ksys::fibonacci(ll);
 // block size must be greater system physical page size
-  if( ll < getpagesize() ) ll = getpagesize();
+  if( ll < (uintptr_t) getpagesize() ) ll = getpagesize();
 // block size must be lesser 64 Mb
   if( ll > 64u * 1024u * 1024u ) ll = 64u * 1024u * 1024u;
   return ll;

@@ -296,7 +296,7 @@ MSFTPServerFiber & MSFTPServerFiber::getFileHash()
   utf8::String name;
   uint64_t l, ll, lp, bs, partialBlockSize;
   *this >> name >> partialBlockSize;
-  if( partialBlockSize < getpagesize() ) partialBlockSize = getpagesize();
+  if( partialBlockSize < (uintptr_t) getpagesize() ) partialBlockSize = getpagesize();
   if( partialBlockSize > 4u * 1024u * 1024u ) partialBlockSize = 4u * 1024u * 1024u;
   ksys::AsyncFile file(name);
   if( file.tryOpen() ){
