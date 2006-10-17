@@ -287,7 +287,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   lg.l_linger = 0;
   setsockopt(SOL_SOCKET,SO_LINGER,&lg,sizeof(lg));
   int reuse = true;
-  socklen_t rlen = sizeof(reuse);
+//  socklen_t rlen = sizeof(reuse);
 //  getsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,rlen);
   setsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,(socklen_t) sizeof(reuse));
 #endif
@@ -540,7 +540,7 @@ AsyncSocket & AsyncSocket::operator << (const utf8::String & s)
   if( l > (~uint64_t(0) >> 1) )
     ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
   if( l > 32767 ){
-    for( intptr_t i = sizeof(b); i > sizeof(b) / 2; i-- )
+    for( uintptr_t i = sizeof(b); i > sizeof(b) / 2; i-- )
       ksys::xchg(b[sizeof(b) - i],((uint8_t *) &l)[i - 1]);
     b[0] |= uint8_t(0x80);
     return write(b,sizeof(uint64_t)).write(s.c_str(),ll);
@@ -560,7 +560,7 @@ AsyncSocket & AsyncSocket::operator >> (utf8::String & s)
   if( b[0] & 0x80 ){
     b[0] &= ~0x80;
     read(b + sizeof(int16_t),sizeof(uint64_t) - sizeof(int16_t));
-    for( intptr_t i = sizeof(b); i > sizeof(b) / 2; i-- )
+    for( uintptr_t i = sizeof(b); i > sizeof(b) / 2; i-- )
       ksys::xchg(b[sizeof(b) - i],((uint8_t *) &l)[i - 1]);
   }
   else {

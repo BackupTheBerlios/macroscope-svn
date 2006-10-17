@@ -630,6 +630,9 @@ class ServerFiber : public ksock::ServerFiber {
     ServerType serverType_;
     uint8_t protocol_;
 
+    ServerFiber(const ServerFiber &);
+    void operator = (const ServerFiber &);
+    
     static EmbeddedHashNode<ServerFiber> & hashNode(const ServerFiber & object){
       return object.hashNode_;
     }

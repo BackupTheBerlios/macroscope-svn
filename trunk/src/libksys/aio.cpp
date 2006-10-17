@@ -241,6 +241,9 @@ void AsyncIoSlave::openAPI(AsyncEvent * object)
     case etAccept :
     case etConnect :
       object->descriptor_->openAPI();
+    default :
+      assert( 0 );
+      exit(EINVAL);
   }
 }
 //---------------------------------------------------------------------------
@@ -252,6 +255,9 @@ void AsyncIoSlave::closeAPI(AsyncEvent * object)
     case etAccept :
     case etConnect :
       object->descriptor_->closeAPI();
+    default :
+      assert( 0 );
+      exit(EINVAL);
   }
 }
 //---------------------------------------------------------------------------
@@ -1581,6 +1587,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
+    default :;
   }
   Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
 }

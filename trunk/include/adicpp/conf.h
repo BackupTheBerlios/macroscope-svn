@@ -317,8 +317,8 @@ class EConfig : public Exception {
   public:
     EConfig(Config * config, const utf8::String & what);
     static EConfig * newException(Config * config,const utf8::String & what);
-    static void throwSP(Config * config,const utf8::String & what);
-    static void throwSP(Config * config,const char * what);
+    static void throwSP(Config * config,const utf8::String & what) GNUG_NORETURN;
+    static void throwSP(Config * config,const char * what) GNUG_NORETURN;
 };
 //---------------------------------------------------------------------------
 } // namespace ksys

@@ -204,6 +204,7 @@ bool Semaphore::timedWait(uint64_t timeout)
 {
 #if HAVE_SEMAPHORE_H
   Exception::throwSP(ENOSYS, __PRETTY_FUNCTION__);
+  return false;
 #elif defined(__WIN32__) || defined(__WIN64__)
   uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);
   DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));

@@ -338,7 +338,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
     file.writeBuffer((const uint8_t *) response.raw() + response.pos(),response.count() - response.pos());
     for(;;){
       int64_t r;
-      if( response.count() < getpagesize() ) response.resize(getpagesize());
+      if( response.count() < (uintptr_t) getpagesize() ) response.resize(getpagesize());
       response.seek(0);
       while( response.pos() < response.count() ){
         r = 0;

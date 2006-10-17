@@ -187,14 +187,14 @@ const T & Array<T>::operator[](uintptr_t i) const
 template <class T> inline
 T & Array<T>::operator [] (int i)
 {
-  assert( i < count_ );
+  assert( (uintptr_t) i < count_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
 template <class T> inline
 const T & Array<T>::operator [] (int i) const
 {
-  assert( i < count_ );
+  assert( (uintptr_t) i < count_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------

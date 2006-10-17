@@ -27,32 +27,6 @@
 #ifndef _tlv_H_
 #define _tlv_H_
 //---------------------------------------------------------------------------
-#ifdef __GNUG__
-#define GNUG_NOTHROW __attribute__((nothrow))
-#if __x86_64__
-#define GNUG_CDECL
-#else
-#define GNUG_CDECL __attribute__((cdecl))
-#endif
-#if __x86_64__
-#define GNUG_NOTHROW_CDECL __attribute__((nothrow))
-#else
-#define GNUG_NOTHROW_CDECL __attribute__((nothrow,cdecl))
-#endif
-#define GNUG_CONSTRUCTOR __attribute__((constructor))
-#define GNUG_NOTHROW_CONSTRUCTOR __attribute__((nothrow,constructor))
-#define GNUG_DESTRUCTOR __attribute__((destructor))
-#define GNUG_NOTHROW_DESTRUCTOR __attribute__((nothrow,destructor))
-#else
-#define GNUG_NOTHROW
-#define GNUG_CDECL
-#define GNUG_NOTHROW_CDECL
-#define GNUG_CONSTRUCTOR
-#define GNUG_NOTHROW_CONSTRUCTOR
-#define GNUG_DESTRUCTOR
-#define GNUG_NOTHROW_DESTRUCTOR
-#endif
-//---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
 #if __BCPLUSPLUS__

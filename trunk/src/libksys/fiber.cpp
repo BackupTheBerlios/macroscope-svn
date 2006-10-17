@@ -287,11 +287,11 @@ BaseServer::~BaseServer()
 }
 //------------------------------------------------------------------------------
 BaseServer::BaseServer() :
+  shutdown_(false),
   mt_(numberOfProcessors() * 4),
   fiberStackSize_(PTHREAD_STACK_MIN),
   fiberTimeout_(10000000),
-  howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbort)),
-  shutdown_(false)
+  howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbort))
 {
 }
 //------------------------------------------------------------------------------

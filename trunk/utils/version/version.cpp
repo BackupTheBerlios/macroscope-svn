@@ -27,10 +27,10 @@ int main(int ac, char*av[]){
   unsigned int version, ver, rev, lev;
   if( sscanf(inpBuffer,"%s %s %u.%u.%u",versionString,target,&ver,&rev,&lev) != 5 ) return -1;
   for( int i = sizeof(target) - 1; i >= 0; i-- ) upperTarget[i] = toupper(target[i]);
-  for( int i = 0; i < sizeof(upperOutName); i++ ){
-    upperOutName[i] = toupper(av[2][i]);
-    if( upperOutName[i] == '.' || isspace(upperOutName[i]) ) upperOutName[i] = '_';
-    if( av[2][i] == '\0' ) break;
+  for( unsigned u = 0; u < sizeof(upperOutName); u++ ){
+    upperOutName[u] = toupper(av[2][u]);
+    if( upperOutName[u] == '.' || isspace(upperOutName[u]) ) upperOutName[u] = '_';
+    if( av[2][u] == '\0' ) break;
   }
   version = (ver << 22) + (rev << 12) + lev;
   version++;
