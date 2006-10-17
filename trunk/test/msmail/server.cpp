@@ -229,11 +229,62 @@ void Server::addRecvMailFiber(ServerFiber & fiber)
   recvMailFibers_.insert(fiber);
 }
 //------------------------------------------------------------------------------
-void Server::remRecvMailFiber(ServerFiber & fiber)
+bool Server::remRecvMailFiber(ServerFiber & fiber)
 {
+  bool r = false;
   AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
   ServerFiber * fib = recvMailFibers_.find(fiber);
-  if( fib == &fiber ) recvMailFibers_.remove(fiber);
+  if( fib == &fiber ){
+    recvMailFibers_.remove(fiber);
+    r = true;
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
+ServerFiber * Server::findRecvMailFiberNL(const ServerFiber & fiber)
+{
+  return recvMailFibers_.find(fiber);
+}
+//------------------------------------------------------------------------------
+ServerFiber * Server::findRecvMailFiber(const ServerFiber & fiber)
+{
+  AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+  return findRecvMailFiberNL(fiber);
+}
+//------------------------------------------------------------------------------
+void Server::sendRobotMessage(
+  const utf8::String & recepient,
+  const utf8::String & sender,
+  const utf8::String & sended,
+  const utf8::String & key,
+  const utf8::String & value,
+  Message * msg)
+{
+  Message m;
+  if( msg != NULL ) m.copyUserAttributes(*msg);
+  m.value("#Recepient",recepient);
+  m.value("#Sender",sender);
+  m.value("#Sender.Sended",getTimeString(gettimeofday()));
+  m.value("#Sender.Sended.Origin",sended);
+  m.value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
+  m.value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
+  m.value("#Sender.Host","robot@" + bindAddrs()[0].resolve(defaultPort));
+  m.value(key,value);
+  AsyncFile ctrl2(lckDir() + m.id() + ".lck");
+  ctrl2.createIfNotExist(true).removeAfterClose(true).open();
+  AutoFileWRLock<AsyncFile> flock(ctrl2);
+  AsyncFile file2(spoolDir() + m.id() + ".msg");
+  file2.createIfNotExist(true).open() << m;
+}
+//------------------------------------------------------------------------------
+void Server::sendUserWatchdog(const utf8::String & user)
+{
+// send notify to wait fiber
+  guid_t uuid;
+  createGUID(uuid);
+  utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
+  AsyncFile watchdog(includeTrailingPathDelimiter(mailDir() + user) + "." + suuid);
+  watchdog.createIfNotExist(true).removeAfterClose(true).open();
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

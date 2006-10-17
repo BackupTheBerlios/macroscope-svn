@@ -34,8 +34,8 @@ ServerFiber::~ServerFiber()
 {
 }
 //------------------------------------------------------------------------------
-ServerFiber::ServerFiber(Server & server) :
-  server_(server), serverType_(stNone), protocol_(0)
+ServerFiber::ServerFiber(Server & server,utf8::String user,utf8::String key) :
+  server_(server), serverType_(stNone), protocol_(0), user_(user), key_(key)
 {
 }
 //------------------------------------------------------------------------------
@@ -428,7 +428,6 @@ void ServerFiber::processMailbox(
         assert( message.id().strcmp(id) == 0 );
         utf8::String suser, skey;
         splitString(message.value("#Recepient"),suser,skey,"@");
-        //stdErr.debug(9,utf8::String::Stream() << message.value("#Recepient") << "\n");
         bool lostSheep = true;
         {
           Server::Data & data = server_.data(stStandalone);
@@ -438,7 +437,6 @@ void ServerFiber::processMailbox(
             lostSheep = key2ServerLink->server_.strcasecmp(myHost) != 0;
         }
         lostSheep = user_.strcasecmp(suser) != 0 || lostSheep;
-        //lostSheep = false;
         if( lostSheep ){
           file.close();
           rename(file.fileName(),server_.spoolDir() + getNameFromPathName(list[i]));
@@ -446,12 +444,33 @@ void ServerFiber::processMailbox(
         else {
           bool messageAccepted = true;
           if( skey.strcasecmp(key_) == 0 && mids.find(message.id()) == NULL ){
+            if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
+              AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
+              ServerFiber * fib = server_.findRecvMailFiberNL(*this);
+              if( fib == NULL ){
+                server_.sendRobotMessage(
+                  message.value("#Sender"),
+                  message.value("#Recepient"),
+                  message.value("#Sender.Sended"),
+                  "#request.user.online","no"
+                );
+                if( (bool) Mutant(message.isValue("#request.user.remove.message.if.offline")) ){
+                  file.close();
+                  remove(list[i]);
+                  stdErr.debug(1,
+                    utf8::String::Stream() << "Message " << message.id() <<
+                    " received from " << message.value("#Sender") <<
+                    " to " << message.value("#Recepient") <<
+                    " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
+                  );
+                }
+              }
+            }
             file >> message; // read user attributes
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
             if( onlyNewMail && messageAccepted ){
-	            Message::Key key(message.id());
-              ids.insert(*newObject<Message::Key>(key),false);
+              ids.insert(*newObject<Message::Key>(message.id()),false);
 	          }
           }
           file.close();
@@ -468,7 +487,7 @@ void ServerFiber::processMailbox(
 void ServerFiber::recvMail() // client receiving mail
 {
   utf8::String mailForUser, mailForKey;
-  bool waitForMail, onlyNewMail;
+  bool waitForMail, onlyNewMail, wait;
   *this >> mailForUser >> mailForKey >> waitForMail >> onlyNewMail;
   user_ = mailForUser;
   key_ = mailForKey;
@@ -479,15 +498,7 @@ void ServerFiber::recvMail() // client receiving mail
   AutoHashDrop<Message::Keys> idsAutoDrop(ids);
   server_.addRecvMailFiber(*this);
   try {
-    {
-// send notify to wait fibers
-      guid_t uuid;
-      createGUID(uuid);
-      utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-      AsyncFile watchdog(includeTrailingPathDelimiter(userMailBox) + "." + suuid);
-      watchdog.createIfNotExist(true).removeAfterClose(true).open();
-    }
-    bool wait;
+    server_.sendUserWatchdog(mailForUser);
     while( !terminated_ ){
       processMailbox(userMailBox,ids,onlyNewMail,wait);
       if( !waitForMail ) break;
@@ -503,9 +514,11 @@ void ServerFiber::recvMail() // client receiving mail
   }
   catch( ... ){
     server_.remRecvMailFiber(*this);
+    processMailbox(userMailBox,ids,onlyNewMail,wait);
     throw;
   }
   server_.remRecvMailFiber(*this);
+  processMailbox(userMailBox,ids,onlyNewMail,wait);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::removeMail() // client remove mail
@@ -601,15 +614,48 @@ void SpoolWalker::processQueue(bool & timeWait)
         }
         else {
           if( deliverLocaly ){
-            utf8::String userMailBox(server_.mailDir() + suser);
-            createDirectory(userMailBox);
-            rename(list[i],includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
-            stdErr.debug(0,
-              utf8::String::Stream() << "Message " << message.id() <<
-              " received from " << message.value("#Sender") <<
-              " to " << message.value("#Recepient") <<
-              " delivered localy to mailbox: " << userMailBox << "\n"
-            );
+// auto response
+            bool process = true;
+            if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
+              AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
+              ServerFiber * fib = server_.findRecvMailFiberNL(ServerFiber(server_,suser,skey));
+              if( fib == NULL ){
+                server_.sendRobotMessage(
+                  message.value("#Sender"),
+                  message.value("#Recepient"),
+                  message.value("#Sender.Sended"),
+                  "#request.user.online","no"
+                );
+                if( (bool) Mutant(message.isValue("#request.user.remove.message.if.offline")) ){
+                  remove(list[i]);
+                  stdErr.debug(1,
+                    utf8::String::Stream() << "Message " << message.id() <<
+                    " received from " << message.value("#Sender") <<
+                    " to " << message.value("#Recepient") <<
+                    " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
+                  );
+                  process = false;
+                }
+              }
+            }
+////////////////
+            if( process ){
+              utf8::String userMailBox(server_.mailDir() + suser);
+              utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
+              try {
+                rename(list[i],mailFile);
+              }
+              catch( ... ){
+                createDirectory(userMailBox);
+              }
+              rename(list[i],mailFile);
+              stdErr.debug(0,
+                utf8::String::Stream() << "Message " << message.id() <<
+                " received from " << message.value("#Sender") <<
+                " to " << message.value("#Recepient") <<
+                " delivered localy to mailbox: " << userMailBox << "\n"
+              );
+            }
           }
           else {
             rename(list[i],server_.mqueueDir() + message.id() + ".msg");
@@ -639,7 +685,12 @@ void SpoolWalker::fiberExecute()
 {
   bool timeWait;
   while( !terminated_ ){
-    processQueue(timeWait);
+    try {
+      processQueue(timeWait);
+    }
+    catch( ... ){
+      timeWait = true;
+    }
     if( terminated_ ) break;
     if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(
@@ -905,7 +956,12 @@ void MailQueueWalker::main()
 {
   bool timeWait;
   while( !terminated_ ){
-    processQueue(timeWait);
+    try {
+      processQueue(timeWait);
+    }
+    catch( ... ){
+      timeWait = true;
+    }
     if( terminated_ ) break;
     if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(

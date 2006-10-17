@@ -187,6 +187,7 @@ class Message {
     Message & value(const utf8::String & key,const utf8::String & value);
     utf8::String removeValue(const utf8::String & key);
     Message & removeValueByLeft(const utf8::String & key);
+    Message & copyUserAttributes(const Message & msg);
 
     static EmbeddedHashNode<Message> & idNode(const Message & object){
       return object.idNode_;
@@ -619,7 +620,7 @@ class ServerFiber : public ksock::ServerFiber {
   friend class Server;
   public:
     virtual ~ServerFiber();
-    ServerFiber(Server & server);
+    ServerFiber(Server & server,utf8::String user = utf8::String(),utf8::String key = utf8::String());
   protected:
     bool isValidUser(const utf8::String & user);
     utf8::String getUserPassword(const utf8::String & user);
@@ -897,7 +898,17 @@ class Server : public ksock::Server {
       ServerFiber::hashNodeEqu
     > recvMailFibers_;
     void addRecvMailFiber(ServerFiber & fiber);
-    void remRecvMailFiber(ServerFiber & fiber);
+    bool remRecvMailFiber(ServerFiber & fiber);
+    ServerFiber * findRecvMailFiberNL(const ServerFiber & fiber);
+    ServerFiber * findRecvMailFiber(const ServerFiber & fiber);
+    void sendRobotMessage(
+      const utf8::String & recepient,
+      const utf8::String & sender,
+      const utf8::String & sended,
+      const utf8::String & key,
+      const utf8::String & value,
+      Message * msg = NULL);
+    void sendUserWatchdog(const utf8::String & user);
 };
 //------------------------------------------------------------------------------
 inline Server::Data & Server::data(ServerType type)

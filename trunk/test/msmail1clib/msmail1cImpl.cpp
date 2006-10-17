@@ -751,7 +751,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 21;
+  *plMethods = 22;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -841,6 +841,10 @@ HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
   if( _wcsicoll(bstrMethodName,L"String2File") == 0 ) *plMethodNum = 20;
   else
   if( _wcsicoll(bstrMethodName,L"СтрокуВФайл") == 0 ) *plMethodNum = 20;
+  else
+  if( _wcsicoll(bstrMethodName,L"TimeFromTimeString") == 0 ) *plMethodNum = 21;
+  else
+  if( _wcsicoll(bstrMethodName,L"ВремяИзВремениСтрокой") == 0 ) *plMethodNum = 21;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -1017,6 +1021,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"СтрокуВФайл")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 21 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"TimeFromTimeString")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ВремяИзВремениСтрокой")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1045,6 +1057,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 18 : *plParams = 1; break;
     case 19 : *plParams = 1; break;
     case 20 : *plParams = 2; break;
+    case 21 : *plParams = 1; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -1472,6 +1485,22 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             SafeArrayUnlock(*paParams);
           }
           break;
+        case 21 : // TimeFromTimeString
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                V_BSTR(pvarRetValue) = utf8::int2Str(timeFromTimeString(V_BSTR(pv0))).getOLEString();
+                V_VT(pvarRetValue) = VT_BSTR;
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+          
         default :
           hr = E_NOTIMPL;
       }

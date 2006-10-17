@@ -240,6 +240,16 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   return s;
 }
 //------------------------------------------------------------------------------
+Message & Message::copyUserAttributes(const Message & msg)
+{
+  Array<Attribute *> list;
+  msg.attributes_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    if( utf8::String(list[i]->key_).strncmp("#",1) != 0 )
+      attributes_.insert(*newObject<Attribute>(*list[i]));
+  return *this;
+}
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 UserInfo::~UserInfo()
