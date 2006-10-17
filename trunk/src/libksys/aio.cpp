@@ -1450,8 +1450,6 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
       if( r ) break;
     }
   }
-#else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
   return r;
 }

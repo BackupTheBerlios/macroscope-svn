@@ -1637,13 +1637,10 @@ intptr_t String::Stream::Format::format(char * buffer) const
   ksys::AutoPtr<char> b;
   errno = 0;
   size = print(buf,sizeof(buf));
-  if( size == -1 && (errno == 0 || errno == ERANGE) ){
-    for( uintptr_t sz = sizeof(buf) * 2; sz < ~uintptr_t(0); sz <<= 1 ){
-      b.realloc(sz);
-      errno = 0;
-      size = print(p = b.ptr(),sz);
-      if( size >= 0 || errno == 0 || errno == EINVAL ) break;
-    }
+  if( buffer != NULL && size > -1 && (unsigned) size >= sizeof(buf) ){
+    b.realloc(size + 1);
+    errno = 0;
+    size = print(p = b.ptr(),size + 1);
   }
   if( size == -1 ){
     int32_t err = errno;

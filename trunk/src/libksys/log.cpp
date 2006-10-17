@@ -179,11 +179,11 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
       Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
     AutoPtr<char> buf;
-    buf.alloc(a);
+    buf.alloc(a + 1);
     if( pri == lmDEBUG ){
       a = SNPRINTF(
         buf.ptr(),
-        a,
+        a + 1,
         "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
         t.tm_mday,
         t.tm_mon + 1,
@@ -200,7 +200,7 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
     else {
       a = SNPRINTF(
         buf.ptr(),
-        a,
+        a + 1,
         "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
         t.tm_mday,
         t.tm_mon + 1,
