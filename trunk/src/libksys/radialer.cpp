@@ -32,6 +32,7 @@ namespace ksys {
 //------------------------------------------------------------------------------
 RemoteAccessDialer::~RemoteAccessDialer()
 {
+  close();
 }
 //------------------------------------------------------------------------------
 RemoteAccessDialer::RemoteAccessDialer()
@@ -49,20 +50,20 @@ RemoteAccessDialer & RemoteAccessDialer::open()
     DWORD r = RasDialA(
       &rasDialExtensions_,
       phonebook_.getANSIString(),
-      rasDialParams_,
+      &rasDialParamsA_,
       NULL,
       NULL,
-      &rasConn_
+      &hRasConn_
     );
   }
   else {
     DWORD r = RasDialW(
       &rasDialExtensions_,
       phonebook_.getUNICODEString(),
-      rasDialParams_,
+      &rasDialParamsW_,
       NULL,
       NULL,
-      &rasConn_
+      &hRasConn_
     );
   }
   return *this;
@@ -70,6 +71,10 @@ RemoteAccessDialer & RemoteAccessDialer::open()
 //------------------------------------------------------------------------------
 RemoteAccessDialer & RemoteAccessDialer::close()
 {
+  if( hRasConn_ == NULL ){
+    RasHangUp(hRasConn_);
+    hRasConn_ = NULL;
+  }
   return *this;
 }
 //------------------------------------------------------------------------------

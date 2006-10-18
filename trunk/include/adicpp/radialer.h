@@ -43,7 +43,10 @@ class RemoteAccessDialer {
 #if defined(__WIN32__) || defined(__WIN64__)
     RASDIALEXTENSIONS rasDialExtensions_;
     utf8::String phonebook_;
-    RASDIALPARAMS rasDialParams_;
+    union {
+      RASDIALPARAMSA rasDialParamsA_;
+      RASDIALPARAMSW rasDialParamsW_;
+    };
     HRASCONN hRasConn_;
 #endif
 };
