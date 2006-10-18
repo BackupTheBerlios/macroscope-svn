@@ -100,6 +100,7 @@ void ClientFiber::main()
     stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
     stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
     stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
+    checkMachineBinding(client_.config_->value("machine_key"));
     {
       AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
       client_.connected_ = false;
@@ -460,6 +461,7 @@ utf8::String Client::value(const utf8::String id,const utf8::String key,const ut
 //------------------------------------------------------------------------------
 bool Client::sendMessage(const utf8::String id)
 {
+  checkMachineBinding(config_->value("machine_key"));
   Message * msg = sendQueue_.find(id);
   if( msg == NULL ) return false;
   workFiberLastError_ = 0;

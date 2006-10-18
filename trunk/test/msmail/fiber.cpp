@@ -1078,6 +1078,7 @@ void NodeClient::main()
     bool connected, exchanged, doWork;
     do {
       stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
+      if( periodicaly_ ) checkMachineBinding(server_.config_->value("machine_key"),true);
       connected = exchanged = false;
       {
         AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);

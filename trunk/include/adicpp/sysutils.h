@@ -153,9 +153,9 @@ inline utf8::String & machineUniqueCryptedKey()
   return *reinterpret_cast<utf8::String *>(machineUniqueCryptedKeyHolder);
 }
 #if PRIVATE_RELEASE
-void checkMachineBinding(const utf8::String & key,bool abortProgram = false);
+bool checkMachineBinding(const utf8::String & key,bool abortProgram = false);
 #else
-inline void checkMachineBinding(const utf8::String &,bool abortProgram = false){}
+inline bool checkMachineBinding(const utf8::String &,bool abortProgram = false){ return false; }
 #endif
 //---------------------------------------------------------------------------
 class guid_t
@@ -321,9 +321,9 @@ MFA GetMFA(const T & ptr,A * obj)
   return MFA_<T,A>(ptr,obj).a;
 } */
 //---------------------------------------------------------------------------
-int64_t timeFromTimeString(const utf8::String & s);
+int64_t timeFromTimeString(const utf8::String & s,bool local = true);
 utf8::String getTimeString(int64_t t);
-int64_t timeFromTimeCodeString(const utf8::String & s);
+int64_t timeFromTimeCodeString(const utf8::String & s,bool local = true);
 utf8::String getTimeCode(int64_t t);
 //---------------------------------------------------------------------------
 } // namespace ksys

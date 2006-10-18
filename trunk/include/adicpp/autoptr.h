@@ -71,6 +71,7 @@ template< class T> class AutoPtr {
 
     AutoPtr< T> &   alloc(size_t size);
     AutoPtr< T> &   realloc(size_t size);
+    T * realloc(size_t size,int);
     AutoPtr< T> &   free();
 
     AutoPtr< T> &   setBit(uintptr_t n);
@@ -244,6 +245,14 @@ AutoPtr< T> & AutoPtr< T>::realloc(size_t size)
 {
   ptr_ = (T *) krealloc(ptr_, size);
   return *this;
+}
+//---------------------------------------------------------------------------
+template< class T> inline
+T * AutoPtr<T>::realloc(size_t size,int)
+{
+  T * p = (T *) ::realloc(ptr_,size);
+  if( p != NULL ) ptr_ = p;
+  return p;
 }
 //---------------------------------------------------------------------------
 template< class T> inline

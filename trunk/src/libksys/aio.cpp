@@ -241,9 +241,12 @@ void AsyncIoSlave::openAPI(AsyncEvent * object)
     case etAccept :
     case etConnect :
       object->descriptor_->openAPI();
+      break;
     default :
-      assert( 0 );
-      exit(EINVAL);
+      if( object->type_ >= etCount ){
+        assert( 0 );
+        exit(EINVAL);
+      }
   }
 }
 //---------------------------------------------------------------------------
@@ -255,9 +258,12 @@ void AsyncIoSlave::closeAPI(AsyncEvent * object)
     case etAccept :
     case etConnect :
       object->descriptor_->closeAPI();
+      break;
     default :
-      assert( 0 );
-      exit(EINVAL);
+      if( object->type_ >= etCount ){
+        assert( 0 );
+        exit(EINVAL);
+      }
   }
 }
 //---------------------------------------------------------------------------

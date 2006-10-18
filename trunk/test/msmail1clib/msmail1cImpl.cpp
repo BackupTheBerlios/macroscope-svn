@@ -569,7 +569,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               stdErr.setRedirect(
                 client_.config_->value("log_redirect",utf8::String())
               );
-              if( !isRet() ) client_.open();
+              client_.open();
               active_ = true;
             }
             else {
@@ -1269,14 +1269,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
-                if( isRet() ){
-                  V_I4(pvarRetValue) = 1;
-                  lastError_ = 0;
-                }
-                else {
-                  V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0)) ? 1 : 0;
-                  lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
-                }
+                V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0)) ? 1 : 0;
+                lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
               }
             }
             SafeArrayUnlock(*paParams);
@@ -1547,11 +1541,6 @@ Cmsmail1c::LockedFile * Cmsmail1c::addFile(const utf8::String & name)
 //---------------------------------------------------------------------------
 STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG maxSleepTime,OUT LONG * pLastError)
 {
-  if( isRet() ){
-    *pLastError = 0;
-    return S_OK;
-  }
-//---------------------------------------------------------------------
   ULONG tm;
   if( maxSleepTime < minSleepTime ){
     tm = maxSleepTime;
@@ -1563,6 +1552,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
   LockedFile * file = NULL;
   *pLastError = 0;
   try {
+    checkMachineBinding(client_.config_->value("machine_key"));
     file = findFileByName(name);
     if( file == NULL ) file = addFile(name);
     file->lastError_ = 0;
@@ -1651,9 +1641,9 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
     }
   }
   catch( ExceptionSP & e ){
-    *pLastError = e->code() - errorOffset;
+    *pLastError = e->code() > errorOffset ? e->code() - errorOffset : e->code();
     if( file != NULL ) file->lastError_ = *pLastError;
-    e->writeStdError();
+//    e->writeStdError();
   }
   return S_OK;
 }

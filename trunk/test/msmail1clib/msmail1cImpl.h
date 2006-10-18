@@ -250,7 +250,7 @@ public:
   STDMETHOD(sleepIn)(IN ULONG minSleepTime,IN ULONG maxSleepTime);
   STDMETHOD(textToFile)(IN BSTR name,IN BSTR text,OUT LONG * pLastError);
 
-  static bool isRet();
+//  static bool isRet();
 
   // IInitDone Methods
 public:
@@ -279,7 +279,7 @@ public:
 
 OBJECT_ENTRY_AUTO(__uuidof(msmail1c), Cmsmail1c)
 
-#include "Registry.h"
+/*#include "Registry.h"
 
 inline bool Cmsmail1c::isRet()
 {
@@ -310,14 +310,14 @@ inline bool Cmsmail1c::isRet()
   bool ret = false;
   time_t ct;
 
-  /*struct tm tma;
-  memset(&tma,0,sizeof(tma));
-  tma.tm_year = 2007 - 1900;
-  tma.tm_mon = 2;
-  tma.tm_mday = 1;
-  tma.tm_hour = 13;
-  tma.tm_min = 13;
-  ct = mktime(&tma);*/
+//  struct tm tma;
+//  memset(&tma,0,sizeof(tma));
+//  tma.tm_year = 2007 - 1900;
+//  tma.tm_mon = 2;
+//  tma.tm_mday = 1;
+//  tma.tm_hour = 13;
+//  tma.tm_min = 13;
+//  ct = mktime(&tma);
 
   time(&ct);
   if( ct >= *(time_t *) (stop + 16) ){
@@ -333,3 +333,4 @@ inline bool Cmsmail1c::isRet()
   return false;
 #endif
 }
+*/

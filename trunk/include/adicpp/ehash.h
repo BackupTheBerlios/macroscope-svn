@@ -459,19 +459,26 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
   switch( o ){
     case optInc :
       if( ++count_ < count + c ) return;
-      head = getChain();
-      hash_.realloc((i = (size_ << 1) + (size_ == 0)) * sizeof(EmbeddedHashNode<T> *));
-      while( size_ < i ){
-        hash_[size_] = NULL;
-        size_++;
+      if( hash_.realloc((i = (size_ << 1) + (size_ == 0)) * sizeof(EmbeddedHashNode<T> *),0) != NULL ){
+        head = getChain();
+        while( size_ < i ){
+          hash_[size_] = NULL;
+          size_++;
+        }
+        putChain(head);
       }
-      putChain(head);
       break;
     case optDec :
       if( --count_ > count - c ) return;
       if( size_ > 1 || count_ == 0 ){
         head = getChain();
-        hash_.realloc((size_ >> 1) * sizeof(EmbeddedHashNode<T> *));
+#ifndef NDEBUG
+        EmbeddedHashNode<T> ** a =
+#endif
+        hash_.realloc((size_ >> 1) * sizeof(EmbeddedHashNode<T> *),0);
+#ifndef NDEBUG
+        assert( a != NULL );
+#endif
         size_ >>= 1;
         putChain(head);
       }

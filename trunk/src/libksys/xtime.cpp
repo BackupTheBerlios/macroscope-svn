@@ -55,7 +55,7 @@ intptr_t str2Month(const char * month)
 //------------------------------------------------------------------------------
 size_t sizeOf_timeval_tv_sec = sizeof(((struct timeval *) NULL)->tv_sec);
 //---------------------------------------------------------------------------
-int64_t timeFromTimeString(const utf8::String & s)
+int64_t timeFromTimeString(const utf8::String & s,bool local)
 {
   struct timeval tv;
   struct tm tma;
@@ -96,10 +96,12 @@ int64_t timeFromTimeString(const utf8::String & s)
     int32_t err = errno;
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
-  struct timeval tv2;
-  struct timezone tz;
-  gettimeofday(&tv2,&tz);
-  tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+  if( local ){
+    struct timeval tv2;
+    struct timezone tz;
+    gettimeofday(&tv2,&tz);
+    tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+  }
   tv.tv_usec = usec;
   return timeval2Time(tv);
 }
@@ -133,7 +135,7 @@ utf8::String getTimeString(int64_t t)
   return s;
 }
 //---------------------------------------------------------------------------
-int64_t timeFromTimeCodeString(const utf8::String & s)
+int64_t timeFromTimeCodeString(const utf8::String & s,bool local)
 {
   struct timeval tv;
   struct tm tma;
@@ -174,10 +176,12 @@ int64_t timeFromTimeCodeString(const utf8::String & s)
     int32_t err = errno;
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
-  struct timeval tv2;
-  struct timezone tz;
-  gettimeofday(&tv2,&tz);
-  tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+  if( local ){
+    struct timeval tv2;
+    struct timezone tz;
+    gettimeofday(&tv2,&tz);
+    tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+  }
   tv.tv_usec = usec;
   return timeval2Time(tv);
 }
