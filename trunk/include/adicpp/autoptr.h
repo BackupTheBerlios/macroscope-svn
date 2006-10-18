@@ -251,7 +251,7 @@ template< class T> inline
 T * AutoPtr<T>::realloc(size_t size,int)
 {
   T * p = (T *) ::realloc(ptr_,size);
-  if( p != NULL ) ptr_ = p;
+  if( p != NULL || size == 0 ) ptr_ = p;
   return p;
 }
 //---------------------------------------------------------------------------

@@ -142,7 +142,7 @@ inline SHA256Cryptor::~SHA256Cryptor()
 {
 }
 //---------------------------------------------------------------------------
-inline SHA256Cryptor::SHA256Cryptor() : threshold_(1024 * 1024)
+inline SHA256Cryptor::SHA256Cryptor() : cursor_(0), count_(0), threshold_(1024 * 1024)
 {
 }
 //---------------------------------------------------------------------------

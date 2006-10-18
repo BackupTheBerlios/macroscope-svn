@@ -262,7 +262,7 @@ void ServerFiber::registerDB()
   stream.clear() << serverTypeName_[serverType_] <<
     ": database " << (fullDump ? "full dump" : "changes") << " sended to " << hostDB << "\n";
   ldata.dumpNL(stream);
-  stdErr.debug(6,stream);
+  stdErr.debug(fullDump ? 7 : 6,stream);
   stream.clear() << serverTypeName_[serverType_] << ": changes stored\n";
   diff.dumpNL(stream);
   stdErr.debug(5,stream);
@@ -281,7 +281,7 @@ void ServerFiber::getDB()
   stream << serverTypeName_[serverType_] <<
     ": database sended to client " << host << "\n";
   tdata.dumpNL(stream);
-  stdErr.debug(7,stream);
+  stdErr.debug(8,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::sendMail() // client sending mail
@@ -1203,7 +1203,7 @@ void NodeClient::main()
                 " database " << (fullDump ? "full dump" : "changes") <<
                 " sended to node " << host << "\n";
               ldata.dumpNL(stream);
-              stdErr.debug(6,stream);
+              stdErr.debug(fullDump ? 7 : 6,stream);
               stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
                 " database changes received from node " << host << "\n";
               rdata.dumpNL(stream);

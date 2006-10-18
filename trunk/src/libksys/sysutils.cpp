@@ -2028,12 +2028,18 @@ utf8::String getMachineCleanUniqueKey()
   return base64Encode(key.c_str(),key.size());
 }
 //---------------------------------------------------------------------------
+static uint8_t machineCryptKey[sizeof(SHA256_CTX) + 1];
+//---------------------------------------------------------------------------
 utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::String & info,SHA256Cryptor * decryptor)
 {
   SHA256Cryptor crypt;
   SHA256Cryptor & cryptor = decryptor != NULL ? *decryptor : crypt;
   cryptor.threshold(~(uintptr_t) 0);
   cryptor.init(text.c_str(),text.size());
+  if( machineCryptKey[sizeof(SHA256_CTX)] == 0 ){
+    memcpy(machineCryptKey,cryptor.sha256(),cryptor.size());
+    machineCryptKey[sizeof(SHA256_CTX)] = 1;
+  }
   SHA256 sha;
   sha.make(cryptor.sha256(),cryptor.size());
   utf8::String key(base64Encode(sha.sha256(),sha.size()));
@@ -2050,8 +2056,12 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
   bool pirate = true, mkey = true, expire = true;
   try {
     SHA256Cryptor decryptor;
-    if( machineUniqueCryptedKey().strlen() == 0 )
+    if( machineUniqueCryptedKey().strlen() == 0 ){
       machineUniqueCryptedKey() = getMachineCryptedUniqueKey(getMachineCleanUniqueKey(),utf8::String(),&decryptor);
+    }
+    else {
+      memcpy(decryptor.sha256(),machineCryptKey,decryptor.size());
+    }
     pirate = mkey = machineUniqueCryptedKey().left(43).strcmp(key.left(43)) != 0;
     if( key.strlen() > 43 ){ // check expiration date
       utf8::String info(key.right(key.size() - 43));

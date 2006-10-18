@@ -477,7 +477,7 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
 #endif
         hash_.realloc((size_ >> 1) * sizeof(EmbeddedHashNode<T> *),0);
 #ifndef NDEBUG
-        assert( a != NULL );
+        assert( a != NULL || size_ == 1 );
 #endif
         size_ >>= 1;
         putChain(head);
