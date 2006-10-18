@@ -81,6 +81,7 @@ template <typename T> inline void xchg(T & v1, T & v2)
 #include <adicpp/service.h>
 #include <adicpp/fetch.h>
 #include <adicpp/archive.h>
+#include <adicpp/radialer.h>
 //---------------------------------------------------------------------------
 #endif /* ksysH */
 //---------------------------------------------------------------------------
