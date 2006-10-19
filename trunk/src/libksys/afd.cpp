@@ -53,6 +53,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
 AsyncFile & AsyncFile::close()
 {
   detach();
+  bool closed = false;
   if( file_ != INVALID_HANDLE_VALUE ){
     if( !std_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -62,6 +63,7 @@ AsyncFile & AsyncFile::close()
 #endif
     }
     file_ = INVALID_HANDLE_VALUE;
+    closed = true;
   }
   if( handle_ != INVALID_HANDLE_VALUE ){
     if( !std_ ){
@@ -72,12 +74,13 @@ AsyncFile & AsyncFile::close()
 #endif
     }
     handle_ = INVALID_HANDLE_VALUE;
-    if( removeAfterClose_ ){
-      try {
-        remove(fileName_);
-      }
-      catch( ... ){}
+    closed = true;
+  }
+  if( closed && removeAfterClose_ ){
+    try {
+      remove(fileName_);
     }
+    catch( ... ){}
   }
   return *this;
 }
