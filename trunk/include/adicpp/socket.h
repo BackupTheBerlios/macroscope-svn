@@ -43,6 +43,7 @@ const int ENOTCONN = WSAENOTCONN + ksys::errorOffset;
 const int ENOTSOCK = WSAENOTSOCK + ksys::errorOffset;
 const int EWSANOTINITIALISED = WSANOTINITIALISED + ksys::errorOffset;
 const int SHUT_RDWR = SD_BOTH;
+const int ECONNABORTED = WSAECONNABORTED + ksys::errorOffset;
 #else
 typedef int sig_t;
 typedef int sock_t;
@@ -596,6 +597,9 @@ inline Client::Client()
 class EAsyncSocket : public ksys::Exception {
   public:
     EAsyncSocket(int32_t code,const utf8::String & what);
+    static EAsyncSocket * newException(int32_t code,const utf8::String & what);
+    static void DECLSPEC_NORETURN throwSP(int32_t code,const utf8::String & what) GNUG_NORETURN;
+    static void DECLSPEC_NORETURN throwSP(int32_t code,const char * what) GNUG_NORETURN;
 };
 //---------------------------------------------------------------------------
 void  initialize();

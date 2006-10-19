@@ -1631,19 +1631,18 @@ int String::Stream::Format::print(char * buffer,size_t count) const
 //---------------------------------------------------------------------------
 intptr_t String::Stream::Format::format(char * buffer) const
 {
-  char buf[32], * p = buf;
-  int size = -1;
-  if( fmt_[0] != '%' ) errno = EINVAL;
+  char buf[64], * p = buf;
+  int size = -1, size2 = sizeof(buf);
   ksys::AutoPtr<char> b;
-  errno = 0;
-  size = print(buf,sizeof(buf));
-  if( buffer != NULL && size > -1 && (unsigned) size >= sizeof(buf) ){
-    b.realloc(size + 1);
+  if( fmt_[0] != '%' ){ errno = EINVAL; goto l1; }
+  for(;;){
     errno = 0;
-    size = print(p = b.ptr(),size + 1);
+    size = print(p,size2);
+    if( errno != ERANGE ) break;
+    p = b.realloc(size2 <<= 1);
   }
   if( size == -1 ){
-    int32_t err = errno;
+l1: int32_t err = errno;
     ksys::Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
   if( buffer != NULL ) memcpy(buffer,p,size);

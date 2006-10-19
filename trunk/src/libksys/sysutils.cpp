@@ -2044,10 +2044,18 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::St
   sha.make(cryptor.sha256(),cryptor.size());
   utf8::String key(base64Encode(sha.sha256(),sha.size()));
   AutoPtr<uint8_t> info2;
-  info2.alloc(info.size());
-  cryptor.crypt(info2,info.c_str(),info.size());
+  uintptr_t size = info.size();
+  info2.alloc(size + sizeof(uint32_t) + sizeof(uint32_t));
+  uint32_t checksum = crc32(0,NULL,0);
+  checksum = crc32(checksum,info.c_str(),size);
+  *(uint32_t *)(info2.ptr() + size) = checksum;
+  cryptor.crypt(info2,info.c_str(),size);
+  cryptor.crypt(info2.ptr() + size,sizeof(uint32_t));
+  checksum = crc32(0,NULL,0);
+  checksum = crc32(checksum,info2,size + sizeof(uint32_t));
+  *(uint32_t *)(info2.ptr() + size + sizeof(uint32_t)) = checksum;
   cryptor.init(text.c_str(),text.size());
-  return key + base64Encode(info2,info.size());
+  return key + base64Encode(info2,size + sizeof(uint32_t) + sizeof(uint32_t));
 }
 //---------------------------------------------------------------------------
 #if PRIVATE_RELEASE
@@ -2066,19 +2074,34 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
     if( key.strlen() > 43 ){ // check expiration date
       utf8::String info(key.right(key.size() - 43));
       AutoPtr<uint8_t> info1;
-      uintptr_t size;
+      uintptr_t size, size2;
       info1.alloc(size = base64Decode(info,NULL,0));
-      base64Decode(info,info1,size);
-      utf8::String info2;
-      info2.resize(size);
-      decryptor.crypt(info2.c_str(),info1,size);
+      if( size > sizeof(uint32_t) * 2 ){
+        base64Decode(info,info1,size);
+        size2 = size - sizeof(uint32_t) - sizeof(uint32_t);
+        uint32_t checksum = crc32(0,NULL,0);
+        checksum = crc32(checksum,info1,size - sizeof(uint32_t));
+        pirate = *(uint32_t *)(info1.ptr() + size - sizeof(uint32_t)) != checksum || pirate;
+        utf8::String info2;
+        info2.resize(size2);
+        decryptor.crypt(info1,size - sizeof(uint32_t));
+        memcpy(info2.c_str(),info1,size2);
+        checksum = crc32(0,NULL,0);
+        checksum = crc32(checksum,info1,size2);
+        pirate = *(uint32_t *)(info1.ptr() + size2) != checksum || pirate;
 // now this is expiration date text from keymaker command line as plain text in info2
-      uint64_t ld = gettimeofday();
-      uint64_t ed = timeFromTimeString(info2,false);
-      pirate = (expire = ld > ed) || pirate;
+        uint64_t ld = gettimeofday();
+        uint64_t ed = timeFromTimeString(info2,false);
+        pirate = (expire = ld > ed) || pirate;
+      }
+      else {
+        pirate = true;
+      }
     }
   }
-  catch( ... ){}
+  catch( ... ){
+    pirate = true;
+  }
   if( pirate ){
     if( abortProgram ){
       if( !mkey && expire ){

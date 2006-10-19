@@ -43,7 +43,7 @@ class AsyncFile : public AsyncDescriptor {
     bool isOpen() const;
     AsyncFile & open();
     bool tryOpen();
-    AsyncFile & close(bool calledFromDestructor = false);
+    AsyncFile & close();
     AsyncFile & seek(uint64_t pos);
     uint64_t size() const;
     AsyncFile & resize(uint64_t nSize);

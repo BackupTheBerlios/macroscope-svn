@@ -38,6 +38,8 @@ int main(int _argc,char * _argv[])
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
   try {
+//    stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
+
     /*AsyncFile file;
     file.fileName("c:\\1234").open();
     AutoPtr<char> b;

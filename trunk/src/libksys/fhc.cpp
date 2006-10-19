@@ -52,12 +52,11 @@ FileHandleContainer & FileHandleContainer::close()
     ::close(handle_);
 #endif
     handle_ = INVALID_HANDLE_VALUE;
-  }
-  if( removeAfterClose_ ){
-    try {
-      remove(fileName_);
-    }
-    catch( ... ){
+    if( removeAfterClose_ ){
+      try {
+        remove(fileName_);
+      }
+      catch( ... ){}
     }
   }
   return *this;

@@ -1067,7 +1067,9 @@ void NodeClient::sweepHelper(ServerType serverType)
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
-  if( periodicaly_ ) checkMachineBinding(server_.config_->value("machine_key"),true);
+  if( periodicaly_ ) checkMachineBinding(
+    server_.config_->parse().override().value("machine_key"),true
+  );
   server_.data(stStandalone).registerServer(
     ServerInfo(server_.bindAddrs()[0].resolve(defaultPort),stStandalone)
   );

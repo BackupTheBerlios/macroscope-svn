@@ -534,6 +534,7 @@ ADD_SUBDIRECTORY(test/msmail)
 IF (WIN32 AND NOT UNIX)
   ADD_SUBDIRECTORY(test/msmail1clib)
 ENDIF (WIN32 AND NOT UNIX)
+ADD_SUBDIRECTORY(test/mskey)
 
 # Install
 

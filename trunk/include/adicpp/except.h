@@ -59,8 +59,8 @@ class Exception {
     virtual bool                  isFatalError() const;
 
     static Exception * newException(int32_t code,const utf8::String & what);
-    static void throwSP(int32_t code,const utf8::String & what) GNUG_NORETURN;
-    static void throwSP(int32_t code,const char * what) GNUG_NORETURN;
+    static void DECLSPEC_NORETURN throwSP(int32_t code,const utf8::String & what) GNUG_NORETURN;
+    static void DECLSPEC_NORETURN throwSP(int32_t code,const char * what) GNUG_NORETURN;
   protected:
     Array<int32_t>                codes_;
     Array<utf8::String>           whats_;

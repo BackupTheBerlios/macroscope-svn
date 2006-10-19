@@ -32,7 +32,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 AsyncFile::~AsyncFile()
 {
-  close(true);
+  close();
 }
 //---------------------------------------------------------------------------
 AsyncFile::AsyncFile(const utf8::String & fileName) :
@@ -50,7 +50,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
 #endif
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::close(bool calledFromDestructor)
+AsyncFile & AsyncFile::close()
 {
   detach();
   if( file_ != INVALID_HANDLE_VALUE ){
@@ -72,13 +72,11 @@ AsyncFile & AsyncFile::close(bool calledFromDestructor)
 #endif
     }
     handle_ = INVALID_HANDLE_VALUE;
-  }
-  if( removeAfterClose_ ){
-    try {
-      remove(fileName_);
-    }
-    catch( ... ){
-      if( !calledFromDestructor ) throw;
+    if( removeAfterClose_ ){
+      try {
+        remove(fileName_);
+      }
+      catch( ... ){}
     }
   }
   return *this;

@@ -47,7 +47,7 @@ class Fiber {
     Fiber & terminate();
     const bool & finished() const;
 
-    void switchFiber(Fiber * fiber) GNUG_NOTHROW;
+    void DECLSPEC_NOTHROW switchFiber(Fiber * fiber) GNUG_NOTHROW;
 
     Fiber * const mainFiber() const;
 

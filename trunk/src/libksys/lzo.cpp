@@ -284,5 +284,15 @@ LZO1X & LZO1X::active(bool active)
   return *this;
 }
 //---------------------------------------------------------------------------
+uint32_t adler32(uint32_t adler,const void * buf, uintptr_t len)
+{
+  return lzo_adler32(adler,(const lzo_bytep) buf,(lzo_uint) len);
+}
+//---------------------------------------------------------------------------
+uint32_t crc32(uint32_t c,const void * buf,uintptr_t len)
+{
+  return lzo_crc32(c,(const lzo_bytep) buf,(lzo_uint) len);
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
