@@ -703,7 +703,7 @@ class EmbeddedHashKey {
       return hash(object.key_,caseV);
     }
     static bool keyHashNodeEqu(const ClassT & object1,const ClassT & object2){
-      return compareObjects(object1.key_,object2.key_) == 0;
+      return compareObjects(object1.key_,object2.key_,caseV) == 0;
     }
   protected:
   private:

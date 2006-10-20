@@ -50,6 +50,13 @@ class VARIANTContainer : public VARIANT {
       HRESULT * pRes = NULL
     );
     VARIANTContainer & changeType(
+      const VARIANT & pVarSrc, 
+      LCID lcid,
+      unsigned short wFlags, 
+      VARTYPE vt,
+      HRESULT * pRes = NULL
+    );
+    VARIANTContainer & changeType(
       const VARIANTContainer & pVarSrc,
       LCID lcid,
       unsigned short wFlags,
@@ -114,6 +121,24 @@ inline VARIANTContainer & VARIANTContainer::changeType(
 {
   HRESULT hRes;
   hRes = VariantChangeTypeEx(this,pVarSrc,lcid,wFlags,vt);
+  if( pRes != NULL ){
+    *pRes = hRes;
+  }
+  else if( FAILED(hRes) ){
+    Exception::throwSP(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__);
+  }
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline VARIANTContainer & VARIANTContainer::changeType(
+  const VARIANT & pVarSrc,
+  LCID lcid,
+  unsigned short wFlags,
+  VARTYPE vt,
+  HRESULT * pRes)
+{
+  HRESULT hRes;
+  hRes = VariantChangeTypeEx(this,const_cast<VARIANT *>((const VARIANT *) &pVarSrc),lcid,wFlags,vt);
   if( pRes != NULL ){
     *pRes = hRes;
   }

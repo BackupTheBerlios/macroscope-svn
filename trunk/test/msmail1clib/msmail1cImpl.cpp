@@ -81,7 +81,8 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"CreateHashedArray", L"—оздать’ешированныйћассив",
       L"RemoveHashedArray", L"”далить’ешированныйћассив",
       L"SetHashedArrayValue", L"”становить«начение’ешированногоћассива",
-      L"GetHashedArrayValue", L"ѕолучить«начение’ешированногоћассива"
+      L"GetHashedArrayValue", L"ѕолучить«начение’ешированногоћассива",
+      L"RemoveAllHashedArrays", L"”далить¬се’ешированныећассивы"
     };
     functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
@@ -799,7 +800,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 26;
+  *plMethods = 27;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -1021,6 +1022,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"ѕолучить«начение’ешированногоћассива")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 26 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RemoveAllHashedArrays")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"”далить¬се’ешированныећассивы")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1050,7 +1059,14 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 19 : *plParams = 1; break;
     case 20 : *plParams = 2; break;
     case 21 : *plParams = 1; break;
-    default : return E_NOTIMPL;
+    case 22 : *plParams = 0; break;
+    case 23 : *plParams = 1; break;
+    case 24 : *plParams = 3; break;
+    case 25 : *plParams = 2; break;
+    case 26 : *plParams = 0; break;
+    default :
+      *plParams = -1;
+      return E_NOTIMPL;
   }
   return S_OK;
 }
@@ -1487,7 +1503,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 22 : // CreateHashedArray
-          V_I4(pvarRetValue) = (LONG) hashedArrays_.add().count();
+          hashedArrays_.add().estimatedChainLength(4);
+          V_I4(pvarRetValue) = (LONG) hashedArrays_.count();
           break;          
         case 23 : // RemoveHashedArray
           hr = SafeArrayLock(*paParams);
@@ -1498,6 +1515,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
               if( SUCCEEDED(hr) ){
                 if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
+                  hashedArrays_[V_I4(pv0) - 1].drop();
                   hashedArrays_.remove(V_I4(pv0) - 1);
                   V_I4(pvarRetValue) = 1;
                 }
@@ -1553,21 +1571,20 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
-                    lIndex = 2;
-                    hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
-                    if( SUCCEEDED(hr) ){
-                      if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
-                        HashedArrayKey * key = hashedArrays_[V_I4(pv0) - 1].find(*newObject<HashedArrayKey>(V_BSTR(pv1)));
-                        if( key != NULL ){
-                          hr = VariantChangeTypeEx(pvarRetValue,&key->value_,0,0,V_VT(&key->value_));
-                        }
-                        else {
-                          hr = VariantChangeTypeEx(pvarRetValue,pvarRetValue,0,0,VT_EMPTY);
-                        }
+                    if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
+                      //uintptr_t max = hashedArrays_[V_I4(pv0) - 1].maxChainLength();
+                      //uintptr_t min = hashedArrays_[V_I4(pv0) - 1].minChainLength();
+                      //uintptr_t avg = hashedArrays_[V_I4(pv0) - 1].avgChainLength();
+                      HashedArrayKey * key = hashedArrays_[V_I4(pv0) - 1].find(*newObject<HashedArrayKey>(V_BSTR(pv1)));
+                      if( key != NULL ){
+                        hr = VariantChangeTypeEx(pvarRetValue,&key->value_,0,0,V_VT(&key->value_));
                       }
                       else {
-                        hr = HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
+                        hr = VariantChangeTypeEx(pvarRetValue,pvarRetValue,0,0,VT_EMPTY);
                       }
+                    }
+                    else {
+                      hr = HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
                     }
                   }
                 }
@@ -1575,7 +1592,13 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             }
             SafeArrayUnlock(*paParams);
           }
-          break;          
+          break;
+        case 26 : // RemoveAllHashedArrays
+          for( intptr_t i = hashedArrays_.count() - 1; i >= 0; i-- )
+            hashedArrays_[i].drop();
+          hashedArrays_.clear();
+          V_I4(pvarRetValue) = 1;
+          break;
         default :
           hr = E_NOTIMPL;
       }

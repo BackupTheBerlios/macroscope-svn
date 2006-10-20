@@ -1154,9 +1154,9 @@ inline uintptr_t hash(const utf8::String & s,bool caseSensitive = true)
 inline uintptr_t compareObjects(const utf8::String & s1,const utf8::String & s2,bool caseSensitive = true)
 {
   static intptr_t (utf8::String::* const cmp[2])(const utf8::String &) const = {
-    &utf8::String::strcmp, &utf8::String::strcasecmp
+    &utf8::String::strcasecmp, &utf8::String::strcmp
   };
-  return (s1.*cmp[caseSensitive])(s1);
+  return (s1.*cmp[caseSensitive])(s2);
 }
 //---------------------------------------------------------------------------
 #endif
