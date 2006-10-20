@@ -95,6 +95,15 @@ class EmbeddedHash {
     T * find(const T & object) const;
     EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
     const uintptr_t & count() const;
+    const uintptr_t & estimatedChainLength() const;
+    EmbeddedHash<T,N,O,H,E> & estimatedChainLength(uintptr_t a);
+    const uintptr_t & thresholdNumerator() const;
+    EmbeddedHash<T,N,O,H,E> & thresholdNumerator(uintptr_t a);
+    const uintptr_t & thresholdDenominator() const;
+    EmbeddedHash<T,N,O,H,E> & thresholdDenominator(uintptr_t a);
+    uintptr_t maxChainLength() const;
+    uintptr_t minChainLength() const;
+    uintptr_t avgChainLength() const;
 
     template <typename ST> ST & put(ST & stream) const
     {
@@ -128,7 +137,11 @@ class EmbeddedHash {
     mutable AutoPtr<EmbeddedHashNode<T> *> hash_;
     mutable uintptr_t size_;
     uintptr_t count_;
-    EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist = false,bool throwIfNotExist = false) const;
+    uintptr_t estimatedChainLength_;
+    uintptr_t thresholdNumerator_;
+    uintptr_t thresholdDenominator_;
+
+    EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist,bool throwIfNotExist) const;
     enum OptType { optInc, optDec };
     EmbeddedHashNode<T> * getChain();
     void putChain(EmbeddedHashNode<T> * head);
@@ -154,7 +167,12 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E>::EmbeddedHash() : size_(0), count_(0)
+EmbeddedHash<T,N,O,H,E>::EmbeddedHash() :
+  size_(0),
+  count_(0),
+  estimatedChainLength_(16),
+  thresholdNumerator_(5),
+  thresholdDenominator_(8)
 {
 }
 //---------------------------------------------------------------------------
@@ -280,7 +298,7 @@ inline
 #endif
 EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist)
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist);
+  EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist,false);
   if( head == NULL || *head == NULL ){
     if( size_ == 0 ){
       hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
@@ -342,7 +360,7 @@ template <
 > inline
 T & EmbeddedHash<T,N,O,H,E>::search(const T & object) const
 {
-  return *internalFind(object,true)->object();
+  return *internalFind(object,false,true)->object();
 }
 //---------------------------------------------------------------------------
 template <
@@ -354,7 +372,7 @@ template <
 > inline
 T * EmbeddedHash<T,N,O,H,E>::find(const T & object) const
 {
-  EmbeddedHashNode<T> ** p = internalFind(object);
+  EmbeddedHashNode<T> ** p = internalFind(object,false,false);
   return p == NULL || *p == NULL ? NULL : &O(**p,NULL);
 }
 //---------------------------------------------------------------------------
@@ -433,7 +451,7 @@ void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head)
   EmbeddedHashNode<T> ** p0, * a0;
   while( head != NULL ){
     a0 = head->next();
-    p0 = internalFind(O(*head,NULL));
+    p0 = internalFind(O(*head,NULL),false,false);
     assert( p0 != NULL && *p0 == NULL );
     *p0 = head;
     head->next() = NULL;
@@ -455,7 +473,8 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
 {
   EmbeddedHashNode<T> * head = NULL;
 // using golden section == 5/8 as optimization threshold
-  uintptr_t count = size_ << 4, c = ((count << 2) + count) >> 3, i;
+//  uintptr_t count = size_ << 4, c = ((count << 2) + count) >> 3, i;
+  uintptr_t count = size_ * estimatedChainLength_, c = count * thresholdNumerator_ / thresholdDenominator_, i;
   switch( o ){
     case optInc :
       if( ++count_ < count + c ) return;
@@ -498,6 +517,135 @@ const uintptr_t & EmbeddedHash<T,N,O,H,E>::count() const
   return count_;
 }
 //---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+const uintptr_t & EmbeddedHash<T,N,O,H,E>::estimatedChainLength() const
+{
+  return estimatedChainLength_;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::estimatedChainLength(uintptr_t a)
+{
+  estimatedChainLength_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+const uintptr_t & EmbeddedHash<T,N,O,H,E>::thresholdNumerator() const
+{
+  return thresholdNumerator_;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdNumerator(uintptr_t a)
+{
+  thresholdNumerator_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+const uintptr_t & EmbeddedHash<T,N,O,H,E>::thresholdDenominator() const
+{
+  return thresholdDenominator_;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdDenominator(uintptr_t a)
+{
+  thresholdDenominator_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+uintptr_t EmbeddedHash<T,N,O,H,E>::maxChainLength() const
+{
+  uintptr_t max = 0, m;
+  for( intptr_t i = size_ - 1; i >= 0; i-- ){
+    EmbeddedHashNode<T> ** p;
+    for( m = 0, p = hash_.ptr() + i; *p != NULL; p = &(*p)->next(), m++ );
+    if( m > max ) max = m;
+  }
+  return max;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+uintptr_t EmbeddedHash<T,N,O,H,E>::minChainLength() const
+{
+  uintptr_t min = ~(uintptr_t) 0, m;
+  for( intptr_t i = size_ - 1; i >= 0; i-- ){
+    EmbeddedHashNode<T> ** p;
+    for( m = 0, p = hash_.ptr() + i; *p != NULL; p = &(*p)->next(), m++ );
+    if( m < min ) min = m;
+  }
+  return min;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+uintptr_t EmbeddedHash<T,N,O,H,E>::avgChainLength() const
+{
+  uintptr_t avg = 0, m;
+  for( intptr_t i = size_ - 1; i >= 0; i-- ){
+    EmbeddedHashNode<T> ** p;
+    for( m = 0, p = hash_.ptr() + i; *p != NULL; p = &(*p)->next(), m++ );
+    avg += m;
+  }
+  return size_ > 0 ? avg / size_ : 0;
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 template <typename T> class AutoHashDrop {
@@ -508,8 +656,8 @@ template <typename T> class AutoHashDrop {
   private:
     T * hash_;
 
-    AutoHashDrop(const AutoHashDrop<T> &){}
-    void operator =(const AutoHashDrop<T> &){}
+    AutoHashDrop(const AutoHashDrop<T> &);
+    void operator = (const AutoHashDrop<T> &);
 };
 //---------------------------------------------------------------------------
 template <typename T> inline AutoHashDrop<T>::~AutoHashDrop()
@@ -520,9 +668,139 @@ template <typename T> inline AutoHashDrop<T>::~AutoHashDrop()
 template <typename T> inline
 AutoHashDrop<T>::AutoHashDrop(T & hash) : hash_(&hash)
 {
+  assert( hash_ != NULL );
 }
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename KeyT,typename ValueT,bool caseV = true>
+class EmbeddedHashKey {
+  typedef EmbeddedHashKey<KeyT,ValueT,caseV> ClassT;
+  public:
+    ~EmbeddedHashKey(){}
+    EmbeddedHashKey(){}
+    EmbeddedHashKey(const ClassT & a) : key_(a.key_), value_(a.value_) {}
+    EmbeddedHashKey(const KeyT & key,const ValueT & value = ValueT()) : key_(key), value_(value) {}
+    ClassT & operator = (const ClassT & a){ key_ = a.key_; value_ = a.value_; return *this; }
+    ClassT & operator = (const ValueT & a){ value_ = a.value_; return *this; }
+    bool operator == (const ClassT & a) const { return key_ == a.key_; }
+    bool operator != (const ClassT & a) const { return key_ != a.key_; }
+    bool operator >= (const ClassT & a) const { return key_ >= a.key_; }
+    bool operator >  (const ClassT & a) const { return key_ >  a.key_; }
+    bool operator <= (const ClassT & a) const { return key_ <= a.key_; }
+    bool operator <  (const ClassT & a) const { return key_ <  a.key_; }
+
+    KeyT key_;
+    ValueT value_;
+
+    static EmbeddedHashNode<ClassT> & keyNode(const ClassT & object){
+      return object.keyNode_;
+    }
+    static ClassT & keyNodeObject(const EmbeddedHashNode<ClassT> & node,ClassT * p){
+      return node.object(p->keyNode_);
+    }
+    static uintptr_t keyNodeHash(const ClassT & object){
+      return hash(object.key_,caseV);
+    }
+    static bool keyHashNodeEqu(const ClassT & object1,const ClassT & object2){
+      return compareObjects(object1.key_,object2.key_) == 0;
+    }
+  protected:
+  private:
+    mutable EmbeddedHashNode<ClassT> keyNode_;
+};
+//---------------------------------------------------------------------------
+#define typedefEmbeddedHashKey(KeyT,ValueT,caseV) \
+typedef EmbeddedHashKey<KeyT,ValueT,caseV>
+#define typedefEmbeddedHashKeys(KeyT,ValueT,caseV) \
+typedef EmbeddedHash<\
+  EmbeddedHashKey<KeyT,ValueT,caseV>,\
+  EmbeddedHashKey<KeyT,ValueT,caseV>::keyNode,\
+  EmbeddedHashKey<KeyT,ValueT,caseV>::keyNodeObject,\
+  EmbeddedHashKey<KeyT,ValueT,caseV>::keyNodeHash,\
+  EmbeddedHashKey<KeyT,ValueT,caseV>::keyHashNodeEqu>
+//---------------------------------------------------------------------------
 } // namespace ksys
+//---------------------------------------------------------------------------
+inline intptr_t hash(const int8_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t hash(const uint8_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t hash(const int16_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t hash(const uint16_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t hash(const int32_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t hash(const uint32_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t hash(const int64_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t hash(const uint64_t & a,bool /*caseSensitive*/ = true)
+{
+  return ksys::HF::hash(&a,sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const int8_t & a1,const int8_t & a2,bool /*caseSensitive*/ = true)
+{
+  return a1 - a2;
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const uint8_t & a1,const uint8_t & a2,bool /*caseSensitive*/ = true)
+{
+  return intptr_t(a1) - intptr_t(a2);
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const int16_t & a1,const int16_t & a2,bool /*caseSensitive*/ = true)
+{
+  return a1 - a2;
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const uint16_t & a1,const uint16_t & a2,bool /*caseSensitive*/ = true)
+{
+  return intptr_t(a1) - intptr_t(a2);
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const int32_t & a1,const int32_t & a2,bool /*caseSensitive*/ = true)
+{
+  return a1 - a2;
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const uint32_t & a1,const uint32_t & a2,bool /*caseSensitive*/ = true)
+{
+  return a1 > a2 ? 1 : a1 < a2 ? -1 : 0;
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const int64_t & a1,const int64_t & a2,bool /*caseSensitive*/ = true)
+{
+  return a1 > a2 ? 1 : a1 < a2 ? -1 : 0;
+}
+//---------------------------------------------------------------------------
+inline intptr_t compareObjects(const uint64_t & a1,const uint64_t & a2,bool /*caseSensitive*/ = true)
+{
+  return a1 > a2 ? 1 : a1 < a2 ? -1 : 0;
+}
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------

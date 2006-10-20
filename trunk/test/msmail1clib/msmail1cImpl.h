@@ -241,6 +241,16 @@ public:
   };
   Vector<LockedFile> files_;
   Randomizer rnd_;
+
+  typedefEmbeddedHashKey(const wchar_t *,uint8_t,true) Function;
+  typedefEmbeddedHashKeys(const wchar_t *,uint8_t,true) Functions;
+  Functions functions_;
+  AutoHashDrop<Functions> functionsAutoDrop_;
+
+  typedefEmbeddedHashKey(utf8::String,VARIANTContainer,true) HashedArrayKey;
+  typedefEmbeddedHashKeys(utf8::String,VARIANTContainer,true) HashedArrayKeys;
+  Vector<HashedArrayKeys> hashedArrays_;
+
   LockedFile * findFileByName(const utf8::String & name);
   LockedFile * addFile(const utf8::String & name);
   STDMETHOD(lockFile)(IN BSTR name,IN ULONG minSleepTime,IN ULONG maxSleepTime,OUT LONG * pLastError);
@@ -278,6 +288,17 @@ public:
 };
 
 OBJECT_ENTRY_AUTO(__uuidof(msmail1c), Cmsmail1c)
+
+inline intptr_t hash(const wchar_t * a1,bool /*caseSensitive*/ = false)
+{
+  return ksys::HF::hash(a1,wcslen(a1) * sizeof(a1[0]));
+}
+
+inline intptr_t compareObjects(const wchar_t * a1,const wchar_t * a2,bool /*caseSensitive*/ = false)
+{
+//  return _wcsicoll(a1,a2);
+  return wcscmp(a1,a2) ;
+}
 
 /*#include "Registry.h"
 

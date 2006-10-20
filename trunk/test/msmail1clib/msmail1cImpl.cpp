@@ -36,13 +36,16 @@
 //------------------------------------------------------------------------------
 Cmsmail1c::~Cmsmail1c()
 {
+  for( intptr_t i = hashedArrays_.count() - 1; i >= 0; i-- )
+    hashedArrays_[i].drop();
 }
 //------------------------------------------------------------------------------
 Cmsmail1c::Cmsmail1c() :
   pBackConnection_(NULL),
   pAsyncEvent_(NULL),
   active_(false),
-  lastError_(0)
+  lastError_(0),
+  functionsAutoDrop_(functions_)
 {
 }
 //------------------------------------------------------------------------------
@@ -51,6 +54,47 @@ Cmsmail1c::Cmsmail1c() :
 HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
 {
 //  stdErr.enableDebugLevel(9);
+  try {
+    static const wchar_t * fn[] = {
+      L"LockFile", L"Ѕлокировать‘айл",
+      L"UnlockFile", L"–азблокировать‘айл",
+      L"GetLastError", L"ѕолучить одќшибки",
+      L"Sleep", L"—пать",
+      L"SleepIn", L"—пать¬",
+      L"TextToFile", L"“екст¬‘айл",
+      L"NewMessage", L"Ќовое—ообщение",
+      L"SetMessageAttribute", L"”становитьјтрибут—ообщени€",
+      L"GetMessageAttribute", L"ѕолучитьјтрибут—ообщени€",
+      L"SendMessage", L"ѕослать—ообщение",
+      L"RemoveMessage", L"”далить—ообщение",
+      L"GetDB", L"ѕолучить»Ѕ",
+      L"CopyMessage", L"—копировать—ообщение",
+      L"RemoveMessageAttribute", L"”далитьјтрибут—ообщени€",
+      L"DebugMessage", L"ќтладочное—ообщение",
+      L"IsDirectory", L"Ёто аталог",
+      L"RemoveDirectory", L"”далить аталог",
+      L"MK1100SendBarCodeInfo", L"MK1100ѕослать»нформациюЎтрихкода",
+      L"GetDBInGroupList", L"—писок»Ѕ¬√руппе",
+      L"File2String", L"‘айл¬—троку",
+      L"String2File", L"—троку¬‘айл",
+      L"TimeFromTimeString", L"¬рем€»з¬ремени—трокой",
+      L"CreateHashedArray", L"—оздать’ешированныйћассив",
+      L"RemoveHashedArray", L"”далить’ешированныйћассив",
+      L"SetHashedArrayValue", L"”становить«начение’ешированногоћассива",
+      L"GetHashedArrayValue", L"ѕолучить«начение’ешированногоћассива"
+    };
+    functions_.estimatedChainLength(1);
+//    functions_.thresholdNumerator(5);
+//    functions_.thresholdDenominator(8);
+    for( uintptr_t i = 0; i < sizeof(fn) / sizeof(fn[0]); i++ )
+      functions_.insert(*newObject<Function>(fn[i],uint8_t(i / 2)));
+  }
+  catch( ... ){
+    return E_FAIL;
+  }
+//  uintptr_t max = functions_.maxChainLength();
+//  uintptr_t min = functions_.minChainLength();
+//  uintptr_t avg = functions_.avgChainLength();
   pBackConnection_ = pBackConnection;
   pBackConnection_->AddRef();
   return S_OK;
@@ -64,6 +108,10 @@ HRESULT Cmsmail1c::Done()
     pAsyncEvent_ = NULL;
   }
   if( pBackConnection_ != NULL ) pBackConnection_->Release();
+  for( intptr_t i = hashedArrays_.count() - 1; i >= 0; i-- )
+    hashedArrays_[i].drop();
+  hashedArrays_.clear();
+  functions_.drop();
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -751,103 +799,15 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 22;
+  *plMethods = 26;
   return S_OK;
 }
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
 {
-  *plMethodNum = -1;
-  if( _wcsicoll(bstrMethodName,L"LockFile") == 0 ) *plMethodNum = 0;
-  else
-  if( _wcsicoll(bstrMethodName,L"Ѕлокировать‘айл") == 0 ) *plMethodNum = 0;
-  else
-  if( _wcsicoll(bstrMethodName,L"UnlockFile") == 0 ) *plMethodNum = 1;
-  else
-  if( _wcsicoll(bstrMethodName,L"–азблокировать‘айл") == 0 ) *plMethodNum = 1;
-  else
-  if( _wcsicoll(bstrMethodName,L"GetLastError") == 0 ) *plMethodNum = 2;
-  else
-  if( _wcsicoll(bstrMethodName,L"ѕолучить одќшибки") == 0 ) *plMethodNum = 2;
-  else
-  if( _wcsicoll(bstrMethodName,L"Sleep") == 0 ) *plMethodNum = 3;
-  else
-  if( _wcsicoll(bstrMethodName,L"—пать") == 0 ) *plMethodNum = 3;
-  else
-  if( _wcsicoll(bstrMethodName,L"SleepIn") == 0 ) *plMethodNum = 4;
-  else
-  if( _wcsicoll(bstrMethodName,L"—пать¬") == 0 ) *plMethodNum = 4;
-  else
-  if( _wcsicoll(bstrMethodName,L"TextToFile") == 0 ) *plMethodNum = 5;
-  else
-  if( _wcsicoll(bstrMethodName,L"“екст¬‘айл") == 0 ) *plMethodNum = 5;
-  else
-  if( _wcsicoll(bstrMethodName,L"NewMessage") == 0 ) *plMethodNum = 6;
-  else
-  if( _wcsicoll(bstrMethodName,L"Ќовое—ообщение") == 0 ) *plMethodNum = 6;
-  else
-  if( _wcsicoll(bstrMethodName,L"SetMessageAttribute") == 0 ) *plMethodNum = 7;
-  else
-  if( _wcsicoll(bstrMethodName,L"”становитьјтрибут—ообщени€") == 0 ) *plMethodNum = 7;
-  else
-  if( _wcsicoll(bstrMethodName,L"GetMessageAttribute") == 0 ) *plMethodNum = 8;
-  else
-  if( _wcsicoll(bstrMethodName,L"ѕолучитьјтрибут—ообщени€") == 0 ) *plMethodNum = 8;
-  else
-  if( _wcsicoll(bstrMethodName,L"SendMessage") == 0 ) *plMethodNum = 9;
-  else
-  if( _wcsicoll(bstrMethodName,L"ѕослать—ообщение") == 0 ) *plMethodNum = 9;
-  else
-  if( _wcsicoll(bstrMethodName,L"RemoveMessage") == 0 ) *plMethodNum = 10;
-  else
-  if( _wcsicoll(bstrMethodName,L"”далить—ообщение") == 0 ) *plMethodNum = 10;
-  else
-  if( _wcsicoll(bstrMethodName,L"GetDB") == 0 ) *plMethodNum = 11;
-  else
-  if( _wcsicoll(bstrMethodName,L"ѕолучить»Ѕ") == 0 ) *plMethodNum = 11;
-  else
-  if( _wcsicoll(bstrMethodName,L"CopyMessage") == 0 ) *plMethodNum = 12;
-  else
-  if( _wcsicoll(bstrMethodName,L"—копировать—ообщение") == 0 ) *plMethodNum = 12;
-  else
-  if( _wcsicoll(bstrMethodName,L"RemoveMessageAttribute") == 0 ) *plMethodNum = 13;
-  else
-  if( _wcsicoll(bstrMethodName,L"”далитьјтрибут—ообщени€") == 0 ) *plMethodNum = 13;
-  else
-  if( _wcsicoll(bstrMethodName,L"DebugMessage") == 0 ) *plMethodNum = 14;
-  else
-  if( _wcsicoll(bstrMethodName,L"ќтладочное—ообщение") == 0 ) *plMethodNum = 14;
-  else
-  if( _wcsicoll(bstrMethodName,L"IsDirectory") == 0 ) *plMethodNum = 15;
-  else
-  if( _wcsicoll(bstrMethodName,L"Ёто аталог") == 0 ) *plMethodNum = 15;
-  else
-  if( _wcsicoll(bstrMethodName,L"RemoveDirectory") == 0 ) *plMethodNum = 16;
-  else
-  if( _wcsicoll(bstrMethodName,L"”далить аталог") == 0 ) *plMethodNum = 16;
-  else
-  if( _wcsicoll(bstrMethodName,L"MK1100SendBarCodeInfo") == 0 ) *plMethodNum = 17;
-  else
-  if( _wcsicoll(bstrMethodName,L"MK1100ѕослать»нформациюЎтрихкода") == 0 ) *plMethodNum = 17;
-  else
-  if( _wcsicoll(bstrMethodName,L"GetDBInGroupList") == 0 ) *plMethodNum = 18;
-  else
-  if( _wcsicoll(bstrMethodName,L"—писок»Ѕ¬√руппе") == 0 ) *plMethodNum = 18;
-  else
-  if( _wcsicoll(bstrMethodName,L"File2String") == 0 ) *plMethodNum = 19;
-  else
-  if( _wcsicoll(bstrMethodName,L"‘айл¬—троку") == 0 ) *plMethodNum = 19;
-  else
-  if( _wcsicoll(bstrMethodName,L"String2File") == 0 ) *plMethodNum = 20;
-  else
-  if( _wcsicoll(bstrMethodName,L"—троку¬‘айл") == 0 ) *plMethodNum = 20;
-  else
-  if( _wcsicoll(bstrMethodName,L"TimeFromTimeString") == 0 ) *plMethodNum = 21;
-  else
-  if( _wcsicoll(bstrMethodName,L"¬рем€»з¬ремени—трокой") == 0 ) *plMethodNum = 21;
-  else
-    return DISP_E_MEMBERNOTFOUND;
-  return S_OK;
+  Function * f = functions_.find(Function(bstrMethodName));
+  *plMethodNum = f != NULL ? f->value_ : -1;
+  return f != NULL ? S_OK : DISP_E_MEMBERNOTFOUND;
 }
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrMethodName)
@@ -1027,6 +987,38 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"TimeFromTimeString")) != NULL ? S_OK : E_OUTOFMEMORY;
         case 1 :
           return (*pbstrMethodName = SysAllocString(L"¬рем€»з¬ремени—трокой")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 22 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"CreateHashedArray")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"—оздать’ешированныйћассив")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 23 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RemoveHashedArray")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"”далить’ешированныйћассив")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 24 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"SetHashedArrayValue")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"”становить«начение’ешированногоћассива")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 25 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"GetHashedArrayValue")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ѕолучить«начение’ешированногоћассива")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
   }
@@ -1494,7 +1486,96 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             SafeArrayUnlock(*paParams);
           }
           break;
-          
+        case 22 : // CreateHashedArray
+          V_I4(pvarRetValue) = (LONG) hashedArrays_.add().count();
+          break;          
+        case 23 : // RemoveHashedArray
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
+                if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
+                  hashedArrays_.remove(V_I4(pv0) - 1);
+                  V_I4(pvarRetValue) = 1;
+                }
+                else {
+                  lastError_ = ERROR_NOT_FOUND;
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;          
+        case 24 : // SetHashedArrayValue
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
+                lIndex = 1;
+                hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
+                    lIndex = 2;
+                    hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
+                    if( SUCCEEDED(hr) ){
+                      if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
+                        hashedArrays_[V_I4(pv0) - 1].insert(*newObject<HashedArrayKey>(V_BSTR(pv1),*pv2));
+                        V_I4(pvarRetValue) = 1;
+                      }
+                      else {
+                        lastError_ = ERROR_NOT_FOUND;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;          
+        case 25 : // GetHashedArrayValue
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
+                lIndex = 1;
+                hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
+                    lIndex = 2;
+                    hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
+                    if( SUCCEEDED(hr) ){
+                      if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
+                        HashedArrayKey * key = hashedArrays_[V_I4(pv0) - 1].find(*newObject<HashedArrayKey>(V_BSTR(pv1)));
+                        if( key != NULL ){
+                          hr = VariantChangeTypeEx(pvarRetValue,&key->value_,0,0,V_VT(&key->value_));
+                        }
+                        else {
+                          hr = VariantChangeTypeEx(pvarRetValue,pvarRetValue,0,0,VT_EMPTY);
+                        }
+                      }
+                      else {
+                        hr = HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;          
         default :
           hr = E_NOTIMPL;
       }
@@ -1516,8 +1597,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
 //------------------------------------------------------------------------------
 Cmsmail1c::LockedFile::~LockedFile()
 {
-  CloseHandle(handle_);
-  CloseHandle(hEvent_);
+  if( handle_ != INVALID_HANDLE_VALUE ) CloseHandle(handle_);
+  if( hEvent_ != NULL ) CloseHandle(hEvent_);
 }
 //---------------------------------------------------------------------------
 Cmsmail1c::LockedFile::LockedFile() :

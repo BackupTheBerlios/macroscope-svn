@@ -473,11 +473,11 @@ inline void String::Container::release()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-inline String::String(Container * container) : container_(container)
+inline String::~String()
 {
 }
 //---------------------------------------------------------------------------
-inline String::~String()
+inline String::String(Container * container) : container_(container)
 {
 }
 //---------------------------------------------------------------------------
@@ -1145,6 +1145,19 @@ EStr2ScalarT<T>::EStr2ScalarT(int32_t code,const utf8::String & what) : T(code, 
 typedef EStr2ScalarT<ksys::Exception> EStr2Scalar;
 //---------------------------------------------------------------------------
 } // namespace utf8
+//---------------------------------------------------------------------------
+inline uintptr_t hash(const utf8::String & s,bool caseSensitive = true)
+{
+  return s.hash(caseSensitive);
+}
+//---------------------------------------------------------------------------
+inline uintptr_t compareObjects(const utf8::String & s1,const utf8::String & s2,bool caseSensitive = true)
+{
+  static intptr_t (utf8::String::* const cmp[2])(const utf8::String &) const = {
+    &utf8::String::strcmp, &utf8::String::strcasecmp
+  };
+  return (s1.*cmp[caseSensitive])(s1);
+}
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
