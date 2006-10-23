@@ -280,14 +280,15 @@
 #endif
 #if __x86_64__
 #define GNUG_CDECL
+#define GNUG_NAKED
 #else
 #define GNUG_CDECL __attribute__((cdecl))
+#define GNUG_NAKED __attribute__((naked))
 #endif
 #define GNUG_CONSTRUCTOR __attribute__((constructor))
 #define GNUG_DESTRUCTOR __attribute__((destructor))
 #define DECLSPEC_NORETURN
 #define GNUG_NORETURN __attribute__((noreturn))
-#define GNUG_NAKED __attribute__((naked))
 #else
 #define DECLSPEC_NOTHROW __declspec(nothrow)
 #define GNUG_NOTHROW

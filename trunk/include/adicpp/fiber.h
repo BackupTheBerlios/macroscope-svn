@@ -68,7 +68,7 @@ class Fiber {
     static VOID WINAPI start(Fiber * fiber);
     LPVOID fiber_;
 #else
-    static void start(Fiber * fiber, void * param, void (*ip) (void *)) GNUG_NOTHROW_CDECL GNUG_NOTHROW;
+    static void start(Fiber * fiber, void * param, void (*ip) (void *)) GNUG_NOTHROW GNUG_CDECL;
     AutoPtr<uint8_t> stack_;
     void * stackPointer_;
     void switchFiber2(Fiber * fiber) GNUG_NOTHROW GNUG_CDECL GNUG_NAKED;

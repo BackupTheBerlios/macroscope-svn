@@ -78,17 +78,17 @@ Fiber & Fiber::allocateStack(
     ((void **) stackPointer_)[-1] = ip;
     ((void **) stackPointer_)[-2] = param;
     ((void **) stackPointer_)[-3] = this;
-    ((void **) stackPointer_)[-4] = NULL;
-// push parameters and return address for 'Fiber & Fiber::switchFiber(Fiber *)
+    ((void **) stackPointer_)[-4] = *(void **) stack_.ptr();
+// push dummy parameters and return address for 'void Fiber::switchFiber2(Fiber *)
     ((void **) stackPointer_)[-5] = this;
     ((void **) stackPointer_)[-6] = mainFiber;
     ((void **) stackPointer_)[-7] = (void *) start;
  // for epilogue (push ebp)    
-    ((void **) stackPointer_)[-8] = NULL;
+    ((void **) stackPointer_)[-8] = *(uint8_t **) stack_.ptr() + 1;
 // push dummy registers for switchFiber2, see below
-    ((void **) stackPointer_)[-9] = NULL;
-    ((void **) stackPointer_)[-10] = NULL;
-    ((void **) stackPointer_)[-11] = NULL;
+    ((void **) stackPointer_)[-9] = *(uint8_t **) stack_.ptr() + 2;
+    ((void **) stackPointer_)[-10] = *(uint8_t **) stack_.ptr() + 3;
+    ((void **) stackPointer_)[-11] = *(uint8_t **) stack_.ptr() + 4;
     ((void **) stackPointer_)[-12] = (void **) stackPointer_ - 8;
     stackPointer_ = (void **) stackPointer_ - 12;
   }
@@ -144,8 +144,6 @@ void Fiber::switchFiber2(Fiber * fiber)
 void Fiber::switchFiber2(Fiber * fiber)
 {
   asm volatile (
-    "push  %%rbp\n"
-    "mov   %%rsp,%%rbp\n"
     "push  %%rbx\n"
     "push  %%rsi\n"
     "push  %%rdi\n"
@@ -156,11 +154,11 @@ void Fiber::switchFiber2(Fiber * fiber)
     "pop   %%rdi\n"
     "pop   %%rsi\n"
     "pop   %%rbx\n"
-    "leave\n"
+    "leaveq\n"
     "pop   %%rax\n"
     "pop   %%rdx\n"
     "pop   %%rdx\n"
-    "jmp   *%%rax\n"
+    "jmpq  *%%rax\n"
     :
     : "d" (&fiber->stackPointer_), // rdx
       "a" (&stackPointer_)  // rax
