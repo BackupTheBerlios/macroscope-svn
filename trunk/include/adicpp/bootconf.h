@@ -30,7 +30,11 @@
 #if HAVE_CONFIG_H
 #include <adicpp/config.h>
 #elif (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && (defined(_WIN32) || defined(_WIN32_WINNT))
-#include <adicpp/config.h.msvc>
+#ifdef _WIN64
+#include <adicpp/config.h.msvc.win64>
+#else
+#include <adicpp/config.h.msvc.win32>
+#endif
 #elif defined(__MINGW32__)
 #include <adicpp/config.h.mingw>
 #include <adicpp/config.h.cygwin>

@@ -1515,7 +1515,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
               if( SUCCEEDED(hr) ){
                 if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
-                  hashedArrays_[V_I4(pv0) - 1].drop();
+                  hashedArrays_[uintptr_t(V_I4(pv0) - 1)].drop();
                   hashedArrays_.remove(V_I4(pv0) - 1);
                   V_I4(pvarRetValue) = 1;
                 }
@@ -1544,7 +1544,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                     hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
                     if( SUCCEEDED(hr) ){
                       if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
-                        hashedArrays_[V_I4(pv0) - 1].insert(*newObject<HashedArrayKey>(V_BSTR(pv1),*pv2));
+                        hashedArrays_[uintptr_t(V_I4(pv0) - 1)].insert(*newObject<HashedArrayKey>(V_BSTR(pv1),*pv2));
                         V_I4(pvarRetValue) = 1;
                       }
                       else {
@@ -1575,7 +1575,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                       //uintptr_t max = hashedArrays_[V_I4(pv0) - 1].maxChainLength();
                       //uintptr_t min = hashedArrays_[V_I4(pv0) - 1].minChainLength();
                       //uintptr_t avg = hashedArrays_[V_I4(pv0) - 1].avgChainLength();
-                      HashedArrayKey * key = hashedArrays_[V_I4(pv0) - 1].find(*newObject<HashedArrayKey>(V_BSTR(pv1)));
+                      HashedArrayKey * key = hashedArrays_[uintptr_t(V_I4(pv0) - 1)].find(*newObject<HashedArrayKey>(V_BSTR(pv1)));
                       if( key != NULL ){
                         hr = VariantChangeTypeEx(pvarRetValue,&key->value_,0,0,V_VT(&key->value_));
                       }
