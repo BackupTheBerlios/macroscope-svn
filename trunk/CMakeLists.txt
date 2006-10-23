@@ -517,7 +517,7 @@ CHECK_EMPTY_ARRAY_SIZE (EMPTY_ARRAY_SIZE)
 INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} /usr/local/include "${CMAKE_BINARY_DIR}/include")
 LINK_DIRECTORIES(${LINK_DIRECTORIES} /usr/local/lib)
 
-CONFIGURE_FILE(include/adicpp/config.h.cmake include/adicpp/config.h)
+CONFIGURE_FILE("${CMAKE_BINARY_DIR}/include/adicpp/config.h.cmake" "${CMAKE_BINARY_DIR}/include/adicpp/config.h")
 
 # Targets definition
 
@@ -543,7 +543,7 @@ SET (CPACK_PACKAGE_VENDOR "Korvin Software")
 SET (CPACK_PACKAGE_EXECUTABLES "macroscope" "Macroscope")
 SET (CPACK_PACKAGE_VERSION_MAJOR "1")
 SET (CPACK_PACKAGE_VERSION_MINOR "0")
-SET (CPACK_PACKAGE_VERSION_PATCH "394")
+SET (CPACK_PACKAGE_VERSION_PATCH "395")
 SET (CPACK_PACKAGE_INSTALL_DIRECTORY "macroscope")
 
 # Try to get patch level from svn
