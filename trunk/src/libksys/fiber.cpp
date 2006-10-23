@@ -144,6 +144,8 @@ void Fiber::switchFiber2(Fiber * fiber)
 void Fiber::switchFiber2(Fiber * fiber)
 {
   asm volatile (
+    "push  %%rbp\n"
+    "mov   %%rsp,%%rbp\n"
     "push  %%rbx\n"
     "push  %%rsi\n"
     "push  %%rdi\n"

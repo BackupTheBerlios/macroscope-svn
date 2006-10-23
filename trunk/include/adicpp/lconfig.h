@@ -279,27 +279,24 @@
 #define GNUG_CDECL __attribute__((cdecl))
 #endif
 #if __x86_64__
-#define GNUG_NOTHROW_CDECL __attribute__((nothrow))
+#define GNUG_CDECL
 #else
-#define GNUG_NOTHROW_CDECL __attribute__((nothrow,cdecl))
+#define GNUG_CDECL __attribute__((cdecl))
 #endif
 #define GNUG_CONSTRUCTOR __attribute__((constructor))
-#define GNUG_NOTHROW_CONSTRUCTOR __attribute__((nothrow,constructor))
 #define GNUG_DESTRUCTOR __attribute__((destructor))
-#define GNUG_NOTHROW_DESTRUCTOR __attribute__((nothrow,destructor))
 #define DECLSPEC_NORETURN
 #define GNUG_NORETURN __attribute__((noreturn))
+#define GNUG_NAKED __attribute__((naked))
 #else
 #define DECLSPEC_NOTHROW __declspec(nothrow)
 #define GNUG_NOTHROW
 #define GNUG_CDECL
-#define GNUG_NOTHROW_CDECL
 #define GNUG_CONSTRUCTOR
-#define GNUG_NOTHROW_CONSTRUCTOR
 #define GNUG_DESTRUCTOR
-#define GNUG_NOTHROW_DESTRUCTOR
 #define DECLSPEC_NORETURN __declspec(noreturn)
 #define GNUG_NORETURN
+#define GNUG_NAKED
 #endif
 
 #endif /* _lconfig_H_ */
