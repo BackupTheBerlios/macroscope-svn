@@ -287,14 +287,19 @@ typedef uint64_t uintmax_t;
 
 #if SIZEOF_INTPTR_T == 0
 #undef SIZEOF_INTPTR_T
-#if SIZEOF_INT32_T == SIZEOF_VOID_P
+#if SIZEOF_INT == SIZEOF_VOID_P
+typedef int intptr_t;
+typedef unsigned int uintptr_t;
+#define SIZEOF_INTPTR_T 4
+#define HAVE_INTPTR_T_AS_INT 1
+#elif SIZEOF_INT32_T == SIZEOF_VOID_P
 typedef int32_t intptr_t;
-typedef unsigned int32_t uintptr_t;
+typedef uint32_t uintptr_t;
 #define SIZEOF_INTPTR_T 4
 #define HAVE_INTPTR_T_AS_INT32_T 1
-#elif SIZEOF_INT64_t == SIZEOF_VOID_P
+#elif SIZEOF_INT64_T == SIZEOF_VOID_P
 typedef int64_t intptr_t;
-typedef unsigned int64_t uintptr_t;
+typedef uint64_t uintptr_t;
 #define SIZEOF_INTPTR_T 8
 #define HAVE_INTPTR_T_AS_INT64_T 1
 #define HAVE_INTPTR_T_AS_INTMAX_T 1

@@ -29,7 +29,17 @@
 #include "resource.h"       // main symbols
 #include <adicpp/adicpp.h>
 using namespace ksys;
+#ifndef CMAKE_BUILD
 #include "msmail1clib.h"
+#elif CMAKE_BUILD_TYPE == 1
+#include "msmail1clib.dir/Debug/msmail1clib.h"
+#elif CMAKE_BUILD_TYPE == 2
+#include "msmail1clib.dir/Release/msmail1clib.h"
+#elif CMAKE_BUILD_TYPE == 3
+#include "msmail1clib.dir/RelWithDebInfo/msmail1clib.h"
+#elif CMAKE_BUILD_TYPE == 4
+#include "msmail1clib.dir/MinSizeRel/msmail1clib.h"
+#endif
 #include <adicpp/adicpp.h>
 #include "../msmail/msmail.h"
 //------------------------------------------------------------------------------
