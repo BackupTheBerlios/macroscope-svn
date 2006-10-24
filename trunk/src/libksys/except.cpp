@@ -58,9 +58,10 @@ void Exception::throwSP(int32_t code,const char * what)
   throw ExceptionSP(newObject<Exception>(code,what));
 }
 //---------------------------------------------------------------------------
-const Exception & Exception::writeStdError() const
+const Exception & Exception::writeStdError(LogFile * log) const
 {
   if( stdErr.isDebugLevelEnabled(9) ){
+    if( log == NULL ) log = &stdErr;
     for( uintptr_t i = 0; i < whats_.count(); i++ ){
       if( codes_[0] == 0 ) continue;
       intmax_t a;
@@ -72,7 +73,7 @@ const Exception & Exception::writeStdError() const
       }
       if( serr.strlen() > 0 ) s << serr << " ";
       s << whats_[i] << "\n";
-      stdErr.debug(9,s);
+      log->debug(9,s);
     }
   }
   return *this;

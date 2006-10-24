@@ -31,11 +31,10 @@ namespace utf8 {
 //---------------------------------------------------------------------------
 intptr_t utf82ucs(const unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t & c)
 {
-  intptr_t  r = 0;
+  intptr_t r = 0;
 
   if( *utf8s < 0x80 ){
-    if( (intptr_t) utf8l > 0 )
-      c = *utf8s++;
+    if( (intptr_t) utf8l > 0 ) c = *utf8s++;
     utf8l--;
   }
 #if SIZEOF_WCHAR_T > 2
@@ -96,11 +95,10 @@ intptr_t utf82ucs(const unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t & c
 //---------------------------------------------------------------------------
 intptr_t ucs2utf8(unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t c)
 {
-  intptr_t  r = 0;
+  intptr_t r = 0;
 
   if( c < 0x80 ){
-    if( (intptr_t) utf8l > 0 )
-      *utf8s++ = (unsigned char) c;
+    if( (intptr_t) utf8l > 0 ) *utf8s++ = (unsigned char) c;
     utf8l--;
   }
   else if( c < 0x800 ){
@@ -170,7 +168,7 @@ intptr_t ucs2utf8(unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t c)
     utf8l -= 6;
   }
 #endif
-  else{
+  else {
     if( (intptr_t) utf8l > 0 ){
       *utf8s++ = '?';
       r = -3;
@@ -209,12 +207,18 @@ char * strnstr(const char * s1,const char * s2,uintptr_t n)
 intptr_t mbcs2utf8s(uintptr_t cp, char * utf8s, uintptr_t utf8l, const char * s, uintptr_t l)
 {
   const unsigned char * p, * a;
-  intptr_t              r = 0, ol = utf8l, low , high ;
-  const utf8cp *        e = findCodePage(cp);
+  intptr_t r = 0, ol = utf8l, low , high ;
+  const utf8cp * e = findCodePage(cp);
   if( e == NULL ){
-    while( l > 0 ){
-      if( *(const unsigned char *) s == 0 )
-        break;
+    if( cp == CP_UNICODE ){
+      while( l > 0 && *(wchar_t *) s != L'\0' ){
+        ucs2utf8(utf8s,utf8l,*(wchar_t *) s);
+        s = (char *) ((wchar_t *) s + 1);
+        l--;
+      }
+    }
+    else while( l > 0 ){
+      if( *(const unsigned char *) s == 0 ) break;
       if( (intptr_t) utf8l > 0 ){
         *(unsigned char *) utf8s = *(const unsigned char *) s;
         utf8s++;
@@ -296,7 +300,7 @@ intptr_t mbcs2utf8s(uintptr_t cp, char * utf8s, uintptr_t utf8l, const char * s,
   else if( intptr_t(utf8l) <= 0 ){
     r = ol - utf8l;
   }
-  else{
+  else {
     *utf8s = '\0';
   }
   return r;
@@ -304,13 +308,34 @@ intptr_t mbcs2utf8s(uintptr_t cp, char * utf8s, uintptr_t utf8l, const char * s,
 //---------------------------------------------------------------------------
 intptr_t utf8s2mbcs(uintptr_t cp, char * s, uintptr_t l, const char * utf8s, uintptr_t utf8l)
 {
-  uintptr_t       c = 0;
-  intptr_t        r = 0, ol = l, low , high ;
-  const utf8cp *  e = findCodePage(cp);
+  uintptr_t c = 0;
+  intptr_t r = 0, ol = l, low , high;
+  const utf8cp * e = findCodePage(cp);
   if( e == NULL ){
+    if( cp == CP_UNICODE ){
+      uintptr_t ql;
+      while( utf8l > 0 && *utf8s != '\0' ){
+        c = utf82ucs(utf8s,ql);
+        if( intptr_t(ql) <= 0 ){
+          errno = EINVAL;
+          return -1;
+        }
+        if( intptr_t(l) >= intptr_t(sizeof(wchar_t)) ) *(wchar_t *) s = (wchar_t) c;
+        s += sizeof(wchar_t);
+        utf8s += ql;
+        utf8l -= ql;
+        l -= sizeof(wchar_t);
+      }
+      if( intptr_t(l) <= 0 ){
+        return ol - l;
+      }
+      else {
+        *(wchar_t *) s = L'\0';
+      }
+      return 0;
+    }
     while( utf8l > 0 ){
-      if( *(const unsigned char *) utf8s == 0 )
-        break;
+      if( *(const unsigned char *) utf8s == 0 ) break;
       if( (intptr_t) l > 0 ){
         *(unsigned char *) s = *(const unsigned char *) utf8s;
         s++;
@@ -320,11 +345,10 @@ intptr_t utf8s2mbcs(uintptr_t cp, char * s, uintptr_t l, const char * utf8s, uin
       l--;
     }
   }
-  else{
+  else {
     while( utf8l > 0 && *utf8s != '\0' ){
       r = utf82ucs(*(const unsigned char **) &utf8s, utf8l, c);
-      if( r != 0 )
-        break;
+      if( r != 0 ) break;
       const unsigned char * p, * a  = e->utf8s2cps + 2;
       while( *a != 0xFF ){
         low = 0;
@@ -397,7 +421,7 @@ fd:   if( c < 0x100 ){
   else if( intptr_t(l) <= 0 ){
     r = ol - l;
   }
-  else{
+  else {
     *s = '\0';
   }
   return r;
@@ -410,8 +434,7 @@ uintptr_t utf8s2Lower(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uint
   while( utf8lS > 0 ){
     uintptr_t c;
     r = utf82ucs(*(const unsigned char **) &utf8sS, utf8lS, c);
-    if( r != 0 )
-      break;
+    if( r != 0 ) break;
     low = 0;
     high = (sizeof(lowerTable) / sizeof(lowerTable[0])) / 2 - 1;
     while( low <= high ){

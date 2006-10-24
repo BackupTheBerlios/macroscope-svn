@@ -39,6 +39,8 @@ inline int32_t oserror(){ return errno; }
 inline void oserror(int32_t err){ errno = err; }
 #endif
 //---------------------------------------------------------------------------
+class LogFile;
+//---------------------------------------------------------------------------
 class Exception {
   public:
     virtual ~Exception();
@@ -51,7 +53,7 @@ class Exception {
     bool                          searchCode(int32_t code1, int32_t code2) const;
     bool                          searchCode(int32_t code1, int32_t code2, int32_t code3) const;
     bool                          searchCode(int32_t code1, int32_t code2, int32_t code3, int32_t code4) const;
-    const Exception &             writeStdError() const;
+    const Exception &             writeStdError(LogFile * log = NULL) const;
 
     Exception &                   addRef();
     Exception &                   remRef();

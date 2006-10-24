@@ -45,6 +45,8 @@ class KFTPClient : public ksock::ClientFiber {
     utf8::String host_;
     ksock::SockAddr remoteAddress_;
     int & errorCode_;
+    ksys::LogFile * log_;
+    ksys::LogFile logFile_;
 
     KFTPClient & checkCode(int32_t code,int32_t noThrowCode = eOK);
     KFTPClient & getCode(int32_t noThrowCode = eOK);
@@ -58,7 +60,7 @@ KFTPClient::~KFTPClient()
 }
 //------------------------------------------------------------------------------
 KFTPClient::KFTPClient(const ksys::ConfigSP & config,const utf8::String & section,int & errorCode) :
-  config_(config), section_(section), errorCode_(errorCode)
+  config_(config), section_(section), errorCode_(errorCode), log_(&ksys::stdErr)
 {
   host_ = config_->section(section_).text();
 }
@@ -138,8 +140,13 @@ void KFTPClient::put()
   utf8::String exclude(config_->section(section_).section("put").text("exclude"));
   bool recursive = config_->value("recursive",true);
   recursive = config_->section(section_).section("put").value("recursive",recursive);
-  uint64_t partialBlockSize = config_->value("min_partial_block_size",getpagesize());
+  uint64_t partialBlockSize = config_->value("partial_block_size",getpagesize());
   partialBlockSize = config_->section(section_).section("put").value("partial_block_size",partialBlockSize);
+  if( config_->section(section_).section("put").isValue("log_file") ){
+    logFile_.codePage(config_->section(section_).section("put").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
+    logFile_.fileName(config_->section(section_).section("put").text("log_file"));
+    log_ = &logFile_;
+  }
 
   ksys::Vector<utf8::String> list;
   getDirList(list,local,exclude,recursive,false,true);
@@ -234,7 +241,7 @@ void KFTPClient::put()
         atime += ttime;
         if( ttime == 0 ) ttime = 1;
         l = rl;
-        ksys::stdErr.debug(l > 0 ? 1 : 2,
+        log_->debug(l > 0 ? 1 : 2,
           utf8::String::Stream() <<
           section_ << " " << host_ << " elapsed: " << utf8::elapsedTime2Str(ttime) <<
           ", avg speed " << (l * 1000000u / ttime) / 1024u << "." <<
@@ -247,7 +254,6 @@ void KFTPClient::put()
       }
     }
     catch( ksys::ExceptionSP & e ){
-      e->writeStdError();
       switch( e->code() ){
         case 0 :
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -267,7 +273,8 @@ void KFTPClient::put()
         default :
           if( e->code() < ksock::AsyncSocket::aeMagic || e->code() >= eCount ) throw;
       }
-      ksys::stdErr.debug(3,
+      e->writeStdError(log_);
+      log_->debug(3,
         utf8::String::Stream() << "job " << host_ << " failed: " <<
         ksys::strError(e->code()) << ", " << list[i] << "\n"
       );
@@ -276,7 +283,7 @@ void KFTPClient::put()
   }
   if( (ptime = getlocaltimeofday() - ptime) == 0 ) ptime = 1;
   if( atime == 0 ) atime = 1;
-  ksys::stdErr.debug(0,
+  log_->debug(0,
     utf8::String::Stream() <<
     section_ << " " << host_ << " operation put complete.\n" <<
     "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
@@ -325,8 +332,13 @@ void KFTPClient::get()
   uint64_t bs = (uint64_t) config_->value("buffer_size",getpagesize());
   bs = (uint64_t) config_->section(section_).section("get").value("buffer_size",bs);
   if( bs == 0 ) bs = getpagesize();
-  uint64_t partialBlockSize = config_->value("min_partial_block_size",getpagesize());
+  uint64_t partialBlockSize = config_->value("partial_block_size",getpagesize());
   partialBlockSize = config_->section(section_).section("get").value("partial_block_size",partialBlockSize);
+  if( config_->section(section_).section("put").isValue("log_file") ){
+    logFile_.codePage(config_->section(section_).section("get").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
+    logFile_.fileName(config_->section(section_).section("get").text("log_file"));
+    log_ = &logFile_;
+  }
 
   uint64_t all = 0, ptime = getlocaltimeofday(), atime = 0, ttime;
   uint64_t l, ll, lp, r, wl;
@@ -414,7 +426,7 @@ void KFTPClient::get()
       atime += ttime;
       if( ttime == 0 ) ttime = 1;
       l = wl;
-      ksys::stdErr.debug(l > 0 ? 1 : 2,
+      log_->debug(l > 0 ? 1 : 2,
         utf8::String::Stream() <<
         section_ << " " << host_ << " elapsed: " << utf8::elapsedTime2Str(ttime) <<
         ", avg speed " << (l * 1000000u / ttime) / 1024u << "." <<
@@ -426,7 +438,6 @@ void KFTPClient::get()
       all += l;
     }
     catch( ksys::ExceptionSP & e ){
-      e->writeStdError();
       switch( e->code() ){
         case 0 :
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -446,7 +457,8 @@ void KFTPClient::get()
         default :
           if( e->code() < ksock::AsyncSocket::aeMagic || e->code() >= eCount ) throw;
       }
-      ksys::stdErr.debug(3,
+      e->writeStdError(log_);
+      log_->debug(3,
         utf8::String::Stream() << "job " << host_ << " failed: " <<
         ksys::strError(e->code()) << ", " << list[i] << "\n"
       );
@@ -455,7 +467,7 @@ void KFTPClient::get()
   }
   if( (ptime = getlocaltimeofday() - ptime) == 0 ) ptime = 1;
   if( atime == 0 ) atime = 1;
-  ksys::stdErr.debug(0,
+  log_->debug(0,
     utf8::String::Stream() <<
     section_ << " " << host_ << " operation get complete.\n" <<
     "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
@@ -485,6 +497,11 @@ void KFTPClient::get()
 void KFTPClient::main()
 {
   try {
+    if( config_->section(section_).isValue("log_file") ){
+      logFile_.codePage(config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));
+      logFile_.fileName(config_->section(section_).text("log_file"));
+      log_ = &logFile_;
+    }
     remoteAddress_.resolve(host_,MSFTPDefaultPort);
     connect(remoteAddress_);
 
@@ -495,14 +512,17 @@ void KFTPClient::main()
     getCode();
   }
   catch( ksys::ExceptionSP & e ){
-    e->writeStdError();
+    e->writeStdError(log_);
     if( errorCode_ == 0 ) errorCode_ = e->code();
+    log_->close();
     throw;
   }
   catch( ... ){
     if( errorCode_ == 0 ) errorCode_ = -1;
+    log_->close();
     throw;
   }
+  log_->close();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

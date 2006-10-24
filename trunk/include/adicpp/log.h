@@ -70,6 +70,8 @@ class LogFile {
     const uint64_t & rotationThreshold() const;
     LogFile & rotatedFileCount(uintptr_t a);
     const uintptr_t & rotatedFileCount() const;
+    LogFile & codePage(uintptr_t a);
+    const uintptr_t & codePage() const;
 
     const char * const & priNick(LogMessagePriority filter) const;
 
@@ -85,6 +87,7 @@ class LogFile {
     uintptr_t enabledLevels_;
     uint64_t rotationThreshold_;
     uintptr_t rotatedFileCount_;
+    uintptr_t codePage_;
 
     LogFile & internalLog(LogMessagePriority pri,uintptr_t level,const utf8::String::Stream & stream);
     void rotate(uint64_t size);
@@ -150,6 +153,17 @@ inline LogFile & LogFile::rotatedFileCount(uintptr_t a)
 inline const uintptr_t & LogFile::rotatedFileCount() const
 {
   return rotatedFileCount_;
+}
+//---------------------------------------------------------------------------
+inline LogFile & LogFile::codePage(uintptr_t a)
+{
+  codePage_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & LogFile::codePage() const
+{
+  return codePage_;
 }
 //---------------------------------------------------------------------------
 extern char stdErr_[sizeof(LogFile) / sizeof(char)];

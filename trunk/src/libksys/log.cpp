@@ -53,7 +53,8 @@ LogFile::~LogFile()
 LogFile::LogFile() : 
   enabledLevels_(1 + 2 + 4 + 8 + 16 + 32 + 64 + 128 + 256 + 512),
   rotationThreshold_(1024 * 1024),
-  rotatedFileCount_(10)
+  rotatedFileCount_(10),
+  codePage_(CP_ACP)
 {
   file_.createIfNotExist(true);
   lockFile_.createIfNotExist(true).removeAfterClose(true);
@@ -66,11 +67,8 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-  try {
-    file_.close();
-    lockFile_.close();
-  }
-  catch( ... ){}
+  file_.close();
+  lockFile_.close();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -85,7 +83,7 @@ LogFile & LogFile::fileName(const utf8::String & name)
   return *this;
 }
 //---------------------------------------------------------------------------
-const char * const  LogFile::priNicks_[]  = {
+const char * const  LogFile::priNicks_[] = {
   "INFO",
   "DEBUG",
   "NOTIFY",
@@ -134,7 +132,7 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
   try {
     struct timeval tv = time2Timeval(getlocaltimeofday());
     struct tm t = time2tm(timeval2Time(tv));
-    int a;
+    intptr_t a;
 
 #if HAVE_SNPRINTF
 #define SNPRINTF snprintf
@@ -218,13 +216,20 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
       int32_t err = errno;
       Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
-    intptr_t l = utf8::utf8s2mbcs(CP_OEMCP,NULL,0,stream.plane(),stream.count());
-    if( l < 0 ){
+    union {
+      char buf2[128];
+      wchar_t buf2w[128];
+    };
+    a = utf8::utf8s2mbcs(codePage_,NULL,0,buf,sizeof(buf2));
+    intptr_t l = utf8::utf8s2mbcs(codePage_,NULL,0,stream.plane(),stream.count());
+    if( a < 0 || l < 0 ){
       int32_t err = errno;
       Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
+    utf8::utf8s2mbcs(codePage_,buf2,sizeof(buf2w),buf,sizeof(buf2));
     buf.realloc(a + l);
-    utf8::utf8s2mbcs(CP_OEMCP,buf.ptr() + a,l,stream.plane(),stream.count());
+    memcpy(buf,buf2,a);
+    utf8::utf8s2mbcs(codePage_,buf.ptr() + a,l,stream.plane(),stream.count());
     uint64_t sz = 0;
     AutoLock<FiberInterlockedMutex> lock(mutex_);
     if( file_.fileName().strlen() == 0 ){

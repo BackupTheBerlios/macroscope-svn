@@ -34,6 +34,9 @@ namespace utf8 {
 #define CP_MACCP      2
 #define CP_THREAD_ACP 3
 #define CP_SYMBOL     42
+#ifndef CP_UNICODE
+#define CP_UNICODE    1200
+#endif
 #define CP_UTF7       65000
 #define CP_UTF8       65001
 #define CP_UNIXCP     65010
@@ -177,6 +180,7 @@ inline uintptr_t utf82ucs(const unsigned char * utf8s, uintptr_t & l)
 {
   uintptr_t c;
 
+  l = intptr_t(-1);
 #if SIZEOF_WCHAR_t_T > 2
   if( (*utf8s & 0xFC) == 0xFC && utf8s[1] != 0 && utf8s[2] != 0 && utf8s[3] != 0 && utf8s[4] != 0 && utf8s[5] != 0 ){
     c = ((uintptr_t) (*utf8s & 0x1) << 30) | ((uintptr_t) (utf8s[1] & 0x3F) << 24) | ((uintptr_t) (utf8s[2] & 0x3F) << 18) | ((uintptr_t) (utf8s[3] & 0x3F) << 12) | ((uintptr_t) (utf8s[4] & 0x3F) << 6) | (uintptr_t) (utf8s[5] & 0x3F);
@@ -191,7 +195,7 @@ inline uintptr_t utf82ucs(const unsigned char * utf8s, uintptr_t & l)
     l = 4;
   }
   else
-    #endif
+#endif
   if( (*utf8s & 0xE0) == 0xE0 && utf8s[1] != 0 && utf8s[2] != 0 ){
     c = ((uintptr_t) (*utf8s & 0xF) << 12) | ((uintptr_t) (utf8s[1] & 0x3F) << 6) | (uintptr_t) (utf8s[2] & 0x3F);
     l = 3;
@@ -204,7 +208,7 @@ inline uintptr_t utf82ucs(const unsigned char * utf8s, uintptr_t & l)
     c = *utf8s;
     l = 1;
   }
-  else{
+  else {
     c = uintptr_t(intptr_t(-1));
     l = 1;
   }
