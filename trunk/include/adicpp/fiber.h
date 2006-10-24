@@ -78,11 +78,9 @@ class Fiber {
       void * dummy4,
       void * dummy5,
       void * dummy6,
-      Fiber * fiber,
-      void * param,
-      void (*ip) (void *)
+      Fiber * fiber
     ) GNUG_NOTHROW GNUG_CDECL;
-    void switchFiber2(
+    static void switchFiber2(
       void * dummy1,
       void * dummy2,
       void * dummy3,
@@ -93,7 +91,7 @@ class Fiber {
       Fiber * fiber
     ) GNUG_NOTHROW GNUG_CDECL;
 #else
-    static void start(Fiber * fiber, void * param, void (*ip) (void *)) GNUG_NOTHROW GNUG_CDECL;
+    static void start(Fiber * fiber) GNU_NOTHROW GNUG_CDECL;
     void switchFiber2(Fiber * fiber) GNUG_NOTHROW GNUG_CDECL;
 #endif
 #endif
@@ -104,7 +102,7 @@ class Fiber {
       AsyncDescriptor::fiberListNodeObject
     > descriptorsList_;
 
-    Fiber & allocateStack(void * ip,void * param,size_t size,Fiber * mainFiber,uintptr_t dummy1 = 0,uintptr_t dummy2 = 0);
+    Fiber & allocateStack(size_t size,Fiber * mainFiber,uintptr_t dummy1 = 0,uintptr_t dummy2 = 0);
 #if defined(__WIN32__) || defined(__WIN64__)
     Fiber & createFiber(uintptr_t dwStackSize);
     Fiber & deleteFiber();
