@@ -1055,7 +1055,8 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
   utf8::String::Iterator ni(name), mi(mask);
   while( !ni.eof() && !mi.eof() ){
     if( mi.getChar() == '?' ){
-      Exception::throwSP(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME");
+      ni.next();
+      mi.next();
     }
     else if( mi.getChar() == '*' ){
       mi.next();
@@ -1064,27 +1065,34 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
         ni.next();
         if( ni.eof() ) break;
       }
-      if( utf8::String(ni).strcasecmp(mi) != 0 ) mi.prev();
+      if( utf8::String(ni).strcasecmp(mi) != 0 ){
+        mi.prev();
+        ni.next();
+      }
 #else
       while( !mi.eof() && !ni.eof() && ni.getChar() != mi.getChar() ){
         ni.next();
         if( ni.eof() ) break;
       }
-      if( utf8::String(ni).strcmp(mi) != 0 ) mi.prev();
+      if( utf8::String(ni).strcmp(mi) != 0 ){
+        mi.prev();
+        ni.next();
+      }
 #endif
     }
     else if( mi.getChar() == '[' ){
 //      mi.next();
       Exception::throwSP(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME");
     }
-    else
+    else {
 #if defined(__WIN32__) || defined(__WIN64__)
       if( ni.getUpperChar() != mi.getUpperChar() ) break;
 #else
       if( ni.getChar() != mi.getChar() ) break;
 #endif
-    ni.next();
-    mi.next();
+      ni.next();
+      mi.next();
+    }
   }
   return ni.eof() && mi.eof();
 }
