@@ -68,10 +68,34 @@ class Fiber {
     static VOID WINAPI start(Fiber * fiber);
     LPVOID fiber_;
 #else
-    static void start(Fiber * fiber, void * param, void (*ip) (void *)) GNUG_NOTHROW GNUG_CDECL;
     AutoPtr<uint8_t> stack_;
     void * stackPointer_;
-    void switchFiber2(Fiber * fiber) GNUG_NOTHROW GNUG_CDECL GNUG_NAKED;
+#if __GNUG__ && __x86_64__
+    static void start(
+      void * dummy1,
+      void * dummy2,
+      void * dummy3,
+      void * dummy4,
+      void * dummy5,
+      void * dummy6,
+      Fiber * fiber,
+      void * param,
+      void (*ip) (void *)
+    ) GNUG_NOTHROW GNUG_CDECL;
+    void switchFiber2(
+      void * dummy1,
+      void * dummy2,
+      void * dummy3,
+      void * dummy4,
+      void * dummy5,
+      void * dummy6,
+      Fiber * thisOnStack,
+      Fiber * fiber
+    ) GNUG_NOTHROW GNUG_CDECL;
+#else
+    static void start(Fiber * fiber, void * param, void (*ip) (void *)) GNUG_NOTHROW GNUG_CDECL;
+    void switchFiber2(Fiber * fiber) GNUG_NOTHROW GNUG_CDECL;
+#endif
 #endif
     BaseThread * thread_;
     EmbeddedList<
@@ -86,8 +110,6 @@ class Fiber {
     Fiber & deleteFiber();
     Fiber & clearFiber();
     Fiber & convertThreadToFiber();
-#else
-    static void fiber2(Fiber * fiber);
 #endif
 
     void detachDescriptors();
@@ -183,7 +205,7 @@ inline void Fiber::switchFiber(Fiber * fiber)
 inline void Fiber::switchFiber(Fiber * fiber)
 {
   *reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder) = fiber;
-  switchFiber2(fiber);
+  switchFiber2(NULL,NULL,NULL,NULL,NULL,NULL,this,fiber);
 }
 //---------------------------------------------------------------------------
 #endif

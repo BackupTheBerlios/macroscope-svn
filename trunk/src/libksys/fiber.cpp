@@ -71,9 +71,12 @@ Fiber & Fiber::allocateStack(
   size += -intptr_t(size) & (sizeof(uintptr_t) - 1);
   stack_.realloc(size);
   stackPointer_ = stack_.ptr();
-  memset(stackPointer_,0xAA,size);
+//  for( intptr_t i = size / sizeof(uintptr_t) - 1; i >= 0; i-- )
+//    ((uintptr_t *) stackPointer_)[i] = i;
+//  memset(stackPointer_,0xAA,size);
   if( &dummy1 < &dummy2 ){
     stackPointer_ = stack_.ptr() + size;
+/*
 // push parameters and return address for 'void Fiber::start'
     ((void **) stackPointer_)[-1] = ip;
     ((void **) stackPointer_)[-2] = param;
@@ -84,13 +87,27 @@ Fiber & Fiber::allocateStack(
     ((void **) stackPointer_)[-6] = mainFiber;
     ((void **) stackPointer_)[-7] = (void *) start;
  // for epilogue (push ebp)    
-    ((void **) stackPointer_)[-8] = *(uint8_t **) stack_.ptr() + 1;
+    ((void **) stackPointer_)[-8] = NULL;
 // push dummy registers for switchFiber2, see below
-    ((void **) stackPointer_)[-9] = *(uint8_t **) stack_.ptr() + 2;
-    ((void **) stackPointer_)[-10] = *(uint8_t **) stack_.ptr() + 3;
-    ((void **) stackPointer_)[-11] = *(uint8_t **) stack_.ptr() + 4;
+    ((void **) stackPointer_)[-9] = NULL;
+    ((void **) stackPointer_)[-10] = NULL;
+    ((void **) stackPointer_)[-11] = NULL;
     ((void **) stackPointer_)[-12] = (void **) stackPointer_ - 8;
     stackPointer_ = (void **) stackPointer_ - 12;
+    */
+// push parameters and return address for 'void Fiber::start'
+    ((void **) stackPointer_)[-1] = ip;
+    ((void **) stackPointer_)[-2] = param;
+    ((void **) stackPointer_)[-3] = this;
+    ((void **) stackPointer_)[-4] = NULL;
+// push dummy parameters and return address for 'void Fiber::switchFiber2(Fiber *)
+    ((void **) stackPointer_)[-5] = this;
+    ((void **) stackPointer_)[-6] = mainFiber;
+    ((void **) stackPointer_)[-7] = (void *) start;
+ // for epilogue (push ebp)    
+    ((void **) stackPointer_)[-8] = NULL;
+// push dummy registers for switchFiber2, see below
+    stackPointer_ = (void **) stackPointer_ - 8;
   }
   else {
     stackPointer_ = stack_.ptr();
@@ -120,56 +137,61 @@ Fiber & Fiber::allocateStack(
 void Fiber::switchFiber2(Fiber * fiber)
 {
   asm volatile (
-    "push  %%ebx\n"
-    "push  %%esi\n"
-    "push  %%edi\n"
-    "push  %%ebp\n"
     "mov   %%esp,(%%eax)\n"
     "mov   (%%edx),%%esp\n"
-    "pop   %%ebp\n"
-    "pop   %%edi\n"
-    "pop   %%esi\n"
-    "pop   %%ebx\n"
-    "leave\n"
-    "pop   %%eax\n"
-    "pop   %%edx\n"
-    "pop   %%edx\n"
-    "jmp   *%%eax\n"
+    "mov   %%esp,%%ebp\n"
     :
     : "d" (&fiber->stackPointer_), // edx
       "a" (&stackPointer_)  // eax
   );
 }
 #elif __GNUG__ && __x86_64__
-void Fiber::switchFiber2(Fiber * fiber)
+/*
+  Function calling conventions for x86_64 architecture:
+  param1 --> RDI
+  param2 --> RSI
+  param3 --> RDX
+  param4 --> RCX
+  param5 --> R8
+  param6 --> R9
+  param7 and more placed on stack
+  return value returned in RAX or in RAX:RDX pair or
+  if sizeof(return value) > sizeof(RAX:RDX) then
+  param1 --> RSI
+  param2 --> RDX
+  param3 --> RCX
+  param4 --> R8
+  param5 --> R9
+  param6 and more placed on stack
+  param1 --> RDI pointer to place for return value
+ */
+void Fiber::switchFiber2(void *,void *,void *,void *,void *,void *,
+  Fiber * thisOnStack,
+  Fiber * fiber)
 {
   asm volatile (
-    "push  %%rbx\n"
-    "push  %%rsi\n"
-    "push  %%rdi\n"
-    "push  %%rbp\n"
     "mov   %%rsp,(%%rax)\n"
     "mov   (%%rdx),%%rsp\n"
-    "pop   %%rbp\n"
-    "pop   %%rdi\n"
-    "pop   %%rsi\n"
-    "pop   %%rbx\n"
-    "leaveq\n"
-    "pop   %%rax\n"
-    "pop   %%rdx\n"
-    "pop   %%rdx\n"
-    "jmpq  *%%rax\n"
+    "mov   %%rsp,%%rbp\n"
     :
-    : "d" (&fiber->stackPointer_), // rdx
+    : "d" (&fiber->stackPointer_), // rbx
       "a" (&stackPointer_)  // rax
   );
 }
 #else
-#error fibers for this system not implemented
+void Fiber::switchFiber2(Fiber * fiber)
+{
+  error = ENOSYS;
+  perror(NULL);
+  exit(ENOSYS);
+}
 #endif
 //------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 VOID WINAPI Fiber::start(Fiber * fiber)
+#elif __GNUG__ && __x86_64__
+void Fiber::start(void *,void *,void *,void *,void *,void *,
+  Fiber * fiber,void * param,void (* ip)(void *))
 #else
 void Fiber::start(Fiber * fiber,void * param,void (* ip)(void *))
 #endif
@@ -191,15 +213,6 @@ void Fiber::start(Fiber * fiber,void * param,void (* ip)(void *))
   fiber->finished_ = true;
   fiber->switchFiber(fiber->thread_);
 }
-//------------------------------------------------------------------------------
-#if !defined(__WIN32__) && !defined(__WIN64__)
-//------------------------------------------------------------------------------
-void Fiber::fiber2(Fiber * fiber)
-{
-  fiber->fiberExecute();
-}
-//------------------------------------------------------------------------------
-#endif
 //------------------------------------------------------------------------------
 void Fiber::detachDescriptors()
 {
