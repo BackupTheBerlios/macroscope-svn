@@ -62,9 +62,9 @@ Fiber::Fiber() : started_(false), terminated_(false), finished_(false),
 //---------------------------------------------------------------------------
 Fiber & Fiber::allocateStack(
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  size_t size,Fiber * mainFiber,uintptr_t dummy1,uintptr_t dummy2)
+  size_t size,Fiber * mainFiber,void *,void *,void *,uintptr_t dummy1,uintptr_t dummy2)
 #else
-  size_t size,Fiber *,uintptr_t,uintptr_t)
+  size_t size,Fiber *,void *,void *,void *,uintptr_t,uintptr_t)
 #endif
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -72,41 +72,30 @@ Fiber & Fiber::allocateStack(
 #else
   size += -intptr_t(size) & (sizeof(uintptr_t) - 1);
   stack_.realloc(size);
-  stackPointer_ = stack_.ptr();
 //  for( intptr_t i = size / sizeof(uintptr_t) - 1; i >= 0; i-- )
 //    ((uintptr_t *) stackPointer_)[i] = i;
 //  memset(stackPointer_,0xAA,size);
   if( &dummy1 < &dummy2 ){
     stackPointer_ = stack_.ptr() + size;
-/*
-// push parameters and return address for 'void Fiber::start'
-    ((void **) stackPointer_)[-1] = ip;
-    ((void **) stackPointer_)[-2] = param;
-    ((void **) stackPointer_)[-3] = this;
-    ((void **) stackPointer_)[-4] = *(void **) stack_.ptr();
-// push dummy parameters and return address for 'void Fiber::switchFiber2(Fiber *)
-    ((void **) stackPointer_)[-5] = this;
-    ((void **) stackPointer_)[-6] = mainFiber;
-    ((void **) stackPointer_)[-7] = (void *) start;
- // for epilogue (push ebp)    
-    ((void **) stackPointer_)[-8] = NULL;
-// push dummy registers for switchFiber2, see below
-    ((void **) stackPointer_)[-9] = NULL;
-    ((void **) stackPointer_)[-10] = NULL;
-    ((void **) stackPointer_)[-11] = NULL;
-    ((void **) stackPointer_)[-12] = (void **) stackPointer_ - 8;
-    stackPointer_ = (void **) stackPointer_ - 12;
-    */
+#if __GNUG__ && __x86_64__
+// push return address for 'void Fiber::switchFiber2
+    ((void **) stackPointer_)[-1] = (void *) start;
+ // for epilogue (push ebp)
+    ((void **) stackPointer_)[-2] = NULL;
+    stackPointer_ = (void **) stackPointer_ - 2;
+#else
 // push parameters and return address for 'void Fiber::start'
     ((void **) stackPointer_)[-1] = this;
     ((void **) stackPointer_)[-2] = NULL;
-// push dummy parameters and return address for 'void Fiber::switchFiber2(Fiber *)
-    ((void **) stackPointer_)[-3] = mainFiber;
-    ((void **) stackPointer_)[-4] = this;
-    ((void **) stackPointer_)[-5] = (void *) start;
+// push dummy parameters and return address for 'void Fiber::switchFiber2
+    ((void **) stackPointer_)[-3] = NULL;
+    ((void **) stackPointer_)[-4] = NULL;
+    ((void **) stackPointer_)[-5] = NULL;
+    ((void **) stackPointer_)[-6] = (void *) start;
  // for epilogue (push ebp)
-    ((void **) stackPointer_)[-6] = NULL;
-    stackPointer_ = (void **) stackPointer_ - 6;
+    ((void **) stackPointer_)[-7] = NULL;
+    stackPointer_ = (void **) stackPointer_ - 7;
+#endif
   }
   else {
     stackPointer_ = stack_.ptr();
@@ -114,9 +103,7 @@ Fiber & Fiber::allocateStack(
     ((void **) stackPointer_)[0] = this;
     ((void **) stackPointer_)[1] = NULL;
 // push dummy parameters and return address for 'void Fiber::switchFiber2(Fiber *)
-    ((void **) stackPointer_)[2] = this;
-    ((void **) stackPointer_)[3] = mainFiber;
-    ((void **) stackPointer_)[4] = (void *) start;
+    ((void **) stackPointer_)[2] = (void *) start;
  // for epilogue (push ebp)
     ((void **) stackPointer_)[5] = NULL;
     stackPointer_ = (void **) stackPointer_ - 5;
@@ -128,15 +115,15 @@ Fiber & Fiber::allocateStack(
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 #elif __i386__ && __GNUG__
-void Fiber::switchFiber2(Fiber * fiber)
+void Fiber::switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber *)
 {
   asm volatile (
     "mov   %%esp,(%%eax)\n"
     "mov   (%%edx),%%esp\n"
     "mov   %%esp,%%ebp\n"
     :
-    : "d" (&fiber->stackPointer_), // edx
-      "a" (&stackPointer_)  // eax
+    : "d" (switchToFiberSP), // edx
+      "a" (currentFiberSP)  // eax
   );
 }
 #elif __GNUG__ && __x86_64__
@@ -159,17 +146,21 @@ void Fiber::switchFiber2(Fiber * fiber)
   param6 and more placed on stack
   param1 --> RDI pointer to place for return value
  */
-void Fiber::switchFiber2(void *,void *,void *,void *,void *,void *,
-  Fiber * thisOnStack,
-  Fiber * fiber)
+void Fiber::switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber * fiber)
 {
   asm volatile (
-    "mov   %%rsp,(%%rax)\n"
-    "mov   (%%rdx),%%rsp\n"
-    "mov   %%rsp,%%rbp\n"
+    ".intel_syntax\n"
+    "mov   [%%rdi],%%rsp\n"
+    "mov   %%rsp,[%%rsi]\n"
+    "mov   %%rbp,%%rsp\n"
+    "mov   %%rdi,%%rdx\n"
+//    "mov   %%rax,[%%rsp + 0]\n"
+//    "mov   %%rbx,[%%rsp + 8]\n"
+//    "mov   %%rcx,[%%rsp + 12]\n"
+//    "mov   %%rdx,[%%rsp + 16]\n"
+    ".att_syntax\n"
     :
-    : "d" (&fiber->stackPointer_), // rdx
-      "a" (&thisOnStack->stackPointer_)  // rax
+    :
   );
 }
 #else
@@ -183,8 +174,6 @@ void Fiber::switchFiber2(Fiber * fiber)
 //------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 VOID WINAPI Fiber::start(Fiber * fiber)
-#elif __GNUG__ && __x86_64__
-void Fiber::start(void *,void *,void *,void *,void *,void *,Fiber * fiber)
 #else
 void Fiber::start(Fiber * fiber)
 #endif
@@ -201,6 +190,7 @@ void Fiber::start(Fiber * fiber)
   fiber->detachDescriptors();
   fiber->finished_ = true;
   fiber->switchFiber(fiber->thread_);
+  exit(ENOSYS);
 }
 //------------------------------------------------------------------------------
 void Fiber::detachDescriptors()

@@ -146,7 +146,7 @@ AsyncIoSlave::~AsyncIoSlave()
   for( intptr_t i = sizeof(events_) / sizeof(events_[0]) - 1; i >= 0; i-- )
     CloseHandle(events_[i]);
 #elif HAVE_KQUEUE
-  if( close(kqueue_) != 0 ){
+  if( kqueue_ >= 0 && close(kqueue_) != 0 ){
     perror(NULL);
     assert( 0 );
     abort();
@@ -387,10 +387,11 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       if( rw == 0 && GetLastError() == ERROR_NO_SYSTEM_RESOURCES )
         if( (object->length_ >>= 1) > 0 ) goto l1;
       if( rw == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != WSAEWOULDBLOCK ){
+        DWORD err = GetLastError();
         closeAPI(object);
         ResetEvent(events_[sp]);
         newRequests_.remove(*object);
-        object->errno_ = GetLastError();
+        object->errno_ = err;
         object->count_ = ~(uint64_t) 0;
         object->fiber_->thread()->postEvent(object);
         sp--;
@@ -501,6 +502,7 @@ void AsyncIoSlave::threadExecute()
 #if SIZEOF_AIOCB
   struct aiocb * iocb;
 #endif
+  int evCount;
   int32_t error;
   uint64_t count;
   EventsNode * node;
@@ -520,11 +522,11 @@ void AsyncIoSlave::threadExecute()
           break;
         case etRead     :
 	  if( object->length_ > 0 ){
-            if( object->descriptor_->isSocket() ){
+            /*if( object->descriptor_->isSocket() ){
               EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
               if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
 	    }
-	    else {
+	    else {*/
               iocb = &object->iocb_;
               memset(iocb,0,sizeof(*iocb));
               iocb->aio_fildes = object->descriptor_->descriptor_;
@@ -539,7 +541,7 @@ void AsyncIoSlave::threadExecute()
 #else
 	      error = ENOSYS;
 #endif
-            }
+            //}
           }
 	  else {
 	    errno = EINVAL;
@@ -547,11 +549,11 @@ void AsyncIoSlave::threadExecute()
           break;
         case etWrite  :
 	  if( object->length_ > 0 ){
-            if( object->descriptor_->isSocket() ){
+            /*if( object->descriptor_->isSocket() ){
               EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_WRITE,EV_ADD | EV_ONESHOT,0,0,node);
               if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
 	    }
-	    else {
+	    else {*/
               iocb = &object->iocb_;
       	      memset(iocb,0,sizeof(*iocb));
               iocb->aio_fildes = object->descriptor_->descriptor_;
@@ -566,7 +568,7 @@ void AsyncIoSlave::threadExecute()
 #else
 	      error = ENOSYS;
 #endif
-            }
+            //}
 	  }
 	  else {
             errno = EINVAL;
@@ -577,14 +579,14 @@ void AsyncIoSlave::threadExecute()
           if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
             count = object->descriptor_->accept();
 	  if( errno != EWOULDBLOCK ){
-	    int32_t err = errno;
+	    error = errno;
 	    kevents_[0].flags = EV_DELETE;
             if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
               perror(NULL);
               assert( 0 );
               abort();
             }
-            errno = err;
+            errno = error;
 	  }
 	  else {
 	    errno = EINPROGRESS;
@@ -592,17 +594,29 @@ void AsyncIoSlave::threadExecute()
           break;
         case etConnect :
           EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
-          if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
+	  evCount = kevent(kqueue_,&kevents_[0],1,NULL,0,NULL);
+          if( evCount == 1 ){
             object->descriptor_->connect(object);
-          if( errno != EINPROGRESS ){
-	    int32_t err = errno;
+            if( errno != EINPROGRESS ){
+  	      error = errno;
+	      kevents_[0].flags = EV_DELETE;
+              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
+                perror(NULL);
+                assert( 0 );
+	        abort();
+              }
+	      errno = error;
+	    }
+	  }
+	  else if( evCount == 0 ){
+  	    error = errno;
 	    kevents_[0].flags = EV_DELETE;
             if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
               perror(NULL);
               assert( 0 );
 	      abort();
             }
-	    errno = err;
+	    errno = error;
 	  }
           break;
         default :
@@ -613,9 +627,10 @@ void AsyncIoSlave::threadExecute()
         requests_.insToTail(newRequests_.remove(*object));
       }
       else if( errno != EINPROGRESS ){
+        error = errno;
         closeAPI(object);
         newRequests_.remove(*object);
-        object->errno_ = errno;
+        object->errno_ = error;
         object->count_ = ~(uint64_t) 0;
         object->fiber_->thread()->postEvent(object);
         sp--;
@@ -628,7 +643,11 @@ void AsyncIoSlave::threadExecute()
       acquire();
     }
     else {
-      int evCount = kevent(kqueue_,NULL,0,&kevents_[0],kevents_.count(),NULL);
+      release();
+      evCount = kevent(kqueue_,NULL,0,&kevents_[0],kevents_.count(),NULL);
+      error = errno;
+      acquire();
+      errno = error;
       if( evCount == -1 ){
         perror(NULL);
         assert( 0 );
@@ -640,12 +659,13 @@ void AsyncIoSlave::threadExecute()
 	if( node == NULL ) continue;
 	object = &AsyncEvent::nodeObject(*node);
         if( kev->filter == EVFILT_TIMER ){
-          if( !requests_.nodeInserted(*node) ) continue;
+//          if( !requests_.nodeInserted(*node) ) continue;
           assert( object->type_ == etAccept );
 	  kev->filter = EVFILT_READ;
           kev->flags |= EV_ERROR;
           kev->data = EINTR;
         }
+	error = 0;
         switch( object->type_ ){
           case etRead    :
             if( kev->filter == EVFILT_READ ){
@@ -719,9 +739,7 @@ void AsyncIoSlave::threadExecute()
           default        :
             assert( 0 );
         }
-        acquire();
         requests_.remove(*object);
-        release();
         object->ioSlave_ = NULL;
         object->errno_ = error;
         object->count_ = count;
@@ -1496,7 +1514,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           if( ofSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
           ofSlaves_.add(slave.ptr(NULL));
-	        p->transplant(currentFiber()->event_);
+          p->transplant(currentFiber()->event_);
         }
       }
       return;
@@ -1520,7 +1538,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           if( wdcnSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
           wdcnSlaves_.add(slave.ptr(NULL));
-	        p->transplant(currentFiber()->event_);
+          p->transplant(currentFiber()->event_);
         }
         return;
       }
@@ -1549,7 +1567,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           if( ioSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
           ioSlaves_.add(slave.ptr(NULL));
-	        p->transplant(currentFiber()->event_);
+          p->transplant(currentFiber()->event_);
         }
       }
       return;
@@ -1587,7 +1605,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           if( acquireSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
           acquireSlaves_.add(slave.ptr(NULL));
-	        p->transplant(currentFiber()->event_);
+          p->transplant(currentFiber()->event_);
         }
       }
       return;

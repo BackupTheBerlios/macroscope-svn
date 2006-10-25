@@ -86,20 +86,16 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
         api.close();
         EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
       }
+      if( fcntl(socket_,F_SETFL,fcntl(socket_,F_GETFL,0) | O_NONBLOCK) != 0 ){
+        err = errno;
+        EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+      }
       if( type == SOCK_STREAM ){
 #if defined(__WIN32__) || defined(__WIN64__)
         int bufLen = 0;
         setsockopt(SOL_SOCKET,SO_RCVBUF,&bufLen,sizeof(bufLen));
         setsockopt(SOL_SOCKET,SO_SNDBUF,&bufLen,sizeof(bufLen));
-        int ka = true;
-        setsockopt(SOL_SOCKET,SO_KEEPALIVE,&ka,sizeof(ka));
 #else
-        if( fcntl(socket_,F_SETFL,fcntl(socket_,F_GETFL,0) | O_NONBLOCK/* | O_DIRECT*/) != 0 ){
-          err = errno;
-          EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
-        }
-        int ka = true;
-        setsockopt(SOL_SOCKET,SO_KEEPALIVE,&ka,sizeof(ka));
 /*      socklen_t optlen;
         int lowait;
         optlen = sizeof(lowait);
@@ -120,6 +116,8 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
         setsockopt(SOL_SOCKET,SO_RCVTIMEO,&timeo,sizeof(timeo));
         setsockopt(SOL_SOCKET,SO_SNDTIMEO,&timeo,sizeof(timeo));*/
 #endif
+        int ka = true;
+        setsockopt(SOL_SOCKET,SO_KEEPALIVE,&ka,sizeof(ka));
         struct linger lg;
         lg.l_onoff = 0;
         lg.l_linger = 0;

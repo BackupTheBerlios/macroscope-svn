@@ -159,60 +159,25 @@ inline InterlockedMutex::InterlockedMutex() : refCount_(0)
 }
 #endif
 //---------------------------------------------------------------------------
-#if (FAST_MUTEX && !defined(__WIN32__) && !defined(__WIN64__)) || HAVE_PTHREAD_H
+#if FAST_MUTEX
 //---------------------------------------------------------------------------
 inline void InterlockedMutex::acquire()
 {
-#if FAST_MUTEX
   acquire_(this);
-#elif HAVE_PTHREAD_H
-#ifndef NDEBUG
-  int r =
-#endif
-  pthread_mutex_lock(&mutex_);
-#ifndef NDEBUG
-  assert(r == 0);
-#endif
-#endif
 }
 //---------------------------------------------------------------------------
 inline bool InterlockedMutex::tryAcquire()
 {
-#if FAST_MUTEX
   return interlockedCompareExchange(refCount_, -1, 0) == 0;
-#elif HAVE_PTHREAD_H
-#ifndef NDEBUG
-  int r =
-#else
-  return
-#endif
-  pthread_mutex_trylock(&mutex_)
-#ifndef NDEBUG
-  ;
-  assert(r == 0 || errno == EBUSY);
-  return r == 0;
-#else
-  == 0;
-#endif
-#endif
 }
 //---------------------------------------------------------------------------
 inline void InterlockedMutex::release()
 {
-#if FAST_MUTEX
   interlockedIncrement(refCount_, 1);
-#elif HAVE_PTHREAD_H
-#ifndef NDEBUG
-  int r =
-  #endif
-  pthread_mutex_unlock(&mutex_);
-#ifndef NDEBUG
-  assert(r == 0);
-#endif
-#endif
 }
 //---------------------------------------------------------------------------
 #endif
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Mutex
@@ -249,97 +214,57 @@ class Mutex
     void operator =(const Mutex &){}
 };
 //---------------------------------------------------------------------------
+#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
+//---------------------------------------------------------------------------
 inline Mutex::~Mutex()
 {
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
-#elif HAVE_PTHREAD_RWLOCK_INIT
-#ifndef NDEBUG
-  int r =
-#endif
-  pthread_rwlock_destroy(&mutex_);
-#ifndef NDEBUG
-  assert(r == 0);
-#endif
-#endif
+}
+//---------------------------------------------------------------------------
+inline Mutex::Mutex()
+{
+  value_ = 0;
 }
 //---------------------------------------------------------------------------
 inline Mutex & Mutex::rdLock()
 {
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
   rdLock_(this);
-#elif HAVE_PTHREAD_RWLOCK_INIT
-#ifndef NDEBUG
-  int r =
-#endif
-  pthread_rwlock_rdlock(&mutex_);
-#ifndef NDEBUG
-  assert(r == 0);
-#endif
-#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 inline bool Mutex::tryRDLock()
 {
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
   acquire();
   bool  r = value_ >= 0;
-  if( r )
-    value_++;
+  if( r ) value_++;
   release();
   return r;
-#elif HAVE_PTHREAD_RWLOCK_INIT
-  int r = pthread_rwlock_tryrdlock(&mutex_);
-  assert(r == 0 || errno == EBUSY);
-  return r == 0;
-#endif
 }
 //---------------------------------------------------------------------------
 inline Mutex & Mutex::wrLock()
 {
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
   wrLock_(this);
-#elif HAVE_PTHREAD_RWLOCK_INIT
-#ifndef NDEBUG
-  int r =
-  #endif
-  pthread_rwlock_wrlock(&mutex_);
-  assert(r == 0);
-#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 inline bool Mutex::tryWRLock()
 {
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
   acquire();
   bool r = value_ == 0;
   if( r ) value_ = -1;
   release();
   return r;
-#elif HAVE_PTHREAD_RWLOCK_INIT
-  int r = pthread_rwlock_trywrlock(&mutex_);
-  assert(r == 0 || errno == EBUSY);
-  return r == 0;
-#endif
 }
 //---------------------------------------------------------------------------
 inline Mutex & Mutex::unlock()
 {
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
   acquire();
   assert(value_ != 0);
   if( value_ > 0 ) value_--; else if( value_ < 0 ) value_++;
   release();
-#elif HAVE_PTHREAD_RWLOCK_INIT
-#ifndef NDEBUG
-  int r =
-  #endif
-  pthread_rwlock_unlock(&mutex_);
-  assert(r == 0);
-#endif
   return *this;
 }
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -455,7 +380,7 @@ inline Event & Event::wait()
 #if HAVE_PTHREAD_H
 #ifndef NDEBUG
   int r =
-  #endif
+#endif
   pthread_cond_wait(&handle_, &mutex_);
 #ifndef NDEBUG
   assert(r == 0);

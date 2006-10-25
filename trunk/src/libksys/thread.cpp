@@ -99,7 +99,12 @@ void * Thread::threadFunc(void * thread)
 }
 //---------------------------------------------------------------------------
 Thread::Thread() :
+#if __x86_64__
+// getnameinfo take more then 8 Kb stack space
+  stackSize_(PTHREAD_STACK_MIN * 8),
+#else
   stackSize_(PTHREAD_STACK_MIN),
+#endif
 #if defined(__WIN32__) || defined(__WIN64__)
   handle_(NULL),
   id_(~DWORD(0)),
@@ -109,7 +114,7 @@ Thread::Thread() :
   exitCode_(0),
   started_(false), terminated_(false), finished_(false)
 {
-  stackSize((uintptr_t) getpagesize());
+//  stackSize((uintptr_t) getpagesize());
 }
 //---------------------------------------------------------------------------
 Thread & Thread::resume()

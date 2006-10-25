@@ -78,7 +78,8 @@ IF (WIN32 AND NOT UNIX)
 ENDIF (WIN32 AND NOT UNIX)
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
-  SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -fexceptions -Wall -fno-function-cse")
+# -fno-function-cse
+  SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe -fexceptions -Wall")
   IF (CMAKE_BUILD_TYPE MATCHES Deb)
     SET (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
   ENDIF (CMAKE_BUILD_TYPE MATCHES Deb)

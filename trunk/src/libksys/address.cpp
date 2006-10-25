@@ -92,29 +92,29 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 #endif
     addr4_.sin_family = PF_INET;
     if( port.strlen() > 0 ){
-	    addr4_.sin_port = api.htons((u_short) utf8::str2Int(port));
+      addr4_.sin_port = api.htons((u_short) utf8::str2Int(port));
     }
     else {
-	    addr4_.sin_port = api.htons(defPort);
+      addr4_.sin_port = api.htons(defPort);
     }
-	  if( host.strlen() > 0 ){
-	    struct hostent * he = api.gethostbyname(host.getANSIString());
-	    if( he == NULL ){
-		    r = -1;
-	    }
-	    else {
-  		  s = he->h_name;
-	  	  addr4_.sin_family = he->h_addrtype;
-		    memcpy(&addr4_.sin_addr,he->h_addr_list[0],he->h_length);
-	    }
-	  }
-	  else {
+    if( host.strlen() > 0 ){
+      struct hostent * he = api.gethostbyname(host.getANSIString());
+      if( he == NULL ){
+        r = -1;
+      }
+      else {
+        s = he->h_name;
+        addr4_.sin_family = he->h_addrtype;
+	memcpy(&addr4_.sin_addr,he->h_addr_list[0],he->h_length);
+      }
+    }
+    else {
 #if defined(__WIN32__) || defined(__WIN64__)
       addr4_.sin_addr.S_un.S_addr = INADDR_ANY;
 #else
       addr4_.sin_addr.s_addr = INADDR_ANY;
 #endif
-	  }
+    }
   }
   else {
     utf8::WideString hp(host.getUNICODEString());

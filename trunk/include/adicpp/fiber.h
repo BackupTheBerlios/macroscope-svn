@@ -70,30 +70,8 @@ class Fiber {
 #else
     AutoPtr<uint8_t> stack_;
     void * stackPointer_;
-#if __GNUG__ && __x86_64__
-    static void start(
-      void * dummy1,
-      void * dummy2,
-      void * dummy3,
-      void * dummy4,
-      void * dummy5,
-      void * dummy6,
-      Fiber * fiber
-    ) GNUG_NOTHROW GNUG_CDECL;
-    static void switchFiber2(
-      void * dummy1,
-      void * dummy2,
-      void * dummy3,
-      void * dummy4,
-      void * dummy5,
-      void * dummy6,
-      Fiber * thisOnStack,
-      Fiber * fiber
-    ) GNUG_NOTHROW GNUG_CDECL;
-#else
-    static void start(Fiber * fiber) GNU_NOTHROW GNUG_CDECL;
-    void switchFiber2(Fiber * fiber) GNUG_NOTHROW GNUG_CDECL;
-#endif
+    static void start(Fiber * fiber) GNUG_NOTHROW GNUG_CDECL GNUG_NORETURN;
+    static void switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber * fiber) GNUG_NOTHROW GNUG_CDECL;
 #endif
     BaseThread * thread_;
     EmbeddedList<
@@ -102,7 +80,7 @@ class Fiber {
       AsyncDescriptor::fiberListNodeObject
     > descriptorsList_;
 
-    Fiber & allocateStack(size_t size,Fiber * mainFiber,uintptr_t dummy1 = 0,uintptr_t dummy2 = 0);
+    Fiber & allocateStack(size_t size,Fiber * mainFiber,void * = NULL,void * = NULL,void * = NULL,uintptr_t dummy1 = 0xAAAAAAAA,uintptr_t dummy2 = 0xBBBBBBBB);
 #if defined(__WIN32__) || defined(__WIN64__)
     Fiber & createFiber(uintptr_t dwStackSize);
     Fiber & deleteFiber();
@@ -203,7 +181,7 @@ inline void Fiber::switchFiber(Fiber * fiber)
 inline void Fiber::switchFiber(Fiber * fiber)
 {
   *reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder) = fiber;
-  switchFiber2(NULL,NULL,NULL,NULL,NULL,NULL,this,fiber);
+  switchFiber2(&stackPointer_,&fiber->stackPointer_,fiber);
 }
 //---------------------------------------------------------------------------
 #endif

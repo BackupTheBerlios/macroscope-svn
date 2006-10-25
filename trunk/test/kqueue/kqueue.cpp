@@ -21,8 +21,8 @@
 
 class KQueue {
   public:
-              ~KQueue();
-              KQueue();
+    ~KQueue();
+    KQueue();
 
     KQueue &  testConnect();
     KQueue &  testRegularFiles();
@@ -59,6 +59,10 @@ KQueue & KQueue::testConnect()
     perror(NULL);
     abort();
   }
+  if( fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK) != 0 ){
+    perror(NULL);
+    abort();
+  }
   EV_SET(&kev, s, EVFILT_READ | EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, 0);
   if( kevent(kqueue_, &kev, 1, NULL, 0, NULL) == -1 ){
     perror(NULL);
@@ -69,27 +73,20 @@ KQueue & KQueue::testConnect()
   addr.sin_family = PF_INET;
   addr.sin_addr.s_addr = inet_addr("192.168.201.200");//INADDR_LOOPBACK;
   addr.sin_port = htons(21);
-  if( fcntl(s, F_SETFL, fcntl(s, F_GETFL, 0) | O_NONBLOCK) != 0 ){
-    perror(NULL);
-    abort();
-  }
   if( connect(s, (const struct sockaddr *) &addr, sizeof(addr)) != 0 && errno != EINPROGRESS ){
     perror(NULL);
     abort();
   }
-  int             kcount;
-  struct timespec timeout = {
-                  0, 0
-                  }, * pto = NULL;
-  char            b[1];
-  for( ; ; ){
+  int kcount;
+  struct timespec timeout = { 0, 0 }, * pto = NULL;
+  char b[1];
+  for(;;){
     kcount = kevent(kqueue_, NULL, 0, &kev, 1, NULL);
     if( kcount == -1 ){
       perror(NULL);
       abort();
     }
-    if( kcount == 0 )
-      break;
+    if( kcount == 0 ) break;
     if( kev.flags & EV_ERROR ){
       errno = kev.data;
       perror(NULL);
@@ -111,8 +108,7 @@ KQueue & KQueue::testConnect()
       fprintf(stderr, "EVFILT_WRITE\n");
     }
     ssize_t r;
-    while( (r = recv(s, b, sizeof(b), 0)) > 0 )
-      fprintf(stderr, "%c", b[0]);
+    while( (r = recv(s, b, sizeof(b), 0)) > 0 ) fprintf(stderr, "%c", b[0]);
     if( r <= 0 ){
       if( errno != EAGAIN ){
         perror(NULL);
@@ -166,10 +162,8 @@ KQueue & KQueue::testRegularFiles()
     perror(NULL);
     abort();
   }
-  int             kcount;
-  struct timespec timeout = {
-                  0, 0
-                  }, * pto = NULL;
+  int kcount;
+  struct timespec timeout = { 0, 0 }, * pto = NULL;
   for( ; ; ){
     kcount = kevent(kqueue_, NULL, 0, &kev, 1, pto);
     if( kcount == -1 ){
