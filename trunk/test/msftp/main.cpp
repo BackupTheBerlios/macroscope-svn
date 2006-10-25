@@ -275,7 +275,7 @@ void KFTPClient::put()
       }
       e->writeStdError(log_);
       log_->debug(3,
-        utf8::String::Stream() << "job " << host_ << " failed: " <<
+        utf8::String::Stream() << section_ << " " << host_ << " failed: " <<
         ksys::strError(e->code()) << ", " << list[i] << "\n"
       );
     }
@@ -459,7 +459,7 @@ void KFTPClient::get()
       }
       e->writeStdError(log_);
       log_->debug(3,
-        utf8::String::Stream() << "job " << host_ << " failed: " <<
+        utf8::String::Stream() << section_ << " " << host_ << " failed: " <<
         ksys::strError(e->code()) << ", " << list[i] << "\n"
       );
     }
@@ -512,7 +512,7 @@ void KFTPClient::main()
     getCode();
   }
   catch( ksys::ExceptionSP & e ){
-    e->writeStdError(log_);
+    log_->debug(8,utf8::String::Stream() << section_ << " " << host_ << " incomplete.\n");
     if( errorCode_ == 0 ) errorCode_ = e->code();
     log_->close();
     throw;
