@@ -64,7 +64,9 @@ KQueue & KQueue::testConnect()
     abort();
   }
   EV_SET(&kev, s, EVFILT_READ | EVFILT_WRITE, EV_ADD | EV_ONESHOT, 0, 0, 0);
-  if( kevent(kqueue_, &kev, 1, NULL, 0, NULL) == -1 ){
+  int evc = kevent(kqueue_, &kev, 1, NULL, 0, NULL);
+  fprintf(stderr,"evc == %d\n",evc);
+  if( evc == -1 ){
     perror(NULL);
     abort();
   }
@@ -73,6 +75,7 @@ KQueue & KQueue::testConnect()
   addr.sin_family = PF_INET;
   addr.sin_addr.s_addr = inet_addr("192.168.201.200");//INADDR_LOOPBACK;
   addr.sin_port = htons(21);
+  fprintf(stderr,"sizeof(addr) == %u\n",sizeof(addr));
   if( connect(s, (const struct sockaddr *) &addr, sizeof(addr)) != 0 && errno != EINPROGRESS ){
     perror(NULL);
     abort();

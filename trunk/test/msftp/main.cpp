@@ -503,6 +503,10 @@ void KFTPClient::main()
       log_ = &logFile_;
     }
     remoteAddress_.resolve(host_,MSFTPDefaultPort);
+/*    remoteAddress_.addr4_.sin_len = sizeof(remoteAddress_.addr4_);
+    remoteAddress_.addr4_.sin_family = PF_INET;
+    remoteAddress_.addr4_.sin_addr.s_addr = inet_addr("192.168.201.200");
+    remoteAddress_.addr4_.sin_port = htons(2121);*/
     connect(remoteAddress_);
 
     auth();

@@ -595,20 +595,9 @@ void AsyncIoSlave::threadExecute()
         case etConnect :
           EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
 	  evCount = kevent(kqueue_,&kevents_[0],1,NULL,0,NULL);
-          if( evCount == 1 ){
+          if( evCount != -1 )
             object->descriptor_->connect(object);
-            if( errno != EINPROGRESS ){
-  	      error = errno;
-	      kevents_[0].flags = EV_DELETE;
-              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
-                perror(NULL);
-                assert( 0 );
-	        abort();
-              }
-	      errno = error;
-	    }
-	  }
-	  else if( evCount == 0 ){
+          if( errno != EINPROGRESS ){
   	    error = errno;
 	    kevents_[0].flags = EV_DELETE;
             if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
@@ -644,7 +633,7 @@ void AsyncIoSlave::threadExecute()
     }
     else {
       release();
-      evCount = kevent(kqueue_,NULL,0,&kevents_[0],kevents_.count(),NULL);
+      evCount = kevent(kqueue_,NULL,0,&kevents_[0],1,NULL);
       error = errno;
       acquire();
       errno = error;
@@ -668,7 +657,7 @@ void AsyncIoSlave::threadExecute()
 	error = 0;
         switch( object->type_ ){
           case etRead    :
-            if( kev->filter == EVFILT_READ ){
+            /*if( kev->filter == EVFILT_READ ){
 	      count = ~uint64_t(0);
               if( kev->flags & EV_ERROR ){
 	        error = kev->data;
@@ -686,15 +675,15 @@ void AsyncIoSlave::threadExecute()
 		error = errno;
 	      }
 	    }
-	    else {
+	    else {*/
               assert( kev->filter == EVFILT_AIO );
               error = aio_error(&object->iocb_);
               assert( error != EINPROGRESS );
               count = aio_return(&object->iocb_);
-	    }
+	    //}
 	    break;
           case etWrite   :
-            if( kev->filter == EVFILT_WRITE ){
+            /*if( kev->filter == EVFILT_WRITE ){
               count = ~uint64_t(0);
               if( kev->flags & EV_ERROR ){
                 error = kev->data;
@@ -712,12 +701,12 @@ void AsyncIoSlave::threadExecute()
 		error = errno;
 	      }
 	    }
-	    else {
+	    else {*/
 	      assert( kev->filter == EVFILT_AIO );
               error = aio_error(&object->iocb_);
               assert( error != EINPROGRESS );
               count = aio_return(&object->iocb_);
-            }
+            //}
 	    break;
           case etAccept  :
             assert( kev->filter == EVFILT_READ );
@@ -739,6 +728,7 @@ void AsyncIoSlave::threadExecute()
           default        :
             assert( 0 );
         }
+	closeAPI(object);
         requests_.remove(*object);
         object->ioSlave_ = NULL;
         object->errno_ = error;
