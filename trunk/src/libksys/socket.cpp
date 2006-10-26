@@ -92,6 +92,14 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
         EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
       }
 #endif
+#ifdef IP_TOS
+      int tos = IPTOS_LOWDELAY;
+      setsockopt(IPPROTO_IP,IP_TOS,&tos,sizeof(tos));
+#endif
+#ifdef TCP_NODELAY
+      int on = 1;
+      setsockopt(IPPROTO_TCP,TCP_NODELAY,&on,sizeof(on));
+#endif
       if( type == SOCK_STREAM ){
 #if defined(__WIN32__) || defined(__WIN64__)
         int bufLen = 0;

@@ -31,6 +31,9 @@
 #cmakedefine HAVE_AIO_H 1
 #cmakedefine HAVE_SHA256_H 1
 #cmakedefine HAVE_NETINET_IN_H 1
+#cmakedefine HAVE_NETINET_IN_SYSTM_H 1
+#cmakedefine HAVE_NETINET_IP_H 1
+#cmakedefine HAVE_NETINET_TCP_H 1
 #cmakedefine HAVE_ARPA_INET_H 1
 #cmakedefine HAVE_NETDB_H 1
 #cmakedefine HAVE_PWD_H 1

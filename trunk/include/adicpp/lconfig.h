@@ -71,6 +71,18 @@
 #include <netinet/in.h>
 #endif
 
+#if HAVE_NETINET_IN_SYSTM_H
+#include <netinet/in_systm.h>
+#endif
+
+#if HAVE_NETINET_IP_H
+#include <netinet/ip.h>
+#endif
+
+#if HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
+
 #if HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
