@@ -86,10 +86,12 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
         api.close();
         EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
       }
+#if !defined(__WIN32__) && !defined(__WIN64__)
       if( fcntl(socket_,F_SETFL,fcntl(socket_,F_GETFL,0) | O_NONBLOCK) != 0 ){
         err = errno;
         EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
       }
+#endif
       if( type == SOCK_STREAM ){
 #if defined(__WIN32__) || defined(__WIN64__)
         int bufLen = 0;
