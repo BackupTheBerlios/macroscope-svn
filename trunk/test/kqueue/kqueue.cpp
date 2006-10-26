@@ -73,8 +73,8 @@ KQueue & KQueue::testConnect()
   struct sockaddr_in  addr;
   addr.sin_len = sizeof(addr);
   addr.sin_family = PF_INET;
-  addr.sin_addr.s_addr = inet_addr("192.168.201.200");//INADDR_LOOPBACK;
-  addr.sin_port = htons(21);
+  addr.sin_addr.s_addr = inet_addr("192.168.201.31");//INADDR_LOOPBACK;
+  addr.sin_port = htons(2121);
   fprintf(stderr,"sizeof(addr) == %u\n",sizeof(addr));
   if( connect(s, (const struct sockaddr *) &addr, sizeof(addr)) != 0 && errno != EINPROGRESS ){
     perror(NULL);

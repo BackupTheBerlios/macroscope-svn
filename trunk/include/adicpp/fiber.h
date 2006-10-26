@@ -217,7 +217,7 @@ typedef EmbeddedListNode<AsyncEvent> EventsNode;
 class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
   public:
     virtual ~AsyncIoSlave();
-    AsyncIoSlave();
+    AsyncIoSlave(bool connect = false);
 
     bool transplant(AsyncEvent & requests);
 #if HAVE_KQUEUE
@@ -234,11 +234,14 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #if defined(__WIN32__) || defined(__WIN64__)
     HANDLE events_[MAXIMUM_WAIT_OBJECTS];
     AsyncEvent * eReqs_[MAXIMUM_WAIT_OBJECTS];
-#elif HAVE_KQUEUE
-    int                   kqueue_;
-    Array<struct kevent>  kevents_;
 #else
-#error async io not implemented
+#if HAVE_KQUEUE
+    int kqueue_;
+    Array<struct kevent> kevents_;
+#endif
+    AutoPtr<fd_set> rfds_;
+    AutoPtr<fd_set> wfds_;
+    bool connect_;
 #endif
     void openAPI(AsyncEvent * object);
     void closeAPI(AsyncEvent * object);
@@ -348,6 +351,12 @@ class Requester {
     InterlockedMutex ioRequestsMutex_;
     Vector<AsyncIoSlave> ioSlaves_;
     int64_t ioSlavesSweepTime_;
+
+#if !defined(__WIN32__) && !defined(__WIN64__)
+    InterlockedMutex connectRequestsMutex_;
+    Vector<AsyncIoSlave> connectSlaves_;
+    int64_t connectSlavesSweepTime_;
+#endif
 
     InterlockedMutex ofRequestsMutex_;
     Vector<AsyncOpenFileSlave> ofSlaves_;

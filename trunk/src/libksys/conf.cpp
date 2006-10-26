@@ -158,13 +158,14 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
       if( inQuoted ){
         if( screened ){
           screened = false;
-          uintptr_t     screenLen;
-          utf8::String  sc  = unScreenChar(aheadi_, screenLen);
+          uintptr_t screenLen;
+          utf8::String sc = unScreenChar(aheadi_, screenLen);
           ahead_.replace(aheadi_, aheadi_ + screenLen + 1, sc);
         }
         else if( aheadi_.getChar() == '\"' ){
           inQuoted = false;
           aheadi_.next();
+	  prevChar = 0;
           continue;
         }
         else if( aheadi_.getChar() == '\\' ){
@@ -172,20 +173,22 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           continue;
         }
       }
-      else{
+      else {
         ctype = utf8::getC1Type(c = aheadi_.getChar());
         if( commentLevel > 0 ){
           if( prevChar == '*' && c == '/' ) commentLevel--;
+	  prevChar = c;
           aheadi_.next();
           t = tt = ttUnknown;
           continue;
         }
         if( (ctype & (C1_SPACE | C1_CNTRL)) != 0 || c == '\r' || c == '\n' ){
+	  prevChar = 0;
           if( tt != ttUnknown ) break;
           aheadi_.next();
           continue;
         }
-        if( prevChar == '/' && c == '/' ){
+        if( prevChar == '/' && c == '/' && commentLevel == 0 ){
           token.resize(token.size() - (aheadi_ - 1).seqLen());
           aheadi_.last();
           t = tt = ttUnknown;
@@ -213,22 +216,27 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         else if( c == '{' ){
           t = ttLeftBrace;
           maxTokenLen = 1;
+	  c = 0;
         }
         else if( c == '}' ){
           t = ttRightBrace;
           maxTokenLen = 1;
+	  c = 0;
         }
         else if( c == '=' ){
           t = ttEqual;
           maxTokenLen = 1;
+	  c = 0;
         }
         else if( c == ';' ){
           t = ttSemicolon;
           maxTokenLen = 1;
+	  c = 0;
         }
         else if( c == ',' ){
           t = ttColon;
           maxTokenLen = 1;
+	  c = 0;
         }
         else if( (ctype & C1_CNTRL) == 0 ){
           if( tt != ttNumeric ||
@@ -237,8 +245,11 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
             t = ttString;
             maxTokenLen = ~uintptr_t(0);
           }
+	  else {
+            c = 0;
+	  }
         }
-        else{
+        else {
           t = ttUnknown;
           maxTokenLen = 0;
         }

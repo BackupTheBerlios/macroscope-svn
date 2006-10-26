@@ -337,18 +337,15 @@ l1:
 #elif HAVE_KQUEUE
   switch( fiber()->event_.errno_ ){
     case 0           :
-//      if( fiber()->event_.count_ > 0 ) break; else goto l2;
-      assert( fiber()->event_.count_ > 0 );
+      if( fiber()->event_.count_ == 0 ) goto l2;
       break;
-    case EWOULDBLOCK :
-      goto l1;
     case EMSGSIZE    :
       if( len > 0 ){
         len >>= 1;
         goto l1;
       }
     default          :
-//l2:
+l2:
 #endif
      EAsyncSocket::throwSP(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
   }
@@ -423,18 +420,15 @@ l1:
 #elif HAVE_KQUEUE
   switch( fiber()->event_.errno_ ){
     case 0           :
-//      if( fiber()->event_.count_ > 0 ) break; else goto l2;
-      assert( fiber()->event_.count_ > 0 );
+      if( fiber()->event_.count_ == 0 ) goto l2;
       break;
-    case EWOULDBLOCK :
-      goto l1;
     case EMSGSIZE    :
       if( len > 0 ){
         len >>= 1;
         goto l1;
       }
     default          :
-//l2:
+l2:
 #endif  
      EAsyncSocket::throwSP(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
   }

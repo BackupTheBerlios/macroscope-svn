@@ -154,7 +154,7 @@ AsyncIoSlave::~AsyncIoSlave()
 #endif
 }
 //---------------------------------------------------------------------------
-AsyncIoSlave::AsyncIoSlave()
+AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;
@@ -168,15 +168,26 @@ AsyncIoSlave::AsyncIoSlave()
       Exception::throwSP(err,__PRETTY_FUNCTION__);
     }
   }
-#elif HAVE_KQUEUE
-  kqueue_ = kqueue();
-  if( kqueue < 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+#else
+  if( connect_ ){
+    rfds_.alloc(sizeof(fd_set));
+    wfds_.alloc(sizeof(fd_set));
+    FD_ZERO(rfds_);
+    FD_ZERO(wfds_);
   }
-  kevents_.resize(64);
+#if HAVE_KQUEUE
+  else {
+    kqueue_ = -1;
+    kqueue_ = kqueue();
+    if( kqueue < 0 ){
+      int32_t err = errno;
+      Exception::throwSP(err,__PRETTY_FUNCTION__);
+    }
+    kevents_.resize(64);
+  }
 #else
   Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
 #endif
 }
 //---------------------------------------------------------------------------
@@ -184,18 +195,20 @@ AsyncIoSlave::AsyncIoSlave()
 //---------------------------------------------------------------------------
 void AsyncIoSlave::cancelEvent(const AsyncEvent & request)
 {
-  struct kevent ke;
-  EV_SET(&ke,request.descriptor_->socket_,EVFILT_READ | EVFILT_WRITE,EV_DELETE,0,0,0);
-  if( kevent(kqueue_,&ke,1,NULL,0,NULL) == -1 ){
-    perror(NULL);
-    assert( 0 );
-    abort();
-  }
-  EV_SET(&ke,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,&request.node(request));
-  if( kevent(kqueue_,&ke,1,NULL,0,NULL) == -1 ){
-    perror(NULL);
-    assert( 0 );
-    abort();
+  if( request.type_ != etConnect ){
+    struct kevent ke;
+    EV_SET(&ke,request.descriptor_->socket_,EVFILT_READ | EVFILT_WRITE,EV_DELETE,0,0,0);
+    if( kevent(kqueue_,&ke,1,NULL,0,NULL) == -1 ){
+      perror(NULL);
+      assert( 0 );
+      abort();
+    }
+    EV_SET(&ke,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,&request.node(request));
+    if( kevent(kqueue_,&ke,1,NULL,0,NULL) == -1 ){
+      perror(NULL);
+      assert( 0 );
+      abort();
+    }
   }
 }
 //---------------------------------------------------------------------------
@@ -205,8 +218,12 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
 #define MAX_REQS (MAXIMUM_WAIT_OBJECTS - 2)
-#elif HAVE_KQUEUE
-#define MAX_REQS 64
+#else
+  uintptr_t MAX_REQS;
+#if HAVE_KQUEUE
+  MAX_REQS = 64;
+#endif
+  if( connect_ ) MAX_REQS = FD_SETSIZE;
 #endif
   bool r = false;
   if( !terminated_ ){
@@ -216,13 +233,21 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
       if( newRequests_.count() < 2 ){
 #if defined(__WIN32__) || defined(__WIN64__)
         SetEvent(events_[MAXIMUM_WAIT_OBJECTS - 1]);
-#elif HAVE_KQUEUE
-        struct kevent ev;
-        EV_SET(&ev,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,0);
-        if( kevent(kqueue_,&ev,1,NULL,0,NULL) == -1 ){
-          perror(NULL);
-          abort();
-        }
+#else
+        if( connect_ ){
+	}
+#if HAVE_KQUEUE
+        else {
+          struct kevent ev;
+          EV_SET(&ev,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,0);
+          if( kevent(kqueue_,&ev,1,NULL,0,NULL) == -1 ){
+            perror(NULL);
+            abort();
+          }
+	}
+#else
+        Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+#endif
 #endif
         if( requests_.count() == 0 ) post();
       }
@@ -493,7 +518,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
   }
 }
 //------------------------------------------------------------------------------
-#elif HAVE_KQUEUE
+#else
 //------------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
@@ -502,7 +527,10 @@ void AsyncIoSlave::threadExecute()
 #if SIZEOF_AIOCB
   struct aiocb * iocb;
 #endif
-  int evCount;
+  union {
+    int nrd;
+    int evCount;
+  };
   int32_t error;
   uint64_t count;
   EventsNode * node;
@@ -522,26 +550,20 @@ void AsyncIoSlave::threadExecute()
           break;
         case etRead     :
 	  if( object->length_ > 0 ){
-            /*if( object->descriptor_->isSocket() ){
-              EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
-              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
-	    }
-	    else {*/
-              iocb = &object->iocb_;
-              memset(iocb,0,sizeof(*iocb));
-              iocb->aio_fildes = object->descriptor_->descriptor_;
-              iocb->aio_nbytes = object->length_;
-	      iocb->aio_buf = object->buffer_;
-              iocb->aio_offset = object->position_;
-	      iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
-              iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
-              iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
+            iocb = &object->iocb_;
+            memset(iocb,0,sizeof(*iocb));
+            iocb->aio_fildes = object->descriptor_->descriptor_;
+            iocb->aio_nbytes = object->length_;
+	    iocb->aio_buf = object->buffer_;
+            iocb->aio_offset = object->position_;
+	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
+            iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
+            iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #if HAVE_AIO_READ
-              if( aio_read(iocb) == 0 ) errno = EINPROGRESS;
+            if( aio_read(iocb) == 0 ) errno = EINPROGRESS;
 #else
-	      error = ENOSYS;
+	    error = ENOSYS;
 #endif
-            //}
           }
 	  else {
 	    errno = EINVAL;
@@ -549,32 +571,27 @@ void AsyncIoSlave::threadExecute()
           break;
         case etWrite  :
 	  if( object->length_ > 0 ){
-            /*if( object->descriptor_->isSocket() ){
-              EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_WRITE,EV_ADD | EV_ONESHOT,0,0,node);
-              if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == 0 ) errno = EINPROGRESS;
-	    }
-	    else {*/
-              iocb = &object->iocb_;
-      	      memset(iocb,0,sizeof(*iocb));
-              iocb->aio_fildes = object->descriptor_->descriptor_;
-              iocb->aio_nbytes = object->length_;
-              iocb->aio_buf = object->buffer_;
-              iocb->aio_offset = object->position_;
-              iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
-              iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
-              iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
+            iocb = &object->iocb_;
+      	    memset(iocb,0,sizeof(*iocb));
+            iocb->aio_fildes = object->descriptor_->descriptor_;
+            iocb->aio_nbytes = object->length_;
+            iocb->aio_buf = object->buffer_;
+            iocb->aio_offset = object->position_;
+            iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
+            iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
+            iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #if HAVE_AIO_WRITE
-              if( aio_write(iocb) == 0 ) errno = EINPROGRESS;
+            if( aio_write(iocb) == 0 ) errno = EINPROGRESS;
 #else
-	      error = ENOSYS;
+	    error = ENOSYS;
 #endif
-            //}
 	  }
 	  else {
             errno = EINVAL;
 	  }
           break;
         case etAccept :
+#if HAVE_KQUEUE
           EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
           if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
             count = object->descriptor_->accept();
@@ -591,21 +608,25 @@ void AsyncIoSlave::threadExecute()
 	  else {
 	    errno = EINPROGRESS;
 	  }
+#else
+          errno = ENOSYS;
+#endif
           break;
         case etConnect :
-          EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
-	  evCount = kevent(kqueue_,&kevents_[0],1,NULL,0,NULL);
-          if( evCount != -1 )
+	  if( object->descriptor_->socket_ < 0 ||
+	      (uintptr_t) object->descriptor_->socket_ >= FD_SETSIZE ){
+	    errno = EINVAL;
+	  }
+	  else {
+	    FD_SET(object->descriptor_->socket_,rfds_);
+	    FD_SET(object->descriptor_->socket_,wfds_);
             object->descriptor_->connect(object);
-          if( errno != EINPROGRESS ){
-  	    error = errno;
-	    kevents_[0].flags = EV_DELETE;
-            if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) == -1 && errno != ENOENT ){
-              perror(NULL);
-              assert( 0 );
-	      abort();
-            }
-	    errno = error;
+            if( errno != EINPROGRESS ){
+    	      error = errno;
+	      FD_CLR(object->descriptor_->socket_,rfds_);
+	      FD_CLR(object->descriptor_->socket_,wfds_);
+	      errno = error;
+	    }
 	  }
           break;
         default :
@@ -633,7 +654,16 @@ void AsyncIoSlave::threadExecute()
     }
     else {
       release();
-      evCount = kevent(kqueue_,NULL,0,&kevents_[0],1,NULL);
+      if( connect_ ){
+	nrd = select(FD_SETSIZE,rfds_,wfds_,NULL,NULL);
+      }
+      else {
+#if HAVE_KQUEUE
+        evCount = kevent(kqueue_,NULL,0,&kevents_[0],1,NULL);
+#else
+        errno = ENOSYS;
+#endif
+      }
       error = errno;
       acquire();
       errno = error;
@@ -642,73 +672,60 @@ void AsyncIoSlave::threadExecute()
         assert( 0 );
         abort();
       }
-      while( --evCount >= 0 ){
-        struct kevent * kev = &kevents_[evCount];
-        node = (EventsNode *) kev->udata;
-	if( node == NULL ) continue;
-	object = &AsyncEvent::nodeObject(*node);
-        if( kev->filter == EVFILT_TIMER ){
-//          if( !requests_.nodeInserted(*node) ) continue;
-          assert( object->type_ == etAccept );
-	  kev->filter = EVFILT_READ;
-          kev->flags |= EV_ERROR;
-          kev->data = EINTR;
+      node = requests_.first();
+      while( evCount > 0 ){
+#if HAVE_KQUEUE
+        struct kevent * kev;
+#endif
+        if( connect_ ){
+	   if( node == NULL ) break;
+	   object = &AsyncEvent::nodeObject(*node);
+           assert( object->type_ == etConnect );
+	   node = node->next();
+	   if( !FD_ISSET(object->descriptor_->socket_,rfds_) &&
+	       !FD_ISSET(object->descriptor_->socket_,wfds_) ){
+	    FD_SET(object->descriptor_->socket_,rfds_);
+	    FD_SET(object->descriptor_->socket_,wfds_);
+            continue;
+	  }
+	}
+#if HAVE_KQUEUE
+	else {
+          evCount--;
+          kev = &kevents_[evCount];
+          node = (EventsNode *) kev->udata;
+  	  if( node == NULL ) continue;
+	  object = &AsyncEvent::nodeObject(*node);
+          if( kev->filter == EVFILT_TIMER ){
+            assert( object->type_ == etAccept );
+	    kev->filter = EVFILT_READ;
+            kev->flags |= EV_ERROR;
+            kev->data = EINTR;
+          }
         }
+#endif
+        socklen_t errLen;
 	error = 0;
+	count = 0;
         switch( object->type_ ){
           case etRead    :
-            /*if( kev->filter == EVFILT_READ ){
-	      count = ~uint64_t(0);
-              if( kev->flags & EV_ERROR ){
-	        error = kev->data;
-	        if( error == 0 ) error = ESHUTDOWN;
-	      }
-              else if( kev->flags & EV_EOF ){
-                error = kev->fflags;
-	        if( error == 0 ) error = ESHUTDOWN;
-	      }
-	      else {
-  	        count = object->descriptor_->read2(
-		  object->buffer_,
-		  object->length_ > (uint64_t) kev->data ? kev->data : object->length_
-		);
-		error = errno;
-	      }
-	    }
-	    else {*/
+#if HAVE_KQUEUE
               assert( kev->filter == EVFILT_AIO );
               error = aio_error(&object->iocb_);
               assert( error != EINPROGRESS );
               count = aio_return(&object->iocb_);
-	    //}
+#endif
 	    break;
           case etWrite   :
-            /*if( kev->filter == EVFILT_WRITE ){
-              count = ~uint64_t(0);
-              if( kev->flags & EV_ERROR ){
-                error = kev->data;
-                if( error == 0 ) error = ESHUTDOWN;
-	      }
-	      else if( kev->flags & EV_EOF ){
-                error = kev->fflags;
-                if( error == 0 ) error = ESHUTDOWN;
-	      }
-	      else {
-  	        count = object->descriptor_->write2(
-		  object->cbuffer_,
-		  object->length_ > (uint64_t) kev->data ? kev->data : object->length_
-		);
-		error = errno;
-	      }
-	    }
-	    else {*/
+#if HAVE_KQUEUE
 	      assert( kev->filter == EVFILT_AIO );
               error = aio_error(&object->iocb_);
               assert( error != EINPROGRESS );
               count = aio_return(&object->iocb_);
-            //}
+#endif
 	    break;
           case etAccept  :
+#if HAVE_KQUEUE
             assert( kev->filter == EVFILT_READ );
             if( kev->flags & EV_ERROR ){
               error = kev->data;
@@ -718,12 +735,11 @@ void AsyncIoSlave::threadExecute()
 	      count = object->descriptor_->accept();
 	      error = errno;
 	    }
+#endif
             break;
           case etConnect :
-            assert( kev->filter == EVFILT_READ );
-            if( kev->flags & EV_ERROR ) error = kev->data;
-            if( kev->flags & EV_EOF ) error = kev->fflags;
-            count = 0;
+	    errLen = sizeof(error);
+	    dynamic_cast<ksock::AsyncSocket *>(object->descriptor_)->getsockopt(SOL_SOCKET,SO_ERROR,&error,errLen);
             break;
           default        :
             assert( 0 );
@@ -737,16 +753,6 @@ void AsyncIoSlave::threadExecute()
       }
     }
   }
-}
-//------------------------------------------------------------------------------
-#else
-//------------------------------------------------------------------------------
-void AsyncIoSlave::threadExecute()
-{
-  errno = ENOSYS;
-  perror(NULL);
-  assert( 0 );
-  abort();
 }
 //------------------------------------------------------------------------------
 #endif
@@ -1397,6 +1403,13 @@ Requester::~Requester()
     ioSlaves_[i].post();
     ioSlaves_[i].Thread::wait();
   }
+#if !defined(__WIN32__) && !defined(__WIN64__)
+  for( i = connectSlaves_.count() - 1; i >= 0; i-- ){
+    connectSlaves_[i].terminate();
+    connectSlaves_[i].post();
+    connectSlaves_[i].Thread::wait();
+  }
+#endif
   for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
     ofSlaves_[i].terminate();
     ofSlaves_[i].post();
@@ -1418,6 +1431,9 @@ Requester::~Requester()
 //---------------------------------------------------------------------------
 Requester::Requester() :
   ioSlavesSweepTime_(0),
+#if !defined(__WIN32__) && !defined(__WIN64__)
+  connectSlavesSweepTime_(0),
+#endif
   ofSlavesSweepTime_(0),
   acquireSlavesSweepTime_(0)
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1538,13 +1554,15 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etRead :
     case etWrite :
     case etAccept :
+#if defined(__WIN32__) || defined(__WIN64__)
     case etConnect :
+#endif
       {
         AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
         if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
           for( i = ioSlaves_.count() - 1; i >= 0; i-- )
             if( ioSlaves_[i].finished() ){
-	            ioSlaves_[i].Thread::wait();
+              ioSlaves_[i].Thread::wait();
               ioSlaves_.remove(i);
             }
           ioSlavesSweepTime_ = gettimeofday();
@@ -1561,6 +1579,31 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
+#if !defined(__WIN32__) && !defined(__WIN64__)
+    case etConnect :
+      {
+        AutoLock<InterlockedMutex> lock(connectRequestsMutex_);
+        if( gettimeofday() - connectSlavesSweepTime_ >= 10000000 ){
+          for( i = connectSlaves_.count() - 1; i >= 0; i-- )
+            if( connectSlaves_[i].finished() ){
+              connectSlaves_[i].Thread::wait();
+              connectSlaves_.remove(i);
+            }
+          connectSlavesSweepTime_ = gettimeofday();
+        }
+        for( i = connectSlaves_.count() - 1; i >= 0; i-- )
+          if( connectSlaves_[i].transplant(currentFiber()->event_) ) break;
+        if( i < 0 ){
+          AsyncIoSlave * p = newObject<AsyncIoSlave>(true);
+          AutoPtr<AsyncIoSlave> slave(p);
+          if( connectSlaves_.count() >= numberOfProcessors() ) p->terminate();
+          p->resume();
+          connectSlaves_.add(slave.ptr(NULL));
+          p->transplant(currentFiber()->event_);
+        }
+      }
+      return;
+#endif
     case etClose :
     case etQuit :
     case etDispatch :

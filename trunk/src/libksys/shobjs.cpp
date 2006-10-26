@@ -135,7 +135,7 @@ Semaphore::~Semaphore()
   if( handle_ != NULL ){
 #ifndef NDEBUG
     int r =
-    #endif
+#endif
     sem_destroy(&handle_);
 #ifndef NDEBUG
     assert(r == 0);
@@ -287,13 +287,15 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
 {
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
-  //  fprintf(stderr,"%s %s\n",(const char *) name_,__PRETTY_FUNCTION__);
+#ifndef NDEBUG
+  fprintf(stderr,"%s %s\n",(const char *) name_,__PRETTY_FUNCTION__);
+#endif
   handle_ = sem_open(name_, O_EXCL | O_CREAT, (mode_t) mode, 0);
   if( handle_ == SEM_FAILED ){
     if( errno == EEXIST )
       handle_ = sem_open(name_, 0, (mode_t) mode, 0);
   }
-  else{
+  else {
     creator_ = true;
   }
   if( handle_ == SEM_FAILED ){
