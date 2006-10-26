@@ -21,4 +21,21 @@ Hints:
   Windows:
     At this time /RTC1 or /RTCsu option must be set under
     Microsoft Visual C++ Studio for 'Release' configurations.
-    
+    Follow these steps to enable the IP_TOS option for the Winsock setsockopt
+    function and the -v option for the ping utility on Windows 2000, Windows XP,
+    or Windows Server 2003:
+      1. Start Registry Editor (Regedt32.exe).
+      2. Go to the following key: 
+         HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\TcpIp\Parameters
+      3. If you are running Windows 2000, follow these steps:
+           a. On the Edit menu, click Add Value.
+           b. In the Value name box, type DisableUserTOSSetting. 
+           c. In the Data Type list, click REG_DWORD, and then click OK.
+           d. In the Data box, type a value of 0 (zero), and then click OK.
+         If you are running Windows XP or Windows Server 2003, follow these steps:
+           a. On the Edit menu, point to New, and then click DWORD Value. 
+           b. Type DisableUserTOSSetting as the entry name, and then press ENTER.
+         When you add this entry, the value is set to 0 (zero). Do not change the value.
+       4. Quit Registry Editor, and then restart the computer.
+    See original of this instruction on http://support.microsoft.com/kb/248611
+
