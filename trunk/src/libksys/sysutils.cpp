@@ -1129,7 +1129,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
       r = MoveFileA(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString());
     }
     else {
-      r = MoveFileExW(anyPathName2HostPathName(oldPathName).getUNICODEString(),anyPathName2HostPathName(newPathName.getUNICODEString()),MOVEFILE_COPY_ALLOWED);
+      r = MoveFileExW(anyPathName2HostPathName(oldPathName).getUNICODEString(),anyPathName2HostPathName(newPathName).getUNICODEString(),MOVEFILE_COPY_ALLOWED);
     }
     if( r == 0 ){
 #else
