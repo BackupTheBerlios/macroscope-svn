@@ -3,6 +3,7 @@
 #endif
 
 #include <sys/types.h>
+#include <sys/endian.h>
 #include <sys/event.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -212,7 +213,9 @@ KQueue & KQueue::testRegularFiles()
 
 int main(int argc, char ** argv)
 {
-  KQueue  kqueue;
+//  be32enc(NULL,0);
+
+  KQueue kqueue;
   kqueue.testConnect();
   //  kqueue.testRegularFiles();
   return 0;

@@ -14,7 +14,7 @@ PROJECT(macroscope)
 
 #SET (CMAKE_CXX_CREATE_STATIC_LIBRARY "xilib ${CMAKE_CL_NOLOGO} <LINK_FLAGS> /out:<TARGET> <OBJECTS> ")
 
-# the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1" 
+# the complete system name, e.g. "Linux-2.4.22", "FreeBSD-5.4-RELEASE" or "Windows 5.1"
 #MESSAGE( STATUS "CMAKE_SYSTEM: " ${CMAKE_SYSTEM} )
 # the short system name, e.g. "Linux", "FreeBSD" or "Windows"
 #MESSAGE( STATUS "CMAKE_SYSTEM_NAME: " ${CMAKE_SYSTEM_NAME} )
@@ -234,6 +234,7 @@ SET (CMAKE_EXTRA_INCLUDE_FILES
   sys/uuid.h
   sys/event.h
   sys/utime.h
+  sys/endian.h
   utime.h
   uuid.h
   aio.h
@@ -451,8 +452,6 @@ CHECK_FUNCTION_EXISTS (ftok HAVE_FTOK)
 CHECK_FUNCTION_EXISTS (exit HAVE_EXIT)
 CHECK_FUNCTION_EXISTS (_tzset HAVE__TZSET)
 CHECK_FUNCTION_EXISTS (tzset HAVE_TZSET)
-CHECK_FUNCTION_EXISTS (be32enc HAVE_BE32ENC)
-CHECK_FUNCTION_EXISTS (be32dec HAVE_BE32DEC)
 CHECK_FUNCTION_EXISTS (pthread_create HAVE_PTHREAD_CREATE)
 CHECK_FUNCTION_EXISTS (pthread_detach HAVE_PTHREAD_DETACH)
 CHECK_FUNCTION_EXISTS (pthread_self HAVE_PTHREAD_SELF)
@@ -472,6 +471,10 @@ CHECK_FUNCTION_EXISTS (pthread_rwlock_tryrdlock HAVE_PTHREAD_TRYRDLOCK)
 CHECK_FUNCTION_EXISTS (pthread_rwlock_wrlock HAVE_PTHREAD_WRLOCK)
 CHECK_FUNCTION_EXISTS (pthread_rwlock_trywrlock HAVE_PTHREAD_TRYWRLOCK)
 CHECK_FUNCTION_EXISTS (pthread_rwlock_unlock HAVE_PTHREAD_UNLOCK)
+
+INCLUDE (CheckSymbolExists)
+CHECK_SYMBOL_EXISTS (be32dec sys/endian.h HAVE_BE32DEC)
+CHECK_SYMBOL_EXISTS (be32enc sys/endian.h HAVE_BE32ENC)
 
 FIND_LIBRARY(LIB_C_R NAMES c_r)
 FIND_LIBRARY(LIB_PTHREAD NAMES pthread)
