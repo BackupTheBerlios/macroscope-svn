@@ -618,6 +618,10 @@ int main(int argc,char * argv[])
   autoInitializer = autoInitializer;
 
   try {
+    ksys::SHA256 sha;
+    uint8_t b[8];
+    memset(b,1,sizeof(b));
+    sha.make(b,sizeof(b));
     union {
       intptr_t i;
       uintptr_t u;

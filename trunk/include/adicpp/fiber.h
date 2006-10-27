@@ -217,7 +217,11 @@ typedef EmbeddedListNode<AsyncEvent> EventsNode;
 class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
   public:
     virtual ~AsyncIoSlave();
-    AsyncIoSlave(bool connect = false);
+#if defined(__WIN32__) || defined(__WIN64__)
+    AsyncIoSlave();
+#else
+    AsyncIoSlave(bool connect);
+#endif
 
     bool transplant(AsyncEvent & requests);
 #if HAVE_KQUEUE

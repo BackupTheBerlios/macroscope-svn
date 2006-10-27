@@ -154,7 +154,11 @@ AsyncIoSlave::~AsyncIoSlave()
 #endif
 }
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+AsyncIoSlave::AsyncIoSlave()
+#else
 AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
+#endif
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;

@@ -93,7 +93,7 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
         EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
       }
 #endif
-#ifdef IP_TOS
+#if defined(IP_TOS) && defined(IPTOS_LOWDELAY)
       int tos = IPTOS_LOWDELAY;
       setsockopt(IPPROTO_IP,IP_TOS,&tos,sizeof(tos));
 #endif
