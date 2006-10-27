@@ -657,15 +657,15 @@ void changeCurrentDir(const utf8::String & name)
 #if defined(__WIN32__) || defined(__WIN64__)
   SetLastError(0);
   if( isWin9x() ){
-    SetCurrentDirectoryA((const char *) name.getANSIString());
+    SetCurrentDirectoryA((const char *) anyPathName2HostPathName(name).getANSIString());
   }
   else {
-    SetCurrentDirectoryW((const wchar_t *) name.getUNICODEString());
+    SetCurrentDirectoryW((const wchar_t *) anyPathName2HostPathName(name).getUNICODEString());
   }
   err = GetLastError();
 #else
   errno = 0;
-  chdir((const char *) name.getANSIString());
+  chdir((const char *) anyPathName2HostPathName(name).getANSIString());
   err = errno;
 #endif
   if( err != 0 )
@@ -700,12 +700,10 @@ utf8::String changeFileExt(const utf8::String & fileName,const utf8::String & ex
   utf8::String::Iterator i(fileName);
   i.last();
   while( !i.bof() ){
-    switch( i.getChar() ){
-      case '\\' : case ':' : break;
-      case '.'  :
-        return utf8::String(utf8::String::Iterator(fileName),i) + extension;
-      default   : i.prev();
-    }
+    uintptr_t c = i.getChar();
+    if( c == '\\' || c == '/' || c == ':' ) break;
+    if( c == '.' ) return utf8::String(utf8::String::Iterator(fileName),i) + extension;
+    i.prev();
   }
   return fileName + extension;
 }
@@ -715,11 +713,10 @@ utf8::String getFileExt(const utf8::String & fileName)
   utf8::String::Iterator i(fileName);
   i.last();
   while( !i.bof() ){
-    switch( i.getChar() ){
-      case '\\' : case ':' : break;
-      case '.'  : return utf8::String(i);
-      default   : i.prev();
-    }
+    uintptr_t c = i.getChar();
+    if( c == '\\' || c == '/' || c == ':' ) break;
+    if( c = '.' ) return utf8::String(i);
+    i.prev();
   }
   return utf8::String();
 }
@@ -742,7 +739,8 @@ utf8::String getExecutablePath()
   utf8::String::Iterator i(name);
   i.last();
   while( !i.bof() ){
-    if( i.getChar() == (uintptr_t) pathDelimiter ) break;
+    uintptr_t c = i.getChar();
+    if( c == '\\' || c == '/' ) break;
     i.prev();
   }
   return utf8::String(utf8::String::Iterator(name),i + 1);
@@ -753,8 +751,11 @@ utf8::String excludeTrailingPathDelimiter(const utf8::String & path)
   utf8::String s(path);
   utf8::String::Iterator i(s);
   i.last();
-  if( i.getChar() == (uintptr_t) pathDelimiter )
-    s = s.unique().resize(s.size() - i.seqLen());
+  switch( i.getChar() ){
+    case '\\' : case '/' :
+      s = s.unique().resize(s.size() - i.seqLen());
+    default:;
+  }
   return s;
 }
 //---------------------------------------------------------------------------
@@ -763,11 +764,13 @@ utf8::String includeTrailingPathDelimiter(const utf8::String & path)
   utf8::String s(path);
   utf8::String::Iterator i(s);
   i.last();
-  if( i.getChar() != (uintptr_t) pathDelimiter ){
-    char b[2];
-    b[0] = pathDelimiter;
-    b[1] = '\0';
-    s = s.unique() + b;
+  switch( i.getChar() ){
+    case '\\' : case '/' :
+    default:
+      char b[2];
+      b[0] = pathDelimiter;
+      b[1] = '\0';
+      return s + b;
   }
   return s;
 }
@@ -775,17 +778,16 @@ utf8::String includeTrailingPathDelimiter(const utf8::String & path)
 bool isPathNameRelative(const utf8::String & pathName)
 {
   utf8::String::Iterator i(pathName);
-#if defined(__WIN32__) || defined(__WIN64__)
-  uintptr_t c = 0;
-#endif
+  uintptr_t c = 0, c2, c3;
   while( !i.eof() ){
     if( !i.isSpace() ){
-      if( i.getChar() == (uintptr_t) pathDelimiter ) return false;
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( c != 0 && i.getChar() == ':' ) return false;
-      if( c == 0 && (i.getUpperChar() < 'A' || i.getUpperChar() > 'Z') ) break;
+      switch( c2 = i.getChar() ){
+        case '\\' : case '/' : return false;
+	default: ;
+      }
+      if( c != 0 && c2 == ':' ) return false;
+      if( c == 0 && ((c3 = i.getUpperChar()) < 'A' || c3 > 'Z') ) break;
       c = i.getChar();
-#endif
     }
     i.next();
   }
@@ -1025,8 +1027,11 @@ utf8::String getPathFromPathName(const utf8::String & pathName)
   utf8::String::Iterator i(pathName);
   i.last();
   while( !i.bof() ){
-    if( i.getChar() == (uintptr_t) pathDelimiter || i.getChar() == ':' )
-      return utf8::String(utf8::String::Iterator(pathName),i);
+    switch( i.getChar() ){
+      case '\\' : case '/' : case ':' :
+        return utf8::String(utf8::String::Iterator(pathName),i);
+      default :;
+    }
     i.prev();
   }
   return ".";
@@ -1037,8 +1042,11 @@ utf8::String getNameFromPathName(const utf8::String & pathName)
   utf8::String::Iterator i(pathName);
   i.last();
   while( !i.bof() ){
-    if( i.getChar() == (uintptr_t) pathDelimiter )
-      return utf8::String(i + 1,utf8::String::Iterator(pathName).last());
+    switch( i.getChar() ){
+      case '\\' : case '/' :
+        return utf8::String(i + 1,utf8::String::Iterator(pathName).last());
+      default :;
+    }
     i.prev();
   }
   return i;
@@ -1046,8 +1054,11 @@ utf8::String getNameFromPathName(const utf8::String & pathName)
 //---------------------------------------------------------------------------
 utf8::String anyPathName2HostPathName(const utf8::String & pathName)
 {
-  if( pathDelimiter == '\\' ) return pathName.replaceAll("/",pathDelimiterStr);
-  return pathName.replaceAll("\\",pathDelimiterStr);
+  if( pathDelimiter == '\\' && !pathName.strstr("\\").eof() )
+    return pathName.replaceAll("/",pathDelimiterStr);
+  if( pathDelimiter == '/' && !pathName.strstr("/").eof() )
+    return pathName.replaceAll("\\",pathDelimiterStr);
+  return pathName;
 }
 //---------------------------------------------------------------------------
 bool nameFitMask(const utf8::String & name,const utf8::String & mask)
@@ -1115,14 +1126,14 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
 #if defined(__WIN32__) || defined(__WIN64__)
     BOOL r;
     if( isWin9x() ){
-      r = MoveFileA(oldPathName.getANSIString(),newPathName.getANSIString());
+      r = MoveFileA(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString());
     }
     else {
-      r = MoveFileExW(oldPathName.getUNICODEString(),newPathName.getUNICODEString(),MOVEFILE_COPY_ALLOWED);
+      r = MoveFileExW(anyPathName2HostPathName(oldPathName).getUNICODEString(),anyPathName2HostPathName(newPathName.getUNICODEString()),MOVEFILE_COPY_ALLOWED);
     }
     if( r == 0 ){
 #else
-    if( ::rename(oldPathName.getANSIString(),newPathName.getANSIString()) != 0 ){
+    if( ::rename(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString()) != 0 ){
 #endif
       int32_t err = oserror() + errorOffset;
       Exception::throwSP(err,utf8::String(__PRETTY_FUNCTION__));
