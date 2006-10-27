@@ -328,36 +328,5 @@ utf8::String getTimeCode(int64_t t);
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
-#if !HAVE_GETPAGESIZE
-#if defined(__WIN32__) || defined(__WIN64__)
-inline uintptr_t getpagesize()
-{
-  SYSTEM_INFO si;
-  GetSystemInfo(&si);
-  return si.dwPageSize;
-}
-#elif HAVE_SYSCONF && defined(_SC_PAGESIZE)
-inline uintptr_t getpagesize()
-{
-  return sysconf(_SC_PAGESIZE);
-}
-#elif HAVE_SYSCONF && defined(_SC_PAGE_SIZE)
-inline uintptr_t getpagesize()
-{
-  return sysconf(_SC_PAGE_SIZE);
-}
-#elif __i386__
-inline uintptr_t getpagesize()
-{
-  return 4096;
-}
-#else
-inline uintptr_t getpagesize()
-{
-  return 8192;
-}
-#endif
-#endif
-//---------------------------------------------------------------------------
 #endif /* _Sysutils_H_ */
 //---------------------------------------------------------------------------

@@ -72,6 +72,14 @@
 #cmakedefine HAVE_NEW 1
 #cmakedefine HAVE_TYPEINFO 1
 
+#ifndef LITTLE_ENDIAN
+#define LITTLE_ENDIAN 1
+#endif
+
+#ifndef BIG_ENDIAN
+#define BIG_ENDIAN 2
+#endif
+
 #ifndef BYTE_ORDER
 #cmakedefine BYTE_ORDER ${BYTE_ORDER}
 #endif
@@ -210,6 +218,8 @@
 #cmakedefine HAVE_EXIT 1
 #cmakedefine HAVE__TZSET 1
 #cmakedefine HAVE_TZSET 1
+#cmakedefine HAVE_BE32ENC 1
+#cmakedefine HAVE_BE32DEC 1
 #cmakedefine HAVE_PTHREAD_CREATE 1
 #cmakedefine HAVE_PTHREAD_DETACH 1
 #cmakedefine HAVE_PTHREAD_SELF 1

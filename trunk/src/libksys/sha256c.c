@@ -24,15 +24,8 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libmd/sha256c.c,v 1.1 2005/03/09 19:23:04 cperciva Exp $");
-
-#include <sys/endian.h>
-#include <sys/types.h>
-
-#include <string.h>
-
-#include "sha256.h"
+#include <adicpp/lconfig.h>
+#include <adicpp/sha/sha256.h>
 
 #if BYTE_ORDER == BIG_ENDIAN
 
