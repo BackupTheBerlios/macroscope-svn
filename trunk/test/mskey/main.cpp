@@ -44,7 +44,7 @@ int main(int ac,char * av[])
       uintptr_t u;
     };
     initializeArguments(ac,av);
-    utf8::String expirationDate;
+    utf8::String expirationDate("00.00.0000");
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].strcmp("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << mskey_version.tex_ << "\n");

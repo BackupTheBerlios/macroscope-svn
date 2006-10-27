@@ -2100,11 +2100,14 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
 // now this is expiration date text from keymaker command line as plain text in info2
         uint64_t ld = gettimeofday();
         uint64_t ed = timeFromTimeString(info2,false);
-        pirate = (expire = ld > ed) || pirate;
+        pirate = (expire = ed > 0 && ld > ed) || pirate;
       }
       else {
         pirate = true;
       }
+    }
+    else {
+      pirate = true;
     }
   }
   catch( ... ){
