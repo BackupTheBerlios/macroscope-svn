@@ -220,7 +220,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #if defined(__WIN32__) || defined(__WIN64__)
     AsyncIoSlave();
 #else
-    AsyncIoSlave(bool connect);
+    AsyncIoSlave(bool connect = false);
 #endif
 
     bool transplant(AsyncEvent & requests);
