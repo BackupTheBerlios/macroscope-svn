@@ -660,15 +660,15 @@ void SpoolWalker::processQueue(bool & timeWait)
                 " delivered localy to mailbox: " << userMailBox << "\n"
               );
             }
-            else {
-              rename(list[i],server_.mqueueDir() + message.id() + ".msg");
-              stdErr.debug(0,
-                utf8::String::Stream() << "Message " << message.id() <<
-                " received from " << message.value("#Sender") <<
-                " to " << message.value("#Recepient") <<
-                " is put in queue for delivery.\n"
-              );
-            }
+          }
+          else {
+            rename(list[i],server_.mqueueDir() + message.id() + ".msg");
+            stdErr.debug(0,
+              utf8::String::Stream() << "Message " << message.id() <<
+              " received from " << message.value("#Sender") <<
+              " to " << message.value("#Recepient") <<
+              " is put in queue for delivery.\n"
+            );
           }
         }
       }
