@@ -104,6 +104,9 @@ void KFTPClient::auth()
   optimize = config_->section(section_).section("compression").value("optimize",optimize);
   uintptr_t bufferSize = config_->section("compression").value("buffer_size",getpagesize());
   bufferSize = config_->section(section_).section("compression").value("buffer_size",bufferSize);
+  bool noAuth = config_->value("noauth",false);
+  noAuth = config_->section(section_).value("noauth",noAuth);
+
 /*  ksys::stdErr.log(
     ksys::lmINFO,
     utf8::String::Stream() <<
@@ -121,7 +124,8 @@ void KFTPClient::auth()
       crc,
       compressionLevel,
       optimize,
-      bufferSize
+      bufferSize,
+      noAuth
     )
   );
 }

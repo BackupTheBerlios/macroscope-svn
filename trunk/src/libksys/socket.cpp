@@ -603,57 +603,60 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(
   const utf8::String & crc,
   uintptr_t level,
   bool optimize,
-  uintptr_t bufferSize)
+  uintptr_t bufferSize,
+  bool noAuth)
 {
-  uint8_t authMagic[sizeof(authMagic_)];
-  read(authMagic,sizeof(authMagic));
-  if( memcmp(authMagic,authMagic_,sizeof(authMagic_)) != 0 ){
-    *this << int32_t(aeMagic);
-    return aeMagic;
-  }
-  *this << int32_t(aeOK);
-  utf8::String user(readString());
-  if( !isValidUser(user) ){
-    *this << int32_t(aeUser);
-    return aeUser;
-  }
-  *this << int32_t(aeOK);
-  utf8::String password(getUserPassword(user));
   uint8_t passwordSHA256[32];
-  memset(passwordSHA256,0,sizeof(passwordSHA256));
-  ksys::SHA256 SHA256;
-  if( password.strncasecmp("sha256:",7) == 0 ){
-    ksys::base64Decode(
-      utf8::String::Iterator(password) + 7,
-      passwordSHA256,
-      sizeof(passwordSHA256)
-    );
+  uint8_t se = radDisabled, ce = radDisabled;
+  if( !noAuth ){
+    uint8_t authMagic[sizeof(authMagic_)];
+    read(authMagic,sizeof(authMagic));
+    if( memcmp(authMagic,authMagic_,sizeof(authMagic_)) != 0 ){
+      *this << int32_t(aeMagic);
+      return aeMagic;
+    }
+    *this << int32_t(aeOK);
+    utf8::String user(readString());
+    if( !isValidUser(user) ){
+      *this << int32_t(aeUser);
+      return aeUser;
+    }
+    *this << int32_t(aeOK);
+    utf8::String password(getUserPassword(user));
+    memset(passwordSHA256,0,sizeof(passwordSHA256));
+    ksys::SHA256 SHA256;
+    if( password.strncasecmp("sha256:",7) == 0 ){
+      ksys::base64Decode(
+        utf8::String::Iterator(password) + 7,
+        passwordSHA256,
+        sizeof(passwordSHA256)
+      );
+    }
+    else {
+      SHA256.make(password.c_str(),password.size());
+      memcpy(passwordSHA256,SHA256.sha256(),sizeof(passwordSHA256));
+    }
+    SHA256.make(passwordSHA256,sizeof(passwordSHA256));
+    uint8_t rpassword2SHA256[32];
+    read(rpassword2SHA256,sizeof(rpassword2SHA256));
+    if( memcmp(rpassword2SHA256,SHA256.sha256(),sizeof(rpassword2SHA256)) != 0 ){
+      *this << int32_t(aePassword);
+      return aePassword;
+    }
+    *this << int32_t(aeOK);
+    se = authChannelHelper(encryption);
+    *this >> ce;
+    *this << se;
+    if( se == radRequired && ce == radDisabled ){
+      *this << int32_t(aeEncryptionServerRequiredButClientDisabled);
+      return aeEncryptionServerRequiredButClientDisabled;
+    }
+    if( se == radDisabled && ce == radRequired ){
+      *this << int32_t(aeEncryptionServerDisabledButClientRequired);
+      return aeEncryptionServerRequiredButClientDisabled;
+    }
+    *this << int32_t(aeOK);
   }
-  else {
-    SHA256.make(password.c_str(),password.size());
-    memcpy(passwordSHA256,SHA256.sha256(),sizeof(passwordSHA256));
-  }
-  SHA256.make(passwordSHA256,sizeof(passwordSHA256));
-  uint8_t rpassword2SHA256[32];
-  read(rpassword2SHA256,sizeof(rpassword2SHA256));
-  if( memcmp(rpassword2SHA256,SHA256.sha256(),sizeof(rpassword2SHA256)) != 0 ){
-    *this << int32_t(aePassword);
-    return aePassword;
-  }
-  *this << int32_t(aeOK);
-  uint8_t se, ce;
-  se = authChannelHelper(encryption);
-  *this >> ce;
-  *this << se;
-  if( se == radRequired && ce == radDisabled ){
-    *this << int32_t(aeEncryptionServerRequiredButClientDisabled);
-    return aeEncryptionServerRequiredButClientDisabled;
-  }
-  if( se == radDisabled && ce == radRequired ){
-    *this << int32_t(aeEncryptionServerDisabledButClientRequired);
-    return aeEncryptionServerRequiredButClientDisabled;
-  }
-  *this << int32_t(aeOK);
   uint8_t sc, cc, smethod, cmethod, scrc, ccrc, clevel;
   sc = authChannelHelper(compression);
   smethod = authChannelHelper2(compressionType);
@@ -693,46 +696,47 @@ AsyncSocket::AuthErrorType AsyncSocket::clientAuth(
   const utf8::String & crc,
   uintptr_t level,
   bool optimize,
-  uintptr_t bufferSize)
+  uintptr_t bufferSize,
+  bool noAuth)
 {
   union {
     int32_t e;
     AuthErrorType ae;
   };
   e = ae = aeOK;
-  
-  write(authMagic_,sizeof(authMagic_));
-  *this >> e;
-  if( e != aeOK ) return ae;
-  *this << user;
-  *this >> e;
-  if( e != aeOK ) return ae;
-
   uint8_t passwordSHA256[32];
-  memset(passwordSHA256,0,sizeof(passwordSHA256));
-  ksys::SHA256 SHA256;
-  if( password.strncasecmp("sha256:",7) == 0 ){
-    ksys::base64Decode(
-      utf8::String::Iterator(password) + 7,
-      passwordSHA256,
-      sizeof(passwordSHA256)
-    );
-  }
-  else {
-    SHA256.make(password.c_str(),password.size());
-    memcpy(passwordSHA256,SHA256.sha256(),sizeof(passwordSHA256));
-  }
-  SHA256.make(passwordSHA256,sizeof(passwordSHA256));
-  write(SHA256.sha256(),sizeof(passwordSHA256));
-  *this >> e;
-  if( e != aeOK ) return ae;
+  uint8_t se = radDisabled, ce = radDisabled;
+  if( !noAuth ){
+    write(authMagic_,sizeof(authMagic_));
+    *this >> e;
+    if( e != aeOK ) return ae;
+    *this << user;
+    *this >> e;
+    if( e != aeOK ) return ae;
 
-  uint8_t se, ce;
-  ce = authChannelHelper(encryption);
-  *this << ce;
-  *this >> se >> e;
-  if( e != aeOK ) return ae;
+    memset(passwordSHA256,0,sizeof(passwordSHA256));
+    ksys::SHA256 SHA256;
+    if( password.strncasecmp("sha256:",7) == 0 ){
+      ksys::base64Decode(
+        utf8::String::Iterator(password) + 7,
+        passwordSHA256,
+        sizeof(passwordSHA256)
+      );
+    }
+    else {
+      SHA256.make(password.c_str(),password.size());
+      memcpy(passwordSHA256,SHA256.sha256(),sizeof(passwordSHA256));
+    }
+    SHA256.make(passwordSHA256,sizeof(passwordSHA256));
+    write(SHA256.sha256(),sizeof(passwordSHA256));
+    *this >> e;
+    if( e != aeOK ) return ae;
 
+    ce = authChannelHelper(encryption);
+    *this << ce;
+    *this >> se >> e;
+    if( e != aeOK ) return ae;
+  }
   uint8_t sc, cc, smethod, cmethod, scrc, ccrc, slevel;
   cc = authChannelHelper(compression);
   cmethod = authChannelHelper2(compressionType);

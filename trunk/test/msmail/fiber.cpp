@@ -78,6 +78,9 @@ void ServerFiber::auth()
   uintptr_t compressionLevel = server_.config_->section("compression").value("max_level",3);
   bool optimize = server_.config_->section("compression").value("optimize",false);
   uintptr_t bufferSize = server_.config_->section("compression").value("buffer_size",getpagesize());
+  bool noAuth = false;
+  if( server_.config_->isSection("users") )
+    noAuth = server_.config_->section("users").value("noauth",noAuth);
   Error e = (Error) serverAuth(
     encryption,
     encryptionThreshold,
@@ -86,7 +89,8 @@ void ServerFiber::auth()
     crc,
     compressionLevel,
     optimize,
-    bufferSize
+    bufferSize,
+    noAuth
   );
   if( e != eOK ) Exception::throwSP(e,__PRETTY_FUNCTION__);
 }
@@ -618,8 +622,7 @@ void SpoolWalker::processQueue(bool & timeWait)
             bool process = true;
             if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
               AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
-	      ServerFiber aaa(server_,suser,skey);
-              ServerFiber * fib = server_.findRecvMailFiberNL(aaa);
+              ServerFiber * fib = server_.findRecvMailFiberNL(ServerFiber(server_,suser,skey));
               if( fib == NULL ){
                 server_.sendRobotMessage(
                   message.value("#Sender"),
@@ -734,7 +737,7 @@ void MailQueueWalker::auth()
   utf8::String user, password, encryption, compression, compressionType, crc;
   maxSendSize(server_.config_->parse().override().value("max_send_size",getpagesize()));
   user = server_.config_->text("user","system");
-  password = server_.config_->text("password","sha256:D7h+DiEkmuy6kSKdj9YoFurRn2Cbqoa2qGdd5kocOjE");
+  password = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
   encryption = server_.config_->section("encryption").text(utf8::String(),"default");
   uintptr_t encryptionThreshold = server_.config_->section("encryption").value("threshold",1024 * 1024);
   compression = server_.config_->section("compression").text(utf8::String(),"default");
@@ -743,6 +746,7 @@ void MailQueueWalker::auth()
   uintptr_t compressionLevel = server_.config_->section("compression").value("level",3);
   bool optimize = server_.config_->section("compression").value("optimize",false);
   uintptr_t bufferSize = server_.config_->section("compression").value("buffer_size",getpagesize());
+  bool noAuth = server_.config_->value("noauth",false);
   checkCode(
     clientAuth(
       user,
@@ -754,12 +758,13 @@ void MailQueueWalker::auth()
       crc,
       compressionLevel,
       optimize,
-      bufferSize
+      bufferSize,
+      noAuth
     )
   );
 }
 //------------------------------------------------------------------------------
-void MailQueueWalker::processQueue(bool & timeWait)
+void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
 {
   timeWait = false;
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
@@ -790,7 +795,7 @@ void MailQueueWalker::processQueue(bool & timeWait)
 #endif
     }
     if( file.isOpen() ){
-      bool resolved = false, connected = false, authentificated = false, sended = false;
+      bool resolved = false, tryConnect = false, connected = false, authentificated = false, sended = false;
       try {
         Message message;
         file >> message;
@@ -841,11 +846,15 @@ void MailQueueWalker::processQueue(bool & timeWait)
           }
           if( resolved ){
             close();
-            uintptr_t cec = 0;
+            uint64_t cec = 0;
+            uint64_t lastFailedConnectTime = 0;
             {
               AutoMutexRDLock<FiberMutex> lock(data.mutex_);
               ServerInfo * si = data.servers_.find(server);
-              if( si != NULL ) cec = si->connectErrorCount_;
+              if( si != NULL ){
+                cec = si->connectErrorCount_;
+                lastFailedConnectTime = si->lastFailedConnectTime_;
+              }
             }
             if( cec > 0 ){
               uintptr_t mwt = server_.config_->parse().override().valueByPath(
@@ -855,22 +864,24 @@ void MailQueueWalker::processQueue(bool & timeWait)
               );
               cec = (uintptr_t) fibonacci(cec);
               if( cec > mwt ) cec = mwt;
-              stdErr.debug(7,utf8::String::Stream() <<
-                "mqueue: Wait " << cec << "seconds before connect to host " <<
-                server << " because previous connect try failed.\n"
-              );
-              sleep(cec * 1000000u);
+              //sleep(cec * 1000000u);
             }
-            try {
-              connect(address);
-              connected = true;
-            }
-            catch( ExceptionSP & e ){
-              e->writeStdError();
-              stdErr.debug(3,
-                utf8::String::Stream() <<
-                "Unable to connect. Host " << server << " unreachable.\n"
-              );
+            cec *= 1000000u;
+            if( (uint64_t) gettimeofday() >= cec + lastFailedConnectTime ){
+              try {
+                tryConnect = true;
+                connect(address);
+                connected = true;
+              }
+              catch( ExceptionSP & e ){
+                timeWait = true;
+                if( timeout > cec ) timeout = cec;
+                e->writeStdError();
+                stdErr.debug(3,
+                  utf8::String::Stream() <<
+                  "Unable to connect. Host " << server << " unreachable.\n"
+                );
+              }
             }
           }
           if( connected ){
@@ -890,10 +901,19 @@ void MailQueueWalker::processQueue(bool & timeWait)
             AutoMutexWRLock<FiberMutex> lock(data.mutex_);
             ServerInfo * si = data.servers_.find(server);
             if( si != NULL ){
-              if( authentificated )
+              if( authentificated ){
                 si->connectErrorCount_ = 0;
-              else
+                si->lastFailedConnectTime_ = 0;
+              }
+              else if( tryConnect ){
                 si->connectErrorCount_++;
+                si->lastFailedConnectTime_ = gettimeofday();
+                stdErr.debug(7,utf8::String::Stream() <<
+                  "mqueue: Wait " << fibonacci(si->connectErrorCount_) <<
+                  " seconds before connect to host " <<
+                  server << " because previous connect try failed.\n"
+                );
+              }
             }
           }
         }
@@ -956,18 +976,20 @@ void MailQueueWalker::processQueue(bool & timeWait)
 void MailQueueWalker::main()
 {
   bool timeWait;
+  uint64_t timeout = ~uint64_t(0);
   while( !terminated_ ){
     try {
-      processQueue(timeWait);
+      processQueue(timeWait,timeout);
     }
     catch( ... ){
       timeWait = true;
     }
     if( terminated_ ) break;
     if( timeWait ){
-      uint64_t timeout = server_.config_->valueByPath(
+      uint64_t timeout2 = server_.config_->valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",60u);
-      sleep(timeout * 1000000u);
+      if( timeout2 > timeout ) timeout2 = timeout;
+      sleep(timeout2 * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
     }
     else {
@@ -1030,7 +1052,7 @@ void NodeClient::auth()
   utf8::String user, password, encryption, compression, compressionType, crc;
   maxSendSize(server_.config_->parse().override().value("max_send_size",getpagesize()));
   user = server_.config_->text("user","system");
-  password = server_.config_->text("password","sha256:D7h+DiEkmuy6kSKdj9YoFurRn2Cbqoa2qGdd5kocOjE");
+  password = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
   encryption = server_.config_->section("encryption").text(utf8::String(),"default");
   uintptr_t encryptionThreshold = server_.config_->section("encryption").value("threshold",1024 * 1024);
   compression = server_.config_->section("compression").text(utf8::String(),"default");
@@ -1039,6 +1061,7 @@ void NodeClient::auth()
   uintptr_t compressionLevel = server_.config_->section("compression").value("level",3);
   bool optimize = server_.config_->section("compression").value("optimize",false);
   uintptr_t bufferSize = server_.config_->section("compression").value("buffer_size",getpagesize());
+  bool noAuth = server_.config_->value("noauth",false);
   checkCode(
     clientAuth(
       user,
@@ -1050,7 +1073,8 @@ void NodeClient::auth()
       crc,
       compressionLevel,
       optimize,
-      bufferSize
+      bufferSize,
+      noAuth
     )
   );
 }
@@ -1077,7 +1101,7 @@ void NodeClient::main()
   utf8::String server, host;
   Server::Data & data = server_.data(dataType_);
   try {
-    bool connected, exchanged, doWork;
+    bool tryConnect, connected, exchanged, doWork;
     do {
       stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
       if( periodicaly_ ) checkMachineBinding(server_.config_->value("machine_key"),true);
@@ -1113,7 +1137,9 @@ void NodeClient::main()
             remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
             host = remoteAddress.resolve(defaultPort);
             close();
+            tryConnect = false;
             uintptr_t cec = 0;
+            uint64_t lastFailedConnectTime = 0;
             if( !periodicaly_ ){
               AutoMutexWRLock<FiberMutex> lock(data.mutex_);
               ServerInfo * si = data.servers_.find(host);
@@ -1124,6 +1150,7 @@ void NodeClient::main()
                 assert( si != NULL );
               }
               cec = si->connectErrorCount_;
+              lastFailedConnectTime = si->lastFailedConnectTime_;
             }
             if( cec > 0 ){
               uintptr_t mwt = server_.config_->parse().override().valueByPath(
@@ -1133,22 +1160,22 @@ void NodeClient::main()
               );
               cec = (uintptr_t) fibonacci(cec);
               if( cec > mwt ) cec = mwt;
-              stdErr.debug(7,utf8::String::Stream() <<
-                "NODE client: Wait " << cec << " seconds before connect to host " <<
-                host << " because previous connect try failed.\n"
-              );
-              sleep(cec * 1000000u);
+              cec *= 1000000u;
+              //sleep(cec * 1000000u);
             }
-            connect(remoteAddress);
-            try {
-              auth();
-              connected = true;
-            }
-            catch( ExceptionSP & e ){
-              e->writeStdError();
-              stdErr.debug(3,utf8::String::Stream() <<
-                "Authentification to host " << host << " failed.\n"
-              );
+            if( (uint64_t) gettimeofday() >= cec + lastFailedConnectTime ){
+              tryConnect = true;
+              connect(remoteAddress);
+              try {
+                auth();
+                connected = true;
+              }
+              catch( ExceptionSP & e ){
+                e->writeStdError();
+                stdErr.debug(3,utf8::String::Stream() <<
+                  "Authentification to host " << host << " failed.\n"
+                );
+              }
             }
           }
           catch( ExceptionSP & e ){
@@ -1195,7 +1222,10 @@ void NodeClient::main()
                 ServerInfo * si = data.servers_.find(host);
                 if( si != NULL ){
                   if( fullDump ) si->stime_ = rStartTime;
-                  if( !periodicaly_ ) si->connectErrorCount_ = 0;
+                  if( !periodicaly_ ){
+                    si->connectErrorCount_ = 0;
+                    si->lastFailedConnectTime_ = 0;
+                  }
                 }
               }
               exchanged = true;
@@ -1225,7 +1255,14 @@ void NodeClient::main()
           else if( !periodicaly_ ){
             AutoMutexWRLock<FiberMutex> lock(data.mutex_);
             ServerInfo * si = data.servers_.find(host);
-            if( si != NULL ) si->connectErrorCount_++;
+            if( si != NULL ){
+              si->connectErrorCount_++;
+              si->lastFailedConnectTime_ = gettimeofday();
+              stdErr.debug(7,utf8::String::Stream() <<
+                "NODE client: Wait " << fibonacci(si->connectErrorCount_) << " seconds before connect to host " <<
+                host << " because previous connect try failed.\n"
+              );
+            }
           }
         }
       }

@@ -475,6 +475,7 @@ class ServerInfo {
     InfoLinkKeys sendedTo_;
     AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
     uintptr_t connectErrorCount_;
+    uint64_t lastFailedConnectTime_;
   protected:
   private:
 };
@@ -696,7 +697,7 @@ class MailQueueWalker : public ksock::ClientFiber {
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
-    void processQueue(bool & timeWait);
+    void processQueue(bool & timeWait,uint64_t & timeout);
     void main();
   private:
     Server & server_;

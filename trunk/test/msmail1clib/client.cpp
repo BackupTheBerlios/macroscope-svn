@@ -66,7 +66,7 @@ void ClientFiber::auth()
   utf8::String user, password, encryption, compression, compressionType, crc;
   maxSendSize(client_.config_->value("max_send_size",getpagesize()));
   user = client_.config_->text("user","system");
-  password = client_.config_->text("password","sha256:D7h+DiEkmuy6kSKdj9YoFurRn2Cbqoa2qGdd5kocOjE");
+  password = client_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
   encryption = client_.config_->section("encryption").text(utf8::String(),"default");
   uintptr_t encryptionThreshold = client_.config_->section("encryption").value("threshold",1024 * 1024);
   compression = client_.config_->section("compression").text(utf8::String(),"default");
@@ -75,6 +75,7 @@ void ClientFiber::auth()
   uintptr_t compressionLevel = client_.config_->section("compression").value("level",3);
   bool optimize = client_.config_->section("compression").value("optimize",false);
   uintptr_t bufferSize = client_.config_->section("compression").value("buffer_size",getpagesize());
+  bool noAuth = client_.config_->value("noauth",false);
   checkCode(
     clientAuth(
       user,
@@ -86,7 +87,8 @@ void ClientFiber::auth()
       crc,
       compressionLevel,
       optimize,
-      bufferSize
+      bufferSize,
+      noAuth
     )
   );
 }

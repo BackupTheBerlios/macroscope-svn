@@ -187,7 +187,8 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
       const utf8::String & crc,
       uintptr_t level,
       bool optimize,
-      uintptr_t bufferSize
+      uintptr_t bufferSize,
+      bool noAuth = false
     );
     AuthErrorType clientAuth(
       const utf8::String & user,
@@ -199,7 +200,8 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
       const utf8::String & crc,
       uintptr_t level,
       bool optimize,
-      uintptr_t bufferSize
+      uintptr_t bufferSize,
+      bool noAuth = false
     );
 
     AsyncSocket & clearStatistic();

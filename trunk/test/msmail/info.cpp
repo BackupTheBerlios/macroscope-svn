@@ -414,7 +414,8 @@ ServerInfo::ServerInfo() :
 ServerInfo::ServerInfo(const utf8::String & name,ServerType type) :
   atime_(gettimeofday()), rtime_(0), stime_(0), name_(name),
   type_(type), sendedToAutoDrop_(sendedTo_),
-  connectErrorCount_(0)
+  connectErrorCount_(0),
+  lastFailedConnectTime_(0)
 {
 }
 //------------------------------------------------------------------------------

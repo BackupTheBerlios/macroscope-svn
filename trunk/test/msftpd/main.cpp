@@ -96,6 +96,7 @@ MSFTPServerFiber & MSFTPServerFiber::auth()
   uintptr_t compressionLevel = config_->section("compression").value("max_level",3);
   bool optimize = config_->section("compression").value("optimize",false);
   uintptr_t bufferSize = config_->section("compression").value("buffer_size",getpagesize());
+  bool noAuth = config_->value("noauth",false);
   MSFTPError e = (MSFTPError) serverAuth(
     encryption,
     encryptionThreshold,
@@ -104,7 +105,8 @@ MSFTPServerFiber & MSFTPServerFiber::auth()
     crc,
     compressionLevel,
     optimize,
-    bufferSize
+    bufferSize,
+    noAuth
   );
   if( e != eOK )
     ksys::Exception::throwSP(e,__PRETTY_FUNCTION__);

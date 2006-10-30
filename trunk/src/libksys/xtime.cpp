@@ -84,6 +84,10 @@ int64_t timeFromTimeString(const utf8::String & s,bool local)
     int32_t err = errno;
     Exception::throwSP(err,__PRETTY_FUNCTION__);
   }
+  if( tma.tm_year == 0 && tma.tm_mon == 0 && tma.tm_mday == 0 &&
+      tma.tm_hour == 0 && tma.tm_min == 0 && tma.tm_sec == 0 && usec == 0 ){
+    return 0;
+  }
   tma.tm_mon -= 1;
   tma.tm_year -= 1900;
   if( ksys::sizeOf_timeval_tv_sec == 4 ){
