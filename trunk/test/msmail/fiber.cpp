@@ -1255,7 +1255,7 @@ void NodeClient::main()
           else if( !periodicaly_ ){
             AutoMutexWRLock<FiberMutex> lock(data.mutex_);
             ServerInfo * si = data.servers_.find(host);
-            if( si != NULL ){
+            if( si != NULL && tryConnect ){
               si->connectErrorCount_++;
               si->lastFailedConnectTime_ = gettimeofday();
               stdErr.debug(7,utf8::String::Stream() <<
@@ -1263,6 +1263,7 @@ void NodeClient::main()
                 host << " because previous connect try failed.\n"
               );
             }
+            sleep(1000000);
           }
         }
       }
