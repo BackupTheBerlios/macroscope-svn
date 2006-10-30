@@ -644,22 +644,21 @@ void SpoolWalker::processQueue(bool & timeWait)
 ////////////////
           if( process ){
             if( deliverLocaly ){
-                utf8::String userMailBox(server_.mailDir() + suser);
-                utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
-                try {
-                  rename(list[i],mailFile);
-                }
-                catch( ... ){
-                  createDirectory(userMailBox);
-                }
+              utf8::String userMailBox(server_.mailDir() + suser);
+              utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
+              try {
                 rename(list[i],mailFile);
-                stdErr.debug(0,
-                  utf8::String::Stream() << "Message " << message.id() <<
-                  " received from " << message.value("#Sender") <<
-                  " to " << message.value("#Recepient") <<
-                  " delivered localy to mailbox: " << userMailBox << "\n"
-                );
               }
+              catch( ... ){
+                createDirectory(userMailBox);
+              }
+              rename(list[i],mailFile);
+              stdErr.debug(0,
+                utf8::String::Stream() << "Message " << message.id() <<
+                " received from " << message.value("#Sender") <<
+                " to " << message.value("#Recepient") <<
+                " delivered localy to mailbox: " << userMailBox << "\n"
+              );
             }
             else {
               rename(list[i],server_.mqueueDir() + message.id() + ".msg");
