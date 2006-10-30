@@ -433,6 +433,7 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
   type_ = a.type_;
   sendedTo_ = a.sendedTo_;
   connectErrorCount_ = a.connectErrorCount_;
+  lastFailedConnectTime_ = a.lastFailedConnectTime_;
   return *this;
 }
 //------------------------------------------------------------------------------
