@@ -617,33 +617,33 @@ void SpoolWalker::processQueue(bool & timeWait)
           timeWait = true;
         }
         else {
+          if( deliverLocaly ){
 // auto response
-          bool process = true;
-          if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
-            AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
-            ServerFiber * fib = server_.findRecvMailFiberNL(ServerFiber(server_,suser,skey));
-            if( fib == NULL ){
-              server_.sendRobotMessage(
-                message.value("#Sender"),
-                message.value("#Recepient"),
-                message.value("#Sender.Sended"),
-                "#request.user.online","no"
-              );
-              if( (bool) Mutant(message.isValue("#request.user.remove.message.if.offline")) ){
-                remove(list[i]);
-                stdErr.debug(1,
-                  utf8::String::Stream() << "Message " << message.id() <<
-                  " received from " << message.value("#Sender") <<
-                  " to " << message.value("#Recepient") <<
-                  " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
+            bool process = true;
+            if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
+              AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
+              ServerFiber * fib = server_.findRecvMailFiberNL(ServerFiber(server_,suser,skey));
+              if( fib == NULL ){
+                server_.sendRobotMessage(
+                  message.value("#Sender"),
+                  message.value("#Recepient"),
+                  message.value("#Sender.Sended"),
+                  "#request.user.online","no"
                 );
-                process = false;
+                if( (bool) Mutant(message.isValue("#request.user.remove.message.if.offline")) ){
+                  remove(list[i]);
+                  stdErr.debug(1,
+                    utf8::String::Stream() << "Message " << message.id() <<
+                    " received from " << message.value("#Sender") <<
+                    " to " << message.value("#Recepient") <<
+                    " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
+                  );
+                  process = false;
+                }
               }
             }
-          }
 ////////////////
-          if( process ){
-            if( deliverLocaly ){
+            if( process ){
               utf8::String userMailBox(server_.mailDir() + suser);
               utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
               try {
