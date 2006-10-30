@@ -617,58 +617,59 @@ void SpoolWalker::processQueue(bool & timeWait)
           timeWait = true;
         }
         else {
-          if( deliverLocaly ){
 // auto response
-            bool process = true;
-            if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
-              AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
-              ServerFiber * fib = server_.findRecvMailFiberNL(ServerFiber(server_,suser,skey));
-              if( fib == NULL ){
-                server_.sendRobotMessage(
-                  message.value("#Sender"),
-                  message.value("#Recepient"),
-                  message.value("#Sender.Sended"),
-                  "#request.user.online","no"
+          bool process = true;
+          if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
+            AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
+            ServerFiber * fib = server_.findRecvMailFiberNL(ServerFiber(server_,suser,skey));
+            if( fib == NULL ){
+              server_.sendRobotMessage(
+                message.value("#Sender"),
+                message.value("#Recepient"),
+                message.value("#Sender.Sended"),
+                "#request.user.online","no"
+              );
+              if( (bool) Mutant(message.isValue("#request.user.remove.message.if.offline")) ){
+                remove(list[i]);
+                stdErr.debug(1,
+                  utf8::String::Stream() << "Message " << message.id() <<
+                  " received from " << message.value("#Sender") <<
+                  " to " << message.value("#Recepient") <<
+                  " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
                 );
-                if( (bool) Mutant(message.isValue("#request.user.remove.message.if.offline")) ){
-                  remove(list[i]);
-                  stdErr.debug(1,
-                    utf8::String::Stream() << "Message " << message.id() <<
-                    " received from " << message.value("#Sender") <<
-                    " to " << message.value("#Recepient") <<
-                    " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
-                  );
-                  process = false;
-                }
+                process = false;
               }
             }
+          }
 ////////////////
-            if( process ){
-              utf8::String userMailBox(server_.mailDir() + suser);
-              utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
-              try {
+          if( process ){
+            if( deliverLocaly ){
+                utf8::String userMailBox(server_.mailDir() + suser);
+                utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message.id() + ".msg");
+                try {
+                  rename(list[i],mailFile);
+                }
+                catch( ... ){
+                  createDirectory(userMailBox);
+                }
                 rename(list[i],mailFile);
+                stdErr.debug(0,
+                  utf8::String::Stream() << "Message " << message.id() <<
+                  " received from " << message.value("#Sender") <<
+                  " to " << message.value("#Recepient") <<
+                  " delivered localy to mailbox: " << userMailBox << "\n"
+                );
               }
-              catch( ... ){
-                createDirectory(userMailBox);
-              }
-              rename(list[i],mailFile);
+            }
+            else {
+              rename(list[i],server_.mqueueDir() + message.id() + ".msg");
               stdErr.debug(0,
                 utf8::String::Stream() << "Message " << message.id() <<
                 " received from " << message.value("#Sender") <<
                 " to " << message.value("#Recepient") <<
-                " delivered localy to mailbox: " << userMailBox << "\n"
+                " is put in queue for delivery.\n"
               );
             }
-          }
-          else {
-            rename(list[i],server_.mqueueDir() + message.id() + ".msg");
-            stdErr.debug(0,
-              utf8::String::Stream() << "Message " << message.id() <<
-              " received from " << message.value("#Sender") <<
-              " to " << message.value("#Recepient") <<
-              " is put in queue for delivery.\n"
-            );
           }
         }
       }
@@ -830,6 +831,8 @@ void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
           }
         }
         else {
+          uint64_t cec = 0;
+          uint64_t lastFailedConnectTime = 0;
           try {
             address.resolve(server,defaultPort);
             resolved = true;
@@ -846,8 +849,6 @@ void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
           }
           if( resolved ){
             close();
-            uint64_t cec = 0;
-            uint64_t lastFailedConnectTime = 0;
             {
               AutoMutexRDLock<FiberMutex> lock(data.mutex_);
               ServerInfo * si = data.servers_.find(server);
@@ -865,8 +866,9 @@ void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
               cec = (uintptr_t) fibonacci(cec);
               if( cec > mwt ) cec = mwt;
               //sleep(cec * 1000000u);
+              cec *= 1000000u;
+              if( timeout > cec ) timeout = cec;
             }
-            cec *= 1000000u;
             if( (uint64_t) gettimeofday() >= cec + lastFailedConnectTime ){
               try {
                 tryConnect = true;
@@ -875,7 +877,6 @@ void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
               }
               catch( ExceptionSP & e ){
                 timeWait = true;
-                if( timeout > cec ) timeout = cec;
                 e->writeStdError();
                 stdErr.debug(3,
                   utf8::String::Stream() <<
@@ -905,14 +906,23 @@ void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
                 si->connectErrorCount_ = 0;
                 si->lastFailedConnectTime_ = 0;
               }
-              else if( tryConnect ){
-                si->connectErrorCount_++;
-                si->lastFailedConnectTime_ = gettimeofday();
-                stdErr.debug(7,utf8::String::Stream() <<
-                  "mqueue: Wait " << fibonacci(si->connectErrorCount_) <<
-                  " seconds before connect to host " <<
-                  server << " because previous connect try failed.\n"
-                );
+              else {
+                if( tryConnect ){
+                  si->connectErrorCount_++;
+                  si->lastFailedConnectTime_ = gettimeofday();
+                  cec = fibonacci(si->connectErrorCount_);
+                  stdErr.debug(7,utf8::String::Stream() <<
+                    "mqueue: Wait " << cec <<
+                    " seconds before connect to host " <<
+                    server << " because previous connect try failed.\n"
+                  );
+                }
+                else {
+                  cec = fibonacci(si->connectErrorCount_);
+                }
+                timeWait = true;
+                cec *= 1000000u;
+                if( timeout > cec ) timeout = cec;
               }
             }
           }
@@ -976,9 +986,10 @@ void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
 void MailQueueWalker::main()
 {
   bool timeWait;
-  uint64_t timeout = ~uint64_t(0);
+  uint64_t timeout;
   while( !terminated_ ){
     try {
+      timeout = ~uint64_t(0);
       processQueue(timeWait,timeout);
     }
     catch( ... ){
@@ -988,8 +999,9 @@ void MailQueueWalker::main()
     if( timeWait ){
       uint64_t timeout2 = server_.config_->valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",60u);
+      timeout2 *= 1000000u;
       if( timeout2 > timeout ) timeout2 = timeout;
-      sleep(timeout2 * 1000000u);
+      sleep(timeout2);
       stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
     }
     else {
