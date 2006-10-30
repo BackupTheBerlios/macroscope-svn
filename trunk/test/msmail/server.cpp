@@ -264,11 +264,16 @@ void Server::sendRobotMessage(
   if( msg != NULL ) m.copyUserAttributes(*msg);
   m.value("#Recepient",recepient);
   m.value("#Sender",sender);
-  m.value("#Sender.Sended",getTimeString(gettimeofday()));
+  utf8::String tms(getTimeString(gettimeofday()));
+  m.value("#Sender.Sended",tms);
   m.value("#Sender.Sended.Origin",sended);
   m.value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
-  m.value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
+  utf8::String psts(getTimeString(getProcessStartTime()));
+  m.value("#Sender.Process.StartTime",psts);
   m.value("#Sender.Host","robot@" + bindAddrs()[0].resolve(defaultPort));
+  m.value("#Relay.0.Process.Id",utf8::int2Str(ksys::getpid()));
+  m.value("#Relay.0.Process.StartTime",psts);
+  m.value("#Relay.0.Received",tms);
   m.value(key,value);
   AsyncFile ctrl2(lckDir() + m.id() + ".lck");
   ctrl2.createIfNotExist(true).removeAfterClose(true).open();

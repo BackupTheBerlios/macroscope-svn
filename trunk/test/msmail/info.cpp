@@ -407,7 +407,8 @@ ServerInfo::~ServerInfo()
 ServerInfo::ServerInfo() :
   atime_(gettimeofday()), rtime_(0), stime_(0),
   type_(stStandalone), sendedToAutoDrop_(sendedTo_),
-  connectErrorCount_(0)
+  connectErrorCount_(0),
+  lastFailedConnectTime_(0)
 {
 }
 //------------------------------------------------------------------------------
