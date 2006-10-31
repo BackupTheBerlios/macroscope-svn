@@ -323,8 +323,8 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
 //---------------------------------------------------------------------------
 utf8::String SharedSemaphore::genName(const utf8::String & name)
 {
-  uint64_t  h = name.hash_ll(true);
-  return pathDelimiterStr + base64Encode(&h, sizeof(h));
+  uint64_t h = name.hash_ll(true);
+  return pathDelimiterStr + base32Encode(&h,sizeof(h));
 }
 //---------------------------------------------------------------------------
 void SharedSemaphore::unlink(const utf8::String & name)
