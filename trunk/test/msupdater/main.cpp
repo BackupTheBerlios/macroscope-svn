@@ -60,6 +60,15 @@ void MSUpdateSetuper::fiberExecute()
     updateSetup.silent(true).fileName(updateLocalPath + "setup.conf").parse();
     for( intptr_t j = updateSetup.sectionCount() - 1; j >= 0; j-- ){
       if( updateSetup.section(j).name().strncasecmp("file",4) != 0 ) continue;
+      utf8::String fileName(updateSetup.section(j).value(""));
+      if( updateSetup.section(j).isSection("before") ){ // run before actions
+      }
+      if( updateSetup.section(j).isValue("install") ){
+      }
+      if( updateSetup.section(j).isValue("remove") ){
+      }
+      if( updateSetup.section(j).isSection("after") ){ // run after actions
+      }
     }
   }
   updatesSetup.save();
