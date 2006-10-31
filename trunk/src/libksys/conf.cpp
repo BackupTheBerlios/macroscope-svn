@@ -86,13 +86,64 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
   throw 0;
 }
 //---------------------------------------------------------------------------
+static void saveSectionHelper(
+  utf8::String::Stream & stream,
+  utf8::String key,
+  utf8::String value,
+  uintptr_t level)
+{
+  if( key.strlen() > 0 ){
+    utf8::String::Iterator keyIt(key);
+    while( !keyIt.eof() ){
+      if( keyIt.isBlank() || keyIt.isCntrl() ){
+        key = "\"" + screenString(key) + "\"";
+        break;
+      }
+      keyIt.next();
+    }
+  }
+  utf8::String::Iterator valueIt(value);
+  while( !valueIt.eof() ){
+    if( valueIt.isBlank() || valueIt.isCntrl() ){
+      value = "\"" + screenString(value) + "\"";
+      break;
+    }
+    valueIt.next();
+  }
+  if( key.strlen() > 0 ){
+    for( uintptr_t j = 0; j < level; j++ ) stream << "  ";
+    stream << key << " = ";
+  }
+  stream << value;
+  if( key.strlen() > 0 ) stream << ";\n";
+}
+//---------------------------------------------------------------------------
 ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,bool recursive,uintptr_t level)
 {
-  if( !file.isOpen() ) file.readOnly(false).exclusive(true).open();
+  if( level == 0 ){
+    file.detach();
+    if( !file.isOpen() ) file.readOnly(false).exclusive(true).createIfNotExist(true).open();
+    file.attach().resize(0);
+  }
   uintptr_t i;
   utf8::String::Stream stream;
+  if( name_.strlen() > 0 ){
+    for( i = 0; i < level - 1; i++ ) stream << "  ";
+    stream << name_ << " ";
+    Mutant * m = values_.objectOfKey(utf8::String());
+    saveSectionHelper(stream,utf8::String(),m == NULL ? utf8::String() : *m,level);
+    stream << " {\n";
+  }
   for( i = 0; i < values_.count(); i++ ){
-
+    HashedObjectListItem<utf8::String,Mutant> * item = values_.itemOfIndex(i);
+    utf8::String key(item->key());
+    if( key.strlen() == 0 ) continue;
+    utf8::String value(*item->object());
+    saveSectionHelper(stream,key,value,level);
+  }
+  if( name_.strlen() > 0 ){
+    for( i = 0; i < level - 1; i++ ) stream << "  ";
+    stream << "}\n";
   }
   AutoPtr<uint8_t> s;
   i = stream.string().getMBCSString(codePage,s,false);
@@ -103,6 +154,28 @@ ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,b
   }
   if( level == 0 ) file.close();
   return *this;
+}
+//---------------------------------------------------------------------------
+ConfigSection & ConfigSection::setValue(const utf8::String & key,const Mutant & value) const
+{
+  HashedObjectListItem<utf8::String,Mutant> * item = values_.itemOfKey(key);
+  if( item == NULL ){
+    AutoPtr<Mutant> m(newObject<Mutant>(value));
+    values_.add(m,key,&item);
+    m.ptr(NULL);
+  }
+  else {
+    *item->object() = value;
+  }
+  return *const_cast<ConfigSection *>(this);
+}
+//---------------------------------------------------------------------------
+ConfigSection & ConfigSection::setValue(uintptr_t i,const Mutant & value) const
+{
+  HashedObjectListItem<utf8::String,Mutant> * item = values_.itemOfIndex(i);
+  assert( item != NULL );
+  *item->object() = value;
+  return *const_cast<ConfigSection *>(this);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -327,8 +400,11 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     if( tt != ttColon )
       EConfig::throwSP(this, "unexpected token '" + token + "', expecting colon");
   }
-  if( param.strlen() > 0 )
-    root.values_.add(newObject<Mutant>(param), utf8::String());
+  if( param.strlen() > 0 ){
+    AutoPtr<Mutant> m(newObject<Mutant>(param));
+    root.values_.add(m, utf8::String());
+    m.ptr(NULL);
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -379,7 +455,9 @@ Config & Config::parseSectionBody(ConfigSection & root)
         if( tt != ttColon )
           EConfig::throwSP(this, "unexpected token '" + token + "', expecting colon");
       }
-      root.values_.add(newObject<Mutant>(value), key);
+      AutoPtr<Mutant> m(newObject<Mutant>(value));
+      root.values_.add(m, key);
+      m.ptr(NULL);
     }
   }
   return *this;
@@ -404,7 +482,7 @@ Config & Config::parse()
     for( intptr_t i = maxTryOpenCount_ - 1; i >= 0; i-- ){
       try {
         file_.detach();
-        file_.readOnly(true).exclusive(true).open();
+        file_.readOnly(true).exclusive(true).createIfNotExist(false).open();
 /*#ifndef NDEBUG
         fprintf(stderr,"config file %s used\n", (const char *) file_.fileName().getANSIString());
 #endif*/

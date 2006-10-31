@@ -1141,6 +1141,65 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
   }
 }
 //---------------------------------------------------------------------------
+void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uintptr_t bufferSize)
+{
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.string0_ = dstPathName;
+    currentFiber()->event_.string1_ = srcPathName;
+    currentFiber()->event_.count_ = bufferSize;
+    currentFiber()->event_.type_ = etCopy;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etRename );
+    if( currentFiber()->event_.errno_ != 0 )
+      throw ExceptionSP(
+        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
+      );
+  }
+  else {
+    if( bufferSize == 0 ) bufferSize = getpagesize();
+#if defined(__WIN32__) || defined(__WIN64__)
+    BOOL r;
+    if( isWin9x() ){
+      r = CopyFileA(
+        anyPathName2HostPathName(srcPathName).getANSIString(),
+        anyPathName2HostPathName(dstPathName).getANSIString(),
+        FALSE
+      );
+    }
+    else {
+      BOOL bCancel = FALSE;
+      r = CopyFileExW(
+        anyPathName2HostPathName(srcPathName).getUNICODEString(),
+        anyPathName2HostPathName(dstPathName).getUNICODEString(),
+        NULL,
+        NULL,
+        &bCancel,
+        0
+      );
+    }
+    if( r == 0 ){
+      int32_t err = oserror() + errorOffset;
+      Exception::throwSP(err,utf8::String(__PRETTY_FUNCTION__));
+    }
+#else
+    AsyncFile dstFile, srcFile;
+    dstFile.fileName(dstPathName).createIfNotExist(true).exclusive(true);
+    srcFile.fileName(srcPathName).readOnly(true);
+    dstFile.open();
+    srcFile.open();
+    AutoPtr<uint8_t> buffer;
+    buffer.alloc(bufferSize);
+    dstFile.resize(0);
+    for( uint64_t ll, l = srcFile.size(); l > 0; l -= ll ){
+      ll = bufferSize > l ? l : bufferSize;
+      srcFile.readBuffer(buffer,ll);
+      dstFile.writeBuffer(buffer,ll);
+    }
+#endif
+  }
+}
+//---------------------------------------------------------------------------
 void sleep(uint64_t timeout)
 {
   if( currentFiber() != NULL ){

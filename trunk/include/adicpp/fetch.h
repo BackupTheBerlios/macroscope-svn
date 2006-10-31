@@ -42,6 +42,7 @@ class Fetcher {
     Fetcher & proxy(const utf8::String & a);
     const utf8::String & localPath() const;
     Fetcher & localPath(const utf8::String & a);
+    const utf8::String & localPathName() const;
     bool storeHostPath() const;
     Fetcher & storeHostPath(bool a);
     bool resume() const;
@@ -67,6 +68,7 @@ class Fetcher {
     utf8::String url_;
     utf8::String proxy_;
     utf8::String localPath_;
+    utf8::String localPathName_;
     struct {
       uint8_t storeHostPath_ : 1;
       uint8_t resume_ : 1;
@@ -110,6 +112,11 @@ inline Fetcher & Fetcher::localPath(const utf8::String & a)
 {
   localPath_ = a;
   return *this;
+}
+//---------------------------------------------------------------------------
+inline const utf8::String & Fetcher::localPathName() const
+{
+  return localPath_;
 }
 //---------------------------------------------------------------------------
 inline bool Fetcher::storeHostPath() const

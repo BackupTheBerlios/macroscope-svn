@@ -176,6 +176,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
     (storeHostPath_ ? path.strncmp("/",1) == 0 ? utf8::String(utf8::String::Iterator(path) + 1) : path : utf8::String()) +
     (localName.strlen() > 0 ? localName : name)
   );
+  localPathName_ = file.fileName();
   ksock::AsyncSocket socket;
   MemoryStream response;
   unsigned int code = 0;

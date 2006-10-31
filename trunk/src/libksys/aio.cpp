@@ -1030,6 +1030,18 @@ void AsyncOpenFileSlave::threadExecute()
         assert( request->fiber_ != NULL );
         request->fiber_->thread()->postEvent(request);
       }
+      else if( request->type_ == etCopy ){
+        int32_t err = 0;
+        try {
+          copy(request->string0_,request->string1_);
+        }
+        catch( ExceptionSP & e ){
+          err = e->code();
+        }
+        request->errno_ = err;
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
+      }
     }
   }
 }

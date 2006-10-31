@@ -765,8 +765,7 @@ uintptr_t HashedObjectList< TKey,TObj>::add(TObj * object, const TKey & key, Has
     newObject<HashedObjectListItem<TKey,TObj> >(key, object, count_)
   );
   uintptr_t i = addHelper(item.ptr());
-  if( pItem != NULL )
-    *pItem = item.ptr();
+  if( pItem != NULL ) *pItem = item.ptr();
   item.ptr(NULL);
   return i;
 }
@@ -775,8 +774,7 @@ template< class TKey,class TObj> inline
 HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByKey(const TKey & key)
 {
   TObj *  object  = extractByKey(key);
-  if( ownsObjects_ )
-    delete object;
+  if( ownsObjects_ ) delete object;
   return *this;
 }
 //---------------------------------------------------------------------------

@@ -33,15 +33,49 @@
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-MSUpdater::~MSUpdater()
+MSUpdateSetuper::~MSUpdateSetuper()
 {
 }
 //------------------------------------------------------------------------------
-MSUpdater::MSUpdater(const ConfigSP & config) : config_(config)
+MSUpdateSetuper::MSUpdateSetuper(const ConfigSP & config) : config_(config)
 {
 }
 //------------------------------------------------------------------------------
-void MSUpdater::fiberExecute()
+void MSUpdateSetuper::fiberExecute()
+{
+  config_->parse().override();
+  utf8::String localPath(includeTrailingPathDelimiter(
+    config_->valueByPath("update.storage",getExecutablePath() + "updates")
+  ));
+  Config updatesSetup;
+  updatesSetup.codePage(CP_UTF8);
+  updatesSetup.silent(true).fileName(localPath + "setup.conf").parse();
+  for( intptr_t i = updatesSetup.sectionCount() - 1; i >= 0; i-- ){
+    if( (bool) updatesSetup.section(i).value("installed",false) ) continue;
+    Config updateSetup;
+    updateSetup.codePage(CP_UTF8);
+    utf8::String updateLocalPath(includeTrailingPathDelimiter(
+      localPath + updatesSetup.section(i).name()
+    ));
+    updateSetup.silent(true).fileName(updateLocalPath + "setup.conf").parse();
+    for( intptr_t j = updateSetup.sectionCount() - 1; j >= 0; j-- ){
+      if( updateSetup.section(j).name().strncasecmp("file",4) != 0 ) continue;
+    }
+  }
+  updatesSetup.save();
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+MSUpdateFetcher::~MSUpdateFetcher()
+{
+}
+//------------------------------------------------------------------------------
+MSUpdateFetcher::MSUpdateFetcher(const ConfigSP & config) : config_(config)
+{
+}
+//------------------------------------------------------------------------------
+void MSUpdateFetcher::fiberExecute()
 {
   Fetcher fetch;
   uint64_t lastCheckUpdate = 0;
@@ -60,24 +94,66 @@ void MSUpdater::fiberExecute()
         "Check for new updates on " << fetch.url() << " ...\n"
       );
       try {
+        Config updatesSetup;
+        updatesSetup.codePage(CP_UTF8);
+        updatesSetup.silent(true).fileName(fetch.localPath() + "setup.conf").parse();
+
         fetch.fetch("updates.lst");
         Array<utf8::String> updateURLs;
         if( fetch.fetched() || fetch.resumed() || fetch.modified() ){
           AsyncFile updateList(fetch.localPath() + "updates.lst");
           AsyncFile::LineGetBuffer buffer;
+          buffer.codePage_ = CP_UTF8;
+          buffer.removeNewLine_ = true;
           utf8::String s;
           while( !updateList.gets(s,&buffer) ) updateURLs.add(s);
         }
-        if( updateURLs.count() == 0 ){
+        if( (!fetch.fetched() && !fetch.resumed() && !fetch.modified()) || updateURLs.count() == 0 ){
           stdErr.debug(3,utf8::String::Stream() << this <<
             "New updates on " << fetch.url() << " semifresh.\n"
           );
         }
         else {
           for( intptr_t i = updateURLs.count() - 1; i >= 0; i-- ){
-            fetch.url(updateURLs[i]);
-            fetch.fetch();
+            uint64_t urlHash = updateURLs[i].hash_ll(true);
+            utf8::String sectionName(base32Encode(&urlHash,sizeof(urlHash)));
+            bool fetched = false;
+            if( updatesSetup.isSection(sectionName) ){
+              fetched = updatesSetup.section(sectionName).value("fetched",false);
+            }
+            if( !fetched ){
+              fetch.url(updateURLs[i]);
+              try {
+                fetch.fetch();
+                fetched = true;
+              }
+              catch( ExceptionSP & e ){
+                e->writeStdError();
+                stdErr.debug(4,utf8::String::Stream() << this <<
+                  "Fetch for update on " << fetch.url() << " failed.\n"
+                );
+              }
+            }
+            updatesSetup.section(sectionName).setValue("fetched",fetched);
+            updatesSetup.section(sectionName).setValue("url",fetch.url());
+            bool extracted = updatesSetup.section(sectionName).value("extracted",false);
+            if( fetched && !extracted ){
+              Archive ar;
+              try {
+                ar.fileName(fetch.localPathName());
+                ar.unpack(fetch.localPath() + sectionName);
+                extracted = true;
+              }
+              catch( ExceptionSP & e ){
+                e->writeStdError();
+                stdErr.debug(5,utf8::String::Stream() << this <<
+                  "Extracting update " << fetch.url() << " failed.\n"
+                );
+              }
+            }
+            updatesSetup.section(sectionName).setValue("extracted",extracted);
           }
+          updatesSetup.save();
         }
       }
       catch( ExceptionSP & e ){
@@ -87,6 +163,7 @@ void MSUpdater::fiberExecute()
         );
       }
       lastCheckUpdate = getlocaltimeofday();
+      thread()->server()->attachFiber(newObject<MSUpdateSetuper>(config_));
     }
     sleep(interval);
   }
@@ -111,7 +188,7 @@ MSUpdaterService::MSUpdaterService() :
 //------------------------------------------------------------------------------
 void MSUpdaterService::start()
 {
-  attachFiber(newObject<MSUpdater>(config_));
+  attachFiber(newObject<MSUpdateFetcher>(config_));
 }
 //------------------------------------------------------------------------------
 void MSUpdaterService::stop()

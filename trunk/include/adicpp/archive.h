@@ -39,6 +39,8 @@ class Archive : protected LZO1X, protected SHA256Filter {
     Archive & clear();
     Archive & pack(const Vector<utf8::String> & fileList);
     Archive & unpack(const utf8::String & path,Vector<utf8::String> * pList = NULL);
+    const utf8::String & fileName() const;
+    Archive & fileName(const utf8::String & name);
 
     static const uint8_t magic_[16];
   protected:
@@ -51,6 +53,17 @@ class Archive : protected LZO1X, protected SHA256Filter {
     Archive & activateFeatures();
   private:
 };
+//---------------------------------------------------------------------------
+inline const utf8::String & Archive::fileName() const
+{
+  return fileName_;
+}
+//---------------------------------------------------------------------------
+inline Archive & Archive::fileName(const utf8::String & name)
+{
+  fileName_ = name;
+  return *this;
+}
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

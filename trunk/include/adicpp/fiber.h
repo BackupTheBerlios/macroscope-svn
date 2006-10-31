@@ -521,10 +521,11 @@ class BaseServer {
     const HowCloseServer & howCloseServer() const;
     BaseServer & howCloseServer(uintptr_t how);
     void closeServer();
+
+    virtual void attachFiber(const AutoPtr<Fiber> & fiber);
   protected:
     virtual BaseThread * newThread();
     virtual Fiber * newFiber() = 0;
-    virtual void attachFiber(const AutoPtr<Fiber> & fiber);
     virtual void maintainFiber(Fiber * fiber);
     void maintainFibers();
     void abortNotification(DirectoryChangeNotification * dcn = NULL);

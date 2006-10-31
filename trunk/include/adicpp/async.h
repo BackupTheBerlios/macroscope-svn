@@ -40,6 +40,7 @@ enum AsyncEventType {
   etRemoveDir,
   etRemoveFile,
   etRename,
+  etCopy,
   etResolveName,
   etResolveAddress,
   etStat,

@@ -112,7 +112,7 @@ AsyncFile & AsyncFile::open()
 #if defined(__WIN32__) || defined(__WIN64__)
         int32_t err;
         if( isWin9x() ){
-          utf8::AnsiString  ansiFileName  (anyPathName2HostPathName(fileName_).getANSIString());
+          utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
           if( !readOnly_ )
             handle_ = CreateFileA(
               ansiFileName,GENERIC_READ | GENERIC_WRITE,

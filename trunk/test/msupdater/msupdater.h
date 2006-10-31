@@ -31,10 +31,22 @@ using namespace ksys;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class MSUpdater : public Fiber {
+class MSUpdateSetuper : public Fiber {
   public:
-    virtual ~MSUpdater();
-    MSUpdater(const ConfigSP & config);
+    virtual ~MSUpdateSetuper();
+    MSUpdateSetuper(const ConfigSP & config);
+  protected:
+    void fiberExecute();
+  private:
+    ConfigSP config_;
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class MSUpdateFetcher : public Fiber {
+  public:
+    virtual ~MSUpdateFetcher();
+    MSUpdateFetcher(const ConfigSP & config);
   protected:
     void fiberExecute();
   private:

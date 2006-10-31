@@ -608,7 +608,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               client_.configFile_ = configFile_;
               client_.logFile_ = logFile_;
               stdErr.fileName(logFile_);
-              client_.config_->silent(true).parse();
+              client_.config_->fileName(configFile_).silent(true).parse();
               stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
               stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
               stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));

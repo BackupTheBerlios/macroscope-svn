@@ -228,6 +228,7 @@ bool utime(const utf8::String & pathName,uint64_t atime,uint64_t mtime);
 bool createDirectory(const utf8::String & name);
 bool removeDirectory(const utf8::String & name,bool recursive = true);
 void rename(const utf8::String & oldPathName,const utf8::String & newPathName);
+void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uintptr_t bufferSize = 0);
 bool remove(const utf8::String & name);
 void getDirList(
   Vector<utf8::String> & list,

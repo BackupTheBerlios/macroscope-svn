@@ -68,6 +68,9 @@ class ConfigSection {
     Mutant valueByPath(const utf8::String & path, const Mutant & defValue = Mutant()) const;
 
     ConfigSection & saveSection(uintptr_t codePage,AsyncFile & file,bool recursive,uintptr_t level = 0);
+
+    ConfigSection & setValue(const utf8::String & key,const Mutant & value) const;
+    ConfigSection & setValue(uintptr_t i,const Mutant & value) const;
   protected:
     ConfigSection & clear();
     Mutant & valueRefByPath(const utf8::String & path) const;
