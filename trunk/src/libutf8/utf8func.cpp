@@ -228,7 +228,7 @@ intptr_t mbcs2utf8s(uintptr_t cp, char * utf8s, uintptr_t utf8l, const char * s,
       utf8l--;
     }
   }
-  else{
+  else {
     while( l-- > 0 && *s != '\0' ){
       a = e->cps2utf8s + sizeof(uint32_t);
       low = 0;

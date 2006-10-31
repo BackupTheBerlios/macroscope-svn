@@ -479,12 +479,14 @@ int main(int argc,char * argv[])
     ksys::initializeArguments(argc,argv);
     ksys::Config::defaultFileName(SYSCONF_DIR + "msftpd.conf");
     ksys::Services services(msftpd_version.gnu_);
-    services.add(newObject<MSFTPService>());
+    MSFTPService * service;
+    services.add(service = newObject<MSFTPService>());
 #if defined(__WIN32__) || defined(__WIN64__)
     bool dispatch = true;
 #else
     bool dispatch = false;
 #endif
+    service->msftpConfig_->silent(true);
     for( u = 1; u < ksys::argv().count(); u++ ){
       if( ksys::argv()[u].strcmp("--version") == 0 ){
         ksys::stdErr.debug(9,utf8::String::Stream() << msftpd_version.tex_ << "\n");
@@ -543,11 +545,8 @@ int main(int argc,char * argv[])
       }
     }
     if( dispatch ){
-      bool daemon;
-      {
-        ksys::ConfigSP config(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >());
-        daemon = config->value("daemon",false);
-      }
+      bool daemon = service->msftpConfig_->parse().override().value("daemon",false);
+      service->msftpConfig_->silent(false);
       services.startServiceCtrlDispatcher(daemon);
     }
   }

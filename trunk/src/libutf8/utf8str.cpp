@@ -493,6 +493,33 @@ WideString String::getUNICODEString() const
   return p;
 }
 //---------------------------------------------------------------------------
+uintptr_t String::getMBCSString(const char * string,uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos)
+{
+  intptr_t sl;
+  if( codePage != CP_UTF8 ){
+    sl = utf8s2mbcs(codePage,NULL,0,string,~uintptr_t(0) >> 1);
+    if( sl < 0 ){
+      int32_t err = errno;
+      ksys::Exception::throwSP(err,__PRETTY_FUNCTION__);
+    }
+    if( eos ) sl += codePage == CP_UNICODE ? sizeof(wchar_t) : sizeof(char);
+    s.realloc(sl);
+    mbcs2utf8s(codePage,(char *) s.ptr(),sl,string,~uintptr_t(0) >> 1);
+  }
+  else {
+    sl = ::strlen(string);
+    if( eos ) sl += 1;
+    s.realloc(sl);
+    memcpy(s,string,sl);
+  }
+  return sl;
+}
+//---------------------------------------------------------------------------
+uintptr_t String::getMBCSString(uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos) const
+{
+  return getMBCSString(container_->string_,codePage,s,eos);
+}
+//---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 BSTR String::getOLEString() const
 {

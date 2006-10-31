@@ -28,27 +28,26 @@
 #define _table_H
 //-----------------------------------------------------------------------------
 namespace ksys {
-
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template< typename T,class RT = Array< T> > class Table {
+template <typename T,class RT = Array< T> > class Table {
   public:
-                          ~Table();
-                          Table();
+    ~Table();
+    Table();
 
-    Table< T,RT> &        clear();
-    Table< T,RT> &        resize(uintptr_t rows, uintptr_t columns);
+    Table<T,RT> &        clear();
+    Table<T,RT> &        resize(uintptr_t rows, uintptr_t columns);
 
-    Table< T,RT> &        addRow();
-    Table< T,RT> &        insertRow(uintptr_t row);
-    Table< T,RT> &        removeRow(uintptr_t row);
-    Table< T,RT> &        addColumn(const utf8::String & columnName = utf8::String());
-    Table< T,RT> &        insertColumn(uintptr_t column, const utf8::String & columnName = utf8::String());
-    Table< T,RT> &        removeColumn(uintptr_t column);
+    Table<T,RT> &        addRow();
+    Table<T,RT> &        insertRow(uintptr_t row);
+    Table<T,RT> &        removeRow(uintptr_t row);
+    Table<T,RT> &        addColumn(const utf8::String & columnName = utf8::String());
+    Table<T,RT> &        insertColumn(uintptr_t column, const utf8::String & columnName = utf8::String());
+    Table<T,RT> &        removeColumn(uintptr_t column);
 
     const utf8::String &  columnName(uintptr_t column) const;
-    Table< T,RT> &        columnName(uintptr_t column, const utf8::String & columnName);
+    Table<T,RT> &        columnName(uintptr_t column, const utf8::String & columnName);
 
     intptr_t              columnIndex(const utf8::String & columnName) const;
 
@@ -64,35 +63,29 @@ template< typename T,class RT = Array< T> > class Table {
     T &                   operator ()(uintptr_t row, const utf8::String & columnName);
     const T &             operator ()(uintptr_t row, uintptr_t column) const;
     const T &             operator ()(uintptr_t row, const utf8::String & columnName) const;
-
   private:
-    template< typename TT,typename P> class SortParam {
+    template <typename TT,typename P> class SortParam {
       public:
         const TT * table_;
         const P  * param_;
         intptr_t (* const f_)(uintptr_t, uintptr_t, const P &);
 
         SortParam(const TT & table, const P & param, intptr_t(*const f)(uintptr_t, uintptr_t, const P &))
-          : table_(&table),
-            param_(&param),
-            f_(f)
-        {
-        }
+          : table_(&table), param_(&param), f_(f) {}
       private:
         SortParam(const SortParam<TT,P> &){}
         void operator = (const SortParam<TT,P> &){}
     };
-    template< typename RRT,typename TT,typename P> static intptr_t sortHelper(RRT * const & p1, RRT * const & p2, const SortParam< TT,P> & param)
+    template <typename RRT,typename TT,typename P> static intptr_t sortHelper(RRT * const & p1, RRT * const & p2, const SortParam< TT,P> & param)
     {
       return param.f_(&p1 - param.table_->rows_.ptr(), &p2 - param.table_->rows_.ptr(), *param.param_);
     }
   public:
-    template< typename P> Table< T,RT> & sort(intptr_t(*const f)(uintptr_t row1, uintptr_t row2, const P & param), const P & p)
+    template <typename P> Table<T,RT> & sort(intptr_t(*const f)(uintptr_t row1, uintptr_t row2, const P & param), const P & p)
     {
-      SortParam< Table< T,RT>,P> param(*this,p,f);
-      intptr_t (*pSortHelper)(RT * const & p1, RT * const & p2,
-                              const SortParam< Table< T,RT>,P> & param);
-      qSort(rows_.ptr(), 0, rows_.count() - 1, pSortHelper = sortHelper< RT,Table< T,RT>,P>, param);
+      SortParam< Table<T,RT>,P> param(*this,p,f);
+      intptr_t (*pSortHelper)(RT * const & p1,RT * const & p2,const SortParam< Table<T,RT>,P> & param);
+      qSort(rows_.ptr(), 0, rows_.count() - 1, pSortHelper = sortHelper< RT,Table<T,RT>,P>, param);
       return *this;
     }
   protected:
@@ -101,36 +94,30 @@ template< typename T,class RT = Array< T> > class Table {
         utf8::String  name_;
         uintptr_t     index_;
 
-        Name2Index()
-        {
-        }
-        Name2Index(const utf8::String & name, uintptr_t index)
-          : name_(name),
-            index_(index)
-        {
-        }
+        Name2Index(){}
+        Name2Index(const utf8::String & name, uintptr_t index) : name_(name), index_(index) {}
       protected:
       private:
     };
-    Array< Name2Index>    name2Index_;
-    Array< Name2Index *>  index2Name_;
-    Vector< RT>           rows_;
+    Array<Name2Index>    name2Index_;
+    Array<Name2Index *>  index2Name_;
+    Vector<RT>           rows_;
   private:
     utf8::String  genColumnName(const utf8::String & columnNameTemplate, uintptr_t & i, intptr_t & c) const;
     intptr_t      name2Index(const utf8::String & columnName) const;
     uintptr_t     name2Index(const utf8::String & columnName, intptr_t & c) const;
 };
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline Table< T,RT>::~Table()
+template <typename T,class RT> inline Table<T,RT>::~Table()
 {
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline Table< T,RT>::Table()
+template <typename T,class RT> inline Table<T,RT>::Table()
 {
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-Table< T,RT> & Table< T,RT>::clear()
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::clear()
 {
   rows_.clear();
   name2Index_.clear();
@@ -138,11 +125,11 @@ Table< T,RT> & Table< T,RT>::clear()
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Table< T,RT> & Table< T,RT>::resize(uintptr_t rows, uintptr_t columns)
+Table<T,RT> & Table<T,RT>::resize(uintptr_t rows, uintptr_t columns)
 {
   assert(rows >= 0 && columns >= 0);
   if( rows != rows_.count() )
@@ -154,40 +141,39 @@ Table< T,RT> & Table< T,RT>::resize(uintptr_t rows, uintptr_t columns)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-Table< T,RT> & Table< T,RT>::addRow()
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::addRow()
 {
   rows_.add(RT().resize(name2Index_.count()));
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-Table< T,RT> & Table< T,RT>::insertRow(uintptr_t row)
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::insertRow(uintptr_t row)
 {
   rows_.insert(row, RT().resize(name2Index_.count()));
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-Table< T,RT> & Table< T,RT>::removeRow(uintptr_t row)
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::removeRow(uintptr_t row)
 {
   rows_.remove(row);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-utf8::String Table< T,RT>::genColumnName(const utf8::String & columnNameTemplate, uintptr_t & i, intptr_t & c) const
+utf8::String Table<T,RT>::genColumnName(const utf8::String & columnNameTemplate, uintptr_t & i, intptr_t & c) const
 {
   utf8::String cn(columnNameTemplate);
   i = name2Index(cn, c);
   if( c == 0 ){
     if( cn.strlen() == 0 && name2Index_.count() > 0 )
       cn = index2Name_[name2Index_.count() - 1]->name_;
-    if( cn.strlen() == 0 || cn.strncmp("COLUMN_", 7) == 0 )
-      cn = "COLUMN";
+    if( cn.strlen() == 0 || cn.strncmp("COLUMN_", 7) == 0 ) cn = "COLUMN";
     for( i = name2Index_.count(); i < ~uintptr_t(0); i++ ){
       utf8::String  s (cn + "_" + utf8::int2Str((uintmax_t) i));
       i = name2Index(s, c);
@@ -200,17 +186,17 @@ utf8::String Table< T,RT>::genColumnName(const utf8::String & columnNameTemplate
   return cn;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Table< T,RT> & Table< T,RT>::addColumn(const utf8::String & columnName)
+Table<T,RT> & Table<T,RT>::addColumn(const utf8::String & columnName)
 {
 #ifndef __BCPLUSPLUS__
   union {
 #endif
-      intptr_t  i;
-      uintptr_t u;
+    intptr_t  i;
+    uintptr_t u;
 #ifndef __BCPLUSPLUS__
   };
 #endif
@@ -223,11 +209,11 @@ Table< T,RT> & Table< T,RT>::addColumn(const utf8::String & columnName)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Table< T,RT> & Table< T,RT>::insertColumn(uintptr_t column, const utf8::String & columnName)
+Table<T,RT> & Table<T,RT>::insertColumn(uintptr_t column, const utf8::String & columnName)
 {
   intptr_t      i, c;
   utf8::String  s (genColumnName(columnName, i, c));
@@ -238,32 +224,31 @@ Table< T,RT> & Table< T,RT>::insertColumn(uintptr_t column, const utf8::String &
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Table< T,RT> & Table< T,RT>::removeColumn(uintptr_t column)
+Table<T,RT> & Table<T,RT>::removeColumn(uintptr_t column)
 {
   uintptr_t i;
-  for( i = rows_.count() - 1; i >= 0; i-- )
-    rows_[i].remove(column);
+  for( i = rows_.count() - 1; i >= 0; i-- ) rows_[i].remove(column);
   name2Index_.remove(index2Name_[column]);
   index2Name_.remove(column);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-const utf8::String & Table< T,RT>::columnName(uintptr_t column) const
+template <typename T,class RT> inline
+const utf8::String & Table<T,RT>::columnName(uintptr_t column) const
 {
   assert((uintptr_t) column < (uintptr_t) name2Index_.count());
   return index2Name_[column]->name_;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Table< T,RT> & Table< T,RT>::columnName(uintptr_t column, const utf8::String & columnName)
+Table<T,RT> & Table<T,RT>::columnName(uintptr_t column, const utf8::String & columnName)
 {
   assert((uintptr_t) column < (uintptr_t) name2Index_.count());
   intptr_t  c, i  = name2Index(columnName, c);
@@ -276,11 +261,11 @@ Table< T,RT> & Table< T,RT>::columnName(uintptr_t column, const utf8::String & c
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-intptr_t Table< T,RT>::name2Index(const utf8::String & columnName) const
+intptr_t Table<T,RT>::name2Index(const utf8::String & columnName) const
 {
   intptr_t  c, low  = 0, high = name2Index_.count() - 1, pos ;
 
@@ -299,11 +284,11 @@ intptr_t Table< T,RT>::name2Index(const utf8::String & columnName) const
   return -1;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT>
+template <typename T,class RT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-uintptr_t Table< T,RT>::name2Index(const utf8::String & columnName, intptr_t & c) const
+uintptr_t Table<T,RT>::name2Index(const utf8::String & columnName, intptr_t & c) const
 {
   intptr_t  low = 0, high = name2Index_.count() - 1, pos = -1;
 
@@ -323,8 +308,8 @@ uintptr_t Table< T,RT>::name2Index(const utf8::String & columnName, intptr_t & c
   return pos;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-intptr_t Table< T,RT>::columnIndex(const utf8::String & columnName) const
+template <typename T,class RT> inline
+intptr_t Table<T,RT>::columnIndex(const utf8::String & columnName) const
 {
   intptr_t  i = name2Index(columnName);
   if( i >= 0 )
@@ -332,67 +317,67 @@ intptr_t Table< T,RT>::columnIndex(const utf8::String & columnName) const
   return i;
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-uintptr_t Table< T,RT>::rowCount() const
+template <typename T,class RT> inline
+uintptr_t Table<T,RT>::rowCount() const
 {
   return rows_.count();
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-uintptr_t Table< T,RT>::columnCount() const
+template <typename T,class RT> inline
+uintptr_t Table<T,RT>::columnCount() const
 {
   return name2Index_.count();
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-T & Table< T,RT>::cell(uintptr_t row, uintptr_t column)
+template <typename T,class RT> inline
+T & Table<T,RT>::cell(uintptr_t row, uintptr_t column)
 {
   assert(row < rows_.count() && column < name2Index_.count());
   return rows_[row][column];
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-T & Table< T,RT>::cell(uintptr_t row, const utf8::String & columnName)
-{
-  uintptr_t column  = columnIndex(columnName);
-  assert(row < rows_.count() && column < name2Index_.count());
-  return rows_[row][column];
-}
-//-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-const T & Table< T,RT>::cell(uintptr_t row, uintptr_t column) const
-{
-  assert(row < rows_.count() && column < name2Index_.count());
-  return rows_[row][column];
-}
-//-----------------------------------------------------------------------------
-template< typename T,class RT> inline
-const T & Table< T,RT>::cell(uintptr_t row, const utf8::String & columnName) const
+template <typename T,class RT> inline
+T & Table<T,RT>::cell(uintptr_t row, const utf8::String & columnName)
 {
   uintptr_t column  = columnIndex(columnName);
   assert(row < rows_.count() && column < name2Index_.count());
   return rows_[row][column];
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
+template <typename T,class RT> inline
+const T & Table<T,RT>::cell(uintptr_t row, uintptr_t column) const
+{
+  assert(row < rows_.count() && column < name2Index_.count());
+  return rows_[row][column];
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+const T & Table<T,RT>::cell(uintptr_t row, const utf8::String & columnName) const
+{
+  uintptr_t column  = columnIndex(columnName);
+  assert(row < rows_.count() && column < name2Index_.count());
+  return rows_[row][column];
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
 T & Table<T,RT>::operator ()(uintptr_t row, uintptr_t column)
 {
   return cell(row, column);
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
+template <typename T,class RT> inline
 T & Table<T,RT>::operator ()(uintptr_t row, const utf8::String & columnName)
 {
   return cell(row, columnName);
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
+template <typename T,class RT> inline
 const T & Table<T,RT>::operator ()(uintptr_t row, uintptr_t column) const
 {
   return cell(row, column);
 }
 //-----------------------------------------------------------------------------
-template< typename T,class RT> inline
+template <typename T,class RT> inline
 const T & Table<T,RT>::operator ()(uintptr_t row, const utf8::String & columnName) const
 {
   return cell(row, columnName);

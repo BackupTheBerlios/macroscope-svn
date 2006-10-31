@@ -399,6 +399,8 @@ class String {
     AnsiString          getANSIString() const;
     OemString           getOEMString() const;
     WideString          getUNICODEString() const;
+    static uintptr_t getMBCSString(const char * string,uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos = true);
+    uintptr_t getMBCSString(uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos = true) const;
 #if defined(__WIN32__) || defined(__WIN64__)
     BSTR getOLEString() const;
 #endif

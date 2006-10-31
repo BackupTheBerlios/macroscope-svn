@@ -69,13 +69,14 @@ class AsyncFile : public AsyncDescriptor {
       public:
         ~LineGetBuffer() {}
         LineGetBuffer(uintptr_t size = 0) : 
-          bufferFilePos_(0), size_(size), pos_(0), len_(0), removeNewLine_(false) {}
+          bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false) {}
 
         AutoPtr<uint8_t> buffer_;
         uint64_t bufferFilePos_;
         uintptr_t size_;
         uintptr_t pos_;
         uintptr_t len_;
+        uintptr_t codePage_;
         bool removeNewLine_;
     };
     bool gets(utf8::String & str,LineGetBuffer * buffer = NULL);

@@ -954,14 +954,15 @@ l1:
 //---------------------------------------------------------------------------
 bool AsyncFile::gets(utf8::String & str,LineGetBuffer * buffer)
 {
+  int64_t r;
   bool eof = false;
+  AutoPtr<char> s;
   if( buffer == NULL ){
     uint64_t op = tell();
-    int64_t r, rr, l = 0;
+    int64_t rr, l = 0;
     char * a, * q;
-    AutoPtr<char> p;
     for(;;){
-      a = p.realloc(size_t(l + 512)).ptr() + l;
+      a = s.realloc(size_t(l + 512)).ptr() + l;
       rr = r = read(a,512);
       if( r <= 0 ){
         eof = true;
@@ -969,7 +970,7 @@ bool AsyncFile::gets(utf8::String & str,LineGetBuffer * buffer)
       }
       for( q = a; r > 0; q++, r-- ){
         if( *q == '\n' ){
-          l = intptr_t(q - p.ptr() + 1);
+          l = intptr_t(q - s.ptr() + (buffer->removeNewLine_ == false));
           goto l1;
         }
       }
@@ -977,50 +978,76 @@ bool AsyncFile::gets(utf8::String & str,LineGetBuffer * buffer)
     }
 l1:
     seek(op + l);
-    p.realloc(size_t(l + (l > 0)));
-    if( l > 0 ) p[uintptr_t(l)] = '\0';
-    utf8::String::Container * container = newObject<utf8::String::Container>(0,p.ptr());
-    p.ptr(NULL);
-    str = container;
-    return eof;
+    s.realloc(size_t(l + (l > 0)));
+    if( l > 0 ) s[uintptr_t(l)] = '\0';
   }
-  int64_t r;
-  if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
-  if( buffer->buffer_ == (const uint8_t *) NULL ) buffer->buffer_.alloc(buffer->size_);
-  uintptr_t i, ss = 0;
-  AutoPtr<char> s;
-  for(;;){
-    if( buffer->pos_ >= buffer->len_ ){
-      if( buffer->len_ == 0 ){
-        buffer->bufferFilePos_ = tell();
-        r = read(buffer->buffer_,buffer->size_);
+  else {
+    if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
+    if( buffer->buffer_ == (const uint8_t *) NULL ) buffer->buffer_.alloc(buffer->size_);
+    uintptr_t i, ss = 0;
+    for(;;){
+      if( buffer->pos_ >= buffer->len_ ){
+        if( buffer->len_ == 0 ){
+          buffer->bufferFilePos_ = tell();
+          r = read(buffer->buffer_,buffer->size_);
+        }
+        else {
+          r = read(buffer->bufferFilePos_ + buffer->len_,buffer->buffer_,buffer->size_);
+          buffer->bufferFilePos_ += buffer->len_;
+        }
+        if( r <= 0 ){
+          if( ss == 0 ) eof = true;
+          break;
+        }
+        seek(buffer->bufferFilePos_);
+        buffer->len_ = (uintptr_t) r;
+        buffer->pos_ = 0;
+      }
+      bool nl = false;
+      uintptr_t symSize;
+      if( buffer->codePage_ == CP_UNICODE ){
+        symSize = sizeof(wchar_t);
+        for( i = buffer->pos_; i < buffer->len_; i += symSize )
+          if( *(wchar_t *) (buffer->buffer_.ptr() + i) == L'\n' ){ i += symSize; nl = true; break; }
       }
       else {
-        r = read(buffer->bufferFilePos_ + buffer->len_,buffer->buffer_,buffer->size_);
-        buffer->bufferFilePos_ += buffer->len_;
+        symSize = sizeof(char);
+        for( i = buffer->pos_; i < buffer->len_; i += symSize )
+          if( buffer->buffer_[i] == '\n' ){ i += symSize; nl = true; break; }
       }
-      if( r <= 0 ){
-        if( ss == 0 ) eof = true;
-        break;
+      s.realloc(ss + i - buffer->pos_ + symSize - (nl && buffer->removeNewLine_) * symSize);
+      memcpy(&s[ss],&buffer->buffer_[buffer->pos_],i - buffer->pos_ - (nl && buffer->removeNewLine_) * symSize);
+      ss += i - buffer->pos_ - (nl && buffer->removeNewLine_) * symSize;
+      if( buffer->codePage_ == CP_UNICODE ){
+        *(wchar_t *) (s.ptr() + ss) = L'\0';
       }
-      seek(buffer->bufferFilePos_);
-      buffer->len_ = (uintptr_t) r;
-      buffer->pos_ = 0;
+      else {
+        s[ss] = '\0';
+      }
+      buffer->pos_ = i;
+      seek(buffer->bufferFilePos_ + i);
+      if( nl ) break;
     }
-    bool nl = false;
-    for( i = buffer->pos_; i < buffer->len_; i++ )
-      if( buffer->buffer_[i] == '\n' ){ i++; nl = true; break; }
-    s.realloc(ss + i - buffer->pos_ + 1 - (nl && buffer->removeNewLine_));
-    memcpy(&s[ss],&buffer->buffer_[buffer->pos_],i - buffer->pos_ - (nl && buffer->removeNewLine_));
-    ss += i - buffer->pos_ - (nl && buffer->removeNewLine_);
-    s[ss] = '\0';
-    buffer->pos_ = i;
-    seek(buffer->bufferFilePos_ + i);
-    if( nl ) break;
   }
-  utf8::String::Container * container = newObject<utf8::String::Container>(0,s.ptr());
-  s.ptr(NULL);
-  str = container;
+  if( s.ptr() == NULL ){
+    str = utf8::String();
+  }
+  else {
+    if( buffer != NULL && buffer->codePage_ != CP_UTF8 ){
+      intptr_t sl = utf8::mbcs2utf8s(buffer->codePage_,NULL,0,s,~uintptr_t(0) >> 1);
+      if( sl < 0 ){
+        int32_t err = errno;
+        Exception::throwSP(err,__PRETTY_FUNCTION__);
+      }
+      AutoPtr<char> s2;
+      s2.alloc(sl + 1);
+      utf8::mbcs2utf8s(buffer->codePage_,s2,sl + 1,s,~uintptr_t(0) >> 1);
+      s2.xchg(s);
+    }
+    utf8::String::Container * container = newObject<utf8::String::Container>(0,s.ptr());
+    s.ptr(NULL);
+    str = container;
+  }
   return eof;
 }
 //---------------------------------------------------------------------------

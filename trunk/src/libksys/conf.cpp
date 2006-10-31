@@ -28,22 +28,6 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-Config::~Config()
-{
-}
-//---------------------------------------------------------------------------
-Config::Config() : 
-  ConfigSection(utf8::String()),
-  mtime_(0),
-  maxTryOpenCount_(3),
-  minTimeBetweenTryOpen_(1),
-  maxTimeBetweenTryOpen_(1000000),
-  aheadi_(ahead_)
-{
-}
-//---------------------------------------------------------------------------
 Mutant ConfigSection::value(const utf8::String & key, const Mutant & defValue) const
 {
   Mutant m(defValue);
@@ -89,8 +73,7 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
   const ConfigSection * section = this;
   for( ; ; ){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 )
-      break;
+    if( e - b < 1 ) break;
     if( e.eof() ){
       return section->valueRef(utf8::String(b, e));
     }
@@ -101,6 +84,25 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
   }
   Exception::throwSP(ENOENT,__PRETTY_FUNCTION__);
   throw 0;
+}
+//---------------------------------------------------------------------------
+ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,bool recursive,uintptr_t level)
+{
+  if( !file.isOpen() ) file.readOnly(false).exclusive(true).open();
+  uintptr_t i;
+  utf8::String::Stream stream;
+  for( i = 0; i < values_.count(); i++ ){
+
+  }
+  AutoPtr<uint8_t> s;
+  i = stream.string().getMBCSString(codePage,s,false);
+  file.writeBuffer(s,i);
+  if( recursive ){
+    for( i = 0; i < subSections_.count(); i++ )
+      subSections_[i]->saveSection(codePage,file,recursive,level + 1);
+  }
+  if( level == 0 ) file.close();
+  return *this;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -127,30 +129,45 @@ utf8::String Config::defaultFileName(const utf8::String & name)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+Config::~Config()
+{
+}
+//---------------------------------------------------------------------------
+Config::Config() : 
+  ConfigSection(utf8::String()),
+  mtime_(0),
+  maxTryOpenCount_(3),
+  minTimeBetweenTryOpen_(1),
+  maxTimeBetweenTryOpen_(1000000),
+  aheadi_(ahead_),
+  codePage_(CP_ACP),
+  silent_(false)
+{
+}
+//---------------------------------------------------------------------------
 #ifdef __BCPLUSPLUS__
 #pragma option push -w-8004
 #endif
 //---------------------------------------------------------------------------
 utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
 {
-  TokenType     t;
-  bool          inQuoted      = false, screened = false;
-  uintptr_t     commentLevel  = 0, prevChar = 0;
-  uintptr_t     maxTokenLen   = 0;
-  uintptr_t     c, ctype;
-  utf8::String  token;
+  TokenType t;
+  bool inQuoted = false, screened = false;
+  uintptr_t commentLevel = 0, prevChar = 0;
+  uintptr_t maxTokenLen = 0;
+  uintptr_t c, ctype;
+  utf8::String token;
   t = tt = ttUnknown;
+  AsyncFile::LineGetBuffer buffer;
+  buffer.codePage_ = codePage_;
   for(;;){
     if( aheadi_.eof() ){
-      uintptr_t size;
-      size = file_.gets(rs_);
-      if( size == 0 ){
+      if( file_.gets(ahead_,&buffer) ){
         ahead_.resize(0);
         t = ttEof;
       }
-      else{
+      else {
         line_++;
-        ahead_ = utf8::String(rs_.ptr(), size);
       }
       aheadi_ = ahead_;
     }
@@ -165,7 +182,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         else if( aheadi_.getChar() == '\"' ){
           inQuoted = false;
           aheadi_.next();
-	  prevChar = 0;
+	        prevChar = 0;
           continue;
         }
         else if( aheadi_.getChar() == '\\' ){
@@ -177,13 +194,13 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         ctype = utf8::getC1Type(c = aheadi_.getChar());
         if( commentLevel > 0 ){
           if( prevChar == '*' && c == '/' ) commentLevel--;
-	  prevChar = c;
+	        prevChar = c;
           aheadi_.next();
           t = tt = ttUnknown;
           continue;
         }
         if( (ctype & (C1_SPACE | C1_CNTRL)) != 0 || c == '\r' || c == '\n' ){
-	  prevChar = 0;
+	        prevChar = 0;
           if( tt != ttUnknown ) break;
           aheadi_.next();
           continue;
@@ -216,27 +233,27 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         else if( c == '{' ){
           t = ttLeftBrace;
           maxTokenLen = 1;
-	  c = 0;
+	        c = 0;
         }
         else if( c == '}' ){
           t = ttRightBrace;
           maxTokenLen = 1;
-	  c = 0;
+	        c = 0;
         }
         else if( c == '=' ){
           t = ttEqual;
           maxTokenLen = 1;
-	  c = 0;
+	        c = 0;
         }
         else if( c == ';' ){
           t = ttSemicolon;
           maxTokenLen = 1;
-	  c = 0;
+	        c = 0;
         }
         else if( c == ',' ){
           t = ttColon;
           maxTokenLen = 1;
-	  c = 0;
+	        c = 0;
         }
         else if( (ctype & C1_CNTRL) == 0 ){
           if( tt != ttNumeric ||
@@ -245,9 +262,9 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
             t = ttString;
             maxTokenLen = ~uintptr_t(0);
           }
-	  else {
+	        else {
             c = 0;
-	  }
+	        }
         }
         else {
           t = ttUnknown;
@@ -387,7 +404,7 @@ Config & Config::parse()
     for( intptr_t i = maxTryOpenCount_ - 1; i >= 0; i-- ){
       try {
         file_.detach();
-        file_.readOnly(true).open();
+        file_.readOnly(true).exclusive(true).open();
 /*#ifndef NDEBUG
         fprintf(stderr,"config file %s used\n", (const char *) file_.fileName().getANSIString());
 #endif*/
@@ -396,13 +413,13 @@ Config & Config::parse()
         ahead_.resize(0);
         clear();
         parseSectionBody(*this);
-        rs_.free();
-        stdErr.debug(9,
-          utf8::String::Stream() <<
-          "config file " <<
-          file_.fileName() <<
-          (mtime_ == 0 ? " loaded\n" : " reloaded\n")
-        );
+        if( !silent_ )
+          stdErr.debug(9,
+            utf8::String::Stream() <<
+            "config file " <<
+            file_.fileName() <<
+            (mtime_ == 0 ? " loaded\n" : " reloaded\n")
+          );
         i = 0;
         mtime_ = st.st_mtime;
       }

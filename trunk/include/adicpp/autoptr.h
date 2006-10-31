@@ -68,6 +68,7 @@ template< class T> class AutoPtr {
 
     T * ptr(T * ptr) const;
     T * const & ptr() const;
+    AutoPtr<T> & xchg(AutoPtr<T> & ptr);
 
     AutoPtr< T> &   alloc(size_t size);
     AutoPtr< T> &   realloc(size_t size);
@@ -222,7 +223,7 @@ AutoPtr< T> & AutoPtr<T>::operator =(T * ptr)
 template< class T> inline
 T * AutoPtr<T>::ptr(T * ptr) const
 {
-  xchg(ptr_, ptr);
+  ksys::xchg(ptr_, ptr);
   return ptr;
 }
 //---------------------------------------------------------------------------
@@ -230,6 +231,13 @@ template< class T> inline
 T * const & AutoPtr< T>::ptr() const
 {
   return ptr_;
+}
+//---------------------------------------------------------------------------
+template <class T> inline
+AutoPtr<T> & AutoPtr< T>::xchg(AutoPtr<T> & ptr)
+{
+  ksys::xchg(ptr_,ptr.ptr_);
+  return *this;
 }
 //---------------------------------------------------------------------------
 template< class T> inline

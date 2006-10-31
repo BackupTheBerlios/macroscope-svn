@@ -67,6 +67,7 @@ int main(int _argc,char * _argv[])
 #else
     bool dispatch = false;
 #endif
+    service->msmailConfig()->silent(true);
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].strcmp("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msmail_version.tex_ << "\n");
@@ -158,6 +159,7 @@ int main(int _argc,char * _argv[])
       stdErr.setRedirect(
         service->msmailConfig()->value("log_redirect",utf8::String())
       );
+      service->msmailConfig()->silent(false);
       services.startServiceCtrlDispatcher();
     }
   }

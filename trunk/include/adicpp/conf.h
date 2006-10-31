@@ -51,31 +51,33 @@ class ConfigSection {
     ~ConfigSection();
     ConfigSection(const utf8::String & name);
 
-    const utf8::String &  name() const;
+    const utf8::String & name() const;
 
-    uintptr_t             sectionCount() const;
-    uintptr_t             valueCount() const;
+    uintptr_t sectionCount() const;
+    uintptr_t valueCount() const;
 
-    bool                  isSection(const utf8::String & section, const HashedObjectListItem< utf8::String,ConfigSection> ** pItem = NULL) const;
-    bool                  isValue(const utf8::String & key, const HashedObjectListItem< utf8::String,Mutant> ** pItem = NULL) const;
+    bool isSection(const utf8::String & section, const HashedObjectListItem< utf8::String,ConfigSection> ** pItem = NULL) const;
+    bool isValue(const utf8::String & key, const HashedObjectListItem< utf8::String,Mutant> ** pItem = NULL) const;
     const ConfigSection & section(const utf8::String & section) const;
     const ConfigSection & section(uintptr_t i) const;
-    Mutant                value(const utf8::String & key = utf8::String(), const Mutant & defValue = Mutant()) const;
-    Mutant                value(uintptr_t i) const;
-    utf8::String          text(const utf8::String & key = utf8::String(), const utf8::String & defText = utf8::String()) const;
-    utf8::String          text(uintptr_t i) const;
+    Mutant value(const utf8::String & key = utf8::String(), const Mutant & defValue = Mutant()) const;
+    Mutant value(uintptr_t i) const;
+    utf8::String text(const utf8::String & key = utf8::String(), const utf8::String & defText = utf8::String()) const;
+    utf8::String text(uintptr_t i) const;
 
-    Mutant                valueByPath(const utf8::String & path, const Mutant & defValue = Mutant()) const;
+    Mutant valueByPath(const utf8::String & path, const Mutant & defValue = Mutant()) const;
+
+    ConfigSection & saveSection(uintptr_t codePage,AsyncFile & file,bool recursive,uintptr_t level = 0);
   protected:
-    ConfigSection &       clear();
-    Mutant &              valueRefByPath(const utf8::String & path) const;
-    Mutant &              valueRef(const utf8::String & key) const;
+    ConfigSection & clear();
+    Mutant & valueRefByPath(const utf8::String & path) const;
+    Mutant & valueRef(const utf8::String & key) const;
   private:
     ConfigSection(const ConfigSection &);
     void operator = (const ConfigSection &);
-    utf8::String                                          name_;
-    mutable HashedObjectList< utf8::String,ConfigSection> subSections_;
-    mutable HashedObjectList< utf8::String,Mutant>        values_;
+    utf8::String name_;
+    mutable HashedObjectList<utf8::String,ConfigSection> subSections_;
+    mutable HashedObjectList<utf8::String,Mutant> values_;
 };
 //---------------------------------------------------------------------------
 inline ConfigSection::~ConfigSection()
@@ -181,6 +183,11 @@ class Config : public ConfigSection {
     static const utf8::String & defaultFileName();
     static utf8::String         defaultFileName(const utf8::String & name);
     const time_t & mtime() const;
+    const uintptr_t & codePage() const;
+    Config & codePage(uintptr_t a);
+    const bool & silent() const;
+    Config & silent(bool a);
+    Config & save(AsyncFile * file = NULL);
   protected:
     Config &                    parseSectionHeader(ConfigSection & root);
     Config &                    parseSectionBody(ConfigSection & root);
@@ -211,8 +218,9 @@ class Config : public ConfigSection {
     utf8::String            ahead_;
     utf8::String::Iterator  aheadi_;
 
-    uintptr_t               line_;
-    AutoPtr< char>          rs_;
+    uintptr_t line_;
+    uintptr_t codePage_;
+    bool silent_;
 
     utf8::String  getToken(TokenType & tt, bool throwUnexpectedEof = false);
     Config &      putToken(const utf8::String & s, TokenType tt);
@@ -264,6 +272,34 @@ inline const int64_t & Config::maxTimeBetweenTryOpen() const
 inline const time_t & Config::mtime() const
 {
   return mtime_;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & Config::codePage() const
+{
+  return codePage_;
+}
+//---------------------------------------------------------------------------
+inline Config & Config::codePage(uintptr_t a)
+{
+  codePage_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const bool & Config::silent() const
+{
+  return silent_;
+}
+//---------------------------------------------------------------------------
+inline Config & Config::silent(bool a)
+{
+  silent_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline Config & Config::save(AsyncFile * file)
+{
+  saveSection(codePage_,file == NULL ? file_ : *file,true);
+  return *this;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
