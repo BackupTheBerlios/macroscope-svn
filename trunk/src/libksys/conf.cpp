@@ -131,7 +131,7 @@ ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,b
     for( i = 0; i < level - 1; i++ ) stream << "  ";
     stream << name_ << " ";
     Mutant * m = values_.objectOfKey(utf8::String());
-    saveSectionHelper(stream,utf8::String(),m == NULL ? utf8::String() : *m,level);
+    saveSectionHelper(stream,utf8::String(),m == NULL ? utf8::String() : (utf8::String) *m,level);
     stream << " {\n";
   }
   for( i = 0; i < values_.count(); i++ ){
