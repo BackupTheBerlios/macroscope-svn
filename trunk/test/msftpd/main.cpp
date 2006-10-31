@@ -410,6 +410,7 @@ ksys::Fiber * MSFTPServer::newFiber()
 class MSFTPService : public ksys::Service {
   public:
     MSFTPService();
+    const ksys::ConfigSP & msftpConfig() const { return msftpConfig_; }
   protected:
   private:
     ksys::ConfigSP msftpConfig_;
@@ -486,7 +487,7 @@ int main(int argc,char * argv[])
 #else
     bool dispatch = false;
 #endif
-    service->msftpConfig_->silent(true);
+    service->msftpConfig()->silent(true);
     for( u = 1; u < ksys::argv().count(); u++ ){
       if( ksys::argv()[u].strcmp("--version") == 0 ){
         ksys::stdErr.debug(9,utf8::String::Stream() << msftpd_version.tex_ << "\n");
@@ -545,8 +546,8 @@ int main(int argc,char * argv[])
       }
     }
     if( dispatch ){
-      bool daemon = service->msftpConfig_->parse().override().value("daemon",false);
-      service->msftpConfig_->silent(false);
+      bool daemon = service->msftpConfig()->parse().override().value("daemon",false);
+      service->msftpConfig()->silent(false);
       services.startServiceCtrlDispatcher(daemon);
     }
   }
