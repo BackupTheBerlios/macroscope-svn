@@ -121,10 +121,8 @@ InterlockedMutex::~InterlockedMutex()
   if( sem_ != NULL ) CloseHandle(sem_);
 #elif HAVE_PTHREAD_H
   if( mutex_ != NULL ){
-    if( pthread_mutex_destroy(&mutex_) != 0 ){
-      int32_t err = errno;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
-    }
+    int r = pthread_mutex_destroy(&mutex_);
+    if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
   }
 #endif
 }
@@ -201,36 +199,27 @@ void InterlockedMutex::release()
 //---------------------------------------------------------------------------
 InterlockedMutex::InterlockedMutex() : mutex_(NULL)
 {
-  if( pthread_mutex_init(&mutex_,NULL) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_mutex_init(&mutex_,NULL);
+  if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
 }
 //---------------------------------------------------------------------------
 void InterlockedMutex::acquire()
 {
-  if( pthread_mutex_lock(&mutex_) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_mutex_lock(&mutex_);
+  if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
 }
 //---------------------------------------------------------------------------
 bool InterlockedMutex::tryAcquire()
 {
   int r = pthread_mutex_trylock(&mutex_);
-  if( r != 0 && errno != EBUSY ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  if( r != 0 && r != EBUSY ) Exception::throwSP(r,__PRETTY_FUNCTION__);
   return r == 0;
 }
 //---------------------------------------------------------------------------
 void InterlockedMutex::release()
 {
-  if( pthread_mutex_unlock(&mutex_) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_mutex_unlock(&mutex_);
+  if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
 }
 //---------------------------------------------------------------------------
 #endif
