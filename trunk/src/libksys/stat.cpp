@@ -47,9 +47,7 @@ bool stat(const utf8::String & pathName,struct Stat & st)
         currentFiber()->event_.errno_ != ENOENT &&
 	currentFiber()->event_.errno_ != ENOTDIR )
 #endif
-      throw ksys::ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -160,12 +158,12 @@ done:
   CloseHandle(hFile);
   SetLastError(err);
   if( err != 0 && err != ERROR_PATH_NOT_FOUND && err != ERROR_FILE_NOT_FOUND )
-    Exception::throwSP(err + errorOffset, __PRETTY_FUNCTION__);
+    newObject<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
 #else
   if( stat(anyPathName2HostPathName(pathName).getANSIString(), &st) != 0 ){
     err = errno;
     if( err != ENOENT )
-      Exception::throwSP(err, __PRETTY_FUNCTION__);
+      newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
   return err == 0;

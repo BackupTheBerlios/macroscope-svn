@@ -27,7 +27,6 @@
 #include <adicpp/adicpp.h>
 //---------------------------------------------------------------------------
 namespace adicpp {
-
 //---------------------------------------------------------------------------
 Database * Database::newDatabase(ksys::Config * config)
 {
@@ -62,7 +61,8 @@ Database * Database::newDatabase(ksys::Config * config)
     my.ptr(NULL);
     return p;
   }
-  throw ksys::ExceptionSP(ksys::Exception::newException(EINVAL, "unknown or unsupported server type"));
+  newObject<ksys::Exception>(EINVAL, "unknown or unsupported server type")->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 } // namespace adicpp

@@ -101,9 +101,7 @@ AsyncFile & AsyncFile::open()
       assert( fiber()->event_.type_ == etOpenFile );
       descriptor_ = fiber()->event_.fileDescriptor_;
       if( fiber()->event_.errno_ != 0 )
-        throw ExceptionSP(
-          newObject<EFileError>(fiber()->event_.errno_ + errorOffset, fileName_)
-        );
+        newObject<EFileError>(fiber()->event_.errno_ + errorOffset, fileName_)->throwSP();
     }
   }
   else {
@@ -165,7 +163,7 @@ AsyncFile & AsyncFile::open()
           case ERROR_INVALID_FLAGS       :
           case ERROR_INVALID_ADDRESS     :
           case ERROR_INSUFFICIENT_BUFFER :
-            throw ksys::ExceptionSP(newObject<EFileError>(err + errorOffset, fileName_));
+            newObject<EFileError>(err + errorOffset, fileName_)->throwSP();
         }
 #else
         utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
@@ -195,7 +193,7 @@ AsyncFile & AsyncFile::open()
           case EFAULT       :
           case EOPNOTSUPP   :
           case EINVAL       :
-            throw ksys::ExceptionSP(newObject<EFileError>(errno, fileName_));
+            newObject<EFileError>(errno, fileName_)->throwSP();
         }
 #endif
         ksys::sleep1();
@@ -300,14 +298,14 @@ uint64_t AsyncFile::size() const
   i.lo = GetFileSize(fileMember() ? file_ : handle_, &i.hi);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
+    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return i.a;
 #else
   struct stat st;
   if( fstat(fileMember() ? file_ : handle_,&st) != 0 ){
     int32_t err = errno;
-    throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
+    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return st.st_size;
 #endif
@@ -323,12 +321,12 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
 // TODO: check for SetFileValidData working (may be faster then SetEndOfFile)
     if( SetEndOfFile(fileMember() ? file_ : handle_) == 0 ){
       err = GetLastError() + errorOffset;
-      throw ExceptionSP(newObject<EDiskFull>(err, __PRETTY_FUNCTION__));
+      newObject<EDiskFull>(err, __PRETTY_FUNCTION__)->throwSP();
     }
 #elif HAVE_FTRUNCATE
     if( ftruncate(fileMember() ? file_ : handle_, nSize) == -1 ){
       err = errno;
-      throw ExceptionSP(newObject<EDiskFull>(err, __PRETTY_FUNCTION__));
+      newObject<EDiskFull>(err, __PRETTY_FUNCTION__)->throwSP();
     }
 #else
 #error resize not implemented
@@ -576,10 +574,9 @@ AsyncFile & AsyncFile::readBuffer(void * buf,uint64_t size)
 {
   int64_t r = read(buf,size);
   if( r == 0 && size > 0 )
-    throw ExceptionSP(newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__));
+    newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__)->throwSP();
   if( r < 0 || (uint64_t) r != size )
-    throw ExceptionSP(newObject<EFileError>(
-      fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
+    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -587,10 +584,9 @@ AsyncFile & AsyncFile::writeBuffer(const void * buf,uint64_t size)
 {
   int64_t w = write(buf,size);
   if( w < 0 && size > 0 )
-    throw ExceptionSP(newObject<EFileError>(
-      fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
+    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   if( (uint64_t) w != size && size > 0 )
-    throw ExceptionSP(newObject<EFileError>(EIO, __PRETTY_FUNCTION__));
+    newObject<EFileError>(EIO, __PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -598,10 +594,9 @@ AsyncFile & AsyncFile::readBuffer(uint64_t pos,void * buf,uint64_t size)
 {
   int64_t r = read(pos,buf,size);
   if( r == 0 && size > 0 )
-    throw ExceptionSP(newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__));
+    newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__)->throwSP();
   if( r < 0 || (uint64_t) r != size )
-    throw ExceptionSP(newObject<EFileError>(
-      fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
+    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -609,10 +604,9 @@ AsyncFile & AsyncFile::writeBuffer(uint64_t pos,const void * buf,uint64_t size)
 {
   int64_t w = write(pos, buf, size);
   if( w < 0 && size > 0 )
-    throw ExceptionSP(
-      newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__));
+    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   if( (uint64_t) w != size && size > 0 )
-    throw ExceptionSP(newObject<EFileError>(EIO,__PRETTY_FUNCTION__));
+    newObject<EFileError>(EIO,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -629,7 +623,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
       fiber()->thread()->postRequest(this);
       fiber()->switchFiber(fiber()->mainFiber());
       if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
-        throw ExceptionSP(newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
     }
     return fiber()->event_.errno_ == 0;
 #else
@@ -642,7 +636,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
       if( fcntl(file_,F_SETLKW,&fl) == 0 ) return true;
       if( errno != EAGAIN ){
         int32_t err = errno;
-        throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
       }
       return false;
     }
@@ -664,7 +658,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
       case ERROR_LOCK_VIOLATION :
          return false;
       default                   :
-        throw ExceptionSP(newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
     }
 #else
     struct flock fl;
@@ -675,7 +669,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
     if( fcntl(handle_,F_SETLKW,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+      newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
     }
     return false;
 #endif
@@ -696,7 +690,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
       fiber()->thread()->postRequest(this);
       fiber()->switchFiber(fiber()->mainFiber());
       if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
-        throw ExceptionSP(newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
     }
     return fiber()->event_.errno_ == 0;
 #else
@@ -709,7 +703,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
       if( fcntl(file_,F_SETLK,&fl) == 0 ) return true;
       if( errno != EAGAIN ){
         int32_t err = errno;
-        throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
       }
       return false;
     }
@@ -731,7 +725,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
       case ERROR_LOCK_VIOLATION :
         return false;
       default                   :
-        throw ExceptionSP(newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
     }
 #else
     struct flock fl;
@@ -742,7 +736,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
     if( fcntl(handle_,F_SETLK,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+      newObject<EFLock>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     return false;
 #endif
@@ -762,7 +756,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       fiber()->thread()->postRequest(this);
       fiber()->switchFiber(fiber()->mainFiber());
       if( fiber()->event_.errno_ != 0 )
-        throw ExceptionSP(newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
 #else
       struct flock fl;
       fl.l_start = pos;
@@ -771,7 +765,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(file_,F_SETLKW,&fl) != 0 ){
         int32_t err = errno;
-        throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }
@@ -785,7 +779,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
       if( LockFileEx(handle_, 0, 0, reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast< uint64 *>(&size)->hi,&Overlapped) == 0 ){
         int32_t err = GetLastError() + errorOffset;
-        throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
+        newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #else
       struct flock  fl;
@@ -795,7 +789,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(handle_, F_SETLKW, &fl) != 0 ){
         int32_t err = errno;
-        throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }
@@ -815,7 +809,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
       fiber()->thread()->postRequest(this);
       fiber()->switchFiber(fiber()->mainFiber());
       if( fiber()->event_.errno_ != 0 )
-        throw ExceptionSP(newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__));
+        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
 #else
       struct flock  fl;
       fl.l_start = pos;
@@ -824,7 +818,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(file_, F_SETLKW, &fl) != 0 ){
         int32_t err = errno;
-        throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }
@@ -838,7 +832,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
       Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
       if( LockFileEx(handle_,LOCKFILE_EXCLUSIVE_LOCK,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
         int32_t err = GetLastError() + errorOffset;
-        throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
+        newObject<EFileError>(err, __PRETTY_FUNCTION__)->throwSP();
       }
 #else
       struct flock  fl;
@@ -848,7 +842,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(handle_,F_SETLKW,&fl) != 0 ){
         int32_t err = errno;
-        throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }
@@ -866,7 +860,7 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
     Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
     if( UnlockFileEx(fileMember() ? file_ : handle_,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
+      newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #else
     struct flock fl;
@@ -876,7 +870,7 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
     fl.l_whence = SEEK_SET;
     if( fcntl(fileMember() ? file_ : handle_,F_SETLK,&fl) != 0 ){
       int32_t err = errno;
-      throw ExceptionSP(newObject<EFLock>(err, __PRETTY_FUNCTION__));
+      newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
     }
 #endif
   }
@@ -892,14 +886,14 @@ uint64_t AsyncFile::tell() const
   i.lo = SetFilePointer(fileMember() ? file_ : handle_,0,&i.hi,FILE_CURRENT);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ksys::ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
+    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return i.a;
 #else
   int64_t pos = lseek(fileMember() ? file_ : handle_,0,SEEK_CUR);
   if( pos < 0 ){
     int32_t err = errno;
-    throw ExceptionSP(newObject<EFileError>(err,__PRETTY_FUNCTION__));
+    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return pos;
 #endif
@@ -912,13 +906,13 @@ AsyncFile & AsyncFile::seek(uint64_t pos)
   reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(fileMember() ? file_ : handle_,reinterpret_cast< uint64 *>(&pos)->lo,(PLONG) &reinterpret_cast<uint64 *>(&pos)->hi,FILE_BEGIN);
   if( GetLastError() != NO_ERROR ){
     int32_t err = GetLastError() + errorOffset;
-    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
+    newObject<EFileError>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #else
   int64_t lp = lseek(fileMember() ? file_ : handle_,pos,SEEK_SET);
   if( lp < 0 || (uint64_t) lp != pos ){
     int32_t err = errno;
-    throw ExceptionSP(newObject<EFileError>(err, __PRETTY_FUNCTION__));
+    newObject<EFileError>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
   return *this;
@@ -1037,7 +1031,7 @@ l1:
       intptr_t sl = utf8::mbcs2utf8s(buffer->codePage_,NULL,0,s,~uintptr_t(0) >> 1);
       if( sl < 0 ){
         int32_t err = errno;
-        Exception::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       AutoPtr<char> s2;
       s2.alloc(sl + 1);
@@ -1127,7 +1121,7 @@ AsyncFile & AsyncFile::redirectToStdin()
   HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( handle != NULL ){
     fileName("stdin");
@@ -1147,7 +1141,7 @@ AsyncFile & AsyncFile::redirectToStdout()
   HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( handle != NULL ){
     fileName("stdout");
@@ -1167,7 +1161,7 @@ AsyncFile & AsyncFile::redirectToStderr()
   HANDLE handle = GetStdHandle(STD_ERROR_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( handle != NULL ){
     fileName("stderr");

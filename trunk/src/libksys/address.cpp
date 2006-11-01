@@ -136,7 +136,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 #endif
   if( r != 0 ){
     int32_t err = errNo();
-    throw ksys::ExceptionSP(newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__));
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #if defined(__WIN32__) || defined(__WIN64__)
   if( ksys::isWin9x() && api.freeaddrinfo != NULL ){
@@ -175,9 +175,7 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
     ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
     assert( ksys::currentFiber()->event_.type_ == ksys::etResolveName );
     if( ksys::currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     memcpy(&addr4_,&ksys::currentFiber()->event_.address_.addr4_,ksys::currentFiber()->event_.address_.sockAddrSize());
   }
   else {
@@ -247,9 +245,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
     ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
     assert( ksys::currentFiber()->event_.type_ == ksys::etResolveAddress );
     if( ksys::currentFiber()->event_.errno_ != 0 )
-      throw ksys::ExceptionSP(
-        newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return ksys::currentFiber()->event_.string0_;
   }
   int32_t err = 0;
@@ -336,7 +332,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
 //  if( pent != NULL ) s = pent->h_name; else err = errNo();
   api.close();
   if( err != 0 )
-    throw ksys::ExceptionSP(newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__));
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   return s;
 }
 //------------------------------------------------------------------------------
@@ -364,7 +360,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
           continue;
         }
       }
-      ksys::Exception::throwSP(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__);
+      newObject<ksys::Exception>(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   else {
@@ -379,9 +375,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
           continue;
         }
       }
-      throw ksys::ExceptionSP(
-        newObject<ksys::Exception>(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__)
-      );
+      newObject<ksys::Exception>(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
   }
 }
@@ -485,9 +479,7 @@ utf8::String SockAddr::gethostname()
   }
   api.close();
   if( err != 0 )
-    throw ksys::ExceptionSP(
-      newObject<EAsyncSocket>(err + ksys::errorOffset,__PRETTY_FUNCTION__)
-    );
+    newObject<EAsyncSocket>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return s;
 }
 //------------------------------------------------------------------------------

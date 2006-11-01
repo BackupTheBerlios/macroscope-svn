@@ -39,19 +39,19 @@ void * Thread::threadFunc(void * thread)
 #endif
 {
 #if HAVE_PTHREAD_H
-  if( pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,NULL) != 0 ){
+  if( (errno = pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,NULL)) != 0 ){
     perror(NULL);
     abort();
   }
-  if( pthread_mutex_lock(&reinterpret_cast<Thread *>(thread)->mutex_) != 0 ){
+  if( (errno = pthread_mutex_lock(&reinterpret_cast<Thread *>(thread)->mutex_)) != 0 ){
     perror(NULL);
     abort();
   }
-  if( pthread_mutex_unlock(&reinterpret_cast<Thread *>(thread)->mutex_) != 0 ){
+  if( (errno = pthread_mutex_unlock(&reinterpret_cast<Thread *>(thread)->mutex_)) != 0 ){
     perror(NULL);
     abort();
   }
-  if( pthread_mutex_destroy(&reinterpret_cast<Thread *>(thread)->mutex_) != 0 ){
+  if( (errno = pthread_mutex_destroy(&reinterpret_cast<Thread *>(thread)->mutex_)) != 0 ){
     perror(NULL);
     abort();
   }
@@ -119,27 +119,28 @@ Thread::Thread() :
 //---------------------------------------------------------------------------
 Thread & Thread::resume()
 {
+  int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( handle_ == NULL ){
     started_ = terminated_ = finished_ = false;
     handle_ = CreateThread(NULL,stackSize_,threadFunc,this,CREATE_SUSPENDED,&id_);
     if( handle_ == NULL ){
-      int32_t err = GetLastError() + errorOffset;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      err = GetLastError() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #elif HAVE_PTHREAD_H
   pthread_attr_t attr = NULL;
   if( handle_ == NULL ){
     started_ = terminated_ = finished_ = false;
-    if( pthread_mutex_init(&mutex_,NULL) != 0 ) goto l1;
-    if( pthread_attr_init(&attr) != 0 ) goto l1;
-    if( pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE) != 0 ) goto l1;
-    if( pthread_attr_setstacksize(&attr,stackSize_) != 0 ) goto l1;
+    if( (errno = pthread_mutex_init(&mutex_,NULL)) != 0 ) goto l1;
+    if( (errno = pthread_attr_init(&attr)) != 0 ) goto l1;
+    if( (errno = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE)) != 0 ) goto l1;
+    if( (errno = pthread_attr_setstacksize(&attr,stackSize_)) != 0 ) goto l1;
 #if HAVE_PTHREAD_ATTR_SETGUARDSIZE
-    if( pthread_attr_setguardsize(&attr,0) != 0 ) goto l1;
+    if( (errno = pthread_attr_setguardsize(&attr,0)) != 0 ) goto l1;
 #endif
-    if( pthread_mutex_lock(&mutex_) != 0 ) goto l1;
-    if( pthread_create(&handle_,&attr,threadFunc,this) != 0 ){
+    if( (errno = pthread_mutex_lock(&mutex_)) != 0 ) goto l1;
+    if( (errno = pthread_create(&handle_,&attr,threadFunc,this)) != 0 ){
       pthread_mutex_unlock(&mutex_);
       goto l1;
     }
@@ -149,17 +150,17 @@ Thread & Thread::resume()
   ResumeThread(handle_);
   return *this;
 #elif HAVE_PTHREAD_H
-  if( pthread_mutex_unlock(&mutex_) != 0 ){
+  if( (errno = pthread_mutex_unlock(&mutex_)) != 0 ){
     perror(NULL);
     abort();
   }
   return *this;
 l1:
-  int32_t err = errno;
+  err = errno;
   pthread_attr_destroy(&attr);
   pthread_mutex_destroy(&mutex_);
   mutex_ = NULL;
-  Exception::throwSP(err,__PRETTY_FUNCTION__);
+  newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -176,14 +177,14 @@ Thread & Thread::wait()
     CloseHandle(handle_);
     handle_ = NULL;
 #elif HAVE_PTHREAD_H
-    if( pthread_join(handle_,NULL) != 0 ){
+    if( (errno = pthread_join(handle_,NULL)) != 0 ){
       perror(NULL);
       abort();
     }
     if( mutex_ != NULL ){
-      if( pthread_mutex_destroy(&mutex_) != 0 ){
+      if( (errno = pthread_mutex_destroy(&mutex_)) != 0 ){
         perror(NULL);
-	abort();
+	      abort();
       }
       mutex_ = NULL;
     }
@@ -199,16 +200,16 @@ Thread & Thread::priority(uintptr_t pri)
 #if HAVE_PTHREAD_SETSCHEDPARAM
     int policy;
     struct sched_param param;
-    if( pthread_getschedparam(handle_,&policy,&param) != 0 ){
+    if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
 l1:   int32_t err = errno;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     param.sched_priority = pri;
-    if( pthread_setschedparam(handle_,policy,&param) != 0 ) goto l1;
+    if( (errno = pthread_setschedparam(handle_,policy,&param)) != 0 ) goto l1;
 #elif defined(__WIN32__) || defined(__WIN64__)
     if( SetThreadPriority(handle_,(int) pri) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #endif
   }
@@ -222,16 +223,16 @@ uintptr_t Thread::priority() const
 #if HAVE_PTHREAD_GETSCHEDPARAM
     int policy;
     struct sched_param param;
-    if( pthread_getschedparam(handle_,&policy,&param) != 0 ){
+    if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
       int32_t err = errno;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     pri = param.sched_priority;
 #elif defined(__WIN32__) || defined(__WIN64__)
     pri = GetThreadPriority(handle_);
     if( pri == THREAD_PRIORITY_ERROR_RETURN ){
       int32_t err = GetLastError() + errorOffset;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #endif
   }

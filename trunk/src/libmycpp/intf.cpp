@@ -154,7 +154,7 @@ void API::open()
         9,
         utf8::String::Stream() << "Load " << libFileName << " failed\n"
       );
-      ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
+      newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -167,7 +167,7 @@ void API::open()
           9,
           utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
         );
-        ksys::Exception::throwSP(err + ksys::errorOffset, __PRETTY_FUNCTION__);
+        newObject<ksys::Exception>(err + ksys::errorOffset, __PRETTY_FUNCTION__)->throwSP();
       }
 #elif HAVE_DLFCN_H
       (&p_mysql_thread_safe)[i] = dlsym(handle_, symbols_[i]);
@@ -196,7 +196,7 @@ void API::open()
         ksys::lmERROR,
         utf8::String::Stream() << "my_init couldn't initialize environment\n"
       );
-      ksys::Exception::throwSP(EINVAL, "my_init couldn't initialize environment");
+      newObject<ksys::Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
     }
   }
   count_++;

@@ -294,14 +294,14 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
               }
               if( code == 304 || code == 416 || code == 206 ) break;
               if( code != 200 )
-                Exception::throwSP(
+                newObject<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
                   ERROR_INVALID_DATA,
 #else
                   EINVAL,
 #endif
                   utf8::String(httpCode,crlf - httpCode)
-                );
+                )->throwSP();
               response.resize(response.pos());
               response.seek(crlf - (const char *) response.raw() + 4);
             }
@@ -313,14 +313,14 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
       if( crlf != NULL ) break;
     }
     if( crlf == NULL )
-      Exception::throwSP(
+      newObject<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_INVALID_DATA,
 #else
         EINVAL,
 #endif
         utf8::String((const char *) response.raw(),response.pos())
-      );
+      )->throwSP();
   } while( code == 304 || (code == 416 && cs > (uint64_t) st.st_size) );
   try {
     file.createIfNotExist(true).open();

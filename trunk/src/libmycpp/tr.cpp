@@ -27,7 +27,6 @@
 #include <adicpp/mycpp.h>
 //---------------------------------------------------------------------------
 namespace mycpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -66,7 +65,7 @@ Transaction & Transaction::detach()
 Transaction & Transaction::start()
 {
   if( !attached() )
-    throw ksys::ExceptionSP(newObject<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
     utf8::String  trSQL ("START TRANSACTION WITH ");
     if( isolation_.strcasecmp("REPEATABLE") == 0 )
@@ -88,7 +87,7 @@ Transaction & Transaction::start()
 Transaction & Transaction::commit()
 {
   if( !active() )
-    throw ksys::ExceptionSP(newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
     if( api.mysql_commit(database_->handle_) != 0 )
@@ -102,7 +101,7 @@ Transaction & Transaction::commit()
 Transaction & Transaction::rollback()
 {
   if( !active() )
-    throw ksys::ExceptionSP(newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
     if( api.mysql_rollback(database_->handle_) != 0 )
@@ -121,8 +120,7 @@ void Transaction::processingException(ksys::Exception * e)
       startCount_ = 0;
     }
     else{
-      if( active() )
-        rollback();
+      if( active() ) rollback();
     }
   }
 }
@@ -131,7 +129,7 @@ void Transaction::staticExceptionHandler(ksys::Exception * e)
 {
   processingException(e);
   database_->processingException(e);
-  throw ksys::ExceptionSP(e);
+  e->throwSP();
 }
 //---------------------------------------------------------------------------
 void Transaction::exceptionHandler(ksys::Exception * e)

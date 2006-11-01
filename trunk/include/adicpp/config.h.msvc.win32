@@ -52,6 +52,7 @@
 #define HAVE_WINDOWS_H 1
 #define HAVE_MSWSOCK_H 1
 #define HAVE_WBEMIDL_H 1
+#define HAVE_DBGHELP_H 1
 #define HAVE_TLHELP32_H 1
 #define HAVE_IPHLPAPI_H 1
 /* #undef HAVE_TYPEINFO_H 1 */

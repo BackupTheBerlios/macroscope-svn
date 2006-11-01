@@ -200,7 +200,7 @@ Transaction & Transaction::retainingHelper()
 Transaction & Transaction::start()
 {
   if( !attached() )
-    throw ksys::ExceptionSP(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__);
   if( startCount_ == 0 ){
     retainingHelper(); // pumping retaining transactions
     ksys::AutoPtr< ISC_TEB> tebVector;
@@ -342,7 +342,7 @@ void Transaction::staticExceptionHandler(ksys::Exception * e)
   processingException(e);
   for( intptr_t i = databases_.count() - 1; i >= 0; i-- )
     databases_[i]->processingException(e);
-  throw ksys::ExceptionSP(e);
+  e->throwSP();
 }
 //---------------------------------------------------------------------------
 void Transaction::exceptionHandler(ksys::Exception * e)

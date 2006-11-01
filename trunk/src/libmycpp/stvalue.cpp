@@ -27,7 +27,6 @@
 #include <adicpp/mycpp.h>
 //---------------------------------------------------------------------------
 namespace mycpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -338,7 +337,8 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
     default :
       ;
   }
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLValues::asString(uintptr_t i)
@@ -400,13 +400,14 @@ utf8::String DSQLValues::asString(uintptr_t i)
     default :
       ;
   }
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLValues & DSQLValues::selectRow(uintptr_t i)
 {
   if( i >= rows_.count() )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidRowIndex>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidRowIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   row_ = i;
   return *this;
 }
@@ -414,9 +415,9 @@ DSQLValues & DSQLValues::selectRow(uintptr_t i)
 uintptr_t DSQLValues::checkValueIndex(uintptr_t i)
 {
   if( (uintptr_t) (intptr_t) row_ >= rows_.count() )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__)->throwSP();
   if( i >= valuesIndex_.count() )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidValueIndex>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidValueIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return i;
 }
 //---------------------------------------------------------------------------

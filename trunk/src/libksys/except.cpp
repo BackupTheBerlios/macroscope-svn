@@ -25,14 +25,34 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
+#include <adicpp/pdbutils/pdbutils.h>
+#include <iostream>
+#include <fstream>
 //---------------------------------------------------------------------------
 namespace ksys {
+//---------------------------------------------------------------------------
+Exception * Exception::newObject()
+{
+  ksys::AutoPtr<Exception> safe((Exception *) ksys::kmalloc(sizeof(Exception)));
+  new (safe) Exception;
+  return safe.ptr(NULL);
+}
 //---------------------------------------------------------------------------
 Exception::~Exception()
 {
 }
 //---------------------------------------------------------------------------
+Exception::Exception() : refCount_(0)
+{
+}
+//---------------------------------------------------------------------------
 Exception::Exception(int32_t code, const utf8::String & what) : refCount_(0)
+{
+  codes_.add(code);
+  whats_.add(what);
+}
+//---------------------------------------------------------------------------
+Exception::Exception(int32_t code, const char * what) : refCount_(0)
 {
   codes_.add(code);
   whats_.add(what);
@@ -43,19 +63,102 @@ bool Exception::isFatalError() const
   return false;
 }
 //---------------------------------------------------------------------------
-Exception * Exception::newException(int32_t code,const utf8::String & what)
+void Exception::throwSP()
 {
-  return newObject<Exception>(code,what);
-}
-//---------------------------------------------------------------------------
-void Exception::throwSP(int32_t code,const utf8::String & what)
-{
-  throw ExceptionSP(newObject<Exception>(code,what));
-}
-//---------------------------------------------------------------------------
-void Exception::throwSP(int32_t code,const char * what)
-{
-  throw ExceptionSP(newObject<Exception>(code,what));
+/*
+// Set options 
+	DWORD options = SymGetOptions(); 
+// SYMOPT_DEBUG option asks DbgHelp to print additional troubleshooting 
+// messages to debug output - use the debugger's Debug Output window 
+// to view the messages 
+	options |= SYMOPT_DEBUG | SYMOPT_LOAD_LINES | SYMOPT_FAIL_CRITICAL_ERRORS | SYMOPT_INCLUDE_32BIT_MODULES;
+	SymSetOptions(options);
+
+  int32_t err;
+  BOOL r = SymInitialize(GetCurrentProcess(),NULL,TRUE);
+  err = GetLastError();
+//  DWORD64 modBase = SymLoadModule64(GetCurrentProcess(),NULL,NULL,NULL,0,0);
+//  err = GetLastError();
+  union {
+    SYMBOL_INFO SymbolInfo;
+    char name[sizeof(SYMBOL_INFO) / sizeof(char) + MAX_SYM_NAME];
+  };
+  SymbolInfo.SizeOfStruct = sizeof(SYMBOL_INFO);
+  SymbolInfo.MaxNameLen = MAX_SYM_NAME;
+  DWORD64 dw64Displacement;
+  r = SymFromAddr(
+    GetCurrentProcess(),
+    (DWORD64) fibonacci,
+    &dw64Displacement,
+    &SymbolInfo
+  );
+  err = GetLastError();
+  if( SymbolInfo.Flags & SYMFLAG_THUNK ){
+    SymbolInfo.SizeOfStruct = sizeof(SYMBOL_INFO);
+    SymbolInfo.MaxNameLen = MAX_SYM_NAME;
+    r = SymFromAddr(
+      GetCurrentProcess(),
+      SymbolInfo.Value,
+      &dw64Displacement,
+      &SymbolInfo
+    );
+    err = GetLastError();
+  }
+  if( SymbolInfo.Flags & SYMFLAG_FUNCTION || SymbolInfo.Flags == 0 ){
+    IMAGEHLP_LINE64 line;
+    line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+    DWORD dwDisplacement;
+    r = SymGetLineFromAddr64(GetCurrentProcess(),SymbolInfo.Address,&dwDisplacement,&line);
+    err = GetLastError();
+    union {
+      DWORD * pTag;
+      DWORD callingConvention;
+      BSTR symName;
+    };
+    r = SymGetTypeInfo(
+      GetCurrentProcess(),
+      SymbolInfo.ModBase,
+      SymbolInfo.TypeIndex,
+      TI_GET_TYPE,
+      &callingConvention
+    );
+    err = GetLastError();
+    r = SymGetTypeInfo(
+      GetCurrentProcess(),
+      SymbolInfo.ModBase,
+      SymbolInfo.TypeIndex,
+      TI_GET_SYMTAG,
+      &pTag
+    );
+    err = GetLastError();
+    r = SymGetTypeInfo(
+      GetCurrentProcess(),
+      SymbolInfo.ModBase,
+      SymbolInfo.TypeIndex,
+      TI_GET_CALLING_CONVENTION,
+      &callingConvention
+    );
+    err = GetLastError();
+    r = SymGetTypeInfo(
+      GetCurrentProcess(),
+      SymbolInfo.ModBase,
+      SymbolInfo.TypeIndex,
+      TI_GET_SYMNAME,
+      &symName
+    );
+    err = GetLastError();
+    LocalFree(symName);
+  }
+  r = SymCleanup(GetCurrentProcess());
+  err = GetLastError();*/
+
+// TODO: сделать вызов через AsyncEvent потому что для текущего выполняющегося
+// потока невозможно получить контекст. т.е. другой поток должен остановить
+// этот через SuspendThread, выполнить трассировку, потом сделать ResumeThread
+  std::cout << DBGSTRING2CHARPTR(pdbutils::getFullBackTrace()) << std::endl;
+
+  refCount_ = 0;
+  throw ExceptionSP(this);
 }
 //---------------------------------------------------------------------------
 const Exception & Exception::writeStdError(LogFile * log) const

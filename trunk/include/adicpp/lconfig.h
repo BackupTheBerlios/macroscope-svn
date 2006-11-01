@@ -256,6 +256,11 @@
 #include <WbemIdl.h>
 #endif
 
+#if HAVE_DBGHELP_H
+#define _NO_CVCONST_H
+#include <dbghelp.h>
+#endif
+
 /*#if defined(HAVE_WINDOWS_H) && !defined(__CYGWIN__)
 #if !defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0502
 #undef _WIN32_WINNT

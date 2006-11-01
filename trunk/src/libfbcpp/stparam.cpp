@@ -32,22 +32,26 @@ namespace fbcpp {
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLParam::getMutant()
 {
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setMutant(const ksys::Mutant &)
 {
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLParam::getString()
 {
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setString(const utf8::String &)
 {
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -108,7 +112,8 @@ ksys::Mutant DSQLParamScalar::getMutant()
       }
       return bigInt_;
   }
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParamScalar::setMutant(const ksys::Mutant & value)
@@ -148,7 +153,7 @@ DSQLParam & DSQLParamScalar::setMutant(const ksys::Mutant & value)
         timeStamp_ = timeval2IscTimeStamp(value);
         break;
       default              :
-        throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+        newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
     }
     sqlind_ = 0;
   }
@@ -189,7 +194,7 @@ utf8::String DSQLParamScalar::getString()
       case SQL_TIMESTAMP   :
         return utf8::time2Str(iscTimeStamp2Time(timeStamp_));
       default              :
-        throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+        newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
     }
   }
   return utf8::String();
@@ -225,7 +230,7 @@ DSQLParam & DSQLParamScalar::setString(const utf8::String & value)
       timeStamp_ = time2IscTimeStamp(utf8::str2Time(value));
       break;
     default              :
-      throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+      newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   }
   sqlind_ = 0;
   return *this;
@@ -321,7 +326,7 @@ DSQLParamArray & DSQLParamArray::checkData()
 DSQLParamArray & DSQLParamArray::checkDim(bool inRange)
 {
   if( !inRange )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidArrayDim>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidArrayDim>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -330,8 +335,8 @@ DSQLParamArray & DSQLParamArray::setDataFromMutant(uintptr_t absIndex, const ksy
   checkData();
   uintptr_t elementOffset = elementSize_ * absIndex, len ;
   if( elementOffset >= (uintptr_t) dataSize_ )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
-  char *        data  = (char *) data_ + elementOffset;
+    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  char * data  = (char *) data_ + elementOffset;
   utf8::String  tempString;
 #if HAVE_LONG_DOUBLE
   long
@@ -403,7 +408,7 @@ DSQLParamArray & DSQLParamArray::setDataFromMutant(uintptr_t absIndex, const ksy
       }
       break;
     default            :
-      throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+      newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -466,7 +471,8 @@ ksys::Mutant DSQLParamArray::getMutantFromArray(uintptr_t absIndex)
         return *(int64_t *) data;
     }
   }
-  throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+  newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLParamArray & DSQLParamArray::putSlice()
@@ -820,7 +826,7 @@ DSQLParamBlob & DSQLParams::asBlob(uintptr_t i)
 {
   DSQLParamBlob * blob  = dynamic_cast< DSQLParamBlob *>(checkParamIndex(i).indexToParam_.ptr()[i]->object());
   if( blob == NULL )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *blob;
 }
 //---------------------------------------------------------------------------
@@ -828,7 +834,7 @@ DSQLParamBlob & DSQLParams::asBlob(const utf8::String & name)
 {
   DSQLParamBlob * blob  = dynamic_cast< DSQLParamBlob *>(checkParamName(name));
   if( blob == NULL )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *blob;
 }
 //---------------------------------------------------------------------------
@@ -836,7 +842,7 @@ DSQLParamArray & DSQLParams::asArray(uintptr_t i)
 {
   DSQLParamArray *  array = dynamic_cast< DSQLParamArray *>(checkParamIndex(i).indexToParam_.ptr()[i]->object());
   if( array == NULL )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *array;
 }
 //---------------------------------------------------------------------------
@@ -844,14 +850,14 @@ DSQLParamArray & DSQLParams::asArray(const utf8::String & name)
 {
   DSQLParamArray *  array = dynamic_cast< DSQLParamArray *>(checkParamName(name));
   if( array == NULL )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *array;
 }
 //---------------------------------------------------------------------------
 DSQLParams & DSQLParams::checkParamIndex(uintptr_t i)
 {
   if( i >= params_.count() )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamIndex>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParamIndex>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -859,7 +865,7 @@ DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
 {
   DSQLParam * param = params_.objectOfKey(paramName);
   if( param == NULL )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamName>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParamName>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return param;
 }
 //---------------------------------------------------------------------------

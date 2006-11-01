@@ -189,7 +189,7 @@ DSQLStatement & DSQLStatement::detach()
 DSQLStatement & DSQLStatement::allocate()
 {
   if( !attached() )
-    throw ksys::ExceptionSP(newObject<EDSQLStNotAttached>((ISC_STATUS *) NULL,__PRETTY_FUNCTION__));
+    newObject<EDSQLStNotAttached>((ISC_STATUS *) NULL,__PRETTY_FUNCTION__)->throwSP();
   if( !allocated() ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_dsql_allocate_statement(status, &database_->handle_, &handle_) != 0 )

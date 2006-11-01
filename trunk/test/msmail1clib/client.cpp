@@ -42,7 +42,7 @@ ClientFiber::ClientFiber(Client & client) : client_(client)
 void ClientFiber::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    Exception::throwSP(code,__PRETTY_FUNCTION__);
+    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void ClientFiber::getCode(int32_t noThrowCode)
@@ -57,7 +57,7 @@ int32_t ClientFiber::getCode2(int32_t noThrowCode0,int32_t noThrowCode1)
   int32_t r;
   *this >> r;
   if( r != eOK && r != noThrowCode0 && r != noThrowCode1 )
-    Exception::throwSP(r,__PRETTY_FUNCTION__);
+    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r;
 }
 //------------------------------------------------------------------------------
@@ -322,7 +322,7 @@ void ClientDBGetterFiber::main()
       registered = client_.connected_;
     }
     if( !registered )
-      Exception::throwSP(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__);
+      newObject<Exception>(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     utf8::String server(client_.config_->value("server",client_.mailServer_));
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
@@ -433,7 +433,7 @@ HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pva
     msg = queue->find(id);
   }
   if( msg == NULL )
-    Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   HRESULT hr = S_OK;
   if( msg->isValue(key) ){
     V_BSTR(pvarRetValue) = msg->value(key).getOLEString();
@@ -454,7 +454,7 @@ utf8::String Client::value(const utf8::String id,const utf8::String key,const ut
     queue = &recvQueue_;
     msg = queue->find(id);
   }
-  if( msg == NULL ) Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
+  if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   utf8::String oldValue;
   if( msg->isValue(key) ) oldValue = msg->value(key);
   msg->value(key,value);
@@ -582,7 +582,7 @@ utf8::String Client::copyMessage(const utf8::String id)
     msg = queue->find(id);
   }
   if( msg == NULL )
-    Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   AutoPtr<Message> message(newObject<Message>());
   utf8::String newId(message->id());
   *message = *msg;
@@ -602,7 +602,7 @@ utf8::String Client::removeValue(const utf8::String id,const utf8::String key)
     msg = queue->find(id);
   }
   if( msg == NULL )
-    Exception::throwSP(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return msg->removeValue(key);
 }
 //------------------------------------------------------------------------------

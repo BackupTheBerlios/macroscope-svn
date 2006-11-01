@@ -43,7 +43,7 @@ DirectoryChangeNotification::DirectoryChangeNotification()
 #endif
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -63,13 +63,13 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
       );
       if( hFFCNotification_ == INVALID_HANDLE_VALUE ){
         int32_t err = GetLastError() + errorOffset;
-        Exception::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     else if( FindNextChangeNotification(hFFCNotification_) == 0 ){
       int32_t err = GetLastError() + errorOffset;
       stop();
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   else {
@@ -90,7 +90,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
       );
       if( hDirectory_ == INVALID_HANDLE_VALUE ){
         int32_t err = GetLastError() + errorOffset;
-        Exception::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
     }
   }
@@ -105,9 +105,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   assert( currentFiber()->event_.type_ == etDirectoryChangeNotification );
   if( currentFiber()->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
   if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
-    throw ExceptionSP(
-      newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
-    );
+    newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -164,12 +162,12 @@ void createGUID(guid_t & uuid)
 #if defined(__WIN32__) || defined(__WIN64__)
   if( FAILED(CoCreateGuid(&uuid)) ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_UUIDGEN
   if( uuidgen(&uuid,1) != 0 ){
     int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_UUID_CREATE
   uuid_t * u;
@@ -177,13 +175,12 @@ void createGUID(guid_t & uuid)
   uuid_create(&u,&status);
   if( status != uuid_s_ok ){
     int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   uuid = *u;
   free(u);
 #else
-  int32_t err = ENOSYS;
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -669,7 +666,7 @@ void changeCurrentDir(const utf8::String & name)
   err = errno;
 #endif
   if( err != 0 )
-    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 utf8::String getTempPath()
@@ -816,9 +813,7 @@ bool createDirectory(const utf8::String & name)
     if( currentFiber()->event_.errno_ == EEXIST ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      throw ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -847,7 +842,7 @@ bool createDirectory(const utf8::String & name)
 #else
   if( err != 0 && err != EEXIST )
 #endif
-    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   oserror(err);
   return err == 0;
 }
@@ -887,9 +882,7 @@ bool removeDirectory(const utf8::String & name,bool recursive)
     if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      throw ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = removeDirectoryHelper(name);
@@ -937,7 +930,7 @@ bool removeDirectory(const utf8::String & name,bool recursive)
 #endif
   oserror(err);
   if( err != 0 )
-    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return true;
 }
 //---------------------------------------------------------------------------
@@ -956,9 +949,7 @@ bool remove(const utf8::String & name)
     if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      throw ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -984,7 +975,7 @@ bool remove(const utf8::String & name)
       if( removeDirectory(name,true) ) return remove(name);
       err = oserror();
     }
-    Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   return true;
 }
@@ -1005,7 +996,7 @@ void chModOwn(
   }
   if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m) != 0 ){
     err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   const struct passwd * u = getpwnam(utf8::String(user).getANSIString());
   uid_t userID(u != NULL ? u->pw_uid : (uid_t) user);
@@ -1013,7 +1004,7 @@ void chModOwn(
   gid_t groupID(g != NULL ? g->gr_gid : (gid_t) group);
   if( chown(anyPathName2HostPathName(pathName).getANSIString(),userID,groupID) != 0 ){
     err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 #else
@@ -1093,7 +1084,7 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
     }
     else if( mi.getChar() == '[' ){
 //      mi.next();
-      Exception::throwSP(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME");
+      newObject<Exception>(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME")->throwSP();
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1118,9 +1109,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etRename );
     if( currentFiber()->event_.errno_ != 0 )
-      throw ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
   }
   else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1136,7 +1125,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
     if( ::rename(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString()) != 0 ){
 #endif
       int32_t err = oserror() + errorOffset;
-      Exception::throwSP(err,utf8::String(__PRETTY_FUNCTION__));
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
 }
@@ -1152,9 +1141,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etRename );
     if( currentFiber()->event_.errno_ != 0 )
-      throw ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
   }
   else {
     if( bufferSize == 0 ) bufferSize = getpagesize();
@@ -1180,7 +1167,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     }
     if( r == 0 ){
       int32_t err = oserror() + errorOffset;
-      Exception::throwSP(err,utf8::String(__PRETTY_FUNCTION__));
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #else
     AsyncFile dstFile, srcFile;
@@ -1211,9 +1198,7 @@ void sleep(uint64_t timeout)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etTimer );
     if( currentFiber()->event_.errno_ != 0 )
-      throw ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   else {
 #if HAVE_NANOSLEEP
@@ -1274,9 +1259,7 @@ void getDirList(
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etDirList );
     if( currentFiber()->event_.errno_ != 0 )
-      throw ExceptionSP(
-        newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)
-      );
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return;
   }
   int32_t err;
@@ -1293,7 +1276,7 @@ void getDirList(
     handle = FindFirstFileA(anyPathName2HostPathName(path + pathDelimiterStr + "*").getANSIString(),&fda);
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError() + errorOffset;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     try {
       do {
@@ -1308,7 +1291,7 @@ void getDirList(
     DIR * dir = opendir(anyPathName2HostPathName(path).getANSIString());
     if( dir == NULL ){
       err = errno;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     try {
       struct dirent * ent;
@@ -1318,7 +1301,7 @@ void getDirList(
       for(;;){
         if( readdir_r(dir,ent,&result) != 0 ){
           err = errno;
-          Exception::throwSP(err,__PRETTY_FUNCTION__);
+          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
         }
         if( result == NULL ) break;
 #else
@@ -1355,7 +1338,7 @@ void getDirList(
       } while( FindNextFileA(handle,&fda) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        Exception::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     catch( ... ){
@@ -1368,7 +1351,7 @@ void getDirList(
     handle = FindFirstFileW(anyPathName2HostPathName(path + pathDelimiterStr + "*").getUNICODEString(),&fdw);
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError() + errorOffset;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     try {
       do {
@@ -1393,7 +1376,7 @@ void getDirList(
       } while( FindNextFileW(handle,&fdw) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        Exception::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     catch( ... ){
@@ -1422,11 +1405,11 @@ void copyStrToClipboard(const utf8::String & s)
   int32_t err;
   if( OpenClipboard(NULL) == 0 ){
     err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EmptyClipboard() == 0 ){
     err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( isWin9x() ){
     utf8::AnsiString pass(s.getANSIString());
@@ -1437,13 +1420,13 @@ void copyStrToClipboard(const utf8::String & s)
     if( w == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     LPVOID ww = GlobalLock(w);
     if( ww == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     memcpy(ww,(const char *) pass,(strlen(pass) + 1) * sizeof(char));
     GlobalUnlock(ww);
@@ -1451,7 +1434,7 @@ void copyStrToClipboard(const utf8::String & s)
       err = GetLastError() + errorOffset;
       GlobalFree(w);
       CloseClipboard();
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   else {
@@ -1463,13 +1446,13 @@ void copyStrToClipboard(const utf8::String & s)
     if( w == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     LPVOID ww = GlobalLock(w);
     if( ww == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     memcpy(ww,(const wchar_t *) pass,(lstrlenW(pass) + 1) * sizeof(wchar_t));
     GlobalUnlock(ww);
@@ -1477,7 +1460,7 @@ void copyStrToClipboard(const utf8::String & s)
       err = GetLastError() + errorOffset;
       GlobalFree(w);
       CloseClipboard();
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   CloseClipboard();
@@ -1516,10 +1499,10 @@ int64_t getProcessStartTime(bool toLocalTime)
       if( toLocalTime ) FileTimeToLocalFileTime(&creationTime.ft,&creationTime.ft);
   err = GetLastError();
   if( hProcess != NULL ) CloseHandle(hProcess);
-  if( err != ERROR_SUCCESS ) Exception::throwSP(err + errorOffset,__PRETTY_FUNCTION__);
+  if( err != ERROR_SUCCESS ) newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
 #else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1673,9 +1656,9 @@ uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size)
   size <<= 3;
   while( !sp.eof() ){
     uintptr_t c = sp.getChar();
-    if( c < 1 || c >= 256 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+    if( c < 1 || c >= 256 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     c = base64DecodeTable[c];
-    if( c >= 64 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+    if( c >= 64 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     if( i < size ){
       if( size - i <= 8 ){
         *(uint8_t *) ((uint8_t *) p + (i >> 3)) &= (uint8_t) (~(63u << (i & 7)));
@@ -1739,9 +1722,9 @@ uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size)
   size <<= 3;
   while( !sp.eof() ){
     uintptr_t c = sp.getChar();
-    if( c < 1 || c >= 256 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+    if( c < 1 || c >= 256 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     c = base32DecodeTable[c];
-    if( c >= 32 ) Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+    if( c >= 32 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     if( i < size ){
       if( size - i <= 8 ){
         *(uint8_t *) ((uint8_t *) p + (i >> 3)) &= (uint8_t) (~(31u << (i & 7)));
@@ -1807,7 +1790,7 @@ bool isWow64()
   BOOL bIsWow64 = FALSE;
   if( fnIsWow64Process != NULL && fnIsWow64Process(GetCurrentProcess(),&bIsWow64) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return bIsWow64 == FALSE ? false : true;
 }
@@ -1839,7 +1822,7 @@ utf8::String getMachineUniqueKey()
     // Initialize COM. ------------------------------------------
     CoInit_hres = CoInitializeEx(0,COINIT_MULTITHREADED);
     if( FAILED(CoInit_hres) )
-      Exception::throwSP(HRESULT_CODE(CoInit_hres) + errorOffset,__PRETTY_FUNCTION__);
+      newObject<Exception>(HRESULT_CODE(CoInit_hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     try {
       // Step 2: --------------------------------------------------
       // Set general COM security levels --------------------------
@@ -1860,7 +1843,7 @@ utf8::String getMachineUniqueKey()
           NULL                         // Reserved
         );
         if( FAILED(hres) && hres != RPC_E_TOO_LATE )
-          Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+          newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
       // Step 3: ---------------------------------------------------
       // Obtain the initial locator to WMI -------------------------
@@ -1872,7 +1855,7 @@ utf8::String getMachineUniqueKey()
         IID_IWbemLocator, (LPVOID *) &pLoc
       );
       if( FAILED(hres) )
-        Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+        newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       try {
         // Step 4: -----------------------------------------------------
         // Connect to WMI through the IWbemLocator::ConnectServer method
@@ -1891,7 +1874,7 @@ utf8::String getMachineUniqueKey()
           &pSvc                    // pointer to IWbemServices proxy
         );
         if( FAILED(hres) )
-          Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+          newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
         try {
           // Step 5: --------------------------------------------------
           // Set security levels on the proxy -------------------------
@@ -1906,7 +1889,7 @@ utf8::String getMachineUniqueKey()
              EOAC_NONE                    // proxy capabilities 
           );
           if( FAILED(hres) )
-            Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+            newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
           // Step 6: --------------------------------------------------
           // Use the IWbemServices pointer to make requests of WMI ----
           IEnumWbemClassObject * pEnumerator = NULL;
@@ -1918,7 +1901,7 @@ utf8::String getMachineUniqueKey()
             &pEnumerator
           );
           if( FAILED(hres) )
-            Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+            newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
           try {
             // Step 7: -------------------------------------------------
             // Get the data from the query in step 6 -------------------
@@ -1930,31 +1913,31 @@ utf8::String getMachineUniqueKey()
               try {
                 hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);
                 if( FAILED(hr) )
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtName) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtName,&vtName,0,0,VT_BSTR);
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"DeviceId", 0, &vtDeviceId, 0, 0);
                 if( FAILED(hr) )
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtDeviceId) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtDeviceId,&vtDeviceId,0,0,VT_BSTR);
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"Description", 0, &vtDescription, 0, 0);
                 if( FAILED(hr) )
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtDescription) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtDescription,&vtDescription,0,0,VT_BSTR);
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"ProcessorId", 0, &vtProcessorId, 0, 0);
                 if( FAILED(hr) )
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtProcessorId) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtProcessorId,&vtProcessorId,0,0,VT_BSTR);
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 if( s.strlen() > 0 ) s += "\n";
                 s += utf8::String(V_BSTR(&vtDeviceId)) + " " +
@@ -1984,7 +1967,7 @@ utf8::String getMachineUniqueKey()
             &pEnumerator
           );
           if( FAILED(hres) )
-            Exception::throwSP(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__);
+            newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
           try {
             // Step 7: -------------------------------------------------
             // Get the data from the query in step 6 -------------------
@@ -1996,22 +1979,22 @@ utf8::String getMachineUniqueKey()
               try {
                 hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);
                 if( FAILED(hr) )
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtName) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtName,&vtName,0,0,VT_BSTR);
-                  Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"AdapterTypeId", 0, &vtAdapterTypeId, 0, 0);
                 if( FAILED(hr) ){
                   HRESULT hr2 = pclsObj->Get(L"AdapterType", 0, &vtAdapterTypeId, 0, 0);
                   if( FAILED(hr2) ){
                     hr = hr2;
-                    Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                    newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                   }
                   if( V_VT(&vtAdapterTypeId) != VT_NULL ){
                     if( V_VT(&vtAdapterTypeId) != VT_BSTR ){
                       hr = VariantChangeTypeEx(&vtAdapterTypeId,&vtAdapterTypeId,0,0,VT_BSTR);
-                      Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                      newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                     }
                   }
                 }
@@ -2030,16 +2013,16 @@ utf8::String getMachineUniqueKey()
                   }
                   if( V_VT(&vtAdapterTypeId) != VT_I4 ){
                     hr = VariantChangeTypeEx(&vtAdapterTypeId,&vtAdapterTypeId,0,0,VT_I4);
-                    Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                    newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                   }
                   if( V_I4(&vtAdapterTypeId) >= 0 && V_I4(&vtAdapterTypeId) != 3 ){
                     hr = pclsObj->Get(L"MACAddress", 0, &vtMACAddress, 0, 0);
                     if( FAILED(hr) )
-                      Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                      newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                     if( V_VT(&vtMACAddress) != VT_NULL ){
                       if( V_VT(&vtMACAddress) != VT_BSTR ){
                         hr = VariantChangeTypeEx(&vtMACAddress,&vtMACAddress,0,0,VT_BSTR);
-                        Exception::throwSP(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+                        newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                       }
                       if( s.strlen() > 0 ) s += "\n";
                       s += utf8::String(V_BSTR(&vtName)) + " " + V_BSTR(&vtMACAddress);
@@ -2093,7 +2076,7 @@ utf8::String getMachineUniqueKey()
   VariantClear(&vtMACAddress);
   return s;
 #else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 #else
   return utf8::String();
@@ -2193,7 +2176,7 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
       }
       exit(EINVAL);
     }
-    Exception::throwSP(EINVAL,"Pirate copy detected");
+    newObject<Exception>(EINVAL,"Pirate copy detected")->throwSP();
   }
   return pirate;
 }

@@ -27,7 +27,6 @@
 #include <adicpp/mycpp.h>
 //---------------------------------------------------------------------------
 namespace mycpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -242,7 +241,7 @@ DSQLParams & DSQLParams::asString(const utf8::String & paramName, const utf8::St
 DSQLParams & DSQLParams::checkParamIndex(uintptr_t i)
 {
   if( i >= params_.count() )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamIndex>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParamIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -250,7 +249,7 @@ DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
 {
   DSQLParam * param = params_.objectOfKey(paramName);
   if( param == NULL )
-    throw ksys::ExceptionSP(newObject<EDSQLStInvalidParamName>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStInvalidParamName>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return param;
 }
 //---------------------------------------------------------------------------

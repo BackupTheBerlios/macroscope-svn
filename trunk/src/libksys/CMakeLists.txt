@@ -73,5 +73,6 @@ IF (WIN32)
     ws2_32
     mswsock
     iphlpapi
+    dbghelp
   )
 ENDIF (WIN32)

@@ -107,7 +107,7 @@ inline VARIANTContainer & VARIANTContainer::changeType(VARTYPE vt,HRESULT * pRes
     *pRes = hRes;
   }
   else if( FAILED(hRes) ){
-    Exception::throwSP(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -125,7 +125,7 @@ inline VARIANTContainer & VARIANTContainer::changeType(
     *pRes = hRes;
   }
   else if( FAILED(hRes) ){
-    Exception::throwSP(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -143,7 +143,7 @@ inline VARIANTContainer & VARIANTContainer::changeType(
     *pRes = hRes;
   }
   else if( FAILED(hRes) ){
-    Exception::throwSP(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -161,7 +161,7 @@ inline VARIANTContainer & VARIANTContainer::changeType(
     *pRes = hRes;
   }
   else if( FAILED(hRes) ){
-    Exception::throwSP(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__);
+    newObject<Exception>(HRESULT_CODE(hRes) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }

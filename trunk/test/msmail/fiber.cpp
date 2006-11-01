@@ -42,7 +42,7 @@ ServerFiber::ServerFiber(Server & server,utf8::String user,utf8::String key) :
 void ServerFiber::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    Exception::throwSP(code,__PRETTY_FUNCTION__);
+    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void ServerFiber::getCode(int32_t noThrowCode)
@@ -92,7 +92,7 @@ void ServerFiber::auth()
     bufferSize,
     noAuth
   );
-  if( e != eOK ) Exception::throwSP(e,__PRETTY_FUNCTION__);
+  if( e != eOK ) newObject<Exception>(e,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void ServerFiber::main()
@@ -723,7 +723,7 @@ MailQueueWalker::MailQueueWalker(Server & server) : server_(server)
 void MailQueueWalker::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    Exception::throwSP(code,__PRETTY_FUNCTION__);
+    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void MailQueueWalker::getCode(int32_t noThrowCode)
@@ -1034,13 +1034,13 @@ NodeClient * NodeClient::newClient(Server & server,ServerType dataType,const utf
 void NodeClient::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    Exception::throwSP(code,__PRETTY_FUNCTION__);
+    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void NodeClient::checkCode(int32_t code,int32_t noThrowCode1,int32_t noThrowCode2)
 {
   if( code != eOK && code != noThrowCode1 && code != noThrowCode1)
-    Exception::throwSP(code,__PRETTY_FUNCTION__);
+    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 int32_t NodeClient::getCode(int32_t noThrowCode)

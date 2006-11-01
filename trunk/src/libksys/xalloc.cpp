@@ -40,16 +40,14 @@ void * kmalloc(size_t size)
     p = malloc(size);
 #endif
     if( p == NULL ){
-      throw ExceptionSP(
-        newObject<EOutOfMemory>(
+      newObject<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
-          ERROR_NOT_ENOUGH_MEMORY + errorOffset,
+        ERROR_NOT_ENOUGH_MEMORY + errorOffset,
 #else
-          ENOMEM,
+        ENOMEM,
 #endif
-          utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(size)
-        )
-      );
+        utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(size)
+      )->throwSP();
     }
 #if !defined(NDEBUG) && !defined(NODEBUGMEM)
     *(uintptr_t *) p = size;
@@ -75,16 +73,14 @@ void * krealloc(void * p, size_t size)
     a = realloc(p,size);
 #endif
     if( a == NULL )
-      throw ExceptionSP(
-        newObject<EOutOfMemory>(
+      newObject<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
-          ERROR_NOT_ENOUGH_MEMORY + errorOffset,
+        ERROR_NOT_ENOUGH_MEMORY + errorOffset,
 #else
-          ENOMEM,
+        ENOMEM,
 #endif
-          utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(size)
-        )
-      );
+        utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(size)
+      )->throwSP();
 #if !defined(NDEBUG) && !defined(NODEBUGMEM)
     if( size > *(uintptr_t *) a )
       memset((uint8_t *) ((uintptr_t *) a + 1) + *(uintptr_t *) a,0xFF,size - *(uintptr_t *) a);

@@ -151,7 +151,7 @@ MYSQLStatement * MYSQLStatement::attach(Database & database)
 {
   MYSQLDatabase * p = dynamic_cast< MYSQLDatabase *>(&database);
   if( p == NULL )
-    ksys::Exception::throwSP(EINVAL, __PRETTY_FUNCTION__);
+    newObject<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   static_cast< mycpp::DSQLStatement *>(this)->attach(*p);
   return this;
 }

@@ -212,7 +212,6 @@ Database & Database::attach(const utf8::String & name)
 Database & Database::detach()
 {
   if( attached() ){
-    //    throw EDBDetach(this,-1,utf8::string(__PRETTY_FUNCTION__);
     if( transaction_ != NULL )
       while( transaction_->active() )
         transaction_->rollback();
@@ -237,7 +236,7 @@ void Database::staticExceptionHandler(ksys::Exception * e)
 {
   transaction_->processingException(e);
   processingException(e);
-  throw ksys::ExceptionSP(e);
+  e->throwSP();
 }
 //---------------------------------------------------------------------------
 void Database::exceptionHandler(ksys::Exception * e)
@@ -252,8 +251,7 @@ void Database::exceptionHandler(ksys::Exception * e)
 Database & Database::name(const utf8::String & name)
 {
   if( name_.strcasecmp(name) != 0 ){
-    if( attached() )
-      detach();
+    if( attached() ) detach();
     name_ = name;
   }
   return *this;

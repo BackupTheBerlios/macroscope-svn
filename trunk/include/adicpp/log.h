@@ -84,7 +84,7 @@ class LogFile {
     AsyncFile file_;
     AsyncFile lockFile_;
     FiberInterlockedMutex mutex_;
-    uintptr_t enabledLevels_;
+    uint8_t enabledLevels_[32];
     uint64_t rotationThreshold_;
     uintptr_t rotatedFileCount_;
     uintptr_t codePage_;
@@ -118,18 +118,18 @@ inline const char * const & LogFile::priNick(LogMessagePriority filter) const
 //---------------------------------------------------------------------------
 inline bool LogFile::isDebugLevelEnabled(uintptr_t level) const
 {
-  return (enabledLevels_ & (uintptr_t(1) << (level & (sizeof(uintptr_t) * CHAR_BIT - 1)))) != 0;
+  return bit(enabledLevels_,level & (sizeof(enabledLevels_) * 8u)) != 0;
 }
 //---------------------------------------------------------------------------
 inline LogFile & LogFile::enableDebugLevel(uintptr_t level)
 {
-  if( level <= 9 ) enabledLevels_ |= uintptr_t(1) << level;
+  setBit(enabledLevels_,level & (sizeof(enabledLevels_) * 8u));
   return *this;
 }
 //---------------------------------------------------------------------------
 inline LogFile & LogFile::disableDebugLevel(uintptr_t level)
 {
-  if( level <= 9 ) enabledLevels_ &= ~(uintptr_t(1) << level);
+  resetBit(enabledLevels_,level & (sizeof(enabledLevels_) * 8u));
   return *this;
 }
 //---------------------------------------------------------------------------

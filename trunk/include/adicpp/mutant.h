@@ -42,8 +42,8 @@ enum MutantType {
 };
 //---------------------------------------------------------------------------
 class Mutant {
-  friend void         initialize();
-  friend void         cleanup();
+  friend void initialize();
+  friend void cleanup();
   public:
     ~Mutant();
     Mutant();
@@ -538,10 +538,15 @@ inline char * Mutant::plane()
 //---------------------------------------------------------------------------
 class EMutant : public Exception {
   public:
+    EMutant(int32_t code, const char * what);
     EMutant(int32_t code, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
-inline EMutant::EMutant(int32_t code, const utf8::String & what) : Exception(code, what)
+inline EMutant::EMutant(int32_t code,const char * what) : Exception(code, what)
+{
+}
+//---------------------------------------------------------------------------
+inline EMutant::EMutant(int32_t code,const utf8::String & what) : Exception(code, what)
 {
 }
 //---------------------------------------------------------------------------

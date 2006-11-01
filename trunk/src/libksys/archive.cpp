@@ -170,14 +170,14 @@ Archive & Archive::unpack(const utf8::String & path,Vector<utf8::String> * pList
   uint8_t magic[sizeof(magic_)];
   archive.readBuffer(magic,sizeof(magic));
   if( memcmp(magic,magic_,sizeof(magic)) != 0 )
-    Exception::throwSP(
+    newObject<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_INVALID_DATA,
 #else
       EINVAL,
 #endif
       __PRETTY_FUNCTION__
-    );
+    )->throwSP();
   for(;;){
     uint64_t sz, l, la;
     try {

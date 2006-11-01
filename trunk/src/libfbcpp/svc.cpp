@@ -410,15 +410,14 @@ Service & Service::invoke()
 //---------------------------------------------------------------------------
 void Service::staticExceptionHandler(ksys::Exception * e)
 {
-  EClientServer * p = dynamic_cast< EClientServer *>(e);
+  EClientServer * p = dynamic_cast<EClientServer *>(e);
   if( p != NULL && p->isFatalError() && attached() ){
-    ISC_STATUS_ARRAY  status;
-    api.isc_service_detach(status, &handle_);
+    ISC_STATUS_ARRAY status;
+    api.isc_service_detach(status,&handle_);
     handle_ = 0;
     api.close();
-    throw ksys::ExceptionSP(p);
   }
-  throw ksys::ExceptionSP(e);
+  e->throwSP();
 }
 //---------------------------------------------------------------------------
 void Service::exceptionHandler(ksys::Exception * e)

@@ -56,9 +56,9 @@ void MemoryStream::cleanup()
 MemoryStream & MemoryStream::readBuffer(void * buffer, uintptr_t count)
 {
   if( pos_ == container_->count_ )
-    throw ExceptionSP(newObject<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__));
+    newObject<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__)->throwSP();
   if( pos_ + count > container_->count_ )
-    throw ExceptionSP(newObject<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__));
+    newObject<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__)->throwSP();
   memcpy(buffer, container_->uptr_ + pos_, count);
   pos_ += count;
   return *this;
@@ -69,9 +69,9 @@ MemoryStream & MemoryStream::operator >> (utf8::String & s)
   uintptr_t pos = pos_;
   while( pos < container_->count_ && container_->uptr_[pos] != '\0' ) pos++;
   if( pos == pos_ && pos == container_->count_ )
-    throw ExceptionSP(newObject<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__));
+    newObject<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__)->throwSP();
   if( pos > pos_ && pos == container_->count_ )
-    throw ExceptionSP(newObject<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__));
+    newObject<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__)->throwSP();
   s = utf8::plane(container_->sptr_ + pos_, pos - pos_);
   pos_ = pos;
   return *this;

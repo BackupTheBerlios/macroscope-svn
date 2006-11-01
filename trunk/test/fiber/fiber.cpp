@@ -2,8 +2,8 @@
 
 class TestClient : public ksock::ClientFiber {
   public:
-          ~TestClient();
-          TestClient();
+    ~TestClient();
+    TestClient();
   protected:
     void  main();
   private:
@@ -20,13 +20,13 @@ TestClient::TestClient()
 void TestClient::main()
 {
   fprintf(stderr, "%s, %d\n", __PRETTY_FUNCTION__, __LINE__);
-  throw ksys::Exception(44, __PRETTY_FUNCTION__);
+  ksys::newObject<Exception>(44, __PRETTY_FUNCTION__)->throwSP();
 }
 
 class ClientShell : public ksock::Client {
   public:
-          ~ClientShell();
-          ClientShell();
+    ~ClientShell();
+    ClientShell();
 
     void  main();
   protected:

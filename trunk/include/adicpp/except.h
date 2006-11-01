@@ -44,31 +44,34 @@ class LogFile;
 class Exception {
   public:
     virtual ~Exception();
-    Exception(int32_t code, const utf8::String & what);
-    int32_t                       code() const;
-    const utf8::String &          what() const;
-    const Array< int32_t> &       codes() const;
-    const Array< utf8::String> &  whats() const;
-    bool                          searchCode(int32_t code) const;
-    bool                          searchCode(int32_t code1, int32_t code2) const;
-    bool                          searchCode(int32_t code1, int32_t code2, int32_t code3) const;
-    bool                          searchCode(int32_t code1, int32_t code2, int32_t code3, int32_t code4) const;
-    const Exception &             writeStdError(LogFile * log = NULL) const;
+    Exception();
+    Exception(int32_t code,const utf8::String & what);
+    Exception(int32_t code,const char * what);
 
-    Exception &                   addRef();
-    Exception &                   remRef();
+    Exception & addRef();
+    Exception & remRef();
 
-    virtual bool                  isFatalError() const;
+    int32_t code() const;
+    Exception & code(int32_t err);
+    const utf8::String & what() const;
+    Exception & what(const utf8::String & error);
+    const Array<int32_t> & codes() const;
+    const Array<utf8::String> & whats() const;
+    bool searchCode(int32_t code) const;
+    bool searchCode(int32_t code1, int32_t code2) const;
+    bool searchCode(int32_t code1, int32_t code2, int32_t code3) const;
+    bool searchCode(int32_t code1, int32_t code2, int32_t code3, int32_t code4) const;
 
-    static Exception * newException(int32_t code,const utf8::String & what);
-    static void DECLSPEC_NORETURN throwSP(int32_t code,const utf8::String & what) GNUG_NORETURN;
-    static void DECLSPEC_NORETURN throwSP(int32_t code,const char * what) GNUG_NORETURN;
+    static Exception * newObject();
+
+    virtual const Exception & writeStdError(LogFile * log = NULL) const;
+    virtual bool isFatalError() const;
+    virtual void DECLSPEC_NORETURN throwSP() GNUG_NORETURN;
   protected:
-    Array<int32_t>                codes_;
-    Array<utf8::String>           whats_;
+    Array<int32_t> codes_;
+    Array<utf8::String> whats_;
   private:
-    int32_t                       refCount_;
-    Exception(){}
+    mutable int32_t refCount_;
     Exception(const Exception &){}
     void operator = (const Exception &){}
 };
@@ -78,9 +81,21 @@ inline int32_t Exception::code() const
   return codes_[(uintptr_t) 0];
 }
 //---------------------------------------------------------------------------
+inline Exception & Exception::code(int32_t err)
+{
+  codes_.add(err);
+  return *this;
+}
+//---------------------------------------------------------------------------
 inline const utf8::String & Exception::what() const
 {
   return whats_[(uintptr_t) 0];
+}
+//---------------------------------------------------------------------------
+inline Exception & Exception::what(const utf8::String & error)
+{
+  whats_.add(error);
+  return *this;
 }
 //---------------------------------------------------------------------------
 inline const Array< int32_t> & Exception::codes() const
@@ -140,10 +155,16 @@ ExceptionSP;
 //---------------------------------------------------------------------------
 class EOutOfMemory : public Exception {
   public:
-    EOutOfMemory(int32_t code, const utf8::String & what);
+    EOutOfMemory(int32_t code,const char * what);
+    EOutOfMemory(int32_t code,const utf8::String & what);
 };
 //---------------------------------------------------------------------------
-inline EOutOfMemory::EOutOfMemory(int32_t code, const utf8::String & what)
+inline EOutOfMemory::EOutOfMemory(int32_t code,const char * what)
+  : Exception(code, what)
+{
+}
+//---------------------------------------------------------------------------
+inline EOutOfMemory::EOutOfMemory(int32_t code,const utf8::String & what)
   : Exception(code, what)
 {
 }

@@ -43,7 +43,7 @@ bool utime(const utf8::String & path,uint64_t atime,uint64_t mtime)
   }
   if( hFile == INVALID_HANDLE_VALUE ){
     err = GetLastError() + errorOffset;
-    Exception::throwSP(err, __PRETTY_FUNCTION__);
+    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   union {
       LARGE_INTEGER lat;
@@ -60,7 +60,7 @@ bool utime(const utf8::String & path,uint64_t atime,uint64_t mtime)
   if( SetFileTime(hFile, NULL, &lastAccessTime, &lastWriteTime) == 0 ){
     err = GetLastError() + errorOffset;
     CloseHandle(hFile);
-    Exception::throwSP(err, __PRETTY_FUNCTION__);
+    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   CloseHandle(hFile);
 #elif HAVE_UTIMES
@@ -71,7 +71,7 @@ bool utime(const utf8::String & path,uint64_t atime,uint64_t mtime)
   tms[1].tv_usec = long(mtime % 1000000u);
   if( utimes(anyPathName2HostPathName(path).getANSIString(),tms) == 0 ){
     err = errno;
-    Exception::throwSP(errno,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_UTIME
   struct utimbuf times;
@@ -79,10 +79,10 @@ bool utime(const utf8::String & path,uint64_t atime,uint64_t mtime)
   times.modtime = mtime;
   if( utime(anyPathName2HostPathName(path).getANSIString(), &times) != 0 ){
     err = errno;
-    Exception::throwSP(err, __PRETTY_FUNCTION__);
+    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
   return err == 0;
 }

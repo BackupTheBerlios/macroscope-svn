@@ -51,27 +51,27 @@ int64_t AsyncDescriptor::write2(const void *,uint64_t)
 //------------------------------------------------------------------------------
 void AsyncDescriptor::shutdown2()
 {
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::flush2()
 {
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::close2()
 {
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::openAPI()
 {
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::closeAPI()
 {
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,14 +105,14 @@ void BaseThread::attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber)
     descriptor.fiber_ = &toFiber;
   }
   else if( descriptor.fiber_->thread_ != this ){
-    Exception::throwSP(
+    newObject<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_INVALID_DATA + errorOffset
 #else
       EINVAL
 #endif
       ,__PRETTY_FUNCTION__
-    );
+    )->throwSP();
   }
 }
 //------------------------------------------------------------------------------
@@ -126,14 +126,14 @@ void BaseThread::detachDescriptor(AsyncDescriptor & descriptor)
       descriptor.fiber_ = NULL;
     }
     else {
-      Exception::throwSP(
+      newObject<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_INVALID_DATA + errorOffset
 #else
         EINVAL
 #endif
         ,__PRETTY_FUNCTION__
-      );
+      )->throwSP();
     }
   }
 }
@@ -169,7 +169,7 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
     if( events_[i] != NULL ) continue;
     if( (events_[i] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
       err = GetLastError() + errorOffset;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
 #else
@@ -1149,7 +1149,7 @@ AsyncAcquireSlave::AsyncAcquireSlave()
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
   if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -1291,7 +1291,7 @@ AsyncWin9xDirectoryChangeNotificationSlave::AsyncWin9xDirectoryChangeNotificatio
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
   if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //------------------------------------------------------------------------------
@@ -1660,7 +1660,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
       return;
     default :;
   }
-  Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

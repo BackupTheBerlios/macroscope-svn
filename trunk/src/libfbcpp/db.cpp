@@ -445,7 +445,7 @@ void Database::staticExceptionHandler(ksys::Exception * e)
   for( intptr_t i = transactions_.count() - 1; i >= 0; i-- )
     transactions_[i]->processingException(e);
   processingException(e);
-  throw ksys::ExceptionSP(e);
+  e->throwSP();
 }
 //---------------------------------------------------------------------------
 void Database::exceptionHandler(ksys::Exception * e)

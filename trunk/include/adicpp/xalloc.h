@@ -129,6 +129,28 @@ template <
   typename T,
   typename Param1,
   typename Param2
+> inline T * newObjectV1(Param1 & p1,const Param2 & p2)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2
+> inline T * newObjectV2(const Param1 & p1,Param2 & p2)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  new (safe) T(p1,p2);
+  return (T *) safe.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2
 > inline T * newObject(const Param1 & p1,const Param2 & p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));

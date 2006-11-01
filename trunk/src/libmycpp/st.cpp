@@ -27,7 +27,6 @@
 #include <adicpp/mycpp.h>
 //---------------------------------------------------------------------------
 namespace mycpp {
-
 //---------------------------------------------------------------------------
 utf8::String time2Str(int64_t t)
 {
@@ -77,7 +76,7 @@ DSQLStatement::~DSQLStatement()
 DSQLStatement & DSQLStatement::attach(Database & database)
 {
   if( attached() )
-    throw ksys::ExceptionSP(newObject<EDSQLStAttached>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   database.dsqlStatements_.add(this, utf8::ptr2Str(this));
   database_ = &database;
   return *this;
@@ -98,7 +97,7 @@ DSQLStatement & DSQLStatement::detach()
 DSQLStatement & DSQLStatement::allocate()
 {
   if( !attached() )
-    throw ksys::ExceptionSP(newObject<EDSQLStNotAttached>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EDSQLStNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( !allocated() ){
     handle_ = api.mysql_stmt_init(database_->handle_);
     if( handle_ == NULL )

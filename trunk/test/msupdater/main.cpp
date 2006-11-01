@@ -227,6 +227,9 @@ int main(int ac,char * av[])
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
   try {
+
+    newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+
     union {
       intptr_t i;
       uintptr_t u;

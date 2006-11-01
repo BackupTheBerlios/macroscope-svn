@@ -1214,12 +1214,12 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 6 : // NewMessage
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           V_BSTR(pvarRetValue) = client_.newMessage().getOLEString();
           V_VT(pvarRetValue) = VT_BSTR;
           break;
         case 7 : // SetMessageAttribute
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0; // UUID of Message
@@ -1249,7 +1249,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 8 : // GetMessageAttribute
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0; // UUID of Message
@@ -1270,7 +1270,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 9 : // SendMessage
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1286,7 +1286,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 10 : // RemoveMessage
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1302,12 +1302,12 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 11 : // GetDB
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           client_.getDB();
           V_I4(pvarRetValue) = 1;
           break;
         case 12 : // CopyMessage
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1323,7 +1323,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 13 : // RemoveMessageAttribute
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0; // UUID of Message
@@ -1400,7 +1400,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 17 : // MK1100SendBarCodeInfo
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1462,7 +1462,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 20 : // String2File
-          if( !active_ ) Exception::throwSP(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__);
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1674,14 +1674,14 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
       );
       if( file->handle_ == INVALID_HANDLE_VALUE ){
         err = GetLastError() + errorOffset;
-        Exception::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     SetLastError(0);
     if( file->hEvent_ == NULL ){
       if( (file->hEvent_ = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
-          err = GetLastError() + errorOffset;
-          Exception::throwSP(err,__PRETTY_FUNCTION__);
+        err = GetLastError() + errorOffset;
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     if( !file->locked_ ){
@@ -1693,8 +1693,8 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
       if( maxSleepTime == 0 && minSleepTime == 0 ) flags |= LOCKFILE_FAIL_IMMEDIATELY;
       BOOL lk = LockFileEx(file->handle_,flags,0,~DWORD(0),~DWORD(0),&Overlapped);
       if( lk == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != ERROR_LOCK_VIOLATION ){
-          err = GetLastError() + errorOffset;
-          Exception::throwSP(err,__PRETTY_FUNCTION__);
+        err = GetLastError() + errorOffset;
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       if( GetLastError() == ERROR_IO_PENDING ){
         DWORD st = (DWORD) rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
@@ -1704,23 +1704,23 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
           CancelIo(file->handle_);
           SetLastError(WAIT_TIMEOUT);
           err = GetLastError() + errorOffset;
-          Exception::throwSP(err,__PRETTY_FUNCTION__);
+          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
         }
         else if( state == WAIT_ABANDONED ){
           SetLastError(WAIT_TIMEOUT);
           err = GetLastError() + errorOffset;
-          Exception::throwSP(err,__PRETTY_FUNCTION__);
+          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
         }
         DWORD NumberOfBytesTransferred;
         if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE) == 0 ){
           err = GetLastError() + errorOffset;
-          Exception::throwSP(err,__PRETTY_FUNCTION__);
+          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
         }
       }
       else if( GetLastError() == ERROR_LOCK_VIOLATION ){
-          SetLastError(WAIT_TIMEOUT);
-          err = GetLastError() + errorOffset;
-          Exception::throwSP(err,__PRETTY_FUNCTION__);
+        SetLastError(WAIT_TIMEOUT);
+        err = GetLastError() + errorOffset;
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       /*char pid[10 + 1];
       memset(pid,'\0',sizeof(pid));
@@ -1764,7 +1764,7 @@ STDMETHODIMP Cmsmail1c::unlockFile(IN BSTR name,OUT LONG * pLastError)
       memset(&Overlapped,0,sizeof(Overlapped));
       if( UnlockFileEx(file->handle_,0,~DWORD(0),~DWORD(0),&Overlapped) == 0 ){
         int32_t err = GetLastError() + errorOffset;
-        Exception::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 //      CloseHandle(file->handle_);
 //      file->handle_ = INVALID_HANDLE_VALUE;

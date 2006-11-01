@@ -161,7 +161,7 @@ InterlockedMutex::InterlockedMutex()
   sem_ = CreateSemaphoreA(NULL,1,~(ULONG) 0 >> 1, NULL);
   if( sem_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
@@ -171,7 +171,7 @@ void InterlockedMutex::acquire()
   DWORD r = WaitForSingleObject(sem_,INFINITE);
   if( r == WAIT_FAILED || (r != WAIT_OBJECT_0 && r != WAIT_ABANDONED) ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
@@ -181,7 +181,7 @@ bool InterlockedMutex::tryAcquire()
   DWORD r = WaitForSingleObject(sem_,0);
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 }
@@ -191,7 +191,7 @@ void InterlockedMutex::release()
 //  LeaveCriticalSection(&cs_);
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
@@ -200,26 +200,26 @@ void InterlockedMutex::release()
 InterlockedMutex::InterlockedMutex() : mutex_(NULL)
 {
   int r = pthread_mutex_init(&mutex_,NULL);
-  if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
+  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 void InterlockedMutex::acquire()
 {
   int r = pthread_mutex_lock(&mutex_);
-  if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
+  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 bool InterlockedMutex::tryAcquire()
 {
   int r = pthread_mutex_trylock(&mutex_);
-  if( r != 0 && r != EBUSY ) Exception::throwSP(r,__PRETTY_FUNCTION__);
+  if( r != 0 && r != EBUSY ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
 void InterlockedMutex::release()
 {
   int r = pthread_mutex_unlock(&mutex_);
-  if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
+  if( r != 0 ) newOBject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 #endif
@@ -296,65 +296,49 @@ void Mutex::singleWRLock(Mutex * mutex)
 //---------------------------------------------------------------------------
 Mutex::~Mutex()
 {
-  if( pthread_rwlock_destroy(&mutex_) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_rwlock_destroy(&mutex_);
+  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 Mutex::Mutex()
 {
   mutex_ = NULL;
-  if( pthread_rwlock_init(&mutex_,NULL) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_rwlock_init(&mutex_,NULL);
+  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 Mutex & Mutex::rdLock()
 {
-  if( pthread_rwlock_rdlock(&mutex_) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_rwlock_rdlock(&mutex_);
+  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
 bool Mutex::tryRDLock()
 {
   int r = pthread_rwlock_tryrdlock(&mutex_);
-  if( r != 0 && errno != EBUSY ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  if( r != 0 && r != EBUSY ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
 Mutex & Mutex::wrLock()
 {
-  if( pthread_rwlock_wrlock(&mutex_) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_rwlock_wrlock(&mutex_);
+  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
 bool Mutex::tryWRLock()
 {
   int r = pthread_rwlock_trywrlock(&mutex_);
-  if( r != 0 && errno != EBUSY ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  if( r != 0 && r != EBUSY ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
 Mutex & Mutex::unlock()
 {
-  if( pthread_rwlock_unlock(&mutex_) != 0 ){
-    int32_t err = errno;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
-  }
+  int r = pthread_rwlock_unlock(&mutex_);
+  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -387,7 +371,7 @@ Event::Event()
   if( handle_ == NULL ){
     err = GetLastError() + errorOffset;
 #endif
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------

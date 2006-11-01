@@ -142,7 +142,7 @@ inline Fiber & Fiber::createFiber(uintptr_t dwStackSize)
 #endif
   if( fiber_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -152,7 +152,7 @@ inline Fiber & Fiber::convertThreadToFiber()
   assert( fiber_ == NULL );
   if( (fiber_ = ConvertThreadToFiber(this)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }

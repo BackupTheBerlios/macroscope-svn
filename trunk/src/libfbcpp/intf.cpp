@@ -152,7 +152,7 @@ void API::open()
   int32_t err;
   ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
   if( count_ == 0 ){
-    utf8::String  libFileName (tryOpen());
+    utf8::String libFileName(tryOpen());
     if( handle_ == NULL ){
 #if defined(__WIN32__) || defined(__WIN64__)
       err = GetLastError() + ksys::errorOffset;
@@ -163,7 +163,7 @@ void API::open()
         9,
         utf8::String::Stream() << "Load " << libFileName << " failed\n"
       );
-      ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
+      newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -177,7 +177,7 @@ void API::open()
             9,
             utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
           );
-          ksys::Exception::throwSP(err + ksys::errorOffset, __PRETTY_FUNCTION__);
+          newObject<ksys::Exception>(err + ksys::errorOffset, __PRETTY_FUNCTION__)->throwSP();
         }
       }
 #elif HAVE_DLFCN_H
@@ -188,9 +188,9 @@ void API::open()
           dlclose(handle_);
           handle_ = NULL;
           ksys::stdErr.debug(9,
-	    utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
-	  );
-          ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
+	          utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
+	        );
+          newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
         }
       }
 #endif

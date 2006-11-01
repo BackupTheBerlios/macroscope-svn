@@ -84,13 +84,13 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
 #endif
         err = errNo();
         api.close();
-        EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #if !defined(__WIN32__) && !defined(__WIN64__)
       int flags = fcntl(socket_,F_GETFL,0);
       if( flags == -1 || fcntl(socket_,F_SETFL,flags | O_NONBLOCK) == -1 ){
         err = errno;
-        EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #endif
 #if defined(IP_TOS) && defined(IPTOS_LOWDELAY)
@@ -155,7 +155,7 @@ AsyncSocket & AsyncSocket::close()
     if( socket_ != INVALID_SOCKET ){
       if( api.closesocket(socket_) != 0 ){
         int32_t err = errNo();
-        EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       socket_ = INVALID_SOCKET;
       closed = true;
@@ -172,7 +172,7 @@ AsyncSocket & AsyncSocket::shutdown(int how)
     if( api.shutdown(socket_,how) != 0 ){
       int32_t err = errNo();
       if( err != ENOTCONN && err != ENOTSOCK && err != EWSANOTINITIALISED )
-        EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+        newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #if HAVE_KQUEUE
     if( fiber()->event_.type_ == ksys::etAccept ){
@@ -188,7 +188,7 @@ AsyncSocket & AsyncSocket::getsockopt(int level,int optname,void * optval,sockle
 {
   if( api.getsockopt(socket_,level,optname,(char *) optval,&optlen) != 0 ){
     int32_t err = errNo();
-    EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -197,7 +197,7 @@ AsyncSocket & AsyncSocket::setsockopt(int level,int optname,const void * optval,
 {
   if( api.setsockopt(socket_,level,optname,(const char *) optval,optlen) != 0 ){
     int32_t err = errNo();
-    EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -206,7 +206,7 @@ AsyncSocket & AsyncSocket::bind(const SockAddr & sockAddr)
 {
   if( api.bind(socket_,(struct sockaddr *) &sockAddr.addr4_,sockAddr.sockAddrSize()) != 0 ){
     int32_t err = errNo();
-    EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -218,7 +218,7 @@ AsyncSocket & AsyncSocket::listen()
 #endif
   if( api.listen(socket_,SOMAXCONN) != 0 ){
     int32_t err = errNo();
-    EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -227,9 +227,9 @@ const SockAddr & AsyncSocket::remoteAddress() const
 {
   if( remoteAddress_ == NULL )
 #if defined(__WIN32__) || defined(__WIN64__)
-    EAsyncSocket::throwSP(ERROR_INVALID_DATA + ksys::errorOffset,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(ERROR_INVALID_DATA + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
 #else
-    EAsyncSocket::throwSP(EINVAL,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 #endif
   return remoteAddress_;
 }
@@ -249,7 +249,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   if( fiber()->event_.errno_ != 0 ){
     socket.detach();
     socket.close();
-    EAsyncSocket::throwSP(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   LPSOCKADDR plsa, prsa;
   INT lsaLen, rsaLen;
@@ -281,7 +281,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   socket.socket_ = (int) fiber()->event_.data_;
   if( fcntl(socket.socket_,F_SETFL,fcntl(socket.socket_,F_GETFL,0) | O_NONBLOCK) != 0 ){
     int32_t err = errno;
-    EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   int ka = true;
   socket.setsockopt(SOL_SOCKET,SO_KEEPALIVE,&ka,sizeof(ka));
@@ -313,7 +313,7 @@ AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
   fiber()->switchFiber(fiber()->mainFiber());
   assert( fiber()->event_.type_ == ksys::etConnect );
   if( fiber()->event_.errno_ != 0 )
-    EAsyncSocket::throwSP(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   deActivateCompression();
   deActivateEncryption();
   clearStatistic();
@@ -347,7 +347,7 @@ l1:
     default          :
 l2:
 #endif
-     EAsyncSocket::throwSP(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
+     newObject<EAsyncSocket>(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   r = fiber()->event_.count_;
   nrb_ += r;
@@ -430,7 +430,7 @@ l1:
     default          :
 l2:
 #endif  
-     EAsyncSocket::throwSP(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
+     newObject<EAsyncSocket>(fiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   w = fiber()->event_.count_;
   nsb_ += w;
@@ -484,7 +484,8 @@ AsyncSocket & AsyncSocket::flush()
 AsyncSocket & AsyncSocket::read(void * buf,uint64_t len)
 {
   for(;;){
-    if( fiber()->terminated() ) EAsyncSocket::throwSP(ECONNABORTED,__PRETTY_FUNCTION__);
+    if( fiber()->terminated() )
+      newObject<EAsyncSocket>(ECONNABORTED,__PRETTY_FUNCTION__)->throwSP();
     if( len <= 0 ) break;
     uint64_t l = recv(buf,len);
     buf = (uint8_t *) buf + (size_t) l;
@@ -496,7 +497,8 @@ AsyncSocket & AsyncSocket::read(void * buf,uint64_t len)
 AsyncSocket & AsyncSocket::write(const void * buf,uint64_t len)
 {
   for(;;){
-    if( fiber()->terminated() ) EAsyncSocket::throwSP(ECONNABORTED,__PRETTY_FUNCTION__);
+    if( fiber()->terminated() )
+      newObject<EAsyncSocket>(ECONNABORTED,__PRETTY_FUNCTION__)->throwSP();
     if( len <= 0 ) break;
     uint64_t l = send(buf,len);
     buf = (uint8_t *) buf + (size_t) l;
@@ -521,7 +523,7 @@ AsyncSocket & AsyncSocket::operator << (const utf8::String & s)
   uint64_t ll;
   ll = l = s.size();
   if( l > (~uint64_t(0) >> 1) )
-    ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+    newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   if( l > 32767 ){
     for( uintptr_t i = sizeof(b); i > sizeof(b) / 2; i-- )
       ksys::xchg(b[sizeof(b) - i],((uint8_t *) &l)[i - 1]);
@@ -551,7 +553,7 @@ AsyncSocket & AsyncSocket::operator >> (utf8::String & s)
   }
   uintptr_t q = 0;
   q = ~q;
-  if( l > q ) ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  if( l > q ) newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   utf8::String t;
   t.resize((size_t) l);
   read(t.c_str(),l);
@@ -572,7 +574,8 @@ static uint8_t authChannelHelper(const utf8::String & s)
   if( s.strcasecmp("allow") == 0 ) return radAllow;
   if( s.strcasecmp("disabled") == 0) return radDisabled;
   if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return radAllow;
-  ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper2(const utf8::String & s)
@@ -583,7 +586,8 @@ static uint8_t authChannelHelper2(const utf8::String & s)
   if( s.strcasecmp("LZO1X_1_15") == 0 ) return ksys::LZO1X::LZO1X_1_15;
   if( s.strcasecmp("LZO1X_999") == 0 ) return ksys::LZO1X::LZO1X_999;
   if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::LZO1X_1_15;
-  ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper3(const utf8::String & s)
@@ -592,7 +596,8 @@ static uint8_t authChannelHelper3(const utf8::String & s)
   if( s.strcasecmp("CRC32") == 0 ) return ksys::LZO1X::CRC32;
   if( s.strcasecmp("ADLER32") == 0 ) return ksys::LZO1X::ADLER32;
   if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::ADLER32;
-  ksys::Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+  newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //------------------------------------------------------------------------------
 AsyncSocket::AuthErrorType AsyncSocket::serverAuth(
@@ -906,7 +911,7 @@ AsyncSocket & AsyncSocket::getSockAddr(SockAddr & addr) const
   if( err != 0 ) err = errNo();
   api.close();
   if( err != 0 )
-    EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   return *const_cast<AsyncSocket *>(this);
 }
 //------------------------------------------------------------------------------
@@ -926,30 +931,9 @@ AsyncSocket & AsyncSocket::getPeerAddr(SockAddr & addr) const
   if( err != 0 ) err = errNo();
   api.close();
   if( err != 0 )
-    EAsyncSocket::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   return *const_cast<AsyncSocket *>(this);
 }
 //------------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-EAsyncSocket::EAsyncSocket(int32_t code,const utf8::String & what) : ksys::Exception(code,what)
-{
-}
-//---------------------------------------------------------------------------
-EAsyncSocket * EAsyncSocket::newException(int32_t code,const utf8::String & what)
-{
-  return newObject<EAsyncSocket>(code,what);
-}
-//---------------------------------------------------------------------------
-void EAsyncSocket::throwSP(int32_t code,const utf8::String & what)
-{
-  throw ksys::ExceptionSP(newException(code,what));
-}
-//---------------------------------------------------------------------------
-void EAsyncSocket::throwSP(int32_t code,const char * what)
-{
-  throw ksys::ExceptionSP(newException(code,what));
-}
-//---------------------------------------------------------------------------
 } // namespace ksock
 //------------------------------------------------------------------------------

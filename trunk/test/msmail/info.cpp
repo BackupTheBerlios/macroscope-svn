@@ -74,14 +74,14 @@ const utf8::String & Message::value(const utf8::String & key) const
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL )
-    Exception::throwSP(
+    newObject<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
 #else
       ENOENT
 #endif
       ,__PRETTY_FUNCTION__
-    );
+    )->throwSP();
   return p->value_;
 }
 //------------------------------------------------------------------------------
@@ -101,14 +101,14 @@ utf8::String Message::removeValue(const utf8::String & key)
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL )
-    Exception::throwSP(
+    newObject<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
 #else
       ENOENT
 #endif
       ,__PRETTY_FUNCTION__
-    );
+    )->throwSP();
   utf8::String oldValue(p->value_);
   attributes_.drop(*p);
   return oldValue;
@@ -143,9 +143,9 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
       while( i.eof() )
         if( i.isSpace() )
 #if defined(__WIN32__) || defined(__WIN64__)
-          Exception::throwSP(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__);
+          newObject<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
 #else
-          Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+          newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 #endif
     }
     a.value(key,value);
@@ -209,9 +209,9 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
-      Exception::throwSP(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__);
+      newObject<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
 #else
-      Exception::throwSP(EINVAL,__PRETTY_FUNCTION__);
+      newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 #endif
     }
   }

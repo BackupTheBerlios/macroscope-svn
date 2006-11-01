@@ -68,7 +68,7 @@ KFTPClient::KFTPClient(const ksys::ConfigSP & config,const utf8::String & sectio
 KFTPClient & KFTPClient::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    ksys::Exception::throwSP(code,__PRETTY_FUNCTION__);
+    newObject<ksys::Exception>(code,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //------------------------------------------------------------------------------

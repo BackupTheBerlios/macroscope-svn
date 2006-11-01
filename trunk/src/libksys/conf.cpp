@@ -82,8 +82,8 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
       b = ++e;
     }
   }
-  Exception::throwSP(ENOENT,__PRETTY_FUNCTION__);
-  throw 0;
+  newObject<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 static void saveSectionHelper(
@@ -355,7 +355,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   }
   lastTokenType_ = tt;
   if( throwUnexpectedEof && tt == ttEof )
-    EConfig::throwSP(this, "unexpected end of file");
+    newObject<EConfig>(this, "unexpected end of file")->throwSP();
   return token;
 }
 //---------------------------------------------------------------------------
@@ -386,7 +386,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     token = getToken(tt);
     if( tt == ttLeftBrace ) break;
     if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
-      EConfig::throwSP(this, "invalid section param");
+      newObject<EConfig>(this, "invalid section param")->throwSP();
     if( param.strlen() > 0 ) param += ",";
     if( tt == ttQuotedString ){
       param += screenString(token);
@@ -398,7 +398,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     if( tt == ttLeftBrace )
       break;
     if( tt != ttColon )
-      EConfig::throwSP(this, "unexpected token '" + token + "', expecting colon");
+      newObject<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
   }
   if( param.strlen() > 0 ){
     AutoPtr<Mutant> m(newObject<Mutant>(param));
@@ -420,11 +420,11 @@ Config & Config::parseSectionBody(ConfigSection & root)
     }
     if( tt == ttRightBrace ){
       if( &root == this )
-        EConfig::throwSP(this, "unexpected token '" + token + "'");
+        newObject<EConfig>(this, "unexpected token '" + token + "'")->throwSP();
       break;
     }
     if( (tt != ttString && tt != ttQuotedString && tt != ttNumeric) || token.strlen() == 0 )
-      EConfig::throwSP(this, "invalid section or key name");
+      newObject<EConfig>(this, "invalid section or key name");
     utf8::String key(token);
     token = getToken(tt);
     if( tt != ttEqual ){
@@ -442,7 +442,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
         if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
-          EConfig::throwSP(this, "invalid section key value");
+          newObject<EConfig>(this, "invalid section key value")->throwSP();
         if( value.strlen() > 0 ) value += ",";
         if( tt == ttQuotedString ){
           value += screenString(token);
@@ -453,7 +453,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
         if( tt != ttColon )
-          EConfig::throwSP(this, "unexpected token '" + token + "', expecting colon");
+          newObject<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
       }
       AutoPtr<Mutant> m(newObject<Mutant>(value));
       root.values_.add(m, key);
@@ -563,26 +563,18 @@ Config & Config::maxTimeBetweenTryOpen(int64_t max)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-EConfig::EConfig(Config * config, const utf8::String & what)
+EConfig::EConfig(Config * config,const char * what)
   : Exception(EINVAL, "[config error] " + 
                 config->file_.fileName() + ", " +
                 utf8::int2Str((intmax_t) config->line_) + " : " + what)
 {
 }
 //---------------------------------------------------------------------------
-EConfig * EConfig::newException(Config * config,const utf8::String & what)
+EConfig::EConfig(Config * config,const utf8::String & what)
+  : Exception(EINVAL, "[config error] " + 
+                config->file_.fileName() + ", " +
+                utf8::int2Str((intmax_t) config->line_) + " : " + what)
 {
-  return newObject<EConfig>(config,what);
-}
-//---------------------------------------------------------------------------
-void EConfig::throwSP(Config * config,const utf8::String & what)
-{
-  throw ExceptionSP(newException(config,what));
-}
-//---------------------------------------------------------------------------
-void EConfig::throwSP(Config * config,const char * what)
-{
-  throw ExceptionSP(newException(config,what));
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

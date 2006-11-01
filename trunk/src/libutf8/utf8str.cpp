@@ -71,7 +71,7 @@ String plane(const char * s, uintptr_t size)
   while( size > 0 && *s != '\0' ){
     uintptr_t l = utf8seqlen(s);
     if( l > size || l == 0 )
-      ksys::Exception::throwSP(EINVAL, __PRETTY_FUNCTION__);
+      newObject<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
     s += l;
     size -= l;
   }
@@ -143,7 +143,7 @@ String::String(const wchar_t * s, uintptr_t l) : container_(&nullContainer())
   for( ul = 0, ll = l, a = s; ll > 0 && *a != L'\0'; a++, ll-- ){
     ql = ucs2utf8seq("", 0, *a);
     if( ql == 0 )
-      ksys::Exception::throwSP(EINVAL, __PRETTY_FUNCTION__);
+      newObject<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
     ul += ql;
   }
   String::Container * container;
@@ -500,7 +500,7 @@ uintptr_t String::getMBCSString(const char * string,uintptr_t codePage,ksys::Aut
     sl = utf8s2mbcs(codePage,NULL,0,string,~uintptr_t(0) >> 1);
     if( sl < 0 ){
       int32_t err = errno;
-      ksys::Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     if( eos ) sl += codePage == CP_UNICODE ? sizeof(wchar_t) : sizeof(char);
     s.realloc(sl);
@@ -526,13 +526,10 @@ BSTR String::getOLEString() const
   uintptr_t l = strlen();
   UINT t = 0;
   t = ~t;
-  if( l > t ) throw ksys::ExceptionSP(
-    newObject<ksys::Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)
-  );
+  if( l > t ) newObject<ksys::Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
   BSTR p = SysAllocStringLen(NULL,UINT(l));
-  if( p == NULL ) throw ksys::ExceptionSP(
-    newObject<ksys::EOutOfMemory>(ERROR_NOT_ENOUGH_MEMORY + ksys::errorOffset,__PRETTY_FUNCTION__)
-  );
+  if( p == NULL ) newObject<ksys::EOutOfMemory>(
+    ERROR_NOT_ENOUGH_MEMORY + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   Iterator i(*this);
   while( !i.eof() ){
     p[i.position()] = (wchar_t) i.getChar();
@@ -1250,7 +1247,7 @@ intmax_t str2Int(const String & str)
 {
   intmax_t  a;
   if( !tryStr2Int(str, a) )
-    throw ksys::ExceptionSP(newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return a;
 }
 //---------------------------------------------------------------------------
@@ -1309,7 +1306,7 @@ struct tm str2tm(const String & str)
 {
   struct tm tv;
   if( !tryStr2tm(str, tv) )
-    throw ksys::ExceptionSP(newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return tv;
 }
 //---------------------------------------------------------------------------
@@ -1317,7 +1314,7 @@ int64_t str2Time(const String & str)
 {
   int64_t tv;
   if( !tryStr2Time(str, tv) )
-    throw ksys::ExceptionSP(newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return tv;
 }
 //---------------------------------------------------------------------------
@@ -1325,7 +1322,7 @@ struct timeval str2Timeval(const String & str)
 {
   struct timeval  tv;
   if( !tryStr2Timeval(str, tv) )
-    throw ksys::ExceptionSP(newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return tv;
 }
 //---------------------------------------------------------------------------
@@ -1458,7 +1455,7 @@ double str2Float(const String & str)
   double      a;
 #endif
   if( !tryStr2Float(str, a) )
-    throw ksys::ExceptionSP(newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__));
+    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return a;
 }
 //---------------------------------------------------------------------------
@@ -1670,7 +1667,7 @@ intptr_t String::Stream::Format::format(char * buffer) const
   }
   if( size == -1 ){
 l1: int32_t err = errno;
-    ksys::Exception::throwSP(err,__PRETTY_FUNCTION__);
+    newObject<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( buffer != NULL ) memcpy(buffer,p,size);
   return size;

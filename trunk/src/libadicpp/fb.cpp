@@ -149,16 +149,16 @@ FirebirdStatement::FirebirdStatement()
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::attach(Database & database)
 {
-  FirebirdDatabase *  p = dynamic_cast< FirebirdDatabase *>(&database);
+  FirebirdDatabase * p = dynamic_cast<FirebirdDatabase *>(&database);
   if( p == NULL )
-    ksys::Exception::throwSP(EINVAL, __PRETTY_FUNCTION__);
-  static_cast<fbcpp::DSQLStatement *>(this)->attach(*p, *p);
+    newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  static_cast<fbcpp::DSQLStatement *>(this)->attach(*p,*p);
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::detach()
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->detach();
+  static_cast<fbcpp::DSQLStatement *>(this)->detach();
   return this;
 }
 //---------------------------------------------------------------------------

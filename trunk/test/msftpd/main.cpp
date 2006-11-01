@@ -109,7 +109,7 @@ MSFTPServerFiber & MSFTPServerFiber::auth()
     noAuth
   );
   if( e != eOK )
-    ksys::Exception::throwSP(e,__PRETTY_FUNCTION__);
+    newObject<ksys::Exception>(e,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //------------------------------------------------------------------------------

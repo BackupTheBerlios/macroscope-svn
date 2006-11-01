@@ -409,7 +409,7 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object, b
 #endif
   }
   if( err != 0 )
-    Exception::throwSP(err + errorOffset, __PRETTY_FUNCTION__);
+    newObject<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
   return head;
 }
 //---------------------------------------------------------------------------

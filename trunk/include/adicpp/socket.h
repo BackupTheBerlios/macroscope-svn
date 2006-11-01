@@ -598,14 +598,20 @@ inline Client::Client()
 //---------------------------------------------------------------------------
 class EAsyncSocket : public ksys::Exception {
   public:
+    EAsyncSocket(int32_t code,const char * what);
     EAsyncSocket(int32_t code,const utf8::String & what);
-    static EAsyncSocket * newException(int32_t code,const utf8::String & what);
-    static void DECLSPEC_NORETURN throwSP(int32_t code,const utf8::String & what) GNUG_NORETURN;
-    static void DECLSPEC_NORETURN throwSP(int32_t code,const char * what) GNUG_NORETURN;
 };
 //---------------------------------------------------------------------------
-void  initialize();
-void  cleanup();
+inline EAsyncSocket::EAsyncSocket(int32_t code,const char * what) : ksys::Exception(code,what)
+{
+}
+//---------------------------------------------------------------------------
+inline EAsyncSocket::EAsyncSocket(int32_t code,const utf8::String & what) : ksys::Exception(code,what)
+{
+}
+//---------------------------------------------------------------------------
+void initialize();
+void cleanup();
 //---------------------------------------------------------------------------
 } // namespace ksock
 //---------------------------------------------------------------------------
