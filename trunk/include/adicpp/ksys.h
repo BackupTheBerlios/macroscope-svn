@@ -40,49 +40,52 @@ template <typename T> inline void xchg(T & v1, T & v2)
 //---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------
-#include <adicpp/lconfig.h>
-#include <adicpp/bits.h>
-#include <adicpp/autoptr.h>
-#include <adicpp/xalloc.h>
-#include <adicpp/xtime.h>
-#include <adicpp/sp.h>
-#include <adicpp/rnd.h>
-#include <adicpp/tlv.h>
-#include <adicpp/hash.h>
-#include <adicpp/array.h>
-#include <adicpp/list.h>
-#include <adicpp/mutex.h>
-#include <adicpp/thread.h>
-#include <adicpp/profiler.h>
-#include <adicpp/utf8str.h>
-#include <adicpp/except.h>
-#include <adicpp/tree.h>
-#include <adicpp/qsort.h>
-#include <adicpp/vector.h>
-#include <adicpp/hol.h>
-#include <adicpp/ehash.h>
-#include <adicpp/table.h>
-#include <adicpp/mstream.h>
-#include <adicpp/mutant.h>
-#include <adicpp/sysutils.h>
-#include <adicpp/fhc.h>
-#include <adicpp/sockaddr.h>
-#include <adicpp/async.h>
-#include <adicpp/afd.h>
-#include <adicpp/log.h>
-#include <adicpp/conf.h>
-#include <adicpp/shsem.h>
-#include <adicpp/fiber.h>
-#include <adicpp/scktintf.h>
-#include <adicpp/sha.h>
-#include <adicpp/lzo.h>
-#include <adicpp/socket.h>
-#include <adicpp/shmem.h>
-#include <adicpp/service.h>
-#include <adicpp/fetch.h>
-#include <adicpp/archive.h>
-#include <adicpp/radialer.h>
-#include <adicpp/varcont.h>
+#include "lconfig.h"
+#include "bits.h"
+#include "autoptr.h"
+#include "xalloc.h"
+#include "xtime.h"
+#include "sp.h"
+#include "rnd.h"
+#include "tlv.h"
+#include "hash.h"
+#include "array.h"
+#include "list.h"
+#include "mutex.h"
+#include "thread.h"
+#include "profiler.h"
+#include "utf8str.h"
+#include "except.h"
+#include "tree.h"
+#include "qsort.h"
+#include "vector.h"
+#include "hol.h"
+#include "ehash.h"
+#include "table.h"
+#include "mstream.h"
+#include "mutant.h"
+#include "sysutils.h"
+#include "fhc.h"
+#include "sockaddr.h"
+#include "async.h"
+#include "afd.h"
+#include "log.h"
+#include "conf.h"
+#include "shsem.h"
+#include "fiber.h"
+#include "scktintf.h"
+#include "sha.h"
+#include "lzo.h"
+#include "socket.h"
+#include "shmem.h"
+#include "service.h"
+#include "fetch.h"
+#include "archive.h"
+#include "radialer.h"
+#include "varcont.h"
+#if defined(__WIN32__) || defined(__WIN64__)
+#include "pdbutils/pdbutils.h"
+#endif
 //---------------------------------------------------------------------------
 #endif /* ksysH */
 //---------------------------------------------------------------------------

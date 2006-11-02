@@ -55,6 +55,8 @@ enum AsyncEventType {
   etDispatch,
   etTimer,
   etAcquire,
+  etStackBackTrace,
+  etStackBackTraceZero,
   etCount
 };
 //---------------------------------------------------------------------------
@@ -95,6 +97,8 @@ class AsyncEvent {
         union {
           uint64_t position_;
           uint64_t timerStartTime_;
+          uintptr_t data0_;
+          intptr_t data1_;
         };
         union {
           void * buffer_;
@@ -106,6 +110,7 @@ class AsyncEvent {
           int fileDescriptor_;
           int socket_;
 #endif
+          InterlockedMutex * mutex0_;
           FiberInterlockedMutex * mutex_;
           DirectoryChangeNotification * directoryChangeNotification_;
           struct Stat * stat_;
@@ -124,6 +129,8 @@ class AsyncEvent {
           uint64_t length_;
           uint64_t count_;
           uintptr_t data_;
+          Thread * thread_;
+          uintptr_t threadHandle_;
           Vector<utf8::String> * dirList_;
         };
         LockFileType lockType_;

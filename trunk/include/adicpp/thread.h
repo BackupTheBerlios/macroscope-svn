@@ -78,14 +78,17 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Thread {
-  friend void       initialize();
-  friend void       cleanup();
+  friend void initialize();
+  friend void cleanup();
   public:
     virtual ~Thread();
     Thread();
 
-    Thread &          resume();
-    Thread &          wait();
+    Thread & resume();
+    Thread & suspend();
+    static bool isSuspended(uintptr_t handle);
+    bool isSuspended() const;
+    Thread & wait();
 
     uintptr_t         id() const;
     const int32_t &   exitCode() const;
@@ -150,9 +153,7 @@ inline Thread::Action::~Action()
 {
 }
 //---------------------------------------------------------------------------
-inline Thread::Action::Action(void * handler, void * data)
-  : handler_(handler),
-    data_(data)
+inline Thread::Action::Action(void * handler, void * data) : handler_(handler), data_(data)
 {
 }
 //---------------------------------------------------------------------------
@@ -176,6 +177,11 @@ inline bool Thread::Action::operator ==(const Action & action) const
 inline Thread::~Thread()
 {
   assert(((started_ && finished_) || (!started_ && !finished_)) && handle_ == NULL);
+}
+//---------------------------------------------------------------------------
+inline bool Thread::isSuspended() const
+{
+  return isSuspended((uintptr_t) handle_);
 }
 //---------------------------------------------------------------------------
 inline uintptr_t Thread::id() const

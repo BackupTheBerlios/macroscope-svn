@@ -67,9 +67,13 @@ class Exception {
     virtual const Exception & writeStdError(LogFile * log = NULL) const;
     virtual bool isFatalError() const;
     virtual void DECLSPEC_NORETURN throwSP() GNUG_NORETURN;
+
+    const bool & stackBackTrace() const;
+    Exception & stackBackTrace(bool v);
   protected:
     Array<int32_t> codes_;
     Array<utf8::String> whats_;
+    bool stackBackTrace_;
   private:
     mutable int32_t refCount_;
     Exception(const Exception &){}
@@ -137,6 +141,17 @@ inline Exception & Exception::addRef()
 inline Exception & Exception::remRef()
 {
   if( interlockedIncrement(refCount_, -1) == 1 ) delete this;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const bool & Exception::stackBackTrace() const
+{
+  return stackBackTrace_;
+}
+//---------------------------------------------------------------------------
+inline Exception & Exception::stackBackTrace(bool v)
+{
+  stackBackTrace_ = v;
   return *this;
 }
 //---------------------------------------------------------------------------

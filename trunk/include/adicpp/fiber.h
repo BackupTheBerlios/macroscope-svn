@@ -316,6 +316,7 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
+//---------------------------------------------------------------------------
 class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semaphore, public InterlockedMutex {
   public:
     virtual ~AsyncWin9xDirectoryChangeNotificationSlave();
@@ -338,6 +339,25 @@ class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semapho
 
     void threadExecute();
 };
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class AsyncStackBackTraceSlave : public Thread, public Semaphore, public InterlockedMutex {
+  public:
+    virtual ~AsyncStackBackTraceSlave();
+    AsyncStackBackTraceSlave();
+
+    void transplant(AsyncEvent & requests);
+  protected:
+  private:
+    AsyncStackBackTraceSlave(const AsyncStackBackTraceSlave &){}
+    void operator = (const AsyncStackBackTraceSlave &){}
+
+    Events requests_;
+
+    void threadExecute();
+};
+//---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -350,6 +370,9 @@ class Requester {
     void abort();
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
     void postRequest(AsyncDescriptor * descriptor);
+    void postRequest(AsyncEvent * event);
+
+    static Requester & requester();
   protected:
   private:
     InterlockedMutex ioRequestsMutex_;
@@ -377,6 +400,9 @@ class Requester {
     InterlockedMutex wdcnRequestsMutex_;
     Vector<AsyncWin9xDirectoryChangeNotificationSlave> wdcnSlaves_;
     int64_t wdcnSlavesSweepTime_;
+
+    InterlockedMutex asyncStackBackTraceSlaveMutex_;
+    AutoPtr<AsyncStackBackTraceSlave> asyncStackBackTraceSlave_;
 #endif
 
     Requester(const Requester &){}
@@ -390,6 +416,7 @@ class BaseThread : public Thread, public Fiber {
   friend void cleanup();
   friend class Fiber;
   friend class BaseServer;
+  friend Requester & Requester::requester();
   public:
     virtual ~BaseThread();
     BaseThread();
@@ -490,6 +517,11 @@ inline BaseThread & BaseThread::maxFibersPerThread(uintptr_t mfpt)
 {
   mfpt_ = mfpt;
   return *this;
+}
+//------------------------------------------------------------------------------
+inline Requester & Requester::requester()
+{
+  return BaseThread::requester();
 }
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

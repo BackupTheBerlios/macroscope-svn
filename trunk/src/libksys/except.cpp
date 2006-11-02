@@ -25,9 +25,6 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
-#include <adicpp/pdbutils/pdbutils.h>
-#include <iostream>
-#include <fstream>
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
@@ -42,17 +39,17 @@ Exception::~Exception()
 {
 }
 //---------------------------------------------------------------------------
-Exception::Exception() : refCount_(0)
+Exception::Exception() : refCount_(0), stackBackTrace_(true)
 {
 }
 //---------------------------------------------------------------------------
-Exception::Exception(int32_t code, const utf8::String & what) : refCount_(0)
+Exception::Exception(int32_t code, const utf8::String & what) : refCount_(0), stackBackTrace_(true)
 {
   codes_.add(code);
   whats_.add(what);
 }
 //---------------------------------------------------------------------------
-Exception::Exception(int32_t code, const char * what) : refCount_(0)
+Exception::Exception(int32_t code, const char * what) : refCount_(0), stackBackTrace_(true)
 {
   codes_.add(code);
   whats_.add(what);
@@ -152,11 +149,11 @@ void Exception::throwSP()
   r = SymCleanup(GetCurrentProcess());
   err = GetLastError();*/
 
-// TODO: сделать вызов через AsyncEvent потому что для текущего выполняющегося
-// потока невозможно получить контекст. т.е. другой поток должен остановить
-// этот через SuspendThread, выполнить трассировку, потом сделать ResumeThread
-  std::cout << DBGSTRING2CHARPTR(pdbutils::getFullBackTrace()) << std::endl;
-
+  if( stackBackTrace_ ){
+    utf8::String::Stream stackTrace;
+    stackTrace << getBackTrace();
+    if( stackTrace.count() > 0 ) stdErr.debug(128,stackTrace);
+  }
   refCount_ = 0;
   throw ExceptionSP(this);
 }

@@ -1405,6 +1405,82 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::abortNotification(DirectoryChan
   return r;
 }
 //---------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+AsyncStackBackTraceSlave::~AsyncStackBackTraceSlave()
+{
+}
+//------------------------------------------------------------------------------
+AsyncStackBackTraceSlave::AsyncStackBackTraceSlave()
+{
+}
+//------------------------------------------------------------------------------
+void AsyncStackBackTraceSlave::transplant(AsyncEvent & request)
+{
+  AutoLock<InterlockedMutex> lock(*this);
+  requests_.insToTail(request);
+  post();
+}
+//------------------------------------------------------------------------------
+void AsyncStackBackTraceSlave::threadExecute()
+{
+  priority(THREAD_PRIORITY_TIME_CRITICAL);
+  AsyncEvent * request;
+  for(;;){
+    acquire();
+    request = NULL;
+    if( requests_.count() > 0 ) request = &AsyncEvent::nodeObject(*requests_.first());
+    release();
+    if( request == NULL ){
+      if( terminated_ ) break;
+      Semaphore::wait();
+    }
+    else {
+      assert( request->type_ == etStackBackTrace || request->type_ == etStackBackTraceZero );
+      request->errno_ = 0;
+      BOOL r;
+      DWORD result, exitCode;
+      switch( request->type_ ){
+        case etStackBackTrace :
+          assert( request->thread_ != NULL );
+          if( request->mutex0_ == NULL ) request->thread_->suspend();
+          request->string0_ =// DBGSTRING2CHARPTR(
+            pdbutils::getBackTrace(
+              pdbutils::DbgFrameGetAll,
+              request->data1_ == -1 ? -1 : request->data1_ + 1,
+              request->thread_
+            );
+          if( request->mutex0_ == NULL ) request->thread_->resume();
+          acquire();
+          requests_.remove(*request);
+          request->fiber_->thread()->postEvent(request);
+          release();
+          if( request->mutex0_ != NULL ) request->mutex0_->release();
+          break;
+        case etStackBackTraceZero :
+          //while( request->mutex0_->tryAcquire() ) request->mutex0_->release();
+          result = SuspendThread((HANDLE) request->threadHandle_);
+          if( result == (DWORD) -1 ) exit(GetLastError());
+          request->string0_ =// DBGSTRING2CHARPTR(
+            pdbutils::getBackTrace(
+              pdbutils::DbgFrameGetAll,
+              request->data1_ == -1 ? -1 : request->data1_ + 1,
+              request->thread_
+            );
+          result = ResumeThread((HANDLE) request->threadHandle_);
+          if( result == (DWORD) -1 ) exit(GetLastError());
+          acquire();
+          requests_.remove(*request);
+          release();
+          request->mutex0_->release();
+          break;
+        default:
+          assert( 0 );
+      }
+    }
+  }
+}
+//------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -1442,6 +1518,9 @@ Requester::~Requester()
     wdcnSlaves_[i].post();
     wdcnSlaves_[i].Thread::wait();
   }
+  asyncStackBackTraceSlave_->terminate();
+  asyncStackBackTraceSlave_->post();
+  asyncStackBackTraceSlave_->Thread::wait();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1656,6 +1735,36 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           acquireSlaves_.add(slave.ptr(NULL));
           p->transplant(currentFiber()->event_);
         }
+      }
+      return;
+    case etStackBackTrace :
+      {
+        AutoLock<InterlockedMutex> lock(asyncStackBackTraceSlaveMutex_);
+        if( asyncStackBackTraceSlave_ == NULL ){
+          AutoPtr<AsyncStackBackTraceSlave> p(newObject<AsyncStackBackTraceSlave>());
+          p->resume();
+          asyncStackBackTraceSlave_.xchg(p);
+        }
+        asyncStackBackTraceSlave_->transplant(currentFiber()->event_);
+      }
+      return;
+    default :;
+  }
+  newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+}
+//---------------------------------------------------------------------------
+void Requester::postRequest(AsyncEvent * event)
+{
+  switch( event->type_ ){
+    case etStackBackTraceZero :
+      {
+        AutoLock<InterlockedMutex> lock(asyncStackBackTraceSlaveMutex_);
+        if( asyncStackBackTraceSlave_ == NULL ){
+          AutoPtr<AsyncStackBackTraceSlave> p(newObject<AsyncStackBackTraceSlave>());
+          p->resume();
+          asyncStackBackTraceSlave_.xchg(p);
+        }
+        asyncStackBackTraceSlave_->transplant(*event);
       }
       return;
     default :;

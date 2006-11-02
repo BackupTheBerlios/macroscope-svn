@@ -28,6 +28,54 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+bool stackBackTrace = true;
+//---------------------------------------------------------------------------
+utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
+{
+  if( stackBackTrace ){
+    InterlockedMutex mutex;
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( currentFiber() != NULL ){
+      if( thread == NULL ){
+        thread = currentThread();
+        currentFiber()->event_.mutex0_ = &mutex;
+        mutex.acquire();
+      }
+      else {
+        currentFiber()->event_.mutex0_ = NULL;
+      }
+      currentFiber()->event_.data1_ = skipCount;
+      currentFiber()->event_.thread_ = thread;
+      currentFiber()->event_.type_ = etStackBackTrace;
+      currentFiber()->thread()->postRequest();
+      if( thread != currentThread() ){
+        currentFiber()->switchFiber(currentFiber()->mainFiber());
+      }
+      else {
+        mutex.acquire();
+        mutex.release();
+      }
+      assert( currentFiber()->event_.type_ == etStackBackTrace );
+      assert( currentFiber()->event_.errno_ == 0 );
+      return currentFiber()->event_.string0_;
+    }
+    AsyncEvent event;
+    event.mutex0_ = &mutex;
+    event.data1_ = skipCount;
+    event.threadHandle_ = (uintptr_t) GetCurrentThread();
+    event.type_ = etStackBackTraceZero;
+    mutex.acquire();
+    Requester::requester().postRequest(&event);
+    mutex.acquire();
+    mutex.release();
+    assert( event.type_ == etStackBackTraceZero );
+    assert( event.errno_ == 0 );
+    return event.string0_;
+#endif
+  }
+  return utf8::String();
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 DirectoryChangeNotification::~DirectoryChangeNotification()

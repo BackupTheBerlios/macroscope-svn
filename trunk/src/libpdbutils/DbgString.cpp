@@ -9,8 +9,8 @@
   Requirements dbghelp.h .dll .lib from microsoft
 */
 
+#include <adicpp/lconfig.h>
 #include <adicpp/pdbutils/pdbutils.h>
-
 
 const char* findrT(const char* it1, const char* end1, const char* it2, const char* end2)
   {

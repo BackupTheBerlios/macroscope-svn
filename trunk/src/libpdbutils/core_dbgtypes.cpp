@@ -8,13 +8,10 @@
 
   Requirements dbghelp.h .dll .lib from microsoft
 */
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
+#include <adicpp/lconfig.h>
 #include <adicpp/pdbutils/pdbutils.h>
 
 using namespace pdbutils;
-
 
 bool get_core_vector_symbolInfo(DbgType& dbgType, bool& discarge)
 {

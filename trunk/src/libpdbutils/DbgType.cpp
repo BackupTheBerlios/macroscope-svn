@@ -1,22 +1,12 @@
-
+#include <adicpp/lconfig.h>
 #include <adicpp/pdbutils/pdbutils.h>
-
-#if !defined(DBGUTILS_USE_MFC_CSTRING)
-#include <windows.h>
-#endif
-
-//#define DECLSPEC_DEPRECATED
-#include <dbghelp.h>
-
-#include <tlhelp32.h>
 
 #include <sstream>
 #include <iostream>
 
 namespace pdbutils {
 
-
-#define NL "\r\n"
+#define NL "\n"
 
 extern HANDLE _currentProcess;
 

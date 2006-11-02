@@ -1,17 +1,5 @@
-
+#include <adicpp/lconfig.h>
 #include <adicpp/pdbutils/pdbutils.h>
-
-#if !defined(DBGUTILS_USE_MFC_CSTRING)
-#include <windows.h>
-#endif
-#if !defined(DECLSPEC_DEPRECATED)
-# define DECLSPEC_DEPRECATED
-#endif
-#include <dbghelp.h>
-
-#include <tlhelp32.h>
-
-#include <io.h>
 
 #ifndef R_OK
 #  define R_OK    4               /* Test for read permission.  */
@@ -20,7 +8,7 @@
 #  define F_OK    0               /* Test for existence.  */  
 #endif
 
-#define NL "\r\n"
+#define NL "\n"
 
 //#define LOCAL_DEBUG
 
@@ -30,8 +18,6 @@
 namespace pdbutils {
 
 HANDLE _currentProcess = 0;
-
-
 
 #if defined(LOCAL_DEBUG)
 
