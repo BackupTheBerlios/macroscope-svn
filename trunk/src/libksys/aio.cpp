@@ -1438,8 +1438,7 @@ void AsyncStackBackTraceSlave::threadExecute()
     else {
       assert( request->type_ == etStackBackTrace || request->type_ == etStackBackTraceZero );
       request->errno_ = 0;
-      BOOL r;
-      DWORD result, exitCode;
+      DWORD result;
       switch( request->type_ ){
         case etStackBackTrace :
           assert( request->thread_ != NULL );
@@ -1458,9 +1457,9 @@ void AsyncStackBackTraceSlave::threadExecute()
           if( request->mutex0_ != NULL ) request->mutex0_->release();
           break;
         case etStackBackTraceZero :
-          //while( request->mutex0_->tryAcquire() ) request->mutex0_->release();
-          result = SuspendThread((HANDLE) request->threadHandle_);
-          if( result == (DWORD) -1 ) exit(GetLastError());
+          while( !Thread::isSuspended(request->threadHandle_) ) sleep1();
+//          result = SuspendThread((HANDLE) request->threadHandle_);
+//          if( result == (DWORD) -1 ) exit(GetLastError());
           request->string0_ =// DBGSTRING2CHARPTR(
             pdbutils::getBackTrace(
               pdbutils::DbgFrameGetAll,

@@ -769,8 +769,8 @@ extern intptr_t /*DBGUTILS_EXPORT*/ MaxPointerRecursion;
   @param dbgType out-paramater which will be filled
   @param queryFlags combination of DbgGetFrameFlags
 */
-bool /*DBGUTILS_EXPORT*/ querySymbolType(__int64 modBase, unsigned long dwTypeIndex, intptr_t offset, 
-                                    intptr_t size, DbgType& dbgType, intptr_t queryFlags);
+bool /*DBGUTILS_EXPORT*/ querySymbolType(__int64 modBase, uintptr_t dwTypeIndex, intptr_t offset, 
+                                    int64_t size, DbgType& dbgType, intptr_t queryFlags);
 
 /*@}*/
 

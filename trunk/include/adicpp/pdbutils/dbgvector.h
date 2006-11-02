@@ -29,7 +29,7 @@ public:
   {
     //_ensureCap(10);
   }
-  DbgVector(int capacity)
+  DbgVector(intptr_t capacity)
   : _begin(0)
   , _end(0)
   , _bufEnd(0)

@@ -249,7 +249,7 @@ public:
     The size describe the size of the used memory.
     Not every time equaly to sizeof(T)
   */
-  intptr_t size;
+  int64_t size;
   /**
     internal used
   */

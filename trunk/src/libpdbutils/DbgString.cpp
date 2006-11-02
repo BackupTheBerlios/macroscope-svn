@@ -47,7 +47,7 @@ const char* findrT(const char* it1, const char* end1, const char* it2, const cha
 
 namespace pdbutils {
 
-int 
+intptr_t
 DbgString::lastIndexOf(const char* text) const
 {
   const char* end = _ptr + strlen(_ptr);
@@ -57,9 +57,9 @@ DbgString::lastIndexOf(const char* text) const
   return f - _ptr;
 }
 DbgString 
-DbgString::substr(int offset, int length) const
+DbgString::substr(intptr_t offset, intptr_t length) const
 {
-  int len = size();
+  intptr_t len = size();
   if (length == -1 && offset > len)
     return *this;
   if (offset + length > len)
@@ -72,9 +72,9 @@ DbgString::substr(int offset, int length) const
 DbgString 
 DbgString::operator+(const char* text) const
 {
-  int s1 = size();
-  int s2 = strlen(text);
-  int size = s1 + s2 + 1;
+  intptr_t s1 = size();
+  intptr_t s2 = strlen(text);
+  intptr_t size = s1 + s2 + 1;
   char* nt = new char[size + 1];
   memcpy(nt, _ptr, s1);
   memcpy(nt + s1, text, s2);
@@ -97,14 +97,14 @@ DbgString::_release()
 }
 
 void 
-DbgString::_assign(const char* ptr, int length)
+DbgString::_assign(const char* ptr, intptr_t length)
 {
   if (ptr == 0)
   {
     _ptr = 0;
     return;
   }
-  int size;
+  intptr_t size;
   if (length == -1)
     size = strlen(ptr);
   else

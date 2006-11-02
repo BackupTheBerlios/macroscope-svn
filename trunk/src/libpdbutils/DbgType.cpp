@@ -550,15 +550,14 @@ queryArrayType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& d
   dbgType.typeName = DBGSTRING_CONSTSTR("[]");
   
   
-  int elsize = 0;
-  if (elcount != 0)
-    elsize = length / elcount;
+  int64_t elsize = 0;
+  if (elcount != 0) elsize = length / elcount;
   DOUT("Array: count=[" << elcount << "]; elsize=[" << elsize << "]; ");
-  for (int i = 0; i < int(elcount); ++i)
+  for (uintptr_t i = 0; i < elcount; ++i)
   {
     void* eladdr = *(void**)(address + (elsize * i));
     DbgType subtype;
-    if (querySymbolType(modBase, realTypeId, (int)&eladdr, elsize, subtype, queryFlags) == true)
+    if (querySymbolType(modBase, realTypeId, (intptr_t)&eladdr, elsize, subtype, queryFlags) == true)
     {
       dbgType.addSubType(subtype);
     }
@@ -588,23 +587,23 @@ queryArrayType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& d
 
 
 bool
-isBadStringPtr(const char* ptr, int size)
+isBadStringPtr(const char* ptr, int64_t size)
 {
-  if (int(ptr) < 1024 || int(ptr) > 0xFFFFF000 || unsigned int(ptr) == 0xcdcdcdcd || unsigned int(ptr) == 0xCCCCCCCC)
+  if (intptr_t(ptr) < 1024 || intptr_t(ptr) > 0xFFFFF000 || uintptr_t(ptr) == 0xcdcdcdcd || uintptr_t(ptr) == 0xCCCCCCCC)
     return true;
   return IsBadStringPtr(ptr, size) == TRUE;
 }
 
 bool
-isBadReadPtr(const void* ptr, int size)
+isBadReadPtr(const void* ptr, int64_t size)
 {
-  if (int(ptr) < 1024 || int(ptr) > 0xFFFFF000  || unsigned int(ptr) == 0xcdcdcdcd)
+  if (intptr_t(ptr) < 1024 || intptr_t(ptr) > 0xFFFFF000  || uintptr_t(ptr) == 0xcdcdcdcd)
     return true;
   return IsBadReadPtr(ptr, size) == TRUE;
 }
 
 bool
-queryPoinerType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& dbgType, int queryFlags)
+queryPoinerType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& dbgType, intptr_t queryFlags)
 {
   //ELOGNL("queryPoinerType: " << dbgType.name);
   DOUTNL("queryPoinerType");
@@ -642,7 +641,7 @@ queryPoinerType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& 
     ++CurrentPointerRecursion;
     dbgType.flags |= DbgType::IsValidPointer;
     DbgType subtype;
-    if (querySymbolType(modBase, dwTypeIndex, (int)*(void**)address, length, subtype, queryFlags) == true)
+    if (querySymbolType(modBase, dwTypeIndex, (intptr_t)*(void**)address, length, subtype, queryFlags) == true)
       dbgType.addSubType(subtype);
     --CurrentPointerRecursion;
 
@@ -692,7 +691,7 @@ RegisterDebugPreTypeHandler _register_sysTypeHandler(handleSysType);
 
 
 bool 
-querySymbolType(__int64 modBase, unsigned long  dwTypeIndex, DWORD_PTR offset, intptr_t size, DbgType& dbgType, intptr_t queryFlags)
+querySymbolType(__int64 modBase, uintptr_t dwTypeIndex, DWORD_PTR offset, int64_t size, DbgType& dbgType, intptr_t queryFlags)
 {
   intptr_t mb1 = (intptr_t)modBase;
   intptr_t mb2 = modBase >> 32;

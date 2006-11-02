@@ -189,8 +189,8 @@ public:
     return ptr == _ptr;
   }
   
-  int lastIndexOf(const char* text) const;
-  DbgString substr(int offset, int length = -1) const;
+  intptr_t lastIndexOf(const char* text) const;
+  DbgString substr(intptr_t offset, intptr_t length = -1) const;
   DbgString operator+(const char* text) const;
 
   DbgString operator+(const DbgString& other) const
@@ -199,7 +199,7 @@ public:
   }
 protected:
   void _release();
-  void _assign(const char* ptr, int length = -1);
+  void _assign(const char* ptr, intptr_t length = -1);
 };
 
 /**
@@ -211,7 +211,7 @@ class DbgStream
   DbgVector<char> _buffer;
   typedef DbgVector<char>::iterator iterator;
 public:
-  DbgStream(int buffSize = 256) 
+  DbgStream(intptr_t buffSize = 256) 
     : _buffer(buffSize < 1 ? 2 : buffSize)
   {
     *_buffer.begin() = 0;
