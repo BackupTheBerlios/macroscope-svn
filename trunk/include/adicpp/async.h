@@ -130,7 +130,7 @@ class AsyncEvent {
           uint64_t count_;
           uintptr_t data_;
           Thread * thread_;
-          uintptr_t threadHandle_;
+          uintptr_t tid_;
           Vector<utf8::String> * dirList_;
         };
         LockFileType lockType_;

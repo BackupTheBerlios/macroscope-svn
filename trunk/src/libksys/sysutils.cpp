@@ -62,7 +62,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
     AsyncEvent event;
     event.mutex0_ = &mutex;
     event.data1_ = skipCount;
-    event.threadHandle_ = (uintptr_t) GetCurrentThread();
+    event.tid_ = (uintptr_t) GetCurrentThreadId();
     event.type_ = etStackBackTraceZero;
     mutex.acquire();
     Requester::requester().postRequest(&event);

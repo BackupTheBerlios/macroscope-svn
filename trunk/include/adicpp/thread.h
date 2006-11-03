@@ -86,7 +86,7 @@ class Thread {
 
     Thread & resume();
     Thread & suspend();
-    static bool isSuspended(uintptr_t handle);
+    static bool isSuspended(uintptr_t tid);
     bool isSuspended() const;
     Thread & wait();
 
@@ -181,7 +181,7 @@ inline Thread::~Thread()
 //---------------------------------------------------------------------------
 inline bool Thread::isSuspended() const
 {
-  return isSuspended((uintptr_t) handle_);
+  return isSuspended(id_);
 }
 //---------------------------------------------------------------------------
 inline uintptr_t Thread::id() const

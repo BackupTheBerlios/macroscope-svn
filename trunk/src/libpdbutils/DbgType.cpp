@@ -78,22 +78,19 @@ registerDebugTypePreHandler(DebugTypeHandler handler)
   getDebugTypePreHandlerArray().push_back(handler);
 }
 
-
 intptr_t MaxPointerRecursion = 0;
 
-
-void 
-DbgFrame::toString(DbgStream& ss, intptr_t printflags) const
+void DbgFrame::toString(DbgStream& ss, intptr_t printflags) const
 {
-  ss << "------------------------------------------------------------------" NL;
+//  ss << "------------------------------------------------------------------" NL;
   if (printflags & DbgFrameGetLibary)
   {
     if (DBGSTRING_SIZE(libraryName) > 0)
-      ss << libraryName << ":" NL;
+      ss << libraryName << ": " << NL;
   }
   if (printflags & DbgFrameGetSourcePos)
   {
-    ss << sourceFileName << "(" << sourceFileLine << "):" NL;
+    ss << sourceFileName << "(" << sourceFileLine << "): ";
   }
   //return sourceFileName;// + "(" + sourceFileLine + "): " + functionName;
   ss << functionName << "(";
@@ -517,7 +514,7 @@ setBasicType(DbgType::BasicType basicType, DWORD64 length, PVOID pAddress, DbgTy
 
 
 bool
-queryArrayType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& dbgType, int queryFlags)
+queryArrayType(DWORD64 modBase, uintptr_t dwTypeIndex, DWORD_PTR address, DbgType& dbgType, intptr_t queryFlags)
 {
   DWORD realTypeId = 0;
   DOUTNL("queryArrayType");
@@ -704,13 +701,13 @@ querySymbolType(__int64 modBase, uintptr_t dwTypeIndex, DWORD_PTR offset, int64_
   DWORD symbTag = 0;
 
   HANDLE_FALSE_CALL(
-    SymGetTypeInfo( _currentProcess, modBase, dwTypeIndex, TI_GET_SYMTAG, &symbTag ),
+    SymGetTypeInfo( _currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_SYMTAG, &symbTag ),
       symbTag = -1;
     )
   
   DbgType::TagEnum tag = (DbgType::TagEnum)symbTag;
   WCHAR * pwszTypeName;
-  if (SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_SYMNAME, &pwszTypeName))
+  if (SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_SYMNAME, &pwszTypeName))
   {
     char tbuf[2048];
     sprintf(tbuf, "%ls", pwszTypeName);
@@ -739,7 +736,7 @@ retry:
   case -1:
   {
     DWORD dwChildrenCount = 0;
-    SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_CHILDRENCOUNT, &dwChildrenCount);
+    SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_CHILDRENCOUNT, &dwChildrenCount);
     if (dwChildrenCount != 0)
     {
       tag = DbgType::SymTagBaseType;
@@ -960,14 +957,14 @@ bool querySymbolValue(PSYMBOL_INFO pSym, DbgFrame& frame)
 {
   DbgType::Flags symtype = DbgType::STUnknown;
   // Indicate if the variable is a local or parameter
-  if (pSym->Flags & IMAGEHLP_SYMBOL_INFO_PARAMETER)
+  if (pSym->Flags & SYMFLAG_PARAMETER /*IMAGEHLP_SYMBOL_INFO_PARAMETER*/)
   {
     if ((frame.queryFlags & DbgFrameGetArguments) == 0)
       return false;
     symtype = DbgType::STParam;
     DOUT("  Param: ");
   }
-  else if ( pSym->Flags & IMAGEHLP_SYMBOL_INFO_LOCAL )
+  else if ( pSym->Flags & SYMFLAG_LOCAL/*IMAGEHLP_SYMBOL_INFO_LOCAL*/ )
   {
     if ((frame.queryFlags & DbgFrameGetLocals) == 0)
       return false;

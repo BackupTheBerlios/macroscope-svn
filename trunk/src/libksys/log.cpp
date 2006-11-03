@@ -150,37 +150,72 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
 #define SNPRINTF _snprintf
 #endif
       if( pri == lmDEBUG ){
-        a = SNPRINTF(
-          NULL,
-          0,
-          "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
-          t.tm_mday,
-          t.tm_mon + 1,
-          t.tm_year + 1900,
-          t.tm_hour,
-          t.tm_min,
-          t.tm_sec,
-          tv.tv_usec,
-          priNicks_[pri],
-          getpid(),
-          (unsigned int) level
-        );
+        if( currentFiber() != NULL )
+          a = SNPRINTF(
+            NULL,
+            0,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p,%u): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid(),
+            currentFiber(),
+            (unsigned int) level
+          );
+        else
+          a = SNPRINTF(
+            NULL,
+            0,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid(),
+            (unsigned int) level
+          );
       }
       else {
-        a = SNPRINTF(
-          NULL,
-          0,
-          "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-          t.tm_mday,
-          t.tm_mon + 1,
-          t.tm_year + 1900,
-          t.tm_hour,
-          t.tm_min,
-          t.tm_sec,
-          tv.tv_usec,
-          priNicks_[pri],
-          getpid()
-        );
+        if( currentFiber() != NULL )
+          a = SNPRINTF(
+            NULL,
+            0,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid(),
+            currentFiber()
+          );
+        else
+          a = SNPRINTF(
+            NULL,
+            0,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid()
+          );
       }
       if( a == -1 ){
         int32_t err = errno;
@@ -189,37 +224,72 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
       AutoPtr<char> buf;
       buf.alloc(a + 1);
       if( pri == lmDEBUG ){
-        a = SNPRINTF(
-          buf.ptr(),
-          a + 1,
-          "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
-          t.tm_mday,
-          t.tm_mon + 1,
-          t.tm_year + 1900,
-          t.tm_hour,
-          t.tm_min,
-          t.tm_sec,
-          tv.tv_usec,
-          priNicks_[pri],
-          getpid(),
-          (unsigned int) level
-        );
+        if( currentFiber() != NULL )
+          a = SNPRINTF(
+            buf.ptr(),
+            a + 1,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p,%u): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid(),
+            currentFiber(),
+            (unsigned int) level
+          );
+        else
+          a = SNPRINTF(
+            buf.ptr(),
+            a + 1,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid(),
+            (unsigned int) level
+          );
       }
       else {
-        a = SNPRINTF(
-          buf.ptr(),
-          a + 1,
-          "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-          t.tm_mday,
-          t.tm_mon + 1,
-          t.tm_year + 1900,
-          t.tm_hour,
-          t.tm_min,
-          t.tm_sec,
-          tv.tv_usec,
-          priNicks_[pri],
-          getpid()
-        );
+        if( currentFiber() != NULL )
+          a = SNPRINTF(
+            buf.ptr(),
+            a + 1,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid(),
+            currentFiber()
+          );
+        else
+          a = SNPRINTF(
+            buf.ptr(),
+            a + 1,
+            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
+            t.tm_mday,
+            t.tm_mon + 1,
+            t.tm_year + 1900,
+            t.tm_hour,
+            t.tm_min,
+            t.tm_sec,
+            tv.tv_usec,
+            priNicks_[pri],
+            getpid()
+          );
       }
   #undef SNPRINTF
       if( a == -1 ){

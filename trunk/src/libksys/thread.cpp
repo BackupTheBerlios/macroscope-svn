@@ -459,78 +459,88 @@ typedef NTSTATUS (NTAPI * PFNNtQuerySystemInformation)(
   OUT PULONG ReturnLength OPTIONAL
 );
 //---------------------------------------------------------------------------
-bool Thread::isSuspended(uintptr_t handle)
+bool Thread::isSuspended(uintptr_t tid)
 {
+  bool r = false;
   HINSTANCE hInstLib = LoadLibraryEx("ntdll.dll",NULL,DONT_RESOLVE_DLL_REFERENCES);
-  if( hInstLib != NULL ){
-    PFNNtQuerySystemInformation pNtQuerySystemInformation =
-      (PFNNtQuerySystemInformation) GetProcAddress(hInstLib,"NtQuerySystemInformation");
-    /*PFNZwQuerySystemInformation pZwQuerySystemInformation =
-      (PFNZwQuerySystemInformation) GetProcAddress(hInstLib,"ZwQuerySystemInformation");*/
-    union {
-      PSYSTEM_PROCESS_INFORMATION pProcess;
-      PSYSTEM_PROCESS_NT4 pProcessNT4;
-      PSYSTEM_PROCESS_NT5 pProcessNT5;
-    };
-    PSYSTEM_PROCESS_INFORMATION pInfo = NULL;
-    ULONG returnLength, length = 0;
-    NTSTATUS status = pNtQuerySystemInformation(
+  if( hInstLib == NULL ){
+    int32_t err = GetLastError() + errorOffset;
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  PFNNtQuerySystemInformation pNtQuerySystemInformation =
+    (PFNNtQuerySystemInformation) GetProcAddress(hInstLib,"NtQuerySystemInformation");
+  union {
+    PSYSTEM_PROCESS_INFORMATION pProcess;
+    PSYSTEM_PROCESS_NT4 pProcessNT4;
+    PSYSTEM_PROCESS_NT5 pProcessNT5;
+  };
+  PSYSTEM_PROCESS_INFORMATION pInfo = NULL;
+  ULONG returnLength, length = 0;
+  NTSTATUS status = pNtQuerySystemInformation(
+    SystemProcessInformation,
+    pInfo,
+    length,
+    &returnLength
+  );
+  while( status == STATUS_INFO_LENGTH_MISMATCH ){
+    length = returnLength;
+    if( pInfo == NULL ){
+      pInfo = (PSYSTEM_PROCESS_INFORMATION) LocalAlloc(LMEM_FIXED,returnLength);
+    }
+    else {
+      pInfo = (PSYSTEM_PROCESS_INFORMATION) LocalReAlloc(pInfo,returnLength,0);
+    }
+    status = pNtQuerySystemInformation(
       SystemProcessInformation,
       pInfo,
       length,
       &returnLength
     );
-    while( status == STATUS_INFO_LENGTH_MISMATCH ){
-      length = returnLength;
-      if( pInfo == NULL ){
-        pInfo = (PSYSTEM_PROCESS_INFORMATION) LocalAlloc(LMEM_FIXED,returnLength);
-      }
-      else {
-        pInfo = (PSYSTEM_PROCESS_INFORMATION) LocalReAlloc(pInfo,returnLength,0);
-      }
-      status = pNtQuerySystemInformation(
-        SystemProcessInformation,
-        pInfo,
-        length,
-        &returnLength
-      );
-    }
-    if( status == STATUS_SUCCESS ){
-      pProcess = pInfo;
-      uintptr_t pid = GetCurrentProcessId();
-      uintptr_t tid = GetThreadId((HANDLE) handle);
-      for(;;){
-        fprintf(stdout,"%S %u\n",
-          pProcessNT5->Process.usName.Buffer != NULL ? pProcessNT5->Process.usName.Buffer : L"Idle",
-          pProcess->UniqueProcessId
-        );
-        if( (uintptr_t) pProcess->UniqueProcessId == pid ){
-          intptr_t i;
-          for( i = pProcessNT5->Process.dThreadCount - 1; i >= 0; i-- ){
-            PSYSTEM_THREAD pThread = pProcessNT5->aThreads + i;
-            fprintf(stdout,"%S %u %u\n",
-              pProcessNT5->Process.usName.Buffer != NULL ? pProcessNT5->Process.usName.Buffer : L"Idle",
-              pThread->Cid.UniqueProcess,
-              pThread->Cid.UniqueThread
-            );
-            if( pThread->Cid.UniqueThread == (HANDLE) handle ) break;
-            if( pThread->Cid.UniqueThread == (HANDLE) (~handle + 1) ) break;
-            if( pThread->Cid.UniqueThread == tid ) break;
-          }
-          if( i >= 0 ){
-            i = i;
-            fprintf(stdout,"hit\n");
-          }
+  }
+  if( status == STATUS_SUCCESS ){
+    pProcess = pInfo;
+    uintptr_t pid = GetCurrentProcessId();
+    for(;;){
+      /*fprintf(stdout,"%S %u\n",
+        pProcessNT5->Process.usName.Buffer != NULL ? pProcessNT5->Process.usName.Buffer : L"Idle",
+        pProcess->UniqueProcessId
+      );*/
+      if( (uintptr_t) pProcess->UniqueProcessId == pid ){
+        PSYSTEM_THREAD pThread, pThread1;
+        if( isWinNT4() ){
+          pThread = pProcessNT4->aThreads;
         }
-        if( pProcess->NextEntryOffset == 0 ) break;
-        pProcess = (PSYSTEM_PROCESS_INFORMATION) ((PBYTE) pProcess + pProcess->NextEntryOffset);
+        else {
+          pThread = pProcessNT5->aThreads;
+        }
+        pThread1 = pThread + pProcessNT5->Process.dThreadCount;
+        while( pThread < pThread1 ){
+          /*fprintf(stdout,"%S %u %u\n",
+            pProcessNT5->Process.usName.Buffer != NULL ? pProcessNT5->Process.usName.Buffer : L"Idle",
+            pThread->Cid.UniqueProcess,
+            pThread->Cid.UniqueThread
+          );*/
+          if( (uintptr_t) pThread->Cid.UniqueThread == tid ){
+            r = pThread->dThreadState == StateStandby || pThread->dThreadState == StateWait;
+            pProcess->NextEntryOffset = 0;
+            break;
+          }
+          pThread++;
+        }
       }
+      if( pProcess->NextEntryOffset == 0 ) break;
+      pProcess = (PSYSTEM_PROCESS_INFORMATION) ((PBYTE) pProcess + pProcess->NextEntryOffset);
     }
+  }
+  else {
     LocalFree(pInfo);
     FreeLibrary(hInstLib);
+    int32_t err = status + errorOffset;
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
-  exit(0);
-  return false;
+  LocalFree(pInfo);
+  FreeLibrary(hInstLib);
+  return r;
 }
 //---------------------------------------------------------------------------
 uint8_t Thread::beforeExecuteActions_[sizeof(Array<Action>)];

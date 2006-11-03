@@ -100,7 +100,7 @@ public:
     @param length length of ptr string. If length == -1 (default) str will be 
             used until 0 termination
   */
-  DbgString(const char* ptr, int length = -1)
+  DbgString(const char* ptr, intptr_t length = -1)
   : _ptr(0)
   , _owns(true)
   {

@@ -408,8 +408,7 @@ getBackTrace(intptr_t flags, intptr_t skipCount, void* threadHandle)
   ss  << "SkiptCount: " << skipCount << NL
       << "StackFrameCount: " << count << NL;
     */
-  skipCount = -1;
-  for (intptr_t i = skipCount + 1; i < count; ++i)
+  for (intptr_t i = skipCount; i < count; ++i)
   {
     DbgFrame frame;
     getFrame(pcs[i], frame, flags);

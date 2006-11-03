@@ -53,7 +53,7 @@ class Exception {
 
     int32_t code() const;
     Exception & code(int32_t err);
-    const utf8::String & what() const;
+    const utf8::String what() const;
     Exception & what(const utf8::String & error);
     const Array<int32_t> & codes() const;
     const Array<utf8::String> & whats() const;
@@ -80,20 +80,10 @@ class Exception {
     void operator = (const Exception &){}
 };
 //---------------------------------------------------------------------------
-inline int32_t Exception::code() const
-{
-  return codes_[(uintptr_t) 0];
-}
-//---------------------------------------------------------------------------
 inline Exception & Exception::code(int32_t err)
 {
   codes_.add(err);
   return *this;
-}
-//---------------------------------------------------------------------------
-inline const utf8::String & Exception::what() const
-{
-  return whats_[(uintptr_t) 0];
 }
 //---------------------------------------------------------------------------
 inline Exception & Exception::what(const utf8::String & error)

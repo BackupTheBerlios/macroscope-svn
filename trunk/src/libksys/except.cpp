@@ -60,100 +60,25 @@ bool Exception::isFatalError() const
   return false;
 }
 //---------------------------------------------------------------------------
+int32_t Exception::code() const
+{
+  return codes_.count() > 0 ? codes_[(uintptr_t) 0] : 0;
+}
+//---------------------------------------------------------------------------
+const utf8::String Exception::what() const
+{
+  return whats_.count() > 0 ? whats_[(uintptr_t) 0] : utf8::String();
+}
+//---------------------------------------------------------------------------
 void Exception::throwSP()
 {
-/*
-// Set options 
-	DWORD options = SymGetOptions(); 
-// SYMOPT_DEBUG option asks DbgHelp to print additional troubleshooting 
-// messages to debug output - use the debugger's Debug Output window 
-// to view the messages 
-	options |= SYMOPT_DEBUG | SYMOPT_LOAD_LINES | SYMOPT_FAIL_CRITICAL_ERRORS | SYMOPT_INCLUDE_32BIT_MODULES;
-	SymSetOptions(options);
-
-  int32_t err;
-  BOOL r = SymInitialize(GetCurrentProcess(),NULL,TRUE);
-  err = GetLastError();
-//  DWORD64 modBase = SymLoadModule64(GetCurrentProcess(),NULL,NULL,NULL,0,0);
-//  err = GetLastError();
-  union {
-    SYMBOL_INFO SymbolInfo;
-    char name[sizeof(SYMBOL_INFO) / sizeof(char) + MAX_SYM_NAME];
-  };
-  SymbolInfo.SizeOfStruct = sizeof(SYMBOL_INFO);
-  SymbolInfo.MaxNameLen = MAX_SYM_NAME;
-  DWORD64 dw64Displacement;
-  r = SymFromAddr(
-    GetCurrentProcess(),
-    (DWORD64) fibonacci,
-    &dw64Displacement,
-    &SymbolInfo
-  );
-  err = GetLastError();
-  if( SymbolInfo.Flags & SYMFLAG_THUNK ){
-    SymbolInfo.SizeOfStruct = sizeof(SYMBOL_INFO);
-    SymbolInfo.MaxNameLen = MAX_SYM_NAME;
-    r = SymFromAddr(
-      GetCurrentProcess(),
-      SymbolInfo.Value,
-      &dw64Displacement,
-      &SymbolInfo
-    );
-    err = GetLastError();
-  }
-  if( SymbolInfo.Flags & SYMFLAG_FUNCTION || SymbolInfo.Flags == 0 ){
-    IMAGEHLP_LINE64 line;
-    line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-    DWORD dwDisplacement;
-    r = SymGetLineFromAddr64(GetCurrentProcess(),SymbolInfo.Address,&dwDisplacement,&line);
-    err = GetLastError();
-    union {
-      DWORD * pTag;
-      DWORD callingConvention;
-      BSTR symName;
-    };
-    r = SymGetTypeInfo(
-      GetCurrentProcess(),
-      SymbolInfo.ModBase,
-      SymbolInfo.TypeIndex,
-      TI_GET_TYPE,
-      &callingConvention
-    );
-    err = GetLastError();
-    r = SymGetTypeInfo(
-      GetCurrentProcess(),
-      SymbolInfo.ModBase,
-      SymbolInfo.TypeIndex,
-      TI_GET_SYMTAG,
-      &pTag
-    );
-    err = GetLastError();
-    r = SymGetTypeInfo(
-      GetCurrentProcess(),
-      SymbolInfo.ModBase,
-      SymbolInfo.TypeIndex,
-      TI_GET_CALLING_CONVENTION,
-      &callingConvention
-    );
-    err = GetLastError();
-    r = SymGetTypeInfo(
-      GetCurrentProcess(),
-      SymbolInfo.ModBase,
-      SymbolInfo.TypeIndex,
-      TI_GET_SYMNAME,
-      &symName
-    );
-    err = GetLastError();
-    LocalFree(symName);
-  }
-  r = SymCleanup(GetCurrentProcess());
-  err = GetLastError();*/
-
+#ifndef NDEBUG
   if( stackBackTrace_ ){
     utf8::String::Stream stackTrace;
-    stackTrace << getBackTrace();
-    if( stackTrace.count() > 0 ) stdErr.debug(128,stackTrace);
+    stackTrace << "\n" << getBackTrace(5);
+    if( stackTrace.count() > 1 ) stdErr.debug(128,stackTrace);
   }
+#endif
   refCount_ = 0;
   throw ExceptionSP(this);
 }

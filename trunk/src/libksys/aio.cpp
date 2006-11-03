@@ -1438,36 +1438,48 @@ void AsyncStackBackTraceSlave::threadExecute()
     else {
       assert( request->type_ == etStackBackTrace || request->type_ == etStackBackTraceZero );
       request->errno_ = 0;
-      DWORD result;
+      HANDLE threadHandle;
       switch( request->type_ ){
         case etStackBackTrace :
           assert( request->thread_ != NULL );
           if( request->mutex0_ == NULL ) request->thread_->suspend();
-          request->string0_ =// DBGSTRING2CHARPTR(
-            pdbutils::getBackTrace(
-              pdbutils::DbgFrameGetAll,
-              request->data1_ == -1 ? -1 : request->data1_ + 1,
-              request->thread_
-            );
+          threadHandle = OpenThread(THREAD_ALL_ACCESS,FALSE,(DWORD) request->thread_->id());
+          if( threadHandle != NULL ){
+            request->string0_ =// DBGSTRING2CHARPTR(
+              pdbutils::getBackTrace(
+                pdbutils::DbgFrameGetAll,
+                request->data1_,
+                threadHandle
+              );
+            CloseHandle(threadHandle);
+          }
           if( request->mutex0_ == NULL ) request->thread_->resume();
           acquire();
           requests_.remove(*request);
-          request->fiber_->thread()->postEvent(request);
           release();
-          if( request->mutex0_ != NULL ) request->mutex0_->release();
+          if( request->mutex0_ == NULL ){
+            request->fiber_->thread()->postEvent(request);
+          }
+          else {
+            request->mutex0_->release();
+          }
           break;
         case etStackBackTraceZero :
-          while( !Thread::isSuspended(request->threadHandle_) ) sleep1();
+          while( !Thread::isSuspended(request->tid_) ) sleep1();
+          threadHandle = OpenThread(THREAD_ALL_ACCESS,FALSE,(DWORD) request->tid_);
+          if( threadHandle != NULL ){
 //          result = SuspendThread((HANDLE) request->threadHandle_);
 //          if( result == (DWORD) -1 ) exit(GetLastError());
-          request->string0_ =// DBGSTRING2CHARPTR(
-            pdbutils::getBackTrace(
-              pdbutils::DbgFrameGetAll,
-              request->data1_ == -1 ? -1 : request->data1_ + 1,
-              request->thread_
-            );
-          result = ResumeThread((HANDLE) request->threadHandle_);
-          if( result == (DWORD) -1 ) exit(GetLastError());
+            request->string0_ =// DBGSTRING2CHARPTR(
+              pdbutils::getBackTrace(
+                pdbutils::DbgFrameGetAll,
+                request->data1_,
+                threadHandle
+              );
+//          result = ResumeThread((HANDLE) request->threadHandle_);
+//          if( result == (DWORD) -1 ) exit(GetLastError());
+            CloseHandle(threadHandle);
+          }
           acquire();
           requests_.remove(*request);
           release();

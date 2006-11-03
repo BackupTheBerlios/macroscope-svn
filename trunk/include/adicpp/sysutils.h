@@ -113,7 +113,17 @@ extern UINT   fiberFinishMessage;
 inline bool isWin9x()
 {
   DWORD dwVersion = GetVersion();
-  return (dwVersion >> 31) == 1 && (dwVersion & 0xFF) == 4;
+  return (dwVersion & (DWORD(1u) << 31)) != 0 && (dwVersion & 0xFF) == 4;
+}
+inline bool isWinNT4()
+{
+  DWORD dwVersion = GetVersion();
+  return (dwVersion & (DWORD(1u) << 31)) == 0 && (dwVersion & 0xFF) == 4;
+}
+inline bool isWinNT5()
+{
+  DWORD dwVersion = GetVersion();
+  return (dwVersion & (DWORD(1u) << 31)) == 0 && (dwVersion & 0xFF) == 5;
 }
 inline bool isWinXPorLater()
 {
@@ -134,6 +144,14 @@ bool isWow64();
 
 #else
 inline bool isWin9x()
+{
+  return false;
+}
+inline bool isWinNT4()
+{
+  return false;
+}
+inline bool isWinNT5()
 {
   return false;
 }
