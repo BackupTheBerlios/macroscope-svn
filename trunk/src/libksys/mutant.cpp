@@ -538,6 +538,7 @@ Mutant::operator int() const
       ;
   }
   newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned() const
@@ -573,6 +574,7 @@ Mutant::operator unsigned() const
       ;
   }
   newObject<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 #endif

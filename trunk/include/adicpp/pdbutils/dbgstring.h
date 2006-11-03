@@ -235,7 +235,13 @@ public:
   void append(intptr_t i)
   {
     char ibuff[64];
-    sprintf(ibuff, "%d", i);
+    sprintf(ibuff, "%"PRIdPTR, i);
+    append(ibuff, strlen(ibuff));
+  }
+  void append(uintptr_t i)
+  {
+    char ibuff[64];
+    sprintf(ibuff, "%"PRIuPTR, i);
     append(ibuff, strlen(ibuff));
   }
   inline
@@ -257,9 +263,26 @@ public:
     append(ptr);
     return *this;
   }
+#if !HAVE_INTPTR_T_AS_INT && !HAVE_INT_AS_INTPTR_T
   inline DbgStream&  operator<<(int i)
   {
+    append((intptr_t) i);
+    return *this;
+  }
+#endif
+  inline DbgStream&  operator<<(intptr_t i)
+  {
     append(i);
+    return *this;
+  }
+  inline DbgStream&  operator<<(uintptr_t i)
+  {
+    append(i);
+    return *this;
+  }
+  inline DbgStream&  operator<<(DWORD i)
+  {
+    append((uintptr_t) i);
     return *this;
   }
 

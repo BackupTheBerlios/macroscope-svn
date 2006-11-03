@@ -129,10 +129,7 @@ void API::open()
       handle_ = LoadLibraryExA("ws2_32.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       if( handle_ == NULL ){
         err = GetLastError() + ksys::errorOffset;
-        ksys::stdErr.log(
-          ksys::lmERROR,
-          utf8::String::Stream() << "Load 'ws2_32.dll' failed\n"
-        );
+        ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'ws2_32.dll' failed\n");
         newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
       }
       apiEx.handle_ = LoadLibraryExA("mswsock.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -140,10 +137,7 @@ void API::open()
         err = GetLastError() + ksys::errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
-        ksys::stdErr.log(
-          ksys::lmERROR,
-          utf8::String::Stream() << "Load 'mswsock.dll' failed\n"
-        );
+        ksys::stdErr.debug(9,utf8::String::Stream() << "Load 'mswsock.dll' failed\n");
         newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
       }
     }
@@ -206,8 +200,7 @@ void API::open()
         iphlpapi.handle_ = NULL;
         FreeLibrary(wship6api.handle_);
         wship6api.handle_ = NULL;
-        ksys::stdErr.log(
-          ksys::lmERROR,
+        ksys::stdErr.debug(9,
           utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
         );
         newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
@@ -225,8 +218,7 @@ void API::open()
         iphlpapi.handle_ = NULL;
         FreeLibrary(wship6api.handle_);
         wship6api.handle_ = NULL;
-        ksys::stdErr.log(
-          ksys::lmERROR,
+        ksys::stdErr.debug(9,
           utf8::String::Stream() << "GetProcAddress(\"" << apiEx.symbols_[i] << "\")\n"
         );
         newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();

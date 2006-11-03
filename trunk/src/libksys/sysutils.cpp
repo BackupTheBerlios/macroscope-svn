@@ -32,9 +32,10 @@ bool stackBackTrace = true;
 //---------------------------------------------------------------------------
 utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 {
+#if !defined(NDEBUG)/* || CMAKE_BUILD_TYPE == 1 || CMAKE_BUILD_TYPE == 3*/
   if( stackBackTrace ){
-    InterlockedMutex mutex;
 #if defined(__WIN32__) || defined(__WIN64__)
+    InterlockedMutex mutex;
     if( currentFiber() != NULL ){
       if( thread == NULL ){
         thread = currentThread();
@@ -73,6 +74,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
     return event.string0_;
 #endif
   }
+#endif
   return utf8::String();
 }
 //---------------------------------------------------------------------------

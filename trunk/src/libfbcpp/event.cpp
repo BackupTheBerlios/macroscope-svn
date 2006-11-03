@@ -189,11 +189,7 @@ EventHandler & EventHandler::add(const utf8::String & eventName)
 //---------------------------------------------------------------------------
 EventHandler & EventHandler::eventHandler(const utf8::String & eventName, uintptr_t eventCount)
 {
-  ksys::stdErr.log(
-    ksys::lmNOTIFY,
-    utf8::String::Stream() <<
-    "unhandled event: " << eventName << eventCount
-  );
+  ksys::stdErr.debug(9,utf8::String::Stream() << "unhandled event: " << eventName << eventCount);
   return *this;
 }
 //---------------------------------------------------------------------------

@@ -500,7 +500,7 @@ void KFTPClient::get()
 //------------------------------------------------------------------------------
 void KFTPClient::main()
 {
-  newObject<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+//  newObject<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   try {
     if( config_->section(section_).isValue("log_file") ){
       logFile_.codePage(config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));

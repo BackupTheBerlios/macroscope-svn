@@ -72,7 +72,7 @@ const utf8::String Exception::what() const
 //---------------------------------------------------------------------------
 void Exception::throwSP()
 {
-#ifndef NDEBUG
+#if !defined(NDEBUG)/* || CMAKE_BUILD_TYPE == 1 || CMAKE_BUILD_TYPE == 3*/
   if( stackBackTrace_ ){
     utf8::String::Stream stackTrace;
     stackTrace << "\n" << getBackTrace(5);
@@ -85,7 +85,7 @@ void Exception::throwSP()
 //---------------------------------------------------------------------------
 const Exception & Exception::writeStdError(LogFile * log) const
 {
-  if( stdErr.isDebugLevelEnabled(9) ){
+  if( stdErr.debugLevel(9) ){
     if( log == NULL ) log = &stdErr;
     for( uintptr_t i = 0; i < whats_.count(); i++ ){
       if( codes_[0] == 0 ) continue;

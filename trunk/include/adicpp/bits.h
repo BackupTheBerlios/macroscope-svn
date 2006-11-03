@@ -36,6 +36,12 @@ inline void setBit(void * ptr, uintptr_t n)
   ((uint8_t *) ptr)[n >> 3] |= uint8_t(1u << (n & 7));
 }
 //-----------------------------------------------------------------------------
+inline void setBitValue(void * ptr, uintptr_t n,uintptr_t v)
+{
+  ((uint8_t *) ptr)[n >> 3] &= uint8_t(~0x80u >> (~n & 7));
+  ((uint8_t *) ptr)[n >> 3] |= uint8_t((v & 1) << (n & 7));
+}
+//-----------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INTMAX_T
 inline void setBit(void * ptr, uintmax_t n)
 {

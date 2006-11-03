@@ -192,16 +192,15 @@ void API::open()
 #endif
       handle_ = NULL;
 #endif
-      ksys::stdErr.log(
-        ksys::lmERROR,
+      ksys::stdErr.debug(9,
         utf8::String::Stream() << "my_init couldn't initialize environment\n"
       );
       newObject<ksys::Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
     }
   }
   count_++;
-  intptr_t        c, i;
-  API::ThreadList tl  (gettid());
+  intptr_t c, i;
+  API::ThreadList tl(gettid());
   i = threadList().bSearch(tl, c);
   if( c != 0 ){
     threadList().insert(i += (c > 0), tl);
@@ -212,9 +211,9 @@ void API::open()
 //---------------------------------------------------------------------------
 void API::close()
 {
-  ksys::AutoLock< ksys::InterlockedMutex> lock  (mutex());
-  API::ThreadList                         tl    (gettid());
-  intptr_t                                i     = threadList().bSearch(tl);
+  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  API::ThreadList tl(gettid());
+  intptr_t i = threadList().bSearch(tl);
   if( i >= 0 && --threadList()[i].count_ == 0 ){
     threadList().remove(i);
     api.mysql_thread_end();

@@ -57,6 +57,7 @@
 #cmakedefine HAVE_WBEMIDL_H 1
 #cmakedefine HAVE_DBGHELP_H 1
 #cmakedefine HAVE_NTSTATUS_H 1
+#cmakedefine HAVE_WINTERNL_H 1
 #cmakedefine HAVE_TLHELP32_H 1
 #cmakedefine HAVE_IPHLPAPI_H 1
 #cmakedefine HAVE_TYPEINFO_H 1

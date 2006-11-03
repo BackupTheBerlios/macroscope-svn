@@ -1529,9 +1529,11 @@ Requester::~Requester()
     wdcnSlaves_[i].post();
     wdcnSlaves_[i].Thread::wait();
   }
-  asyncStackBackTraceSlave_->terminate();
-  asyncStackBackTraceSlave_->post();
-  asyncStackBackTraceSlave_->Thread::wait();
+  if( asyncStackBackTraceSlave_ != NULL ){
+    asyncStackBackTraceSlave_->terminate();
+    asyncStackBackTraceSlave_->post();
+    asyncStackBackTraceSlave_->Thread::wait();
+  }
 #endif
 }
 //---------------------------------------------------------------------------

@@ -10,6 +10,7 @@ TARGET_LINK_LIBRARIES (macroscope
   ksys
   mycpp
   utf8
+  ${LIBPDBUTILS}
 )
 
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)

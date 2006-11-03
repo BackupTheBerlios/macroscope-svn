@@ -29,17 +29,6 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-enum LogMessagePriority { 
-  lmINFO,
-  lmDEBUG,
-  lmNOTIFY, 
-  lmWARNING, 
-  lmERROR, 
-  lmFATAL, 
-  lmPROFILER,
-  lmDIRECT 
-};
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class AsyncFile;
@@ -58,13 +47,12 @@ class LogFile {
     LogFile & fileName(const utf8::String & name);
     const utf8::String & fileName() const;
 
-    LogFile & log(LogMessagePriority pri,const utf8::String::Stream & stream);
     LogFile & debug(uintptr_t level,const utf8::String::Stream & stream);
 
-    bool isDebugLevelEnabled(uintptr_t level) const;
-    LogFile & enableDebugLevel(uintptr_t level);
-    LogFile & disableDebugLevel(uintptr_t level);
+    bool debugLevel(uintptr_t level) const;
+    LogFile & debugLevel(uintptr_t level,intptr_t value);
     LogFile & setDebugLevels(const utf8::String & levels);
+    LogFile & setAllDebugLevels(intptr_t value);
 
     LogFile & rotationThreshold(uint64_t a);
     const uint64_t & rotationThreshold() const;
@@ -72,8 +60,6 @@ class LogFile {
     const uintptr_t & rotatedFileCount() const;
     LogFile & codePage(uintptr_t a);
     const uintptr_t & codePage() const;
-
-    const char * const & priNick(LogMessagePriority filter) const;
 
     LogFile & redirectToStdin();
     LogFile & redirectToStdout();
@@ -89,21 +75,16 @@ class LogFile {
     uintptr_t rotatedFileCount_;
     uintptr_t codePage_;
 
-    LogFile & internalLog(LogMessagePriority pri,uintptr_t level,const utf8::String::Stream & stream);
+    LogFile & internalLog(uintptr_t level,const utf8::String::Stream & stream);
     void rotate(uint64_t size);
   private:
     static void initialize();
     static void cleanup();
 };
 //---------------------------------------------------------------------------
-inline LogFile & LogFile::log(LogMessagePriority pri,const utf8::String::Stream & stream)
-{
-  return internalLog(pri,~uintptr_t(0),stream);
-}
-//---------------------------------------------------------------------------
 inline LogFile & LogFile::debug(uintptr_t level,const utf8::String::Stream & stream)
 {
-  return internalLog(lmDEBUG,level,stream);
+  return internalLog(level,stream);
 }
 //---------------------------------------------------------------------------
 inline const utf8::String & LogFile::fileName() const
@@ -111,25 +92,14 @@ inline const utf8::String & LogFile::fileName() const
   return file_.fileName();
 }
 //---------------------------------------------------------------------------
-inline const char * const & LogFile::priNick(LogMessagePriority filter) const
+inline bool LogFile::debugLevel(uintptr_t level) const
 {
-  return priNicks_[filter];
+  return bit(enabledLevels_,level & (sizeof(enabledLevels_) * 8u - 1)) != 0;
 }
 //---------------------------------------------------------------------------
-inline bool LogFile::isDebugLevelEnabled(uintptr_t level) const
+inline LogFile & LogFile::debugLevel(uintptr_t level,intptr_t value)
 {
-  return bit(enabledLevels_,level & (sizeof(enabledLevels_) * 8u)) != 0;
-}
-//---------------------------------------------------------------------------
-inline LogFile & LogFile::enableDebugLevel(uintptr_t level)
-{
-  setBit(enabledLevels_,level & (sizeof(enabledLevels_) * 8u));
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline LogFile & LogFile::disableDebugLevel(uintptr_t level)
-{
-  resetBit(enabledLevels_,level & (sizeof(enabledLevels_) * 8u));
+  setBitValue(enabledLevels_,level & (sizeof(enabledLevels_) * 8u - 1),value > 0);
   return *this;
 }
 //---------------------------------------------------------------------------

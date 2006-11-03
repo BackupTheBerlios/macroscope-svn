@@ -117,7 +117,6 @@ getProgramCounters(FrameAddress* frames, intptr_t pccount, void* threadHandle)
   HANDLE currentProcess = _currentProcess;
   if (GetThreadContext(currentThread, &context) == 0)
     return 0;
-
 #ifdef _M_IX86
     // Initialize the STACKFRAME structure for the first call.  This is only
     // necessary for Intel CPUs, and isn't mentioned in the documentation.
@@ -130,9 +129,9 @@ getProgramCounters(FrameAddress* frames, intptr_t pccount, void* threadHandle)
   dwMachineType = IMAGE_FILE_MACHINE_I386;
 #endif
 #ifdef _M_X64
-  dwMachineType = IMAGE_FILE_MACHINE_AMD64
+  dwMachineType = IMAGE_FILE_MACHINE_AMD64;
 #endif
-  intptr_t i ;
+  intptr_t i;
   for (i = 0; i < pccount; ++i)
   {
         // Get the next stack frame
@@ -148,8 +147,8 @@ getProgramCounters(FrameAddress* frames, intptr_t pccount, void* threadHandle)
       break;
     if( 0 == sf.AddrFrame.Offset ) // Basic sanity check to make sure
       break;                      // the frame is OK.  Bail if not.
-    frames[i].address = sf.AddrPC.Offset;
-    frames[i].offset = sf.AddrFrame.Offset;
+    frames[i].address = (intptr_t) sf.AddrPC.Offset;
+    frames[i].offset = (intptr_t) sf.AddrFrame.Offset;
   }
   return i;
 }
@@ -206,14 +205,14 @@ getProgramCounters(FrameAddress* frames, intptr_t pccount, CONTEXT& context)
 
 static
 bool 
-get_logical_address(void * addr, PTSTR szModule, DWORD len, DWORD& section, DWORD& offset)
+get_logical_address(void * addr, char * szModule, uintptr_t len, uintptr_t & section, uintptr_t & offset)
 {
   MEMORY_BASIC_INFORMATION mbi;
   if (VirtualQuery( addr, &mbi, sizeof(mbi)) == FALSE)
     return false;
 
-  __int8 * hMod = (__int8 *) mbi.AllocationBase;
-  if (GetModuleFileName((HMODULE) hMod, szModule, len) == FALSE)
+  uintptr_t hMod = (uintptr_t) mbi.AllocationBase;
+  if (GetModuleFileName((HMODULE) hMod, szModule, (DWORD) len) == FALSE)
     return false;
 
   PIMAGE_DOS_HEADER pDosHdr = (PIMAGE_DOS_HEADER)hMod;
@@ -224,16 +223,16 @@ get_logical_address(void * addr, PTSTR szModule, DWORD len, DWORD& section, DWOR
   
   PIMAGE_SECTION_HEADER pSection = IMAGE_FIRST_SECTION( pNtHdr );
   
-  __int8 * rva = (__int8 *) ((__int8 *) addr - hMod);
+  uintptr_t rva = (uintptr_t) addr - hMod;
   
   for (intptr_t i = 0; i < pNtHdr->FileHeader.NumberOfSections; i++, pSection++)
   {
-    __int8 * sectionStart = (__int8 *) pSection->VirtualAddress;
-    __int8 * sectionEnd = sectionStart + max(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
+    uintptr_t sectionStart = pSection->VirtualAddress;
+    uintptr_t sectionEnd = sectionStart + max(pSection->SizeOfRawData, pSection->Misc.VirtualSize);
     
     if ((rva >= sectionStart) && (rva <= sectionEnd))
     {
-      section = i + 1;
+      section = DWORD(i + 1);
       offset = rva - sectionStart;
       return true;
     }
@@ -289,7 +288,7 @@ dbgutils_getFrame(const FrameAddress& frameAddr, DbgFrame& frame)
   if (frame.queryFlags & DbgFrameGetLibary)
     {
       char szModule[MAX_PATH] = "";
-      DWORD section = 0, offset = 0;
+      uintptr_t section = 0, offset = 0;
       if (get_logical_address((void*)frameAddr.address, szModule, sizeof(szModule), section, offset ) == true)
       {
         frame.libraryName = szModule;
@@ -546,7 +545,7 @@ void writeAscCrashDump(const char* filename, const char* content, intptr_t lengt
   if (hFile != NULL)
   {
     DWORD written = 0;
-    WriteFile(hFile, content, length, &written, NULL);
+    WriteFile(hFile, content, (DWORD) length, &written, NULL);
     CloseHandle(hFile);
   }
   else
@@ -599,12 +598,12 @@ dbgutils_createDump(const char* filename, intptr_t flags, PEXCEPTION_POINTERS pE
     if (pExceptionInfo != NULL)
     {
       PEXCEPTION_RECORD pExceptionRecord = pExceptionInfo->ExceptionRecord;
-    ss << "Exception code: " << (void*)pExceptionRecord->ExceptionCode << NL
-      << getExceptionString(pExceptionRecord->ExceptionCode) << NL;
+      ss << "Exception code: " << (void*)(uintptr_t)pExceptionRecord->ExceptionCode << NL
+        << getExceptionString(pExceptionRecord->ExceptionCode) << NL;
 
     // Now print information about where the fault occured
     TCHAR szFaultingModule[MAX_PATH];
-    DWORD section, offset;
+    uintptr_t section, offset;
     get_logical_address(  pExceptionRecord->ExceptionAddress,
                         szFaultingModule,
                         sizeof( szFaultingModule ),

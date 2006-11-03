@@ -32,7 +32,7 @@
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-//  Sleep(15000);
+  Sleep(15000);
 //  _set_amblksiz(1024);
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
@@ -114,9 +114,7 @@ int main(int _argc,char * _argv[])
         stdErr.setDebugLevels(argv()[u + 1]);
       }
       else if( argv()[u].strcmp("--debug") == 0 && u + 1 < argv().count() ){
-        stdErr.enableDebugLevel(0).enableDebugLevel(1).enableDebugLevel(2).enableDebugLevel(3).
-          enableDebugLevel(4).enableDebugLevel(5).enableDebugLevel(6).enableDebugLevel(7).
-          enableDebugLevel(8).enableDebugLevel(9);
+        stdErr.setAllDebugLevels(1);
       }
       else if( argv()[u].strcmp("--start-disp") == 0 ){
         dispatch = true;

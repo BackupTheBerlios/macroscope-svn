@@ -32,8 +32,8 @@ using namespace std;
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-char      stdErr_[sizeof(LogFile) / sizeof(char)];
-LogFile & stdErr  = *reinterpret_cast< LogFile *>(stdErr_);
+char stdErr_[sizeof(LogFile) / sizeof(char)];
+LogFile & stdErr = *reinterpret_cast< LogFile *>(stdErr_);
 //---------------------------------------------------------------------------
 void LogFile::initialize()
 {
@@ -57,16 +57,16 @@ LogFile::LogFile() :
 {
 //  enabledLevels_(1 + 2 + 4 + 8 + 16 + 32 + 64 + 128 + 256 + 512),
   memset(enabledLevels_,0,sizeof(enabledLevels_));
-  enableDebugLevel(0);
-  enableDebugLevel(1);
-  enableDebugLevel(2);
-  enableDebugLevel(3);
-  enableDebugLevel(4);
-  enableDebugLevel(5);
-  enableDebugLevel(6);
-  enableDebugLevel(7);
-  enableDebugLevel(8);
-  enableDebugLevel(9);
+  debugLevel(0,1);
+  debugLevel(1,1);
+  debugLevel(2,1);
+  debugLevel(3,1);
+  debugLevel(4,1);
+  debugLevel(5,1);
+  debugLevel(6,1);
+  debugLevel(7,1);
+  debugLevel(8,1);
+  debugLevel(9,1);
   file_.createIfNotExist(true);
   lockFile_.createIfNotExist(true).removeAfterClose(true);
 }
@@ -93,17 +93,6 @@ LogFile & LogFile::fileName(const utf8::String & name)
   catch( ... ){}
   return *this;
 }
-//---------------------------------------------------------------------------
-const char * const  LogFile::priNicks_[] = {
-  "INFO",
-  "DEBUG",
-  "NOTIFY",
-  "WARNING",
-  "ERROR",
-  "FATAL",
-  "PROFILER",
-  "DIRECT"
-};
 //---------------------------------------------------------------------------
 void LogFile::rotate(uint64_t size)
 {
@@ -136,9 +125,9 @@ void LogFile::rotate(uint64_t size)
   }
 }
 //---------------------------------------------------------------------------
-LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8::String::Stream & stream)
+LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stream)
 {
-  if( isDebugLevelEnabled(level) ){
+  if( debugLevel(level) ){
     try {
       struct timeval tv = time2Timeval(getlocaltimeofday());
       struct tm t = time2tm(timeval2Time(tv));
@@ -149,149 +138,75 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
 #elif HAVE__SNPRINTF
 #define SNPRINTF _snprintf
 #endif
-      if( pri == lmDEBUG ){
-        if( currentFiber() != NULL )
-          a = SNPRINTF(
-            NULL,
-            0,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p,%u): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid(),
-            currentFiber(),
-            (unsigned int) level
-          );
-        else
-          a = SNPRINTF(
-            NULL,
-            0,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid(),
-            (unsigned int) level
-          );
-      }
-      else {
-        if( currentFiber() != NULL )
-          a = SNPRINTF(
-            NULL,
-            0,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid(),
-            currentFiber()
-          );
-        else
-          a = SNPRINTF(
-            NULL,
-            0,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid()
-          );
-      }
+      if( currentFiber() != NULL )
+        a = SNPRINTF(
+          NULL,
+          0,
+          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u.%p,%u): ",
+          t.tm_mday,
+          t.tm_mon + 1,
+          t.tm_year + 1900,
+          t.tm_hour,
+          t.tm_min,
+          t.tm_sec,
+          tv.tv_usec,
+          getpid(),
+          currentFiber(),
+          (unsigned int) level
+        );
+      else
+        a = SNPRINTF(
+          NULL,
+          0,
+          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u,%u): ",
+          t.tm_mday,
+          t.tm_mon + 1,
+          t.tm_year + 1900,
+          t.tm_hour,
+          t.tm_min,
+          t.tm_sec,
+          tv.tv_usec,
+          getpid(),
+          (unsigned int) level
+        );
       if( a == -1 ){
         int32_t err = errno;
         newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       AutoPtr<char> buf;
       buf.alloc(a + 1);
-      if( pri == lmDEBUG ){
-        if( currentFiber() != NULL )
-          a = SNPRINTF(
-            buf.ptr(),
-            a + 1,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p,%u): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid(),
-            currentFiber(),
-            (unsigned int) level
-          );
-        else
-          a = SNPRINTF(
-            buf.ptr(),
-            a + 1,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u,%u): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid(),
-            (unsigned int) level
-          );
-      }
-      else {
-        if( currentFiber() != NULL )
-          a = SNPRINTF(
-            buf.ptr(),
-            a + 1,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u.%p): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid(),
-            currentFiber()
-          );
-        else
-          a = SNPRINTF(
-            buf.ptr(),
-            a + 1,
-            "%02u.%02u.%04u %02u:%02u:%02u.%06ld %s(%u): ",
-            t.tm_mday,
-            t.tm_mon + 1,
-            t.tm_year + 1900,
-            t.tm_hour,
-            t.tm_min,
-            t.tm_sec,
-            tv.tv_usec,
-            priNicks_[pri],
-            getpid()
-          );
-      }
-  #undef SNPRINTF
+      if( currentFiber() != NULL )
+        a = SNPRINTF(
+          buf.ptr(),
+          a + 1,
+          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u.%p,%u): ",
+          t.tm_mday,
+          t.tm_mon + 1,
+          t.tm_year + 1900,
+          t.tm_hour,
+          t.tm_min,
+          t.tm_sec,
+          tv.tv_usec,
+          getpid(),
+          currentFiber(),
+          (unsigned int) level
+        );
+      else
+        a = SNPRINTF(
+          buf.ptr(),
+          a + 1,
+          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u,%u): ",
+          t.tm_mday,
+          t.tm_mon + 1,
+          t.tm_year + 1900,
+          t.tm_hour,
+          t.tm_min,
+          t.tm_sec,
+          tv.tv_usec,
+          getpid(),
+          (unsigned int) level
+        );
+#undef SNPRINTF
       if( a == -1 ){
         int32_t err = errno;
         newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
@@ -333,18 +248,10 @@ LogFile & LogFile::internalLog(LogMessagePriority pri,uintptr_t level,const utf8
       file_.detach();
       file_.attach();
       try {
-        if( pri == lmDIRECT ){
-          if( file_.std() )
-            file_.writeBuffer(buf.ptr() + a,l * sizeof(char));
-          else
-            file_.writeBuffer(file_.size(),buf.ptr() + a,l * sizeof(char));
-        }
-        else {
-          if( file_.std() )
-            file_.writeBuffer(buf.ptr(),(a + l) * sizeof(char));
-          else
-            file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
-        }
+        if( file_.std() )
+          file_.writeBuffer(buf.ptr(),(a + l) * sizeof(char));
+        else
+          file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
         sz = file_.size();
       }
       catch( ... ){
@@ -374,11 +281,15 @@ LogFile & LogFile::setDebugLevels(const utf8::String & levels)
     catch( ExceptionSP & e ){
       if( dynamic_cast<utf8::EStr2Scalar *>(e.ptr()) == NULL ) throw;
     }
-    if( (intptr_t) level >= 0 )
-      enableDebugLevel((intptr_t) level);
-    else
-      disableDebugLevel(-(intptr_t) level);
+    debugLevel(level,level);
   }
+  return *this;
+}
+//---------------------------------------------------------------------------
+LogFile & LogFile::setAllDebugLevels(intptr_t value)
+{
+  for( intptr_t i = sizeof(enabledLevels_) * 8 - 1; i >= 0; i-- )
+    debugLevel(i,value);
   return *this;
 }
 //---------------------------------------------------------------------------

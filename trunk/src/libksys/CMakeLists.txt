@@ -62,17 +62,3 @@ ADD_LIBRARY(ksys STATIC
 #ENDIF (CMAKE_COMPILER_IS_GNUCXX)
 
 INCLUDE_DIRECTORIES (${INCLUDE_DIRECTORIES} ../../include/libadicpp)
-
-IF (WIN32)
-#  FIND_LIBRARY(ws2_32_LIBRARY
-#    NAMES ws2_32
-#    PATHS ${LIBPATHS}
-#    DOC "ws2_32 library"
-#  )
-  SET (ADD_LIBS
-    ws2_32
-    mswsock
-    iphlpapi
-    dbghelp
-  )
-ENDIF (WIN32)

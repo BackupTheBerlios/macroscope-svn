@@ -69,13 +69,13 @@ void Service::start()
   for( uintptr_t i = 0; i < addrs.count(); i++ ) msmail_.addBind(addrs[i]);
   //msmail_.fiberStackSize(1024 * 1024);
   msmail_.open();
-  stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
+  stdErr.debug(0,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
 }
 //------------------------------------------------------------------------------
 void Service::stop()
 {
   msmail_.close();
-  stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " stopped\n");
+  stdErr.debug(0,utf8::String::Stream() << msmail_version.gnu_ << " stopped\n");
 }
 //------------------------------------------------------------------------------
 bool Service::active()

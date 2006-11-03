@@ -39,8 +39,8 @@ bool get_std_vector_symbolInfo(DbgType& dbgType, bool& discarge)
   char* endPtr = (char*)end.dataAddress;
   char* capacityPtr = (char*)capacity.dataAddress;
   char* itPtr = beginPtr;
-  int size = 0;
-  int icapacity = 0;
+  int64_t size = 0;
+  int64_t icapacity = 0;
   if (eltype.size > 0)
   {
     size = (endPtr - beginPtr) / eltype.size;
@@ -50,11 +50,11 @@ bool get_std_vector_symbolInfo(DbgType& dbgType, bool& discarge)
   sizeType.name = DBGSTRING_CONSTSTR("size");
   sizeType.typeName = DBGSTRING_CONSTSTR("int");
   sizeType.type = DbgType::Integer;
-  sizeType.val.integer = size;
+  sizeType.val.bigInt = size;
   newtype.addSubType(sizeType);
 
   sizeType.name = DBGSTRING_CONSTSTR("capacity");
-  sizeType.val.integer = icapacity;
+  sizeType.val.bigInt = icapacity;
   newtype.addSubType(sizeType);
 
   DbgType arrayType;
@@ -65,7 +65,7 @@ bool get_std_vector_symbolInfo(DbgType& dbgType, bool& discarge)
   for (; eltype.size > 0 && itPtr < endPtr; itPtr += eltype.size)
   {
     DbgType subType;
-    if (querySymbolType(dbgType.modBase, begin.typeIndex, (int)&itPtr, eltype.size, subType, DbgFrameGetAll) == true)
+    if (querySymbolType(dbgType.modBase, begin.typeIndex, (intptr_t)&itPtr, eltype.size, subType, DbgFrameGetAll) == true)
     {
       DbgType s2;
       if (subType.getPointer(s2) == true)

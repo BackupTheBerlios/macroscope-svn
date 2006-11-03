@@ -322,10 +322,10 @@ const char* basicType2String(DbgType::BasicType type)
 #define DWORD_PTR intptr_t
 
 DbgType::BasicType
-queryBasicType( DWORD typeIndex, DWORD64 modBase )
+queryBasicType( uintptr_t typeIndex, DWORD64 modBase )
 {
   DbgType::BasicType basicType;
-  if ( SymGetTypeInfo( _currentProcess, modBase, typeIndex, TI_GET_BASETYPE, &basicType))
+  if ( SymGetTypeInfo( _currentProcess, modBase, (ULONG) typeIndex, TI_GET_BASETYPE, &basicType))
   {
     //ELOGNL("qbt 1: " << basicType);
     DOUT(basicType2String(basicType));
@@ -335,7 +335,7 @@ queryBasicType( DWORD typeIndex, DWORD64 modBase )
   // Get the real "TypeId" of the child.  We need this for the
   // SymGetTypeInfo( TI_GET_TYPEID ) call below.
   DWORD typeId = 0;
-  if (SymGetTypeInfo(_currentProcess, modBase, typeIndex, TI_GET_TYPEID, &typeId))
+  if (SymGetTypeInfo(_currentProcess, modBase, (ULONG) typeIndex, TI_GET_TYPEID, &typeId))
   {
     if ( SymGetTypeInfo( _currentProcess, modBase, typeId, TI_GET_BASETYPE, &basicType ) )
     {
@@ -350,7 +350,7 @@ queryBasicType( DWORD typeIndex, DWORD64 modBase )
 }
 
 void
-setBasicType(DbgType::BasicType basicType, DWORD64 length, PVOID pAddress, DbgType& dbgType, int queryFlags)
+setBasicType(DbgType::BasicType basicType, DWORD64 length, PVOID pAddress, DbgType& dbgType, intptr_t queryFlags)
 {
   switch (basicType)
   {
@@ -519,12 +519,12 @@ queryArrayType(DWORD64 modBase, uintptr_t dwTypeIndex, DWORD_PTR address, DbgTyp
   DWORD realTypeId = 0;
   DOUTNL("queryArrayType");
   HANDLE_FALSE_CALL(
-    SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_TYPEID, &realTypeId),
+    SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_TYPEID, &realTypeId),
     ;
   )
   DWORD elcount = 0;
   HANDLE_FALSE_CALL(
-    SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_COUNT, &elcount),
+    SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_COUNT, &elcount),
     ;
   )
 
@@ -533,7 +533,7 @@ queryArrayType(DWORD64 modBase, uintptr_t dwTypeIndex, DWORD_PTR address, DbgTyp
 
   ULONG64 length;
   HANDLE_FALSE_CALL(
-    SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_LENGTH, &length),
+    SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_LENGTH, &length),
     ;
   )
 
@@ -588,7 +588,7 @@ isBadStringPtr(const char* ptr, int64_t size)
 {
   if (intptr_t(ptr) < 1024 || intptr_t(ptr) > 0xFFFFF000 || uintptr_t(ptr) == 0xcdcdcdcd || uintptr_t(ptr) == 0xCCCCCCCC)
     return true;
-  return IsBadStringPtr(ptr, size) == TRUE;
+  return IsBadStringPtr(ptr, (UINT_PTR) size) == TRUE;
 }
 
 bool
@@ -596,11 +596,11 @@ isBadReadPtr(const void* ptr, int64_t size)
 {
   if (intptr_t(ptr) < 1024 || intptr_t(ptr) > 0xFFFFF000  || uintptr_t(ptr) == 0xcdcdcdcd)
     return true;
-  return IsBadReadPtr(ptr, size) == TRUE;
+  return IsBadReadPtr(ptr, (UINT_PTR) size) == TRUE;
 }
 
 bool
-queryPoinerType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& dbgType, intptr_t queryFlags)
+queryPoinerType(DWORD64 modBase, uintptr_t dwTypeIndex, DWORD_PTR address, DbgType& dbgType, intptr_t queryFlags)
 {
   //ELOGNL("queryPoinerType: " << dbgType.name);
   DOUTNL("queryPoinerType");
@@ -608,13 +608,13 @@ queryPoinerType(DWORD64 modBase, DWORD dwTypeIndex, DWORD_PTR address, DbgType& 
   dbgType.type = DbgType::Pointer;
   DWORD realTypeId = 0;
   HANDLE_FALSE_CALL(
-    SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_TYPEID, &realTypeId),
+    SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_TYPEID, &realTypeId),
     ;
   )
   dwTypeIndex = realTypeId;
   ULONG64 length;
   HANDLE_FALSE_CALL(
-    SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_LENGTH, &length),
+    SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_LENGTH, &length),
     ;
   )
   dbgType.dataAddress = *(void**)address;
@@ -682,16 +682,11 @@ bool handleSysType(DbgType& dbgType, bool& discarge)
 }
 RegisterDebugPreTypeHandler _register_sysTypeHandler(handleSysType);
 
-
-
-
-
-
 bool 
 querySymbolType(__int64 modBase, uintptr_t dwTypeIndex, DWORD_PTR offset, int64_t size, DbgType& dbgType, intptr_t queryFlags)
 {
-  intptr_t mb1 = (intptr_t)modBase;
-  intptr_t mb2 = modBase >> 32;
+  intptr_t mb1 = (intptr_t) modBase;
+  intptr_t mb2 = (intptr_t) (modBase >> 32);
   DOUTNL("querySymbolType: << modbase: " << mb1 << ":"<< mb2 << "; dwTypeIndex: " << dwTypeIndex
          << "; offset: " << offset << "; size=" << size);
   dbgType.size = size;
@@ -788,7 +783,7 @@ retry:
     return true;
   
   DWORD dwChildrenCount = 0;
-  SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_GET_CHILDRENCOUNT, &dwChildrenCount);
+  SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_GET_CHILDRENCOUNT, &dwChildrenCount);
     
   if (dwChildrenCount == 0)
     return false;
@@ -809,7 +804,7 @@ retry:
   children.Start= 0;
 
   // Get the array of TypeIds, one for each child type
-  if ( !SymGetTypeInfo(_currentProcess, modBase, dwTypeIndex, TI_FINDCHILDREN, &children))
+  if ( !SymGetTypeInfo(_currentProcess, modBase, (ULONG) dwTypeIndex, TI_FINDCHILDREN, &children))
       return false;
   dbgType.type = DbgType::User;
   DOUTNL("Component type:");
@@ -956,54 +951,52 @@ retry:
 bool querySymbolValue(PSYMBOL_INFO pSym, DbgFrame& frame)
 {
   DbgType::Flags symtype = DbgType::STUnknown;
-  // Indicate if the variable is a local or parameter
-  if (pSym->Flags & SYMFLAG_PARAMETER /*IMAGEHLP_SYMBOL_INFO_PARAMETER*/)
+
+  /*if( pSym->Flags & IMAGEHLP_SYMBOL_THUNK ){
+    DWORD64 symDisplacement = 0;
+    SymFromAddr(_currentProcess,pSym->Value,&symDisplacement,pSym);
+    return querySymbolValue(pSym,frame);
+  }*/
+// Indicate if the variable is a local or parameter
+  if (pSym->Flags & IMAGEHLP_SYMBOL_INFO_PARAMETER)
   {
     if ((frame.queryFlags & DbgFrameGetArguments) == 0)
       return false;
     symtype = DbgType::STParam;
     DOUT("  Param: ");
   }
-  else if ( pSym->Flags & SYMFLAG_LOCAL/*IMAGEHLP_SYMBOL_INFO_LOCAL*/ )
+  else if ( pSym->Flags & IMAGEHLP_SYMBOL_INFO_LOCAL )
   {
     if ((frame.queryFlags & DbgFrameGetLocals) == 0)
       return false;
     symtype = DbgType::STLocal;
     DOUT("  Local: ");
   }
-  if ( pSym->Tag == DbgType::SymTagFunction)
-    return false;
+  if( pSym->Tag == DbgType::SymTagFunction ) return false;
     
   DbgType dbgType;
   dbgType.flags |= symtype;
   dbgType.name =  pSym->Name;
 
-
   DWORD_PTR pVariable = 0;
-  if (pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGRELATIVE)
-  {
+  if( pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGRELATIVE ){
     pVariable = frame.frame.offset;
     pVariable += (DWORD_PTR)pSym->Address;
   }
-  else if ( pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGISTER )
-  {
+  else if ( pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGISTER ){
     return false;   // Don't try to report register variable
   }
-  else
-  {
+  else {
     pVariable = (DWORD_PTR)pSym->Address;   // It must be a global variable
     symtype = DbgType::STGlobal;
     dbgType.flags |= symtype;
     DOUT("  Global: ");
   }
-
-    // Determine if the variable is a user defined type (UDT).  IF so, bHandled
-    // will return true.
-  bool bHandled = querySymbolType(pSym->ModBase, pSym->TypeIndex, pVariable, pSym->Size, dbgType, frame.queryFlags); 
-  if (bHandled == false)
-    return true;
-  switch (symtype)
-  {
+// Determine if the variable is a user defined type (UDT).  IF so, bHandled
+// will return true.
+  bool bHandled = querySymbolType(pSym->ModBase, pSym->TypeIndex, pVariable, pSym->Size, dbgType, frame.queryFlags);
+  if( bHandled == false ) return true;
+  switch( symtype ){
   case DbgType::STParam:
     frame.params.push_back(dbgType);
     break;

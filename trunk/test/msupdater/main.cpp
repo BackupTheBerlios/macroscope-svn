@@ -198,15 +198,13 @@ MSUpdaterService::MSUpdaterService() :
 void MSUpdaterService::start()
 {
   attachFiber(newObject<MSUpdateFetcher>(config_));
+  stdErr.debug(0,utf8::String::Stream() << msupdater_version.gnu_ << " started\n");
 }
 //------------------------------------------------------------------------------
 void MSUpdaterService::stop()
 {
   closeServer();
-  stdErr.log(
-    lmINFO,
-    utf8::String::Stream() << msupdater_version.gnu_ << " stopped\n"
-  );
+  stdErr.debug(0,utf8::String::Stream() << msupdater_version.gnu_ << " stopped\n");
 }
 //------------------------------------------------------------------------------
 bool MSUpdaterService::active()
