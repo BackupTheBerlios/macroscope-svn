@@ -652,8 +652,8 @@ void SpoolWalker::processQueue(bool & timeWait)
               }
               catch( ... ){
                 createDirectory(userMailBox);
+                rename(list[i],mailFile);
               }
-              rename(list[i],mailFile);
               stdErr.debug(0,
                 utf8::String::Stream() << "Message " << message.id() <<
                 " received from " << message.value("#Sender") <<
