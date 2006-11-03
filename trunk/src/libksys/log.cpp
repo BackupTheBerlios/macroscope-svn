@@ -42,7 +42,10 @@ void LogFile::initialize()
 //---------------------------------------------------------------------------
 void LogFile::cleanup()
 {
+  bool stackBackTrace0 = stackBackTrace;
+  stackBackTrace = false;
   stdErr.~LogFile();
+  stackBackTrace = stackBackTrace0;
 }
 //---------------------------------------------------------------------------
 LogFile::~LogFile()

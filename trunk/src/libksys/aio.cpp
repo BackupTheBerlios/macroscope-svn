@@ -1429,7 +1429,10 @@ void AsyncStackBackTraceSlave::threadExecute()
   for(;;){
     acquire();
     request = NULL;
-    if( requests_.count() > 0 ) request = &AsyncEvent::nodeObject(*requests_.first());
+    if( requests_.count() > 0 ){
+      request = &AsyncEvent::nodeObject(*requests_.first());
+      requests_.remove(*request);
+    }
     release();
     if( request == NULL ){
       if( terminated_ ) break;
@@ -1454,9 +1457,6 @@ void AsyncStackBackTraceSlave::threadExecute()
             CloseHandle(threadHandle);
           }
           if( request->mutex0_ == NULL ) request->thread_->resume();
-          acquire();
-          requests_.remove(*request);
-          release();
           if( request->mutex0_ == NULL ){
             request->fiber_->thread()->postEvent(request);
           }
@@ -1480,9 +1480,6 @@ void AsyncStackBackTraceSlave::threadExecute()
 //          if( result == (DWORD) -1 ) exit(GetLastError());
             CloseHandle(threadHandle);
           }
-          acquire();
-          requests_.remove(*request);
-          release();
           request->mutex0_->release();
           break;
         default:

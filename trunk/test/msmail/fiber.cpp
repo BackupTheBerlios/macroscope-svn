@@ -622,7 +622,7 @@ void SpoolWalker::processQueue(bool & timeWait)
             bool process = true;
             if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
               AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
-	      ServerFiber sfib(server_,suser,skey);
+	            ServerFiber sfib(server_,suser,skey);
               ServerFiber * fib = server_.findRecvMailFiberNL(sfib);
               if( fib == NULL ){
                 server_.sendRobotMessage(

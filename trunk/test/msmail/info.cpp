@@ -178,6 +178,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
 {
   AsyncFile::LineGetBuffer buffer;
   buffer.removeNewLine_ = true;
+  buffer.codePage_ = CP_UTF8;
   uint64_t lastHeaderPos;
 
   utf8::String str, key, value;

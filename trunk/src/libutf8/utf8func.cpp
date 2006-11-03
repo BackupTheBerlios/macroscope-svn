@@ -289,8 +289,7 @@ intptr_t mbcs2utf8s(uintptr_t cp, char * utf8s, uintptr_t utf8l, const char * s,
         }
         a += a[-1] * (e->utf8s2cps[0] + 2);
       }
-      fd:   if( r != 0 && r != -2 )
-              break;
+fd:   if( r != 0 && r != -2 ) break;
       s++;
     }
   }
