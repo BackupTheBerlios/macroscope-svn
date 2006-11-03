@@ -45,6 +45,58 @@ int main(int ac, char*av[]){
     if( fprintf(out,"%s %s %u.%u.%u\n",versionString,target,ver,rev,lev) == -1 ) return errno;
   }
   else {
+    static const char machine[] =
+#if __pentium__ || __pentium_mmx__
+      "pentium"
+#elif __pentiumpro__
+      "pentiumpro"
+#elif __k6__
+      "k6"
+#elif __k6_2__
+      "k6_2"
+#elif __k6_3__
+      "k6_3"
+#elif __athlon__
+      "athlon"
+#elif __k8__
+      "k8"
+#elif __pentium4__
+      "pentium4"
+#elif __amd64__
+      "amd64"
+#elif __x86_64__
+      "x86_64"
+#elif (_M_IX86 >= 300 && _M_IX86 < 400) || __i386__
+      "i386"
+#elif (_M_IX86 >= 400 && _M_IX86 < 500) || __i486__
+      "i486"
+#elif (_M_IX86 >= 500 && _M_IX86 < 600) || __i586__
+      "i586"
+#elif (_M_IX86 >= 600 && _M_IX86 < 700) || __i686__
+      "i686"
+#elif _M_IX86
+      "x86"
+#elif _M_X64
+      "x86_64"
+#endif
+#if __MMX__ || __pentium_mmx__
+      "+MMX"
+#endif
+#if __3dNOW__
+      "+3dNOW"
+#endif
+#if __3dNOW_A__
+      "+3dNOW_A"
+#endif
+#if _M_IX86_FP == 1 || __SSE__ || __athlon_sse__
+      "+SSE"
+#elif _M_IX86_FP == 2 || __SSE2__
+      "+SSE2"
+#elif _M_IX86_FP == 3 || __SSE3__
+      "+SSE3"
+#endif
+    ;
+
 #if HAVE__TZSET
     _tzset();
 #elif HAVE_TZSET
@@ -96,13 +148,13 @@ int main(int ac, char*av[]){
       "  0x%X,\n"
       "  0x%X,\n"
       "  0x%X,\n"
-      "  \"%u.%u.%u\",\n"
-      "  \"%u.%u.%u (%s-%s-%s %s)\",\n"
-      "  \"This is %s, Version %u.%u.%u (%s-%s-%s %s)\",\n"
-      "  \"%s %u.%u.%u (%s-%s-%s %s)\",\n"
-      "  \"%s/%u.%u.%u\",\n"
-      "  \"@(#)%s %u.%u.%u (%s-%s-%s %s)\",\n"
-      "  \"$Id: %s %u.%u.%u (%s-%s-%s %s) $\"\n"
+      "  \"%u.%u.%u %s\",\n"
+      "  \"%u.%u.%u %s (%s-%s-%s %s)\",\n"
+      "  \"This is %s, Version %u.%u.%u %s (%s-%s-%s %s)\",\n"
+      "  \"%s %u.%u.%u %s (%s-%s-%s %s)\",\n"
+      "  \"%s/%u.%u.%u %s\",\n"
+      "  \"@(#)%s %u.%u.%u %s (%s-%s-%s %s)\",\n"
+      "  \"$Id: %s %u.%u.%u %s (%s-%s-%s %s) $\"\n"
       "};\n\n"
       "#ifdef __cplusplus\n"
       "} // extern \"C\"\n"
@@ -125,34 +177,34 @@ int main(int ac, char*av[]){
       target,
       version,
       ver,rev,lev,
-      ver,rev,lev,
-      ver,rev,lev,
+      ver,rev,lev, machine,
+      ver,rev,lev, machine,
       ts + 8,
       ts + 4,
       ts + 20,
       ts + 11,
       target,
-      ver,rev,lev,
+      ver,rev,lev, machine,
       ts + 8,
       ts + 4,
       ts + 20,
       ts + 11,
       target,
-      ver,rev,lev,
+      ver,rev,lev, machine,
       ts + 8,
       ts + 4,
       ts + 20,
       ts + 11,
       target,
-      ver,rev,lev,
+      ver,rev,lev, machine,
       target,
-      ver,rev,lev,
+      ver,rev,lev, machine,
       ts + 8,
       ts + 4,
       ts + 20,
       ts + 11,
       target,
-      ver,rev,lev,
+      ver,rev,lev, machine,
       ts + 8,
       ts + 4,
       ts + 20,

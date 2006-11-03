@@ -32,7 +32,7 @@
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  Sleep(15000);
+//  Sleep(15000);
 //  _set_amblksiz(1024);
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;

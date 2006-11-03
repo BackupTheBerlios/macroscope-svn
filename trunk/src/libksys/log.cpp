@@ -67,6 +67,7 @@ LogFile::LogFile() :
   debugLevel(7,1);
   debugLevel(8,1);
   debugLevel(9,1);
+  debugLevel(128,1);
   file_.createIfNotExist(true);
   lockFile_.createIfNotExist(true).removeAfterClose(true);
 }
@@ -273,15 +274,18 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
 //---------------------------------------------------------------------------
 LogFile & LogFile::setDebugLevels(const utf8::String & levels)
 {
+  utf8::String minus("-");
   for( intptr_t i = enumStringParts(levels) - 1; i >= 0; i-- ){
-    Mutant level(stringPartByNo(levels,i));
+    utf8::String s(stringPartByNo(levels,i));
+    Mutant level(s);
     try {
       level.changeType(mtInt);
     }
     catch( ExceptionSP & e ){
       if( dynamic_cast<utf8::EStr2Scalar *>(e.ptr()) == NULL ) throw;
     }
-    debugLevel(level,level);
+    intptr_t v = s.strstr(minus).eof() ? 1 : 0;
+    debugLevel(level,v);
   }
   return *this;
 }
