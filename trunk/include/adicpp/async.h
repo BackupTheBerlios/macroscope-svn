@@ -41,6 +41,8 @@ enum AsyncEventType {
   etRemoveFile,
   etRename,
   etCopy,
+  etExec,
+  etWaitForProcess,
   etResolveName,
   etResolveAddress,
   etStat,
@@ -99,6 +101,7 @@ class AsyncEvent {
           uint64_t timerStartTime_;
           uintptr_t data0_;
           intptr_t data1_;
+          const Array<utf8::String> * env_;
         };
         union {
           void * buffer_;
@@ -123,6 +126,7 @@ class AsyncEvent {
             bool exMaskAsList_;
             bool abort_;
             bool rval_;
+            bool wait_;
           };
         };
         union {
@@ -130,8 +134,10 @@ class AsyncEvent {
           uint64_t count_;
           uintptr_t data_;
           Thread * thread_;
+          pid_t pid_;
           uintptr_t tid_;
           Vector<utf8::String> * dirList_;
+          const Array<utf8::String> * args_;
         };
         LockFileType lockType_;
       };

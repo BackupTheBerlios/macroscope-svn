@@ -1517,6 +1517,166 @@ void copyStrToClipboard(const utf8::String & s)
 #endif
 }
 //---------------------------------------------------------------------------
+pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env,bool wait)
+{
+  Array<utf8::String> a;
+  uintptr_t i, j = enumStringParts(args," \t");
+  for( i = 0; i < j; i++ ) a.add(stringPartByNo(args,i," \t"));
+  return execute(name,a,env,wait);
+}
+//---------------------------------------------------------------------------
+pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env,bool wait)
+{
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.args_ = &args;
+    currentFiber()->event_.env_ = env;
+    currentFiber()->event_.string0_ = name;
+    currentFiber()->event_.wait_ = wait;
+    currentFiber()->event_.type_ = etExec;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etExec );
+    if( currentFiber()->event_.errno_ != 0 )
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+    return (pid_t) currentFiber()->event_.data_;
+  }
+#if defined(__WIN32__) || defined(__WIN64__)
+  BOOL r;
+  uintptr_t i;
+  utf8::String s;
+  for( i = 0; i < args.count(); i++ ){
+    if( i > 0 ) s += " ";
+    s += args[i];
+  }
+  MemoryStream e;
+  union {
+    STARTUPINFOA sui;
+    STARTUPINFOW suiW;
+  };
+  memset(&suiW,0,sizeof(suiW));
+  PROCESS_INFORMATION pi;
+  memset(&pi,0,sizeof(pi));
+  if( isWin9x() ){
+    if( env != NULL ){
+      for( i = 0; i < env->count(); i++ ){
+        utf8::AnsiString a((*env)[i].getANSIString());
+        e.writeBuffer(a,strlen(a) + 1);
+      }
+      e.writeBuffer("",1);
+    }
+    sui.cb = sizeof(sui);
+    r = CreateProcessA(
+      name.getANSIString(),
+      s.getANSIString(),
+      NULL,
+      NULL,
+      FALSE,
+      0,
+      env != NULL ? e.raw() : NULL,
+      NULL,
+      &sui,
+      &pi
+    );
+  }
+  else {
+    if( env != NULL ){
+      for( i = 0; i < env->count(); i++ ){
+        utf8::WideString a((*env)[i].getUNICODEString());
+        e.writeBuffer(a,(wcslen(a) + 1) * sizeof(wchar_t));
+      }
+      e.writeBuffer(L"",sizeof(wchar_t));
+    }
+    suiW.cb = sizeof(suiW);
+    r = CreateProcessW(
+      name.getUNICODEString(),
+      s.getUNICODEString(),
+      NULL,
+      NULL,
+      FALSE,
+      0,
+      env != NULL ? e.raw() : NULL,
+      NULL,
+      &suiW,
+      &pi
+    );
+  }
+  int32_t err;
+  if( r == 0 ){
+    err = GetLastError() + errorOffset;
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( wait ){
+    DWORD r = WaitForSingleObject(pi.hProcess,INFINITE);
+    if( r == WAIT_FAILED ){
+      err = GetLastError() + errorOffset;
+      CloseHandle(pi.hProcess);
+      CloseHandle(pi.hThread);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( r != WAIT_OBJECT_0 ){
+      CloseHandle(pi.hProcess);
+      CloseHandle(pi.hThread);
+      newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+    }
+    DWORD exitCode;
+    if( GetExitCodeProcess(pi.hProcess,&exitCode) == 0 ){
+      err = GetLastError() + errorOffset;
+      CloseHandle(pi.hProcess);
+      CloseHandle(pi.hThread);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    pi.dwProcessId = exitCode;
+  }
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+  return pi.dwProcessId;
+#else
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+#endif
+}
+//---------------------------------------------------------------------------
+int32_t waitForProcess(pid_t pid)
+{
+  if( currentFiber() != NULL ){
+    currentFiber()->event_.pid_ = pid;
+    currentFiber()->event_.type_ = etWaitForProcess;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etWaitForProcess );
+    if( currentFiber()->event_.errno_ != 0 )
+      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+    return (int32_t) currentFiber()->event_.data_;
+  }
+#if defined(__WIN32__) || defined(__WIN64__)
+  int32_t err;
+  HANDLE hProcess = OpenProcess(NULL,FALSE,pid);
+  if( hProcess == NULL ){
+    err = GetLastError() + errorOffset;
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  DWORD r = WaitForSingleObject(hProcess,INFINITE);
+  if( r == WAIT_FAILED ){
+    err = GetLastError() + errorOffset;
+    CloseHandle(hProcess);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( r != WAIT_OBJECT_0 ){
+    CloseHandle(hProcess);
+    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+  }
+  DWORD exitCode;
+  if( GetExitCodeProcess(hProcess,&exitCode) == 0 ){
+    err = GetLastError() + errorOffset;
+    CloseHandle(hProcess);
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  CloseHandle(hProcess);
+  return exitCode;
+#else
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+#endif
+}
+//---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 static BOOL WINAPI consoleCtrlHandler(DWORD dwCtrlType)
 {

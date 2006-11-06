@@ -36,33 +36,33 @@ template <typename T,class RT = Array< T> > class Table {
     ~Table();
     Table();
 
-    Table<T,RT> &        clear();
-    Table<T,RT> &        resize(uintptr_t rows, uintptr_t columns);
+    Table<T,RT> & clear();
+    Table<T,RT> & resize(uintptr_t rows, uintptr_t columns);
 
-    Table<T,RT> &        addRow();
-    Table<T,RT> &        insertRow(uintptr_t row);
-    Table<T,RT> &        removeRow(uintptr_t row);
-    Table<T,RT> &        addColumn(const utf8::String & columnName = utf8::String());
-    Table<T,RT> &        insertColumn(uintptr_t column, const utf8::String & columnName = utf8::String());
-    Table<T,RT> &        removeColumn(uintptr_t column);
+    Table<T,RT> & addRow();
+    Table<T,RT> & insertRow(uintptr_t row);
+    Table<T,RT> & removeRow(uintptr_t row);
+    Table<T,RT> & addColumn(const utf8::String & columnName = utf8::String());
+    Table<T,RT> & insertColumn(uintptr_t column, const utf8::String & columnName = utf8::String());
+    Table<T,RT> & removeColumn(uintptr_t column);
 
-    const utf8::String &  columnName(uintptr_t column) const;
-    Table<T,RT> &        columnName(uintptr_t column, const utf8::String & columnName);
+    const utf8::String & columnName(uintptr_t column) const;
+    Table<T,RT> & columnName(uintptr_t column, const utf8::String & columnName);
 
-    intptr_t              columnIndex(const utf8::String & columnName) const;
+    intptr_t columnIndex(const utf8::String & columnName) const;
 
-    uintptr_t             rowCount() const;
-    uintptr_t             columnCount() const;
+    uintptr_t rowCount() const;
+    uintptr_t columnCount() const;
 
-    T &                   cell(uintptr_t row, uintptr_t column);
-    T &                   cell(uintptr_t row, const utf8::String & columnName);
-    const T &             cell(uintptr_t row, uintptr_t column) const;
-    const T &             cell(uintptr_t row, const utf8::String & columnName) const;
+    T & cell(uintptr_t row, uintptr_t column);
+    T & cell(uintptr_t row, const utf8::String & columnName);
+    const T & cell(uintptr_t row, uintptr_t column) const;
+    const T & cell(uintptr_t row, const utf8::String & columnName) const;
 
-    T &                   operator ()(uintptr_t row, uintptr_t column);
-    T &                   operator ()(uintptr_t row, const utf8::String & columnName);
-    const T &             operator ()(uintptr_t row, uintptr_t column) const;
-    const T &             operator ()(uintptr_t row, const utf8::String & columnName) const;
+    T & operator ()(uintptr_t row, uintptr_t column);
+    T & operator ()(uintptr_t row, const utf8::String & columnName);
+    const T & operator ()(uintptr_t row, uintptr_t column) const;
+    const T & operator ()(uintptr_t row, const utf8::String & columnName) const;
   private:
     template <typename TT,typename P> class SortParam {
       public:
@@ -91,8 +91,8 @@ template <typename T,class RT = Array< T> > class Table {
   protected:
     class Name2Index {
       public:
-        utf8::String  name_;
-        uintptr_t     index_;
+        utf8::String name_;
+        uintptr_t index_;
 
         Name2Index(){}
         Name2Index(const utf8::String & name, uintptr_t index) : name_(name), index_(index) {}
@@ -103,9 +103,9 @@ template <typename T,class RT = Array< T> > class Table {
     Array<Name2Index *>  index2Name_;
     Vector<RT>           rows_;
   private:
-    utf8::String  genColumnName(const utf8::String & columnNameTemplate, uintptr_t & i, intptr_t & c) const;
-    intptr_t      name2Index(const utf8::String & columnName) const;
-    uintptr_t     name2Index(const utf8::String & columnName, intptr_t & c) const;
+    utf8::String genColumnName(const utf8::String & columnNameTemplate,uintptr_t & i,intptr_t & c) const;
+    intptr_t name2Index(const utf8::String & columnName) const;
+    uintptr_t name2Index(const utf8::String & columnName,intptr_t & c) const;
 };
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline Table<T,RT>::~Table()
@@ -132,12 +132,9 @@ inline
 Table<T,RT> & Table<T,RT>::resize(uintptr_t rows, uintptr_t columns)
 {
   assert(rows >= 0 && columns >= 0);
-  if( rows != rows_.count() )
-    rows_.resize(rows);
-  while( columns < name2Index_.count() )
-    removeColumn(name2Index_.count() - 1);
-  while( columns > name2Index_.count() )
-    addColumn();
+  if( rows != rows_.count() ) rows_.resize(rows);
+  while( columns < name2Index_.count() ) removeColumn(name2Index_.count() - 1);
+  while( columns > name2Index_.count() ) addColumn();
   return *this;
 }
 //-----------------------------------------------------------------------------

@@ -34,11 +34,13 @@ using namespace ksys;
 class MSUpdateSetuper : public Fiber {
   public:
     virtual ~MSUpdateSetuper();
-    MSUpdateSetuper(const ConfigSP & config);
+    MSUpdateSetuper(const ConfigSP & config,Semaphore & setupSem);
   protected:
     void fiberExecute();
   private:
     ConfigSP config_;
+    Semaphore & setupSem_;
+    void executeAction(ConfigSection & section);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -51,6 +53,7 @@ class MSUpdateFetcher : public Fiber {
     void fiberExecute();
   private:
     ConfigSP config_;
+    Semaphore setupSem_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

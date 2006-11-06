@@ -209,6 +209,9 @@ void copyStrToClipboard(const utf8::String & s);
 int64_t getProcessStartTime(bool toLocalTime = false);
 intptr_t strToMonth(const utf8::String & month);
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time);
+pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env = NULL,bool wait = false);
+pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env = NULL,bool wait = false);
+int32_t waitForProcess(pid_t pid);
 //---------------------------------------------------------------------------
 inline uintptr_t strlen(const char * s)
 {

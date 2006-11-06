@@ -1042,6 +1042,30 @@ void AsyncOpenFileSlave::threadExecute()
         assert( request->fiber_ != NULL );
         request->fiber_->thread()->postEvent(request);
       }
+      else if( request->type_ == etExec ){
+        int32_t err = 0;
+        try {
+          request->data_ = execute(request->string0_,*request->args_,request->env_,request->wait_);
+        }
+        catch( ExceptionSP & e ){
+          err = e->code();
+        }
+        request->errno_ = err;
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
+      }
+      else if( request->type_ == etWaitForProcess ){
+        int32_t err = 0;
+        try {
+          request->data_ = waitForProcess(request->pid_);
+        }
+        catch( ExceptionSP & e ){
+          err = e->code();
+        }
+        request->errno_ = err;
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
+      }
     }
   }
 }
@@ -1530,6 +1554,7 @@ Requester::~Requester()
     asyncStackBackTraceSlave_->terminate();
     asyncStackBackTraceSlave_->post();
     asyncStackBackTraceSlave_->Thread::wait();
+    asyncStackBackTraceSlave_ = NULL;
   }
 #endif
 }
@@ -1604,6 +1629,9 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etRemoveDir :
     case etRemoveFile :
     case etRename :
+    case etCopy :
+    case etExec :
+    case etWaitForProcess :
     case etResolveName :
     case etResolveAddress :
     case etStat :

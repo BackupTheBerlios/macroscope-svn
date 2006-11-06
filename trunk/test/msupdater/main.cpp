@@ -37,41 +37,103 @@ MSUpdateSetuper::~MSUpdateSetuper()
 {
 }
 //------------------------------------------------------------------------------
-MSUpdateSetuper::MSUpdateSetuper(const ConfigSP & config) : config_(config)
+MSUpdateSetuper::MSUpdateSetuper(const ConfigSP & config,Semaphore & setupSem) :
+  config_(config), setupSem_(setupSem)
 {
+}
+//------------------------------------------------------------------------------
+void MSUpdateSetuper::executeAction(ConfigSection & section)
+{
+  int32_t result = 0;
+  utf8::String name(section.value());
+  utf8::String args(section.value("args"));
+  if( name.strlen() > 0 ){
+    result = execute(name,args,NULL,wait);
+    utf8::String::Stream s;
+    s << updateSetup.section(j).name <<
+      " before action: '" << name << " " << args << "'";
+    if( result == 0 ){
+      s << " executed successfuly\n";
+    }
+    else {
+      utf8::String iec(section.value("ignore_exit_code"));
+      intptr_t i;
+      for( i = enumStringParts(iec) - 1; i >= 0; i-- )
+        if( (int32_t) Mutant(stringPartByNo(iec,i)) == result ) break;
+      s << " failed with code " << result;
+      if( i >= 0 ){
+        s << ", but error will be ignored\n";
+        result = 0;
+      }
+    }
+    stdErr.debug(5,s);
+  }
+  if( result != 0 ) newObject<Exception>(result,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void MSUpdateSetuper::fiberExecute()
 {
-  config_->parse().override();
-  utf8::String localPath(includeTrailingPathDelimiter(
-    config_->valueByPath("update.storage",getExecutablePath() + "updates")
-  ));
-  Config updatesSetup;
-  updatesSetup.codePage(CP_UTF8);
-  updatesSetup.silent(true).fileName(localPath + "setup.conf").parse();
-  for( intptr_t i = updatesSetup.sectionCount() - 1; i >= 0; i-- ){
-    if( (bool) updatesSetup.section(i).value("installed",false) ) continue;
-    Config updateSetup;
-    updateSetup.codePage(CP_UTF8);
-    utf8::String updateLocalPath(includeTrailingPathDelimiter(
-      localPath + updatesSetup.section(i).name()
+  try {
+    config_->parse().override();
+    utf8::String localPath(includeTrailingPathDelimiter(
+      config_->valueByPath("update.storage",getExecutablePath() + "updates")
     ));
-    updateSetup.silent(true).fileName(updateLocalPath + "setup.conf").parse();
-    for( intptr_t j = updateSetup.sectionCount() - 1; j >= 0; j-- ){
-      if( updateSetup.section(j).name().strncasecmp("file",4) != 0 ) continue;
-      utf8::String fileName(updateSetup.section(j).value(""));
-      if( updateSetup.section(j).isSection("before") ){ // run before actions
+    Config updatesSetup;
+    updatesSetup.codePage(CP_UTF8);
+    updatesSetup.silent(true).fileName(localPath + "setup.conf").parse();
+    for( uintptr_t i = 0; i < updatesSetup.sectionCount(); i++ ){
+      if( (bool) updatesSetup.section(i).value("installed",false) ) continue;
+      stdErr.debug(4,utf8::String::Stream() <<
+        "Try to install update: " << updatesSetup.section(i).name << "\n"
+      );
+      Config updateSetup;
+      updateSetup.codePage(CP_UTF8);
+      utf8::String updateLocalPath(includeTrailingPathDelimiter(
+        localPath + updatesSetup.section(i).name()
+      ));
+      updateSetup.silent(true).fileName(updateLocalPath + "setup.conf").parse();
+      for( uintptr_t j = 0; j < updateSetup.sectionCount(); j++ ){
+        if( updateSetup.section(j).name().strncasecmp("file",4) != 0 ) continue;
+        if( (bool) updateSetup.section(j).value("installed",false) ) continue;
+        utf8::String fileName(updateSetup.section(j).value(""));
+        if( updateSetup.section(j).isSection("before") ){ // run before actions
+          if( updateSetup.section(j).section("before").isSection("execute") )
+            executeAction(updateSetup.section(j).section("before").section("execute"));
+        }
+        if( updateSetup.section(j).isSection("install") ){
+          if( updateSetup.section(j).isSection("install").isSection("copy") ){
+            ConfigSection & section = updateSetup.section(j).isSection("install").section("copy");
+            try {
+              copy(section.value("destination"),section.value("source"));
+            }
+            catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+              if( e->code() != ERROR_ACCESS_DENIED + errorOffset &&
+                  e->code() != ERROR_SHARING_VIOLATION  + errorOffset &&
+                  e->code() != ERROR_LOCK_VIOLATION  + errorOffset ) throw;
+#endif
+            }
+          }
+        }
+        if( updateSetup.section(j).isSection("remove") ){
+          remove(updateSetup.section(j).isSection("remove").value());
+        }
+        if( updateSetup.section(j).isSection("after") ){ // run after actions
+          if( updateSetup.section(j).section("after").isSection("execute") )
+            executeAction(updateSetup.section(j).section("after").section("execute"));
+        }
+        updateSetup.section(j).setValue("installed",true);
+        updateSetup.save();
       }
-      if( updateSetup.section(j).isValue("install") ){
-      }
-      if( updateSetup.section(j).isValue("remove") ){
-      }
-      if( updateSetup.section(j).isSection("after") ){ // run after actions
-      }
+      updatesSetup.section(i).setValue("installed",true);
     }
+    updatesSetup.save();
   }
-  updatesSetup.save();
+  catch( ... ){
+    setupSem_.post();
+    throw;
+  }
+  setupSem_.post();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,13 +148,15 @@ MSUpdateFetcher::MSUpdateFetcher(const ConfigSP & config) : config_(config)
 //------------------------------------------------------------------------------
 void MSUpdateFetcher::fiberExecute()
 {
+  setupSem_.post();
   Fetcher fetch;
   uint64_t lastCheckUpdate = 0;
   while( !terminated_ ){
     config_->parse().override();
     uint64_t interval = config_->valueByPath("update.interval",180);
     interval *= 60000000u;
-    if( getlocaltimeofday() - lastCheckUpdate >= interval ){
+    bool setupEnded = setupSem_.tryWait();
+    if( getlocaltimeofday() - lastCheckUpdate >= interval && setupEnded ){
       fetch.url(config_->valueByPath("update.url"));
       fetch.proxy(config_->valueByPath("update.proxy"));
       fetch.resume(config_->valueByPath("update.resume",true));
@@ -174,7 +238,7 @@ void MSUpdateFetcher::fiberExecute()
       lastCheckUpdate = getlocaltimeofday();
       thread()->server()->attachFiber(newObject<MSUpdateSetuper>(config_));
     }
-    sleep(interval);
+    if( setupEnded ) sleep(interval); else sleep(1000000u);
   }
 }
 //------------------------------------------------------------------------------
@@ -214,7 +278,9 @@ bool MSUpdaterService::active()
 //------------------------------------------------------------------------------
 void MSUpdaterService::genUpdatePackage()
 {
-
+  Config updatesSetup;
+  updatesSetup.codePage(CP_UTF8);
+  updatesSetup.silent(true).fileName(localPath + "setup.conf").parse();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
