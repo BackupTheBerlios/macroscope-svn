@@ -338,7 +338,7 @@ void KFTPClient::get()
   if( bs == 0 ) bs = getpagesize();
   uint64_t partialBlockSize = config_->value("partial_block_size",getpagesize());
   partialBlockSize = config_->section(section_).section("get").value("partial_block_size",partialBlockSize);
-  if( config_->section(section_).section("put").isValue("log_file") ){
+  if( config_->section(section_).section("get").isValue("log_file") ){
     logFile_.codePage(config_->section(section_).section("get").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
     logFile_.fileName(config_->section(section_).section("get").text("log_file"));
     log_ = &logFile_;

@@ -42,16 +42,16 @@ MSUpdateSetuper::MSUpdateSetuper(const ConfigSP & config,Semaphore & setupSem) :
 {
 }
 //------------------------------------------------------------------------------
-void MSUpdateSetuper::executeAction(ConfigSection & section)
+void MSUpdateSetuper::executeAction(const utf8::String & name,const ConfigSection & section)
 {
   int32_t result = 0;
-  utf8::String name(section.value());
+  utf8::String image(section.value());
   utf8::String args(section.value("args"));
   if( name.strlen() > 0 ){
-    result = execute(name,args,NULL,wait);
+    result = execute(image,args,NULL,true);
     utf8::String::Stream s;
-    s << updateSetup.section(j).name <<
-      " before action: '" << name << " " << args << "'";
+    s << name <<
+      " before action: '" << image << " " << args << "'";
     if( result == 0 ){
       s << " executed successfuly\n";
     }
@@ -84,7 +84,7 @@ void MSUpdateSetuper::fiberExecute()
     for( uintptr_t i = 0; i < updatesSetup.sectionCount(); i++ ){
       if( (bool) updatesSetup.section(i).value("installed",false) ) continue;
       stdErr.debug(4,utf8::String::Stream() <<
-        "Try to install update: " << updatesSetup.section(i).name << "\n"
+        "Try to install update: " << updatesSetup.section(i).name() << "\n"
       );
       Config updateSetup;
       updateSetup.codePage(CP_UTF8);
@@ -98,11 +98,14 @@ void MSUpdateSetuper::fiberExecute()
         utf8::String fileName(updateSetup.section(j).value(""));
         if( updateSetup.section(j).isSection("before") ){ // run before actions
           if( updateSetup.section(j).section("before").isSection("execute") )
-            executeAction(updateSetup.section(j).section("before").section("execute"));
+            executeAction(
+              updateSetup.section(j).name(),
+              updateSetup.section(j).section("before").section("execute")
+            );
         }
         if( updateSetup.section(j).isSection("install") ){
-          if( updateSetup.section(j).isSection("install").isSection("copy") ){
-            ConfigSection & section = updateSetup.section(j).isSection("install").section("copy");
+          if( updateSetup.section(j).section("install").isSection("copy") ){
+            const ConfigSection & section = updateSetup.section(j).section("install").section("copy");
             try {
               copy(section.value("destination"),section.value("source"));
             }
@@ -116,11 +119,14 @@ void MSUpdateSetuper::fiberExecute()
           }
         }
         if( updateSetup.section(j).isSection("remove") ){
-          remove(updateSetup.section(j).isSection("remove").value());
+          remove(updateSetup.section(j).section("remove").value());
         }
         if( updateSetup.section(j).isSection("after") ){ // run after actions
           if( updateSetup.section(j).section("after").isSection("execute") )
-            executeAction(updateSetup.section(j).section("after").section("execute"));
+            executeAction(
+              updateSetup.section(j).name(),
+              updateSetup.section(j).section("after").section("execute")
+            );
         }
         updateSetup.section(j).setValue("installed",true);
         updateSetup.save();
@@ -236,7 +242,7 @@ void MSUpdateFetcher::fiberExecute()
         );
       }
       lastCheckUpdate = getlocaltimeofday();
-      thread()->server()->attachFiber(newObject<MSUpdateSetuper>(config_));
+      thread()->server()->attachFiber(newObjectV<MSUpdateSetuper>(config_,setupSem_));
     }
     if( setupEnded ) sleep(interval); else sleep(1000000u);
   }
@@ -276,11 +282,20 @@ bool MSUpdaterService::active()
   return active();
 }
 //------------------------------------------------------------------------------
-void MSUpdaterService::genUpdatePackage()
+void MSUpdaterService::genUpdatePackage(const utf8::String & setupConfigFile)
 {
   Config updatesSetup;
   updatesSetup.codePage(CP_UTF8);
-  updatesSetup.silent(true).fileName(localPath + "setup.conf").parse();
+  updatesSetup.silent(true).fileName(setupConfigFile).parse();
+  Vector<utf8::String> fileList;
+  for( uintptr_t i = 0; i < updatesSetup.sectionCount(); i++ ){
+    if( updatesSetup.section(i).name().strncasecmp("file",4) != 0 ) continue;
+    fileList.add(updatesSetup.section(i).value("file_name"));
+  }
+  fileList.add(updatesSetup.fileName());
+  Archive ar;
+  ar.fileName(updatesSetup.value("file_name"));
+  ar.pack(fileList);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -361,7 +376,7 @@ int main(int ac,char * av[])
         dispatch = false;
       }
       else if( argv()[u].strcmp("--generate-update-package") == 0 && u + 1 < argv().count() ){
-        MSUpdaterService::genUpdatePackage();
+        MSUpdaterService::genUpdatePackage(argv()[u + 1]);
       }
 #if PRIVATE_RELEASE
       else if( argv()[u].strcmp("--machine-key") == 0 ){

@@ -40,7 +40,7 @@ class MSUpdateSetuper : public Fiber {
   private:
     ConfigSP config_;
     Semaphore & setupSem_;
-    void executeAction(ConfigSection & section);
+    void executeAction(const utf8::String & name,const ConfigSection & section);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -62,7 +62,7 @@ class MSUpdaterService : public Service, protected BaseServer {
   public:
     MSUpdaterService();
 
-    static void genUpdatePackage();
+    static void genUpdatePackage(const utf8::String & setupConfigFile);
   protected:
   private:
     ConfigSP config_;

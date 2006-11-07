@@ -300,9 +300,9 @@ dbgutils_getFrame(const FrameAddress& frameAddr, DbgFrame& frame)
   {
 
     // Get the source line for this stack frame entry
-    IMAGEHLP_LINE lineInfo = { sizeof(IMAGEHLP_LINE) };
+    IMAGEHLP_LINE64 lineInfo = { sizeof(IMAGEHLP_LINE) };
     DWORD dwLineDisplacement;
-    if ( SymGetLineFromAddr( _currentProcess, frameAddr.address,
+    if ( SymGetLineFromAddr64( _currentProcess, frameAddr.address,
                                 &dwLineDisplacement, &lineInfo ) )
     {
       frame.sourceFileName = lineInfo.FileName;
@@ -324,7 +324,7 @@ dbgutils_getFrame(const FrameAddress& frameAddr, DbgFrame& frame)
   }
   if (frame.queryFlags & DbgFrameGetGlobals)
   {
-    SymEnumSymbols(GetCurrentProcess(), (DWORD64)GetModuleHandle(NULL), 0, dbgutils_enumerateSymbolsCallback, &frame);
+    SymEnumSymbols(GetCurrentProcess(),(ULONG64)GetModuleHandle(NULL),0,dbgutils_enumerateSymbolsCallback, &frame);
   }
   
 }
