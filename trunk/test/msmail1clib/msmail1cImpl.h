@@ -47,6 +47,25 @@ namespace msmail {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class SerialPortFiber : public Fiber {
+  friend class Client;
+  public:
+    virtual ~SerialPortFiber();
+    SerialPortFiber(Client & client,uintptr_t serialPortNumber);
+  protected:
+    Client & client_;
+    uintptr_t serialPortNumber_;
+    AsyncFile * serial_;
+
+    void removeFromArray();
+    void fiberExecute();
+  private:
+    SerialPortFiber(const SerialPortFiber &);
+    void operator = (const SerialPortFiber &);
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 class ClientFiber : public ksock::ClientFiber {
   friend class Client;
   public:
@@ -76,9 +95,8 @@ class ClientMailSenderFiber : public ClientFiber {
 
     void main();
   private:
-    ClientMailSenderFiber(const ClientMailSenderFiber & a) :
-      ClientFiber(a.client_), message_(a.message_) {}
-    void operator = (const ClientMailSenderFiber &){}
+    ClientMailSenderFiber(const ClientMailSenderFiber &);
+    void operator = (const ClientMailSenderFiber &);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,6 +148,7 @@ class MK1100ClientFiber : public ksock::ClientFiber {
 class Client : public ksock::Client {
   friend class ClientFiber;
   friend class ClientDBGetterFiber;
+  friend class SerialPortFiber;
   public:
     virtual ~Client();
     Client();
@@ -167,6 +186,10 @@ class Client : public ksock::Client {
     utf8::String getUserList() const;
     utf8::String getDBInGroupList(const utf8::String & group) const;
 
+    bool installSerialPortScanner(uintptr_t serialPortNumber);
+    bool removeSerialPortScanner(uintptr_t serialPortNumber);
+    void removeAllSerialPortScanners();
+
     InterlockedMutex workFiberWait_;
     int32_t workFiberLastError_;
   protected:
@@ -177,6 +200,7 @@ class Client : public ksock::Client {
     AutoHashDrop<Messages> sendQueueAutoDrop_;
     Server::Data data_;
     uint64_t ftime_;
+    Array<SerialPortFiber *> serialPortsFibers_;
   private:
     Client(const Client &);
     void operator = (const Client &){}

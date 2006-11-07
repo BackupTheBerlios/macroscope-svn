@@ -62,7 +62,7 @@ int main(int ac,char * av[])
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
-    errcode = e->code();
+    errcode = e->code() >= errorOffset ? e->code() - errorOffset : e->code();
   }
   catch( ... ){
   }

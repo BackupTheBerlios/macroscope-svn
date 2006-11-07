@@ -392,14 +392,13 @@ int main(int ac,char * av[])
       {
         ConfigSP config(newObject<InterlockedConfig<FiberInterlockedMutex> >());
         daemon = config->value("daemon",false);
-        checkMachineBinding(config->value("machine_key"));
       }
       services.startServiceCtrlDispatcher(daemon);
     }
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
-    errcode = e->code();
+    errcode = e->code() >= errorOffset ? e->code() - errorOffset : e->code();
   }
   catch( ... ){
   }

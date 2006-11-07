@@ -32,6 +32,8 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class AsyncFile : public AsyncDescriptor {
+  friend void initialize();
+  friend void cleanup();
   public:
     virtual ~AsyncFile();
     AsyncFile(const utf8::String & fileName = utf8::String());
@@ -91,6 +93,8 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & readOnly(bool v);
     bool createIfNotExist() const;
     AsyncFile & createIfNotExist(bool v);
+    bool detachOnClose() const;
+    AsyncFile & detachOnClose(bool v);
 
     AsyncFile & redirectToStdin();
     AsyncFile & redirectToStdout();
@@ -98,6 +102,8 @@ class AsyncFile : public AsyncDescriptor {
     bool std() const;
   protected:
   private:
+    static uint8_t mutex_[];
+    static InterlockedMutex & mutex();
 #if _MSC_VER
 #pragma warning(push,3)
 #endif
@@ -127,6 +133,8 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t readOnly_         : 1;
       uint8_t createIfNotExist_ : 1;
       uint8_t std_              : 1;
+      uint8_t seekable_         : 1;
+      uint8_t detachOnClose_    : 1;
     };
 #if _MSC_VER
 #pragma warning(pop)
@@ -150,6 +158,9 @@ class AsyncFile : public AsyncDescriptor {
     void closeAPI();
     bool fileMember() const;
     bool redirectByName();
+
+    static void initialize();
+    static void cleanup();
 };
 //---------------------------------------------------------------------------
 inline bool AsyncFile::std() const
@@ -218,6 +229,17 @@ inline AsyncFile & AsyncFile::createIfNotExist(bool v)
   return *this;
 }
 //---------------------------------------------------------------------------
+inline bool AsyncFile::detachOnClose() const
+{
+  return detachOnClose_ != 0;
+}
+//---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::detachOnClose(bool v)
+{
+  detachOnClose_ = v;
+  return *this;
+}
+//---------------------------------------------------------------------------
 inline AsyncFile & AsyncFile::attach()
 {
   if( !std_ ) AsyncDescriptor::attach();
@@ -230,6 +252,11 @@ inline AsyncFile & AsyncFile::detach()
   return *this;
 }
 //------------------------------------------------------------------------------
+inline InterlockedMutex & AsyncFile::mutex()
+{
+  return *reinterpret_cast<InterlockedMutex *>(mutex_);
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 template <typename T> class AutoFileWRLock {
@@ -278,3 +305,4 @@ AutoFileWRLock<T> & AutoFileWRLock<T>::setLocked(T & file,uint64_t pos,uint64_t 
 } // namespace ksys
 //---------------------------------------------------------------------------
 #endif
+//---------------------------------------------------------------------------

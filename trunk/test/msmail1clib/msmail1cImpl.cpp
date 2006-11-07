@@ -82,7 +82,9 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"RemoveHashedArray", L"”далить’ешированныйћассив",
       L"SetHashedArrayValue", L"”становить«начение’ешированногоћассива",
       L"GetHashedArrayValue", L"ѕолучить«начение’ешированногоћассива",
-      L"RemoveAllHashedArrays", L"”далить¬се’ешированныећассивы"
+      L"RemoveAllHashedArrays", L"”далить¬се’ешированныећассивы",
+      L"InstallDeviceScanner", L"”становить—канер”стройства",
+      L"RemoveDeviceScanner", L"”далить—канер”стройства"
     };
     functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
@@ -801,7 +803,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 27;
+  *plMethods = 29;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -1031,6 +1033,22 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"”далить¬се’ешированныећассивы")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 27 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"InstallDeviceScanner")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"”становить—канер”стройства")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 28 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RemoveDeviceScanner")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"”далить—канер”стройства")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1065,6 +1083,8 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 24 : *plParams = 3; break;
     case 25 : *plParams = 2; break;
     case 26 : *plParams = 0; break;
+    case 27 : *plParams = 1; break;
+    case 28 : *plParams = 1; break;
     default :
       *plParams = -1;
       return E_NOTIMPL;
@@ -1600,6 +1620,36 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           hashedArrays_.clear();
           V_I4(pvarRetValue) = 1;
           break;
+        case 27 : // InstallDeviceScanner
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
+                V_I4(pvarRetValue) = client_.installSerialPortScanner(V_I4(pv0));
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;          
+        case 28 : // RemoveDeviceScanner
+          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
+                V_I4(pvarRetValue) = client_.removeSerialPortScanner(V_I4(pv0));
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;          
         default :
           hr = E_NOTIMPL;
       }

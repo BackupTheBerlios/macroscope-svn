@@ -30,8 +30,11 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+uint8_t AsyncFile::mutex_[sizeof(InterlockedMutex)];
+//---------------------------------------------------------------------------
 AsyncFile::~AsyncFile()
 {
+  detachOnClose_ = true;
   close();
 }
 //---------------------------------------------------------------------------
@@ -41,7 +44,9 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   removeAfterClose_(false),
   readOnly_(false),
   createIfNotExist_(false),
-  std_(false)
+  std_(false),
+  seekable_(true),
+  detachOnClose_(true)
 {
   file_ = INVALID_HANDLE_VALUE;
   handle_ = INVALID_HANDLE_VALUE;
@@ -52,29 +57,32 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::close()
 {
-  detach();
+  if( detachOnClose_ ) detach();
   bool closed = false;
-  if( file_ != INVALID_HANDLE_VALUE ){
-    if( !std_ ){
+  {
+    AutoLock<InterlockedMutex> lock(mutex());
+    if( file_ != INVALID_HANDLE_VALUE ){
+      if( !std_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      CloseHandle(file_);
+        CloseHandle(file_);
 #else
-      ::close(file_);
+        ::close(file_);
 #endif
+      }
+      file_ = INVALID_HANDLE_VALUE;
+      closed = true;
     }
-    file_ = INVALID_HANDLE_VALUE;
-    closed = true;
-  }
-  if( handle_ != INVALID_HANDLE_VALUE ){
-    if( !std_ ){
+    if( handle_ != INVALID_HANDLE_VALUE ){
+      if( !std_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      CloseHandle(handle_);
+        CloseHandle(handle_);
 #else
-      ::close(handle_);
+        ::close(handle_);
 #endif
+      }
+      handle_ = INVALID_HANDLE_VALUE;
+      closed = true;
     }
-    handle_ = INVALID_HANDLE_VALUE;
-    closed = true;
   }
   if( closed && removeAfterClose_ ){
     try {
@@ -88,6 +96,14 @@ AsyncFile & AsyncFile::close()
 AsyncFile & AsyncFile::open()
 {
   if( redirectByName() ) return *this;
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( fileName_.strncasecmp("COM",3) == 0 ){
+    utf8::String::Iterator i(fileName_);
+    i += 3;
+    while( i.isDigit() ) i.next();
+    seekable_ = i.getChar() != ':' || !(i + 1).eof();
+  }
+#endif
   if( fileMember() ){
     if( file_ == INVALID_HANDLE_VALUE ){
       attach();
@@ -346,7 +362,7 @@ int64_t AsyncFile::read(void * buf,uint64_t size)
   if( fileMember() ){
     int64_t r = 0;
     while( size > 0 ){
-      int64_t pos = tell();
+      int64_t pos = seekable_ ? tell() : 0;
       fiber()->event_.position_ = pos;
       fiber()->event_.cbuffer_ = buf;
       fiber()->event_.length_ = size;
@@ -367,7 +383,7 @@ int64_t AsyncFile::read(void * buf,uint64_t size)
       buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
       r += fiber()->event_.count_;
       size -= fiber()->event_.count_;
-      seek(pos + fiber()->event_.count_);
+      if( seekable_ ) seek(pos + fiber()->event_.count_);
     }
     return r;
   }
@@ -399,7 +415,7 @@ int64_t AsyncFile::write(const void * buf,uint64_t size)
   if( fileMember() ){
     int64_t w = 0;
     while( size > 0 ){
-      int64_t pos = tell();
+      int64_t pos = seekable_ ? tell() : 0;
       fiber()->event_.position_ = pos;
       fiber()->event_.cbuffer_ = buf;
       fiber()->event_.length_ = size;
@@ -417,7 +433,7 @@ int64_t AsyncFile::write(const void * buf,uint64_t size)
       buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
       w += fiber()->event_.count_;
       size -= fiber()->event_.count_;
-      seek(pos + fiber()->event_.count_);
+      if( seekable_ ) seek(pos + fiber()->event_.count_);
       if( (uint64_t) w < size ) break;
     }
     return w;
@@ -1191,6 +1207,16 @@ bool AsyncFile::redirectByName()
   else
     r = false;
   return r;
+}
+//---------------------------------------------------------------------------
+void AsyncFile::initialize()
+{
+  new (mutex_) InterlockedMutex;
+}
+//---------------------------------------------------------------------------
+void AsyncFile::cleanup()
+{
+  mutex().~InterlockedMutex();
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

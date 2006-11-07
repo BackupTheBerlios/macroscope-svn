@@ -163,7 +163,7 @@ int main(int _argc,char * _argv[])
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
-    errcode = e->code();
+    errcode = e->code() >= errorOffset ? e->code() - errorOffset : e->code();
   }
   catch( ... ){
   }

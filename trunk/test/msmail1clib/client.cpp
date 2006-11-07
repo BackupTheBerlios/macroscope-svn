@@ -31,6 +31,92 @@ namespace msmail {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+SerialPortFiber::~SerialPortFiber()
+{
+}
+//------------------------------------------------------------------------------
+SerialPortFiber::SerialPortFiber(Client & client,uintptr_t serialPortNumber) :
+  client_(client), serialPortNumber_(serialPortNumber), serial_(NULL)
+{
+}
+//------------------------------------------------------------------------------
+void SerialPortFiber::removeFromArray()
+{
+  AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+  intptr_t i = client_.serialPortsFibers_.bSearch(this);
+  assert( i >= 0 );
+  client_.serialPortsFibers_.remove(i);
+}
+//------------------------------------------------------------------------------
+void SerialPortFiber::fiberExecute()
+{
+  AsyncFile serial;
+  serial_ = &serial;
+  try {
+    serial.detachOnClose(false).readOnly(true).fileName(
+      "COM" + utf8::int2Str(serialPortNumber_) + ":"
+    ).open();
+    AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+    intptr_t c, i = client_.serialPortsFibers_.bSearch(this,c);
+    assert( c != 0 );
+    client_.serialPortsFibers_.insert(i + (c > 0),this);
+  }
+  catch( ExceptionSP & e ){
+    e->writeStdError();
+    client_.workFiberLastError_ = e->code();
+  }
+  try {
+    client_.workFiberWait_.release();
+    if( serial.isOpen() ){
+      Array<char> b;
+      uintptr_t pos = 0, i;
+      b.resize(128);
+      while( !terminated_ ){
+        memset(&b[pos],' ',b.count() - pos);
+        if( pos >= b.count() ) b.resize((b.count() << 1) + (b.count() == 0));
+        int64_t r = serial.read(&b[pos],b.count() - pos);
+        if( r < 0 ) break;
+        pos += (uintptr_t) r;
+        bool codeBar = false;
+        for( i = 0; i < pos && !(codeBar = b[i] == '\0' || b[i] == '\r' || b[i] == '\n'); i++ );
+        if( codeBar ){
+          BSTR source = NULL, event = NULL, data = NULL;
+          try {
+            source = client_.name_.getOLEString();
+            event = utf8::String("BarCodeValue_" + serial.fileName()).getOLEString();
+            data = utf8::String(b.ptr(),i).getOLEString();
+          }
+          catch( ... ){
+            SysFreeString(data);
+            SysFreeString(event);
+            SysFreeString(source);
+            throw;
+          }
+          HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source,event,data);
+          assert( SUCCEEDED(hr) );
+          b.resize(128);
+          pos = 0;
+        }
+      }
+      removeFromArray();
+      client_.workFiberLastError_ = 0;
+      client_.workFiberWait_.release();
+    }
+  }
+  catch( ... ){
+    removeFromArray();
+    if( terminated_ ){
+      client_.workFiberLastError_ = 0;
+      client_.workFiberWait_.release();
+    }
+    else {
+      throw;
+    }
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 ClientFiber::~ClientFiber()
 {
 }
@@ -154,10 +240,19 @@ void ClientFiber::main()
         *this << uint8_t(cmRecvMail) << client_.user_ << key << bool(true) << bool(true);
         getCode();
         {
-          AutoPtr<OLECHAR> source(client_.name_.getOLEString());
-          AutoPtr<OLECHAR> event(utf8::String("Connect").getOLEString());
-          AutoPtr<OLECHAR> data(utf8::ptr2Str(this).getOLEString());
-          HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
+          BSTR source = NULL, event = NULL, data = NULL;
+          try {
+            source = client_.name_.getOLEString();
+            event = utf8::String("Connect").getOLEString();
+            data = utf8::ptr2Str(this).getOLEString();
+          }
+          catch( ... ){
+            SysFreeString(data);
+            SysFreeString(event);
+            SysFreeString(source);
+            throw;
+          }
+          HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source,event,data);
           assert( SUCCEEDED(hr) );
           AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
           client_.connectedToServer_ = remoteAddress.resolve();
@@ -411,6 +506,7 @@ void Client::open()
 //------------------------------------------------------------------------------
 void Client::close()
 {
+  removeAllSerialPortScanners();
   ksock::Client::close();
   sendQueue_.drop();
   recvQueue_.drop();
@@ -604,6 +700,70 @@ utf8::String Client::removeValue(const utf8::String id,const utf8::String key)
   if( msg == NULL )
     newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return msg->removeValue(key);
+}
+//------------------------------------------------------------------------------
+bool Client::installSerialPortScanner(uintptr_t serialPortNumber)
+{
+  bool installed = false;
+  {
+    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    for( intptr_t i = serialPortsFibers_.count() - 1; i >= 0; i-- )
+      if( serialPortsFibers_[i]->serialPortNumber_ == serialPortNumber ){
+        installed = true;
+        break;
+      }
+  }
+  workFiberLastError_ = 0;
+  if( !installed ){
+    workFiberWait_.acquire();
+    try {
+      attachFiber(newObjectV<SerialPortFiber>(*this,serialPortNumber));
+    }
+    catch( ... ){
+      workFiberWait_.release();
+      throw;
+    }
+    AutoLock<InterlockedMutex> lock(workFiberWait_);
+  }
+  return workFiberLastError_ == 0;
+}
+//------------------------------------------------------------------------------
+bool Client::removeSerialPortScanner(uintptr_t serialPortNumber)
+{
+  intptr_t i;
+  {
+    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    for( i = serialPortsFibers_.count() - 1; i >= 0; i-- )
+      if( serialPortsFibers_[i]->serialPortNumber_ == serialPortNumber ){
+        serialPortsFibers_[i]->terminate();
+        serialPortsFibers_[i]->serial_->close();
+        break;
+      }
+  }
+  if( i < 0 ) return false;
+  workFiberLastError_ = 0;
+  workFiberWait_.acquire();
+  AutoLock<InterlockedMutex> lock(workFiberWait_);
+  return workFiberLastError_ == 0;
+}
+//------------------------------------------------------------------------------
+void Client::removeAllSerialPortScanners()
+{
+  for(;;){
+    intptr_t i;
+    {
+      AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+      i = serialPortsFibers_.count() - 1;
+      if( i >= 0 ){
+        serialPortsFibers_[i]->terminate();
+        serialPortsFibers_[i]->serial_->close();
+      }
+    }
+    if( i < 0 ) break;
+    workFiberLastError_ = 0;
+    workFiberWait_.acquire();
+    AutoLock<InterlockedMutex> lock(workFiberWait_);
+  }
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

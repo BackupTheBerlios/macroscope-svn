@@ -2474,6 +2474,7 @@ void initialize()
   utf8::String::initialize();
   new (argvPlaceHolder) Array<utf8::String>;
   strErrorInitialize();
+  AsyncFile::initialize();
   LogFile::initialize();
   Config::initialize();
 #ifdef NETMAIL_ENABLE_PROFILER
@@ -2512,6 +2513,7 @@ void cleanup()
 #endif
   Config::cleanup();
   LogFile::cleanup();
+  AsyncFile::cleanup();
   strErrorCleanup();
   argv().~Array<utf8::String>();
   utf8::String::cleanup();

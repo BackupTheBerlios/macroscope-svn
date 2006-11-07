@@ -553,7 +553,7 @@ int main(int argc,char * argv[])
   }
   catch( ksys::ExceptionSP & e ){
     e->writeStdError();
-    errcode = e->code();
+    errcode = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
   }
   catch( ... ){
   }

@@ -84,33 +84,15 @@ template< class T> class Array {
   protected:
     T *       ptr_;
     uintptr_t count_;
-
-    Array(uintptr_t count,int);
   private:
 };
 //-----------------------------------------------------------------------------
 template< class T> inline
 Array< T> & Array< T>::replace(Array< T> & array)
 {
-  clear();
-  ptr_ = array.ptr_;
-  count_ = array.count_;
-  array.ptr_ = NULL;
-  array.count_ = 0;
+  xchg(ptr_,array.ptr_);
+  xchg(count_,array.count_);
   return *this;
-}
-//-----------------------------------------------------------------------------
-template< class T>
-#ifndef __BCPLUSPLUS__
-inline
-#endif
-Array<T>::Array(uintptr_t count,int) : ptr_(NULL), count_(0)
-{
-  xmalloc(ptr_, sizeof(T) * count);
-  while( count_ < count ){
-    new (ptr_ + count_) T;
-    count_++;
-  }
 }
 //-----------------------------------------------------------------------------
 template< class T> inline Array< T>::~Array()
@@ -124,7 +106,7 @@ template< class T> inline Array< T>::Array(T * ptr) : ptr_(ptr), count_(0)
 //-----------------------------------------------------------------------------
 template< class T> inline Array< T>::Array(const T & element) : ptr_(NULL), count_(0)
 {
-  resize(1) = element;
+  resize(1).ptr_[0] = element;
 }
 //-----------------------------------------------------------------------------
 template< class T> inline Array< T>::Array(const Array< T> & array) : ptr_(NULL), count_(0)
@@ -134,13 +116,16 @@ template< class T> inline Array< T>::Array(const Array< T> & array) : ptr_(NULL)
 //-----------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 Array< T> & Array<T>::operator =(const Array< T> & array)
 {
-  Array< T> newArray(array.count_,0);
-  for( intptr_t i = array.count_ - 1; i >= 0; i-- )
-    newArray.ptr_[i] = array.ptr_[i];
+  Array<T> newArray;
+  xalloc(newArray.ptr_,sizeof(T) * array.count_);
+  while( newArray.count_ < array.count_ ){
+    new (newArray.ptr_ + newArray.count_) T(array.ptr_[newArray.count_]);
+    newArray.count_++;
+  }
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
@@ -228,7 +213,7 @@ Array< T> & Array< T>::clear()
 {
   while( count_ > 0 ){
     count_--;
-    ptr_[count_].~T();
+    (ptr_ + count_)->~T();
   }
   xfree(ptr_);
   ptr_ = NULL;
@@ -253,38 +238,52 @@ inline
 #endif
 Array<T> & Array<T>::resize(uintptr_t newSize)
 {
-  Array<T> newArray(newSize,0);
-  for( intptr_t i = (newSize > count_ ? count_ : newSize) - 1; i >= 0; i-- )
-    newArray.ptr_[i] = ptr_[i];
+  Array<T> newArray;
+  newArray.ptr_ = (T *) kmalloc(sizeof(T) * newSize);
+  while( newArray.count_ < count_ ){
+    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+    newArray.count_++;
+  }
+  while( newArray.count_ < newSize ){
+    new (newArray.ptr_ + newArray.count_) T;
+    newArray.count_++;
+  }
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Array< T> & Array< T>::add(const T & element)
+Array<T> & Array<T>::add(const T & element)
 {
-  Array< T> newArray(count_ + 1,0);
-  for( intptr_t i = count_ - 1; i >= 0; i-- ) newArray.ptr_[i] = ptr_[i];
-  newArray.ptr_[count_] = element;
+  Array<T> newArray;
+  newArray.ptr_ = (T *) kmalloc(sizeof(T) * (count_ + 1));
+  while( newArray.count_ < count_ ){
+    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+    newArray.count_++;
+  }
+  new (newArray.ptr_ + newArray.count_++) T(element);
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Array< T> & Array< T>::insert(uintptr_t i, const T & element)
+Array<T> & Array<T>::insert(uintptr_t i,const T & element)
 {
-  assert((uintptr_t) i <= count_);
-  Array<T> newArray(count_ + 1,0);
-  uintptr_t j;
-  for( j = 0; j < i; j++ ) newArray.ptr_[j] = ptr_[j];
-  newArray.ptr_[j] = element;
-  while( j < count_ ){
-    newArray.ptr_[j + 1] = ptr_[j];
-    j++;
+  assert( (uintptr_t) i <= count_ );
+  Array<T> newArray;
+  newArray.ptr_ = (T *) kmalloc(sizeof(T) * (count_ + 1));
+  while( newArray.count_ < i ){
+    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+    newArray.count_++;
+  }
+  new (newArray.ptr_ + newArray.count_++) T(element);
+  while( newArray.count_ - 1 < count_ ){
+    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_ - 1]);
+    newArray.count_++;
   }
   return replace(newArray);
 }
@@ -414,10 +413,16 @@ inline
 Array<T> & Array<T>::remove(uintptr_t i)
 {
   assert(i < count_);
-  Array<T> newArray(count_ - 1,0);
-  uintptr_t j;
-  for( j = 0; j < i; j++ ) newArray.ptr_[j] = ptr_[j];
-  for( j = i + 1; j < count_; j++ ) newArray.ptr_[j - 1] = ptr_[j];
+  Array<T> newArray;
+  newArray.ptr_ = (T *) kmalloc(sizeof(T) * (count_ - 1));
+  while( newArray.count_ < i ){
+    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+    newArray.count_++;
+  }
+  while( newArray.count_ + 1 < count_ ){
+    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_ + 1]);
+    newArray.count_++;
+  }
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
