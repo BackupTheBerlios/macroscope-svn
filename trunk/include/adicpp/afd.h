@@ -95,6 +95,13 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & createIfNotExist(bool v);
     bool detachOnClose() const;
     AsyncFile & detachOnClose(bool v);
+#if defined(__WIN32__) || defined(__WIN64__)
+    DWORD waitCommEvent();
+    HANDLE descriptor() const;
+#else
+    uint32_t waitCommEvent();
+    int descriptor() const;
+#endif
 
     AsyncFile & redirectToStdin();
     AsyncFile & redirectToStdout();
@@ -256,6 +263,18 @@ inline InterlockedMutex & AsyncFile::mutex()
 {
   return *reinterpret_cast<InterlockedMutex *>(mutex_);
 }
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+inline HANDLE AsyncFile::descriptor() const
+{
+  return fileMember() ? descriptor_ : handle_;
+}
+#else
+inline int AsyncFile::descriptor() const
+{
+  return fileMember() ? descriptor_ : handle_;
+}
+#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

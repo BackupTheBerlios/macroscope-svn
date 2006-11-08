@@ -50,12 +50,58 @@ void SerialPortFiber::removeFromArray()
 //------------------------------------------------------------------------------
 void SerialPortFiber::fiberExecute()
 {
+  int32_t err;
+#if defined(__WIN32__) || defined(__WIN64__)
+  DWORD evtMask;
+#else
+  uint32_t evtMask;
+#endif
+
   AsyncFile serial;
   serial_ = &serial;
   try {
-    serial.detachOnClose(false).readOnly(true).fileName(
+    serial.detachOnClose(false).readOnly(true).exclusive(true).fileName(
       "COM" + utf8::int2Str(serialPortNumber_) + ":"
     ).open();
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( SetupComm(serial.descriptor(),1600,1600) == 0 ){
+      err = GetLastError() + errorOffset;
+      serial.close();
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    COMMTIMEOUTS cto;
+    if( GetCommTimeouts(serial.descriptor(),&cto) == 0 ){
+      err = GetLastError() + errorOffset;
+      serial.close();
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    memset(&cto,0,sizeof(cto));
+    cto.ReadIntervalTimeout = MAXDWORD;
+    /*cto.ReadTotalTimeoutMultiplier = 0;
+    cto.ReadTotalTimeoutConstant = 0;
+    cto.WriteTotalTimeoutMultiplier = MAXDWORD;
+    cto.WriteTotalTimeoutConstant = MAXDWORD - 1;*/
+    if( SetCommTimeouts(serial.descriptor(),&cto) == 0 ){
+      err = GetLastError() + errorOffset;
+      serial.close();
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( GetCommMask(serial.descriptor(),&evtMask) == 0 ){
+      err = GetLastError() + errorOffset;
+      serial.close();
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( SetCommMask(serial.descriptor(),evtMask | EV_RXCHAR/* | EV_CTS | EV_DSR | EV_ERR | EV_RLSD*/) == 0 ){
+      err = GetLastError() + errorOffset;
+      serial.close();
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
+      err = GetLastError() + errorOffset;
+      serial.close();
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+#endif
     AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
     intptr_t c, i = client_.serialPortsFibers_.bSearch(this,c);
     assert( c != 0 );
@@ -68,34 +114,57 @@ void SerialPortFiber::fiberExecute()
   try {
     client_.workFiberWait_.release();
     if( serial.isOpen() ){
-      Array<char> b;
-      uintptr_t pos = 0, i;
-      b.resize(128);
+      Array<uint8_t> b;
+      uintptr_t pos = 0, i, j;
+      b.resize(8);
       while( !terminated_ ){
-        memset(&b[pos],' ',b.count() - pos);
         if( pos >= b.count() ) b.resize((b.count() << 1) + (b.count() == 0));
-        int64_t r = serial.read(&b[pos],b.count() - pos);
+        memset(b.ptr() + pos,0,b.count() - pos);
+        evtMask = serial.waitCommEvent();
+        int64_t r = serial.read(b.ptr() + pos,b.count() - pos);
         if( r < 0 ) break;
         pos += (uintptr_t) r;
-        bool codeBar = false;
-        for( i = 0; i < pos && !(codeBar = b[i] == '\0' || b[i] == '\r' || b[i] == '\n'); i++ );
-        if( codeBar ){
-          BSTR source = NULL, event = NULL, data = NULL;
-          try {
-            source = client_.name_.getOLEString();
-            event = utf8::String("BarCodeValue_" + serial.fileName()).getOLEString();
-            data = utf8::String(b.ptr(),i).getOLEString();
+        for( i = 0; i < pos; ){
+          while( i < pos ){
+            if( isascii(b[i]) && !iscntrl(b[i]) ) break;
+            i++;
           }
-          catch( ... ){
-            SysFreeString(data);
-            SysFreeString(event);
-            SysFreeString(source);
-            throw;
+          j = i;
+          bool codeBar = false;
+          while( i < pos ){
+            codeBar = !isascii(b[i]) || iscntrl(b[i]);
+            if( codeBar ) break;
+            i++;
           }
-          HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source,event,data);
-          assert( SUCCEEDED(hr) );
-          b.resize(128);
-          pos = 0;
+          if( codeBar ){
+            BSTR source = NULL, event = NULL, data = NULL;
+            try {
+              source = client_.name_.getOLEString();
+              event = utf8::String("BarCodeValue_COM" + utf8::int2Str(serialPortNumber_)).getOLEString();
+              data = utf8::String((char *) b.ptr() + j,i - j).getOLEString();
+            }
+            catch( ... ){
+              SysFreeString(data);
+              SysFreeString(event);
+              SysFreeString(source);
+              throw;
+            }
+            HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source,event,data);
+            if( FAILED(hr) ){
+              newObject<Exception>(
+                HRESULT_CODE(hr) + errorOffset,
+                utf8::String(__PRETTY_FUNCTION__) + " line " +
+                utf8::int2Str(__LINE__) + ", pAsyncEvent_->ExternalEvent(" +
+                client_.name_ + "," +
+                "BarCodeValue_COM" + utf8::int2Str(serialPortNumber_) + "," +
+                utf8::String((char *) b.ptr() + j,i - j) + ") failed"
+              )->writeStdError();
+            }
+            memcpy(b.ptr(),b.ptr() + i,pos - i);
+            //memset(b.ptr() + pos - i,0,b.count() + pos - i);
+            pos -= i;
+            i = 0;
+          }
         }
       }
       removeFromArray();
@@ -253,7 +322,15 @@ void ClientFiber::main()
             throw;
           }
           HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source,event,data);
-          assert( SUCCEEDED(hr) );
+          if( FAILED(hr) ){
+            newObject<Exception>(
+              HRESULT_CODE(hr) + errorOffset,
+              utf8::String(__PRETTY_FUNCTION__) + " line " +
+              utf8::int2Str(__LINE__) + ", pAsyncEvent_->ExternalEvent(" +
+              client_.name_ + ",Connect," +
+              utf8::ptr2Str(this) + ") failed"
+            )->writeStdError();
+          }
           AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
           client_.connectedToServer_ = remoteAddress.resolve();
           client_.connected_ = true;
@@ -270,13 +347,27 @@ void ClientFiber::main()
           }
           bool messageAccepted = true;
           if( msg == NULL ){
-            AutoPtr<OLECHAR> source(client_.name_.getOLEString());
-            AutoPtr<OLECHAR> event(utf8::String("Message").getOLEString());
-            AutoPtr<OLECHAR> data(msgId.getOLEString());
-            HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
+            BSTR source = NULL, event = NULL, data = NULL;
+            try {
+              source = client_.name_.getOLEString();
+              event = utf8::String("Message").getOLEString();
+              data = msgId.getOLEString();
+            }
+            catch( ... ){
+              SysFreeString(data);
+              SysFreeString(event);
+              SysFreeString(source);
+              throw;
+            }
+            HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source,event,data);
             if( FAILED(hr) ){
-              Exception e((hr & 0xFFFF) + errorOffset,utf8::String());
-              e.writeStdError();
+              newObject<Exception>(
+                HRESULT_CODE(hr) + errorOffset,
+                utf8::String(__PRETTY_FUNCTION__) + " line " +
+                utf8::int2Str(__LINE__) + ", pAsyncEvent_->ExternalEvent(" +
+                client_.name_ + ",Message," +
+                msgId + ") failed"
+              )->writeStdError();
               messageAccepted = false;
               AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
               Message * msg = client_.recvQueue_.find(msgId);

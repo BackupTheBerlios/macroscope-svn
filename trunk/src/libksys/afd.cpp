@@ -1209,6 +1209,34 @@ bool AsyncFile::redirectByName()
   return r;
 }
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+DWORD AsyncFile::waitCommEvent()
+{
+  DWORD evtMask;
+  if( fileMember() ){
+    fiber()->event_.type_ = etWaitCommEvent;
+    fiber()->event_.position_ = 0;
+    fiber()->thread()->postRequest(this);
+    fiber()->switchFiber(fiber()->mainFiber());
+    if( fiber()->event_.errno_ != 0 )
+      newObject<Exception>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    evtMask = fiber()->event_.evtMask_;
+  }
+  else {
+    if( WaitCommEvent(handle_,&evtMask,NULL) == 0 ){
+      int32_t err = GetLastError() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return evtMask;
+}
+#else
+uint32_t AsyncFile::waitCommEvent()
+{
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+}
+#endif
+//---------------------------------------------------------------------------
 void AsyncFile::initialize()
 {
   new (mutex_) InterlockedMutex;

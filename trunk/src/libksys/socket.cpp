@@ -307,6 +307,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
 AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
 {
   open();
+  fiber()->event_.position_ = 0;
   fiber()->event_.address_ = addr;
   fiber()->event_.type_ = ksys::etConnect;
   fiber()->thread()->postRequest(this);

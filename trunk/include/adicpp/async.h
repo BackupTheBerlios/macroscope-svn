@@ -47,6 +47,7 @@ enum AsyncEventType {
   etResolveAddress,
   etStat,
   etDirectoryChangeNotification,
+  etWaitCommEvent,
   etLockFile,
   etRead,
   etWrite,
@@ -138,6 +139,9 @@ class AsyncEvent {
           uintptr_t tid_;
           Vector<utf8::String> * dirList_;
           const Array<utf8::String> * args_;
+#if defined(__WIN32__) || defined(__WIN64__)
+          DWORD evtMask_;
+#endif
         };
         LockFileType lockType_;
       };

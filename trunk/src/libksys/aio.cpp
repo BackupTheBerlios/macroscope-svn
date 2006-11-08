@@ -341,6 +341,13 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             );
           }
           break;
+        case etWaitCommEvent :
+          rw = WaitCommEvent(
+            object->descriptor_->descriptor_,
+            &object->evtMask_,
+            &object->overlapped_
+          );
+          break;
         case etLockFile :
           if( object->length_ == 0 ) object->length_ = ~UINT64_C(0);
           switch( object->lockType_ ){
@@ -369,7 +376,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
           );
           break;
         case etRead     :
-	  if( object->length_ > 0 ){
+	        if( object->length_ > 0 ){
             if( object->length_ > 0x40000000 ) object->length_ = 0x40000000;
             rw = object->descriptor_->Read(
               object->buffer_,
@@ -378,12 +385,12 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
               isw9x ? NULL : &object->overlapped_
             );
           }
-	  else {
-	    errno = EINVAL;
-	  }
+	        else {
+	          errno = EINVAL;
+	        }
           break;
         case etWrite  :
-	  if( object->length_ > 0 ){
+	        if( object->length_ > 0 ){
             if( object->length_ > 0x40000000 ) object->length_ = 0x40000000;
             rw = object->descriptor_->Write(
               object->buffer_,
@@ -391,10 +398,10 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
               &nb,
               isw9x ? NULL : &object->overlapped_
             );
-	  }
-	  else {
+	        }
+	        else {
             errno = EINVAL;
-	  }
+	        }
           break;
         case etAccept :
           rw = object->descriptor_->AcceptEx(
@@ -1683,6 +1690,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
       }
       // walk through
 #endif
+    case etWaitCommEvent :
     case etLockFile :
     case etRead :
     case etWrite :
