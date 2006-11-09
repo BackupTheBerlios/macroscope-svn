@@ -121,7 +121,7 @@ inline
 Array< T> & Array<T>::operator =(const Array< T> & array)
 {
   Array<T> newArray;
-  xalloc(newArray.ptr_,sizeof(T) * array.count_);
+  newArray.ptr_ = (T *) kmalloc(sizeof(T) * array.count_);
   while( newArray.count_ < array.count_ ){
     new (newArray.ptr_ + newArray.count_) T(array.ptr_[newArray.count_]);
     newArray.count_++;

@@ -498,20 +498,394 @@ void KFTPClient::get()
   );
 }
 //------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class ZebexPDL {
+  public:
+    ~ZebexPDL();
+    ZebexPDL();
+
+    void fiberExecute();
+  protected:
+  private:
+    enum PCC { // Protocol Control Code
+      DLE = 0,
+      SOH = 1,  //	A	START OF HEADING
+      STX = 2,  // B START OF TEXT
+      ETX = 3,  // C END OF TEXT
+      EOT = 4,  // D END OF TRANSMISSION
+      ENQ = 5,  // E ENQUIRY
+      ACK = 6,  // F ACK ACKNOWLEDGE
+      NAK = 21, // U NEGATIVE ACKNOWLEDGE
+      RAR = 0x41, // Remove all records
+      GPR = 0xa5, // Get parameters
+    };
+    enum PEC { // Protocol Error Code
+      E_OK = 0,
+      E_CRC_ERROR = 0x30,
+      E_EOF = 0x31,
+      E_ILLEGAL_VALUE = 0x32
+    };
+    uintptr_t serialPortNumber_;
+    ksys::AsyncFile * serial_;
+    uint16_t crc_;
+
+    ZebexPDL & operator << (const PCC & pcc);
+    ZebexPDL & operator >> (PCC & pcc);
+    ZebexPDL & operator << (const uint8_t & a);
+    ZebexPDL & operator >> (uint8_t & a);
+    ZebexPDL & operator << (const uint16_t & a);
+    ZebexPDL & operator >> (uint16_t & a);
+    
+    void clearTerminalHelper(uint8_t a);
+    void clearTerminal();
+};
+//------------------------------------------------------------------------------
+ZebexPDL::~ZebexPDL()
+{
+}
+//------------------------------------------------------------------------------
+ZebexPDL::ZebexPDL() : serialPortNumber_(0), serial_(NULL)
+{
+}
+//------------------------------------------------------------------------------
+ZebexPDL & ZebexPDL::operator << (const PCC & pcc)
+{
+  serial_->writeBuffer(&pcc,1);
+  crc_ += pcc;
+  return *this;
+}
+//------------------------------------------------------------------------------
+ZebexPDL & ZebexPDL::operator >> (PCC & pcc)
+{
+  serial_->readBuffer(&pcc,1);
+  crc_ += pcc;
+  return *this;
+}
+//------------------------------------------------------------------------------
+ZebexPDL & ZebexPDL::operator << (const uint8_t & a)
+{
+  serial_->writeBuffer(&a,sizeof(a));
+  crc_ += a;
+  return *this;
+}
+//------------------------------------------------------------------------------
+ZebexPDL & ZebexPDL::operator >> (uint8_t & a)
+{
+  serial_->readBuffer(&a,sizeof(a));
+  crc_ += a;
+  return *this;
+}
+//------------------------------------------------------------------------------
+ZebexPDL & ZebexPDL::operator << (const uint16_t & a)
+{
+  serial_->writeBuffer(&a,sizeof(a));
+  for( uintptr_t i = 0; i < sizeof(a); i++ ) crc_ += ((const uint8_t *) &a)[i];
+  return *this;
+}
+//------------------------------------------------------------------------------
+ZebexPDL & ZebexPDL::operator >> (uint16_t & a)
+{
+  serial_->readBuffer(&a,sizeof(a));
+  for( uintptr_t i = 0; i < sizeof(a); i++ ) crc_ += ((const uint8_t *) &a)[i];
+  return *this;
+}
+//------------------------------------------------------------------------------
+void ZebexPDL::clearTerminalHelper(uint8_t a)
+{
+  using namespace ksys;
+  uint8_t e;
+// Handshaking ?
+  *this << uint8_t(0x05);
+  *this >> e;
+  if( e == 0x06 ){
+//    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+  }
+  *this << uint8_t(0x55);
+  *this >> e;
+  if( e == 0x07 ){
+//    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+  }
+  *this << uint8_t(0x54);
+  *this >> e;
+  if( e == 0x06 ){
+//    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+  }
+// Command on clear terminal ?
+  *this << uint8_t(0x02) << uint8_t(0x43) << uint8_t(0x45) << a << uint8_t(0x03);
+  *this >> e;
+  if( e == 0x06 ){
+//    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+  }
+// May be end of exchage marker code ?
+  *this << uint8_t(0x1b);
+}
+//------------------------------------------------------------------------------
+void ZebexPDL::clearTerminal()
+{
+  using namespace ksys;
+  AsyncFile serial;
+  serial_ = &serial;
+  serial.detachOnClose(false).exclusive(true).fileName(
+    "COM" + utf8::int2Str(serialPortNumber_) + ":"
+  ).open();
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( SetupComm(serial.descriptor(),1600,1600) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  COMMTIMEOUTS cto;
+  memset(&cto,0,sizeof(cto));
+  cto.ReadIntervalTimeout = MAXDWORD - 1;
+  if( SetCommTimeouts(serial.descriptor(),&cto) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( SetCommMask(serial.descriptor(),EV_RXCHAR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  /*if( EscapeCommFunction(serial.descriptor(),CLRRTS) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( EscapeCommFunction(serial.descriptor(),CLRBREAK) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( EscapeCommFunction(serial.descriptor(),SETDTR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }*/
+#endif
+  clearTerminalHelper(0x31);
+  Sleep(200);
+  clearTerminalHelper(0x32);
+  Sleep(200);
+  clearTerminalHelper(0x33);
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#endif
+}
+//------------------------------------------------------------------------------
+void ZebexPDL::fiberExecute()
+{
+  using namespace ksys;
+/*  HMODULE pdx = LoadLibraryEx(L"C:\\Korvin\\1C\\Эталон\\PDXDLL.dll",NULL,0);
+
+  union {
+    void (* clearTable)(int,int);
+    void * p;
+  };
+
+  p = GetProcAddress(pdx,"?PDXClearTable@@YA_NH@Z");
+
+  clearTable(3,1);
+
+  FreeLibrary(pdx);*/
+
+  serialPortNumber_ = 3;
+
+  clearTerminal();
+
+  AsyncFile serial;
+  serial_ = &serial;
+  serial.detachOnClose(false).exclusive(true).fileName(
+    "COM" + utf8::int2Str(serialPortNumber_) + ":"
+  ).open();
+#if defined(__WIN32__) || defined(__WIN64__)
+  /*if( SetupComm(serial.descriptor(),1600,1600) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }*/
+  COMMTIMEOUTS cto;
+  memset(&cto,0,sizeof(cto));
+  cto.ReadIntervalTimeout = 100;//MAXDWORD;
+  if( SetCommTimeouts(serial.descriptor(),&cto) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( SetCommMask(serial.descriptor(),EV_RXCHAR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+
+#define FILE_DEVICE_SERIAL_PORT 0x0000001b
+#define METHOD_BUFFERED 0
+#define FILE_ANY_ACCESS 0
+#define IOCTL_SERIAL_SET_RTS CTL_CODE(FILE_DEVICE_SERIAL_PORT,12,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_SERIAL_CLR_RTS CTL_CODE(FILE_DEVICE_SERIAL_PORT,13,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_SERIAL_SET_DTR CTL_CODE(FILE_DEVICE_SERIAL_PORT, 9,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_SERIAL_CLR_DTR CTL_CODE(FILE_DEVICE_SERIAL_PORT,10,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_SERIAL_CLR_DTR CTL_CODE(FILE_DEVICE_SERIAL_PORT,10,METHOD_BUFFERED,FILE_ANY_ACCESS)
+#define IOCTL_SERIAL_GET_COMMSTATUS CTL_CODE(FILE_DEVICE_SERIAL_PORT,27,METHOD_BUFFERED,FILE_ANY_ACCESS)
+  DWORD bytesReturned;
+/*  if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_CLR_RTS,NULL,0,NULL,0,&bytesReturned,NULL) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_CLR_DTR,NULL,0,NULL,0,&bytesReturned,NULL) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_SET_DTR,NULL,0,NULL,0,&bytesReturned,NULL) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }*/
+  DCB dcb;
+  if( GetCommState(serial.descriptor(),&dcb) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  dcb.BaudRate = CBR_9600;
+  dcb.StopBits = ONESTOPBIT;
+  if( SetCommState(serial.descriptor(),&dcb) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+
+  if( EscapeCommFunction(serial.descriptor(),CLRRTS) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( EscapeCommFunction(serial.descriptor(),CLRBREAK) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( EscapeCommFunction(serial.descriptor(),SETDTR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#endif
+  uint8_t head, err, tail;
+  uint16_t crc;
+  crc_ = 0;
+//  *this << STX << GPR << ETX << crc_;
+  /*typedef struct _COMSTAT {
+    DWORD fCtsHold :1;
+    DWORD fDsrHold :1;
+    DWORD fRlsdHold :1;
+    DWORD fXoffHold :1;
+    DWORD fXoffSent :1;
+    DWORD fEof :1;
+    DWORD fTxim :1;
+    DWORD fReserved :25;
+    DWORD cbInQue;
+    DWORD cbOutQue;
+  } COMSTAT, *LPCOMSTAT;*/
+  typedef struct _SERIAL_DEV_STATUS {
+    DWORD Errors;
+    COMSTAT ComStat;
+  } SERIAL_DEV_STATUS, *PSERIAL_DEV_STATUS;
+
+  SERIAL_DEV_STATUS sds;
+  /*if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_GET_COMMSTATUS,NULL,0,&sds,sizeof(sds),&bytesReturned,NULL) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }*/
+
+  /*if( ClearCommError(serial.descriptor(),&sds.Errors,&sds.ComStat) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }*/
+
+// Handshaking ?
+  *this << uint8_t(0x05);
+  *this >> err;
+//  assert( err == 0x06 );
+  *this << uint8_t(0x55);
+  *this >> err;
+//  assert( err == 0x07 );
+  *this << uint8_t(0x54);
+  *this >> err;
+//  assert( err == 0x06 );
+// Command on clear terminal ?
+  *this << uint8_t(0x02) << uint8_t(0x43) << uint8_t(0x45) << uint8_t(0x31) << uint8_t(0x03);
+  *this >> err;
+//  assert( err == 0x06 );
+// May be end of exchage code ?
+  *this << uint8_t(0x1b);
+
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+/*  if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_CLR_DTR,NULL,0,NULL,0,&bytesReturned,NULL) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }*/
+  if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    serial.close();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#endif
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+}
+//------------------------------------------------------------------------------
 void KFTPClient::main()
 {
-//  newObject<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   try {
+//    ZebexPDL pdl;
+//    pdl.fiberExecute();
+  
     if( config_->section(section_).isValue("log_file") ){
       logFile_.codePage(config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));
       logFile_.fileName(config_->section(section_).text("log_file"));
       log_ = &logFile_;
     }
     remoteAddress_.resolve(host_,MSFTPDefaultPort);
-/*    remoteAddress_.addr4_.sin_len = sizeof(remoteAddress_.addr4_);
-    remoteAddress_.addr4_.sin_family = PF_INET;
-    remoteAddress_.addr4_.sin_addr.s_addr = inet_addr("192.168.201.200");
-    remoteAddress_.addr4_.sin_port = htons(2121);*/
     connect(remoteAddress_);
 
     auth();
