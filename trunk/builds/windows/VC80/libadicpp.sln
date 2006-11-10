@@ -51,6 +51,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mskey", "mskey.vcproj", "{D
 		{699C55AF-E43D-48AE-9496-77D183B93940} = {699C55AF-E43D-48AE-9496-77D183B93940}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "msserial", "msserial.vcproj", "{2D89A82E-6143-4F03-A127-7C92F3A20F00}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		debug|Win32 = debug|Win32
@@ -139,6 +141,14 @@ Global
 		{D9C8C2D6-9134-4C45-98DD-5C1A88C0DA05}.release|Win32.Build.0 = Release|Win32
 		{D9C8C2D6-9134-4C45-98DD-5C1A88C0DA05}.release|x64.ActiveCfg = Debug|x64
 		{D9C8C2D6-9134-4C45-98DD-5C1A88C0DA05}.release|x64.Build.0 = Debug|x64
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.debug|Win32.ActiveCfg = Debug|Win32
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.debug|Win32.Build.0 = Debug|Win32
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.debug|x64.ActiveCfg = Debug|x64
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.debug|x64.Build.0 = Debug|x64
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.release|Win32.ActiveCfg = Release|Win32
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.release|Win32.Build.0 = Release|Win32
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.release|x64.ActiveCfg = Release|x64
+		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

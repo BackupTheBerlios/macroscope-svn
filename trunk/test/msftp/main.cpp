@@ -612,7 +612,9 @@ void ZebexPDL::clearTerminalHelper(uint8_t a)
 //    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
   }
 // Command on clear terminal ?
-  *this << uint8_t(0x02) << uint8_t(0x43) << uint8_t(0x45) << a << uint8_t(0x03);
+  uint8_t clr[] = { 0x02, 0x43, 0x45, a, 0x03 };
+  serial_->writeBuffer(clr,sizeof(clr));
+//  *this << uint8_t(0x02) << uint8_t(0x43) << uint8_t(0x45) << a << uint8_t(0x03);
   *this >> e;
   if( e == 0x06 ){
 //    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
@@ -877,8 +879,8 @@ void ZebexPDL::fiberExecute()
 void KFTPClient::main()
 {
   try {
-//    ZebexPDL pdl;
-//    pdl.fiberExecute();
+    ZebexPDL pdl;
+    pdl.fiberExecute();
   
     if( config_->section(section_).isValue("log_file") ){
       logFile_.codePage(config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));

@@ -378,14 +378,6 @@ int main(int ac,char * av[])
       else if( argv()[u].strcmp("--generate-update-package") == 0 && u + 1 < argv().count() ){
         MSUpdaterService::genUpdatePackage(argv()[u + 1]);
       }
-#if PRIVATE_RELEASE
-      else if( argv()[u].strcmp("--machine-key") == 0 ){
-        utf8::String key(getMachineCleanUniqueKey());
-        fprintf(stdout,"%s\n",key.c_str());
-        copyStrToClipboard(key);
-        dispatch = false;
-      }
-#endif
     }
     if( dispatch ){
       bool daemon;
