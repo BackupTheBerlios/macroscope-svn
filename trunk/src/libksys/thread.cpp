@@ -99,12 +99,16 @@ void * Thread::threadFunc(void * thread)
 }
 //---------------------------------------------------------------------------
 Thread::Thread() :
-#if __x86_64__
+//#if __x86_64__
 // getnameinfo take more then 8 Kb stack space
-  stackSize_(PTHREAD_STACK_MIN * 8),
+#if defined(__WIN32__) || defined(__WIN64__)
+  stackSize_(64u * 1024u),
 #else
-  stackSize_(PTHREAD_STACK_MIN),
+  stackSize_(PTHREAD_STACK_MIN * 8),
 #endif
+//#else
+//  stackSize_(PTHREAD_STACK_MIN),
+//#endif
 #if defined(__WIN32__) || defined(__WIN64__)
   handle_(NULL),
   id_(~DWORD(0)),

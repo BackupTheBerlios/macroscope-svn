@@ -245,15 +245,17 @@ void KFTPClient::put()
         atime += ttime;
         if( ttime == 0 ) ttime = 1;
         l = rl;
-        log_->debug(l > 0 ? 1 : 2,
-          utf8::String::Stream() <<
+        utf8::String::Stream stream;
+        stream <<
           section_ << " " << host_ << " elapsed: " << utf8::elapsedTime2Str(ttime) <<
           ", avg speed " << (l * 1000000u / ttime) / 1024u << "." <<
           utf8::String::Stream::Format(unsigned((l * 1000000u / ttime) % 1024u) * 100u / 1024u,"%02") <<
           " kbps, " << l / 1024u << "." <<
           utf8::String::Stream::Format(unsigned((l % 1024u) * 100u / 1024u),"%02") <<
           " kb transfered\n  " << list[i] << " to " << rfile << "\n"
-        );
+        ;
+        log_->debug(l > 0 ? 1 : 2,stream);
+        if( log_ != &stdErr ) stdErr.debug(l > 0 ? 1 : 2,stream);
         all += l;
       }
     }
@@ -278,17 +280,19 @@ void KFTPClient::put()
           if( e->code() < ksock::AsyncSocket::aeMagic || e->code() >= eCount ) throw;
       }
       e->writeStdError(log_);
-      log_->debug(3,
-        utf8::String::Stream() << section_ << " " << host_ << " failed: " <<
+      utf8::String::Stream stream;
+      stream << section_ << " " << host_ << " failed: " <<
         ksys::strError(e->code()) << ", " << list[i] << "\n"
-      );
+      ;
+      log_->debug(3,stream);
+      if( log_ != &stdErr ) stdErr.debug(3,stream);
     }
     list.resize(list.count() - 1);
   }
   if( (ptime = getlocaltimeofday() - ptime) == 0 ) ptime = 1;
   if( atime == 0 ) atime = 1;
-  log_->debug(0,
-    utf8::String::Stream() <<
+  utf8::String::Stream stream;
+  stream <<
     section_ << " " << host_ << " operation put complete.\n" <<
     "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
     (all * 1000000u / atime) / 1024u << "." << 
@@ -311,7 +315,9 @@ void KFTPClient::put()
     " kb, ratio: " << 
     utf8::String::Stream::Format(rscRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(rscRatio() % 100u,"%02") << "%\n"
-  );
+  ;
+  log_->debug(0,stream);
+  if( log_ != &stdErr ) stdErr.debug(0,stream);
 }
 //------------------------------------------------------------------------------
 void KFTPClient::get()
@@ -597,16 +603,19 @@ void ZebexPDL::clearTerminalHelper(uint8_t a)
   uint8_t e;
 // Handshaking ?
   *this << uint8_t(0x05);
+  serial_->waitCommEvent();
   *this >> e;
   if( e == 0x06 ){
 //    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
   }
   *this << uint8_t(0x55);
+  serial_->waitCommEvent();
   *this >> e;
   if( e == 0x07 ){
 //    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
   }
   *this << uint8_t(0x54);
+  serial_->waitCommEvent();
   *this >> e;
   if( e == 0x06 ){
 //    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
@@ -615,6 +624,7 @@ void ZebexPDL::clearTerminalHelper(uint8_t a)
   uint8_t clr[] = { 0x02, 0x43, 0x45, a, 0x03 };
   serial_->writeBuffer(clr,sizeof(clr));
 //  *this << uint8_t(0x02) << uint8_t(0x43) << uint8_t(0x45) << a << uint8_t(0x03);
+  serial_->waitCommEvent();
   *this >> e;
   if( e == 0x06 ){
 //    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
@@ -639,7 +649,7 @@ void ZebexPDL::clearTerminal()
   }
   COMMTIMEOUTS cto;
   memset(&cto,0,sizeof(cto));
-  cto.ReadIntervalTimeout = MAXDWORD - 1;
+  cto.ReadIntervalTimeout = MAXDWORD;
   if( SetCommTimeouts(serial.descriptor(),&cto) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
@@ -677,9 +687,9 @@ void ZebexPDL::clearTerminal()
   }*/
 #endif
   clearTerminalHelper(0x31);
-  Sleep(200);
+  sleep(200000);
   clearTerminalHelper(0x32);
-  Sleep(200);
+  sleep(200000);
   clearTerminalHelper(0x33);
 #if defined(__WIN32__) || defined(__WIN64__)
   if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
@@ -879,8 +889,8 @@ void ZebexPDL::fiberExecute()
 void KFTPClient::main()
 {
   try {
-    ZebexPDL pdl;
-    pdl.fiberExecute();
+//    ZebexPDL pdl;
+//    pdl.fiberExecute();
   
     if( config_->section(section_).isValue("log_file") ){
       logFile_.codePage(config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));

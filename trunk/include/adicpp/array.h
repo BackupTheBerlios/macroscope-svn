@@ -51,6 +51,9 @@ template< class T> class Array {
     T &        operator [] (uintptr_t i);
     const T &  operator [] (uintptr_t i) const;
 
+    operator T * (){ return ptr_; }
+    operator const T * () const { return ptr_; }
+
     const uintptr_t & count() const;
     Array<T> &       clear();
     T * &             ptr();
