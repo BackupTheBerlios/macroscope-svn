@@ -401,8 +401,10 @@ class Requester {
     Vector<AsyncWin9xDirectoryChangeNotificationSlave> wdcnSlaves_;
     int64_t wdcnSlavesSweepTime_;
 
+#ifndef NDEBUG
     InterlockedMutex asyncStackBackTraceSlaveMutex_;
     AutoPtr<AsyncStackBackTraceSlave> asyncStackBackTraceSlave_;
+#endif
 #endif
 
     Requester(const Requester &){}

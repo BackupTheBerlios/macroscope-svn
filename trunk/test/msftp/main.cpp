@@ -255,7 +255,7 @@ void KFTPClient::put()
           " kb transfered\n  " << list[i] << " to " << rfile << "\n"
         ;
         log_->debug(l > 0 ? 1 : 2,stream);
-        if( log_ != &stdErr ) stdErr.debug(l > 0 ? 1 : 2,stream);
+        if( log_ != &ksys::stdErr ) ksys::stdErr.debug(l > 0 ? 1 : 2,stream);
         all += l;
       }
     }
@@ -285,7 +285,7 @@ void KFTPClient::put()
         ksys::strError(e->code()) << ", " << list[i] << "\n"
       ;
       log_->debug(3,stream);
-      if( log_ != &stdErr ) stdErr.debug(3,stream);
+      if( log_ != &ksys::stdErr ) ksys::stdErr.debug(3,stream);
     }
     list.resize(list.count() - 1);
   }
@@ -317,7 +317,7 @@ void KFTPClient::put()
     utf8::String::Stream::Format(rscRatio() % 100u,"%02") << "%\n"
   ;
   log_->debug(0,stream);
-  if( log_ != &stdErr ) stdErr.debug(0,stream);
+  if( log_ != &ksys::stdErr ) ksys::stdErr.debug(0,stream);
 }
 //------------------------------------------------------------------------------
 void KFTPClient::get()
@@ -764,7 +764,7 @@ void ZebexPDL::fiberExecute()
 #define IOCTL_SERIAL_CLR_DTR CTL_CODE(FILE_DEVICE_SERIAL_PORT,10,METHOD_BUFFERED,FILE_ANY_ACCESS)
 #define IOCTL_SERIAL_CLR_DTR CTL_CODE(FILE_DEVICE_SERIAL_PORT,10,METHOD_BUFFERED,FILE_ANY_ACCESS)
 #define IOCTL_SERIAL_GET_COMMSTATUS CTL_CODE(FILE_DEVICE_SERIAL_PORT,27,METHOD_BUFFERED,FILE_ANY_ACCESS)
-  DWORD bytesReturned;
+//  DWORD bytesReturned;
 /*  if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_CLR_RTS,NULL,0,NULL,0,&bytesReturned,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
@@ -815,9 +815,10 @@ void ZebexPDL::fiberExecute()
     newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
-  uint8_t head, err, tail;
+  uint8_t err;
+  /*uint8_t head, tail;
   uint16_t crc;
-  crc_ = 0;
+  crc_ = 0;*/
 //  *this << STX << GPR << ETX << crc_;
   /*typedef struct _COMSTAT {
     DWORD fCtsHold :1;
@@ -836,7 +837,7 @@ void ZebexPDL::fiberExecute()
     COMSTAT ComStat;
   } SERIAL_DEV_STATUS, *PSERIAL_DEV_STATUS;
 
-  SERIAL_DEV_STATUS sds;
+//  SERIAL_DEV_STATUS sds;
   /*if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_GET_COMMSTATUS,NULL,0,&sds,sizeof(sds),&bytesReturned,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();

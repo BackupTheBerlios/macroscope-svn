@@ -1438,6 +1438,8 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::abortNotification(DirectoryChan
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+#ifndef NDEBUG
+//------------------------------------------------------------------------------
 AsyncStackBackTraceSlave::~AsyncStackBackTraceSlave()
 {
 }
@@ -1522,6 +1524,8 @@ void AsyncStackBackTraceSlave::threadExecute()
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
+#endif
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 Requester::~Requester()
@@ -1557,12 +1561,14 @@ Requester::~Requester()
     wdcnSlaves_[i].post();
     wdcnSlaves_[i].Thread::wait();
   }
+#ifndef NDEBUG
   if( asyncStackBackTraceSlave_ != NULL ){
     asyncStackBackTraceSlave_->terminate();
     asyncStackBackTraceSlave_->post();
     asyncStackBackTraceSlave_->Thread::wait();
     asyncStackBackTraceSlave_ = NULL;
   }
+#endif
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1783,6 +1789,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
+#ifndef NDEBUG
     case etStackBackTrace :
       {
         AutoLock<InterlockedMutex> lock(asyncStackBackTraceSlaveMutex_);
@@ -1794,6 +1801,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         asyncStackBackTraceSlave_->transplant(currentFiber()->event_);
       }
       return;
+#endif
     default :;
   }
   newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -1801,6 +1809,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
 //---------------------------------------------------------------------------
 void Requester::postRequest(AsyncEvent * event)
 {
+#ifndef NDEBUG
   switch( event->type_ ){
     case etStackBackTraceZero :
       {
@@ -1815,6 +1824,7 @@ void Requester::postRequest(AsyncEvent * event)
       return;
     default :;
   }
+#endif
   newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
