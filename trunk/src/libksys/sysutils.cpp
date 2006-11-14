@@ -762,7 +762,7 @@ utf8::String getFileExt(const utf8::String & fileName)
   while( !i.bof() ){
     uintptr_t c = i.getChar();
     if( c == '\\' || c == '/' || c == ':' ) break;
-    if( c = '.' ) return utf8::String(i);
+    if( c == '.' ) return utf8::String(i);
     i.prev();
   }
   return utf8::String();
