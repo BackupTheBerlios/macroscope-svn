@@ -1736,42 +1736,42 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
     }
     if( !file->locked_ ){
       memset(&Overlapped,0,sizeof(Overlapped));
-      Overlapped.hEvent = file->hEvent_;
-      Overlapped.Offset = 0;//1024u * 1024u;
       SetLastError(0);
-      DWORD flags = LOCKFILE_EXCLUSIVE_LOCK;
-      if( maxSleepTime == 0 && minSleepTime == 0 ) flags |= LOCKFILE_FAIL_IMMEDIATELY;
+      DWORD flags = LOCKFILE_EXCLUSIVE_LOCK, err;
+      if( maxSleepTime == 0 && minSleepTime == 0 ){
+        flags |= LOCKFILE_FAIL_IMMEDIATELY;
+      }
+      else {
+        Overlapped.hEvent = file->hEvent_;
+      }
       BOOL lk = LockFileEx(file->handle_,flags,0,~DWORD(0),~DWORD(0),&Overlapped);
-      if( lk == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != ERROR_LOCK_VIOLATION ){
+      err = GetLastError();
+      if( lk == 0 && err != ERROR_IO_PENDING && err != ERROR_LOCK_VIOLATION ){
         err = GetLastError() + errorOffset;
         newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
-      if( GetLastError() == ERROR_IO_PENDING ){
+      if( err == ERROR_IO_PENDING ){
         DWORD st = (DWORD) rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
         st = maxSleepTime == 0 && minSleepTime == 0 ? 0 : st;
         DWORD state = WaitForSingleObject(file->hEvent_,st);
         if( state == WAIT_TIMEOUT ){
           CancelIo(file->handle_);
-          SetLastError(WAIT_TIMEOUT);
-          err = GetLastError() + errorOffset;
-          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+          *pLastError = WAIT_TIMEOUT;
         }
         else if( state == WAIT_ABANDONED ){
-          SetLastError(WAIT_TIMEOUT);
-          err = GetLastError() + errorOffset;
-          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+          CancelIo(file->handle_);
+          *pLastError = WAIT_TIMEOUT;
         }
-        DWORD NumberOfBytesTransferred;
-        if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE) == 0 ){
-          err = GetLastError() + errorOffset;
-          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        else {
+          DWORD NumberOfBytesTransferred;
+          GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE);
+          file->locked_ = true;
         }
       }
-      else if( GetLastError() == ERROR_LOCK_VIOLATION ){
-        SetLastError(WAIT_TIMEOUT);
-        err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      else if( err == ERROR_LOCK_VIOLATION ){
+        *pLastError = WAIT_TIMEOUT;
       }
+      else {
       /*char pid[10 + 1];
       memset(pid,'\0',sizeof(pid));
       _snprintf(pid,sizeof(pid) / sizeof(pid[0]),"%d",ksys::getpid());
@@ -1792,7 +1792,8 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
       }
       SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
       SetEndOfFile(file->handle_);*/
-      file->locked_ = true;
+        file->locked_ = true;
+      }
     }
   }
   catch( ExceptionSP & e ){

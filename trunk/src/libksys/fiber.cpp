@@ -70,6 +70,7 @@ Fiber & Fiber::allocateStack(
 #if defined(__WIN32__) || defined(__WIN64__)
   createFiber(size);
 #else
+// TODO: rewrite fiber context switching on ucontext functions
   size += -intptr_t(size) & (sizeof(uintptr_t) - 1);
   stack_.realloc(size);
 //  for( intptr_t i = size / sizeof(uintptr_t) - 1; i >= 0; i-- )
@@ -115,6 +116,7 @@ Fiber & Fiber::allocateStack(
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 #elif __i386__ && __GNUG__
+// TODO: rewrite fiber context switching on ucontext functions
 void Fiber::switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber *)
 {
   asm volatile (
@@ -127,6 +129,7 @@ void Fiber::switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber *)
   );
 }
 #elif __GNUG__ && __x86_64__
+// TODO: rewrite fiber context switching on ucontext functions
 /*
   Function calling conventions for x86_64 architecture:
   param1 --> RDI
