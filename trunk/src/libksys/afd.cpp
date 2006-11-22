@@ -992,7 +992,7 @@ l1:
     if( l > 0 ) s[uintptr_t(l)] = '\0';
   }
   else {
-    if( buffer->size_ == 0 ) buffer->size_ = getpagesize();
+    if( buffer->size_ == 0 ) buffer->size_ = getpagesize() * 32;
     if( buffer->buffer_ == (const uint8_t *) NULL ) buffer->buffer_.alloc(buffer->size_);
     uintptr_t i, ss = 0;
     for(;;){

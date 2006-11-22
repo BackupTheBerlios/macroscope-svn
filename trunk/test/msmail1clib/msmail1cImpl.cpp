@@ -1671,6 +1671,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
 //------------------------------------------------------------------------------
 Cmsmail1c::LockedFile::~LockedFile()
 {
+  unlockFile();
   if( handle_ != INVALID_HANDLE_VALUE ) CloseHandle(handle_);
   if( hEvent_ != NULL ) CloseHandle(hEvent_);
 }
@@ -1678,6 +1679,21 @@ Cmsmail1c::LockedFile::~LockedFile()
 Cmsmail1c::LockedFile::LockedFile() :
   handle_(INVALID_HANDLE_VALUE), hEvent_(NULL), lastError_(0), locked_(false)
 {
+}
+//---------------------------------------------------------------------------
+void Cmsmail1c::LockedFile::unlockFile()
+{
+  if( handle_ != INVALID_HANDLE_VALUE && locked_ ){
+    OVERLAPPED Overlapped;
+    memset(&Overlapped,0,sizeof(Overlapped));
+    if( UnlockFileEx(handle_,0,~DWORD(0),~DWORD(0),&Overlapped) == 0 ){
+      int32_t err = GetLastError() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+//      CloseHandle(file->handle_);
+//      file->handle_ = INVALID_HANDLE_VALUE;
+    locked_ = false;
+  }
 }
 //---------------------------------------------------------------------------
 Cmsmail1c::LockedFile * Cmsmail1c::findFileByName(const utf8::String & name)
@@ -1736,14 +1752,14 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
     }
     if( !file->locked_ ){
       memset(&Overlapped,0,sizeof(Overlapped));
-      SetLastError(0);
+      Overlapped.hEvent = file->hEvent_;
       DWORD flags = LOCKFILE_EXCLUSIVE_LOCK, err;
-      if( maxSleepTime == 0 && minSleepTime == 0 ){
+      /*if( maxSleepTime == 0 && minSleepTime == 0 ){
         flags |= LOCKFILE_FAIL_IMMEDIATELY;
       }
       else {
-        Overlapped.hEvent = file->hEvent_;
-      }
+      }*/
+      SetLastError(0);
       BOOL lk = LockFileEx(file->handle_,flags,0,~DWORD(0),~DWORD(0),&Overlapped);
       err = GetLastError();
       if( lk == 0 && err != ERROR_IO_PENDING && err != ERROR_LOCK_VIOLATION ){
@@ -1810,16 +1826,8 @@ STDMETHODIMP Cmsmail1c::unlockFile(IN BSTR name,OUT LONG * pLastError)
   *pLastError = 0;
   try {
     file = findFileByName(name);
-    if( file != NULL && file->locked_ ){
-      OVERLAPPED Overlapped;
-      memset(&Overlapped,0,sizeof(Overlapped));
-      if( UnlockFileEx(file->handle_,0,~DWORD(0),~DWORD(0),&Overlapped) == 0 ){
-        int32_t err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
-//      CloseHandle(file->handle_);
-//      file->handle_ = INVALID_HANDLE_VALUE;
-      file->locked_ = false;
+    if( file != NULL ){
+      file->unlockFile();
     }
     else {
       *pLastError = ERROR_FILE_NOT_FOUND;

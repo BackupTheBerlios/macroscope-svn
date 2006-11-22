@@ -272,6 +272,7 @@ public:
 
       ~LockedFile();
       LockedFile();
+      void unlockFile();
   };
   Vector<LockedFile> files_;
   Randomizer rnd_;
@@ -287,6 +288,7 @@ public:
 
   LockedFile * findFileByName(const utf8::String & name);
   LockedFile * addFile(const utf8::String & name);
+
   STDMETHOD(lockFile)(IN BSTR name,IN ULONG minSleepTime,IN ULONG maxSleepTime,OUT LONG * pLastError);
   STDMETHOD(unlockFile)(IN BSTR name,OUT LONG * pLastError);
   STDMETHOD(getLastError)(IN BSTR name,OUT LONG * pLastError);
