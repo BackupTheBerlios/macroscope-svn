@@ -264,7 +264,7 @@ public:
 // queue interface
   class LockedFile {
     public:
-      HANDLE handle_;
+      file_t handle_;
       HANDLE hEvent_;
       utf8::String name_;
       DWORD lastError_;

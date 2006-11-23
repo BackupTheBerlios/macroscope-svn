@@ -465,9 +465,6 @@ void Logger::main()
   ksys::stdErr.setDebugLevels(
     config_.value("debug_levels","+0,+1,+2,+3")
   );
-  ksys::stdErr.setRedirect(
-    config_.value("log_redirect",utf8::String())
-  );
   ksys::stdErr.fileName(
     config_.value("log_file",ksys::stdErr.fileName())
   );

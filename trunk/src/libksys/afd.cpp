@@ -46,13 +46,20 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   createIfNotExist_(false),
   std_(false),
   seekable_(true),
-  detachOnClose_(true)
+  detachOnClose_(true),
+  random_(false),
+  direct_(false)
 {
   file_ = INVALID_HANDLE_VALUE;
   handle_ = INVALID_HANDLE_VALUE;
 #if defined(__WIN32__) || defined(__WIN64__)
   specification_ = 1;
 #endif
+}
+//---------------------------------------------------------------------------
+bool AsyncFile::fileMember() const
+{
+  return currentFiber() != NULL && std_ == 0;
 }
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::close()
@@ -93,9 +100,8 @@ AsyncFile & AsyncFile::close()
   return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::open()
+file_t AsyncFile::openHelper(bool async)
 {
-  if( redirectByName() ) return *this;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( fileName_.strncasecmp("COM",3) == 0 ){
     utf8::String::Iterator i(fileName_);
@@ -104,6 +110,132 @@ AsyncFile & AsyncFile::open()
     seekable_ = i.getChar() != ':' || !(i + 1).eof();
   }
 #endif
+  file_t handle = INVALID_HANDLE_VALUE;
+#if defined(__WIN32__) || defined(__WIN64__)
+  int32_t err;
+  if( isWin9x() ){
+    utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
+    if( !readOnly_ )
+      handle = CreateFileA(
+        ansiFileName,GENERIC_READ | GENERIC_WRITE,
+        exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
+          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+        NULL
+      );
+    if( handle == INVALID_HANDLE_VALUE )
+      handle = CreateFileA(
+        ansiFileName,GENERIC_READ,
+        exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
+          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+        NULL
+      );
+  }
+  else{
+    utf8::WideString unicodeFileName(anyPathName2HostPathName(fileName_).getUNICODEString());
+    if( !readOnly_ )
+      handle = CreateFileW(
+        unicodeFileName,
+        GENERIC_READ | GENERIC_WRITE,
+        exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
+          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+        NULL
+      );
+    if( handle == INVALID_HANDLE_VALUE )
+      handle = CreateFileW(
+        unicodeFileName,GENERIC_READ,
+        exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
+          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+        NULL
+      );
+  }
+  if( handle == INVALID_HANDLE_VALUE ){
+    err = GetLastError() + errorOffset;
+/*      case ERROR_INVALID_DRIVE       :
+      case ERROR_ACCESS_DENIED       :
+      case ERROR_TOO_MANY_OPEN_FILES :
+      case ERROR_PATH_NOT_FOUND      :
+      case ERROR_FILE_NOT_FOUND      :
+      case ERROR_INVALID_NAME        :
+      case ERROR_INVALID_FLAGS       :
+      case ERROR_INVALID_ADDRESS     :
+      case ERROR_INSUFFICIENT_BUFFER :*/
+    newObject<EFileError>(err,fileName_)->throwSP();
+  }
+#else
+  utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
+  mode_t um = umask(0);
+  umask(um);
+#ifndef O_DIRECT
+#define O_DIRECT 0
+#endif
+  if( !readOnly_ )
+    handle = ::open(
+      ansiFileName,
+      O_RDWR | O_CREAT | (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
+      um | S_IRUSR | S_IWUSR
+    );
+  if( handle < 0 )
+    handle = ::open(
+      ansiFileName,
+      O_RDONLY | O_CREAT | (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
+      um | S_IRUSR | S_IWUSR
+    );
+  if( handle <= 0 ){
+    err = errno;
+/*      case ENOTDIR      :
+      case ENOENT       :
+      case ENAMETOOLONG :
+      case EACCES       :
+      case ELOOP        :
+      case EISDIR       :
+      case EROFS        :
+      case EMFILE       :
+      case ENFILE       :
+      case EINTR        :
+      case ENOSPC       :
+      case EDQUOT       :
+      case EIO          :
+      case ETXTBSY      :
+      case EFAULT       :
+      case EOPNOTSUPP   :
+      case EINVAL       :*/
+    newObject<EFileError>(err,fileName_)->throwSP();
+  }
+  if( async ){
+    int flags = fcntl(handle,F_GETFL,0);
+    if( flags == -1 || fcntl(handle,F_SETFL,flags | O_NONBLOCK) == -1 ){
+      err = errno;
+      ::close(handle);
+      newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+#endif
+  return handle;
+}
+//---------------------------------------------------------------------------
+AsyncFile & AsyncFile::open()
+{
+  if( redirectByName() ) return *this;
   if( fileMember() ){
     if( file_ == INVALID_HANDLE_VALUE ){
       attach();
@@ -111,199 +243,33 @@ AsyncFile & AsyncFile::open()
       fiber()->event_.createIfNotExist_ = createIfNotExist_;
       fiber()->event_.exclusive_ = exclusive_;
       fiber()->event_.readOnly_ = readOnly_;
+      fiber()->event_.file_ = this;
       fiber()->event_.type_ = etOpenFile;
       fiber()->thread()->postRequest(this);
       fiber()->switchFiber(fiber()->mainFiber());
       assert( fiber()->event_.type_ == etOpenFile );
-      descriptor_ = fiber()->event_.fileDescriptor_;
+      file_ = fiber()->event_.fileDescriptor_;
       if( fiber()->event_.errno_ != 0 )
-        newObject<EFileError>(fiber()->event_.errno_ + errorOffset, fileName_)->throwSP();
+        newObject<EFileError>(fiber()->event_.errno_,fileName_)->throwSP();
     }
   }
-  else {
-    if( handle_ == INVALID_HANDLE_VALUE ){
-      for(;;){
-#if defined(__WIN32__) || defined(__WIN64__)
-        int32_t err;
-        if( isWin9x() ){
-          utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
-          if( !readOnly_ )
-            handle_ = CreateFileA(
-              ansiFileName,GENERIC_READ | GENERIC_WRITE,
-              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-              NULL,
-              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-              NULL
-            );
-          if( handle_ == INVALID_HANDLE_VALUE )
-            handle_ = CreateFileA(
-              ansiFileName,GENERIC_READ,
-              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-              NULL,
-              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-              NULL
-            );
-        }
-        else{
-          utf8::WideString unicodeFileName(anyPathName2HostPathName(fileName_).getUNICODEString());
-          if( !readOnly_ )
-            handle_ = CreateFileW(
-              unicodeFileName,
-              GENERIC_READ | GENERIC_WRITE,
-              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-              NULL,
-              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-              NULL
-            );
-          if( handle_ == INVALID_HANDLE_VALUE )
-            handle_ = CreateFileW(
-              unicodeFileName,GENERIC_READ,
-              exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-              NULL,
-              createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-              FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-              NULL
-            );
-        }
-        if( handle_ != INVALID_HANDLE_VALUE ) break;
-        switch( err = GetLastError() ){
-          case ERROR_INVALID_DRIVE       :
-          case ERROR_ACCESS_DENIED       :
-          case ERROR_TOO_MANY_OPEN_FILES :
-          case ERROR_PATH_NOT_FOUND      :
-          case ERROR_FILE_NOT_FOUND      :
-          case ERROR_INVALID_NAME        :
-          case ERROR_INVALID_FLAGS       :
-          case ERROR_INVALID_ADDRESS     :
-          case ERROR_INSUFFICIENT_BUFFER :
-            newObject<EFileError>(err + errorOffset, fileName_)->throwSP();
-        }
-#else
-        utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
-        mode_t um = umask(0);
-        umask(um);
-        if( !readOnly_ )
-          handle_ = ::open(ansiFileName, O_RDWR | O_CREAT | (exclusive_ ? O_EXLOCK : 0), um | S_IRUSR | S_IWUSR);
-        if( handle_ < 0 )
-          handle_ = ::open(ansiFileName, O_RDONLY | O_CREAT | (exclusive_ ? O_EXLOCK : 0), um | S_IRUSR | S_IWUSR);
-        if( handle_ >= 0 )
-          break;
-        switch( errno ){
-          case ENOTDIR      :
-          case ENOENT       :
-          case ENAMETOOLONG :
-          case EACCES       :
-          case ELOOP        :
-          case EISDIR       :
-          case EROFS        :
-          case EMFILE       :
-          case ENFILE       :
-          case EINTR        :
-          case ENOSPC       :
-          case EDQUOT       :
-          case EIO          :
-          case ETXTBSY      :
-          case EFAULT       :
-          case EOPNOTSUPP   :
-          case EINVAL       :
-            newObject<EFileError>(errno, fileName_)->throwSP();
-        }
-#endif
-        ksys::sleep1();
-      }
-    }
+  else if( handle_ == INVALID_HANDLE_VALUE ){
+    handle_ = openHelper();
   }
   return *this;
 }
 //---------------------------------------------------------------------------
 bool AsyncFile::tryOpen()
 {
-  if( redirectByName() ) return true;
-  if( fileMember() ){
-    if( file_ == INVALID_HANDLE_VALUE ){
-      attach();
-      fiber()->event_.string0_ = fileName_;
-      fiber()->event_.createIfNotExist_ = createIfNotExist_;
-      fiber()->event_.exclusive_ = exclusive_;
-      fiber()->event_.readOnly_ = readOnly_;
-      fiber()->event_.type_ = etOpenFile;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      assert( fiber()->event_.type_ == etOpenFile );
-      file_ = fiber()->event_.fileDescriptor_;
-    }
-    return file_ != INVALID_HANDLE_VALUE;
+  bool r = false;
+  try {
+    open();
+    r = true;
   }
-  else {
-    if( handle_ == INVALID_HANDLE_VALUE ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( isWin9x() ){
-        utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
-        if( !readOnly_ )
-          handle_ = CreateFileA(
-            ansiFileName,
-            GENERIC_READ | GENERIC_WRITE,
-            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL,
-            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-            NULL
-          );
-        if( handle_ == INVALID_HANDLE_VALUE )
-          handle_ = CreateFileA(
-            ansiFileName,
-            GENERIC_READ,
-            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL,
-            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-            NULL
-          );
-      }
-      else{
-        utf8::WideString unicodeFileName(anyPathName2HostPathName(fileName_).getUNICODEString());
-        if( !readOnly_ )
-          handle_ = CreateFileW(
-            unicodeFileName,
-            GENERIC_READ | GENERIC_WRITE,
-            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-            NULL
-          );
-        if( handle_ == INVALID_HANDLE_VALUE )
-          handle_ = CreateFileW(
-            unicodeFileName,
-            GENERIC_READ,
-            exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL,
-            createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-            NULL
-          );
-      }
-#else
-      utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
-      mode_t um = umask(0);
-      umask(um);
-      if( !readOnly_ )
-        handle_ = ::open(
-          ansiFileName,
-          O_RDWR | (createIfNotExist_ ? O_CREAT : 0) | (exclusive_ ? O_EXLOCK : 0),
-          um | S_IRUSR | S_IWUSR
-        );
-      if( handle_ < 0 )
-        handle_ = ::open(
-          ansiFileName,O_RDONLY | (createIfNotExist_ ? O_CREAT : 0) | (exclusive_ ? O_EXLOCK : 0),
-          um | S_IRUSR | S_IWUSR
-        );
-#endif
-    }
-    return handle_ != INVALID_HANDLE_VALUE;
+  catch( ExceptionSP & e ){
+    oserror(e->code());
   }
+  return r;
 }
 //---------------------------------------------------------------------------
 uint64_t AsyncFile::size() const
@@ -1131,7 +1097,7 @@ void AsyncFile::closeAPI()
 {
 }
 //------------------------------------------------------------------------------
-AsyncFile & AsyncFile::redirectToStdin()
+void AsyncFile::redirectToStdin()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
@@ -1148,10 +1114,9 @@ AsyncFile & AsyncFile::redirectToStdin()
 #else
   Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
-  return *this;
 }
 //------------------------------------------------------------------------------
-AsyncFile & AsyncFile::redirectToStdout()
+void AsyncFile::redirectToStdout()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1168,10 +1133,9 @@ AsyncFile & AsyncFile::redirectToStdout()
 #else
   Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
-  return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::redirectToStderr()
+void AsyncFile::redirectToStderr()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   HANDLE handle = GetStdHandle(STD_ERROR_HANDLE);
@@ -1188,22 +1152,24 @@ AsyncFile & AsyncFile::redirectToStderr()
 #else
   Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
-  return *this;
-}
-//---------------------------------------------------------------------------
-bool AsyncFile::fileMember() const
-{
-  return currentFiber() != NULL && !std_;
 }
 //---------------------------------------------------------------------------
 bool AsyncFile::redirectByName()
 {
   bool r = true;
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( fileName_.strcasecmp("stdin") == 0 ) redirectToStdin();
+  else
+  if( fileName_.strcasecmp("stdout") == 0 ) redirectToStdout();
+  else
+  if( fileName_.strcasecmp("stderr") == 0 ) redirectToStderr();
+#else
   if( fileName_.strcmp("stdin") == 0 ) redirectToStdin();
   else
   if( fileName_.strcmp("stdout") == 0 ) redirectToStdout();
   else
   if( fileName_.strcmp("stderr") == 0 ) redirectToStderr();
+#endif
   else
     r = false;
   return r;

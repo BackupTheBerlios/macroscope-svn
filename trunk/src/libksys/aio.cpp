@@ -830,7 +830,17 @@ void AsyncOpenFileSlave::threadExecute()
     }
     else {
       if( request->type_ == etOpenFile ){
+        int32_t err = 0;
         try {
+          request->fileDescriptor_ = request->file_->openHelper(true);
+        }
+        catch( ExceptionSP & e ){
+          err = e->code();
+        }
+        request->errno_ = err;
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
+        /*try {
 #if defined(__WIN32__) || defined(__WIN64__)
           HANDLE file = INVALID_HANDLE_VALUE;
           if( isWin9x() ){
@@ -874,7 +884,7 @@ void AsyncOpenFileSlave::threadExecute()
                 FILE_FLAG_OVERLAPPED |
                 FILE_ATTRIBUTE_NORMAL |
                 FILE_ATTRIBUTE_ARCHIVE |
-                FILE_FLAG_RANDOM_ACCESS/* | FILE_FLAG_BACKUP_SEMANTICS*/,
+                FILE_FLAG_RANDOM_ACCESS,// | FILE_FLAG_BACKUP_SEMANTICS,
                 NULL
               );
             if( file == INVALID_HANDLE_VALUE ){
@@ -889,7 +899,7 @@ void AsyncOpenFileSlave::threadExecute()
                 FILE_FLAG_OVERLAPPED |
                 FILE_ATTRIBUTE_NORMAL |
                 FILE_ATTRIBUTE_ARCHIVE |
-                FILE_FLAG_RANDOM_ACCESS/* | FILE_FLAG_BACKUP_SEMANTICS*/,
+                FILE_FLAG_RANDOM_ACCESS,// | FILE_FLAG_BACKUP_SEMANTICS,
                 NULL
               );
             }
@@ -924,7 +934,7 @@ void AsyncOpenFileSlave::threadExecute()
           request->errno_ = e->code();
           request->fileDescriptor_ = INVALID_HANDLE_VALUE;
           request->fiber_->thread()->postEvent(request);
-        }
+        }*/
       }
       else if( request->type_ == etDirList ){
         int32_t err = 0;

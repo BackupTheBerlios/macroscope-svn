@@ -964,9 +964,6 @@ void KFTPShell::open()
   ksys::stdErr.fileName(
     config_->value("log_file",ksys::stdErr.fileName())
   );
-  ksys::stdErr.setRedirect(
-    config_->value("log_redirect",utf8::String())
-  );
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )

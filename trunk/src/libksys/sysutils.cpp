@@ -234,6 +234,13 @@ void createGUID(guid_t & uuid)
 #endif
 }
 //---------------------------------------------------------------------------
+utf8::String createGUIDAsBase32String()
+{
+  guid_t uuid;
+  createGUID(uuid);
+  return base32Encode(&uuid,sizeof(uuid));
+}
+//---------------------------------------------------------------------------
 utf8::String screenChar(const utf8::String::Iterator & ii)
 {
   char * p, b[12];

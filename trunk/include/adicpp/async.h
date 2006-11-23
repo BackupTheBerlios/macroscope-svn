@@ -67,7 +67,14 @@ enum AsyncEventType {
 //---------------------------------------------------------------------------
 class Fiber;
 class AsyncDescriptor;
+class AsyncFile;
 class FiberInterlockedMutex;
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+typedef HANDLE file_t;
+#else
+typedef int file_t;
+#endif
 //---------------------------------------------------------------------------
 class AsyncEvent {
   public:
@@ -103,15 +110,15 @@ class AsyncEvent {
           uintptr_t data0_;
           intptr_t data1_;
           const Array<utf8::String> * env_;
+          AsyncFile * file_;
         };
         union {
           void * buffer_;
           const void * cbuffer_;
+          file_t fileDescriptor_;
 #if defined(__WIN32__) || defined(__WIN64__)
-          HANDLE fileDescriptor_;
           SOCKET socket_;
 #else
-          int fileDescriptor_;
           int socket_;
 #endif
           InterlockedMutex * mutex0_;
@@ -187,15 +194,15 @@ class AsyncDescriptorKey {
     AsyncDescriptorKey();
 #if defined(__WIN32__) || defined(__WIN64__)
     AsyncDescriptorKey(SOCKET socket,int8_t specification = 0);
-    AsyncDescriptorKey(HANDLE file,int8_t specification = 0);
+    AsyncDescriptorKey(file_t file,int8_t specification = 0);
 #if _MSC_VER
 #pragma warning(push,3)
 #endif
     struct {
       union {
         SOCKET socket_;
-        HANDLE file_;
-        HANDLE descriptor_;
+        file_t file_;
+        file_t descriptor_;
       };
       int8_t  specification_;
     };
@@ -204,11 +211,11 @@ class AsyncDescriptorKey {
 #endif
 #else
     union {
-      int socket_;
-      int file_;
-      int descriptor_;
+      file_t socket_;
+      file_t file_;
+      file_t descriptor_;
     };
-    AsyncDescriptorKey(int descriptor);
+    AsyncDescriptorKey(file_t descriptor);
 #endif
     bool hashKeyEqu(const AsyncDescriptorKey & key) const;
     uintptr_t hash() const;
@@ -234,7 +241,7 @@ inline AsyncDescriptorKey::AsyncDescriptorKey(SOCKET socket, int8_t specificatio
 {
 }
 //---------------------------------------------------------------------------
-inline AsyncDescriptorKey::AsyncDescriptorKey(HANDLE file, int8_t specification)
+inline AsyncDescriptorKey::AsyncDescriptorKey(file_t file, int8_t specification)
   : file_(file), specification_(specification)
 {
 }
@@ -255,7 +262,7 @@ inline AsyncDescriptorKey::AsyncDescriptorKey() : descriptor_(-1)
 {
 }
 //---------------------------------------------------------------------------
-inline AsyncDescriptorKey::AsyncDescriptorKey(int descriptor) : descriptor_(descriptor)
+inline AsyncDescriptorKey::AsyncDescriptorKey(file_t descriptor) : descriptor_(descriptor)
 {
 }
 //---------------------------------------------------------------------------

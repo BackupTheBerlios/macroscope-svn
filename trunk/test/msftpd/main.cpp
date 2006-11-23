@@ -342,9 +342,6 @@ void MSFTPServerFiber::main()
   ksys::stdErr.fileName(
     config_->value("log_file",ksys::stdErr.fileName())
   );
-  ksys::stdErr.setRedirect(
-    config_->value("log_redirect",utf8::String())
-  );
 
   auth();
   while( !terminated() ){

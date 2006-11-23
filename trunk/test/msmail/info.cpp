@@ -38,10 +38,7 @@ Message::~Message()
 //------------------------------------------------------------------------------
 Message::Message() : attributesAutoDrop_(attributes_)
 {
-  guid_t uuid;
-  createGUID(uuid);
-  utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-  attributes_.insert(*newObject<Attribute>(messageIdKey,suuid));
+  attributes_.insert(*newObject<Attribute>(messageIdKey,createGUIDAsBase32String()));
 }
 //------------------------------------------------------------------------------
 Message::Message(const utf8::String & sid) : attributesAutoDrop_(attributes_)

@@ -466,8 +466,7 @@ inline intptr_t MemoryStream::read(void * buffer, uintptr_t count)
 //---------------------------------------------------------------------------
 inline intptr_t MemoryStream::write(const void * buffer, uintptr_t count)
 {
-  if( pos_ + count > container_->mcount_ )
-    resize(pos_ + count);
+  if( pos_ + count > container_->mcount_ ) resize(pos_ + count);
   memcpy(container_->uptr_ + pos_, buffer, count);
   pos_ += count;
   return count;

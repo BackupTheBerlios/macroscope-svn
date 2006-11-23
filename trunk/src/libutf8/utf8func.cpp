@@ -393,8 +393,8 @@ intptr_t utf8s2mbcs(uintptr_t cp, char * s, uintptr_t l, const char * utf8s, uin
         r = -3;
       }
 fd:   if( c < 0x100 ){
-          if( (intptr_t) l > 0 ) *s++ = (unsigned char) c;
-          l--;
+        if( (intptr_t) l > 0 ) *s++ = (unsigned char) c;
+        l--;
       }
       else if( c < 0x1000 ){
         if( (intptr_t) l > 1 ) *(uint16_t *) s = (uint16_t) c;

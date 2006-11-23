@@ -509,13 +509,8 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 12 : // UUID
-        {
-          guid_t uuid;
-          createGUID(uuid);
-          utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-          V_BSTR(pvarPropVal) = suuid.getOLEString();
-          V_VT(pvarPropVal) = VT_BSTR;
-        }
+        V_BSTR(pvarPropVal) = createGUIDAsBase32String().getOLEString();
+        V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 13 : // RandomNumber
         V_BSTR(pvarPropVal) = utf8::int2Str(rnd_.random()).getOLEString();
@@ -616,9 +611,6 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
               stdErr.fileName(
                 client_.config_->value("log_file",stdErr.fileName())
-              );
-              stdErr.setRedirect(
-                client_.config_->value("log_redirect",utf8::String())
               );
               client_.config_->silent(false);
               client_.open();

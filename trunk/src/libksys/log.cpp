@@ -33,11 +33,12 @@ using namespace std;
 namespace ksys {
 //---------------------------------------------------------------------------
 char stdErr_[sizeof(LogFile) / sizeof(char)];
-LogFile & stdErr = *reinterpret_cast< LogFile *>(stdErr_);
+LogFile & stdErr = *reinterpret_cast<LogFile *>(stdErr_);
 //---------------------------------------------------------------------------
 void LogFile::initialize()
 {
   new (&stdErr) LogFile;
+  stdErr.fileName(changeFileExt(getExecutableName(),".log"));
 }
 //---------------------------------------------------------------------------
 void LogFile::cleanup()
@@ -54,6 +55,9 @@ LogFile::~LogFile()
 }
 //---------------------------------------------------------------------------
 LogFile::LogFile() : 
+  bufferPos_(0),
+  bufferSize_(0),
+  bufferDataTTA_(60 * 1000000u), // 60 seconds
   rotationThreshold_(1024 * 1024),
   rotatedFileCount_(10),
   codePage_(CP_ACP)
@@ -71,8 +75,6 @@ LogFile::LogFile() :
   debugLevel(8,1);
   debugLevel(9,1);
   debugLevel(128,1);
-  file_.createIfNotExist(true);
-  lockFile_.createIfNotExist(true).removeAfterClose(true);
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::open()
@@ -82,61 +84,33 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-  file_.close();
-  lockFile_.close();
+  terminate();
+  bufferSemaphore_.post().post();
+  wait();
   return *this;
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::fileName(const utf8::String & name)
 {
-  AutoLock<FiberInterlockedMutex> lock(mutex_);
-  try {
-    file_.fileName(name);
-    lockFile_.fileName(name + ".lck");
-  }
-  catch( ... ){}
+  file_ = name;
+  close();
   return *this;
-}
-//---------------------------------------------------------------------------
-void LogFile::rotate(uint64_t size)
-{
-  if( (rotatedFileCount_ > 0 && size <= rotationThreshold_) || file_.std() ) return;
-  file_.close();
-  utf8::String name(file_.fileName() + ".rename");
-  rename(file_.fileName(),name);
-  try {
-    utf8::String fileExt(getFileExt(file_.fileName()));
-    Stat st;
-    intptr_t i = 0;
-    while( stat(changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
-    while( i > 0 ){
-      if( i >= (intptr_t) rotatedFileCount_ ){
-        remove(changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
-      }
-      else {
-        rename(
-          changeFileExt(file_.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
-          changeFileExt(file_.fileName(),"." + utf8::int2Str(i)) + fileExt
-        );
-      }
-      i--;
-    }
-    rename(name,changeFileExt(file_.fileName(),".0") + fileExt);
-  }
-  catch( ... ){
-    rename(name,file_.fileName());
-    throw;
-  }
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stream)
 {
   if( debugLevel(level) ){
+    struct timeval tv = time2Timeval(getlocaltimeofday());
+    struct tm t = time2tm(timeval2Time(tv));
+    AutoPtr<char> buf;
+    bool post = false;
     try {
-      struct timeval tv = time2Timeval(getlocaltimeofday());
-      struct tm t = time2tm(timeval2Time(tv));
-      intptr_t a;
-
+      char buf[128];
+      union {
+        char buf2[128];
+        wchar_t buf2w[128];
+      };
+      intptr_t a, l;
 #if HAVE_SNPRINTF
 #define SNPRINTF snprintf
 #elif HAVE__SNPRINTF
@@ -144,8 +118,8 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
 #endif
       if( currentFiber() != NULL )
         a = SNPRINTF(
-          NULL,
-          0,
+          buf,
+          sizeof(buf),
           "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u.%p,%u): ",
           t.tm_mday,
           t.tm_mon + 1,
@@ -160,45 +134,8 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         );
       else
         a = SNPRINTF(
-          NULL,
-          0,
-          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u,%u): ",
-          t.tm_mday,
-          t.tm_mon + 1,
-          t.tm_year + 1900,
-          t.tm_hour,
-          t.tm_min,
-          t.tm_sec,
-          tv.tv_usec,
-          getpid(),
-          (unsigned int) level
-        );
-      if( a == -1 ){
-        int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
-      AutoPtr<char> buf;
-      buf.alloc(a + 1);
-      if( currentFiber() != NULL )
-        a = SNPRINTF(
-          buf.ptr(),
-          a + 1,
-          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u.%p,%u): ",
-          t.tm_mday,
-          t.tm_mon + 1,
-          t.tm_year + 1900,
-          t.tm_hour,
-          t.tm_min,
-          t.tm_sec,
-          tv.tv_usec,
-          getpid(),
-          currentFiber(),
-          (unsigned int) level
-        );
-      else
-        a = SNPRINTF(
-          buf.ptr(),
-          a + 1,
+          buf,
+          sizeof(buf),
           "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u,%u): ",
           t.tm_mday,
           t.tm_mon + 1,
@@ -215,64 +152,142 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         int32_t err = errno;
         newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
-      union {
-        char buf2[128];
-        wchar_t buf2w[128];
-      };
-      a = utf8::utf8s2mbcs(codePage_,NULL,0,buf,sizeof(buf2));
-      intptr_t l = utf8::utf8s2mbcs(codePage_,NULL,0,stream.plane(),stream.count());
+      utf8::utf8s2mbcs(codePage_,buf2,sizeof(buf2),buf,sizeof(buf));
+      l = utf8::utf8s2mbcs(codePage_,NULL,0,stream.plane(),stream.count());
       if( a < 0 || l < 0 ){
         int32_t err = errno;
         newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
-      utf8::utf8s2mbcs(codePage_,buf2,sizeof(buf2w),buf,sizeof(buf2));
-      buf.realloc(a + l);
-      memcpy(buf,buf2,a);
-      utf8::utf8s2mbcs(codePage_,buf.ptr() + a,l,stream.plane(),stream.count());
-      uint64_t sz = 0;
       AutoLock<FiberInterlockedMutex> lock(mutex_);
-      if( file_.fileName().strlen() == 0 ){
-        file_.fileName(changeFileExt(getExecutableName(),".log"));
-        lockFile_.fileName(file_.fileName() + ".lck");
-      }
-      if( !file_.std() ){
-        lockFile_.open();
-        lockFile_.detach();
-        lockFile_.attach();
-      }
-      AutoFileWRLock<AsyncFile> flock;
-      if( !file_.std() ){
-        if( !lockFile_.tryWRLock(0,0) ){
-          file_.close();
-          lockFile_.wrLock(0,0);
-        }
-        flock.setLocked(lockFile_);
-      }
-      file_.open();
-      file_.detach();
-      file_.attach();
+      if( !active() ) resume();
+      post = bufferPos_ == 0;
       try {
-        if( file_.std() )
-          file_.writeBuffer(buf.ptr(),(a + l) * sizeof(char));
-        else
-          file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
-        sz = file_.size();
+        uintptr_t bufferSize = bufferSize_;
+        while( bufferSize < bufferPos_ + a + l ) bufferSize = (bufferSize << 1) + (bufferSize == 0);
+        buffer_.realloc(bufferSize);
+        bufferSize_ = bufferSize;
+        memcpy(buffer_.ptr() + bufferPos_,buf2,a);
+        utf8::utf8s2mbcs(codePage_,buffer_.ptr() + bufferPos_ + a,l,stream.plane(),stream.count());
+        bufferPos_ += a + l;
       }
       catch( ... ){
-        file_.close();
-        throw;
+        post = false;
       }
-      file_.detach();
-      rotate(sz);
-      lockFile_.detach();
+        /*uint64_t sz = 0;
+        AutoLock<FiberInterlockedMutex> lock(mutex_);
+        if( file_.fileName().strlen() == 0 ){
+          file_.fileName(changeFileExt(getExecutableName(),".log"));
+          lockFile_.fileName(file_.fileName() + ".lck");
+        }
+        if( !file_.std() ){
+          lockFile_.open();
+          lockFile_.detach();
+          lockFile_.attach();
+        }
+        AutoFileWRLock<AsyncFile> flock;
+        if( !file_.std() ){
+          if( !lockFile_.tryWRLock(0,0) ){
+            file_.close();
+            lockFile_.wrLock(0,0);
+          }
+          flock.setLocked(lockFile_);
+        }
+        file_.open();
+        file_.detach();
+        file_.attach();
+        try {
+          if( file_.std() )
+            file_.writeBuffer(buf.ptr(),(a + l) * sizeof(char));
+          else
+            file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
+          sz = file_.size();
+        }
+        catch( ... ){
+          file_.close();
+          throw;
+        }
+        file_.detach();
+        rotate(sz);
+        lockFile_.detach();
+      }
+  //    catch( ExceptionSP & e ){
+  //      e->code();
+  //    }*/
     }
-  /*  catch( ExceptionSP & e ){
-      e->code();
-    }*/
     catch( ... ){
+      post = false;
     }
+    if( post ) bufferSemaphore_.post();
   }
   return *this;
+}
+//---------------------------------------------------------------------------
+void LogFile::rotate(AsyncFile & file)
+{
+  if( (rotatedFileCount_ > 0 && file.size() <= rotationThreshold_) || file.std() ) return;
+  file.close();
+  file.exclusive(true).open();
+  utf8::String fileExt(getFileExt(file.fileName()));
+  Stat st;
+  intptr_t i = 0;
+  while( stat(changeFileExt(file.fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
+  while( i > 0 ){
+    if( i >= (intptr_t) rotatedFileCount_ ){
+      remove(changeFileExt(file.fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
+    }
+    else {
+      rename(
+        changeFileExt(file.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
+        changeFileExt(file.fileName(),"." + utf8::int2Str(i)) + fileExt
+      );
+    }
+    i--;
+  }
+  file.close();
+  rename(file.fileName(),changeFileExt(file.fileName(),".0") + fileExt);
+}
+//---------------------------------------------------------------------------
+void LogFile::threadExecute()
+{
+  priority(THREAD_PRIORITY_LOWEST);
+  AsyncFile file;
+  file.fileName(file_).createIfNotExist(true);
+  AsyncFile lck;
+  lck.fileName(file.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
+  while( !terminated_ ){
+    bufferSemaphore_.wait();
+    bufferSemaphore_.timedWait(bufferDataTTA_);
+    AutoPtr<char> buffer;
+    uintptr_t bufferPos;
+    {
+      AutoLock<FiberInterlockedMutex> lock(mutex_);
+      buffer.xchg(buffer_);
+      bufferPos = bufferPos_;
+      bufferPos_ = 0;
+      bufferSize_ = 0;
+    }
+    if( bufferPos > 0 ){
+      bool exception = false;
+      {
+        AutoFileWRLock<AsyncFile> lock;
+        try {
+          lck.open();
+          lck.wrLock(0,0);
+          lock.setLocked(lck);
+          file.exclusive(false).open();
+          file.seek(file.size()).writeBuffer(buffer,bufferPos);
+          rotate(file);
+        }
+        catch( ... ){
+          exception = true;
+        }
+      }
+      if( exception ){
+        file.close();
+        lck.close();
+      }
+    }
+  }
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::setDebugLevels(const utf8::String & levels)
@@ -301,44 +316,6 @@ LogFile & LogFile::setAllDebugLevels(intptr_t value)
 {
   for( intptr_t i = sizeof(enabledLevels_) * 8 - 1; i >= 0; i-- )
     debugLevel(i,value);
-  return *this;
-}
-//---------------------------------------------------------------------------
-LogFile & LogFile::redirectToStdout()
-{
-#if defined(__WIN32__) || defined(__WIN64__)
-  AutoLock<FiberInterlockedMutex> lock(mutex_);
-  try {
-    lockFile_.close();
-    file_.close().redirectToStdout();
-  }
-  catch( ... ){}
-#else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-#endif
-  return *this;
-}
-//---------------------------------------------------------------------------
-LogFile & LogFile::redirectToStderr()
-{
-#if defined(__WIN32__) || defined(__WIN64__)
-  AutoLock<FiberInterlockedMutex> lock(mutex_);
-  try {
-    lockFile_.close();
-    file_.close().redirectToStderr();
-  }
-  catch( ... ){}
-#else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-#endif
-  return *this;
-}
-//---------------------------------------------------------------------------
-LogFile & LogFile::setRedirect(const utf8::String & redirect)
-{
-  if( redirect.strcasecmp("stdout") == 0 ) redirectToStdout();
-  else
-  if( redirect.strcasecmp("stderr") == 0 ) redirectToStderr();
   return *this;
 }
 //---------------------------------------------------------------------------

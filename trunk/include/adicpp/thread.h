@@ -203,7 +203,7 @@ inline bool Thread::active() const
 #if defined(__WIN32__) || defined(__WIN64__)
   DWORD exitCode;
   return
-    (GetExitCodeThread(handle_, &exitCode) != 0 && exitCode == STILL_ACTIVE) ||
+    (GetExitCodeThread(handle_,&exitCode) != 0 && exitCode == STILL_ACTIVE) ||
     (started_ && !finished_)
   ;
 #else

@@ -204,6 +204,7 @@ inline guid_t base642uuid(const utf8::String & s)
 //---------------------------------------------------------------------------
 uintmax_t fibonacci(uintmax_t n);
 void createGUID(guid_t & uuid);
+utf8::String createGUIDAsBase32String();
 inline guid_t createGUID(){ guid_t uuid; createGUID(uuid); return uuid; }
 void copyStrToClipboard(const utf8::String & s);
 int64_t getProcessStartTime(bool toLocalTime = false);

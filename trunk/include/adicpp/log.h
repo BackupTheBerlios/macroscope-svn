@@ -34,7 +34,7 @@ namespace ksys {
 class AsyncFile;
 class FiberInterlockedMutex;
 //---------------------------------------------------------------------------
-class LogFile {
+class LogFile : protected Thread {
   friend void initialize();
   friend void cleanup();
   public:
@@ -60,27 +60,41 @@ class LogFile {
     const uintptr_t & rotatedFileCount() const;
     LogFile & codePage(uintptr_t a);
     const uintptr_t & codePage() const;
-
-    LogFile & redirectToStdin();
-    LogFile & redirectToStdout();
-    LogFile & redirectToStderr();
-    LogFile & setRedirect(const utf8::String & redirect);
+    LogFile & bufferDataTTA(uint64_t a);
+    const uint64_t & bufferDataTTA() const;
   protected:
     static const char * const priNicks_[];
-    AsyncFile file_;
-    AsyncFile lockFile_;
+    utf8::String file_;
     FiberInterlockedMutex mutex_;
+    AutoPtr<char> buffer_;
+    uintptr_t bufferPos_;
+    uintptr_t bufferSize_;
+    uint64_t bufferDataTTA_; // data time to accumulation
+    Semaphore bufferSemaphore_;
+
     uint8_t enabledLevels_[32];
     uint64_t rotationThreshold_;
     uintptr_t rotatedFileCount_;
     uintptr_t codePage_;
 
     LogFile & internalLog(uintptr_t level,const utf8::String::Stream & stream);
-    void rotate(uint64_t size);
+    void rotate(AsyncFile & file);
+    void threadExecute();
   private:
     static void initialize();
     static void cleanup();
 };
+//---------------------------------------------------------------------------
+inline LogFile & LogFile::bufferDataTTA(uint64_t a)
+{
+  bufferDataTTA_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uint64_t & LogFile::bufferDataTTA() const
+{
+  return bufferDataTTA_;
+}
 //---------------------------------------------------------------------------
 inline LogFile & LogFile::debug(uintptr_t level,const utf8::String::Stream & stream)
 {
@@ -89,7 +103,7 @@ inline LogFile & LogFile::debug(uintptr_t level,const utf8::String::Stream & str
 //---------------------------------------------------------------------------
 inline const utf8::String & LogFile::fileName() const
 {
-  return file_.fileName();
+  return file_;
 }
 //---------------------------------------------------------------------------
 inline bool LogFile::debugLevel(uintptr_t level) const

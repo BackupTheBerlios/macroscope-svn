@@ -44,6 +44,7 @@ class AsyncFile : public AsyncDescriptor {
 
     bool isOpen() const;
     AsyncFile & open();
+    file_t openHelper(bool async = false);
     bool tryOpen();
     AsyncFile & close();
     AsyncFile & seek(uint64_t pos);
@@ -95,17 +96,16 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & createIfNotExist(bool v);
     bool detachOnClose() const;
     AsyncFile & detachOnClose(bool v);
+    bool random() const;
+    AsyncFile & random(bool v);
+    bool direct() const;
+    AsyncFile & direct(bool v);
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD waitCommEvent();
-    HANDLE descriptor() const;
 #else
     uint32_t waitCommEvent();
-    int descriptor() const;
 #endif
-
-    AsyncFile & redirectToStdin();
-    AsyncFile & redirectToStdout();
-    AsyncFile & redirectToStderr();
+    file_t descriptor() const;
     bool std() const;
   protected:
   private:
@@ -129,10 +129,8 @@ class AsyncFile : public AsyncDescriptor {
         ULONG hi;
       };
     };
-    HANDLE handle_;
-#else
-    int handle_;
 #endif
+    file_t handle_;
     utf8::String fileName_;
     struct {
       uint8_t exclusive_        : 1;
@@ -142,6 +140,8 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t std_              : 1;
       uint8_t seekable_         : 1;
       uint8_t detachOnClose_    : 1;
+      uint8_t random_           : 1;
+      uint8_t direct_           : 1;
     };
 #if _MSC_VER
 #pragma warning(pop)
@@ -165,6 +165,9 @@ class AsyncFile : public AsyncDescriptor {
     void closeAPI();
     bool fileMember() const;
     bool redirectByName();
+    void redirectToStdin();
+    void redirectToStdout();
+    void redirectToStderr();
 
     static void initialize();
     static void cleanup();
@@ -244,6 +247,28 @@ inline bool AsyncFile::detachOnClose() const
 inline AsyncFile & AsyncFile::detachOnClose(bool v)
 {
   detachOnClose_ = v;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool AsyncFile::random() const
+{
+  return random_ != 0;
+}
+//---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::random(bool v)
+{
+  random_ = v;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool AsyncFile::direct() const
+{
+  return direct_ != 0;
+}
+//---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::direct(bool v)
+{
+  direct_ = v;
   return *this;
 }
 //---------------------------------------------------------------------------

@@ -285,10 +285,7 @@ void Server::sendRobotMessage(
 void Server::sendUserWatchdog(const utf8::String & user)
 {
 // send notify to wait fiber
-  guid_t uuid;
-  createGUID(uuid);
-  utf8::String suuid(base32Encode(&uuid,sizeof(uuid)));
-  AsyncFile watchdog(includeTrailingPathDelimiter(mailDir() + user) + "." + suuid);
+  AsyncFile watchdog(includeTrailingPathDelimiter(mailDir() + user) + "." + createGUIDAsBase32String());
   watchdog.createIfNotExist(true).removeAfterClose(true).open();
 }
 //------------------------------------------------------------------------------

@@ -154,9 +154,6 @@ int main(int _argc,char * _argv[])
       stdErr.fileName(
         service->msmailConfig()->value("log_file",stdErr.fileName())
       );
-      stdErr.setRedirect(
-        service->msmailConfig()->value("log_redirect",utf8::String())
-      );
       service->msmailConfig()->silent(false);
       services.startServiceCtrlDispatcher();
     }
