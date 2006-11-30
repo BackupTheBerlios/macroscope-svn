@@ -345,9 +345,9 @@ template <
 T & EmbeddedHash<T,N,O,H,E>::remove()
 {
   assert( count_ > 0 );
-  EmbeddedHashNode<T> ** p1 = hash_, p2 = p1 + hash_.size_;
+  EmbeddedHashNode<T> ** p1 = hash_.ptr(), ** p2 = p1 + size_;
   while( p1 < p2 && *p1 == NULL ) p1++;
-  return remove(O(*p1,NULL),false);
+  return remove(O(**p1,NULL),false);
 }
 //---------------------------------------------------------------------------
 template <

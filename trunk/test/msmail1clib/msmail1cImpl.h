@@ -85,34 +85,41 @@ class ClientFiber : public ksock::ClientFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class ClientMailSenderFiber : public ClientFiber {
+class ClientMailFiber : public ClientFiber {
   friend class Client;
   public:
-    virtual ~ClientMailSenderFiber();
-    ClientMailSenderFiber(Client & client,Message & message);
+    virtual ~ClientMailFiber();
+    ClientMailFiber(Client & client);
   protected:
-    Message & message_;
+    FiberInterlockedMutex messageMutex_;
+    FiberSemaphore semaphore_;
+    class MessageControl {
+      public:
+        enum Operation {
+          msgNone, msgSend, msgRemove
+        };
+
+        ~MessageControl(){}
+        MessageControl(Message * message = NULL,Operation op = msgNone,bool async = false) :
+          message_(message), operation_(op), async_(async) {}
+
+        Message * message_;
+        Operation operation_;
+        bool async_;
+      private:
+        //MessageControl(const MessageControl &);
+        //void operator = (const MessageControl &);
+    };
+    Vector<MessageControl> messages_;
 
     void main();
   private:
-    ClientMailSenderFiber(const ClientMailSenderFiber &);
-    void operator = (const ClientMailSenderFiber &);
-};
-//------------------------------------------------------------------------------
-////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
-class ClientMailRemoverFiber : public ClientFiber {
-  friend class Client;
-  public:
-    virtual ~ClientMailRemoverFiber();
-    ClientMailRemoverFiber(Client & client,const utf8::String & id);
-  protected:
-    utf8::String id_;
+    ClientMailFiber(const ClientMailFiber &);
+    void operator = (const ClientMailFiber &);
 
-    void main();
-  private:
-    ClientMailRemoverFiber(const ClientMailRemoverFiber & a) : ClientFiber(a.client_) {}
-    void operator = (const ClientMailRemoverFiber &){}
+    void connectHost(bool & online);
+    void removeMessage(MessageControl * message);
+    MessageControl * newMessage();
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -147,6 +154,7 @@ class MK1100ClientFiber : public ksock::ClientFiber {
 //------------------------------------------------------------------------------
 class Client : public ksock::Client {
   friend class ClientFiber;
+  friend class ClientMailFiber;
   friend class ClientDBGetterFiber;
   friend class SerialPortFiber;
   public:
@@ -170,13 +178,15 @@ class Client : public ksock::Client {
     bool connected_;
     u_short mk1100Port_;
 
+    HRESULT sendAsyncEvent(const utf8::String & source,const utf8::String & event,const utf8::String & data);
+
     const utf8::String & newMessage();
     HRESULT value(const utf8::String id,const utf8::String key,VARIANT * pvarRetValue) const;
     utf8::String value(const utf8::String id,const utf8::String key,const utf8::String value);
     utf8::String removeValue(const utf8::String id,const utf8::String key);
 
-    bool sendMessage(const utf8::String id);
-    bool removeMessage(const utf8::String id);
+    bool sendMessage(const utf8::String id,bool async);
+    bool removeMessage(const utf8::String id,bool async);
     utf8::String Client::copyMessage(const utf8::String id);
     utf8::String getReceivedMessageList() const;
     utf8::String getSendingMessageList() const;
@@ -201,6 +211,7 @@ class Client : public ksock::Client {
     Server::Data data_;
     uint64_t ftime_;
     Array<SerialPortFiber *> serialPortsFibers_;
+    ClientMailFiber * clientMailFiber_;
   private:
     Client(const Client &);
     void operator = (const Client &){}

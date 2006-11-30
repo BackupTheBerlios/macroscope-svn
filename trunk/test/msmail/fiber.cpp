@@ -669,7 +669,7 @@ void SpoolWalker::processQueue(bool & timeWait)
             }
           }
           else {
-            server_.sendMessage(host,message);
+            server_.sendMessage(host,message->id(),list[i]);
             //rename(list[i],server_.mqueueDir() + message->id() + ".msg");
             stdErr.debug(0,
               utf8::String::Stream() << "Message " << message->id() <<
@@ -728,7 +728,7 @@ MailQueueWalker::MailQueueWalker(Server & server) : server_(server)
 }
 //------------------------------------------------------------------------------
 MailQueueWalker::MailQueueWalker(Server & server,const utf8::String & host)
-  : server_(server), inactivityTime_(~uint64_t(0))
+  : server_(server)
 {
 }
 //------------------------------------------------------------------------------
@@ -1026,6 +1026,7 @@ void MailQueueWalker::main1()
 void MailQueueWalker::connectHost(bool & online)
 {
   if( !online ){
+    close();
     ksock::SockAddr address;
     try {
       address.resolve(host_,defaultPort);
@@ -1044,35 +1045,28 @@ void MailQueueWalker::connectHost(bool & online)
         }
         catch( ExceptionSP & e ){
           e->writeStdError();
-          stdErr.debug(3,
-            utf8::String::Stream() << "Authentification to host " <<
-            server << " failed.\n"
+          stdErr.debug(3,utf8::String::Stream() <<
+            "Authentification to host " << host_ << " failed.\n"
           );
         }
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
-        stdErr.debug(3,
-          utf8::String::Stream() <<
-          "Unable to connect. Host " << server << " unreachable.\n"
+        stdErr.debug(3,utf8::String::Stream() <<
+          "Unable to connect. Host " << host_ << " unreachable.\n"
         );
       }
     }
     catch( ExceptionSP & e ){
       e->writeStdError();
-      stdErr.debug(1,
-        utf8::String::Stream() <<
-          "Unable to resolve " << server <<
-          ", message " << message.id() <<
-          " recepient " << message.value("#Recepient") << "\n"
-      );
+      stdErr.debug(1,utf8::String::Stream() << "Unable to resolve " << host_ << "\n");
     }
   }
   uint64_t cec;
   {
     Server::Data & data = server_.data(stStandalone);
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-    ServerInfo * si = data.servers_.find(server);
+    ServerInfo * si = data.servers_.find(host_);
     if( online ){
       si->connectErrorCount_ = 0;
       si->lastFailedConnectTime_ = 0;
@@ -1085,7 +1079,7 @@ void MailQueueWalker::connectHost(bool & online)
       stdErr.debug(7,utf8::String::Stream() <<
         "mqueue: Wait " << cec <<
         " seconds before connect to host " <<
-        server << " because previous connect try failed.\n"
+        host_ << " because previous connect try failed.\n"
       );
       cec *= 1000000u;
       uint64_t mwt = (uint64_t) server_.config_->parse().override().valueByPath(
@@ -1101,44 +1095,60 @@ void MailQueueWalker::connectHost(bool & online)
 //------------------------------------------------------------------------------
 void MailQueueWalker::main()
 {
-  bool online = false;
-  while( !terminated_ ){
-    if( !semaphore_.timedWait(inactivityTime_) ) break;
+  try {
+    bool online = false;
     while( !terminated_ ){
       connectHost(online);
-      Message::Key mId;
-      uintptr_t count;
-      {
-        AutoMutexWRLock<FiberMutex> lock(messagesMutex_);
-        if( (count = messages_.count()) > 0 ) mId = messages_.remove();
-      }
-      if( count == 0 ) break;
       if( online ){
-        *this << uint8_t(cmSendMail) << mId << true >> restFrom;
-        AsyncFile file;
-        file.fileName(server_.mqueueDir() + mId + ".msg").readOnly(true).open().seek(restFrom);
-        *this << (remainder = file.size() - restFrom);
-        AutoPtr<uint8_t> b;
-        size_t bl = getpagesize() * 16;
-        b.alloc(bl);
-        while( remainder > 0 ){
-          uint64_t l = remainder > bl ? bl : remainder;
-          file.read(b,l);
-          write(b,l);
-          remainder -= l;
+        Message::Key mId;
+        uintptr_t count;
+        {
+          AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
+          if( (count = messages_.count()) > 0 ) mId = messages_.remove();
         }
-        getCode();
-        *this << uint8_t(cmQuit);
-        getCode();
-        stdErr.debug(0,
-          utf8::String::Stream() << "Message " << message.id() <<
-          " sended to " << message.value("#Recepient") <<
-          " via " << server << ", traffic " <<
-          allBytes() << "\n"
-        );
+        if( count > 0 ){
+          uint64_t restFrom, remainder, rb = recvBytes(), sb = sendBytes();
+          *this << uint8_t(cmSendMail) << mId << true >> restFrom;
+          AsyncFile file;
+          file.fileName(server_.mqueueDir() + mId + ".msg").readOnly(true).open().seek(restFrom);
+          *this << (remainder = file.size() - restFrom);
+          AutoPtr<uint8_t> b;
+          size_t bl = getpagesize() * 16;
+          b.alloc(bl);
+          while( remainder > 0 ){
+            uint64_t l = remainder > bl ? bl : remainder;
+            file.read(b,l);
+            write(b,l);
+            remainder -= l;
+          }
+          getCode();
+          stdErr.debug(0,utf8::String::Stream() <<
+            "Message " << mId <<
+            " sended to " << host_ << ", traffic " <<
+            recvBytes() - rb + sendBytes() - sb << "\n"
+          );
+          file.close();
+          remove(file.fileName());
+        }
+        else {
+          uint64_t inactivityTime = (uint64_t) server_.config_->parse().valueByPath(
+            utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fiber_inactivity_time",
+            60u
+          ) * 1000000u;
+          if( !semaphore_.timedWait(inactivityTime) ){
+            *this << uint8_t(cmQuit);
+            getCode();
+            break;
+          }
+        }
       }
     }
   }
+  catch( ExceptionSP & ){
+    server_.removeSender(*this);
+    throw;
+  }
+  server_.removeSender(*this);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

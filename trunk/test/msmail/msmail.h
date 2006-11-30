@@ -721,8 +721,8 @@ class MailQueueWalker : public ksock::ClientFiber {
     FiberInterlockedMutex messagesMutex_;
     Message::Keys messages_;
     FiberSemaphore semaphore_;
-    uint64_t inactivityTime_;
 
+    void connectHost(bool & online);
     void main();
   private:
     Server & server_;
@@ -938,7 +938,9 @@ class Server : public ksock::Server {
       MailQueueWalker::hostHashNodeEqu
     > sendMailFibers_;
 
-    void sendMessage(const utf8::String & host,const utf8::String & id);
+    void sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName);
+    void removeSender(MailQueueWalker & sender);
+    void mqueueCleanup();
 
     void addRecvMailFiber(ServerFiber & fiber);
     bool remRecvMailFiber(ServerFiber & fiber);

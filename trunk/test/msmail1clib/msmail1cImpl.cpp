@@ -1057,8 +1057,8 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 6 : *plParams = 0; break;
     case 7 : *plParams = 3; break;
     case 8 : *plParams = 2; break;
-    case 9 : *plParams = 1; break;
-    case 10 : *plParams = 1; break;
+    case 9 : *plParams = 2; break;
+    case 10 : *plParams = 2; break;
     case 11 : *plParams = 0; break;
     case 12 : *plParams = 1; break;
     case 13 : *plParams = 2; break;
@@ -1086,7 +1086,17 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetParamDefValue(long lMethodNum,long lParamNum,VARIANT * pvarParamDefValue)
 {
-  return S_OK;
+  HRESULT hr = S_OK;
+  switch( lMethodNum ){
+    case 9 : case 10 :
+      if( lParamNum == 2 ){
+        if( V_VT(pvarParamDefValue) != VT_I4 )
+          hr = VariantChangeType(pvarParamDefValue,pvarParamDefValue,0,VT_I4);
+        if( SUCCEEDED(hr) ) V_I4(pvarParamDefValue) = 0;
+      }
+      break;
+  }
+  return hr;
 }
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::HasRetVal(long lMethodNum,BOOL * pboolRetValue)
@@ -1290,8 +1300,15 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
-                V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0)) ? 1 : 0;
-                lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
+                lIndex = 1;
+                hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_I4 ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
+                  if( SUCCEEDED(hr) ){
+                    V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0),V_I4(pv1) != 0) ? 1 : 0;
+                    lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
+                  }
+                }
               }
             }
             SafeArrayUnlock(*paParams);
@@ -1306,8 +1323,15 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
-                V_I4(pvarRetValue) = client_.removeMessage(V_BSTR(pv0));
-                lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
+                lIndex = 1;
+                hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_I4 ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
+                  if( SUCCEEDED(hr) ){
+                    V_I4(pvarRetValue) = client_.removeMessage(V_BSTR(pv0),V_I4(pv1) != 0);
+                    lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
+                  }
+                }
               }
             }
             SafeArrayUnlock(*paParams);

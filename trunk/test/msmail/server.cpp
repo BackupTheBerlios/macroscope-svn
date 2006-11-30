@@ -48,13 +48,14 @@ Server::Server(const ConfigSP config) :
 void Server::open()
 {
   ksock::Server::open();
+  mqueueCleanup();
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
   union {
     intptr_t i;
     uintptr_t u;
   };
   spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",8);
-  for( u = 1; i < spoolFibers_; u <<= 1 );
+  for( u = 1; u < spoolFibers_; u <<= 1 );
   spoolFibers_ = u;
   while( u > 0 ) attachFiber(newObjectV<SpoolWalker>(*this,--u));
   attachFiber(newObjectV<SpoolWalker>(*this,--i)); // lost sheeps collector fiber
@@ -295,24 +296,44 @@ void Server::sendUserWatchdog(const utf8::String & user)
   watchdog.createIfNotExist(true).removeAfterClose(true).open();
 }
 //------------------------------------------------------------------------------
-void Server::sendMessage(const utf8::String & host,const utf8::String & id)
+void Server::sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName)
 {
   MailQueueWalker * pWalker;
-  {
-    AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
-    AutoPtr<MailQueueWalker> walker(newObject<MailQueueWalker>(*this,host));
-    MailQueueWalker * pWalker = sendMailFibers_.find(walker);
-    if( pWalker == NULL ){
-      pWalker = walker;
-      attachFiber(walker);
-    }
-    pWalker->inactivityTime_ = (uint64_t) config_->valueByPath(
-      utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fiber_inactivity_time",
-      60u
-    ) * 1000000u;
+  AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
+  AutoPtr<Fiber> walker(pWalker = newObjectV<MailQueueWalker>(*this,host));
+  if( sendMailFibers_.find(*pWalker) == NULL ) attachFiber(walker);
+  AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
+  pWalker->messages_.insert(*newObject<Message::Key>(id));
+  rename(fileName,mqueueDir() + id + ".msg");
+  if( pWalker->messages_.count() == 1 ) pWalker->semaphore_.post();
+}
+//------------------------------------------------------------------------------
+void Server::removeSender(MailQueueWalker & sender)
+{
+  AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
+  AutoLock<FiberInterlockedMutex> lock2(sender.messagesMutex_);
+  Array<Message::Key *> list;
+  sender.messages_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    rename(
+      spoolDir(utf8::String(*list[i]).hash(true) & (spoolFibers_ - 1)) +
+        *list[i] + ".msg",
+      mqueueDir() + *list[i] + ".msg"
+    );
+  sendMailFibers_.remove(sender);
+}
+//------------------------------------------------------------------------------
+void Server::mqueueCleanup()
+{
+  Vector<utf8::String> list;
+  getDirList(list,mqueueDir() + "*.msg",utf8::String(),false);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+    rename(
+      spoolDir(utf8::String(list[i]).hash(true) & (spoolFibers_ - 1)) +
+        list[i] + ".msg",
+      mqueueDir() + list[i] + ".msg"
+    );
   }
-  AutoLock<FiberInterlockedMutex> lock(pWalker->messagesMutex_);
-  pWalker->messages_.insert(newObject<Message::Key>(id));
 }
 //------------------------------------------------------------------------------
 } // namespace msmail
