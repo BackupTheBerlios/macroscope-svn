@@ -244,6 +244,7 @@ utf8::String  getExecutablePath();
 utf8::String  excludeTrailingPathDelimiter(const utf8::String & path);
 utf8::String  includeTrailingPathDelimiter(const utf8::String & path);
 void chModOwn(const utf8::String & pathName, const Mutant & mode, const Mutant & user, const Mutant & group);
+utf8::String getRootFromPathName(const utf8::String & pathName);
 utf8::String  getPathFromPathName(const utf8::String & pathName);
 utf8::String  getNameFromPathName(const utf8::String & pathName);
 utf8::String  anyPathName2HostPathName(const utf8::String & pathName);

@@ -40,7 +40,8 @@ Server::Server(const ConfigSP config) :
   rnd_(newObject<Randomizer>(),rndMutex_),
   nodeClient_(NULL),
   skippedNodeClientStarts_(0),
-  skippedNodeExchangeStarts_(0)
+  skippedNodeExchangeStarts_(0),
+  spoolFibers_(0)
 {
 }
 //------------------------------------------------------------------------------
@@ -48,11 +49,17 @@ void Server::open()
 {
   ksock::Server::open();
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
-  uintptr_t i;
-  for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",10); i > 0; i-- )
-    attachFiber(newObjectV<SpoolWalker>(*this));
-  for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fibers",10); i > 0; i-- )
-    attachFiber(newObjectV<MailQueueWalker>(*this));
+  union {
+    intptr_t i;
+    uintptr_t u;
+  };
+  spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",8);
+  for( u = 1; i < spoolFibers_; u <<= 1 );
+  spoolFibers_ = u;
+  while( u > 0 ) attachFiber(newObjectV<SpoolWalker>(*this,--u));
+  attachFiber(newObjectV<SpoolWalker>(*this,--i)); // lost sheeps collector fiber
+//  for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fibers",8; i > 0; i-- )
+//    attachFiber(newObjectV<MailQueueWalker>(*this));
 }
 //------------------------------------------------------------------------------
 void Server::close()
@@ -65,12 +72,12 @@ Fiber * Server::newFiber()
   return newObjectV<ServerFiber>(*this);
 }
 //------------------------------------------------------------------------------
-utf8::String Server::spoolDir() const
+utf8::String Server::spoolDir(uintptr_t id) const
 {
   utf8::String spool(
-    excludeTrailingPathDelimiter(
+    includeTrailingPathDelimiter(
       config_->value("spool",getExecutablePath() + "spool")
-    )
+      ) + utf8::int2Str0(id,4)
   );
   createDirectory(spool);
   return includeTrailingPathDelimiter(spool);
@@ -275,11 +282,10 @@ void Server::sendRobotMessage(
   m.value("#Relay.0.Process.StartTime",psts);
   m.value("#Relay.0.Received",tms);
   m.value(key,value);
-  AsyncFile ctrl2(lckDir() + m.id() + ".lck");
-  ctrl2.createIfNotExist(true).removeAfterClose(true).open();
-  AutoFileWRLock<AsyncFile> flock(ctrl2);
-  AsyncFile file2(spoolDir() + m.id() + ".msg");
-  file2.createIfNotExist(true).open() << m;
+  AsyncFile file(incompleteDir() + m.id() + ".msg");
+  file.createIfNotExist(true).removeAfterClose(true).open() << m;
+  file.removeAfterClose(false).close();
+  rename(file.fileName(),spoolDir(m.id().hash(true) & (spoolFibers_ - 1)) + m.id() + ".msg");
 }
 //------------------------------------------------------------------------------
 void Server::sendUserWatchdog(const utf8::String & user)
@@ -287,6 +293,26 @@ void Server::sendUserWatchdog(const utf8::String & user)
 // send notify to wait fiber
   AsyncFile watchdog(includeTrailingPathDelimiter(mailDir() + user) + "." + createGUIDAsBase32String());
   watchdog.createIfNotExist(true).removeAfterClose(true).open();
+}
+//------------------------------------------------------------------------------
+void Server::sendMessage(const utf8::String & host,const utf8::String & id)
+{
+  MailQueueWalker * pWalker;
+  {
+    AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
+    AutoPtr<MailQueueWalker> walker(newObject<MailQueueWalker>(*this,host));
+    MailQueueWalker * pWalker = sendMailFibers_.find(walker);
+    if( pWalker == NULL ){
+      pWalker = walker;
+      attachFiber(walker);
+    }
+    pWalker->inactivityTime_ = (uint64_t) config_->valueByPath(
+      utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fiber_inactivity_time",
+      60u
+    ) * 1000000u;
+  }
+  AutoLock<FiberInterlockedMutex> lock(pWalker->messagesMutex_);
+  pWalker->messages_.insert(newObject<Message::Key>(id));
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

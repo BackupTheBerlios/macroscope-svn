@@ -1070,6 +1070,43 @@ void chModOwn(const utf8::String &,const Mutant &,const Mutant &,const Mutant &)
 }
 #endif
 //---------------------------------------------------------------------------
+utf8::String getRootFromPathName(const utf8::String & pathName)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  uintptr_t offset = pathName.strncmp("\\\\?\\",4) == 0 || pathName.strncmp("//?/",4) == 0 ? 4 : 0;
+  utf8::String s(utf8::String::Iterator(pathName) + offset);
+  if( s.strncmp("\\\\",2) == 0 || s.strncmp("//",2) == 0 ){ // windows network path
+    utf8::String::Iterator i(utf8::String::Iterator(s) + 2);
+    while( !i.bof() ){
+      uintptr_t c = i.getChar();
+      if( c == '/' || c == '\\' ){ // windows network server name
+        while( !i.bof() ){
+          c = i.getChar();
+          if( c == '/' || c == '\\' ) break; // windows network server resource name
+          i.next();
+        }
+        return utf8::String(s,i) + pathDelimiterStr;
+      }
+      i.next();
+    }
+    return utf8::String(s,i) + pathDelimiterStr;
+  }
+  utf8::String::Iterator i(s);
+  while( !i.bof() ){
+    uintptr_t c = i.getChar();
+    if( c == '/' || c == '\\' ) break;
+    if( c == ':' ){
+      return utf8::String(s,i + 1) + pathDelimiterStr;
+    }
+    i.next();
+  }
+  return getRootFromPathName(getCurrentDir());
+#else
+// FIX ME
+  return pathDelimiterStr;
+#endif
+}
+//---------------------------------------------------------------------------
 utf8::String getPathFromPathName(const utf8::String & pathName)
 {
   utf8::String::Iterator i(pathName);

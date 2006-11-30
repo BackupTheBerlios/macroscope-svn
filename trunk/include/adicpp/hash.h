@@ -123,53 +123,45 @@ uintptr_t HashFuncContainer< T>::hash_rev(const void * key, uintptr_t len, uintp
 //---------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-uintptr_t HashFuncContainer< T>::hash(const char * s, uintptr_t h)
+uintptr_t HashFuncContainer< T>::hash(const char * s,uintptr_t h)
 {
   for( ; ; ){
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
   }
   return h;
 }
 //---------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-uint64_t HashFuncContainer< T>::hash_ll(const char * s, uint64_t h)
+uint64_t HashFuncContainer< T>::hash_ll(const char * s,uint64_t h)
 {
-  for( ; ; ){
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
-    if( *s == '\0' )
-      break;
-    HASH4(h, s, 1);
+  for(;;){
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
+    if( *s == '\0' ) break;
+    HASH4(h,s,1);
   }
   return h;
 }
 //---------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 uint64_t HashFuncContainer< T>::hash_ll(const void * key, uintptr_t len, uint64_t h)
 {

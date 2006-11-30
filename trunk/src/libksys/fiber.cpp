@@ -525,10 +525,11 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
 #endif
       assert( currentFiber() != NULL );
       currentFiber()->event_.mutex_ = this;
-      currentFiber()->event_.type_ = etAcquire;
+      currentFiber()->event_.timeout_ = ~uint64_t(0);
+      currentFiber()->event_.type_ = etAcquireMutex;
       currentFiber()->thread()->postRequest();
       currentFiber()->switchFiber(currentFiber()->mainFiber());
-      assert( currentFiber()->event_.type_ == etAcquire );
+      assert( currentFiber()->event_.type_ == etAcquireMutex );
       if( currentFiber()->event_.errno_ != 0 )
         newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
       return true;
@@ -752,6 +753,28 @@ void FiberSemaphore::post()
   }
   mutex_.release();
 }*/
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+//------------------------------------------------------------------------------
+bool FiberSemaphore::timedWait(uint64_t timeout)
+{
+  if( isRunInFiber() ){
+    currentFiber()->event_.semaphore_ = this;
+    currentFiber()->event_.timeout_ = timeout;
+    currentFiber()->event_.type_ = etAcquireSemaphore;
+    currentFiber()->thread()->postRequest();
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
+    assert( currentFiber()->event_.type_ == etAcquireSemaphore );
+    if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != WAIT_TIMEOUT )
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+    return currentFiber()->event_.errno_ != WAIT_TIMEOUT;
+  }
+  return Semaphore::timedWait(timeout);
+}
+//------------------------------------------------------------------------------
+#endif
 //------------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------

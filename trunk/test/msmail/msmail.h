@@ -677,9 +677,11 @@ class ServerFiber : public ksock::ServerFiber {
 class SpoolWalker : public Fiber {
   public:
     virtual ~SpoolWalker();
-    SpoolWalker(Server & server);
+    SpoolWalker(Server & server,intptr_t id);
   protected:
     DirectoryChangeNotification dcn_;
+    intptr_t id_; // if negative then fiber must work as collector for lost sheeps
+
     void processQueue(bool & timeWait);
     void fiberExecute();
   private:
@@ -689,15 +691,38 @@ class SpoolWalker : public Fiber {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class MailQueueWalker : public ksock::ClientFiber {
+  friend class Server;
   public:
     virtual ~MailQueueWalker();
     MailQueueWalker(Server & server);
+    MailQueueWalker(Server & server,const utf8::String & host);
   protected:
     DirectoryChangeNotification dcn_;
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
     void processQueue(bool & timeWait,uint64_t & timeout);
+    void main1();
+
+    static EmbeddedHashNode<MailQueueWalker> & hostHashNode(const MailQueueWalker & object){
+      return object.hostHashNode_;
+    }
+    static MailQueueWalker & hostHashNodeObject(const EmbeddedHashNode<MailQueueWalker> & node,MailQueueWalker * p){
+      return node.object(p->hostHashNode_);
+    }
+    static uintptr_t hostHashNodeHash(const MailQueueWalker & object){
+      return object.host_.hash(false);
+    }
+    static bool hostHashNodeEqu(const MailQueueWalker & object1,const MailQueueWalker & object2){
+      return object1.host_.strcasecmp(object2.host_) == 0;
+    }
+    mutable EmbeddedHashNode<MailQueueWalker> hostHashNode_;
+    utf8::String host_;
+    FiberInterlockedMutex messagesMutex_;
+    Message::Keys messages_;
+    FiberSemaphore semaphore_;
+    uint64_t inactivityTime_;
+
     void main();
   private:
     Server & server_;
@@ -870,7 +895,7 @@ class Server : public ksock::Server {
     };
   protected:
     Fiber * newFiber();
-    utf8::String spoolDir() const;
+    utf8::String spoolDir(uintptr_t id) const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;
@@ -901,6 +926,20 @@ class Server : public ksock::Server {
       ServerFiber::hashNodeHash,
       ServerFiber::hashNodeEqu
     > recvMailFibers_;
+
+    uintptr_t spoolFibers_;
+
+    FiberInterlockedMutex sendMailFibersMutex_;
+    EmbeddedHash<
+      MailQueueWalker,
+      MailQueueWalker::hostHashNode,
+      MailQueueWalker::hostHashNodeObject,
+      MailQueueWalker::hostHashNodeHash,
+      MailQueueWalker::hostHashNodeEqu
+    > sendMailFibers_;
+
+    void sendMessage(const utf8::String & host,const utf8::String & id);
+
     void addRecvMailFiber(ServerFiber & fiber);
     bool remRecvMailFiber(ServerFiber & fiber);
     ServerFiber * findRecvMailFiberNL(const ServerFiber & fiber);

@@ -57,7 +57,8 @@ enum AsyncEventType {
   etQuit,
   etDispatch,
   etTimer,
-  etAcquire,
+  etAcquireMutex,
+  etAcquireSemaphore,
   etStackBackTrace,
   etStackBackTraceZero,
   etCount
@@ -69,6 +70,7 @@ class Fiber;
 class AsyncDescriptor;
 class AsyncFile;
 class FiberInterlockedMutex;
+class FiberSemaphore;
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 typedef HANDLE file_t;
@@ -123,6 +125,7 @@ class AsyncEvent {
 #endif
           InterlockedMutex * mutex0_;
           FiberInterlockedMutex * mutex_;
+          FiberSemaphore * semaphore_;
           DirectoryChangeNotification * directoryChangeNotification_;
           struct Stat * stat_;
           struct {
@@ -454,6 +457,40 @@ inline bool FiberMutex::tryWRLock()
   release();
   return r;
 }
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class FiberSemaphore : public Semaphore {
+  friend class AsyncAcquireSlave;
+  public:
+    ~FiberSemaphore();
+    FiberSemaphore();
+
+    bool timedWait(uint64_t timeout);
+    FiberSemaphore & wait();
+  protected:
+  private:
+    FiberSemaphore(const FiberSemaphore &){}
+    void operator =(const FiberSemaphore &){}
+};
+//---------------------------------------------------------------------------
+inline FiberSemaphore::~FiberSemaphore()
+{
+}
+//---------------------------------------------------------------------------
+inline FiberSemaphore::FiberSemaphore()
+{
+}
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+//---------------------------------------------------------------------------
+inline FiberSemaphore & FiberSemaphore::wait()
+{
+  timedWait(~uint64_t(0));
+  return *this;
+}
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------

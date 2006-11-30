@@ -37,8 +37,8 @@ namespace ksys {
 class SVSharedSemaphore {
     // System V shared semaphore
   public:
-                        ~SVSharedSemaphore();
-                        SVSharedSemaphore(const utf8::String & name = utf8::String(), uintptr_t flags = SEM_R | SEM_A, uintptr_t count = 1);
+    ~SVSharedSemaphore();
+    SVSharedSemaphore(const utf8::String & name = utf8::String(), uintptr_t flags = SEM_R | SEM_A, uintptr_t count = 1);
 
     static key_t        getKey(const utf8::String & name);
     SVSharedSemaphore & post(uintptr_t sem = 0);
@@ -51,13 +51,8 @@ class SVSharedSemaphore {
     int   count_;
     bool  creator_;
   private:
-    SVSharedSemaphore(const SVSharedSemaphore &)
-    {
-    }
-    SVSharedSemaphore & operator =(const SVSharedSemaphore &)
-    {
-      return *this;
-    }
+    SVSharedSemaphore(const SVSharedSemaphore &){}
+    void operator =(const SVSharedSemaphore &){ }
 };
 //---------------------------------------------------------------------------
 inline const bool & SVSharedSemaphore::creator() const

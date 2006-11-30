@@ -48,12 +48,14 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   seekable_(true),
   detachOnClose_(true),
   random_(false),
-  direct_(false)
+  direct_(false),
+  nocache_(false)
 {
   file_ = INVALID_HANDLE_VALUE;
   handle_ = INVALID_HANDLE_VALUE;
 #if defined(__WIN32__) || defined(__WIN64__)
   specification_ = 1;
+  alignment_ = 1;
 #endif
 }
 //---------------------------------------------------------------------------
@@ -124,7 +126,8 @@ file_t AsyncFile::openHelper(bool async)
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
           (async ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
-          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
+          (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
         NULL
       );
     if( handle == INVALID_HANDLE_VALUE )
@@ -136,7 +139,8 @@ file_t AsyncFile::openHelper(bool async)
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
           (async ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
-          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
+          (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
         NULL
       );
   }
@@ -152,7 +156,8 @@ file_t AsyncFile::openHelper(bool async)
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
           (async ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
-          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
+          (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
         NULL
       );
     if( handle == INVALID_HANDLE_VALUE )
@@ -164,7 +169,8 @@ file_t AsyncFile::openHelper(bool async)
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
           (async ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
-          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0),
+          (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
+          (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
         NULL
       );
   }
@@ -235,9 +241,8 @@ file_t AsyncFile::openHelper(bool async)
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::open()
 {
-  if( redirectByName() ) return *this;
-  if( fileMember() ){
-    if( file_ == INVALID_HANDLE_VALUE ){
+  if( !isOpen() && !redirectByName() ){
+    if( fileMember() ){
       attach();
       fiber()->event_.string0_ = fileName_;
       fiber()->event_.createIfNotExist_ = createIfNotExist_;
@@ -252,9 +257,38 @@ AsyncFile & AsyncFile::open()
       if( fiber()->event_.errno_ != 0 )
         newObject<EFileError>(fiber()->event_.errno_,fileName_)->throwSP();
     }
-  }
-  else if( handle_ == INVALID_HANDLE_VALUE ){
-    handle_ = openHelper();
+    else {
+      handle_ = openHelper();
+    }
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( nocache_ ){
+      utf8::String s(getRootFromPathName(fileName_));
+      BOOL r;
+      DWORD sectorsPerCluster, bytesPerSector, numberOfFreeClusters, totalNumberOfClusters;
+      if( isWin9x() )
+        r = GetDiskFreeSpaceA(
+          s.getANSIString(),
+          &sectorsPerCluster,
+          &bytesPerSector,
+          &numberOfFreeClusters,
+          &totalNumberOfClusters
+        );
+      else
+        r = GetDiskFreeSpaceW(
+          s.getUNICODEString(),
+          &sectorsPerCluster,
+          &bytesPerSector,
+          &numberOfFreeClusters,
+          &totalNumberOfClusters
+        );
+      if( r == 0 ){
+        int32_t err = GetLastError() + errorOffset;
+        close();
+        newObject<EFileError>(err,fileName_)->throwSP();
+      }
+      alignment_ = bytesPerSector;
+    }
+#endif
   }
   return *this;
 }

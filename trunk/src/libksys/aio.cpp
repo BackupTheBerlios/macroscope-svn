@@ -1232,10 +1232,11 @@ void AsyncAcquireSlave::threadExecute()
       node = newRequests_.first();
       if( node == NULL ) break;
       object = &AsyncEvent::nodeObject(*node);
-      assert( object->type_ == etAcquire );
       assert( sp_ < MAXIMUM_WAIT_OBJECTS - 1 );
       ++sp_;
-      sems_[sp_] = object->mutex_->sem_;
+      if( object->type_ == etAcquireMutex ) sems_[sp_] = object->mutex_->sem_;
+      else
+      if( object->type_ == etAcquireSemaphore ) sems_[sp_] = object->semaphore_->handle_;
       eSems_[sp_] = object;
       sems_[sp_ + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
       requests_.insToTail(newRequests_.remove(*node));
@@ -1247,10 +1248,17 @@ void AsyncAcquireSlave::threadExecute()
       acquire();
     }
     else {
+      uint64_t timeout = ~uint64_t(0);
+      for( node = requests_.first(); node != NULL; node = node->next() ){
+        object = &AsyncEvent::nodeObject(*node);
+        if( object->timeout_ < timeout ) timeout = object->timeout_;
+      }
       release();
       object = NULL;
       node = NULL;
-      DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,INFINITE,FALSE);
+      DWORD tma = timeout == ~uint64_t(0) ? INFINITE : DWORD(timeout / 1000u);
+      timeout = gettimeofday();
+      DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,tma,FALSE);
       acquire();
       wm0 = WAIT_OBJECT_0;
       if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
@@ -1273,6 +1281,25 @@ void AsyncAcquireSlave::threadExecute()
       else if( wm == STATUS_ABANDONED_WAIT_0 + sp_ + 1 ){
         ResetEvent(sems_[STATUS_ABANDONED_WAIT_0 + sp_ + 1]);
       }
+      else if( wm == WAIT_TIMEOUT ){
+        timeout = timeout - gettimeofday();
+        for( intptr_t i = sp_; i >= 0; i-- ){
+          object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
+          if( object->timeout_ == 0 ){
+            object = eSems_[i];
+            //xchg(sems_[i],sems_[sp_]);
+            sems_[sp_] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
+            //eSems_[i] = eSems_[sp_];
+            eSems_[sp_] = NULL;
+            sp_--;
+            requests_.remove(*object);
+            assert( object->fiber_ != NULL );
+            object->errno_ = WAIT_TIMEOUT;
+            object->fiber_->thread()->postEvent(object);
+          }
+        }
+        node = NULL;
+      }
       else {
         assert( 0 );
       }
@@ -1282,7 +1309,7 @@ void AsyncAcquireSlave::threadExecute()
         eSems_[wm] = eSems_[sp_];
         eSems_[sp_] = NULL;
         sp_--;
-        requests_.remove(*node);
+        requests_.remove(*object);
         assert( object->fiber_ != NULL );
         object->errno_ = 0;
         object->fiber_->thread()->postEvent(object);
@@ -1366,7 +1393,7 @@ void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
       node = newRequests_.first();
       if( node == NULL ) break;
       object = &AsyncEvent::nodeObject(*node);
-      assert( object->type_ == etAcquire );
+      assert( object->type_ == etAcquireMutex );
       assert( sp_ < MAXIMUM_WAIT_OBJECTS - 1 );
       ++sp_;
       sems_[sp_] = object->directoryChangeNotification_->hFFCNotification();
@@ -1776,7 +1803,8 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         timerSlave_->transplant(currentFiber()->event_);
       }
       return;
-    case etAcquire :
+    case etAcquireMutex :
+    case etAcquireSemaphore :
       {
         AutoLock<InterlockedMutex> lock(acquireRequestsMutex_);
         if( gettimeofday() - acquireSlavesSweepTime_ >= 10000000 ){

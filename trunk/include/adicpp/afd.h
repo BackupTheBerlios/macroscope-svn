@@ -100,10 +100,14 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & random(bool v);
     bool direct() const;
     AsyncFile & direct(bool v);
+    bool nocache() const;
+    AsyncFile & nocache(bool v);
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD waitCommEvent();
+    const DWORD & alignment() const;
 #else
     uint32_t waitCommEvent();
+    uint32_t alignment() const { return 1; }
 #endif
     file_t descriptor() const;
     bool std() const;
@@ -129,6 +133,7 @@ class AsyncFile : public AsyncDescriptor {
         ULONG hi;
       };
     };
+    DWORD alignment_;
 #endif
     file_t handle_;
     utf8::String fileName_;
@@ -142,6 +147,7 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t detachOnClose_    : 1;
       uint8_t random_           : 1;
       uint8_t direct_           : 1;
+      uint8_t nocache_          : 1;
     };
 #if _MSC_VER
 #pragma warning(pop)
@@ -172,6 +178,11 @@ class AsyncFile : public AsyncDescriptor {
     static void initialize();
     static void cleanup();
 };
+//---------------------------------------------------------------------------
+inline const DWORD & AsyncFile::alignment() const
+{
+  return alignment_;
+}
 //---------------------------------------------------------------------------
 inline bool AsyncFile::std() const
 {
@@ -269,6 +280,17 @@ inline bool AsyncFile::direct() const
 inline AsyncFile & AsyncFile::direct(bool v)
 {
   direct_ = v;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool AsyncFile::nocache() const
+{
+  return nocache_ != 0;
+}
+//---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::nocache(bool v)
+{
+  nocache_ = v;
   return *this;
 }
 //---------------------------------------------------------------------------
