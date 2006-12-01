@@ -78,7 +78,7 @@ utf8::String Server::spoolDir(intptr_t id) const
   utf8::String spool(
     includeTrailingPathDelimiter(
       config_->value("spool",getExecutablePath() + "spool")
-      ) + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String())
+    ) + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String("collector"))
   );
   createDirectory(spool);
   return includeTrailingPathDelimiter(spool);

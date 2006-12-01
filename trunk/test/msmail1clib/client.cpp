@@ -211,6 +211,7 @@ void BaseClientFiber::main()
       cycleException(e);
     }
   }
+  onTerminate();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -469,6 +470,12 @@ void ClientMailFiber::newMessage()
     }
   }
   if( message_ == NULL && messages_.count() > 0 ) message_ = &messages_[0];
+}
+//------------------------------------------------------------------------------
+void ClientMailFiber::onTerminate()
+{
+  AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+  client_.clientMailFiber_ = NULL;
 }
 //------------------------------------------------------------------------------
 bool ClientMailFiber::cycleStage1()

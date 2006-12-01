@@ -83,6 +83,7 @@ class BaseClientFiber : public ksock::ClientFiber {
     virtual void onlineStage1() {}
     virtual void offlineStage0() {}
     virtual void cycleException(ExceptionSP &) {}
+    virtual void onTerminate() {}
   private:
     BaseClientFiber(const BaseClientFiber &);
     void operator = (const BaseClientFiber &);
@@ -152,6 +153,7 @@ class ClientMailFiber : public BaseClientFiber {
     void onlineStage0();
     bool cycleStage1();
     void offlineStage0();
+    void onTerminate();
 
     void removeMessage(MessageControl * message);
     void newMessage();
