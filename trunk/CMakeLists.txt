@@ -590,7 +590,7 @@ SET (CPACK_PACKAGE_VENDOR "Korvin Software")
 SET (CPACK_PACKAGE_EXECUTABLES "macroscope" "Macroscope")
 SET (CPACK_PACKAGE_VERSION_MAJOR "1")
 SET (CPACK_PACKAGE_VERSION_MINOR "0")
-SET (CPACK_PACKAGE_VERSION_PATCH "478")
+SET (CPACK_PACKAGE_VERSION_PATCH "479")
 SET (CPACK_PACKAGE_INSTALL_DIRECTORY "macroscope")
 
 # Try to get patch level from svn
@@ -636,7 +636,10 @@ IF (WIN32 AND NOT UNIX)
   )
   IF (NSIS_MAKENSIS)
     SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-      "!include \\\"Library.nsh\\\"\\n"
+      "SetCompressor /SOLID lzma\\n"
+    )
+    SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
+      "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}!include \\\"Library.nsh\\\"\\n"
     )
     SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
       "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}!insertmacro InstallLib DLL SHARED REBOOT_NOTPROTECTED \\\${INST_DIR}\\\\msmail1clib.dll \\\$SYSDIR\\\\msmail1clib.dll $SYSDIR\\n"

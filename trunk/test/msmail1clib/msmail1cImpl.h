@@ -66,18 +66,51 @@ class SerialPortFiber : public Fiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class ClientFiber : public ksock::ClientFiber {
+class BaseClientFiber : public ksock::ClientFiber {
+  public:
+    virtual ~BaseClientFiber();
+    BaseClientFiber();
+  protected:
+    void checkCode(int32_t code,int32_t noThrowCode = eOK);
+    void getCode(int32_t noThrowCode = eOK);
+
+    void main();
+    virtual void connectHost(bool & online) = 0;
+    virtual void auth() {}
+    virtual void cycleStage0() {}
+    virtual bool cycleStage1() { return false; }
+    virtual void onlineStage0() {}
+    virtual void onlineStage1() {}
+    virtual void offlineStage0() {}
+    virtual void cycleException(ExceptionSP &) {}
+  private:
+    BaseClientFiber(const BaseClientFiber &);
+    void operator = (const BaseClientFiber &);
+
+    void recvMail();
+    void sendMail();
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class ClientFiber : public BaseClientFiber {
   friend class Client;
   public:
     virtual ~ClientFiber();
     ClientFiber(Client & client);
   protected:
     Client & client_;
-    void checkCode(int32_t code,int32_t noThrowCode = eOK);
-    void getCode(int32_t noThrowCode = eOK);
+    AutoPtr<Message> message_;
+    ksock::SockAddr remoteAddress_;
+
     int32_t getCode2(int32_t noThrowCode0 = eOK,int32_t noThrowCode1 = eOK);
+
+    void connectHost(bool & online);
     void auth();
-    void main();
+    void cycleStage0();
+    void onlineStage0();
+    void onlineStage1();
+    void cycleException(ExceptionSP &);
   private:
     ClientFiber(const ClientFiber & a) : client_(a.client_) {}
     void operator = (const ClientFiber &){}
@@ -85,12 +118,13 @@ class ClientFiber : public ksock::ClientFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class ClientMailFiber : public ClientFiber {
+class ClientMailFiber : public BaseClientFiber {
   friend class Client;
   public:
     virtual ~ClientMailFiber();
     ClientMailFiber(Client & client);
   protected:
+    Client & client_;
     FiberInterlockedMutex messageMutex_;
     FiberSemaphore semaphore_;
     class MessageControl {
@@ -111,15 +145,18 @@ class ClientMailFiber : public ClientFiber {
         //void operator = (const MessageControl &);
     };
     Vector<MessageControl> messages_;
+    MessageControl * message_;
 
-    void main();
+    void connectHost(bool & online);
+    void onlineStage0();
+    bool cycleStage1();
+    void offlineStage0();
+
+    void removeMessage(MessageControl * message);
+    void newMessage();
   private:
     ClientMailFiber(const ClientMailFiber &);
     void operator = (const ClientMailFiber &);
-
-    void connectHost(bool & online);
-    void removeMessage(MessageControl * message);
-    MessageControl * newMessage();
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
