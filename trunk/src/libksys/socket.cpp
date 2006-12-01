@@ -50,7 +50,7 @@ AsyncSocket::~AsyncSocket()
   close();
 }
 //------------------------------------------------------------------------------
-AsyncSocket::AsyncSocket() : maxSendSize_(~(uintptr_t) 0)
+AsyncSocket::AsyncSocket() : maxRecvSize_(~(uintptr_t) 0), maxSendSize_(~(uintptr_t) 0)
 {
   socket_ = INVALID_SOCKET;
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -324,6 +324,7 @@ AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
 uint64_t AsyncSocket::sysRecv(void * buf,uint64_t len)
 {
   uint64_t r = 0;
+  if( len > maxRecvSize_ ) len = maxRecvSize_;
 #if HAVE_KQUEUE
 l1:
 #endif

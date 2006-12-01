@@ -234,34 +234,7 @@ int32_t ClientFiber::getCode2(int32_t noThrowCode0,int32_t noThrowCode1)
 //------------------------------------------------------------------------------
 void ClientFiber::auth()
 {
-  utf8::String user, password, encryption, compression, compressionType, crc;
-  maxSendSize(client_.config_->value("max_send_size",getpagesize()));
-  user = client_.config_->text("user","system");
-  password = client_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
-  encryption = client_.config_->section("encryption").text(utf8::String(),"default");
-  uintptr_t encryptionThreshold = client_.config_->section("encryption").value("threshold",1024 * 1024);
-  compression = client_.config_->section("compression").text(utf8::String(),"default");
-  compressionType = client_.config_->section("compression").value("type","default");
-  crc = client_.config_->section("compression").value("crc","default");
-  uintptr_t compressionLevel = client_.config_->section("compression").value("level",3);
-  bool optimize = client_.config_->section("compression").value("optimize",false);
-  uintptr_t bufferSize = client_.config_->section("compression").value("buffer_size",getpagesize());
-  bool noAuth = client_.config_->value("noauth",false);
-  checkCode(
-    clientAuth(
-      user,
-      password,
-      encryption,
-      encryptionThreshold,
-      compression,
-      compressionType,
-      crc,
-      compressionLevel,
-      optimize,
-      bufferSize,
-      noAuth
-    )
-  );
+  checkCode(client_.auth(*this));
 }
 //------------------------------------------------------------------------------
 void ClientFiber::cycleStage0()
@@ -438,6 +411,11 @@ void ClientMailFiber::removeMessage(MessageControl * message)
     if( message == &messages_[i] ) messages_.remove(i);
 }
 //------------------------------------------------------------------------------
+void ClientMailFiber::auth()
+{
+  checkCode(client_.auth(*this));
+}
+//------------------------------------------------------------------------------
 void ClientMailFiber::connectHost(bool & online)
 {
   if( !online ){
@@ -447,17 +425,33 @@ void ClientMailFiber::connectHost(bool & online)
       ksock::SockAddr remoteAddress;
       try {
         remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
-        connect(remoteAddress);
-        auth();
-        *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
-        getCode();
-        online = true;
+        utf8::String fqdn(remoteAddress.resolve());
+        try {
+          connect(remoteAddress);
+          try {
+            auth();
+            *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
+            getCode();
+            online = true;
+          }
+          catch( ExceptionSP & e ){
+            e->writeStdError();
+            stdErr.debug(3,utf8::String::Stream() <<
+              "Authentification to host " << fqdn << " failed.\n"
+            );
+          }
+        }
+        catch( ExceptionSP & e ){
+          e->writeStdError();
+          stdErr.debug(2,utf8::String::Stream() <<
+            "Unable to connect. Host " << fqdn << " unreachable.\n"
+          );
+        }
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
-        stdErr.debug(2,utf8::String::Stream() <<
-          "Unable to connect. Host " << stringPartByNo(server,i) <<
-          " unreachable.\n"
+        stdErr.debug(3,utf8::String::Stream() <<
+          "Unable to resolve host: " << stringPartByNo(server,i) << "\n"
         );
       }
     }
@@ -530,11 +524,6 @@ void ClientMailFiber::onlineStage0()
         }
         else {
           client_.workFiberWait_.release();
-        }
-        {
-          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
-          Message * msg = client_.recvQueue_.find(message_->message_->id());
-          if( msg != NULL ) client_.recvQueue_.drop(*msg);
         }
         removeMessage(message_);
         break;
@@ -629,23 +618,19 @@ void ClientDBGetterFiber::main()
     *this << uint8_t(cmQuit);
     getCode();
     client_.data_.clear().ore(tdata);
-    AutoPtr<OLECHAR> source(client_.name_.getOLEString());
-    AutoPtr<OLECHAR> event(utf8::String("GetDB").getOLEString());
     bool isEmpty = 
       client_.data_.getUserList().strlen() == 0 &&
       client_.data_.getKeyList().strlen() == 0
     ;
-    AutoPtr<OLECHAR> data(utf8::String(isEmpty ? "" : "DATA").getOLEString());
-    HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
-    assert( SUCCEEDED(hr) );
+    client_.sendAsyncEvent(client_.name_,"GetDB",utf8::String(isEmpty ? "" : "DATA"));
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
-    AutoPtr<OLECHAR> source(client_.name_.getOLEString());
-    AutoPtr<OLECHAR> event(utf8::String("GetDB").getOLEString());
-    AutoPtr<OLECHAR> data(utf8::int2Str(e->code() - (e->code() >= errorOffset) * errorOffset).getOLEString());
-    HRESULT hr = client_.pAsyncEvent_->ExternalEvent(source.ptr(NULL),event.ptr(NULL),data.ptr(NULL));
-    assert( SUCCEEDED(hr) );
+    client_.sendAsyncEvent(
+      client_.name_,
+      "GetDB",
+      utf8::int2Str(e->code() - (e->code() >= errorOffset) * errorOffset)
+    );
   }
 }
 //------------------------------------------------------------------------------
@@ -1007,6 +992,37 @@ HRESULT Client::sendAsyncEvent(const utf8::String & source,const utf8::String & 
     }
   }
   return hr;
+}
+//------------------------------------------------------------------------------
+int32_t Client::auth(ksock::AsyncSocket & socket)
+{
+  utf8::String user, password, encryption, compression, compressionType, crc;
+  socket.maxRecvSize(config_->value("max_recv_size",-1));
+  socket.maxSendSize(config_->value("max_send_size",-1));
+  user = config_->text("user","system");
+  password = config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
+  encryption = config_->section("encryption").text(utf8::String(),"default");
+  uintptr_t encryptionThreshold = config_->section("encryption").value("threshold",1024 * 1024);
+  compression = config_->section("compression").text(utf8::String(),"default");
+  compressionType = config_->section("compression").value("type","default");
+  crc = config_->section("compression").value("crc","default");
+  uintptr_t compressionLevel = config_->section("compression").value("level",3);
+  bool optimize = config_->section("compression").value("optimize",false);
+  uintptr_t bufferSize = config_->section("compression").value("buffer_size",getpagesize());
+  bool noAuth = config_->value("noauth",false);
+  return socket.clientAuth(
+    user,
+    password,
+    encryption,
+    encryptionThreshold,
+    compression,
+    compressionType,
+    crc,
+    compressionLevel,
+    optimize,
+    bufferSize,
+    noAuth
+  );
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

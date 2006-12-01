@@ -1284,6 +1284,7 @@ void AsyncAcquireSlave::threadExecute()
       else if( wm == WAIT_TIMEOUT ){
         timeout = timeout - gettimeofday();
         for( intptr_t i = sp_; i >= 0; i-- ){
+          if( object->timeout_ == ~uint64_t(0) ) continue;
           object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
           if( object->timeout_ == 0 ){
             object = eSems_[i];

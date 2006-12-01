@@ -895,7 +895,7 @@ class Server : public ksock::Server {
     };
   protected:
     Fiber * newFiber();
-    utf8::String spoolDir(uintptr_t id) const;
+    utf8::String spoolDir(intptr_t id) const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;

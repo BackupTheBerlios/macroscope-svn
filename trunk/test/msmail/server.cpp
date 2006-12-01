@@ -73,12 +73,12 @@ Fiber * Server::newFiber()
   return newObjectV<ServerFiber>(*this);
 }
 //------------------------------------------------------------------------------
-utf8::String Server::spoolDir(uintptr_t id) const
+utf8::String Server::spoolDir(intptr_t id) const
 {
   utf8::String spool(
     includeTrailingPathDelimiter(
       config_->value("spool",getExecutablePath() + "spool")
-      ) + utf8::int2Str0(id,4)
+      ) + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String())
   );
   createDirectory(spool);
   return includeTrailingPathDelimiter(spool);

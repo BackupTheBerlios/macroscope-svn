@@ -164,7 +164,9 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     AsyncSocket &     operator >>(uint64_t & a);
     AsyncSocket &     operator >>(utf8::String & s);
 
-    AsyncSocket &     maxSendSize(uintptr_t mss);
+    AsyncSocket & maxRecvSize(uintptr_t mrs);
+    const uintptr_t & maxRecvSize() const;
+    AsyncSocket & maxSendSize(uintptr_t mss);
     const uintptr_t & maxSendSize() const;
 
     enum AuthErrorType { 
@@ -230,6 +232,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     ksys::AutoPtr<SockAddr> remoteAddress_; // client address which accept returns
   private:
     static const uint8_t authMagic_[16];
+    uintptr_t maxRecvSize_;
     uintptr_t maxSendSize_;
     uint64_t srb_, nrb_, ssb_, nsb_;
 
@@ -414,6 +417,17 @@ inline AsyncSocket & AsyncSocket::operator >>(int64_t & a)
 inline AsyncSocket & AsyncSocket::operator >>(uint64_t & a)
 {
   return read(&a, sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline AsyncSocket & AsyncSocket::maxRecvSize(uintptr_t mrs)
+{
+  maxRecvSize_ = mrs;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & AsyncSocket::maxRecvSize() const
+{
+  return maxRecvSize_;
 }
 //---------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::maxSendSize(uintptr_t mss)

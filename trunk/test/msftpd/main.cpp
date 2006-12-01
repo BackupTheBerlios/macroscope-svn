@@ -87,6 +87,7 @@ utf8::String MSFTPServerFiber::getUserPassword(const utf8::String & user)
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::auth()
 {
+  maxRecvSize(config_->value("max_recv_size",-1));
   maxSendSize(config_->value("max_send_size",-1));
   utf8::String encryption(config_->section("encryption").text(utf8::String(),"default"));
   uintptr_t encryptionThreshold = config_->section("encryption").value("threshold",1024 * 1024);

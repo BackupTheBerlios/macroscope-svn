@@ -1089,7 +1089,7 @@ HRESULT Cmsmail1c::GetParamDefValue(long lMethodNum,long lParamNum,VARIANT * pva
   HRESULT hr = S_OK;
   switch( lMethodNum ){
     case 9 : case 10 :
-      if( lParamNum == 2 ){
+      if( lParamNum == 1 ){
         if( V_VT(pvarParamDefValue) != VT_I4 )
           hr = VariantChangeType(pvarParamDefValue,pvarParamDefValue,0,VT_I4);
         if( SUCCEEDED(hr) ) V_I4(pvarParamDefValue) = 0;

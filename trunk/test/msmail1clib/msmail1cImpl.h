@@ -147,6 +147,7 @@ class ClientMailFiber : public BaseClientFiber {
     Vector<MessageControl> messages_;
     MessageControl * message_;
 
+    void auth();
     void connectHost(bool & online);
     void onlineStage0();
     bool cycleStage1();
@@ -236,6 +237,8 @@ class Client : public ksock::Client {
     bool installSerialPortScanner(uintptr_t serialPortNumber);
     bool removeSerialPortScanner(uintptr_t serialPortNumber);
     void removeAllSerialPortScanners();
+
+    int32_t auth(ksock::AsyncSocket & socket);
 
     InterlockedMutex workFiberWait_;
     int32_t workFiberLastError_;

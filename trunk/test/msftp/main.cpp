@@ -82,6 +82,8 @@ KFTPClient & KFTPClient::getCode(int32_t noThrowCode)
 void KFTPClient::auth()
 {
   utf8::String user, password, encryption, compression, compressionType, crc;
+  maxRecvSize(config_->value("max_recv_size",-1));
+  maxRecvSize(config_->section(section_).value("max_recv_size",maxRecvSize()));
   maxSendSize(config_->value("max_send_size",-1));
   maxSendSize(config_->section(section_).value("max_send_size",maxSendSize()));
   user = config_->text("user");
