@@ -296,12 +296,10 @@ void ServerFiber::sendMail() // client sending mail
   utf8::String id;
   Stat st;
   bool rest, incomplete = false;
+  uint64_t rb = recvBytes(), sb = sendBytes();
 
   *this >> id >> rest;
-  AsyncFile ctrl, file;
-  ctrl.fileName(server_.lckDir() + id + ".msg.lck").
-    createIfNotExist(true).removeAfterClose(true).open();
-  AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
+  AsyncFile file;
   file.createIfNotExist(true);
   if( rest ){
     file.fileName(server_.incompleteDir() + id + ".msg");
@@ -309,7 +307,7 @@ void ServerFiber::sendMail() // client sending mail
     uint64_t remainder;
     *this << uint64_t(st.st_size) >> remainder;
     AutoPtr<uint8_t> b;
-    size_t bl = server_.config_->value("max_send_size",getpagesize());
+    size_t bl = getpagesize() * 16;
     b.alloc(bl);
     file.open().seek(st.st_size);
     while( remainder > 0 ){
@@ -325,6 +323,7 @@ void ServerFiber::sendMail() // client sending mail
   }
   else {
     message = newObject<Message>();
+    message->file().createIfNotExist(true).removeAfterClose(true);
     *this >> message;
   }
   if( !message->isValue("#Recepient") || 
@@ -345,36 +344,49 @@ void ServerFiber::sendMail() // client sending mail
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
   message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
   if( incomplete ){
+    size_t bl = getpagesize() * 16;
     AutoPtr<uint8_t> b;
-    b.alloc(getpagesize());
+    b.alloc(bl);
     AsyncFile file2(file.fileName() + ".tmp");
     file2.createIfNotExist(true).removeAfterClose(true).open();
     file2 << message;
-    for( uint64_t ll, l = file.size() - file.tell(); l > 0; l -= ll ){
-      ll = l > (uintptr_t) getpagesize() ? getpagesize() : l;
-      file.readBuffer(b,ll);
-      file2.writeBuffer(b,ll);
-    }
     file2.removeAfterClose(false).close();
+    message = NULL;
     try {
       rename(file2.fileName(),server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg");
     }
-    catch( ... ){
+    catch( ExceptionSP & e ){
+      e->writeStdError();
       try {
         remove(file2.fileName());
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
       }
-      throw;
     }
     file.removeAfterClose(true).close();
   }
   else {
-    file.fileName(server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg");
-    file.removeAfterClose(true).open();
+    file.fileName(server_.incompleteDir() + id + ".msg.tmp");
+    file.createIfNotExist(true).removeAfterClose(true).open();
     file << message;
     file.removeAfterClose(false).close();
+    message = NULL;
+    try {
+      rename(
+        file.fileName(),
+        server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg"
+      );
+    }
+    catch( ExceptionSP & e ){
+      e->writeStdError();
+      try {
+        remove(file.fileName());
+      }
+      catch( ExceptionSP & e ){
+        e->writeStdError();
+      }
+    }
   }
   putCode(eOK);
   flush();
@@ -383,7 +395,7 @@ void ServerFiber::sendMail() // client sending mail
     " received from " << message->value("#Sender") <<
     " to " << message->value("#Recepient") <<
     ", traffic " <<
-    allBytes() << "\n"
+    recvBytes() - rb + sendBytes() - sb << "\n"
   );
 }
 //------------------------------------------------------------------------------
@@ -413,15 +425,7 @@ void ServerFiber::processMailbox(
     }
     catch( ExceptionSP & e ){
       e->writeStdError();
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-          e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
-          e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-#else
-      if( e->code() != EWOULDBLOCK &&
-          e->code() != ENOENT &&
-          e->code() != EACCES ) throw;
-#endif
+      wait = true;
     }
     if( file.isOpen() ){
       utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
@@ -560,29 +564,16 @@ void SpoolWalker::processQueue(bool & timeWait)
   timeWait = false;
   stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   utf8::String myHost(server_.bindAddrs()[0].resolve(defaultPort));
-  intptr_t i;
   Vector<utf8::String> list;
   getDirList(list,server_.spoolDir(id_) + "*.msg",utf8::String(),false);
-  while( !terminated_ && list.count() > 0 ){
-    i = (intptr_t) server_.rnd_->random(list.count());
-//    AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
-//    ctrl.createIfNotExist(true).removeAfterClose(true).open();
-//    AutoFileWRLock<AsyncFile> flock(ctrl);
+  for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
     AsyncFile file(list[i]);
     try {
       file.open();
     }
     catch( ExceptionSP & e ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-          e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
-          e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-#else
-      if( e->code() != EWOULDBLOCK &&
-          e->code() != ENOENT &&
-          e->code() != EACCES ) throw;
-#endif
       e->writeStdError();
+      timeWait = true;
     }
     try {
       if( file.isOpen() ){
@@ -685,12 +676,9 @@ void SpoolWalker::processQueue(bool & timeWait)
       }
     }
     catch( ExceptionSP & e ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
-#else
-      if( e->code() != EINVAL ) throw;
-#endif
+      e->writeStdError();
       stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << "\n");
+      timeWait = true;
     }
     list.remove(i);
   }
@@ -778,252 +766,6 @@ void MailQueueWalker::auth()
       noAuth
     )
   );
-}
-//------------------------------------------------------------------------------
-void MailQueueWalker::processQueue(bool & timeWait,uint64_t & timeout)
-{
-  timeWait = false;
-  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
-  intptr_t i;
-  Vector<utf8::String> list;
-  getDirList(list,server_.mqueueDir() + "*.msg",utf8::String(),false);
-  Server::Data & data = server_.data(stStandalone);
-  while( !terminated_ && list.count() > 0 ){
-    i = (intptr_t) server_.rnd_->random(list.count());
-    AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
-    ctrl.createIfNotExist(true).removeAfterClose(true).open();
-    AutoFileWRLock<AsyncFile> flock(ctrl);
-    AsyncFile file(list[i]);
-    try {
-      file.open();
-    }
-    catch( ExceptionSP & e ){
-#if defined(__WIN32__) || defined(__WIN64__)
-      if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
-          e->code() != ERROR_FILE_NOT_FOUND + errorOffset &&
-          e->code() != ERROR_ACCESS_DENIED + errorOffset ) throw;
-      if( e->code() == ERROR_ACCESS_DENIED ) e->writeStdError();
-#else
-      if( e->code() != EWOULDBLOCK &&
-          e->code() != ENOENT &&
-          e->code() != EACCES ) throw;
-      if( e->code() == EACCES ) e->writeStdError();
-#endif
-    }
-    if( file.isOpen() ){
-      bool resolved = false, tryConnect = false, connected = false, authentificated = false, sended = false;
-      try {
-        Message message;
-        file >> message;
-        utf8::String server, suser, skey;
-        splitString(message.value("#Recepient"),suser,skey,"@");
-        ksock::SockAddr address;
-        {
-          AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-          Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
-          if( key2ServerLink != NULL ) server = key2ServerLink->server_;
-        }
-        if( server.trim().strlen() == 0 ){
-          timeWait = true;
-          stdErr.debug(1,
-            utf8::String::Stream() <<
-            "Message recepient " << message.value("#Recepient") <<
-            " not found in database.\n"
-          );
-          server_.startNodeClient(stStandalone);
-          uint64_t messageTTL = server_.config_->valueByPath(
-            utf8::String(serverConfSectionName_[stStandalone]) +
-            ".message_ttl",
-            2678400u // 31 day
-          );
-          uint64_t messageTime = timeFromTimeString(message.value("#Relay.0.Received"));
-          if( gettimeofday() - messageTime >= messageTTL * 1000000u ){
-            file.close();
-            remove(list[i]);
-            stdErr.debug(1,utf8::String::Stream() << "Message " <<
-              list[i] << " TTL exhausted, removed.\n"
-            );
-          }
-        }
-        else {
-          uint64_t cec = 0;
-          uint64_t lastFailedConnectTime = 0;
-          try {
-            address.resolve(server,defaultPort);
-            resolved = true;
-          }
-          catch( ExceptionSP & e ){
-            timeWait = true;
-            e->writeStdError();
-            stdErr.debug(1,
-              utf8::String::Stream() <<
-                "Unable to resolve " << server <<
-                ", message " << message.id() <<
-                " recepient " << message.value("#Recepient") << "\n"
-            );
-          }
-          if( resolved ){
-            close();
-            {
-              AutoMutexRDLock<FiberMutex> lock(data.mutex_);
-              ServerInfo * si = data.servers_.find(server);
-              if( si != NULL ){
-                cec = si->connectErrorCount_;
-                lastFailedConnectTime = si->lastFailedConnectTime_;
-              }
-            }
-            if( cec > 0 ){
-              uintptr_t mwt = server_.config_->parse().override().valueByPath(
-                utf8::String(serverConfSectionName_[stStandalone]) +
-                ".max_wait_time_before_try_connect",
-                600u
-              );
-              cec = (uintptr_t) fibonacci(cec);
-              if( cec > mwt ) cec = mwt;
-              //sleep(cec * 1000000u);
-              cec *= 1000000u;
-              if( timeout > cec ) timeout = cec;
-            }
-            if( (uint64_t) gettimeofday() >= cec + lastFailedConnectTime ){
-              try {
-                tryConnect = true;
-                connect(address);
-                connected = true;
-              }
-              catch( ExceptionSP & e ){
-                timeWait = true;
-                e->writeStdError();
-                stdErr.debug(3,
-                  utf8::String::Stream() <<
-                  "Unable to connect. Host " << server << " unreachable.\n"
-                );
-              }
-            }
-          }
-          if( connected ){
-            try {
-              auth();
-              authentificated = true;
-            }
-            catch( ExceptionSP & e ){
-              e->writeStdError();
-              stdErr.debug(3,
-                utf8::String::Stream() << "Authentification to host " <<
-                server << " failed.\n"
-              );
-            }
-          }
-          {
-            AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-            ServerInfo * si = data.servers_.find(server);
-            if( si != NULL ){
-              if( authentificated ){
-                si->connectErrorCount_ = 0;
-                si->lastFailedConnectTime_ = 0;
-              }
-              else {
-                if( tryConnect ){
-                  si->connectErrorCount_++;
-                  si->lastFailedConnectTime_ = gettimeofday();
-                  cec = fibonacci(si->connectErrorCount_);
-                  stdErr.debug(7,utf8::String::Stream() <<
-                    "mqueue: Wait " << cec <<
-                    " seconds before connect to host " <<
-                    server << " because previous connect try failed.\n"
-                  );
-                }
-                else {
-                  cec = fibonacci(si->connectErrorCount_);
-                }
-                timeWait = true;
-                cec *= 1000000u;
-                if( timeout > cec ) timeout = cec;
-              }
-            }
-          }
-        }
-        if( authentificated ){ // and now we can send message
-          sended = false;
-          uint64_t restFrom, remainder;
-          try {
-            *this << uint8_t(cmSelectServerType) << uint8_t(stStandalone);
-            getCode();
-            *this << uint8_t(cmSendMail) << message.id() << true >> restFrom;
-            file.seek(restFrom);
-            *this << (remainder = file.size() - restFrom);
-            AutoPtr<uint8_t> b;
-            size_t bl = server_.config_->value("max_send_size",getpagesize());
-            b.alloc(bl);
-            while( remainder > 0 ){
-              uint64_t l = remainder > bl ? bl : remainder;
-              file.read(b,l);
-              write(b,l);
-              remainder -= l;
-            }
-            getCode();
-            *this << uint8_t(cmQuit);
-            getCode();
-            stdErr.debug(0,
-              utf8::String::Stream() << "Message " << message.id() <<
-              " sended to " << message.value("#Recepient") <<
-              " via " << server << ", traffic " <<
-              allBytes() << "\n"
-            );
-            sended = true;
-          }
-          catch( ExceptionSP & e ){
-            timeWait = true;
-            e->writeStdError();
-          }
-        }
-        shutdown();
-        close();
-      }
-      catch( ExceptionSP & e ){
-#if defined(__WIN32__) || defined(__WIN64__)
-        if( e->code() != ERROR_INVALID_DATA + errorOffset ) throw;
-#else
-        if( e->code() != EINVAL ) throw;
-#endif
-        remove(list[i]);
-        stdErr.debug(1,utf8::String::Stream() << "Invalid message " << list[i] << " removed.\n");
-      }
-      if( sended ){
-        file.close();
-        remove(list[i]);
-        stdErr.debug(9,utf8::String::Stream() << "Message " << list[i] << " sended, removed.\n");
-      }
-    }
-    list.remove(i);
-  }
-}
-//------------------------------------------------------------------------------
-void MailQueueWalker::main1()
-{
-  bool timeWait;
-  uint64_t timeout;
-  while( !terminated_ ){
-    try {
-      timeout = ~uint64_t(0);
-      processQueue(timeWait,timeout);
-    }
-    catch( ... ){
-      timeWait = true;
-    }
-    if( terminated_ ) break;
-    if( timeWait ){
-      uint64_t timeout2 = server_.config_->valueByPath(
-        utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_processing_interval",60u);
-      timeout2 *= 1000000u;
-      if( timeout2 > timeout ) timeout2 = timeout;
-      sleep(timeout2);
-      stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by timer... \n");
-    }
-    else {
-      dcn_.monitor(excludeTrailingPathDelimiter(server_.mqueueDir()));
-      stdErr.debug(9,utf8::String::Stream() << this << " Processing mqueue by monitor... \n");
-    }
-  }
 }
 //------------------------------------------------------------------------------
 void MailQueueWalker::connectHost(bool & online)
@@ -1247,7 +989,7 @@ void NodeClient::sweepHelper(ServerType serverType)
 void NodeClient::main()
 {
   if( periodicaly_ ) checkMachineBinding(
-    server_.config_->parse().override().value("machine_key"),true
+    server_.config_->parse().value("machine_key"),true
   );
   server_.data(stStandalone).registerServer(
     ServerInfo(server_.bindAddrs()[0].resolve(defaultPort),stStandalone)
@@ -1258,7 +1000,7 @@ void NodeClient::main()
   try {
     bool tryConnect, connected, exchanged, doWork;
     do {
-      stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
+      stdErr.setDebugLevels(server_.config_->parse().value("debug_levels","+0,+1,+2,+3"));
       if( periodicaly_ ) checkMachineBinding(server_.config_->value("machine_key"),true);
       connected = exchanged = false;
       {
@@ -1275,7 +1017,7 @@ void NodeClient::main()
           host = server_.data(stNode).getNodeList();
           if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
           server += host;
-          host = server_.config_->parse().override().valueByPath(
+          host = server_.config_->parse().valueByPath(
             utf8::String(serverConfSectionName_[stStandalone]) + ".node",""
           );
           if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
@@ -1308,7 +1050,7 @@ void NodeClient::main()
               lastFailedConnectTime = si->lastFailedConnectTime_;
             }
             if( cec > 0 ){
-              uintptr_t mwt = server_.config_->parse().override().valueByPath(
+              uintptr_t mwt = server_.config_->parse().valueByPath(
                 utf8::String(serverConfSectionName_[dataType_]) +
                 ".max_wait_time_before_try_connect",
                 600u
@@ -1425,7 +1167,7 @@ void NodeClient::main()
       if( periodicaly_ ){
         sweepHelper(stStandalone);
         sweepHelper(stNode);
-        uint64_t timeout = server_.config_->parse().override().
+        uint64_t timeout = server_.config_->parse().
           valueByPath(
             utf8::String(serverConfSectionName_[stStandalone]) + ".exchange_interval",
             600u

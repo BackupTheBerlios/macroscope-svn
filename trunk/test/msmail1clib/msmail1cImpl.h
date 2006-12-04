@@ -220,7 +220,7 @@ class Client : public ksock::Client {
 
     HRESULT sendAsyncEvent(const utf8::String & source,const utf8::String & event,const utf8::String & data);
 
-    const utf8::String & newMessage();
+    utf8::String newMessage();
     HRESULT value(const utf8::String id,const utf8::String key,VARIANT * pvarRetValue) const;
     utf8::String value(const utf8::String id,const utf8::String key,const utf8::String value);
     utf8::String removeValue(const utf8::String id,const utf8::String key);

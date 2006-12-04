@@ -353,6 +353,7 @@ void ClientFiber::connectHost(bool & online)
 void ClientFiber::onlineStage0()
 {
   message_ = newObject<Message>();
+  message_->file().createIfNotExist(true).removeAfterClose(true);
   *this >> message_;
 }
 //------------------------------------------------------------------------------
@@ -513,6 +514,8 @@ void ClientMailFiber::onlineStage0()
             "MessageSended",
             message_->message_->id()
           );
+          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          client_.recvQueue_.drop(*message_->message_);
         }
         else {
           client_.workFiberWait_.release();
@@ -528,6 +531,8 @@ void ClientMailFiber::onlineStage0()
             "MessageRemoved",
             message_->message_->id()
           );
+          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          client_.recvQueue_.drop(*message_->message_);
         }
         else {
           client_.workFiberWait_.release();
@@ -550,6 +555,8 @@ void ClientMailFiber::offlineStage0()
             "MessageSendingError_" + utf8::int2Str(WSAECONNREFUSED),
             message_->message_->id()
           );
+          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          client_.sendQueue_.drop(*message_->message_);
         }
         else {
           client_.workFiberLastError_ = WSAECONNREFUSED + errorOffset;
@@ -564,6 +571,8 @@ void ClientMailFiber::offlineStage0()
             "MessageRemovingError_" + utf8::int2Str(WSAECONNREFUSED),
             message_->message_->id()
           );
+          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          client_.recvQueue_.drop(*message_->message_);
         }
         else {
           client_.workFiberLastError_ = WSAECONNREFUSED + errorOffset;
@@ -697,10 +706,11 @@ void Client::close()
   recvQueue_.drop();
 }
 //------------------------------------------------------------------------------
-const utf8::String & Client::newMessage()
+utf8::String Client::newMessage()
 {
   Message * msg = newObject<Message>();
   sendQueue_.insert(*msg);
+  msg->file().createIfNotExist(true).removeAfterClose(true);
   return msg->id();
 }
 //------------------------------------------------------------------------------
@@ -888,6 +898,7 @@ utf8::String Client::copyMessage(const utf8::String id)
   message->removeValueByLeft("#Relay");
   message->id(newId);
   sendQueue_.insert(*message.ptr(NULL));
+  message->file().createIfNotExist(true).open(); // need be open because newMessage set removeAfterClose flag
   return newId;
 }
 //------------------------------------------------------------------------------

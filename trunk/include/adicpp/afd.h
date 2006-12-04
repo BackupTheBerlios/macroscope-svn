@@ -71,9 +71,12 @@ class AsyncFile : public AsyncDescriptor {
     class LineGetBuffer {
       public:
         ~LineGetBuffer() {}
-        LineGetBuffer(uintptr_t size = 0) : 
-          bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false) {}
+        LineGetBuffer(AsyncFile & file,uintptr_t size = 0) : 
+          file_(file), bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false) {}
 
+        LineGetBuffer & seek(uint64_t pos);
+
+        AsyncFile & file_;
         AutoPtr<uint8_t> buffer_;
         uint64_t bufferFilePos_;
         uintptr_t size_;
@@ -187,11 +190,6 @@ inline const DWORD & AsyncFile::alignment() const
 inline bool AsyncFile::std() const
 {
   return std_ != 0;
-}
-//---------------------------------------------------------------------------
-inline bool AsyncFile::isOpen() const
-{
-  return file_ != INVALID_HANDLE_VALUE || handle_ != INVALID_HANDLE_VALUE;
 }
 //---------------------------------------------------------------------------
 inline const utf8::String & AsyncFile::fileName() const

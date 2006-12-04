@@ -231,7 +231,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   uintptr_t c, ctype;
   utf8::String token;
   t = tt = ttUnknown;
-  AsyncFile::LineGetBuffer buffer;
+  AsyncFile::LineGetBuffer buffer(file_);
   buffer.codePage_ = codePage_;
   for(;;){
     if( aheadi_.eof() ){

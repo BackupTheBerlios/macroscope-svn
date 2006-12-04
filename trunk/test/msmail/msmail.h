@@ -78,7 +78,7 @@ class Message {
   public:
     ~Message();
     Message();
-    Message(const utf8::String & sid);
+    Message(const utf8::String & mId);
     Message(const Message & a);
     Message & operator = (const Message & a);
 
@@ -138,14 +138,16 @@ class Message {
       public:
         ~Attribute(){}
         Attribute(){}
-        Attribute(const Attribute & a) : key_(a.key_), value_(a.value_) {}
+        Attribute(const Attribute & a) : key_(a.key_), value_(a.value_), index_(a.index_), size_(a.size_) {}
         Attribute(const utf8::String & key,const utf8::String & value = utf8::String()) :
-          key_(key), value_(value) {}
+          key_(key), value_(value), index_(0), size_(0) {}
         Attribute(const Key & key,const utf8::String & value = utf8::String()) :
-          key_(key), value_(value) {}
+          key_(key), value_(value), index_(0), size_(0) {}
         Attribute & operator = (const Attribute & a){
           key_ = a.key_;
           value_ = a.value_;
+          index_ = a.index_;
+          size_ = a.size_;
           return *this;
         }
         bool operator == (const Attribute & a) const { return key_ == a.key_; }
@@ -157,6 +159,8 @@ class Message {
 
         Key key_;
         utf8::String value_;
+        uint64_t index_;
+        uint64_t size_;
       protected:
       private:
         static EmbeddedHashNode<Attribute> & keyNode(const Attribute & object){
@@ -180,11 +184,11 @@ class Message {
     bool operator <= (const Message & a) const { return id().strcmp(a.id()) <= 0; }
     bool operator <  (const Message & a) const { return id().strcmp(a.id()) <  0; }
 
-    const utf8::String & id() const;
+    utf8::String id() const;
     Message & id(const utf8::String & id);
-    const utf8::String & value(const utf8::String & key) const;
+    utf8::String value(const utf8::String & key,Attribute ** pAttribute = NULL) const;
     bool isValue(const utf8::String & key) const;
-    Message & value(const utf8::String & key,const utf8::String & value);
+    Message & value(const utf8::String & key,const utf8::String & value,Attribute ** pAttribute = NULL);
     utf8::String removeValue(const utf8::String & key);
     Message & removeValueByLeft(const utf8::String & key);
     Message & copyUserAttributes(const Message & msg);
@@ -201,6 +205,10 @@ class Message {
     static bool idHashNodeEqu(const Message & object1,const Message & object2){
       return object1.id().strcmp(object2.id()) == 0;
     }
+
+    const uintptr_t & codePage() const;
+    Message & codePage(uintptr_t a);
+    AsyncFile & file() const;
   protected:
   private:
     mutable EmbeddedHashNode<Message> idNode_;
@@ -213,11 +221,30 @@ class Message {
     > Attributes;
     mutable Attributes attributes_;
     AutoHashDrop<Attributes> attributesAutoDrop_;
+    uintptr_t residentSize_;
+    uintptr_t codePage_;
+    mutable AsyncFile file_;
 };
 //------------------------------------------------------------------------------
-inline const utf8::String & Message::id() const
+inline utf8::String Message::id() const
 {
   return value(messageIdKey);
+}
+//------------------------------------------------------------------------------
+inline const uintptr_t & Message::codePage() const
+{
+  return codePage_;
+}
+//------------------------------------------------------------------------------
+inline Message & Message::codePage(uintptr_t a)
+{
+  codePage_ = a == CP_UNICODE ? CP_UTF8 : a;
+  return *this;
+}
+//------------------------------------------------------------------------------
+inline AsyncFile & Message::file() const
+{
+  return file_;
 }
 //------------------------------------------------------------------------------
 typedef EmbeddedHash<
@@ -697,12 +724,9 @@ class MailQueueWalker : public ksock::ClientFiber {
     MailQueueWalker(Server & server);
     MailQueueWalker(Server & server,const utf8::String & host);
   protected:
-    DirectoryChangeNotification dcn_;
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
     void auth();
-    void processQueue(bool & timeWait,uint64_t & timeout);
-    void main1();
 
     static EmbeddedHashNode<MailQueueWalker> & hostHashNode(const MailQueueWalker & object){
       return object.hostHashNode_;

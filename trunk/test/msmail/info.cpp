@@ -36,23 +36,33 @@ Message::~Message()
 {
 }
 //------------------------------------------------------------------------------
-Message::Message() : attributesAutoDrop_(attributes_)
+Message::Message() :
+  attributesAutoDrop_(attributes_), residentSize_(0), codePage_(CP_UTF8)
 {
-  attributes_.insert(*newObject<Attribute>(messageIdKey,createGUIDAsBase32String()));
+  utf8::String mId(createGUIDAsBase32String());
+  file_.fileName(getTempPath() + mId + ".msg");
+  attributes_.insert(*newObject<Attribute>(messageIdKey,mId));
 }
 //------------------------------------------------------------------------------
-Message::Message(const utf8::String & sid) : attributesAutoDrop_(attributes_)
+Message::Message(const utf8::String & mId) :
+  attributesAutoDrop_(attributes_), residentSize_(0), codePage_(CP_UTF8)
 {
-  value(messageIdKey,sid);
+  file_.fileName(getTempPath() + mId + ".msg");
+  attributes_.insert(*newObject<Attribute>(messageIdKey,mId));
 }
 //------------------------------------------------------------------------------
-Message::Message(const Message & a) : attributes_(a.attributes_), attributesAutoDrop_(attributes_)
+Message::Message(const Message & a) : attributesAutoDrop_(attributes_)
 {
+  operator = (a);
 }
 //------------------------------------------------------------------------------
 Message & Message::operator = (const Message & a)
 {
   attributes_ = a.attributes_;
+  residentSize_ = a.residentSize_;
+  codePage_ = a.codePage_;
+  file_.fileName(a.file_.fileName());
+  file_.createIfNotExist(!a.file_.isOpen());
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -67,7 +77,7 @@ bool Message::isValue(const utf8::String & key) const
   return attributes_.find(key) != NULL;
 }
 //------------------------------------------------------------------------------
-const utf8::String & Message::value(const utf8::String & key) const
+utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) const
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL )
@@ -79,18 +89,55 @@ const utf8::String & Message::value(const utf8::String & key) const
 #endif
       ,__PRETTY_FUNCTION__
     )->throwSP();
-  return p->value_;
+  if( pAttribute != NULL ) *pAttribute = p;
+  if( p->index_ == 0 ) return p->value_;
+  file_.detach().attach().open();
+  utf8::String s(utf8::String::Container::container((uintptr_t) p->size_));
+  file_.readBuffer(p->index_,s.c_str(),p->size_);
+  s.c_str()[(uintptr_t) p->size_] = '\0';
+  if( key.strncmp("#",1) != 0 ) s = unScreenString(s);
+  return s;
 }
 //------------------------------------------------------------------------------
-Message & Message::value(const utf8::String & key,const utf8::String & value)
+Message & Message::value(const utf8::String & key,const utf8::String & value,Attribute ** pAttribute)
 {
+  utf8::String v(value);
   Attribute * p = attributes_.find(key);
   if( p == NULL ){
-    attributes_.insert(*newObject<Attribute>(key,value));
+    p = newObject<Attribute>(key);
+    attributes_.insert(*p);
+    if( pAttribute == NULL ){
+l1:   if( residentSize_ + sizeof(Attribute) + key.size() + v.size() + 1 >= /*getpagesize() **/ 16 ){
+        file_.detach().attach().open();
+        file_.seek(file_.size());
+        v = key;
+        utf8::String v2(value);
+        if( key.strncmp("#",1) != 0 ){
+          v = screenString(key);
+          v2 = screenString(value);
+        }
+        v = v + ": index " + utf8::int2Str(p->size_ = v2.size()) + "\n";
+        file_.writeBuffer(v.c_str(),v.size());
+        p->index_ = file_.tell();
+        file_.writeBuffer(v2.c_str(),p->size_).writeBuffer("\n",1);
+        v.resize(0);
+      }
+    }
+    p->value_ = v;
+    residentSize_ += sizeof(Attribute) + key.size() + v.size() + 2;
   }
   else {
-    p->value_ = value;
+    if( pAttribute == NULL ){
+      residentSize_ += sizeof(Attribute) + utf8::String(p->key_).size() + p->value_.size() + 2;
+      p->index_ = 0;
+      p->size_ = 0;
+      goto l1;
+    }
+    residentSize_ -= p->value_.size() + 1;
+    p->value_ = v;
+    residentSize_ += p->value_.size() + 1;
   }
+  if( pAttribute != NULL ) *pAttribute = p;
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -108,6 +155,7 @@ utf8::String Message::removeValue(const utf8::String & key)
     )->throwSP();
   utf8::String oldValue(p->value_);
   attributes_.drop(*p);
+  residentSize_ -= sizeof(Attribute) + key.size() + oldValue.size() + 2;
   return oldValue;
 }
 //------------------------------------------------------------------------------
@@ -122,19 +170,12 @@ Message & Message::removeValueByLeft(const utf8::String & key)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 {
-/*  AsyncFile f;
-  f.fileName("c:\\operatorToMessage.log").createIfNotExist(true).open().resize(0);*/
-
   uint64_t i;
   utf8::String key, value;
   s >> i;
   while( i > 0 ){
     i--;
     s >> key >> value;
-    /*f.writeBuffer(key.c_str(),key.size());
-    f.writeBuffer("\n",1);
-    f.writeBuffer(value.c_str(),value.size());
-    f.writeBuffer("\n",1);*/
     if( key.strncmp("#",1) == 0 ){
       utf8::String::Iterator i(key);
       while( i.eof() )
@@ -152,58 +193,66 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
 {
-/*  AsyncFile f;
-  f.fileName("c:\\operatorFromMessage.log").createIfNotExist(true).open().resize(0);*/
-
   Array<Message::Attribute *> list;
   a.attributes_.list(list);
   uintptr_t i;
   s << uint64_t(i = list.count());
   while( i > 0 ){
     i--;
-    utf8::String key(list[i]->key_), value(list[i]->value_);
-    /*f.writeBuffer(key.c_str(),key.size());
-    f.writeBuffer("\n",1);
-    f.writeBuffer(value.c_str(),value.size());
-    f.writeBuffer("\n",1);*/
-    s << key << value;
+    utf8::String key(list[i]->key_);
+    s << key << a.value(key);
   }
   return s;
 }
 //------------------------------------------------------------------------------
 AsyncFile & operator >> (AsyncFile & s,Message & a)
 {
-  AsyncFile::LineGetBuffer buffer;
+  AsyncFile::LineGetBuffer buffer(s);
   buffer.removeNewLine_ = true;
-  buffer.codePage_ = CP_UTF8;
-  uint64_t lastHeaderPos;
+  buffer.codePage_ = a.codePage_;
 
+  Message::Attribute * pAttribute;
   utf8::String str, key, value;
-  bool eof, header = false;
+  bool eof;
 
   for(;;){
-    lastHeaderPos = s.tell();
     eof = s.gets(str,&buffer);
     if( eof ) break;
     utf8::String::Iterator i(str), ia(i);
     ia.last();
     if( (ia - 1).getChar() == '\n' ) ia.prev();
-    i = str.strstr(": ");
-    if( !i.eof() ){
+    if( !(i = str.strstr(": index ")).eof() ){
+      key = unScreenString(utf8::String(str,i));
+      value.resize(0);
+      uint64_t q = utf8::str2Int(unScreenString(utf8::String(i + 8,ia)));
+      a.value(key,value,&pAttribute);
+      pAttribute->index_ = s.tell();
+      pAttribute->size_ = q;
+      q = s.tell() + pAttribute->size_ + 1;
+      s.seek(q);
+      buffer.seek(q);
+    }
+    else if( !(i = str.strstr(": ")).eof() ){
       if( str.strncmp("#",1) == 0 ){
-        header = true;
         key = utf8::String(str,i);
-        value = unScreenString(utf8::String(i + 2,ia));
+        value = utf8::String(i + 2,ia);
+        if( str.strcmp("#codepage") == 0 ){
+          buffer.codePage_ = (uintptr_t) utf8::str2Int(value);
+        }
       }
       else {
-        if( header ){
-          s.seek(lastHeaderPos);
-          break;
-        }
         key = unScreenString(utf8::String(str,i));
         value = unScreenString(utf8::String(i + 2,ia));
       }
-      a.value(key,value);
+      if( a.residentSize_ + ia.cursor() - i.cursor() - 2 >= getpagesize() * 16 ){
+        value.resize(0);
+        a.value(key,value,&pAttribute);
+        pAttribute->index_ = s.tell() + i.cursor() + 2;
+        pAttribute->size_ = ia.cursor() - i.cursor() - 2;
+      }
+      else {
+        a.value(key,value);
+      }
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -213,6 +262,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
 #endif
     }
   }
+  a.file_.fileName(s.fileName());
   return s;
 }
 //------------------------------------------------------------------------------
@@ -221,19 +271,47 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   Array<Message::Attribute *> list;
   a.attributes_.list(list);
   uintptr_t i;
-  utf8::String v = a.id();
+  utf8::String v;
   for( i = 0; i < list.count(); i++ ){
     if( utf8::String(list[i]->key_).strncmp("#",1) != 0 ) continue;
-    v = utf8::String(list[i]->key_) + ": " + unScreenString(list[i]->value_) + "\n";
-    s.writeBuffer(v.c_str(),v.size());
+    if( list[i]->index_ == 0 ){
+      v = utf8::String(list[i]->key_) + ": " + a.value(list[i]->key_) + "\n";
+      s.writeBuffer(v.c_str(),v.size());
+    }
+    else {
+      v = utf8::String(list[i]->key_) + ": index " + utf8::int2Str(list[i]->size_) + "\n";
+      s.writeBuffer(v.c_str(),v.size());
+      size_t bl = getpagesize() * 16;
+      AutoPtr<uint8_t> b;
+      b.alloc(bl);
+      for( uint64_t ll, lp = 0, l = list[i]->size_ + 1; l > 0; l -= ll, lp += ll ){
+        ll = l > bl ? bl : l;
+        a.file().readBuffer(list[i]->index_ + lp,b,ll);
+        s.writeBuffer(b,ll);
+      }
+    }
   }
   for( i = 0; i < list.count(); i++ ){
     if( utf8::String(list[i]->key_).strncmp("#",1) == 0 ) continue;
-    v =
-      screenString(list[i]->key_) + ": " +
-      screenString(list[i]->value_) + "\n"
-    ;
-    s.writeBuffer(v.c_str(),v.size());
+    if( list[i]->index_ == 0 ){
+      v =
+        screenString(list[i]->key_) + ": " +
+        screenString(a.value(list[i]->key_)) + "\n"
+      ;
+      s.writeBuffer(v.c_str(),v.size());
+    }
+    else {
+      v = screenString(list[i]->key_) + ": index " + utf8::int2Str(list[i]->size_) + "\n";
+      s.writeBuffer(v.c_str(),v.size());
+      size_t bl = getpagesize() * 16;
+      AutoPtr<uint8_t> b;
+      b.alloc(bl);
+      for( uint64_t ll, lp = 0, l = list[i]->size_ + 1; l > 0; l -= ll, lp += ll ){
+        ll = l > bl ? bl : l;
+        a.file().readBuffer(list[i]->index_ + lp,b,ll);
+        s.writeBuffer(b,ll);
+      }
+    }
   }
   return s;
 }
@@ -244,7 +322,7 @@ Message & Message::copyUserAttributes(const Message & msg)
   msg.attributes_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
     if( utf8::String(list[i]->key_).strncmp("#",1) != 0 )
-      attributes_.insert(*newObject<Attribute>(*list[i]));
+      value(msg.value(list[i]->key_));
   return *this;
 }
 //------------------------------------------------------------------------------

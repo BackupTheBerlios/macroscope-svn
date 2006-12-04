@@ -1282,15 +1282,15 @@ void AsyncAcquireSlave::threadExecute()
         ResetEvent(sems_[STATUS_ABANDONED_WAIT_0 + sp_ + 1]);
       }
       else if( wm == WAIT_TIMEOUT ){
-        timeout = timeout - gettimeofday();
+        timeout = gettimeofday() - timeout;
         for( intptr_t i = sp_; i >= 0; i-- ){
+          object = eSems_[i];
           if( object->timeout_ == ~uint64_t(0) ) continue;
           object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
           if( object->timeout_ == 0 ){
-            object = eSems_[i];
-            //xchg(sems_[i],sems_[sp_]);
+            xchg(sems_[i],sems_[sp_]);
             sems_[sp_] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
-            //eSems_[i] = eSems_[sp_];
+            eSems_[i] = eSems_[sp_];
             eSems_[sp_] = NULL;
             sp_--;
             requests_.remove(*object);

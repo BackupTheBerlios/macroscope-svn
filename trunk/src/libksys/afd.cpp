@@ -104,14 +104,6 @@ AsyncFile & AsyncFile::close()
 //---------------------------------------------------------------------------
 file_t AsyncFile::openHelper(bool async)
 {
-#if defined(__WIN32__) || defined(__WIN64__)
-  if( fileName_.strncasecmp("COM",3) == 0 ){
-    utf8::String::Iterator i(fileName_);
-    i += 3;
-    while( i.isDigit() ) i.next();
-    seekable_ = i.getChar() != ':' || !(i + 1).eof();
-  }
-#endif
   file_t handle = INVALID_HANDLE_VALUE;
 #if defined(__WIN32__) || defined(__WIN64__)
   int32_t err;
@@ -239,6 +231,11 @@ file_t AsyncFile::openHelper(bool async)
   return handle;
 }
 //---------------------------------------------------------------------------
+bool AsyncFile::isOpen() const
+{
+  return (fileMember() && file_ != INVALID_HANDLE_VALUE) || (!fileMember() && handle_ != INVALID_HANDLE_VALUE);
+}
+//---------------------------------------------------------------------------
 AsyncFile & AsyncFile::open()
 {
   if( !isOpen() && !redirectByName() ){
@@ -261,6 +258,12 @@ AsyncFile & AsyncFile::open()
       handle_ = openHelper();
     }
 #if defined(__WIN32__) || defined(__WIN64__)
+    if( fileName_.strncasecmp("COM",3) == 0 ){
+      utf8::String::Iterator i(fileName_);
+      i += 3;
+      while( i.isDigit() ) i.next();
+      seekable_ = i.getChar() != ':' || !(i + 1).eof();
+    }
     if( nocache_ ){
       utf8::String s(getRootFromPathName(fileName_));
       BOOL r;
@@ -992,7 +995,7 @@ l1:
     if( l > 0 ) s[uintptr_t(l)] = '\0';
   }
   else {
-    if( buffer->size_ == 0 ) buffer->size_ = getpagesize() * 32;
+    if( buffer->size_ == 0 ) buffer->size_ = getpagesize() * 16;
     if( buffer->buffer_ == (const uint8_t *) NULL ) buffer->buffer_.alloc(buffer->size_);
     uintptr_t i, ss = 0;
     for(;;){
@@ -1059,6 +1062,21 @@ l1:
     str = container;
   }
   return eof;
+}
+//---------------------------------------------------------------------------
+AsyncFile::LineGetBuffer & AsyncFile::LineGetBuffer::seek(uint64_t pos)
+{
+  if( pos < bufferFilePos_ || pos >= bufferFilePos_ + len_ ){
+    file_.seek(pos);
+    bufferFilePos_ = pos;
+    pos_ = 0;
+    len_ = 0;
+  }
+  else {
+    file_.seek(pos);
+    pos_ = uintptr_t(pos - bufferFilePos_);
+  }
+  return *this;
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
