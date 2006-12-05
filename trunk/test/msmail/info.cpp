@@ -51,12 +51,12 @@ Message::Message(const utf8::String & mId) :
   attributes_.insert(*newObject<Attribute>(messageIdKey,mId));
 }
 //------------------------------------------------------------------------------
-Message::Message(const Message & a) : attributesAutoDrop_(attributes_)
+/*Message::Message(const Message & a) : attributesAutoDrop_(attributes_)
 {
   operator = (a);
-}
+}*/
 //------------------------------------------------------------------------------
-Message & Message::operator = (const Message & a)
+/*Message & Message::operator = (const Message & a)
 {
   attributes_ = a.attributes_;
   residentSize_ = a.residentSize_;
@@ -64,7 +64,7 @@ Message & Message::operator = (const Message & a)
   file_.fileName(a.file_.fileName());
   file_.createIfNotExist(!a.file_.isOpen());
   return *this;
-}
+}*/
 //------------------------------------------------------------------------------
 Message & Message::id(const utf8::String & id)
 {
@@ -101,41 +101,31 @@ utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) co
 //------------------------------------------------------------------------------
 Message & Message::value(const utf8::String & key,const utf8::String & value,Attribute ** pAttribute)
 {
-  utf8::String v(value);
+  uintptr_t keySize = key.size(), valueSize = value.size();
   Attribute * p = attributes_.find(key);
   if( p == NULL ){
     p = newObject<Attribute>(key);
     attributes_.insert(*p);
-    if( pAttribute == NULL ){
-l1:   if( residentSize_ + sizeof(Attribute) + key.size() + v.size() + 1 >= /*getpagesize() **/ 16 ){
-        file_.detach().attach().open();
-        file_.seek(file_.size());
-        v = key;
-        utf8::String v2(value);
-        if( key.strncmp("#",1) != 0 ){
-          v = screenString(key);
-          v2 = screenString(value);
-        }
-        v = v + ": index " + utf8::int2Str(p->size_ = v2.size()) + "\n";
-        file_.writeBuffer(v.c_str(),v.size());
-        p->index_ = file_.tell();
-        file_.writeBuffer(v2.c_str(),p->size_).writeBuffer("\n",1);
-        v.resize(0);
-      }
+    residentSize_ += sizeof(Attribute) + keySize + 2;
+  }
+  if( pAttribute == NULL && residentSize_ + valueSize >= getpagesize() * 16 ){
+    file_.detach().attach().open();
+    file_.seek(file_.size());
+    utf8::String v(key), v2(value);
+    if( key.strncmp("#",1) != 0 ){
+      v = screenString(key);
+      v2 = screenString(value);
     }
-    p->value_ = v;
-    residentSize_ += sizeof(Attribute) + key.size() + v.size() + 2;
+    v = v + ": index " + utf8::int2Str(p->size_ = v2.size()) + "\n";
+    file_.writeBuffer(v.c_str(),v.size());
+    p->index_ = file_.tell();
+    file_.writeBuffer(v2.c_str(),p->size_).writeBuffer("\n",1);
+    p->value_ = utf8::String();
   }
   else {
-    if( pAttribute == NULL ){
-      residentSize_ += sizeof(Attribute) + utf8::String(p->key_).size() + p->value_.size() + 2;
-      p->index_ = 0;
-      p->size_ = 0;
-      goto l1;
-    }
-    residentSize_ -= p->value_.size() + 1;
-    p->value_ = v;
-    residentSize_ += p->value_.size() + 1;
+    residentSize_ -= p->value_.size();
+    p->value_ = value;
+    residentSize_ += valueSize;
   }
   if( pAttribute != NULL ) *pAttribute = p;
   return *this;
@@ -163,9 +153,49 @@ Message & Message::removeValueByLeft(const utf8::String & key)
 {
   Array<Attribute *> list;
   attributes_.list(list);
-  for( intptr_t l = key.strlen(), i = list.count() - 1; i >= 0; i-- )
-    if( utf8::String(list[i]->key_).strncmp(key,l) == 0 ) attributes_.drop(*list[i]);
+  for( intptr_t l = key.strlen(), i = list.count() - 1; i >= 0; i-- ){
+    utf8::String k(list[i]->key_);
+    if( k.strncmp(key,l) == 0 ){
+      residentSize_ -= sizeof(Attribute) + k.size() + list[i]->value_.size() + 2;
+      attributes_.drop(*list[i]);
+    }
+  }
   return *this;
+}
+//------------------------------------------------------------------------------
+void Message::validateKey(const utf8::String & key)
+{
+  bool invalid = false;
+  if( !key.strstr(": ").eof() ) invalid = true;
+  else
+  if( !key.strstr(": index ").eof() ) invalid = true;
+  else
+  if( key.strncmp("#",1) == 0 ){
+    utf8::String::Iterator i(key);
+    while( i.eof() )
+      if( i.isSpace() ){
+        invalid = true;
+        break;
+      }
+  }
+  if( invalid )
+#if defined(__WIN32__) || defined(__WIN64__)
+    newObject<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+#else
+    newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+#endif
+}
+//------------------------------------------------------------------------------
+static inline intptr_t attributeCompare(const Message::Attribute * const & p1,const Message::Attribute * const & p2)
+{
+  uintptr_t c1 = utf8::String::Iterator(p1->key_).getChar(), c2 = utf8::String::Iterator(p2->key_).getChar();
+  if( c1 == '#' ){
+    if( c2 == '#' ) return utf8::String(p1->key_).strcmp(p2->key_);
+    return -1;
+  }
+  if( c2 == '#' ) return 1;
+  int64_t a = p1->value_.size() + p1->size_ - p2->value_.size() - p2->size_;
+  return a > 0 ? 1 : a < 0 ? -1 : 0;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
@@ -176,16 +206,6 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
   while( i > 0 ){
     i--;
     s >> key >> value;
-    if( key.strncmp("#",1) == 0 ){
-      utf8::String::Iterator i(key);
-      while( i.eof() )
-        if( i.isSpace() )
-#if defined(__WIN32__) || defined(__WIN64__)
-          newObject<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-#else
-          newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
-#endif
-    }
     a.value(key,value);
   }
   return s;
@@ -195,13 +215,11 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Message & a)
 {
   Array<Message::Attribute *> list;
   a.attributes_.list(list);
+  qSort(list.ptr(),0,list.count() - 1,attributeCompare);
   uintptr_t i;
   s << uint64_t(i = list.count());
-  while( i > 0 ){
-    i--;
-    utf8::String key(list[i]->key_);
-    s << key << a.value(key);
-  }
+  for( i = 0; i < list.count(); i++ )
+    s << list[i]->key_ << a.value(list[i]->key_);
   return s;
 }
 //------------------------------------------------------------------------------
@@ -212,31 +230,35 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
   buffer.codePage_ = a.codePage_;
 
   Message::Attribute * pAttribute;
-  utf8::String str, key, value;
+  utf8::String str, key, value, numberSign("#"), index(": index "), colon(": "), codepage("#codepage");
   bool eof;
 
   for(;;){
+    uint64_t pos = s.tell();
     eof = s.gets(str,&buffer);
     if( eof ) break;
+    bool isNumberSign = str.strncmp(numberSign,1) == 0;
     utf8::String::Iterator i(str), ia(i);
     ia.last();
-    if( (ia - 1).getChar() == '\n' ) ia.prev();
-    if( !(i = str.strstr(": index ")).eof() ){
-      key = unScreenString(utf8::String(str,i));
-      value.resize(0);
-      uint64_t q = utf8::str2Int(unScreenString(utf8::String(i + 8,ia)));
-      a.value(key,value,&pAttribute);
+    if( !(i = str.strstr(index)).eof() ){
+      if( isNumberSign ){
+        key = utf8::String(str,i);
+      }
+      else {
+        key = unScreenString(utf8::String(str,i));
+      }
+      uint64_t q = utf8::str2Int(utf8::String(i + 8,ia));
+      a.value(key,utf8::String(),&pAttribute);
       pAttribute->index_ = s.tell();
-      pAttribute->size_ = q;
+      pAttribute->size_ = uintptr_t(q);
       q = s.tell() + pAttribute->size_ + 1;
-      s.seek(q);
       buffer.seek(q);
     }
-    else if( !(i = str.strstr(": ")).eof() ){
-      if( str.strncmp("#",1) == 0 ){
+    else if( !(i = str.strstr(colon)).eof() ){
+      if( isNumberSign ){
         key = utf8::String(str,i);
         value = utf8::String(i + 2,ia);
-        if( str.strcmp("#codepage") == 0 ){
+        if( str.strcmp(codepage) == 0 ){
           buffer.codePage_ = (uintptr_t) utf8::str2Int(value);
         }
       }
@@ -244,14 +266,13 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
         key = unScreenString(utf8::String(str,i));
         value = unScreenString(utf8::String(i + 2,ia));
       }
-      if( a.residentSize_ + ia.cursor() - i.cursor() - 2 >= getpagesize() * 16 ){
-        value.resize(0);
-        a.value(key,value,&pAttribute);
-        pAttribute->index_ = s.tell() + i.cursor() + 2;
+      if( a.residentSize_ + ia.cursor() - i.cursor() - 2 + 1 >= getpagesize() * 16 ){
+        a.value(key,utf8::String(),&pAttribute);
+        pAttribute->index_ = pos + i.cursor() + 2;
         pAttribute->size_ = ia.cursor() - i.cursor() - 2;
       }
       else {
-        a.value(key,value);
+        a.value(key,value,&pAttribute);
       }
     }
     else {
@@ -270,58 +291,64 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
 {
   Array<Message::Attribute *> list;
   a.attributes_.list(list);
-  uintptr_t i;
-  utf8::String v;
-  for( i = 0; i < list.count(); i++ ){
-    if( utf8::String(list[i]->key_).strncmp("#",1) != 0 ) continue;
-    if( list[i]->index_ == 0 ){
-      v = utf8::String(list[i]->key_) + ": " + a.value(list[i]->key_) + "\n";
+  qSort(list.ptr(),0,list.count() - 1,attributeCompare);
+  utf8::String numberSign("#");
+  size_t bl = getpagesize() * 16;
+  AutoPtr<uint8_t> b;
+  uintptr_t i, j, k, sz;
+  for( k = i = 0; i < list.count(); i++ ){
+    bool isNumberSign = utf8::String(list[i]->key_).strncmp(numberSign,1) == 0;
+    j = uintptr_t(list[i]->value_.size() + list[i]->size_ + 2 + sizeof(Message::Attribute));
+    if( k + j < bl ){
+      utf8::String v;
+      if( isNumberSign ){
+        v = utf8::String(list[i]->key_) + ": " + a.value(list[i]->key_) + "\n";
+      }
+      else {
+        v = screenString(list[i]->key_) + ": " + screenString(a.value(list[i]->key_)) + "\n";
+      }
       s.writeBuffer(v.c_str(),v.size());
     }
     else {
-      v = utf8::String(list[i]->key_) + ": index " + utf8::int2Str(list[i]->size_) + "\n";
+      sz = list[i]->index_ == 0 ? sz = list[i]->value_.size() : list[i]->size_;
+      utf8::String v;
+      if( isNumberSign ){
+        v = utf8::String(list[i]->key_) + ": index " + utf8::int2Str(sz) + "\n";
+      }
+      else {
+        v = screenString(list[i]->key_) + ": index " + utf8::int2Str(sz) + "\n";
+      }
       s.writeBuffer(v.c_str(),v.size());
-      size_t bl = getpagesize() * 16;
-      AutoPtr<uint8_t> b;
-      b.alloc(bl);
-      for( uint64_t ll, lp = 0, l = list[i]->size_ + 1; l > 0; l -= ll, lp += ll ){
-        ll = l > bl ? bl : l;
-        a.file().readBuffer(list[i]->index_ + lp,b,ll);
-        s.writeBuffer(b,ll);
+      if( list[i]->index_ == 0 ){
+        if( isNumberSign ){
+          v = list[i]->value_ + "\n";
+        }
+        else {
+          v = screenString(list[i]->value_) + "\n";
+        }
+        s.writeBuffer(v.c_str(),v.size());
+      }
+      else {
+        if( b.ptr() == NULL ) b.alloc(bl);
+        for( uint64_t ll, lp = 0, l = list[i]->size_ + 1; l > 0; l -= ll, lp += ll ){
+          ll = l > bl ? bl : l;
+          a.file().readBuffer(list[i]->index_ + lp,b,ll);
+          s.writeBuffer(b,ll);
+        }
       }
     }
-  }
-  for( i = 0; i < list.count(); i++ ){
-    if( utf8::String(list[i]->key_).strncmp("#",1) == 0 ) continue;
-    if( list[i]->index_ == 0 ){
-      v =
-        screenString(list[i]->key_) + ": " +
-        screenString(a.value(list[i]->key_)) + "\n"
-      ;
-      s.writeBuffer(v.c_str(),v.size());
-    }
-    else {
-      v = screenString(list[i]->key_) + ": index " + utf8::int2Str(list[i]->size_) + "\n";
-      s.writeBuffer(v.c_str(),v.size());
-      size_t bl = getpagesize() * 16;
-      AutoPtr<uint8_t> b;
-      b.alloc(bl);
-      for( uint64_t ll, lp = 0, l = list[i]->size_ + 1; l > 0; l -= ll, lp += ll ){
-        ll = l > bl ? bl : l;
-        a.file().readBuffer(list[i]->index_ + lp,b,ll);
-        s.writeBuffer(b,ll);
-      }
-    }
+    k += j;
   }
   return s;
 }
 //------------------------------------------------------------------------------
 Message & Message::copyUserAttributes(const Message & msg)
 {
+  utf8::String numberSign("#");
   Array<Attribute *> list;
   msg.attributes_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    if( utf8::String(list[i]->key_).strncmp("#",1) != 0 )
+    if( utf8::String(list[i]->key_).strncmp(numberSign,1) != 0 )
       value(msg.value(list[i]->key_));
   return *this;
 }

@@ -79,8 +79,6 @@ class Message {
     ~Message();
     Message();
     Message(const utf8::String & mId);
-    Message(const Message & a);
-    Message & operator = (const Message & a);
 
     class Key {
       public:
@@ -160,7 +158,7 @@ class Message {
         Key key_;
         utf8::String value_;
         uint64_t index_;
-        uint64_t size_;
+        uintptr_t size_;
       protected:
       private:
         static EmbeddedHashNode<Attribute> & keyNode(const Attribute & object){
@@ -183,6 +181,8 @@ class Message {
     bool operator >  (const Message & a) const { return id().strcmp(a.id()) >  0; }
     bool operator <= (const Message & a) const { return id().strcmp(a.id()) <= 0; }
     bool operator <  (const Message & a) const { return id().strcmp(a.id()) <  0; }
+
+    static void validateKey(const utf8::String & key);
 
     utf8::String id() const;
     Message & id(const utf8::String & id);
@@ -211,6 +211,9 @@ class Message {
     AsyncFile & file() const;
   protected:
   private:
+    Message(const Message & a);
+    Message & operator = (const Message & a);
+
     mutable EmbeddedHashNode<Message> idNode_;
     typedef EmbeddedHash<
       Attribute,

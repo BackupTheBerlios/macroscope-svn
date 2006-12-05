@@ -32,7 +32,7 @@ namespace ksys {
 //-------------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 void qSort(T * ptr, intptr_t lb, intptr_t ub)
 {
@@ -72,50 +72,42 @@ void qSort(T * ptr, intptr_t lb, intptr_t ub)
   }
 }
 //-------------------------------------------------------------------------------
-template< class T>
+template <typename T,typename F /*intptr_t (* f)(const T &,const T &)*/>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-void qSort(T * const ptr, intptr_t lb, intptr_t ub, intptr_t(*const f)(const T & p1, const T & p2))
+void qSort(T * const ptr,intptr_t lb,intptr_t ub,const F f)
 {
   intptr_t  l, r, m;
   if( lb < ub ){
     if( ub - lb < 12 ){
       for( r = ub; r > lb; r-- ){
         for( m = r, l = m - 1; l >= lb; l-- )
-          if( f(ptr[m], ptr[l]) < 0 )
-            m = l;
-        T t = ptr[m];
-        ptr[m] = ptr[r];
-        ptr[r] = t;
+          if( f(ptr[m],ptr[l]) < 0 ) m = l;
+        xchg(ptr[m],ptr[r]);
       }
     }
     else{
       m = lb + ((ub - lb) >> 1);
       l = lb, r = ub;
       for(;;){
-        while( l < r && f(ptr[m], ptr[l]) > 0 ) l++;
-        while( r >= l && f(ptr[m], ptr[r]) < 0 ) r--;
+        while( l < r && f(ptr[m],ptr[l]) > 0 ) l++;
+        while( r >= l && f(ptr[m],ptr[r]) < 0 ) r--;
         if( l >= r ) break;
-        T t = ptr[l];
-        ptr[l] = ptr[r];
-        ptr[r] = t;
-        if( r == m )
-          m = l;
-        else if( l == m )
-          m = r;
+        xchg(ptr[l],ptr[r]);
+        if( r == m ) m = l; else if( l == m ) m = r;
         l++;
         r--;
       }
-      qSort< T>(ptr, lb, r, f);
-      qSort< T>(ptr, r + 1, ub, f);
+      qSort<T>(ptr,lb,r,f);
+      qSort<T>(ptr,r + 1,ub,f);
     }
   }
 }
 //-------------------------------------------------------------------------------
 template< class T,intptr_t(*const f)(const T & p1, const T & p2)>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 void qSort(T * const ptr, intptr_t lb, intptr_t ub)
 {
@@ -159,7 +151,7 @@ void qSort(T * const ptr, intptr_t lb, intptr_t ub)
 //-------------------------------------------------------------------------------
 template< class T,class PT>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 void qSort(T * const ptr, intptr_t lb, intptr_t ub, intptr_t(*const f)(const T & p1, const T & p2, const PT & param), const PT & param)
 {
@@ -201,10 +193,13 @@ void qSort(T * const ptr, intptr_t lb, intptr_t ub, intptr_t(*const f)(const T &
   }
 }
 //-------------------------------------------------------------------------------
-template< class T,class PT,
-          intptr_t(*const f)(const T & p1, const T & p2, const PT & param)>
+template<
+  class T,
+  class PT,
+  intptr_t(*const f)(const T & p1, const T & p2, const PT & param)
+>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 void qSort(T * const ptr, intptr_t lb, intptr_t ub, const PT & param)
 {
@@ -333,7 +328,7 @@ intptr_t bSearch(const T * bsa, const T & item, intptr_t & c, intptr_t(*const F)
 //-------------------------------------------------------------------------------
 template< class T,intptr_t(*F)(const T &, const T &)>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 intptr_t bSearch(const T * bsa, const T & item, intptr_t & c)
 {

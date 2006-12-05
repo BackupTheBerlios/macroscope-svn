@@ -986,12 +986,13 @@ void AsyncOpenFileSlave::threadExecute()
       else if( request->type_ == etRemoveFile ){
         int32_t err = 0;
         try {
-          remove(request->string0_);
+          request->rval_ = remove(request->string0_);
           err = oserror();
           if( err != 0 ) err += errorOffset;
         }
         catch( ExceptionSP & e ){
           err = e->code();
+          request->rval_ = false;
         }
         request->errno_ = err;
         assert( request->fiber_ != NULL );

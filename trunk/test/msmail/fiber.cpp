@@ -300,9 +300,8 @@ void ServerFiber::sendMail() // client sending mail
 
   *this >> id >> rest;
   AsyncFile file;
-  file.createIfNotExist(true);
+  file.fileName(server_.incompleteDir() + id + ".msg").createIfNotExist(true);
   if( rest ){
-    file.fileName(server_.incompleteDir() + id + ".msg");
     stat(file.fileName(),st);
     uint64_t remainder;
     *this << uint64_t(st.st_size) >> remainder;
@@ -323,13 +322,21 @@ void ServerFiber::sendMail() // client sending mail
   }
   else {
     message = newObject<Message>();
-    message->file().createIfNotExist(true).removeAfterClose(true);
+    message->file().fileName(file.fileName()).createIfNotExist(true).removeAfterClose(true);
     *this >> message;
   }
+  utf8::String::Stream stream;
+  stream << "Message " << message->id() <<
+    " received from " << message->value("#Sender") <<
+    " to " << message->value("#Recepient") <<
+    ", traffic " <<
+    recvBytes() - rb + sendBytes() - sb << "\n"
+  ;
   if( !message->isValue("#Recepient") || 
       message->value("#Recepient").trim().strlen() == 0 ||
       !message->isValue(messageIdKey) ||
       id.strcmp(message->id()) != 0 ){
+    file.removeAfterClose(true);
     putCode(eInvalidMessage);
     return;
   }
@@ -343,60 +350,30 @@ void ServerFiber::sendMail() // client sending mail
   message->value(relay + "Received",getTimeString(gettimeofday()));
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
   message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
-  if( incomplete ){
-    size_t bl = getpagesize() * 16;
-    AutoPtr<uint8_t> b;
-    b.alloc(bl);
-    AsyncFile file2(file.fileName() + ".tmp");
-    file2.createIfNotExist(true).removeAfterClose(true).open();
-    file2 << message;
-    file2.removeAfterClose(false).close();
-    message = NULL;
-    try {
-      rename(file2.fileName(),server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg");
-    }
-    catch( ExceptionSP & e ){
-      e->writeStdError();
-      try {
-        remove(file2.fileName());
-      }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
-      }
-    }
+  AsyncFile file2(file.fileName() + ".tmp");
+  file2.createIfNotExist(true).removeAfterClose(true).open();
+  file2 << message;
+  file2.removeAfterClose(false).close();
+  message = NULL;
+  try {
+    rename(
+      file2.fileName(),
+      server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg"
+    );
     file.removeAfterClose(true).close();
+    putCode(eOK);
+    flush();
+    stdErr.debug(0,stream);
   }
-  else {
-    file.fileName(server_.incompleteDir() + id + ".msg.tmp");
-    file.createIfNotExist(true).removeAfterClose(true).open();
-    file << message;
-    file.removeAfterClose(false).close();
-    message = NULL;
+  catch( ExceptionSP & e ){
+    e->writeStdError();
     try {
-      rename(
-        file.fileName(),
-        server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg"
-      );
+      remove(file2.fileName());
     }
     catch( ExceptionSP & e ){
       e->writeStdError();
-      try {
-        remove(file.fileName());
-      }
-      catch( ExceptionSP & e ){
-        e->writeStdError();
-      }
     }
   }
-  putCode(eOK);
-  flush();
-  stdErr.debug(0,
-    utf8::String::Stream() << "Message " << message->id() <<
-    " received from " << message->value("#Sender") <<
-    " to " << message->value("#Recepient") <<
-    ", traffic " <<
-    recvBytes() - rb + sendBytes() - sb << "\n"
-  );
 }
 //------------------------------------------------------------------------------
 void ServerFiber::processMailbox(
@@ -431,7 +408,7 @@ void ServerFiber::processMailbox(
       utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
       if( mids.find(id) == NULL || !onlyNewMail ){
         Message message;
-        file >> message; // read system attributes
+        file >> message;
         assert( message.id().strcmp(id) == 0 );
         utf8::String suser, skey;
         splitString(message.value("#Recepient"),suser,skey,"@");
@@ -473,7 +450,6 @@ void ServerFiber::processMailbox(
                 }
               }
             }
-            file >> message; // read user attributes
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
             if( onlyNewMail && messageAccepted ){
@@ -605,17 +581,20 @@ void SpoolWalker::processQueue(bool & timeWait)
           );
           uint64_t messageTime = timeFromTimeString(message->value("#Relay.0.Received"));
           if( gettimeofday() - messageTime >= messageTTL * 1000000u ){
+            utf8::String::Stream stream;
+            stream << "Message " << message->id() << " TTL exhausted, removed.\n";
+            message = NULL;
             remove(list[i]);
-            stdErr.debug(1,utf8::String::Stream() << "Message " <<
-              message->id() << " TTL exhausted, removed.\n"
-            );
+            stdErr.debug(1,stream);
           }
           else {
-            rename(file.fileName(),server_.spoolDir(-1) + getNameFromPathName(file.fileName()));
-            stdErr.debug(1,utf8::String::Stream() <<
-              "Message recepient " << message->value("#Recepient") <<
+            utf8::String::Stream stream;
+            stream << "Message recepient " << message->value("#Recepient") <<
               " not found in database.\n"
-            );
+            ;
+            message = NULL;
+            rename(file.fileName(),server_.spoolDir(-1) + getNameFromPathName(file.fileName()));
+            stdErr.debug(1,stream);
           }
         }
         else if( deliverLocaly ){
@@ -633,13 +612,15 @@ void SpoolWalker::processQueue(bool & timeWait)
                 "#request.user.online","no"
               );
               if( (bool) Mutant(message->isValue("#request.user.remove.message.if.offline")) ){
-                remove(list[i]);
-                stdErr.debug(1,
-                  utf8::String::Stream() << "Message " << message->id() <<
+                utf8::String::Stream stream;
+                stream << "Message " << message->id() <<
                   " received from " << message->value("#Sender") <<
                   " to " << message->value("#Recepient") <<
                   " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
-                );
+                ;
+                message = NULL;
+                remove(list[i]);
+                stdErr.debug(1,stream);
                 process = false;
               }
             }
@@ -647,7 +628,14 @@ void SpoolWalker::processQueue(bool & timeWait)
 ////////////////
           if( process ){
             utf8::String userMailBox(server_.mailDir() + suser);
+            utf8::String::Stream stream;
+            stream << "Message " << message->id() <<
+              " received from " << message->value("#Sender") <<
+              " to " << message->value("#Recepient") <<
+              " delivered localy to mailbox: " << userMailBox << "\n"
+            ;
             utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message->id() + ".msg");
+            message = NULL;
             try {
               rename(list[i],mailFile);
             }
@@ -655,23 +643,21 @@ void SpoolWalker::processQueue(bool & timeWait)
               createDirectory(userMailBox);
               rename(list[i],mailFile);
             }
-            stdErr.debug(0,
-              utf8::String::Stream() << "Message " << message->id() <<
-              " received from " << message->value("#Sender") <<
-              " to " << message->value("#Recepient") <<
-              " delivered localy to mailbox: " << userMailBox << "\n"
-            );
+            stdErr.debug(0,stream);
           }
         }
         else {
-          server_.sendMessage(host,message->id(),list[i]);
-          //rename(list[i],server_.mqueueDir() + message->id() + ".msg");
-          stdErr.debug(0,
-            utf8::String::Stream() << "Message " << message->id() <<
+          utf8::String::Stream stream;
+          stream << "Message " << message->id() <<
             " received from " << message->value("#Sender") <<
             " to " << message->value("#Recepient") <<
             " is put in queue for delivery.\n"
-          );
+          ;
+          utf8::String mId(message->id());
+          message = NULL;
+          server_.sendMessage(host,mId,list[i]);
+          //rename(list[i],server_.mqueueDir() + message->id() + ".msg");
+          stdErr.debug(0,stream);
         }
       }
     }

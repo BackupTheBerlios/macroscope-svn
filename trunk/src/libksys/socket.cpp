@@ -585,8 +585,8 @@ static uint8_t authChannelHelper2(const utf8::String & s)
   if( s.strcasecmp("LZO1X_1") == 0 ) return ksys::LZO1X::LZO1X_1;
   if( s.strcasecmp("LZO1X_1_11") == 0 ) return ksys::LZO1X::LZO1X_1_11;
   if( s.strcasecmp("LZO1X_1_12") == 0 ) return ksys::LZO1X::LZO1X_1_12;
-  if( s.strcasecmp("LZO1X_1_15") == 0 ) return ksys::LZO1X::LZO1X_1_15;
-  if( s.strcasecmp("LZO1X_999") == 0 ) return ksys::LZO1X::LZO1X_999;
+  if( s.strcasecmp("LZO1X_1_15") == 0 ) return ksys::LZO1X::LZO1X_1_15; // fastest
+  if( s.strcasecmp("LZO1X_999") == 0 ) return ksys::LZO1X::LZO1X_999; // slowest, best compression
   if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::LZO1X_1_15;
   newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);

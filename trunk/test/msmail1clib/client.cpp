@@ -42,7 +42,7 @@ SerialPortFiber::SerialPortFiber(Client & client,uintptr_t serialPortNumber) :
 //------------------------------------------------------------------------------
 void SerialPortFiber::removeFromArray()
 {
-  AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+  AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
   intptr_t i = client_.serialPortsFibers_.bSearch(this);
   assert( i >= 0 );
   client_.serialPortsFibers_.remove(i);
@@ -102,7 +102,7 @@ void SerialPortFiber::fiberExecute()
       newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #endif
-    AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
     intptr_t c, i = client_.serialPortsFibers_.bSearch(this,c);
     assert( c != 0 );
     client_.serialPortsFibers_.insert(i + (c > 0),this);
@@ -244,7 +244,6 @@ void ClientFiber::cycleStage0()
   stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
   stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
   stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
-  checkMachineBinding(client_.config_->value("machine_key"));
 }
 //------------------------------------------------------------------------------
 void ClientFiber::connectHost(bool & online)
@@ -287,9 +286,12 @@ void ClientFiber::connectHost(bool & online)
                       "Connect",
                       utf8::ptr2Str(this)
                     );
-                    AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
-                    client_.connectedToServer_ = fqdn;
-                    client_.connected_ = true;
+                    {
+                      AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
+                      client_.connectedToServer_ = fqdn;
+                      client_.connected_ = true;
+                    }
+                    checkMachineBinding(client_.config_->value("machine_key"));
                     online = true;
                   }
                   catch( ExceptionSP & e ){
@@ -362,7 +364,7 @@ void ClientFiber::onlineStage1()
   Message * msg;
   utf8::String msgId(message_->id());
   {
-    AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
     msg = client_.recvQueue_.find(message_);
     if( msg == NULL ){
       client_.recvQueue_.insert(*message_.ptr());
@@ -378,7 +380,7 @@ void ClientFiber::onlineStage1()
     );
     if( FAILED(hr) ){
       messageAccepted = false;
-      AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+      AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
       Message * msg = client_.recvQueue_.find(msgId);
       if( msg != NULL ) client_.recvQueue_.drop(*msg);
     }
@@ -475,7 +477,7 @@ void ClientMailFiber::newMessage()
 //------------------------------------------------------------------------------
 void ClientMailFiber::onTerminate()
 {
-  AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+  AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
   client_.clientMailFiber_ = NULL;
 }
 //------------------------------------------------------------------------------
@@ -486,7 +488,7 @@ bool ClientMailFiber::cycleStage1()
   if( message_ == NULL ){
     uint64_t inactivityTime = client_.config_->value("fiber_inactivity_time",60);
     if( !semaphore_.timedWait(inactivityTime * 1000000u) ){
-      AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+      AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
       client_.clientMailFiber_ = NULL;
       newMessage();
       if( message_ == NULL ){
@@ -514,7 +516,7 @@ void ClientMailFiber::onlineStage0()
             "MessageSended",
             message_->message_->id()
           );
-          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
           client_.recvQueue_.drop(*message_->message_);
         }
         else {
@@ -531,7 +533,7 @@ void ClientMailFiber::onlineStage0()
             "MessageRemoved",
             message_->message_->id()
           );
-          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
           client_.recvQueue_.drop(*message_->message_);
         }
         else {
@@ -555,7 +557,7 @@ void ClientMailFiber::offlineStage0()
             "MessageSendingError_" + utf8::int2Str(WSAECONNREFUSED),
             message_->message_->id()
           );
-          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
           client_.sendQueue_.drop(*message_->message_);
         }
         else {
@@ -571,7 +573,7 @@ void ClientMailFiber::offlineStage0()
             "MessageRemovingError_" + utf8::int2Str(WSAECONNREFUSED),
             message_->message_->id()
           );
-          AutoLock<FiberInterlockedMutex> lock(client_.recvQueueMutex_);
+          AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
           client_.recvQueue_.drop(*message_->message_);
         }
         else {
@@ -694,7 +696,7 @@ void Client::open()
 void Client::close()
 {
   {
-    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     if( clientMailFiber_ != NULL ){
       clientMailFiber_->terminate();
       clientMailFiber_->semaphore_.post();
@@ -708,6 +710,7 @@ void Client::close()
 //------------------------------------------------------------------------------
 utf8::String Client::newMessage()
 {
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   Message * msg = newObject<Message>();
   sendQueue_.insert(*msg);
   msg->file().createIfNotExist(true).removeAfterClose(true);
@@ -716,7 +719,8 @@ utf8::String Client::newMessage()
 //------------------------------------------------------------------------------
 HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pvarRetValue) const
 {
-  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+  Message::validateKey(key);
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   const Messages * queue = &sendQueue_;
   const Message * msg = queue->find(id);
   if( msg == NULL ){
@@ -738,13 +742,8 @@ HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pva
 //------------------------------------------------------------------------------
 utf8::String Client::value(const utf8::String id,const utf8::String key,const utf8::String value)
 {
-  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
-  Messages * queue = &sendQueue_;
-  Message * msg = queue->find(id);
-  if( msg == NULL ){
-    queue = &recvQueue_;
-    msg = queue->find(id);
-  }
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+  Message * msg = sendQueue_.find(id);
   if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   utf8::String oldValue;
   if( msg->isValue(key) ) oldValue = msg->value(key);
@@ -755,17 +754,21 @@ utf8::String Client::value(const utf8::String id,const utf8::String key,const ut
 bool Client::sendMessage(const utf8::String id,bool async)
 {
   checkMachineBinding(config_->value("machine_key"));
-  Message * msg = sendQueue_.find(id);
-  if( msg == NULL ) return false;
-  msg->value("#Sender",user_ + "@" + config_->value("key",key_));
-  msg->value("#Sender.Sended",getTimeString(gettimeofday()));
-  msg->value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
-  msg->value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
-  msg->value("#Sender.Host",ksock::SockAddr::gethostname());
+  Message * msg;
+  {
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+    msg = sendQueue_.find(id);
+    if( msg == NULL ) return false;
+    msg->value("#Sender",user_ + "@" + config_->value("key",key_));
+    msg->value("#Sender.Sended",getTimeString(gettimeofday()));
+    msg->value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
+    msg->value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
+    msg->value("#Sender.Host",ksock::SockAddr::gethostname());
+  }
   if( !async ) workFiberWait_.acquire();
   workFiberLastError_ = 0;
   try {
-    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     if( clientMailFiber_ == NULL ){
       ClientMailFiber * clientMailFiber;
       attachFiber(clientMailFiber = newObjectV<ClientMailFiber>(*this));
@@ -781,27 +784,31 @@ bool Client::sendMessage(const utf8::String id,bool async)
   }
   if( async ) return true;
   AutoLock<InterlockedMutex> lock(workFiberWait_);
-  if( workFiberLastError_ == 0 ) sendQueue_.drop(*msg);
+  if( workFiberLastError_ == 0 ){
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+    sendQueue_.drop(*msg);
+  }
   return workFiberLastError_ == 0;
 }
 //------------------------------------------------------------------------------
 bool Client::removeMessage(const utf8::String id,bool async)
 {
   Messages * queue = &sendQueue_;
-  Message * msg = sendQueue_.find(id);
-  if( msg != NULL ){
-    sendQueue_.drop(*msg);
-    return true;
-  }
+  Message * msg;
   {
-    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+    msg = sendQueue_.find(id);
+    if( msg != NULL ){
+      sendQueue_.drop(*msg);
+      return true;
+    }
     msg = recvQueue_.find(id);
     if( msg == NULL ) return false;
   }
   if( !async ) workFiberWait_.acquire();
   workFiberLastError_ = 0;
   try {
-    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     if( clientMailFiber_ == NULL ){
       ClientMailFiber * clientMailFiber;
       attachFiber(clientMailFiber = newObjectV<ClientMailFiber>(*this));
@@ -818,7 +825,7 @@ bool Client::removeMessage(const utf8::String id,bool async)
   if( async ) return true;
   AutoLock<InterlockedMutex> lock(workFiberWait_);
   if( workFiberLastError_ == 0 ){
-    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     msg = recvQueue_.find(id);
     assert( msg != NULL );
     recvQueue_.drop(*msg);
@@ -828,8 +835,8 @@ bool Client::removeMessage(const utf8::String id,bool async)
 //------------------------------------------------------------------------------
 utf8::String Client::getReceivedMessageList() const
 {
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   utf8::String slist;
-  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
   Array<Message *> list;
   recvQueue_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
@@ -843,6 +850,7 @@ utf8::String Client::getReceivedMessageList() const
 //------------------------------------------------------------------------------
 utf8::String Client::getSendingMessageList() const
 {
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   utf8::String slist;
   Array<Message *> list;
   sendQueue_.list(list);
@@ -883,7 +891,7 @@ utf8::String Client::getDBInGroupList(const utf8::String & group) const
 //------------------------------------------------------------------------------
 utf8::String Client::copyMessage(const utf8::String id)
 {
-  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   const Messages * queue = &sendQueue_;
   Message * msg = queue->find(id);
   if( msg == NULL ){
@@ -894,17 +902,17 @@ utf8::String Client::copyMessage(const utf8::String id)
     newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   AutoPtr<Message> message(newObject<Message>());
   utf8::String newId(message->id());
-  *message = *msg;
+  message->file().createIfNotExist(true).removeAfterClose(true).open() << *msg >> message;
   message->removeValueByLeft("#Relay");
   message->id(newId);
-  sendQueue_.insert(*message.ptr(NULL));
-  message->file().createIfNotExist(true).open(); // need be open because newMessage set removeAfterClose flag
+  sendQueue_.insert(*message.ptr());
+  message.ptr(NULL);
   return newId;
 }
 //------------------------------------------------------------------------------
 utf8::String Client::removeValue(const utf8::String id,const utf8::String key)
 {
-  AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   Messages * queue = &sendQueue_;
   Message * msg = queue->find(id);
   if( msg == NULL ){
@@ -920,7 +928,7 @@ bool Client::installSerialPortScanner(uintptr_t serialPortNumber)
 {
   bool installed = false;
   {
-    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     for( intptr_t i = serialPortsFibers_.count() - 1; i >= 0; i-- )
       if( serialPortsFibers_[i]->serialPortNumber_ == serialPortNumber ){
         installed = true;
@@ -946,7 +954,7 @@ bool Client::removeSerialPortScanner(uintptr_t serialPortNumber)
 {
   intptr_t i;
   {
-    AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     for( i = serialPortsFibers_.count() - 1; i >= 0; i-- )
       if( serialPortsFibers_[i]->serialPortNumber_ == serialPortNumber ){
         serialPortsFibers_[i]->terminate();
@@ -966,7 +974,7 @@ void Client::removeAllSerialPortScanners()
   for(;;){
     intptr_t i;
     {
-      AutoLock<FiberInterlockedMutex> lock(recvQueueMutex_);
+      AutoLock<FiberInterlockedMutex> lock(queueMutex_);
       i = serialPortsFibers_.count() - 1;
       if( i >= 0 ){
         serialPortsFibers_[i]->terminate();

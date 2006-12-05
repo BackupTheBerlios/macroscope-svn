@@ -245,7 +245,7 @@ class Client : public ksock::Client {
     InterlockedMutex workFiberWait_;
     int32_t workFiberLastError_;
   protected:
-    mutable FiberInterlockedMutex recvQueueMutex_;
+    mutable FiberInterlockedMutex queueMutex_;
     Messages recvQueue_;
     AutoHashDrop<Messages> recvQueueAutoDrop_;
     Messages sendQueue_;
