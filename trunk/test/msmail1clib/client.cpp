@@ -60,7 +60,7 @@ void SerialPortFiber::fiberExecute()
   AsyncFile serial;
   serial_ = &serial;
   try {
-    serial.detachOnClose(false).readOnly(true).exclusive(true).fileName(
+    serial.readOnly(true).exclusive(true).fileName(
       "COM" + utf8::int2Str(serialPortNumber_) + ":"
     ).open();
 #if defined(__WIN32__) || defined(__WIN64__)

@@ -65,7 +65,6 @@ template <typename T> inline void xchg(T & v1, T & v2)
 #include "mstream.h"
 #include "mutant.h"
 #include "sysutils.h"
-#include "fhc.h"
 #include "sockaddr.h"
 #include "shsem.h"
 #include "async.h"

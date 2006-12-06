@@ -168,6 +168,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort,int ai_flag)
 {
   if( ksys::currentFiber() != NULL ){
+    ksys::currentFiber()->event_.timeout_ = ~uint64_t(0);
     ksys::currentFiber()->event_.string0_ = addr;
     ksys::currentFiber()->event_.string1_ = defPort;
     ksys::currentFiber()->event_.type_ = ksys::etResolveName;
@@ -238,6 +239,7 @@ void SockAddr::resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,c
 utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
 {
   if( ksys::currentFiber() != NULL ){
+    ksys::currentFiber()->event_.timeout_ = ~uint64_t(0);
     ksys::currentFiber()->event_.address_ = *this;
     ksys::currentFiber()->event_.defPort_ = defPort;
     ksys::currentFiber()->event_.type_ = ksys::etResolveAddress;

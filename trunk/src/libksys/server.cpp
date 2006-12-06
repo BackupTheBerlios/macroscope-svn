@@ -42,7 +42,6 @@ void AcceptFiber::fiberExecute()
 {
   Server * server = dynamic_cast<Server *>(ksys::Fiber::thread()->server());
   assert( server != NULL );
-  attach();
   try {
     for(;;){
       ServerFiber * serverFiber = dynamic_cast<ServerFiber *>(server->newFiber());
@@ -81,7 +80,6 @@ void ServerFiber::fiberExecute()
 {
   try {
     open();
-    attach();
     main();
     flush();
   }

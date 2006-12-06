@@ -38,10 +38,6 @@ class AsyncFile : public AsyncDescriptor {
     virtual ~AsyncFile();
     AsyncFile(const utf8::String & fileName = utf8::String());
 
-    // override AsyncDescriptor
-    AsyncFile & attach();
-    AsyncFile & detach();
-
     bool isOpen() const;
     AsyncFile & open();
     file_t openHelper(bool async = false);
@@ -97,8 +93,6 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & readOnly(bool v);
     bool createIfNotExist() const;
     AsyncFile & createIfNotExist(bool v);
-    bool detachOnClose() const;
-    AsyncFile & detachOnClose(bool v);
     bool random() const;
     AsyncFile & random(bool v);
     bool direct() const;
@@ -112,7 +106,6 @@ class AsyncFile : public AsyncDescriptor {
     uint32_t waitCommEvent();
     uint32_t alignment() const { return 1; }
 #endif
-    file_t descriptor() const;
     bool std() const;
   protected:
   private:
@@ -122,6 +115,7 @@ class AsyncFile : public AsyncDescriptor {
 #pragma warning(push,3)
 #endif
 #if defined(__WIN32__) || defined(__WIN64__)
+    HANDLE eventObject_;
     union int64 {
       int64_t a;
       struct {
@@ -138,7 +132,6 @@ class AsyncFile : public AsyncDescriptor {
     };
     DWORD alignment_;
 #endif
-    file_t handle_;
     utf8::String fileName_;
     struct {
       uint8_t exclusive_        : 1;
@@ -147,7 +140,6 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t createIfNotExist_ : 1;
       uint8_t std_              : 1;
       uint8_t seekable_         : 1;
-      uint8_t detachOnClose_    : 1;
       uint8_t random_           : 1;
       uint8_t direct_           : 1;
       uint8_t nocache_          : 1;
@@ -172,7 +164,6 @@ class AsyncFile : public AsyncDescriptor {
     void close2();
     void openAPI();
     void closeAPI();
-    bool fileMember() const;
     bool redirectByName();
     void redirectToStdin();
     void redirectToStdout();
@@ -181,6 +172,11 @@ class AsyncFile : public AsyncDescriptor {
     static void initialize();
     static void cleanup();
 };
+//---------------------------------------------------------------------------
+inline bool AsyncFile::isOpen() const
+{
+  return descriptor_ != INVALID_HANDLE_VALUE;
+}
 //---------------------------------------------------------------------------
 inline const DWORD & AsyncFile::alignment() const
 {
@@ -248,17 +244,6 @@ inline AsyncFile & AsyncFile::createIfNotExist(bool v)
   return *this;
 }
 //---------------------------------------------------------------------------
-inline bool AsyncFile::detachOnClose() const
-{
-  return detachOnClose_ != 0;
-}
-//---------------------------------------------------------------------------
-inline AsyncFile & AsyncFile::detachOnClose(bool v)
-{
-  detachOnClose_ = v;
-  return *this;
-}
-//---------------------------------------------------------------------------
 inline bool AsyncFile::random() const
 {
   return random_ != 0;
@@ -292,34 +277,26 @@ inline AsyncFile & AsyncFile::nocache(bool v)
   return *this;
 }
 //---------------------------------------------------------------------------
-inline AsyncFile & AsyncFile::attach()
-{
-  if( !std_ ) AsyncDescriptor::attach();
-  return *this;
-}
-//------------------------------------------------------------------------------
-inline AsyncFile & AsyncFile::detach()
-{
-  /*if( !std_ )*/ AsyncDescriptor::detach();
-  return *this;
-}
-//------------------------------------------------------------------------------
 inline InterlockedMutex & AsyncFile::mutex()
 {
   return *reinterpret_cast<InterlockedMutex *>(mutex_);
 }
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-inline HANDLE AsyncFile::descriptor() const
+inline int64_t AsyncFile::read(void * buf,uint64_t size)
 {
-  return fileMember() ? descriptor_ : handle_;
+  uint64_t pos = seekable_ ? tell() : 0;
+  int64_t r = read(pos,buf,size);
+  if( r > 0 ) seek(pos + r);
+  return r;
 }
-#else
-inline int AsyncFile::descriptor() const
+//---------------------------------------------------------------------------
+inline int64_t AsyncFile::write(const void * buf,uint64_t size)
 {
-  return fileMember() ? descriptor_ : handle_;
+  uint64_t pos = seekable_ ? tell() : 0;
+  int64_t w = write(pos,buf,size);
+  if( w > 0 ) seek(pos + w);
+  return w;
 }
-#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -364,6 +341,22 @@ AutoFileWRLock<T> & AutoFileWRLock<T>::setLocked(T & file,uint64_t pos,uint64_t 
   pos_ = pos;
   size_ = size;
   return *this;
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class EFileEOF : public Exception {
+  public:
+    EFileEOF(int32_t code,const char * what);
+    EFileEOF(int32_t code,const utf8::String & what);
+};
+//---------------------------------------------------------------------------
+inline EFileEOF::EFileEOF(int32_t code,const char * what) : Exception(code,what)
+{
+}
+//---------------------------------------------------------------------------
+inline EFileEOF::EFileEOF(int32_t code,const utf8::String & what) : Exception(code,what)
+{
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

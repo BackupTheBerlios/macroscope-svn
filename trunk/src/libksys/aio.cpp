@@ -96,48 +96,6 @@ void BaseThread::cleanup()
   requester().~Requester();
 }
 //------------------------------------------------------------------------------
-void BaseThread::attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber)
-{
-  AutoLock<InterlockedMutex> lock(mutex_);
-  if( descriptor.fiber_ == NULL ){
-    descriptorsList_.insToTail(descriptor);
-    toFiber.descriptorsList_.insToTail(descriptor);
-    descriptor.fiber_ = &toFiber;
-  }
-  else if( descriptor.fiber_->thread_ != this ){
-    newObject<Exception>(
-#if defined(__WIN32__) || defined(__WIN64__)
-      ERROR_INVALID_DATA + errorOffset
-#else
-      EINVAL
-#endif
-      ,__PRETTY_FUNCTION__
-    )->throwSP();
-  }
-}
-//------------------------------------------------------------------------------
-void BaseThread::detachDescriptor(AsyncDescriptor & descriptor)
-{
-  AutoLock<InterlockedMutex> lock(mutex_);
-  if( descriptor.fiber_ != NULL ){
-    if( descriptor.fiber_->thread_ == this ){
-      descriptorsList_.remove(descriptor);
-      descriptor.fiber_->descriptorsList_.remove(descriptor);
-      descriptor.fiber_ = NULL;
-    }
-    else {
-      newObject<Exception>(
-#if defined(__WIN32__) || defined(__WIN64__)
-        ERROR_INVALID_DATA + errorOffset
-#else
-        EINVAL
-#endif
-        ,__PRETTY_FUNCTION__
-      )->throwSP();
-    }
-  }
-}
-//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 AsyncIoSlave::~AsyncIoSlave()
@@ -167,7 +125,7 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
   for( i = sizeof(events_) / sizeof(events_[0]) - 1; i >= 0; i-- ) events_[i] = NULL;
   for( i = sizeof(events_) / sizeof(events_[0]) - 1; i >= 0; i-- ){
     if( events_[i] != NULL ) continue;
-    if( (events_[i] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
+    if( (events_[i] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
       err = GetLastError() + errorOffset;
       newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
@@ -452,14 +410,15 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         wm = ~DWORD(0);
       }
       else {
-        /*intptr_t i, j = -1;
         uint64_t timeout = ~uint64_t(0);
-        for( intptr_t i = sp; i >= 0; i-- ) if( eReqs_[i]->timeout_ < timeout ){
-          timeout = eReqs_[i]->timeout_;
-          j = i;
-        }*/
+        for( node = requests_.first(); node != NULL; node = node->next() ){
+          object = &AsyncEvent::nodeObject(*node);
+          if( object->timeout_ < timeout )
+            timeout = object->timeout_;
+        }
+        DWORD tma = timeout == ~uint64_t(0) ? INFINITE : DWORD(timeout / 1000u);
         release();
-        wm = WaitForMultipleObjectsEx(MAXIMUM_WAIT_OBJECTS,events_,FALSE,INFINITE,TRUE);
+        wm = WaitForMultipleObjectsEx(MAXIMUM_WAIT_OBJECTS,events_,FALSE,tma,TRUE);
         DWORD err0 = GetLastError();
         acquire();
         SetLastError(err0);
@@ -505,9 +464,28 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         else if( wm == WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS - 1	){
           ResetEvent(events_[wm - WAIT_OBJECT_0]);
         }
-        else if( wm == WAIT_IO_COMPLETION ||
-                 (wm >= STATUS_ABANDONED_WAIT_0 && wm < STATUS_ABANDONED_WAIT_0 + sp + 1) ||
-                 wm == WAIT_TIMEOUT ){
+        else if( wm == WAIT_TIMEOUT ){
+          timeout = gettimeofday() - timeout;
+          for( intptr_t i = sp; i >= 0; i-- ){
+            object = eReqs_[i];
+            if( object->timeout_ == ~uint64_t(0) ) continue;
+            object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
+            if( object->timeout_ == 0 ){
+              CancelIo(object->descriptor_->descriptor_);
+              xchg(events_[i],events_[sp]);
+              events_[sp] = events_[MAXIMUM_WAIT_OBJECTS - 1];
+              eReqs_[i] = eReqs_[sp];
+              eReqs_[sp] = NULL;
+              sp--;
+              requests_.remove(*object);
+              assert( object->fiber_ != NULL );
+              object->errno_ = WAIT_TIMEOUT;
+              object->fiber_->thread()->postEvent(object);
+            }
+          }
+          node = NULL;
+        }
+        else {
           assert( 0 );
         }
       }
@@ -840,101 +818,6 @@ void AsyncOpenFileSlave::threadExecute()
         request->errno_ = err;
         assert( request->fiber_ != NULL );
         request->fiber_->thread()->postEvent(request);
-        /*try {
-#if defined(__WIN32__) || defined(__WIN64__)
-          HANDLE file = INVALID_HANDLE_VALUE;
-          if( isWin9x() ){
-            utf8::AnsiString ansiFileName(anyPathName2HostPathName(request->string0_).getANSIString());
-            SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
-            SetLastError(ERROR_SUCCESS);
-            if( !request->readOnly_ )
-              file = CreateFileA(
-                ansiFileName,
-                GENERIC_READ | GENERIC_WRITE,
-                request->exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-                NULL,
-                request->createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-                NULL
-              );
-            if( file == INVALID_HANDLE_VALUE ){
-              SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
-              SetLastError(ERROR_SUCCESS);
-              file = CreateFileA(
-                ansiFileName,GENERIC_READ,
-                request->exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-                NULL,
-                request->createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-                FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE | FILE_FLAG_RANDOM_ACCESS,
-                NULL
-              );
-            }
-          }
-          else {
-            utf8::WideString unicodeFileName(anyPathName2HostPathName(request->string0_).getUNICODEString());
-            SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
-            SetLastError(ERROR_SUCCESS);
-            if( !request->readOnly_ )
-              file = CreateFileW(
-                unicodeFileName,
-                GENERIC_READ | GENERIC_WRITE,
-                request->exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-                NULL,
-                request->createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-                FILE_FLAG_OVERLAPPED |
-                FILE_ATTRIBUTE_NORMAL |
-                FILE_ATTRIBUTE_ARCHIVE |
-                FILE_FLAG_RANDOM_ACCESS,// | FILE_FLAG_BACKUP_SEMANTICS,
-                NULL
-              );
-            if( file == INVALID_HANDLE_VALUE ){
-              SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
-              SetLastError(ERROR_SUCCESS);
-              file = CreateFileW(
-                unicodeFileName,
-                GENERIC_READ,
-                request->exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
-                NULL,
-                request->createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
-                FILE_FLAG_OVERLAPPED |
-                FILE_ATTRIBUTE_NORMAL |
-                FILE_ATTRIBUTE_ARCHIVE |
-                FILE_FLAG_RANDOM_ACCESS,// | FILE_FLAG_BACKUP_SEMANTICS,
-                NULL
-              );
-            }
-          }
-          if( file != INVALID_HANDLE_VALUE && GetLastError() == ERROR_ALREADY_EXISTS ) SetLastError(0);
-          request->errno_ = GetLastError();
-#else
-          int file;
-          utf8::AnsiString ansiFileName(anyPathName2HostPathName(anyPathName2HostPathName(request->string0_)).getANSIString());
-          mode_t um = umask(0);
-          umask(um);
-          errno = 0;
-          file = ::open(
-            ansiFileName,
-            O_RDWR | (request->createIfNotExist_ ? O_CREAT : 0) | (request->exclusive_ ? O_EXLOCK : 0),
-            um | S_IRUSR | S_IWUSR
-          );
-          if( file < 0 ){
-            errno = 0;
-            file = ::open(
-              ansiFileName,
-              O_RDONLY | (request->createIfNotExist_ ? O_CREAT : 0) | (request->exclusive_ ? O_EXLOCK : 0),
-              um | S_IRUSR | S_IWUSR
-            );
-          }
-          request->errno_ = errno;
-#endif
-          request->fileDescriptor_ = file;
-          request->fiber_->thread()->postEvent(request);
-        }
-        catch( ExceptionSP & e ){
-          request->errno_ = e->code();
-          request->fileDescriptor_ = INVALID_HANDLE_VALUE;
-          request->fiber_->thread()->postEvent(request);
-        }*/
       }
       else if( request->type_ == etDirList ){
         int32_t err = 0;
@@ -1189,7 +1072,7 @@ AsyncAcquireSlave::AsyncAcquireSlave()
   intptr_t i;
   for( i = sizeof(eSems_) / sizeof(eSems_[0]) - 1; i >= 0; i-- ) eSems_[i] = NULL;
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
-  if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
+  if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
     newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
@@ -1359,7 +1242,7 @@ AsyncWin9xDirectoryChangeNotificationSlave::AsyncWin9xDirectoryChangeNotificatio
   intptr_t i;
   for( i = sizeof(eSems_) / sizeof(eSems_[0]) - 1; i >= 0; i-- ) eSems_[i] = NULL;
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
-  if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
+  if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
     newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }

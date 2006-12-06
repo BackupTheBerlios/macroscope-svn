@@ -142,8 +142,10 @@ Semaphore::~Semaphore()
 #endif
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
-  if( handle_ != NULL )
+  if( handle_ != NULL ){
     CloseHandle(handle_);
+    handle_ = NULL;
+  }
 #endif
 }
 //---------------------------------------------------------------------------
@@ -203,6 +205,7 @@ Semaphore & Semaphore::wait()
 bool Semaphore::timedWait(uint64_t timeout)
 {
 #if HAVE_SEMAPHORE_H
+  sem_timedwait();
   newObject<Exception>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
   return false;
 #elif defined(__WIN32__) || defined(__WIN64__)

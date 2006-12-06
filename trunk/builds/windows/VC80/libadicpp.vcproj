@@ -392,10 +392,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\include\adicpp\fhc.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\include\adicpp\fiber.h"
 				>
 			</File>
@@ -1380,10 +1376,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libksys\fhc.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libksys\fiber.cpp"
 				>
 			</File>
@@ -1560,46 +1552,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libmycpp\st.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libadicpp\st.cpp"
 				>
 				<FileConfiguration
@@ -1642,6 +1594,46 @@
 			<File
 				RelativePath="..\..\..\src\libfbcpp\st.cpp"
 				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libmycpp\st.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\stat.cpp"
@@ -1696,6 +1688,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
 				>
 				<FileConfiguration
@@ -1734,10 +1730,6 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\svc.cpp"

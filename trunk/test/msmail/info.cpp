@@ -91,12 +91,17 @@ utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) co
     )->throwSP();
   if( pAttribute != NULL ) *pAttribute = p;
   if( p->index_ == 0 ) return p->value_;
-  file_.detach().attach().open();
-  utf8::String s(utf8::String::Container::container((uintptr_t) p->size_));
-  file_.readBuffer(p->index_,s.c_str(),p->size_);
-  s.c_str()[(uintptr_t) p->size_] = '\0';
-  if( key.strncmp("#",1) != 0 ) s = unScreenString(s);
-  return s;
+  if( p->size_ == 0 ) return utf8::String();
+  file_.open();
+  AutoPtr<char> s;
+  s.alloc((uintptr_t) p->size_ + 1);
+  s[(uintptr_t) p->size_] = '\0';
+  file_.readBuffer(p->index_,s,p->size_);
+  AutoPtr<utf8::String::Container> container(newObject<utf8::String::Container>(0,s.ptr()));
+  s.ptr(NULL);
+  utf8::String ss(container.ptr(NULL));
+  if( key.c_str()[0] != '#' ) ss = unScreenString(ss);
+  return ss;
 }
 //------------------------------------------------------------------------------
 Message & Message::value(const utf8::String & key,const utf8::String & value,Attribute ** pAttribute)
@@ -109,7 +114,7 @@ Message & Message::value(const utf8::String & key,const utf8::String & value,Att
     residentSize_ += sizeof(Attribute) + keySize + 2;
   }
   if( pAttribute == NULL && residentSize_ + valueSize >= getpagesize() * 16 ){
-    file_.detach().attach().open();
+    file_.open();
     file_.seek(file_.size());
     utf8::String v(key), v2(value);
     if( key.strncmp("#",1) != 0 ){
@@ -302,10 +307,10 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
     if( k + j < bl ){
       utf8::String v;
       if( isNumberSign ){
-        v = utf8::String(list[i]->key_) + ": " + a.value(list[i]->key_) + "\n";
+       v = utf8::String(list[i]->key_) + ": " + a.value(list[i]->key_) + "\n";
       }
       else {
-        v = screenString(list[i]->key_) + ": " + screenString(a.value(list[i]->key_)) + "\n";
+       v = screenString(list[i]->key_) + ": " + screenString(a.value(list[i]->key_)) + "\n";
       }
       s.writeBuffer(v.c_str(),v.size());
     }

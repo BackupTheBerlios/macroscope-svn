@@ -28,9 +28,21 @@
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------
-uint8_t Fiber::currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber>)];
-//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+AsyncDescriptor::~AsyncDescriptor()
+{
+  Requester::requester().detachDescriptor(*this);
+}
+//---------------------------------------------------------------------------
+AsyncDescriptor::AsyncDescriptor()
+{
+  Requester::requester().attachDescriptor(*this);
+}
+//---------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+uint8_t Fiber::currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber>)];
 //------------------------------------------------------------------------------
 void Fiber::initialize()
 {
@@ -190,17 +202,9 @@ void Fiber::start(Fiber * fiber)
   }
   catch( ... ){
   }
-  fiber->detachDescriptors();
   fiber->finished_ = true;
   fiber->switchFiber(fiber->thread_);
   exit(ENOSYS);
-}
-//------------------------------------------------------------------------------
-void Fiber::detachDescriptors()
-{
-  EmbeddedListNode<AsyncDescriptor> * adp;
-  for( adp = descriptorsList_.first(); adp != NULL; adp = adp->next() )
-    AsyncDescriptor::fiberListNodeObject(*adp).detach();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -325,7 +329,6 @@ void BaseServer::closeServer()
   uintptr_t how = howCloseServer_;
   EmbeddedListNode<BaseThread> * btp;
   EmbeddedListNode<Fiber> * bfp;
-  EmbeddedListNode<AsyncDescriptor> * adp;
   BaseThread * thread;
   shutdown_ = true;
   if( how & csTerminate ){
@@ -380,15 +383,7 @@ void BaseServer::closeServer()
     }
     if( btp == NULL ) break;
     if( how & csShutdown ){
-      AutoLock<InterlockedMutex> lock(mutex_);
-      for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
-        thread = &BaseThread::serverListNodeObject(*btp);
-        AutoLock<InterlockedMutex> lock2(thread->mutex_);
-        for( adp = thread->descriptorsList_.first(); adp != NULL; adp = adp->next() ){
-          AsyncDescriptor::clusterListNodeObject(*adp).shutdown2();
-          AsyncDescriptor::clusterListNodeObject(*adp).close2();
-        }
-      }
+      BaseThread::requester().shutdownDescriptors();
       BaseThread::requester().abort();
     }
   }

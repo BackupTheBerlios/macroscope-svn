@@ -34,8 +34,13 @@ uint8_t AsyncFile::mutex_[sizeof(InterlockedMutex)];
 //---------------------------------------------------------------------------
 AsyncFile::~AsyncFile()
 {
-  detachOnClose_ = true;
   close();
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( eventObject_ != NULL ){
+    CloseHandle(eventObject_);
+    eventObject_ = NULL;
+  }
+#endif
 }
 //---------------------------------------------------------------------------
 AsyncFile::AsyncFile(const utf8::String & fileName) :
@@ -46,64 +51,51 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   createIfNotExist_(false),
   std_(false),
   seekable_(true),
-  detachOnClose_(true),
   random_(false),
   direct_(false),
   nocache_(false)
 {
-  file_ = INVALID_HANDLE_VALUE;
-  handle_ = INVALID_HANDLE_VALUE;
 #if defined(__WIN32__) || defined(__WIN64__)
-  specification_ = 1;
   alignment_ = 1;
+  eventObject_ = CreateEventA(NULL,TRUE,FALSE,NULL);
+  if( eventObject_ == NULL ){
+    int32_t err = GetLastError() + errorOffset;
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+  }
 #endif
-}
-//---------------------------------------------------------------------------
-bool AsyncFile::fileMember() const
-{
-  return currentFiber() != NULL && std_ == 0;
 }
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::close()
 {
-  if( detachOnClose_ ) detach();
   bool closed = false;
   {
     AutoLock<InterlockedMutex> lock(mutex());
-    if( file_ != INVALID_HANDLE_VALUE ){
+    if( descriptor_ != INVALID_HANDLE_VALUE ){
       if( !std_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        CloseHandle(file_);
+        CloseHandle(descriptor_);
 #else
-        ::close(file_);
+        ::close(descriptor_);
 #endif
       }
-      file_ = INVALID_HANDLE_VALUE;
-      closed = true;
-    }
-    if( handle_ != INVALID_HANDLE_VALUE ){
-      if( !std_ ){
-#if defined(__WIN32__) || defined(__WIN64__)
-        CloseHandle(handle_);
-#else
-        ::close(handle_);
-#endif
-      }
-      handle_ = INVALID_HANDLE_VALUE;
+      descriptor_ = INVALID_HANDLE_VALUE;
       closed = true;
     }
   }
-  if( closed && removeAfterClose_ ){
-    try {
-      remove(fileName_);
+  if( closed ){
+    if( removeAfterClose_ ){
+      try {
+        remove(fileName_);
+      }
+      catch( ... ){}
     }
-    catch( ... ){}
   }
   return *this;
 }
 //---------------------------------------------------------------------------
 file_t AsyncFile::openHelper(bool async)
 {
+  async = true;
   file_t handle = INVALID_HANDLE_VALUE;
 #if defined(__WIN32__) || defined(__WIN64__)
   int32_t err;
@@ -177,7 +169,7 @@ file_t AsyncFile::openHelper(bool async)
       case ERROR_INVALID_FLAGS       :
       case ERROR_INVALID_ADDRESS     :
       case ERROR_INSUFFICIENT_BUFFER :*/
-    newObject<EFileError>(err,fileName_)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
 #else
   utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
@@ -217,45 +209,41 @@ file_t AsyncFile::openHelper(bool async)
       case EFAULT       :
       case EOPNOTSUPP   :
       case EINVAL       :*/
-    newObject<EFileError>(err,fileName_)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
   if( async ){
     int flags = fcntl(handle,F_GETFL,0);
     if( flags == -1 || fcntl(handle,F_SETFL,flags | O_NONBLOCK) == -1 ){
       err = errno;
       ::close(handle);
-      newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
   }
 #endif
   return handle;
 }
 //---------------------------------------------------------------------------
-bool AsyncFile::isOpen() const
-{
-  return (fileMember() && file_ != INVALID_HANDLE_VALUE) || (!fileMember() && handle_ != INVALID_HANDLE_VALUE);
-}
-//---------------------------------------------------------------------------
 AsyncFile & AsyncFile::open()
 {
   if( !isOpen() && !redirectByName() ){
-    if( fileMember() ){
-      attach();
-      fiber()->event_.string0_ = fileName_;
-      fiber()->event_.createIfNotExist_ = createIfNotExist_;
-      fiber()->event_.exclusive_ = exclusive_;
-      fiber()->event_.readOnly_ = readOnly_;
-      fiber()->event_.file_ = this;
-      fiber()->event_.type_ = etOpenFile;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      assert( fiber()->event_.type_ == etOpenFile );
-      file_ = fiber()->event_.fileDescriptor_;
-      if( fiber()->event_.errno_ != 0 )
-        newObject<EFileError>(fiber()->event_.errno_,fileName_)->throwSP();
+    Fiber * fiber = currentFiber();
+    if( fiber != NULL ){
+      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.string0_ = fileName_;
+      fiber->event_.createIfNotExist_ = createIfNotExist_;
+      fiber->event_.exclusive_ = exclusive_;
+      fiber->event_.readOnly_ = readOnly_;
+      fiber->event_.file_ = this;
+      fiber->event_.type_ = etOpenFile;
+      fiber->thread()->postRequest(this);
+      fiber->switchFiber(fiber->mainFiber());
+      assert( fiber->event_.type_ == etOpenFile );
+      descriptor_ = fiber->event_.fileDescriptor_;
+      if( fiber->event_.errno_ != 0 )
+        newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
     else {
-      handle_ = openHelper();
+      descriptor_ = openHelper(true);
     }
 #if defined(__WIN32__) || defined(__WIN64__)
     if( fileName_.strncasecmp("COM",3) == 0 ){
@@ -287,7 +275,7 @@ AsyncFile & AsyncFile::open()
       if( r == 0 ){
         int32_t err = GetLastError() + errorOffset;
         close();
-        newObject<EFileError>(err,fileName_)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
       alignment_ = bytesPerSector;
     }
@@ -313,18 +301,18 @@ uint64_t AsyncFile::size() const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   uint64 i;
-  SetLastError(NO_ERROR);
-  i.lo = GetFileSize(fileMember() ? file_ : handle_, &i.hi);
-  if( GetLastError() != NO_ERROR ){
+  SetLastError(ERROR_SUCCESS);
+  i.lo = GetFileSize(descriptor_, &i.hi);
+  if( GetLastError() != ERROR_SUCCESS ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
   return i.a;
 #else
   struct stat st;
-  if( fstat(fileMember() ? file_ : handle_,&st) != 0 ){
+  if( fstat(descriptor_,&st) != 0 ){
     int32_t err = errno;
-    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
   return st.st_size;
 #endif
@@ -338,14 +326,14 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
 #if defined(__WIN32__) || defined(__WIN64__)
     seek(nSize);
 // TODO: check for SetFileValidData working (may be faster then SetEndOfFile)
-    if( SetEndOfFile(fileMember() ? file_ : handle_) == 0 ){
+    if( SetEndOfFile(descriptor_) == 0 ){
       err = GetLastError() + errorOffset;
-      newObject<EDiskFull>(err, __PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
 #elif HAVE_FTRUNCATE
-    if( ftruncate(fileMember() ? file_ : handle_, nSize) == -1 ){
+    if( ftruncate(descriptor_,nSize) == -1 ){
       err = errno;
-      newObject<EDiskFull>(err, __PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
 #else
 #error resize not implemented
@@ -360,166 +348,81 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
   return *this;
 }
 //---------------------------------------------------------------------------
-int64_t AsyncFile::read(void * buf,uint64_t size)
+int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
 {
-  if( fileMember() ){
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
     int64_t r = 0;
     while( size > 0 ){
-      int64_t pos = seekable_ ? tell() : 0;
-      fiber()->event_.position_ = pos;
-      fiber()->event_.cbuffer_ = buf;
-      fiber()->event_.length_ = size;
-      fiber()->event_.type_ = etRead;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 ){
+      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.position_ = pos;
+      fiber->event_.cbuffer_ = buf;
+      fiber->event_.length_ = size;
+      fiber->event_.type_ = etRead;
+      fiber->thread()->postRequest(this);
+      fiber->switchFiber(fiber->mainFiber());
+      if( fiber->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        SetLastError(fiber()->event_.errno_);
-        if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
+        SetLastError(fiber->event_.errno_);
+        if( fiber->event_.errno_ == ERROR_HANDLE_EOF ) break;
 #else
-        if( fiber()->event_.count_ == 0 ) break;
+        if( fiber->event_.count_ == 0 ) break;
 #endif
         if( r == 0 ) r = -1;
         break;
       }
-      if( fiber()->event_.count_ == 0 ) break;
-      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-      r += fiber()->event_.count_;
-      size -= fiber()->event_.count_;
-      if( seekable_ ) seek(pos + fiber()->event_.count_);
+      if( fiber->event_.count_ == 0 ) break;
+      buf = (uint8_t *) buf + (size_t) fiber->event_.count_;
+      size -= fiber->event_.count_;
+      if( seekable_ ) pos += fiber->event_.count_;
+      r += fiber->event_.count_;
     }
     return r;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
+  OVERLAPPED overlapped;
+  memset(&overlapped,0,sizeof(overlapped));
+  overlapped.hEvent = eventObject_;
   int64_t r = 0;
   while( size > 0 ){
-    DWORD rr, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
-l1: if( ReadFile(handle_,buf,a,&rr,NULL) == 0 ){
-      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
-        a >>= 1;
-        goto l1;
+    overlapped.Offset = (DWORD) pos;
+    overlapped.OffsetHigh = (DWORD) (pos >> 32);
+    DWORD a = size > 0x40000000 ? 0x40000000 : (DWORD) size, rr;
+    BOOL status;
+    for(;;){
+      if( ResetEvent(overlapped.hEvent) == 0 ){
+        int32_t err = errno;
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
-      if( GetLastError() == ERROR_HANDLE_EOF ) break;
-      r = -1;
+      SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
+      status = ReadFile(descriptor_,buf,a,&rr,&overlapped);
+      if( status != 0 || GetLastError() != ERROR_NO_SYSTEM_RESOURCES ) break;
+      a >>= 1;
+    }
+    if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
+      status = ::GetOverlappedResult(descriptor_,&overlapped,&rr,TRUE);
+      if( status != 0 ) SetLastError(ERROR_SUCCESS);
+    }
+    if( GetLastError() == ERROR_HANDLE_EOF ) break;
+    if( GetLastError() != ERROR_SUCCESS ){
+      if( r == 0 ) r = -1;
       break;
     }
     if( rr == 0 ) break;
+    buf = (uint8_t *) buf + rr;
     size -= rr;
+    if( seekable_ ) pos += rr;
     r += rr;
   }
-  return r;
-#else
-  return ::read(handle_,buf,size);
-#endif
-}
-//---------------------------------------------------------------------------
-int64_t AsyncFile::write(const void * buf,uint64_t size)
-{
-  if( fileMember() ){
-    int64_t w = 0;
-    while( size > 0 ){
-      int64_t pos = seekable_ ? tell() : 0;
-      fiber()->event_.position_ = pos;
-      fiber()->event_.cbuffer_ = buf;
-      fiber()->event_.length_ = size;
-      fiber()->event_.type_ = etWrite;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
-        SetLastError(fiber()->event_.errno_);
-#else
-        errno = fiber()->event_.errno_;
-#endif
-        return -1;
-      }
-      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-      w += fiber()->event_.count_;
-      size -= fiber()->event_.count_;
-      if( seekable_ ) seek(pos + fiber()->event_.count_);
-      if( (uint64_t) w < size ) break;
-    }
-    return w;
-  }
-#if defined(__WIN32__) || defined(__WIN64__)
-  int64_t w = 0;
-  while( size > 0 ){
-    DWORD ww, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
-l1: if( WriteFile(handle_,buf,a,&ww,NULL) == 0 ){
-      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
-        a >>= 1;
-        goto l1;
-      }
-      w = -1;
-      break;
-    }
-    if( ww == 0 ) break;
-    size -= ww;
-    w += ww;
-  }
-  return w;
-#else
-  return ::write(handle_,buf,size);
-#endif
-}
-//---------------------------------------------------------------------------
-int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
-{
-  if( fileMember() ){
-    int64_t r = 0;
-    while( size > 0 ){
-      fiber()->event_.position_ = pos;
-      fiber()->event_.cbuffer_ = buf;
-      fiber()->event_.length_ = size;
-      fiber()->event_.type_ = etRead;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 ){
-#if defined(__WIN32__) || defined(__WIN64__)
-        SetLastError(fiber()->event_.errno_);
-        if( fiber()->event_.errno_ == ERROR_HANDLE_EOF ) break;
-#else
-        errno = fiber()->event_.errno_;
-#endif
-        return -1;
-      }
-      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-      pos += fiber()->event_.count_;
-      r += fiber()->event_.count_;
-      size -= fiber()->event_.count_;
-      if( r == 0 ) break;
-    }
-    return r;
-  }
-#if defined(__WIN32__) || defined(__WIN64__)
-  uint64_t ps(tell());
-  seek(pos);
-  int64_t r = 0;
-  while( size > 0 ){
-    DWORD rr, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
-l1: if( ReadFile(handle_,buf,a,&rr,NULL) == 0 ){
-      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
-        a >>= 1;
-        goto l1;
-      }
-      if( GetLastError() == ERROR_HANDLE_EOF ) break;
-      r = -1;
-      break;
-    }
-    if( rr == 0 ) break;
-    size -= rr;
-    r += rr;
-  }
-  seek(ps);
   return r;
 #elif HAVE_PREAD
-  return pread(handle_,buf,size,pos);
+  return pread(descriptor_,buf,size,pos);
 #else
   intptr_t r = -1;
   uint64_t OldPos = tell();
   int err;
   seek(pos);
-  r = ::read(handle_,buf,size);
+  r = ::read(descriptor_,buf,size);
   err = errno;
   seek(OldPos);
   errno = err;
@@ -529,59 +432,76 @@ l1: if( ReadFile(handle_,buf,a,&rr,NULL) == 0 ){
 //---------------------------------------------------------------------------
 int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
 {
-  if( fileMember() ){
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
     int64_t w = 0;
     while( size > 0 ){
-      fiber()->event_.position_ = pos;
-      fiber()->event_.cbuffer_ = buf;
-      fiber()->event_.length_ = size;
-      fiber()->event_.type_ = etWrite;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 ){
+      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.position_ = pos;
+      fiber->event_.cbuffer_ = buf;
+      fiber->event_.length_ = size;
+      fiber->event_.type_ = etWrite;
+      fiber->thread()->postRequest(this);
+      fiber->switchFiber(fiber->mainFiber());
+      if( fiber->event_.errno_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        SetLastError(fiber()->event_.errno_);
+        SetLastError(fiber->event_.errno_);
 #else
-        errno = fiber()->event_.errno_;
+        errno = fiber->event_.errno_;
 #endif
-        return -1;
+        if( w == 0 ) w = -1;
+        break;
       }
-      buf = (uint8_t *) buf + (size_t) fiber()->event_.count_;
-      pos += fiber()->event_.count_;
-      w += fiber()->event_.count_;
-      size -= fiber()->event_.count_;
-      if( w == 0 ) break;
+      buf = (const uint8_t *) buf + (size_t) fiber->event_.count_;
+      size -= fiber->event_.count_;
+      if( seekable_ ) pos += fiber->event_.count_;
+      w += fiber->event_.count_;
     }
     return w;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
-  uint64_t ps(tell());
-  seek(pos);
+  OVERLAPPED overlapped;
+  memset(&overlapped,0,sizeof(overlapped));
+  overlapped.hEvent = eventObject_;
   int64_t w = 0;
   while( size > 0 ){
-    DWORD ww, a = size > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : (DWORD) size;
-l1: if( WriteFile(handle_,buf,a,&ww,NULL) == 0 ){
-      if( GetLastError() == ERROR_NO_SYSTEM_RESOURCES ){
-        a >>= 1;
-        goto l1;
+    overlapped.Offset = (DWORD) pos;
+    overlapped.OffsetHigh = (DWORD) (pos >> 32);
+    DWORD a = size > 0x40000000 ? 0x40000000 : (DWORD) size, ww;
+    BOOL status;
+    for(;;){
+      if( ResetEvent(overlapped.hEvent) == 0 ){
+        int32_t err = errno;
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
-      w = -1;
+      SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
+      status = WriteFile(descriptor_,buf,a,&ww,&overlapped);
+      if( status != 0 || GetLastError() != ERROR_NO_SYSTEM_RESOURCES ) break;
+      a >>= 1;
+    }
+    if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
+      status = ::GetOverlappedResult(descriptor_,&overlapped,&ww,TRUE);
+      if( status != 0 ) SetLastError(ERROR_SUCCESS);
+    }
+    if( GetLastError() != ERROR_SUCCESS ){
+      if( w == 0 ) w = -1;
       break;
     }
     if( ww == 0 ) break;
+    buf = (const uint8_t *) buf + ww;
     size -= ww;
+    if( seekable_ ) pos += ww;
     w += ww;
   }
-  seek(ps);
   return w;
 #elif HAVE_PWRITE
-  return pwrite(handle_,buf,size,pos);
+  return pwrite(descriptor_,buf,size,pos);
 #else
   intptr_t r = -1;
   uint64_t OldPos = tell();
   int err;
   seek(pos);
-  r = ::write(handle_,buf,size);
+  r = ::write(descriptor_,buf,size);
   err = errno;
   seek(OldPos);
   errno = err;
@@ -591,60 +511,78 @@ l1: if( WriteFile(handle_,buf,a,&ww,NULL) == 0 ){
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::readBuffer(void * buf,uint64_t size)
 {
-  int64_t r = read(buf,size);
-  if( r == 0 && size > 0 )
-    newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__)->throwSP();
-  if( r < 0 || (uint64_t) r != size )
-    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( size > 0 ){
+    int64_t r = read(buf,size);
+    if( r < 0 ){
+      int32_t err = oserror() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+    }
+    if( r == 0 || (uint64_t) r != size )
+      newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::writeBuffer(const void * buf,uint64_t size)
 {
-  int64_t w = write(buf,size);
-  if( w < 0 && size > 0 )
-    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-  if( (uint64_t) w != size && size > 0 )
-    newObject<EFileError>(EIO, __PRETTY_FUNCTION__)->throwSP();
+  if( size > 0 ){
+    int64_t w = write(buf,size);
+    if( w < 0 ){
+      int32_t err = oserror() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+    }
+    if( (uint64_t) w != size )
+      newObject<Exception>(EIO,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::readBuffer(uint64_t pos,void * buf,uint64_t size)
 {
-  int64_t r = read(pos,buf,size);
-  if( r == 0 && size > 0 )
-    newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__)->throwSP();
-  if( r < 0 || (uint64_t) r != size )
-    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( size > 0 ){
+    int64_t r = read(pos,buf,size);
+    if( r < 0 ){
+      int32_t err = oserror() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+    }
+    if( r == 0 || (uint64_t) r != size )
+      newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::writeBuffer(uint64_t pos,const void * buf,uint64_t size)
 {
-  int64_t w = write(pos, buf, size);
-  if( w < 0 && size > 0 )
-    newObject<EFileError>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-  if( (uint64_t) w != size && size > 0 )
-    newObject<EFileError>(EIO,__PRETTY_FUNCTION__)->throwSP();
+  if( size > 0 ){
+    int64_t w = write(pos,buf,size);
+    if( w < 0 ){
+      int32_t err = oserror() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+    }
+    if( (uint64_t) w != size )
+      newObject<Exception>(EIO,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
 bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
 {
-  if( fileMember() ){
+  if( isRunInFiber() ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    fiber()->event_.errno_ = 0;
+    Fiber * fiber = currentFiber();
+    fiber->event_.errno_ = 0;
     if( !exclusive_ ){
-      fiber()->event_.type_ = etLockFile;
-      fiber()->event_.lockType_ = AsyncEvent::tryRDLock;
-      fiber()->event_.position_ = pos;
-      fiber()->event_.length_ = size;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
-        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.type_ = etLockFile;
+      fiber->event_.lockType_ = AsyncEvent::tryRDLock;
+      fiber->event_.position_ = pos;
+      fiber->event_.length_ = size;
+      fiber->thread()->postRequest(this);
+      fiber->switchFiber(fiber->mainFiber());
+      if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_LOCK_VIOLATION )
+        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
-    return fiber()->event_.errno_ == 0;
+    return fiber->event_.errno_ == 0;
 #else
     if( !exclusive_ ){
       struct flock fl;
@@ -652,10 +590,10 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
       fl.l_len = size;
       fl.l_type = F_RDLCK;
       fl.l_whence = SEEK_SET;
-      if( fcntl(file_,F_SETLKW,&fl) == 0 ) return true;
+      if( fcntl(descriptor_,F_SETLKW,&fl) == 0 ) return true;
       if( errno != EAGAIN ){
         int32_t err = errno;
-        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
       return false;
     }
@@ -665,19 +603,34 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
     if( size == 0 ) size = ~UINT64_C(0);
-    OVERLAPPED Overlapped;
-    Overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
-    Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
-    SetLastError(0);
-    LockFileEx(handle_,LOCKFILE_FAIL_IMMEDIATELY,0,reinterpret_cast< uint64 *>(&size)->lo,reinterpret_cast< uint64 *>(&size)->hi,&Overlapped);
-    DWORD err = GetLastError();
+    OVERLAPPED overlapped;
+    memset(&overlapped,0,sizeof(overlapped));
+    overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+    overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+    overlapped.hEvent = eventObject_;
+    if( ResetEvent(overlapped.hEvent) == 0 ){
+      int32_t err = errno;
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+    }
+    SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
+    BOOL status = LockFileEx(
+      descriptor_,
+      LOCKFILE_FAIL_IMMEDIATELY,
+      0,
+      reinterpret_cast<uint64 *>(&size)->lo,
+      reinterpret_cast<uint64 *>(&size)->hi,
+      &overlapped
+    );
+    DWORD err;
+    if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
+      status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
+      if( status != 0 ) return GetLastError() != ERROR_LOCK_VIOLATION;
+    }
+    err = GetLastError();
     switch( err ){
-      case 0                    : return true;
-      case ERROR_IO_PENDING     :
-      case ERROR_LOCK_VIOLATION :
-         return false;
+      case ERROR_LOCK_VIOLATION : return false;
       default                   :
-        newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
 #else
     struct flock fl;
@@ -685,10 +638,10 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
     fl.l_len = size;
     fl.l_type = F_RDLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(handle_,F_SETLKW,&fl) == 0 ) return true;
+    if( fcntl(descriptor_,F_SETLKW,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
     return false;
 #endif
@@ -698,20 +651,22 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
 //---------------------------------------------------------------------------
 bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
 {
-  if( fileMember() ){
+  if( isRunInFiber() ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    fiber()->event_.errno_ = 0;
+    Fiber * fiber = currentFiber();
+    fiber->event_.errno_ = 0;
     if( !exclusive_ ){
-      fiber()->event_.type_ = etLockFile;
-      fiber()->event_.lockType_ = AsyncEvent::tryWRLock;
-      fiber()->event_.position_ = pos;
-      fiber()->event_.length_ = size;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 && fiber()->event_.errno_ != ERROR_LOCK_VIOLATION )
-        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.type_ = etLockFile;
+      fiber->event_.lockType_ = AsyncEvent::tryWRLock;
+      fiber->event_.position_ = pos;
+      fiber->event_.length_ = size;
+      fiber->thread()->postRequest(this);
+      fiber->switchFiber(fiber->mainFiber());
+      if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_LOCK_VIOLATION )
+        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
-    return fiber()->event_.errno_ == 0;
+    return fiber->event_.errno_ == 0;
 #else
     if( !exclusive_ ){
       struct flock fl;
@@ -719,10 +674,10 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
       fl.l_len = size;
       fl.l_type = F_WRLCK;
       fl.l_whence = SEEK_SET;
-      if( fcntl(file_,F_SETLK,&fl) == 0 ) return true;
+      if( fcntl(descriptor_,F_SETLK,&fl) == 0 ) return true;
       if( errno != EAGAIN ){
         int32_t err = errno;
-        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
       return false;
     }
@@ -732,19 +687,34 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
     if( size == 0 ) size = ~UINT64_C(0);
-    OVERLAPPED  Overlapped;
-    Overlapped.Offset = reinterpret_cast< uint64 *>(&pos)->lo;
-    Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
-    SetLastError(0);
-    LockFileEx(handle_, LOCKFILE_FAIL_IMMEDIATELY | LOCKFILE_EXCLUSIVE_LOCK, 0, reinterpret_cast< uint64 *>(&size)->lo, reinterpret_cast< uint64 *>(&size)->hi, &Overlapped);
-    DWORD err = GetLastError();
+    OVERLAPPED overlapped;
+    memset(&overlapped,0,sizeof(overlapped));
+    overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+    overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+    overlapped.hEvent = eventObject_;
+    if( ResetEvent(overlapped.hEvent) == 0 ){
+      int32_t err = errno;
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+    }
+    SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
+    BOOL status = LockFileEx(
+      descriptor_,
+      LOCKFILE_FAIL_IMMEDIATELY | LOCKFILE_EXCLUSIVE_LOCK,
+      0,
+      reinterpret_cast<uint64 *>(&size)->lo,
+      reinterpret_cast<uint64 *>(&size)->hi,
+      &overlapped
+    );
+    DWORD err;
+    if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
+      status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
+      if( status != 0 ) return GetLastError() != ERROR_LOCK_VIOLATION;
+    }
+    err = GetLastError();
     switch( err ){
-      case 0                    : return true;
-      case ERROR_IO_PENDING     :
-      case ERROR_LOCK_VIOLATION :
-        return false;
+      case ERROR_LOCK_VIOLATION : return false;
       default                   :
-        newObject<EFLock>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
 #else
     struct flock fl;
@@ -752,10 +722,10 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
     fl.l_len = size;
     fl.l_type = F_WRLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(handle_,F_SETLK,&fl) == 0 ) return true;
+    if( fcntl(descriptor_,F_SETLK,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      newObject<EFLock>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
     return false;
 #endif
@@ -765,26 +735,28 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
 {
-  if( fileMember() ){
+  if( isRunInFiber() ){
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      fiber()->event_.type_ = etLockFile;
-      fiber()->event_.lockType_ = AsyncEvent::rdLock;
-      fiber()->event_.position_ = pos;
-      fiber()->event_.length_ = size;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 )
-        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+      Fiber * fiber = currentFiber();
+      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.type_ = etLockFile;
+      fiber->event_.lockType_ = AsyncEvent::rdLock;
+      fiber->event_.position_ = pos;
+      fiber->event_.length_ = size;
+      fiber->thread()->postRequest(this);
+      fiber->switchFiber(fiber->mainFiber());
+      if( fiber->event_.errno_ != 0 )
+        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
 #else
       struct flock fl;
       fl.l_start = pos;
       fl.l_len = size;
       fl.l_type = F_RDLCK;
       fl.l_whence = SEEK_SET;
-      if( fcntl(file_,F_SETLKW,&fl) != 0 ){
+      if( fcntl(descriptor_,F_SETLKW,&fl) != 0 ){
         int32_t err = errno;
-        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
 #endif
     }
@@ -793,12 +765,34 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
       if( size == 0 ) size = ~UINT64_C(0);
-      OVERLAPPED Overlapped;
-      Overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
-      Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
-      if( LockFileEx(handle_, 0, 0, reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast< uint64 *>(&size)->hi,&Overlapped) == 0 ){
-        int32_t err = GetLastError() + errorOffset;
-        newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
+      OVERLAPPED overlapped;
+      memset(&overlapped,0,sizeof(overlapped));
+      overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+      overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+      overlapped.hEvent = eventObject_;
+      if( ResetEvent(overlapped.hEvent) == 0 ){
+        int32_t err = errno;
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+      }
+      SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
+      BOOL status = LockFileEx(
+        descriptor_,
+        0,
+        0,
+        reinterpret_cast<uint64 *>(&size)->lo,
+        reinterpret_cast<uint64 *>(&size)->hi,
+        &overlapped
+      );
+      DWORD err;
+      if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
+        status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
+        if( status != 0 ) SetLastError(ERROR_SUCCESS);
+      }
+      err = GetLastError();
+      switch( err ){
+        case ERROR_SUCCESS        : break;
+        default                   :
+          newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
 #else
       struct flock  fl;
@@ -806,9 +800,9 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       fl.l_len = size;
       fl.l_type = F_RDLCK;
       fl.l_whence = SEEK_SET;
-      if( fcntl(handle_, F_SETLKW, &fl) != 0 ){
+      if( fcntl(descriptor_, F_SETLKW, &fl) != 0 ){
         int32_t err = errno;
-        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
 #endif
     }
@@ -816,28 +810,30 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
   return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
+AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
 {
-  if( fileMember() ){
+  if( isRunInFiber() ){
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      fiber()->event_.type_ = etLockFile;
-      fiber()->event_.lockType_ = AsyncEvent::wrLock;
-      fiber()->event_.position_ = pos;
-      fiber()->event_.length_ = size;
-      fiber()->thread()->postRequest(this);
-      fiber()->switchFiber(fiber()->mainFiber());
-      if( fiber()->event_.errno_ != 0 )
-        newObject<EFLock>(fiber()->event_.errno_ + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+      Fiber * fiber = currentFiber();
+      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.type_ = etLockFile;
+      fiber->event_.lockType_ = AsyncEvent::wrLock;
+      fiber->event_.position_ = pos;
+      fiber->event_.length_ = size;
+      fiber->thread()->postRequest(this);
+      fiber->switchFiber(fiber->mainFiber());
+      if( fiber->event_.errno_ != 0 )
+        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
 #else
       struct flock  fl;
       fl.l_start = pos;
       fl.l_len = size;
       fl.l_type = F_WRLCK;
       fl.l_whence = SEEK_SET;
-      if( fcntl(file_, F_SETLKW, &fl) != 0 ){
+      if( fcntl(descriptor_, F_SETLKW, &fl) != 0 ){
         int32_t err = errno;
-        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
 #endif
     }
@@ -846,12 +842,34 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
       if( size == 0 ) size = ~UINT64_C(0);
-      OVERLAPPED Overlapped;
-      Overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
-      Overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
-      if( LockFileEx(handle_,LOCKFILE_EXCLUSIVE_LOCK,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
-        int32_t err = GetLastError() + errorOffset;
-        newObject<EFileError>(err, __PRETTY_FUNCTION__)->throwSP();
+      OVERLAPPED overlapped;
+      memset(&overlapped,0,sizeof(overlapped));
+      overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+      overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+      overlapped.hEvent = eventObject_;
+      if( ResetEvent(overlapped.hEvent) == 0 ){
+        int32_t err = errno;
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+      }
+      SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
+      BOOL status = LockFileEx(
+        descriptor_,
+        LOCKFILE_EXCLUSIVE_LOCK,
+        0,
+        reinterpret_cast<uint64 *>(&size)->lo,
+        reinterpret_cast<uint64 *>(&size)->hi,
+        &overlapped
+      );
+      DWORD err;
+      if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
+        status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
+        if( status != 0 ) SetLastError(ERROR_SUCCESS);
+      }
+      err = GetLastError();
+      switch( err ){
+        case ERROR_SUCCESS        : break;
+        default                   :
+          newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
 #else
       struct flock  fl;
@@ -859,9 +877,9 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos, uint64_t size)
       fl.l_len = size;
       fl.l_type = F_WRLCK;
       fl.l_whence = SEEK_SET;
-      if( fcntl(handle_,F_SETLKW,&fl) != 0 ){
+      if( fcntl(descriptor_,F_SETLKW,&fl) != 0 ){
         int32_t err = errno;
-        newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
 #endif
     }
@@ -874,12 +892,20 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
   if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
     if( size == 0 ) size = ~UINT64_C(0);
-    OVERLAPPED Overlapped;
-    Overlapped.Offset = reinterpret_cast< uint64 *>(&pos)->lo;
-    Overlapped.OffsetHigh = reinterpret_cast< uint64 *>(&pos)->hi;
-    if( UnlockFileEx(fileMember() ? file_ : handle_,0,reinterpret_cast<uint64 *>(&size)->lo,reinterpret_cast<uint64 *>(&size)->hi,&Overlapped) == 0 ){
+    OVERLAPPED overlapped;
+    memset(&overlapped,0,sizeof(overlapped));
+    overlapped.Offset = reinterpret_cast<uint64 *>(&pos)->lo;
+    overlapped.OffsetHigh = reinterpret_cast<uint64 *>(&pos)->hi;
+    BOOL status = UnlockFileEx(
+      descriptor_,
+      0,
+      reinterpret_cast<uint64 *>(&size)->lo,
+      reinterpret_cast<uint64 *>(&size)->hi,
+      &overlapped
+    );
+    if( status == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
 #else
     struct flock fl;
@@ -887,9 +913,9 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
     fl.l_len = size;
     fl.l_type = F_UNLCK;
     fl.l_whence = SEEK_SET;
-    if( fcntl(fileMember() ? file_ : handle_,F_SETLK,&fl) != 0 ){
+    if( fcntl(descriptor_,F_SETLK,&fl) != 0 ){
       int32_t err = errno;
-      newObject<EFLock>(err, __PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
     }
 #endif
   }
@@ -901,18 +927,18 @@ uint64_t AsyncFile::tell() const
 #if defined(__WIN32__) || defined(__WIN64__)
   int64 i;
   i.hi = 0;
-  SetLastError(NO_ERROR);
-  i.lo = SetFilePointer(fileMember() ? file_ : handle_,0,&i.hi,FILE_CURRENT);
-  if( GetLastError() != NO_ERROR ){
+  SetLastError(ERROR_SUCCESS);
+  i.lo = SetFilePointer(descriptor_,0,&i.hi,FILE_CURRENT);
+  if( GetLastError() != ERROR_SUCCESS ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
   return i.a;
 #else
-  int64_t pos = lseek(fileMember() ? file_ : handle_,0,SEEK_CUR);
+  int64_t pos = lseek(descriptor_,0,SEEK_CUR);
   if( pos < 0 ){
     int32_t err = errno;
-    newObject<EFileError>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
   return pos;
 #endif
@@ -921,17 +947,17 @@ uint64_t AsyncFile::tell() const
 AsyncFile & AsyncFile::seek(uint64_t pos)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  SetLastError(NO_ERROR);
-  reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(fileMember() ? file_ : handle_,reinterpret_cast< uint64 *>(&pos)->lo,(PLONG) &reinterpret_cast<uint64 *>(&pos)->hi,FILE_BEGIN);
-  if( GetLastError() != NO_ERROR ){
+  SetLastError(ERROR_SUCCESS);
+  reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(descriptor_,reinterpret_cast<uint64 *>(&pos)->lo,(PLONG) &reinterpret_cast<uint64 *>(&pos)->hi,FILE_BEGIN);
+  if( GetLastError() != ERROR_SUCCESS ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<EFileError>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
 #else
-  int64_t lp = lseek(fileMember() ? file_ : handle_,pos,SEEK_SET);
+  int64_t lp = lseek(descriptor_,pos,SEEK_SET);
   if( lp < 0 || (uint64_t) lp != pos ){
     int32_t err = errno;
-    newObject<EFileError>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
 #endif
   return *this;
@@ -1101,17 +1127,17 @@ BOOL AsyncFile::Connect(HANDLE /*event*/, ksys::AsyncEvent * /*request*/)
 //---------------------------------------------------------------------------
 BOOL AsyncFile::Read(LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped)
 {
-  return ReadFile(file_, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
+  return ReadFile(descriptor_, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesRead, lpOverlapped);
 }
 //---------------------------------------------------------------------------
 BOOL AsyncFile::Write(LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped)
 {
-  return WriteFile(file_, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
+  return WriteFile(descriptor_, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
 }
 //---------------------------------------------------------------------------
 BOOL AsyncFile::GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD /*lpdwFlags*/)
 {
-  return ::GetOverlappedResult(file_, lpOverlapped, lpNumberOfBytesTransferred, bWait);
+  return ::GetOverlappedResult(descriptor_, lpOverlapped, lpNumberOfBytesTransferred, bWait);
 }
 //---------------------------------------------------------------------------
 #elif HAVE_KQUEUE
@@ -1159,8 +1185,7 @@ void AsyncFile::redirectToStdin()
   }
   if( handle != NULL ){
     fileName("stdin");
-    handle_ = handle;
-    file_ = handle;
+    descriptor_ = handle;
     std_ = true;
   }
 #else
@@ -1178,8 +1203,7 @@ void AsyncFile::redirectToStdout()
   }
   if( handle != NULL ){
     fileName("stdout");
-    handle_ = handle;
-    file_ = handle;
+    descriptor_ = handle;
     std_ = true;
   }
 #else
@@ -1197,8 +1221,7 @@ void AsyncFile::redirectToStderr()
   }
   if( handle != NULL ){
     fileName("stderr");
-    handle_ = handle;
-    file_ = handle;
+    descriptor_ = handle;
     std_ = true;
   }
 #else
@@ -1231,17 +1254,19 @@ bool AsyncFile::redirectByName()
 DWORD AsyncFile::waitCommEvent()
 {
   DWORD evtMask;
-  if( fileMember() ){
-    fiber()->event_.type_ = etWaitCommEvent;
-    fiber()->event_.position_ = 0;
-    fiber()->thread()->postRequest(this);
-    fiber()->switchFiber(fiber()->mainFiber());
-    if( fiber()->event_.errno_ != 0 )
-      newObject<Exception>(fiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-    evtMask = fiber()->event_.evtMask_;
+  if( isRunInFiber() ){
+    Fiber * fiber = currentFiber();
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.type_ = etWaitCommEvent;
+    fiber->event_.position_ = 0;
+    fiber->thread()->postRequest(this);
+    fiber->switchFiber(fiber->mainFiber());
+    if( fiber->event_.errno_ != 0 )
+      newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    evtMask = fiber->event_.evtMask_;
   }
   else {
-    if( WaitCommEvent(handle_,&evtMask,NULL) == 0 ){
+    if( WaitCommEvent(descriptor_,&evtMask,NULL) == 0 ){
       int32_t err = GetLastError() + errorOffset;
       newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }

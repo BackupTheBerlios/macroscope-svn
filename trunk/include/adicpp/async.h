@@ -195,33 +195,13 @@ class AsyncDescriptorKey {
   public:
     ~AsyncDescriptorKey();
     AsyncDescriptorKey();
-#if defined(__WIN32__) || defined(__WIN64__)
-    AsyncDescriptorKey(SOCKET socket,int8_t specification = 0);
-    AsyncDescriptorKey(file_t file,int8_t specification = 0);
-#if _MSC_VER
-#pragma warning(push,3)
-#endif
-    struct {
-      union {
-        SOCKET socket_;
-        file_t file_;
-        file_t descriptor_;
-      };
-      int8_t  specification_;
-    };
-#if _MSC_VER
-#pragma warning(pop)
-#endif
-#else
     union {
-      file_t socket_;
-      file_t file_;
+      SOCKET socket_;
       file_t descriptor_;
     };
+    AsyncDescriptorKey(SOCKET socket);
     AsyncDescriptorKey(file_t descriptor);
-#endif
-    bool hashKeyEqu(const AsyncDescriptorKey & key) const;
-    uintptr_t hash() const;
+    file_t descriptor() const;
   protected:
   private:
     AsyncDescriptorKey(const AsyncDescriptorKey &){}
@@ -232,36 +212,11 @@ inline AsyncDescriptorKey::~AsyncDescriptorKey()
 {
 }
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-//---------------------------------------------------------------------------
-inline AsyncDescriptorKey::AsyncDescriptorKey() :
-  file_(INVALID_HANDLE_VALUE), specification_(0)
+inline AsyncDescriptorKey::AsyncDescriptorKey() : descriptor_(INVALID_HANDLE_VALUE)
 {
 }
 //---------------------------------------------------------------------------
-inline AsyncDescriptorKey::AsyncDescriptorKey(SOCKET socket, int8_t specification)
-  : socket_(socket), specification_(specification)
-{
-}
-//---------------------------------------------------------------------------
-inline AsyncDescriptorKey::AsyncDescriptorKey(file_t file, int8_t specification)
-  : file_(file), specification_(specification)
-{
-}
-//---------------------------------------------------------------------------
-inline bool AsyncDescriptorKey::hashKeyEqu(const AsyncDescriptorKey & key) const
-{
-  return memcmp(&socket_, &key.socket_, (size_t) ((int8_t *) &specification_ - (int8_t *) &socket_ + 1)) == 0;
-}
-//---------------------------------------------------------------------------
-inline uintptr_t AsyncDescriptorKey::hash() const
-{
-  return HF::hash(&socket_, (uintptr_t) ((int8_t *) &specification_ - (int8_t *) &socket_) + 1);
-}
-//---------------------------------------------------------------------------
-#else
-//---------------------------------------------------------------------------
-inline AsyncDescriptorKey::AsyncDescriptorKey() : descriptor_(-1)
+inline AsyncDescriptorKey::AsyncDescriptorKey(SOCKET socket) : socket_(socket)
 {
 }
 //---------------------------------------------------------------------------
@@ -269,17 +224,10 @@ inline AsyncDescriptorKey::AsyncDescriptorKey(file_t descriptor) : descriptor_(d
 {
 }
 //---------------------------------------------------------------------------
-inline bool AsyncDescriptorKey::hashKeyEqu(const AsyncDescriptorKey & key) const
+inline file_t AsyncDescriptorKey::descriptor() const
 {
-  return descriptor_ == key.descriptor_;
+  return descriptor_;
 }
-//---------------------------------------------------------------------------
-inline uintptr_t AsyncDescriptorKey::hash() const
-{
-  return HF::hash(&descriptor_,sizeof(descriptor_));
-}
-//---------------------------------------------------------------------------
-#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -293,11 +241,6 @@ class AsyncDescriptor : public AsyncDescriptorKey {
   public:
     virtual ~AsyncDescriptor();
     AsyncDescriptor();
-
-    AsyncDescriptor & attach();
-    AsyncDescriptor & detach();
-
-    Fiber * const & fiber() const;
 
     virtual bool isSocket() const;
 
@@ -322,38 +265,14 @@ class AsyncDescriptor : public AsyncDescriptorKey {
     virtual void openAPI();
     virtual void closeAPI();
   private:
-    Fiber * fiber_;
-
-    mutable EmbeddedListNode<AsyncDescriptor> fiberListNode_;
-    static EmbeddedListNode<AsyncDescriptor> & fiberListNode(const AsyncDescriptor & object){
-      return object.fiberListNode_;
+    mutable EmbeddedListNode<AsyncDescriptor> listNode_;
+    static EmbeddedListNode<AsyncDescriptor> & listNode(const AsyncDescriptor & object){
+      return object.listNode_;
     }
-    static AsyncDescriptor & fiberListNodeObject(const EmbeddedListNode<AsyncDescriptor> & node,AsyncDescriptor * p = NULL){
-      return node.object(p->fiberListNode_);
-    }
-
-    mutable EmbeddedListNode<AsyncDescriptor> clusterListNode_;
-    static EmbeddedListNode<AsyncDescriptor> & clusterListNode(const AsyncDescriptor & object){
-      return object.clusterListNode_;
-    }
-    static AsyncDescriptor & clusterListNodeObject(const EmbeddedListNode<AsyncDescriptor> & node,AsyncDescriptor * p = NULL){
-      return node.object(p->clusterListNode_);
+    static AsyncDescriptor & listNodeObject(const EmbeddedListNode<AsyncDescriptor> & node,AsyncDescriptor * p = NULL){
+      return node.object(p->listNode_);
     }
 };
-//---------------------------------------------------------------------------
-inline AsyncDescriptor::~AsyncDescriptor()
-{
-  assert( fiber_ == NULL );
-}
-//---------------------------------------------------------------------------
-inline AsyncDescriptor::AsyncDescriptor() : fiber_(NULL)
-{
-}
-//---------------------------------------------------------------------------
-inline Fiber * const & AsyncDescriptor::fiber() const
-{
-  return fiber_;
-}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

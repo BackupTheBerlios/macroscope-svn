@@ -45,6 +45,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
       else {
         currentFiber()->event_.mutex0_ = NULL;
       }
+      currentFiber()->event_.timeout_ = ~uint64_t(0);
       currentFiber()->event_.data1_ = skipCount;
       currentFiber()->event_.thread_ = thread;
       currentFiber()->event_.type_ = etStackBackTrace;
@@ -65,6 +66,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
     event.data1_ = skipCount;
     event.tid_ = (uintptr_t) GetCurrentThreadId();
     event.type_ = etStackBackTraceZero;
+    event.timeout_ = ~uint64_t(0);
     mutex.acquire();
     Requester::requester().postRequest(&event);
     mutex.acquire();
@@ -155,7 +157,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   assert( currentFiber()->event_.type_ == etDirectoryChangeNotification );
   if( currentFiber()->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
   if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
-    newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
   }
 #endif
 }
@@ -379,7 +381,9 @@ utf8::String screenString(const utf8::String & s)
   char * q = a;
   for( p = s.c_str(); *p != '\0'; p += seql, q += l ) screenChar(p,seql,q,l);
   a[len] = '\0';
-  return newObject<utf8::String::Container>(1,a.ptr(NULL));
+  utf8::String::Container * container = newObject<utf8::String::Container>(0,a.ptr());
+  a.ptr(NULL);
+  return container;
 }
 //---------------------------------------------------------------------------
 utf8::String unScreenChar(const utf8::String::Iterator & ii,uintptr_t & screenLen)
@@ -551,7 +555,9 @@ utf8::String unScreenString(const utf8::String & s)
     }
   }
   a[len] = '\0';
-  return newObject<utf8::String::Container>(1,a.ptr(NULL));
+  utf8::String::Container * container = newObject<utf8::String::Container>(0,a.ptr());
+  a.ptr(NULL);
+  return container;
 }
 //---------------------------------------------------------------------------
 uintptr_t enumStringParts(const utf8::String & s,const char * delim)
@@ -859,6 +865,7 @@ utf8::String absolutePathNameFromWorkDir(
 bool createDirectory(const utf8::String & name)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.string0_ = name;
     currentFiber()->event_.type_ = etCreateDir;
     currentFiber()->thread()->postRequest();
@@ -870,7 +877,7 @@ bool createDirectory(const utf8::String & name)
     if( currentFiber()->event_.errno_ == EEXIST ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -899,7 +906,7 @@ bool createDirectory(const utf8::String & name)
 #else
   if( err != 0 && err != EEXIST )
 #endif
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
   oserror(err);
   return err == 0;
 }
@@ -926,6 +933,7 @@ static int32_t removeDirectoryHelper(const utf8::String & name)
 bool removeDirectory(const utf8::String & name,bool recursive)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.string0_ = name;
     currentFiber()->event_.recursive_ = recursive;
     currentFiber()->event_.type_ = etRemoveDir;
@@ -939,7 +947,7 @@ bool removeDirectory(const utf8::String & name,bool recursive)
     if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = removeDirectoryHelper(name);
@@ -987,13 +995,14 @@ bool removeDirectory(const utf8::String & name,bool recursive)
 #endif
   oserror(err);
   if( err != 0 )
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
   return true;
 }
 //---------------------------------------------------------------------------
 bool remove(const utf8::String & name)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.string0_ = name;
     currentFiber()->event_.type_ = etRemoveFile;
     currentFiber()->thread()->postRequest();
@@ -1006,7 +1015,7 @@ bool remove(const utf8::String & name)
     if( currentFiber()->event_.errno_ == ENOENT ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -1032,7 +1041,7 @@ bool remove(const utf8::String & name)
       if( removeDirectory(name,true) ) return remove(name);
       err = oserror();
     }
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
   }
   return true;
 }
@@ -1196,6 +1205,7 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
 void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.string0_ = oldPathName;
     currentFiber()->event_.string1_ = newPathName;
     currentFiber()->event_.type_ = etRename;
@@ -1203,7 +1213,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etRename );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
   }
   else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1219,7 +1229,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
     if( ::rename(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString()) != 0 ){
 #endif
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
     }
   }
 }
@@ -1227,6 +1237,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
 void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uintptr_t bufferSize)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.string0_ = dstPathName;
     currentFiber()->event_.string1_ = srcPathName;
     currentFiber()->event_.count_ = bufferSize;
@@ -1235,7 +1246,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etRename );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + srcPathName)->throwSP();
   }
   else {
     if( bufferSize == 0 ) bufferSize = getpagesize();
@@ -1261,7 +1272,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     }
     if( r == 0 ){
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + srcPathName)->throwSP();
     }
 #else
     AsyncFile dstFile, srcFile;
@@ -1292,7 +1303,7 @@ void sleep(uint64_t timeout)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etTimer );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   else {
 #if HAVE_NANOSLEEP
@@ -1342,6 +1353,7 @@ void getDirList(
   bool exMaskAsList)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.dirList_ = &list;
     currentFiber()->event_.string0_ = dirAndMask;
     currentFiber()->event_.string1_ = exMask;
@@ -1353,7 +1365,7 @@ void getDirList(
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etDirList );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
     return;
   }
   int32_t err;
@@ -1385,7 +1397,7 @@ void getDirList(
     DIR * dir = opendir(anyPathName2HostPathName(path).getANSIString());
     if( dir == NULL ){
       err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
     }
     try {
       struct dirent * ent;
@@ -1395,7 +1407,7 @@ void getDirList(
       for(;;){
         if( readdir_r(dir,ent,&result) != 0 ){
           err = errno;
-          newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+          newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
         }
         if( result == NULL ) break;
 #else
@@ -1432,7 +1444,7 @@ void getDirList(
       } while( FindNextFileA(handle,&fda) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
       }
     }
     catch( ... ){
@@ -1445,7 +1457,7 @@ void getDirList(
     handle = FindFirstFileW(anyPathName2HostPathName(path + pathDelimiterStr + "*").getUNICODEString(),&fdw);
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
     }
     try {
       do {
@@ -1470,7 +1482,7 @@ void getDirList(
       } while( FindNextFileW(handle,&fdw) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
       }
     }
     catch( ... ){
@@ -1572,6 +1584,7 @@ pid_t execute(const utf8::String & name,const utf8::String & args,const Array<ut
 pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env,bool wait)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.args_ = &args;
     currentFiber()->event_.env_ = env;
     currentFiber()->event_.string0_ = name;
@@ -1581,7 +1594,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etExec );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
     return (pid_t) currentFiber()->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1682,13 +1695,14 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
 int32_t waitForProcess(pid_t pid)
 {
   if( currentFiber() != NULL ){
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.pid_ = pid;
     currentFiber()->event_.type_ = etWaitForProcess;
     currentFiber()->thread()->postRequest();
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etWaitForProcess );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<EFileError>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return (int32_t) currentFiber()->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -2518,14 +2532,14 @@ void initialize()
   utf8::String::initialize();
   new (argvPlaceHolder) Array<utf8::String>;
   strErrorInitialize();
+  Fiber::initialize();
+  BaseThread::initialize();
   AsyncFile::initialize();
   LogFile::initialize();
   Config::initialize();
 #ifdef NETMAIL_ENABLE_PROFILER
   TProfiler::initialize();
 #endif
-  Fiber::initialize();
-  BaseThread::initialize();
   ksock::api.initialize();
   try {
     utf8::String cwd(getCurrentDir());
@@ -2548,16 +2562,17 @@ void initialize()
 //---------------------------------------------------------------------------
 void cleanup()
 {
+  stdErr.close();
   machineUniqueCryptedKey().~String();
   ksock::api.cleanup();
-  BaseThread::cleanup();
-  Fiber::cleanup();
 #ifdef NETMAIL_ENABLE_PROFILER
   TProfiler::cleanup();
 #endif
   Config::cleanup();
   LogFile::cleanup();
   AsyncFile::cleanup();
+  BaseThread::cleanup();
+  Fiber::cleanup();
   strErrorCleanup();
   argv().~Array<utf8::String>();
   utf8::String::cleanup();

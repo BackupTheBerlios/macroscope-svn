@@ -118,7 +118,10 @@ InterlockedMutex::~InterlockedMutex()
 #if FAST_MUTEX
 #elif defined(__WIN32__) || defined(__WIN64__)
 //  if( memcmp(&cs_,&staticCS_,sizeof(cs_)) != 0 ) DeleteCriticalSection(&cs_);
-  if( sem_ != NULL ) CloseHandle(sem_);
+  if( sem_ != NULL ){
+    CloseHandle(sem_);
+    sem_ = NULL;
+  }
 #elif HAVE_PTHREAD_H
   if( mutex_ != NULL ){
     int r = pthread_mutex_destroy(&mutex_);

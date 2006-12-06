@@ -28,7 +28,6 @@ ADD_LIBRARY(ksys STATIC
   conf.cpp
   except.cpp
   fetch.cpp
-  fhc.cpp
   fiber.cpp
   log.cpp
   lzo.cpp

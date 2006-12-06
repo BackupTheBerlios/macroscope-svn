@@ -55,11 +55,10 @@ void Server::open()
     uintptr_t u;
   };
   spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",8);
-  /*for( u = 1; u < spoolFibers_; u <<= 1 );
+  for( u = 1; u < spoolFibers_; u <<= 1 );
   spoolFibers_ = u;
   while( u > 0 ) attachFiber(newObjectV<SpoolWalker>(*this,--u));
-  attachFiber(newObjectV<SpoolWalker>(*this,--i)); // lost sheeps collector fiber
-  */
+  attachFiber(newObjectV<SpoolWalker>(*this,--i)); // lost sheeps collector fiber  
 //  for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fibers",8; i > 0; i-- )
 //    attachFiber(newObjectV<MailQueueWalker>(*this));
 }

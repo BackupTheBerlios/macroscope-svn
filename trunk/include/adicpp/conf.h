@@ -192,11 +192,14 @@ class Config : public ConfigSection {
     Config & silent(bool a);
     Config & save(AsyncFile * file = NULL);
   protected:
-    Config &                    parseSectionHeader(ConfigSection & root);
-    Config &                    parseSectionBody(ConfigSection & root);
+    Config & parseSectionHeader(ConfigSection & root);
+    Config & parseSectionBody(ConfigSection & root);
   private:
     static uint8_t defaultFileName_[];
     AsyncFile file_;
+    uintptr_t codePage_;
+    AutoPtr<AsyncFile::LineGetBuffer> buffer_;
+
     time_t mtime_;
     Array<utf8::String> security_;
     uintptr_t maxTryOpenCount_;
@@ -222,7 +225,6 @@ class Config : public ConfigSection {
     utf8::String::Iterator  aheadi_;
 
     uintptr_t line_;
-    uintptr_t codePage_;
     bool silent_;
 
     utf8::String  getToken(TokenType & tt, bool throwUnexpectedEof = false);

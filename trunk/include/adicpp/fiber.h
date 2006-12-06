@@ -38,6 +38,7 @@ class Fiber {
   friend class BaseServer;
   friend class Requester;
   friend class AsyncDescriptor;
+  friend Fiber * currentFiber();
   public:
     virtual ~Fiber();
     Fiber();
@@ -50,12 +51,7 @@ class Fiber {
     void DECLSPEC_NOTHROW switchFiber(Fiber * fiber) GNUG_NOTHROW;
 
     Fiber * const mainFiber() const;
-
     BaseThread * const & thread() const;
-
-    void attachDescriptor(AsyncDescriptor & descriptor);
-    void detachDescriptor(AsyncDescriptor & descriptor);
-
     AsyncEvent event_;
   protected:
     bool started_;
@@ -74,11 +70,6 @@ class Fiber {
     static void switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber * fiber) GNUG_NOTHROW GNUG_CDECL;
 #endif
     BaseThread * thread_;
-    EmbeddedList<
-      AsyncDescriptor,
-      AsyncDescriptor::fiberListNode,
-      AsyncDescriptor::fiberListNodeObject
-    > descriptorsList_;
 
     Fiber & allocateStack(size_t size,Fiber * mainFiber,void * = NULL,void * = NULL,void * = NULL,uintptr_t dummy1 = 0xAAAAAAAA,uintptr_t dummy2 = 0xBBBBBBBB);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -87,8 +78,6 @@ class Fiber {
     Fiber & clearFiber();
     Fiber & convertThreadToFiber();
 #endif
-
-    void detachDescriptors();
 
     mutable EmbeddedListNode<Fiber> node_;
     static EmbeddedListNode<Fiber> & node(const Fiber & object){
@@ -99,7 +88,7 @@ class Fiber {
     }
 
     static uint8_t currentFiberPlaceHolder[];
-    friend Fiber * currentFiber();
+
     static void initialize();
     static void cleanup();
 };
@@ -196,19 +185,6 @@ inline bool isRunInFiber()
   return currentFiber() != NULL;
 }
 //---------------------------------------------------------------------------
-inline AsyncDescriptor & AsyncDescriptor::attach()
-{
-  Fiber * fiber = currentFiber();
-  if( fiber != NULL ) fiber->attachDescriptor(*this);
-  return *this;
-}
-//------------------------------------------------------------------------------
-inline AsyncDescriptor & AsyncDescriptor::detach()
-{
-  if( fiber_ != NULL ) fiber_->detachDescriptor(*this);
-  return *this;
-}
-//------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 typedef EmbeddedList<AsyncEvent,AsyncEvent::node,AsyncEvent::nodeObject> Events;
@@ -372,9 +348,20 @@ class Requester {
     void postRequest(AsyncDescriptor * descriptor);
     void postRequest(AsyncEvent * event);
 
+    void attachDescriptor(AsyncDescriptor & descriptor);
+    void detachDescriptor(AsyncDescriptor & descriptor);
+    void shutdownDescriptors();
+
     static Requester & requester();
   protected:
   private:
+    InterlockedMutex mutex_;
+    EmbeddedList<
+      AsyncDescriptor,
+      AsyncDescriptor::listNode,
+      AsyncDescriptor::listNodeObject
+    > descriptors_;
+
     InterlockedMutex ioRequestsMutex_;
     Vector<AsyncIoSlave> ioSlaves_;
     int64_t ioSlavesSweepTime_;
@@ -411,6 +398,28 @@ class Requester {
     void operator = (const Requester &){}
 };
 //---------------------------------------------------------------------------
+inline void Requester::attachDescriptor(AsyncDescriptor & descriptor)
+{
+  AutoLock<InterlockedMutex> lock(mutex_);
+  descriptors_.insToTail(descriptor);
+}
+//---------------------------------------------------------------------------
+inline void Requester::detachDescriptor(AsyncDescriptor & descriptor)
+{
+  AutoLock<InterlockedMutex> lock(mutex_);
+  descriptors_.remove(descriptor);
+}
+//---------------------------------------------------------------------------
+inline void Requester::shutdownDescriptors()
+{
+  AutoLock<InterlockedMutex> lock(mutex_);
+  EmbeddedListNode<AsyncDescriptor> * adp;
+  for( adp = descriptors_.first(); adp != NULL; adp = adp->next() ){
+    AsyncDescriptor::listNodeObject(*adp).shutdown2();
+    AsyncDescriptor::listNodeObject(*adp).close2();
+  }
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class BaseThread : public Thread, public Fiber {
@@ -441,11 +450,6 @@ class BaseThread : public Thread, public Fiber {
       Fiber::node,
       Fiber::nodeObject
     > fibers_;
-    EmbeddedList<
-      AsyncDescriptor,
-      AsyncDescriptor::clusterListNode,
-      AsyncDescriptor::clusterListNodeObject
-    > descriptorsList_;
 //    uintptr_t maxStackSize_;
     uintptr_t mfpt_;
 
@@ -455,9 +459,6 @@ class BaseThread : public Thread, public Fiber {
     void queue();
     void sweepFiber(Fiber * fiber);
     void detectMaxFiberStackSize();
-
-    void attachDescriptor(AsyncDescriptor & descriptor,Fiber & toFiber);
-    void detachDescriptor(AsyncDescriptor & descriptor);
 
     void threadExecute();
     void fiberExecute() {}
@@ -493,16 +494,6 @@ inline void BaseThread::postRequest(AsyncDescriptor * descriptor)
 inline Requester & BaseThread::requester()
 {
   return *reinterpret_cast<Requester *>(requester_);
-}
-//------------------------------------------------------------------------------
-inline void Fiber::attachDescriptor(AsyncDescriptor & descriptor)
-{
-  thread_->attachDescriptor(descriptor,*this);
-}
-//------------------------------------------------------------------------------
-inline void Fiber::detachDescriptor(AsyncDescriptor & descriptor)
-{
-  thread_->detachDescriptor(descriptor);
 }
 //------------------------------------------------------------------------------
 inline Fiber * const Fiber::mainFiber() const

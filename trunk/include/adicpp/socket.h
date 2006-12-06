@@ -169,6 +169,11 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     AsyncSocket & maxSendSize(uintptr_t mss);
     const uintptr_t & maxSendSize() const;
 
+    AsyncSocket & recvTimeout(uint64_t a);
+    const uint64_t & recvTimeout() const;
+    AsyncSocket & sendTimeout(uint64_t a);
+    const uint64_t & sendTimeout() const;
+
     enum AuthErrorType { 
       aeOK,
       aeMagic = 2000,
@@ -234,6 +239,8 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     static const uint8_t authMagic_[16];
     uintptr_t maxRecvSize_;
     uintptr_t maxSendSize_;
+    uint64_t recvTimeout_;
+    uint64_t sendTimeout_;
     uint64_t srb_, nrb_, ssb_, nsb_;
 
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -417,6 +424,28 @@ inline AsyncSocket & AsyncSocket::operator >>(int64_t & a)
 inline AsyncSocket & AsyncSocket::operator >>(uint64_t & a)
 {
   return read(&a, sizeof(a));
+}
+//---------------------------------------------------------------------------
+inline AsyncSocket & AsyncSocket::recvTimeout(uint64_t a)
+{
+  recvTimeout_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uint64_t & AsyncSocket::recvTimeout() const
+{
+  return recvTimeout_;
+}
+//---------------------------------------------------------------------------
+inline AsyncSocket & AsyncSocket::sendTimeout(uint64_t a)
+{
+  sendTimeout_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uint64_t & AsyncSocket::sendTimeout() const
+{
+  return sendTimeout_;
 }
 //---------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::maxRecvSize(uintptr_t mrs)
@@ -623,6 +652,8 @@ inline EAsyncSocket::EAsyncSocket(int32_t code,const char * what) : ksys::Except
 inline EAsyncSocket::EAsyncSocket(int32_t code,const utf8::String & what) : ksys::Exception(code,what)
 {
 }
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 void initialize();
 void cleanup();

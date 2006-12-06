@@ -121,9 +121,8 @@ static void saveSectionHelper(
 ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,bool recursive,uintptr_t level)
 {
   if( level == 0 ){
-    file.detach();
     if( !file.isOpen() ) file.readOnly(false).exclusive(true).createIfNotExist(true).open();
-    file.attach().resize(0);
+    file.resize(0);
   }
   uintptr_t i;
   utf8::String::Stream stream;
@@ -208,12 +207,12 @@ Config::~Config()
 //---------------------------------------------------------------------------
 Config::Config() : 
   ConfigSection(utf8::String()),
+  codePage_(CP_ACP),
   mtime_(0),
   maxTryOpenCount_(3),
   minTimeBetweenTryOpen_(1),
   maxTimeBetweenTryOpen_(1000000),
   aheadi_(ahead_),
-  codePage_(CP_ACP),
   silent_(false)
 {
 }
@@ -231,11 +230,9 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   uintptr_t c, ctype;
   utf8::String token;
   t = tt = ttUnknown;
-  AsyncFile::LineGetBuffer buffer(file_);
-  buffer.codePage_ = codePage_;
   for(;;){
     if( aheadi_.eof() ){
-      if( file_.gets(ahead_,&buffer) ){
+      if( file_.gets(ahead_,buffer_) ){
         ahead_.resize(0);
         t = ttEof;
       }
@@ -481,11 +478,12 @@ Config & Config::parse()
     rnd->randomize();
     for( intptr_t i = maxTryOpenCount_ - 1; i >= 0; i-- ){
       try {
-        file_.detach();
         file_.readOnly(true).exclusive(true).createIfNotExist(false).open();
 /*#ifndef NDEBUG
         fprintf(stderr,"config file %s used\n", (const char *) file_.fileName().getANSIString());
 #endif*/
+        buffer_ = newObjectV<AsyncFile::LineGetBuffer>(file_);
+        buffer_->codePage_ = codePage_;
         line_ = 0;
         lastTokenType_ = ttUnknown;
         ahead_.resize(0);
@@ -502,6 +500,7 @@ Config & Config::parse()
         mtime_ = st.st_mtime;
       }
       catch( ExceptionSP & e ){
+        buffer_ = NULL;
         file_.close();
 #if defined(__WIN32__) || defined(__WIN64__)
         if( e->code() != ERROR_SHARING_VIOLATION + errorOffset &&
@@ -511,6 +510,7 @@ Config & Config::parse()
 #endif
           throw;
       }
+      buffer_ = NULL;
       file_.close();
       if( i > 0 )
         sleep(rnd->random(

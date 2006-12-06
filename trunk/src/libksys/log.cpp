@@ -103,7 +103,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
     struct timeval tv = time2Timeval(getlocaltimeofday());
     struct tm t = time2tm(timeval2Time(tv));
     AutoPtr<char> buf;
-    bool post = false;
+    bool post = false, post2 = false;
     try {
       char buf[128];
       union {
@@ -169,6 +169,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         memcpy(buffer_.ptr() + bufferPos_,buf2,a);
         utf8::utf8s2mbcs(codePage_,buffer_.ptr() + bufferPos_ + a,l,stream.plane(),stream.count());
         bufferPos_ += a + l;
+        post2 = bufferPos_ >= getpagesize() * 16;
       }
       catch( ... ){
         post = false;
@@ -218,6 +219,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
       post = false;
     }
     if( post ) bufferSemaphore_.post();
+    if( post2 ) bufferSemaphore_.post();
   }
   return *this;
 }
