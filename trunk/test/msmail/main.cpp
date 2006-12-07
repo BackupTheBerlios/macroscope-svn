@@ -30,13 +30,33 @@
 #include "version.c"
 #undef _VERSION_C_AS_HEADER_
 //------------------------------------------------------------------------------
+void throwCycleThrow()
+{
+  newObject<Exception>(-1,__PRETTY_FUNCTION__ + utf8::String("12345"))->throwSP();
+}
+//------------------------------------------------------------------------------
+void throwCycle()
+{
+  int32_t code;
+  for( intptr_t i = 100000; i > 0; i-- ){
+    try {
+      throwCycleThrow();
+    }
+    catch( ExceptionSP & e ){
+      code = e->code();
+    }
+  }
+}
+//------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-//  Sleep(15000);
+//   Sleep(15000);
 //  _set_amblksiz(1024);
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
+  //throwCycle();
+  //throwCycle();
   try {
 //    stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
 
@@ -69,20 +89,30 @@ int main(int _argc,char * _argv[])
 #endif
     service->msmailConfig()->silent(true);
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--version") == 0 ){
-        stdErr.debug(9,utf8::String::Stream() << msmail_version.tex_ << "\n");
-        fprintf(stdout,"%s\n",msmail_version.tex_);
-        dispatch = false;
-        continue;
+      if( argv()[u].strcmp("--chdir") == 0 && u + 1 < argv().count() ){
+        changeCurrentDir(argv()[u + 1]);
       }
-      if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
         Config::defaultFileName(argv()[u + 1]);
         service->msmailConfig()->fileName(argv()[u + 1]);
       }
       else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--install") == 0 ){
+    }
+    for( u = 1; u < argv().count(); u++ ){
+      if( argv()[u].strcmp("--version") == 0 ){
+        stdErr.debug(9,utf8::String::Stream() << msmail_version.tex_ << "\n");
+        fprintf(stdout,"%s\n",msmail_version.tex_);
+        dispatch = false;
+        continue;
+      }
+      if( argv()[u].strcmp("--install") == 0 ){
+        for( uintptr_t j = u + 1; j < argv().count(); j++ )
+          if( argv()[j].isSpace() )
+            service->args(service->args() + " \"" + argv()[j] + "\"");
+          else
+            service->args(service->args() + " " + argv()[j]);
         services.install();
         dispatch = false;
       }

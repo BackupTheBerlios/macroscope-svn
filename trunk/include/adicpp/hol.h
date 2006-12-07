@@ -417,7 +417,7 @@ template< class TKey,class TObj> class HashedObjectList {
     HashedObjectList< TKey,TObj> &      clear();
     HashedObjectList< TKey,TObj> &      assign(const HashedObjectList< TKey,TObj> & source);
     HashedObjectList< TKey,TObj> &      transplant(HashedObjectList< TKey,TObj> & donor);
-    uintptr_t                           add(TObj * object, const TKey & key, HashedObjectListItem< TKey,TObj> ** pItem = NULL);
+    uintptr_t                           add(TObj * object, const TKey & key, HashedObjectListItem< TKey,TObj> ** pItem = NULL,bool throwIfExist = true);
     HashedObjectList< TKey,TObj> &      removeByKey(const TKey & key);
     HashedObjectList< TKey,TObj> &      removeByObject(TObj * object);
     HashedObjectList< TKey,TObj> &      removeByIndex(uintptr_t index);
@@ -466,7 +466,7 @@ template< class TKey,class TObj> class HashedObjectList {
     void                                reHash(uintptr_t slotCount);
     void                                renumeration(uintptr_t index);
 
-    uintptr_t                           addHelper(HashedObjectListItem< TKey,TObj> * item);
+    uintptr_t                           addHelper(HashedObjectListItem< TKey,TObj> * & item,bool throwIfExists);
   private:
     HashedObjectList(const HashedObjectList< TKey,TObj> &){}
     void operator =(const HashedObjectList< TKey,TObj> &){}
@@ -665,14 +665,17 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplant(HashedOb
 }
 //---------------------------------------------------------------------------
 template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::addHelper(HashedObjectListItem< TKey,TObj> * item)
+uintptr_t HashedObjectList< TKey,TObj>::addHelper(HashedObjectListItem<TKey,TObj> * & item,bool throwIfExists)
 {
-  HashedObjectListItem< TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
-  pKeyItem = keyHash_.find(item->key(), caseSensitive_);
+  HashedObjectListItem<TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
+  pKeyItem = keyHash_.find(item->key(),caseSensitive_);
   pObjectItem = objectHash_.find(item->object());
   pIndexItem = indexHash_.find(item->index());
-  if( *pKeyItem != NULL || *pObjectItem != NULL || *pIndexItem != NULL )
-    newObject<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
+  if( *pKeyItem != NULL || *pObjectItem != NULL || *pIndexItem != NULL ){
+    if( throwIfExists ) newObject<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
+    item = *pKeyItem;
+    return item->index();
+  }
   *pKeyItem = item;
   *pObjectItem = item;
   *pIndexItem = item;
@@ -755,14 +758,15 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeIndex(uintptr
 }
 //---------------------------------------------------------------------------
 template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::add(TObj * object, const TKey & key, HashedObjectListItem< TKey,TObj> ** pItem)
+uintptr_t HashedObjectList<TKey,TObj>::add(TObj * object,const TKey & key,HashedObjectListItem<TKey,TObj> ** pItem,bool throwIfExist)
 {
-  AutoPtr<HashedObjectListItem< TKey,TObj> > item(
+  AutoPtr<HashedObjectListItem<TKey,TObj> > item(
     newObject<HashedObjectListItem<TKey,TObj> >(key, object, count_)
   );
-  uintptr_t i = addHelper(item.ptr());
-  if( pItem != NULL ) *pItem = item.ptr();
-  item.ptr(NULL);
+  HashedObjectListItem< TKey,TObj> * p = item.ptr();
+  uintptr_t i = addHelper(p,throwIfExist);
+  if( pItem != NULL ) *pItem = p;
+  if( p == item.ptr() ) item.ptr(NULL);
   return i;
 }
 //---------------------------------------------------------------------------

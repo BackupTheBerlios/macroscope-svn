@@ -47,6 +47,7 @@ l2:;
 AsyncSocket::~AsyncSocket()
 {
   close();
+  ksys::Requester::requester().detachDescriptor(*this);
 }
 //------------------------------------------------------------------------------
 AsyncSocket::AsyncSocket() :
@@ -56,6 +57,7 @@ AsyncSocket::AsyncSocket() :
 #if defined(__WIN32__) || defined(__WIN64__)
   socket_ = INVALID_SOCKET;
 #endif
+  ksys::Requester::requester().attachDescriptor(*this);
 }
 //------------------------------------------------------------------------------
 bool AsyncSocket::isSocket() const

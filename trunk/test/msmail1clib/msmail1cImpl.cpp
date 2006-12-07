@@ -36,11 +36,29 @@
 //------------------------------------------------------------------------------
 Cmsmail1c::~Cmsmail1c()
 {
-  for( intptr_t i = hashedArrays_.count() - 1; i >= 0; i-- )
-    hashedArrays_[i].drop();
 }
 //------------------------------------------------------------------------------
-Cmsmail1c::Cmsmail1c() :
+Cmsmail1c::Cmsmail1c()
+{
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+Cmsmail1c::msmail1c::~msmail1c()
+{
+  client_.close();
+  if( pAsyncEvent_ != NULL ){
+    pAsyncEvent_->Release();
+    pAsyncEvent_ = NULL;
+  }
+  if( pBackConnection_ != NULL ) pBackConnection_->Release();
+  for( intptr_t i = hashedArrays_.count() - 1; i >= 0; i-- )
+    hashedArrays_[i].drop();
+  hashedArrays_.clear();
+  functions_.drop();
+}
+//------------------------------------------------------------------------------
+Cmsmail1c::msmail1c::msmail1c() :
   pBackConnection_(NULL),
   pAsyncEvent_(NULL),
   active_(false),
@@ -55,6 +73,7 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
 {
 //  stdErr.enableDebugLevel(9);
   try {
+    msmail1c_ = newObject<msmail1c>();
     static const wchar_t * fn[] = {
       L"LockFile", L"Ѕлокировать‘айл",
       L"UnlockFile", L"–азблокировать‘айл",
@@ -86,11 +105,11 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"InstallDeviceScanner", L"”становить—канер”стройства",
       L"RemoveDeviceScanner", L"”далить—канер”стройства"
     };
-    functions_.estimatedChainLength(1);
+    msmail1c_->functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
 //    functions_.thresholdDenominator(8);
     for( uintptr_t i = 0; i < sizeof(fn) / sizeof(fn[0]); i++ )
-      functions_.insert(*newObject<Function>(fn[i],uint8_t(i / 2)));
+      msmail1c_->functions_.insert(*newObject<msmail1c::Function>(fn[i],uint8_t(i / 2)));
   }
   catch( ... ){
     return E_FAIL;
@@ -98,23 +117,14 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
 //  uintptr_t max = functions_.maxChainLength();
 //  uintptr_t min = functions_.minChainLength();
 //  uintptr_t avg = functions_.avgChainLength();
-  pBackConnection_ = pBackConnection;
-  pBackConnection_->AddRef();
+  msmail1c_->pBackConnection_ = pBackConnection;
+  msmail1c_->pBackConnection_->AddRef();
   return S_OK;
 }
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::Done()
 {
-  client_.close();
-  if( pAsyncEvent_ != NULL ){
-    pAsyncEvent_->Release();
-    pAsyncEvent_ = NULL;
-  }
-  if( pBackConnection_ != NULL ) pBackConnection_->Release();
-  for( intptr_t i = hashedArrays_.count() - 1; i >= 0; i-- )
-    hashedArrays_[i].drop();
-  hashedArrays_.clear();
-  functions_.drop();
+  msmail1c_ = NULL;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -435,12 +445,12 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
   try {
     switch( lPropNum ){
       case 0 :
-        V_BSTR(pvarPropVal) = name_.getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->name_.getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 1 :
         if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
-        if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = active_ ? 1 : 0;
+        if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = msmail1c_->active_ ? 1 : 0;
         break;
       case 2 :
         if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
@@ -474,30 +484,30 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         break;
       case 3 :
         if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
-        if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = lastError_;
+        if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = msmail1c_->lastError_;
         break;
       case 4 : // User
-        V_BSTR(pvarPropVal) = user_.getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->user_.getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 5 : // Key
-        V_BSTR(pvarPropVal) = key_.getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->key_.getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 6 : // Groups
-        V_BSTR(pvarPropVal) = groups_.getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->groups_.getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 7 : // MailServer
-        V_BSTR(pvarPropVal) = mailServer_.getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->mailServer_.getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 8 : // ConfigFile
-        V_BSTR(pvarPropVal) = configFile_.getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->configFile_.getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 9 : // LogFile
-        V_BSTR(pvarPropVal) = logFile_.getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->logFile_.getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 10 : // LocalTime
@@ -513,7 +523,7 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 13 : // RandomNumber
-        V_BSTR(pvarPropVal) = utf8::int2Str(rnd_.random()).getOLEString();
+        V_BSTR(pvarPropVal) = utf8::int2Str(msmail1c_->rnd_.random()).getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 14 : // Version
@@ -524,17 +534,17 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
         if( SUCCEEDED(hr) ){
           V_I4(pvarPropVal) = 0;
-          if( active_ ){
-            AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
-            V_I4(pvarPropVal) = client_.connected_ ? 1 : 0;
+          if( msmail1c_->active_ ){
+            AutoLock<FiberInterlockedMutex> lock(msmail1c_->client_.connectedMutex_);
+            V_I4(pvarPropVal) = msmail1c_->client_.connected_ ? 1 : 0;
           }
         }
         break;
       case 16 : // WorkServer
         {
-          AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
-          if( active_ && client_.connected_ ){
-            V_BSTR(pvarPropVal) = client_.connectedToServer_.getOLEString();
+          AutoLock<FiberInterlockedMutex> lock(msmail1c_->client_.connectedMutex_);
+          if( msmail1c_->active_ && msmail1c_->client_.connected_ ){
+            V_BSTR(pvarPropVal) = msmail1c_->client_.connectedToServer_.getOLEString();
             V_VT(pvarPropVal) = VT_BSTR;
           }
           else {
@@ -543,28 +553,28 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         }
         break;
       case 17 : // ReceivedMessagesList
-        V_BSTR(pvarPropVal) = client_.getReceivedMessageList().getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->client_.getReceivedMessageList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 18 : // DBList
-        V_BSTR(pvarPropVal) = client_.getDBList().getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->client_.getDBList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 19 : // DBGroupList
-        V_BSTR(pvarPropVal) = client_.getDBGroupList().getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->client_.getDBGroupList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 20 : // UserList
-        V_BSTR(pvarPropVal) = client_.getUserList().getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->client_.getUserList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 21 : // SendingMessagesList
-        V_BSTR(pvarPropVal) = client_.getSendingMessageList().getOLEString();
+        V_BSTR(pvarPropVal) = msmail1c_->client_.getSendingMessageList().getOLEString();
         V_VT(pvarPropVal) = VT_BSTR;
         break;
       case 22 : // MK1100Port
         if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
-        if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = client_.mk1100Port_;
+        if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = msmail1c_->client_.mk1100Port_;
         break;
     }
   }
@@ -583,46 +593,46 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
     switch( lPropNum ){
       case 0 :
         if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
-        if( SUCCEEDED(hr) ) name_ = V_BSTR(varPropVal);
+        if( SUCCEEDED(hr) ) msmail1c_->name_ = V_BSTR(varPropVal);
         break;
       case 1 :
         if( V_VT(varPropVal) != VT_I4 ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4);
         if( SUCCEEDED(hr) ){
-          if( V_I4(varPropVal) != 0 && pAsyncEvent_ == NULL ){
-            hr = pBackConnection_->QueryInterface(IID_IAsyncEvent,(void **) &pAsyncEvent_);
-            if( SUCCEEDED(hr) ) hr = pAsyncEvent_->SetEventBufferDepth(1000000);
+          if( V_I4(varPropVal) != 0 && msmail1c_->pAsyncEvent_ == NULL ){
+            hr = msmail1c_->pBackConnection_->QueryInterface(IID_IAsyncEvent,(void **) &msmail1c_->pAsyncEvent_);
+            if( SUCCEEDED(hr) ) hr = msmail1c_->pAsyncEvent_->SetEventBufferDepth(1000000);
           }
           if( SUCCEEDED(hr) ){
             if( V_I4(varPropVal) != 0 ){
-              client_.close();
-              active_ = false;
-              client_.pAsyncEvent_ = pAsyncEvent_;
-              client_.name_ = name_;
-              client_.user_ = user_;
-              client_.key_ = key_;
-              client_.groups_ = groups_;
-              client_.mailServer_ = mailServer_;
-              client_.configFile_ = configFile_;
-              client_.logFile_ = logFile_;
-              stdErr.fileName(logFile_);
-              client_.config_->fileName(configFile_).silent(true).parse();
-              stdErr.rotationThreshold(client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
-              stdErr.rotatedFileCount(client_.config_->value("debug_file_rotate_count",10));
-              stdErr.setDebugLevels(client_.config_->value("debug_levels","+0,+1,+2,+3"));
+              msmail1c_->client_.close();
+              msmail1c_->active_ = false;
+              msmail1c_->client_.pAsyncEvent_ = msmail1c_->pAsyncEvent_;
+              msmail1c_->client_.name_ = msmail1c_->name_;
+              msmail1c_->client_.user_ = msmail1c_->user_;
+              msmail1c_->client_.key_ = msmail1c_->key_;
+              msmail1c_->client_.groups_ = msmail1c_->groups_;
+              msmail1c_->client_.mailServer_ = msmail1c_->mailServer_;
+              msmail1c_->client_.configFile_ = msmail1c_->configFile_;
+              msmail1c_->client_.logFile_ = msmail1c_->logFile_;
+              stdErr.fileName(msmail1c_->logFile_);
+              msmail1c_->client_.config_->fileName(msmail1c_->configFile_).silent(true).parse();
+              stdErr.rotationThreshold(msmail1c_->client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
+              stdErr.rotatedFileCount(msmail1c_->client_.config_->value("debug_file_rotate_count",10));
+              stdErr.setDebugLevels(msmail1c_->client_.config_->value("debug_levels","+0,+1,+2,+3"));
               stdErr.fileName(
-                client_.config_->value("log_file",stdErr.fileName())
+                msmail1c_->client_.config_->value("log_file",stdErr.fileName())
               );
-              client_.config_->silent(false);
-              client_.open();
-              active_ = true;
+              msmail1c_->client_.config_->silent(false);
+              msmail1c_->client_.open();
+              msmail1c_->active_ = true;
             }
             else {
-              client_.close();
-              active_ = false;
+              msmail1c_->client_.close();
+              msmail1c_->active_ = false;
             }
-            if( V_I4(varPropVal) == 0 && pAsyncEvent_ != NULL ){
-              pAsyncEvent_->Release();
-              pAsyncEvent_ = NULL;
+            if( V_I4(varPropVal) == 0 && msmail1c_->pAsyncEvent_ != NULL ){
+              msmail1c_->pAsyncEvent_->Release();
+              msmail1c_->pAsyncEvent_ = NULL;
             }
           }
         }
@@ -661,27 +671,27 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
         break;
       case 4 : // User
         if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
-        if( SUCCEEDED(hr) ) user_ = V_BSTR(varPropVal);
+        if( SUCCEEDED(hr) ) msmail1c_->user_ = V_BSTR(varPropVal);
         break;
       case 5 : // Key
         if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
-        if( SUCCEEDED(hr) ) key_ = V_BSTR(varPropVal);
+        if( SUCCEEDED(hr) ) msmail1c_->key_ = V_BSTR(varPropVal);
         break;
       case 6 : // Groups
         if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
-        if( SUCCEEDED(hr) ) groups_ = V_BSTR(varPropVal);
+        if( SUCCEEDED(hr) ) msmail1c_->groups_ = V_BSTR(varPropVal);
         break;
       case 7 : // MailServer
         if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
-        if( SUCCEEDED(hr) ) mailServer_ = V_BSTR(varPropVal);
+        if( SUCCEEDED(hr) ) msmail1c_->mailServer_ = V_BSTR(varPropVal);
         break;
       case 8 : // ConfigFile
         if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
-        if( SUCCEEDED(hr) ) configFile_ = V_BSTR(varPropVal);
+        if( SUCCEEDED(hr) ) msmail1c_->configFile_ = V_BSTR(varPropVal);
         break;
       case 9 : // LogFile
         if( V_VT(varPropVal) != VT_BSTR ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_BSTR);
-        if( SUCCEEDED(hr) ) logFile_ = V_BSTR(varPropVal);
+        if( SUCCEEDED(hr) ) msmail1c_->logFile_ = V_BSTR(varPropVal);
         break;
       case 10 : // LocalTime
         hr = E_NOTIMPL;
@@ -801,7 +811,7 @@ HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::FindMethod(BSTR bstrMethodName,long * plMethodNum)
 {
-  Function * f = functions_.find(Function(bstrMethodName));
+  msmail1c::Function * f = msmail1c_->functions_.find(msmail1c::Function(bstrMethodName));
   *plMethodNum = f != NULL ? f->value_ : -1;
   return f != NULL ? S_OK : DISP_E_MEMBERNOTFOUND;
 }
@@ -1236,12 +1246,12 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 6 : // NewMessage
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
-          V_BSTR(pvarRetValue) = client_.newMessage().getOLEString();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          V_BSTR(pvarRetValue) = msmail1c_->client_.newMessage().getOLEString();
           V_VT(pvarRetValue) = VT_BSTR;
           break;
         case 7 : // SetMessageAttribute
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0; // UUID of Message
@@ -1259,7 +1269,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                     if( SUCCEEDED(hr) ){
                       if( V_VT(pv2) != VT_BSTR ) hr = VariantChangeTypeEx(pv2,pv2,0,0,VT_BSTR);
                       if( SUCCEEDED(hr) ){
-                        V_BSTR(pvarRetValue) = client_.value(V_BSTR(pv0),V_BSTR(pv1),V_BSTR(pv2)).getOLEString();
+                        V_BSTR(pvarRetValue) = msmail1c_->client_.value(V_BSTR(pv0),V_BSTR(pv1),V_BSTR(pv2)).getOLEString();
                         V_VT(pvarRetValue) = VT_BSTR;
                       }
                     }
@@ -1271,7 +1281,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 8 : // GetMessageAttribute
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0; // UUID of Message
@@ -1284,7 +1294,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) )
-                    hr = client_.value(V_BSTR(pv0),V_BSTR(pv1),pvarRetValue);
+                    hr = msmail1c_->client_.value(V_BSTR(pv0),V_BSTR(pv1),pvarRetValue);
                 }
               }
             }
@@ -1292,7 +1302,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 9 : // SendMessage
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1305,8 +1315,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_I4 ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
                   if( SUCCEEDED(hr) ){
-                    V_I4(pvarRetValue) = client_.sendMessage(V_BSTR(pv0),V_I4(pv1) != 0) ? 1 : 0;
-                    lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
+                    V_I4(pvarRetValue) = msmail1c_->client_.sendMessage(V_BSTR(pv0),V_I4(pv1) != 0) ? 1 : 0;
+                    msmail1c_->lastError_ = msmail1c_->client_.workFiberLastError_ - (msmail1c_->client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
                   }
                 }
               }
@@ -1315,7 +1325,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 10 : // RemoveMessage
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1328,8 +1338,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_I4 ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_I4);
                   if( SUCCEEDED(hr) ){
-                    V_I4(pvarRetValue) = client_.removeMessage(V_BSTR(pv0),V_I4(pv1) != 0);
-                    lastError_ = client_.workFiberLastError_ - (client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
+                    V_I4(pvarRetValue) = msmail1c_->client_.removeMessage(V_BSTR(pv0),V_I4(pv1) != 0);
+                    msmail1c_->lastError_ = msmail1c_->client_.workFiberLastError_ - (msmail1c_->client_.workFiberLastError_ >= errorOffset ? errorOffset : 0);
                   }
                 }
               }
@@ -1338,12 +1348,12 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 11 : // GetDB
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
-          client_.getDB();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          msmail1c_->client_.getDB();
           V_I4(pvarRetValue) = 1;
           break;
         case 12 : // CopyMessage
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1351,7 +1361,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
-                V_BSTR(pvarRetValue) = client_.copyMessage(V_BSTR(pv0)).getOLEString();
+                V_BSTR(pvarRetValue) = msmail1c_->client_.copyMessage(V_BSTR(pv0)).getOLEString();
                 V_VT(pvarRetValue) = VT_BSTR;
               }
             }
@@ -1359,7 +1369,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 13 : // RemoveMessageAttribute
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0; // UUID of Message
@@ -1372,7 +1382,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
-                    V_BSTR(pvarRetValue) = client_.removeValue(V_BSTR(pv0),V_BSTR(pv1)).getOLEString();
+                    V_BSTR(pvarRetValue) = msmail1c_->client_.removeValue(V_BSTR(pv0),V_BSTR(pv1)).getOLEString();
                     V_VT(pvarRetValue) = VT_BSTR;
                   }
                 }
@@ -1416,7 +1426,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                   V_I4(pvarRetValue) = (st.st_mode & S_IFDIR) != 0 ? 1 : 0;
                 }
                 else {
-                  lastError_ = GetLastError();
+                  msmail1c_->lastError_ = GetLastError();
                 }
               }
             }
@@ -1436,7 +1446,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 17 : // MK1100SendBarCodeInfo
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1464,7 +1474,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
-                V_BSTR(pvarRetValue) = client_.getDBInGroupList(V_BSTR(pv0)).getOLEString();
+                V_BSTR(pvarRetValue) = msmail1c_->client_.getDBInGroupList(V_BSTR(pv0)).getOLEString();
                 V_VT(pvarRetValue) = VT_BSTR;
               }
             }
@@ -1498,7 +1508,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 20 : // String2File
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1540,8 +1550,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 22 : // CreateHashedArray
-          hashedArrays_.add().estimatedChainLength(4);
-          V_I4(pvarRetValue) = (LONG) hashedArrays_.count();
+          msmail1c_->hashedArrays_.add().estimatedChainLength(4);
+          V_I4(pvarRetValue) = (LONG) msmail1c_->hashedArrays_.count();
           break;          
         case 23 : // RemoveHashedArray
           hr = SafeArrayLock(*paParams);
@@ -1551,13 +1561,13 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
               if( SUCCEEDED(hr) ){
-                if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
-                  hashedArrays_[uintptr_t(V_I4(pv0) - 1)].drop();
-                  hashedArrays_.remove(V_I4(pv0) - 1);
+                if( uintptr_t(V_I4(pv0) - 1) < msmail1c_->hashedArrays_.count() ){
+                  msmail1c_->hashedArrays_[uintptr_t(V_I4(pv0) - 1)].drop();
+                  msmail1c_->hashedArrays_.remove(V_I4(pv0) - 1);
                   V_I4(pvarRetValue) = 1;
                 }
                 else {
-                  lastError_ = ERROR_NOT_FOUND;
+                  msmail1c_->lastError_ = ERROR_NOT_FOUND;
                 }
               }
             }
@@ -1580,12 +1590,14 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                     lIndex = 2;
                     hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
                     if( SUCCEEDED(hr) ){
-                      if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
-                        hashedArrays_[uintptr_t(V_I4(pv0) - 1)].insert(*newObject<HashedArrayKey>(V_BSTR(pv1),*pv2));
+                      if( uintptr_t(V_I4(pv0) - 1) < msmail1c_->hashedArrays_.count() ){
+                        msmail1c_->hashedArrays_[uintptr_t(V_I4(pv0) - 1)].insert(
+                          *newObject<msmail1c::HashedArrayKey>(V_BSTR(pv1),*pv2)
+                        );
                         V_I4(pvarRetValue) = 1;
                       }
                       else {
-                        lastError_ = ERROR_NOT_FOUND;
+                        msmail1c_->lastError_ = ERROR_NOT_FOUND;
                       }
                     }
                   }
@@ -1608,11 +1620,13 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
-                    if( uintptr_t(V_I4(pv0) - 1) < hashedArrays_.count() ){
+                    if( uintptr_t(V_I4(pv0) - 1) < msmail1c_->hashedArrays_.count() ){
                       //uintptr_t max = hashedArrays_[V_I4(pv0) - 1].maxChainLength();
                       //uintptr_t min = hashedArrays_[V_I4(pv0) - 1].minChainLength();
                       //uintptr_t avg = hashedArrays_[V_I4(pv0) - 1].avgChainLength();
-                      HashedArrayKey * key = hashedArrays_[uintptr_t(V_I4(pv0) - 1)].find(*newObject<HashedArrayKey>(V_BSTR(pv1)));
+                      msmail1c::HashedArrayKey * key = msmail1c_->hashedArrays_[uintptr_t(V_I4(pv0) - 1)].find(
+                        *newObject<msmail1c::HashedArrayKey>(V_BSTR(pv1))
+                      );
                       if( key != NULL ){
                         hr = VariantChangeTypeEx(pvarRetValue,&key->value_,0,0,V_VT(&key->value_));
                       }
@@ -1631,13 +1645,13 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 26 : // RemoveAllHashedArrays
-          for( intptr_t i = hashedArrays_.count() - 1; i >= 0; i-- )
-            hashedArrays_[i].drop();
-          hashedArrays_.clear();
+          for( intptr_t i = msmail1c_->hashedArrays_.count() - 1; i >= 0; i-- )
+            msmail1c_->hashedArrays_[i].drop();
+          msmail1c_->hashedArrays_.clear();
           V_I4(pvarRetValue) = 1;
           break;
         case 27 : // InstallDeviceScanner
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1645,14 +1659,14 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
               if( SUCCEEDED(hr) ){
-                V_I4(pvarRetValue) = client_.installSerialPortScanner(V_I4(pv0));
+                V_I4(pvarRetValue) = msmail1c_->client_.installSerialPortScanner(V_I4(pv0));
               }
             }
             SafeArrayUnlock(*paParams);
           }
           break;          
         case 28 : // RemoveDeviceScanner
-          if( !active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( !msmail1c_->active_ ) newObject<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1660,7 +1674,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
               if( SUCCEEDED(hr) ){
-                V_I4(pvarRetValue) = client_.removeSerialPortScanner(V_I4(pv0));
+                V_I4(pvarRetValue) = msmail1c_->client_.removeSerialPortScanner(V_I4(pv0));
               }
             }
             SafeArrayUnlock(*paParams);
@@ -1671,8 +1685,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
       }
     }
     catch( ExceptionSP & e ){
-      lastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
-      hr = HRESULT_FROM_WIN32(lastError_);
+      msmail1c_->lastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+      hr = HRESULT_FROM_WIN32(msmail1c_->lastError_);
       if( lIndex >= 0 ) SafeArrayUnlock(*paParams);
       e->writeStdError();
     }
@@ -1685,19 +1699,19 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-Cmsmail1c::LockedFile::~LockedFile()
+Cmsmail1c::msmail1c::LockedFile::~LockedFile()
 {
   unlockFile();
   if( handle_ != INVALID_HANDLE_VALUE ) CloseHandle(handle_);
   if( hEvent_ != NULL ) CloseHandle(hEvent_);
 }
 //---------------------------------------------------------------------------
-Cmsmail1c::LockedFile::LockedFile() :
+Cmsmail1c::msmail1c::LockedFile::LockedFile() :
   handle_(INVALID_HANDLE_VALUE), hEvent_(NULL), lastError_(0), locked_(false)
 {
 }
 //---------------------------------------------------------------------------
-void Cmsmail1c::LockedFile::unlockFile()
+void Cmsmail1c::msmail1c::LockedFile::unlockFile()
 {
   if( handle_ != INVALID_HANDLE_VALUE && locked_ ){
     OVERLAPPED Overlapped;
@@ -1712,14 +1726,14 @@ void Cmsmail1c::LockedFile::unlockFile()
   }
 }
 //---------------------------------------------------------------------------
-Cmsmail1c::LockedFile * Cmsmail1c::findFileByName(const utf8::String & name)
+Cmsmail1c::msmail1c::LockedFile * Cmsmail1c::msmail1c::findFileByName(const utf8::String & name)
 {
   for( intptr_t i = files_.count() - 1; i >= 0; i-- )
     if( files_[i].name_.strcasecmp(name) == 0 ) return &files_[i];
   return NULL;
 }
 //---------------------------------------------------------------------------
-Cmsmail1c::LockedFile * Cmsmail1c::addFile(const utf8::String & name)
+Cmsmail1c::msmail1c::LockedFile * Cmsmail1c::msmail1c::addFile(const utf8::String & name)
 {
   LockedFile & p = files_.safeAdd(newObject<LockedFile>());
   p.name_ = name;
@@ -1736,12 +1750,12 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
   }
   OVERLAPPED Overlapped;
   int32_t err;
-  LockedFile * file = NULL;
+  msmail1c::LockedFile * file = NULL;
   *pLastError = 0;
   try {
-    checkMachineBinding(client_.config_->value("machine_key"));
-    file = findFileByName(name);
-    if( file == NULL ) file = addFile(name);
+    checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
+    file = msmail1c_->findFileByName(name);
+    if( file == NULL ) file = msmail1c_->addFile(name);
     file->lastError_ = 0;
     if( file->handle_ == INVALID_HANDLE_VALUE ){
       SetLastError(0);
@@ -1783,7 +1797,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
         newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       if( err == ERROR_IO_PENDING ){
-        DWORD st = (DWORD) rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
+        DWORD st = (DWORD) msmail1c_->rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
         st = maxSleepTime == 0 && minSleepTime == 0 ? 0 : st;
         DWORD state = WaitForSingleObject(file->hEvent_,st);
         if( state == WAIT_TIMEOUT ){
@@ -1838,10 +1852,10 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
 //---------------------------------------------------------------------------
 STDMETHODIMP Cmsmail1c::unlockFile(IN BSTR name,OUT LONG * pLastError)
 {
-  LockedFile * file = NULL;
+  msmail1c::LockedFile * file = NULL;
   *pLastError = 0;
   try {
-    file = findFileByName(name);
+    file = msmail1c_->findFileByName(name);
     if( file != NULL ){
       file->unlockFile();
     }
@@ -1858,9 +1872,9 @@ STDMETHODIMP Cmsmail1c::unlockFile(IN BSTR name,OUT LONG * pLastError)
 //---------------------------------------------------------------------------
 STDMETHODIMP Cmsmail1c::getLastError(IN BSTR name,OUT LONG * pLastError)
 {
-  LockedFile * file = NULL;
+  msmail1c::LockedFile * file = NULL;
   try {
-    file = findFileByName(name);
+    file = msmail1c_->findFileByName(name);
     if( file != NULL ){
       *pLastError = file->lastError_;
     }
@@ -1889,7 +1903,7 @@ STDMETHODIMP Cmsmail1c::sleepIn(IN ULONG minSleepTime,IN ULONG maxSleepTime)
     maxSleepTime = minSleepTime;
     minSleepTime = tm;
   }
-  Sleep((DWORD) rnd_.random(maxSleepTime - minSleepTime) + minSleepTime);
+  Sleep((DWORD) msmail1c_->rnd_.random(maxSleepTime - minSleepTime) + minSleepTime);
   return S_OK;
 }
 //---------------------------------------------------------------------------

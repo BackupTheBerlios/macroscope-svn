@@ -398,15 +398,7 @@ getBackTrace(intptr_t flags, intptr_t skipCount, void* threadHandle)
   memset(pcs, 0, sizeof(pcs));
   DbgStream ss;
   
-  /*
-  ret = ret + ss.str().c_str(); 
-  */
-    
   intptr_t count = getProgramCounters(pcs, 128, threadHandle);
-  /*
-  ss  << "SkiptCount: " << skipCount << NL
-      << "StackFrameCount: " << count << NL;
-    */
   for (intptr_t i = skipCount; i < count; ++i)
   {
     DbgFrame frame;

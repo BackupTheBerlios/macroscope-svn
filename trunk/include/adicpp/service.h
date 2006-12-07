@@ -53,6 +53,8 @@ class Service {
     Service &             serviceMain(uintptr_t n, DWORD dwArgc, LPWSTR * lpszArgv);
     Service &             handler(uintptr_t n, DWORD fdwControl);
 #endif
+    const utf8::String & args() const;
+    Service & args(const utf8::String & s);
   protected:
 #if !defined(__WIN32__) && !defined(__WIN64__)
     utf8::String          serviceName_;
@@ -90,7 +92,19 @@ class Service {
     Service &             install(SC_HANDLE hSCManager);
     Service &             uninstall(SC_HANDLE hSCManager);
 #endif
-};
+   utf8::String args_;
+ };
+//---------------------------------------------------------------------------
+inline const utf8::String & Service::args() const
+{
+  return args_;
+}
+//---------------------------------------------------------------------------
+inline Service & Service::args(const utf8::String & s)
+{
+  args_ = s;
+  return *this;
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

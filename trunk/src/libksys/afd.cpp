@@ -41,6 +41,7 @@ AsyncFile::~AsyncFile()
     eventObject_ = NULL;
   }
 #endif
+  Requester::requester().detachDescriptor(*this);
 }
 //---------------------------------------------------------------------------
 AsyncFile::AsyncFile(const utf8::String & fileName) :
@@ -55,6 +56,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   direct_(false),
   nocache_(false)
 {
+  Requester::requester().attachDescriptor(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
   alignment_ = 1;
   eventObject_ = CreateEventA(NULL,TRUE,FALSE,NULL);

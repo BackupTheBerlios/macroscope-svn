@@ -31,13 +31,5 @@ namespace adicpp {
 int32_t Initializer::mutex_ = 0;
 int32_t Initializer::initCount_ = 0;
 //---------------------------------------------------------------------------
-void Initializer::acquire()
-{
-  for(;;){
-    if( ksys::interlockedCompareExchange(mutex_,-1,0) == 0 ) break;
-    ksys::sleep1();
-  }
-}
-//---------------------------------------------------------------------------
 } // namespace adicpp
 //---------------------------------------------------------------------------

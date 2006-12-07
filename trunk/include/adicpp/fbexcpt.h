@@ -49,9 +49,9 @@ extern const ISCErrorDesc ISCErrors[];
 class EClientServer : public ksys::Exception {
   public:
     virtual ~EClientServer();
-    EClientServer(const ISC_STATUS_ARRAY stat, const utf8::String what);
+    EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & what);
 
-    bool    isFatalError() const;
+    bool isFatalError() const;
   protected:
   private:
     void operator = (const EClientServer &){}

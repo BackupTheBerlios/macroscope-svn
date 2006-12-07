@@ -430,6 +430,18 @@ class String {
     bool                hashKeyEqu(const utf8::String & key, bool caseSensitive) const;
     uintptr_t           hash(bool caseSensitive) const;
     uint64_t            hash_ll(bool caseSensitive) const;
+
+    bool isDigit() const;
+    bool isAlpha() const;
+    bool isAlnum() const;
+    bool isPrint() const;
+    bool isSpace() const;
+    bool isPunct() const;
+    bool isCntrl() const;
+    bool isBlank() const;
+    bool isXdigit() const;
+    bool isUpper() const;
+    bool isLower() const;
   protected:
     mutable ksys::SPRC<Container> container_;
     static char nullString_[];

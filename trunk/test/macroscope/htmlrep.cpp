@@ -83,8 +83,8 @@ void Logger::writeUserTop(
     paramAsMutant("BT",beginTime)->
     paramAsMutant("ET",endTime)->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
-    ksys::FileHandleContainer f(file);
-    f.createIfNotExist(true).open().resize(0);
+    ksys::AsyncFile f(file);
+    f.createIfNotExist(true).open();
     writeHtmlHead(f);
     f <<
       "<TABLE WIDTH=100 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
@@ -156,13 +156,14 @@ void Logger::writeUserTop(
       ;
     }
     writeHtmlTail(f);
+    f.resize(f.seek());
   }
 }
 //------------------------------------------------------------------------------
 void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & year)
 {
-  ksys::FileHandleContainer f(file);
-  f.createIfNotExist(true).open().resize(0);
+  ksys::AsyncFile f(file);
+  f.createIfNotExist(true).open();
 #if defined(__WIN32__) || defined(__WIN64__)
   utf8::String section("macroscope.windows.html_report.");
 #else
@@ -402,6 +403,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
     beginTime = beginTime2;
   }
   writeHtmlTail(f);
+  f.resize(f.seek());
 }
 //------------------------------------------------------------------------------
 void Logger::writeHtmlYearOutput()
@@ -447,10 +449,10 @@ void Logger::writeHtmlYearOutput()
     config_.valueByPath(section + "directory_user",ksys::getuid()),
     config_.valueByPath(section + "directory_group",ksys::getgid())
   );
-  ksys::FileHandleContainer f(
+  ksys::AsyncFile f(
     ksys::includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
   );
-  f.createIfNotExist(true).open().resize(0);
+  f.createIfNotExist(true).open();
   ksys::chModOwn(
     f.fileName(),
     config_.valueByPath(section + "file_mode", 755),
@@ -656,6 +658,7 @@ void Logger::writeHtmlYearOutput()
     utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) << "\n<BR>\n" <<
     utf8::int2Str((uintmax_t) trafCache_.count()) << "<BR>\n";
   writeHtmlTail(f);
+  f.resize(f.seek());
 }
 //------------------------------------------------------------------------------
 uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)
@@ -704,7 +707,7 @@ intptr_t Logger::sortUsersTrafTable(uintptr_t row1, uintptr_t row2, const ksys::
   return c;
 }
 //------------------------------------------------------------------------------
-void Logger::writeTraf(ksys::FileHandleContainer & f, uint64_t qi, uint64_t qj)
+void Logger::writeTraf(ksys::AsyncFile & f, uint64_t qi, uint64_t qj)
 {
   uint64_t  q, a  = qi % 1024u != 0, b , c ;
 
@@ -726,7 +729,7 @@ utf8::String Logger::TrafCacheEntry::id() const
   ;
 }
 //------------------------------------------------------------------------------
-void Logger::writeHtmlHead(ksys::FileHandleContainer & f)
+void Logger::writeHtmlHead(ksys::AsyncFile & f)
 {
   f << "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
     "<HTML>\n" "<HEAD>\n"
@@ -739,7 +742,7 @@ void Logger::writeHtmlHead(ksys::FileHandleContainer & f)
   ;
 }
 //------------------------------------------------------------------------------
-void Logger::writeHtmlTail(ksys::FileHandleContainer & f)
+void Logger::writeHtmlTail(ksys::AsyncFile & f)
 {
 #if HAVE_UNAME
   struct utsname  un;

@@ -399,7 +399,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
   }
   if( param.strlen() > 0 ){
     AutoPtr<Mutant> m(newObject<Mutant>(param));
-    root.values_.add(m, utf8::String());
+    root.values_.add(m,utf8::String());
     m.ptr(NULL);
   }
   return *this;
@@ -407,7 +407,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
 //---------------------------------------------------------------------------
 Config & Config::parseSectionBody(ConfigSection & root)
 {
-  TokenType     tt;
+  TokenType tt;
   utf8::String  token;
   for(;;){
     token = getToken(tt);
@@ -421,18 +421,29 @@ Config & Config::parseSectionBody(ConfigSection & root)
       break;
     }
     if( (tt != ttString && tt != ttQuotedString && tt != ttNumeric) || token.strlen() == 0 )
-      newObject<EConfig>(this, "invalid section or key name");
+      newObject<EConfig>(this, "invalid section or key name")->throwSP();
     utf8::String key(token);
     token = getToken(tt);
     if( tt != ttEqual ){
-      // try new subsection
-      HashedObjectListItem<utf8::String,ConfigSection> * item;
-      root.subSections_.add(newObject<ConfigSection>(key),key,&item);
-      putToken(token,tt);
-      parseSectionHeader(*item->object());
-      parseSectionBody(*item->object());
+      if( key.strcasecmp("include") == 0 && (tt == ttString || tt == ttQuotedString || tt == ttNumeric) ){ // include directive
+        Config config;
+        config.fileName(token);
+        config.parse();
+// TODO:
+      }
+      else { // try new subsection
+        HashedObjectListItem<utf8::String,ConfigSection> * item = root.subSections_.itemOfKey(key);
+        AutoPtr<ConfigSection> p(newObject<ConfigSection>(key));
+        if( item == NULL ){
+          root.subSections_.add(p,key,&item);
+          p.ptr(NULL);
+        }
+        putToken(token,tt);
+        parseSectionHeader(*item->object());
+        parseSectionBody(*item->object());
+      }
     }
-    else{
+    else {
       utf8::String value;
       for( ; ; ){
         // get key values
@@ -453,7 +464,9 @@ Config & Config::parseSectionBody(ConfigSection & root)
           newObject<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
       }
       AutoPtr<Mutant> m(newObject<Mutant>(value));
-      root.values_.add(m, key);
+      HashedObjectListItem<utf8::String,Mutant> * item = root.values_.itemOfKey(key);
+      if( item != NULL ) root.values_.removeByKey(key);
+      root.values_.add(m,key);
       m.ptr(NULL);
     }
   }

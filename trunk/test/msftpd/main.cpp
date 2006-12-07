@@ -439,6 +439,8 @@ MSFTPService::MSFTPService() :
 void MSFTPService::start()
 {
   msftpConfig_->parse().override();
+  serviceName_ = msftpConfig_->value("service_name","msftp");
+  displayName_ = msftpConfig_->value("service_display_name","Macroscope FTP Service");
   ksys::Array<ksock::SockAddr> addrs;
   ksock::SockAddr::resolve(
     msftpConfig_->text("bind"),
@@ -448,7 +450,7 @@ void MSFTPService::start()
   for( intptr_t i = addrs.count() - 1; i >= 0; i-- ) msftp_.addBind(addrs[i]);
   msftp_.open();
   ksys::stdErr.debug(0,
-    utf8::String::Stream() << msftpd_version.gnu_ << " started\n"
+    utf8::String::Stream() << msftpd_version.gnu_ << " started (" << serviceName_ << ")\n"
   );
 }
 //------------------------------------------------------------------------------
@@ -456,7 +458,7 @@ void MSFTPService::stop()
 {
   msftp_.close();
   ksys::stdErr.debug(0,
-    utf8::String::Stream() << msftpd_version.gnu_ << " stopped\n"
+    utf8::String::Stream() << msftpd_version.gnu_ << " stopped (" << serviceName_ << ")\n"
   );
 }
 //------------------------------------------------------------------------------
@@ -486,6 +488,18 @@ int main(int argc,char * argv[])
     bool dispatch = false;
 #endif
     service->msftpConfig()->silent(true);
+    for( u = 1; u < argv().count(); u++ ){
+      if( argv()[u].strcmp("--chdir") == 0 && u + 1 < argv().count() ){
+        changeCurrentDir(argv()[u + 1]);
+      }
+      else if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+        Config::defaultFileName(argv()[u + 1]);
+        service->msmailConfig()->fileName(argv()[u + 1]);
+      }
+      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+        stdErr.fileName(argv()[u + 1]);
+      }
+    }
     for( u = 1; u < ksys::argv().count(); u++ ){
       if( ksys::argv()[u].strcmp("--version") == 0 ){
         ksys::stdErr.debug(9,utf8::String::Stream() << msftpd_version.tex_ << "\n");
@@ -493,13 +507,11 @@ int main(int argc,char * argv[])
         dispatch = false;
         continue;
       }
-      if( ksys::argv()[u].strcmp("-c") == 0 && u + 1 < ksys::argv().count() ){
-        ksys::Config::defaultFileName(ksys::argv()[u + 1]);
-      }
-      else if( ksys::argv()[u].strcmp("--log") == 0 && u + 1 < ksys::argv().count() ){
-        ksys::stdErr.fileName(ksys::argv()[u + 1]);
-      }
-      else if( ksys::argv()[u].strcmp("--install") == 0 ){
+      if( ksys::argv()[u].strcmp("--install") == 0 ){
+        if( argv()[j].isSpace() )
+          service->args(service->args() + " \"" + argv()[j] + "\"");
+        else
+          service->args(service->args() + " " + argv()[j]);
         services.install();
         dispatch = false;
       }

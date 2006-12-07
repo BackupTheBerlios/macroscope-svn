@@ -78,6 +78,25 @@ int32_t __fastcall __declspec(nothrow) interlockedCompareExchange(int32_t &,int3
 #pragma option pop
 #endif
 //---------------------------------------------------------------------------
+#if (_M_IX86 || __i386__) && !__x86_64__ && !_M_X64
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
+{
+  int64_t old;
+  do {
+    old = v;
+  } while( interlockedCompareExchange(v,old + a,old) != old );
+  return old;
+}
+#endif
+//---------------------------------------------------------------------------
+void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
+{
+  for(;;){
+    if( interlockedCompareExchange(v,exValue,cmpValue) == 0 ) break;
+    sleep1();
+  }
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 void InterlockedMutex::initialize()
@@ -99,7 +118,7 @@ void InterlockedMutex::initialize()
   }
 #endif
 #if defined(__WIN32__) || defined(__WIN64__)
-  memset(&staticCS_,0,sizeof(staticCS_));
+  //memset(&staticCS_,0,sizeof(staticCS_));
 #endif
   new (giantPlaceHolder) InterlockedMutex;
 }
@@ -110,12 +129,13 @@ void InterlockedMutex::cleanup()
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-CRITICAL_SECTION InterlockedMutex::staticCS_;
+//CRITICAL_SECTION InterlockedMutex::staticCS_;
 #endif
 //---------------------------------------------------------------------------
 InterlockedMutex::~InterlockedMutex()
 {
 #if FAST_MUTEX
+  assert( refCount_ == 0 );
 #elif defined(__WIN32__) || defined(__WIN64__)
 //  if( memcmp(&cs_,&staticCS_,sizeof(cs_)) != 0 ) DeleteCriticalSection(&cs_);
   if( sem_ != NULL ){

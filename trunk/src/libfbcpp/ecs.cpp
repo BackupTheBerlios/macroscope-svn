@@ -809,11 +809,11 @@ EClientServer::~EClientServer()
 {
 }
 //---------------------------------------------------------------------------
-EClientServer::EClientServer(const ISC_STATUS_ARRAY stat, const utf8::String what)
-  : ksys::Exception(-1, what)
+EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & what)
 {
-  ISC_STATUS_ARRAY status;
-  if( status != NULL ){
+  if( stat != NULL ){
+    ISC_STATUS_ARRAY status;
+    memcpy(status,stat,sizeof(status));
     codes_.resize(0);
     whats_.resize(0);
     char error[1024];

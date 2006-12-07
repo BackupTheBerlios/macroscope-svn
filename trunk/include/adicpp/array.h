@@ -243,12 +243,11 @@ Array<T> & Array<T>::resize(uintptr_t newSize)
 {
   Array<T> newArray;
   newArray.ptr_ = (T *) kmalloc(sizeof(T) * newSize);
-  while( newArray.count_ < count_ ){
-    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
-    newArray.count_++;
-  }
   while( newArray.count_ < newSize ){
-    new (newArray.ptr_ + newArray.count_) T;
+    if( newArray.count_ < count_ )
+      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+    else
+      new (newArray.ptr_ + newArray.count_) T;
     newArray.count_++;
   }
   return replace(newArray);

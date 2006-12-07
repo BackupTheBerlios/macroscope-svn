@@ -124,7 +124,7 @@ Service & Service::install(SC_HANDLE hSCManager)
   install();
   utf8::WideString serviceNameW(serviceName_.getUNICODEString());
   utf8::WideString displayNameW(displayName_.getUNICODEString());
-  utf8::WideString binaryPathNameW(binaryPathName_.getUNICODEString());
+  utf8::WideString binaryPathNameW((args_.strlen() > 0 ? binaryPathName_ + args_ : binaryPathName_).getUNICODEString());
   utf8::WideString loadOrderGroupW(loadOrderGroup_.getUNICODEString());
   utf8::WideString dependenciesW(dependencies_.getUNICODEString());
   utf8::WideString serviceStartNameW(serviceStartName_.getUNICODEString());

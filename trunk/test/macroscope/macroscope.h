@@ -108,24 +108,24 @@ class Logger {
     utf8::String htmlDir_;
 
     int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String());
-    void writeHtmlHead(ksys::FileHandleContainer & f);
-    void writeHtmlTail(ksys::FileHandleContainer & f);
+    void writeHtmlHead(ksys::AsyncFile & f);
+    void writeHtmlTail(ksys::AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
     static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const ksys::Table<ksys::Mutant> & table);
-    static void writeTraf(ksys::FileHandleContainer & f,uint64_t qi,uint64_t qj);
+    static void writeTraf(ksys::AsyncFile & f,uint64_t qi,uint64_t qj);
 
-    utf8::String                                          trafTypeNick_[ttCount];
-    utf8::String                                          trafTypeHeadColor_[ttCount];
-    utf8::String                                          trafTypeBodyColor_[ttCount];
-    utf8::String                                          trafTypeTailColor_[ttCount];
-    utf8::String                                          trafTypeHeadDataColor_[ttCount];
-    utf8::String                                          trafTypeBodyDataColor_[ttCount];
-    utf8::String                                          trafTypeTailDataColor_[ttCount];
+    utf8::String trafTypeNick_[ttCount];
+    utf8::String trafTypeHeadColor_[ttCount];
+    utf8::String trafTypeBodyColor_[ttCount];
+    utf8::String trafTypeTailColor_[ttCount];
+    utf8::String trafTypeHeadDataColor_[ttCount];
+    utf8::String trafTypeBodyDataColor_[ttCount];
+    utf8::String trafTypeTailDataColor_[ttCount];
 
-    void            decoration();
+    void decoration();
 };
 //------------------------------------------------------------------------------
 } // namespace macroscope

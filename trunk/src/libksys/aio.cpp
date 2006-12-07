@@ -1430,7 +1430,7 @@ void AsyncStackBackTraceSlave::threadExecute()
                 pdbutils::DbgFrameGetAll,
                 request->data1_,
                 threadHandle
-              );
+                );
 //          result = ResumeThread((HANDLE) request->threadHandle_);
 //          if( result == (DWORD) -1 ) exit(GetLastError());
             CloseHandle(threadHandle);

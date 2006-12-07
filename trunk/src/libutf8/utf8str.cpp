@@ -802,30 +802,99 @@ uint64_t String::hash_ll(bool caseSensitive) const
   return h;
 }
 //---------------------------------------------------------------------------
-String operator +(const char * s1, const String & s2)
+bool String::isDigit() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isDigit() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isAlpha() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isAlpha() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isAlnum() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isAlnum() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isPrint() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isPrint() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isSpace() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isSpace() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isPunct() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isPunct() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isCntrl() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isCntrl() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isBlank() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isBlank() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isXdigit() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isXdigit() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isUpper() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isUpper() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+bool String::isLower() const
+{
+  Iterator i(*this);
+  while( !i.eof() && !i.isLower() ) i.next();
+  return !i.eof();
+}
+//---------------------------------------------------------------------------
+String operator + (const char * s1,const String & s2)
 {
   return String(s1) + s2;
 }
 //---------------------------------------------------------------------------
-String operator +(const wchar_t * s1, const String & s2)
+String operator + (const wchar_t * s1,const String & s2)
 {
   return String(s1) + s2;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-String::Iterator & String::Iterator::operator +=(intptr_t relPos)
+String::Iterator & String::Iterator::operator += (intptr_t relPos)
 {
-  while( relPos > 0 )
-    if( next() )
-      relPos--;
-    else
-      break;
-  while( relPos < 0 )
-    if( prev() )
-      relPos++;
-    else
-      break;
+  while( relPos > 0 ) if( next() ) relPos--; else break;
+  while( relPos < 0 ) if( prev() ) relPos++; else break;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -1179,22 +1248,16 @@ String int2HexStr(uintmax_t a, uintptr_t padding)
 //---------------------------------------------------------------------------
 bool tryStr2Int(const String & str, intmax_t & a, uintptr_t pow)
 {
-#if _MSC_VER
-#pragma warning(push,3)
-#endif
   union {
-      struct {
-          unsigned char plus              : 1;
-          unsigned char minus             : 1;
-          unsigned char digit             : 1;
-          unsigned char spaceAfterDigit   : 1;
-          unsigned char spaceBeforeDigit  : 1;
-      };
-      unsigned char m;
+    struct {
+      uint8_t plus              : 1;
+      uint8_t minus             : 1;
+      uint8_t digit             : 1;
+      uint8_t spaceAfterDigit   : 1;
+      uint8_t spaceBeforeDigit  : 1;
+    };
+    unsigned char m;
   } m;
-#if _MSC_VER
-#pragma warning(pop)
-#endif
   m.m = 0;
   uintmax_t x = 0;
   String::Iterator i(str);
@@ -1284,10 +1347,10 @@ bool tryStr2Time(const String & str, int64_t & tv)
   return k >= 3 && tvs >= 0 && (uint64_t) us < 1000000;
 }
 //---------------------------------------------------------------------------
-bool tryStr2Timeval(const String & str, struct timeval & tv)
+bool tryStr2Timeval(const String & str,struct timeval & tv)
 {
   struct tm t;
-  memset(&t, 0, sizeof(t));
+  memset(&t,0,sizeof(t));
   tv.tv_usec = 0;
   int k = sscanf(str.c_str(), "%02u.%02u.%04u %02u:%02u:%02u.%06lu", &t.tm_mday, &t.tm_mon, &t.tm_year, &t.tm_hour, &t.tm_min, &t.tm_sec, &tv.tv_usec);
   t.tm_year -= 1900;

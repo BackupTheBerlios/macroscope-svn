@@ -107,6 +107,9 @@ class AsyncFile : public AsyncDescriptor {
     uint32_t alignment() const { return 1; }
 #endif
     bool std() const;
+
+    AsyncFile & operator << (const char * s){ writeBuffer(s,::strlen(s)); return *this; }
+    AsyncFile & operator << (const utf8::String & s){ writeBuffer(s.c_str(),s.size()); return *this; }
   protected:
   private:
     static uint8_t mutex_[];

@@ -54,10 +54,25 @@ inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
   return a;
 }
 
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
+
 inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {
   asm volatile ("lock; cmpxchg %%ecx,(%%edx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
+}
+
+inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+{
+  asm volatile ("lock; cmpxchg8b (%%ebp)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
+  __asm {
+    mov         ebp,v
+    mov         ebx,dword ptr exValue
+    mov         ecx,dword ptr exValue + 4
+    mov         eax,dword ptr cmpValue
+    mov         edx,dword ptr cmpValue + 4
+    lock cmpxchg8b qword ptr [ebp]
+  }
 }
 #elif __GNUG__ && __x86_64__
 inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
@@ -66,13 +81,25 @@ inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
   return a;
 }
 
+inline int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
+{
+  asm volatile ("lock; xadd %%rax,(%%rdx)" : "=a" (a) : "d" (&v), "a" (a));
+  return a;
+}
+
 inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {
   asm volatile ("lock; cmpxchg %%ecx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
 }
-#elif defined(_MSC_VER) && _M_IX86
-inline int32_t __fastcall interlockedIncrement(volatile int32_t & v, int32_t a)
+
+inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+{
+  asm volatile ("lock; cmpxchg %%rcx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
+  return cmpValue;
+}
+#elif _MSC_VER && _M_IX86
+__forceinline int32_t __fastcall interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   __asm {
     mov         eax,a
@@ -81,7 +108,9 @@ inline int32_t __fastcall interlockedIncrement(volatile int32_t & v, int32_t a)
   }
 }
 
-inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
+
+__forceinline int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
 {
   __asm {
     mov         eax,cmpValue
@@ -90,8 +119,20 @@ inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue,
     lock cmpxchg [edx],ecx
   }
 }
+
+__forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+{
+  __asm {
+    mov         esi,v
+    mov         ebx,dword ptr exValue
+    mov         ecx,dword ptr exValue + 4
+    mov         eax,dword ptr cmpValue
+    mov         edx,dword ptr cmpValue + 4
+    lock cmpxchg8b qword ptr [esi]
+  }
+}
 #elif _MSC_VER && _M_X64
-inline int32_t __fastcall interlockedIncrement(volatile int32_t & v, int32_t a)
+__forceinline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   return InterlockedExchangeAdd((LONG *) &v,a);
   /*__asm {
@@ -101,7 +142,12 @@ inline int32_t __fastcall interlockedIncrement(volatile int32_t & v, int32_t a)
   }*/
 }
 
-inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
+__forceinline int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
+{
+  return InterlockedExchangeAdd64((LONGLONG *) &v,a);
+}
+
+__forceinline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {
   return InterlockedCompareExchange((LONG *) &v,exValue,cmpValue);
   /*__asm {
@@ -111,13 +157,20 @@ inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue,
     lock cmpxchg [edx],ecx
   }*/
 }
+
+__forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+{
+  return InterlockedCompareExchange64((LONGLONG *) &v,exValue,cmpValue);
+}
 #elif defined(__BCPLUSPLUS__)
-int32_t __fastcall  __declspec(nothrow) interlockedIncrement(int32_t & v, int32_t a);
-int32_t __fastcall  __declspec(nothrow) interlockedCompareExchange(int32_t & v, int32_t exValue, int32_t cmpValue);
+int32_t __fastcall  __declspec(nothrow) interlockedIncrement(int32_t & v,int32_t a);
+int32_t __fastcall  __declspec(nothrow) interlockedCompareExchange(int32_t & v,int32_t exValue,int32_t cmpValue);
 #else
 int32_t             interlockedIncrement(volatile int32_t & v, int32_t a);
 int32_t             interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue);
 #endif
+//---------------------------------------------------------------------------
+void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int32_t cmpValue);
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -141,7 +194,7 @@ class InterlockedMutex {
     static void singleAcquire(InterlockedMutex * mutex);
     static void multiAcquire(InterlockedMutex * mutex);
 #elif defined(__WIN32__) || defined(__WIN64__)
-    static CRITICAL_SECTION staticCS_;
+//    static CRITICAL_SECTION staticCS_;
 //    CRITICAL_SECTION cs_;
     HANDLE sem_;
 #elif HAVE_PTHREAD_H
@@ -336,12 +389,12 @@ template <typename T> class AutoLock {
     void operator =(const AutoLock<T> &){}
 };
 //---------------------------------------------------------------------------
-template<typename T> inline AutoLock<T>::~AutoLock()
+template <typename T> inline AutoLock<T>::~AutoLock()
 {
   mutex_.release();
 }
 //---------------------------------------------------------------------------
-template<typename T> inline AutoLock<T>::AutoLock(T & mutex) : mutex_(mutex)
+template <typename T> inline AutoLock<T>::AutoLock(T & mutex) : mutex_(mutex)
 {
   mutex_.acquire();
 }

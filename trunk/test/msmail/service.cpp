@@ -63,19 +63,19 @@ void Service::uninstall()
 //------------------------------------------------------------------------------
 void Service::start()
 {
-  msmailConfig_->parse().override();
+  install();
   Array<ksock::SockAddr> addrs;
   ksock::SockAddr::resolve(msmailConfig_->text("bind"),addrs,defaultPort);
   for( uintptr_t i = 0; i < addrs.count(); i++ ) msmail_.addBind(addrs[i]);
   //msmail_.fiberStackSize(1024 * 1024);
   msmail_.open();
-  stdErr.debug(0,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
+  stdErr.debug(0,utf8::String::Stream() << msmail_version.gnu_ << " started (" << serviceName_ << ")\n");
 }
 //------------------------------------------------------------------------------
 void Service::stop()
 {
   msmail_.close();
-  stdErr.debug(0,utf8::String::Stream() << msmail_version.gnu_ << " stopped\n");
+  stdErr.debug(0,utf8::String::Stream() << msmail_version.gnu_ << " stopped (" << serviceName_ << ")\n");
 }
 //------------------------------------------------------------------------------
 bool Service::active()

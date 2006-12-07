@@ -49,9 +49,14 @@ class Initializer {
     static int32_t initCount_;
 };
 //---------------------------------------------------------------------------
+inline void Initializer::acquire()
+{
+  ksys::interlockedCompareExchangeAcquire(mutex_,-1,0);
+}
+//---------------------------------------------------------------------------
 inline void Initializer::release()
 {
-  ksys::interlockedIncrement(mutex_, 1);
+  ksys::interlockedIncrement(mutex_,1);
 }
 //---------------------------------------------------------------------------
 inline void Initializer::initialize()

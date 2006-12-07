@@ -97,7 +97,7 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
   }
 }
 //------------------------------------------------------------------------------
-void Logger::parseSquidLogLine(char * p, uintptr_t size,ksys::Array<const char *> & slcp)
+void Logger::parseSquidLogLine(char * p,uintptr_t size,ksys::Array<const char *> & slcp)
 {
   char *  rb  = p + size, * a, * s;
   for( a = p; *a != '\r' && *a != '\n' && a < rb; a++ );
@@ -187,7 +187,7 @@ Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName, int64
 void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl)
 {
   ksys::AsyncFile flog(logFileName);
-  flog.open();
+  flog.readOnly(true).open();
   stTrafIns_->text(
     "INSERT INTO INET_USERS_TRAF"
     "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)"
@@ -202,15 +202,13 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
 
-//  ksys::AutoPtr<char> b;
   int64_t lineNo = 1;
   uintptr_t size;
   ksys::Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
-  ksys::AsyncFile::LineGetBuffer lgb;
+  ksys::AsyncFile::LineGetBuffer lgb(flog);
+  lgb.codePage_ = CP_UTF8;
   for(;;){
-//    if( (size = flog.gets(b)) <= 0 ) break;
-//    if( b[size - 1] == '\n' ){
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
     size = sb.size();
@@ -287,11 +285,10 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
 void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear)
 {
   ksys::AsyncFile flog(logFileName);
-  flog.open();
+  flog.readOnly(true).open();
   stTrafIns_->text("INSERT INTO INET_USERS_TRAF" "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)" "VALUES (:ST_USER, :ST_TIMESTAMP, 0, :ST_TRAF_SMTP)");
   stTrafUpd_->text("UPDATE INET_USERS_TRAF SET ST_TRAF_SMTP = ST_TRAF_SMTP + :ST_TRAF_SMTP " "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP");
 
-//  ksys::AutoPtr< char>  b;
   database_->start();
   int64_t offset  = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
@@ -299,10 +296,9 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   uintptr_t size;
   intptr_t  mon     = 0;
   int64_t   cl      = getlocaltimeofday();
-  ksys::AsyncFile::LineGetBuffer lgb;
-  for( ; ; ){
-//    if( (size = flog.gets(b)) <= 0 ) break;
-//    if( b[size - 1] == '\n' ){
+  ksys::AsyncFile::LineGetBuffer lgb(flog);
+  lgb.codePage_ = CP_UTF8;
+  for(;;){
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
     size = sb.size();
@@ -469,23 +465,6 @@ void Logger::main()
     config_.value("log_file",ksys::stdErr.fileName())
   );
 
-/*  utf8::String lockFileName(ksys::getTempPath() +
-    ksys::unScreenString(
-      config_.section("macroscope").text(
-        "lock_file_name", "F2BC263F-C902-4398-AF11-5173F2B6B4F4")
-      )
-  );
-
-  ksys::FileHandleContainer lf(lockFileName);
-  lf.exclusive(true);
-  lf.removeAfterClose(true);
-  if( !lf.tryOpen(true) ){
-    int32_t err = errno;
-    fprintf(stderr, "lower frequency of program starting needed\n");
-    ksys::Exception::throwSP(err,"lower frequency of program starting needed");
-  }
-  lf << utf8::int2Str(ksys::getpid());*/
-
   verbose_ = config_.section("macroscope").value("verbose", false);
 
   database_.ptr(Database::newDatabase(&config_));
@@ -549,44 +528,6 @@ void Logger::main()
 
   database_->create();
 
-//TODO: must be rewriten, not worked
-  /*if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
-    const ksys::ConfigSection & section = config_.section("libadicpp").
-      section("default_connection").section("firebird");
-    utf8::String hostName, dbName;
-    uintptr_t port;
-    database_->separateDBName(database_->name(),hostName,dbName,port);
-    //  if( hostName.trim().strlen() > 0 ){
-    utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
-    fbcpp::Service service;
-    service.params().
-      add("user_name", section.value("user")).
-      add("password", section.value("password"));
-    service.attach(serviceName);
-    service.request().clear().
-      add("action_svc_properties").add("dbname",dbName).
-      add("prp_set_sql_dialect",3);
-    service.invoke().detach();
-    service.attach(serviceName);
-    service.request().clear().
-      add("action_svc_properties").add("dbname",dbName).
-      add("prp_reserve_space",isc_spb_prp_res_use_full);
-    service.invoke().detach();
-//    service.request().clear().add("action_svc_properties").add("dbname","macroscope").
-//      add("prp_page_buffers",8 * 1024 * 1024 / database.params().pageSize());
-//    service.invoke();
-    service.attach(serviceName);
-    service.request().clear().
-      add("action_svc_properties").add("dbname", dbName).
-      add("prp_write_mode", isc_spb_prp_wm_async);
-    service.invoke().detach();
-    service.attach(serviceName);
-    service.request().clear().
-      add("action_svc_properties").add("dbname", dbName).
-      add("prp_sweep_interval", 10000);
-    service.invoke().detach();
-    //  }
-  }*/
   ksys::Vector< utf8::String> metadata;
   if( dynamic_cast< FirebirdDatabase *>(database_.ptr()) != NULL )
     metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
@@ -637,6 +578,42 @@ void Logger::main()
     database_->drop();
     database_->create();
   }
+
+  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+    const ksys::ConfigSection & section = config_.section("libadicpp").
+      section("default_connection").section("firebird");
+    utf8::String hostName, dbName;
+    uintptr_t port;
+    database_->separateDBName(database_->name(),hostName,dbName,port);
+    //  if( hostName.trim().strlen() > 0 ){
+    utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
+    fbcpp::Service service;
+    service.params().
+      add("user_name",section.value("user")).
+      add("password",section.value("password"));
+    service.attach(serviceName);
+    service.request().
+      add("action_svc_properties").add("dbname",dbName).
+      add("prp_set_sql_dialect",3);
+    service.invoke();
+    service.request().clear().
+      add("action_svc_properties").add("dbname",dbName).
+      add("prp_reserve_space",isc_spb_prp_res_use_full);
+    service.invoke();
+    service.request().clear().add("action_svc_properties").add("dbname",dbName).
+      add("prp_page_buffers",8u * 1024u * 1024u / 16384u);
+    service.invoke();
+    service.request().clear().
+      add("action_svc_properties").add("dbname", dbName).
+      add("prp_write_mode", isc_spb_prp_wm_async);
+    service.invoke();
+    service.attach(serviceName);
+    service.request().clear().
+      add("action_svc_properties").add("dbname", dbName).
+      add("prp_sweep_interval", 10000);
+    service.invoke();
+  }
+
   database_->attach();
 
   for( uintptr_t i = 0; i < metadata.count(); i++ ){

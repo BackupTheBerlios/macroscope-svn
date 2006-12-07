@@ -299,48 +299,57 @@ public:
   }
 
 public:
-  adicpp::AutoInitializer autoInitializer_;
-  msmail::Client client_;
-  LPDISPATCH pBackConnection_;
-  IAsyncEvent * pAsyncEvent_;
-  utf8::String name_;
-  utf8::String user_;
-  utf8::String key_;
-  utf8::String groups_;
-  utf8::String mailServer_;
-  utf8::String mailServerUser_;
-  utf8::String mailServerPassword_;
-  utf8::String configFile_;
-  utf8::String logFile_;
-  bool active_;
-  LONG lastError_;
-// queue interface
-  class LockedFile {
+  class msmail1c {
     public:
-      file_t handle_;
-      HANDLE hEvent_;
+      ~msmail1c();
+      msmail1c();
+
+      adicpp::AutoInitializer initializer_;
+
+      msmail::Client client_;
+      LPDISPATCH pBackConnection_;
+      IAsyncEvent * pAsyncEvent_;
       utf8::String name_;
-      DWORD lastError_;
-      bool locked_;
+      utf8::String user_;
+      utf8::String key_;
+      utf8::String groups_;
+      utf8::String mailServer_;
+      utf8::String mailServerUser_;
+      utf8::String mailServerPassword_;
+      utf8::String configFile_;
+      utf8::String logFile_;
+      bool active_;
+      LONG lastError_;
+    // queue interface
+      class LockedFile {
+        public:
+          file_t handle_;
+          HANDLE hEvent_;
+          utf8::String name_;
+          DWORD lastError_;
+          bool locked_;
 
-      ~LockedFile();
-      LockedFile();
-      void unlockFile();
+          ~LockedFile();
+          LockedFile();
+          void unlockFile();
+      };
+      Vector<LockedFile> files_;
+      Randomizer rnd_;
+
+      typedefEmbeddedHashKey(const wchar_t *,uint8_t,true) Function;
+      typedefEmbeddedHashKeys(const wchar_t *,uint8_t,true) Functions;
+      Functions functions_;
+      AutoHashDrop<Functions> functionsAutoDrop_;
+
+      typedefEmbeddedHashKey(utf8::String,VARIANTContainer,true) HashedArrayKey;
+      typedefEmbeddedHashKeys(utf8::String,VARIANTContainer,true) HashedArrayKeys;
+      Vector<HashedArrayKeys> hashedArrays_;
+
+      LockedFile * findFileByName(const utf8::String & name);
+      LockedFile * addFile(const utf8::String & name);
   };
-  Vector<LockedFile> files_;
-  Randomizer rnd_;
 
-  typedefEmbeddedHashKey(const wchar_t *,uint8_t,true) Function;
-  typedefEmbeddedHashKeys(const wchar_t *,uint8_t,true) Functions;
-  Functions functions_;
-  AutoHashDrop<Functions> functionsAutoDrop_;
-
-  typedefEmbeddedHashKey(utf8::String,VARIANTContainer,true) HashedArrayKey;
-  typedefEmbeddedHashKeys(utf8::String,VARIANTContainer,true) HashedArrayKeys;
-  Vector<HashedArrayKeys> hashedArrays_;
-
-  LockedFile * findFileByName(const utf8::String & name);
-  LockedFile * addFile(const utf8::String & name);
+  AutoPtr<msmail1c> msmail1c_;
 
   STDMETHOD(lockFile)(IN BSTR name,IN ULONG minSleepTime,IN ULONG maxSleepTime,OUT LONG * pLastError);
   STDMETHOD(unlockFile)(IN BSTR name,OUT LONG * pLastError);
