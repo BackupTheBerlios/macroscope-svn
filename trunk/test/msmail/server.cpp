@@ -73,15 +73,18 @@ Fiber * Server::newFiber()
   return newObjectV<ServerFiber>(*this);
 }
 //------------------------------------------------------------------------------
+utf8::String Server::spoolDirHelper() const
+{
+  return includeTrailingPathDelimiter(config_->valueByPath(
+    utf8::String(serverConfSectionName_[stStandalone]) + ".spool",
+    getExecutablePath() + "spool"
+  ));
+}
+//------------------------------------------------------------------------------
 utf8::String Server::spoolDir(intptr_t id) const
 {
   utf8::String spool(
-    includeTrailingPathDelimiter(
-      config_->valueByPath(
-        utf8::String(serverConfSectionName_[stStandalone]) + ".spool",
-        getExecutablePath() + "spool"
-      )
-    ) + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String("collector"))
+    spoolDirHelper() + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String("collector"))
   );
   createDirectory(spool);
   return includeTrailingPathDelimiter(spool);
@@ -89,28 +92,28 @@ utf8::String Server::spoolDir(intptr_t id) const
 //------------------------------------------------------------------------------
 utf8::String Server::mailDir() const
 {
-  utf8::String mail(spoolDir(-1) + "mail");
+  utf8::String mail(spoolDirHelper() + "mail");
   createDirectory(mail);
   return includeTrailingPathDelimiter(mail);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::mqueueDir() const
 {
-  utf8::String mqueue(spoolDir(-1) + "mqueue");
+  utf8::String mqueue(spoolDirHelper() + "mqueue");
   createDirectory(mqueue);
   return includeTrailingPathDelimiter(mqueue);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::lckDir() const
 {
-  utf8::String lck(spoolDir(-1) + "lck");
+  utf8::String lck(spoolDirHelper() + "lck");
   createDirectory(lck);
   return includeTrailingPathDelimiter(lck);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::incompleteDir() const
 {
-  utf8::String lck(spoolDir(-1) + "incomplete");
+  utf8::String lck(spoolDirHelper() + "incomplete");
   createDirectory(lck);
   return includeTrailingPathDelimiter(lck);
 }

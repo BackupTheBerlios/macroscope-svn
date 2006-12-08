@@ -557,7 +557,7 @@ void SpoolWalker::processQueue(bool & timeWait)
         file >> message;
         utf8::String suser, skey, host;
         splitString(message->value("#Recepient"),suser,skey,"@");
-        bool deliverLocaly = true;
+        bool deliverLocaly = false;
         Key2ServerLink * key2ServerLink = NULL;
         {
           Server::Data & data = server_.data(stStandalone);
