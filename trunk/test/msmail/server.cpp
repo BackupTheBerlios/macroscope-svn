@@ -294,7 +294,12 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
     attachFiber(walker);
   }
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
-  pWalker->messages_.insert(*newObject<Message::Key>(id));
+  try {
+    pWalker->messages_.insert(*newObject<Message::Key>(id));
+  }
+  catch( ... ){
+    pWalker = pWalker;
+  }
   rename(fileName,mqueueDir() + id + ".msg");
   if( pWalker->messages_.count() == 1 ) pWalker->semaphore_.post();
 }

@@ -236,7 +236,8 @@ void BaseThread::queue()
     assert( !ev->fiber_->finished() );
     Fiber::switchFiber(ev->fiber_);
     if( ev->fiber_->finished() ){
-      detectMaxFiberStackSize();
+      //detectMaxFiberStackSize();
+      setCurrentFiber(NULL);
       sweepFiber(ev->fiber_);
     }
   }

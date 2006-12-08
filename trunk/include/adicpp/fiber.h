@@ -39,6 +39,7 @@ class Fiber {
   friend class Requester;
   friend class AsyncDescriptor;
   friend Fiber * currentFiber();
+  friend void setCurrentFiber(Fiber * fiber);
   public:
     virtual ~Fiber();
     Fiber();
@@ -178,6 +179,11 @@ inline void Fiber::switchFiber(Fiber * fiber)
 inline Fiber * currentFiber()
 {
   return *reinterpret_cast<ThreadLocalVariable<Fiber> *>(Fiber::currentFiberPlaceHolder);
+}
+//---------------------------------------------------------------------------
+inline void setCurrentFiber(Fiber * fiber)
+{
+  *reinterpret_cast<ThreadLocalVariable<Fiber> *>(Fiber::currentFiberPlaceHolder) = fiber;
 }
 //---------------------------------------------------------------------------
 inline bool isRunInFiber()

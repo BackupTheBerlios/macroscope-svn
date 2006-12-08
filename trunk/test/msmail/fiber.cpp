@@ -659,7 +659,6 @@ void SpoolWalker::processQueue(bool & timeWait)
           utf8::String mId(message->id());
           message = NULL;
           server_.sendMessage(host,mId,list[i]);
-          //rename(list[i],server_.mqueueDir() + message->id() + ".msg");
           stdErr.debug(0,stream);
         }
       }
@@ -867,6 +866,8 @@ void MailQueueWalker::main()
           );
           file.close();
           remove(file.fileName());
+          AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
+          messages_.remove(mId);
         }
         else {
           uint64_t inactivityTime = (uint64_t) server_.config_->parse().valueByPath(

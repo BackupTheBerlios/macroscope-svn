@@ -226,7 +226,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
 //---------------------------------------------------------------------------
 void LogFile::rotate(AsyncFile & file)
 {
-  if( (rotatedFileCount_ > 0 && file.size() <= rotationThreshold_) || file.std() ) return;
+  if( rotatedFileCount_ > 0 || file.std() || file.size() <= rotationThreshold_ ) return;
   file.close();
   file.exclusive(true).open();
   utf8::String fileExt(getFileExt(file.fileName()));
