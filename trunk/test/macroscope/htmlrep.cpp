@@ -156,7 +156,7 @@ void Logger::writeUserTop(
       ;
     }
     writeHtmlTail(f);
-    f.resize(f.seek());
+    f.resize(f.tell());
   }
 }
 //------------------------------------------------------------------------------
@@ -403,7 +403,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
     beginTime = beginTime2;
   }
   writeHtmlTail(f);
-  f.resize(f.seek());
+  f.resize(f.tell());
 }
 //------------------------------------------------------------------------------
 void Logger::writeHtmlYearOutput()
@@ -658,7 +658,7 @@ void Logger::writeHtmlYearOutput()
     utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) << "\n<BR>\n" <<
     utf8::int2Str((uintmax_t) trafCache_.count()) << "<BR>\n";
   writeHtmlTail(f);
-  f.resize(f.seek());
+  f.resize(f.tell());
 }
 //------------------------------------------------------------------------------
 uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)

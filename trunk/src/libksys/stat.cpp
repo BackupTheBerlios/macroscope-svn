@@ -30,7 +30,14 @@ namespace ksys {
 //---------------------------------------------------------------------------
 #define EPOCH_BIAS UINT64_C(116444592000000000)
 //---------------------------------------------------------------------------
-bool stat(const utf8::String & pathName,struct Stat & st)
+bool stat(const utf8::String & pathName,Stat * st)
+{
+  Stat sts;
+  if( st == NULL ) st = &sts;
+  return stat(pathName,*st);
+}
+//---------------------------------------------------------------------------
+bool stat(const utf8::String & pathName,Stat & st)
 {
   if( currentFiber() != NULL ){
     currentFiber()->event_.timeout_ = ~uint64_t(0);

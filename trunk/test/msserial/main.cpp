@@ -48,7 +48,7 @@ SerialPortControl::SerialPortControl() :
 //------------------------------------------------------------------------------
 void SerialPortControl::open(const utf8::String & device)
 {
-  device_.detachOnClose(false).exclusive(true).fileName(device).open();
+  device_.exclusive(true).fileName(device).open();
 #if defined(__WIN32__) || defined(__WIN64__)
   int32_t err;
   if( SetupComm(device_.descriptor(),1600,1600) == 0 ){
@@ -109,7 +109,6 @@ void SerialPortFiber::removeControl()
 //------------------------------------------------------------------------------
 void SerialPortFiber::main()
 {
-  attach();
   utf8::String device(readString()), mode(readString());
   if( control_ == NULL ){
     AutoLock<FiberInterlockedMutex> lock(service_.serialPortsMutex_);
@@ -138,7 +137,6 @@ void SerialPortFiber::main()
     }
     if( control_->reader_ == NULL ){
       control_->reader_ = newObjectV<SerialPortFiber>(service_,control_);
-      detach();
       control_->reader_->socket_ = socket_;
       socket_ = INVALID_SOCKET;
       thread()->server()->attachFiber(control_->reader_);

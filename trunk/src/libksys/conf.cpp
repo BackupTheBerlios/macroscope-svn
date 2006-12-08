@@ -158,14 +158,10 @@ ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,b
 ConfigSection & ConfigSection::setValue(const utf8::String & key,const Mutant & value) const
 {
   HashedObjectListItem<utf8::String,Mutant> * item = values_.itemOfKey(key);
-  if( item == NULL ){
-    AutoPtr<Mutant> m(newObject<Mutant>(value));
-    values_.add(m,key,&item);
-    m.ptr(NULL);
-  }
-  else {
-    *item->object() = value;
-  }
+  if( item != NULL ) values_.removeByKey(key);
+  AutoPtr<Mutant> m(newObject<Mutant>(value));
+  values_.add(m,key);
+  m.ptr(NULL);
   return *const_cast<ConfigSection *>(this);
 }
 //---------------------------------------------------------------------------
@@ -173,8 +169,32 @@ ConfigSection & ConfigSection::setValue(uintptr_t i,const Mutant & value) const
 {
   HashedObjectListItem<utf8::String,Mutant> * item = values_.itemOfIndex(i);
   assert( item != NULL );
-  *item->object() = value;
+  utf8::String key(item->key());
+  values_.removeByIndex(i);
+  AutoPtr<Mutant> m(newObject<Mutant>(value));
+  values_.add(m,key);
+  m.ptr(NULL);
   return *const_cast<ConfigSection *>(this);
+}
+//---------------------------------------------------------------------------
+ConfigSection & ConfigSection::addSection(const ConfigSection & section)
+{
+  intptr_t i;
+  for( i = section.subSections_.count() - 1; i >= 0; i-- ){
+    ConfigSection * subSection = section.subSections_.objectOfIndex(i);
+    ConfigSection * subSection2 = subSections_.objectOfKey(subSection->name_);
+    if( subSection2 == NULL ){
+      AutoPtr<ConfigSection> p(newObject<ConfigSection>(subSection->name_));
+      subSections_.add(p,subSection->name_);
+      subSection2 = p.ptr(NULL);
+    }
+    subSection2->addSection(*subSection);
+  }  
+  for( i = section.values_.count() - 1; i >= 0; i-- ){
+    HashedObjectListItem<utf8::String,Mutant> * item = section.values_.itemOfIndex(i);
+    if( item->key().strlen() > 0 ) setValue(item->key(),*item->object());
+  }  
+  return *this;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -375,10 +395,10 @@ Config & Config::putToken(const utf8::String & s, TokenType tt)
 //---------------------------------------------------------------------------
 Config & Config::parseSectionHeader(ConfigSection & root)
 {
-  TokenType     tt;
-  utf8::String  token;
-  utf8::String  param;
-  for( ; ; ){
+  TokenType tt;
+  utf8::String token;
+  utf8::String param;
+  for(;;){
     // get section header values
     token = getToken(tt);
     if( tt == ttLeftBrace ) break;
@@ -388,20 +408,15 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     if( tt == ttQuotedString ){
       param += screenString(token);
     }
-    else{
+    else {
       param += token;
     }
     token = getToken(tt);
-    if( tt == ttLeftBrace )
-      break;
+    if( tt == ttLeftBrace ) break;
     if( tt != ttColon )
       newObject<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
   }
-  if( param.strlen() > 0 ){
-    AutoPtr<Mutant> m(newObject<Mutant>(param));
-    root.values_.add(m,utf8::String());
-    m.ptr(NULL);
-  }
+  if( param.strlen() > 0 ) root.setValue(utf8::String(),param);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -425,16 +440,18 @@ Config & Config::parseSectionBody(ConfigSection & root)
     utf8::String key(token);
     token = getToken(tt);
     if( tt != ttEqual ){
-      if( key.strcasecmp("include") == 0 && (tt == ttString || tt == ttQuotedString || tt == ttNumeric) ){ // include directive
+      if( key.strcasecmp("#include") == 0 && (tt == ttString || tt == ttQuotedString || tt == ttNumeric) ){ // pragma
         Config config;
         config.fileName(token);
-        config.parse();
-// TODO:
+        if( !stat(token) )
+          config.fileName(includeTrailingPathDelimiter(getPathFromPathName(file_.fileName())) + token);
+        config.silent(true).parse();
+        root.addSection(config);
       }
       else { // try new subsection
         HashedObjectListItem<utf8::String,ConfigSection> * item = root.subSections_.itemOfKey(key);
-        AutoPtr<ConfigSection> p(newObject<ConfigSection>(key));
         if( item == NULL ){
+          AutoPtr<ConfigSection> p(newObject<ConfigSection>(key));
           root.subSections_.add(p,key,&item);
           p.ptr(NULL);
         }
@@ -463,11 +480,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         if( tt != ttColon )
           newObject<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
       }
-      AutoPtr<Mutant> m(newObject<Mutant>(value));
-      HashedObjectListItem<utf8::String,Mutant> * item = root.values_.itemOfKey(key);
-      if( item != NULL ) root.values_.removeByKey(key);
-      root.values_.add(m,key);
-      m.ptr(NULL);
+      root.setValue(key,value);
     }
   }
   return *this;

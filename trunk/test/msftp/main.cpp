@@ -640,7 +640,7 @@ void ZebexPDL::clearTerminal()
   using namespace ksys;
   AsyncFile serial;
   serial_ = &serial;
-  serial.detachOnClose(false).exclusive(true).fileName(
+  serial.exclusive(true).fileName(
     "COM" + utf8::int2Str(serialPortNumber_) + ":"
   ).open();
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -729,7 +729,7 @@ void ZebexPDL::fiberExecute()
 
   AsyncFile serial;
   serial_ = &serial;
-  serial.detachOnClose(false).exclusive(true).fileName(
+  serial.exclusive(true).fileName(
     "COM" + utf8::int2Str(serialPortNumber_) + ":"
   ).open();
 #if defined(__WIN32__) || defined(__WIN64__)

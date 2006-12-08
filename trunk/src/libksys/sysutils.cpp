@@ -1148,9 +1148,9 @@ utf8::String getNameFromPathName(const utf8::String & pathName)
 //---------------------------------------------------------------------------
 utf8::String anyPathName2HostPathName(const utf8::String & pathName)
 {
-  if( pathDelimiter == '\\' && !pathName.strstr("\\").eof() )
+  if( pathDelimiter == '\\' && !pathName.strstr("/").eof() )
     return pathName.replaceAll("/",pathDelimiterStr);
-  if( pathDelimiter == '/' && !pathName.strstr("/").eof() )
+  if( pathDelimiter == '/' && !pathName.strstr("\\").eof() )
     return pathName.replaceAll("\\",pathDelimiterStr);
   return pathName;
 }

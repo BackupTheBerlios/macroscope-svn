@@ -181,7 +181,7 @@ void MSUpdateFetcher::fiberExecute()
         Array<utf8::String> updateURLs;
         if( fetch.fetched() || fetch.resumed() || fetch.modified() ){
           AsyncFile updateList(fetch.localPath() + "updates.lst");
-          AsyncFile::LineGetBuffer buffer;
+          AsyncFile::LineGetBuffer buffer(updateList);
           buffer.codePage_ = CP_UTF8;
           buffer.removeNewLine_ = true;
           utf8::String s;

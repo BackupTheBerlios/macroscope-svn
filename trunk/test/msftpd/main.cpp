@@ -467,7 +467,7 @@ bool MSFTPService::active()
   return msftp_.active();
 }
 //------------------------------------------------------------------------------
-int main(int argc,char * argv[])
+int main(int _argc,char * _argv[])
 {
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
@@ -477,7 +477,7 @@ int main(int argc,char * argv[])
       intptr_t i;
       uintptr_t u;
     };
-    ksys::initializeArguments(argc,argv);
+    ksys::initializeArguments(_argc,_argv);
     ksys::Config::defaultFileName(SYSCONF_DIR + "msftpd.conf");
     ksys::Services services(msftpd_version.gnu_);
     MSFTPService * service;
@@ -488,16 +488,16 @@ int main(int argc,char * argv[])
     bool dispatch = false;
 #endif
     service->msftpConfig()->silent(true);
-    for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--chdir") == 0 && u + 1 < argv().count() ){
-        changeCurrentDir(argv()[u + 1]);
+    for( u = 1; u < ksys::argv().count(); u++ ){
+      if( ksys::argv()[u].strcmp("--chdir") == 0 && u + 1 < ksys::argv().count() ){
+        ksys::changeCurrentDir(ksys::argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
-        Config::defaultFileName(argv()[u + 1]);
-        service->msmailConfig()->fileName(argv()[u + 1]);
+      else if( ksys::argv()[u].strcmp("-c") == 0 && u + 1 < ksys::argv().count() ){
+        ksys::Config::defaultFileName(ksys::argv()[u + 1]);
+        service->msftpConfig()->fileName(ksys::argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
-        stdErr.fileName(argv()[u + 1]);
+      else if( ksys::argv()[u].strcmp("--log") == 0 && u + 1 < ksys::argv().count() ){
+        ksys::stdErr.fileName(ksys::argv()[u + 1]);
       }
     }
     for( u = 1; u < ksys::argv().count(); u++ ){
@@ -508,10 +508,11 @@ int main(int argc,char * argv[])
         continue;
       }
       if( ksys::argv()[u].strcmp("--install") == 0 ){
-        if( argv()[j].isSpace() )
-          service->args(service->args() + " \"" + argv()[j] + "\"");
-        else
-          service->args(service->args() + " " + argv()[j]);
+        for( uintptr_t j = u + 1; j < ksys::argv().count(); j++ )
+          if( ksys::argv()[j].isSpace() )
+            service->args(service->args() + " \"" + ksys::argv()[j] + "\"");
+          else
+            service->args(service->args() + " " + ksys::argv()[j]);
         services.install();
         dispatch = false;
       }

@@ -95,4 +95,5 @@ INSTALL (
 )
 
 INSTALL (FILES msmail.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME msmail.conf.template)
+INSTALL (FILES machine.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME machine.conf.template)
 

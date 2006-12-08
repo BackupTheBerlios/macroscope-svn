@@ -291,6 +291,7 @@ stat
 #endif
 {
 };
+bool stat(const utf8::String & pathName,Stat * st = NULL);
 bool stat(const utf8::String & pathName,struct Stat & st);
 //---------------------------------------------------------------------------
 typedef utf8::String (* StrErrorHandler)(int32_t);

@@ -73,11 +73,14 @@ class ConfigSection {
     ConfigSection & setValue(uintptr_t i,const Mutant & value) const;
   protected:
     ConfigSection & clear();
+    ConfigSection & addSection(const ConfigSection & section);
     Mutant & valueRefByPath(const utf8::String & path) const;
     Mutant & valueRef(const utf8::String & key) const;
+
   private:
     ConfigSection(const ConfigSection &);
     void operator = (const ConfigSection &);
+
     utf8::String name_;
     mutable HashedObjectList<utf8::String,ConfigSection> subSections_;
     mutable HashedObjectList<utf8::String,Mutant> values_;

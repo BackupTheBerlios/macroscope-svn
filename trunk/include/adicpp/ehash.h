@@ -399,6 +399,9 @@ template <
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object, bool throwIfExist, bool throwIfNotExist) const
 {
   EmbeddedHashNode<T> ** head = NULL;
@@ -436,6 +439,9 @@ template <
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 EmbeddedHashNode<T> * EmbeddedHash<T,N,O,H,E>::getChain()
 {
   EmbeddedHashNode<T> * head = NULL, ** p0, ** p1, * a0, * a1;
@@ -462,6 +468,9 @@ template <
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head)
 {
   EmbeddedHashNode<T> ** p0, * a0;
@@ -614,7 +623,10 @@ template <
   T & (*O) (const EmbeddedHashNode<T> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
-> inline
+>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 uintptr_t EmbeddedHash<T,N,O,H,E>::maxChainLength() const
 {
   uintptr_t max = 0, m;
@@ -632,7 +644,10 @@ template <
   T & (*O) (const EmbeddedHashNode<T> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
-> inline
+>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 uintptr_t EmbeddedHash<T,N,O,H,E>::minChainLength() const
 {
   uintptr_t min = ~(uintptr_t) 0, m;
@@ -650,7 +665,10 @@ template <
   T & (*O) (const EmbeddedHashNode<T> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
-> inline
+>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 uintptr_t EmbeddedHash<T,N,O,H,E>::avgChainLength() const
 {
   uintptr_t avg = 0, m;
