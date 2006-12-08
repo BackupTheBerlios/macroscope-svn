@@ -488,7 +488,7 @@ void ServerFiber::recvMail() // client receiving mail
       if( wait ){
         dcn_.monitor(userMailBox);
         stdErr.debug(9,utf8::String::Stream() <<
-          this << " Processing mailbox " <<
+          " Processing mailbox " <<
           excludeTrailingPathDelimiter(userMailBox) <<
           " by monitor... \n"
         );
@@ -587,7 +587,7 @@ void SpoolWalker::processQueue(bool & timeWait)
             remove(list[i]);
             stdErr.debug(1,stream);
           }
-          else {
+          else if( id_ >= 0 ){
             utf8::String::Stream stream;
             stream << "Message recepient " << message->value("#Recepient") <<
               " not found in database.\n"
@@ -595,6 +595,9 @@ void SpoolWalker::processQueue(bool & timeWait)
             message = NULL;
             rename(file.fileName(),server_.spoolDir(-1) + getNameFromPathName(file.fileName()));
             stdErr.debug(1,stream);
+          }
+          else { // if collector
+            timeWait = true;
           }
         }
         else if( deliverLocaly ){
@@ -682,14 +685,17 @@ void SpoolWalker::fiberExecute()
     }
     if( terminated_ ) break;
     if( timeWait ){
+      utf8::String iName(serverConfSectionName_[stStandalone]);
       uint64_t timeout = server_.config_->valueByPath(
-        utf8::String(serverConfSectionName_[stStandalone]) + ".spool_processing_interval",60u);
+        iName + (id_ >= 0 ? ".spool" : ".collector") + "_processing_interval",
+        60u
+      );
       sleep(timeout * 1000000u);
-      stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by timer... \n");
+      stdErr.debug(9,utf8::String::Stream() << " Processing spool by timer... \n");
     }
     else {
       dcn_.monitor(excludeTrailingPathDelimiter(server_.spoolDir(id_)));
-      stdErr.debug(9,utf8::String::Stream() << this << " Processing spool by monitor... \n");
+      stdErr.debug(9,utf8::String::Stream() << " Processing spool by monitor... \n");
     }
   }
 }
@@ -798,6 +804,7 @@ void MailQueueWalker::connectHost(bool & online)
     Server::Data & data = server_.data(stStandalone);
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
     ServerInfo * si = data.servers_.find(host_);
+    if( si == NULL ) data.registerServerNL(host_);
     if( online ){
       si->connectErrorCount_ = 0;
       si->lastFailedConnectTime_ = 0;
@@ -813,7 +820,7 @@ void MailQueueWalker::connectHost(bool & online)
         host_ << " because previous connect try failed.\n"
       );
       cec *= 1000000u;
-      uint64_t mwt = (uint64_t) server_.config_->parse().override().valueByPath(
+      uint64_t mwt = (uint64_t) server_.config_->parse().valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) +
         ".max_wait_time_before_try_connect",
         600u

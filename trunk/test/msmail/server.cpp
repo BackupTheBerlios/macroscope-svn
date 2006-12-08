@@ -65,6 +65,7 @@ void Server::open()
 //------------------------------------------------------------------------------
 void Server::close()
 {
+  closeSenders();
   ksock::Server::close();
 }
 //------------------------------------------------------------------------------
@@ -287,14 +288,18 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
   MailQueueWalker * pWalker;
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
   AutoPtr<Fiber> walker(pWalker = newObjectV<MailQueueWalker>(*this,host));
-  if( sendMailFibers_.find(*pWalker) == NULL ) attachFiber(walker);
+  if( sendMailFibers_.find(*pWalker) == NULL ){
+    pWalker->host_ = host;
+    sendMailFibers_.insert(*pWalker);
+    attachFiber(walker);
+  }
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
   pWalker->messages_.insert(*newObject<Message::Key>(id));
   rename(fileName,mqueueDir() + id + ".msg");
   if( pWalker->messages_.count() == 1 ) pWalker->semaphore_.post();
 }
 //------------------------------------------------------------------------------
-void Server::removeSender(MailQueueWalker & sender)
+void Server::removeSender(MailQueueWalker & sender) // must be called only from terminating fiber !!!
 {
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
   AutoLock<FiberInterlockedMutex> lock2(sender.messagesMutex_);
@@ -307,6 +312,17 @@ void Server::removeSender(MailQueueWalker & sender)
       mqueueDir() + *list[i] + ".msg"
     );
   sendMailFibers_.remove(sender);
+}
+//------------------------------------------------------------------------------
+void Server::closeSenders()
+{
+  AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
+  Array<MailQueueWalker *> list;
+  sendMailFibers_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+    list[i]->terminate();
+    list[i]->semaphore_.post();
+  }
 }
 //------------------------------------------------------------------------------
 void Server::mqueueCleanup()

@@ -968,6 +968,7 @@ class Server : public ksock::Server {
 
     void sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName);
     void removeSender(MailQueueWalker & sender);
+    void closeSenders();
     void mqueueCleanup();
 
     void addRecvMailFiber(ServerFiber & fiber);

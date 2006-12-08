@@ -332,19 +332,20 @@ uint64_t AsyncSocket::sysRecv(void * buf,uint64_t len)
 #if HAVE_KQUEUE
 l1:
 #endif
-  ksys::currentFiber()->event_.timeout_ = recvTimeout_;
-  ksys::currentFiber()->event_.buffer_ = buf;
-  ksys::currentFiber()->event_.length_ = len;
-  ksys::currentFiber()->event_.type_ = ksys::etRead;
-  ksys::currentFiber()->thread()->postRequest(this);
-  ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-  assert( ksys::currentFiber()->event_.type_ == ksys::etRead );
+  ksys::Fiber * fiber = ksys::currentFiber();
+  fiber->event_.timeout_ = recvTimeout_;
+  fiber->event_.buffer_ = buf;
+  fiber->event_.length_ = len;
+  fiber->event_.type_ = ksys::etRead;
+  fiber->thread()->postRequest(this);
+  fiber->switchFiber(fiber->mainFiber());
+  assert( fiber->event_.type_ == ksys::etRead );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::currentFiber()->event_.errno_ != 0 || ksys::currentFiber()->event_.count_ == 0 ){
+  if( fiber->event_.errno_ != 0 || fiber->event_.count_ == 0 ){
 #elif HAVE_KQUEUE
-  switch( ksys::currentFiber()->event_.errno_ ){
+  switch( fiber->event_.errno_ ){
     case 0           :
-      if( ksys::currentFiber()->event_.count_ == 0 ) goto l2;
+      if( fiber->event_.count_ == 0 ) goto l2;
       break;
     case EMSGSIZE    :
       if( len > 0 ){
@@ -354,9 +355,9 @@ l1:
     default          :
 l2:
 #endif
-     newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+     newObject<EAsyncSocket>(fiber->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
-  r = ksys::currentFiber()->event_.count_;
+  r = fiber->event_.count_;
   nrb_ += r;
   return r;
 }
@@ -416,19 +417,20 @@ uint64_t AsyncSocket::sysSend(const void * buf,uint64_t len)
 #if HAVE_KQUEUE
 l1:
 #endif
-  ksys::currentFiber()->event_.timeout_ = sendTimeout_;
-  ksys::currentFiber()->event_.cbuffer_ = buf;
-  ksys::currentFiber()->event_.length_ = len;
-  ksys::currentFiber()->event_.type_ = ksys::etWrite;
-  ksys::currentFiber()->thread()->postRequest(this);
-  ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-  assert( ksys::currentFiber()->event_.type_ == ksys::etWrite );
+  ksys::Fiber * fiber = ksys::currentFiber();
+  fiber->event_.timeout_ = sendTimeout_;
+  fiber->event_.cbuffer_ = buf;
+  fiber->event_.length_ = len;
+  fiber->event_.type_ = ksys::etWrite;
+  fiber->thread()->postRequest(this);
+  fiber->switchFiber(fiber->mainFiber());
+  assert( fiber->event_.type_ == ksys::etWrite );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( ksys::currentFiber()->event_.errno_ != 0 || ksys::currentFiber()->event_.count_ == 0 ){
+  if( fiber->event_.errno_ != 0 || fiber->event_.count_ == 0 ){
 #elif HAVE_KQUEUE
-  switch( ksys::currentFiber()->event_.errno_ ){
+  switch( fiber->event_.errno_ ){
     case 0           :
-      if( ksys::currentFiber()->event_.count_ == 0 ) goto l2;
+      if( fiber->event_.count_ == 0 ) goto l2;
       break;
     case EMSGSIZE    :
       if( len > 0 ){
@@ -438,9 +440,9 @@ l1:
     default          :
 l2:
 #endif  
-     newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+     newObject<EAsyncSocket>(fiber->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
-  w = ksys::currentFiber()->event_.count_;
+  w = fiber->event_.count_;
   nsb_ += w;
   return w;
 }
