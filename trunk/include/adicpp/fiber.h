@@ -218,7 +218,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
     Events requests_;
     Events newRequests_;
 #if defined(__WIN32__) || defined(__WIN64__)
-    HANDLE events_[MAXIMUM_WAIT_OBJECTS];
+    HANDLE safeEvents_[MAXIMUM_WAIT_OBJECTS];
     AsyncEvent * eReqs_[MAXIMUM_WAIT_OBJECTS];
 #else
 #if HAVE_KQUEUE

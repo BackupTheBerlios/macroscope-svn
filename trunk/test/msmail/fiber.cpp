@@ -488,7 +488,7 @@ void ServerFiber::recvMail() // client receiving mail
       if( wait ){
         dcn_.monitor(userMailBox);
         stdErr.debug(9,utf8::String::Stream() <<
-          " Processing mailbox " <<
+          "Processing mailbox " <<
           excludeTrailingPathDelimiter(userMailBox) <<
           " by monitor... \n"
         );
@@ -690,11 +690,11 @@ void SpoolWalker::fiberExecute()
         60u
       );
       sleep(timeout * 1000000u);
-      stdErr.debug(9,utf8::String::Stream() << " Processing spool by timer... \n");
+      stdErr.debug(9,utf8::String::Stream() << "Processing spool by timer... \n");
     }
     else {
       dcn_.monitor(excludeTrailingPathDelimiter(server_.spoolDir(id_)));
-      stdErr.debug(9,utf8::String::Stream() << " Processing spool by monitor... \n");
+      stdErr.debug(9,utf8::String::Stream() << "Processing spool by monitor... \n");
     }
   }
 }

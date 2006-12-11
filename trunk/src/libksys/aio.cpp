@@ -101,8 +101,8 @@ void BaseThread::cleanup()
 AsyncIoSlave::~AsyncIoSlave()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  for( intptr_t i = sizeof(events_) / sizeof(events_[0]) - 1; i >= 0; i-- )
-    CloseHandle(events_[i]);
+  for( intptr_t i = sizeof(safeEvents_) / sizeof(safeEvents_[0]) - 1; i >= 0; i-- )
+    CloseHandle(safeEvents_[i]);
 #elif HAVE_KQUEUE
   if( kqueue_ >= 0 && close(kqueue_) != 0 ){
     perror(NULL);
@@ -122,10 +122,9 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
   intptr_t i;
   int32_t err;
   for( i = sizeof(eReqs_) / sizeof(eReqs_[0]) - 1; i >= 0; i-- ) eReqs_[i] = NULL;
-  for( i = sizeof(events_) / sizeof(events_[0]) - 1; i >= 0; i-- ) events_[i] = NULL;
-  for( i = sizeof(events_) / sizeof(events_[0]) - 1; i >= 0; i-- ){
-    if( events_[i] != NULL ) continue;
-    if( (events_[i] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
+  for( i = sizeof(safeEvents_) / sizeof(safeEvents_[0]) - 1; i >= 0; i-- ) safeEvents_[i] = NULL;
+  for( i = sizeof(safeEvents_) / sizeof(safeEvents_[0]) - 1; i >= 0; i-- ){
+    if( (safeEvents_[i] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
       err = GetLastError() + errorOffset;
       newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
@@ -178,24 +177,29 @@ void AsyncIoSlave::cancelEvent(const AsyncEvent & request)
 //---------------------------------------------------------------------------
 bool AsyncIoSlave::transplant(AsyncEvent & request)
 {
+  bool r = false;
 #if defined(__WIN32__) || defined(__WIN64__)
-#define MAX_REQS (MAXIMUM_WAIT_OBJECTS - 2)
+  if( !terminated_ ){
+    AutoLock<InterlockedMutex> lock(*this);
+    if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 1 ){
+      newRequests_.insToTail(request);
+      BOOL es = SetEvent(safeEvents_[MAXIMUM_WAIT_OBJECTS - 1]);
+      assert( es != 0 );
+      if( requests_.count() == 0 ) post();
+      r = true;
+    }
+  }
 #else
   uintptr_t MAX_REQS;
 #if HAVE_KQUEUE
   MAX_REQS = 64;
 #endif
   if( connect_ ) MAX_REQS = FD_SETSIZE;
-#endif
-  bool r = false;
   if( !terminated_ ){
     AutoLock<InterlockedMutex> lock(*this);
     if( requests_.count() + newRequests_.count() < MAX_REQS ){
       newRequests_.insToTail(request);
       if( newRequests_.count() < 2 ){
-#if defined(__WIN32__) || defined(__WIN64__)
-        SetEvent(events_[MAXIMUM_WAIT_OBJECTS - 1]);
-#else
         if( connect_ ){
 	}
 #if HAVE_KQUEUE
@@ -210,13 +214,13 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 #else
         Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
 #endif
-#endif
         if( requests_.count() == 0 ) post();
       }
       r = true;
     }
   }
 #undef MAX_REQS
+#endif
   return r;
 }
 //---------------------------------------------------------------------------
@@ -258,26 +262,32 @@ void AsyncIoSlave::closeAPI(AsyncEvent * object)
 //---------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
-  priority(THREAD_PRIORITY_HIGHEST);
+//  priority(THREAD_PRIORITY_HIGHEST);
 //  priority(THREAD_PRIORITY_LOWEST);
   BOOL rw = FALSE;
   DWORD nb = 0;
-  intptr_t sp = -1;
+  intptr_t sp = -1, ssp = MAXIMUM_WAIT_OBJECTS - 1;
   bool isw9x = isWin9x();
   EventsNode * node;
   AsyncEvent * object = NULL;
+  HANDLE events[MAXIMUM_WAIT_OBJECTS];
   for(;;){
     AutoLock<InterlockedMutex> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
       openAPI(object);
       assert( sp < MAXIMUM_WAIT_OBJECTS - 1 );
-      ++sp;
+      sp++;
       eReqs_[sp] = object;
       memset(&object->overlapped_,0,sizeof(object->overlapped_));
       object->overlapped_.Offset = (DWORD) object->position_;
       object->overlapped_.OffsetHigh = (DWORD) (object->position_ >> 32);
-      object->overlapped_.hEvent = events_[sp];
+      ssp--;
+      events[sp] = safeEvents_[ssp];
+      safeEvents_[ssp] = NULL;
+      nb = ResetEvent(events[sp]);
+      assert( nb != 0 );
+      object->overlapped_.hEvent = events[sp];
 l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       SetLastError(ERROR_SUCCESS);
       switch( object->type_ ){
@@ -374,7 +384,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
           );
           break;
         case etConnect :
-          rw = object->descriptor_->Connect(events_[sp],object);
+          rw = object->descriptor_->Connect(events[sp],object);
           break;
         default :
           assert( 0 );
@@ -384,12 +394,17 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       if( rw == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != WSAEWOULDBLOCK ){
         DWORD err = GetLastError();
         closeAPI(object);
-        ResetEvent(events_[sp]);
+
+        safeEvents_[ssp++] = events[sp];
+        events[sp] = NULL;
+        events[sp + 1] = NULL;
+        eReqs_[sp] = NULL;
+        sp--;
+
         newRequests_.remove(*object);
         object->errno_ = err;
-        object->count_ = ~(uint64_t) 0;
+        object->count_ = ~uint64_t(0);
         object->fiber_->thread()->postEvent(object);
-        sp--;
       }
       else {
         requests_.insToTail(newRequests_.remove(*object));
@@ -404,6 +419,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
     }
     else {
       node = NULL;
+      object = NULL;
       DWORD wm0 = WAIT_OBJECT_0, wm;
       if( isw9x ){
         node = requests_.first();
@@ -418,8 +434,10 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             timeout = object->timeout_;
         }
         DWORD tma = timeout == ~uint64_t(0) ? INFINITE : DWORD(timeout / 1000u);
+        events[sp + 1] = safeEvents_[MAXIMUM_WAIT_OBJECTS - 1];
         release();
-        wm = WaitForMultipleObjectsEx(MAXIMUM_WAIT_OBJECTS,events_,FALSE,tma,TRUE);
+        timeout = gettimeofday();
+        wm = WaitForMultipleObjectsEx(DWORD(sp + 2),events,FALSE,tma,TRUE);
         DWORD err0 = GetLastError();
         acquire();
         SetLastError(err0);
@@ -428,11 +446,10 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
 l2:       object = eReqs_[wm];
           assert( object != NULL );
           node = &AsyncEvent::node(*object);
-          ResetEvent(events_[wm]);
           SetLastError(ERROR_SUCCESS);
           if( object->type_ == etConnect ){
             nb = 0;
-            object->descriptor_->WSAEnumNetworkEvents(events_[wm],FD_CONNECT_BIT);
+            object->descriptor_->WSAEnumNetworkEvents(events[wm],FD_CONNECT_BIT);
           }
           else {
             if( object->type_ == etDirectoryChangeNotification ){
@@ -461,11 +478,15 @@ l2:       object = eReqs_[wm];
           wm -= WAIT_ABANDONED_0;
           goto l2;
         }
-        else if( wm == WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS - 1	){
-          ResetEvent(events_[wm - WAIT_OBJECT_0]);
+        else if( wm == WAIT_OBJECT_0 + sp + 1	){
+          wm -= WAIT_OBJECT_0;
+          nb = ResetEvent(events[wm]);
+          assert( nb != 0 );
         }
-        else if( wm == WAIT_ABANDONED_0 + MAXIMUM_WAIT_OBJECTS - 1	){
-          ResetEvent(events_[wm - WAIT_ABANDONED_0]);
+        else if( wm == WAIT_ABANDONED_0 + sp + 1	){
+          wm -= WAIT_ABANDONED_0;
+          nb = ResetEvent(events[wm]);
+          assert( nb != 0 );
         }
         else if( wm == WAIT_TIMEOUT ){
           timeout = gettimeofday() - timeout;
@@ -476,8 +497,10 @@ l2:       object = eReqs_[wm];
             if( object->timeout_ == 0 ){
               closeAPI(object);
               CancelIo(object->descriptor_->descriptor_);
-              ResetEvent(events_[i]);
-              xchg(events_[i],events_[sp]);
+              safeEvents_[ssp++] = events[i];
+              events[i] = events[sp];
+              events[sp] = NULL;
+              events[sp + 1] = NULL;
               eReqs_[i] = eReqs_[sp];
               eReqs_[sp] = NULL;
               sp--;
@@ -488,6 +511,7 @@ l2:       object = eReqs_[wm];
             }
           }
           node = NULL;
+          object = NULL;
         }
         else {
           assert( 0 );
@@ -497,15 +521,16 @@ l2:       object = eReqs_[wm];
         object->errno_ = GetLastError();
         closeAPI(object);
 
-        xchg(events_[wm],events_[sp]);
+        safeEvents_[ssp++] = events[wm];
+        events[wm] = events[sp];
+        events[sp] = NULL;
+        events[sp + 1] = NULL;
         eReqs_[wm] = eReqs_[sp];
         eReqs_[sp] = NULL;
-
+        sp--;
         requests_.remove(*object);
-
         object->count_ = object->errno_ != ERROR_SUCCESS && object->errno_ != ERROR_HANDLE_EOF ? ~uint64_t(0) : nb;
         object->fiber_->thread()->postEvent(object);
-        sp--;
       }
     }
   }
@@ -515,7 +540,7 @@ l2:       object = eReqs_[wm];
 //------------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
-  priority(THREAD_PRIORITY_HIGHEST);
+//  priority(THREAD_PRIORITY_HIGHEST);
   intptr_t sp = -1;
 #if SIZEOF_AIOCB
   struct aiocb * iocb;
@@ -799,7 +824,7 @@ bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
 //------------------------------------------------------------------------------
 void AsyncOpenFileSlave::threadExecute()
 {
-  priority(THREAD_PRIORITY_HIGHEST);
+//  priority(THREAD_PRIORITY_HIGHEST);
 //  priority(THREAD_PRIORITY_LOWEST);
   AsyncEvent * request;
   for(;;){
@@ -995,7 +1020,7 @@ void AsyncTimerSlave::transplant(AsyncEvent & request)
 //------------------------------------------------------------------------------
 void AsyncTimerSlave::threadExecute()
 {
-  priority(THREAD_PRIORITY_TIME_CRITICAL);
+//  priority(THREAD_PRIORITY_TIME_CRITICAL);
 //  priority(THREAD_PRIORITY_LOWEST);
   uint64_t minTimeout, timerStartTime, elapsedTime, currentTime;
   EventsNode * requestNode;
@@ -1087,19 +1112,19 @@ AsyncAcquireSlave::AsyncAcquireSlave()
 //------------------------------------------------------------------------------
 bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 {
-//  intptr_t i;
   bool r = false;
   if( !terminated_ ){
     AutoLock<InterlockedMutex> lock(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
-      //for( i = sp_; i >= 0; i-- ) if( sems_[i] == request.mutex_->sem_ ) break;
-      //if( i < 0 ){
-        newRequests_.insToTail(request);
-        SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
-        if( requests_.count() == 0 ) post();
-        r = true;
-      //}
+    if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 1 ){
+      if( request.timeout_ <= 60000000 ){
+        r = r;
+      }
+      newRequests_.insToTail(request);
+      BOOL es = SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
+      assert( es != 0 );
+      if( requests_.count() == 0 ) post();
+      r = true;
     }
 #else
     requests_.insToTail(request);
@@ -1112,7 +1137,7 @@ bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 //------------------------------------------------------------------------------
 void AsyncAcquireSlave::threadExecute()
 {
-  priority(THREAD_PRIORITY_TIME_CRITICAL);
+//  priority(THREAD_PRIORITY_TIME_CRITICAL);
 //  priority(THREAD_PRIORITY_LOWEST);
 #if defined(__WIN32__) || defined(__WIN64__)
   AsyncEvent * object;
@@ -1124,12 +1149,11 @@ void AsyncAcquireSlave::threadExecute()
       if( node == NULL ) break;
       object = &AsyncEvent::nodeObject(*node);
       assert( sp_ < MAXIMUM_WAIT_OBJECTS - 1 );
-      ++sp_;
+      sp_++;
       if( object->type_ == etAcquireMutex ) sems_[sp_] = object->mutex_->sem_;
       else
       if( object->type_ == etAcquireSemaphore ) sems_[sp_] = object->semaphore_->handle_;
       eSems_[sp_] = object;
-      sems_[sp_ + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
       requests_.insToTail(newRequests_.remove(*node));
     }
     if( requests_.count() == 0 ){
@@ -1139,22 +1163,28 @@ void AsyncAcquireSlave::threadExecute()
       acquire();
     }
     else {
+      DWORD tma = INFINITE, wm0 = WAIT_OBJECT_0;
       uint64_t timeout = ~uint64_t(0);
       for( node = requests_.first(); node != NULL; node = node->next() ){
         object = &AsyncEvent::nodeObject(*node);
-        if( object->timeout_ < timeout ) timeout = object->timeout_;
+        if( object->timeout_ < timeout ){
+          timeout = object->timeout_;
+          tma = DWORD(timeout / 1000u);
+        }
       }
       release();
       object = NULL;
       node = NULL;
-      DWORD tma = timeout == ~uint64_t(0) ? INFINITE : DWORD(timeout / 1000u);
       timeout = gettimeofday();
-      DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,tma,TRUE);
+      sems_[sp_ + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
+      DWORD wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,tma,TRUE);
       acquire();
-      wm0 = WAIT_OBJECT_0;
       if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
         wm -= WAIT_OBJECT_0;
         object = eSems_[wm];
+        if( object->timeout_ <= 60000000 ){
+          wm = wm;
+        }
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
@@ -1178,7 +1208,8 @@ void AsyncAcquireSlave::threadExecute()
           object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
           if( object->timeout_ == 0 ){
             sems_[i] = sems_[sp_];
-            sems_[sp_] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
+            sems_[sp_] = NULL;
+            sems_[sp_ + 1] = NULL;
             eSems_[i] = eSems_[sp_];
             eSems_[sp_] = NULL;
             sp_--;
@@ -1189,13 +1220,15 @@ void AsyncAcquireSlave::threadExecute()
           }
         }
         node = NULL;
+        object = NULL;
       }
       else {
         assert( 0 );
       }
       if( node != NULL ){
         sems_[wm] = sems_[sp_];
-        sems_[sp_] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
+        sems_[sp_] = NULL;
+        sems_[sp_ + 1] = NULL;
         eSems_[wm] = eSems_[sp_];
         eSems_[sp_] = NULL;
         sp_--;
@@ -1274,7 +1307,7 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::transplant(AsyncEvent & request
 //------------------------------------------------------------------------------
 void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
 {
-  priority(THREAD_PRIORITY_TIME_CRITICAL);
+//  priority(THREAD_PRIORITY_TIME_CRITICAL);
   AsyncEvent * object;
   EventsNode * node;
   for(;;){
@@ -1384,7 +1417,7 @@ void AsyncStackBackTraceSlave::transplant(AsyncEvent & request)
 //------------------------------------------------------------------------------
 void AsyncStackBackTraceSlave::threadExecute()
 {
-  priority(THREAD_PRIORITY_TIME_CRITICAL);
+//  priority(THREAD_PRIORITY_TIME_CRITICAL);
   AsyncEvent * request;
   for(;;){
     acquire();
