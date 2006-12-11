@@ -923,7 +923,7 @@ class Server : public ksock::Server {
   protected:
     Fiber * newFiber();
     utf8::String spoolDirHelper() const;
-    utf8::String spoolDir(intptr_t id) const;
+    utf8::String spoolDir(intptr_t id,bool createIfNotExist = true) const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;
@@ -969,6 +969,7 @@ class Server : public ksock::Server {
     void sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName);
     void removeSender(MailQueueWalker & sender);
     void closeSenders();
+    void spoolCleanup();
     void mqueueCleanup();
 
     void addRecvMailFiber(ServerFiber & fiber);

@@ -48,13 +48,14 @@ Server::Server(const ConfigSP config) :
 void Server::open()
 {
   ksock::Server::open();
+  spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",8);
   mqueueCleanup();
+  spoolCleanup();
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
   union {
     intptr_t i;
     uintptr_t u;
   };
-  spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",8);
   for( u = 1; u < spoolFibers_; u <<= 1 );
   spoolFibers_ = u;
   while( u > 0 ) attachFiber(newObjectV<SpoolWalker>(*this,--u));
@@ -82,12 +83,12 @@ utf8::String Server::spoolDirHelper() const
   ));
 }
 //------------------------------------------------------------------------------
-utf8::String Server::spoolDir(intptr_t id) const
+utf8::String Server::spoolDir(intptr_t id,bool createIfNotExist) const
 {
   utf8::String spool(
     spoolDirHelper() + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String("collector"))
   );
-  createDirectory(spool);
+  if( createIfNotExist ) createDirectory(spool);
   return includeTrailingPathDelimiter(spool);
 }
 //------------------------------------------------------------------------------
@@ -289,17 +290,11 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
   AutoPtr<Fiber> walker(pWalker = newObjectV<MailQueueWalker>(*this,host));
   if( sendMailFibers_.find(*pWalker) == NULL ){
-    pWalker->host_ = host;
     sendMailFibers_.insert(*pWalker);
     attachFiber(walker);
   }
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
-  try {
-    pWalker->messages_.insert(*newObject<Message::Key>(id));
-  }
-  catch( ... ){
-    pWalker = pWalker;
-  }
+  pWalker->messages_.insert(*newObject<Message::Key>(id));
   rename(fileName,mqueueDir() + id + ".msg");
   if( pWalker->messages_.count() == 1 ) pWalker->semaphore_.post();
 }
@@ -312,7 +307,7 @@ void Server::removeSender(MailQueueWalker & sender) // must be called only from 
   sender.messages_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
     rename(
-      spoolDir(utf8::String(*list[i]).hash(true) & (spoolFibers_ - 1)) +
+    spoolDir(getNameFromPathName(*list[i]).hash(true) & (spoolFibers_ - 1)) +
         *list[i] + ".msg",
       mqueueDir() + *list[i] + ".msg"
     );
@@ -336,10 +331,29 @@ void Server::mqueueCleanup()
   getDirList(list,mqueueDir() + "*.msg",utf8::String(),false);
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
     rename(
-      spoolDir(utf8::String(list[i]).hash(true) & (spoolFibers_ - 1)) +
-        list[i] + ".msg",
-      mqueueDir() + list[i] + ".msg"
+      list[i],
+      spoolDir(getNameFromPathName(list[i]).hash(true) & (spoolFibers_ - 1)) +
+        getNameFromPathName(list[i])
     );
+    list.remove(i);
+  }
+}
+//------------------------------------------------------------------------------
+void Server::spoolCleanup()
+{
+  for( uintptr_t i = spoolFibers_; i < ~uintptr_t(0); i++ ){
+    if( !stat(excludeTrailingPathDelimiter(spoolDir(i,false))) ) break;
+    Vector<utf8::String> list;
+    getDirList(list,spoolDir(i) + "*.msg",utf8::String(),false);
+    for( intptr_t j = list.count() - 1; j >= 0; j-- ){
+      rename(
+        list[j],
+        spoolDir(getNameFromPathName(list[j]).hash(true) & (spoolFibers_ - 1)) +
+          getNameFromPathName(list[j])
+      );
+      list.remove(j);
+    }
+    removeDirectory(excludeTrailingPathDelimiter(spoolDir(i)));
   }
 }
 //------------------------------------------------------------------------------

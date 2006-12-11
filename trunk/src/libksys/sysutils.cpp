@@ -2390,6 +2390,7 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::St
 #if PRIVATE_RELEASE
 bool checkMachineBinding(const utf8::String & key,bool abortProgram)
 {
+  return false;
   bool pirate = true, mkey = true, expire = true;
   try {
     SHA256Cryptor decryptor;

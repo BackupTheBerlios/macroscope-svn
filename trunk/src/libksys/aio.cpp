@@ -259,6 +259,7 @@ void AsyncIoSlave::closeAPI(AsyncEvent * object)
 void AsyncIoSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_HIGHEST);
+//  priority(THREAD_PRIORITY_LOWEST);
   BOOL rw = FALSE;
   DWORD nb = 0;
   intptr_t sp = -1;
@@ -403,7 +404,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
     }
     else {
       node = NULL;
-      DWORD wm;
+      DWORD wm0 = WAIT_OBJECT_0, wm;
       if( isw9x ){
         node = requests_.first();
         object = &AsyncEvent::nodeObject(*node);
@@ -422,14 +423,9 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         DWORD err0 = GetLastError();
         acquire();
         SetLastError(err0);
-#if __INTEL_COMPILER
-        if( wm < WAIT_OBJECT_0 + sp + 1 ){
-#else
-        if( wm >= WAIT_OBJECT_0 && wm < WAIT_OBJECT_0 + sp + 1 ){
-#endif
+        if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp + 1 ){
           wm -= WAIT_OBJECT_0;
-          assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
-          object = eReqs_[wm];
+l2:       object = eReqs_[wm];
           assert( object != NULL );
           node = &AsyncEvent::node(*object);
           ResetEvent(events_[wm]);
@@ -461,8 +457,15 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             }
           }
         }
+        else if( wm >= WAIT_ABANDONED_0 && wm < WAIT_ABANDONED_0 + sp + 1 ){
+          wm -= WAIT_ABANDONED_0;
+          goto l2;
+        }
         else if( wm == WAIT_OBJECT_0 + MAXIMUM_WAIT_OBJECTS - 1	){
           ResetEvent(events_[wm - WAIT_OBJECT_0]);
+        }
+        else if( wm == WAIT_ABANDONED_0 + MAXIMUM_WAIT_OBJECTS - 1	){
+          ResetEvent(events_[wm - WAIT_ABANDONED_0]);
         }
         else if( wm == WAIT_TIMEOUT ){
           timeout = gettimeofday() - timeout;
@@ -471,9 +474,10 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             if( object->timeout_ == ~uint64_t(0) ) continue;
             object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
             if( object->timeout_ == 0 ){
+              closeAPI(object);
               CancelIo(object->descriptor_->descriptor_);
+              ResetEvent(events_[i]);
               xchg(events_[i],events_[sp]);
-              events_[sp] = events_[MAXIMUM_WAIT_OBJECTS - 1];
               eReqs_[i] = eReqs_[sp];
               eReqs_[sp] = NULL;
               sp--;
@@ -796,6 +800,7 @@ bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
 void AsyncOpenFileSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_HIGHEST);
+//  priority(THREAD_PRIORITY_LOWEST);
   AsyncEvent * request;
   for(;;){
     request = NULL;
@@ -991,6 +996,7 @@ void AsyncTimerSlave::transplant(AsyncEvent & request)
 void AsyncTimerSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_TIME_CRITICAL);
+//  priority(THREAD_PRIORITY_LOWEST);
   uint64_t minTimeout, timerStartTime, elapsedTime, currentTime;
   EventsNode * requestNode;
   AsyncEvent * request, * minRequest;
@@ -1107,6 +1113,7 @@ bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 void AsyncAcquireSlave::threadExecute()
 {
   priority(THREAD_PRIORITY_TIME_CRITICAL);
+//  priority(THREAD_PRIORITY_LOWEST);
 #if defined(__WIN32__) || defined(__WIN64__)
   AsyncEvent * object;
   EventsNode * node;
@@ -1142,28 +1149,26 @@ void AsyncAcquireSlave::threadExecute()
       node = NULL;
       DWORD tma = timeout == ~uint64_t(0) ? INFINITE : DWORD(timeout / 1000u);
       timeout = gettimeofday();
-      DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,tma,FALSE);
+      DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,tma,TRUE);
       acquire();
       wm0 = WAIT_OBJECT_0;
       if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
         wm -= WAIT_OBJECT_0;
-        assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm >= STATUS_ABANDONED_WAIT_0 && wm < STATUS_ABANDONED_WAIT_0 + sp_ + 1 ){
-        wm -= STATUS_ABANDONED_WAIT_0;
-        assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
+      else if( wm >= WAIT_ABANDONED_0 && wm < WAIT_ABANDONED_0 + sp_ + 1 ){
+        wm -= WAIT_ABANDONED_0;
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
       else if( wm == WAIT_OBJECT_0 + sp_ + 1 ){
-        ResetEvent(sems_[WAIT_OBJECT_0 + sp_ + 1]);
+        ResetEvent(sems_[wm]);
       }
-      else if( wm == STATUS_ABANDONED_WAIT_0 + sp_ + 1 ){
-        ResetEvent(sems_[STATUS_ABANDONED_WAIT_0 + sp_ + 1]);
+      else if( wm == WAIT_ABANDONED_0 + sp_ + 1 ){
+        ResetEvent(sems_[wm]);
       }
       else if( wm == WAIT_TIMEOUT ){
         timeout = gettimeofday() - timeout;
@@ -1172,7 +1177,7 @@ void AsyncAcquireSlave::threadExecute()
           if( object->timeout_ == ~uint64_t(0) ) continue;
           object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
           if( object->timeout_ == 0 ){
-            xchg(sems_[i],sems_[sp_]);
+            sems_[i] = sems_[sp_];
             sems_[sp_] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
             eSems_[i] = eSems_[sp_];
             eSems_[sp_] = NULL;
@@ -1189,7 +1194,7 @@ void AsyncAcquireSlave::threadExecute()
         assert( 0 );
       }
       if( node != NULL ){
-        xchg(sems_[wm],sems_[sp_]);
+        sems_[wm] = sems_[sp_];
         sems_[sp_] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
         eSems_[wm] = eSems_[sp_];
         eSems_[sp_] = NULL;

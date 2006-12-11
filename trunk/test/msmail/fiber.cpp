@@ -710,7 +710,7 @@ MailQueueWalker::MailQueueWalker(Server & server) : server_(server)
 }
 //------------------------------------------------------------------------------
 MailQueueWalker::MailQueueWalker(Server & server,const utf8::String & host)
-  : server_(server)
+  : server_(server), host_(host)
 {
 }
 //------------------------------------------------------------------------------
@@ -866,8 +866,6 @@ void MailQueueWalker::main()
           );
           file.close();
           remove(file.fileName());
-          AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
-          messages_.remove(mId);
         }
         else {
           uint64_t inactivityTime = (uint64_t) server_.config_->parse().valueByPath(
