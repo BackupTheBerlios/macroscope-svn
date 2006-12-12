@@ -286,12 +286,15 @@ void Server::sendUserWatchdog(const utf8::String & user)
 //------------------------------------------------------------------------------
 void Server::sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName)
 {
-  MailQueueWalker * pWalker;
+  MailQueueWalker * pWalker, * pWalker2;
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
   AutoPtr<Fiber> walker(pWalker = newObjectV<MailQueueWalker>(*this,host));
-  if( sendMailFibers_.find(*pWalker) == NULL ){
+  if( (pWalker2 = sendMailFibers_.find(*pWalker)) == NULL ){
     sendMailFibers_.insert(*pWalker);
     attachFiber(walker);
+  }
+  else {
+    pWalker = pWalker2;
   }
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
   pWalker->messages_.insert(*newObject<Message::Key>(id));

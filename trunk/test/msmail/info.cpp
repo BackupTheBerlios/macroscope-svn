@@ -335,6 +335,7 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
       }
       else {
         if( b.ptr() == NULL ) b.alloc(bl);
+        a.file().open();
         for( uint64_t ll, lp = 0, l = list[i]->size_ + 1; l > 0; l -= ll, lp += ll ){
           ll = l > bl ? bl : l;
           a.file().readBuffer(list[i]->index_ + lp,b,ll);

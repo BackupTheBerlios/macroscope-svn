@@ -1099,7 +1099,6 @@ AsyncAcquireSlave::~AsyncAcquireSlave()
 AsyncAcquireSlave::AsyncAcquireSlave()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  sp_ = -1;
   intptr_t i;
   for( i = sizeof(eSems_) / sizeof(eSems_[0]) - 1; i >= 0; i-- ) eSems_[i] = NULL;
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
@@ -1117,9 +1116,6 @@ bool AsyncAcquireSlave::transplant(AsyncEvent & request)
     AutoLock<InterlockedMutex> lock(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
     if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 1 ){
-      if( request.timeout_ <= 60000000 ){
-        r = r;
-      }
       newRequests_.insToTail(request);
       BOOL es = SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
       assert( es != 0 );
@@ -1142,18 +1138,19 @@ void AsyncAcquireSlave::threadExecute()
 #if defined(__WIN32__) || defined(__WIN64__)
   AsyncEvent * object;
   EventsNode * node;
+  intptr_t sp = -1;
   for(;;){
     AutoLock<InterlockedMutex> lock(*this);
     for(;;){
       node = newRequests_.first();
       if( node == NULL ) break;
       object = &AsyncEvent::nodeObject(*node);
-      assert( sp_ < MAXIMUM_WAIT_OBJECTS - 1 );
-      sp_++;
-      if( object->type_ == etAcquireMutex ) sems_[sp_] = object->mutex_->sem_;
+      assert( sp < MAXIMUM_WAIT_OBJECTS - 1 );
+      sp++;
+      if( object->type_ == etAcquireMutex ) sems_[sp] = object->mutex_->sem_;
       else
-      if( object->type_ == etAcquireSemaphore ) sems_[sp_] = object->semaphore_->handle_;
-      eSems_[sp_] = object;
+      if( object->type_ == etAcquireSemaphore ) sems_[sp] = object->semaphore_->handle_;
+      eSems_[sp] = object;
       requests_.insToTail(newRequests_.remove(*node));
     }
     if( requests_.count() == 0 ){
@@ -1176,43 +1173,40 @@ void AsyncAcquireSlave::threadExecute()
       object = NULL;
       node = NULL;
       timeout = gettimeofday();
-      sems_[sp_ + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
-      DWORD wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,tma,TRUE);
+      sems_[sp + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
+      DWORD wm = WaitForMultipleObjectsEx(DWORD(sp + 2),sems_,FALSE,tma,TRUE);
       acquire();
-      if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
+      if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp + 1 ){
         wm -= WAIT_OBJECT_0;
         object = eSems_[wm];
-        if( object->timeout_ <= 60000000 ){
-          wm = wm;
-        }
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm >= WAIT_ABANDONED_0 && wm < WAIT_ABANDONED_0 + sp_ + 1 ){
+      else if( wm >= WAIT_ABANDONED_0 && wm < WAIT_ABANDONED_0 + sp + 1 ){
         wm -= WAIT_ABANDONED_0;
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm == WAIT_OBJECT_0 + sp_ + 1 ){
+      else if( wm == WAIT_OBJECT_0 + sp + 1 ){
         ResetEvent(sems_[wm]);
       }
-      else if( wm == WAIT_ABANDONED_0 + sp_ + 1 ){
+      else if( wm == WAIT_ABANDONED_0 + sp + 1 ){
         ResetEvent(sems_[wm]);
       }
       else if( wm == WAIT_TIMEOUT ){
         timeout = gettimeofday() - timeout;
-        for( intptr_t i = sp_; i >= 0; i-- ){
+        for( intptr_t i = sp; i >= 0; i-- ){
           object = eSems_[i];
           if( object->timeout_ == ~uint64_t(0) ) continue;
           object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
           if( object->timeout_ == 0 ){
-            sems_[i] = sems_[sp_];
-            sems_[sp_] = NULL;
-            sems_[sp_ + 1] = NULL;
-            eSems_[i] = eSems_[sp_];
-            eSems_[sp_] = NULL;
-            sp_--;
+            sems_[i] = sems_[sp];
+            sems_[sp] = NULL;
+            sems_[sp + 1] = NULL;
+            eSems_[i] = eSems_[sp];
+            eSems_[sp] = NULL;
+            sp--;
             requests_.remove(*object);
             assert( object->fiber_ != NULL );
             object->errno_ = WAIT_TIMEOUT;
@@ -1226,12 +1220,12 @@ void AsyncAcquireSlave::threadExecute()
         assert( 0 );
       }
       if( node != NULL ){
-        sems_[wm] = sems_[sp_];
-        sems_[sp_] = NULL;
-        sems_[sp_ + 1] = NULL;
-        eSems_[wm] = eSems_[sp_];
-        eSems_[sp_] = NULL;
-        sp_--;
+        sems_[wm] = sems_[sp];
+        sems_[sp] = NULL;
+        sems_[sp + 1] = NULL;
+        eSems_[wm] = eSems_[sp];
+        eSems_[sp] = NULL;
+        sp--;
         requests_.remove(*object);
         assert( object->fiber_ != NULL );
         object->errno_ = 0;

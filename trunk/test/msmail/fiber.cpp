@@ -838,12 +838,12 @@ void MailQueueWalker::main()
       connectHost(online);
       if( online ){
         Message::Key mId;
-        uintptr_t count;
+        bool send;
         {
           AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
-          if( (count = messages_.count()) > 0 ) mId = messages_.remove();
+          if( (send = messages_.count() > 0) ) mId = messages_.remove();
         }
-        if( count > 0 ){
+        if( send ){
           uint64_t restFrom, remainder, rb = recvBytes(), sb = sendBytes();
           *this << uint8_t(cmSendMail) << mId << true >> restFrom;
           AsyncFile file;
