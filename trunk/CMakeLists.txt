@@ -590,7 +590,7 @@ SET (CPACK_PACKAGE_VENDOR "Korvin Software")
 SET (CPACK_PACKAGE_EXECUTABLES "macroscope" "Macroscope")
 SET (CPACK_PACKAGE_VERSION_MAJOR "1")
 SET (CPACK_PACKAGE_VERSION_MINOR "0")
-SET (CPACK_PACKAGE_VERSION_PATCH "493")
+SET (CPACK_PACKAGE_VERSION_PATCH "494")
 SET (CPACK_PACKAGE_INSTALL_DIRECTORY "macroscope")
 
 # Try to get patch level from svn
@@ -635,9 +635,9 @@ IF (WIN32 AND NOT UNIX)
     DOC "Where is makensis.exe located"
   )
   IF (NSIS_MAKENSIS)
-    SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-      "SetCompressor /SOLID lzma\\n"
-    )
+#    SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
+#      "SetCompressor /SOLID lzma\\n"
+#    )
     SET (CPACK_NSIS_EXTRA_INSTALL_COMMANDS
       "${CPACK_NSIS_EXTRA_INSTALL_COMMANDS}!include \\\"Library.nsh\\\"\\n"
     )
@@ -657,12 +657,14 @@ IF (WIN32 AND NOT UNIX)
 #      "${CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS}nsExec::ExecToLog '\\\"$INSTDIR\\\\bin\\\\msmail.exe\\\" --uninstall'\\n"
 #    )
     SET (CPACK_NSIS_MODIFY_PATH OFF)
+    SET (CPACK_NSIS_COMPRESSOR lzma)
+    SET (CPACK_GENERATOR "NSIS")
   ELSE (NSIS_MAKENSIS)
     SET (CPACK_GENERATOR TGZ)
   ENDIF (NSIS_MAKENSIS)
 ENDIF(WIN32 AND NOT UNIX)
 
-INCLUDE (InstallRequiredSystemLibraries)
+#INCLUDE (InstallRequiredSystemLibraries)
 INCLUDE (CPack)
 
 IF (APPLE)
