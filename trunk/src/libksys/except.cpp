@@ -74,9 +74,13 @@ void Exception::throwSP()
 {
 #if !defined(NDEBUG)/* || CMAKE_BUILD_TYPE == 1 || CMAKE_BUILD_TYPE == 3*/
   if( stackBackTrace_ ){
-    utf8::String::Stream stackTrace;
-    stackTrace << "\n" << getBackTrace(5);
-    if( stackTrace.count() > 1 ) stdErr.debug(128,stackTrace);
+    try {
+      utf8::String::Stream stackTrace;
+      stackTrace << "\n" << getBackTrace(5);
+      if( stackTrace.count() > 1 ) stdErr.debug(128,stackTrace);
+    }
+    catch( ... ){
+    }
   }
 #endif
   refCount_ = 0;

@@ -225,6 +225,9 @@ class Client : public ksock::Client {
     utf8::String value(const utf8::String id,const utf8::String key,const utf8::String value);
     utf8::String removeValue(const utf8::String id,const utf8::String key);
 
+    bool attachFileToMessage(const utf8::String id,const utf8::String key,const utf8::String fileName);
+    bool saveMessageAttachmentToFile(const utf8::String id,const utf8::String key,const utf8::String fileName);
+
     bool sendMessage(const utf8::String id,bool async);
     bool removeMessage(const utf8::String id,bool async);
     utf8::String Client::copyMessage(const utf8::String id);

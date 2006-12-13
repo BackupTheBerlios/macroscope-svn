@@ -103,7 +103,9 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"GetHashedArrayValue", L"ѕолучить«начение’ешированногоћассива",
       L"RemoveAllHashedArrays", L"”далить¬се’ешированныећассивы",
       L"InstallDeviceScanner", L"”становить—канер”стройства",
-      L"RemoveDeviceScanner", L"”далить—канер”стройства"
+      L"RemoveDeviceScanner", L"”далить—канер”стройства",
+      L"AttachFileToMessage", L"ѕрикрепить‘айл —ообщению",
+      L"SaveMessageAttachmentToFile", L"—охранитьѕрикрепление—ообщени€¬‘айл"
     };
     msmail1c_->functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
@@ -805,7 +807,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 29;
+  *plMethods = 31;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -1051,6 +1053,22 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"”далить—канер”стройства")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 29 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"AttachFileToMessage")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ѕрикрепить‘айл —ообщению")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 30 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"SaveMessageAttachmentToFile")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"—охранитьѕрикрепление—ообщени€¬‘айл")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1087,6 +1105,8 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 26 : *plParams = 0; break;
     case 27 : *plParams = 1; break;
     case 28 : *plParams = 1; break;
+    case 29 : *plParams = 3; break;
+    case 30 : *plParams = 3; break;
     default :
       *plParams = -1;
       return E_NOTIMPL;
@@ -1679,7 +1699,63 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             }
             SafeArrayUnlock(*paParams);
           }
-          break;          
+          break;
+        case 29 : // AttachFileToMessage
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                lIndex = 1;
+                hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
+                    lIndex = 2;
+                    hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
+                    if( SUCCEEDED(hr) ){
+                      if( V_VT(pv2) != VT_BSTR ) hr = VariantChangeTypeEx(pv2,pv2,0,0,VT_BSTR);
+                      if( SUCCEEDED(hr) ){
+                        V_I4(pvarRetValue) = msmail1c_->client_.attachFileToMessage(V_BSTR(pv0),V_BSTR(pv1),V_BSTR(pv2)) ? 1 : 0;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
+        case 30 : // SaveMessageAttachmentToFile
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
+              if( SUCCEEDED(hr) ){
+                lIndex = 1;
+                hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv1);
+                if( SUCCEEDED(hr) ){
+                  if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
+                  if( SUCCEEDED(hr) ){
+                    lIndex = 2;
+                    hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
+                    if( SUCCEEDED(hr) ){
+                      if( V_VT(pv2) != VT_BSTR ) hr = VariantChangeTypeEx(pv2,pv2,0,0,VT_BSTR);
+                      if( SUCCEEDED(hr) ){
+                        V_I4(pvarRetValue) = msmail1c_->client_.saveMessageAttachmentToFile(V_BSTR(pv0),V_BSTR(pv1),V_BSTR(pv2)) ? 1 : 0;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;        
         default :
           hr = E_NOTIMPL;
       }

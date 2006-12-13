@@ -235,7 +235,7 @@ inline uintptr_t utf8seqlen(const unsigned char * utf8s)
     l = 4;
   }
   else
-    #endif
+#endif
   if( (*utf8s & 0xE0) == 0xE0 ){
     l = 3;
   }

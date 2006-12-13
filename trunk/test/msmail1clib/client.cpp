@@ -714,6 +714,10 @@ utf8::String Client::newMessage()
   AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   Message * msg = newObject<Message>();
   sendQueue_.insert(*msg);
+  msg->file().fileName(
+    includeTrailingPathDelimiter(getPathFromPathName(msg->file().fileName())) + 
+    changeFileExt(getNameFromPathName(msg->file().fileName()),utf8::String()) + "#.msg"
+  );
   msg->file().createIfNotExist(true).removeAfterClose(true);
   return msg->id();
 }
@@ -750,6 +754,68 @@ utf8::String Client::value(const utf8::String id,const utf8::String key,const ut
   if( msg->isValue(key) ) oldValue = msg->value(key);
   msg->value(key,value);
   return oldValue;
+}
+//------------------------------------------------------------------------------
+bool Client::attachFileToMessage(const utf8::String id,const utf8::String key,const utf8::String fileName)
+{
+  Message * msg;
+  {
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+    Message * msg = sendQueue_.find(id);
+    if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    if( msg->isValue(key) )
+      newObject<Exception>(ERROR_ALREADY_EXISTS + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  AsyncFile file;
+  file.fileName(fileName).readOnly(true).open();
+  size_t bl = getpagesize() * 16;
+  AutoPtr<uint8_t> b;
+  b.alloc(bl);
+  uint64_t i = 0, l = 0, ll;
+  for( ll = file.size(); ll > 0; ll -= l, i++ ){
+    l = ll > bl ? bl : ll;
+    file.readBuffer(b,l);
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+    msg = sendQueue_.find(id);
+    if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    msg->value(key + "#" + utf8::int2HexStr(i,8),base64Encode(b,uintptr_t(l)));
+  }
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+  msg = sendQueue_.find(id);
+  if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  msg->value(key,"attached file '" + fileName + "', original size " + utf8::int2Str(file.size()) + ", block count " + utf8::int2Str(i));
+  return true;
+}
+//------------------------------------------------------------------------------
+bool Client::saveMessageAttachmentToFile(const utf8::String id,const utf8::String key,const utf8::String fileName)
+{
+  Message * msg;
+  {
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+    Message * msg = recvQueue_.find(id);
+    if( msg == NULL || !msg->isValue(key) )
+      newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  AsyncFile file;
+  file.fileName(fileName).createIfNotExist(true).open();
+  AutoPtr<uint8_t> b;
+  for( uint64_t i = 0; i < ~uint64_t(0); i++ ){
+    utf8::String bkey(key + "#" + utf8::int2HexStr(i,8)), v;
+    {
+      AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+      msg = recvQueue_.find(id);
+      if( msg == NULL || !msg->isValue(key) )
+        newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      if( !msg->isValue(bkey) ) break;
+      v = msg->value(bkey);
+    }
+    uintptr_t l = base64Decode(v,NULL,0);
+    b.realloc(l);
+    base64Decode(v,b,l);
+    file.writeBuffer(b,l);
+  }
+  file.resize(file.tell());
+  return true;
 }
 //------------------------------------------------------------------------------
 bool Client::sendMessage(const utf8::String id,bool async)

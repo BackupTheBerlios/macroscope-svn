@@ -833,6 +833,7 @@ void MailQueueWalker::connectHost(bool & online)
 void MailQueueWalker::main()
 {
   try {
+    server_.config_->parse();
     bool online = false;
     while( !terminated_ ){
       connectHost(online);
@@ -868,7 +869,7 @@ void MailQueueWalker::main()
           remove(file.fileName());
         }
         else {
-          uint64_t inactivityTime = (uint64_t) server_.config_->parse().valueByPath(
+          uint64_t inactivityTime = (uint64_t) server_.config_->valueByPath(
             utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fiber_inactivity_time",
             60u
           ) * 1000000u;

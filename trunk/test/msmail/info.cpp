@@ -251,6 +251,9 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
       }
       else {
         key = unScreenString(utf8::String(str,i));
+        if( key.strcasecmp(L"Ôאיכמ") == 0 ){
+          eof = eof;
+        }
       }
       uint64_t q = utf8::str2Int(utf8::String(i + 8,ia));
       a.value(key,utf8::String(),&pAttribute);
@@ -304,19 +307,30 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   for( k = i = 0; i < list.count(); i++ ){
     bool isNumberSign = utf8::String(list[i]->key_).strncmp(numberSign,1) == 0;
     j = uintptr_t(list[i]->value_.size() + list[i]->size_ + 2 + sizeof(Message::Attribute));
+    utf8::String v;
     if( k + j < bl ){
-      utf8::String v;
       if( isNumberSign ){
-       v = utf8::String(list[i]->key_) + ": " + a.value(list[i]->key_) + "\n";
+        v = utf8::String(list[i]->key_) + ": " + a.value(list[i]->key_) + "\n";
       }
       else {
-       v = screenString(list[i]->key_) + ": " + screenString(a.value(list[i]->key_)) + "\n";
+        v = screenString(list[i]->key_) + ": " + screenString(a.value(list[i]->key_)) + "\n";
       }
       s.writeBuffer(v.c_str(),v.size());
     }
     else {
-      sz = list[i]->index_ == 0 ? sz = list[i]->value_.size() : list[i]->size_;
-      utf8::String v;
+      utf8::String v2;
+      if( list[i]->index_ == 0 ){
+        if( isNumberSign ){
+          v2 = list[i]->value_ + "\n";
+        }
+        else {
+          v2 = screenString(list[i]->value_) + "\n";
+        }
+        sz = v2.size() - 1;
+      }
+      else {
+        sz = list[i]->size_;
+      }
       if( isNumberSign ){
         v = utf8::String(list[i]->key_) + ": index " + utf8::int2Str(sz) + "\n";
       }
@@ -325,18 +339,12 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
       }
       s.writeBuffer(v.c_str(),v.size());
       if( list[i]->index_ == 0 ){
-        if( isNumberSign ){
-          v = list[i]->value_ + "\n";
-        }
-        else {
-          v = screenString(list[i]->value_) + "\n";
-        }
-        s.writeBuffer(v.c_str(),v.size());
+        s.writeBuffer(v2.c_str(),sz + 1);
       }
       else {
         if( b.ptr() == NULL ) b.alloc(bl);
         a.file().open();
-        for( uint64_t ll, lp = 0, l = list[i]->size_ + 1; l > 0; l -= ll, lp += ll ){
+        for( uint64_t ll, lp = 0, l = sz + 1; l > 0; l -= ll, lp += ll ){
           ll = l > bl ? bl : l;
           a.file().readBuffer(list[i]->index_ + lp,b,ll);
           s.writeBuffer(b,ll);
