@@ -11,15 +11,14 @@ del /q CMakeCache.txt include\adicpp\config.h
 
 set conf=Debug
 set cmd=Clean
-rem call builds\cmake\build-helper.cmd
+call builds\cmake\build-helper.cmd
 set cmd=Build
-rem call builds\cmake\build-helper.cmd
+call builds\cmake\build-helper.cmd
 set conf=Release
 set cmd=Clean
 call builds\cmake\build-helper.cmd
 set cmd=Build
 call builds\cmake\build-helper.cmd
-exit
 set conf=MinSizeRel
 set cmd=Clean
 call builds\cmake\build-helper.cmd

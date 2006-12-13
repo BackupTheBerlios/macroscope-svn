@@ -472,7 +472,7 @@ void ClientMailFiber::newMessage()
       break;
     }
   }
-  if( message_ == NULL && messages_.count() > 0 ) message_ = &messages_[0];
+  if( message_ == NULL && messages_.count() > 0 ) message_ = &messages_[uintptr_t(0)];
 }
 //------------------------------------------------------------------------------
 void ClientMailFiber::onTerminate()
