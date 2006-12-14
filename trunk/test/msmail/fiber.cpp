@@ -93,7 +93,12 @@ void ServerFiber::auth()
     bufferSize,
     noAuth
   );
-  if( e != eOK ) newObject<Exception>(e,__PRETTY_FUNCTION__)->throwSP();
+  if( e != eOK ){
+    utf8::String::Stream stream;
+    stream << "Authentification error from: " << remoteAddress().resolve(~uintptr_t(0)) << "\n";
+    stdErr.debug(9,stream);
+    newObject<Exception>(e,__PRETTY_FUNCTION__)->throwSP();
+  }
 }
 //------------------------------------------------------------------------------
 void ServerFiber::main()

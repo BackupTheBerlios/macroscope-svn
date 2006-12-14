@@ -240,9 +240,9 @@ AsyncFile & AsyncFile::open()
       fiber->thread()->postRequest(this);
       fiber->switchFiber(fiber->mainFiber());
       assert( fiber->event_.type_ == etOpenFile );
-      descriptor_ = fiber->event_.fileDescriptor_;
       if( fiber->event_.errno_ != 0 )
         newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+      descriptor_ = fiber->event_.fileDescriptor_;
     }
     else {
       descriptor_ = openHelper(true);

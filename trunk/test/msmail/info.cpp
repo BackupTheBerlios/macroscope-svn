@@ -113,7 +113,7 @@ Message & Message::value(const utf8::String & key,const utf8::String & value,Att
     attributes_.insert(*p);
     residentSize_ += sizeof(Attribute) + keySize + 2;
   }
-  if( pAttribute == NULL && residentSize_ + valueSize >= getpagesize() * 16 ){
+  if( pAttribute == NULL && residentSize_ - p->value_.size() + valueSize >= getpagesize() * 16 ){
     file_.open();
     file_.seek(file_.size());
     utf8::String v(key), v2(value);
@@ -124,7 +124,8 @@ Message & Message::value(const utf8::String & key,const utf8::String & value,Att
     v = v + ": index " + utf8::int2Str(p->size_ = v2.size()) + "\n";
     file_.writeBuffer(v.c_str(),v.size());
     p->index_ = file_.tell();
-    file_.writeBuffer(v2.c_str(),p->size_).writeBuffer("\n",1);
+    v2 += "\n";
+    file_.writeBuffer(v2.c_str(),p->size_ + 1);
     p->value_ = utf8::String();
   }
   else {
@@ -206,10 +207,10 @@ static inline intptr_t attributeCompare(const Message::Attribute * const & p1,co
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Message & a)
 {
   uint64_t i;
-  utf8::String key, value;
   s >> i;
   while( i > 0 ){
     i--;
+    utf8::String key, value;
     s >> key >> value;
     a.value(key,value);
   }
@@ -251,9 +252,6 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
       }
       else {
         key = unScreenString(utf8::String(str,i));
-        if( key.strcasecmp(L"Ôאיכמ") == 0 ){
-          eof = eof;
-        }
       }
       uint64_t q = utf8::str2Int(utf8::String(i + 8,ia));
       a.value(key,utf8::String(),&pAttribute);

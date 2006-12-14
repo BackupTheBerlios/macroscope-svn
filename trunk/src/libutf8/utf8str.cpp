@@ -372,50 +372,46 @@ intptr_t String::strncasecmp(const String & s, uintptr_t n) const
 //---------------------------------------------------------------------------
 String::Iterator String::strstr(const String & str) const
 {
-  intptr_t  c = 0;
+  intptr_t c;
   uintptr_t l1, l2;
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
-  while( !i.eof() ){
-    const char * s1  = container_->string_ + i.cursor_, * s2 = str.container_->string_;
-    for( ; ; ){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf82ucs(s1, l1) - utf82ucs(s2, l2);
-      if( c != 0 ) break;
-      s1 += l1;
-      s2 += l2;
+  if( str.container_->string_[0] != '\0' ){
+    while( !i.eof() ){
+      const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
+      for(;;){
+        c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
+        if( *s2 == '\0' ) return i;
+        if( *s1 == '\0' || c != 0 ) break;
+        s1 += l1;
+        s2 += l2;
+      }
+      i.cursor_ += l1;
+      i.position_++;
     }
-    if( c == 0 ){
-      i2 = i;
-      break;
-    }
-    i.cursor_ += i.seqLen();
-    i.position_++;
   }
   return i2;
 }
 //---------------------------------------------------------------------------
 String::Iterator String::strcasestr(const String & str) const
 {
-  intptr_t  c = 0;
+  intptr_t c;
   uintptr_t l1, l2;
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
-  while( !i.eof() ){
-    const char *  s1  = container_->string_ + i.cursor_, * s2 = str.container_->string_;
-    for( ; ; ){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf8c2UpperUCS(s1, l1) - utf8c2UpperUCS(s2, l2);
-      if( c != 0 ) break;
-      s1 += l1;
-      s2 += l2;
+  if( str.container_->string_[0] != '\0' ){
+    while( !i.eof() ){
+      const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
+      for(;;){
+        c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
+        if( *s2 == '\0' ) return i;
+        if( *s1 == '\0' || c != 0 ) break;
+        s1 += l1;
+        s2 += l2;
+      }
+      i.cursor_ += l1;
+      i.position_++;
     }
-    if( c == 0 ){
-      i2 = i;
-      break;
-    }
-    i.cursor_ += i.seqLen();
-    i.position_++;
   }
   return i2;
 }
@@ -426,22 +422,21 @@ String::Iterator String::strrstr(const String & str) const
   uintptr_t l1, l2;
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
-  for( ; ; ){
-    const char *  s1  = container_->string_ + i.cursor_, * s2 = str.container_->string_;
-    for( ; ; ){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf82ucs(s1, l1) - utf82ucs(s2, l2);
-      if( c != 0 ) break;
-      s1 += l1;
-      s2 += l2;
+  if( str.container_->string_[0] != '\0' ){
+    while( !i.eof() ){
+      const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
+      for(;;){
+        c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
+        if( *s2 == '\0' ){ i2 = i; break; }
+        if( *s1 == '\0' || c != 0 ) break;
+        s1 += l1;
+        s2 += l2;
+      }
+      i.cursor_ += l1;
+      i.position_++;
     }
-    if( c == 0 ) i2 = i;
-    if( i.eof() ) break;
-    i.cursor_ += i.seqLen();
-    i.position_++;
   }
-  if( i2.position_ >= 0 ) i = i2;
-  return i;
+  return i2;
 }
 //---------------------------------------------------------------------------
 String::Iterator String::strrcasestr(const String & str) const
@@ -450,21 +445,21 @@ String::Iterator String::strrcasestr(const String & str) const
   uintptr_t l1, l2;
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
-  for( ; ; ){
-    const char *  s1  = container_->string_ + i.cursor_, * s2 = str.container_->string_;
-    for( ; ; ){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf8c2UpperUCS(s1, l1) - utf8c2UpperUCS(s2, l2);
-      s1 += l1;
-      s2 += l2;
+  if( str.container_->string_[0] != '\0' ){
+    while( !i.eof() ){
+      const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
+      for(;;){
+        c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
+        if( *s2 == '\0' ){ i2 = i; break; }
+        if( *s1 == '\0' || c != 0 ) break;
+        s1 += l1;
+        s2 += l2;
+      }
+      i.cursor_ += l1;
+      i.position_++;
     }
-    if( c == 0 ) i2 = i;
-    if( i.eof() ) break;
-    i.cursor_ += i.seqLen();
-    i.position_++;
   }
-  if( i2.position_ >= 0 ) i = i2;
-  return i;
+  return i2;
 }
 //---------------------------------------------------------------------------
 AnsiString String::getANSIString() const
