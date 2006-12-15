@@ -33,51 +33,50 @@ bool stackBackTrace = true;
 utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 {
 #if !defined(NDEBUG)/* || CMAKE_BUILD_TYPE == 1 || CMAKE_BUILD_TYPE == 3*/
-  if( stackBackTrace ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    InterlockedMutex mutex;
-    if( currentFiber() != NULL ){
-      if( thread == NULL ){
-        thread = currentThread();
-        currentFiber()->event_.mutex0_ = &mutex;
-        mutex.acquire();
-      }
-      else {
-        currentFiber()->event_.mutex0_ = NULL;
-      }
-      currentFiber()->event_.timeout_ = ~uint64_t(0);
-      currentFiber()->event_.data1_ = skipCount;
-      currentFiber()->event_.thread_ = thread;
-      currentFiber()->event_.type_ = etStackBackTrace;
-      currentFiber()->thread()->postRequest();
-      if( thread != currentThread() ){
-        currentFiber()->switchFiber(currentFiber()->mainFiber());
-      }
-      else {
-        mutex.acquire();
-        mutex.release();
-      }
-      assert( currentFiber()->event_.type_ == etStackBackTrace );
-      assert( currentFiber()->event_.errno_ == 0 );
-      return currentFiber()->event_.string0_;
+  InterlockedMutex mutex;
+  if( currentFiber() != NULL ){
+    if( thread == NULL ){
+      thread = currentThread();
+      currentFiber()->event_.mutex0_ = &mutex;
+      mutex.acquire();
     }
-    AsyncEvent event;
-    event.mutex0_ = &mutex;
-    event.data1_ = skipCount;
-    event.tid_ = (uintptr_t) GetCurrentThreadId();
-    event.type_ = etStackBackTraceZero;
-    event.timeout_ = ~uint64_t(0);
-    mutex.acquire();
-    Requester::requester().postRequest(&event);
-    mutex.acquire();
-    mutex.release();
-    assert( event.type_ == etStackBackTraceZero );
-    assert( event.errno_ == 0 );
-    return event.string0_;
-#endif
+    else {
+      currentFiber()->event_.mutex0_ = NULL;
+    }
+    currentFiber()->event_.timeout_ = ~uint64_t(0);
+    currentFiber()->event_.data1_ = skipCount;
+    currentFiber()->event_.thread_ = thread;
+    currentFiber()->event_.type_ = etStackBackTrace;
+    currentFiber()->thread()->postRequest();
+    if( thread != currentThread() ){
+      currentFiber()->switchFiber(currentFiber()->mainFiber());
+    }
+    else {
+      mutex.acquire();
+      mutex.release();
+    }
+    assert( currentFiber()->event_.type_ == etStackBackTrace );
+    assert( currentFiber()->event_.errno_ == 0 );
+    return currentFiber()->event_.string0_;
   }
+  AsyncEvent event;
+  event.mutex0_ = &mutex;
+  event.data1_ = skipCount;
+  event.tid_ = (uintptr_t) GetCurrentThreadId();
+  event.type_ = etStackBackTraceZero;
+  event.timeout_ = ~uint64_t(0);
+  mutex.acquire();
+  Requester::requester().postRequest(&event);
+  mutex.acquire();
+  mutex.release();
+  assert( event.type_ == etStackBackTraceZero );
+  assert( event.errno_ == 0 );
+  return event.string0_;
+#else
+  return "";
 #endif
-  return utf8::String();
+#endif
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -91,8 +90,9 @@ DirectoryChangeNotification::DirectoryChangeNotification()
 #if defined(__WIN32__) || defined(__WIN64__)
   : hFFCNotification_(INVALID_HANDLE_VALUE),
   hDirectory_(INVALID_HANDLE_VALUE),
-  bufferSize_(0)
+  bufferSize_(0),
 #endif
+  createPath_(true)
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
   newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
@@ -109,13 +109,17 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   if( isWin9x() ){
     if( hFFCNotification_ == INVALID_HANDLE_VALUE ){
       hFFCNotification_ = FindFirstChangeNotificationA(
-        pathName.getOEMString(),
+        anyPathName2HostPathName(pathName).getOEMString(),
         FALSE,
         FILE_NOTIFY_CHANGE_FILE_NAME
       );
       if( hFFCNotification_ == INVALID_HANDLE_VALUE ){
-        int32_t err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        int32_t err = GetLastError();
+        if( (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) && createPath_ ){
+          createDirectory(pathName);
+          return monitor(pathName,timeout);
+        }
+        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     else if( FindNextChangeNotification(hFFCNotification_) == 0 ){
@@ -132,7 +136,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
     }
     if( hDirectory_ == INVALID_HANDLE_VALUE ){
       hDirectory_ = CreateFileW(
-          pathName.getUNICODEString(),
+          anyPathName2HostPathName(pathName).getUNICODEString(),
           GENERIC_READ,
           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
           NULL,
@@ -141,24 +145,31 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
           NULL
       );
       if( hDirectory_ == INVALID_HANDLE_VALUE ){
-        int32_t err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        int32_t err = GetLastError();
+        if( (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) && createPath_ ){
+          createDirectory(pathName);
+          return monitor(pathName,timeout);
+        }
+        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
     }
   }
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.abort_ = false;
-  currentFiber()->event_.position_ = 0;
-  currentFiber()->event_.directoryChangeNotification_ = this;
-  currentFiber()->event_.timeout_ = timeout;
-  currentFiber()->event_.type_ = etDirectoryChangeNotification;
-  currentFiber()->thread()->postRequest();
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == etDirectoryChangeNotification );
-  if( currentFiber()->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
-  if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
-    newObject<Exception>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
+  Fiber * fiber = currentFiber();
+  assert( fiber != NULL );
+  fiber->event_.abort_ = false;
+  fiber->event_.position_ = 0;
+  fiber->event_.directoryChangeNotification_ = this;
+  fiber->event_.timeout_ = timeout;
+  fiber->event_.type_ = etDirectoryChangeNotification;
+  fiber->thread()->postRequest();
+  fiber->switchFiber(fiber->mainFiber());
+  assert( fiber->event_.type_ == etDirectoryChangeNotification );
+  if( fiber->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
+  if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
+    newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
   }
+#else
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1202,33 +1213,51 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
   return ni.eof() && mi.eof();
 }
 //---------------------------------------------------------------------------
-void rename(const utf8::String & oldPathName,const utf8::String & newPathName)
+void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bool createPathIfNotExist)
 {
-  if( currentFiber() != NULL ){
-    currentFiber()->event_.timeout_ = ~uint64_t(0);
-    currentFiber()->event_.string0_ = oldPathName;
-    currentFiber()->event_.string1_ = newPathName;
-    currentFiber()->event_.type_ = etRename;
-    currentFiber()->thread()->postRequest();
-    currentFiber()->switchFiber(currentFiber()->mainFiber());
-    assert( currentFiber()->event_.type_ == etRename );
-    if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.string0_ = oldPathName;
+    fiber->event_.string1_ = newPathName;
+    fiber->event_.createIfNotExist_ = createPathIfNotExist;
+    fiber->event_.type_ = etRename;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(currentFiber()->mainFiber());
+    assert( fiber->event_.type_ == etRename );
+    if( fiber->event_.errno_ != 0 )
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
   }
   else {
 #if defined(__WIN32__) || defined(__WIN64__)
     BOOL r;
     if( isWin9x() ){
-      r = MoveFileA(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString());
+      r = MoveFileA(
+        anyPathName2HostPathName(oldPathName).getANSIString(),
+        anyPathName2HostPathName(newPathName).getANSIString()
+      );
     }
     else {
-      r = MoveFileExW(anyPathName2HostPathName(oldPathName).getUNICODEString(),anyPathName2HostPathName(newPathName).getUNICODEString(),MOVEFILE_COPY_ALLOWED);
+      r = MoveFileExW(
+        anyPathName2HostPathName(oldPathName).getUNICODEString(),
+        anyPathName2HostPathName(newPathName).getUNICODEString(),
+        MOVEFILE_COPY_ALLOWED
+      );
     }
     if( r == 0 ){
+      int32_t err = GetLastError() + errorOffset;
+      if( err == ERROR_PATH_NOT_FOUND && createPathIfNotExist ){
+        createDirectory(getPathFromPathName(newPathName));
+        return rename(oldPathName,newPathName,false);
+      }
 #else
     if( ::rename(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString()) != 0 ){
+      int32_t err = errno;
+      if( err == ENOENT && createPathIfNotExist ){
+        createDirectory(getPathFromPathName(newPathName));
+        return rename(oldPathName,newPathName,false);
+      }
 #endif
-      int32_t err = oserror() + errorOffset;
       newObject<Exception>(err,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
     }
   }
@@ -1381,8 +1410,9 @@ void getDirList(
   if( isWin9x() ){
     handle = FindFirstFileA(anyPathName2HostPathName(path + pathDelimiterStr + "*").getANSIString(),&fda);
     if( handle == INVALID_HANDLE_VALUE ){
-      err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      err = GetLastError();
+      if( err == ERROR_PATH_NOT_FOUND ) return;
+      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
     try {
       do {
@@ -1397,6 +1427,7 @@ void getDirList(
     DIR * dir = opendir(anyPathName2HostPathName(path).getANSIString());
     if( dir == NULL ){
       err = errno;
+      if( err == ENOENT ) return;
       newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
     }
     try {
@@ -1456,8 +1487,9 @@ void getDirList(
   else {
     handle = FindFirstFileW(anyPathName2HostPathName(path + pathDelimiterStr + "*").getUNICODEString(),&fdw);
     if( handle == INVALID_HANDLE_VALUE ){
-      err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
+      err = GetLastError();
+      if( err == ERROR_PATH_NOT_FOUND ) return;
+      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
     }
     try {
       do {

@@ -235,6 +235,7 @@ Config::Config() :
   aheadi_(ahead_),
   silent_(false)
 {
+  file_.createPath(false);
 }
 //---------------------------------------------------------------------------
 #ifdef __BCPLUSPLUS__

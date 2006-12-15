@@ -362,15 +362,7 @@ void KFTPClient::get()
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
     try {
       ksys::AsyncFile file(localPath + list[i]);
-      file.createIfNotExist(true);
-      if( !file.tryOpen() ){
-        ksys::createDirectory(
-          ksys::excludeTrailingPathDelimiter(
-            ksys::getPathFromPathName(file.fileName())
-          )
-        );
-        file.open();
-      }
+      file.createIfNotExist(true).open();
       MSFTPStat rmst, lmst;
       lmst.stat(file.fileName());
       ll = 0;

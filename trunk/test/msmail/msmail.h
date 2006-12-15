@@ -682,6 +682,8 @@ class ServerFiber : public ksock::ServerFiber {
     mutable EmbeddedHashNode<ServerFiber> hashNode_;
     utf8::String user_;
     utf8::String key_;
+    Message::Keys ids_;
+    AutoHashDrop<Message::Keys> idsAutoDrop_;
     DirectoryChangeNotification dcn_;
 
     void putCode(int32_t code);
@@ -694,7 +696,6 @@ class ServerFiber : public ksock::ServerFiber {
     void sendMail();
     void processMailbox(
       const utf8::String & userMailBox,
-      Message::Keys & mids,
       bool onlyNewMail,
       bool & wait
     );
@@ -749,7 +750,7 @@ class MailQueueWalker : public ksock::ClientFiber {
     Message::Keys messages_;
     FiberSemaphore semaphore_;
 
-    void connectHost(bool & online);
+    void connectHost(bool & online,bool & mwt);
     void main();
   private:
     Server & server_;
@@ -923,7 +924,7 @@ class Server : public ksock::Server {
   protected:
     Fiber * newFiber();
     utf8::String spoolDirHelper() const;
-    utf8::String spoolDir(intptr_t id,bool createIfNotExist = true) const;
+    utf8::String spoolDir(intptr_t id) const;
     utf8::String mailDir() const;
     utf8::String mqueueDir() const;
     utf8::String lckDir() const;

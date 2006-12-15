@@ -952,7 +952,7 @@ void AsyncOpenFileSlave::threadExecute()
       else if( request->type_ == etRename ){
         int32_t err = 0;
         try {
-          rename(request->string0_,request->string1_);
+          rename(request->string0_,request->string1_,request->createIfNotExist_);
         }
         catch( ExceptionSP & e ){
           err = e->code();

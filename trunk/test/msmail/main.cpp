@@ -185,6 +185,7 @@ int main(int _argc,char * _argv[])
       stdErr.fileName(
         service->msmailConfig()->value("log_file",stdErr.fileName())
       );
+      stackBackTrace = service->msmailConfig()->value("stack_back_trace",true);
       service->msmailConfig()->silent(false);
       services.startServiceCtrlDispatcher();
     }

@@ -83,41 +83,29 @@ utf8::String Server::spoolDirHelper() const
   ));
 }
 //------------------------------------------------------------------------------
-utf8::String Server::spoolDir(intptr_t id,bool createIfNotExist) const
+utf8::String Server::spoolDir(intptr_t id) const
 {
-  utf8::String spool(
-    spoolDirHelper() + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String("collector"))
-  );
-  if( createIfNotExist ) createDirectory(spool);
-  return includeTrailingPathDelimiter(spool);
+  return includeTrailingPathDelimiter(spoolDirHelper() + (id >= 0 ? utf8::int2Str0(id,4) : utf8::String("collector")));
 }
 //------------------------------------------------------------------------------
 utf8::String Server::mailDir() const
 {
-  utf8::String mail(spoolDirHelper() + "mail");
-  createDirectory(mail);
-  return includeTrailingPathDelimiter(mail);
+  return includeTrailingPathDelimiter(spoolDirHelper() + "mail");
 }
 //------------------------------------------------------------------------------
 utf8::String Server::mqueueDir() const
 {
-  utf8::String mqueue(spoolDirHelper() + "mqueue");
-  createDirectory(mqueue);
-  return includeTrailingPathDelimiter(mqueue);
+  return includeTrailingPathDelimiter(spoolDirHelper() + "mqueue");
 }
 //------------------------------------------------------------------------------
 utf8::String Server::lckDir() const
 {
-  utf8::String lck(spoolDirHelper() + "lck");
-  createDirectory(lck);
-  return includeTrailingPathDelimiter(lck);
+  return includeTrailingPathDelimiter(spoolDirHelper() + "lck");
 }
 //------------------------------------------------------------------------------
 utf8::String Server::incompleteDir() const
 {
-  utf8::String lck(spoolDirHelper() + "incomplete");
-  createDirectory(lck);
-  return includeTrailingPathDelimiter(lck);
+  return includeTrailingPathDelimiter(spoolDirHelper() + "incomplete");
 }
 //------------------------------------------------------------------------------
 void Server::clearNodeClient(NodeClient * client)
@@ -305,7 +293,6 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
 void Server::removeSender(MailQueueWalker & sender) // must be called only from terminating fiber !!!
 {
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
-  AutoLock<FiberInterlockedMutex> lock2(sender.messagesMutex_);
   Array<Message::Key *> list;
   sender.messages_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
@@ -330,22 +317,24 @@ void Server::closeSenders()
 //------------------------------------------------------------------------------
 void Server::mqueueCleanup()
 {
-  Vector<utf8::String> list;
-  getDirList(list,mqueueDir() + "*.msg",utf8::String(),false);
-  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
-    rename(
-      list[i],
-      spoolDir(getNameFromPathName(list[i]).hash(true) & (spoolFibers_ - 1)) +
-        getNameFromPathName(list[i])
-    );
-    list.remove(i);
+  if( stat(excludeTrailingPathDelimiter(mqueueDir())) ){
+    Vector<utf8::String> list;
+    getDirList(list,mqueueDir() + "*.msg",utf8::String(),false);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+      rename(
+        list[i],
+        spoolDir(getNameFromPathName(list[i]).hash(true) & (spoolFibers_ - 1)) +
+          getNameFromPathName(list[i])
+      );
+      list.remove(i);
+    }
   }
 }
 //------------------------------------------------------------------------------
 void Server::spoolCleanup()
 {
   for( uintptr_t i = spoolFibers_; i < ~uintptr_t(0); i++ ){
-    if( !stat(excludeTrailingPathDelimiter(spoolDir(i,false))) ) break;
+    if( !stat(excludeTrailingPathDelimiter(spoolDir(i))) ) break;
     Vector<utf8::String> list;
     getDirList(list,spoolDir(i) + "*.msg",utf8::String(),false);
     for( intptr_t j = list.count() - 1; j >= 0; j-- ){

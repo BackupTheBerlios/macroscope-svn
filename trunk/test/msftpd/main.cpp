@@ -153,24 +153,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
   if( cmd_ == cmPutFilePartial ) *this >> bs;
   MSFTPError err = eOK;
   try {
-    if( !file.tryOpen() ){
-      try {
-        ksys::createDirectory(
-          ksys::excludeTrailingPathDelimiter(
-            ksys::getPathFromPathName(file.fileName())
-          )
-        );
-        try {
-          file.open();
-        }
-        catch( ... ){
-          err = eFileOpen;
-        }
-      }
-      catch( ... ){
-        err = eMkDir;
-      }
-    }
+    if( !file.tryOpen() ) err = eFileOpen;
   }
   catch( ksys::ExceptionSP & e ){
     e->writeStdError();

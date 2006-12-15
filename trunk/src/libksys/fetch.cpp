@@ -322,13 +322,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
         utf8::String((const char *) response.raw(),response.pos())
       )->throwSP();
   } while( code == 304 || (code == 416 && cs > (uint64_t) st.st_size) );
-  try {
-    file.createIfNotExist(true).open();
-  }
-  catch( ... ){
-    createDirectory(getPathFromPathName(file.fileName()));
-  }
-  if( !file.isOpen() ) file.open();
+  file.createIfNotExist(true).open();
   try {
     if( resume_ ){
       file.seek(resume);

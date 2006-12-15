@@ -442,7 +442,6 @@ void Logger::writeHtmlYearOutput()
       config_.valueByPath(section + "directory")
     )
   );
-  ksys::createDirectory(htmlDir_);
   ksys::chModOwn(
     htmlDir_,
     config_.valueByPath(section + "directory_mode", 755),

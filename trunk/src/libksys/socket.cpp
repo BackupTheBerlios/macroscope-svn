@@ -244,15 +244,17 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   if( pAcceptExBuffer_ == NULL ) pAcceptExBuffer_.alloc(sizeof(AcceptExBuffer));
   assert( socket.socket_ == INVALID_SOCKET );
   socket.open();
-  ksys::currentFiber()->event_.timeout_ = ~uint64_t(0);
-  ksys::currentFiber()->event_.socket_ = socket.socket_;
-  ksys::currentFiber()->event_.type_ = ksys::etAccept;
-  ksys::currentFiber()->thread()->postRequest(this);
-  ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-  assert( ksys::currentFiber()->event_.type_ == ksys::etAccept );
-  if( ksys::currentFiber()->event_.errno_ != 0 ){
+  ksys::Fiber * fiber = ksys::currentFiber();
+  assert( fiber != NULL );
+  fiber->event_.timeout_ = ~uint64_t(0);
+  fiber->event_.socket_ = socket.socket_;
+  fiber->event_.type_ = ksys::etAccept;
+  fiber->thread()->postRequest(this);
+  fiber->switchFiber(fiber->mainFiber());
+  assert( fiber->event_.type_ == ksys::etAccept );
+  if( fiber->event_.errno_ != 0 ){
     socket.close();
-    newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObject<EAsyncSocket>(fiber->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   LPSOCKADDR plsa, prsa;
   INT lsaLen, rsaLen;
@@ -273,15 +275,17 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   //memmove(&socket.localAddress_.addr4_,plsa,sizeof(socket.localAddress_.addr4_));
   memmove(&socket.remoteAddress_->addr4_,prsa,sizeof(socket.remoteAddress_->addr4_));
 #elif HAVE_KQUEUE
+  ksys::Fiber * fiber = ksys::currentFiber();
+  assert( fiber != NULL );
   assert( socket.socket_ == INVALID_SOCKET );
-  currentFiber()->event_.timeout_ = ~uint64_t(0);
-  currentFiber()->event_.type_ = ksys::etAccept;
-  currentFiber()->thread()->postRequest(this);
-  currentFiber()->switchFiber(currentFiber()->mainFiber());
-  assert( currentFiber()->event_.type_ == ksys::etAccept );
-  if( currentFiber()->event_.errno_ != 0 )
-    EAsyncSocket::throwSP(currentFiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
-  socket.socket_ = (int) currentFiber()->event_.data_;
+  fiber->event_.timeout_ = ~uint64_t(0);
+  fiber->event_.type_ = ksys::etAccept;
+  fiber->thread()->postRequest(this);
+  fiber->switchFiber(fiber->mainFiber());
+  assert( fiber->event_.type_ == ksys::etAccept );
+  if( fiber->event_.errno_ != 0 )
+    EAsyncSocket::throwSP(fiber->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
+  socket.socket_ = (int) fiber->event_.data_;
   if( fcntl(socket.socket_,F_SETFL,fcntl(socket.socket_,F_GETFL,0) | O_NONBLOCK) != 0 ){
     int32_t err = errno;
     newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
@@ -310,15 +314,17 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
 AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
 {
   open();
-  ksys::currentFiber()->event_.timeout_ = ~uint64_t(0);
-  ksys::currentFiber()->event_.position_ = 0;
-  ksys::currentFiber()->event_.address_ = addr;
-  ksys::currentFiber()->event_.type_ = ksys::etConnect;
-  ksys::currentFiber()->thread()->postRequest(this);
-  ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
+  ksys::Fiber * fiber = ksys::currentFiber();
+  assert( fiber != NULL );
+  fiber->event_.timeout_ = ~uint64_t(0);
+  fiber->event_.position_ = 0;
+  fiber->event_.address_ = addr;
+  fiber->event_.type_ = ksys::etConnect;
+  fiber->thread()->postRequest(this);
+  fiber->switchFiber(fiber->mainFiber());
   assert( ksys::currentFiber()->event_.type_ == ksys::etConnect );
-  if( ksys::currentFiber()->event_.errno_ != 0 )
-    newObject<EAsyncSocket>(ksys::currentFiber()->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( fiber->event_.errno_ != 0 )
+    newObject<EAsyncSocket>(fiber->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   deActivateCompression();
   deActivateEncryption();
   clearStatistic();

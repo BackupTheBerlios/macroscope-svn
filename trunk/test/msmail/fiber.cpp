@@ -35,7 +35,8 @@ ServerFiber::~ServerFiber()
 }
 //------------------------------------------------------------------------------
 ServerFiber::ServerFiber(Server & server,utf8::String user,utf8::String key) :
-  server_(server), serverType_(stNone), protocol_(0), user_(user), key_(key)
+  server_(server), serverType_(stNone), protocol_(0), user_(user), key_(key),
+  idsAutoDrop_(ids_)
 {
 }
 //------------------------------------------------------------------------------
@@ -103,7 +104,7 @@ void ServerFiber::auth()
 //------------------------------------------------------------------------------
 void ServerFiber::main()
 {
-  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
+  stdErr.setDebugLevels(server_.config_->parse().value("debug_levels","+0,+1,+2,+3"));
   union {
     uint8_t cmd;
     uint8_t ui8;
@@ -383,23 +384,18 @@ void ServerFiber::sendMail() // client sending mail
 //------------------------------------------------------------------------------
 void ServerFiber::processMailbox(
   const utf8::String & userMailBox,
-  Message::Keys & mids,
   bool onlyNewMail,
   bool & wait)
 {
   wait = true;
-  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
   utf8::String myHost(server_.bindAddrs()[0].resolve(defaultPort));
-  intptr_t i;
-  Message::Keys ids;
-  AutoHashDrop<Message::Keys> idsAutoDrop(ids);
   Vector<utf8::String> list;
   getDirList(list,userMailBox + "*.msg",utf8::String(),false);
-  while( !terminated_ && list.count() > 0 ){
-    i = (intptr_t) server_.rnd_->random(list.count());
-    AsyncFile ctrl(server_.lckDir() + getNameFromPathName(list[i]) + ".lck");
-    ctrl.createIfNotExist(true).removeAfterClose(true).open();
-    AutoFileWRLock<AsyncFile> flock(ctrl);
+  Message::Keys ids;
+  AutoHashDrop<Message::Keys> idsAutoDrop(ids);
+  for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
+    utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
+    bool isNewMessage = ids_.find(id) == NULL;
     AsyncFile file(list[i]);
     try {
       file.open();
@@ -407,16 +403,21 @@ void ServerFiber::processMailbox(
     }
     catch( ExceptionSP & e ){
       e->writeStdError();
-      wait = true;
     }
-    if( file.isOpen() ){
-      utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
-      if( mids.find(id) == NULL || !onlyNewMail ){
-        Message message;
+    if( file.isOpen() && (isNewMessage || !onlyNewMail) ){
+      AutoPtr<Message> message(newObject<Message>());
+      try {
         file >> message;
-        assert( message.id().strcmp(id) == 0 );
+      }
+      catch( ExceptionSP & e ){
+        e->writeStdError();
+        file.removeAfterClose(true);
+      }
+      file.close();
+      if( !file.removeAfterClose() ){
+        assert( message->id().strcmp(id) == 0 );
         utf8::String suser, skey;
-        splitString(message.value("#Recepient"),suser,skey,"@");
+        splitString(message->value("#Recepient"),suser,skey,"@");
         bool lostSheep = true;
         {
           Server::Data & data = server_.data(stStandalone);
@@ -427,41 +428,22 @@ void ServerFiber::processMailbox(
         }
         lostSheep = user_.strcasecmp(suser) != 0 || lostSheep;
         if( lostSheep ){
-          file.close();
-          rename(file.fileName(),server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + getNameFromPathName(list[i]));
+          try {
+            rename(file.fileName(),server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + getNameFromPathName(list[i]));
+          }
+          catch( ExceptionSP & e ){
+            e->writeStdError();
+          }
         }
         else {
           bool messageAccepted = true;
-          if( skey.strcasecmp(key_) == 0 && mids.find(message.id()) == NULL ){
-            if( message.isValue("#request.user.online") && message.value("#request.user.online").strlen() == 0 ){
-              AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
-              ServerFiber * fib = server_.findRecvMailFiberNL(*this);
-              if( fib == NULL ){
-                server_.sendRobotMessage(
-                  message.value("#Sender"),
-                  message.value("#Recepient"),
-                  message.value("#Sender.Sended"),
-                  "#request.user.online","no"
-                );
-                if( (bool) Mutant(message.isValue("#request.user.remove.message.if.offline")) ){
-                  file.close();
-                  remove(list[i]);
-                  stdErr.debug(1,
-                    utf8::String::Stream() << "Message " << message.id() <<
-                    " received from " << message.value("#Sender") <<
-                    " to " << message.value("#Recepient") <<
-                    " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
-                  );
-                }
-              }
-            }
+          if( skey.strcasecmp(key_) == 0 ){
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
-            if( onlyNewMail && messageAccepted ){
-              ids.insert(*newObject<Message::Key>(message.id()),false);
-	          }
           }
-          file.close();
+          if( messageAccepted ){
+            ids.insert(*newObject<Message::Key>(id));
+          }
           if( wait && !messageAccepted ) wait = false;
         }
       }
@@ -469,26 +451,20 @@ void ServerFiber::processMailbox(
     list.remove(i);
   }
   flush();
-  mids = ids;
+  ids_.xchg(ids);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::recvMail() // client receiving mail
 {
-  utf8::String mailForUser, mailForKey;
   bool waitForMail, onlyNewMail, wait;
-  *this >> mailForUser >> mailForKey >> waitForMail >> onlyNewMail;
-  user_ = mailForUser;
-  key_ = mailForKey;
-  utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
-  createDirectory(excludeTrailingPathDelimiter(userMailBox));
+  *this >> user_ >> key_ >> waitForMail >> onlyNewMail;
+  utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + user_));
   putCode(eOK);
-  Message::Keys ids;
-  AutoHashDrop<Message::Keys> idsAutoDrop(ids);
   server_.addRecvMailFiber(*this);
   try {
-    server_.sendUserWatchdog(mailForUser);
+    server_.sendUserWatchdog(user_);
     while( !terminated_ ){
-      processMailbox(userMailBox,ids,onlyNewMail,wait);
+      processMailbox(userMailBox,onlyNewMail,wait);
       if( !waitForMail ) break;
       if( wait ){
         dcn_.monitor(userMailBox);
@@ -502,32 +478,45 @@ void ServerFiber::recvMail() // client receiving mail
   }
   catch( ... ){
     server_.remRecvMailFiber(*this);
-//    processMailbox(userMailBox,ids,onlyNewMail,wait);
     throw;
   }
   server_.remRecvMailFiber(*this);
-//  processMailbox(userMailBox,ids,onlyNewMail,wait);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::removeMail() // client remove mail
 {
+  int32_t e = eOK;
   utf8::String mailForUser, id;
   *this >> mailForUser >> id;
-  try {
-    utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
-    createDirectory(userMailBox);
-    {
-      AsyncFile ctrl(server_.lckDir() + id + ".msg" + ".lck");
-      ctrl.createIfNotExist(true).removeAfterClose(true).open();
-      AutoFileWRLock<AsyncFile> flock(ctrl,0,0);
-      remove(includeTrailingPathDelimiter(userMailBox) + id + ".msg");
+  utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
+  utf8::String name(includeTrailingPathDelimiter(userMailBox) + id + ".msg");
+  for( bool cont = true; cont;){
+    try {
+      remove(name);
+      cont = false;
     }
-    putCode(eOK);
+    catch( ExceptionSP & ex ){
+      switch( ex->code() ){
+#if defined(__WIN32__) || defined(__WIN64__)
+        case ERROR_FILE_NOT_FOUND + errorOffset :
+#else
+        case ENOENT :
+#endif
+          e = eInvalidMessageId;
+          cont = false;
+          break;
+#if defined(__WIN32__) || defined(__WIN64__)
+        case ERROR_SHARING_VIOLATION + errorOffset :
+        case ERROR_LOCK_VIOLATION + errorOffset :
+#else
+        case EACCESS :
+#endif
+          break;
+      }
+    }
+    if( cont ) sleep(1000000);
   }
-  catch( ExceptionSP & ){
-    putCode(eInvalidMessageId);
-    throw;
-  }
+  putCode(e);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -543,7 +532,6 @@ SpoolWalker::SpoolWalker(Server & server,intptr_t id) : server_(server), id_(id)
 void SpoolWalker::processQueue(bool & timeWait)
 {
   timeWait = false;
-  stdErr.setDebugLevels(server_.config_->parse().override().value("debug_levels","+0,+1,+2,+3"));
   utf8::String myHost(server_.bindAddrs()[0].resolve(defaultPort));
   Vector<utf8::String> list;
   getDirList(list,server_.spoolDir(id_) + "*.msg",utf8::String(),false);
@@ -679,21 +667,20 @@ void SpoolWalker::processQueue(bool & timeWait)
 //------------------------------------------------------------------------------
 void SpoolWalker::fiberExecute()
 {
+  utf8::String iName(serverConfSectionName_[stStandalone]);
+  utf8::String vName(iName + (id_ >= 0 ? ".spool" : ".collector") + "_processing_interval");
   bool timeWait;
   while( !terminated_ ){
     try {
       processQueue(timeWait);
     }
-    catch( ... ){
+    catch( ExceptionSP & e ){
+      e->writeStdError();
       timeWait = true;
     }
     if( terminated_ ) break;
     if( timeWait ){
-      utf8::String iName(serverConfSectionName_[stStandalone]);
-      uint64_t timeout = server_.config_->valueByPath(
-        iName + (id_ >= 0 ? ".spool" : ".collector") + "_processing_interval",
-        60u
-      );
+      uint64_t timeout = server_.config_->valueByPath(vName,60u);
       sleep(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << "Processing spool by timer... \n");
     }
@@ -764,8 +751,9 @@ void MailQueueWalker::auth()
   );
 }
 //------------------------------------------------------------------------------
-void MailQueueWalker::connectHost(bool & online)
+void MailQueueWalker::connectHost(bool & online,bool & mwt)
 {
+  mwt = false;
   if( !online ){
     close();
     ksock::SockAddr address;
@@ -824,12 +812,13 @@ void MailQueueWalker::connectHost(bool & online)
         host_ << " because previous connect try failed.\n"
       );
       cec *= 1000000u;
-      uint64_t mwt = (uint64_t) server_.config_->parse().valueByPath(
+      uint64_t mwtv = (uint64_t) server_.config_->parse().valueByPath(
         utf8::String(serverConfSectionName_[stStandalone]) +
         ".max_wait_time_before_try_connect",
         600u
       ) * 1000000u;
-      if( cec > mwt ) cec = mwt;
+      mwt = cec > mwtv;
+      if( mwt ) cec = mwtv;
     }
   }
   if( !online ) sleep(cec);
@@ -839,9 +828,9 @@ void MailQueueWalker::main()
 {
   try {
     server_.config_->parse();
-    bool online = false;
+    bool online = false, mwt;
     while( !terminated_ ){
-      connectHost(online);
+      connectHost(online,mwt);
       if( online ){
         Message::Key mId;
         bool send;
@@ -884,6 +873,9 @@ void MailQueueWalker::main()
             break;
           }
         }
+      }
+      else if( mwt ){
+        break;
       }
     }
   }

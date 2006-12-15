@@ -73,7 +73,7 @@ const utf8::String Exception::what() const
 void Exception::throwSP()
 {
 #if !defined(NDEBUG)/* || CMAKE_BUILD_TYPE == 1 || CMAKE_BUILD_TYPE == 3*/
-  if( stackBackTrace_ ){
+  if( stackBackTrace_ && ksys::stackBackTrace ){
     try {
       utf8::String::Stream stackTrace;
       stackTrace << "\n" << getBackTrace(5);

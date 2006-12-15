@@ -624,6 +624,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               stdErr.fileName(
                 msmail1c_->client_.config_->value("log_file",stdErr.fileName())
               );
+              stackBackTrace = msmail1c_->client_.config_->value("stack_back_trace",true);
               msmail1c_->client_.config_->silent(false);
               msmail1c_->client_.open();
               msmail1c_->active_ = true;

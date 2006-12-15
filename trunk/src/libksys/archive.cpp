@@ -195,19 +195,13 @@ Archive & Archive::unpack(const utf8::String & path,Vector<utf8::String> * pList
     AutoPtr<uint8_t> buf;
     buf.alloc(wBufSize());
     AsyncFile file(includeTrailingPathDelimiter(path) + fileName);
-    file.createIfNotExist(true);
-    try {
-      file.open();
-    }
-    catch( ... ){
-      createDirectory(getPathFromPathName(includeTrailingPathDelimiter(path) + fileName));
-    }
-    file.open().resize(0);
+    file.createIfNotExist(true).open();
     for( l = 0; l < sz; l += la ){
       la = l > wBufSize() ? wBufSize() : l;
       readBuffer(buf,la,archive);
       file.writeBuffer(buf,la);
     }
+    file.resize(file.tell());
   }  
   return *this;
 }

@@ -82,16 +82,15 @@ class EmbeddedHash {
   public:
     ~EmbeddedHash();
     EmbeddedHash();
-    EmbeddedHash(const EmbeddedHash<T,N,O,H,E> & a);
 
-    EmbeddedHash<T,N,O,H,E> & operator = (const EmbeddedHash<T,N,O,H,E> & a);
+    EmbeddedHash<T,N,O,H,E> & xchg(const EmbeddedHash<T,N,O,H,E> & a);
 
     EmbeddedHash<T,N,O,H,E> & clear();
     EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true);
     T & remove(const T & object,bool throwIfNotExist = true);
     T & remove();
     EmbeddedHash<T,N,O,H,E> & drop();
-    EmbeddedHash<T,N,O,H,E> & drop(T & object);
+    EmbeddedHash<T,N,O,H,E> & drop(T & object,bool throwIfNotExist = true);
     T & search(const T & object) const;
     T * find(const T & object) const;
     EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
@@ -137,10 +136,13 @@ class EmbeddedHash {
   private:
     mutable AutoPtr<EmbeddedHashNode<T> *> hash_;
     mutable uintptr_t size_;
-    uintptr_t count_;
-    uintptr_t estimatedChainLength_;
-    uintptr_t thresholdNumerator_;
-    uintptr_t thresholdDenominator_;
+    mutable uintptr_t count_;
+    mutable uintptr_t estimatedChainLength_;
+    mutable uintptr_t thresholdNumerator_;
+    mutable uintptr_t thresholdDenominator_;
+
+    EmbeddedHash(const EmbeddedHash<T,N,O,H,E> &);
+    void operator = (const EmbeddedHash<T,N,O,H,E> &);
 
     EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist,bool throwIfNotExist) const;
     enum OptType { optInc, optDec };
@@ -183,37 +185,15 @@ template <
   T & (*O) (const EmbeddedHashNode<T> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
-> inline
-EmbeddedHash<T,N,O,H,E>::EmbeddedHash(const EmbeddedHash<T,N,O,H,E> & a) : size_(0), count_(0)
-{
-  operator = (a);
-}
-//---------------------------------------------------------------------------
-template <
-  typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
-  uintptr_t (*H)(const T &),
-  bool (*E) (const T &, const T &)
 >
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::operator = (const EmbeddedHash<T,N,O,H,E> & a)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::xchg(const EmbeddedHash<T,N,O,H,E> & a)
 {
-  EmbeddedHash<T,N,O,H,E> t;
-  EmbeddedHashNode<T> ** head = a.hash_, ** tail = head + a.size_, * walk;
-  while( head < tail ){
-    walk = *head;
-    while( walk != NULL ){
-      t.insert(*newObject<T>(O(*walk,NULL)));
-      walk = walk->next();
-    }
-    head++;
-  }
-  drop();
-  hash_.ptr(t.hash_.ptr(NULL));
-  size_ = t.size_;
-  t.size_ = 0;
-  count_ = t.count_;
-  t.count_ = 0;
+  hash_.xchg(a.hash_);
+  ksys::xchg(size_,a.size_);
+  ksys::xchg(count_,a.count_);
+  ksys::xchg(estimatedChainLength_,a.estimatedChainLength_);
+  ksys::xchg(thresholdNumerator_,a.thresholdNumerator_);
+  ksys::xchg(thresholdDenominator_,a.thresholdDenominator_);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -357,13 +337,22 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop(T & object)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop(T & object,bool throwIfNotExist)
 {
   EmbeddedHashNode<T> ** head = internalFind(object,false,true);
-  *head = (*head)->next();
-  N(object).next() = NULL;
-  optimize(optDec);
-  delete &object;
+  if( head != NULL && *head != NULL ){
+    *head = (*head)->next();
+    N(object).next() = NULL;
+    optimize(optDec);
+    delete &object;
+  }
+  else if( throwIfNotExist ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+#else
+    newObject<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
+#endif
+  }
   return *this;
 }
 //---------------------------------------------------------------------------

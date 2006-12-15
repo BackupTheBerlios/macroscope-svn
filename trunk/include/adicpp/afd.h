@@ -99,6 +99,8 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & direct(bool v);
     bool nocache() const;
     AsyncFile & nocache(bool v);
+    bool createPath() const;
+    AsyncFile & createPath(bool v);
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD waitCommEvent();
     const DWORD & alignment() const;
@@ -146,6 +148,7 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t random_           : 1;
       uint8_t direct_           : 1;
       uint8_t nocache_          : 1;
+      uint8_t createPath_       : 1;
     };
 #if _MSC_VER
 #pragma warning(pop)
@@ -277,6 +280,17 @@ inline bool AsyncFile::nocache() const
 inline AsyncFile & AsyncFile::nocache(bool v)
 {
   nocache_ = v;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool AsyncFile::createPath() const
+{
+  return createPath_ != 0;
+}
+//---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::createPath(bool v)
+{
+  createPath_ = v;
   return *this;
 }
 //---------------------------------------------------------------------------

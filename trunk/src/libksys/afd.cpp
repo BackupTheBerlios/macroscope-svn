@@ -54,7 +54,8 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   seekable_(true),
   random_(false),
   direct_(false),
-  nocache_(false)
+  nocache_(false),
+  createPath_(true)
 {
   Requester::requester().attachDescriptor(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -130,7 +131,7 @@ file_t AsyncFile::openHelper(bool async)
         NULL
       );
   }
-  else{
+  else {
     utf8::WideString unicodeFileName(anyPathName2HostPathName(fileName_).getUNICODEString());
     if( !readOnly_ )
       handle = CreateFileW(
@@ -161,17 +162,12 @@ file_t AsyncFile::openHelper(bool async)
       );
   }
   if( handle == INVALID_HANDLE_VALUE ){
-    err = GetLastError() + errorOffset;
-/*      case ERROR_INVALID_DRIVE       :
-      case ERROR_ACCESS_DENIED       :
-      case ERROR_TOO_MANY_OPEN_FILES :
-      case ERROR_PATH_NOT_FOUND      :
-      case ERROR_FILE_NOT_FOUND      :
-      case ERROR_INVALID_NAME        :
-      case ERROR_INVALID_FLAGS       :
-      case ERROR_INVALID_ADDRESS     :
-      case ERROR_INSUFFICIENT_BUFFER :*/
-    newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
+    err = GetLastError();
+    if( err == ERROR_PATH_NOT_FOUND && createPath_ ){
+      createDirectory(getPathFromPathName(fileName_));
+      return openHelper(async);
+    }
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
 #else
   utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
@@ -194,23 +190,10 @@ file_t AsyncFile::openHelper(bool async)
     );
   if( handle <= 0 ){
     err = errno;
-/*      case ENOTDIR      :
-      case ENOENT       :
-      case ENAMETOOLONG :
-      case EACCES       :
-      case ELOOP        :
-      case EISDIR       :
-      case EROFS        :
-      case EMFILE       :
-      case ENFILE       :
-      case EINTR        :
-      case ENOSPC       :
-      case EDQUOT       :
-      case EIO          :
-      case ETXTBSY      :
-      case EFAULT       :
-      case EOPNOTSUPP   :
-      case EINVAL       :*/
+    if( err == ENOENT && createPath_ ){
+      createDirectory(getPathFromPathName(fileName_));
+      return openHelper(async);
+    }
     newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
   }
   if( async ){

@@ -391,7 +391,11 @@ UserInfo & UserInfo::operator = (const UserInfo & a)
   atime_ = a.atime_;
   rtime_ = a.rtime_;
   name_ = a.name_;
-  sendedTo_ = a.sendedTo_;
+  Array<InfoLinkKey *> list;
+  sendedTo_.drop();
+  a.sendedTo_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -441,7 +445,11 @@ KeyInfo & KeyInfo::operator = (const KeyInfo & a)
   atime_ = a.atime_;
   rtime_ = a.rtime_;
   name_ = a.name_;
-  sendedTo_ = a.sendedTo_;
+  Array<InfoLinkKey *> list;
+  sendedTo_.drop();
+  a.sendedTo_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -490,7 +498,11 @@ GroupInfo & GroupInfo::operator = (const GroupInfo & a)
   atime_ = a.atime_;
   rtime_ = a.rtime_;
   name_ = a.name_;
-  sendedTo_ = a.sendedTo_;
+  Array<InfoLinkKey *> list;
+  sendedTo_.drop();
+  a.sendedTo_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -547,7 +559,11 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
   stime_ = a.stime_;
   name_ = a.name_;
   type_ = a.type_;
-  sendedTo_ = a.sendedTo_;
+  Array<InfoLinkKey *> list;
+  sendedTo_.drop();
+  a.sendedTo_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   connectErrorCount_ = a.connectErrorCount_;
   lastFailedConnectTime_ = a.lastFailedConnectTime_;
   return *this;
@@ -602,7 +618,11 @@ User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
   rtime_ = a.rtime_;
   user_ = a.user_;
   key_ = a.key_;
-  sendedTo_ = a.sendedTo_;
+  Array<InfoLinkKey *> list;
+  sendedTo_.drop();
+  a.sendedTo_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -652,7 +672,11 @@ Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
   rtime_ = a.rtime_;
   key_ = a.key_;
   group_ = a.group_;
-  sendedTo_ = a.sendedTo_;
+  Array<InfoLinkKey *> list;
+  sendedTo_.drop();
+  a.sendedTo_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -702,7 +726,11 @@ Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)
   rtime_ = a.rtime_;
   key_ = a.key_;
   server_ = a.server_;
-  sendedTo_ = a.sendedTo_;
+  Array<InfoLinkKey *> list;
+  sendedTo_.drop();
+  a.sendedTo_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- )
+    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
