@@ -1245,7 +1245,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
       );
     }
     if( r == 0 ){
-      int32_t err = GetLastError() + errorOffset;
+      int32_t err = GetLastError();
       if( err == ERROR_PATH_NOT_FOUND && createPathIfNotExist ){
         createDirectory(getPathFromPathName(newPathName));
         return rename(oldPathName,newPathName,false);
@@ -1258,7 +1258,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
         return rename(oldPathName,newPathName,false);
       }
 #endif
-      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
+      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
     }
   }
 }
