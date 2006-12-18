@@ -76,6 +76,8 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 #else
   return "";
 #endif
+#else
+  return "";
 #endif
 }
 //---------------------------------------------------------------------------

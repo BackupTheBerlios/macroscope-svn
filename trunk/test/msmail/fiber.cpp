@@ -512,9 +512,11 @@ void ServerFiber::removeMail() // client remove mail
         case EACCESS :
 #endif
           break;
+        default :
+          ex->writeStdError();
       }
     }
-    if( cont ) sleep(1000000);
+    if( cont ) sleep(100000);
   }
   putCode(e);
 }
