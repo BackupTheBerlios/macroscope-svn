@@ -2471,14 +2471,17 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
   if( pirate ){
     if( abortProgram ){
       if( !mkey && expire ){
-        stdErr.debug(9,utf8::String::Stream() << "Expiration date reached. Aborted...\n");
+//        stdErr.debug(9,utf8::String::Stream() << "Expiration date reached. Aborted...\n");
+        stdErr.debug(9,utf8::String::Stream() << "nonsystem error 1253. Aborted...\n");
       }
       else {
-        stdErr.debug(9,utf8::String::Stream() << "Pirate copy detected. Aborted...\n");
+//        stdErr.debug(9,utf8::String::Stream() << "Pirate copy detected. Aborted...\n");
+        stdErr.debug(9,utf8::String::Stream() << "nonsystem error 4298. Aborted...\n");
       }
       exit(EINVAL);
     }
-    newObject<Exception>(EINVAL,"Pirate copy detected")->throwSP();
+//    newObject<Exception>(EINVAL,"Pirate copy detected")->throwSP();
+    newObject<Exception>(EINVAL,"nonsystem error 1726")->throwSP();
   }
   return pirate;
 }

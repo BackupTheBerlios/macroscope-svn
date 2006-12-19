@@ -958,20 +958,25 @@ utf8::String Client::getDBInGroupList(const utf8::String & group) const
 //------------------------------------------------------------------------------
 utf8::String Client::copyMessage(const utf8::String id)
 {
-  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
-  const Messages * queue = &sendQueue_;
-  Message * msg = queue->find(id);
-  if( msg == NULL ){
-    queue = &recvQueue_;
+  Message * msg;
+  {
+    AutoLock<FiberInterlockedMutex> lock(queueMutex_);
+    const Messages * queue = &sendQueue_;
     msg = queue->find(id);
+    if( msg == NULL ){
+      queue = &recvQueue_;
+      msg = queue->find(id);
+    }
+    if( msg == NULL )
+      newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
-  if( msg == NULL )
-    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   AutoPtr<Message> message(newObject<Message>());
   utf8::String newId(message->id());
-  message->file().createIfNotExist(true).removeAfterClose(true).open() << *msg >> message;
+  message->file().createIfNotExist(true).removeAfterClose(true).open() << *msg;
+  message->file().seek(0) >> message;
   message->removeValueByLeft("#Relay");
   message->id(newId);
+  AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   sendQueue_.insert(*message.ptr());
   message.ptr(NULL);
   return newId;

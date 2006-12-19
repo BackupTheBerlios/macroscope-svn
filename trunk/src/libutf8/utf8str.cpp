@@ -1224,13 +1224,17 @@ uintptr_t int2StrLen(uintptr_t a)
   return l;
 }
 //---------------------------------------------------------------------------
-String int2HexStr(uintmax_t a, uintptr_t padding)
+String int2HexStr(uintmax_t a,uintptr_t padding)
 {
   if( padding > 16 ) padding = 16;
   char b[17], * p;
   *(p = b + sizeof(b) - 1) = '\0';
   do {
-    *--p = (char) (a % 16u + '0');
+    uintptr_t q = uintptr_t(a % 16u);
+    if( q > 9 )
+      *--p = (char) (q + 'A' - 10);
+    else
+      *--p = (char) (q + '0');
     a /= 16u;
     if( padding > 0 ) padding--;
   } while( a != 0 );

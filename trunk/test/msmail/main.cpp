@@ -55,7 +55,6 @@ int main(int _argc,char * _argv[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
-
   //throwCycle();
   //throwCycle();
   try {

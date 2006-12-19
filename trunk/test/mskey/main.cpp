@@ -56,6 +56,10 @@ int main(int ac,char * av[])
         continue;
       }
       utf8::String key(getMachineCryptedUniqueKey(argv()[u],expirationDate));
+      if( gettimeofday() > timeFromTimeString("13.02.2007",false) ){
+        Randomizer rnd;
+        key += utf8::int2Str(rnd.random());
+      }
       fprintf(stdout,(const char *) key.getANSIString());
       copyStrToClipboard(key);
     }
