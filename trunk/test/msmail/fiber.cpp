@@ -980,9 +980,6 @@ void NodeClient::sweepHelper(ServerType serverType)
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
-  if( periodicaly_ ) checkMachineBinding(
-    server_.config_->parse().value("machine_key"),true
-  );
   server_.data(stStandalone).registerServer(
     ServerInfo(server_.bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
@@ -992,7 +989,8 @@ void NodeClient::main()
   try {
     bool tryConnect, connected, exchanged, doWork;
     do {
-      stdErr.setDebugLevels(server_.config_->parse().value("debug_levels","+0,+1,+2,+3"));
+      server_.config_->parse();
+      stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
       if( periodicaly_ ) checkMachineBinding(server_.config_->value("machine_key"),true);
       connected = exchanged = false;
       {
@@ -1173,7 +1171,7 @@ void NodeClient::main()
       if( dataType_ == stNode ) server_.skippedNodeExchangeStarts_++;
     }
   }
-  catch( ... ){
+  catch( ExceptionSP & ){
     if( !periodicaly_ ) server_.clearNodeClient(this);
     throw;
   }

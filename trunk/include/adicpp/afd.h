@@ -201,8 +201,14 @@ inline const utf8::String & AsyncFile::fileName() const
 //---------------------------------------------------------------------------
 inline AsyncFile & AsyncFile::fileName(const utf8::String & name)
 {
-  close();
-  fileName_ = name;
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( fileName_.strcasecmp(name) != 0 ){
+#else
+  if( fileName_.strcmp(name) != 0 ){
+#endif
+    close();
+    fileName_ = name;
+  }
   return *this;
 }
 //---------------------------------------------------------------------------

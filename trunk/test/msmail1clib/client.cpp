@@ -222,6 +222,8 @@ ClientFiber::~ClientFiber()
 //------------------------------------------------------------------------------
 ClientFiber::ClientFiber(Client & client) : client_(client)
 {
+  recvTimeout(~uint64_t(0));
+  sendTimeout(~uint64_t(0));
 }
 //------------------------------------------------------------------------------
 int32_t ClientFiber::getCode2(int32_t noThrowCode0,int32_t noThrowCode1)
@@ -500,6 +502,40 @@ bool ClientMailFiber::cycleStage1()
     }
   }
   return r;
+}
+//------------------------------------------------------------------------------
+void ClientMailFiber::cycleException(ExceptionSP & e)
+{
+  if( message_ != NULL ){
+    utf8::String ev;
+    switch( message_->operation_ ){
+      case MessageControl::msgNone : assert( 0 ); break;
+      case MessageControl::msgSend :
+        ev = "MessageSendingError_";
+        break;
+      case MessageControl::msgRemove :
+        ev = "MessageRemovingError_";
+        break;
+    }
+    if( message_->async_ ){
+      client_.sendAsyncEvent(client_.name_,ev + utf8::int2Str(e->code()),message_->message_->id());
+      AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
+      switch( message_->operation_ ){
+        case MessageControl::msgNone : assert( 0 ); break;
+        case MessageControl::msgSend :
+          client_.sendQueue_.drop(*message_->message_);
+          break;
+        case MessageControl::msgRemove :
+          client_.recvQueue_.drop(*message_->message_);
+          break;
+      }
+    }
+    else {
+      client_.workFiberLastError_ = e->code();
+      client_.workFiberWait_.release();
+    }
+    removeMessage(message_);
+  }
 }
 //------------------------------------------------------------------------------
 void ClientMailFiber::onlineStage0()
@@ -967,11 +1003,15 @@ utf8::String Client::copyMessage(const utf8::String id)
       queue = &recvQueue_;
       msg = queue->find(id);
     }
-    if( msg == NULL )
-      newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
+  if( msg == NULL )
+    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   AutoPtr<Message> message(newObject<Message>());
   utf8::String newId(message->id());
+  message->file().fileName(
+    includeTrailingPathDelimiter(getPathFromPathName(message->file().fileName())) + 
+    newId + "#.msg"
+  );
   message->file().createIfNotExist(true).removeAfterClose(true).open() << *msg;
   message->file().seek(0) >> message;
   message->removeValueByLeft("#Relay");

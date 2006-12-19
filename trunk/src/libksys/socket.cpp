@@ -52,7 +52,7 @@ AsyncSocket::~AsyncSocket()
 //------------------------------------------------------------------------------
 AsyncSocket::AsyncSocket() :
   maxRecvSize_(~uintptr_t(0)), maxSendSize_(~uintptr_t(0)),
-  recvTimeout_(~uint64_t(0)), sendTimeout_(~uint64_t(0))
+  recvTimeout_(~uint64_t(0)/*60000000u*/), sendTimeout_(~uint64_t(0)/*60000000u*/)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   socket_ = INVALID_SOCKET;

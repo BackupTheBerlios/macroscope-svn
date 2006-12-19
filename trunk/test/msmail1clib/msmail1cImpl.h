@@ -150,6 +150,7 @@ class ClientMailFiber : public BaseClientFiber {
 
     void auth();
     void connectHost(bool & online);
+    void cycleException(ExceptionSP & e);
     void onlineStage0();
     bool cycleStage1();
     void offlineStage0();
