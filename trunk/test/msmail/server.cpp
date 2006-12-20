@@ -274,15 +274,12 @@ void Server::sendUserWatchdog(const utf8::String & user)
 //------------------------------------------------------------------------------
 void Server::sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName)
 {
-  MailQueueWalker * pWalker, * pWalker2;
+  MailQueueWalker * pWalker;
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
-  AutoPtr<Fiber> walker(pWalker = newObjectV<MailQueueWalker>(*this,host));
-  if( (pWalker2 = sendMailFibers_.find(*pWalker)) == NULL ){
+  if( (pWalker = sendMailFibers_.find(MailQueueWalker(*this,host))) == NULL ){
+    AutoPtr<Fiber> walker(pWalker = newObjectV<MailQueueWalker>(*this,host));
     sendMailFibers_.insert(*pWalker);
     attachFiber(walker);
-  }
-  else {
-    pWalker = pWalker2;
   }
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
   pWalker->messages_.insert(*newObject<Message::Key>(id));
@@ -293,14 +290,19 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
 void Server::removeSender(MailQueueWalker & sender) // must be called only from terminating fiber !!!
 {
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
-  Array<Message::Key *> list;
-  sender.messages_.list(list);
-  for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    rename(
-    spoolDir(getNameFromPathName(*list[i]).hash(true) & (spoolFibers_ - 1)) +
-        *list[i] + ".msg",
-      mqueueDir() + *list[i] + ".msg"
-    );
+//  try {
+    Array<Message::Key *> list;
+    sender.messages_.list(list);
+    for( intptr_t i = list.count() - 1; i >= 0; i-- )
+      rename(spoolDir(
+        getNameFromPathName(*list[i]).hash(true) & (spoolFibers_ - 1)) + *list[i] + ".msg",
+        mqueueDir() + *list[i] + ".msg"
+      );
+/*  }
+  catch( ExceptionSP & e ){
+    int32_t err = e->code();
+    e->writeStdError();
+  }*/
   sendMailFibers_.remove(sender);
 }
 //------------------------------------------------------------------------------

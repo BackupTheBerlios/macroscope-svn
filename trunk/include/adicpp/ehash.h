@@ -89,6 +89,7 @@ class EmbeddedHash {
     EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true);
     T & remove(const T & object,bool throwIfNotExist = true);
     T & remove();
+    T & first() const;
     EmbeddedHash<T,N,O,H,E> & drop();
     EmbeddedHash<T,N,O,H,E> & drop(T & object,bool throwIfNotExist = true);
     T & search(const T & object) const;
@@ -322,12 +323,24 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::remove()
+T & EmbeddedHash<T,N,O,H,E>::first() const
 {
   assert( count_ > 0 );
   EmbeddedHashNode<T> ** p1 = hash_.ptr(), ** p2 = p1 + size_;
   while( p1 < p2 && *p1 == NULL ) p1++;
-  return remove(O(**p1,NULL),false);
+  return O(**p1,NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t (*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+T & EmbeddedHash<T,N,O,H,E>::remove()
+{
+  return remove(first(),false);
 }
 //---------------------------------------------------------------------------
 template <

@@ -70,30 +70,25 @@ utf8::String ServerFiber::getUserPassword(const utf8::String & user)
 //------------------------------------------------------------------------------
 void ServerFiber::auth()
 {
-  maxRecvSize(server_.config_->parse().override().value("max_recv_size",-1));
-  maxSendSize(server_.config_->value("max_send_size",-1));
-  utf8::String encryption(server_.config_->section("encryption").text(utf8::String(),"default"));
-  uintptr_t encryptionThreshold = server_.config_->section("encryption").value("threshold",1024 * 1024);
-  utf8::String compression(server_.config_->section("compression").text(utf8::String(),"default"));
-  utf8::String compressionType(server_.config_->section("compression").text("type","default"));
-  utf8::String crc(server_.config_->section("compression").text("crc","default"));
-  uintptr_t compressionLevel = server_.config_->section("compression").value("max_level",3);
-  bool optimize = server_.config_->section("compression").value("optimize",false);
-  uintptr_t bufferSize = server_.config_->section("compression").value("buffer_size",getpagesize());
-  bool noAuth = false;
+  AuthParams ap;
+  ap.maxRecvSize_ = server_.config_->parse().override().value("max_recv_size",-1);
+  ap.maxSendSize_ = server_.config_->value("max_send_size",-1);
+  ap.recvTimeout_ = server_.config_->value("recv_timeout",-1);
+  if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
+  ap.sendTimeout_ = server_.config_->value("send_timeout",-1);
+  if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
+  ap.encryption_ = server_.config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = server_.config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = server_.config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = server_.config_->section("compression").text("type","default");
+  ap.crc_ = server_.config_->section("compression").text("crc","default");
+  ap.level_ = server_.config_->section("compression").value("max_level",9);
+  ap.optimize_ = server_.config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = server_.config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.noAuth_ = false;
   if( server_.config_->isSection("users") )
-    noAuth = server_.config_->section("users").value("noauth",noAuth);
-  Error e = (Error) serverAuth(
-    encryption,
-    encryptionThreshold,
-    compression,
-    compressionType,
-    crc,
-    compressionLevel,
-    optimize,
-    bufferSize,
-    noAuth
-  );
+    ap.noAuth_ = server_.config_->section("users").value("noauth",ap.noAuth_);
+  Error e = (Error) serverAuth(ap);
   if( e != eOK ){
     utf8::String::Stream stream;
     stream << "Authentification error from: " << remoteAddress().resolve(~uintptr_t(0)) << "\n";
@@ -104,7 +99,8 @@ void ServerFiber::auth()
 //------------------------------------------------------------------------------
 void ServerFiber::main()
 {
-  stdErr.setDebugLevels(server_.config_->parse().value("debug_levels","+0,+1,+2,+3"));
+  server_.config_->parse();
+  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
   union {
     uint8_t cmd;
     uint8_t ui8;
@@ -317,7 +313,7 @@ void ServerFiber::sendMail() // client sending mail
     file.open().seek(st.st_size);
     while( remainder > 0 ){
       uint64_t l = remainder > bl ? bl : remainder;
-      read(b,l);
+      l = recv(b,l);
       file.write(b,l);
       remainder -= l;
     }
@@ -330,7 +326,7 @@ void ServerFiber::sendMail() // client sending mail
     message = newObject<Message>();
     message->file().fileName(file.fileName()).createIfNotExist(true).removeAfterClose(true);
     *this >> message;
-  }
+  }  
   utf8::String::Stream stream;
   stream << "Message " << message->id() <<
     " received from " << message->value("#Sender") <<
@@ -723,34 +719,25 @@ void MailQueueWalker::getCode(int32_t noThrowCode)
 //------------------------------------------------------------------------------
 void MailQueueWalker::auth()
 {
-  utf8::String user, password, encryption, compression, compressionType, crc;
-  maxSendSize(server_.config_->parse().override().value("max_send_size",getpagesize()));
-  user = server_.config_->text("user","system");
-  password = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
-  encryption = server_.config_->section("encryption").text(utf8::String(),"default");
-  uintptr_t encryptionThreshold = server_.config_->section("encryption").value("threshold",1024 * 1024);
-  compression = server_.config_->section("compression").text(utf8::String(),"default");
-  compressionType = server_.config_->section("compression").value("type","default");
-  crc = server_.config_->section("compression").value("crc","default");
-  uintptr_t compressionLevel = server_.config_->section("compression").value("level",3);
-  bool optimize = server_.config_->section("compression").value("optimize",false);
-  uintptr_t bufferSize = server_.config_->section("compression").value("buffer_size",getpagesize());
-  bool noAuth = server_.config_->value("noauth",false);
-  checkCode(
-    clientAuth(
-      user,
-      password,
-      encryption,
-      encryptionThreshold,
-      compression,
-      compressionType,
-      crc,
-      compressionLevel,
-      optimize,
-      bufferSize,
-      noAuth
-    )
-  );
+  AuthParams ap;
+  ap.maxSendSize_ = server_.config_->value("max_send_size",-1);
+  ap.maxRecvSize_ = server_.config_->value("max_recv_size",-1);
+  ap.recvTimeout_ = server_.config_->value("recv_timeout",-1);
+  if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
+  ap.sendTimeout_ = server_.config_->value("send_timeout",-1);
+  if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
+  ap.user_ = server_.config_->text("user","system");
+  ap.password_ = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
+  ap.encryption_ = server_.config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = server_.config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = server_.config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = server_.config_->section("compression").value("type","default");
+  ap.crc_ = server_.config_->section("compression").value("crc","default");
+  ap.level_ = server_.config_->section("compression").value("level",9);
+  ap.optimize_ = server_.config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = server_.config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.noAuth_ = server_.config_->value("noauth",false);
+  checkCode(clientAuth(ap));
 }
 //------------------------------------------------------------------------------
 void MailQueueWalker::connectHost(bool & online,bool & mwt)
@@ -838,7 +825,7 @@ void MailQueueWalker::main()
         bool send;
         {
           AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
-          if( (send = messages_.count() > 0) ) mId = messages_.remove();
+          if( (send = messages_.count() > 0) ) mId = messages_.first();
         }
         if( send ){
           uint64_t restFrom, remainder, rb = recvBytes(), sb = sendBytes();
@@ -863,6 +850,8 @@ void MailQueueWalker::main()
           );
           file.close();
           remove(file.fileName());
+          AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
+          messages_.remove(mId);
         }
         else {
           uint64_t inactivityTime = (uint64_t) server_.config_->valueByPath(
@@ -881,7 +870,8 @@ void MailQueueWalker::main()
       }
     }
   }
-  catch( ExceptionSP & ){
+  catch( ExceptionSP & e ){
+    int32_t err = e->code();
     server_.removeSender(*this);
     throw;
   }
@@ -938,34 +928,25 @@ int32_t NodeClient::getCode(int32_t noThrowCode1,int32_t noThrowCode2)
 //------------------------------------------------------------------------------
 void NodeClient::auth()
 {
-  utf8::String user, password, encryption, compression, compressionType, crc;
-  maxSendSize(server_.config_->parse().override().value("max_send_size",getpagesize()));
-  user = server_.config_->text("user","system");
-  password = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
-  encryption = server_.config_->section("encryption").text(utf8::String(),"default");
-  uintptr_t encryptionThreshold = server_.config_->section("encryption").value("threshold",1024 * 1024);
-  compression = server_.config_->section("compression").text(utf8::String(),"default");
-  compressionType = server_.config_->section("compression").value("type","default");
-  crc = server_.config_->section("compression").value("crc","default");
-  uintptr_t compressionLevel = server_.config_->section("compression").value("level",3);
-  bool optimize = server_.config_->section("compression").value("optimize",false);
-  uintptr_t bufferSize = server_.config_->section("compression").value("buffer_size",getpagesize());
-  bool noAuth = server_.config_->value("noauth",false);
-  checkCode(
-    clientAuth(
-      user,
-      password,
-      encryption,
-      encryptionThreshold,
-      compression,
-      compressionType,
-      crc,
-      compressionLevel,
-      optimize,
-      bufferSize,
-      noAuth
-    )
-  );
+  AuthParams ap;
+  ap.maxSendSize_ = server_.config_->value("max_send_size",-1);
+  ap.maxRecvSize_ = server_.config_->value("max_recv_size",-1);
+  ap.recvTimeout_ = server_.config_->value("recv_timeout",-1);
+  if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
+  ap.sendTimeout_ = server_.config_->value("send_timeout",-1);
+  if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
+  ap.user_ = server_.config_->text("user","system");
+  ap.password_ = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
+  ap.encryption_ = server_.config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = server_.config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = server_.config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = server_.config_->section("compression").value("type","default");
+  ap.crc_ = server_.config_->section("compression").value("crc","default");
+  ap.level_ = server_.config_->section("compression").value("level",9);
+  ap.optimize_ = server_.config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = server_.config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.noAuth_ = server_.config_->value("noauth",false);
+  checkCode(clientAuth(ap));
 }
 //------------------------------------------------------------------------------
 void NodeClient::sweepHelper(ServerType serverType)

@@ -81,55 +81,40 @@ KFTPClient & KFTPClient::getCode(int32_t noThrowCode)
 //------------------------------------------------------------------------------
 void KFTPClient::auth()
 {
-  utf8::String user, password, encryption, compression, compressionType, crc;
-  maxRecvSize(config_->value("max_recv_size",-1));
-  maxRecvSize(config_->section(section_).value("max_recv_size",maxRecvSize()));
-  maxSendSize(config_->value("max_send_size",-1));
-  maxSendSize(config_->section(section_).value("max_send_size",maxSendSize()));
-  user = config_->text("user");
-  user = config_->section(section_).text("user",user);
-  password = config_->text("password");
-  password = config_->section(section_).text("password",password);
-  encryption = config_->section("encryption").text(utf8::String(),"default");
-  uintptr_t encryptionThreshold = config_->section("encryption").value("threshold",1024 * 1024);
-  encryption = config_->section(section_).section("encryption").text(utf8::String(),encryption);
-  encryptionThreshold = config_->section(section_).section("encryption").value("threshold",encryptionThreshold);
-  compression = config_->section("compression").text(utf8::String(),"default");
-  compression = config_->section(section_).section("compression").text(utf8::String(),compression);
-  compressionType = config_->section("compression").value("type","default");
-  compressionType = config_->section(section_).section("compression").value("type",compressionType);
-  crc = config_->section("compression").value("crc","default");
-  crc = config_->section(section_).section("compression").value("crc",crc);
-  uintptr_t compressionLevel = config_->section("compression").value("level",3);
-  compressionLevel = config_->section(section_).section("compression").value("level",compressionLevel);
-  bool optimize = config_->section("compression").value("optimize",false);
-  optimize = config_->section(section_).section("compression").value("optimize",optimize);
-  uintptr_t bufferSize = config_->section("compression").value("buffer_size",getpagesize());
-  bufferSize = config_->section(section_).section("compression").value("buffer_size",bufferSize);
-  bool noAuth = config_->value("noauth",false);
-  noAuth = config_->section(section_).value("noauth",noAuth);
-
-/*  ksys::stdErr.log(
-    ksys::lmINFO,
-    utf8::String::Stream() <<
-      "encryption --> " << encryption << ", encryptionThreshold: " << encryptionThreshold <<
-      ", compression --> " << compression << ", compressionLevel: " << compressionLevel << "\n"
-  );*/
-  checkCode(
-    clientAuth(
-      user,
-      password,
-      encryption,
-      encryptionThreshold,
-      compression,
-      compressionType,
-      crc,
-      compressionLevel,
-      optimize,
-      bufferSize,
-      noAuth
-    )
-  );
+  AuthParams ap;
+  ap.maxRecvSize_ = config_->value("max_recv_size",-1);
+  ap.maxRecvSize_ = config_->section(section_).value("max_recv_size",ap.maxRecvSize_);
+  ap.maxSendSize_ = config_->value("max_send_size",-1);
+  ap.maxSendSize_ = config_->section(section_).value("max_send_size",ap.maxSendSize_);
+  ap.recvTimeout_ = config_->value("recv_timeout",-1);
+  ap.recvTimeout_ = config_->section(section_).value("recv_timeout",ap.recvTimeout_);
+  if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
+  ap.sendTimeout_ = config_->value("send_timeout",-1);
+  ap.sendTimeout_ = config_->section(section_).value("send_timeout",ap.sendTimeout_);
+  if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
+  ap.user_ = config_->text("user");
+  ap.user_ = config_->section(section_).text("user",ap.user_);
+  ap.password_ = config_->text("password");
+  ap.password_ = config_->section(section_).text("password",ap.password_);
+  ap.encryption_ = config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = config_->section("encryption").value("threshold",1024 * 1024);
+  ap.encryption_ = config_->section(section_).section("encryption").text(utf8::String(),ap.encryption_);
+  ap.threshold_ = config_->section(section_).section("encryption").value("threshold",ap.threshold_);
+  ap.compression_ = config_->section("compression").text(utf8::String(),"default");
+  ap.compression_ = config_->section(section_).section("compression").text(utf8::String(),ap.compression_);
+  ap.compressionType_ = config_->section("compression").value("type","default");
+  ap.compressionType_ = config_->section(section_).section("compression").value("type",ap.compressionType_);
+  ap.crc_ = config_->section("compression").value("crc","default");
+  ap.crc_ = config_->section(section_).section("compression").value("crc",ap.crc_);
+  ap.level_ = config_->section("compression").value("level",9);
+  ap.level_ = config_->section(section_).section("compression").value("level",ap.level_);
+  ap.optimize_ = config_->section("compression").value("optimize",true);
+  ap.optimize_ = config_->section(section_).section("compression").value("optimize",ap.optimize_);
+  ap.bufferSize_ = config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.bufferSize_ = config_->section(section_).section("compression").value("buffer_size",ap.bufferSize_);
+  ap.noAuth_ = config_->value("noauth",false);
+  ap.noAuth_ = config_->section(section_).value("noauth",ap.noAuth_);
+  checkCode(clientAuth(ap));
 }
 //------------------------------------------------------------------------------
 void KFTPClient::put()

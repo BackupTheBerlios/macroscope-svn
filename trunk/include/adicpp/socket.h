@@ -186,30 +186,30 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
       aeCount
     };
 
-    AuthErrorType serverAuth(
-      const utf8::String & encryption,
-      uintptr_t threshold,
-      const utf8::String & compression,
-      const utf8::String & compressionType,
-      const utf8::String & crc,
-      uintptr_t level,
-      bool optimize,
-      uintptr_t bufferSize,
-      bool noAuth = false
-    );
-    AuthErrorType clientAuth(
-      const utf8::String & user,
-      const utf8::String & password,
-      const utf8::String & encryption,
-      uintptr_t threshold,
-      const utf8::String & compression,
-      const utf8::String & compressionType,
-      const utf8::String & crc,
-      uintptr_t level,
-      bool optimize,
-      uintptr_t bufferSize,
-      bool noAuth = false
-    );
+    class AuthParams {
+      public:
+        ~AuthParams();
+        AuthParams();
+
+        mutable utf8::String user_;
+        mutable utf8::String password_;
+        mutable utf8::String encryption_;
+        mutable utf8::String compression_;
+        mutable utf8::String compressionType_;
+        mutable utf8::String crc_;
+        mutable uintptr_t maxRecvSize_;
+        mutable uintptr_t maxSendSize_;
+        mutable uint64_t recvTimeout_;
+        mutable uint64_t sendTimeout_;
+        mutable uintptr_t threshold_;
+        mutable uintptr_t level_;
+        mutable uintptr_t bufferSize_;
+        mutable bool optimize_;
+        mutable bool noAuth_;
+    };
+
+    AuthErrorType serverAuth(const AuthParams & ap);
+    AuthErrorType clientAuth(const AuthParams & ap);
 
     AsyncSocket & clearStatistic();
     AsyncSocket & activateEncryption(const uint8_t sha256[32]);

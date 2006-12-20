@@ -397,7 +397,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
 
         safeEvents_[ssp++] = events[sp];
         events[sp] = NULL;
-        events[sp + 1] = NULL;
+        //events[sp + 1] = NULL;
         eReqs_[sp] = NULL;
         sp--;
 
@@ -496,11 +496,18 @@ l2:       object = eReqs_[wm];
             object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
             if( object->timeout_ == 0 ){
               closeAPI(object);
+#ifndef NDEBUG
+              BOOL cir =
+#endif
               CancelIo(object->descriptor_->descriptor_);
+#ifndef NDEBUG
+              wm0 = GetLastError();
+              assert( cir != NULL );
+#endif
               safeEvents_[ssp++] = events[i];
               events[i] = events[sp];
               events[sp] = NULL;
-              events[sp + 1] = NULL;
+              //events[sp + 1] = NULL;
               eReqs_[i] = eReqs_[sp];
               eReqs_[sp] = NULL;
               sp--;
@@ -513,6 +520,10 @@ l2:       object = eReqs_[wm];
           node = NULL;
           object = NULL;
         }
+        else if( wm == WAIT_FAILED ){
+          DWORD err = GetLastError();
+          assert( 0 );
+        }
         else {
           assert( 0 );
         }
@@ -524,7 +535,7 @@ l2:       object = eReqs_[wm];
         safeEvents_[ssp++] = events[wm];
         events[wm] = events[sp];
         events[sp] = NULL;
-        events[sp + 1] = NULL;
+        //events[sp + 1] = NULL;
         eReqs_[wm] = eReqs_[sp];
         eReqs_[sp] = NULL;
         sp--;
@@ -1118,6 +1129,7 @@ bool AsyncAcquireSlave::transplant(AsyncEvent & request)
     if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 1 ){
       newRequests_.insToTail(request);
       BOOL es = SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
+      DWORD err = GetLastError();
       assert( es != 0 );
       if( requests_.count() == 0 ) post();
       r = true;
@@ -1203,7 +1215,7 @@ void AsyncAcquireSlave::threadExecute()
           if( object->timeout_ == 0 ){
             sems_[i] = sems_[sp];
             sems_[sp] = NULL;
-            sems_[sp + 1] = NULL;
+            //sems_[sp + 1] = NULL;
             eSems_[i] = eSems_[sp];
             eSems_[sp] = NULL;
             sp--;
@@ -1216,13 +1228,17 @@ void AsyncAcquireSlave::threadExecute()
         node = NULL;
         object = NULL;
       }
+      else if( wm == WAIT_FAILED ){
+        DWORD err = GetLastError();
+        assert( 0 );
+      }
       else {
         assert( 0 );
       }
       if( node != NULL ){
         sems_[wm] = sems_[sp];
         sems_[sp] = NULL;
-        sems_[sp + 1] = NULL;
+        //sems_[sp + 1] = NULL;
         eSems_[wm] = eSems_[sp];
         eSems_[sp] = NULL;
         sp--;

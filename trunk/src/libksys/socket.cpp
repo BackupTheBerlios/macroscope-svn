@@ -52,7 +52,7 @@ AsyncSocket::~AsyncSocket()
 //------------------------------------------------------------------------------
 AsyncSocket::AsyncSocket() :
   maxRecvSize_(~uintptr_t(0)), maxSendSize_(~uintptr_t(0)),
-  recvTimeout_(~uint64_t(0)/*60000000u*/), sendTimeout_(~uint64_t(0)/*60000000u*/)
+  recvTimeout_(~uint64_t(0)), sendTimeout_(~uint64_t(0))
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   socket_ = INVALID_SOCKET;
@@ -616,20 +616,26 @@ static uint8_t authChannelHelper3(const utf8::String & s)
   exit(ENOSYS);
 }
 //------------------------------------------------------------------------------
-AsyncSocket::AuthErrorType AsyncSocket::serverAuth(
-  const utf8::String & encryption,
-  uintptr_t threshold,
-  const utf8::String & compression,
-  const utf8::String & compressionType,
-  const utf8::String & crc,
-  uintptr_t level,
-  bool optimize,
-  uintptr_t bufferSize,
-  bool noAuth)
+AsyncSocket::AuthParams::~AuthParams()
 {
+}
+//------------------------------------------------------------------------------
+AsyncSocket::AuthParams::AuthParams() :
+  maxRecvSize_(~uintptr_t(0)), maxSendSize_(~uintptr_t(0)),
+  recvTimeout_(~uint64_t(0)), sendTimeout_(~uint64_t(0)),
+  threshold_(1024u * 1024u), level_(9), optimize_(true), noAuth_(false)
+{
+}
+//------------------------------------------------------------------------------
+AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
+{
+  maxRecvSize_ = ap.maxRecvSize_;
+  maxSendSize_ = ap.maxSendSize_;
+  recvTimeout_ = ap.recvTimeout_;
+  sendTimeout_ = ap.sendTimeout_;
   uint8_t passwordSHA256[32];
   uint8_t se = radDisabled, ce = radDisabled;
-  if( !noAuth ){
+  if( !ap.noAuth_ ){
     uint8_t authMagic[sizeof(authMagic_)];
     read(authMagic,sizeof(authMagic));
     if( memcmp(authMagic,authMagic_,sizeof(authMagic_)) != 0 ){
@@ -671,7 +677,7 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(
       return aePassword;
     }
     *this << int32_t(aeOK);
-    se = authChannelHelper(encryption);
+    se = authChannelHelper(ap.encryption_);
     *this >> ce;
     *this << se;
     if( se == radRequired && ce == radDisabled ){
@@ -685,15 +691,15 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(
     *this << int32_t(aeOK);
   }
   uint8_t sc, cc, smethod, cmethod, scrc, ccrc, clevel;
-  sc = authChannelHelper(compression);
-  smethod = authChannelHelper2(compressionType);
-  scrc = authChannelHelper3(crc);
+  sc = authChannelHelper(ap.compression_);
+  smethod = authChannelHelper2(ap.compressionType_);
+  scrc = authChannelHelper3(ap.crc_);
   uint32_t cbs, cthreshold;
   *this >> cc >> cmethod >> ccrc >> clevel >> cbs >> cthreshold;
-  if( (uintptr_t) clevel < level ) level = clevel;
-  if( cbs > 0 && cbs < (uint32_t) bufferSize ) bufferSize = cbs;
-  if( cthreshold < (uint32_t) threshold ) threshold = cthreshold; 
-  *this << sc << smethod << scrc << uint8_t(level) << uint32_t(bufferSize) << uint32_t(threshold);
+  if( (uintptr_t) clevel < ap.level_ ) ap.level_ = clevel;
+  if( cbs > 0 && cbs < (uint32_t) ap.bufferSize_ ) ap.bufferSize_ = cbs;
+  if( cthreshold < (uint32_t) ap.threshold_ ) ap.threshold_ = cthreshold; 
+  *this << sc << smethod << scrc << uint8_t(ap.level_) << uint32_t(ap.bufferSize_) << uint32_t(ap.threshold_);
   if( sc == radRequired && cc == radDisabled ){
     *this << int32_t(aeCompressionServerRequiredButClientDisabled);
     return aeCompressionServerRequiredButClientDisabled;
@@ -705,27 +711,20 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(
   *this << int32_t(aeOK);
 
   if( (se == radRequired || se == radAllow) && (ce == radRequired || ce == radAllow) ){
-    this->threshold(threshold);
+    this->threshold(ap.threshold_);
     activateEncryption(passwordSHA256);
   }
   if( (sc == radRequired || sc == radAllow) && (cc == radRequired || cc == radAllow) )
-    activateCompression(smethod,scrc,level,optimize,bufferSize);
+    activateCompression(smethod,scrc,ap.level_,ap.optimize_,ap.bufferSize_);
   return aeOK;
 }
 //------------------------------------------------------------------------------
-AsyncSocket::AuthErrorType AsyncSocket::clientAuth(
-  const utf8::String & user,
-  const utf8::String & password,
-  const utf8::String & encryption,
-  uintptr_t threshold,
-  const utf8::String & compression,
-  const utf8::String & compressionType,
-  const utf8::String & crc,
-  uintptr_t level,
-  bool optimize,
-  uintptr_t bufferSize,
-  bool noAuth)
+AsyncSocket::AuthErrorType AsyncSocket::clientAuth(const AuthParams & ap)
 {
+  maxRecvSize_ = ap.maxRecvSize_;
+  maxSendSize_ = ap.maxSendSize_;
+  recvTimeout_ = ap.recvTimeout_;
+  sendTimeout_ = ap.sendTimeout_;
   union {
     int32_t e;
     AuthErrorType ae;
@@ -733,25 +732,25 @@ AsyncSocket::AuthErrorType AsyncSocket::clientAuth(
   e = ae = aeOK;
   uint8_t passwordSHA256[32];
   uint8_t se = radDisabled, ce = radDisabled;
-  if( !noAuth ){
+  if( !ap.noAuth_ ){
     write(authMagic_,sizeof(authMagic_));
     *this >> e;
     if( e != aeOK ) return ae;
-    *this << user;
+    *this << ap.user_;
     *this >> e;
     if( e != aeOK ) return ae;
 
     memset(passwordSHA256,0,sizeof(passwordSHA256));
     ksys::SHA256 SHA256;
-    if( password.strncasecmp("sha256:",7) == 0 ){
+    if( ap.password_.strncasecmp("sha256:",7) == 0 ){
       ksys::base64Decode(
-        utf8::String::Iterator(password) + 7,
+        utf8::String::Iterator(ap.password_) + 7,
         passwordSHA256,
         sizeof(passwordSHA256)
       );
     }
     else {
-      SHA256.make(password.c_str(),password.size());
+      SHA256.make(ap.password_.c_str(),ap.password_.size());
       memcpy(passwordSHA256,SHA256.sha256(),sizeof(passwordSHA256));
     }
     SHA256.make(passwordSHA256,sizeof(passwordSHA256));
@@ -759,16 +758,16 @@ AsyncSocket::AuthErrorType AsyncSocket::clientAuth(
     *this >> e;
     if( e != aeOK ) return ae;
 
-    ce = authChannelHelper(encryption);
+    ce = authChannelHelper(ap.encryption_);
     *this << ce;
     *this >> se >> e;
     if( e != aeOK ) return ae;
   }
   uint8_t sc, cc, smethod, cmethod, scrc, ccrc, slevel;
-  cc = authChannelHelper(compression);
-  cmethod = authChannelHelper2(compressionType);
-  ccrc = authChannelHelper3(crc);
-  *this << cc << cmethod << ccrc << uint8_t(level) << uint32_t(bufferSize) << uint32_t(threshold);
+  cc = authChannelHelper(ap.compression_);
+  cmethod = authChannelHelper2(ap.compressionType_);
+  ccrc = authChannelHelper3(ap.crc_);
+  *this << cc << cmethod << ccrc << uint8_t(ap.level_) << uint32_t(ap.bufferSize_) << uint32_t(ap.threshold_);
   uint32_t sbs, sthreshold;
   *this >> sc >> smethod >> scrc >> slevel >> sbs >> sthreshold;
   *this >> e;
@@ -779,7 +778,7 @@ AsyncSocket::AuthErrorType AsyncSocket::clientAuth(
     activateEncryption(passwordSHA256);
   }
   if( (sc == radRequired || sc == radAllow) && (cc == radRequired || cc == radAllow) )
-    activateCompression(cmethod,scrc,level,optimize,bufferSize);
+    activateCompression(cmethod,scrc,ap.level_,ap.optimize_,ap.bufferSize_);
   return aeOK;
 }
 //------------------------------------------------------------------------------

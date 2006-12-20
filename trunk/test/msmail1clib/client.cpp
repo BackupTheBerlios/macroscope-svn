@@ -222,8 +222,6 @@ ClientFiber::~ClientFiber()
 //------------------------------------------------------------------------------
 ClientFiber::ClientFiber(Client & client) : client_(client)
 {
-  recvTimeout(~uint64_t(0));
-  sendTimeout(~uint64_t(0));
 }
 //------------------------------------------------------------------------------
 int32_t ClientFiber::getCode2(int32_t noThrowCode0,int32_t noThrowCode1)
@@ -238,6 +236,8 @@ int32_t ClientFiber::getCode2(int32_t noThrowCode0,int32_t noThrowCode1)
 void ClientFiber::auth()
 {
   checkCode(client_.auth(*this));
+  recvTimeout(~uint64_t(0));
+  sendTimeout(~uint64_t(0));
 }
 //------------------------------------------------------------------------------
 void ClientFiber::cycleStage0()
@@ -1134,33 +1134,25 @@ HRESULT Client::sendAsyncEvent(const utf8::String & source,const utf8::String & 
 //------------------------------------------------------------------------------
 int32_t Client::auth(ksock::AsyncSocket & socket)
 {
-  utf8::String user, password, encryption, compression, compressionType, crc;
-  socket.maxRecvSize(config_->value("max_recv_size",-1));
-  socket.maxSendSize(config_->value("max_send_size",-1));
-  user = config_->text("user","system");
-  password = config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
-  encryption = config_->section("encryption").text(utf8::String(),"default");
-  uintptr_t encryptionThreshold = config_->section("encryption").value("threshold",1024 * 1024);
-  compression = config_->section("compression").text(utf8::String(),"default");
-  compressionType = config_->section("compression").value("type","default");
-  crc = config_->section("compression").value("crc","default");
-  uintptr_t compressionLevel = config_->section("compression").value("level",3);
-  bool optimize = config_->section("compression").value("optimize",false);
-  uintptr_t bufferSize = config_->section("compression").value("buffer_size",getpagesize());
-  bool noAuth = config_->value("noauth",false);
-  return socket.clientAuth(
-    user,
-    password,
-    encryption,
-    encryptionThreshold,
-    compression,
-    compressionType,
-    crc,
-    compressionLevel,
-    optimize,
-    bufferSize,
-    noAuth
-  );
+  ksock::AsyncSocket::AuthParams ap;
+  ap.maxSendSize_ = config_->value("max_send_size",-1);
+  ap.maxRecvSize_ = config_->value("max_recv_size",-1);
+  ap.recvTimeout_ = config_->value("recv_timeout",-1);
+  if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
+  ap.sendTimeout_ = config_->value("send_timeout",-1);
+  if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
+  ap.user_ = config_->text("user","system");
+  ap.password_ = config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
+  ap.encryption_ = config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = config_->section("compression").value("type","default");
+  ap.crc_ = config_->section("compression").value("crc","default");
+  ap.level_ = config_->section("compression").value("level",9);
+  ap.optimize_ = config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.noAuth_ = config_->value("noauth",false);
+  return socket.clientAuth(ap);
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

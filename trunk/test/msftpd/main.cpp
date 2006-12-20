@@ -87,28 +87,23 @@ utf8::String MSFTPServerFiber::getUserPassword(const utf8::String & user)
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::auth()
 {
-  maxRecvSize(config_->value("max_recv_size",-1));
-  maxSendSize(config_->value("max_send_size",-1));
-  utf8::String encryption(config_->section("encryption").text(utf8::String(),"default"));
-  uintptr_t encryptionThreshold = config_->section("encryption").value("threshold",1024 * 1024);
-  utf8::String compression(config_->section("compression").text(utf8::String(),"default"));
-  utf8::String compressionType(config_->section("compression").text("type","default"));
-  utf8::String crc(config_->section("compression").text("crc","default"));
-  uintptr_t compressionLevel = config_->section("compression").value("max_level",3);
-  bool optimize = config_->section("compression").value("optimize",false);
-  uintptr_t bufferSize = config_->section("compression").value("buffer_size",getpagesize());
-  bool noAuth = config_->value("noauth",false);
-  MSFTPError e = (MSFTPError) serverAuth(
-    encryption,
-    encryptionThreshold,
-    compression,
-    compressionType,
-    crc,
-    compressionLevel,
-    optimize,
-    bufferSize,
-    noAuth
-  );
+  AuthParams ap;
+  ap.maxRecvSize_ = config_->value("max_recv_size",-1);
+  ap.maxSendSize_ = config_->value("max_send_size",-1);
+  ap.recvTimeout_ = config_->value("recv_timeout",-1);
+  if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
+  ap.sendTimeout_ = config_->value("send_timeout",-1);
+  if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
+  ap.encryption_ = config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = config_->section("compression").text("type","default");
+  ap.crc_ = config_->section("compression").text("crc","default");
+  ap.level_ = config_->section("compression").value("max_level",9);
+  ap.optimize_ = config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.noAuth_ = config_->value("noauth",false);
+  MSFTPError e = (MSFTPError) serverAuth(ap);
   if( e != eOK )
     newObject<ksys::Exception>(e,__PRETTY_FUNCTION__)->throwSP();
   return *this;
