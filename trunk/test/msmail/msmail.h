@@ -118,9 +118,17 @@ class Message {
         static bool keyHashNodeEqu(const Key & object1,const Key & object2){
           return object1.key_.strcmp(object2.key_) == 0;
         }
+
+        static EmbeddedListNode<Key> & listNode(const Key & object){
+          return object.listNode_;
+        }
+        static Key & listNodeObject(const EmbeddedListNode<Key> & node,Key * p = NULL){
+          return node.object(p->listNode_);
+        }
       protected:
       private:
         mutable EmbeddedHashNode<Key> keyNode_;
+        mutable EmbeddedListNode<Key> listNode_;
         utf8::String key_;
     };
     typedef EmbeddedHash<
@@ -696,6 +704,7 @@ class ServerFiber : public ksock::ServerFiber {
     void sendMail();
     void processMailbox(
       const utf8::String & userMailBox,
+      bool waitForMail,
       bool onlyNewMail,
       bool & wait
     );
@@ -747,7 +756,13 @@ class MailQueueWalker : public ksock::ClientFiber {
     mutable EmbeddedHashNode<MailQueueWalker> hostHashNode_;
     utf8::String host_;
     FiberInterlockedMutex messagesMutex_;
-    Message::Keys messages_;
+    typedef EmbeddedList<
+      Message::Key,
+      Message::Key::listNode,
+      Message::Key::listNodeObject
+    > Messages;
+    Messages messages_;
+    AutoListDrop<Messages> messagesAutoDrop_;
     FiberSemaphore semaphore_;
 
     void connectHost(bool & online,bool & mwt);

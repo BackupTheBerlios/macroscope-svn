@@ -624,50 +624,56 @@ T & EmbeddedListNode<T>::object(const EmbeddedListNode<T> & node) const
   );
 }
 //-----------------------------------------------------------------------------
-template<
+template <
   typename T,
-  EmbeddedListNode< T> & (*N) (const T &),
-  T & (*O) (const EmbeddedListNode< T> &, T *)
+  EmbeddedListNode<T> & (*N)(const T &),
+  T & (*O)(const EmbeddedListNode<T> &,T *)
 >
 class EmbeddedList {
   public:
     ~EmbeddedList();
     EmbeddedList();
 
-    EmbeddedList< T,N,O> &          replace(EmbeddedList< T,N,O> & s);
+    EmbeddedList<T,N,O> & replace(EmbeddedList<T,N,O> & s);
+    EmbeddedList<T,N,O> & xchg(EmbeddedList<T,N,O> & s);
 
     T & remove(const T & object);
-    T & remove(const EmbeddedListNode< T> & node);
-    EmbeddedList< T,N,O> &          clear();
+    T & remove(const EmbeddedListNode<T> & node);
+    EmbeddedList<T,N,O> & drop(const T & object);
+    EmbeddedList<T,N,O> & drop(const EmbeddedListNode<T> & node);
+    EmbeddedList<T,N,O> & clear();
+    EmbeddedList<T,N,O> & drop();
 
-    EmbeddedList< T,N,O> &          insToHead(const T & object);
-    EmbeddedList< T,N,O> &          insToTail(const T & object);
-    EmbeddedList< T,N,O> &          insBefore(const T & pos, const T & object);
-    EmbeddedList< T,N,O> &          insAfter(const T & pos, const T & object);
+    EmbeddedList<T,N,O> & insToHead(const T & object);
+    EmbeddedList<T,N,O> & insToTail(const T & object);
+    EmbeddedList<T,N,O> & insBefore(const T & pos, const T & object);
+    EmbeddedList<T,N,O> & insAfter(const T & pos, const T & object);
 
-    EmbeddedListNode< T> * const &  first() const;
-    EmbeddedListNode< T> * const &  last() const;
-    const uintptr_t &               count() const;
+    EmbeddedListNode<T> * const & first() const;
+    EmbeddedListNode<T> * const & last() const;
+    const uintptr_t & count() const;
 
-    bool                            nodeInserted(const EmbeddedListNode< T> & node) const;
-    bool                            nodeInserted(const T & object) const;
+    bool nodeInserted(const EmbeddedListNode<T> & node) const;
+    bool nodeInserted(const T & object) const;
   protected:
-    EmbeddedList< T,N,O> &          insTo(EmbeddedListNode< T> * prev, EmbeddedListNode< T> * next, const T & object);
+    EmbeddedList<T,N,O> & insTo(EmbeddedListNode< T> * prev, EmbeddedListNode< T> * next, const T & object);
   private:
-    EmbeddedListNode< T> *  first_;
-    EmbeddedListNode< T> *  last_;
-    uintptr_t               count_;
+    EmbeddedListNode< T> * first_;
+    EmbeddedListNode< T> * last_;
+    uintptr_t count_;
     EmbeddedList< T,N,O>(const EmbeddedList< T,N,O> &){}
     void operator =(const EmbeddedList< T,N,O> &){}
 };
 //-----------------------------------------------------------------------------
 template< typename T,EmbeddedListNode< T> & (*N) (const T &),
-          T & (*O) (const EmbeddedListNode< T> &, T *) > inline EmbeddedList< T,N,O>::~EmbeddedList()
+          T & (*O) (const EmbeddedListNode< T> &, T *)
+> inline EmbeddedList< T,N,O>::~EmbeddedList()
 {
 }
 //-----------------------------------------------------------------------------
 template< typename T,EmbeddedListNode< T> & (*N) (const T &),
-          T & (*O) (const EmbeddedListNode< T> &, T *) > inline EmbeddedList< T,N,O>::EmbeddedList()
+          T & (*O) (const EmbeddedListNode< T> &, T *)
+> inline EmbeddedList<T,N,O>::EmbeddedList()
 {
   clear();
 }
@@ -704,12 +710,37 @@ EmbeddedList< T,N,O> & EmbeddedList< T,N,O>::replace(EmbeddedList< T,N,O> & s)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< typename T,EmbeddedListNode< T> & (*N) (const T &),
-          T & (*O) (const EmbeddedListNode< T> &, T *) > inline
-EmbeddedList< T,N,O> & EmbeddedList< T,N,O>::clear()
+template<
+  typename T,
+  EmbeddedListNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedListNode<T> &, T *)
+> inline
+EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::xchg(EmbeddedList<T,N,O> & s)
+{
+  ksys::xchg(first_,s.first_);
+  ksys::xchg(last_,s.last_);
+  ksys::xchg(count_,s.count_);
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,EmbeddedListNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedListNode<T> &, T *)
+> inline
+EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::clear()
 {
   first_ = last_ = NULL;
   count_ = 0;
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,EmbeddedListNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedListNode<T> &, T *)
+> inline
+EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::drop()
+{
+  while( count_ > 0 ) drop(*first_);
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -764,10 +795,10 @@ EmbeddedList< T,N,O> & EmbeddedList< T,N,O>::insAfter(const T & pos, const T & o
   return insTo(&pos, N(pos).next(), object);
 }
 //-----------------------------------------------------------------------------
-template<
+template <
   typename T,
-  EmbeddedListNode< T> & (*N) (const T &),
-  T & (*O) (const EmbeddedListNode< T> &, T *)
+  EmbeddedListNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedListNode<T> &, T *)
 > inline T & EmbeddedList<T,N,O>::remove(const T & object)
 {
   if( N(object).prev() != NULL ){
@@ -788,14 +819,33 @@ template<
   return *const_cast<T *>(&object);
 }
 //-----------------------------------------------------------------------------
-template<
+template <
   typename T,
-  EmbeddedListNode< T> & (*N) (const T &),
-  T & (*O) (const EmbeddedListNode< T> &,
-  T *)
-> inline T & EmbeddedList<T,N,O>::remove(const EmbeddedListNode< T> & node)
+  EmbeddedListNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedListNode<T> &,T *)
+> inline T & EmbeddedList<T,N,O>::remove(const EmbeddedListNode<T> & node)
 {
   return remove(O(node, NULL));
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedListNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedListNode<T> &, T *)
+> inline EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::drop(const T & object)
+{
+  delete &remove(object);
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedListNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedListNode<T> &,T *)
+> inline EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::drop(const EmbeddedListNode<T> & node)
+{
+  delete &remove(node);
+  return *this;
 }
 //-----------------------------------------------------------------------------
 template< typename T,EmbeddedListNode< T> & (*N) (const T &),
@@ -812,6 +862,31 @@ bool EmbeddedList< T,N,O>::nodeInserted(const T & object) const
   return nodeInserted(N(object));
 }
 //-----------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T> class AutoListDrop {
+  public:
+    ~AutoListDrop();
+    AutoListDrop(T & list);
+  protected:
+  private:
+    T * list_;
+
+    AutoListDrop(const AutoListDrop<T> &);
+    void operator = (const AutoListDrop<T> &);
+};
+//---------------------------------------------------------------------------
+template <typename T> inline AutoListDrop<T>::~AutoListDrop()
+{
+  list_->drop();
+}
+//---------------------------------------------------------------------------
+template <typename T> inline
+AutoListDrop<T>::AutoListDrop(T & list) : list_(&list)
+{
+  assert( list_ != NULL );
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
 //-----------------------------------------------------------------------------
 #endif

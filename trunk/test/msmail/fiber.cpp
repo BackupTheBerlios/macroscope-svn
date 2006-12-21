@@ -296,31 +296,31 @@ void ServerFiber::sendMail() // client sending mail
   uintptr_t i;
   AutoPtr<Message> message;
   utf8::String id;
-  Stat st;
-  bool rest, incomplete = false;
-  uint64_t rb = recvBytes(), sb = sendBytes();
+  uint64_t rb = recvBytes(), sb = sendBytes(), remainder;
+  bool rest;
 
   *this >> id >> rest;
   AsyncFile file;
   file.fileName(server_.incompleteDir() + id + ".msg").createIfNotExist(true);
   if( rest ){
-    stat(file.fileName(),st);
-    uint64_t remainder;
-    *this << uint64_t(st.st_size) >> remainder;
+    file.open();
+    *this << file.size() >> remainder;
+    if( remainder > 1024u * 1024u * 10u ){
+      remainder = remainder;
+    }
+    file.seek(file.size());
     AutoPtr<uint8_t> b;
     size_t bl = getpagesize() * 16;
     b.alloc(bl);
-    file.open().seek(st.st_size);
     while( remainder > 0 ){
       uint64_t l = remainder > bl ? bl : remainder;
-      l = recv(b,l);
+      read(b,l);
       file.write(b,l);
       remainder -= l;
     }
     file.seek(0);
     message = newObject<Message>();
     file >> message;
-    incomplete = true;
   }
   else {
     message = newObject<Message>();
@@ -380,6 +380,7 @@ void ServerFiber::sendMail() // client sending mail
 //------------------------------------------------------------------------------
 void ServerFiber::processMailbox(
   const utf8::String & userMailBox,
+  bool waitForMail,
   bool onlyNewMail,
   bool & wait)
 {
@@ -434,6 +435,7 @@ void ServerFiber::processMailbox(
         else {
           bool messageAccepted = true;
           if( skey.strcasecmp(key_) == 0 ){
+            if( !waitForMail ) *this << bool(true);
             *this << message >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
           }
@@ -460,8 +462,12 @@ void ServerFiber::recvMail() // client receiving mail
   try {
     server_.sendUserWatchdog(user_);
     while( !terminated_ ){
-      processMailbox(userMailBox,onlyNewMail,wait);
-      if( !waitForMail ) break;
+      processMailbox(userMailBox,waitForMail,onlyNewMail,wait);
+      if( !waitForMail ){
+        *this << bool(false);
+        flush();
+        break;
+      }
       if( wait ){
         dcn_.monitor(userMailBox);
         stdErr.debug(9,utf8::String::Stream() <<
@@ -621,22 +627,16 @@ void SpoolWalker::processQueue(bool & timeWait)
           }
 ////////////////
           if( process ){
-            utf8::String userMailBox(server_.mailDir() + suser);
+            utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + suser));
             utf8::String::Stream stream;
             stream << "Message " << message->id() <<
               " received from " << message->value("#Sender") <<
               " to " << message->value("#Recepient") <<
               " delivered localy to mailbox: " << userMailBox << "\n"
             ;
-            utf8::String mailFile(includeTrailingPathDelimiter(userMailBox) + message->id() + ".msg");
+            utf8::String mailFile(userMailBox + message->id() + ".msg");
             message = NULL;
-            try {
-              rename(list[i],mailFile);
-            }
-            catch( ... ){
-              createDirectory(userMailBox);
-              rename(list[i],mailFile);
-            }
+            rename(list[i],mailFile);
             stdErr.debug(0,stream);
           }
         }
@@ -695,12 +695,13 @@ MailQueueWalker::~MailQueueWalker()
 {
 }
 //------------------------------------------------------------------------------
-MailQueueWalker::MailQueueWalker(Server & server) : server_(server)
+MailQueueWalker::MailQueueWalker(Server & server) :
+  server_(server), messagesAutoDrop_(messages_)
 {
 }
 //------------------------------------------------------------------------------
 MailQueueWalker::MailQueueWalker(Server & server,const utf8::String & host)
-  : server_(server), host_(host)
+  : server_(server), host_(host), messagesAutoDrop_(messages_)
 {
 }
 //------------------------------------------------------------------------------
@@ -821,18 +822,20 @@ void MailQueueWalker::main()
     while( !terminated_ ){
       connectHost(online,mwt);
       if( online ){
-        Message::Key mId;
-        bool send;
+        Message::Key * mId = NULL;
         {
           AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
-          if( (send = messages_.count() > 0) ) mId = messages_.first();
+          if( messages_.count() > 0 ) mId = &Message::Key::listNodeObject(*messages_.first());
         }
-        if( send ){
+        if( mId != NULL ){
           uint64_t restFrom, remainder, rb = recvBytes(), sb = sendBytes();
-          *this << uint8_t(cmSendMail) << mId << true >> restFrom;
+          *this << uint8_t(cmSendMail) << *mId << true >> restFrom;
           AsyncFile file;
-          file.fileName(server_.mqueueDir() + mId + ".msg").readOnly(true).open().seek(restFrom);
+          file.fileName(server_.mqueueDir() + *mId + ".msg").readOnly(true).open().seek(restFrom);
           *this << (remainder = file.size() - restFrom);
+          if( remainder > 1024u * 1024u * 10u ){
+            remainder = remainder;
+          }
           AutoPtr<uint8_t> b;
           size_t bl = getpagesize() * 16;
           b.alloc(bl);
@@ -844,14 +847,14 @@ void MailQueueWalker::main()
           }
           getCode();
           stdErr.debug(0,utf8::String::Stream() <<
-            "Message " << mId <<
+            "Message " << *mId <<
             " sended to " << host_ << ", traffic " <<
             recvBytes() - rb + sendBytes() - sb << "\n"
           );
           file.close();
           remove(file.fileName());
           AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
-          messages_.remove(mId);
+          messages_.drop(*mId);
         }
         else {
           uint64_t inactivityTime = (uint64_t) server_.config_->valueByPath(

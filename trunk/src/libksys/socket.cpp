@@ -412,6 +412,19 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
   return r;
 }
 //------------------------------------------------------------------------------
+AsyncSocket & AsyncSocket::read(void * buf,uint64_t len)
+{
+  for(;;){
+    if( ksys::currentFiber()->terminated() )
+      newObject<EAsyncSocket>(ECONNABORTED,__PRETTY_FUNCTION__)->throwSP();
+    if( len <= 0 ) break;
+    uint64_t l = recv(buf,len);
+    buf = (uint8_t *) buf + (size_t) l;
+    len -= l;
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
 #if __BCPLUSPLUS__
 #pragma option push -w-8004
 #endif
@@ -483,6 +496,19 @@ uint64_t AsyncSocket::send(const void * buf,uint64_t len)
   return w;
 }
 //------------------------------------------------------------------------------
+AsyncSocket & AsyncSocket::write(const void * buf,uint64_t len)
+{
+  for(;;){
+    if( ksys::currentFiber()->terminated() )
+      newObject<EAsyncSocket>(ECONNABORTED,__PRETTY_FUNCTION__)->throwSP();
+    if( len <= 0 ) break;
+    uint64_t l = send(buf,len);
+    buf = (uint8_t *) buf + (size_t) l;
+    len -= l;
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::flush()
 {
   if( ksys::LZO1X::active() && wBufPos() > 0 ){
@@ -493,32 +519,6 @@ AsyncSocket & AsyncSocket::flush()
     if( ksys::SHA256Filter::active() ) encrypt(p,ll);
     for( l = 0; l < ll; l += (uint32_t) sysSend(p + l,ll - l) );
     wBufPos(0);
-  }
-  return *this;
-}
-//------------------------------------------------------------------------------
-AsyncSocket & AsyncSocket::read(void * buf,uint64_t len)
-{
-  for(;;){
-    if( ksys::currentFiber()->terminated() )
-      newObject<EAsyncSocket>(ECONNABORTED,__PRETTY_FUNCTION__)->throwSP();
-    if( len <= 0 ) break;
-    uint64_t l = recv(buf,len);
-    buf = (uint8_t *) buf + (size_t) l;
-    len -= l;
-  }
-  return *this;
-}
-//------------------------------------------------------------------------------
-AsyncSocket & AsyncSocket::write(const void * buf,uint64_t len)
-{
-  for(;;){
-    if( ksys::currentFiber()->terminated() )
-      newObject<EAsyncSocket>(ECONNABORTED,__PRETTY_FUNCTION__)->throwSP();
-    if( len <= 0 ) break;
-    uint64_t l = send(buf,len);
-    buf = (uint8_t *) buf + (size_t) l;
-    len -= l;
   }
   return *this;
 }

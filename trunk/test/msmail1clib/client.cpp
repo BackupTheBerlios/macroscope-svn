@@ -109,7 +109,7 @@ void SerialPortFiber::fiberExecute()
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
-    client_.workFiberLastError_ = e->code();
+    client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
   }
   try {
     client_.workFiberWait_.release();
@@ -220,7 +220,15 @@ ClientFiber::~ClientFiber()
 {
 }
 //------------------------------------------------------------------------------
-ClientFiber::ClientFiber(Client & client) : client_(client)
+ClientFiber::ClientFiber(
+  Client & client,
+  bool terminateAfterCheck,
+  bool waitForMail,
+  bool onlyNewMail) :
+  client_(client),
+  terminateAfterCheck_(terminateAfterCheck),
+  waitForMail_(waitForMail),
+  onlyNewMail_(onlyNewMail)
 {
 }
 //------------------------------------------------------------------------------
@@ -281,7 +289,7 @@ void ClientFiber::connectHost(bool & online)
                     *this << GroupInfo(stringPartByNo(groups,i));
                   getCode();
                   try {
-                    *this << uint8_t(cmRecvMail) << client_.user_ << key << bool(true) << bool(true);
+                    *this << uint8_t(cmRecvMail) << client_.user_ << key << waitForMail_ << onlyNewMail_;
                     getCode();
                     client_.sendAsyncEvent(
                       client_.name_,
@@ -297,6 +305,10 @@ void ClientFiber::connectHost(bool & online)
                     online = true;
                   }
                   catch( ExceptionSP & e ){
+                    if( terminateAfterCheck_ ){
+                      client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+                      terminate();
+                    }
                     e->writeStdError();
                     stdErr.debug(3,utf8::String::Stream() <<
                       "Start receiving mail failed.\n"
@@ -304,6 +316,10 @@ void ClientFiber::connectHost(bool & online)
                   }
                 }
                 catch( ExceptionSP & e ){
+                  if( terminateAfterCheck_ ){
+                    client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+                    terminate();
+                  }
                   e->writeStdError();
                   stdErr.debug(3,utf8::String::Stream() <<
                     "Register groups: " << groups << " failed.\n"
@@ -311,6 +327,10 @@ void ClientFiber::connectHost(bool & online)
                 }
               }
               catch( ExceptionSP & e ){
+                if( terminateAfterCheck_ ){
+                  client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+                  terminate();
+                }
                 e->writeStdError();
                 stdErr.debug(3,utf8::String::Stream() <<
                   "Register user: " << client_.user_ <<
@@ -320,6 +340,10 @@ void ClientFiber::connectHost(bool & online)
               }
             }
             catch( ExceptionSP & e ){
+              if( terminateAfterCheck_ ){
+                client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+                terminate();
+              }
               e->writeStdError();
               stdErr.debug(3,utf8::String::Stream() <<
                 "Select server type  " << serverTypeName_[stStandalone] <<
@@ -328,6 +352,10 @@ void ClientFiber::connectHost(bool & online)
             }
           }
           catch( ExceptionSP & e ){
+            if( terminateAfterCheck_ ){
+              client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+              terminate();
+            }
             e->writeStdError();
             stdErr.debug(3,utf8::String::Stream() <<
               "Authentification to host " <<
@@ -336,6 +364,10 @@ void ClientFiber::connectHost(bool & online)
           }
         }
         catch( ExceptionSP & e ){
+          if( terminateAfterCheck_ ){
+            client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+            terminate();
+          }
           e->writeStdError();
           stdErr.debug(3,utf8::String::Stream() <<
             "Unable to connect. Host " <<
@@ -345,6 +377,10 @@ void ClientFiber::connectHost(bool & online)
         }
       }
       catch( ExceptionSP & e ){
+        if( terminateAfterCheck_ ){
+          client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+          terminate();
+        }
         e->writeStdError();
         stdErr.debug(3,utf8::String::Stream() <<
           "Unable to resolve host: " << stringPartByNo(server,i) << "\n"
@@ -358,11 +394,20 @@ void ClientFiber::onlineStage0()
 {
   message_ = newObject<Message>();
   message_->file().createIfNotExist(true).removeAfterClose(true);
+  if( !waitForMail_ ){
+    bool newMessage;
+    *this >> newMessage;
+    if( !newMessage ){
+      terminate();
+      return;
+    }
+  }
   *this >> message_;
 }
 //------------------------------------------------------------------------------
 void ClientFiber::onlineStage1()
 {
+  if( terminated_ ) return;
   Message * msg;
   utf8::String msgId(message_->id());
   {
@@ -391,13 +436,23 @@ void ClientFiber::onlineStage1()
   getCode2(eLastMessage);
 }
 //------------------------------------------------------------------------------
-void ClientFiber::cycleException(ExceptionSP &)
+void ClientFiber::cycleException(ExceptionSP & e)
 {
-  client_.sendAsyncEvent(
-    client_.name_,
-    "Disconnect",
-    utf8::ptr2Str(this)
-  );
+  if( terminateAfterCheck_ ){
+    client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
+  }
+  else {
+    client_.sendAsyncEvent(
+      client_.name_,
+      "Disconnect",
+      utf8::ptr2Str(this)
+    );
+  }
+}
+//------------------------------------------------------------------------------
+void ClientFiber::onTerminate()
+{
+  if( terminateAfterCheck_ ) client_.workFiberWait_.release();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -406,15 +461,22 @@ ClientMailFiber::~ClientMailFiber()
 {
 }
 //------------------------------------------------------------------------------
-ClientMailFiber::ClientMailFiber(Client & client) : client_(client)
+ClientMailFiber::ClientMailFiber(Client & client) :
+  client_(client), messagesAutoDrop_(messages_)
 {
 }
 //------------------------------------------------------------------------------
 void ClientMailFiber::removeMessage(MessageControl * message)
 {
   AutoLock<FiberInterlockedMutex> lock(messageMutex_);
-  for( uintptr_t i = 0; i < messages_.count(); i++ )
-    if( message == &messages_[i] ) messages_.remove(i);
+  EmbeddedListNode<MessageControl> * p = messages_.first();
+  while( p != NULL ){
+    if( message == &MessageControl::nodeObject(*p) ){
+      messages_.drop(*p);
+      break;
+    }
+    p = p->next();
+  }
 }
 //------------------------------------------------------------------------------
 void ClientMailFiber::auth()
@@ -468,13 +530,15 @@ void ClientMailFiber::newMessage()
 {
   message_ = NULL;
   AutoLock<FiberInterlockedMutex> lock(messageMutex_);
-  for( uintptr_t i = 0; i < messages_.count(); i++ ){
-    if( !messages_[i].async_ ){
-      message_ = &messages_[i];
+  EmbeddedListNode<MessageControl> * p = messages_.first();
+  while( p != NULL ){
+    if( !MessageControl::nodeObject(*p).async_ ){
+      message_ = &MessageControl::nodeObject(*p);
       break;
     }
+    p = p->next();
   }
-  if( message_ == NULL && messages_.count() > 0 ) message_ = &messages_[uintptr_t(0)];
+  if( message_ == NULL ) message_ = &MessageControl::nodeObject(*messages_.first());
 }
 //------------------------------------------------------------------------------
 void ClientMailFiber::onTerminate()
@@ -488,7 +552,7 @@ bool ClientMailFiber::cycleStage1()
   bool r = false;
   newMessage();
   if( message_ == NULL ){
-    uint64_t inactivityTime = client_.config_->value("fiber_inactivity_time",60);
+    uint64_t inactivityTime = client_.config_->value("fiber_inactivity_time",60u);
     if( !semaphore_.timedWait(inactivityTime * 1000000u) ){
       AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
       client_.clientMailFiber_ = NULL;
@@ -518,7 +582,11 @@ void ClientMailFiber::cycleException(ExceptionSP & e)
         break;
     }
     if( message_->async_ ){
-      client_.sendAsyncEvent(client_.name_,ev + utf8::int2Str(e->code()),message_->message_->id());
+      client_.sendAsyncEvent(
+        client_.name_,
+        ev + utf8::int2Str(e->code() - (e->code() >= errorOffset ? errorOffset : 0)),
+        message_->message_->id()
+      );
       AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
       switch( message_->operation_ ){
         case MessageControl::msgNone : assert( 0 ); break;
@@ -531,10 +599,11 @@ void ClientMailFiber::cycleException(ExceptionSP & e)
       }
     }
     else {
-      client_.workFiberLastError_ = e->code();
+      client_.workFiberLastError_ = e->code() - (e->code() >= errorOffset ? errorOffset : 0);
       client_.workFiberWait_.release();
     }
     removeMessage(message_);
+    message_ = NULL;
   }
 }
 //------------------------------------------------------------------------------
@@ -553,12 +622,13 @@ void ClientMailFiber::onlineStage0()
             message_->message_->id()
           );
           AutoLock<FiberInterlockedMutex> lock(client_.queueMutex_);
-          client_.recvQueue_.drop(*message_->message_);
+          client_.sendQueue_.drop(*message_->message_);
         }
         else {
           client_.workFiberWait_.release();
         }
         removeMessage(message_);
+        message_ = NULL;
         break;
       case MessageControl::msgRemove :
         *this << uint8_t(cmRemoveMail) << client_.user_ << message_->message_->id();
@@ -576,6 +646,7 @@ void ClientMailFiber::onlineStage0()
           client_.workFiberWait_.release();
         }
         removeMessage(message_);
+        message_ = NULL;
         break;
     }
   }
@@ -597,10 +668,11 @@ void ClientMailFiber::offlineStage0()
           client_.sendQueue_.drop(*message_->message_);
         }
         else {
-          client_.workFiberLastError_ = WSAECONNREFUSED + errorOffset;
+          client_.workFiberLastError_ = WSAECONNREFUSED;
           client_.workFiberWait_.release();
         }
         removeMessage(message_);
+        message_ = NULL;
         break;
       case MessageControl::msgRemove :
         if( message_->async_ ){
@@ -613,10 +685,11 @@ void ClientMailFiber::offlineStage0()
           client_.recvQueue_.drop(*message_->message_);
         }
         else {
-          client_.workFiberLastError_ = WSAECONNREFUSED + errorOffset;
+          client_.workFiberLastError_ = WSAECONNREFUSED;
           client_.workFiberWait_.release();
         }
         removeMessage(message_);
+        message_ = NULL;
         break;
     }
   }
@@ -714,6 +787,8 @@ Client::Client() :
   config_(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()),
   recvQueueAutoDrop_(recvQueue_),
   sendQueueAutoDrop_(sendQueue_),
+  connected_(false),
+  asyncMessagesReceiving_(true),
   mk1100Port_(0),
   clientMailFiber_(NULL)
 {
@@ -725,7 +800,8 @@ void Client::open()
 {
   data_.clear();
   ftime_ = 0;
-  attachFiber(newObjectV<ClientFiber>(*this));
+  if( asyncMessagesReceiving_ )
+    attachFiber(newObjectV<ClientFiber>(*this));
   if( mk1100Port_ != 0 )
     attachFiber(newObjectV<MK1100ClientFiber>(*this));
 }
@@ -743,6 +819,15 @@ void Client::close()
   ksock::Client::close();
   sendQueue_.drop();
   recvQueue_.drop();
+}
+//------------------------------------------------------------------------------
+bool Client::receiveMessages(bool onlyNewMail)
+{
+  workFiberLastError_ = 0;
+  workFiberWait_.acquire();
+  attachFiber(newObjectV1<ClientFiber>(*this,true,false,onlyNewMail));
+  AutoLock<InterlockedMutex> lock(workFiberWait_);
+  return workFiberLastError_ == 0;
 }
 //------------------------------------------------------------------------------
 utf8::String Client::newMessage()
@@ -878,7 +963,9 @@ bool Client::sendMessage(const utf8::String id,bool async)
       clientMailFiber_ = clientMailFiber;
     }
     AutoLock<FiberInterlockedMutex> lock2(clientMailFiber_->messageMutex_);
-    clientMailFiber_->messages_.add(ClientMailFiber::MessageControl(msg,ClientMailFiber::MessageControl::msgSend,async));
+    clientMailFiber_->messages_.insToTail(
+      *newObject<ClientMailFiber::MessageControl>(msg,ClientMailFiber::MessageControl::msgSend,async)
+    );
     if( clientMailFiber_->messages_.count() == 1 ) clientMailFiber_->semaphore_.post();
   }
   catch( ... ){
@@ -918,7 +1005,9 @@ bool Client::removeMessage(const utf8::String id,bool async)
       clientMailFiber_ = clientMailFiber;
     }
     AutoLock<FiberInterlockedMutex> lock2(clientMailFiber_->messageMutex_);
-    clientMailFiber_->messages_.add(ClientMailFiber::MessageControl(msg,ClientMailFiber::MessageControl::msgRemove,async));
+    clientMailFiber_->messages_.insToTail(
+      *newObject<ClientMailFiber::MessageControl>(msg,ClientMailFiber::MessageControl::msgRemove,async)
+    );
     if( clientMailFiber_->messages_.count() == 1 ) clientMailFiber_->semaphore_.post();
   }
   catch( ... ){

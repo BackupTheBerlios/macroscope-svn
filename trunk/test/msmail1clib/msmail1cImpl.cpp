@@ -105,7 +105,8 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"InstallDeviceScanner", L"”становить—канер”стройства",
       L"RemoveDeviceScanner", L"”далить—канер”стройства",
       L"AttachFileToMessage", L"ѕрикрепить‘айл —ообщению",
-      L"SaveMessageAttachmentToFile", L"—охранитьѕрикрепление—ообщени€¬‘айл"
+      L"SaveMessageAttachmentToFile", L"—охранитьѕрикрепление—ообщени€¬‘айл",
+      L"ReceiveMessages", L"ѕолучить—ообщени€"
     };
     msmail1c_->functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
@@ -148,7 +149,7 @@ HRESULT Cmsmail1c::RegisterExtensionAs(BSTR * bstrExtensionName)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNProps(long * plProps)
 {
-  *plProps = 23;
+  *plProps = 24;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -245,6 +246,10 @@ HRESULT Cmsmail1c::FindProp(BSTR bstrPropName,long * plPropNum)
   if( _wcsicoll(bstrPropName,L"MK1100Port") == 0 ) *plPropNum = 22;
   else
   if( _wcsicoll(bstrPropName,L"MK1100ѕорт") == 0 ) *plPropNum = 22;
+  else
+  if( _wcsicoll(bstrPropName,L"AsyncMessagesReceiving") == 0 ) *plPropNum = 23;
+  else
+  if( _wcsicoll(bstrPropName,L"јсинхронноеѕолучение—ообщений") == 0 ) *plPropNum = 23;
   else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
@@ -437,6 +442,14 @@ HRESULT Cmsmail1c::GetPropName(long lPropNum,long lPropAlias,BSTR * pbstrPropNam
           return (*pbstrPropName = SysAllocString(L"MK1100ѕорт")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 23 :
+      switch( lPropAlias ){
+        case 0 :
+          return (*pbstrPropName = SysAllocString(L"AsyncMessagesReceiving")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrPropName = SysAllocString(L"јсинхронноеѕолучение—ообщений")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -577,6 +590,10 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
       case 22 : // MK1100Port
         if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
         if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = msmail1c_->client_.mk1100Port_;
+        break;
+      case 23 : // AsyncMessagesReceiving
+        if( V_VT(pvarPropVal) != VT_I4 ) hr = VariantChangeTypeEx(pvarPropVal,pvarPropVal,0,0,VT_I4);
+        if( SUCCEEDED(hr) ) V_I4(pvarPropVal) = msmail1c_->client_.asyncMessagesReceiving_ ? 1 : 0;
         break;
     }
   }
@@ -735,6 +752,10 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
       case 22 : // MK1100Port
         hr = E_NOTIMPL;
         break;
+      case 23 : // AsyncMessagesReceiving
+        if( V_VT(varPropVal) != VT_I4 ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4);
+        if( SUCCEEDED(hr) ) msmail1c_->client_.asyncMessagesReceiving_ = V_I4(varPropVal) != 0;
+        break;
     }
   }
   catch( ExceptionSP & e ){
@@ -770,6 +791,7 @@ HRESULT Cmsmail1c::IsPropReadable(long lPropNum,BOOL * pboolPropRead)
     case 20 : *pboolPropRead = TRUE; break;
     case 21 : *pboolPropRead = TRUE; break;
     case 22 : *pboolPropRead = TRUE; break;
+    case 23 : *pboolPropRead = TRUE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -801,6 +823,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
     case 20 : *pboolPropWrite = FALSE; break;
     case 21 : *pboolPropWrite = FALSE; break;
     case 22 : *pboolPropWrite = TRUE; break;
+    case 23 : *pboolPropWrite = TRUE; break;
     default : return E_NOTIMPL;
   }
   return S_OK;
@@ -1070,6 +1093,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"—охранитьѕрикрепление—ообщени€¬‘айл")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 31 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"ReceiveMessages")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ѕолучить—ообщени€")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1108,6 +1139,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 28 : *plParams = 1; break;
     case 29 : *plParams = 3; break;
     case 30 : *plParams = 3; break;
+    case 31 : *plParams = 1; break;
     default :
       *plParams = -1;
       return E_NOTIMPL;
@@ -1124,6 +1156,13 @@ HRESULT Cmsmail1c::GetParamDefValue(long lMethodNum,long lParamNum,VARIANT * pva
         if( V_VT(pvarParamDefValue) != VT_I4 )
           hr = VariantChangeType(pvarParamDefValue,pvarParamDefValue,0,VT_I4);
         if( SUCCEEDED(hr) ) V_I4(pvarParamDefValue) = 0;
+      }
+      break;
+    case 31 :
+      if( lParamNum == 1 ){
+        if( V_VT(pvarParamDefValue) != VT_I4 )
+          hr = VariantChangeType(pvarParamDefValue,pvarParamDefValue,0,VT_I4);
+        if( SUCCEEDED(hr) ) V_I4(pvarParamDefValue) = 1;
       }
       break;
   }
@@ -1757,6 +1796,20 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             SafeArrayUnlock(*paParams);
           }
           break;        
+        case 31 : // ReceiveMessages
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
+                V_I4(pvarRetValue) = msmail1c_->client_.receiveMessages(V_I4(pv0) ? true : false) ? 1 : 0;
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
+          break;
         default :
           hr = E_NOTIMPL;
       }

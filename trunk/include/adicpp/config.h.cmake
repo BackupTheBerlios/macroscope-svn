@@ -136,6 +136,7 @@
 #cmakedefine HAVE_STAT 1
 #cmakedefine HAVE_STRERROR_R 1
 #cmakedefine HAVE_UTIME 1
+#cmakedefine HAVE__UTIME 1
 #cmakedefine HAVE_UTIMES 1
 #cmakedefine HAVE_VPRINTF 1
 #cmakedefine HAVE_LOCALTIME 1

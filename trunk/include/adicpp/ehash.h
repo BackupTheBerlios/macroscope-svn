@@ -307,10 +307,11 @@ template <
 > inline
 T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist)
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist);
+  EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist), * node;
   if( head != NULL && *head != NULL ){
-    *head = (*head)->next();
-    N(object).next() = NULL;
+    node = *head;
+    *head = node->next();
+    node->next() = NULL;
     optimize(optDec);
   }
   return *const_cast<T *>(&object);
@@ -352,20 +353,7 @@ template <
 > inline
 EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop(T & object,bool throwIfNotExist)
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,false,true);
-  if( head != NULL && *head != NULL ){
-    *head = (*head)->next();
-    N(object).next() = NULL;
-    optimize(optDec);
-    delete &object;
-  }
-  else if( throwIfNotExist ){
-#if defined(__WIN32__) || defined(__WIN64__)
-    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-#else
-    newObject<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
-#endif
-  }
+  delete &remove(object,throwIfNotExist);
   return *this;
 }
 //---------------------------------------------------------------------------

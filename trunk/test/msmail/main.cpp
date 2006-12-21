@@ -55,9 +55,13 @@ int main(int _argc,char * _argv[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer;
   autoInitializer = autoInitializer;
+
+//  msmail::Message::Keys guids;
   //throwCycle();
   //throwCycle();
   try {
+//    for( intptr_t i = 1000000; i > 0; i-- )
+//      guids.insert(*newObject<msmail::Message::Key>(createGUIDAsBase32String()));
 //    stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
 
     /*AsyncFile file;

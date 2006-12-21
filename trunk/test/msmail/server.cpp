@@ -282,7 +282,7 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
     attachFiber(walker);
   }
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
-  pWalker->messages_.insert(*newObject<Message::Key>(id));
+  pWalker->messages_.insToTail(*newObject<Message::Key>(id));
   rename(fileName,mqueueDir() + id + ".msg");
   if( pWalker->messages_.count() == 1 ) pWalker->semaphore_.post();
 }
@@ -290,19 +290,15 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
 void Server::removeSender(MailQueueWalker & sender) // must be called only from terminating fiber !!!
 {
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
-//  try {
-    Array<Message::Key *> list;
-    sender.messages_.list(list);
-    for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      rename(spoolDir(
-        getNameFromPathName(*list[i]).hash(true) & (spoolFibers_ - 1)) + *list[i] + ".msg",
-        mqueueDir() + *list[i] + ".msg"
-      );
-/*  }
-  catch( ExceptionSP & e ){
-    int32_t err = e->code();
-    e->writeStdError();
-  }*/
+  EmbeddedListNode<Message::Key> * p = sender.messages_.first();
+  while( p != NULL ){
+    utf8::String key(Message::Key::listNodeObject(*p));
+    rename(
+      mqueueDir() + key + ".msg",
+      spoolDir(key.hash(true) & (spoolFibers_ - 1)) + key + ".msg"
+    );
+    p = p->next();
+  }
   sendMailFibers_.remove(sender);
 }
 //------------------------------------------------------------------------------

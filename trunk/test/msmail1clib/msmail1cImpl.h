@@ -98,11 +98,14 @@ class ClientFiber : public BaseClientFiber {
   friend class Client;
   public:
     virtual ~ClientFiber();
-    ClientFiber(Client & client);
+    ClientFiber(Client & client,bool terminateAfterCheck = false,bool waitForMail = true,bool onlyNewMail = true);
   protected:
     Client & client_;
     AutoPtr<Message> message_;
     ksock::SockAddr remoteAddress_;
+    bool terminateAfterCheck_;
+    bool waitForMail_;
+    bool onlyNewMail_;
 
     int32_t getCode2(int32_t noThrowCode0 = eOK,int32_t noThrowCode1 = eOK);
 
@@ -111,7 +114,8 @@ class ClientFiber : public BaseClientFiber {
     void cycleStage0();
     void onlineStage0();
     void onlineStage1();
-    void cycleException(ExceptionSP &);
+    void cycleException(ExceptionSP & e);
+    void onTerminate();
   private:
     ClientFiber(const ClientFiber & a) : client_(a.client_) {}
     void operator = (const ClientFiber &){}
@@ -138,6 +142,14 @@ class ClientMailFiber : public BaseClientFiber {
         MessageControl(Message * message = NULL,Operation op = msgNone,bool async = false) :
           message_(message), operation_(op), async_(async) {}
 
+        mutable EmbeddedListNode<MessageControl> node_;
+        static EmbeddedListNode<MessageControl> & node(const MessageControl & object){
+          return object.node_;
+        }
+        static MessageControl & nodeObject(const EmbeddedListNode<MessageControl> & node,MessageControl * p = NULL){
+          return node.object(p->node_);
+        }
+
         Message * message_;
         Operation operation_;
         bool async_;
@@ -145,7 +157,13 @@ class ClientMailFiber : public BaseClientFiber {
         //MessageControl(const MessageControl &);
         //void operator = (const MessageControl &);
     };
-    Vector<MessageControl> messages_;
+    typedef EmbeddedList<
+      MessageControl,
+      MessageControl::node,
+      MessageControl::nodeObject
+    > Messages;
+    Messages messages_;
+    AutoListDrop<Messages> messagesAutoDrop_;
     MessageControl * message_;
 
     void auth();
@@ -217,6 +235,7 @@ class Client : public ksock::Client {
     mutable FiberInterlockedMutex connectedMutex_;
     utf8::String connectedToServer_;
     bool connected_;
+    bool asyncMessagesReceiving_;
     u_short mk1100Port_;
 
     HRESULT sendAsyncEvent(const utf8::String & source,const utf8::String & event,const utf8::String & data);
@@ -229,6 +248,7 @@ class Client : public ksock::Client {
     bool attachFileToMessage(const utf8::String id,const utf8::String key,const utf8::String fileName);
     bool saveMessageAttachmentToFile(const utf8::String id,const utf8::String key,const utf8::String fileName);
 
+    bool receiveMessages(bool onlyNewMail);
     bool sendMessage(const utf8::String id,bool async);
     bool removeMessage(const utf8::String id,bool async);
     utf8::String Client::copyMessage(const utf8::String id);

@@ -226,5 +226,24 @@ int main(int ac, char*av[]){
 #elif HAVE_FTRUNCATE && HAVE_FILENO
   if( ftruncate(fileno(out),ftell(out)) != 0 ) return errno;
 #endif
+  fclose(out);
+#if HAVE_STAT
+  struct stat st;
+  if( stat(av[1],&st) != 0 ) return errno;
+#elif HAVE__STAT
+  struct _stat st;
+  if( _stat(av[1],&st) != 0 ) return errno;
+#endif
+#if HAVE_UTIME
+  struct utimbuf ut;
+  ut.actime = st.st_atime;
+  ut.modtime = st.st_mtime;
+  if( utime(av[2],&ut) != 0 ) return errno;
+#elif HAVE__UTIME
+  struct _utimbuf ut;
+  ut.actime = st.st_atime;
+  ut.modtime = st.st_mtime;
+  if( _utime(av[1],&ut) != 0 ) return errno;
+#endif
   return 0;
 }

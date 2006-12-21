@@ -64,7 +64,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib"
+				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
 			/>
 			<Tool
@@ -130,7 +130,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib"
+				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
 			/>
 			<Tool
@@ -196,7 +196,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib"
+				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).lib"
 			/>
 			<Tool
@@ -263,7 +263,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib"
+				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).lib"
 			/>
 			<Tool
@@ -1552,46 +1552,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libadicpp\st.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libfbcpp\st.cpp"
 				>
 			</File>
@@ -1632,6 +1592,46 @@
 						Name="VCCLCompilerTool"
 						ObjectFile="$(IntDir)\$(InputName)1.obj"
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libadicpp\st.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
 					/>
 				</FileConfiguration>
 			</File>
@@ -1688,10 +1688,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
 				>
 				<FileConfiguration
@@ -1730,6 +1726,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\svc.cpp"

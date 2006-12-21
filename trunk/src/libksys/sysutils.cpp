@@ -225,10 +225,14 @@ uintmax_t fibonacci(uintmax_t n)
 void createGUID(guid_t & uuid)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( FAILED(CoCreateGuid(&uuid)) ){
+  UUID u;
+  RPC_STATUS status = UuidCreate(&u);
+  if( status != RPC_S_OK ){
+//  if( FAILED(CoCreateGuid(&uuid)) ){
     int32_t err = GetLastError() + errorOffset;
     newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
+  memcpy(&uuid,&u,sizeof(uuid));
 #elif HAVE_UUIDGEN
   if( uuidgen(&uuid,1) != 0 ){
     int32_t err = errno;
