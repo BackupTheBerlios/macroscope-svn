@@ -368,6 +368,29 @@ AutoFileWRLock<T> & AutoFileWRLock<T>::setLocked(T & file,uint64_t pos,uint64_t 
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+class AutoFileRemove {
+  public:
+    ~AutoFileRemove();
+    AutoFileRemove(const utf8::String & name);
+  protected:
+  private:
+    utf8::String name_;
+
+    AutoFileRemove(const AutoFileRemove &){}
+    void operator =(const AutoFileRemove &){}
+};
+//---------------------------------------------------------------------------
+inline AutoFileRemove::~AutoFileRemove()
+{
+  remove(name_,true);
+}
+//---------------------------------------------------------------------------
+inline AutoFileRemove::AutoFileRemove(const utf8::String & name) : name_(name)
+{
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 class EFileEOF : public Exception {
   public:
     EFileEOF(int32_t code,const char * what);

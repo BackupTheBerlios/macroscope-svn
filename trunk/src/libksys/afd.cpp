@@ -102,6 +102,7 @@ file_t AsyncFile::openHelper(bool async)
   file_t handle = INVALID_HANDLE_VALUE;
 #if defined(__WIN32__) || defined(__WIN64__)
   int32_t err;
+  SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
   if( isWin9x() ){
     utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
     if( !readOnly_ )
@@ -117,7 +118,7 @@ file_t AsyncFile::openHelper(bool async)
           (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
         NULL
       );
-    if( handle == INVALID_HANDLE_VALUE )
+    else if( handle == INVALID_HANDLE_VALUE )
       handle = CreateFileA(
         ansiFileName,GENERIC_READ,
         exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -147,7 +148,7 @@ file_t AsyncFile::openHelper(bool async)
           (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
         NULL
       );
-    if( handle == INVALID_HANDLE_VALUE )
+    else if( handle == INVALID_HANDLE_VALUE )
       handle = CreateFileW(
         unicodeFileName,GENERIC_READ,
         exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -182,7 +183,7 @@ file_t AsyncFile::openHelper(bool async)
       O_RDWR | O_CREAT | (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
       um | S_IRUSR | S_IWUSR
     );
-  if( handle < 0 )
+  else if( handle < 0 )
     handle = ::open(
       ansiFileName,
       O_RDONLY | O_CREAT | (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),

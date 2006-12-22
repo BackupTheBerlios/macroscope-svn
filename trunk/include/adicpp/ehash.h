@@ -83,25 +83,25 @@ class EmbeddedHash {
     ~EmbeddedHash();
     EmbeddedHash();
 
-    EmbeddedHash<T,N,O,H,E> & xchg(const EmbeddedHash<T,N,O,H,E> & a);
+    EmbeddedHash<T,N,O,H,E> & xchg(const EmbeddedHash<T,N,O,H,E> & a) const;
 
-    EmbeddedHash<T,N,O,H,E> & clear();
-    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true);
-    T & remove(const T & object,bool throwIfNotExist = true);
-    T & remove();
+    EmbeddedHash<T,N,O,H,E> & clear() const;
+    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true) const;
+    T & remove(const T & object,bool throwIfNotExist = true) const;
+    T & remove() const;
     T & first() const;
-    EmbeddedHash<T,N,O,H,E> & drop();
-    EmbeddedHash<T,N,O,H,E> & drop(T & object,bool throwIfNotExist = true);
+    EmbeddedHash<T,N,O,H,E> & drop() const;
+    EmbeddedHash<T,N,O,H,E> & drop(T & object,bool throwIfNotExist = true) const;
     T & search(const T & object) const;
     T * find(const T & object) const;
     EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
     const uintptr_t & count() const;
     const uintptr_t & estimatedChainLength() const;
-    EmbeddedHash<T,N,O,H,E> & estimatedChainLength(uintptr_t a);
+    EmbeddedHash<T,N,O,H,E> & estimatedChainLength(uintptr_t a) const;
     const uintptr_t & thresholdNumerator() const;
-    EmbeddedHash<T,N,O,H,E> & thresholdNumerator(uintptr_t a);
+    EmbeddedHash<T,N,O,H,E> & thresholdNumerator(uintptr_t a) const;
     const uintptr_t & thresholdDenominator() const;
-    EmbeddedHash<T,N,O,H,E> & thresholdDenominator(uintptr_t a);
+    EmbeddedHash<T,N,O,H,E> & thresholdDenominator(uintptr_t a) const;
     uintptr_t maxChainLength() const;
     uintptr_t minChainLength() const;
     uintptr_t avgChainLength() const;
@@ -115,7 +115,7 @@ class EmbeddedHash {
       while( u-- > 0 ) stream << *lst[(uintptr_t) u];
       return stream;
     }
-    template <typename ST> ST & get(ST & stream)
+    template <typename ST> ST & get(ST & stream) const
     {
       EmbeddedHash<T,N,O,H,E> t;
       uint64_t u;
@@ -123,19 +123,17 @@ class EmbeddedHash {
       while( u-- > 0 ){
         AutoPtr<T> p(newObject<T>());
         stream >> *p.ptr();
-        t.insert(*p.ptr(NULL));
+        t.insert(*p.ptr());
+        p.ptr(NULL);
       }
       drop();
-      hash_.ptr(t.hash_.ptr(NULL));
-      size_ = t.size_;
-      t.size_ = 0;
-      count_ = t.count_;
-      t.count_ = 0;
+      xchg(t);
       return stream;
     }
   protected:
   private:
-    mutable AutoPtr<EmbeddedHashNode<T> *> hash_;
+    mutable EmbeddedHashNode<T> ** hash_;
+    mutable EmbeddedHashNode<T> * staticHash_[16];
     mutable uintptr_t size_;
     mutable uintptr_t count_;
     mutable uintptr_t estimatedChainLength_;
@@ -145,11 +143,15 @@ class EmbeddedHash {
     EmbeddedHash(const EmbeddedHash<T,N,O,H,E> &);
     void operator = (const EmbeddedHash<T,N,O,H,E> &);
 
+    uintptr_t staticHashCount() const { return sizeof(staticHash_) / sizeof(staticHash_[0]); }
+    void clearStaticHash() const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) staticHash_[i] = NULL; }
+    void xchgStaticHash(const EmbeddedHash<T,N,O,H,E> & a) const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) ksys::xchg(staticHash_[i],a.staticHash_[i]); }
+
     EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist,bool throwIfNotExist) const;
     enum OptType { optInc, optDec };
-    EmbeddedHashNode<T> * getChain();
-    void putChain(EmbeddedHashNode<T> * head);
-    void optimize(OptType o);
+    EmbeddedHashNode<T> * getChain() const;
+    void putChain(EmbeddedHashNode<T> * head) const;
+    void optimize(OptType o) const;
 };
 //---------------------------------------------------------------------------
 template <
@@ -172,30 +174,14 @@ template <
   bool (*E) (const T &, const T &)
 > inline
 EmbeddedHash<T,N,O,H,E>::EmbeddedHash() :
-  size_(0),
+  hash_(staticHash_),
+  size_(staticHashCount()),
   count_(0),
   estimatedChainLength_(16),
   thresholdNumerator_(5),
   thresholdDenominator_(8)
 {
-}
-//---------------------------------------------------------------------------
-template <
-  typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
-  uintptr_t (*H)(const T &),
-  bool (*E) (const T &, const T &)
->
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::xchg(const EmbeddedHash<T,N,O,H,E> & a)
-{
-  hash_.xchg(a.hash_);
-  ksys::xchg(size_,a.size_);
-  ksys::xchg(count_,a.count_);
-  ksys::xchg(estimatedChainLength_,a.estimatedChainLength_);
-  ksys::xchg(thresholdNumerator_,a.thresholdNumerator_);
-  ksys::xchg(thresholdDenominator_,a.thresholdDenominator_);
-  return *this;
+  clearStaticHash();
 }
 //---------------------------------------------------------------------------
 template <
@@ -205,14 +191,35 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::clear()
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::xchg(const EmbeddedHash<T,N,O,H,E> & a) const
 {
-  if( count_ > 0 ){
-    hash_.free();
-    size_ = 0;
-    count_ = 0;
-  }
-  return *this;
+  ksys::xchg(hash_,a.hash_);
+  if( a.hash_ == staticHash_ ) a.hash_ = a.staticHash_;
+  if( hash_ == a.staticHash_ ) hash_ = staticHash_;
+  xchgStaticHash(a);
+  ksys::xchg(size_,a.size_);
+  ksys::xchg(count_,a.count_);
+  ksys::xchg(estimatedChainLength_,a.estimatedChainLength_);
+  ksys::xchg(thresholdNumerator_,a.thresholdNumerator_);
+  ksys::xchg(thresholdDenominator_,a.thresholdDenominator_);
+  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t (*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::clear() const
+{
+  if( size_ > staticHashCount() ) kfree(hash_);
+  hash_ = staticHash_;
+  clearStaticHash();
+  size_ = staticHashCount();
+  count_ = 0;
+  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
@@ -225,7 +232,7 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop()
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop() const
 {
   EmbeddedHashNode<T> ** head = hash_, ** tail = head + size_, * walk, * w;
   while( head < tail ){
@@ -237,12 +244,7 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop()
     }
     head++;
   }
-  if( size_ > 0 ){
-    hash_.free();
-    size_ = 0;
-  }
-  count_ = 0;
-  return *this;
+  return clear();
 }
 //---------------------------------------------------------------------------
 template <
@@ -256,7 +258,7 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::list(Array<T *> & l) const
 {
   l.resize(count_);
   intptr_t i = 0;
-  EmbeddedHashNode<T> ** head = hash_.ptr(), ** tail = head + size_, * walk;
+  EmbeddedHashNode<T> ** head = hash_, ** tail = head + size_, * walk;
   while( head < tail ){
     walk = *head;
     while( walk != NULL ){
@@ -278,24 +280,15 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist) const
 {
   EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist,false);
-  if( head == NULL || *head == NULL ){
-    if( size_ == 0 ){
-      hash_.realloc(sizeof(EmbeddedHashNode<T> *) * 1);
-      hash_[0] = NULL;
-      size_ = 1;
-      head = &hash_[0];
-      *head = &N(object);
-    }
-    else if( *head == NULL ){
-      *head = &N(object);
-    }
+  if( *head == NULL ){
+    *head = &N(object);
     N(object).next() = NULL;
     optimize(optInc);
   }
-  return *this;
+  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
@@ -305,16 +298,36 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist)
+T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist) const
 {
   EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist), * node;
-  if( head != NULL && *head != NULL ){
+  if( *head != NULL ){
     node = *head;
     *head = node->next();
     node->next() = NULL;
     optimize(optDec);
+    return O(*node,NULL);
   }
   return *const_cast<T *>(&object);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedHashNode<T> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  uintptr_t (*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+T & EmbeddedHash<T,N,O,H,E>::remove() const
+{
+  assert( count_ > 0 );
+  EmbeddedHashNode<T> ** p1 = hash_, ** p2 = p1 + size_, * node;
+  while( p1 < p2 && *p1 == NULL ) p1++;
+  node = *p1;
+  *p1 = node->next();
+  node->next() = NULL;
+  optimize(optDec);
+  return O(*node,NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -327,7 +340,7 @@ template <
 T & EmbeddedHash<T,N,O,H,E>::first() const
 {
   assert( count_ > 0 );
-  EmbeddedHashNode<T> ** p1 = hash_.ptr(), ** p2 = p1 + size_;
+  EmbeddedHashNode<T> ** p1 = hash_, ** p2 = p1 + size_;
   while( p1 < p2 && *p1 == NULL ) p1++;
   return O(**p1,NULL);
 }
@@ -339,22 +352,10 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::remove()
-{
-  return remove(first(),false);
-}
-//---------------------------------------------------------------------------
-template <
-  typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
-  uintptr_t (*H)(const T &),
-  bool (*E) (const T &, const T &)
-> inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop(T & object,bool throwIfNotExist)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop(T & object,bool throwIfNotExist) const
 {
   delete &remove(object,throwIfNotExist);
-  return *this;
+  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
@@ -379,7 +380,7 @@ template <
 T * EmbeddedHash<T,N,O,H,E>::find(const T & object) const
 {
   EmbeddedHashNode<T> ** p = internalFind(object,false,false);
-  return p == NULL || *p == NULL ? NULL : &O(**p,NULL);
+  return *p == NULL ? NULL : &O(**p,NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -392,25 +393,22 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object, bool throwIfExist, bool throwIfNotExist) const
+EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bool throwIfExist,bool throwIfNotExist) const
 {
-  EmbeddedHashNode<T> ** head = NULL;
-  if( size_ > 0 ){
-    head = hash_.ptr() + (H(object) & (size_ - 1));
-    while( *head != NULL ){
-      if( E(O(**head,NULL), object) ) break;
-      head = &(*head)->next();
-    }
+  EmbeddedHashNode<T> ** head = hash_ + (H(object) & (size_ - 1));
+  while( *head != NULL ){
+    if( E(O(**head,NULL), object) ) break;
+    head = &(*head)->next();
   }
   int32_t err = 0;
-  if( head != NULL && *head != NULL && throwIfExist ){
+  if( *head != NULL && throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
     err = ERROR_ALREADY_EXISTS;
 #else
     err = EEXIST;
 #endif
   }
-  else if( (head == NULL || *head == NULL) && throwIfNotExist ){
+  else if( *head == NULL && throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
     err = ERROR_NOT_FOUND;
 #else
@@ -432,7 +430,7 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHashNode<T> * EmbeddedHash<T,N,O,H,E>::getChain()
+EmbeddedHashNode<T> * EmbeddedHash<T,N,O,H,E>::getChain() const
 {
   EmbeddedHashNode<T> * head = NULL, ** p0, ** p1, * a0, * a1;
   p0 = hash_;
@@ -445,8 +443,7 @@ EmbeddedHashNode<T> * EmbeddedHash<T,N,O,H,E>::getChain()
       head = a0;
       a0 = a1;
     }
-    *p0 = NULL;
-    p0++;
+    *p0++ = NULL;
   }
   return head;
 }
@@ -461,7 +458,7 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head)
+void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head) const
 {
   EmbeddedHashNode<T> ** p0, * a0;
   while( head != NULL ){
@@ -484,36 +481,46 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-void EmbeddedHash<T,N,O,H,E>::optimize(OptType o)
+void EmbeddedHash<T,N,O,H,E>::optimize(OptType o) const
 {
-  EmbeddedHashNode<T> * head = NULL;
+  EmbeddedHashNode<T> * head, ** a;
 // using golden section == 5/8 as optimization threshold
 //  uintptr_t count = size_ << 4, c = ((count << 2) + count) >> 3, i;
   uintptr_t count = size_ * estimatedChainLength_, c = count * thresholdNumerator_ / thresholdDenominator_, i;
   switch( o ){
     case optInc :
       if( ++count_ < count + c ) return;
-      if( hash_.realloc((i = (size_ << 1) + (size_ == 0)) * sizeof(EmbeddedHashNode<T> *),0) != NULL ){
+      assert( size_ >= staticHashCount() );
+      i = size_ << 1;
+      if( size_ > staticHashCount() ){
+        a = (EmbeddedHashNode<T> **) krealloc(hash_,i * sizeof(EmbeddedHashNode<T> *));
+      }
+      else {
+        a = (EmbeddedHashNode<T> **) kmalloc(i * sizeof(EmbeddedHashNode<T> *));
+        memcpy(a,staticHash_,sizeof(staticHash_));
+      }
+      if( a != NULL ){
+        hash_ = a;
         head = getChain();
-        while( size_ < i ){
-          hash_[size_] = NULL;
-          size_++;
-        }
+        while( size_ < i ) a[size_++] = NULL;
         putChain(head);
       }
       break;
     case optDec :
       if( --count_ > count - c ) return;
-      if( size_ > 1 || count_ == 0 ){
+      i = size_ >> 1;
+      if( i >= staticHashCount() ){
         head = getChain();
-#ifndef NDEBUG
-        EmbeddedHashNode<T> ** a =
-#endif
-        hash_.realloc((size_ >> 1) * sizeof(EmbeddedHashNode<T> *),0);
-#ifndef NDEBUG
-        assert( a != NULL || size_ == 1 );
-#endif
-        size_ >>= 1;
+        if( i > staticHashCount() ){
+          hash_ = (EmbeddedHashNode<T> **) krealloc(hash_,i * sizeof(EmbeddedHashNode<T> *));
+          assert( hash_ != NULL );
+        }
+        else {
+          kfree(hash_);
+          hash_ = staticHash_;
+          clearStaticHash();
+        }
+        size_ = i;
         putChain(head);
       }
       break;
@@ -551,10 +558,10 @@ template <
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::estimatedChainLength(uintptr_t a)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::estimatedChainLength(uintptr_t a) const
 {
   estimatedChainLength_ = a;
-  return *this;
+  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
@@ -576,10 +583,10 @@ template <
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdNumerator(uintptr_t a)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdNumerator(uintptr_t a) const
 {
   thresholdNumerator_ = a;
-  return *this;
+  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
@@ -601,10 +608,10 @@ template <
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdDenominator(uintptr_t a)
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdDenominator(uintptr_t a) const
 {
   thresholdDenominator_ = a;
-  return *this;
+  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
@@ -622,7 +629,7 @@ uintptr_t EmbeddedHash<T,N,O,H,E>::maxChainLength() const
   uintptr_t max = 0, m;
   for( intptr_t i = size_ - 1; i >= 0; i-- ){
     EmbeddedHashNode<T> ** p;
-    for( m = 0, p = hash_.ptr() + i; *p != NULL; p = &(*p)->next(), m++ );
+    for( m = 0, p = hash_ + i; *p != NULL; p = &(*p)->next(), m++ );
     if( m > max ) max = m;
   }
   return max;
@@ -643,7 +650,7 @@ uintptr_t EmbeddedHash<T,N,O,H,E>::minChainLength() const
   uintptr_t min = ~(uintptr_t) 0, m;
   for( intptr_t i = size_ - 1; i >= 0; i-- ){
     EmbeddedHashNode<T> ** p;
-    for( m = 0, p = hash_.ptr() + i; *p != NULL; p = &(*p)->next(), m++ );
+    for( m = 0, p = hash_ + i; *p != NULL; p = &(*p)->next(), m++ );
     if( m < min ) min = m;
   }
   return min;
@@ -664,7 +671,7 @@ uintptr_t EmbeddedHash<T,N,O,H,E>::avgChainLength() const
   uintptr_t avg = 0, m;
   for( intptr_t i = size_ - 1; i >= 0; i-- ){
     EmbeddedHashNode<T> ** p;
-    for( m = 0, p = hash_.ptr() + i; *p != NULL; p = &(*p)->next(), m++ );
+    for( m = 0, p = hash_ + i; *p != NULL; p = &(*p)->next(), m++ );
     avg += m;
   }
   return size_ > 0 ? avg / size_ : 0;

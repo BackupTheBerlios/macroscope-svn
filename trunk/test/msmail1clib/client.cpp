@@ -715,9 +715,9 @@ void ClientDBGetterFiber::main()
     bool registered;
     {
       AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
-      registered = client_.connected_;
+      registered = client_.connected_ || !client_.asyncMessagesReceiving_;
     }
-    if( !registered )
+    if( !registered)
       newObject<Exception>(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     utf8::String server(client_.config_->value("server",client_.mailServer_));
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){

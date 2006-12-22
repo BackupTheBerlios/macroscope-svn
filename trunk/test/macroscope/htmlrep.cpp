@@ -754,14 +754,13 @@ void Logger::writeHtmlTail(ksys::AsyncFile & f)
 //------------------------------------------------------------------------------
 int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et, const utf8::String & user)
 {
-  ksys::AutoPtr< TrafCacheEntry> tce(newObject<TrafCacheEntry>(user, bt, et, tt));
+  ksys::AutoPtr<TrafCacheEntry> tce(newObject<TrafCacheEntry>(user,bt,et,tt));
   tce->bt_.tm_wday = 0;
   tce->bt_.tm_yday = 0;
   tce->et_.tm_wday = 0;
   tce->et_.tm_yday = 0;
-  ksys::HashedObjectListItem< utf8::String,TrafCacheEntry> *  item;
-  item = trafCache_.itemOfKey(tce->id());
-  if( item == NULL ){
+  TrafCacheEntry * pEntry = trafCache_.find(tce);
+  if( pEntry == NULL ){
     statement_->text(utf8::String("SELECT ") +
       (tt == ttAll || tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
       (tt == ttAll ? "," : "") +
@@ -787,15 +786,16 @@ int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et,
       default     :
         break;
     }
-    //    if( trafCache_.count() >= cacheSize_ )
-    //      trafCache_.removeByIndex(trafCache_.count() - 1);
-    trafCache_.add(tce.ptr(), tce->id(), &item);
-    tce.ptr(NULL);
+    if( trafCache_.count() >= cacheSize_ )
+      trafCache_.drop(trafCacheLRU_.remove(*trafCacheLRU_.last()));
+    trafCache_.insert(tce);
+    pEntry = tce.ptr(NULL);
   }
   else {
-    //    trafCache_.changeIndex(item->index(),0);
+    trafCacheLRU_.remove(*pEntry);
   }
-  return item->object()->traf_;
+  trafCacheLRU_.insToHead(*pEntry);
+  return pEntry->traf_;
 }
 //------------------------------------------------------------------------------
 /*  fprintf(fyear,

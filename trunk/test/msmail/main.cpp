@@ -60,21 +60,18 @@ int main(int _argc,char * _argv[])
   //throwCycle();
   //throwCycle();
   try {
-//    for( intptr_t i = 1000000; i > 0; i-- )
-//      guids.insert(*newObject<msmail::Message::Key>(createGUIDAsBase32String()));
-//    stdErr.log(lmINFO,utf8::String::Stream() << msmail_version.gnu_ << " started\n");
-
-    /*AsyncFile file;
-    file.fileName("c:\\1234").open();
-    AutoPtr<char> b;
-    b.alloc((size_t) file.size() + 1);
-    file.readBuffer(b,file.size());
-    b.ptr()[file.size()] = '\0';
-    size_t l = ::strlen(b.ptr());
-    utf8::String orig(newObject<utf8::String::Container>(2,b));
-    utf8::String s(screenString(orig));
-    utf8::String rst(unScreenString(s));
-    intptr_t c = orig.strcmp(rst);*/
+    /*Vector<msmail::Message::Key> vector;
+    for( intptr_t i = 1000000 - 1; i >= 0; i-- )
+      vector.add(createGUIDAsBase32String());
+    for( intptr_t i = vector.count() - 1; i >= 0; i-- )
+      guids.insert(*newObject<msmail::Message::Key>(vector[i]));
+    Array<msmail::Message::Key *> list;
+    guids.list(list);
+    uintptr_t avg = guids.avgChainLength();
+    uintptr_t max = guids.maxChainLength();
+    uintptr_t min = guids.minChainLength();
+    for( intptr_t i = vector.count() - 1; i >= 0; i-- )
+      guids.drop(vector[i]);*/
 
     union {
       intptr_t i;

@@ -225,14 +225,12 @@ uintmax_t fibonacci(uintmax_t n)
 void createGUID(guid_t & uuid)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  UUID u;
-  RPC_STATUS status = UuidCreate(&u);
+  RPC_STATUS status = UuidCreate((UUID *) &uuid);
   if( status != RPC_S_OK ){
 //  if( FAILED(CoCreateGuid(&uuid)) ){
     int32_t err = GetLastError() + errorOffset;
     newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
-  memcpy(&uuid,&u,sizeof(uuid));
 #elif HAVE_UUIDGEN
   if( uuidgen(&uuid,1) != 0 ){
     int32_t err = errno;
@@ -947,25 +945,26 @@ static int32_t removeDirectoryHelper(const utf8::String & name)
   return err;
 }
 //---------------------------------------------------------------------------
-bool removeDirectory(const utf8::String & name,bool recursive)
+bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
 {
-  if( currentFiber() != NULL ){
-    currentFiber()->event_.timeout_ = ~uint64_t(0);
-    currentFiber()->event_.string0_ = name;
-    currentFiber()->event_.recursive_ = recursive;
-    currentFiber()->event_.type_ = etRemoveDir;
-    currentFiber()->thread()->postRequest();
-    currentFiber()->switchFiber(currentFiber()->mainFiber());
-    assert( currentFiber()->event_.type_ == etRemoveDir );
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.string0_ = name;
+    fiber->event_.recursive_ = recursive;
+    fiber->event_.type_ = etRemoveDir;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == etRemoveDir );
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
-        currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
+    if( fiber->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
+        fiber->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
 #else
-    if( currentFiber()->event_.errno_ == ENOENT ) return false;
+    if( fiber->event_.errno_ == ENOENT ) return false;
 #endif
-    if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
-    return currentFiber()->event_.rval_;
+    if( fiber->event_.errno_ != 0 && !noThrow )
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
+    return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = removeDirectoryHelper(name);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1011,29 +1010,30 @@ bool removeDirectory(const utf8::String & name,bool recursive)
   if( err == ENOENT ) return false;
 #endif
   oserror(err);
-  if( err != 0 )
+  if( err != 0 && !noThrow )
     newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
-  return true;
+  return err == 0;
 }
 //---------------------------------------------------------------------------
-bool remove(const utf8::String & name)
+bool remove(const utf8::String & name,bool noThrow)
 {
-  if( currentFiber() != NULL ){
-    currentFiber()->event_.timeout_ = ~uint64_t(0);
-    currentFiber()->event_.string0_ = name;
-    currentFiber()->event_.type_ = etRemoveFile;
-    currentFiber()->thread()->postRequest();
-    currentFiber()->switchFiber(currentFiber()->mainFiber());
-    assert( currentFiber()->event_.type_ == etRemoveFile );
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.string0_ = name;
+    fiber->event_.type_ = etRemoveFile;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == etRemoveFile );
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( currentFiber()->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
-        currentFiber()->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
+    if( fiber->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
+        fiber->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
 #else
-    if( currentFiber()->event_.errno_ == ENOENT ) return false;
+    if( fiber->event_.errno_ == ENOENT ) return false;
 #endif
-    if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
-    return currentFiber()->event_.rval_;
+    if( fiber->event_.errno_ != 0 && !noThrow )
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
+    return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = 0;
   oserror(0);
@@ -1055,12 +1055,19 @@ bool remove(const utf8::String & name)
     struct Stat st;
     stat(name,st);
     if( (st.st_mode & S_IFDIR) != 0 ){
-      if( removeDirectory(name,true) ) return remove(name);
-      err = oserror();
+      try {
+        if( removeDirectory(name,true) ) return true;
+        err = oserror();
+      }
+      catch( ExceptionSP & e){
+        err = e->code() >= errorOffset ? e->code() - errorOffset : e->code();
+      }
     }
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
+    if( !noThrow )
+      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
+    oserror(err);
   }
-  return true;
+  return err == 0;
 }
 //---------------------------------------------------------------------------
 #if !defined(__WIN32__) && !defined(__WIN64__)

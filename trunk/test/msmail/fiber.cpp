@@ -301,13 +301,10 @@ void ServerFiber::sendMail() // client sending mail
 
   *this >> id >> rest;
   AsyncFile file;
-  file.fileName(server_.incompleteDir() + id + ".msg").createIfNotExist(true);
+  file.fileName(server_.incompleteDir() + id + ".msg").createIfNotExist(true).exclusive(true);
   if( rest ){
     file.open();
     *this << file.size() >> remainder;
-    if( remainder > 1024u * 1024u * 10u ){
-      remainder = remainder;
-    }
     file.seek(file.size());
     AutoPtr<uint8_t> b;
     size_t bl = getpagesize() * 16;
@@ -321,12 +318,14 @@ void ServerFiber::sendMail() // client sending mail
     file.seek(0);
     message = newObject<Message>();
     file >> message;
+    file.close();
+    message->file().exclusive(true);
   }
   else {
     message = newObject<Message>();
-    message->file().fileName(file.fileName()).createIfNotExist(true).removeAfterClose(true);
+    message->file().fileName(file.fileName()).createIfNotExist(true).exclusive(true);
     *this >> message;
-  }  
+  }
   utf8::String::Stream stream;
   stream << "Message " << message->id() <<
     " received from " << message->value("#Sender") <<
@@ -334,6 +333,7 @@ void ServerFiber::sendMail() // client sending mail
     ", traffic " <<
     recvBytes() - rb + sendBytes() - sb << "\n"
   ;
+  AutoFileRemove afr(file.fileName());
   if( !message->isValue("#Recepient") || 
       message->value("#Recepient").trim().strlen() == 0 ||
       !message->isValue(messageIdKey) ||
@@ -353,29 +353,23 @@ void ServerFiber::sendMail() // client sending mail
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
   message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
   AsyncFile file2(file.fileName() + ".tmp");
-  file2.createIfNotExist(true).removeAfterClose(true).open();
+  file2.createIfNotExist(true).removeAfterClose(true).exclusive(true).open();
   file2 << message;
   file2.removeAfterClose(false).close();
-  message = NULL;
   try {
     rename(
       file2.fileName(),
       server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg"
     );
-    file.removeAfterClose(true).close();
-    putCode(eOK);
-    flush();
-    stdErr.debug(0,stream);
   }
-  catch( ExceptionSP & e ){
-    e->writeStdError();
-    try {
-      remove(file2.fileName());
-    }
-    catch( ExceptionSP & e ){
-      e->writeStdError();
-    }
+  catch( ExceptionSP & ){
+    remove(file2.fileName());
+    throw;
   }
+  message = NULL;
+  putCode(eOK);
+  flush();
+  stdErr.debug(0,stream);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::processMailbox(
@@ -636,7 +630,18 @@ void SpoolWalker::processQueue(bool & timeWait)
             ;
             utf8::String mailFile(userMailBox + message->id() + ".msg");
             message = NULL;
-            rename(list[i],mailFile);
+            try {
+              rename(list[i],mailFile);
+            }
+            catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+              if( e->code() != ERROR_ALREADY_EXISTS + errorOffset ) throw;
+#else
+              if( e->code() != EEXIST ) throw;
+#endif
+              remove(list[i]);
+              e->writeStdError();
+            }
             stdErr.debug(0,stream);
           }
         }
@@ -833,15 +838,12 @@ void MailQueueWalker::main()
           AsyncFile file;
           file.fileName(server_.mqueueDir() + *mId + ".msg").readOnly(true).open().seek(restFrom);
           *this << (remainder = file.size() - restFrom);
-          if( remainder > 1024u * 1024u * 10u ){
-            remainder = remainder;
-          }
           AutoPtr<uint8_t> b;
           size_t bl = getpagesize() * 16;
           b.alloc(bl);
           while( remainder > 0 ){
             uint64_t l = remainder > bl ? bl : remainder;
-            file.read(b,l);
+            file.readBuffer(b,l);
             write(b,l);
             remainder -= l;
           }

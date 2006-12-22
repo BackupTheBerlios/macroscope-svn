@@ -34,9 +34,11 @@ Logger::~Logger()
 {
 }
 //------------------------------------------------------------------------------
-Logger::Logger() : shortUrl_("://"), ellapsed_(getlocaltimeofday())
+Logger::Logger() :
+  shortUrl_("://"),
+  ellapsed_(getlocaltimeofday()),
+  trafCacheAutoDrop_(trafCache_)
 {
-  trafCache_.caseSensitive(false);
 }
 //------------------------------------------------------------------------------
 ksys::Mutant Logger::timeStampRoundToMin(const ksys::Mutant & timeStamp)

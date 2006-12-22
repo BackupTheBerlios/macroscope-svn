@@ -93,16 +93,47 @@ class Logger {
         {
         }
 
-        utf8::String  id() const;
+        utf8::String id() const;
 
-        bool hashKeyEqu(const TrafCacheEntry & key, bool caseSensitive) const {
-          return id().hashKeyEqu(key.id(), caseSensitive);
+        static ksys::EmbeddedHashNode<TrafCacheEntry> & keyNode(const TrafCacheEntry & object){
+          return object.keyNode_;
         }
-        uintptr_t hash(bool caseSensitive) const {
-          return id().hash(caseSensitive);
+        static TrafCacheEntry & keyNodeObject(const ksys::EmbeddedHashNode<TrafCacheEntry> & node,TrafCacheEntry * p){
+          return node.object(p->keyNode_);
         }
+        static uintptr_t keyNodeHash(const TrafCacheEntry & object){
+          return object.id().hash(false);
+        }
+        static bool keyHashNodeEqu(const TrafCacheEntry & object1,const TrafCacheEntry & object2){
+          return object1.id().strcasecmp(object2.id()) == 0;
+        }
+        
+        mutable ksys::EmbeddedHashNode<TrafCacheEntry> keyNode_;
+
+        static ksys::EmbeddedListNode<TrafCacheEntry> & listNode(const TrafCacheEntry & object){
+          return object.listNode_;
+        }
+        static TrafCacheEntry & listNodeObject(const ksys::EmbeddedListNode<TrafCacheEntry> & node,TrafCacheEntry * p = NULL){
+          return node.object(p->listNode_);
+        }
+
+        mutable ksys::EmbeddedListNode<TrafCacheEntry> listNode_;
     };
-    ksys::HashedObjectList< utf8::String,TrafCacheEntry> trafCache_;
+    typedef ksys::EmbeddedHash<
+      TrafCacheEntry,
+      TrafCacheEntry::keyNode,
+      TrafCacheEntry::keyNodeObject,
+      TrafCacheEntry::keyNodeHash,
+      TrafCacheEntry::keyHashNodeEqu
+    > TrafCache;
+    TrafCache trafCache_;
+    ksys::AutoHashDrop<TrafCache> trafCacheAutoDrop_;
+    typedef ksys::EmbeddedList<
+      TrafCacheEntry,
+      TrafCacheEntry::listNode,
+      TrafCacheEntry::listNodeObject
+    > TrafCacheLRU;
+    TrafCacheLRU trafCacheLRU_;
     uintptr_t cacheSize_;
 
     utf8::String htmlDir_;
