@@ -294,7 +294,7 @@ void ServerFiber::getDB()
 void ServerFiber::sendMail() // client sending mail
 {
   uintptr_t i;
-  AutoPtr<Message> message;
+  AutoPtr<Message> msg;
   utf8::String id;
   uint64_t rb = recvBytes(), sb = sendBytes(), remainder;
   bool rest;
@@ -316,16 +316,19 @@ void ServerFiber::sendMail() // client sending mail
       remainder -= l;
     }
     file.seek(0);
-    message = newObject<Message>();
-    file >> message;
+    msg = newObject<Message>();
+    file >> msg;
     file.close();
-    message->file().exclusive(true);
+    msg->file().exclusive(true);
   }
   else {
-    message = newObject<Message>();
-    message->file().fileName(file.fileName()).createIfNotExist(true).exclusive(true);
-    *this >> message;
+    msg = newObject<Message>();
+    msg->file().fileName(file.fileName()).createIfNotExist(true).exclusive(true);
+    *this >> msg;
   }
+  AutoFileRemove afr(file.fileName());
+  AutoPtr<Message> message;
+  message.xchg(msg);
   utf8::String::Stream stream;
   stream << "Message " << message->id() <<
     " received from " << message->value("#Sender") <<
@@ -333,12 +336,10 @@ void ServerFiber::sendMail() // client sending mail
     ", traffic " <<
     recvBytes() - rb + sendBytes() - sb << "\n"
   ;
-  AutoFileRemove afr(file.fileName());
   if( !message->isValue("#Recepient") || 
       message->value("#Recepient").trim().strlen() == 0 ||
       !message->isValue(messageIdKey) ||
       id.strcmp(message->id()) != 0 ){
-    file.removeAfterClose(true);
     putCode(eInvalidMessage);
     return;
   }
@@ -354,21 +355,27 @@ void ServerFiber::sendMail() // client sending mail
   message->value(relay + "Process.StartTime",getTimeString(getProcessStartTime()));
   AsyncFile file2(file.fileName() + ".tmp");
   file2.createIfNotExist(true).removeAfterClose(true).exclusive(true).open();
-  file2 << message;
-  file2.removeAfterClose(false).close();
   try {
+    file2 << message;
+    file2.removeAfterClose(false).close();
     rename(
       file2.fileName(),
       server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg"
     );
   }
-  catch( ExceptionSP & ){
+  catch( ExceptionSP & e ){
     remove(file2.fileName());
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( e->code() == ERROR_ALREADY_EXISTS + errorOffset ){
+#else
+    if( e->code() == EEXIST ){
+#endif
+      stream << ", is duplicate, removed.\n";
+      stdErr.debug(0,stream);
+    }
     throw;
   }
-  message = NULL;
   putCode(eOK);
-  flush();
   stdErr.debug(0,stream);
 }
 //------------------------------------------------------------------------------
@@ -510,6 +517,8 @@ void ServerFiber::removeMail() // client remove mail
           break;
         default :
           ex->writeStdError();
+          e = eFail;
+          cont = false;
       }
     }
     if( cont ) sleep(100000);
@@ -625,13 +634,13 @@ void SpoolWalker::processQueue(bool & timeWait)
             utf8::String::Stream stream;
             stream << "Message " << message->id() <<
               " received from " << message->value("#Sender") <<
-              " to " << message->value("#Recepient") <<
-              " delivered localy to mailbox: " << userMailBox << "\n"
+              " to " << message->value("#Recepient")
             ;
             utf8::String mailFile(userMailBox + message->id() + ".msg");
             message = NULL;
             try {
               rename(list[i],mailFile);
+              stream << " delivered localy to mailbox: " << userMailBox << "\n";
             }
             catch( ExceptionSP & e ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -641,6 +650,7 @@ void SpoolWalker::processQueue(bool & timeWait)
 #endif
               remove(list[i]);
               e->writeStdError();
+              stream << " is duplicate, removed.\n";
             }
             stdErr.debug(0,stream);
           }
@@ -1126,15 +1136,17 @@ void NodeClient::main()
             close();
           }
           else if( !periodicaly_ ){
-            AutoMutexWRLock<FiberMutex> lock(data.mutex_);
-            ServerInfo * si = data.servers_.find(host);
-            if( si != NULL && tryConnect ){
-              si->connectErrorCount_++;
-              si->lastFailedConnectTime_ = gettimeofday();
-              stdErr.debug(7,utf8::String::Stream() <<
-                "NODE client: Wait " << fibonacci(si->connectErrorCount_) << " seconds before connect to host " <<
-                host << " because previous connect try failed.\n"
-              );
+            {
+              AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+              ServerInfo * si = data.servers_.find(host);
+              if( si != NULL && tryConnect ){
+                si->connectErrorCount_++;
+                si->lastFailedConnectTime_ = gettimeofday();
+                stdErr.debug(7,utf8::String::Stream() <<
+                  "NODE client: Wait " << fibonacci(si->connectErrorCount_) << " seconds before connect to host " <<
+                  host << " because previous connect try failed.\n"
+                );
+              }
             }
             sleep(uint64_t(1000000));
           }
@@ -1143,7 +1155,7 @@ void NodeClient::main()
       if( periodicaly_ ){
         sweepHelper(stStandalone);
         sweepHelper(stNode);
-        uint64_t timeout = server_.config_->parse().
+        uint64_t timeout = server_.config_->
           valueByPath(
             utf8::String(serverConfSectionName_[stStandalone]) + ".exchange_interval",
             600u

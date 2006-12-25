@@ -56,7 +56,7 @@ template <typename T> inline void xchg(T & v1, T & v2)
 #include "profiler.h"
 #include "utf8str.h"
 #include "except.h"
-#include "tree.h"
+//#include "tree.h"
 #include "qsort.h"
 #include "vector.h"
 #include "hol.h"

@@ -28,9 +28,8 @@
 #define _tree_H
 //-----------------------------------------------------------------------------
 namespace ksys {
-
 //-----------------------------------------------------------------------------
-#define AVLTreeStackSize sizeof(int) * 8
+#define AVLTreeStackSize sizeof(uintptr_t) * 8
 //-----------------------------------------------------------------------------
 /*template <class T>
 class AVLTreeNode {
@@ -390,6 +389,185 @@ AVLTreeNode<T> * AVLTree<T>::InsertObject(const T AData)
 }*/
 //-----------------------------------------------------------------------------
 #undef AVLTreeStackSize
+//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
+template <typename T>
+class TreeNode {
+  public:
+    ~TreeNode();
+    TreeNode();
+
+    union {
+      struct {
+        TreeNode<T> * left_;
+        TreeNode<T> * right_;
+      };
+      TreeNode<T> * leafs_[2];
+    };
+    intptr_t balance_;
+  protected:
+  private:
+};
+//-----------------------------------------------------------------------------
+template <typename T> inline
+TreeNode<T>::~TreeNode()
+{
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+TreeNode<T>::TreeNode() : left_(NULL), right_(NULL), balance_(0)
+{
+}
+//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
+template <typename T>
+class TreeNode3 : public <TreeNode<T> > {
+  public:
+    ~TreeNode3();
+    TreeNode3();
+
+    TreeNode3<T> * parent_;
+  protected:
+  private:
+};
+//-----------------------------------------------------------------------------
+template <typename T> inline
+TreeNode3<T>::~TreeNode3()
+{
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+TreeNode3<T>::TreeNode3() : parent_(NULL)
+{
+}
+//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+>
+class Tree {
+  public:
+    ~Tree();
+    Tree();
+
+    Tree<T,N,O,C> & clear();
+    Tree<T,N,O,C> & insert(const T & object,bool throwIfExist = true,T ** pObject = NULL);
+    Tree<T,N,O,C> & remove(const T & object,bool throwIfNotExist = true);
+    Tree<T,N,O,C> & drop(const T & object,bool throwIfNotExist = true);
+  protected:
+    class Stack {
+      public:
+        ~Stack();
+        Stack() : sp_(0) {}
+
+        TreeNode<T> ** node_[sizeof(uintptr_t) * 8];
+        intptr_t leaf_[sizeof(uintptr_t) * 8];
+        intptr_t sp_;
+    };
+
+    TreeNode<T> * root_;
+
+    T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist = true,bool throwIfNotExist = true,Stack * pStack = NULL) const;
+  private:
+};
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+Tree<T,N,O,C>::~Tree()
+{
+  clear();
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+Tree<T,N,O,C>::Tree() : root_(NULL)
+{
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+Tree<T,N,O,C> & Tree<T,N,O,C>::clear()
+{
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist,bool throwIfNotExist,Stack * pStack) const
+{
+  T * pObject = NULL;
+  for(;;){
+    intptr_t c = C(O(**node,NULL),object);
+    if( c == 0 ){
+      pObject = O(**node,NULL);
+      break;
+    }
+    if( pStack != NULL ){
+      pStack->node_[pStack->sp_] = node;
+      pStack->leaf_[pStack->sp_] = c;
+      pStack->sp_++;
+    }
+    node = &(*node)->leafs_[c >> sizeof(c) * 8];
+    if( *node == NULL ) break;
+  }
+  int32_t err = 0;
+  if( pObject != NULL && throwIfExist ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    err = ERROR_ALREADY_EXISTS;
+#else
+    err = EEXIST;
+#endif
+  }
+  else if( pObject == NULL && throwIfNotExist ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    err = ERROR_NOT_FOUND;
+#else
+    err = ENOENT;
+#endif
+  }
+  if( err != 0 )
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  return pObject;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+Tree<T,N,O,C> & Tree<T,N,O,C>::insert(const T & object,bool throwIfExist,T ** pObject)
+{
+  Stack stack;
+  T * obj = internalFind(&root_,throwIfExist,false,&stack);
+  if( obj == NULL ){
+    (stack.node_[stack.sp_ - 1])->leafs_[stack.leaf_[stack.sp_ - 1] >> sizeof(c) * 8]] = &N(object);
+    (stack.node_[stack.sp_ - 1])->balance = stack.leaf_[stack.sp_ - 1];
+  }
+  if( pObject != NULL ) *pObject = obj;
+  return *this;
+}
 //-----------------------------------------------------------------------------
 }
 //-----------------------------------------------------------------------------

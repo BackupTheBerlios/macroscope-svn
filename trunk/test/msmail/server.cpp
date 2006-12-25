@@ -283,8 +283,22 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
   }
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
   pWalker->messages_.insToTail(*newObject<Message::Key>(id));
-  rename(fileName,mqueueDir() + id + ".msg");
-  if( pWalker->messages_.count() == 1 ) pWalker->semaphore_.post();
+  bool step0 = true;
+  try {
+    rename(fileName,mqueueDir() + id + ".msg");
+  }
+  catch( ExceptionSP & e ){
+    pWalker->messages_.drop(*pWalker->messages_.last());
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( e->code() != ERROR_ALREADY_EXISTS + errorOffset ) throw;
+#else
+    if( e->code() != EEXIST ) throw;
+#endif
+    e->writeStdError();
+    remove(fileName);
+    step0 = false;
+  }
+  if( step0 ) if( pWalker->messages_.count() == 1 ) pWalker->semaphore_.post();
 }
 //------------------------------------------------------------------------------
 void Server::removeSender(MailQueueWalker & sender) // must be called only from terminating fiber !!!
@@ -293,10 +307,22 @@ void Server::removeSender(MailQueueWalker & sender) // must be called only from 
   EmbeddedListNode<Message::Key> * p = sender.messages_.first();
   while( p != NULL ){
     utf8::String key(Message::Key::listNodeObject(*p));
-    rename(
-      mqueueDir() + key + ".msg",
-      spoolDir(key.hash(true) & (spoolFibers_ - 1)) + key + ".msg"
-    );
+    utf8::String fileName(mqueueDir() + key + ".msg");
+    try {
+      rename(
+        fileName,
+        spoolDir(key.hash(true) & (spoolFibers_ - 1)) + key + ".msg"
+      );
+    }
+    catch( ExceptionSP & e ){
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( e->code() != ERROR_ALREADY_EXISTS + errorOffset ) throw;
+#else
+      if( e->code() != EEXIST ) throw;
+#endif
+      e->writeStdError();
+      remove(fileName);
+    }
     p = p->next();
   }
   sendMailFibers_.remove(sender);
