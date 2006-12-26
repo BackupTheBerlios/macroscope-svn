@@ -52,8 +52,8 @@ enum ServerType {
   stCount
 };
 //------------------------------------------------------------------------------
-extern const char * serverTypeName_[];
-extern const char * serverConfSectionName_[];
+extern const char * serverTypeName[];
+extern const char * serverConfSectionName[];
 //------------------------------------------------------------------------------
 enum Error {
   eOK,
@@ -843,7 +843,6 @@ class Server : public ksock::Server {
         utf8::String getNodeList() const;
         void dumpNL(utf8::String::Stream & stream) const;
         void dump(utf8::String::Stream & stream) const;
-        Data & clear();
         bool orNL(const Data & a,const utf8::String & sendingTo = utf8::String());
         bool ore(const Data & a,const utf8::String & sendingTo = utf8::String());
         Data & xorNL(const Data & data1,const Data & data2,const utf8::String & sendingTo = utf8::String());
@@ -852,6 +851,8 @@ class Server : public ksock::Server {
         Data & setSendedTo(const utf8::String & sendingTo);
         Data & clearSendedToNL();
         Data & clearSendedTo();
+        Data & clearNL();
+        Data & clear();
         bool sweepNL(uint64_t stime,uint64_t rtime,utf8::String::Stream * log = NULL);
         bool sweep(uint64_t stime,uint64_t rtime,utf8::String::Stream * log = NULL);
         utf8::String getUserListNL(bool quoted = false) const;
@@ -987,6 +988,8 @@ class Server : public ksock::Server {
     void closeSenders();
     void spoolCleanup();
     void mqueueCleanup();
+    void loadStaticDB();
+    void loadStaticRoutes();
 
     void addRecvMailFiber(ServerFiber & fiber);
     bool remRecvMailFiber(ServerFiber & fiber);

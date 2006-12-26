@@ -61,9 +61,9 @@ class ConfigSection {
     const ConfigSection & section(const utf8::String & section) const;
     const ConfigSection & section(uintptr_t i) const;
     Mutant value(const utf8::String & key = utf8::String(), const Mutant & defValue = Mutant()) const;
-    Mutant value(uintptr_t i) const;
+    Mutant value(uintptr_t i,utf8::String * pKey = NULL) const;
     utf8::String text(const utf8::String & key = utf8::String(), const utf8::String & defText = utf8::String()) const;
-    utf8::String text(uintptr_t i) const;
+    utf8::String text(uintptr_t i,utf8::String * pKey = NULL) const;
 
     Mutant valueByPath(const utf8::String & path, const Mutant & defValue = Mutant()) const;
 

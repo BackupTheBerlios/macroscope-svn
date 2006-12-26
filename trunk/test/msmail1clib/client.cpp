@@ -346,7 +346,7 @@ void ClientFiber::connectHost(bool & online)
               }
               e->writeStdError();
               stdErr.debug(3,utf8::String::Stream() <<
-                "Select server type  " << serverTypeName_[stStandalone] <<
+                "Select server type  " << serverTypeName[stStandalone] <<
                 stringPartByNo(server,i) << " failed.\n"
               );
             }
@@ -722,7 +722,7 @@ void ClientDBGetterFiber::main()
       AutoLock<FiberInterlockedMutex> lock(client_.connectedMutex_);
       registered = client_.connected_ || !client_.asyncMessagesReceiving_;
     }
-    if( !registered)
+    if( !registered )
       newObject<Exception>(ERROR_CONNECTION_UNAVAIL + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     utf8::String server(client_.config_->value("server",client_.mailServer_));
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){

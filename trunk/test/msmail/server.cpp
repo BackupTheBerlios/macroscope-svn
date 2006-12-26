@@ -48,7 +48,7 @@ Server::Server(const ConfigSP config) :
 void Server::open()
 {
   ksock::Server::open();
-  spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".spool_fibers",8);
+  spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName[stStandalone]) + ".spool_fibers",8);
   mqueueCleanup();
   spoolCleanup();
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
@@ -78,7 +78,7 @@ Fiber * Server::newFiber()
 utf8::String Server::spoolDirHelper() const
 {
   return includeTrailingPathDelimiter(config_->valueByPath(
-    utf8::String(serverConfSectionName_[stStandalone]) + ".spool",
+    utf8::String(serverConfSectionName[stStandalone]) + ".spool",
     getExecutablePath() + "spool"
   ));
 }
@@ -156,7 +156,7 @@ void Server::startNodesExchangeNL()
   utf8::String me(bindAddrs()[0].resolve(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;
   utf8::String neighbors = config_->parse().override().valueByPath(
-    utf8::String(serverConfSectionName_[stNode]) + ".neighbors",
+    utf8::String(serverConfSectionName[stNode]) + ".neighbors",
     ""
   );
   if( hosts.strlen() > 0 ){
@@ -371,6 +371,31 @@ void Server::spoolCleanup()
     }
     removeDirectory(excludeTrailingPathDelimiter(spoolDir(i)));
   }
+}
+//------------------------------------------------------------------------------
+void Server::loadStaticDB()
+{
+  Server::Data & d = data(stStandalone);
+  const ConfigSection & key2Server = config_->section("database").section("key2server");
+  for( intptr_t i = key2Server.valueCount() - 1; i >= 0; i-- ){
+    utf8::String key, value(key2Server.value(i,&key));
+    d.registerKey2ServerLink(Key2ServerLink(unScreenString(key),unScreenString(value)));
+  }
+  const ConfigSection & key2Group = config_->section("database").section("key2group");
+  for( intptr_t i = key2Group.valueCount() - 1; i >= 0; i-- ){
+    utf8::String key, value(key2Group.value(i,&key));
+    d.registerKey2GroupLink(Key2GroupLink(unScreenString(key),unScreenString(value)));
+  }
+}
+//------------------------------------------------------------------------------
+void Server::loadStaticRoutes()
+{
+  Server::Data & d = data(stStandalone);
+  const ConfigSection & route = config_->section("route");
+  /*for( intptr_t i = key2Server.valueCount() - 1; i >= 0; i-- ){
+    utf8::String key, value(key2Server.value(i,&key));
+    d.registerKey2ServerLink(Key2ServerLink(unScreenString(key),unScreenString(value)));
+  }*/
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

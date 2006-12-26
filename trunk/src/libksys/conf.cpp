@@ -37,15 +37,16 @@ Mutant ConfigSection::value(const utf8::String & key, const Mutant & defValue) c
   return m;
 }
 //---------------------------------------------------------------------------
-Mutant ConfigSection::value(uintptr_t i) const
+Mutant ConfigSection::value(uintptr_t i,utf8::String * pKey) const
 {
-  HashedObjectListItem< utf8::String,Mutant> *  item;
+  HashedObjectListItem<utf8::String,Mutant> * item;
   item = values_.itemOfIndex(i);
-  assert(item != NULL);
+  assert( item != NULL );
+  if( pKey != NULL ) *pKey = item->key();
   return *item->object();
 }
 //---------------------------------------------------------------------------
-utf8::String ConfigSection::text(const utf8::String & key, const utf8::String & defText) const
+utf8::String ConfigSection::text(const utf8::String & key,const utf8::String & defText) const
 {
   utf8::String m(defText);
   HashedObjectListItem< utf8::String,Mutant> *  item;
@@ -53,11 +54,12 @@ utf8::String ConfigSection::text(const utf8::String & key, const utf8::String & 
   return m;
 }
 //---------------------------------------------------------------------------
-utf8::String ConfigSection::text(uintptr_t i) const
+utf8::String ConfigSection::text(uintptr_t i,utf8::String * pKey) const
 {
-  HashedObjectListItem< utf8::String,Mutant> *  item;
+  HashedObjectListItem<utf8::String,Mutant> * item;
   item = values_.itemOfIndex(i);
   assert(item != NULL);
+  if( pKey != NULL ) *pKey = item->key();
   return *item->object();
 }
 //---------------------------------------------------------------------------

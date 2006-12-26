@@ -29,8 +29,8 @@
 namespace msmail {
 //------------------------------------------------------------------------------
 extern const char messageIdKey[] = "#MessageId";
-extern const char * serverTypeName_[] = { "NODE", "STANDALONE" };
-extern const char * serverConfSectionName_[] = { "node", "standalone" };
+extern const char * serverTypeName[] = { "NODE", "STANDALONE" };
+extern const char * serverConfSectionName[] = { "node", "standalone" };
 //------------------------------------------------------------------------------
 Message::~Message()
 {
@@ -586,7 +586,7 @@ ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a)
 {
-  return s << a.name_ << " " << serverTypeName_[a.type_] <<
+  return s << a.name_ << " " << serverTypeName[a.type_] <<
     ", atime: " << getTimeString(a.atime_) <<
     (a.rtime_ != 0 ? ", rtime: " + getTimeString(a.rtime_) : utf8::String());
 }
@@ -1202,19 +1202,6 @@ void Server::Data::dump(utf8::String::Stream & stream) const
   dumpNL(stream);
 }
 //------------------------------------------------------------------------------
-Server::Data & Server::Data::clear()
-{
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
-  users_.drop();
-  keys_.drop();
-  groups_.drop();
-  servers_.drop();
-  user2KeyLinks_.drop();
-  key2GroupLinks_.drop();
-  key2ServerLinks_.drop();
-  return *this;
-}
-//------------------------------------------------------------------------------
 bool Server::Data::orNL(const Data & a,const utf8::String & sendingTo)
 {
   intptr_t i;
@@ -1377,6 +1364,24 @@ Server::Data & Server::Data::clearSendedTo()
 {
   AutoMutexWRLock<FiberMutex> lock(mutex_);
   return clearSendedToNL();
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::clearNL()
+{
+  users_.drop();
+  keys_.drop();
+  groups_.drop();
+  servers_.drop();
+  user2KeyLinks_.drop();
+  key2GroupLinks_.drop();
+  key2ServerLinks_.drop();
+  return *this;
+}
+//------------------------------------------------------------------------------
+Server::Data & Server::Data::clear()
+{
+  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  return clearNL();
 }
 //------------------------------------------------------------------------------
 template <typename T,typename LT> static inline

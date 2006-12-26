@@ -190,7 +190,7 @@ void ServerFiber::registerClient()
   flush();
   if( serverType_ == stStandalone ){
     utf8::String::Stream stream;
-    stream << serverTypeName_[serverType_] << ": changes stored from client " << host << "\n";
+    stream << serverTypeName[serverType_] << ": changes stored from client " << host << "\n";
     diff.dumpNL(stream);
     stdErr.debug(5,stream);
   }
@@ -202,21 +202,21 @@ void ServerFiber::registerDB()
   utf8::String host(remoteAddress().resolve(~uintptr_t(0))), server, service;
   if( serverType_ != stNode ){
     terminate();
-    stream << serverTypeName_[serverType_] <<
-      ": " << host << " ask for " << serverTypeName_[serverType_] << " database\n";
+    stream << serverTypeName[serverType_] <<
+      ": " << host << " ask for " << serverTypeName[serverType_] << " database\n";
     stdErr.debug(6,stream);
     return;
   }
   if( !(bool) server_.config_->parse().valueByPath(
-        utf8::String(serverConfSectionName_[serverType_]) + ".enabled",false) ){
+        utf8::String(serverConfSectionName[serverType_]) + ".enabled",false) ){
     terminate();
-    stream << serverTypeName_[serverType_] <<
+    stream << serverTypeName[serverType_] <<
       ": functional disabled, but " << host << " attempt to register own database.\n";
     stdErr.debug(6,stream);
     return;
   }
   bool irsl = server_.config_->valueByPath(
-    utf8::String(serverConfSectionName_[serverType_]) + ".ignore_remote_send_list",false
+    utf8::String(serverConfSectionName[serverType_]) + ".ignore_remote_send_list",false
   );
   uint32_t port;
   uint64_t rStartTime;
@@ -227,7 +227,7 @@ void ServerFiber::registerDB()
     *this >> rdbt;
     if( rdbt >= stCount ){
       terminate();
-      stream << serverTypeName_[serverType_] <<
+      stream << serverTypeName[serverType_] <<
         ": remote host " << host << " send invalid own database type.\n";
       stdErr.debug(6,stream);
       return;
@@ -237,10 +237,10 @@ void ServerFiber::registerDB()
   host = server;
   if( port != defaultPort ) host += ":" + utf8::int2Str(port);
   utf8::String hostDB(host);
-  if( protocol_ > 0 ) hostDB = hostDB + " " + serverTypeName_[rdbt];
+  if( protocol_ > 0 ) hostDB = hostDB + " " + serverTypeName[rdbt];
   Server::Data rdata, ldata, diff;
   rdata.recvDatabaseNL(*this);
-  stream << serverTypeName_[serverType_] <<
+  stream << serverTypeName[serverType_] <<
     ": database changes received from " << hostDB << "\n";
   rdata.dumpNL(stream);
   stdErr.debug(6,stream);
@@ -266,11 +266,11 @@ void ServerFiber::registerDB()
   putCode(eOK);
   flush();
   if( dbChanged ) server_.startNodesExchange();
-  stream.clear() << serverTypeName_[serverType_] <<
+  stream.clear() << serverTypeName[serverType_] <<
     ": database " << (fullDump ? "full dump" : "changes") << " sended to " << hostDB << "\n";
   ldata.dumpNL(stream);
   stdErr.debug(fullDump ? 7 : 6,stream);
-  stream.clear() << serverTypeName_[serverType_] << ": changes stored\n";
+  stream.clear() << serverTypeName[serverType_] << ": changes stored\n";
   diff.dumpNL(stream);
   stdErr.debug(5,stream);
 }
@@ -285,7 +285,7 @@ void ServerFiber::getDB()
   putCode(eOK);
   flush();
   utf8::String::Stream stream;
-  stream << serverTypeName_[serverType_] <<
+  stream << serverTypeName[serverType_] <<
     ": database sended to client " << host << "\n";
   tdata.dumpNL(stream);
   stdErr.debug(8,stream);
@@ -575,7 +575,7 @@ void SpoolWalker::processQueue(bool & timeWait)
         file.close();
         if( key2ServerLink == NULL ){
           uint64_t messageTTL = server_.config_->valueByPath(
-            utf8::String(serverConfSectionName_[stStandalone]) +
+            utf8::String(serverConfSectionName[stStandalone]) +
             ".message_ttl",
             2678400u // 31 day
           );
@@ -676,11 +676,37 @@ void SpoolWalker::processQueue(bool & timeWait)
     }
     list.remove(i);
   }
+  if( id_ < 0 ){ // if collector
+    utf8::String::Stream stream;
+    utf8::String name(server_.spoolDir(id_) + "clear_node_database.ctrl");
+    if( stat(name) ){
+      server_.data(stNode).clear();
+      remove(name,true);
+      stream << serverTypeName[stNode] << " database droped by user request.\n";
+      stdErr.debug(30,stream);
+    }
+    name = server_.spoolDir(id_) + "clear_standalone_database.ctrl";
+    if( stat(name) ){
+      server_.data(stStandalone).clear();
+      remove(name,true);
+      stream << serverTypeName[stStandalone] << " database droped by user request.\n";
+      stdErr.debug(30,stream);
+    }
+    name = server_.spoolDir(id_) + "clear_database.ctrl";
+    if( stat(name) ){
+      server_.data(stNode).clear();
+      server_.data(stStandalone).clear();
+      remove(name,true);
+      stream << serverTypeName[stNode] << " and " <<
+        serverTypeName[stStandalone] << " database droped by user request.\n";
+      stdErr.debug(30,stream);
+    }
+  }
 }
 //------------------------------------------------------------------------------
 void SpoolWalker::fiberExecute()
 {
-  utf8::String iName(serverConfSectionName_[stStandalone]);
+  utf8::String iName(serverConfSectionName[stStandalone]);
   utf8::String vName(iName + (id_ >= 0 ? ".spool" : ".collector") + "_processing_interval");
   bool timeWait;
   while( !terminated_ ){
@@ -818,7 +844,7 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
       );
       cec *= 1000000u;
       uint64_t mwtv = (uint64_t) server_.config_->parse().valueByPath(
-        utf8::String(serverConfSectionName_[stStandalone]) +
+        utf8::String(serverConfSectionName[stStandalone]) +
         ".max_wait_time_before_try_connect",
         600u
       ) * 1000000u;
@@ -870,7 +896,7 @@ void MailQueueWalker::main()
         }
         else {
           uint64_t inactivityTime = (uint64_t) server_.config_->valueByPath(
-            utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fiber_inactivity_time",
+            utf8::String(serverConfSectionName[stStandalone]) + ".mqueue_fiber_inactivity_time",
             60u
           ) * 1000000u;
           if( !semaphore_.timedWait(inactivityTime) ){
@@ -967,9 +993,9 @@ void NodeClient::auth()
 void NodeClient::sweepHelper(ServerType serverType)
 {
   utf8::String::Stream stream;
-  stream << serverTypeName_[serverType] << ": sweep in " << serverTypeName_[serverType] << " database\n";
-  uint64_t ttl = server_.config_->valueByPath(utf8::String(serverConfSectionName_[serverType]) + ".ttl","");
-  uint64_t ttr = server_.config_->valueByPath(utf8::String(serverConfSectionName_[serverType]) + ".ttr","");
+  stream << serverTypeName[serverType] << ": sweep in " << serverTypeName[serverType] << " database\n";
+  uint64_t ttl = server_.config_->valueByPath(utf8::String(serverConfSectionName[serverType]) + ".ttl","");
+  uint64_t ttr = server_.config_->valueByPath(utf8::String(serverConfSectionName[serverType]) + ".ttr","");
   if( server_.data(serverType).sweep(ttl * 1000000u,ttr * 1000000u,&stream) )
     stdErr.debug(5,stream);
 }
@@ -1004,7 +1030,7 @@ void NodeClient::main()
           if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
           server += host;
           host = server_.config_->parse().valueByPath(
-            utf8::String(serverConfSectionName_[stStandalone]) + ".node",""
+            utf8::String(serverConfSectionName[stStandalone]) + ".node",""
           );
           if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
           server += host;
@@ -1037,7 +1063,7 @@ void NodeClient::main()
             }
             if( cec > 0 ){
               uintptr_t mwt = server_.config_->parse().valueByPath(
-                utf8::String(serverConfSectionName_[dataType_]) +
+                utf8::String(serverConfSectionName[dataType_]) +
                 ".max_wait_time_before_try_connect",
                 600u
               );
@@ -1075,7 +1101,7 @@ void NodeClient::main()
               *this << uint8_t(cmSelectProtocol) << uint8_t(1);
               bool useProto1 = getCode(eInvalidCommand,eInvalidProtocol) == eOK;
               utf8::String hostDB(host);
-              if( useProto1 ) hostDB = hostDB + " " + serverTypeName_[stNode];
+              if( useProto1 ) hostDB = hostDB + " " + serverTypeName[stNode];
               data.registerServer(ServerInfo(host,stNode));
               Server::Data rdata, ldata, diff, dump;
               uint64_t rStartTime;
@@ -1114,18 +1140,18 @@ void NodeClient::main()
               exchanged = true;
               *this << uint8_t(cmQuit);
               getCode();
-              stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
+              stream.clear() << "NODE client: " << serverTypeName[dataType_] <<
                 " database " << (fullDump ? "full dump" : "changes") <<
                 " sended to node " << host << "\n";
               ldata.dumpNL(stream);
               stdErr.debug(fullDump ? 7 : 6,stream);
-              stream.clear() << "NODE client: " << serverTypeName_[dataType_] <<
+              stream.clear() << "NODE client: " << serverTypeName[dataType_] <<
                 " database changes received from node " << host << "\n";
               rdata.dumpNL(stream);
               stdErr.debug(6,stream);
               diff.xorNL(dump,rdata);
               stream.clear() << "NODE client: changes stored in " <<
-                serverTypeName_[dataType_] << " database.\n";
+                serverTypeName[dataType_] << " database.\n";
               diff.dumpNL(stream);
               stdErr.debug(5,stream);
             }
@@ -1157,7 +1183,7 @@ void NodeClient::main()
         sweepHelper(stNode);
         uint64_t timeout = server_.config_->
           valueByPath(
-            utf8::String(serverConfSectionName_[stStandalone]) + ".exchange_interval",
+            utf8::String(serverConfSectionName[stStandalone]) + ".exchange_interval",
             600u
           );
         sleep(timeout * 1000000u);
