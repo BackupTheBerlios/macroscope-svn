@@ -39,24 +39,26 @@ bool stat(const utf8::String & pathName,Stat * st)
 //---------------------------------------------------------------------------
 bool stat(const utf8::String & pathName,Stat & st)
 {
-  if( currentFiber() != NULL ){
-    currentFiber()->event_.timeout_ = ~uint64_t(0);
-    currentFiber()->event_.string0_ = pathName;
-    currentFiber()->event_.stat_ = &st;
-    currentFiber()->event_.type_ = etStat;
-    currentFiber()->thread()->postRequest();
-    currentFiber()->switchFiber(currentFiber()->mainFiber());
-    assert( currentFiber()->event_.type_ == etStat );
-    if( currentFiber()->event_.errno_ != 0 &&
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.string0_ = pathName;
+    fiber->event_.stat_ = &st;
+    fiber->event_.type_ = etStat;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == etStat );
+    if( fiber->event_.errno_ != 0 &&
 #if defined(__WIN32__) || defined(__WIN64__)
-        currentFiber()->event_.errno_ != ERROR_PATH_NOT_FOUND + errorOffset &&
-        currentFiber()->event_.errno_ != ERROR_FILE_NOT_FOUND + errorOffset )
+        fiber->event_.errno_ != ERROR_PATH_NOT_FOUND + errorOffset &&
+        fiber->event_.errno_ != ERROR_FILE_NOT_FOUND + errorOffset &&
+        fiber->event_.errno_ != ERROR_INVALID_NAME + errorOffset )
 #else
-        currentFiber()->event_.errno_ != ENOENT &&
-	currentFiber()->event_.errno_ != ENOTDIR )
+        fiber->event_.errno_ != ENOENT &&
+	      fiber->event_.errno_ != ENOTDIR )
 #endif
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
-    return currentFiber()->event_.rval_;
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
+    return fiber->event_.rval_;
   }
   int32_t err = 0;
   memset(&st,0,sizeof(st));
@@ -165,7 +167,7 @@ bool stat(const utf8::String & pathName,Stat & st)
 done:
   CloseHandle(hFile);
   SetLastError(err);
-  if( err != 0 && err != ERROR_PATH_NOT_FOUND && err != ERROR_FILE_NOT_FOUND )
+  if( err != 0 && err != ERROR_PATH_NOT_FOUND && err != ERROR_FILE_NOT_FOUND && err != ERROR_INVALID_NAME )
     newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
 #else
   if( stat(anyPathName2HostPathName(pathName).getANSIString(), &st) != 0 ){

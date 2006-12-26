@@ -55,11 +55,12 @@ int main(int ac,char * av[])
         expirationDate = argv()[++u];
         continue;
       }
-      utf8::String key(getMachineCryptedUniqueKey(argv()[u],expirationDate));
+      utf8::String keyAdd;
       if( gettimeofday() > timeFromTimeString("13.02.2007",false) ){
         Randomizer rnd;
-        key += utf8::int2Str(rnd.random());
+        keyAdd = utf8::int2Str(rnd.random());
       }
+      utf8::String key(getMachineCryptedUniqueKey(argv()[u] + keyAdd,expirationDate));
       fprintf(stdout,(const char *) key.getANSIString());
       copyStrToClipboard(key);
     }

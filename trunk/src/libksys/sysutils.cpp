@@ -728,20 +728,18 @@ utf8::String getCurrentDir()
 //---------------------------------------------------------------------------
 void changeCurrentDir(const utf8::String & name)
 {
-  int32_t err;
+  int32_t err = 0;
 #if defined(__WIN32__) || defined(__WIN64__)
-  SetLastError(0);
+  BOOL r;
   if( isWin9x() ){
-    SetCurrentDirectoryA((const char *) anyPathName2HostPathName(name).getANSIString());
+    r = SetCurrentDirectoryA((const char *) anyPathName2HostPathName(name).getANSIString());
   }
   else {
-    SetCurrentDirectoryW((const wchar_t *) anyPathName2HostPathName(name).getUNICODEString());
+    r = SetCurrentDirectoryW((const wchar_t *) anyPathName2HostPathName(name).getUNICODEString());
   }
-  err = GetLastError();
+  if( r == 0 ) err = GetLastError();
 #else
-  errno = 0;
-  chdir((const char *) anyPathName2HostPathName(name).getANSIString());
-  err = errno;
+  if( chdir((const char *) anyPathName2HostPathName(name).getANSIString()) != 0 ) err = errno;
 #endif
   if( err != 0 )
     newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
