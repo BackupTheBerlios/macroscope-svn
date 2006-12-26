@@ -54,6 +54,13 @@ void Service::install()
   msmailConfig()->parse().override();
   serviceName_ = unScreenString(msmailConfig_->text("service_name","msmail"));
   displayName_ = unScreenString(msmailConfig_->text("service_display_name","Macroscope MAIL Service"));
+  utf8::String startType(msmailConfig_->text("service_start_type","auto"));
+  if( startType.strcasecmp("auto") == 0 ){
+    startType_ = SERVICE_AUTO_START;
+  }
+  else if( startType.strcasecmp("manual") == 0 ){
+    startType_ = SERVICE_DEMAND_START;
+  }
 }
 //------------------------------------------------------------------------------
 void Service::uninstall()

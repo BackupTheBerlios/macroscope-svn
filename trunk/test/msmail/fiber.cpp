@@ -207,7 +207,7 @@ void ServerFiber::registerDB()
     stdErr.debug(6,stream);
     return;
   }
-  if( !(bool) server_.config_->parse().override().valueByPath(
+  if( !(bool) server_.config_->parse().valueByPath(
         utf8::String(serverConfSectionName_[serverType_]) + ".enabled",false) ){
     terminate();
     stream << serverTypeName_[serverType_] <<
