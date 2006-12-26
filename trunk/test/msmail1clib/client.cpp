@@ -613,6 +613,11 @@ void ClientMailFiber::onlineStage0()
     switch( message_->operation_ ){
       case MessageControl::msgNone : assert( 0 ); break;
       case MessageControl::msgSend :
+        message_->message_->value("#Sender",client_.user_ + "@" + client_.config_->value("key",client_.key_));
+        message_->message_->value("#Sender.Sended",getTimeString(gettimeofday()));
+        message_->message_->value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
+        message_->message_->value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
+        message_->message_->value("#Sender.Host",ksock::SockAddr::gethostname());
         *this << uint8_t(cmSendMail) << message_->message_->id() << false /* no rest flag */ << *message_->message_;
         getCode();
         if( message_->async_ ){
@@ -947,11 +952,6 @@ bool Client::sendMessage(const utf8::String id,bool async)
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     msg = sendQueue_.find(id);
     if( msg == NULL ) return false;
-    msg->value("#Sender",user_ + "@" + config_->value("key",key_));
-    msg->value("#Sender.Sended",getTimeString(gettimeofday()));
-    msg->value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
-    msg->value("#Sender.Process.StartTime",getTimeString(getProcessStartTime()));
-    msg->value("#Sender.Host",ksock::SockAddr::gethostname());
   }
   if( !async ) workFiberWait_.acquire();
   workFiberLastError_ = 0;

@@ -473,6 +473,7 @@ class Tree {
 
     TreeNode<T> * root_;
 
+    static uintptr_t c2i(intptr_t c){ return (c >> sizeof(c) * 8) + 1; }
     T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist = true,bool throwIfNotExist = true,Stack * pStack = NULL) const;
   private:
 };
@@ -528,7 +529,7 @@ T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist,bool th
       pStack->leaf_[pStack->sp_] = c;
       pStack->sp_++;
     }
-    node = &(*node)->leafs_[c >> sizeof(c) * 8];
+    node = &(*node)->leafs_[c2i(c)];
     if( *node == NULL ) break;
   }
   int32_t err = 0;
@@ -562,7 +563,7 @@ Tree<T,N,O,C> & Tree<T,N,O,C>::insert(const T & object,bool throwIfExist,T ** pO
   Stack stack;
   T * obj = internalFind(&root_,throwIfExist,false,&stack);
   if( obj == NULL ){
-    (stack.node_[stack.sp_ - 1])->leafs_[stack.leaf_[stack.sp_ - 1] >> sizeof(c) * 8]] = &N(object);
+    (stack.node_[stack.sp_ - 1])->leafs_[c2i(stack.leaf_[stack.sp_ - 1])] = &N(object);
     (stack.node_[stack.sp_ - 1])->balance = stack.leaf_[stack.sp_ - 1];
   }
   if( pObject != NULL ) *pObject = obj;
