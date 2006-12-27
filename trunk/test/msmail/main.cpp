@@ -72,7 +72,33 @@ int main(int _argc,char * _argv[])
     uintptr_t min = guids.minChainLength();
     for( intptr_t i = vector.count() - 1; i >= 0; i-- )
       guids.drop(vector[i]);*/
+    /*{
+      msmail::Server::Data data, data2, diff;
+      intptr_t i;
+      for( i = 0; i < 10000; i++ ){
+        data.registerUserNL(msmail::UserInfo("user_" + utf8::int2Str(i)));
+        data.registerKeyNL(msmail::KeyInfo("key_" + utf8::int2Str(i)));
+        data.registerGroupNL(msmail::GroupInfo("group_" + utf8::int2Str(i)));
+        data.registerServerNL(msmail::ServerInfo("server_" + utf8::int2Str(i),msmail::stStandalone));
+        data.registerUser2KeyLinkNL(msmail::User2KeyLink("user2key_" + utf8::int2Str(i),"key_" + utf8::int2Str(i)));
+        data.registerKey2GroupLinkNL(msmail::Key2GroupLink("key2group_" + utf8::int2Str(i),"group_" + utf8::int2Str(i)));
+        data.registerKey2ServerLinkNL(msmail::Key2ServerLink("key2server_" + utf8::int2Str(i),"server_" + utf8::int2Str(i)));
+      }
+      for( i = i; i < 20000; i++ ){
+        data2.registerUserNL(msmail::UserInfo("user_" + utf8::int2Str(i)));
+        data2.registerKeyNL(msmail::KeyInfo("key_" + utf8::int2Str(i)));
+        data2.registerGroupNL(msmail::GroupInfo("group_" + utf8::int2Str(i)));
+        data2.registerServerNL(msmail::ServerInfo("server_" + utf8::int2Str(i),msmail::stStandalone));
+        data2.registerUser2KeyLinkNL(msmail::User2KeyLink("user2key_" + utf8::int2Str(i),"key_" + utf8::int2Str(i)));
+        data2.registerKey2GroupLinkNL(msmail::Key2GroupLink("key2group_" + utf8::int2Str(i),"group_" + utf8::int2Str(i)));
+        data2.registerKey2ServerLinkNL(msmail::Key2ServerLink("key2server_" + utf8::int2Str(i),"server_" + utf8::int2Str(i)));
+      }
+      diff.xorNL(data,data2);
+      data2.setSendedToNL("host");
+      data.orNL(data2);
 
+      i = i;
+    }*/
     union {
       intptr_t i;
       uintptr_t u;

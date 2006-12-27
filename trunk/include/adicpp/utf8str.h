@@ -1026,7 +1026,7 @@ inline utf8::String String::Stream::string()
 {
   stream_.realloc(count_ + 1);
   stream_[count_] = '\0';
-  String s(newObject<String::Container>(1,stream_));
+  String s(newObject<String::Container>(0,stream_));
   stream_.ptr(NULL);
   count_ = 0;
   return s;

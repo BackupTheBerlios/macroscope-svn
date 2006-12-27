@@ -86,14 +86,14 @@ class EmbeddedHash {
     EmbeddedHash<T,N,O,H,E> & xchg(const EmbeddedHash<T,N,O,H,E> & a) const;
 
     EmbeddedHash<T,N,O,H,E> & clear() const;
-    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true) const;
-    T & remove(const T & object,bool throwIfNotExist = true) const;
+    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true) const;
+    T & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = true) const;
     T & remove() const;
     T & first() const;
     EmbeddedHash<T,N,O,H,E> & drop() const;
     EmbeddedHash<T,N,O,H,E> & drop(T & object,bool throwIfNotExist = true) const;
-    T & search(const T & object) const;
-    T * find(const T & object) const;
+    T & search(const T & object,bool deleteIfExist = false,bool deleteIfNotExist = false) const;
+    T * find(const T & object,bool deleteIfExist = false,bool deleteIfNotExist = false) const;
     EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
     const uintptr_t & count() const;
     const uintptr_t & estimatedChainLength() const;
@@ -147,7 +147,7 @@ class EmbeddedHash {
     void clearStaticHash() const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) staticHash_[i] = NULL; }
     void xchgStaticHash(const EmbeddedHash<T,N,O,H,E> & a) const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) ksys::xchg(staticHash_[i],a.staticHash_[i]); }
 
-    EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist,bool throwIfNotExist) const;
+    EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const;
     enum OptType { optInc, optDec };
     EmbeddedHashNode<T> * getChain() const;
     void putChain(EmbeddedHashNode<T> * head) const;
@@ -280,9 +280,9 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist) const
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist,bool deleteIfExist) const
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist,false);
+  EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist,false,deleteIfExist,false);
   if( *head == NULL ){
     *head = &N(object);
     N(object).next() = NULL;
@@ -298,9 +298,9 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist) const
+T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist,bool deleteIfNotExist) const
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist), * node;
+  EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist,false,deleteIfNotExist), * node;
   if( *head != NULL ){
     node = *head;
     *head = node->next();
@@ -365,9 +365,9 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::search(const T & object) const
+T & EmbeddedHash<T,N,O,H,E>::search(const T & object,bool deleteIfExist,bool deleteIfNotExist) const
 {
-  return *internalFind(object,false,true)->object();
+  return *internalFind(object,false,true,deleteIfExist,deleteIfNotExist)->object();
 }
 //---------------------------------------------------------------------------
 template <
@@ -377,9 +377,9 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T * EmbeddedHash<T,N,O,H,E>::find(const T & object) const
+T * EmbeddedHash<T,N,O,H,E>::find(const T & object,bool deleteIfExist,bool deleteIfNotExist) const
 {
-  EmbeddedHashNode<T> ** p = internalFind(object,false,false);
+  EmbeddedHashNode<T> ** p = internalFind(object,false,false,deleteIfExist,deleteIfNotExist);
   return *p == NULL ? NULL : &O(**p,NULL);
 }
 //---------------------------------------------------------------------------
@@ -393,7 +393,7 @@ template <
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bool throwIfExist,bool throwIfNotExist) const
+EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const
 {
   EmbeddedHashNode<T> ** head = hash_ + (H(object) & (size_ - 1));
   while( *head != NULL ){
@@ -401,19 +401,25 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bo
     head = &(*head)->next();
   }
   int32_t err = 0;
-  if( *head != NULL && throwIfExist ){
+  if( *head != NULL ){
+    if( deleteIfExist ) delete &object;
+    if( throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    err = ERROR_ALREADY_EXISTS;
+      err = ERROR_ALREADY_EXISTS;
 #else
-    err = EEXIST;
+      err = EEXIST;
 #endif
+    }
   }
-  else if( *head == NULL && throwIfNotExist ){
+  else if( *head == NULL ){
+    if( deleteIfNotExist ) delete &object;
+    if( throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    err = ERROR_NOT_FOUND;
+      err = ERROR_NOT_FOUND;
 #else
-    err = ENOENT;
+      err = ENOENT;
 #endif
+    }
   }
   if( err != 0 )
     newObject<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
@@ -463,7 +469,7 @@ void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head) const
   EmbeddedHashNode<T> ** p0, * a0;
   while( head != NULL ){
     a0 = head->next();
-    p0 = internalFind(O(*head,NULL),false,false);
+    p0 = internalFind(O(*head,NULL),false,false,false,false);
     assert( p0 != NULL && *p0 == NULL );
     *p0 = head;
     head->next() = NULL;

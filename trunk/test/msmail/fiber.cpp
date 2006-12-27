@@ -157,6 +157,16 @@ void ServerFiber::registerClient()
     terminate();
     return;
   }
+  if( !(bool) server_.config_->parse().valueByPath(
+        utf8::String(serverConfSectionName[serverType_]) + ".enabled",true) ){
+    utf8::String host(remoteAddress().resolve(~uintptr_t(0)));
+    utf8::String::Stream stream;
+    stream << serverTypeName[serverType_] <<
+      ": functional disabled, but client " << host << " attempt to register.\n";
+    stdErr.debug(6,stream);
+    terminate();
+    return;
+  }
   utf8::String host(remoteAddress().resolve(~uintptr_t(0)));
   ServerInfo server(server_.bindAddrs()[0].resolve(defaultPort),stStandalone);
   Server::Data & data = server_.data(serverType_);
@@ -1006,7 +1016,7 @@ void NodeClient::main()
     ServerInfo(server_.bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
   intptr_t i;
-  utf8::String server, host;
+  utf8::String server, host, enabledPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled");
   Server::Data & data = server_.data(dataType_);
   try {
     bool tryConnect, connected, exchanged, doWork;
@@ -1023,6 +1033,7 @@ void NodeClient::main()
           server_.nodeClient_ == this
         ;
       }
+      if( doWork && periodicaly_ && !(bool) server_.config_->valueByPath(enabledPath,true) ) doWork = false;
       if( doWork ){
         if( dataType_ == stStandalone ){
           server = server_.data(stStandalone).getNodeList();

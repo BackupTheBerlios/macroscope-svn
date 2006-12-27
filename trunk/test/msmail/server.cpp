@@ -56,12 +56,15 @@ void Server::open()
     intptr_t i;
     uintptr_t u;
   };
-  for( u = 1; u < spoolFibers_; u <<= 1 );
-  spoolFibers_ = u;
-  while( u > 0 ) attachFiber(newObjectV<SpoolWalker>(*this,--u));
-  attachFiber(newObjectV<SpoolWalker>(*this,--i)); // lost sheeps collector fiber  
-//  for( i = config_->valueByPath(utf8::String(serverConfSectionName_[stStandalone]) + ".mqueue_fibers",8; i > 0; i-- )
-//    attachFiber(newObjectV<MailQueueWalker>(*this));
+  if( (bool) config_->valueByPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled",true) ){
+    for( u = 1; u < spoolFibers_; u <<= 1 );
+    spoolFibers_ = u;
+    while( u > 0 ) attachFiber(newObjectV<SpoolWalker>(*this,--u));
+  }
+  else {
+    i = 0;
+  }
+  attachFiber(newObjectV<SpoolWalker>(*this,--i)); // lost sheeps collector fiber and ctrl files handler
 }
 //------------------------------------------------------------------------------
 void Server::close()

@@ -385,18 +385,18 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
       int32_t l, cps; // compressed packet size
       for( vp = &cps, l = 0; l < (int32_t) sizeof(cps); l += (int32_t) sysRecv(ui8p + l,sizeof(cps) - l) );
       if( ksys::SHA256Filter::active() ) decrypt(&cps,sizeof(cps));
-      ksys::AutoPtr<uint8_t> buf;
       if( cps < 0 ){
         rBufSize(-cps);
         for( l = 0; l < -cps; l += (int32_t) sysRecv(rBuf() + l,-cps - l) );
         if( ksys::SHA256Filter::active() ) decrypt(rBuf(),-cps);
       }
       else if( cps >= 0 ){
-        buf.alloc(cps);
-        for( l = sizeof(int32_t); l < cps; l += (int32_t) sysRecv(buf.ptr() + l,cps - l) );
-        *(int32_t *) buf.ptr() = cps;
-        if( ksys::SHA256Filter::active() ) decrypt(buf.ptr() + sizeof(cps),cps - sizeof(cps));
-        decompress(buf);
+        ksys::AutoPtr<uint8_t> b;
+        b.alloc(cps);
+        for( l = sizeof(int32_t); l < cps; l += (int32_t) sysRecv(b.ptr() + l,cps - l) );
+        *(int32_t *) b.ptr() = cps;
+        if( ksys::SHA256Filter::active() ) decrypt(b.ptr() + sizeof(cps),cps - sizeof(cps));
+        decompress(b);
       }
       rBufPos(0);
     }
