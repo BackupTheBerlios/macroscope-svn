@@ -511,7 +511,7 @@ class EmbeddedTree {
     EmbeddedTreeNode<T> * root_;
     uintptr_t count_;
 
-    static uintptr_t c2i(intptr_t c){ return -c >> (sizeof(c) * 8 - 1); }
+    static uintptr_t c2i(intptr_t c){ return (c >> (sizeof(c) * 8 - 1)) + 1; }
     T * internalFind(EmbeddedTreeNode<T> ** pNode,const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist,Stack * pStack = NULL) const;
     void rotate(EmbeddedTreeNode<T> ** pNode,intptr_t c);
   private:
@@ -569,7 +569,7 @@ T * EmbeddedTree<T,N,O,C>::internalFind(
   T * pObject = NULL;
   for(;;){
     if( *pNode == NULL ) break;
-    intptr_t c = C(O(**pNode,NULL),object);
+    intptr_t c = C(object,O(**pNode,NULL));
     if( pStack != NULL ){
       pStack->node_[pStack->sp_] = pNode;
       pStack->leaf_[pStack->sp_++] = c;
@@ -714,23 +714,29 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile &
     node = utf8::String("(") + O(*pGraph->node_,NULL) + "," + utf8::int2Str(pGraph->node_->leaf_) + ")";
   }
   if( pGraph->parent_ == NULL || pGraph->parent_->isLeafs() ){
-    pGraph->graph_.resize(pGraph->level_ + 1)[pGraph->level_].add(node);
+    if( pGraph->level_ >= pGraph->graph_.count() )
+      pGraph->graph_.resize(pGraph->level_ + 1);
+    pGraph->graph_[pGraph->level_].add(node);
     uintptr_t size = node.size();
     if( size > pGraph->root_->max_ ) pGraph->root_->max_ = size;
   }
   if( pGraph->level_ == 0 ){
-    uintptr_t cellPerNode = uintptr_t(1) << (pGraph->graph_[pGraph->graph_.count() - 1].count() - 1);
+    uintptr_t cells = pGraph->graph_[pGraph->graph_.count() - 1].count();
+    uintptr_t cellPerNode = uintptr_t(1) << (cells - 1);
+    uintptr_t size = pGraph->max_ * cells;
     for( uintptr_t i = 0; i < pGraph->graph_.count(); i++ ){
-      for( uintptr_t j = 0; i < pGraph->graph_[i].count(); j++ ){
-        utf8::String line;
-        line.resize(pGraph->max_ * cellPerNode);
+      uintptr_t cellSize = pGraph->max_ * cellPerNode;
+      utf8::String line;
+      line.resize(size + 1);
+      line.c_str()[size] = '\n';
+      for( uintptr_t j = 0; j < pGraph->graph_[i].count(); j++ ){
         memcpy(
-          line.c_str() + (pGraph->max_ * cellPerNode - pGraph->graph_[i][j].size()) / 2,
+          line.c_str() + cellSize * j + cellSize / 2 - pGraph->graph_[i][j].size() / 2,
           pGraph->graph_[i][j].c_str(),
           pGraph->graph_[i][j].size()
         );
-        file.writeBuffer(line.c_str(),pGraph->max_ * cellPerNode);
       }
+      file.writeBuffer(line.c_str(),size + 1);
       cellPerNode >>= 1;
     }
   }
