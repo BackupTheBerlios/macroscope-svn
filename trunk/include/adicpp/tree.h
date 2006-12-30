@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,15 +24,15 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#ifndef _tree_H
-#define _tree_H
+#ifndef _EmbeddedTree_H
+#define _EmbeddedTree_H
 //-----------------------------------------------------------------------------
 namespace ksys {
 //-----------------------------------------------------------------------------
-#define AVLTreeStackSize sizeof(uintptr_t) * 8
+#define AVLEmbeddedTreeStackSize sizeof(uintptr_t) * 8
 //-----------------------------------------------------------------------------
 /*template <class T>
-class AVLTreeNode {
+class AVLEmbeddedTreeNode {
   private:
   protected:
   public:
@@ -40,32 +40,32 @@ class AVLTreeNode {
     enum NodeState { TL, WK, TR };
     enum LinkIDs { Left = 0, Right = 1, Prev = 0, Next = 1 };
     struct NodeStackEntry0 {
-      AVLTreeNode<T> * Parent;
-      AVLTreeNode<T> ** Node;
+      AVLEmbeddedTreeNode<T> * Parent;
+      AVLEmbeddedTreeNode<T> ** Node;
     };
     struct NodeStackEntry : public NodeStackEntry0 {
       NodeState State;
       LinkIDs ID;
     };
-    AVLTreeNode<T> * Links[2];
-    char SubTreeHeights[2];
+    AVLEmbeddedTreeNode<T> * Links[2];
+    char SubEmbeddedTreeHeights[2];
     LinkIDs id;
     T Data;
 
-    AVLTreeNode(const T & AData) : Data(AData) {
+    AVLEmbeddedTreeNode(const T & AData) : Data(AData) {
       Links[Left] = Links[Right] = NULL;
-      SubTreeHeights[Left] = SubTreeHeights[Right] = 0;
+      SubEmbeddedTreeHeights[Left] = SubEmbeddedTreeHeights[Right] = 0;
     }
-    char MaxSubTreeHeight() const { return SubTreeHeights[SubTreeHeights[Left] < SubTreeHeights[Right]]; }
-    long Diff(LinkIDs left,LinkIDs right) const { return SubTreeHeights[left] - SubTreeHeights[right]; }
-    void RotateBase(AVLTreeNode<T> * & RootPtr,LinkIDs left,LinkIDs right);
-    AVLTreeNode<T> * InsertObject(AVLTreeNode<T> ** RootNode,CmpFuncType f,bool RetObj = false);
-    AVLTreeNode<T> * Insert(AVLTreeNode<T> ** RootNode,CmpFuncType f){ return InsertObject(RootNode,f); }
-    static void Delete(AVLTreeNode<T> ** RootNode,T * AData,CmpFuncType f);
-    static void Clear(AVLTreeNode<T> ** RootNode);
-    static AVLTreeNode<T> * Search(AVLTreeNode<T> * ANode,T * AData,CmpFuncType f);
+    char MaxSubEmbeddedTreeHeight() const { return SubEmbeddedTreeHeights[SubEmbeddedTreeHeights[Left] < SubEmbeddedTreeHeights[Right]]; }
+    long Diff(LinkIDs left,LinkIDs right) const { return SubEmbeddedTreeHeights[left] - SubEmbeddedTreeHeights[right]; }
+    void RotateBase(AVLEmbeddedTreeNode<T> * & RootPtr,LinkIDs left,LinkIDs right);
+    AVLEmbeddedTreeNode<T> * InsertObject(AVLEmbeddedTreeNode<T> ** RootNode,CmpFuncType f,bool RetObj = false);
+    AVLEmbeddedTreeNode<T> * Insert(AVLEmbeddedTreeNode<T> ** RootNode,CmpFuncType f){ return InsertObject(RootNode,f); }
+    static void Delete(AVLEmbeddedTreeNode<T> ** RootNode,T * AData,CmpFuncType f);
+    static void Clear(AVLEmbeddedTreeNode<T> ** RootNode);
+    static AVLEmbeddedTreeNode<T> * Search(AVLEmbeddedTreeNode<T> * ANode,T * AData,CmpFuncType f);
 
-    void RotateAfterInsert(AVLTreeNode<T> * & RootPtr,LinkIDs ID){
+    void RotateAfterInsert(AVLEmbeddedTreeNode<T> * & RootPtr,LinkIDs ID){
       LinkIDs left = LinkIDs(Right - ID);
       if( Diff(ID,left) > 1 ) RotateBase(RootPtr,left,ID);
     }
@@ -75,11 +75,11 @@ class AVLTreeNode {
       private:
       protected:
   long sp;
-  AVLTreeNode<T> * RootNode;
-  NodeStackEntry stack[AVLTreeStackSize * 2];
+  AVLEmbeddedTreeNode<T> * RootNode;
+  NodeStackEntry stack[AVLEmbeddedTreeStackSize * 2];
   TraverseDirectionType Direction;
       public:
-  Traverser(AVLTreeNode<T> * ARootNode,TraverseDirectionType ADirection = Ascend);
+  Traverser(AVLEmbeddedTreeNode<T> * ARootNode,TraverseDirectionType ADirection = Ascend);
   Traverser & Rewind(TraverseDirectionType ADirection = Ascend){
     sp = 0;
     Direction = ADirection;
@@ -87,12 +87,12 @@ class AVLTreeNode {
     stack[0].State = TL;
     return *this;
   }
-  AVLTreeNode<T> * Next();
+  AVLEmbeddedTreeNode<T> * Next();
     };
 };
 
 template <class T>
-void AVLTreeNode<T>::RotateBase(AVLTreeNode<T> * & RootPtr,LinkIDs left,LinkIDs right)
+void AVLEmbeddedTreeNode<T>::RotateBase(AVLEmbeddedTreeNode<T> * & RootPtr,LinkIDs left,LinkIDs right)
 {
   RootPtr = Links[right];
   Links[right]->id = id;
@@ -100,14 +100,14 @@ void AVLTreeNode<T>::RotateBase(AVLTreeNode<T> * & RootPtr,LinkIDs left,LinkIDs 
   Links[right] = RootPtr->Links[left];
   RootPtr->Links[left] = this;
   if( Links[right] != NULL ) Links[right]->id = right;
-  SubTreeHeights[right] = RootPtr->SubTreeHeights[left];
-  RootPtr->SubTreeHeights[left] = char(MaxSubTreeHeight() + 1);
+  SubEmbeddedTreeHeights[right] = RootPtr->SubEmbeddedTreeHeights[left];
+  RootPtr->SubEmbeddedTreeHeights[left] = char(MaxSubEmbeddedTreeHeight() + 1);
 }
 
 template <class T>
-AVLTreeNode<T> * AVLTreeNode<T>::InsertObject(AVLTreeNode<T> ** RootNode,CmpFuncType f,bool RetObj)
+AVLEmbeddedTreeNode<T> * AVLEmbeddedTreeNode<T>::InsertObject(AVLEmbeddedTreeNode<T> ** RootNode,CmpFuncType f,bool RetObj)
 {
-  NodeStackEntry stack[AVLTreeStackSize], * p = stack;
+  NodeStackEntry stack[AVLEmbeddedTreeStackSize], * p = stack;
   stack[0].Node = RootNode;
   while( *p->Node != NULL ){
     long c = f(Data,(*p->Node)->Data);
@@ -123,15 +123,15 @@ AVLTreeNode<T> * AVLTreeNode<T>::InsertObject(AVLTreeNode<T> ** RootNode,CmpFunc
   *p->Node = this;
   id = p->ID;
   if( p - 2 >= stack &&
-      p->Parent->SubTreeHeights[Right - p->ID] == 0 &&
-      (p - 1)->Parent->SubTreeHeights[p->ID]   == 0 ){
+      p->Parent->SubEmbeddedTreeHeights[Right - p->ID] == 0 &&
+      (p - 1)->Parent->SubEmbeddedTreeHeights[p->ID]   == 0 ){
     p->Parent->RotateBase(*(p - 1)->Node,LinkIDs(Right - p->ID),p->ID);
     (p - 1)->Parent->RotateBase(*(p - 2)->Node,p->ID,LinkIDs(Right - p->ID));
     p -= 2;
   }
   while( p > stack ){
-    char s2 = char((*p->Node)->MaxSubTreeHeight() + 1);
-    char & s1 = p->Parent->SubTreeHeights[p->ID];
+    char s2 = char((*p->Node)->MaxSubEmbeddedTreeHeight() + 1);
+    char & s1 = p->Parent->SubEmbeddedTreeHeights[p->ID];
     if( s1 != s2 ) s1 = s2;
     p->Parent->RotateAfterInsert(*(p - 1)->Node,p->ID);
     p--;
@@ -140,10 +140,10 @@ AVLTreeNode<T> * AVLTreeNode<T>::InsertObject(AVLTreeNode<T> ** RootNode,CmpFunc
 }
 
 template <class T>
-void AVLTreeNode<T>::Delete(AVLTreeNode<T> ** RootNode,T * AData,CmpFuncType f)
+void AVLEmbeddedTreeNode<T>::Delete(AVLEmbeddedTreeNode<T> ** RootNode,T * AData,CmpFuncType f)
 {
   long q;
-  NodeStackEntry stack[AVLTreeStackSize], * p = stack;
+  NodeStackEntry stack[AVLEmbeddedTreeStackSize], * p = stack;
   stack[0].Parent = NULL;
   stack[0].Node = RootNode;
 
@@ -155,11 +155,11 @@ void AVLTreeNode<T>::Delete(AVLTreeNode<T> ** RootNode,T * AData,CmpFuncType f)
     p++;
   }
   LinkIDs l = Left, r = Right;
-  AVLTreeNode<T> * Result = *p->Node, ** gl, ** gr, ** g;
+  AVLEmbeddedTreeNode<T> * Result = *p->Node, ** gl, ** gr, ** g;
   gl = &(*p->Node)->Links[Left];
   gr = &(*p->Node)->Links[Right];
   if( *(g = gl) == NULL ||
-      (*gr != NULL && (*gr)->MaxSubTreeHeight() > (*gl)->MaxSubTreeHeight()) ){
+      (*gr != NULL && (*gr)->MaxSubEmbeddedTreeHeight() > (*gl)->MaxSubEmbeddedTreeHeight()) ){
     l = Right;
     r = Left;
     g = gr;
@@ -168,15 +168,15 @@ void AVLTreeNode<T>::Delete(AVLTreeNode<T> ** RootNode,T * AData,CmpFuncType f)
     while( (*g)->Links[r] != NULL ) (*g)->RotateBase(*g,l,r);
     while( (*g)->Links[l] != NULL && (*g)->Links[l]->Diff(l,r) > 1 ){
       (*g)->Links[l]->RotateBase((*g)->Links[l],r,l);
-      (*g)->SubTreeHeights[l]--;
+      (*g)->SubEmbeddedTreeHeights[l]--;
     }
     (*g)->Links[r] = (*p->Node)->Links[r];
     if( (*g)->Links[r] != NULL ){
       (*g)->Links[r]->id = r;
-      (*g)->SubTreeHeights[r] = char((*g)->Links[r]->MaxSubTreeHeight() + 1);
+      (*g)->SubEmbeddedTreeHeights[r] = char((*g)->Links[r]->MaxSubEmbeddedTreeHeight() + 1);
     }
     else {
-      (*g)->SubTreeHeights[r] = 0;
+      (*g)->SubEmbeddedTreeHeights[r] = 0;
     }
     (*g)->id = (*p->Node)->id;
     *p->Node = *g;
@@ -187,14 +187,14 @@ void AVLTreeNode<T>::Delete(AVLTreeNode<T> ** RootNode,T * AData,CmpFuncType f)
     }
   }
   else { // trap exception on Left and Right sibling is NULL
-    if( p->Parent != NULL ) p->Parent->SubTreeHeights[(*p->Node)->id] = 0;
+    if( p->Parent != NULL ) p->Parent->SubEmbeddedTreeHeights[(*p->Node)->id] = 0;
     *p->Node = NULL;
     p--;
   }
   while( p > stack ){
 // helper code for operation system swapping, minimize dirty page writes
-    char & h = p->Parent->SubTreeHeights[(*p->Node)->id];
-    char m = char((*p->Node)->MaxSubTreeHeight() + 1);
+    char & h = p->Parent->SubEmbeddedTreeHeights[(*p->Node)->id];
+    char m = char((*p->Node)->MaxSubEmbeddedTreeHeight() + 1);
 // dirty page only if needed
     if( h != m ) h = m;
     q = p->Parent->Diff(Left,Right);
@@ -218,15 +218,15 @@ void AVLTreeNode<T>::Delete(AVLTreeNode<T> ** RootNode,T * AData,CmpFuncType f)
 }
 
 template <class T>
-AVLTreeNode<T>::Traverser::Traverser(
-  AVLTreeNode<T> * ARootNode,
+AVLEmbeddedTreeNode<T>::Traverser::Traverser(
+  AVLEmbeddedTreeNode<T> * ARootNode,
   TraverseDirectionType ADirection) : RootNode(ARootNode)
 {
   Rewind(ADirection);
 }
 
 template <class T>
-AVLTreeNode<T> * AVLTreeNode<T>::Traverser::Next()
+AVLEmbeddedTreeNode<T> * AVLEmbeddedTreeNode<T>::Traverser::Next()
 {
   while( sp >= 0 ){
     if( stack[sp].Parent == NULL ) sp--;
@@ -253,16 +253,16 @@ AVLTreeNode<T> * AVLTreeNode<T>::Traverser::Next()
 }
 
 template <class T>
-void AVLTreeNode<T>::Clear(AVLTreeNode<T> ** RootNode)
+void AVLEmbeddedTreeNode<T>::Clear(AVLEmbeddedTreeNode<T> ** RootNode)
 {
-  AVLTreeNode<T> * p;
+  AVLEmbeddedTreeNode<T> * p;
   Traverser trav(*RootNode);
   while( (p = trav.Next()) != NULL ) delete p;
   *RootNode = NULL;
 }
 
 template <class T>
-AVLTreeNode<T> * AVLTreeNode<T>::Search(AVLTreeNode<T> * ANode,T * AData,CmpFuncType f)
+AVLEmbeddedTreeNode<T> * AVLEmbeddedTreeNode<T>::Search(AVLEmbeddedTreeNode<T> * ANode,T * AData,CmpFuncType f)
 {
   while( ANode != NULL ){
     long c = f(*AData,ANode->Data);
@@ -273,173 +273,197 @@ AVLTreeNode<T> * AVLTreeNode<T>::Search(AVLTreeNode<T> * ANode,T * AData,CmpFunc
 }
 
 template <class T>
-class AVLTree {
+class AVLEmbeddedTree {
   private:
-    static void Destroyer(AVLTreeNode<T> * ANode);
+    static void Destroyer(AVLEmbeddedTreeNode<T> * ANode);
   protected:
   public:
     typedef long (*CmpFuncType)(T &,T &);
     CmpFuncType f;
-    AVLTreeNode<T> * RootNode;
+    AVLEmbeddedTreeNode<T> * RootNode;
 
-    AVLTree();
-    AVLTree(CmpFuncType Af);
-    ~AVLTree();
+    AVLEmbeddedTree();
+    AVLEmbeddedTree(CmpFuncType Af);
+    ~AVLEmbeddedTree();
 
     bool IsEmpty() const { return RootNode == NULL; }
 
-    AVLTreeNode<T> * Insert(const T AData);
-    AVLTreeNode<T> * InsertObject(const T AData);
-    AVLTreeNode<T> * Search(const T AData) const;
-    AVLTree<T> & Delete(const T AData);
-    AVLTree<T> & Clear(){ AVLTreeNode<T>::Clear(&RootNode); return *this; }
+    AVLEmbeddedTreeNode<T> * Insert(const T AData);
+    AVLEmbeddedTreeNode<T> * InsertObject(const T AData);
+    AVLEmbeddedTreeNode<T> * Search(const T AData) const;
+    AVLEmbeddedTree<T> & Delete(const T AData);
+    AVLEmbeddedTree<T> & Clear(){ AVLEmbeddedTreeNode<T>::Clear(&RootNode); return *this; }
 
-    enum TraverseDirectionType { Ascend = AVLTreeNode<T>::Ascend, Descend = AVLTreeNode<T>::Ascend };
-    class Traverser : public AVLTreeNode<T>::Traverser {
+    enum TraverseDirectionType { Ascend = AVLEmbeddedTreeNode<T>::Ascend, Descend = AVLEmbeddedTreeNode<T>::Ascend };
+    class Traverser : public AVLEmbeddedTreeNode<T>::Traverser {
       private:
       protected:
       public:
-        Traverser(AVLTree<T> * ATree,TraverseDirectionType ADirection = Ascend);
-        Traverser & Rewind(TraverseDirectionType ADirection = Ascend){ AVLTreeNode<T>::Traverser::Rewind(AVLTreeNode<T>::TraverseDirectionType(ADirection)); return *this;}
-        AVLTreeNode<T> * Next(){ return AVLTreeNode<T>::Traverser::Next(); }
+        Traverser(AVLEmbeddedTree<T> * AEmbeddedTree,TraverseDirectionType ADirection = Ascend);
+        Traverser & Rewind(TraverseDirectionType ADirection = Ascend){ AVLEmbeddedTreeNode<T>::Traverser::Rewind(AVLEmbeddedTreeNode<T>::TraverseDirectionType(ADirection)); return *this;}
+        AVLEmbeddedTreeNode<T> * Next(){ return AVLEmbeddedTreeNode<T>::Traverser::Next(); }
         T * operator -> () const { return &stack[sp - 1].Parent->Data; }
         T & Data() const { return stack[sp - 1].Parent.Data->Data; }
     };
 
-    AVLTree<T> & Assign(const AVLTree<T> & s);
-    AVLTree<T> & Insert(const AVLTree<T> & s);
+    AVLEmbeddedTree<T> & Assign(const AVLEmbeddedTree<T> & s);
+    AVLEmbeddedTree<T> & Insert(const AVLEmbeddedTree<T> & s);
 };
 
 template <class T>
-AVLTree<T> & AVLTree<T>::Assign(const AVLTree<T> & s)
+AVLEmbeddedTree<T> & AVLEmbeddedTree<T>::Assign(const AVLEmbeddedTree<T> & s)
 {
   Clear();
   f = s.f;
-  AVLTreeNode<T> * p;
-  Traverser trav(const_cast<AVLTree<T> *>(&s));
+  AVLEmbeddedTreeNode<T> * p;
+  Traverser trav(const_cast<AVLEmbeddedTree<T> *>(&s));
   while( (p = trav.Next()) != NULL ) Insert(p->Data);
   return *this;
 }
 
 template <class T>
-AVLTree<T> & AVLTree<T>::Insert(const AVLTree<T> & s)
+AVLEmbeddedTree<T> & AVLEmbeddedTree<T>::Insert(const AVLEmbeddedTree<T> & s)
 {
-  AVLTreeNode<T> * p;
-  Traverser trav(const_cast<AVLTree<T> *>(&s));
+  AVLEmbeddedTreeNode<T> * p;
+  Traverser trav(const_cast<AVLEmbeddedTree<T> *>(&s));
   while( (p = trav.Next()) != NULL ) Insert(p->Data);
   return *this;
 }
 
 template <class T>
-AVLTree<T> & AVLTree<T>::Delete(const T AData)
+AVLEmbeddedTree<T> & AVLEmbeddedTree<T>::Delete(const T AData)
 {
-  AVLTreeNode<T>::Delete(&RootNode,const_cast<T *>(&AData),f);
+  AVLEmbeddedTreeNode<T>::Delete(&RootNode,const_cast<T *>(&AData),f);
   return *this;
 }
 
 template <class T>
-AVLTreeNode<T> * AVLTree<T>::Search(const T AData) const
+AVLEmbeddedTreeNode<T> * AVLEmbeddedTree<T>::Search(const T AData) const
 {
-  return AVLTreeNode<T>::Search(RootNode,const_cast<T *>(&AData),f);
+  return AVLEmbeddedTreeNode<T>::Search(RootNode,const_cast<T *>(&AData),f);
 }
 
 template <class T>
-AVLTree<T>::AVLTree() : Component(NULL), f(NULL), RootNode(NULL)
-{
-}
-
-template <class T>
-AVLTree<T>::AVLTree(CmpFuncType Af) : f(Af), RootNode(NULL)
+AVLEmbeddedTree<T>::AVLEmbeddedTree() : Component(NULL), f(NULL), RootNode(NULL)
 {
 }
 
 template <class T>
-AVLTree<T>::~AVLTree()
+AVLEmbeddedTree<T>::AVLEmbeddedTree(CmpFuncType Af) : f(Af), RootNode(NULL)
+{
+}
+
+template <class T>
+AVLEmbeddedTree<T>::~AVLEmbeddedTree()
 {
   Clear();
 }
 
 template <class T>
-AVLTree<T>::Traverser::Traverser(
-  AVLTree<T> * ATree,TraverseDirectionType ADirection) :
-  AVLTreeNode<T>::Traverser(ATree->RootNode,AVLTreeNode<T>::TraverseDirectionType(ADirection))
+AVLEmbeddedTree<T>::Traverser::Traverser(
+  AVLEmbeddedTree<T> * AEmbeddedTree,TraverseDirectionType ADirection) :
+  AVLEmbeddedTreeNode<T>::Traverser(AEmbeddedTree->RootNode,AVLEmbeddedTreeNode<T>::TraverseDirectionType(ADirection))
 {
 }
 
 template <class T> inline
-void AVLTree<T>::Destroyer(AVLTreeNode<T> * ANode)
+void AVLEmbeddedTree<T>::Destroyer(AVLEmbeddedTreeNode<T> * ANode)
 {
   delete ANode;
 }
 
 template <class T>
-AVLTreeNode<T> * AVLTree<T>::Insert(const T AData)
+AVLEmbeddedTreeNode<T> * AVLEmbeddedTree<T>::Insert(const T AData)
 {
-  AVLTreeNodeLink<LT> ANode = newObject<AVLTreeNode<T> >(AData);
+  AVLEmbeddedTreeNodeLink<LT> ANode = newObject<AVLEmbeddedTreeNode<T> >(AData);
   return ANode->Insert(&RootNode,f);
 }
 
 template <class T>
-AVLTreeNode<T> * AVLTree<T>::InsertObject(const T AData)
+AVLEmbeddedTreeNode<T> * AVLEmbeddedTree<T>::InsertObject(const T AData)
 {
-  AVLTreeNode<T> * ANode = newObject<AVLTreeNode<T> >(AData);
-  AVLTreeNode<T> * ANode2 = ANode->InsertObject(&RootNode,f,true);
+  AVLEmbeddedTreeNode<T> * ANode = newObject<AVLEmbeddedTreeNode<T> >(AData);
+  AVLEmbeddedTreeNode<T> * ANode2 = ANode->InsertObject(&RootNode,f,true);
   if( ANode != ANode2 ) delete AData;
   return ANode2;
 }*/
 //-----------------------------------------------------------------------------
-#undef AVLTreeStackSize
+#undef AVLEmbeddedTreeStackSize
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 template <typename T>
-class TreeNode {
+class EmbeddedTreeNode {
   public:
-    ~TreeNode();
-    TreeNode();
+    ~EmbeddedTreeNode();
+    EmbeddedTreeNode();
 
     union {
       struct {
-        TreeNode<T> * left_;
-        TreeNode<T> * right_;
+        EmbeddedTreeNode<T> * left_;
+        EmbeddedTreeNode<T> * right_;
       };
-      TreeNode<T> * leafs_[2];
+      EmbeddedTreeNode<T> * leafs_[2];
     };
     intptr_t leaf_;
+
+    bool isLeafs() const;
+    bool isNullLeafs() const;
+    T & object(const EmbeddedTreeNode<T> & node) const;
   protected:
   private:
 };
 //-----------------------------------------------------------------------------
 template <typename T> inline
-TreeNode<T>::~TreeNode()
+EmbeddedTreeNode<T>::~EmbeddedTreeNode()
 {
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-TreeNode<T>::TreeNode() : left_(NULL), right_(NULL), leaf_(0)
+EmbeddedTreeNode<T>::EmbeddedTreeNode()
 {
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+bool EmbeddedTreeNode<T>::isLeafs() const
+{
+  return left_ != NULL || right_ != NULL;
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+bool EmbeddedTreeNode<T>::isNullLeafs() const
+{
+  return left_ == NULL && right_ == NULL;
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+T & EmbeddedTreeNode<T>::object(const EmbeddedTreeNode<T> & node) const
+{
+  return *(T *) const_cast<uint8_t *>(
+    (const uint8_t *) this - (uintptr_t) const_cast<EmbeddedTreeNode<T> *>(&node)
+  );
 }
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 template <typename T>
-class TreeNode3 : public <TreeNode<T> > {
+class EmbeddedTreeNode3 : public EmbeddedTreeNode<T> {
   public:
-    ~TreeNode3();
-    TreeNode3();
+    ~EmbeddedTreeNode3();
+    EmbeddedTreeNode3();
 
-    TreeNode3<T> * parent_;
+    EmbeddedTreeNode3<T> * parent_;
   protected:
   private:
 };
 //-----------------------------------------------------------------------------
 template <typename T> inline
-TreeNode3<T>::~TreeNode3()
+EmbeddedTreeNode3<T>::~EmbeddedTreeNode3()
 {
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-TreeNode3<T>::TreeNode3() : parent_(NULL)
+EmbeddedTreeNode3<T>::EmbeddedTreeNode3()
 {
 }
 //-----------------------------------------------------------------------------
@@ -447,100 +471,116 @@ TreeNode3<T>::TreeNode3() : parent_(NULL)
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 >
-class Tree {
+class EmbeddedTree {
   public:
-    ~Tree();
-    Tree();
+    ~EmbeddedTree();
+    EmbeddedTree();
 
-    Tree<T,N,O,C> & clear();
-    Tree<T,N,O,C> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL);
-    T & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false);
-    Tree<T,N,O,C> & drop(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false);
+    EmbeddedTree<T,N,O,C> & clear();
+    EmbeddedTree<T,N,O,C> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL);
+    EmbeddedTree<T,N,O,C> & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false,T ** pObject = NULL);
+    EmbeddedTree<T,N,O,C> & drop(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false);
 
-    Tree<T,N,O,C> & saveTreeGraph(AsyncFile & file,TreeGraph * pGraph = NULL) const;
   protected:
-    class TreeGraph {
+    class EmbeddedTreeGraph {
       public:
-        TreeGraph * master_;
-        TreeNode<T> * node_;
+        Array<Array<utf8::String> > & graph_;
+        EmbeddedTreeGraph * root_;
+        EmbeddedTreeNode<T> * parent_;
+        EmbeddedTreeNode<T> * node_;
         uintptr_t level_;
-        uintptr_t c_;
+        uintptr_t max_;
+
+        EmbeddedTreeGraph(Array<Array<utf8::String> > & graph = *(Array<Array<utf8::String> > *) NULL) : graph_(graph) {}
     };
+  public:
+    EmbeddedTree<T,N,O,C> & saveEmbeddedTreeGraph(AsyncFile & file,EmbeddedTreeGraph * pGraph = NULL) const;
     class Stack {
       public:
         ~Stack();
         Stack() : sp_(0) {}
 
-        TreeNode<T> ** node_[sizeof(uintptr_t) * 8];
+        EmbeddedTreeNode<T> ** node_[sizeof(uintptr_t) * 8];
         intptr_t leaf_[sizeof(uintptr_t) * 8];
         intptr_t sp_;
     };
 
-    TreeNode<T> * root_;
+    EmbeddedTreeNode<T> * root_;
+    uintptr_t count_;
 
-    static uintptr_t c2i(intptr_t c){ return (c >> sizeof(c) * 8) + 1; }
-    T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist,Stack * pStack = NULL) const;
-    void rotate(TreeNode<T> ** pNode,intptr_t c);
+    static uintptr_t c2i(intptr_t c){ return (c >> (sizeof(c) * 8 - 1)) + 1; }
+    T * internalFind(EmbeddedTreeNode<T> ** pNode,const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist,Stack * pStack = NULL) const;
+    void rotate(EmbeddedTreeNode<T> ** pNode,intptr_t c);
   private:
 };
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-Tree<T,N,O,C>::~Tree()
+EmbeddedTree<T,N,O,C>::~EmbeddedTree()
+{
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+EmbeddedTree<T,N,O,C>::EmbeddedTree()
 {
   clear();
 }
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-Tree<T,N,O,C>::Tree() : root_(NULL)
+EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::clear()
 {
+  root_ = NULL;
+  count_ = 0;
+  return *this;
 }
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-Tree<T,N,O,C> & Tree<T,N,O,C>::clear()
-{
-}
-//-----------------------------------------------------------------------------
-template <
-  typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
-  intptr_t (*C)(const T &,const T &)
-> inline
-T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist,bool throwIfNotExist,Stack * pStack) const
+T * EmbeddedTree<T,N,O,C>::internalFind(
+  EmbeddedTreeNode<T> ** pNode,
+  const T & object,
+  bool throwIfExist,
+  bool throwIfNotExist,
+  bool deleteIfExist,
+  bool deleteIfNotExist,
+  Stack * pStack) const
 {
   T * pObject = NULL;
   for(;;){
-    intptr_t c = C(O(**node,NULL),object);
+    if( pStack != NULL ){
+      pStack->node_[pStack->sp_] = pNode;
+      pStack->leaf_[pStack->sp_] = 0;
+    }
+    if( *pNode == NULL ) break;
+    intptr_t c = C(O(**pNode,NULL),object);
+    pStack->leaf_[pStack->sp_++] = c;
     if( c == 0 ){
-      pObject = O(**node,NULL);
+      pObject = &O(**pNode,NULL);
       break;
     }
-    if( pStack != NULL ){
-      pStack->node_[pStack->sp_] = node;
-      pStack->leaf_[pStack->sp_] = c;
-      pStack->sp_++;
-    }
-    node = &(*node)->leafs_[c2i(c)];
-    if( *node == NULL ) break;
+    pNode = &(*pNode)->leafs_[c2i(c)];
   }
   int32_t err = 0;
   if( pObject != NULL ){
@@ -570,14 +610,14 @@ T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist,bool th
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-void Tree<T,N,O,C>::rotate(TreeNode<T> ** pNode,intptr_t c)
+void EmbeddedTree<T,N,O,C>::rotate(EmbeddedTreeNode<T> ** pNode,intptr_t c)
 {
   uintptr_t i = c2i(c), j = 1u - i;
-  TreeNode<T> * node = *pNode;
+  EmbeddedTreeNode<T> * node = *pNode;
   *pNode = node->leafs_[i];
   node->leafs_[i] = (*pNode)->leafs_[j];
   (*pNode)->leafs_[j] = node;
@@ -585,23 +625,26 @@ void Tree<T,N,O,C>::rotate(TreeNode<T> ** pNode,intptr_t c)
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-Tree<T,N,O,C> & Tree<T,N,O,C>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject)
+EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject)
 {
   Stack stack;
-  T * obj = internalFind(&root_,throwIfExist,false,deleteIfExist,false,&stack);
+  T * obj = internalFind(&root_,object,throwIfExist,false,deleteIfExist,false,&stack);
   if( obj == NULL ){
     stack.sp_--;
+    N(object).left_ = NULL;
+    N(object).right_ = NULL;
+    N(object).leaf_ = 0;
     (*stack.node_[stack.sp_])->leafs_[c2i(stack.leaf_[stack.sp_])] = &N(object);
-    (*stack.node_[stack.sp_])->balance = stack.leaf_[stack.sp_];
+    (*stack.node_[stack.sp_])->leaf_ = stack.leaf_[stack.sp_];
     while( --stack.sp_ >= 0 ){
       if( stack.leaf_[stack.sp_] == 0 ) continue;
       rotate(stack.node_[stack.sp_],stack.leaf_[stack.sp_]);
     }
-    while( stack.sp_ >= 0 ) (*stack.node_[stack.sp_--])_.leaf_ = 0;
+    while( stack.sp_ >= 0 ) (*stack.node_[stack.sp_--])->leaf_ = 0;
   }
   else if( deleteIfExist ){
     delete &object;
@@ -612,55 +655,82 @@ Tree<T,N,O,C> & Tree<T,N,O,C>::insert(const T & object,bool throwIfExist,bool de
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-T & Tree<T,N,O,C>::remove(const T & object,bool throwIfNotExist,bool deleteIfNotExist,T ** pObject)
+EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::remove(const T & object,bool throwIfNotExist,bool deleteIfNotExist,T ** pObject)
 {
   Stack stack;
-  T * obj = internalFind(&root_,false,throwIfNotExist,false,deleteIfNotExist,&stack);
+  T * obj = internalFind(&root_,object,false,throwIfNotExist,false,deleteIfNotExist,&stack);
   if( obj != NULL ){
   }
   else if( deleteIfNotExist ){
     delete &object;
   }
   if( pObject != NULL ) *pObject = obj;
-  return *obj;
+  return *this;
 }
 //-----------------------------------------------------------------------------
 template <
   typename T,
-  TreeNode<T> & (*N)(const T &),
-  T & (*O) (const TreeNode<T> &,T *),
+  EmbeddedTreeNode<T> & (*N)(const T &),
+  T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-Tree<T,N,O,C> & Tree<T,N,O,C>::saveTreeGraph(AsyncFile & file,TreeGraph * pGraph) const
+EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile & file,EmbeddedTreeGraph * pGraph) const
 {
-  TreeGraph graph, lGraph, rGraph;
+  Array<Array<utf8::String> > aGraph;
+  EmbeddedTreeGraph graph(aGraph);
   if( pGraph == NULL ){
     pGraph = &graph;
-    graph.master_ = pGraph;
+    graph.root_ = pGraph;
+    graph.parent_ = NULL;
     graph.node_ = root_;
     graph.level_ = 0;
-    graph.c_ = 0;
+    graph.max_ = 0;
   }
-  if( pGraph->node_->left_ != NULL ){
-    lGraph.master_ = pGraph;
+  utf8::String node;
+  if( pGraph->node_ != NULL ){
+    EmbeddedTreeGraph lGraph(pGraph->graph_);
+    lGraph.root_ = pGraph->root_;
+    lGraph.parent_ = pGraph->node_;
     lGraph.node_ = pGraph->node_->left_;
     lGraph.level_ = pGraph->level_ + 1;
-    lGraph.c_ = -1;
-    saveTreeGraph(file,&lGraph);
-  }
-  if( pGraph->node_->right_ != NULL ){
-    rGraph.master_ = pGraph;
+    saveEmbeddedTreeGraph(file,&lGraph);
+
+    EmbeddedTreeGraph rGraph(pGraph->graph_);
+    rGraph.root_ = pGraph->root_;
+    rGraph.parent_ = pGraph->node_;
     rGraph.node_ = pGraph->node_->right_;
     rGraph.level_ = pGraph->level_ + 1;
-    rGraph.c_ = 1;
-    saveTreeGraph(file,&rGraph);
+    saveEmbeddedTreeGraph(file,&rGraph);
+
+    node = utf8::String("(") + O(*pGraph->node_,NULL) + "," + utf8::int2Str(pGraph->node_->leaf_) + ")";
   }
-  return *this;
+  pGraph->graph_.resize(pGraph->level_ + 1)[pGraph->level_].add(node);
+  uintptr_t size = node.size();
+  if( size > pGraph->root_->max_ ) pGraph->root_->max_ = size;
+  if( pGraph->level_ == 0 ){
+    uintptr_t cellPerNode = uintptr_t(1) << (pGraph->graph_[pGraph->graph_.count()].count() - 1);
+    for( uintptr_t i = 0; i < pGraph->graph_.count(); i++ ){
+      for( uintptr_t j = 0; i < pGraph->graph_[i].count(); j++ ){
+        utf8::String line;
+        line.resize(pGraph->max_ * cellPerNode);
+        memcpy(
+          line.c_str() + (pGraph->max_ * cellPerNode - pGraph->graph_[i][j].size()) / 2,
+          pGraph->graph_[i][j].c_str(),
+          pGraph->graph_[i][j].size()
+        );
+        file.writeBuffer(line.c_str(),pGraph->max_ * cellPerNode);
+      }
+      cellPerNode >>= 1;
+    }
+  }
+  return *const_cast<EmbeddedTree<T,N,O,C> *>(this);
 }
+//-----------------------------------------------------------------------------
+} // namespace ksys
 //-----------------------------------------------------------------------------
 #endif
 //-----------------------------------------------------------------------------

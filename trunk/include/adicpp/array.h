@@ -241,6 +241,7 @@ inline
 #endif
 Array<T> & Array<T>::resize(uintptr_t newSize)
 {
+  if( newSize == count_ ) return *this;
   Array<T> newArray;
   newArray.ptr_ = (T *) kmalloc(sizeof(T) * newSize);
   while( newArray.count_ < newSize ){
