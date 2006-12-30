@@ -405,7 +405,7 @@ class TreeNode {
       };
       TreeNode<T> * leafs_[2];
     };
-    intptr_t balance_;
+    intptr_t leaf_;
   protected:
   private:
 };
@@ -416,7 +416,7 @@ TreeNode<T>::~TreeNode()
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-TreeNode<T>::TreeNode() : left_(NULL), right_(NULL), balance_(0)
+TreeNode<T>::TreeNode() : left_(NULL), right_(NULL), leaf_(0)
 {
 }
 //-----------------------------------------------------------------------------
@@ -457,10 +457,19 @@ class Tree {
     Tree();
 
     Tree<T,N,O,C> & clear();
-    Tree<T,N,O,C> & insert(const T & object,bool throwIfExist = true,T ** pObject = NULL);
-    Tree<T,N,O,C> & remove(const T & object,bool throwIfNotExist = true);
-    Tree<T,N,O,C> & drop(const T & object,bool throwIfNotExist = true);
+    Tree<T,N,O,C> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL);
+    T & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false);
+    Tree<T,N,O,C> & drop(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false);
+
+    Tree<T,N,O,C> & saveTreeGraph(AsyncFile & file,TreeGraph * pGraph = NULL) const;
   protected:
+    class TreeGraph {
+      public:
+        TreeGraph * master_;
+        TreeNode<T> * node_;
+        uintptr_t level_;
+        uintptr_t c_;
+    };
     class Stack {
       public:
         ~Stack();
@@ -474,7 +483,8 @@ class Tree {
     TreeNode<T> * root_;
 
     static uintptr_t c2i(intptr_t c){ return (c >> sizeof(c) * 8) + 1; }
-    T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist = true,bool throwIfNotExist = true,Stack * pStack = NULL) const;
+    T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist,Stack * pStack = NULL) const;
+    void rotate(TreeNode<T> ** pNode,intptr_t c);
   private:
 };
 //-----------------------------------------------------------------------------
@@ -533,19 +543,25 @@ T * internalFind(TreeNode<T> ** pNode,const T & object,bool throwIfExist,bool th
     if( *node == NULL ) break;
   }
   int32_t err = 0;
-  if( pObject != NULL && throwIfExist ){
+  if( pObject != NULL ){
+	  if( deleteIfExist ) delete &object;
+	  if( throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    err = ERROR_ALREADY_EXISTS;
+		  err = ERROR_ALREADY_EXISTS;
 #else
-    err = EEXIST;
+		  err = EEXIST;
 #endif
+	  }
   }
-  else if( pObject == NULL && throwIfNotExist ){
+  else if( pObject == NULL ){
+    if( deleteIfNotExist ) delete &object;
+    if( throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    err = ERROR_NOT_FOUND;
+      err = ERROR_NOT_FOUND;
 #else
-    err = ENOENT;
+      err = ENOENT;
 #endif
+    }
   }
   if( err != 0 )
     newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
@@ -558,18 +574,93 @@ template <
   T & (*O) (const TreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-Tree<T,N,O,C> & Tree<T,N,O,C>::insert(const T & object,bool throwIfExist,T ** pObject)
+void Tree<T,N,O,C>::rotate(TreeNode<T> ** pNode,intptr_t c)
+{
+  uintptr_t i = c2i(c), j = 1u - i;
+  TreeNode<T> * node = *pNode;
+  *pNode = node->leafs_[i];
+  node->leafs_[i] = (*pNode)->leafs_[j];
+  (*pNode)->leafs_[j] = node;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+Tree<T,N,O,C> & Tree<T,N,O,C>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject)
 {
   Stack stack;
-  T * obj = internalFind(&root_,throwIfExist,false,&stack);
+  T * obj = internalFind(&root_,throwIfExist,false,deleteIfExist,false,&stack);
   if( obj == NULL ){
-    (stack.node_[stack.sp_ - 1])->leafs_[c2i(stack.leaf_[stack.sp_ - 1])] = &N(object);
-    (stack.node_[stack.sp_ - 1])->balance = stack.leaf_[stack.sp_ - 1];
+    stack.sp_--;
+    (*stack.node_[stack.sp_])->leafs_[c2i(stack.leaf_[stack.sp_])] = &N(object);
+    (*stack.node_[stack.sp_])->balance = stack.leaf_[stack.sp_];
+    while( --stack.sp_ >= 0 ){
+      if( stack.leaf_[stack.sp_] == 0 ) continue;
+      rotate(stack.node_[stack.sp_],stack.leaf_[stack.sp_]);
+    }
+    while( stack.sp_ >= 0 ) (*stack.node_[stack.sp_--])_.leaf_ = 0;
+  }
+  else if( deleteIfExist ){
+    delete &object;
   }
   if( pObject != NULL ) *pObject = obj;
   return *this;
 }
 //-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+T & Tree<T,N,O,C>::remove(const T & object,bool throwIfNotExist,bool deleteIfNotExist,T ** pObject)
+{
+  Stack stack;
+  T * obj = internalFind(&root_,false,throwIfNotExist,false,deleteIfNotExist,&stack);
+  if( obj != NULL ){
+  }
+  else if( deleteIfNotExist ){
+    delete &object;
+  }
+  if( pObject != NULL ) *pObject = obj;
+  return *obj;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename T,
+  TreeNode<T> & (*N)(const T &),
+  T & (*O) (const TreeNode<T> &,T *),
+  intptr_t (*C)(const T &,const T &)
+> inline
+Tree<T,N,O,C> & Tree<T,N,O,C>::saveTreeGraph(AsyncFile & file,TreeGraph * pGraph) const
+{
+  TreeGraph graph, lGraph, rGraph;
+  if( pGraph == NULL ){
+    pGraph = &graph;
+    graph.master_ = pGraph;
+    graph.node_ = root_;
+    graph.level_ = 0;
+    graph.c_ = 0;
+  }
+  if( pGraph->node_->left_ != NULL ){
+    lGraph.master_ = pGraph;
+    lGraph.node_ = pGraph->node_->left_;
+    lGraph.level_ = pGraph->level_ + 1;
+    lGraph.c_ = -1;
+    saveTreeGraph(file,&lGraph);
+  }
+  if( pGraph->node_->right_ != NULL ){
+    rGraph.master_ = pGraph;
+    rGraph.node_ = pGraph->node_->right_;
+    rGraph.level_ = pGraph->level_ + 1;
+    rGraph.c_ = 1;
+    saveTreeGraph(file,&rGraph);
+  }
+  return *this;
 }
 //-----------------------------------------------------------------------------
 #endif
+//-----------------------------------------------------------------------------
