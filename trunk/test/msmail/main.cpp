@@ -49,6 +49,35 @@ void throwCycle()
   }
 }
 //------------------------------------------------------------------------------
+class Key {
+  public:
+    ~Key(){}
+    Key(){}
+    Key(const Key & a) : key_(a.key_) {}
+    Key(const utf8::String & key) : key_(key) {}
+
+    Key & operator = (const Key & a){ key_ = a.key_; return *this; }
+
+    Key & operator = (const utf8::String & key){ key_ = key_; return *this; }
+
+    bool operator == (const Key & a) const { return key_.strcmp(a.key_) == 0; }
+    bool operator != (const Key & a) const { return key_.strcmp(a.key_) != 0; }
+    bool operator >= (const Key & a) const { return key_.strcmp(a.key_) >= 0; }
+    bool operator >  (const Key & a) const { return key_.strcmp(a.key_) >  0; }
+    bool operator <= (const Key & a) const { return key_.strcmp(a.key_) <= 0; }
+    bool operator <  (const Key & a) const { return key_.strcmp(a.key_) <  0; }
+
+    operator const utf8::String & () const { return key_; }
+
+    static EmbeddedTreeNode<Key> & keyNode(const Key & object){ return object.keyNode_; }
+    static Key & keyNodeObject(const EmbeddedTreeNode<Key> & node,Key * p){ return node.object(p->keyNode_); }
+    static intptr_t keyNodeCompare(const Key & object1,const Key & object2){ return object1.key_.strcmp(object2.key_); }
+  protected:
+  private:
+    mutable EmbeddedTreeNode<Key> keyNode_;
+    utf8::String key_;
+};
+//------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
 //   Sleep(15000);
@@ -61,41 +90,11 @@ int main(int _argc,char * _argv[])
   //throwCycle();
   //throwCycle();
   try {
-
-    class Key {
-      public:
-        ~Key(){}
-        Key(){}
-        Key(const Key & a) : key_(a.key_) {}
-        Key(const utf8::String & key) : key_(key) {}
-
-        Key & operator = (const Key & a){ key_ = a.key_; return *this; }
-
-        Key & operator = (const utf8::String & key){ key_ = key_; return *this; }
-
-        bool operator == (const Key & a) const { return key_.strcmp(a.key_) == 0; }
-        bool operator != (const Key & a) const { return key_.strcmp(a.key_) != 0; }
-        bool operator >= (const Key & a) const { return key_.strcmp(a.key_) >= 0; }
-        bool operator >  (const Key & a) const { return key_.strcmp(a.key_) >  0; }
-        bool operator <= (const Key & a) const { return key_.strcmp(a.key_) <= 0; }
-        bool operator <  (const Key & a) const { return key_.strcmp(a.key_) <  0; }
-
-        operator const utf8::String & () const { return key_; }
-
-        static EmbeddedTreeNode<Key> & keyNode(const Key & object){ return object.keyNode_; }
-        static Key & keyNodeObject(const EmbeddedTreeNode<Key> & node,Key * p){ return node.object(p->keyNode_); }
-        static intptr_t keyNodeCompare(const Key & object1,const Key & object2){ return object1.key_.strcmp(object2.key_); }
-      protected:
-      private:
-        mutable EmbeddedTreeNode<Key> keyNode_;
-        utf8::String key_;
-    };
-
     EmbeddedTree<Key,Key::keyNode,Key::keyNodeObject,Key::keyNodeCompare> tree;
-    for( uintptr_t i = 1; i <= 16; i++ )
+    for( uintptr_t i = 1; i <= 3; i++ )
       tree.insert(*newObject<Key>(utf8::int2Str0(i,2)));
     AsyncFile file(getExecutablePath() + "tree.dump");
-    file.createIfNotExist(true).resize(0);
+    file.createIfNotExist(true).open().resize(0);
     tree.saveEmbeddedTreeGraph(file);
     file.close();
     errcode = errcode;

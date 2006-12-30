@@ -484,7 +484,6 @@ class EmbeddedTree {
     EmbeddedTree<T,N,O,C> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL);
     EmbeddedTree<T,N,O,C> & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false,T ** pObject = NULL);
     EmbeddedTree<T,N,O,C> & drop(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false);
-
   protected:
     class EmbeddedTreeGraph {
       public:
@@ -501,7 +500,7 @@ class EmbeddedTree {
     EmbeddedTree<T,N,O,C> & saveEmbeddedTreeGraph(AsyncFile & file,EmbeddedTreeGraph * pGraph = NULL) const;
     class Stack {
       public:
-        ~Stack();
+        ~Stack() {}
         Stack() : sp_(0) {}
 
         EmbeddedTreeNode<T> ** node_[sizeof(uintptr_t) * 8];
@@ -512,7 +511,7 @@ class EmbeddedTree {
     EmbeddedTreeNode<T> * root_;
     uintptr_t count_;
 
-    static uintptr_t c2i(intptr_t c){ return (c >> (sizeof(c) * 8 - 1)) + 1; }
+    static uintptr_t c2i(intptr_t c){ return -c >> (sizeof(c) * 8 - 1); }
     T * internalFind(EmbeddedTreeNode<T> ** pNode,const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist,Stack * pStack = NULL) const;
     void rotate(EmbeddedTreeNode<T> ** pNode,intptr_t c);
   private:
@@ -569,13 +568,12 @@ T * EmbeddedTree<T,N,O,C>::internalFind(
 {
   T * pObject = NULL;
   for(;;){
-    if( pStack != NULL ){
-      pStack->node_[pStack->sp_] = pNode;
-      pStack->leaf_[pStack->sp_] = 0;
-    }
     if( *pNode == NULL ) break;
     intptr_t c = C(O(**pNode,NULL),object);
-    pStack->leaf_[pStack->sp_++] = c;
+    if( pStack != NULL ){
+      pStack->node_[pStack->sp_] = pNode;
+      pStack->leaf_[pStack->sp_++] = c;
+    }
     if( c == 0 ){
       pObject = &O(**pNode,NULL);
       break;
@@ -634,17 +632,24 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::insert(const T & object,bool thro
   Stack stack;
   T * obj = internalFind(&root_,object,throwIfExist,false,deleteIfExist,false,&stack);
   if( obj == NULL ){
-    stack.sp_--;
     N(object).left_ = NULL;
     N(object).right_ = NULL;
     N(object).leaf_ = 0;
-    (*stack.node_[stack.sp_])->leafs_[c2i(stack.leaf_[stack.sp_])] = &N(object);
-    (*stack.node_[stack.sp_])->leaf_ = stack.leaf_[stack.sp_];
-    while( --stack.sp_ >= 0 ){
-      if( stack.leaf_[stack.sp_] == 0 ) continue;
-      rotate(stack.node_[stack.sp_],stack.leaf_[stack.sp_]);
+    if( stack.sp_ > 0 ){
+      stack.sp_--;
+      (*stack.node_[stack.sp_])->leafs_[c2i(stack.leaf_[stack.sp_])] = &N(object);
+      (*stack.node_[stack.sp_])->leaf_ = stack.leaf_[stack.sp_];
+      while( --stack.sp_ >= 0 ){
+        intptr_t & c = (*stack.node_[stack.sp_])->leaf_;
+        if( c == 0 ) continue;
+        rotate(stack.node_[stack.sp_],c);
+        c = 0;
+      }
     }
-    while( stack.sp_ >= 0 ) (*stack.node_[stack.sp_--])->leaf_ = 0;
+    else {
+      root_ = &N(object);
+    }
+    count_++;
   }
   else if( deleteIfExist ){
     delete &object;
@@ -708,11 +713,13 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile &
 
     node = utf8::String("(") + O(*pGraph->node_,NULL) + "," + utf8::int2Str(pGraph->node_->leaf_) + ")";
   }
-  pGraph->graph_.resize(pGraph->level_ + 1)[pGraph->level_].add(node);
-  uintptr_t size = node.size();
-  if( size > pGraph->root_->max_ ) pGraph->root_->max_ = size;
+  if( pGraph->parent_ == NULL || pGraph->parent_->isLeafs() ){
+    pGraph->graph_.resize(pGraph->level_ + 1)[pGraph->level_].add(node);
+    uintptr_t size = node.size();
+    if( size > pGraph->root_->max_ ) pGraph->root_->max_ = size;
+  }
   if( pGraph->level_ == 0 ){
-    uintptr_t cellPerNode = uintptr_t(1) << (pGraph->graph_[pGraph->graph_.count()].count() - 1);
+    uintptr_t cellPerNode = uintptr_t(1) << (pGraph->graph_[pGraph->graph_.count() - 1].count() - 1);
     for( uintptr_t i = 0; i < pGraph->graph_.count(); i++ ){
       for( uintptr_t j = 0; i < pGraph->graph_[i].count(); j++ ){
         utf8::String line;
