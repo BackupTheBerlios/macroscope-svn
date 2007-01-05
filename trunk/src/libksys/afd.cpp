@@ -100,8 +100,8 @@ file_t AsyncFile::openHelper(bool async)
 {
   async = true;
   file_t handle = INVALID_HANDLE_VALUE;
-#if defined(__WIN32__) || defined(__WIN64__)
   int32_t err;
+#if defined(__WIN32__) || defined(__WIN64__)
   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
   if( isWin9x() ){
     utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
@@ -1175,7 +1175,7 @@ void AsyncFile::redirectToStdin()
     std_ = true;
   }
 #else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //------------------------------------------------------------------------------
@@ -1193,7 +1193,7 @@ void AsyncFile::redirectToStdout()
     std_ = true;
   }
 #else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1211,7 +1211,7 @@ void AsyncFile::redirectToStderr()
     std_ = true;
   }
 #else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1263,6 +1263,7 @@ DWORD AsyncFile::waitCommEvent()
 uint32_t AsyncFile::waitCommEvent()
 {
   newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return 0;
 }
 #endif
 //---------------------------------------------------------------------------

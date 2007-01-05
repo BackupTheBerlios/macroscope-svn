@@ -178,7 +178,7 @@ void API::open()
         ksys::stdErr.debug(9,
 	  utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
 	);
-        ksys::Exception::throwSP(err, __PRETTY_FUNCTION__);
+        newObject<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }

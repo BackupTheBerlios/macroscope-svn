@@ -73,9 +73,9 @@ class Exception {
   protected:
     Array<int32_t> codes_;
     Array<utf8::String> whats_;
+    mutable int32_t refCount_;
     bool stackBackTrace_;
   private:
-    mutable int32_t refCount_;
     Exception(const Exception &){}
     void operator = (const Exception &){}
 };

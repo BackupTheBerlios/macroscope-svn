@@ -178,9 +178,10 @@ AsyncSocket & AsyncSocket::shutdown(int how)
         newObject<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #if HAVE_KQUEUE
-    if( currentFiber()->event_.type_ == ksys::etAccept ){
-      ksys::AsyncIoSlave * slave = dynamic_cast<ksys::AsyncIoSlave *>(currentFiber()->event_.ioSlave_);
-      if( slave != NULL ) slave->cancelEvent(currentFiber()->event_);
+    ksys::Fiber * fiber = ksys::currentFiber();
+    if( fiber->event_.type_ == ksys::etAccept ){
+      ksys::AsyncIoSlave * slave = dynamic_cast<ksys::AsyncIoSlave *>(fiber->event_.ioSlave_);
+      if( slave != NULL ) slave->cancelEvent(fiber->event_);
     }
 #endif
   }
@@ -284,7 +285,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   fiber->switchFiber(fiber->mainFiber());
   assert( fiber->event_.type_ == ksys::etAccept );
   if( fiber->event_.errno_ != 0 )
-    EAsyncSocket::throwSP(fiber->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__);
+    newObject<EAsyncSocket>(fiber->event_.errno_ + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   socket.socket_ = (int) fiber->event_.data_;
   if( fcntl(socket.socket_,F_SETFL,fcntl(socket.socket_,F_GETFL,0) | O_NONBLOCK) != 0 ){
     int32_t err = errno;

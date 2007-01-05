@@ -75,7 +75,9 @@ class FiberSemaphore;
 #if defined(__WIN32__) || defined(__WIN64__)
 typedef HANDLE file_t;
 #else
+typedef int SOCKET;
 typedef int file_t;
+#define INVALID_HANDLE_VALUE -1
 #endif
 //---------------------------------------------------------------------------
 class AsyncEvent {
@@ -199,7 +201,9 @@ class AsyncDescriptorKey {
       SOCKET socket_;
       file_t descriptor_;
     };
+#if defined(__WIN32__) || defined(__WIN64__)
     AsyncDescriptorKey(SOCKET socket);
+#endif
     AsyncDescriptorKey(file_t descriptor);
     file_t descriptor() const;
   protected:
@@ -216,9 +220,11 @@ inline AsyncDescriptorKey::AsyncDescriptorKey() : descriptor_(INVALID_HANDLE_VAL
 {
 }
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
 inline AsyncDescriptorKey::AsyncDescriptorKey(SOCKET socket) : socket_(socket)
 {
 }
+#endif
 //---------------------------------------------------------------------------
 inline AsyncDescriptorKey::AsyncDescriptorKey(file_t descriptor) : descriptor_(descriptor)
 {

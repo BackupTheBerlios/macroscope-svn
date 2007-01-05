@@ -166,7 +166,7 @@ l1:
   err = errno;
   pthread_attr_destroy(&attr);
   pthread_mutex_destroy(&mutex_);
-  thread->mutex_ = NULL;
+  mutex_ = NULL;
   newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 #endif
@@ -259,6 +259,8 @@ uintptr_t Thread::priority() const
   }
   return pri;
 }
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
 //---------------------------------------------------------------------------
 //#pragma comment (linker, "/defaultlib:ntdll.lib")
 //---------------------------------------------------------------------------
@@ -546,6 +548,8 @@ bool Thread::isSuspended(uintptr_t tid)
   FreeLibrary(hInstLib);
   return r;
 }
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 uint8_t Thread::beforeExecuteActions_[sizeof(Array<Action>)];
 uint8_t Thread::afterExecuteActions_[sizeof(Array<Action>)];

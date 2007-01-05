@@ -205,8 +205,8 @@ Semaphore & Semaphore::wait()
 bool Semaphore::timedWait(uint64_t timeout)
 {
 #if HAVE_SEMAPHORE_H
-  sem_timedwait();
-  newObject<Exception>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+//  sem_timedwait();
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return false;
 #elif defined(__WIN32__) || defined(__WIN64__)
   uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);

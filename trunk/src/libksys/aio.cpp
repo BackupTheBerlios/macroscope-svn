@@ -39,12 +39,14 @@ bool AsyncDescriptor::isSocket() const
 //------------------------------------------------------------------------------
 int64_t AsyncDescriptor::read2(void *,uint64_t)
 {
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return -1;
 }
 //------------------------------------------------------------------------------
 int64_t AsyncDescriptor::write2(const void *,uint64_t)
 {
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return -1;
 }
 //------------------------------------------------------------------------------
 #endif
@@ -142,12 +144,12 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
     kqueue_ = kqueue();
     if( kqueue < 0 ){
       int32_t err = errno;
-      Exception::throwSP(err,__PRETTY_FUNCTION__);
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     kevents_.resize(64);
   }
 #else
-  Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 #endif
 }
@@ -212,7 +214,7 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
           }
 	}
 #else
-        Exception::throwSP(ENOSYS,__PRETTY_FUNCTION__);
+        newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
         if( requests_.count() == 0 ) post();
       }
@@ -704,7 +706,7 @@ void AsyncIoSlave::threadExecute()
       node = requests_.first();
       while( evCount > 0 ){
 #if HAVE_KQUEUE
-        struct kevent * kev;
+        struct kevent * kev = NULL;
 #endif
         if( connect_ ){
 	   if( node == NULL ) break;

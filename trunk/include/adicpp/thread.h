@@ -119,8 +119,8 @@ class Thread {
         void *  data_;
     };
 
-    static Array< Action> & beforeExecuteActions();
-    static Array< Action> & afterExecuteActions();
+    static Array<Action> & beforeExecuteActions();
+    static Array<Action> & afterExecuteActions();
   protected:
     virtual void threadExecute() = 0;
     uintptr_t       stackSize_;
@@ -181,7 +181,11 @@ inline Thread::~Thread()
 //---------------------------------------------------------------------------
 inline bool Thread::isSuspended() const
 {
+#if defined(__WIN32__) || defined(__WIN64__)
   return isSuspended(id_);
+#else
+  return false;
+#endif
 }
 //---------------------------------------------------------------------------
 inline uintptr_t Thread::id() const
@@ -274,8 +278,7 @@ inline uintptr_t gettid()
 #elif defined(__linux__) && defined(__i386__)
   pid_t ret;
   __asm__ ( "int $0x80" : "=a" (ret) : "0" (224) );
-  if( ret < 0 )
-    ret = -1;
+  if( ret < 0 ) ret = -1;
   return ret;
 #else
 #error gettid not implemented

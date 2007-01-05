@@ -53,7 +53,7 @@ void Fetcher::parseUrl(
   utf8::String & name,
   utf8::String & port)
 {
-  uintptr_t c;
+  uintptr_t c = 0;
   utf8::String::Iterator i(url.strstr("://"));
   if( i.eof() ){
     i = url;
@@ -332,7 +332,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
     }
     file.writeBuffer((const uint8_t *) response.raw() + response.pos(),response.count() - response.pos());
     for(;;){
-      int64_t r;
+      int64_t r = 0;
       if( response.count() < (uintptr_t) getpagesize() ) response.resize(getpagesize());
       response.seek(0);
       while( response.pos() < response.count() ){

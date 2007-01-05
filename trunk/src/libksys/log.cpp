@@ -169,7 +169,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         memcpy(buffer_.ptr() + bufferPos_,buf2,a);
         utf8::utf8s2mbcs(codePage_,buffer_.ptr() + bufferPos_ + a,l,stream.plane(),stream.count());
         bufferPos_ += a + l;
-        post2 = bufferPos_ >= getpagesize() * 16;
+        post2 = bufferPos_ >= getpagesize() * 16u;
       }
       catch( ... ){
         post = false;

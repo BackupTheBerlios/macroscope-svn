@@ -145,7 +145,8 @@ InterlockedMutex::~InterlockedMutex()
 #elif HAVE_PTHREAD_H
   if( mutex_ != NULL ){
     int r = pthread_mutex_destroy(&mutex_);
-    if( r != 0 ) Exception::throwSP(r,__PRETTY_FUNCTION__);
+    if( r != 0 )
+      newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -242,7 +243,8 @@ bool InterlockedMutex::tryAcquire()
 void InterlockedMutex::release()
 {
   int r = pthread_mutex_unlock(&mutex_);
-  if( r != 0 ) newOBject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 )
+    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 #endif

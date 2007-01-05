@@ -11,6 +11,7 @@
 #cmakedefine HAVE_LZO1X_H 1
 #cmakedefine HAVE_LZO_LZO_ASM_H 1
 #cmakedefine HAVE_LZO_ASM_H 1
+#cmakedefine HAVE_UTIME_H 1
 #cmakedefine HAVE_SYS_UTIME_H 1
 #cmakedefine HAVE_SYSEXITS_H 1
 #cmakedefine HAVE_SYS_ENDIAN_H 1

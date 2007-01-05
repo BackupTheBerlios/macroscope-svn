@@ -184,10 +184,12 @@ inline bool AsyncFile::isOpen() const
   return descriptor_ != INVALID_HANDLE_VALUE;
 }
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
 inline const DWORD & AsyncFile::alignment() const
 {
   return alignment_;
 }
+#endif
 //---------------------------------------------------------------------------
 inline bool AsyncFile::std() const
 {

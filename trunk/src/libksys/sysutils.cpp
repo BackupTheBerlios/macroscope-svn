@@ -88,9 +88,9 @@ DirectoryChangeNotification::~DirectoryChangeNotification()
   stop();
 }
 //---------------------------------------------------------------------------
-DirectoryChangeNotification::DirectoryChangeNotification()
+DirectoryChangeNotification::DirectoryChangeNotification() :
 #if defined(__WIN32__) || defined(__WIN64__)
-  : hFFCNotification_(INVALID_HANDLE_VALUE),
+  hFFCNotification_(INVALID_HANDLE_VALUE),
   hDirectory_(INVALID_HANDLE_VALUE),
   bufferSize_(0),
 #endif
@@ -1732,6 +1732,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
   return pi.dwProcessId;
 #else
   newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return 0;
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1775,6 +1776,7 @@ int32_t waitForProcess(pid_t pid)
   return exitCode;
 #else
   newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return -1;
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1814,6 +1816,7 @@ int64_t getProcessStartTime(bool toLocalTime)
   return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
 #else
   newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return -1;
 #endif
 }
 //---------------------------------------------------------------------------
@@ -2388,6 +2391,7 @@ utf8::String getMachineUniqueKey()
   return s;
 #else
   newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return utf8::String();
 #endif
 #else
   return utf8::String();
