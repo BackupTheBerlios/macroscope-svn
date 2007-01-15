@@ -113,11 +113,13 @@ FILE_PATTERNS          = *.c \
 RECURSIVE              = YES
 EXCLUDE                = *pdb* \
                          *dbg* \
-                         *svn*
+                         *svn* \
+                         cp*.cpp
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *pdb* \
                          *dbg* \
-                         *svn*
+                         *svn* \
+                         cp*.cpp
 EXAMPLE_PATH           = 
 EXAMPLE_PATTERNS       = *
 EXAMPLE_RECURSIVE      = NO

@@ -693,18 +693,3 @@ int main(int argc, char * argv[])
   return errcode;
 }
 //------------------------------------------------------------------------------
-// Doxygen
-//------------------------------------------------------------------------------
-/*!
- * \if english
- * \mainpage macroscope Documentation
- * Copyright 2005-2007 by Guram Dukashvili (korvin@tehnomir.lipetsk.ru)
- * \section intro What is macroscope
- * \endif
- *
- * \if russian
- * \mainpage macroscope документация
- * Copyright 2005-2007 by Guram Dukashvili (korvin@tehnomir.lipetsk.ru)
- * \section intro Что такое macroscope
- * \endif
- */

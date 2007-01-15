@@ -311,7 +311,9 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
     int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
     seek(nSize);
-// TODO: check for SetFileValidData working (may be faster then SetEndOfFile)
+/*!
+ * \todo check for SetFileValidData working (may be faster then SetEndOfFile)
+ */
     if( SetEndOfFile(descriptor_) == 0 ){
       err = GetLastError() + errorOffset;
       newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
