@@ -1262,7 +1262,7 @@ void AsyncAcquireSlave::threadExecute()
       Semaphore::wait();
     }
     else {
-      assert( request->type_ == etAcquire );
+      assert( request->type_ == etAcquireMutex );
       request->errno_ = 0;
       try {
         request->mutex_->acquire();
@@ -1762,6 +1762,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
+#if defined(__WIN32__) || defined(__WIN64__)
 #ifndef NDEBUG
     case etStackBackTrace :
       {
@@ -1775,6 +1776,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
       }
       return;
 #endif
+#endif
     default :;
   }
   newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -1782,6 +1784,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
 //---------------------------------------------------------------------------
 void Requester::postRequest(AsyncEvent * event)
 {
+#if defined(__WIN32__) || defined(__WIN64__)
 #ifndef NDEBUG
   switch( event->type_ ){
     case etStackBackTraceZero :
@@ -1797,6 +1800,7 @@ void Requester::postRequest(AsyncEvent * event)
       return;
     default :;
   }
+#endif
 #endif
   newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 }

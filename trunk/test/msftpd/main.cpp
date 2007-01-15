@@ -288,7 +288,7 @@ MSFTPServerFiber & MSFTPServerFiber::getFileHash()
     l += lp > 0 && lp % bs != 0;
   }
   else {
-    l = ll = 0;
+    l = ll = lp = bs = 0;
   }
   *this << ll << l;
   if( file.isOpen() ){
