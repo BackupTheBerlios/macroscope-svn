@@ -90,15 +90,16 @@ int main(int _argc,char * _argv[])
   //throwCycle();
   //throwCycle();
   try {
-    /*EmbeddedTree<Key,Key::keyNode,Key::keyNodeObject,Key::keyNodeCompare> tree;
+#ifndef NDEBUG
+    EmbeddedTree<Key,Key::keyNode,Key::keyNodeObject,Key::keyNodeCompare> tree;
     for( uintptr_t i = 1; i <= 30; i++ )
       tree.insert(*newObject<Key>(utf8::int2Str0(i,2)));
     AsyncFile file(getExecutablePath() + "tree.dump");
     file.createIfNotExist(true).open().resize(0);
     tree.saveEmbeddedTreeGraph(file);
     file.close();
-    errcode = errcode;*/
-
+    errcode = errcode;
+#endif
     /*Vector<msmail::Message::Key> vector;
     for( intptr_t i = 1000000 - 1; i >= 0; i-- )
       vector.add(createGUIDAsBase32String());

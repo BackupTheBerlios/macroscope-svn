@@ -715,6 +715,8 @@ ELSE (APPLE)
   )
 ENDIF (APPLE)
 
+INCLUDE (Documentation)
+
 #INCLUDE (builds/cmake/GetVariablesFromCMakeDashboards.cmake)
 
 #cmake -P GetVariablesFromCMakeDashboards.cmake > CMakeVars.xml 2>&1

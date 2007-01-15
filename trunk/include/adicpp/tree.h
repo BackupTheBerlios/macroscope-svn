@@ -485,19 +485,8 @@ class EmbeddedTree {
     EmbeddedTree<T,N,O,C> & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false,T ** pObject = NULL);
     EmbeddedTree<T,N,O,C> & drop(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = false);
   protected:
-    class EmbeddedTreeGraph {
-      public:
-        Array<Array<utf8::String> > & graph_;
-        EmbeddedTreeGraph * root_;
-        EmbeddedTreeNode<T> * parent_;
-        EmbeddedTreeNode<T> * node_;
-        uintptr_t level_;
-        uintptr_t max_;
-
-        EmbeddedTreeGraph(Array<Array<utf8::String> > & graph = *(Array<Array<utf8::String> > *) NULL) : graph_(graph) {}
-    };
   public:
-    EmbeddedTree<T,N,O,C> & saveEmbeddedTreeGraph(AsyncFile & file,EmbeddedTreeGraph * pGraph = NULL) const;
+    EmbeddedTree<T,N,O,C> & saveEmbeddedTreeGraph(AsyncFile & file) const;
     class Stack {
       public:
         ~Stack() {}
@@ -683,61 +672,54 @@ template <
   T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
 > inline
-EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile & file,EmbeddedTreeGraph * pGraph) const
+EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile & file) const
 {
   Array<Array<utf8::String> > aGraph;
-  EmbeddedTreeGraph graph(aGraph);
-  if( pGraph == NULL ){
-    pGraph = &graph;
-    graph.root_ = pGraph;
-    graph.parent_ = NULL;
-    graph.node_ = root_;
-    graph.level_ = 0;
-    graph.max_ = 0;
+  Array<EmbeddedTreeNode *> graph;
+  Array<intptr_t> leafs;
+  uintptr_t max = 0;
+  graph.add(root_);
+  leafs.add(-1);
+  for(;;){
+    if( graph[graph.count() - 1] == NULL ){
+      graph.resize(graph.count() - 1);
+      leafs.resize(leafs.count() - 1);
+    }
+    if( graph.count() == 0 ) break;
+    graph.add(graph[graph.count() - 1]->leafs_[leafs[leafs.count() - 1]]);
+    leafs.add(-1);
+    utf8::String node(
+      utf8::String("(") +
+      O(*graph[graph.count() - 1],NULL) + "," +
+      utf8::int2Str(graph[graph.count() - 1]->leaf_) + ")"
+    );
   }
-  utf8::String node;
-  if( pGraph->node_ != NULL ){
-    EmbeddedTreeGraph lGraph(pGraph->graph_);
-    lGraph.root_ = pGraph->root_;
-    lGraph.parent_ = pGraph->node_;
-    lGraph.node_ = pGraph->node_->left_;
-    lGraph.level_ = pGraph->level_ + 1;
-    saveEmbeddedTreeGraph(file,&lGraph);
-
-    EmbeddedTreeGraph rGraph(pGraph->graph_);
-    rGraph.root_ = pGraph->root_;
-    rGraph.parent_ = pGraph->node_;
-    rGraph.node_ = pGraph->node_->right_;
-    rGraph.level_ = pGraph->level_ + 1;
-    saveEmbeddedTreeGraph(file,&rGraph);
-
-    node = utf8::String("(") + O(*pGraph->node_,NULL) + "," + utf8::int2Str(pGraph->node_->leaf_) + ")";
-  }
-  if( pGraph->parent_ == NULL || pGraph->parent_->isLeafs() ){
-    if( pGraph->level_ >= pGraph->graph_.count() )
-      pGraph->graph_.resize(pGraph->level_ + 1);
-    pGraph->graph_[pGraph->level_].add(node);
-    uintptr_t size = node.size();
-    if( size > pGraph->root_->max_ ) pGraph->root_->max_ = size;
-  }
-  if( pGraph->level_ == 0 ){
-    uintptr_t cells = pGraph->graph_[pGraph->graph_.count() - 1].count();
-    uintptr_t cellPerNode = uintptr_t(1) << (cells - 1);
-    uintptr_t size = pGraph->max_ * cells;
-    for( uintptr_t i = 0; i < pGraph->graph_.count(); i++ ){
-      uintptr_t cellSize = pGraph->max_ * cellPerNode;
-      utf8::String line;
-      line.resize(size + 1);
-      line.c_str()[size] = '\n';
-      for( uintptr_t j = 0; j < pGraph->graph_[i].count(); j++ ){
-        memcpy(
-          line.c_str() + cellSize * j + cellSize / 2 - pGraph->graph_[i][j].size() / 2,
-          pGraph->graph_[i][j].c_str(),
-          pGraph->graph_[i][j].size()
-        );
+    if( pGraph->parent_ == NULL || pGraph->parent_->isLeafs() ){
+      if( pGraph->level_ >= pGraph->graph_.count() )
+        pGraph->graph_.resize(pGraph->level_ + 1);
+      pGraph->graph_[pGraph->level_].add(node);
+      uintptr_t size = node.size();
+      if( size > pGraph->root_->max_ ) pGraph->root_->max_ = size;
+    }
+    if( pGraph->level_ == 0 ){
+      uintptr_t cells = pGraph->graph_[pGraph->graph_.count() - 1].count();
+      uintptr_t cellPerNode = uintptr_t(1) << (cells - 1);
+      uintptr_t size = pGraph->max_ * cells;
+      for( uintptr_t i = 0; i < pGraph->graph_.count(); i++ ){
+        uintptr_t cellSize = pGraph->max_ * cellPerNode;
+        utf8::String line;
+        line.resize(size + 1);
+        line.c_str()[size] = '\n';
+        for( uintptr_t j = 0; j < pGraph->graph_[i].count(); j++ ){
+          memcpy(
+            line.c_str() + cellSize * j + cellSize / 2 - pGraph->graph_[i][j].size() / 2,
+            pGraph->graph_[i][j].c_str(),
+            pGraph->graph_[i][j].size()
+          );
+        }
+        file.writeBuffer(line.c_str(),size + 1);
+        cellPerNode >>= 1;
       }
-      file.writeBuffer(line.c_str(),size + 1);
-      cellPerNode >>= 1;
     }
   }
   return *const_cast<EmbeddedTree<T,N,O,C> *>(this);
