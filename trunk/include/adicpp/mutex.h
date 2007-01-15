@@ -35,14 +35,26 @@ namespace ksys {
 //#define FAST_MUTEX 1
 //#endif
 //---------------------------------------------------------------------------
+#ifndef MPLOCKED
+#ifdef SMP
+#define MPLOCKED "lock ; "
+#define __STRING(x) #x
+#define __XSTRING(x) __STRING(x)
+#else
+#define MPLOCKED
+#define __STRING(x) #x
+#define __XSTRING(x) __STRING(x)
+#endif
+#endif
+//---------------------------------------------------------------------------
 #if __GNUG__ && __i386__
 inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
 {
   //  register long eax asm("eax");
   //  long r;
-  asm volatile (//    ".arch i686\n"
+  __asm __volatile (//    ".arch i686\n"
   //    ".intel_syntax noprefix\n"
-  "lock; xadd %%eax,(%%edx)\n"
+  __XSTRING(MPLOCKED) "xadd %%eax,(%%edx)\n"
   // возвращаемые параметры
   : "=a" (a)
   // принимаемые параметры    
@@ -58,44 +70,41 @@ int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
 
 inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {
-  asm volatile ("lock; cmpxchg %%ecx,(%%edx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
+  asm volatile (__XSTRING(MPLOCKED) "cmpxchg %%ecx,(%%edx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
 }
 
 inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
 {
-  asm volatile ("lock; cmpxchg8b (%%ebp)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
-  __asm {
-    mov         ebp,v
-    mov         ebx,dword ptr exValue
-    mov         ecx,dword ptr exValue + 4
-    mov         eax,dword ptr cmpValue
-    mov         edx,dword ptr cmpValue + 4
-    lock cmpxchg8b qword ptr [ebp]
-  }
+//  asm volatile ("lock; cmpxchg8b (%%ebp)" : "=a" (cmpValue) : "ebp" (&v), "a" (cmpValue), "c" (exValue));
+//#if HAVE_MACHINE_ATOMIC_H
+//  atomic_cmpset_long(&v,cmpValue,exValue);
+//#endif
+//  return cmpValue;
+  return interlockedCompareExchange(*(int32_t *) &v,int32_t(exValue),int32_t(cmpValue));
 }
 #elif __GNUG__ && __x86_64__
 inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
 {
-  asm volatile ("lock; xadd %%eax,(%%rdx)" : "=a" (a) : "d" (&v), "a" (a));
+  asm volatile (__XSTRING(MPLOCKED) "xadd %%eax,(%%rdx)" : "=a" (a) : "d" (&v), "a" (a));
   return a;
 }
 
 inline int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
 {
-  asm volatile ("lock; xadd %%rax,(%%rdx)" : "=a" (a) : "d" (&v), "a" (a));
+  asm volatile (__XSTRING(MPLOCKED) "xadd %%rax,(%%rdx)" : "=a" (a) : "d" (&v), "a" (a));
   return a;
 }
 
 inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {
-  asm volatile ("lock; cmpxchg %%ecx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
+  asm volatile (__XSTRING(MPLOCKED) "cmpxchg %%ecx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
 }
 
 inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
 {
-  asm volatile ("lock; cmpxchg %%rcx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
+  asm volatile (__XSTRING(MPLOCKED) "cmpxchg %%rcx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
 }
 #elif _MSC_VER && _M_IX86
@@ -486,3 +495,4 @@ inline int32_t SwitchToThread()
 //---------------------------------------------------------------------------
 #endif /* _Mutex_H_ */
 //---------------------------------------------------------------------------
+

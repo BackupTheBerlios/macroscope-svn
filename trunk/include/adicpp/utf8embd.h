@@ -180,7 +180,7 @@ inline uintptr_t utf82ucs(const unsigned char * utf8s, uintptr_t & l)
 {
   uintptr_t c;
 
-  l = intptr_t(-1);
+  l = uintptr_t(intptr_t(-1));
 #if SIZEOF_WCHAR_t_T > 2
   if( (*utf8s & 0xFC) == 0xFC && utf8s[1] != 0 && utf8s[2] != 0 && utf8s[3] != 0 && utf8s[4] != 0 && utf8s[5] != 0 ){
     c = ((uintptr_t) (*utf8s & 0x1) << 30) | ((uintptr_t) (utf8s[1] & 0x3F) << 24) | ((uintptr_t) (utf8s[2] & 0x3F) << 18) | ((uintptr_t) (utf8s[3] & 0x3F) << 12) | ((uintptr_t) (utf8s[4] & 0x3F) << 6) | (uintptr_t) (utf8s[5] & 0x3F);
