@@ -27,6 +27,7 @@
 #cmakedefine HAVE_SYS_TIME_H 1
 #cmakedefine HAVE_SYS_TIMEB_H 1
 #cmakedefine HAVE_SYS_STAT_H 1
+#cmakedefine HAVE_MACHINE_ATOMIC_H 1
 #cmakedefine HAVE_TIME_H 1
 #cmakedefine HAVE_UUID_H 1
 #cmakedefine HAVE_AIO_H 1

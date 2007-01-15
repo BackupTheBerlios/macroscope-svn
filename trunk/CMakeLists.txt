@@ -219,6 +219,7 @@ SET (CMAKE_EXTRA_INCLUDE_FILES sys/types.h)
 CHECK_INCLUDE_FILE("sys/timeb.h" HAVE_SYS_TIMEB_H)
 CHECK_INCLUDE_FILE("sys/event.h" HAVE_SYS_EVENT_H)
 CHECK_INCLUDE_FILE("sys/uuid.h" HAVE_SYS_UUID_H)
+CHECK_INCLUDE_FILE("machine/atomic.h" HAVE_MACHINE_ATOMIC_H)
 
 SET (CMAKE_EXTRA_INCLUDE_FILES sys/types.h sys/socket.h netinet/in.h netinet/in_systm.h netinet/ip.h)
 CHECK_INCLUDE_FILE("netinet/in_systm.h" HAVE_NETINET_IN_SYSTM_H)
