@@ -666,6 +666,8 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::remove(const T & object,bool thro
   return *this;
 }
 //-----------------------------------------------------------------------------
+#ifndef NDEBUG
+//-----------------------------------------------------------------------------
 template <
   typename T,
   EmbeddedTreeNode<T> & (*N)(const T &),
@@ -724,6 +726,8 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile &
   }
   return *const_cast<EmbeddedTree<T,N,O,C> *>(this);
 }
+//-----------------------------------------------------------------------------
+#endif
 //-----------------------------------------------------------------------------
 } // namespace ksys
 //-----------------------------------------------------------------------------
