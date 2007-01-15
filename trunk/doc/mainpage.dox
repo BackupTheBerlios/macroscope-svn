@@ -20,8 +20,9 @@
  * Сервер обмена файлами.
  * \subsection module_msmail msmail
  * Сервер обмена сообщениями.
+ * \ref msmail_doc "подробнее..."
  * \subsection module_msmail1c msmail1c
  * Клиент сервера обмена сообщениями для системы 1С 7.х, 8.х
- * \ref msmail1c_doc "Подробнее..."
+ * \ref msmail1c_doc "подробнее..."
  * \endif
  */
