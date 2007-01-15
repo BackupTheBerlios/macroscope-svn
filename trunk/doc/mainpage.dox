@@ -6,22 +6,22 @@
  * \endif
  *
  * \if russian
- * \mainpage macroscope документация
+ * \mainpage macroscope ДПЛХНЕОФБГЙС
  * Copyright 2005-2007 by Guram Dukashvili (korvin@tehnomir.lipetsk.ru)
- * \section intro Что такое macroscope
- * Это набор интересных программ.
- * \section modules Модули
+ * \section intro юФП ФБЛПЕ macroscope
+ * ьФП ОБВПТ ЙОФЕТЕУОЩИ РТПЗТБНН.
+ * \section modules нПДХМЙ
  * \subsection module_macroscope macroscope
- * Генератор статистики использования траффика в HTML формате по
- * лог файлам программ: squid, sendmail.
+ * зЕОЕТБФПТ УФБФЙУФЙЛЙ ЙУРПМШЪПЧБОЙС ФТБЖЖЙЛБ Ч HTML ЖПТНБФЕ РП
+ * МПЗ ЖБКМБН РТПЗТБНН: squid, sendmail.
  * \subsection module_msftp msftp
- * Клиент сервера обмена файлами.
+ * лМЙЕОФ УЕТЧЕТБ ПВНЕОБ ЖБКМБНЙ.
  * \subsection module_msftpd msftpd
- * Сервер обмена файлами.
+ * уЕТЧЕТ ПВНЕОБ ЖБКМБНЙ.
  * \subsection module_msmail msmail
- * Сервер обмена сообщениями.
+ * уЕТЧЕТ ПВНЕОБ УППВЭЕОЙСНЙ.
  * \subsection module_msmail1c msmail1c
- * Клиент сервера обмена сообщениями для системы 1С 7.х, 8.х
- * \ref msmail1c_doc "Подробнее..."
+ * лМЙЕОФ УЕТЧЕТБ ПВНЕОБ УППВЭЕОЙСНЙ ДМС УЙУФЕНЩ 1у 7.И, 8.И
+ * \ref msmail1c_doc "рПДТПВОЕЕ..."
  * \endif
  */
