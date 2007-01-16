@@ -83,7 +83,7 @@ int main(int _argc,char * _argv[])
 //   Sleep(15000);
 //  _set_amblksiz(1024);
   int errcode = 0;
-  adicpp::AutoInitializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
 
 //  msmail::Message::Keys guids;
@@ -91,14 +91,14 @@ int main(int _argc,char * _argv[])
   //throwCycle();
   try {
 #ifndef NDEBUG
-    EmbeddedTree<Key,Key::keyNode,Key::keyNodeObject,Key::keyNodeCompare> tree;
+    /*EmbeddedTree<Key,Key::keyNode,Key::keyNodeObject,Key::keyNodeCompare> tree;
     for( uintptr_t i = 1; i <= 30; i++ )
       tree.insert(*newObject<Key>(utf8::int2Str0(i,2)));
     AsyncFile file(getExecutablePath() + "tree.dump");
     file.createIfNotExist(true).open().resize(0);
     tree.saveEmbeddedTreeGraph(file);
     file.close();
-    errcode = errcode;
+    errcode = errcode;*/
 #endif
     /*Vector<msmail::Message::Key> vector;
     for( intptr_t i = 1000000 - 1; i >= 0; i-- )
@@ -143,7 +143,7 @@ int main(int _argc,char * _argv[])
       intptr_t i;
       uintptr_t u;
     };
-    initializeArguments(_argc,_argv);
+    stdErr.fileName(SYSLOG_DIR + "msmail/msmail.conf");
     Config::defaultFileName(SYSCONF_DIR + "msmail.conf");
     Services services(msmail_version.gnu_);
     AutoPtr<msmail::Service> serviceAP(newObject<msmail::Service>());

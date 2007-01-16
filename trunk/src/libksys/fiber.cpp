@@ -373,7 +373,7 @@ void BaseServer::closeServer()
         }
         else
 #endif
-        sleep(fbtmd);
+        ksleep(fbtmd);
       }
     }
     if( btp == NULL ) break;
@@ -616,7 +616,7 @@ FiberMutex & FiberMutex::unlock()
         counter_++;
         break;
       }
-      sleep1();
+      ksleep1();
     }
     stdErr.log(
       lmNOTIFY,
@@ -746,8 +746,6 @@ void FiberSemaphore::post()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-//------------------------------------------------------------------------------
 bool FiberSemaphore::timedWait(uint64_t timeout)
 {
   if( isRunInFiber() ){
@@ -757,14 +755,18 @@ bool FiberSemaphore::timedWait(uint64_t timeout)
     currentFiber()->thread()->postRequest();
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etAcquireSemaphore );
+#if defined(__WIN32__) || defined(__WIN64__)
     if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != WAIT_TIMEOUT )
       newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.errno_ != WAIT_TIMEOUT;
+#else
+    if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != ETIMEDOUT )
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+    return currentFiber()->event_.errno_ != ETIMEDOUT;
+#endif
   }
   return Semaphore::timedWait(timeout);
 }
-//------------------------------------------------------------------------------
-#endif
 //------------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------

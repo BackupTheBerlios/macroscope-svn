@@ -78,7 +78,7 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Thread {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   public:
     virtual ~Thread();
@@ -129,7 +129,7 @@ class Thread {
     DWORD           id_;
 #else
     pthread_t       handle_;
-    pthread_mutex_t mutex_;
+    //pthread_mutex_t mutex_;
 #endif
     int32_t         exitCode_;
     bool            started_;

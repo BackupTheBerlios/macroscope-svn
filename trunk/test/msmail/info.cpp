@@ -113,7 +113,7 @@ Message & Message::value(const utf8::String & key,const utf8::String & value,Att
     attributes_.insert(*p);
     residentSize_ += sizeof(Attribute) + keySize + 2;
   }
-  if( pAttribute == NULL && residentSize_ - p->value_.size() + valueSize >= getpagesize() * 16 ){
+  if( pAttribute == NULL && residentSize_ - p->value_.size() + valueSize >= getpagesize() * 16u ){
     file_.open();
     file_.seek(file_.size());
     utf8::String v(key), v2(value);
@@ -272,7 +272,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
         key = unScreenString(utf8::String(str,i));
         value = unScreenString(utf8::String(i + 2,ia));
       }
-      if( a.residentSize_ + ia.cursor() - i.cursor() - 2 + 1 >= getpagesize() * 16 ){
+      if( a.residentSize_ + ia.cursor() - i.cursor() - 2 + 1 >= getpagesize() * 16u ){
         a.value(key,utf8::String(),&pAttribute);
         pAttribute->index_ = pos + i.cursor() + 2;
         pAttribute->size_ = ia.cursor() - i.cursor() - 2;

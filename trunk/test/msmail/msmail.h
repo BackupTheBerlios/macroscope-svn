@@ -719,13 +719,13 @@ class SpoolWalker : public Fiber {
     virtual ~SpoolWalker();
     SpoolWalker(Server & server,intptr_t id);
   protected:
-    DirectoryChangeNotification dcn_;
+    Server & server_;
     intptr_t id_; // if negative then fiber must work as collector for lost sheeps
+    DirectoryChangeNotification dcn_;
 
     void processQueue(bool & timeWait);
     void fiberExecute();
   private:
-    Server & server_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -754,6 +754,7 @@ class MailQueueWalker : public ksock::ClientFiber {
       return object1.host_.strcasecmp(object2.host_) == 0;
     }
     mutable EmbeddedHashNode<MailQueueWalker> hostHashNode_;
+    Server & server_;
     utf8::String host_;
     FiberInterlockedMutex messagesMutex_;
     typedef EmbeddedList<
@@ -768,7 +769,6 @@ class MailQueueWalker : public ksock::ClientFiber {
     void connectHost(bool & online,bool & mwt);
     void main();
   private:
-    Server & server_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

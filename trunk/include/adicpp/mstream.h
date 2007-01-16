@@ -30,7 +30,7 @@
 namespace ksys {
 //---------------------------------------------------------------------------
 class MemoryStream {
-    friend void initialize();
+    friend void initialize(int,char **);
     friend void cleanup();
   private:
     static void initialize();

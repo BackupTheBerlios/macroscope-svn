@@ -87,23 +87,30 @@ void Exception::throwSP()
   throw ExceptionSP(this);
 }
 //---------------------------------------------------------------------------
+utf8::String Exception::stdError(utf8::String::Stream * s) const
+{
+  utf8::String::Stream stream;
+  if( s == NULL ) s = &stream;
+  for( uintptr_t i = 0; i < whats_.count(); i++ ){
+    if( codes_[0] == 0 ) continue;
+    intmax_t a;
+    utf8::String serr(strError(codes_[i]));
+    if( !utf8::tryStr2Int(serr,a) ){
+      if( codes_[i] >= errorOffset ) *s << codes_[i] - errorOffset; else *s << codes_[i];
+      *s << " ";
+    }
+    if( serr.strlen() > 0 ) *s << serr << " ";
+    *s << whats_[i] << "\n";
+  }
+  return s == &stream ? s->string() : utf8::String();
+}
+//---------------------------------------------------------------------------
 const Exception & Exception::writeStdError(LogFile * log) const
 {
   if( stdErr.debugLevel(9) ){
-    if( log == NULL ) log = &stdErr;
-    for( uintptr_t i = 0; i < whats_.count(); i++ ){
-      if( codes_[0] == 0 ) continue;
-      intmax_t a;
-      utf8::String serr(strError(codes_[i]));
-      utf8::String::Stream s;
-      if( !utf8::tryStr2Int(serr,a) ){
-        if( codes_[i] >= errorOffset ) s << codes_[i] - errorOffset; else s << codes_[i];
-        s << " ";
-      }
-      if( serr.strlen() > 0 ) s << serr << " ";
-      s << whats_[i] << "\n";
-      log->debug(9,s);
-    }
+    utf8::String::Stream s;
+    stdError(&s);
+    (log != NULL ? log : &stdErr)->debug(9,s);
   }
   return *this;
 }

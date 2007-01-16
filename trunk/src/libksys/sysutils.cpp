@@ -801,8 +801,7 @@ utf8::String getExecutableName()
   if( h == NULL ) h = GetModuleHandle(NULL);
   return getModuleFileNameByHandle(h);
 #else
-  assert( argv().count() > 0 );
-  return argv()[0];
+  return argv().count() > 0 ? argv()[0] : utf8::String();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1332,7 +1331,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
   }
 }
 //---------------------------------------------------------------------------
-void sleep(uint64_t timeout)
+void ksleep(uint64_t timeout)
 {
   if( currentFiber() != NULL ){
     currentFiber()->event_.abort_ = false;
@@ -1790,7 +1789,7 @@ static BOOL WINAPI consoleCtrlHandler(DWORD dwCtrlType)
     case CTRL_CLOSE_EVENT    :
     case CTRL_LOGOFF_EVENT   :
     case CTRL_SHUTDOWN_EVENT :
-      while( PostThreadMessage(mainThreadId,WM_QUIT,0,0) == 0 ) Sleep(1);
+      while( PostThreadMessage(mainThreadId,WM_QUIT,0,0) == 0 ) ksleep1();
   }
   return TRUE;
 }
@@ -2512,11 +2511,11 @@ uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];
 //---------------------------------------------------------------------------
 void initializeArguments(int argc,char ** argv)
 {
-  ksys::argv().clear();
-  for( intptr_t i = 0; i < argc; i++ ) ksys::argv().add(argv[i]);
+  ksys::argv().resize(argc);
+  while( --argc >= 0 ) ksys::argv()[argc] = argv[argc];
 }
 //---------------------------------------------------------------------------
-void initialize()
+void initialize(int argc,char ** argv)
 {
 // runtime checks for system or compiler incompatibilities
   assert( sizeof(char) == 1 );
@@ -2548,7 +2547,7 @@ void initialize()
 // force the system to create the message queue for main thread (if not already created)
   MSG msg;
   SetLastError(0);
-  PeekMessage(&msg, NULL, WM_USER, WM_USER, PM_NOREMOVE);
+  PeekMessage(&msg,NULL,WM_USER,WM_USER,PM_NOREMOVE);
   if( GetLastError() != 0 ){
     perror(NULL);
     abort();
@@ -2585,6 +2584,7 @@ void initialize()
   Mutant::initialize();
   utf8::String::initialize();
   new (argvPlaceHolder) Array<utf8::String>;
+  initializeArguments(argc,argv);
   strErrorInitialize();
   Fiber::initialize();
   BaseThread::initialize();

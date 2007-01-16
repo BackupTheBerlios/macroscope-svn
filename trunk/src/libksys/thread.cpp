@@ -43,7 +43,7 @@ void * Thread::threadFunc(void * thread)
     perror(NULL);
     abort();
   }
-  if( (errno = pthread_mutex_lock(&reinterpret_cast<Thread *>(thread)->mutex_)) != 0 ){
+  /*if( (errno = pthread_mutex_lock(&reinterpret_cast<Thread *>(thread)->mutex_)) != 0 ){
     perror(NULL);
     abort();
   }
@@ -55,7 +55,7 @@ void * Thread::threadFunc(void * thread)
     perror(NULL);
     abort();
   }
-  reinterpret_cast<Thread *>(thread)->mutex_ = NULL;
+  reinterpret_cast<Thread *>(thread)->mutex_ = NULL;*/
 #endif
   intptr_t i;
   try {
@@ -113,7 +113,7 @@ Thread::Thread() :
   handle_(NULL),
   id_(~DWORD(0)),
 #elif HAVE_PTHREAD_H
-  handle_(NULL), mutex_(NULL),
+  handle_(NULL),// mutex_(NULL),
 #endif
   exitCode_(0),
   started_(false), terminated_(false), finished_(false)
@@ -136,16 +136,16 @@ Thread & Thread::resume()
   pthread_attr_t attr = NULL;
   if( handle_ == NULL ){
     started_ = terminated_ = finished_ = false;
-    if( (errno = pthread_mutex_init(&mutex_,NULL)) != 0 ) goto l1;
+//    if( (errno = pthread_mutex_init(&mutex_,NULL)) != 0 ) goto l1;
     if( (errno = pthread_attr_init(&attr)) != 0 ) goto l1;
     if( (errno = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE)) != 0 ) goto l1;
     if( (errno = pthread_attr_setstacksize(&attr,stackSize_)) != 0 ) goto l1;
 #if HAVE_PTHREAD_ATTR_SETGUARDSIZE
     if( (errno = pthread_attr_setguardsize(&attr,0)) != 0 ) goto l1;
 #endif
-    if( (errno = pthread_mutex_lock(&mutex_)) != 0 ) goto l1;
+    //if( (errno = pthread_mutex_lock(&mutex_)) != 0 ) goto l1;
     if( (errno = pthread_create(&handle_,&attr,threadFunc,this)) != 0 ){
-      pthread_mutex_unlock(&mutex_);
+//      pthread_mutex_unlock(&mutex_);
       goto l1;
     }
 #endif
@@ -157,16 +157,16 @@ Thread & Thread::resume()
   }
   return *this;
 #elif HAVE_PTHREAD_H
-  if( (errno = pthread_mutex_unlock(&mutex_)) != 0 ){
+  /*if( (errno = pthread_mutex_unlock(&mutex_)) != 0 ){
     perror(NULL);
     abort();
-  }
+  }*/
   return *this;
 l1:
   err = errno;
   pthread_attr_destroy(&attr);
-  pthread_mutex_destroy(&mutex_);
-  mutex_ = NULL;
+  //pthread_mutex_destroy(&mutex_);
+  //mutex_ = NULL;
   newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 #endif
@@ -202,13 +202,13 @@ Thread & Thread::wait()
       perror(NULL);
       abort();
     }
-    if( mutex_ != NULL ){
+    /*if( mutex_ != NULL ){
       if( (errno = pthread_mutex_destroy(&mutex_)) != 0 ){
         perror(NULL);
-	      abort();
+        abort();
       }
       mutex_ = NULL;
-    }
+    }*/
     handle_ = NULL;
 #endif
   }

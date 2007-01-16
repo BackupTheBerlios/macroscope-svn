@@ -656,11 +656,11 @@ void Logger::main()
 int main(int argc, char * argv[])
 {
   int errcode = -1;
-  adicpp::AutoInitializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer(argc,argv);
   autoInitializer = autoInitializer;
   try{
     uintptr_t i;
-    ksys::initializeArguments(argc, argv);
+    ksys::stdErr.fileName(SYSLOG_DIR + "macroscope/macroscope.log");
     ksys::Config::defaultFileName(SYSCONF_DIR + "macroscope.conf");
     bool dispatch = true;
     for( i = 1; i < ksys::argv().count(); i++ ){

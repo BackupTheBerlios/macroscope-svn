@@ -32,7 +32,7 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Fiber {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   friend class BaseThread;
   friend class BaseServer;
@@ -428,7 +428,7 @@ inline void Requester::shutdownDescriptors()
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class BaseThread : public Thread, public Fiber {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   friend class Fiber;
   friend class BaseServer;

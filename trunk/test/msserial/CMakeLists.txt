@@ -9,13 +9,14 @@ TARGET_LINK_LIBRARIES (msserial
   ${LIBPDBUTILS}
 )
 
+      
+
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
-ADD_DEPENDENCIES (msserial version)
-ADD_CUSTOM_COMMAND (
-  TARGET msserial PRE_BUILD
-  COMMAND ${VERSION_EXECUTABLE} ARGS version.in version.c
+ADD_DEPENDENCIES (msserial version msserial_version)
+ADD_CUSTOM_TARGET(msserial_version
+  COMMAND ${VERSION_EXECUTABLE} version.in version.c
+  DEPENDS version.in
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  COMMENT "Generate version file"
 )
 
 SET (MSSERIAL_EXECUTABLE

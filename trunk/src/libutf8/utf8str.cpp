@@ -45,7 +45,7 @@ void String::Container::acquire()
 {
 /*  for(;;){
     if( ksys::interlockedCompareExchange(mutex_,-1,0) == 0 ) break;
-    ksys::sleep1();
+    ksys::ksleep1();
   }*/
 }
 //---------------------------------------------------------------------------

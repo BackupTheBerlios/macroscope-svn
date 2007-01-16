@@ -35,7 +35,7 @@ class AsyncFile;
 class FiberInterlockedMutex;
 //---------------------------------------------------------------------------
 class LogFile : protected Thread {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   public:
     ~LogFile();

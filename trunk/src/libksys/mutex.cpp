@@ -93,7 +93,7 @@ void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int3
 {
   for(;;){
     if( interlockedCompareExchange(v,exValue,cmpValue) == 0 ) break;
-    sleep1();
+    ksleep1();
   }
 }
 //---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ void InterlockedMutex::multiAcquire(InterlockedMutex * mutex)
     do {
       if( interlockedCompareExchange(mutex->refCount_,-1,0) == 0 ) goto l1;
     } while( --i > 0 );
-    sleep1();
+    ksleep1();
   }
 l1:;
 }
@@ -172,7 +172,7 @@ void InterlockedMutex::singleAcquire(InterlockedMutex * mutex)
 {
   for(;;){
     if( interlockedCompareExchange(mutex->refCount_,-1,0) == 0 ) break;
-    sleep1();
+    ksleep1();
   }
 }
 //---------------------------------------------------------------------------
@@ -264,7 +264,7 @@ void Mutex::multiRDLock(Mutex * mutex)
       if( mutex->value_ >= 0 ){ mutex->value_++; goto l1; }
       mutex->release();
     } while( --i > 0 );
-    sleep(st);
+    ksleep(st);
     if( st < 100000 ) st <<= 1;
   }
 l1:
@@ -278,7 +278,7 @@ void Mutex::singleRDLock(Mutex * mutex)
     mutex->acquire();
     if( mutex->value_ >= 0 ){ mutex->value_++; break; }
     mutex->release();
-    sleep(st);
+    ksleep(st);
     if( st < 100000 ) st <<= 1;
   }
   mutex->release();
@@ -297,7 +297,7 @@ void Mutex::multiWRLock(Mutex * mutex)
       if( mutex->value_ == 0 ){ mutex->value_--; goto l1; }
       mutex->release();
     } while( --i > 0 );
-    sleep(st);
+    ksleep(st);
     if( st < 100000 ) st <<= 1;
   }
 l1:
@@ -311,7 +311,7 @@ void Mutex::singleWRLock(Mutex * mutex)
     mutex->acquire();
     if( mutex->value_ == 0 ){ mutex->value_--; break; }
     mutex->release();
-    sleep(st);
+    ksleep(st);
     if( st < 100000 ) st <<= 1;
   }
   mutex->release();

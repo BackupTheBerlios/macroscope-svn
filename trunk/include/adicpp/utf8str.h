@@ -128,7 +128,7 @@ typedef StringT<wchar_t> WideString;
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class String {
-  friend void ksys::initialize();
+  friend void ksys::initialize(int,char **);
   friend void ksys::cleanup();
   public:
     class Container {

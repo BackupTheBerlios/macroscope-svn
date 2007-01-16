@@ -42,7 +42,7 @@ class Initializer {
     static void acquire();
     static void release();
   protected:
-    static void initialize();
+    static void initialize(int argc,char ** argv);
     static void cleanup();
   private:
     static int32_t mutex_;
@@ -59,11 +59,11 @@ inline void Initializer::release()
   ksys::interlockedIncrement(mutex_,1);
 }
 //---------------------------------------------------------------------------
-inline void Initializer::initialize()
+inline void Initializer::initialize(int argc,char ** argv)
 {
   ksys::AutoLock<Initializer> lock(*(Initializer *) NULL);
   if( initCount_ == 0 ){
-    ksys::initialize();
+    ksys::initialize(argc,argv);
 #if !DISABLE_FIREBIRD_INTERFACE
     fbcpp::initialize();
 #endif
@@ -93,7 +93,7 @@ inline void Initializer::cleanup()
 class AutoInitializer {
   public:
     ~AutoInitializer(){ Initializer::cleanup(); }
-    AutoInitializer(){ Initializer::initialize(); }
+    AutoInitializer(int argc = 0,char ** argv = NULL){ Initializer::initialize(argc,argv); }
   protected:
   private:
 };

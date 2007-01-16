@@ -86,7 +86,7 @@ class EmbeddedHash {
     EmbeddedHash<T,N,O,H,E> & xchg(const EmbeddedHash<T,N,O,H,E> & a) const;
 
     EmbeddedHash<T,N,O,H,E> & clear() const;
-    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true) const;
+    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL) const;
     T & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = true) const;
     T & remove() const;
     T & first() const;
@@ -277,16 +277,17 @@ template <
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 >
-#ifndef __BCPLUSPLUS__
-inline
-#endif
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist,bool deleteIfExist) const
+EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject) const
 {
   EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist,false,deleteIfExist,false);
   if( *head == NULL ){
+    if( pObject != NULL ) *pObject = const_cast<T *>(&object);
     *head = &N(object);
     N(object).next() = NULL;
     optimize(optInc);
+  }
+  else if( pObject != NULL ){
+    *pObject = &O(**head,NULL);
   }
   return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }

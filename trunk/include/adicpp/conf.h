@@ -165,7 +165,7 @@ inline Mutant & ConfigSection::valueRef(const utf8::String & key) const
 class AsyncFile;
 //---------------------------------------------------------------------------
 class Config : public ConfigSection {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   friend class EConfig;
   friend class Section;

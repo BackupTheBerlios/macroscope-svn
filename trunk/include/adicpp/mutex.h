@@ -184,7 +184,7 @@ void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int3
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class InterlockedMutex {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   friend class Mutex;
   public:

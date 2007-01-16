@@ -668,7 +668,7 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::remove(const T & object,bool thro
 //-----------------------------------------------------------------------------
 #ifndef NDEBUG
 //-----------------------------------------------------------------------------
-template <
+/*template <
   typename T,
   EmbeddedTreeNode<T> & (*N)(const T &),
   T & (*O) (const EmbeddedTreeNode<T> &,T *),
@@ -725,7 +725,7 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile &
     }
   }
   return *const_cast<EmbeddedTree<T,N,O,C> *>(this);
-}
+}*/
 //-----------------------------------------------------------------------------
 #endif
 //-----------------------------------------------------------------------------

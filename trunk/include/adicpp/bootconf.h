@@ -82,8 +82,12 @@
 #include <sys/types.h>
 #endif
 
+#if HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 #if HAVE_MACHINE_ATOMIC_H
-//#include <machine/atomic.h>
+#include <machine/atomic.h>
 #endif
 
 #if HAVE_MEMORY_H
@@ -325,12 +329,24 @@ typedef int64_t ptrdiff_t;
 #define HAVE_LONG_DOUBLE 1
 #endif
 
-#ifndef NDEBUG
-#undef SYSCONF_DIR
+#ifndef SYSCONF_DIR
+#if defined(__WIN32__) || defined(__WIN64__)
+#define SYSCONF_DIR ksys::getExecutablePath()
+#elif BSD
+#define SYSCONF_DIR utf8::String("/usr/local/")
+#else
+#define SYSCONF_DIR utf8::String("/usr/")
+#endif
 #endif
 
-#ifndef SYSCONF_DIR
-#define SYSCONF_DIR ksys::getExecutablePath()
+#ifndef SYSLOG_DIR
+#if defined(__WIN32__) || defined(__WIN64__)
+#define SYSLOG_DIR ksys::getExecutablePath()
+#elif BSD
+#define SYSLOG_DIR utf8::String("/var/log/")
+#else
+#define SYSLOG_DIR utf8::String("/var/log/")
+#endif
 #endif
 
 #ifndef SIZEOF_PID_T

@@ -668,9 +668,9 @@ void ZebexPDL::clearTerminal()
   }*/
 #endif
   clearTerminalHelper(0x31);
-  sleep(200000);
+  ksleep(200000);
   clearTerminalHelper(0x32);
-  sleep(200000);
+  ksleep(200000);
   clearTerminalHelper(0x33);
 #if defined(__WIN32__) || defined(__WIN64__)
   if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
@@ -986,7 +986,7 @@ int main(int argc,char * argv[])
   );
   
   int errcode = 0;
-  adicpp::AutoInitializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer(argc,argv);
   autoInitializer = autoInitializer;
 
   try {
@@ -994,7 +994,7 @@ int main(int argc,char * argv[])
       intptr_t i;
       uintptr_t u;
     };
-    ksys::initializeArguments(argc,argv);
+    ksys::stdErr.fileName(SYSLOG_DIR + "msftp/msftp.conf");
     ksys::Config::defaultFileName(SYSCONF_DIR + "msftp.conf");
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) ksys::getCurrentDir().getOEMString());

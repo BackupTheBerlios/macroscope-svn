@@ -447,7 +447,7 @@ void ServerFiber::processMailbox(
           bool messageAccepted = true;
           if( skey.strcasecmp(key_) == 0 ){
             if( !waitForMail ) *this << bool(true);
-            *this << message >> messageAccepted;
+            *this << *message.ptr() >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
           }
           if( messageAccepted ){
@@ -522,7 +522,7 @@ void ServerFiber::removeMail() // client remove mail
         case ERROR_SHARING_VIOLATION + errorOffset :
         case ERROR_LOCK_VIOLATION + errorOffset :
 #else
-        case EACCESS :
+        case EACCES :
 #endif
           break;
         default :
@@ -531,7 +531,7 @@ void ServerFiber::removeMail() // client remove mail
           cont = false;
       }
     }
-    if( cont ) sleep(100000);
+    if( cont ) ksleep(100000);
   }
   putCode(e);
 }
@@ -730,7 +730,7 @@ void SpoolWalker::fiberExecute()
     if( terminated_ ) break;
     if( timeWait ){
       uint64_t timeout = server_.config_->valueByPath(vName,60u);
-      sleep(timeout * 1000000u);
+      ksleep(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << "Processing spool by timer... \n");
     }
     else {
@@ -862,7 +862,7 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
       if( mwt ) cec = mwtv;
     }
   }
-  if( !online ) sleep(cec);
+  if( !online ) ksleep(cec);
 }
 //------------------------------------------------------------------------------
 void MailQueueWalker::main()
@@ -921,8 +921,7 @@ void MailQueueWalker::main()
       }
     }
   }
-  catch( ExceptionSP & e ){
-    int32_t err = e->code();
+  catch( ExceptionSP & ){
     server_.removeSender(*this);
     throw;
   }
@@ -1081,7 +1080,7 @@ void NodeClient::main()
               cec = (uintptr_t) fibonacci(cec);
               if( cec > mwt ) cec = mwt;
               cec *= 1000000u;
-              //sleep(cec * 1000000u);
+              //ksleep(cec * 1000000u);
             }
             if( (uint64_t) gettimeofday() >= cec + lastFailedConnectTime ){
               tryConnect = true;
@@ -1185,7 +1184,7 @@ void NodeClient::main()
                 );
               }
             }
-            sleep(uint64_t(1000000));
+            ksleep(uint64_t(1000000));
           }
         }
       }
@@ -1197,7 +1196,7 @@ void NodeClient::main()
             utf8::String(serverConfSectionName[stStandalone]) + ".exchange_interval",
             600u
           );
-        sleep(timeout * 1000000u);
+        ksleep(timeout * 1000000u);
       }
     } while( periodicaly_ && !terminated_ );
     AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);

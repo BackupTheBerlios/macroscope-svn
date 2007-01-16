@@ -33,6 +33,10 @@
 //#define _XOPEN_SOURCE 600
 //#define _POSIX_C_SOURCE 200112
 
+#if HAVE_SYSLOG_H
+#include <syslog.h>
+#endif
+
 #if HAVE_STDARG_H
 #include <stdarg.h>
 #elif HAVE_VARARGS_H
@@ -41,10 +45,6 @@
 
 #if HAVE_SYSEXITS_H
 #include <sysexits.h>
-#endif
-
-#if HAVE_SYS_PARAM_H
-#include <sys/param.h>
 #endif
 
 #if HAVE_SYS_IPC_H

@@ -244,7 +244,7 @@ void MSUpdateFetcher::fiberExecute()
       lastCheckUpdate = getlocaltimeofday();
       thread()->server()->attachFiber(newObjectV<MSUpdateSetuper>(config_,setupSem_));
     }
-    if( setupEnded ) sleep(interval); else sleep(1000000u);
+    if( setupEnded ) ksleep(interval); else ksleep(1000000u);
   }
 }
 //------------------------------------------------------------------------------
@@ -303,14 +303,14 @@ void MSUpdaterService::genUpdatePackage(const utf8::String & setupConfigFile)
 int main(int ac,char * av[])
 {
   int errcode = 0;
-  adicpp::AutoInitializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer(ac,av);
   autoInitializer = autoInitializer;
   try {
     union {
       intptr_t i;
       uintptr_t u;
     };
-    initializeArguments(ac,av);
+    stdErr.fileName(SYSLOG_DIR + "msupdater/msupdater.conf");
     Config::defaultFileName(SYSCONF_DIR + "msupdater.conf");
     Services services(msupdater_version.gnu_);
     services.add(newObject<MSUpdaterService>());

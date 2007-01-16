@@ -42,7 +42,7 @@ enum MutantType {
 };
 //---------------------------------------------------------------------------
 class Mutant {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   public:
     ~Mutant();

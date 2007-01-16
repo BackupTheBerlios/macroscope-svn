@@ -32,7 +32,7 @@ namespace ksock {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class API {
-  friend void ksys::initialize();
+  friend void ksys::initialize(int,char **);
   friend void ksys::cleanup();
   public:
 #if defined(__WIN32__) || defined(__WIN64__)

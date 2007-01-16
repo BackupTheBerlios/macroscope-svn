@@ -448,14 +448,14 @@ bool MSFTPService::active()
 int main(int _argc,char * _argv[])
 {
   int errcode = 0;
-  adicpp::AutoInitializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
   try {
     union {
       intptr_t i;
       uintptr_t u;
     };
-    ksys::initializeArguments(_argc,_argv);
+    ksys::stdErr.fileName(SYSLOG_DIR + "msftpd/msftpd.conf");
     ksys::Config::defaultFileName(SYSCONF_DIR + "msftpd.conf");
     ksys::Services services(msftpd_version.gnu_);
     MSFTPService * service;

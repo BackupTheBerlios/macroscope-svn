@@ -64,6 +64,7 @@ class Exception {
 
     static Exception * newObject();
 
+    virtual utf8::String stdError(utf8::String::Stream * s = NULL) const;
     virtual const Exception & writeStdError(LogFile * log = NULL) const;
     virtual bool isFatalError() const;
     virtual void DECLSPEC_NORETURN throwSP() GNUG_NORETURN;

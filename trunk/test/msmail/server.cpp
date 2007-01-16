@@ -208,12 +208,13 @@ void Server::addRecvMailFiber(ServerFiber & fiber)
 {
   AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
   ServerFiber * fib = recvMailFibers_.find(fiber);
-  if( fib != NULL ){
+  recvMailFibers_.insert(fiber,false,false,&fib);
+  if( fib != &fiber ){
     fib->terminate();
     //abortNotification(&fib->dcn_);
     recvMailFibers_.remove(*fib);
+    recvMailFibers_.insert(fiber);
   }
-  recvMailFibers_.insert(fiber);
 }
 //------------------------------------------------------------------------------
 bool Server::remRecvMailFiber(ServerFiber & fiber)
@@ -277,13 +278,11 @@ void Server::sendUserWatchdog(const utf8::String & user)
 //------------------------------------------------------------------------------
 void Server::sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName)
 {
-  MailQueueWalker * pWalker;
+  MailQueueWalker * pWalker, * pWalker2;
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
-  if( (pWalker = sendMailFibers_.find(MailQueueWalker(*this,host))) == NULL ){
-    AutoPtr<Fiber> walker(pWalker = newObjectV<MailQueueWalker>(*this,host));
-    sendMailFibers_.insert(*pWalker);
-    attachFiber(walker);
-  }
+  pWalker2 = newObjectV<MailQueueWalker>(*this,host);
+  sendMailFibers_.insert(*pWalker2,false,true,&pWalker);
+  if( pWalker == pWalker2 ) attachFiber(pWalker);
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
   pWalker->messages_.insToTail(*newObject<Message::Key>(id));
   bool step0 = true;
@@ -393,9 +392,9 @@ void Server::loadStaticDB()
 //------------------------------------------------------------------------------
 void Server::loadStaticRoutes()
 {
-  Server::Data & d = data(stStandalone);
+  /*Server::Data & d = data(stStandalone);
   const ConfigSection & route = config_->section("route");
-  /*for( intptr_t i = key2Server.valueCount() - 1; i >= 0; i-- ){
+  for( intptr_t i = key2Server.valueCount() - 1; i >= 0; i-- ){
     utf8::String key, value(key2Server.value(i,&key));
     d.registerKey2ServerLink(Key2ServerLink(unScreenString(key),unScreenString(value)));
   }*/

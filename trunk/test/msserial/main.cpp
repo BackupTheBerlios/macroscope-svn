@@ -157,8 +157,10 @@ void SerialPortFiber::main()
         uint32_t evtMask =
 #endif
         control_->device_.waitCommEvent();
-#ifndef NDEBUG
+#if (defined(__WIN32__) || defined(__WIN64__)) && !defined(NDEBUG)
         assert( evtMask & EV_RXCHAR );
+#elif !defined(NDEBUG)
+        assert( evtMask != 0 );
 #endif
         int64_t r = control_->device_.read(b,b.count());
         if( r < 0 ) break;
@@ -224,14 +226,14 @@ bool MSSerialService::active()
 int main(int ac,char * av[])
 {
   int errcode = 0;
-  adicpp::AutoInitializer autoInitializer;
+  adicpp::AutoInitializer autoInitializer(ac,av);
   autoInitializer = autoInitializer;
   try {
     union {
       intptr_t i;
       uintptr_t u;
     };
-    initializeArguments(ac,av);
+    stdErr.fileName(SYSLOG_DIR + "msserial/msserial.conf");
     Config::defaultFileName(SYSCONF_DIR + "msserial.conf");
     Services services(msserial_version.gnu_);
     services.add(newObject<MSSerialService>());

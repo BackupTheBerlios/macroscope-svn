@@ -388,7 +388,7 @@ Service & Service::invoke()
           if( ret == 0 ) break;
           if( status[1] != isc_svc_in_use )
             exceptionHandler(newObject<EServiceStart>(status, __PRETTY_FUNCTION__));
-          ksys::sleep1();
+          ksys::ksleep1();
         }
         break;
       case isc_action_svc_db_stats       :

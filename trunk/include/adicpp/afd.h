@@ -32,7 +32,7 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class AsyncFile : public AsyncDescriptor {
-  friend void initialize();
+  friend void initialize(int,char **);
   friend void cleanup();
   public:
     virtual ~AsyncFile();

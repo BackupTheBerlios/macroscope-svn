@@ -105,8 +105,8 @@ inline Array<utf8::String> & argv()
 extern char pathDelimiter;
 extern char pathDelimiterStr[2];
 //---------------------------------------------------------------------------
-void  initializeArguments(int argc, char ** argv);
-void  initialize();
+void  initializeArguments(int argc,char ** argv);
+void  initialize(int argc,char ** argv);
 void  cleanup();
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -267,8 +267,8 @@ void getDirList(
   bool includeDirs = false,
   bool exMaskAsList = false);
 //---------------------------------------------------------------------------
-void sleep(uint64_t timeout);
-inline void sleep1()
+void ksleep(uint64_t timeout);
+inline void ksleep1()
 {
 #if HAVE_NANOSLEEP
   struct timespec rqtp;

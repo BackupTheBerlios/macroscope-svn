@@ -256,7 +256,7 @@ void LogFile::threadExecute()
   file.fileName(file_).createIfNotExist(true);
   AsyncFile lck;
   lck.fileName(file.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
-  while( !terminated_ ){
+  for(;;){
     bufferSemaphore_.wait();
     bufferSemaphore_.timedWait(bufferDataTTA_);
     AutoPtr<char> buffer;
@@ -268,6 +268,7 @@ void LogFile::threadExecute()
       bufferPos_ = 0;
       bufferSize_ = 0;
     }
+    if( bufferPos == 0 && terminated_ ) break;
     if( bufferPos > 0 ){
       bool exception = false;
       {
@@ -280,7 +281,14 @@ void LogFile::threadExecute()
           file.seek(file.size()).writeBuffer(buffer,bufferPos);
           rotate(file);
         }
+#if HAVE_SYSLOG_H
+        catch( ExceptionSP & e ){
+	  openlog(getNameFromPathName(getExecutableName()).getANSIString(),LOG_PID,LOG_DAEMON);
+	  syslog(LOG_ERR,e->stdError().getANSIString());
+	  closelog();
+#else
         catch( ... ){
+#endif
           exception = true;
         }
       }

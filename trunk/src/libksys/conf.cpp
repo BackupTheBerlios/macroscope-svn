@@ -542,7 +542,7 @@ Config & Config::parse()
       buffer_ = NULL;
       file_.close();
       if( i > 0 )
-        sleep(rnd->random(
+        ksleep(rnd->random(
           maxTimeBetweenTryOpen_ - minTimeBetweenTryOpen_ + 1) + minTimeBetweenTryOpen_
         );
     }

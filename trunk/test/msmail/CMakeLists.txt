@@ -23,7 +23,7 @@ ADD_DEPENDENCIES (msmail version msmail_version)
 
 ADD_CUSTOM_TARGET(msmail_version
   COMMAND ${VERSION_EXECUTABLE} version.in version.c
-  DEPENDS version.in version.c
+  DEPENDS version.in
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
     

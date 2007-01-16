@@ -31,13 +31,12 @@
 namespace ksock {
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-typedef HWND    sig_t;
-typedef SOCKET  sock_t;
+typedef HWND sig_t;
 inline int32_t errNo()
 {
   return ksock::api.WSAGetLastError() + ksys::errorOffset;
 }
-const int EINPROGRESS     = WSAEWOULDBLOCK + ksys::errorOffset;
+const int EINPROGRESS = WSAEWOULDBLOCK + ksys::errorOffset;
 //const EMSGSIZE = WSAEMSGSIZE + ksys::errorOffset;
 const int ENOTCONN = WSAENOTCONN + ksys::errorOffset;
 const int ENOTSOCK = WSAENOTSOCK + ksys::errorOffset;
@@ -46,8 +45,6 @@ const int SHUT_RDWR = SD_BOTH;
 const int ECONNABORTED = WSAECONNABORTED + ksys::errorOffset;
 #else
 typedef int sig_t;
-typedef int sock_t;
-const int INVALID_SOCKET = -1;
 const int EWSANOTINITIALISED = ENOTSOCK;
 inline int32_t errNo()
 {

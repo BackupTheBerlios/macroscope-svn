@@ -760,7 +760,9 @@ int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et,
   tce->et_.tm_wday = 0;
   tce->et_.tm_yday = 0;
   TrafCacheEntry * pEntry = trafCache_.find(tce);
-  if( pEntry == NULL ){
+  trafCache_.insert(tce,false,false,&pEntry);
+  if( pEntry == tce ){
+    tce.ptr(NULL);
     statement_->text(utf8::String("SELECT ") +
       (tt == ttAll || tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
       (tt == ttAll ? "," : "") +
@@ -776,10 +778,10 @@ int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et,
     switch( tt ){
       case ttSMTP :
       case ttWWW  :
-        tce->traf_ = statement_->valueAsMutant("SUM");
+        pEntry->traf_ = statement_->valueAsMutant("SUM");
         break;
       case ttAll  :
-        tce->traf_ =
+        pEntry->traf_ =
           (int64_t) statement_->valueAsMutant("SUM") +
           (int64_t) statement_->valueAsMutant("SUM_1");
         break;
@@ -788,8 +790,6 @@ int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et,
     }
     if( trafCache_.count() >= cacheSize_ )
       trafCache_.drop(trafCacheLRU_.remove(*trafCacheLRU_.last()));
-    trafCache_.insert(tce);
-    pEntry = tce.ptr(NULL);
   }
   else {
     trafCacheLRU_.remove(*pEntry);

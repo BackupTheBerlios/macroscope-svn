@@ -1262,16 +1262,31 @@ void AsyncAcquireSlave::threadExecute()
       Semaphore::wait();
     }
     else {
-      assert( request->type_ == etAcquireMutex );
-      request->errno_ = 0;
-      try {
-        request->mutex_->acquire();
+      if( request->type_ == etAcquireMutex ){
+        request->errno_ = 0;
+        try {
+          request->mutex_->acquire();
+        }
+        catch( ExceptionSP & e ){
+          request->errno_ = e->code();
+        }
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
-      catch( ExceptionSP & e ){
-        request->errno_ = e->code();
+      else if( request->type_ == etAcquireSemaphore ){
+        request->errno_ = 0;
+        try {
+          request->semaphore_->timedWait(request->timeout_);
+        }
+        catch( ExceptionSP & e ){
+          request->errno_ = e->code();
+        }
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
       }
-      assert( request->fiber_ != NULL );
-      request->fiber_->thread()->postEvent(request);
+      else {
+        assert( 0 );
+      }
     }
   }
 #endif
@@ -1470,7 +1485,7 @@ void AsyncStackBackTraceSlave::threadExecute()
           }
           break;
         case etStackBackTraceZero :
-          while( !Thread::isSuspended(request->tid_) ) sleep1();
+          while( !Thread::isSuspended(request->tid_) ) ksleep1();
           threadHandle = OpenThread(THREAD_ALL_ACCESS,FALSE,(DWORD) request->tid_);
           if( threadHandle != NULL ){
 //          result = SuspendThread((HANDLE) request->threadHandle_);

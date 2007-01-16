@@ -74,10 +74,12 @@ class FiberSemaphore;
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 typedef HANDLE file_t;
+typedef SOCKET sock_t;
 #else
-typedef int SOCKET;
+typedef int sock_t;
 typedef int file_t;
 #define INVALID_HANDLE_VALUE -1
+#define INVALID_SOCKET -1
 #endif
 //---------------------------------------------------------------------------
 class AsyncEvent {
@@ -120,11 +122,7 @@ class AsyncEvent {
           void * buffer_;
           const void * cbuffer_;
           file_t fileDescriptor_;
-#if defined(__WIN32__) || defined(__WIN64__)
-          SOCKET socket_;
-#else
-          int socket_;
-#endif
+          sock_t socket_;
           InterlockedMutex * mutex0_;
           FiberInterlockedMutex * mutex_;
           FiberSemaphore * semaphore_;
@@ -198,11 +196,11 @@ class AsyncDescriptorKey {
     ~AsyncDescriptorKey();
     AsyncDescriptorKey();
     union {
-      SOCKET socket_;
+      sock_t socket_;
       file_t descriptor_;
     };
 #if defined(__WIN32__) || defined(__WIN64__)
-    AsyncDescriptorKey(SOCKET socket);
+    AsyncDescriptorKey(sock_t socket);
 #endif
     AsyncDescriptorKey(file_t descriptor);
     file_t descriptor() const;
@@ -221,7 +219,7 @@ inline AsyncDescriptorKey::AsyncDescriptorKey() : descriptor_(INVALID_HANDLE_VAL
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-inline AsyncDescriptorKey::AsyncDescriptorKey(SOCKET socket) : socket_(socket)
+inline AsyncDescriptorKey::AsyncDescriptorKey(sock_t socket) : socket_(socket)
 {
 }
 #endif

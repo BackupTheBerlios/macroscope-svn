@@ -32,7 +32,7 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class LZO1X {
-  friend void initialize();
+  friend void initialize(int,char **);
   public:
     ~LZO1X();
     LZO1X();

@@ -84,10 +84,10 @@ class Semaphore
 
 #if !USE_SV_SEMAPHORES
     Semaphore & post();
-    bool timedWait(uint64_t timeout);
     Semaphore & wait();
     bool tryWait();
 #endif
+    bool timedWait(uint64_t timeout);
   protected:
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
@@ -128,6 +128,7 @@ class SharedSemaphore
     bool                tryWait();
     const bool &        creator() const;
 #endif
+    bool timedWait(uint64_t timeout);
   protected:
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
@@ -140,8 +141,8 @@ class SharedSemaphore
 #endif
   private:
     SharedSemaphore(const SharedSemaphore &)
-    #if USE_SV_SEMAPHORES
-    #elif HAVE_SEMAPHORE_H
+#if USE_SV_SEMAPHORES
+#elif HAVE_SEMAPHORE_H
 
       : name_(utf8::String().getANSIString())
 #endif
