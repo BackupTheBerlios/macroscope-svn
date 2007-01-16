@@ -67,6 +67,7 @@ void * Thread::threadFunc(void * thread)
 #if defined(__WIN32__) || defined(__WIN64__)
   reinterpret_cast<Thread *>(thread)->exitCode_ = STILL_ACTIVE;
 #endif
+  reinterpret_cast<Thread *>(thread)->finished_ = false;
   reinterpret_cast<Thread *>(thread)->started_ = true;
   try {
     currentThread() = reinterpret_cast<Thread *>(thread);
@@ -126,7 +127,7 @@ Thread & Thread::resume()
   int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( handle_ == NULL ){
-    started_ = terminated_ = finished_ = false;
+    started_ = terminated_ = false;
     handle_ = CreateThread(NULL,stackSize_,threadFunc,this,CREATE_SUSPENDED,&id_);
     if( handle_ == NULL ){
       err = GetLastError() + errorOffset;
@@ -135,7 +136,7 @@ Thread & Thread::resume()
 #elif HAVE_PTHREAD_H
   pthread_attr_t attr = NULL;
   if( handle_ == NULL ){
-    started_ = terminated_ = finished_ = false;
+    started_ = terminated_ = false;
 //    if( (errno = pthread_mutex_init(&mutex_,NULL)) != 0 ) goto l1;
     if( (errno = pthread_attr_init(&attr)) != 0 ) goto l1;
     if( (errno = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE)) != 0 ) goto l1;

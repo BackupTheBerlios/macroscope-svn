@@ -29,7 +29,7 @@
 namespace mycpp {
 //---------------------------------------------------------------------------
 extern const MYSQLErrorDesc mysqlErrors[] = {
-  #include <adicpp/myapi/mysqld_ername.h>
+#include <adicpp/myapi/mysqld_ername.h>
 };
 //---------------------------------------------------------------------------
 utf8::String strErrorHandler(int32_t err)
@@ -38,7 +38,7 @@ utf8::String strErrorHandler(int32_t err)
   bs.code_ = err;
   intptr_t  c = sizeof(mysqlErrors) / sizeof(mysqlErrors[0]);
   uintptr_t i = ksys::bSearch<MYSQLErrorDesc>(mysqlErrors, bs, c);
-  if( c == 0 ) return mysqlErrors[i].error_;
+  if( c == 0 ) return mysqlErrors[i].error_ + 3;
   return utf8::String();
 }
 //---------------------------------------------------------------------------
@@ -51,8 +51,8 @@ EClientServer::~EClientServer()
 EClientServer::EClientServer(int32_t code, const utf8::String what)
   : ksys::Exception(code, what)
 {
-  utf8::String  se  (strErrorHandler(code));
-  if( se.strlen() > 0 ) whats_[0] += ", " + se;
+//  utf8::String se(strErrorHandler(code));
+//  if( se.strlen() > 0 ) whats_[0] += ", " + se;
 }
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const

@@ -84,8 +84,11 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-  terminate();
-  bufferSemaphore_.post().post();
+//  while( active() ){
+    terminate();
+    bufferSemaphore_.post().post().post().post();
+//    ksleep1();
+//  }
   wait();
   return *this;
 }
