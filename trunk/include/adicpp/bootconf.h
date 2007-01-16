@@ -83,7 +83,7 @@
 #endif
 
 #if HAVE_MACHINE_ATOMIC_H
-#include <machine/atomic.h>
+//#include <machine/atomic.h>
 #endif
 
 #if HAVE_MEMORY_H
