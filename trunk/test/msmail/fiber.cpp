@@ -1018,7 +1018,7 @@ void NodeClient::main()
   utf8::String server, host, enabledPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled");
   Server::Data & data = server_.data(dataType_);
   try {
-    bool tryConnect, connected, exchanged, doWork;
+    bool tryConnect = false, connected, exchanged, doWork;
     do {
       server_.config_->parse();
       stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));

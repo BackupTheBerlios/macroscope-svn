@@ -223,8 +223,26 @@ void InterlockedMutex::release()
 //---------------------------------------------------------------------------
 InterlockedMutex::InterlockedMutex() : mutex_(NULL)
 {
-  int r = pthread_mutex_init(&mutex_,NULL);
-  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  int r;
+  pthread_mutexattr_t attr;
+  if( pthread_mutexattr_init(&attr) != 0 ){
+    r = errno;
+    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  }
+#if HAVE_SYSCONF
+  if( sysconf(_POSIX_THREAD_PRIO_INHERIT) > 0 ){
+    if( pthread_mutexattr_setprotocol(&attr,PTHREAD_PRIO_INHERIT) != 0 ){
+      r = errno;
+      pthread_mutexattr_destroy(&attr);
+      newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+#endif
+  r = pthread_mutex_init(&mutex_,&attr);
+  if( r != 0 ){
+    pthread_mutexattr_destroy(&attr);
+    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  }
 }
 //---------------------------------------------------------------------------
 void InterlockedMutex::acquire()

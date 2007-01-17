@@ -219,7 +219,10 @@ Thread & Thread::wait()
 Thread & Thread::priority(uintptr_t pri)
 {
   if( started_ && !finished_ ){
-#if HAVE_PTHREAD_SETSCHEDPARAM
+#if HAVE_PTHREAD_SETPRIO
+/*#if HAVE_SYSCONF
+    if( sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING) <= 0 ) return *this;
+#endif
     int policy;
     struct sched_param param;
     if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
@@ -227,7 +230,11 @@ l1:   int32_t err = errno;
       newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     param.sched_priority = pri;
-    if( (errno = pthread_setschedparam(handle_,policy,&param)) != 0 ) goto l1;
+    if( (errno = pthread_setschedparam(handle_,policy,&param)) != 0 ) goto l1;*/
+    if( pthread_setprio(handle_,int(pri)) != 0 ){
+      int32_t err = errno;
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
 #elif defined(__WIN32__) || defined(__WIN64__)
     if( SetThreadPriority(handle_,(int) pri) == 0 ){
       int32_t err = GetLastError() + errorOffset;
@@ -242,14 +249,23 @@ uintptr_t Thread::priority() const
 {
   uintptr_t pri = 0;
   if( started_ && !finished_ ){
-#if HAVE_PTHREAD_GETSCHEDPARAM
+#if HAVE_PTHREAD_GETPRIO
+/*#if HAVE_SYSCONF
+    if( sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING) <= 0 ) return pri;
+#endif
     int policy;
     struct sched_param param;
     if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
       int32_t err = errno;
       newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
-    pri = param.sched_priority;
+    pri = param.sched_priority;*/
+    int a = pthread_getprio(handle_);
+    if( a == -1 ){
+      int32_t err = errno;
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    pri = a;
 #elif defined(__WIN32__) || defined(__WIN64__)
     pri = GetThreadPriority(handle_);
     if( pri == THREAD_PRIORITY_ERROR_RETURN ){

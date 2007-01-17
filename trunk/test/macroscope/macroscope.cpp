@@ -64,19 +64,15 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
     int64_t a = pos * 100 / size, b = lineNo * 1000000 / ct;
 #ifdef HAVE__ISATTY
 #ifdef HAVE__FILENO
-    if( _isatty(_fileno(stderr)) )
-      fprintf(stderr, "\r");
+    if( _isatty(_fileno(stderr)) ) fprintf(stderr, "\r");
 #else
-    if( _isatty(fileno(stderr)) )
-      fprintf(stderr, "\r");
+    if( _isatty(fileno(stderr)) )  fprintf(stderr, "\r");
 #endif
 #elif HAVE_ISATTY
 #ifdef HAVE__FILENO
-    if( isatty(_fileno(stderr)) )
-      fprintf(stderr, "\r");
+    if( isatty(_fileno(stderr)) ) fprintf(stderr, "\r");
 #else
-    if( isatty(fileno(stderr)) )
-      fprintf(stderr, "\r");
+    if( isatty(fileno(stderr)) ) fprintf(stderr, "\r");
 #endif
 #endif
     fprintf(stderr, "%3"PRId64".%04"PRId64"%%, %7"PRId64".%04"PRId64" lps, ", a, pos * 1000000 / size - a * 10000, b, lineNo * INT64_C(10000000000) / ct - b * 10000);
@@ -84,18 +80,18 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
 #ifdef HAVE__ISATTY
 #ifdef HAVE__FILENO
     if( !_isatty(_fileno(stderr)) )
-        #else
-      if( !_isatty(fileno(stderr)) )
-            #endif
-            #elif HAVE_ISATTY
-            #ifdef HAVE__FILENO
-        if( !isatty(_fileno(stderr)) )
-                #else
-          if( !isatty(fileno(stderr)) )
-                    #endif
-                    #endif
-            fprintf(stderr, "\n");
-    //    printf("%-20s\n",utf8::elapsedTime2Str(size * ct / pos - ct).c_str());
+#else
+    if( !_isatty(fileno(stderr)) )
+#endif
+#elif HAVE_ISATTY
+#ifdef HAVE__FILENO
+    if( !isatty(_fileno(stderr)) )
+#else
+    if( !isatty(fileno(stderr)) )
+#endif
+#endif
+    fprintf(stderr, "\n");
+  //    printf("%-20s\n",utf8::elapsedTime2Str(size * ct / pos - ct).c_str());
   }
 }
 //------------------------------------------------------------------------------

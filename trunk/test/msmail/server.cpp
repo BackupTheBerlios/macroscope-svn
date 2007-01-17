@@ -207,26 +207,20 @@ void Server::startNodesExchange()
 void Server::addRecvMailFiber(ServerFiber & fiber)
 {
   AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
-  ServerFiber * fib = recvMailFibers_.find(fiber);
+  ServerFiber * fib;
   recvMailFibers_.insert(fiber,false,false,&fib);
   if( fib != &fiber ){
     fib->terminate();
     //abortNotification(&fib->dcn_);
-    recvMailFibers_.remove(*fib);
+    recvMailFibers_.remove(*fib,true,false);
     recvMailFibers_.insert(fiber);
   }
 }
 //------------------------------------------------------------------------------
 bool Server::remRecvMailFiber(ServerFiber & fiber)
 {
-  bool r = false;
   AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
-  ServerFiber * fib = recvMailFibers_.find(fiber);
-  if( fib == &fiber ){
-    recvMailFibers_.remove(fiber);
-    r = true;
-  }
-  return r;
+  return &recvMailFibers_.remove(fiber,false,false) == &fiber;
 }
 //------------------------------------------------------------------------------
 ServerFiber * Server::findRecvMailFiberNL(const ServerFiber & fiber)

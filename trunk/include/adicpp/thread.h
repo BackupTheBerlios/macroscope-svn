@@ -277,7 +277,7 @@ inline uintptr_t gettid()
   return (uintptr_t) pthread_self();
 #elif defined(__linux__) && defined(__i386__)
   pid_t ret;
-  __asm__ ( "int $0x80" : "=a" (ret) : "0" (224) );
+  __asm__ __volatile__ ( "int $0x80" : "=a" (ret) : "0" (224) );
   if( ret < 0 ) ret = -1;
   return ret;
 #else

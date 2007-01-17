@@ -321,14 +321,16 @@ template <
 > inline
 T & EmbeddedHash<T,N,O,H,E>::remove() const
 {
-  assert( count_ > 0 );
-  EmbeddedHashNode<T> ** p1 = hash_, ** p2 = p1 + size_, * node;
-  while( p1 < p2 && *p1 == NULL ) p1++;
-  node = *p1;
-  *p1 = node->next();
-  node->next() = NULL;
-  optimize(optDec);
-  return O(*node,NULL);
+  if( count_ > 0 ){
+    EmbeddedHashNode<T> ** p1 = hash_, ** p2 = p1 + size_, * node;
+    while( p1 < p2 && *p1 == NULL ) p1++;
+    node = *p1;
+    *p1 = node->next();
+    node->next() = NULL;
+    optimize(optDec);
+    return O(*node,NULL);
+  }
+  return *(T *) NULL;
 }
 //---------------------------------------------------------------------------
 template <
