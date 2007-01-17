@@ -1,0 +1,6 @@
+DROP USER 'korvin'@'localhost'\g
+CREATE USER 'korvin'@'localhost'\g
+SET PASSWORD FOR 'korvin'@'localhost' = PASSWORD('ntktgfnjh1')\g
+GRANT SELECT, INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, INDEX ON *.* TO 'korvin'@'localhost'\g
+FLUSH PRIVILEGES\g
+SHOW GRANTS FOR 'korvin'@'localhost'\g

@@ -526,8 +526,8 @@ void Logger::main()
 
   database_->create();
 
-  ksys::Vector< utf8::String> metadata;
-  if( dynamic_cast< FirebirdDatabase *>(database_.ptr()) != NULL )
+  ksys::Vector<utf8::String> metadata;
+  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
     metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
     metadata <<
       "CREATE TABLE INET_USERS_TRAF ("
@@ -561,14 +561,15 @@ void Logger::main()
       " st_bpft_d_port        SMALLINT NOT NULL,"
       " st_bpft_bytes         SMALLINT NOT NULL,"
       " st_bpft_data_bytes    SMALLINT NOT NULL" ")" <<
-      "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
-      "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL)"
+      "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;
-  if( dynamic_cast< FirebirdDatabase *>(database_.ptr()) != NULL ){
+  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+    metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL)";
   }
-  else if( dynamic_cast< MYSQLDatabase *>(database_.ptr()) != NULL ){
+  else if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+    metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL)";
   }
 
   if( (bool) config_.section("macroscope").value("DROP_DATABASE", false) ){

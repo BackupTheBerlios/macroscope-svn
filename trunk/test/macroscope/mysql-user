@@ -1,0 +1,3 @@
+#!/bin/sh
+
+mysql --user=root --password=ntktgfnjh1 --database=mysql < mysql-script
