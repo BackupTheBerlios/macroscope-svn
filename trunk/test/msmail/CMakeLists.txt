@@ -8,7 +8,67 @@ ADD_EXECUTABLE (msmail
 )
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
-  SET_SOURCE_FILES_PROPERTIES (server.cpp info.cpp PROPERTIES COMPILE_FLAGS "-O -finline-functions")
+# internal compiler error: in remove_insn, at emit-rtl.c:3746
+  SET (CMAKE_COMPILER_BUGFIX_FLAGS_LIST0
+    -O
+    -fforce-mem
+    -foptimize-sibling-calls
+    -fstrength-reduce
+    -fcse-follow-jumps
+    -fcse-skip-blocks
+    -frerun-cse-after-loop
+    -frerun-loop-opt
+    -fgcse
+    -fgcse-lm
+    -fgcse-sm
+    -fgcse-las
+    -fdelete-null-pointer-checks
+    -fexpensive-optimizations
+    -fregmove
+#    -fschedule-insns
+    -fschedule-insns2
+    -fsched-interblock
+    -fsched-spec
+    -fcaller-saves
+    -fpeephole2
+    -freorder-blocks
+    -freorder-functions
+    -fstrict-aliasing
+#    -funit-at-a-time
+    -falign-functions
+    -falign-jumps
+    -falign-loops
+    -falign-labels
+    -fcrossjumping
+    -finline-functions
+    -fweb
+    -frename-registers
+    -funswitch-loops
+  )
+  SET (CMAKE_COMPILER_BUGFIX_FLAGS_LIST
+    -fno-schedule-insns
+    -fno-unit-at-a-time
+  )
+  LIST (LENGTH CMAKE_COMPILER_BUGFIX_FLAGS_LIST CMAKE_COMPILER_BUGFIX_FLAGS_LIST_LENGTH)
+  WHILE (CMAKE_COMPILER_BUGFIX_FLAGS_LIST_LENGTH GREATER 0)
+    LIST(GET CMAKE_COMPILER_BUGFIX_FLAGS_LIST 0 CMAKE_COMPILER_BUGFIX_FLAG)
+    SET (CMAKE_COMPILER_BUGFIX_FLAGS "${CMAKE_COMPILER_BUGFIX_FLAGS} ${CMAKE_COMPILER_BUGFIX_FLAG}")
+    LIST(REMOVE_AT CMAKE_COMPILER_BUGFIX_FLAGS_LIST 0)
+    LIST (LENGTH CMAKE_COMPILER_BUGFIX_FLAGS_LIST CMAKE_COMPILER_BUGFIX_FLAGS_LIST_LENGTH)
+  ENDWHILE (CMAKE_COMPILER_BUGFIX_FLAGS_LIST_LENGTH GREATER 0)
+
+  EXECUTE_PROCESS (
+    COMMAND ${CMAKE_CXX_COMPILER} --version
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    RESULT_VARIABLE CMAKE_CXX_COMPILER_RESULT
+    OUTPUT_VARIABLE CMAKE_CXX_COMPILER_OUTPUT
+    ERROR_VARIABLE CMAKE_CXX_COMPILER_ERROR
+  )
+  IF (CMAKE_CXX_COMPILER_RESULT EQUAL 0)
+    IF (CMAKE_CXX_COMPILER_OUTPUT MATCHES "3.4.6")
+      SET_SOURCE_FILES_PROPERTIES (server.cpp info.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_COMPILER_BUGFIX_FLAGS}")
+    ENDIF (CMAKE_CXX_COMPILER_OUTPUT MATCHES "3.4.6")
+  ENDIF (CMAKE_CXX_COMPILER_RESULT EQUAL 0)
 ENDIF (CMAKE_COMPILER_IS_GNUCXX)
 
 ADD_DEFINITIONS(-DDISABLE_FIREBIRD_INTERFACE -DDISABLE_MYSQL_INTERFACE)
