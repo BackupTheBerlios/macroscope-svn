@@ -199,7 +199,6 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   database_->start();
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
 
   int64_t lineNo = 1;
   uintptr_t size;

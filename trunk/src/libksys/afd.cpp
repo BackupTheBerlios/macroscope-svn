@@ -232,10 +232,10 @@ AsyncFile & AsyncFile::open()
         newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       descriptor_ = fiber->event_.fileDescriptor_;
     }
-#if defined(__WIN32__) || defined(__WIN64__)
     else {
       descriptor_ = openHelper(true);
     }
+#if defined(__WIN32__) || defined(__WIN64__)
     if( fileName_.strncasecmp("COM",3) == 0 ){
       utf8::String::Iterator i(fileName_);
       i += 3;
@@ -268,10 +268,6 @@ AsyncFile & AsyncFile::open()
         newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
       alignment_ = bytesPerSector;
-    }
-#else
-    else {
-      descriptor_ = openHelper(false);
     }
 #endif
   }
