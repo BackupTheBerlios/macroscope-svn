@@ -213,7 +213,7 @@ void Server::addRecvMailFiber(ServerFiber & fiber)
     fib->terminate();
     //abortNotification(&fib->dcn_);
     recvMailFibers_.remove(*fib,true,false);
-    recvMailFibers_.insert(fiber);
+    recvMailFibers_.insert(fiber,true,false);
   }
 }
 //------------------------------------------------------------------------------
