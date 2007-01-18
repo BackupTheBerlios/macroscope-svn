@@ -34,7 +34,7 @@ Database * Database::newDatabase(ksys::Config * config)
   if( config == NULL ) config = &lconfig;
   config->parse().override();
   const ksys::ConfigSection & section = config->section("libadicpp").section("default_connection");
-  utf8::String stype(section.value("server_type", "FIREBIRD"));
+  utf8::String stype(section.value("server_type","MYSQL"));
   if( stype.strcasecmp("FIREBIRD") == 0 ){
     FirebirdDatabase * p = newObject<FirebirdDatabase>();
     ksys::AutoPtr< FirebirdDatabase> fb(p);

@@ -190,7 +190,7 @@ Semaphore & Semaphore::wait()
 #if HAVE_SEMAPHORE_H
   if( sem_wait(&handle_) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   DWORD r = WaitForSingleObject(handle_,INFINITE);
@@ -205,11 +205,29 @@ Semaphore & Semaphore::wait()
 bool Semaphore::timedWait(uint64_t timeout)
 {
 #if HAVE_SEMAPHORE_H
+#if HAVE_SEM_TIMEDWAIT
+  struct timespec t;
+  t.tv_sec = timeout / 1000000u;
+  t.tv_nsec = long(timeout % 1000000u);
+  int r = sem_timedwait(&handle_,&t);
+  if( r != 0 && errno != ETIMEDOUT ){
+    r = errno;
+    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  }
+  return r == 0;
+#else
   bool r;
-  while( !(r = tryWait()) && timeout-- > 0 ) ksleep(1);
+  for(;;){
+    r = tryWait();
+    if( r ) break;
+    if( timeout == 0 ) break;
+    timeout--;
+    ksleep(1);
+  }
 //  sem_timedwait();
 //  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return r;
+#endif
 #elif defined(__WIN32__) || defined(__WIN64__)
   uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);
   DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));

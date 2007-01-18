@@ -29,11 +29,14 @@
 
 #include <adicpp/ksys.h>
 
-#if HAVE_MYSQL_H
+#if HAVE_MYSQL_MYSQL_H
+#include <mysql/mysql.h>
+#include <mysql/mysqld_error.h>
+#include <mysql/my_pthread.h>
+#elif HAVE_MYSQL_H
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <my_pthread.h>
-//#include <my_sys.h>
 #else
 #include <adicpp/myapi/mysql.h>
 #include <adicpp/myapi/mysqld_error.h>

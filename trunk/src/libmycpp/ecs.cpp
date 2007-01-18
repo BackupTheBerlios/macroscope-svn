@@ -29,15 +29,21 @@
 namespace mycpp {
 //---------------------------------------------------------------------------
 extern const MYSQLErrorDesc mysqlErrors[] = {
+#if HAVE_MYSQL_MYSQL_H
+#include <mysql/mysqld_ername.h>
+#elif HAVE_MYSQL_H
+#include <mysqld_ername.h>
+#else
 #include <adicpp/myapi/mysqld_ername.h>
+#endif
 };
 //---------------------------------------------------------------------------
 utf8::String strErrorHandler(int32_t err)
 {
-  MYSQLErrorDesc  bs;
+  MYSQLErrorDesc bs;
   bs.code_ = err;
-  intptr_t  c = sizeof(mysqlErrors) / sizeof(mysqlErrors[0]);
-  uintptr_t i = ksys::bSearch<MYSQLErrorDesc>(mysqlErrors, bs, c);
+  intptr_t c = sizeof(mysqlErrors) / sizeof(mysqlErrors[0]);
+  uintptr_t i = ksys::bSearch<MYSQLErrorDesc>(mysqlErrors,bs,c);
   if( c == 0 ) return mysqlErrors[i].error_ + 3;
   return utf8::String();
 }
@@ -48,11 +54,10 @@ EClientServer::~EClientServer()
 {
 }
 //---------------------------------------------------------------------------
-EClientServer::EClientServer(int32_t code, const utf8::String what)
-  : ksys::Exception(code, what)
+EClientServer::EClientServer(int32_t code,const utf8::String what)
+  : ksys::Exception(code,what)
 {
-//  utf8::String se(strErrorHandler(code));
-//  if( se.strlen() > 0 ) whats_[0] += ", " + se;
+  if( whats_[0].strlen() == 0 ) whats_[0] += strErrorHandler(code);
 }
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const

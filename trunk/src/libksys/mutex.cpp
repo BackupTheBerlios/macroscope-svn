@@ -224,7 +224,7 @@ void InterlockedMutex::release()
 InterlockedMutex::InterlockedMutex() : mutex_(NULL)
 {
   int r;
-  pthread_mutexattr_t attr;
+  /*pthread_mutexattr_t attr;
   if( pthread_mutexattr_init(&attr) != 0 ){
     r = errno;
     newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -237,10 +237,10 @@ InterlockedMutex::InterlockedMutex() : mutex_(NULL)
       newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
     }
   }
-#endif
-  r = pthread_mutex_init(&mutex_,&attr);
+#endif*/
+  r = pthread_mutex_init(&mutex_,NULL);
   if( r != 0 ){
-    pthread_mutexattr_destroy(&attr);
+    //pthread_mutexattr_destroy(&attr);
     newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
 }

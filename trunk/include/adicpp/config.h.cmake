@@ -7,6 +7,7 @@
 #cmakedefine HAVE_ERROR_H 1
 #cmakedefine HAVE_IBASE_H 1
 #cmakedefine HAVE_MYSQL_H 1
+#cmakedefine HAVE_MYSQL_MYSQL_H 1
 #cmakedefine HAVE_LZO_LZO1X_H 1
 #cmakedefine HAVE_LZO1X_H 1
 #cmakedefine HAVE_LZO_LZO_ASM_H 1
@@ -187,6 +188,7 @@
 #cmakedefine HAVE_SEM_CLOSE 1
 #cmakedefine HAVE_SEM_OPEN 1
 #cmakedefine HAVE_SEM_UNLINK 1
+#cmakedefine HAVE_SEM_TIMEDWAIT 1
 #cmakedefine HAVE_UNAME 1
 #cmakedefine HAVE_UMASK 1
 #cmakedefine HAVE_READDIR_R 1

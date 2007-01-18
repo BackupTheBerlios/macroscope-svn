@@ -311,7 +311,7 @@ inline int64_t AsyncFile::read(void * buf,uint64_t size)
 {
   uint64_t pos = seekable_ ? tell() : 0;
   int64_t r = read(pos,buf,size);
-  if( r > 0 ) seek(pos + r);
+  if( r > 0 && seekable_ ) seek(pos + r);
   return r;
 }
 //---------------------------------------------------------------------------
@@ -319,7 +319,7 @@ inline int64_t AsyncFile::write(const void * buf,uint64_t size)
 {
   uint64_t pos = seekable_ ? tell() : 0;
   int64_t w = write(pos,buf,size);
-  if( w > 0 ) seek(pos + w);
+  if( w > 0 && seekable_ ) seek(pos + w);
   return w;
 }
 //---------------------------------------------------------------------------

@@ -156,7 +156,7 @@ DSQLStatement & DSQLStatement::prepare()
 {
   allocate();
   if( sqlTextChanged_ || !prepared_ ){
-    utf8::String  sql (compileSQLParameters());
+    utf8::String sql(compileSQLParameters());
     if( api.mysql_stmt_prepare(handle_, sql.c_str(), (unsigned long) sql.size()) != 0 ){
       if( api.mysql_errno(database_->handle_) != ER_UNSUPPORTED_PS )
         database_->exceptionHandler(newObject<EDSQLStPrepare>(
@@ -182,9 +182,11 @@ DSQLStatement & DSQLStatement::execute()
   prepare();
   if( params_.bind_.count() > 0 ){
     params_.bind();
-    if( api.mysql_stmt_bind_param(handle_, params_.bind_.bind()) != 0 ){
+    if( api.mysql_stmt_bind_param(handle_,params_.bind_.bind()) != 0 ){
       database_->exceptionHandler(newObject<EDSQLStBindParam>(
-          api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+        api.mysql_errno(database_->handle_),
+	api.mysql_error(database_->handle_)
+      ));
     }
   }
   if( params_.bind_.count() == 0 && values_.bind_.count() == 0 ){

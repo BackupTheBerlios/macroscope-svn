@@ -908,7 +908,7 @@ bool createDirectory(const utf8::String & name)
   umask(um);
   if( mkdir(anyPathName2HostPathName(name).getANSIString(),um | S_IRUSR | S_IWUSR | S_IXUSR) != 0 )
     err = errno;
-  if( err == ENOENT ){
+  if( err == ENOTDIR ){
 #endif
     if( createDirectory(getPathFromPathName(name)) ) return createDirectory(name);
     err = oserror();
@@ -957,7 +957,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
     if( fiber->event_.errno_ - errorOffset == ERROR_PATH_NOT_FOUND ||
         fiber->event_.errno_ - errorOffset == ERROR_FILE_NOT_FOUND ) return false;
 #else
-    if( fiber->event_.errno_ == ENOENT ) return false;
+    if( fiber->event_.errno_ == ENOTDIR ) return false;
 #endif
     if( fiber->event_.errno_ != 0 && !noThrow )
       newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
@@ -1004,7 +1004,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
 #if defined(__WIN32__) || defined(__WIN64__)
   if( err == ERROR_PATH_NOT_FOUND || err == ERROR_FILE_NOT_FOUND ) return false;
 #else
-  if( err == ENOENT ) return false;
+  if( err == ENOTDIR ) return false;
 #endif
   oserror(err);
   if( err != 0 && !noThrow )
@@ -1263,7 +1263,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
 #else
     if( ::rename(anyPathName2HostPathName(oldPathName).getANSIString(),anyPathName2HostPathName(newPathName).getANSIString()) != 0 ){
       int32_t err = errno;
-      if( err == ENOENT && createPathIfNotExist ){
+      if( err == ENOTDIR && createPathIfNotExist ){
         createDirectory(getPathFromPathName(newPathName));
         return rename(oldPathName,newPathName,false);
       }
@@ -1437,7 +1437,7 @@ void getDirList(
     DIR * dir = opendir(anyPathName2HostPathName(path).getANSIString());
     if( dir == NULL ){
       err = errno;
-      if( err == ENOENT ) return;
+      if( err == ENOTDIR ) return;
       newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
     }
     try {

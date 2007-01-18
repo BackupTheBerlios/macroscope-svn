@@ -151,7 +151,7 @@ int64_t Logger::fetchLogFileLastOffset(const utf8::String & logFileName)
 {
   statement_->text("SELECT ST_LAST_OFFSET FROM INET_LOG_FILE_STAT WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME");
   statement_->prepare();
-  statement_->paramAsString("ST_LOG_FILE_NAME", logFileName);
+  statement_->paramAsString("ST_LOG_FILE_NAME",logFileName);
   statement_->execute();
   int64_t offset  = 0;
   if( statement_->fetch() ){
@@ -199,6 +199,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   database_->start();
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
 
   int64_t lineNo = 1;
   uintptr_t size;
@@ -632,7 +633,6 @@ void Logger::main()
 #else
   utf8::String  prefix  ("macroscope.unix.");
 #endif
-
   if( (bool) config_.valueByPath("macroscope.process_squid_log", true) ){
     parseSquidLogFile(ksys::unScreenString(
       config_.valueByPath(prefix + "squid.log_file_name")),

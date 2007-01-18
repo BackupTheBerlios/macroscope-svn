@@ -102,7 +102,7 @@ file_t AsyncFile::openHelper(bool async)
   file_t handle = INVALID_HANDLE_VALUE;
   int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
-  SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
+  SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);3
   if( isWin9x() ){
     utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
     if( !readOnly_ )
@@ -180,18 +180,22 @@ file_t AsyncFile::openHelper(bool async)
   if( !readOnly_ )
     handle = ::open(
       ansiFileName,
-      O_RDWR | O_CREAT | (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
+      O_RDWR |
+      (createIfNotExist_ ? O_CREAT : 0) |
+      (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
       um | S_IRUSR | S_IWUSR
     );
   else if( handle < 0 )
     handle = ::open(
       ansiFileName,
-      O_RDONLY | O_CREAT | (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
+      O_RDONLY |
+      (createIfNotExist_ ? O_CREAT : 0) |
+      (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
       um | S_IRUSR | S_IWUSR
     );
   if( handle <= 0 ){
     err = errno;
-    if( err == ENOENT && createPath_ ){
+    if( err == ENOTDIR && createPath_ ){
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }
@@ -228,10 +232,10 @@ AsyncFile & AsyncFile::open()
         newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       descriptor_ = fiber->event_.fileDescriptor_;
     }
+#if defined(__WIN32__) || defined(__WIN64__)
     else {
       descriptor_ = openHelper(true);
     }
-#if defined(__WIN32__) || defined(__WIN64__)
     if( fileName_.strncasecmp("COM",3) == 0 ){
       utf8::String::Iterator i(fileName_);
       i += 3;
@@ -264,6 +268,10 @@ AsyncFile & AsyncFile::open()
         newObject<Exception>(err,__PRETTY_FUNCTION__ " " + fileName_)->throwSP();
       }
       alignment_ = bytesPerSector;
+    }
+#else
+    else {
+      descriptor_ = openHelper(false);
     }
 #endif
   }
