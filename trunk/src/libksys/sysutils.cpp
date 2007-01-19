@@ -1075,17 +1075,17 @@ void chModOwn(
   int32_t err;
   union {
     mode_t m;
-    intptr_t m2;
+    intmax_t m2;
   };
-  m = umask(0);
+  m2 = umask(0);
   umask(m);
   if( mode.type() == mtInt ){
-    m = mode;
+    m2 = mode;
   }
   else {
     utf8::tryStr2Int(mode,m2,8);
   }
-  if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m) != 0 ){
+  if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m2) != 0 ){
     err = errno;
     newObject<Exception>(err,pathName + " " __PRETTY_FUNCTION__)->throwSP();
   }
