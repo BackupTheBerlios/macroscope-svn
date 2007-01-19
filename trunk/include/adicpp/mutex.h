@@ -48,9 +48,21 @@ namespace ksys {
 //__XSTRING(MPLOCKED2)*/
 //---------------------------------------------------------------------------
 #if __GNUG__ && __i386__
+inline int32_t interlockedIncrement(volatile int32_t * v,int32_t a)
+{
+  asm volatile (
+    " lock ; "
+    "       xaddl   %0, %1 ;        "
+    "# atomic_fetchadd_int"
+    : "+r" (a),                     /* 0 (result) */
+    "=m" (*v)                     /* 1 */
+    : "m" (*v));                    /* 2 */
+  return a;
+}
+
 inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
 {
-  asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
+/*  asm volatile ( "lock; xaddl %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));*/
 /*  //  register long eax asm("eax");
   //  long r;
   __asm __volatile (//    ".arch i686\n"
@@ -64,7 +76,7 @@ inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
   // регистры, в которые гадим
   //    : "ecx"
   );*/
-  return a;
+  return interlockedIncrement(&v,a);
 }
 
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
