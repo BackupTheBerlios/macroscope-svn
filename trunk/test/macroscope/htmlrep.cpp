@@ -410,7 +410,7 @@ void Logger::writeHtmlYearOutput()
 {
   cacheSize_ = config_.section("macroscope").value("traffic_cache_size",0);
   decoration();
-  struct tm beginTime, endTime;
+  struct tm beginTime, endTime, curTime;
   statement_->text("SELECT ");
   if( dynamic_cast< FirebirdDatabase *>(database_.ptr()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");
@@ -432,6 +432,7 @@ void Logger::writeHtmlYearOutput()
   else {
     beginTime = endTime = ksys::time2tm(getlocaltimeofday());
   }
+  curTime = ksys::time2tm(getlocaltimeofday());
 #if defined(__WIN32__) || defined(__WIN64__)
   utf8::String  section("macroscope.windows.html_report.");
 #else
@@ -473,7 +474,8 @@ void Logger::writeHtmlYearOutput()
   while( ksys::tm2Time(endTime) >= ksys::tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
-    if( getTraf(ttAll, beginTime, endTime) > 0 ){
+    bool process = !(bool) config_.section("macroscope").value("refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
+    if( process && getTraf(ttAll, beginTime, endTime) > 0 ){
       utf8::String trafByYearFile(utf8::String::print("users-traf-by-%04d.html", endTime.tm_year + 1900));
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
