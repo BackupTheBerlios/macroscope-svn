@@ -408,7 +408,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
 //------------------------------------------------------------------------------
 void Logger::writeHtmlYearOutput()
 {
-  cacheSize_ = config_.section("macroscope").value("traffic_cache_size", 8);
+  cacheSize_ = config_.section("macroscope").value("traffic_cache_size",0);
   decoration();
   struct tm beginTime, endTime;
   statement_->text("SELECT ");
@@ -429,7 +429,7 @@ void Logger::writeHtmlYearOutput()
     statement_->execute()->fetchAll();
     endTime = statement_->valueAsMutant("ST_TIMESTAMP");
   }
-  else{
+  else {
     beginTime = endTime = ksys::time2tm(getlocaltimeofday());
   }
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -442,16 +442,16 @@ void Logger::writeHtmlYearOutput()
       config_.valueByPath(section + "directory")
     )
   );
+  ksys::AsyncFile f(
+    ksys::includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
+  );
+  f.createIfNotExist(true).open();
   ksys::chModOwn(
     htmlDir_,
     config_.valueByPath(section + "directory_mode", 755),
     config_.valueByPath(section + "directory_user",ksys::getuid()),
     config_.valueByPath(section + "directory_group",ksys::getgid())
   );
-  ksys::AsyncFile f(
-    ksys::includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
-  );
-  f.createIfNotExist(true).open();
   ksys::chModOwn(
     f.fileName(),
     config_.valueByPath(section + "file_mode", 755),
@@ -474,7 +474,7 @@ void Logger::writeHtmlYearOutput()
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
     if( getTraf(ttAll, beginTime, endTime) > 0 ){
-      utf8::String  trafByYearFile  (utf8::String::print("users-traf-by-%04d.html", endTime.tm_year + 1900));
+      utf8::String trafByYearFile(utf8::String::print("users-traf-by-%04d.html", endTime.tm_year + 1900));
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
@@ -775,6 +775,10 @@ int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et,
       statement_->paramAsString("ST_USER", user);
     statement_->paramAsMutant("BT", bt)->paramAsMutant("ET", et);
     statement_->execute()->fetchAll();
+#ifndef NDEBUG
+//    for( intptr_t i = statement_->fieldCount() - 1; i >= 0; i-- )
+//      fprintf(stderr,"%s %d\n",(const char *) statement_->fieldName(i).getANSIString(),(int) i);
+#endif
     switch( tt ){
       case ttSMTP :
       case ttWWW  :
@@ -788,7 +792,7 @@ int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et,
       default     :
         break;
     }
-    if( trafCache_.count() >= cacheSize_ )
+    if( cacheSize_ > 0 && trafCache_.count() >= cacheSize_ )
       trafCache_.drop(trafCacheLRU_.remove(*trafCacheLRU_.last()));
   }
   else {

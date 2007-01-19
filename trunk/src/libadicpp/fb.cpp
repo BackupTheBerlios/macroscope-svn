@@ -37,12 +37,12 @@ FirebirdDatabase::~FirebirdDatabase()
 //---------------------------------------------------------------------------
 FirebirdDatabase::FirebirdDatabase()
 {
-  static_cast< fbcpp::Transaction *>(this)->attach(*this);
+  static_cast<fbcpp::Transaction *>(this)->attach(*this);
 }
 //---------------------------------------------------------------------------
 void FirebirdDatabase::exceptionHandler(ksys::Exception * e)
 {
-  static_cast< fbcpp::Database *>(this)->staticExceptionHandler(e);
+  static_cast<fbcpp::Database *>(this)->staticExceptionHandler(e);
 }
 //---------------------------------------------------------------------------
 Statement * FirebirdDatabase::newStatement()
@@ -59,82 +59,82 @@ Statement * FirebirdDatabase::newAttachedStatement()
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::create()
 {
-  static_cast< fbcpp::Database *>(this)->create();
+  static_cast<fbcpp::Database *>(this)->create();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::drop()
 {
-  static_cast< fbcpp::Database *>(this)->drop();
+  static_cast<fbcpp::Database *>(this)->drop();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::attach()
 {
-  static_cast< fbcpp::Database *>(this)->attach();
+  static_cast<fbcpp::Database *>(this)->attach();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::detach()
 {
-  static_cast< fbcpp::Database *>(this)->detach();
+  static_cast<fbcpp::Database *>(this)->detach();
   return this;
 }
 //---------------------------------------------------------------------------
 bool FirebirdDatabase::attached()
 {
-  return static_cast< fbcpp::Database *>(this)->attached();
+  return static_cast<fbcpp::Database *>(this)->attached();
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::start()
 {
-  static_cast< fbcpp::Transaction *>(this)->start();
+  static_cast<fbcpp::Transaction *>(this)->start();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::rollback()
 {
-  static_cast< fbcpp::Transaction *>(this)->rollback();
+  static_cast<fbcpp::Transaction *>(this)->rollback();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::commit()
 {
-  static_cast< fbcpp::Transaction *>(this)->commit();
+  static_cast<fbcpp::Transaction *>(this)->commit();
   return this;
 }
 //---------------------------------------------------------------------------
 bool FirebirdDatabase::active()
 {
-  return static_cast< fbcpp::Transaction *>(this)->active();
+  return static_cast<fbcpp::Transaction *>(this)->active();
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::clearParams()
 {
-  static_cast< fbcpp::Database *>(this)->params().clear();
+  static_cast<fbcpp::Database *>(this)->params().clear();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::addParam(const utf8::String & name, const ksys::Mutant & value)
 {
-  static_cast< fbcpp::Database *>(this)->params().add(name, value);
+  static_cast<fbcpp::Database *>(this)->params().add(name, value);
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::name(const utf8::String & name)
 {
-  static_cast< fbcpp::Database *>(this)->name(name);
+  static_cast<fbcpp::Database *>(this)->name(name);
   return this;
 }
 //---------------------------------------------------------------------------
 bool FirebirdDatabase::separateDBName(const utf8::String & name, utf8::String & hostName, utf8::String & dbName, uintptr_t & port)
 {
-  return static_cast< fbcpp::Database *>(this)->separateDBName(name, hostName, dbName, port);
+  return static_cast<fbcpp::Database *>(this)->separateDBName(name, hostName, dbName, port);
 }
 //---------------------------------------------------------------------------
 utf8::String FirebirdDatabase::name()
 {
-  return static_cast< fbcpp::Database *>(this)->name();
+  return static_cast<fbcpp::Database *>(this)->name();
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -164,172 +164,177 @@ FirebirdStatement * FirebirdStatement::detach()
 //---------------------------------------------------------------------------
 bool FirebirdStatement::attached()
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->attached();
+  return static_cast<fbcpp::DSQLStatement *>(this)->attached();
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::prepare()
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->prepare();
+  static_cast<fbcpp::DSQLStatement *>(this)->prepare();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::unprepare()
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->unprepare();
+  static_cast<fbcpp::DSQLStatement *>(this)->unprepare();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::execute()
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->execute();
+  static_cast<fbcpp::DSQLStatement *>(this)->execute();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::execute(const utf8::String & sqlTextImm)
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->execute(sqlTextImm);
+  static_cast<fbcpp::DSQLStatement *>(this)->execute(sqlTextImm);
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::text(const utf8::String & sqlText)
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->sqlText(sqlText);
+  static_cast<fbcpp::DSQLStatement *>(this)->sqlText(sqlText);
   return this;
 }
 //---------------------------------------------------------------------------
 utf8::String FirebirdStatement::text()
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->sqlText();
+  return static_cast<fbcpp::DSQLStatement *>(this)->sqlText();
 }
 //---------------------------------------------------------------------------
 uintptr_t FirebirdStatement::paramCount()
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->params().count();
+  return static_cast<fbcpp::DSQLStatement *>(this)->params().count();
+}
+//---------------------------------------------------------------------------
+utf8::String FirebirdStatement::paramName(uintptr_t i)
+{
+  return static_cast<fbcpp::DSQLStatement *>(this)->params().paramName(i);
 }
 //---------------------------------------------------------------------------
 ksys::Mutant FirebirdStatement::paramAsMutant(uintptr_t i)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->paramAsMutant(i);
+  return static_cast<fbcpp::DSQLStatement *>(this)->paramAsMutant(i);
 }
 //---------------------------------------------------------------------------
 ksys::Mutant FirebirdStatement::paramAsMutant(const utf8::String & name)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->paramAsMutant(name);
+  return static_cast<fbcpp::DSQLStatement *>(this)->paramAsMutant(name);
 }
 //---------------------------------------------------------------------------
 utf8::String FirebirdStatement::paramAsString(uintptr_t i)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->paramAsString(i);
+  return static_cast<fbcpp::DSQLStatement *>(this)->paramAsString(i);
 }
 //---------------------------------------------------------------------------
 utf8::String FirebirdStatement::paramAsString(const utf8::String & name)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->paramAsString(name);
+  return static_cast<fbcpp::DSQLStatement *>(this)->paramAsString(name);
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::paramAsMutant(uintptr_t i, const ksys::Mutant & value)
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->paramAsMutant(i, value);
+  static_cast<fbcpp::DSQLStatement *>(this)->paramAsMutant(i, value);
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::paramAsMutant(const utf8::String & name, const ksys::Mutant & value)
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->paramAsMutant(name, value);
+  static_cast<fbcpp::DSQLStatement *>(this)->paramAsMutant(name, value);
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::paramAsString(uintptr_t i, const utf8::String & value)
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->paramAsString(i, value);
+  static_cast<fbcpp::DSQLStatement *>(this)->paramAsString(i, value);
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::paramAsString(const utf8::String & name, const utf8::String & value)
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->paramAsString(name, value);
+  static_cast<fbcpp::DSQLStatement *>(this)->paramAsString(name, value);
   return this;
 }
 //---------------------------------------------------------------------------
 bool FirebirdStatement::fetch()
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->values().fetch();
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().fetch();
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::fetchAll()
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->values().fetchAll();
+  static_cast<fbcpp::DSQLStatement *>(this)->values().fetchAll();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::selectRow(uintptr_t i)
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->values().selectRow(i);
+  static_cast<fbcpp::DSQLStatement *>(this)->values().selectRow(i);
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::selectFirstRow()
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->values().selectFirst();
+  static_cast<fbcpp::DSQLStatement *>(this)->values().selectFirst();
   return this;
 }
 //---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::selectLastRow()
 {
-  static_cast< fbcpp::DSQLStatement *>(this)->values().selectLast();
+  static_cast<fbcpp::DSQLStatement *>(this)->values().selectLast();
   return this;
 }
 //---------------------------------------------------------------------------
 uintptr_t FirebirdStatement::rowCount()
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->values().rowCount();
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().rowCount();
 }
 //---------------------------------------------------------------------------
 intptr_t FirebirdStatement::rowIndex()
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->values().rowIndex();
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().rowIndex();
 }
 //---------------------------------------------------------------------------
 uintptr_t FirebirdStatement::fieldCount()
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->values().count();
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().count();
 }
 //---------------------------------------------------------------------------
 ksys::Mutant FirebirdStatement::valueAsMutant(uintptr_t i)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->valueAsMutant(i);
+  return static_cast<fbcpp::DSQLStatement *>(this)->valueAsMutant(i);
 }
 //---------------------------------------------------------------------------
 ksys::Mutant FirebirdStatement::valueAsMutant(const utf8::String & name)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->valueAsMutant(name);
+  return static_cast<fbcpp::DSQLStatement *>(this)->valueAsMutant(name);
 }
 //---------------------------------------------------------------------------
 utf8::String FirebirdStatement::valueAsString(uintptr_t i)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->valueAsString(i);
+  return static_cast<fbcpp::DSQLStatement *>(this)->valueAsString(i);
 }
 //---------------------------------------------------------------------------
 utf8::String FirebirdStatement::valueAsString(const utf8::String & name)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->valueAsString(name);
+  return static_cast<fbcpp::DSQLStatement *>(this)->valueAsString(name);
 }
 //---------------------------------------------------------------------------
 bool FirebirdStatement::valueIsNull(uintptr_t i)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->values().isNull(i);
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().isNull(i);
 }
 //---------------------------------------------------------------------------
 bool FirebirdStatement::valueIsNull(const utf8::String & name)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->values().isNull(name);
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().isNull(name);
 }
 //---------------------------------------------------------------------------
 FieldType FirebirdStatement::fieldType(uintptr_t i)
 {
-  i = static_cast< fbcpp::DSQLStatement *>(this)->values().checkValueIndex(i);
-  switch( static_cast< fbcpp::DSQLStatement *>(this)->
-         values().sqlda().sqlda()->sqlvar[i].sqltype & ~1 ){
+  i = static_cast<fbcpp::DSQLStatement *>(this)->values().checkValueIndex(i);
+  i = static_cast<fbcpp::DSQLStatement *>(this)->values().sqlda().sqlda()->sqlvar[i].sqltype & ~1;
+  switch( i ){
     case SQL_VARYING     :
     case SQL_TEXT        :
       return ftString;
@@ -359,12 +364,12 @@ FieldType FirebirdStatement::fieldType(uintptr_t i)
 //---------------------------------------------------------------------------
 FieldType FirebirdStatement::fieldType(const utf8::String & name)
 {
-  return fieldType(static_cast< fbcpp::DSQLStatement *>(this)->values().indexOfName(name));
+  return fieldType(static_cast<fbcpp::DSQLStatement *>(this)->values().indexOfName(name));
 }
 //---------------------------------------------------------------------------
 utf8::String FirebirdStatement::fieldName(uintptr_t i)
 {
-  return static_cast< fbcpp::DSQLStatement *>(this)->values().nameOfIndex(i);
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().nameOfIndex(i);
 }
 //---------------------------------------------------------------------------
 } // namespace adicpp

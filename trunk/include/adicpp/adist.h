@@ -28,21 +28,25 @@
 #define adistH
 //---------------------------------------------------------------------------
 namespace adicpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-enum FieldType { ftChar, ftShort, ftInt,    // 32 bit integer
-ftLong,   // 64 bit integer
-ftFloat,  // 32 bit float
-ftDouble, // 64 bit float
-ftTime, ftString, ftBlob, ftUnknown };
+enum FieldType {
+  ftChar,
+  ftShort,
+  ftInt,    // 32 bit integer
+  ftLong,   // 64 bit integer
+  ftFloat,  // 32 bit float
+  ftDouble, // 64 bit float
+  ftTime,
+  ftString,
+  ftBlob,
+  ftUnknown
+};
 //---------------------------------------------------------------------------
 class Statement {
   public:
-    virtual ~Statement()
-    {
-    }
+    virtual ~Statement() {}
     //    Statement();
 
     virtual Statement *                 attach(Database & database) = 0;
@@ -58,6 +62,7 @@ class Statement {
 
     // query parameters methods
     virtual uintptr_t                   paramCount() = 0;
+    virtual utf8::String                paramName(uintptr_t i) = 0;
     virtual ksys::Mutant                paramAsMutant(uintptr_t i) = 0;
     virtual ksys::Mutant                paramAsMutant(const utf8::String & name) = 0;
     virtual utf8::String                paramAsString(uintptr_t i) = 0;
@@ -89,14 +94,14 @@ class Statement {
     virtual FieldType                   fieldType(const utf8::String & name) = 0;
     virtual utf8::String                fieldName(uintptr_t i) = 0;
 
-    template< class Table> Statement &  unload(Table & table);
+    template <class Table> Statement & unload(Table & table);
   protected:
   private:
 };
 //---------------------------------------------------------------------------
-template< class Table>
+template <class Table>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 Statement & Statement::unload(Table & table)
 {
@@ -117,8 +122,8 @@ Statement & Statement::unload(Table & table)
 //---------------------------------------------------------------------------
 class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
   public:
-    virtual             ~FirebirdStatement();
-                        FirebirdStatement();
+    virtual ~FirebirdStatement();
+    FirebirdStatement();
 
     FirebirdStatement * attach(Database & database);
     FirebirdStatement * detach();
@@ -133,6 +138,7 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
 
     // query parameters methods
     uintptr_t           paramCount();
+    utf8::String        paramName(uintptr_t i);
     ksys::Mutant        paramAsMutant(uintptr_t i);
     ksys::Mutant        paramAsMutant(const utf8::String & name);
     utf8::String        paramAsString(uintptr_t i);
@@ -171,8 +177,8 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
 //---------------------------------------------------------------------------
 class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
   public:
-                      ~MYSQLStatement();
-                      MYSQLStatement();
+    ~MYSQLStatement();
+    MYSQLStatement();
 
     MYSQLStatement *  attach(Database & database);
     MYSQLStatement *  detach();
@@ -187,6 +193,7 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
 
     // query parameters methods
     uintptr_t         paramCount();
+    utf8::String      paramName(uintptr_t i);
     ksys::Mutant      paramAsMutant(uintptr_t i);
     ksys::Mutant      paramAsMutant(const utf8::String & name);
     utf8::String      paramAsString(uintptr_t i);

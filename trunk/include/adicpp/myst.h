@@ -28,7 +28,6 @@
 #define _myst_H_
 //---------------------------------------------------------------------------
 namespace mycpp {
-
 //---------------------------------------------------------------------------
 utf8::String  time2Str(int64_t t);
 int64_t       str2Time(const char * s);
@@ -44,8 +43,8 @@ class MYSQL_BIND_Holder {
     MYSQL_BIND *  bind_;
     uintptr_t     count_;
   public:
-                          MYSQL_BIND_Holder();
-                          ~MYSQL_BIND_Holder();
+    ~MYSQL_BIND_Holder();
+    MYSQL_BIND_Holder();
 
     MYSQL_BIND_Holder &   resize(long n);
     // properties
@@ -53,9 +52,7 @@ class MYSQL_BIND_Holder {
     const uintptr_t &     count();
 };
 //---------------------------------------------------------------------------
-inline MYSQL_BIND_Holder::MYSQL_BIND_Holder()
-  : bind_(NULL),
-    count_(0)
+inline MYSQL_BIND_Holder::MYSQL_BIND_Holder() : bind_(NULL), count_(0)
 {
 }
 //---------------------------------------------------------------------------
@@ -126,12 +123,13 @@ inline DSQLParam::DSQLParam(DSQLStatement & statement)
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLParams {
-    friend class DSQLStatement;
+  friend class DSQLStatement;
   public:
-                                                          ~DSQLParams();
-                                                          DSQLParams(DSQLStatement & statement);
+    ~DSQLParams();
+    DSQLParams(DSQLStatement & statement);
 
-    uintptr_t                                             count();
+    uintptr_t count();
+    utf8::String paramName(uintptr_t i);
     // access methods
     bool                                                  isNull(uintptr_t i);
     DSQLParams &                                          setNull(uintptr_t i);
@@ -166,8 +164,7 @@ inline DSQLParams::~DSQLParams()
 {
 }
 //---------------------------------------------------------------------------
-inline DSQLParams::DSQLParams(DSQLStatement & statement)
-  : statement_(statement)
+inline DSQLParams::DSQLParams(DSQLStatement & statement) : statement_(statement)
 {
   params_.caseSensitive(false);
 }
@@ -177,23 +174,27 @@ inline uintptr_t DSQLParams::count()
   return params_.count();
 }
 //---------------------------------------------------------------------------
+inline utf8::String DSQLParams::paramName(uintptr_t i)
+{
+  return checkParamIndex(i).params_.keyOfIndex(i);
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLRow {
-    friend class DSQLValues;
-  private:
-  protected:
-    ksys::AutoPtr< uint8_t> raw_;
-    ksys::Array< int32_t>   index_;
-    ksys::Array< my_bool>   isNulls_;
-    uint32_t                rowSize_;
+  friend class DSQLValues;
   public:
-    DSQLRow();
     ~DSQLRow();
+    DSQLRow();
+  protected:
+    ksys::AutoPtr<uint8_t> raw_;
+    ksys::Array<int32_t>   index_;
+    ksys::Array<my_bool>   isNulls_;
+    uint32_t               rowSize_;
+  private:
 };
 //---------------------------------------------------------------------------
-inline DSQLRow::DSQLRow()
-  : rowSize_(0)
+inline DSQLRow::DSQLRow() : rowSize_(0)
 {
 }
 //---------------------------------------------------------------------------

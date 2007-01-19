@@ -28,7 +28,6 @@
 #define _fbst_H_
 //---------------------------------------------------------------------------
 namespace fbcpp {
-
 //---------------------------------------------------------------------------
 int64_t         iscTimeStamp2Time(const ISC_TIMESTAMP & stamp);
 struct timeval  iscTimeStamp2Timeval(const ISC_TIMESTAMP & stamp);
@@ -43,8 +42,8 @@ class XSQLDAHolder {
   private:
     XSQLDA *  sqlda_;
   public:
-                          XSQLDAHolder();
-                          ~XSQLDAHolder();
+    XSQLDAHolder();
+    ~XSQLDAHolder();
 
     XSQLDAHolder &        resize(long n);
     // properties
@@ -71,7 +70,7 @@ inline uintptr_t XSQLDAHolder::count()
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLParam {
-    friend class DSQLParams;
+  friend class DSQLParams;
   private:
   protected:
     short sqlind_;
@@ -84,13 +83,11 @@ class DSQLParam {
     virtual utf8::String  getString();
     virtual DSQLParam &   setString(const utf8::String & value);
   public:
-                          DSQLParam();
-    virtual               ~DSQLParam();
+    virtual ~DSQLParam();
+    DSQLParam();
 };
 //---------------------------------------------------------------------------
-inline DSQLParam::DSQLParam()
-  : sqlscale_(0),
-    changed_(false)
+inline DSQLParam::DSQLParam() : sqlscale_(0), changed_(false)
 {
 }
 //---------------------------------------------------------------------------
@@ -101,7 +98,7 @@ inline DSQLParam::~DSQLParam()
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLParamScalar : public DSQLParam {
-    friend class DSQLParams;
+  friend class DSQLParams;
   private:
   protected:
     union {
@@ -116,12 +113,12 @@ class DSQLParamScalar : public DSQLParam {
     utf8::String  getString();
     DSQLParam &   setString(const utf8::String & value);
   public:
-                  DSQLParamScalar();
-    virtual       ~DSQLParamScalar();
+    virtual ~DSQLParamScalar();
+    DSQLParamScalar();
 };
 //---------------------------------------------------------------------------
 class DSQLParamText : public DSQLParam {
-    friend class DSQLParams;
+  friend class DSQLParams;
   private:
   protected:
     utf8::String  text_;
@@ -460,8 +457,8 @@ class DSQLParamBlob : public DSQLParam {
 class DSQLParams {
   friend class DSQLStatement;
   public:
-    DSQLParams(DSQLStatement & statement);
     ~DSQLParams();
+    DSQLParams(DSQLStatement & statement);
 
     uintptr_t         count();
     // access methods
@@ -470,6 +467,7 @@ class DSQLParams {
     bool              isNull(const utf8::String & paramName);
     DSQLParams &      setNull(const utf8::String & paramName);
 
+    utf8::String      paramName(uintptr_t i);
     ksys::Mutant      asMutant(uintptr_t i);
     DSQLParams &      asMutant(uintptr_t i, const ksys::Mutant & value);
     utf8::String      asString(uintptr_t i);
@@ -490,8 +488,8 @@ class DSQLParams {
 
     DSQLStatement                                                       * statement_;
     XSQLDAHolder                                                        sqlda_;
-    ksys::HashedObjectList< utf8::String,DSQLParam>                     params_;
-    ksys::Array< ksys::HashedObjectListItem< utf8::String,DSQLParam> *> indexToParam_;
+    ksys::HashedObjectList<utf8::String,DSQLParam>                      params_;
+    ksys::Array< ksys::HashedObjectListItem<utf8::String,DSQLParam> *>  indexToParam_;
     utf8::String                                                        tempString_;
     ISC_TIMESTAMP                                                       tempStamp_;
     bool                                                                changed_;
@@ -513,6 +511,11 @@ class DSQLParams {
 inline uintptr_t DSQLParams::count()
 {
   return params_.count();
+}
+//---------------------------------------------------------------------------
+inline utf8::String DSQLParams::paramName(uintptr_t i)
+{
+  return checkParamIndex(i).params_.keyOfIndex(i);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -884,22 +887,38 @@ inline utf8::String DSQLValues::asString(const utf8::String & valueName)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-enum Stmt { stmtUnknown = 0, stmtSelect = 1, stmtInsert = 2, stmtUpdate = 3, stmtDelete = 4, stmtDdl = 5, stmtGetSegment = 6, stmtPutSegment = 7, stmtExecProcedure = 8, stmtStartTrans = 9, stmtCommit = 10, stmtRollback = 11, stmtSelectForUpd = 12, stmtSetGenerator = 13, stmtSavepoint = 14 };
+enum Stmt {
+  stmtUnknown = 0,
+  stmtSelect = 1,
+  stmtInsert = 2,
+  stmtUpdate = 3,
+  stmtDelete = 4,
+  stmtDdl = 5,
+  stmtGetSegment = 6,
+  stmtPutSegment = 7,
+  stmtExecProcedure = 8,
+  stmtStartTrans = 9,
+  stmtCommit = 10,
+  stmtRollback = 11,
+  stmtSelectForUpd = 12,
+  stmtSetGenerator = 13,
+  stmtSavepoint = 14
+};
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLStatement {
-    friend class Database;
-    friend class Transaction;
-    friend class DSQLParams;
-    friend class DSQLValues;
-    friend class DSQLParamBlob;
-    friend class DSQLValueBlob;
-    friend class DSQLParamArray;
-    friend class DSQLValueArray;
+  friend class Database;
+  friend class Transaction;
+  friend class DSQLParams;
+  friend class DSQLValues;
+  friend class DSQLParamBlob;
+  friend class DSQLValueBlob;
+  friend class DSQLParamArray;
+  friend class DSQLValueArray;
   public:
-                      ~DSQLStatement();
-                      DSQLStatement();
+    ~DSQLStatement();
+    DSQLStatement();
 
     DSQLStatement &   attach(Database & database, Transaction & transaction);
     DSQLStatement &   detach();

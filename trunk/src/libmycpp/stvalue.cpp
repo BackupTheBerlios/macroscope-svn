@@ -42,7 +42,8 @@ DSQLRow * DSQLValues::bind()
     MYSQL_BIND &  rbind = bind_.bind()[i];
     MYSQL_FIELD & field = fields_[i];
     switch( field.type ){
-      case MYSQL_TYPE_DECIMAL :
+      case MYSQL_TYPE_DECIMAL    :
+      case MYSQL_TYPE_NEWDECIMAL :
         goto l1;
       case MYSQL_TYPE_TINY    :
         rbind.buffer_type = MYSQL_TYPE_TINY;
@@ -98,7 +99,7 @@ DSQLRow * DSQLValues::bind()
         break;
       case MYSQL_TYPE_VAR_STRING :
       case MYSQL_TYPE_STRING :
-        l1:     rbind.buffer_type = MYSQL_TYPE_STRING;
+l1:     rbind.buffer_type = MYSQL_TYPE_STRING;
         row->rowSize_ += rbind.buffer_length = field.length + 1;
         break;
       case MYSQL_TYPE_GEOMETRY :
@@ -133,7 +134,7 @@ DSQLRow * DSQLValues::bind()
   return row.ptr(NULL);
 }
 //---------------------------------------------------------------------------
-DSQLValues & DSQLValues::fillRowHelper(struct fillRowVars & v, uintptr_t ds)
+DSQLValues & DSQLValues::fillRowHelper(struct fillRowVars & v,uintptr_t ds)
 {
   v.k = v.rbind->buffer_length - ds;
   memcpy(v.pc + ds, v.pc + v.rbind->buffer_length, v.row->rowSize_ - v.row->index_[v.i] - v.rbind->buffer_length);
@@ -159,7 +160,8 @@ DSQLValues & DSQLValues::fillRow(DSQLRow * row)
     else{
       MYSQL_FIELD & field = fields_[v.i];
       switch( field.type ){
-        case MYSQL_TYPE_DECIMAL :
+        case MYSQL_TYPE_DECIMAL    :
+        case MYSQL_TYPE_NEWDECIMAL :
           goto l2;
         case MYSQL_TYPE_TINY    :
           //          v.pc[lengths_[v.i]] = '\0';
@@ -207,7 +209,7 @@ DSQLValues & DSQLValues::fillRow(DSQLRow * row)
         case MYSQL_TYPE_DATETIME :
         case MYSQL_TYPE_YEAR :
         case MYSQL_TYPE_NEWDATE :
-          l1:       v.pc[lengths_[v.i]] = '\0';
+l1:       v.pc[lengths_[v.i]] = '\0';
           *v.pll = str2Time(v.pc);
           fillRowHelper(v, sizeof(int64_t));
           break;
@@ -222,7 +224,7 @@ DSQLValues & DSQLValues::fillRow(DSQLRow * row)
           break;
         case MYSQL_TYPE_VAR_STRING :
         case MYSQL_TYPE_STRING :
-          l2:       fillRowHelper(v, lengths_[v.i] + 1);
+l2:       fillRowHelper(v,lengths_[v.i] + 1);
           v.pc[lengths_[v.i]] = '\0';
           break;
         case MYSQL_TYPE_GEOMETRY :
@@ -295,7 +297,8 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
   switch( fields_[i].type ){
     case MYSQL_TYPE_DECIMAL     :
-      return ksys::Mutant(pc, 0);
+    case MYSQL_TYPE_NEWDECIMAL  :
+      return ksys::Mutant(pc,0);
     case MYSQL_TYPE_TINY        :
       return *pc;
     case MYSQL_TYPE_SHORT       :
@@ -319,7 +322,7 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
     case MYSQL_TYPE_DATETIME    :
     case MYSQL_TYPE_YEAR        :
     case MYSQL_TYPE_NEWDATE     :
-      l1:   return ksys::time2tm(*pll);
+l1:   return ksys::time2tm(*pll);
     case MYSQL_TYPE_ENUM        :
       return *ps;
     case MYSQL_TYPE_SET         :
@@ -358,7 +361,8 @@ utf8::String DSQLValues::asString(uintptr_t i)
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
   switch( fields_[i].type ){
     case MYSQL_TYPE_DECIMAL     :
-      return ksys::Mutant(pc, 0);
+    case MYSQL_TYPE_NEWDECIMAL  :
+      return ksys::Mutant(pc,0);
     case MYSQL_TYPE_TINY        :
       return utf8::int2Str(*pc);
     case MYSQL_TYPE_SHORT       :

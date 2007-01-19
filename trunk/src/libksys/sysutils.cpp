@@ -1073,17 +1073,21 @@ void chModOwn(
   const Mutant & mode,const Mutant & user,const Mutant & group)
 {
   int32_t err;
-  intmax_t m = umask(0);
-  umask((mode_t) m);
+  union {
+    mode_t m;
+    intptr_t m2;
+  };
+  m = umask(0);
+  umask(m);
   if( mode.type() == mtInt ){
     m = mode;
   }
   else {
-    utf8::tryStr2Int(mode,m,8);
+    utf8::tryStr2Int(mode,m2,8);
   }
   if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m) != 0 ){
     err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,pathName + " " __PRETTY_FUNCTION__)->throwSP();
   }
   const struct passwd * u = getpwnam(utf8::String(user).getANSIString());
   uid_t userID(u != NULL ? u->pw_uid : (uid_t) user);
@@ -1091,7 +1095,7 @@ void chModOwn(
   gid_t groupID(g != NULL ? g->gr_gid : (gid_t) group);
   if( chown(anyPathName2HostPathName(pathName).getANSIString(),userID,groupID) != 0 ){
     err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,pathName + " " __PRETTY_FUNCTION__)->throwSP();
   }
 }
 #else
