@@ -654,7 +654,7 @@ int main(int argc, char * argv[])
   int errcode = -1;
   adicpp::AutoInitializer autoInitializer(argc,argv);
   autoInitializer = autoInitializer;
-  try{
+  try {
     uintptr_t i;
     ksys::stdErr.fileName(SYSLOG_DIR + "macroscope/macroscope.log");
     ksys::Config::defaultFileName(SYSCONF_DIR + "macroscope.conf");

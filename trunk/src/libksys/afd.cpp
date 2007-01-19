@@ -52,6 +52,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   createIfNotExist_(false),
   std_(false),
   seekable_(true),
+  atty_(false),
   random_(false),
   direct_(false),
   nocache_(false),
@@ -102,7 +103,7 @@ file_t AsyncFile::openHelper(bool async)
   file_t handle = INVALID_HANDLE_VALUE;
   int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
-  SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);3
+  SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
   if( isWin9x() ){
     utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
     if( !readOnly_ )
@@ -269,6 +270,12 @@ AsyncFile & AsyncFile::open()
       }
       alignment_ = bytesPerSector;
     }
+#else
+#if HAVE_ISATTY
+    atty_ = isatty(descriptor_); 
+#elif HAVE__ISATTY
+    atty_ = _isatty(descriptor_); 
+#endif
 #endif
   }
   return *this;

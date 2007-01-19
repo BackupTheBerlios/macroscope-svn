@@ -43,7 +43,9 @@ DSQLRow * DSQLValues::bind()
     MYSQL_FIELD & field = fields_[i];
     switch( field.type ){
       case MYSQL_TYPE_DECIMAL    :
+#if MYSQL_TYPE_NEWDECIMAL
       case MYSQL_TYPE_NEWDECIMAL :
+#endif
         goto l1;
       case MYSQL_TYPE_TINY    :
         rbind.buffer_type = MYSQL_TYPE_TINY;
@@ -161,7 +163,9 @@ DSQLValues & DSQLValues::fillRow(DSQLRow * row)
       MYSQL_FIELD & field = fields_[v.i];
       switch( field.type ){
         case MYSQL_TYPE_DECIMAL    :
+#if MYSQL_TYPE_NEWDECIMAL
         case MYSQL_TYPE_NEWDECIMAL :
+#endif
           goto l2;
         case MYSQL_TYPE_TINY    :
           //          v.pc[lengths_[v.i]] = '\0';
@@ -297,7 +301,9 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
   switch( fields_[i].type ){
     case MYSQL_TYPE_DECIMAL     :
+#if MYSQL_TYPE_NEWDECIMAL
     case MYSQL_TYPE_NEWDECIMAL  :
+#endif
       return ksys::Mutant(pc,0);
     case MYSQL_TYPE_TINY        :
       return *pc;
@@ -361,7 +367,9 @@ utf8::String DSQLValues::asString(uintptr_t i)
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
   switch( fields_[i].type ){
     case MYSQL_TYPE_DECIMAL     :
+#if MYSQL_TYPE_NEWDECIMAL
     case MYSQL_TYPE_NEWDECIMAL  :
+#endif
       return ksys::Mutant(pc,0);
     case MYSQL_TYPE_TINY        :
       return utf8::int2Str(*pc);

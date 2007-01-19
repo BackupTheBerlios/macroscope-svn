@@ -109,6 +109,8 @@ class AsyncFile : public AsyncDescriptor {
     uint32_t alignment() const { return 1; }
 #endif
     bool std() const;
+    bool seekable() const;
+    bool atty() const;
 
     AsyncFile & operator << (const char * s){ writeBuffer(s,::strlen(s)); return *this; }
     AsyncFile & operator << (const utf8::String & s){ writeBuffer(s.c_str(),s.size()); return *this; }
@@ -145,6 +147,7 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t createIfNotExist_ : 1;
       uint8_t std_              : 1;
       uint8_t seekable_         : 1;
+      uint8_t atty_             : 1;
       uint8_t random_           : 1;
       uint8_t direct_           : 1;
       uint8_t nocache_          : 1;
@@ -194,6 +197,16 @@ inline const DWORD & AsyncFile::alignment() const
 inline bool AsyncFile::std() const
 {
   return std_ != 0;
+}
+//---------------------------------------------------------------------------
+inline bool AsyncFile::seekable() const
+{
+  return seekable_ != 0;
+}
+//---------------------------------------------------------------------------
+inline bool AsyncFile::atty() const
+{
+  return atty_ != 0;
 }
 //---------------------------------------------------------------------------
 inline const utf8::String & AsyncFile::fileName() const

@@ -329,7 +329,7 @@ typedef int64_t ptrdiff_t;
 #define HAVE_LONG_DOUBLE 1
 #endif
 
-#ifndef SYSCONF_DIR
+#if !SYSCONF_DIR
 #if defined(__WIN32__) || defined(__WIN64__)
 #define SYSCONF_DIR ksys::getExecutablePath()
 #elif BSD
@@ -339,7 +339,7 @@ typedef int64_t ptrdiff_t;
 #endif
 #endif
 
-#ifndef SYSLOG_DIR
+#if !SYSLOG_DIR
 #if defined(__WIN32__) || defined(__WIN64__)
 #define SYSLOG_DIR ksys::getExecutablePath()
 #elif BSD

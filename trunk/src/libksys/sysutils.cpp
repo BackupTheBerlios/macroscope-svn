@@ -910,8 +910,11 @@ bool createDirectory(const utf8::String & name)
     err = errno;
   if( err == ENOTDIR ){
 #endif
-    if( createDirectory(getPathFromPathName(name)) ) return createDirectory(name);
-    err = oserror();
+    utf8::String parentDir(getPathFromPathName(name));
+    if( parentDir.strlen() > 0 ){
+      if( createDirectory(parentDir) ) return createDirectory(name);
+      err = oserror();
+    }
   }
 #if defined(__WIN32__) || defined(__WIN64__)
   if( err != 0 && err != ERROR_ALREADY_EXISTS )
@@ -1145,9 +1148,12 @@ utf8::String getPathFromPathName(const utf8::String & pathName)
 {
   utf8::String::Iterator i(pathName);
   i.last();
+  if( (i - 1).getChar() == ':' ) return utf8::String();
   while( !i.bof() ){
     switch( i.getChar() ){
-      case '\\' : case '/' : case ':' :
+      case ':' :
+        return utf8::String(utf8::String::Iterator(pathName),i + 1);
+      case '\\' : case '/' :
         return utf8::String(utf8::String::Iterator(pathName),i);
       default :;
     }

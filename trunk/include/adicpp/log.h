@@ -80,6 +80,8 @@ class LogFile : protected Thread {
     LogFile & internalLog(uintptr_t level,const utf8::String::Stream & stream);
     void rotate(AsyncFile & file);
     void threadExecute();
+
+    AsyncFile threadFile_;
   private:
     static void initialize();
     static void cleanup();

@@ -60,7 +60,7 @@ LogFile::LogFile() :
   bufferDataTTA_(60 * 1000000u), // 60 seconds
   rotationThreshold_(1024 * 1024),
   rotatedFileCount_(10),
-  codePage_(CP_ACP)
+  codePage_(CP_OEMCP)
 {
 //  enabledLevels_(1 + 2 + 4 + 8 + 16 + 32 + 64 + 128 + 256 + 512),
   memset(enabledLevels_,0,sizeof(enabledLevels_));
@@ -84,12 +84,13 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-//  while( active() ){
+  while( active() ){
     terminate();
-    bufferSemaphore_.post().post().post().post();
-//    ksleep1();
-//  }
+    bufferSemaphore_.post().post();
+    ksleep1();
+  }
   wait();
+  threadFile_.close();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -255,10 +256,10 @@ void LogFile::rotate(AsyncFile & file)
 void LogFile::threadExecute()
 {
   priority(THREAD_PRIORITY_LOWEST);
-  AsyncFile file;
-  file.fileName(file_).createIfNotExist(true);
+  threadFile_.fileName(file_).createIfNotExist(true);
   AsyncFile lck;
-  lck.fileName(file.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
+  lck.fileName(threadFile_.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
+  bool exception = false;
   for(;;){
     bufferSemaphore_.wait();
     bufferSemaphore_.timedWait(bufferDataTTA_);
@@ -271,32 +272,35 @@ void LogFile::threadExecute()
       bufferPos_ = 0;
       bufferSize_ = 0;
     }
-    if( bufferPos == 0 && terminated_ ) break;
+    if( terminated_ && (bufferPos == 0 || exception) ) break;
     if( bufferPos > 0 ){
-      bool exception = false;
+      exception = false;
       {
         AutoFileWRLock<AsyncFile> lock;
         try {
           lck.open();
           lck.wrLock(0,0);
           lock.setLocked(lck);
-          file.exclusive(false).open();
-          file.seek(file.size()).writeBuffer(buffer,bufferPos);
-          rotate(file);
+          threadFile_.exclusive(false).open();
+          threadFile_.seek(threadFile_.size()).writeBuffer(buffer,bufferPos);
+          rotate(threadFile_);
         }
-#if HAVE_SYSLOG_H
         catch( ExceptionSP & e ){
-	  openlog(getNameFromPathName(getExecutableName()).getANSIString(),LOG_PID,LOG_DAEMON);
-	  syslog(LOG_ERR,e->stdError().getANSIString());
-	  closelog();
+#if HAVE_SYSLOG_H
+          openlog(getNameFromPathName(getExecutableName()).getOEMString(),LOG_PID,LOG_DAEMON);
+          syslog(LOG_ERR,e->stdError().getOEMString());
+          closelog();
 #else
-        catch( ... ){
+          fprintf(stderr,"%s: %s\n",
+            (const char * ) getNameFromPathName(getExecutableName()).getOEMString(),
+	          (const char * ) e->stdError().getOEMString()
+	        );
 #endif
           exception = true;
         }
       }
       if( exception ){
-        file.close();
+        threadFile_.close();
         lck.close();
       }
     }
