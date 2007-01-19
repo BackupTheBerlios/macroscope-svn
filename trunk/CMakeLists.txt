@@ -582,7 +582,7 @@ CHECK_EMPTY_ARRAY_SIZE (EMPTY_ARRAY_SIZE)
 
 INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} "${CMAKE_BINARY_DIR}/include")
 
-SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -fno-schedule-insns -fno-unit-at-a-time -O -g")
+#SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -fno-schedule-insns -fno-unit-at-a-time -O -g -fno-inline-functions")
 
 CONFIGURE_FILE("${CMAKE_BINARY_DIR}/include/adicpp/config.h.cmake" "${CMAKE_BINARY_DIR}/include/adicpp/config.h")
 

@@ -176,7 +176,8 @@ inline bool Thread::Action::operator ==(const Action & action) const
 //---------------------------------------------------------------------------
 inline Thread::~Thread()
 {
-  assert(((started_ && finished_) || (!started_ && !finished_)) && handle_ == NULL);
+//  assert(((started_ && finished_) || (!started_ && !finished_)) && handle_ == NULL);
+  wait();
 }
 //---------------------------------------------------------------------------
 inline bool Thread::isSuspended() const

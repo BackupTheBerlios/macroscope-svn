@@ -133,6 +133,15 @@ Thread & Thread::resume()
       err = GetLastError() + errorOffset;
       newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
+    if( ResumeThread(handle_) == (DWORD) - 1 ){
+      err = GetLastError() + errorOffset;
+      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  else if( finished_ ){
+    wait();
+    resume();
+  }
 #elif HAVE_PTHREAD_H
   pthread_attr_t attr = NULL;
   if( handle_ == NULL ){
@@ -149,15 +158,11 @@ Thread & Thread::resume()
 //      pthread_mutex_unlock(&mutex_);
       goto l1;
     }
-#endif
   }
-#if defined(__WIN32__) || defined(__WIN64__)
-  if( ResumeThread(handle_) == (DWORD) - 1 ){
-    err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  else if( finished_ ){
+    wait();
+    resume();
   }
-  return *this;
-#elif HAVE_PTHREAD_H
   /*if( (errno = pthread_mutex_unlock(&mutex_)) != 0 ){
     perror(NULL);
     abort();
@@ -169,8 +174,8 @@ l1:
   //pthread_mutex_destroy(&mutex_);
   //mutex_ = NULL;
   newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-  return *this;
 #endif
+  return *this;
 }
 //---------------------------------------------------------------------------
 Thread & Thread::suspend()

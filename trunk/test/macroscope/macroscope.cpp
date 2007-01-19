@@ -654,6 +654,7 @@ int main(int argc, char * argv[])
   int errcode = -1;
   adicpp::AutoInitializer autoInitializer(argc,argv);
   autoInitializer = autoInitializer;
+  utf8::String::Stream stream;
   try {
     uintptr_t i;
     ksys::stdErr.fileName(SYSLOG_DIR + "macroscope/macroscope.log");
@@ -681,6 +682,7 @@ int main(int argc, char * argv[])
     }
   }
   catch( ksys::ExceptionSP & e ){
+//    ksys::stdErr.debug(0,stream << macroscope_version.gnu_ << " terminated with error(s), see below.\n");
     e->writeStdError();
     errcode = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
   }

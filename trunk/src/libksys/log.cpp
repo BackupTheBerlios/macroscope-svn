@@ -84,9 +84,11 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-  while( active() ){
+  for(;;){
     terminate();
     bufferSemaphore_.post().post();
+//    fprintf(stderr,"%s %d handle_ = %p, started_ = %u, finished_ = %u\n",__FILE__,__LINE__,handle_,started_,finished_);
+    if( !active() ) break;
     ksleep1();
   }
   wait();
@@ -163,7 +165,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       AutoLock<FiberInterlockedMutex> lock(mutex_);
-      if( !active() ) resume();
+      resume();
       post = bufferPos_ == 0;
       try {
         uintptr_t bufferSize = bufferSize_;
@@ -178,46 +180,6 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
       catch( ... ){
         post = false;
       }
-        /*uint64_t sz = 0;
-        AutoLock<FiberInterlockedMutex> lock(mutex_);
-        if( file_.fileName().strlen() == 0 ){
-          file_.fileName(changeFileExt(getExecutableName(),".log"));
-          lockFile_.fileName(file_.fileName() + ".lck");
-        }
-        if( !file_.std() ){
-          lockFile_.open();
-          lockFile_.detach();
-          lockFile_.attach();
-        }
-        AutoFileWRLock<AsyncFile> flock;
-        if( !file_.std() ){
-          if( !lockFile_.tryWRLock(0,0) ){
-            file_.close();
-            lockFile_.wrLock(0,0);
-          }
-          flock.setLocked(lockFile_);
-        }
-        file_.open();
-        file_.detach();
-        file_.attach();
-        try {
-          if( file_.std() )
-            file_.writeBuffer(buf.ptr(),(a + l) * sizeof(char));
-          else
-            file_.writeBuffer(file_.size(),buf.ptr(),(a + l) * sizeof(char));
-          sz = file_.size();
-        }
-        catch( ... ){
-          file_.close();
-          throw;
-        }
-        file_.detach();
-        rotate(sz);
-        lockFile_.detach();
-      }
-  //    catch( ExceptionSP & e ){
-  //      e->code();
-  //    }*/
     }
     catch( ... ){
       post = false;
@@ -272,6 +234,7 @@ void LogFile::threadExecute()
       bufferPos_ = 0;
       bufferSize_ = 0;
     }
+//    fprintf(stderr,"%s %d terminated_ = %u, bufferPos = %qu, %u = exception\n",__FILE__,__LINE__,terminated_,bufferPos,exception);
     if( terminated_ && (bufferPos == 0 || exception) ) break;
     if( bufferPos > 0 ){
       exception = false;
