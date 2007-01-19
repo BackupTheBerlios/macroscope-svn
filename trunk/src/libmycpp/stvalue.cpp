@@ -43,7 +43,7 @@ DSQLRow * DSQLValues::bind()
     MYSQL_FIELD & field = fields_[i];
     switch( field.type ){
       case MYSQL_TYPE_DECIMAL    :
-#if MYSQL_TYPE_NEWDECIMAL
+#if MYSQL_VERSION_ID >= 50000
       case MYSQL_TYPE_NEWDECIMAL :
 #endif
         goto l1;
@@ -163,7 +163,7 @@ DSQLValues & DSQLValues::fillRow(DSQLRow * row)
       MYSQL_FIELD & field = fields_[v.i];
       switch( field.type ){
         case MYSQL_TYPE_DECIMAL    :
-#if MYSQL_TYPE_NEWDECIMAL
+#if MYSQL_VERSION_ID >= 50000
         case MYSQL_TYPE_NEWDECIMAL :
 #endif
           goto l2;
@@ -290,18 +290,18 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
   if( row.index_[i = checkValueIndex(i)] < 0 )
     return ksys::Mutant();
   union {
-      char *      pc;
-      int16_t *   ps;
-      uint16_t *  pus;
-      int32_t *   pl;
-      int64_t *   pll;
-      float *     pf;
-      double *    pd;
+    char *      pc;
+    int16_t *   ps;
+    uint16_t *  pus;
+    int32_t *   pl;
+    int64_t *   pll;
+    float *     pf;
+    double *    pd;
   };
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
   switch( fields_[i].type ){
     case MYSQL_TYPE_DECIMAL     :
-#if MYSQL_TYPE_NEWDECIMAL
+#if MYSQL_VERSION_ID >= 50000
     case MYSQL_TYPE_NEWDECIMAL  :
 #endif
       return ksys::Mutant(pc,0);
@@ -346,6 +346,7 @@ l1:   return ksys::time2tm(*pll);
     default :
       ;
   }
+//  fprintf(stderr,"%d\n",fields_[i].type);
   newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
@@ -353,21 +354,20 @@ l1:   return ksys::time2tm(*pll);
 utf8::String DSQLValues::asString(uintptr_t i)
 {
   DSQLRow & row = rows_[row_];
-  if( row.index_[i = checkValueIndex(i)] < 0 )
-    return utf8::String();
+  if( row.index_[i = checkValueIndex(i)] < 0 ) return utf8::String();
   union {
-      char *            pc;
-      short *           ps;
-      unsigned short *  pus;
-      int *             pl;
-      int64_t *         pll;
-      float *           pf;
-      double *          pd;
+    char *            pc;
+    short *           ps;
+    unsigned short *  pus;
+    int *             pl;
+    int64_t *         pll;
+    float *           pf;
+    double *          pd;
   };
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
   switch( fields_[i].type ){
     case MYSQL_TYPE_DECIMAL     :
-#if MYSQL_TYPE_NEWDECIMAL
+#if MYSQL_VERSION_ID >= 50000
     case MYSQL_TYPE_NEWDECIMAL  :
 #endif
       return ksys::Mutant(pc,0);
@@ -394,7 +394,7 @@ utf8::String DSQLValues::asString(uintptr_t i)
     case MYSQL_TYPE_DATETIME    :
     case MYSQL_TYPE_YEAR        :
     case MYSQL_TYPE_NEWDATE     :
-      l1:   return utf8::time2Str(*pll);
+l1:   return utf8::time2Str(*pll);
     case MYSQL_TYPE_ENUM        :
     case MYSQL_TYPE_SET         :
       return utf8::int2Str(*pll);

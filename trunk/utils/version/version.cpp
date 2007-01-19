@@ -95,6 +95,9 @@ int main(int ac, char*av[]){
 #elif _M_IX86_FP == 3 || __SSE3__
       "+SSE3"
 #endif
+#ifdef CMAKE_SYSTEM_NAME
+      " for " __XSTRING(CMAKE_SYSTEM_NAME)
+#endif
     ;
 
 #if HAVE__TZSET

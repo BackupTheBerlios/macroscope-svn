@@ -329,6 +329,11 @@ typedef int64_t ptrdiff_t;
 #define HAVE_LONG_DOUBLE 1
 #endif
 
+#ifndef __XSTRING
+#define __STRING(x) #x
+#define __XSTRING(x) __STRING(x)
+#endif
+
 #if !SYSCONF_DIR
 #if defined(__WIN32__) || defined(__WIN64__)
 #define SYSCONF_DIR ksys::getExecutablePath()

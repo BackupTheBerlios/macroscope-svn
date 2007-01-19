@@ -412,7 +412,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
       database_->commit();
       database_->start();
     }
-    if( lineNo % 4096 == 0 ){
+    if( lineNo % 2048 == 0 ){
       printStat(lineNo, offset, flog.tell(), flog.size(), cl);
     }
     lineNo++;
