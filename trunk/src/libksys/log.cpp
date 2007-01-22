@@ -256,8 +256,8 @@ void LogFile::threadExecute()
 #else
           fprintf(stderr,"%s: %s\n",
             (const char * ) getNameFromPathName(getExecutableName()).getOEMString(),
-	          (const char * ) e->stdError().getOEMString()
-	        );
+            (const char * ) e->stdError().getOEMString()
+          );
 #endif
           exception = true;
         }

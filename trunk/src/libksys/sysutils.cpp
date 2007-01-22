@@ -876,6 +876,7 @@ utf8::String absolutePathNameFromWorkDir(
 //---------------------------------------------------------------------------
 bool createDirectory(const utf8::String & name)
 {
+//  fprintf(stderr,"%s %d %s\n",__FILE__,__LINE__,name.c_str());
   if( currentFiber() != NULL ){
     currentFiber()->event_.timeout_ = ~uint64_t(0);
     currentFiber()->event_.string0_ = name;
@@ -908,6 +909,7 @@ bool createDirectory(const utf8::String & name)
   umask(um);
   if( mkdir(anyPathName2HostPathName(name).getANSIString(),um | S_IRUSR | S_IWUSR | S_IXUSR) != 0 )
     err = errno;
+//  fprintf(stderr,"%s %d err = %d %s\n",__FILE__,__LINE__,err,name.c_str());
   if( err == ENOTDIR ){
 #endif
     utf8::String parentDir(getPathFromPathName(name));

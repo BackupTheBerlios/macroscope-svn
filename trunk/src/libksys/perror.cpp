@@ -106,31 +106,26 @@ utf8::String strError(int32_t err)
       err -= errorOffset;
     }*/
 #endif
-    int32_t er = 0;
     AutoPtr<char> serr;
 #if HAVE_STRERROR_R
-    size_t serrs = 1;
-    for( serr.realloc(serrs);
-         strerror_r(err, serr, serrs) != 0 &&
-         (er = errno) == ERANGE;
-         serr.realloc(serrs <<= 1), memset(serr, 0, serrs)
-    );
-#endif
-#if HAVE_STRERROR
-    if( er != 0 || serr.ptr() == NULL || strlen(serr) == 0 ){
-      serr.realloc(strlen(strerror(err)) + 1);
-      strcpy(serr, strerror(err));
-      er = 0;
+    int32_t er;
+    size_t sel = 16;
+    for(;;){
+      serr.realloc(sel = (sel << 1) + (sel == 0));
+//      memset(serr,'@',sel);
+//      fprintf(stderr,"%s %d sel = %u\n",__FILE__,__LINE__,sel);
+      if( (er = strerror_r(err,serr,sel)) != 0 && er != ERANGE ){
+        newObject<Exception>(er,__PRETTY_FUNCTION__)->throwSP();
+      }
+      if( er == 0 ) break;
     }
+#elif HAVE_STRERROR
+    serr.realloc(::strlen(strerror(err)) + 1);
+    strcpy(serr,strerror(err));
 #endif
-    if( er != 0 )
-      newObject<Exception>(er, __PRETTY_FUNCTION__)->throwSP();
-    if( strchr(serr.ptr(), '\r') != NULL )
-      *strchr(serr.ptr(), '\r') = '\0';
-    if( strchr(serr.ptr(), '\n') != NULL )
-      *strchr(serr.ptr(), '\n') = '\0';
-    if( strlen(serr) > 0 && strcmp(serr, "Unknown error") != 0 )
-      return serr.ptr();
+    if( strchr(serr.ptr(),'\r') != NULL ) *strchr(serr.ptr(),'\r') = '\0';
+    if( strchr(serr.ptr(),'\n') != NULL ) *strchr(serr.ptr(),'\n') = '\0';
+    if( strlen(serr) > 0 && ::strcmp(serr,"Unknown error") != 0 ) return serr.ptr();
     return utf8::int2Str(err);
   }
   return utf8::String();

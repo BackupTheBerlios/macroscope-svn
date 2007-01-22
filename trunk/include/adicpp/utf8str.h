@@ -994,23 +994,24 @@ inline String::Stream & String::Stream::operator << (long double n)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-inline String::Stream & String::Stream::operator << (const utf8::String & s)
+/*inline String::Stream & String::Stream::operator << (const utf8::String & s)
 {
   uintptr_t size = s.size();
   stream_.realloc(count_ + size);
   memcpy(stream_.ptr() + count_,s.c_str(),size);
   count_ += size;
   return *this;
-}
+}*/
 //---------------------------------------------------------------------------
-inline String::Stream & String::Stream::operator << (const Format & a)
+/*inline String::Stream & String::Stream::operator << (const Format & a)
 {
   intptr_t size = a.format(NULL);
   stream_.realloc(count_ + size);
-  a.format(stream_.ptr() + count_);
+  memset(stream_.ptr() + count_,'A',size);
+  //a.format(stream_.ptr() + count_);
   count_ += size;
   return *this;
-}
+}*/
 //---------------------------------------------------------------------------
 inline const char * String::Stream::plane() const
 {
@@ -1022,15 +1023,15 @@ inline const uintptr_t & String::Stream::count() const
   return count_;
 }
 //---------------------------------------------------------------------------
-inline utf8::String String::Stream::string()
+/*inline utf8::String String::Stream::string()
 {
   stream_.realloc(count_ + 1);
   stream_[count_] = '\0';
-  String::Container * container = newObject<String::Container>(0,stream_);
+  String::Container * container = newObject<String::Container>(0,stream_.ptr());
   stream_.ptr(NULL);
   count_ = 0;
   return container;
-}
+}*/
 //---------------------------------------------------------------------------
 inline String::Stream & String::Stream::clear()
 {

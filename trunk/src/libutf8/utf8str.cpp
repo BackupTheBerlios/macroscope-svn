@@ -1717,24 +1717,57 @@ int String::Stream::Format::print(char * buffer,size_t count) const
 //---------------------------------------------------------------------------
 intptr_t String::Stream::Format::format(char * buffer) const
 {
-  char buf[64], * p = buf;
+  char buf[640], * p = buf;
   int size = -1, size2 = sizeof(buf);
-//  if( type_ == S ) len = ::strlen(s_);
-  ksys::AutoPtr<char> b;
+  if( buffer != NULL ){
+    p = buffer;
+    size2 = INT_MAX;
+  }
+//  ksys::AutoPtr<char> b;
   if( fmt_[0] != '%' ){ errno = EINVAL; goto l1; }
   for(;;){
     errno = 0;
     size = print(p,size2);
-//    if( errno != ERANGE && (errno != 0 || type_ != S || size2 > len + 1) ) break;
-    if( (size == -1 && errno != ERANGE) || (size > 0 && size < size2) ) break;
-    p = b.realloc(size2 <<= 1);
+    /*if( size > 0 ){
+      for( int i = 0; i < size; i++ ) fprintf(stderr,"%c",p[i]);
+      fprintf(stderr,"\\n\n");
+    }*/
+    if( (size == -1 && errno != ERANGE) || (size > 0 && size < size2) || buffer != NULL ) break;
+//    p = b.realloc(size2 <<= 1);
   }
   if( size == -1 ){
 l1: int32_t err = errno;
     newObject<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
-  if( buffer != NULL ) memcpy(buffer,p,size);
+//  if( buffer != NULL ) memcpy(buffer,p,size);
   return size;
+}
+//---------------------------------------------------------------------------
+String::Stream & String::Stream::operator << (const utf8::String & s)
+{
+  uintptr_t size = s.size();
+  stream_.realloc(count_ + size + 1);
+  memcpy(stream_.ptr() + count_,s.c_str(),size + 1);
+  count_ += size;
+  return *this;
+}
+//---------------------------------------------------------------------------
+String::Stream & String::Stream::operator << (const Format & a)
+{
+  intptr_t size = a.format(NULL);
+  stream_.realloc(count_ + size + 1);
+  a.format(stream_.ptr() + count_);
+  count_ += size;
+  stream_[count_] = '\0';
+  return *this;
+}
+//---------------------------------------------------------------------------
+utf8::String String::Stream::string()
+{
+  String::Container * container = newObject<String::Container>(0,stream_.ptr());
+  stream_.ptr(NULL);
+  count_ = 0;
+  return container;
 }
 //---------------------------------------------------------------------------
 } // namespace utf8

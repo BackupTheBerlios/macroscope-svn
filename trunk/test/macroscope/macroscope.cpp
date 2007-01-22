@@ -449,7 +449,7 @@ void Logger::parseBPFTLogFile(const utf8::String & logFileName)
 //------------------------------------------------------------------------------
 void Logger::main()
 {
-  config_.parse().override();
+  config_.silent(true).parse().override();
   ksys::stdErr.rotationThreshold(
     config_.value("debug_file_rotate_threshold",1024 * 1024)
   );
@@ -462,6 +462,7 @@ void Logger::main()
   ksys::stdErr.fileName(
     config_.value("log_file",ksys::stdErr.fileName())
   );
+  config_.silent(false);
 
   verbose_ = config_.section("macroscope").value("verbose", false);
 

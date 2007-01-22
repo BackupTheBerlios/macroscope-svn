@@ -97,11 +97,14 @@ utf8::String Exception::stdError(utf8::String::Stream * s) const
     utf8::String serr(strError(codes_[i]));
     if( !utf8::tryStr2Int(serr,a) ){
       if( codes_[i] >= errorOffset ) *s << codes_[i] - errorOffset; else *s << codes_[i];
+//      fprintf(stderr,"%s\n",s->plane());
       *s << " ";
+//      fprintf(stderr,"%s\n",s->plane());
     }
     if( serr.strlen() > 0 ) *s << serr << " ";
     *s << whats_[i] << "\n";
   }
+//  fprintf(stderr,"%s\n",s->plane());
   return s == &stream ? s->string() : utf8::String();
 }
 //---------------------------------------------------------------------------
