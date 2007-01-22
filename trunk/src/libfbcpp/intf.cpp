@@ -105,8 +105,8 @@ utf8::String API::tryOpen()
   utf8::String  libFileName;
   if( handle_ == NULL ){
     try {
-      ksys::Config  config;
-      config.parse();
+      ksys::Config config;
+      config.silent(true).parse();
       static const char libKeyPath[] = "libadicpp.firebird.client_library";
 #if defined(__WIN32__) || defined(__WIN64__)
       static const char libName[] = "fbclient.dll";

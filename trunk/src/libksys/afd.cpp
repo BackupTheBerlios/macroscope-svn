@@ -196,7 +196,7 @@ file_t AsyncFile::openHelper(bool async)
     );
   if( handle <= 0 ){
     err = errno;
-    if( (err == ENOTDIR || err == ENOENT) && createPath_ ){
+    if( err == ENOTDIR && createPath_ ){
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }

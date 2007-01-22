@@ -97,8 +97,8 @@ utf8::String API::tryOpen()
   utf8::String  libFileName;
   if( handle_ == NULL ){
     try{
-      ksys::Config  config;
-      config.parse();
+      ksys::Config config;
+      config.silent(true).parse();
       static const char libKey[] = "libadicpp.mysql.client_library";
 #if defined(__WIN32__) || defined(__WIN64__)
       libFileName = config.valueByPath(libKey,"libmysql.dll");
