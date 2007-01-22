@@ -37,7 +37,7 @@ String::Container::Container() : string_(NULL), refCount_(0)/*, mutex_(0)*/
 String::Container * String::Container::container(uintptr_t l)
 {
   ksys::AutoPtr<String::Container> cp(newObject<Container>());
-  ksys::xmalloc(cp->string_, l + (l != ~(uintptr_t) 0));
+  ksys::xmalloc(cp->string_,l + (l != ~(uintptr_t) 0));
   return cp.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -75,6 +75,7 @@ String plane(const char * s, uintptr_t size)
     s += l;
     size -= l;
   }
+  if( s - a == 0 ) return utf8::String();
   String::Container * container = String::Container::container(uintptr_t(s - a));
   memcpy(container->string_, a, s - a);
   container->string_[s - a] = '\0';
@@ -122,15 +123,15 @@ String::String(const String::Iterator & i1, const String::Iterator & i2) : conta
   }
 }
 //---------------------------------------------------------------------------
-String::String(const char * s, uintptr_t l) : container_(&nullContainer())
+String::String(const char * s,uintptr_t l) : container_(&nullContainer())
 {
   String::Container * container;
-  uintptr_t           len = mbcs2utf8s(CP_ACP, NULL, 0, s, l);
+  uintptr_t len = mbcs2utf8s(CP_ACP,NULL,0,s,l);
   if( len > 0 ){
     container = Container::container(len);
-    mbcs2utf8s(CP_ACP, container->string_, len + 1, s, l);
+    mbcs2utf8s(CP_ACP,container->string_,len + 1,s,l);
   }
-  else{
+  else {
     container = &String::nullContainer();
   }
   container_ = container;
@@ -169,7 +170,7 @@ String & String::operator =(const char * str)
     mbcs2utf8s(CP_ACP, container->string_, len + 1, str, ~uintptr_t(0) >> 1);
     container_ = container;
   }
-  else{
+  else {
     container_ = &nullContainer();
   }
   return *this;
@@ -1717,13 +1718,13 @@ int String::Stream::Format::print(char * buffer,size_t count) const
 //---------------------------------------------------------------------------
 intptr_t String::Stream::Format::format(char * buffer) const
 {
-  char buf[640], * p = buf;
+  char buf[32], * p = buf;
   int size = -1, size2 = sizeof(buf);
   if( buffer != NULL ){
     p = buffer;
     size2 = INT_MAX;
   }
-//  ksys::AutoPtr<char> b;
+  ksys::AutoPtr<char> b;
   if( fmt_[0] != '%' ){ errno = EINVAL; goto l1; }
   for(;;){
     errno = 0;
@@ -1733,7 +1734,7 @@ intptr_t String::Stream::Format::format(char * buffer) const
       fprintf(stderr,"\\n\n");
     }*/
     if( (size == -1 && errno != ERANGE) || (size > 0 && size < size2) || buffer != NULL ) break;
-//    p = b.realloc(size2 <<= 1);
+    p = b.realloc(size2 <<= 1);
   }
   if( size == -1 ){
 l1: int32_t err = errno;
@@ -1764,6 +1765,7 @@ String::Stream & String::Stream::operator << (const Format & a)
 //---------------------------------------------------------------------------
 utf8::String String::Stream::string()
 {
+  if( stream_.ptr() == NULL ) return utf8::String();
   String::Container * container = newObject<String::Container>(0,stream_.ptr());
   stream_.ptr(NULL);
   count_ = 0;

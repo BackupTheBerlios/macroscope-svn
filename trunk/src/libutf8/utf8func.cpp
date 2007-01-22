@@ -497,6 +497,7 @@ uintptr_t utf8strlen(const char * utf8s)
 {
   uintptr_t l = 0;
 
+  assert( utf8s != NULL );
   while( *utf8s != '\0' ){
     utf8s += utf8seqlen((const unsigned char *) utf8s);
     l++;

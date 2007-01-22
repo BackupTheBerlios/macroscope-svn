@@ -97,9 +97,9 @@ utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) co
   s.alloc((uintptr_t) p->size_ + 1);
   s[(uintptr_t) p->size_] = '\0';
   file_.readBuffer(p->index_,s,p->size_);
-  AutoPtr<utf8::String::Container> container(newObject<utf8::String::Container>(0,s.ptr()));
+  utf8::String::Container * container = newObject<utf8::String::Container>(0,s.ptr());
   s.ptr(NULL);
-  utf8::String ss(container.ptr(NULL));
+  utf8::String ss(container);
   if( key.c_str()[0] != '#' ) ss = unScreenString(ss);
   return ss;
 }

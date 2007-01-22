@@ -165,7 +165,7 @@ file_t AsyncFile::openHelper(bool async)
   }
   if( handle == INVALID_HANDLE_VALUE ){
     err = GetLastError();
-    if( err == ERROR_PATH_NOT_FOUND && createPath_ ){
+    if( err == ERROR_PATH_NOT_FOUND && createPath_ && !readOnly_ ){
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }
@@ -196,7 +196,7 @@ file_t AsyncFile::openHelper(bool async)
     );
   if( handle <= 0 ){
     err = errno;
-    if( err == ENOTDIR && createPath_ ){
+    if( err == ENOTDIR && createPath_ && !readOnly_ ){
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }

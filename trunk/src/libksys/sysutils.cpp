@@ -392,6 +392,7 @@ utf8::String screenString(const utf8::String & s)
   uintptr_t seql, l, len = 0;
   AutoPtr<char> a;
   for( p = s.c_str(); *p != '\0'; p += seql, len += l ) screenChar(p,seql,NULL,l);
+  if( len == 0 ) return utf8::String();
   a.alloc(len + 1);
   char * q = a;
   for( p = s.c_str(); *p != '\0'; p += seql, q += l ) screenChar(p,seql,q,l);
@@ -555,6 +556,7 @@ utf8::String unScreenString(const utf8::String & s)
       unScreenChar(c,p,seql,NULL,l);
     }
   }
+  if( len == 0 ) return utf8::String();
   a.alloc(len + 1);
   char * q = a;
   for( p = s.c_str(); *p != '\0'; p += seql, q += l ){

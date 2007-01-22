@@ -100,6 +100,7 @@ utf8::String Exception::stdError(utf8::String::Stream * s) const
       *s << " ";
     }
     if( serr.strlen() > 0 ) *s << serr << " ";
+//    fprintf(stderr,"%p %s\n",whats_[i].c_str(),whats_[i].c_str());
     *s << whats_[i] << "\n";
   }
   return s == &stream ? s->string() : utf8::String();
