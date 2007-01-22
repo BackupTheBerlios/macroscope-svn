@@ -820,7 +820,7 @@ inline bool String::hashKeyEqu(const String & key, bool caseSensitive) const
   return (caseSensitive ? strcmp(key) : strcasecmp(key)) == 0;
 }
 //---------------------------------------------------------------------------
-String          operator +(const char * s1, const String & s2);
+String operator + (const char * s1, const String & s2);
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // misc string manipulators /////////////////////////////////////////////////

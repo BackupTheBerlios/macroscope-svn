@@ -249,16 +249,16 @@ void LogFile::threadExecute()
           rotate(threadFile_);
         }
         catch( ExceptionSP & e ){
+          utf8::OemString os(getNameFromPathName(getExecutableName()).getOEMString());
 #if HAVE_SYSLOG_H
-          openlog(getNameFromPathName(getExecutableName()).getOEMString(),LOG_PID,LOG_DAEMON);
+          openlog(os,LOG_PID,LOG_DAEMON);
           syslog(LOG_ERR,e->stdError().getOEMString());
           closelog();
-#else
-          fprintf(stderr,"%s: %s\n",
-            (const char * ) getNameFromPathName(getExecutableName()).getOEMString(),
+#endif
+          fprintf(stderr,"%s: %s",
+            (const char * ) os,
             (const char * ) e->stdError().getOEMString()
           );
-#endif
           exception = true;
         }
       }

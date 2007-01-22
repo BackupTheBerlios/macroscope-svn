@@ -647,7 +647,7 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
     utf8::String user(readString());
     if( !isValidUser(user) ){
       utf8::String::Stream stream;
-      stream << "Invalid user: " << user << ", " __PRETTY_FUNCTION__ "\n";
+      stream << "Invalid user: " << user << ", " << __PRETTY_FUNCTION__ << "\n";
       ksys::stdErr.debug(99,stream);
       *this << int32_t(aeUser);
       return aeUser;
@@ -672,7 +672,7 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
     read(rpassword2SHA256,sizeof(rpassword2SHA256));
     if( memcmp(rpassword2SHA256,SHA256.sha256(),sizeof(rpassword2SHA256)) != 0 ){
       utf8::String::Stream stream;
-      stream << "Invalid password: " << password << " for user: " << user << ", " __PRETTY_FUNCTION__ "\n";
+      stream << "Invalid password: " << password << " for user: " << user << ", " << __PRETTY_FUNCTION__ << "\n";
       ksys::stdErr.debug(99,stream);
       *this << int32_t(aePassword);
       return aePassword;

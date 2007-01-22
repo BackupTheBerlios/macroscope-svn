@@ -168,7 +168,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   assert( fiber->event_.type_ == etDirectoryChangeNotification );
   if( fiber->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
   if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
-    newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
+    newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
 #else
   newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
@@ -890,7 +890,7 @@ bool createDirectory(const utf8::String & name)
     if( currentFiber()->event_.errno_ == EEXIST ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -923,7 +923,7 @@ bool createDirectory(const utf8::String & name)
 #else
   if( err != 0 && err != EEXIST )
 #endif
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
   oserror(err);
   return err == 0;
 }
@@ -965,7 +965,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
     if( fiber->event_.errno_ == ENOTDIR ) return false;
 #endif
     if( fiber->event_.errno_ != 0 && !noThrow )
-      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = removeDirectoryHelper(name);
@@ -1013,7 +1013,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
 #endif
   oserror(err);
   if( err != 0 && !noThrow )
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
   return err == 0;
 }
 //---------------------------------------------------------------------------
@@ -1034,7 +1034,7 @@ bool remove(const utf8::String & name,bool noThrow)
     if( fiber->event_.errno_ == ENOENT ) return false;
 #endif
     if( fiber->event_.errno_ != 0 && !noThrow )
-      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = 0;
@@ -1066,7 +1066,7 @@ bool remove(const utf8::String & name,bool noThrow)
       }
     }
     if( !noThrow )
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + name)->throwSP();
+      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     oserror(err);
   }
   return err == 0;
@@ -1092,7 +1092,7 @@ void chModOwn(
   }
   if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m2) != 0 ){
     err = errno;
-    newObject<Exception>(err,pathName + " " __PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
   const struct passwd * u = getpwnam(utf8::String(user).getANSIString());
   uid_t userID(u != NULL ? u->pw_uid : (uid_t) user);
@@ -1100,7 +1100,7 @@ void chModOwn(
   gid_t groupID(g != NULL ? g->gr_gid : (gid_t) group);
   if( chown(anyPathName2HostPathName(pathName).getANSIString(),userID,groupID) != 0 ){
     err = errno;
-    newObject<Exception>(err,pathName + " " __PRETTY_FUNCTION__)->throwSP();
+    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
 }
 #else
@@ -1248,7 +1248,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
     fiber->switchFiber(currentFiber()->mainFiber());
     assert( fiber->event_.type_ == etRename );
     if( fiber->event_.errno_ != 0 )
-      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
   }
   else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1280,7 +1280,7 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
         return rename(oldPathName,newPathName,false);
       }
 #endif
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + oldPathName)->throwSP();
+      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
     }
   }
 }
@@ -1297,7 +1297,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etRename );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + srcPathName)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + srcPathName)->throwSP();
   }
   else {
     if( bufferSize == 0 ) bufferSize = getpagesize();
@@ -1323,7 +1323,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     }
     if( r == 0 ){
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + srcPathName)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + srcPathName)->throwSP();
     }
 #else
     AsyncFile dstFile, srcFile;
@@ -1416,7 +1416,7 @@ void getDirList(
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etDirList );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
     return;
   }
   int32_t err;
@@ -1450,7 +1450,7 @@ void getDirList(
     if( dir == NULL ){
       err = errno;
       if( err == ENOTDIR ) return;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
     }
     try {
       struct dirent * ent;
@@ -1460,7 +1460,7 @@ void getDirList(
       for(;;){
         if( readdir_r(dir,ent,&result) != 0 ){
           err = errno;
-          newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
+          newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
         }
         if( result == NULL ) break;
 #else
@@ -1497,7 +1497,7 @@ void getDirList(
       } while( FindNextFileA(handle,&fda) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
       }
     }
     catch( ... ){
@@ -1511,7 +1511,7 @@ void getDirList(
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError();
       if( err == ERROR_PATH_NOT_FOUND ) return;
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
+      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
     }
     try {
       do {
@@ -1536,7 +1536,7 @@ void getDirList(
       } while( FindNextFileW(handle,&fdw) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ " " + dirAndMask)->throwSP();
+        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
       }
     }
     catch( ... ){
@@ -1648,7 +1648,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etExec );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ " " + name)->throwSP();
+      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return (pid_t) currentFiber()->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)

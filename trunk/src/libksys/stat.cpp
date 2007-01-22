@@ -57,7 +57,7 @@ bool stat(const utf8::String & pathName,Stat & st)
         fiber->event_.errno_ != ENOENT &&
 	      fiber->event_.errno_ != ENOTDIR )
 #endif
-      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
+      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
     return fiber->event_.rval_;
   }
   int32_t err = 0;
@@ -168,12 +168,12 @@ done:
   CloseHandle(hFile);
   SetLastError(err);
   if( err != 0 && err != ERROR_PATH_NOT_FOUND && err != ERROR_FILE_NOT_FOUND && err != ERROR_INVALID_NAME )
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
+    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
 #else
   if( stat(anyPathName2HostPathName(pathName).getANSIString(), &st) != 0 ){
     err = errno;
     if( err != ENOENT )
-      newObject<Exception>(err,__PRETTY_FUNCTION__ " " + pathName)->throwSP();
+      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
 #endif
   return err == 0;

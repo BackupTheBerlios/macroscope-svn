@@ -546,10 +546,12 @@ typedef int32_t gid_t;
 #define PRIXPTR         "I64X"    /* uintptr_t */
 #endif
 
-#if _MSC_VER < 1300 && !defined(__PRETTY_FUNCTION__)
+#ifndef __GNUG__
+#if !defined(__GNUG__) && MSC_VER < 1300 && !defined(__PRETTY_FUNCTION__)
 #define __PRETTY_FUNCTION__ ""
 #elif _MSC_VER >= 1300 && !defined(__PRETTY_FUNCTION__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
 #endif
 
 #ifndef PACKED
