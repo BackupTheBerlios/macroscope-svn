@@ -1718,14 +1718,15 @@ int String::Stream::Format::print(char * buffer,size_t count) const
 intptr_t String::Stream::Format::format(char * buffer) const
 {
   char buf[64], * p = buf;
-  int size = -1, size2 = sizeof(buf), len;
-  if( type_ == S ) len = ::strlen(s_);
+  int size = -1, size2 = sizeof(buf);
+//  if( type_ == S ) len = ::strlen(s_);
   ksys::AutoPtr<char> b;
   if( fmt_[0] != '%' ){ errno = EINVAL; goto l1; }
   for(;;){
     errno = 0;
     size = print(p,size2);
-    if( errno != ERANGE && (errno != 0 || type_ != S || size2 > len + 1) ) break;
+//    if( errno != ERANGE && (errno != 0 || type_ != S || size2 > len + 1) ) break;
+    if( (size == -1 && errno != ERANGE) || (size > 0 && size < size2) ) break;
     p = b.realloc(size2 <<= 1);
   }
   if( size == -1 ){
