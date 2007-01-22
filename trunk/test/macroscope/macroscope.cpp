@@ -32,6 +32,9 @@ namespace macroscope {
 //------------------------------------------------------------------------------
 Logger::~Logger()
 {
+#ifndef NDEBUG
+  while( trafCacheLRU_.count() > 0 ) trafCacheLRU_.remove(*trafCacheLRU_.last());
+#endif
 }
 //------------------------------------------------------------------------------
 Logger::Logger() :
@@ -649,9 +652,10 @@ void Logger::main()
 //------------------------------------------------------------------------------
 } // namespace macroscope
 //------------------------------------------------------------------------------
+const char * _malloc_options = "J";
+//------------------------------------------------------------------------------
 int main(int argc, char * argv[])
 {
-  _malloc_options = "J";
   int errcode = -1;
   adicpp::AutoInitializer autoInitializer(argc,argv);
   autoInitializer = autoInitializer;
