@@ -652,6 +652,7 @@ void Logger::main()
 //------------------------------------------------------------------------------
 int main(int argc, char * argv[])
 {
+  _malloc_options = "J";
   int errcode = -1;
   adicpp::AutoInitializer autoInitializer(argc,argv);
   autoInitializer = autoInitializer;

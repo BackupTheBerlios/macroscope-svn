@@ -46,7 +46,7 @@ void * kmalloc(size_t size)
 #else
         ENOMEM,
 #endif
-        utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(size)
+        __PRETTY_FUNCTION__ + utf8::String(" ") + utf8::int2Str(size)
       )->throwSP();
     }
 #if !defined(NDEBUG) && !defined(NODEBUGMEM)
