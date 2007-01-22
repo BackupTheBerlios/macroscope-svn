@@ -250,15 +250,13 @@ void LogFile::threadExecute()
         }
         catch( ExceptionSP & e ){
           utf8::OemString os(getNameFromPathName(getExecutableName()).getOEMString());
+	  utf8::OemString er(e->stdError().getOEMString());
 #if HAVE_SYSLOG_H
           openlog(os,LOG_PID,LOG_DAEMON);
-          syslog(LOG_ERR,e->stdError().getOEMString());
+          syslog(LOG_ERR,er);
           closelog();
 #endif
-          fprintf(stderr,"%s: %s",
-            (const char * ) os,
-            (const char * ) e->stdError().getOEMString()
-          );
+          fprintf(stderr,"%s: %s",(const char * ) os,(const char * ) er);
           exception = true;
         }
       }
