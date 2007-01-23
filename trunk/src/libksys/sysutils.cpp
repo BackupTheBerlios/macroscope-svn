@@ -50,8 +50,9 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
   strings = backtrace_symbols(array,size);
   try {
     for( i = 0; i < size; i++ ){
-      if( i > 0 ) s += "\n";
+      попробовать demangle libiberty
       s += strings[i];
+      s += "\n";
     }
   }
   catch( ... ){

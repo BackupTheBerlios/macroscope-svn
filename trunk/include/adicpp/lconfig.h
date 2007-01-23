@@ -209,6 +209,10 @@
 #include <sys/event.h>
 #endif
 
+#if HAVE_MATH_H
+#include <math.h>
+#endif
+
 // C++ headers
 #ifdef __cplusplus
 

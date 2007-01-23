@@ -460,14 +460,21 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
   for(;;){
     struct tm start, stop;
     uintptr_t entriesCount;
+    uint64_t safePos = flog.tell();
     if( log32bitOsCompatible ){
-      if( flog.read(&header32,sizeof(header32)) != sizeof(header32) ) break;
+      if( flog.read(&header32,sizeof(header32)) != sizeof(header32) ){
+        flog.seek(safePos);
+        break;
+      }
       start = timeval2tm(header32.start_);
       stop = timeval2tm(header32.stop_);
       entriesCount = header32.eCount_;
     }
     else {
-      if( flog.read(&header,sizeof(header)) != sizeof(header) ) break;
+      if( flog.read(&header,sizeof(header)) != sizeof(header) ){
+        flog.seek(safePos);
+        break;
+      }
       start = timeval2tm(header.start_);
       stop = timeval2tm(header.stop_);
       entriesCount = header.eCount_;
@@ -476,11 +483,17 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
     Array<BPFTEntry32> entries32;
     if( log32bitOsCompatible ){
       entries32.resize(entriesCount);
-      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ) break;
+      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ){
+        flog.seek(safePos);
+        break;
+      }
     }
     else {
       entries.resize(entriesCount);
-      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ) break;
+      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ){
+        flog.seek(safePos);
+        break;
+      }
     }
     for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
       statement_->paramAsMutant("st_start",start);

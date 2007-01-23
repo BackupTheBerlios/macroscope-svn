@@ -26,6 +26,7 @@
  * $Id: execinfo.c,v 1.3 2004/07/19 05:21:09 sobomax Exp $
  */
 
+#include <adicpp/lconfig.h>
 #include <adicpp/execinfo/execinfo.h>
 #include <adicpp/execinfo/stacktraverse.h>
 
@@ -33,9 +34,7 @@
 
 inline static void * realloc_safe(void * ptr,size_t size)
 {
-  void * nptr;
-
-  nptr = realloc(ptr,size);
+  void * nptr = realloc(ptr,size);
   if( nptr == NULL ) free(ptr);
   return nptr;
 }
@@ -44,60 +43,56 @@ int backtrace(void ** buffer,int size)
 {
   int i;
 
-  for (i = 1; getframeaddr(i + 1) != NULL && i != size + 1; i++){
+  for( i = 1; getframeaddr(i + 1) != NULL && i != size + 1; i++ ){
     buffer[i - 1] = getreturnaddr(i);
-    if( buffer[i - 1] == NULL ) break;
+    fprintf(stderr,"%p\n",buffer[i - 1]);
+    if( (i > 1 && buffer[i - 1] - buffer[i - 2] > 0x100000) || buffer[i - 1] == NULL ) break;
   }
   return i - 1;
 }
 
 char ** backtrace_symbols(void *const *buffer,int size)
 {
-    int i, clen, alen, offset;
-    char **rval;
-    char *cp;
-    Dl_info info;
+  intptr_t i, clen, alen, offset;
+  char ** rval;
+  char * cp;
+  Dl_info info;
 
-    clen = size * sizeof(char *);
-    rval = malloc(clen);
-    if( rval == NULL ) return NULL;
-    (char **) cp = &(rval[size]);
-    for (i = 0; i < size; i++) {
-        if (dladdr(buffer[i], &info) != 0) {
-            if (info.dli_sname == NULL)
-                info.dli_sname = "???";
-            if (info.dli_saddr == NULL)
-                info.dli_saddr = buffer[i];
-            offset = buffer[i] - info.dli_saddr;
-            /* "0x01234567 <function+offset> at filename" */
-            alen = 2 +                      /* "0x" */
-                   (sizeof(void *) * 2) +   /* "01234567" */
-                   2 +                      /* " <" */
-                   strlen(info.dli_sname) + /* "function" */
-                   1 +                      /* "+" */
-                   D10(offset) +            /* "offset */
-                   5 +                      /* "> at " */
-                   strlen(info.dli_fname) + /* "filename" */
-                   1;                       /* "\0" */
-            rval = realloc_safe(rval, clen + alen);
-            if (rval == NULL)
-                return NULL;
-            snprintf(cp, alen, "%p <%s+%d> at %s",
-              buffer[i], info.dli_sname, offset, info.dli_fname);
-        } else {
-            alen = 2 +                      /* "0x" */
-                   (sizeof(void *) * 2) +   /* "01234567" */
-                   1;                       /* "\0" */
-            rval = realloc_safe(rval, clen + alen);
-            if (rval == NULL)
-                return NULL;
-            snprintf(cp, alen, "%p", buffer[i]);
-        }
-        rval[i] = cp;
-        cp += alen;
+  clen = size * sizeof(char *);
+  rval = malloc(clen);
+  if( rval == NULL ) return NULL;
+  cp = (char *) (rval + size);
+  for( i = 0; i < size; i++ ){
+    if( dladdr(buffer[i],&info) != 0 ){
+      if( info.dli_sname == NULL ) info.dli_sname = "???";
+      if( info.dli_saddr == NULL ) info.dli_saddr = buffer[i];
+      offset = buffer[i] - info.dli_saddr;
+/* "0x01234567 <function+offset> at filename" */
+      alen = 2 +                      /* "0x" */
+             (sizeof(void *) * 2) +   /* "01234567" */
+             2 +                      /* " <" */
+             strlen(info.dli_sname) + /* "function" */
+             1 +                      /* "+" */
+             D10(offset) +            /* "offset */
+             5 +                      /* "> at " */
+             strlen(info.dli_fname) + /* "filename" */
+             1;                       /* "\0" */
+      rval = realloc_safe(rval,clen + alen);
+      if( rval == NULL ) return NULL;
+      snprintf(cp,alen,"%p <%s+%"PRIdPTR"> at %s",buffer[i],info.dli_sname,offset,info.dli_fname);
     }
-
-    return rval;
+    else {
+      alen = 2 +                      /* "0x" */
+             (sizeof(void *) * 2) +   /* "01234567" */
+             1;                       /* "\0" */
+      rval = realloc_safe(rval, clen + alen);
+      if( rval == NULL ) return NULL;
+      snprintf(cp, alen, "%p", buffer[i]);
+    }
+    rval[i] = cp;
+    cp += alen;
+  }
+  return rval;
 }
 
 void backtrace_symbols_fd(void *const *buffer, int size, int fd)

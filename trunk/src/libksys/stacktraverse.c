@@ -1,3 +1,4 @@
+#include <adicpp/lconfig.h>
 #include <adicpp/execinfo/stacktraverse.h>
 
 void * getreturnaddr(int level)
