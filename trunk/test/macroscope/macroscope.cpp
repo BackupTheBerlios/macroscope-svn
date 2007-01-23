@@ -653,7 +653,7 @@ void Logger::main()
 } // namespace macroscope
 //------------------------------------------------------------------------------
 #if HAVE__MALLOC_OPTIONS
-const char * _malloc_options = "AJR";
+//const char * _malloc_options = "AJR";
 #endif
 //------------------------------------------------------------------------------
 int main(int argc, char * argv[])
