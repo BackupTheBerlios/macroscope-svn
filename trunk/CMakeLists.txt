@@ -80,13 +80,24 @@ IF (WIN32 AND NOT UNIX)
 ENDIF (WIN32 AND NOT UNIX)
 
 IF (CMAKE_COMPILER_IS_GNUCXX)
-  SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -pipe -fexceptions -Wall -fno-strict-aliasing -finline-limit=1200")
+  SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -pipe -fexceptions -Wall -fno-strict-aliasing -finline-limit=5000")
   IF (CMAKE_BUILD_TYPE MATCHES Deb)
     SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -Werror")
   ENDIF (CMAKE_BUILD_TYPE MATCHES Deb)
   IF (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
     SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -pthread")
   ENDIF (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+  EXECUTE_PROCESS (
+    COMMAND ${CMAKE_CXX_COMPILER} --version
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    RESULT_VARIABLE CMAKE_CXX_COMPILER_RESULT
+    OUTPUT_VARIABLE CMAKE_CXX_COMPILER_OUTPUT
+    ERROR_VARIABLE CMAKE_CXX_COMPILER_ERROR
+  )
+  IF (CMAKE_CXX_COMPILER_RESULT EQUAL 0)
+    STRING (REPLACE "\n" " " CMAKE_CXX_COMPILER_VERSION ${CMAKE_CXX_COMPILER_OUTPUT})
+    SET (CMAKE_CXX_COMPILER_VERSION ${CMAKE_CXX_COMPILER_VERSION} CACHE INTERNAL "C++ compiler version")
+  ENDIF (CMAKE_CXX_COMPILER_RESULT EQUAL 0)
 ENDIF (CMAKE_COMPILER_IS_GNUCXX)
 
 IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
@@ -501,6 +512,7 @@ SET (CMAKE_EXTRA_INCLUDE_FILES)
 INCLUDE (CheckSymbolExists)
 CHECK_SYMBOL_EXISTS (be32dec sys/endian.h HAVE_BE32DEC)
 CHECK_SYMBOL_EXISTS (be32enc sys/endian.h HAVE_BE32ENC)
+CHECK_SYMBOL_EXISTS (_malloc_options stdlib.h HAVE__MALLOC_OPTIONS)
 
 FIND_LIBRARY(LIB_C_R NAMES c_r)
 FIND_LIBRARY(LIB_PTHREAD NAMES pthread)
@@ -583,7 +595,8 @@ CHECK_EMPTY_ARRAY_SIZE (EMPTY_ARRAY_SIZE)
 INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} "${CMAKE_BINARY_DIR}/include")
 
 #SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -fno-schedule-insns -fno-unit-at-a-time -O -g -fno-inline-functions -fno-omit-frame-pointer -fstack-check")
-SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -O -g3 -gstabs+ -fstack-check -fno-omit-frame-pointer -fno-defer-pop -fno-merge-constants -fno-thread-jumps -fno-loop-optimize -fno-if-conversion -fno-if-conversion2 -fno-delayed-branch -fno-guess-branch-probability -fno-cprop-registers")
+#SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -O -g3 -fstack-check -fno-inline-functions -fno-default-inline -fno-inline -fno-builtin -fno-omit-frame-pointer -fno-defer-pop -fno-merge-constants -fno-thread-jumps -fno-loop-optimize -fno-if-conversion -fno-if-conversion2 -fno-delayed-branch -fno-guess-branch-probability -fno-cprop-registers")
+#SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -g3 -fms-extensions -fno-elide-constructors -fno-enforce-eh-specs")
 
 CONFIGURE_FILE("${CMAKE_BINARY_DIR}/include/adicpp/config.h.cmake" "${CMAKE_BINARY_DIR}/include/adicpp/config.h")
 
@@ -617,7 +630,7 @@ SET (CPACK_PACKAGE_VENDOR "Korvin Software")
 SET (CPACK_PACKAGE_EXECUTABLES "macroscope" "Macroscope")
 SET (CPACK_PACKAGE_VERSION_MAJOR "1")
 SET (CPACK_PACKAGE_VERSION_MINOR "0")
-SET (CPACK_PACKAGE_VERSION_PATCH "560")
+SET (CPACK_PACKAGE_VERSION_PATCH "569")
 SET (CPACK_PACKAGE_INSTALL_DIRECTORY "macroscope")
 
 # Try to get patch level from svn

@@ -210,6 +210,7 @@
 #cmakedefine HAVE_FILENO 1
 #cmakedefine HAVE_KQUEUE 1
 #cmakedefine HAVE_KEVENT 1
+#cmakedefine HAVE__MALLOC_OPTIONS 1
 #cmakedefine HAVE_AIO_READ 1
 #cmakedefine HAVE_AIO_WRITE 1
 #cmakedefine HAVE_AIO_RETURN 1

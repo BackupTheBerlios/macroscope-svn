@@ -28,7 +28,11 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
 bool stackBackTrace = true;
+#else
+bool stackBackTrace = false;
+#endif
 //---------------------------------------------------------------------------
 utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 {

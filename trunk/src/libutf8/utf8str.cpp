@@ -36,9 +36,11 @@ String::Container::Container() : string_(NULL), refCount_(0)/*, mutex_(0)*/
 //---------------------------------------------------------------------------
 String::Container * String::Container::container(uintptr_t l)
 {
-  ksys::AutoPtr<String::Container> cp(newObject<Container>());
-  ksys::xmalloc(cp->string_,l + (l != ~(uintptr_t) 0));
-  return cp.ptr(NULL);
+  ksys::AutoPtr<char> string;
+  string.alloc(l + 1);
+  String::Container * cp = newObject<Container>(0,string.ptr());
+  string.ptr(NULL);
+  return cp;
 }
 //---------------------------------------------------------------------------
 void String::Container::acquire()
@@ -56,7 +58,7 @@ unsigned char String::nullContainer_[sizeof(String::Container)];
 //---------------------------------------------------------------------------
 void String::initialize()
 {
-  new (&nullContainer_) Container(1, nullString_);
+  new (&nullContainer_) Container(1,nullString_);
   detectCodePages();
 }
 //---------------------------------------------------------------------------
