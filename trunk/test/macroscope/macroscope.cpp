@@ -652,6 +652,11 @@ void Logger::main()
 //------------------------------------------------------------------------------
 } // namespace macroscope
 //------------------------------------------------------------------------------
+#if HAVE__MALLOC_OPTIONS
+//const char * _malloc_options = "HR";
+const char * _malloc_options = "H";
+#endif
+//------------------------------------------------------------------------------
 int main(int argc, char * argv[])
 {
   int errcode = -1;
