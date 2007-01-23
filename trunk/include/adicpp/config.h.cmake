@@ -31,6 +31,7 @@
 #cmakedefine HAVE_MACHINE_ATOMIC_H 1
 #cmakedefine HAVE_UCONTEXT_H 1
 #cmakedefine HAVE_SYSLOG_H 1
+#cmakedefine HAVE_EXECINFO_H 1
 #cmakedefine HAVE_TIME_H 1
 #cmakedefine HAVE_UUID_H 1
 #cmakedefine HAVE_AIO_H 1

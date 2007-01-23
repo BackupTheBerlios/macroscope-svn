@@ -32,16 +32,33 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
 bool stackBackTrace = true;
-#else
-bool stackBackTrace = false;
-#endif
 //---------------------------------------------------------------------------
 utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 {
-#if !defined(NDEBUG)/* || CMAKE_BUILD_TYPE == 1 || CMAKE_BUILD_TYPE == 3*/
-#if defined(__WIN32__) || defined(__WIN64__)
+#if __GNUG__
+  skipCount = skipCount;
+  thread = thread;
+  Array<void *> array;
+  array.resize(128);
+  size_t size;
+  char ** strings;
+  size_t i;
+
+  utf8::String s;
+  size = backtrace(array,array.count());
+  strings = backtrace_symbols(array,size);
+  try {
+    for( i = 0; i < size; i++ ){
+      if( i > 0 ) s += "\n";
+      s += strings[i];
+    }
+  }
+  catch( ... ){
+  }
+  ::free(strings);
+  return s;
+#elif !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
   InterlockedMutex mutex;
   if( currentFiber() != NULL ){
     if( thread == NULL ){
@@ -82,10 +99,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
   assert( event.errno_ == 0 );
   return event.string0_;
 #else
-  return "";
-#endif
-#else
-  return "";
+  return utf8::String():
 #endif
 }
 //---------------------------------------------------------------------------

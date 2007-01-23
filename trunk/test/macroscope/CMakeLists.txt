@@ -1,6 +1,7 @@
 ADD_EXECUTABLE (macroscope
   macroscope.cpp
   htmlrep.cpp
+  bpfthtml.cpp
   version.c
 )
 

@@ -37,6 +37,12 @@
 #include <syslog.h>
 #endif
 
+#if HAVE_EXECINFO_H
+#include <execinfo.h>
+#else
+#include <adicpp/execinfo/execinfo.h>
+#endif
+
 #if HAVE_STDARG_H
 #include <stdarg.h>
 #elif HAVE_VARARGS_H

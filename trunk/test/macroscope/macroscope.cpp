@@ -27,6 +27,7 @@
 #include <adicpp/adicpp.h>
 //------------------------------------------------------------------------------
 #include "macroscope.h"
+#include "bpft.h"
 //------------------------------------------------------------------------------
 namespace macroscope {
 //------------------------------------------------------------------------------
@@ -44,7 +45,7 @@ Logger::Logger() :
 {
 }
 //------------------------------------------------------------------------------
-ksys::Mutant Logger::timeStampRoundToMin(const ksys::Mutant & timeStamp)
+Mutant Logger::timeStampRoundToMin(const Mutant & timeStamp)
 {
   struct tm t = timeStamp;
   t.tm_sec = 0;
@@ -57,13 +58,10 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
     int64_t ct  = getlocaltimeofday() - cl;
     int64_t q   = (ct * (size - pos)) / (pos - spos <= 0 ? 1 : pos - spos);
     size -= spos;
-    if( size <= 0 )
-      size = 1;
+    if( size <= 0 ) size = 1;
     pos -= spos;
-    if( pos <= 0 )
-      pos = 1;
-    if( ct <= 0 )
-      ct = 1;
+    if( pos <= 0 ) pos = 1;
+    if( ct <= 0 ) ct = 1;
     int64_t a = pos * 100 / size, b = lineNo * 1000000 / ct;
 #ifdef HAVE__ISATTY
 #ifdef HAVE__FILENO
@@ -78,8 +76,18 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
     if( isatty(fileno(stderr)) ) fprintf(stderr, "\r");
 #endif
 #endif
-    fprintf(stderr, "%3"PRId64".%04"PRId64"%%, %7"PRId64".%04"PRId64" lps, ", a, pos * 1000000 / size - a * 10000, b, lineNo * INT64_C(10000000000) / ct - b * 10000);
-    fprintf(stderr, "%s, elapsed: %-20s", (const char *) utf8::elapsedTime2Str(q).getANSIString(), (const char *) utf8::elapsedTime2Str(ct).getANSIString());
+    fprintf(stderr,
+      "%3"PRId64".%04"PRId64"%%, %7"PRId64".%04"PRId64" lps, ",
+      a,
+      pos * 1000000 / size - a * 10000,
+      b,
+      lineNo * INT64_C(10000000000) / ct - b * 10000
+    );
+    fprintf(stderr,
+      "%s, elapsed: %-20s",
+      (const char *) utf8::elapsedTime2Str(q).getOEMString(),
+      (const char *) utf8::elapsedTime2Str(ct).getOEMString()
+    );
 #ifdef HAVE__ISATTY
 #ifdef HAVE__FILENO
     if( !_isatty(_fileno(stderr)) )
@@ -98,7 +106,7 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
   }
 }
 //------------------------------------------------------------------------------
-void Logger::parseSquidLogLine(char * p,uintptr_t size,ksys::Array<const char *> & slcp)
+void Logger::parseSquidLogLine(char * p,uintptr_t size,Array<const char *> & slcp)
 {
   char *  rb  = p + size, * a, * s;
   for( a = p; *a != '\r' && *a != '\n' && a < rb; a++ );
@@ -187,7 +195,7 @@ Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName, int64
 //------------------------------------------------------------------------------
 void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl)
 {
-  ksys::AsyncFile flog(logFileName);
+  AsyncFile flog(logFileName);
   flog.readOnly(true).open();
   stTrafIns_->text(
     "INSERT INTO INET_USERS_TRAF"
@@ -205,9 +213,9 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
 
   int64_t lineNo = 1;
   uintptr_t size;
-  ksys::Array<const char *> slcp;
+  Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
-  ksys::AsyncFile::LineGetBuffer lgb(flog);
+  AsyncFile::LineGetBuffer lgb(flog);
   lgb.codePage_ = CP_UTF8;
   for(;;){
     utf8::String sb;
@@ -223,7 +231,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
         st_user = st_user.lower();
         if( st_url.strcasestr(skipUrl).position() < 0 ){
           st_url = shortUrl(st_url).lower();
-          ksys::Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
+          Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
           try{
             stTrafIns_->prepare();
             stTrafIns_->paramAsString("ST_USER",st_user);
@@ -231,7 +239,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
             stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
             stTrafIns_->execute();
           }
-          catch( ksys::ExceptionSP & e ){
+          catch( ExceptionSP & e ){
             if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
             stTrafUpd_->prepare();
             stTrafUpd_->paramAsString("ST_USER", st_user);
@@ -285,7 +293,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
 //------------------------------------------------------------------------------
 void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear)
 {
-  ksys::AsyncFile flog(logFileName);
+  AsyncFile flog(logFileName);
   flog.readOnly(true).open();
   stTrafIns_->text("INSERT INTO INET_USERS_TRAF" "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)" "VALUES (:ST_USER, :ST_TIMESTAMP, 0, :ST_TRAF_SMTP)");
   stTrafUpd_->text("UPDATE INET_USERS_TRAF SET ST_TRAF_SMTP = ST_TRAF_SMTP + :ST_TRAF_SMTP " "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP");
@@ -297,7 +305,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   uintptr_t size;
   intptr_t  mon     = 0;
   int64_t   cl      = getlocaltimeofday();
-  ksys::AsyncFile::LineGetBuffer lgb(flog);
+  AsyncFile::LineGetBuffer lgb(flog);
   lgb.codePage_ = CP_UTF8;
   for(;;){
     utf8::String sb;
@@ -311,17 +319,15 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         // get time
         tm  lt;
         memset(&lt, 0, sizeof(lt));
-        lt.tm_mon = (int) ksys::str2Month(sb.c_str());
+        lt.tm_mon = (int) str2Month(sb.c_str());
         if( lt.tm_mon < mon ) startYear++;
         mon = lt.tm_mon;
         lt.tm_year = int(startYear - 1900);
         sscanf(sb.c_str() + 4, "%u %u:%u:%u", &lt.tm_mday, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
         // get msgid
         prefix = id;
-        for( prefixl = prefix; *prefixl != '['; prefixl++ )
-          ;
-        while( *id != ']' )
-          id++;
+        for( prefixl = prefix; *prefixl != '['; prefixl++ );
+        while( *id != ']' ) id++;
         while( *++id == ':' );
         while( *++id == ' ' );
         for( idl = id; *idl != ':'; idl++ );
@@ -375,7 +381,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
             paramAsString("ST_MSGID", utf8::String(id, idl - id))->
             paramAsMutant("ST_MSGSIZE", msgSize)->execute();
           }
-          catch( ksys::ExceptionSP & e ){
+          catch( ExceptionSP & e ){
             if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) )
               throw;
           }
@@ -395,7 +401,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
                 paramAsMutant("ST_TIMESTAMP", timeStampRoundToMin(lt))->
                 paramAsMutant("ST_TRAF_SMTP", msgSize)->execute();
               }
-              catch( ksys::ExceptionSP & e ){
+              catch( ExceptionSP & e ){
                 if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) )
                   throw;
                 stTrafUpd_->prepare()->
@@ -420,50 +426,110 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     }
     lineNo++;
   }
-  printStat(lineNo, offset, flog.tell(), flog.size(), cl);
-  updateLogFileLastOffset(logFileName, flog.tell());
+  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+  updateLogFileLastOffset(logFileName,flog.tell());
   stMsgsDel_->execute();
   stMsgsSelCount_->execute()->fetchAll();
   database_->commit();
 }
 //------------------------------------------------------------------------------
-/*
-struct t_entry {
-  struct in_addr in_ip, out_ip;  // src ip addr and dst ip addr
-  u_char  ip_protocol;    // which protocol been used (/etc/protocols)
-  u_short o_port;         // source port
-  u_short p_port;         // destination port
-  u_long  n_psize;        // how many bytes in ip datagrams passed
-  u_long  n_bytes;        // how many data bytes passed
-};
-
-struct t_header {
-  int    t_size;
-  struct timeval start;
-  struct timeval stop;
-};
-
-void Logger::parseBPFTLogFile(const utf8::String & logFileName)
+void Logger::parseBPFTLogFile(const ConfigSection & section)
 {
-  ksys::FileHandleContainer flog(logFileName);
-  flog.open();
+  AsyncFile flog(section.text("log_file_name"));
+  flog.readOnly(true).open();
+  database_->start();
+  int64_t offset = fetchLogFileLastOffset(flog.fileName());
+  flog.seek(offset);
+  int64_t lineNo = 0;
+  int64_t cl = getlocaltimeofday();
+  AutoPtr<Statement> statement(database_->newAttachedStatement());
+  union {
+    BPFTHeader header;
+    BPFTHeader32 header32;
+  };
+//  statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
+  statement_->text(
+    "INSERT INTO INET_BPFT_STAT ("
+    "  st_start,st_stop,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+    ") VALUES ("
+    "  :st_start,:st_stop,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
+    ")"
+  );
+  statement_->prepare();
+  bool log32bitOsCompatible = section.value("log_32bit_os_compatible",SIZEOF_VOID_P < 8);
+  for(;;){
+    struct tm start, stop;
+    uintptr_t entriesCount;
+    if( log32bitOsCompatible ){
+      if( flog.read(&header32,sizeof(header32)) != sizeof(header32) ) break;
+      start = timeval2tm(header32.start_);
+      stop = timeval2tm(header32.stop_);
+      entriesCount = header32.eCount_;
+    }
+    else {
+      if( flog.read(&header,sizeof(header)) != sizeof(header) ) break;
+      start = timeval2tm(header.start_);
+      stop = timeval2tm(header.stop_);
+      entriesCount = header.eCount_;
+    }
+    Array<BPFTEntry> entries;
+    Array<BPFTEntry32> entries32;
+    if( log32bitOsCompatible ){
+      entries32.resize(entriesCount);
+      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ) break;
+    }
+    else {
+      entries.resize(entriesCount);
+      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ) break;
+    }
+    for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
+      statement_->paramAsMutant("st_start",start);
+      statement_->paramAsMutant("st_stop",stop);
+      if( log32bitOsCompatible ){
+        statement_->paramAsMutant("st_src_ip",entries32[i].srcIp_.s_addr);
+        statement_->paramAsMutant("st_dst_ip",entries32[i].dstIp_.s_addr);
+        statement_->paramAsMutant("st_ip_proto",entries32[i].ipProtocol_);
+        statement_->paramAsMutant("st_src_port",entries32[i].srcPort_);
+        statement_->paramAsMutant("st_dst_port",entries32[i].dstPort_);
+        statement_->paramAsMutant("st_dgram_bytes",entries32[i].dgramSize_);
+        statement_->paramAsMutant("st_data_bytes",entries32[i].dataSize_);
+      }
+      else {
+        statement_->paramAsMutant("st_src_ip",entries[i].srcIp_.s_addr);
+        statement_->paramAsMutant("st_dst_ip",entries[i].dstIp_.s_addr);
+        statement_->paramAsMutant("st_ip_proto",entries[i].ipProtocol_);
+        statement_->paramAsMutant("st_src_port",entries[i].srcPort_);
+        statement_->paramAsMutant("st_dst_port",entries[i].dstPort_);
+        statement_->paramAsMutant("st_dgram_bytes",entries[i].dgramSize_);
+        statement_->paramAsMutant("st_data_bytes",entries[i].dataSize_);
+      }
+      statement_->execute();
+    }
+    updateLogFileLastOffset(flog.fileName(),flog.tell());
+    database_->commit();
+    database_->start();
+    printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+    lineNo += entriesCount;
+  }
+  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+  updateLogFileLastOffset(flog.fileName(),flog.tell());
+  database_->commit();
 }
-*/
 //------------------------------------------------------------------------------
 void Logger::main()
 {
   config_.parse().override();
-  ksys::stdErr.rotationThreshold(
+  stdErr.rotationThreshold(
     config_.value("debug_file_rotate_threshold",1024 * 1024)
   );
-  ksys::stdErr.rotatedFileCount(
+  stdErr.rotatedFileCount(
     config_.value("debug_file_rotate_count",10)
   );
-  ksys::stdErr.setDebugLevels(
+  stdErr.setDebugLevels(
     config_.value("debug_levels","+0,+1,+2,+3")
   );
-  ksys::stdErr.fileName(
-    config_.value("log_file",ksys::stdErr.fileName())
+  stdErr.fileName(
+    config_.value("log_file",stdErr.fileName())
   );
 
   verbose_ = config_.section("macroscope").value("verbose", false);
@@ -529,7 +595,7 @@ void Logger::main()
 
   database_->create();
 
-  ksys::Vector<utf8::String> metadata;
+  Vector<utf8::String> metadata;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
     metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
     metadata <<
@@ -554,16 +620,16 @@ void Logger::main()
       " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
       " ST_LAST_OFFSET        BIGINT NOT NULL"
       ")" <<
-      "CREATE TABLE INET_STAT ("
-      " st_bpft_start         DATETIME NOT NULL,"
-      " st_bpft_stop          DATETIME NOT NULL,"
-      " st_bpft_in_ip         VARCHAR(26) NOT NULL,"
-      " st_bpft_out_ip        VARCHAR(26) NOT NULL,"
-      " st_bpft_ip_proto      SMALLINT NOT NULL,"
-      " st_bpft_s_port        SMALLINT NOT NULL,"
-      " st_bpft_d_port        SMALLINT NOT NULL,"
-      " st_bpft_bytes         SMALLINT NOT NULL,"
-      " st_bpft_data_bytes    SMALLINT NOT NULL" ")" <<
+      "CREATE TABLE INET_BPFT_STAT ("
+      " st_start         DATETIME NOT NULL,"
+      " st_stop          DATETIME NOT NULL,"
+      " st_src_ip        INTEGER NOT NULL,"
+      " st_dst_ip        INTEGER NOT NULL,"
+      " st_ip_proto      SMALLINT NOT NULL,"
+      " st_src_port      SMALLINT NOT NULL,"
+      " st_dst_port      SMALLINT NOT NULL,"
+      " st_dgram_bytes   SMALLINT NOT NULL,"
+      " st_data_bytes    SMALLINT NOT NULL" ")" <<
       "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
@@ -582,7 +648,7 @@ void Logger::main()
   }
 
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
-    const ksys::ConfigSection & section = config_.section("libadicpp").
+    const ConfigSection & section = config_.section("libadicpp").
       section("default_connection").section("firebird");
     utf8::String hostName, dbName;
     uintptr_t port;
@@ -607,12 +673,12 @@ void Logger::main()
     service.invoke();
     service.request().clear().
       add("action_svc_properties").add("dbname", dbName).
-      add("prp_write_mode", isc_spb_prp_wm_async);
+      add("prp_write_mode",isc_spb_prp_wm_async);
     service.invoke();
     service.attach(serviceName);
     service.request().clear().
       add("action_svc_properties").add("dbname", dbName).
-      add("prp_sweep_interval", 10000);
+      add("prp_sweep_interval",10000);
     service.invoke();
   }
 
@@ -625,29 +691,33 @@ void Logger::main()
     try {
       statement_->execute(metadata[i]);
     }
-    catch( ksys::ExceptionSP & e ){
-      if( e->searchCode(isc_keytoobig) ) throw;
+    catch( ExceptionSP & e ){
+      //if( e->searchCode(isc_keytoobig) ) throw;
       if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME) ) throw;
     }
   }
 #if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String  prefix  ("macroscope.windows.");
+  utf8::String prefix("macroscope.windows.");
 #else
-  utf8::String  prefix  ("macroscope.unix.");
+  utf8::String prefix("macroscope.unix.");
 #endif
-  if( (bool) config_.valueByPath("macroscope.process_squid_log", true) ){
-    parseSquidLogFile(ksys::unScreenString(
+  if( (bool) config_.valueByPath("macroscope.process_squid_log",true) ){
+    parseSquidLogFile(unScreenString(
       config_.valueByPath(prefix + "squid.log_file_name")),
       config_.valueByPath("macroscope.top10_url", true), 
       config_.valueByPath("macroscope.skip_url"));
   }
-  if( (bool) config_.valueByPath("macroscope.process_sendmail_log", true) ){
-    parseSendmailLogFile(ksys::unScreenString(
+  if( (bool) config_.valueByPath("macroscope.process_sendmail_log",true) ){
+    parseSendmailLogFile(unScreenString(
       config_.valueByPath(prefix + "sendmail.log_file_name")),
       utf8::String("@") + config_.valueByPath("macroscope.sendmail.main_domain"),
       config_.valueByPath("macroscope.sendmail.start_year"));
   }
-  writeHtmlYearOutput();
+  if( (bool) config_.valueByPath("macroscope.process_bpft_log",true) ){
+    for( uintptr_t i = 0; i < config_.sectionByPath("macroscope.bpft").sectionCount(); i++ )
+      parseBPFTLogFile(config_.sectionByPath("macroscope.bpft").section(i));
+  }
+  //writeHtmlYearOutput();
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope
@@ -657,42 +727,42 @@ void Logger::main()
 const char * _malloc_options = "H";
 #endif
 //------------------------------------------------------------------------------
-int main(int argc, char * argv[])
+int main(int _argc, char * _argv[])
 {
   int errcode = -1;
-  adicpp::AutoInitializer autoInitializer(argc,argv);
+  adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
   utf8::String::Stream stream;
   try {
     uintptr_t i;
-    ksys::stdErr.fileName(SYSLOG_DIR + "macroscope/macroscope.log");
-    ksys::Config::defaultFileName(SYSCONF_DIR + "macroscope.conf");
+    stdErr.fileName(SYSLOG_DIR + "macroscope/macroscope.log");
+    Config::defaultFileName(SYSCONF_DIR + "macroscope.conf");
     bool dispatch = true;
-    for( i = 1; i < ksys::argv().count(); i++ ){
-      if( ksys::argv()[i].strcmp("--version") == 0 ){
-        ksys::stdErr.debug(9,utf8::String::Stream() << macroscope_version.tex_ << "\n");
+    for( i = 1; i < argv().count(); i++ ){
+      if( argv()[i].strcmp("--version") == 0 ){
+        stdErr.debug(9,utf8::String::Stream() << macroscope_version.tex_ << "\n");
         fprintf(stdout,"%s\n",macroscope_version.tex_);
         dispatch = false;
         continue;
       }
-      if( ksys::argv()[i].strcmp("-c") == 0 && i + 1 < ksys::argv().count() ){
-        ksys::Config::defaultFileName(ksys::argv()[i + 1]);
+      if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
+        Config::defaultFileName(argv()[i + 1]);
       }
-      else if( ksys::argv()[i].strcmp("--log") == 0 && i + 1 < ksys::argv().count() ){
-        ksys::stdErr.fileName(ksys::argv()[i + 1]);
+      else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
+        stdErr.fileName(argv()[i + 1]);
       }
     }
     if( dispatch ){
       macroscope::Logger logger;
-      ksys::stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
+      stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
       logger.main();
-      ksys::stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
+      stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
     }
   }
-  catch( ksys::ExceptionSP & e ){
-//    ksys::stdErr.debug(0,stream << macroscope_version.gnu_ << " terminated with error(s), see below.\n");
+  catch( ExceptionSP & e ){
+//    stdErr.debug(0,stream << macroscope_version.gnu_ << " terminated with error(s), see below.\n");
     e->writeStdError();
-    errcode = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
+    errcode = e->code() >= errorOffset ? e->code() - errorOffset : e->code();
   }
   catch( ... ){
   }

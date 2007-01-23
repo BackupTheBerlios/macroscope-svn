@@ -52,7 +52,7 @@ void Logger::decoration()
   utf8::String  basePath("macroscope.decoration.");
   for( intptr_t i = sizeof(decos) / sizeof(decos[0]) - 1; i >= 0; i-- )
     for( intptr_t j = ttAll; j >= 0; j-- ){
-      decos[i].colors[j] = ksys::unScreenString(config_.valueByPath(basePath + decos[i].path + nicks[j]));
+      decos[i].colors[j] = unScreenString(config_.valueByPath(basePath + decos[i].path + nicks[j]));
     }
 }
 //------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ void Logger::writeUserTop(
     paramAsMutant("BT",beginTime)->
     paramAsMutant("ET",endTime)->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
-    ksys::AsyncFile f(file);
+    AsyncFile f(file);
     f.createIfNotExist(true).open();
     writeHtmlHead(f);
     f <<
@@ -162,16 +162,16 @@ void Logger::writeUserTop(
 //------------------------------------------------------------------------------
 void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & year)
 {
-  ksys::AsyncFile f(file);
+  AsyncFile f(file);
   f.createIfNotExist(true).open();
 #if defined(__WIN32__) || defined(__WIN64__)
   utf8::String section("macroscope.windows.html_report.");
 #else
   utf8::String section("macroscope.unix.html_report.");
 #endif
-  ksys::chModOwn(
+  chModOwn(
     file,
-    config_.valueByPath(section + "file_mode", 755),
+    config_.valueByPath(section + "file_mode",755),
     config_.valueByPath(section + "file_user",ksys::getuid()),
     config_.valueByPath(section + "file_group",ksys::getgid())
   );
@@ -189,7 +189,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
   endTime.tm_sec = 59;
   struct tm beginTime2, bt, et;
   while( endTime.tm_mon >= 0 ){
-    endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
+    endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
     if( getTraf(ttAll,beginTime,endTime) > 0 ){
@@ -246,7 +246,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         endTime.tm_mday--;
       }
       f << "</TR>\n<TR>\n";
-      endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
+      endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
       // ѕечатаем заголовки трафиков пользовател€ за мес€цы
       while( endTime.tm_mday > 0 ){
         bt = endTime;
@@ -265,13 +265,13 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         endTime.tm_mday--;
       }
       f << "</TR>\n";
-      endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
+      endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
       // ѕечатаем трафик пользователей
       statement_->text(
         "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF " 
         "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
       );
-      ksys::Table<ksys::Mutant> usersTrafTable;
+      Table<Mutant> usersTrafTable;
       statement_->prepare()->
         paramAsMutant("BT",beginTime)->paramAsMutant("ET",endTime)->
           execute()->unload(usersTrafTable);
@@ -295,7 +295,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
           ) + user + ".html"
         );
         writeUserTop(
-          ksys::includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
+          includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
           user,
           beginTime,
           endTime
@@ -348,7 +348,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
           endTime.tm_mday--;
         }
         f << "</TR>\n";
-        endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
+        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
       }
       // ѕечатаем итоговый трафик пользователей за мес€ц
       f <<
@@ -430,32 +430,32 @@ void Logger::writeHtmlYearOutput()
     endTime = statement_->valueAsMutant("ST_TIMESTAMP");
   }
   else {
-    beginTime = endTime = ksys::time2tm(getlocaltimeofday());
+    beginTime = endTime = time2tm(getlocaltimeofday());
   }
-  curTime = ksys::time2tm(getlocaltimeofday());
+  curTime = time2tm(getlocaltimeofday());
 #if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String  section("macroscope.windows.html_report.");
+  utf8::String section("macroscope.windows.html_report.");
 #else
-  utf8::String  section("macroscope.unix.html_report.");
+  utf8::String section("macroscope.unix.html_report.");
 #endif
-  htmlDir_ = ksys::excludeTrailingPathDelimiter(
-    ksys::unScreenString(
+  htmlDir_ = excludeTrailingPathDelimiter(
+    unScreenString(
       config_.valueByPath(section + "directory")
     )
   );
-  ksys::AsyncFile f(
-    ksys::includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
+  AsyncFile f(
+    includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
   );
   f.createIfNotExist(true).open();
-  ksys::chModOwn(
+  chModOwn(
     htmlDir_,
-    config_.valueByPath(section + "directory_mode", 755),
+    config_.valueByPath(section + "directory_mode",755),
     config_.valueByPath(section + "directory_user",ksys::getuid()),
     config_.valueByPath(section + "directory_group",ksys::getgid())
   );
-  ksys::chModOwn(
+  chModOwn(
     f.fileName(),
-    config_.valueByPath(section + "file_mode", 755),
+    config_.valueByPath(section + "file_mode",755),
     config_.valueByPath(section + "file_user",ksys::getuid()),
     config_.valueByPath(section + "file_group",ksys::getgid())
   );
@@ -471,7 +471,7 @@ void Logger::writeHtmlYearOutput()
   endTime.tm_min = 59;
   endTime.tm_sec = 59;
   struct tm beginTime2, bt, et;
-  while( ksys::tm2Time(endTime) >= ksys::tm2Time(beginTime) ){
+  while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
     bool process = !(bool) config_.section("macroscope").value("refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
@@ -512,7 +512,7 @@ void Logger::writeHtmlYearOutput()
         bt.tm_hour = 0;
         bt.tm_min = 0;
         bt.tm_sec = 0;
-        endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
+        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
         if( getTraf(ttAll, bt, endTime) > 0 ){
           f << "  <TH ALIGN=center COLSPAN=" <<
             utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
@@ -533,7 +533,7 @@ void Logger::writeHtmlYearOutput()
         bt.tm_hour = 0;
         bt.tm_min = 0;
         bt.tm_sec = 0;
-        endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
+        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
         if( getTraf(ttAll, bt, endTime) > 0 ){
           for( i = ttAll; i >= 0; i-- ){
             if( getTraf(TrafType(i), bt, endTime) == 0 )
@@ -549,7 +549,7 @@ void Logger::writeHtmlYearOutput()
       endTime.tm_mday = 31;
       // ѕечатаем трафик пользователей
       statement_->text("SELECT DISTINCT ST_USER FROM INET_USERS_TRAF " "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET");
-      ksys::Table< ksys::Mutant>  usersTrafTable;
+      Table< Mutant>  usersTrafTable;
       statement_->prepare()->
       paramAsMutant("BT", beginTime)->paramAsMutant("ET", endTime)->
       execute()->unload(usersTrafTable);
@@ -586,7 +586,7 @@ void Logger::writeHtmlYearOutput()
           bt.tm_hour = 0;
           bt.tm_min = 0;
           bt.tm_sec = 0;
-          endTime.tm_mday = (int) ksys::monthDays(endTime.tm_year + 1900, endTime.tm_mon);
+          endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
           if( getTraf(ttAll, bt, endTime) > 0 ){
             for( j = ttAll; j >= 0; j-- ){
               if( getTraf(TrafType(j), bt, endTime) == 0 )
@@ -624,7 +624,7 @@ void Logger::writeHtmlYearOutput()
         bt.tm_hour = 0;
         bt.tm_min = 0;
         bt.tm_sec = 0;
-        et.tm_mday = (int) ksys::monthDays(et.tm_year + 1900, et.tm_mon);
+        et.tm_mday = (int) monthDays(et.tm_year + 1900, et.tm_mon);
         if( getTraf(ttAll, bt, et) > 0 ){
           for( j = ttAll; j >= 0; j-- ){
             if( getTraf(TrafType(j), bt, et) == 0 ) continue;
@@ -648,13 +648,14 @@ void Logger::writeHtmlYearOutput()
       }
       f << "</TR>\n</TABLE>\n<BR>\n<BR>\n";
       utf8::String fileName(
-        ksys::includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
+        includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
       );
       writeMonthHtmlOutput(fileName, endTime);
     }
     endTime.tm_year--;
     beginTime = beginTime2;
   }
+  writeBPFTHtmlReport(f);
   f << "Ellapsed time: " <<
     utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) << "\n<BR>\n" <<
     utf8::int2Str((uintmax_t) trafCache_.count()) << "<BR>\n";
@@ -669,7 +670,7 @@ uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)
   uintptr_t a = 0;
   while( byear.tm_mon >= 0 ){
     struct tm eyear = byear;
-    eyear.tm_mday = (int) ksys::monthDays(byear.tm_year + 1900, byear.tm_mon);
+    eyear.tm_mday = (int) monthDays(byear.tm_year + 1900, byear.tm_mon);
     eyear.tm_hour = 23;
     eyear.tm_min = 59;
     eyear.tm_sec = 59;
@@ -683,7 +684,7 @@ uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)
 //------------------------------------------------------------------------------
 uintptr_t Logger::nonZeroMonthDaysColumns(struct tm bmon)
 {
-  bmon.tm_mday = (int) ksys::monthDays(bmon.tm_year + 1900, bmon.tm_mon);
+  bmon.tm_mday = (int) monthDays(bmon.tm_year + 1900, bmon.tm_mon);
   bmon.tm_hour = bmon.tm_min = bmon.tm_sec = 0;
   uintptr_t a = 0;
   while( bmon.tm_mday > 0 ){
@@ -699,7 +700,7 @@ uintptr_t Logger::nonZeroMonthDaysColumns(struct tm bmon)
   return a;
 }
 //------------------------------------------------------------------------------
-intptr_t Logger::sortUsersTrafTable(uintptr_t row1, uintptr_t row2, const ksys::Table< ksys::Mutant> & table)
+intptr_t Logger::sortUsersTrafTable(uintptr_t row1, uintptr_t row2, const Table< Mutant> & table)
 {
   int64_t   t1  = table(row1, "ST_TRAF"), t2 = table(row2, "ST_TRAF");
   intptr_t  c   = t1 > t2 ? 1 : t1 < t2 ? -1 : 0;
@@ -708,7 +709,7 @@ intptr_t Logger::sortUsersTrafTable(uintptr_t row1, uintptr_t row2, const ksys::
   return c;
 }
 //------------------------------------------------------------------------------
-void Logger::writeTraf(ksys::AsyncFile & f, uint64_t qi, uint64_t qj)
+void Logger::writeTraf(AsyncFile & f, uint64_t qi, uint64_t qj)
 {
   uint64_t  q, a  = qi % 1024u != 0, b , c ;
 
@@ -726,11 +727,11 @@ void Logger::writeTraf(ksys::AsyncFile & f, uint64_t qi, uint64_t qj)
 utf8::String Logger::TrafCacheEntry::id() const
 {
   return
-    user_ + utf8::time2Str(ksys::tm2Time(bt_)) + utf8::time2Str(ksys::tm2Time(et_)) + trafTypeColumnName[trafType_]
+    user_ + utf8::time2Str(tm2Time(bt_)) + utf8::time2Str(tm2Time(et_)) + trafTypeColumnName[trafType_]
   ;
 }
 //------------------------------------------------------------------------------
-void Logger::writeHtmlHead(ksys::AsyncFile & f)
+void Logger::writeHtmlHead(AsyncFile & f)
 {
   f << "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
     "<HTML>\n" "<HEAD>\n"
@@ -743,7 +744,7 @@ void Logger::writeHtmlHead(ksys::AsyncFile & f)
   ;
 }
 //------------------------------------------------------------------------------
-void Logger::writeHtmlTail(ksys::AsyncFile & f)
+void Logger::writeHtmlTail(AsyncFile & f)
 {
 #if HAVE_UNAME
   struct utsname  un;
@@ -756,7 +757,7 @@ void Logger::writeHtmlTail(ksys::AsyncFile & f)
 //------------------------------------------------------------------------------
 int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et, const utf8::String & user)
 {
-  ksys::AutoPtr<TrafCacheEntry> tce(newObject<TrafCacheEntry>(user,bt,et,tt));
+  AutoPtr<TrafCacheEntry> tce(newObject<TrafCacheEntry>(user,bt,et,tt));
   tce->bt_.tm_wday = 0;
   tce->bt_.tm_yday = 0;
   tce->et_.tm_wday = 0;

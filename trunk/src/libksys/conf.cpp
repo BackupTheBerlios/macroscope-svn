@@ -63,6 +63,19 @@ utf8::String ConfigSection::text(uintptr_t i,utf8::String * pKey) const
   return *item->object();
 }
 //---------------------------------------------------------------------------
+ConfigSection & ConfigSection::sectionByPath(const utf8::String & path) const
+{
+  utf8::String::Iterator b(path), e(path);
+  const ConfigSection * section = this;
+  for(;;){
+    while( e.getChar() != '.' && e.next() );
+    if( e - b < 1 ) break;
+    section = &section->section(utf8::String(b,e));
+    b = ++e;
+  }
+  return *const_cast<ConfigSection *>(section);
+}
+//---------------------------------------------------------------------------
 Mutant ConfigSection::valueByPath(const utf8::String & path, const Mutant & defValue) const
 {
   Mutant &  m = valueRefByPath(path);
@@ -73,14 +86,14 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
 {
   utf8::String::Iterator b(path), e(path);
   const ConfigSection * section = this;
-  for( ; ; ){
+  for(;;){
     while( e.getChar() != '.' && e.next() );
     if( e - b < 1 ) break;
     if( e.eof() ){
-      return section->valueRef(utf8::String(b, e));
+      return section->valueRef(utf8::String(b,e));
     }
-    else{
-      section = &section->section(utf8::String(b, e));
+    else {
+      section = &section->section(utf8::String(b,e));
       b = ++e;
     }
   }

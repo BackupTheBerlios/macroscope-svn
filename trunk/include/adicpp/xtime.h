@@ -102,17 +102,67 @@ inline uintptr_t monthDays(uintptr_t year, uintptr_t mon)
 //---------------------------------------------------------------------------
 #if SIZEOF_TIMEVAL == 0 && !HAVE_WINDOWS_H
 struct timeval {
-    long  tv_sec;         /* seconds since Jan. 1, 1970 */
-    long  tv_usec;        /* and microseconds */
+  long tv_sec;         /* seconds since Jan. 1, 1970 */
+  long tv_usec;        /* and microseconds */
 };
 #endif
 //---------------------------------------------------------------------------
 #if SIZEOF_TIMEZONE == 0/* && !HAVE_WINDOWS_H*/
 struct timezone {
-    int tz_minuteswest; /* minutes west of Greenwich */
-    int tz_dsttime;     /* type of dst correction */
+  int tz_minuteswest; /* minutes west of Greenwich */
+  int tz_dsttime;     /* type of dst correction */
 };
 #endif
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+struct timeval32 {
+  int32_t tv_sec;
+  int32_t tv_usec;
+  
+  timeval32 & operator = (const struct timeval & tv);
+  operator const struct timeval () const;
+};
+//---------------------------------------------------------------------------
+inline timeval32 & timeval32::operator = (const struct timeval & tv)
+{
+  tv_sec = int32_t(tv.tv_sec);
+  tv_usec = int32_t(tv.tv_usec);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline timeval32::operator const struct timeval () const
+{
+  struct timeval tv;
+  tv.tv_sec = (long) tv_sec;
+  tv.tv_usec = (long) tv_usec;
+  return tv;
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+struct timeval64 {
+  int64_t tv_sec;
+  int64_t tv_usec;
+  
+  timeval64 & operator = (const struct timeval & tv);
+  operator const struct timeval () const;
+};
+//---------------------------------------------------------------------------
+inline timeval64 & timeval64::operator = (const struct timeval & tv)
+{
+  tv_sec = int64_t(tv.tv_sec);
+  tv_usec = int64_t(tv.tv_usec);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline timeval64::operator const struct timeval () const
+{
+  struct timeval tv;
+  tv.tv_sec = (long) tv_sec;
+  tv.tv_usec = (long) tv_usec;
+  return tv;
+}
 //---------------------------------------------------------------------------
 #if !HAVE_GETTIMEOFDAY
 int gettimeofday(struct timeval * tp, struct timezone * tzp);

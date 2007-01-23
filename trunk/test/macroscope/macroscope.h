@@ -31,6 +31,7 @@
 #include "version.c"
 #undef _VERSION_C_AS_HEADER_
 //------------------------------------------------------------------------------
+using namespace ksys;
 using namespace adicpp;
 //------------------------------------------------------------------------------
 namespace macroscope {
@@ -44,33 +45,33 @@ class Logger {
   protected:
     void parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl);
     void parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear);
-    void parseBPFTLogFile(const utf8::String & logFileName);
+    void parseBPFTLogFile(const ConfigSection & section);
     void writeHtmlYearOutput();
   private:
     utf8::String shortUrl_;
-    ksys::Config config_;
-    ksys::AutoPtr<Database>  database_;
-    ksys::AutoPtr<Statement> statement_;
-    ksys::AutoPtr<Statement> stTrafIns_;
-    ksys::AutoPtr<Statement> stTrafUpd_;
-    ksys::AutoPtr<Statement> stMonUrlSel_;
-    ksys::AutoPtr<Statement> stMonUrlIns_;
-    ksys::AutoPtr<Statement> stMonUrlUpd_;
-    ksys::AutoPtr<Statement> stFileStatSel_;
-    ksys::AutoPtr<Statement> stFileStatIns_;
-    ksys::AutoPtr<Statement> stFileStatUpd_;
-    ksys::AutoPtr<Statement> stMsgsIns_;
-    ksys::AutoPtr<Statement> stMsgsSel_;
-    ksys::AutoPtr<Statement> stMsgsDel_;
-    ksys::AutoPtr<Statement> stMsgsDel2_;
-    ksys::AutoPtr<Statement> stMsgsSelCount_;
+    Config config_;
+    AutoPtr<Database>  database_;
+    AutoPtr<Statement> statement_;
+    AutoPtr<Statement> stTrafIns_;
+    AutoPtr<Statement> stTrafUpd_;
+    AutoPtr<Statement> stMonUrlSel_;
+    AutoPtr<Statement> stMonUrlIns_;
+    AutoPtr<Statement> stMonUrlUpd_;
+    AutoPtr<Statement> stFileStatSel_;
+    AutoPtr<Statement> stFileStatIns_;
+    AutoPtr<Statement> stFileStatUpd_;
+    AutoPtr<Statement> stMsgsIns_;
+    AutoPtr<Statement> stMsgsSel_;
+    AutoPtr<Statement> stMsgsDel_;
+    AutoPtr<Statement> stMsgsDel2_;
+    AutoPtr<Statement> stMsgsSelCount_;
     int64_t ellapsed_;
     bool verbose_;
 
     void printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl);
-    void parseSquidLogLine(char * p, uintptr_t size, ksys::Array< const char *> & slcp);
+    void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
     utf8::String  squidStrToWideString(const char * str);
-    ksys::Mutant  timeStampRoundToMin(const ksys::Mutant & timeStamp);
+    Mutant  timeStampRoundToMin(const Mutant & timeStamp);
     utf8::String  shortUrl(const utf8::String & url);
     int64_t       fetchLogFileLastOffset(const utf8::String & logFileName);
     Logger &      updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset);
@@ -95,10 +96,10 @@ class Logger {
 
         utf8::String id() const;
 
-        static ksys::EmbeddedHashNode<TrafCacheEntry> & keyNode(const TrafCacheEntry & object){
+        static EmbeddedHashNode<TrafCacheEntry> & keyNode(const TrafCacheEntry & object){
           return object.keyNode_;
         }
-        static TrafCacheEntry & keyNodeObject(const ksys::EmbeddedHashNode<TrafCacheEntry> & node,TrafCacheEntry * p){
+        static TrafCacheEntry & keyNodeObject(const EmbeddedHashNode<TrafCacheEntry> & node,TrafCacheEntry * p){
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const TrafCacheEntry & object){
@@ -108,18 +109,18 @@ class Logger {
           return object1.id().strcasecmp(object2.id()) == 0;
         }
         
-        mutable ksys::EmbeddedHashNode<TrafCacheEntry> keyNode_;
+        mutable EmbeddedHashNode<TrafCacheEntry> keyNode_;
 
-        static ksys::EmbeddedListNode<TrafCacheEntry> & listNode(const TrafCacheEntry & object){
+        static EmbeddedListNode<TrafCacheEntry> & listNode(const TrafCacheEntry & object){
           return object.listNode_;
         }
-        static TrafCacheEntry & listNodeObject(const ksys::EmbeddedListNode<TrafCacheEntry> & node,TrafCacheEntry * p = NULL){
+        static TrafCacheEntry & listNodeObject(const EmbeddedListNode<TrafCacheEntry> & node,TrafCacheEntry * p = NULL){
           return node.object(p->listNode_);
         }
 
-        mutable ksys::EmbeddedListNode<TrafCacheEntry> listNode_;
+        mutable EmbeddedListNode<TrafCacheEntry> listNode_;
     };
-    typedef ksys::EmbeddedHash<
+    typedef EmbeddedHash<
       TrafCacheEntry,
       TrafCacheEntry::keyNode,
       TrafCacheEntry::keyNodeObject,
@@ -127,8 +128,8 @@ class Logger {
       TrafCacheEntry::keyHashNodeEqu
     > TrafCache;
     TrafCache trafCache_;
-    ksys::AutoHashDrop<TrafCache> trafCacheAutoDrop_;
-    typedef ksys::EmbeddedList<
+    AutoHashDrop<TrafCache> trafCacheAutoDrop_;
+    typedef EmbeddedList<
       TrafCacheEntry,
       TrafCacheEntry::listNode,
       TrafCacheEntry::listNodeObject
@@ -139,14 +140,15 @@ class Logger {
     utf8::String htmlDir_;
 
     int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String());
-    void writeHtmlHead(ksys::AsyncFile & f);
-    void writeHtmlTail(ksys::AsyncFile & f);
+    void writeHtmlHead(AsyncFile & f);
+    void writeHtmlTail(AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year);
+    Logger & writeBPFTHtmlReport(AsyncFile & f);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
-    static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const ksys::Table<ksys::Mutant> & table);
-    static void writeTraf(ksys::AsyncFile & f,uint64_t qi,uint64_t qj);
+    static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
+    static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];
