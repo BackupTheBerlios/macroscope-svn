@@ -76,7 +76,13 @@ void Exception::throwSP()
   if( stackBackTrace_ && ksys::stackBackTrace ){
     try {
       utf8::String::Stream stackTrace;
-      stackTrace << "\n" << getBackTrace(5);
+      stackTrace << "\n" <<
+#if __GNUG__
+        getBackTrace(5)
+#else
+        getBackTrace(1)
+#endif
+      ;
       if( stackTrace.count() > 1 ) stdErr.debug(128,stackTrace);
     }
     catch( ... ){

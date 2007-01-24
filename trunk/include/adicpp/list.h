@@ -596,7 +596,7 @@ template<typename T> class EmbeddedListNode {
 //-----------------------------------------------------------------------------
 template< typename T> inline EmbeddedListNode< T>::~EmbeddedListNode()
 {
-  assert(prev_ == NULL && next_ == NULL);
+//  assert(prev_ == NULL && next_ == NULL);
 }
 //-----------------------------------------------------------------------------
 template< typename T> inline EmbeddedListNode< T>::EmbeddedListNode()
@@ -748,7 +748,7 @@ template< typename T,EmbeddedListNode< T> & (*N) (const T &),
           T & (*O) (const EmbeddedListNode< T> &, T *) > inline
 EmbeddedList< T,N,O> & EmbeddedList< T,N,O>::insTo(EmbeddedListNode< T> * prev, EmbeddedListNode< T> * next, const T & object)
 {
-  assert( N(object).prev() == NULL && N(object).next() == NULL );
+//  assert( N(object).prev() == NULL && N(object).next() == NULL );
   N(object).prev() = prev;
   N(object).next() = next;
   if( N(object).prev() == NULL ){

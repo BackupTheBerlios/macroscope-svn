@@ -194,23 +194,23 @@ void LogFile::rotate(AsyncFile & file)
   file.close();
   file.exclusive(true).open();
   utf8::String fileExt(getFileExt(file.fileName()));
-  Stat st;
-  intptr_t i = 0;
-  while( stat(changeFileExt(file.fileName(),"." + utf8::int2Str(i)) + fileExt,st) ) i++;
-  while( i > 0 ){
-    if( i >= (intptr_t) rotatedFileCount_ ){
-      remove(changeFileExt(file.fileName(),"." + utf8::int2Str(i - 1)) + fileExt);
+  uintptr_t i = rotatedFileCount_;
+  while( i >= 1 ){
+    if( i == rotatedFileCount_ ){
+      remove(changeFileExt(file.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,true);
     }
     else {
       rename(
         changeFileExt(file.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
-        changeFileExt(file.fileName(),"." + utf8::int2Str(i)) + fileExt
+        changeFileExt(file.fileName(),"." + utf8::int2Str(i)) + fileExt,
+	true,
+	true
       );
     }
     i--;
   }
   file.close();
-  rename(file.fileName(),changeFileExt(file.fileName(),".0") + fileExt);
+  rename(file.fileName(),changeFileExt(file.fileName(),".0") + fileExt,true,true);
 }
 //---------------------------------------------------------------------------
 void LogFile::threadExecute()
@@ -256,7 +256,7 @@ void LogFile::threadExecute()
         exception = true;
         try {
           utf8::OemString os(getNameFromPathName(getExecutableName()).getOEMString());
-          utf8::OemString er(e->stdError().getOEMString());
+          utf8::OemString er((getBackTrace(1) + e->stdError()).getOEMString());
 #if HAVE_SYSLOG_H
           openlog(os,LOG_PID,LOG_DAEMON);
           syslog(LOG_ERR,er);

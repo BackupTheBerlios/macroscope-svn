@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,18 +37,17 @@ bool stackBackTrace = true;
 utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 {
 #if __GNUG__
-  skipCount = skipCount;
   thread = thread;
-  
   utf8::String s;
-  
   AutoPtr<char *> strings(backtrace());
   strings.ptr(backtrace_symbols(strings));
   for( char ** p = strings; p != NULL && *p != NULL; p++ ){
 //      попробовать demangle libiberty
 //    fprintf(stderr,"%s\n",*p);
-    s += *p;
-    s += "\n";
+    if( --skipCount < 0 ){
+      s += *p;
+      s += "\n";
+    }
   }
   return s;
 #elif !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
@@ -1252,8 +1251,9 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
   return ni.eof() && mi.eof();
 }
 //---------------------------------------------------------------------------
-void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bool createPathIfNotExist)
+bool rename(const utf8::String & oldPathName,const utf8::String & newPathName,bool createPathIfNotExist,bool noThrow)
 {
+  oserror(0);
   Fiber * fiber = currentFiber();
   if( fiber != NULL ){
     fiber->event_.timeout_ = ~uint64_t(0);
@@ -1264,8 +1264,9 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
     fiber->thread()->postRequest();
     fiber->switchFiber(currentFiber()->mainFiber());
     assert( fiber->event_.type_ == etRename );
-    if( fiber->event_.errno_ != 0 )
+    if( fiber->event_.errno_ != 0 && !noThrow )
       newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
+    oserror(fiber->event_.errno_);
   }
   else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1297,9 +1298,12 @@ void rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
         return rename(oldPathName,newPathName,false);
       }
 #endif
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
+      if( !noThrow )
+        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
+      oserror(err);
     }
   }
+  return oserror() == 0;
 }
 //---------------------------------------------------------------------------
 void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uintptr_t bufferSize)
