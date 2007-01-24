@@ -58,6 +58,7 @@ LogFile::LogFile() :
   bufferPos_(0),
   bufferSize_(0),
   bufferDataTTA_(60 * 1000000u), // 60 seconds
+  lastFlushTime_(gettimeofday()),
   rotationThreshold_(1024 * 1024),
   rotatedFileCount_(10),
   codePage_(CP_OEMCP)
@@ -84,16 +85,20 @@ LogFile & LogFile::open()
 //---------------------------------------------------------------------------
 LogFile & LogFile::close()
 {
-  for(;;){
-    terminate();
-    bufferSemaphore_.post().post();
-//    fprintf(stderr,"%s %d handle_ = %p, started_ = %u, finished_ = %u\n",__FILE__,__LINE__,handle_,started_,finished_);
-    if( !active() ) break;
-    ksleep1();
-  }
   wait();
   threadFile_.close();
   return *this;
+}
+//---------------------------------------------------------------------------
+void LogFile::threadBeforeWait()
+{
+//  for(;;){
+    terminate();
+    bufferSemaphore_.post().post();
+//    fprintf(stderr,"%s %d handle_ = %p, started_ = %u, finished_ = %u\n",__FILE__,__LINE__,handle_,started_,finished_);
+//    if( !active() ) break;
+//    ksleep1();
+//  }
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::fileName(const utf8::String & name)
@@ -109,7 +114,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
     struct timeval tv = time2Timeval(getlocaltimeofday());
     struct tm t = time2tm(timeval2Time(tv));
     AutoPtr<char> buf;
-    bool post = false, post2 = false;
+    bool post = false;
     try {
       char buf[128];
       union {
@@ -166,26 +171,19 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
       }
       AutoLock<FiberInterlockedMutex> lock(mutex_);
       resume();
-      post = bufferPos_ == 0;
-      try {
-        uintptr_t bufferSize = bufferSize_;
-        while( bufferSize < bufferPos_ + a + l ) bufferSize = (bufferSize << 1) + (bufferSize == 0);
-        buffer_.realloc(bufferSize);
-        bufferSize_ = bufferSize;
-        memcpy(buffer_.ptr() + bufferPos_,buf2,a);
-        utf8::utf8s2mbcs(codePage_,buffer_.ptr() + bufferPos_ + a,l,stream.plane(),stream.count());
-        bufferPos_ += a + l;
-        post2 = bufferPos_ >= getpagesize() * 16u;
-      }
-      catch( ... ){
-        post = false;
-      }
+      AutoLock<InterlockedMutex> lock2(threadMutex_);
+      uintptr_t bufferSize = bufferSize_;
+      while( bufferSize < bufferPos_ + a + l ) bufferSize = (bufferSize << 1) + (bufferSize == 0);
+      buffer_.realloc(bufferSize);
+      bufferSize_ = bufferSize;
+      memcpy(buffer_.ptr() + bufferPos_,buf2,a);
+      utf8::utf8s2mbcs(codePage_,buffer_.ptr() + bufferPos_ + a,l,stream.plane(),stream.count());
+      bufferPos_ += a + l;
+      post = bufferPos_ - a - l == 0 || bufferPos_ >= getpagesize() * 16u || gettimeofday() - lastFlushTime_ >= bufferDataTTA_;
     }
     catch( ... ){
-      post = false;
     }
     if( post ) bufferSemaphore_.post();
-    if( post2 ) bufferSemaphore_.post();
   }
   return *this;
 }
@@ -217,55 +215,65 @@ void LogFile::rotate(AsyncFile & file)
 //---------------------------------------------------------------------------
 void LogFile::threadExecute()
 {
+//  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
   priority(THREAD_PRIORITY_LOWEST);
   threadFile_.fileName(file_).createIfNotExist(true);
   AsyncFile lck;
   lck.fileName(threadFile_.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
   bool exception = false;
   for(;;){
-    bufferSemaphore_.wait();
-    bufferSemaphore_.timedWait(bufferDataTTA_);
     AutoPtr<char> buffer;
     uintptr_t bufferPos;
     {
-      AutoLock<FiberInterlockedMutex> lock(mutex_);
+      AutoLock<InterlockedMutex> lock(threadMutex_);
       buffer.xchg(buffer_);
       bufferPos = bufferPos_;
       bufferPos_ = 0;
       bufferSize_ = 0;
     }
-//    fprintf(stderr,"%s %d terminated_ = %u, bufferPos = %qu, %u = exception\n",__FILE__,__LINE__,terminated_,bufferPos,exception);
+    if( bufferPos == 0 && !terminated_ ){
+      bufferSemaphore_.wait();
+      continue;
+    }
     if( terminated_ && (bufferPos == 0 || exception) ) break;
     if( bufferPos > 0 ){
+//      fprintf(stderr,"%s %d bufferPos = %"PRIuPTR", terminated_ = %d, exception = %d\n",__FILE__,__LINE__,bufferPos,terminated_,exception);
       exception = false;
-      {
-        AutoFileWRLock<AsyncFile> lock;
+      AutoFileWRLock<AsyncFile> lock;
+      try {
+        lck.open();
+        lck.wrLock(0,0);
+        lock.setLocked(lck);
+        threadFile_.exclusive(false).open();
+        threadFile_.seek(threadFile_.size()).writeBuffer(buffer,bufferPos);
+        {
+          AutoLock<InterlockedMutex> lock(threadMutex_);
+          lastFlushTime_ = gettimeofday();
+	}
+        rotate(threadFile_);
+      }
+      catch( ExceptionSP & e ){
+        exception = true;
         try {
-          lck.open();
-          lck.wrLock(0,0);
-          lock.setLocked(lck);
-          threadFile_.exclusive(false).open();
-          threadFile_.seek(threadFile_.size()).writeBuffer(buffer,bufferPos);
-          rotate(threadFile_);
-        }
-        catch( ExceptionSP & e ){
           utf8::OemString os(getNameFromPathName(getExecutableName()).getOEMString());
-	  utf8::OemString er(e->stdError().getOEMString());
+          utf8::OemString er(e->stdError().getOEMString());
 #if HAVE_SYSLOG_H
           openlog(os,LOG_PID,LOG_DAEMON);
           syslog(LOG_ERR,er);
           closelog();
 #endif
           fprintf(stderr,"%s: %s",(const char * ) os,(const char * ) er);
-          exception = true;
-        }
-      }
-      if( exception ){
-        threadFile_.close();
-        lck.close();
+	}
+        catch( ... ){
+	}
       }
     }
+    if( exception ){
+      threadFile_.close();
+      lck.close();
+    }
   }
+//  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::setDebugLevels(const utf8::String & levels)

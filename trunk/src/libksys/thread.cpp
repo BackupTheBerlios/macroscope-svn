@@ -95,7 +95,8 @@ void * Thread::threadFunc(void * thread)
 //  while( PostThreadMessage(mainThreadId,threadFinishMessage,0,0) == 0 ) Sleep(1);
   return (DWORD) reinterpret_cast<Thread *>(thread)->exitCode_;
 #elif HAVE_PTHREAD_H
-  return (void *) (intptr_t) reinterpret_cast<Thread *>(thread)->exitCode_;
+  return (void *) reinterpret_cast<Thread *>(thread)->exitCode_;
+//  pthread_exit((void *) reinterpret_cast<Thread *>(thread)->exitCode_);
 #endif
 }
 //---------------------------------------------------------------------------
@@ -194,6 +195,7 @@ Thread & Thread::suspend()
 Thread & Thread::wait()
 {
   if( handle_ != NULL ){
+    threadBeforeWait();
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD exitCode;
     BOOL r = GetExitCodeThread(handle_,&exitCode);
@@ -204,7 +206,8 @@ Thread & Thread::wait()
     CloseHandle(handle_);
     handle_ = NULL;
 #elif HAVE_PTHREAD_H
-    if( (errno = pthread_join(handle_,NULL)) != 0 ){
+    void * result;
+    if( (errno = pthread_join(handle_,&result)) != 0 ){
       perror(NULL);
       abort();
     }

@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#include <adicpp/lconfig.h>
+#include <adicpp/ksys.h>
 #include <adicpp/execinfo/execinfo.h>
 //---------------------------------------------------------------------------
 namespace ksys {
@@ -305,12 +305,17 @@ char ** backtrace()
 {
   intptr_t i;
   char ** buffer = (char **) kmalloc(sizeof(char *) * 128);
+  char * prevFrameAddr = (char *) getframeaddr(0);
+  char * prevReturnAddr = (char *) getreturnaddr(0);
   for( i = 0; i < 128; i++ ){
-    buffer[i - 1] = (char *) getframeaddr(i);
-    if( buffer[i] == NULL || (i > 0 && buffer[i] - buffer[i - 1] > 0x100000) ) break;
-    buffer[i - 1] = (char *) getreturnaddr(i);
-//    fprintf(stderr,"%p\n",(*buffer)[i - 1]);
-    if( buffer[i] == NULL || (i > 0 && buffer[i] - buffer[i - 1] > 0x100000) ) break;
+    buffer[i] = (char *) getframeaddr(i);
+//    fprintf(stderr,"%p %"PRIdPTR"\n",buffer[i],buffer[i] - prevFrameAddr);
+    if( buffer[i] == NULL || buffer[i] - prevFrameAddr > 0x100000 ) break;
+    prevFrameAddr = buffer[i];
+    buffer[i] = (char *) getreturnaddr(i);
+//    fprintf(stderr,"%p %"PRIdPTR"\n",buffer[i],buffer[i] - prevReturnAddr);
+    if( buffer[i] == NULL ) break;
+    prevReturnAddr = buffer[i];
   }
   buffer[i] = NULL;
   return buffer;
@@ -318,27 +323,18 @@ char ** backtrace()
 
 char ** backtrace_symbols(char ** buffer)
 {
-  intptr_t clen = 0, i;
+  intptr_t clen = sizeof(char *), i;
 
   for( i = 0; buffer != NULL && buffer[i] != NULL; i++ ) clen += sizeof(char *);
   for( i = 0; buffer != NULL && buffer[i] != NULL; i++ ){
     char * cp;
     intptr_t alen = 0, offset, j;
     Dl_info info;
+#if HAVE_DLFCN_H
     if( dladdr(buffer[i],&info) != 0 ){
       if( info.dli_sname == NULL ) info.dli_sname = "???";
       if( info.dli_saddr == NULL ) info.dli_saddr = buffer[i];
       offset = intptr_t(buffer[i]) - intptr_t(info.dli_saddr);
-// "0x01234567 <function+offset> at filename"
-/*      alen = 2 +                      // "0x"
-             (sizeof(void *) * 2) +   // "01234567"
-             2 +                      // " <"
-             strlen(info.dli_sname) + // "function"
-             1 +                      // "+"
-             D10(offset) +            // "offset
-             5 +                      // "> at "
-             strlen(info.dli_fname) + // "filename"
-             1;                       // "\0"*/
       for(;;){
         buffer = (char **) krealloc(buffer,clen + alen);
         cp = (char *) buffer + clen;
@@ -348,17 +344,17 @@ char ** backtrace_symbols(char ** buffer)
       }
     }
     else {
+#endif
       for(;;){
-/*      alen = 2 +                      // "0x"
-             (sizeof(void *) * 2) +   // "01234567"
-             1;                       // "\0"*/
         buffer = (char **) krealloc(buffer,clen + alen);
         cp = (char *) buffer + clen;
         j = snprintf(cp,alen,"%p",buffer[i]);
 	if( j < alen ) break;
 	alen = (alen << 1) + (alen == 0);
       }
+#if HAVE_DLFCN_H
     }
+#endif
     alen = j + 1;
     buffer[i] = cp;
     clen += alen;

@@ -66,10 +66,12 @@ class LogFile : protected Thread {
     static const char * const priNicks_[];
     utf8::String file_;
     FiberInterlockedMutex mutex_;
+    InterlockedMutex threadMutex_;
     AutoPtr<char> buffer_;
     uintptr_t bufferPos_;
     uintptr_t bufferSize_;
     uint64_t bufferDataTTA_; // data time to accumulation
+    uint64_t lastFlushTime_;
     Semaphore bufferSemaphore_;
 
     uint8_t enabledLevels_[32];
@@ -80,6 +82,7 @@ class LogFile : protected Thread {
     LogFile & internalLog(uintptr_t level,const utf8::String::Stream & stream);
     void rotate(AsyncFile & file);
     void threadExecute();
+    void threadBeforeWait();
 
     AsyncFile threadFile_;
   private:

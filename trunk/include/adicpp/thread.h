@@ -90,19 +90,19 @@ class Thread {
     bool isSuspended() const;
     Thread & wait();
 
-    uintptr_t         id() const;
-    const int32_t &   exitCode() const;
-    bool              active() const;
+    uintptr_t id() const;
+    const intptr_t & exitCode() const;
+    bool active() const;
 
-    const bool &      started() const;
-    Thread &          terminate();
-    const bool &      terminated() const;
-    const bool &      finished() const;
+    const bool & started() const;
+    Thread & terminate();
+    const bool & terminated() const;
+    const bool & finished() const;
 
-    Thread &          stackSize(uintptr_t newStackSize);
+    Thread & stackSize(uintptr_t newStackSize);
     const uintptr_t & stackSize() const;
-    Thread &          priority(uintptr_t pri);
-    uintptr_t         priority() const;
+    Thread & priority(uintptr_t pri);
+    uintptr_t priority() const;
 
     class Action {
       public:
@@ -112,7 +112,7 @@ class Thread {
         void * const &  handler() const;
         void * const &  data() const;
 
-        bool            operator ==(const Action & action) const;
+        bool operator == (const Action & action) const;
       protected:
       private:
         void *  handler_;
@@ -123,6 +123,7 @@ class Thread {
     static Array<Action> & afterExecuteActions();
   protected:
     virtual void threadExecute() = 0;
+    virtual void threadBeforeWait() {}
     uintptr_t       stackSize_;
 #if defined(__WIN32__) || defined(__WIN64__)
     HANDLE          handle_;
@@ -131,7 +132,7 @@ class Thread {
     pthread_t       handle_;
     //pthread_mutex_t mutex_;
 #endif
-    int32_t         exitCode_;
+    intptr_t        exitCode_;
     bool            started_;
     bool            terminated_;
     bool            finished_;
@@ -198,7 +199,7 @@ inline uintptr_t Thread::id() const
 #endif
 }
 //---------------------------------------------------------------------------
-inline const int32_t & Thread::exitCode() const
+inline const intptr_t & Thread::exitCode() const
 {
   return exitCode_;
 }

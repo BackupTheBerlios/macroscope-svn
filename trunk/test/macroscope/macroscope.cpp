@@ -33,9 +33,6 @@ namespace macroscope {
 //------------------------------------------------------------------------------
 Logger::~Logger()
 {
-#ifndef NDEBUG
-  while( trafCacheLRU_.count() > 0 ) trafCacheLRU_.remove(*trafCacheLRU_.last());
-#endif
 }
 //------------------------------------------------------------------------------
 Logger::Logger() :

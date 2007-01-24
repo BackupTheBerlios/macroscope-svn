@@ -593,7 +593,7 @@ CHECK_EMPTY_ARRAY_SIZE (EMPTY_ARRAY_SIZE)
 
 INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} "${CMAKE_BINARY_DIR}/include")
 
-#SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -fno-schedule-insns -fno-unit-at-a-time -O -g -fno-inline-functions -fno-omit-frame-pointer -fstack-check")
+#SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -fno-schedule-insns -fno-unit-at-a-time -O -g -fno-inline-functions -fno-omit-frame-pointer -fno-implicit-inline-templates -fstack-check")
 #SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -O -g3 -fstack-check -fno-inline-functions -fno-default-inline -fno-inline -fno-builtin -fno-omit-frame-pointer -fno-defer-pop -fno-merge-constants -fno-thread-jumps -fno-loop-optimize -fno-if-conversion -fno-if-conversion2 -fno-delayed-branch -fno-guess-branch-probability -fno-cprop-registers")
 #SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -g3 -fms-extensions -fno-elide-constructors -fno-enforce-eh-specs")
 
@@ -629,7 +629,7 @@ SET (CPACK_PACKAGE_VENDOR "Korvin Software")
 SET (CPACK_PACKAGE_EXECUTABLES "macroscope" "Macroscope")
 SET (CPACK_PACKAGE_VERSION_MAJOR "1")
 SET (CPACK_PACKAGE_VERSION_MINOR "0")
-SET (CPACK_PACKAGE_VERSION_PATCH "572")
+SET (CPACK_PACKAGE_VERSION_PATCH "578")
 SET (CPACK_PACKAGE_INSTALL_DIRECTORY "macroscope")
 
 # Try to get patch level from svn
