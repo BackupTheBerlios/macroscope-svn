@@ -73,7 +73,7 @@ const utf8::String Exception::what() const
 void Exception::throwSP()
 {
 #if __GNUG__ || (!defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__)))
-  if( stackBackTrace_ && ksys::stackBackTrace ){
+  if( stdErr.debugLevel(128) && stackBackTrace_ && ksys::stackBackTrace ){
     try {
       utf8::String::Stream stackTrace;
       stackTrace << "\n" <<

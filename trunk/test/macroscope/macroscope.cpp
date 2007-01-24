@@ -727,7 +727,7 @@ void Logger::main()
     for( uintptr_t i = 0; i < config_.sectionByPath("macroscope.bpft").sectionCount(); i++ )
       parseBPFTLogFile(config_.sectionByPath("macroscope.bpft").section(i));
   }
-  //writeHtmlYearOutput();
+  writeHtmlYearOutput();
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope
@@ -770,8 +770,8 @@ int main(int _argc, char * _argv[])
     }
   }
   catch( ExceptionSP & e ){
-//    stdErr.debug(0,stream << macroscope_version.gnu_ << " terminated with error(s), see below.\n");
     e->writeStdError();
+    stdErr.debug(0,stream << macroscope_version.gnu_ << " terminated with error(s), see above.\n");
     errcode = e->code() >= errorOffset ? e->code() - errorOffset : e->code();
   }
   catch( ... ){

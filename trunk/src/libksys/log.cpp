@@ -75,7 +75,9 @@ LogFile::LogFile() :
   debugLevel(7,1);
   debugLevel(8,1);
   debugLevel(9,1);
+#ifndef NDEBUG
   debugLevel(128,1);
+#endif
 }
 //---------------------------------------------------------------------------
 LogFile & LogFile::open()
