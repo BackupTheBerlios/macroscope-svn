@@ -41,20 +41,14 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
   thread = thread;
   
   utf8::String s;
-  char ** strings = (char **) ::malloc(sizeof(char *) * 128);
-  if( strings != NULL ){
-    size_t size = backtrace((void **) strings,128);
-    strings = backtrace_symbols((void **) strings,size);
-    try {
-      for( size_t i = 0; i < size; i++ ){
+  
+  AutoPtr<char *> strings(backtrace());
+  strings.ptr(backtrace_symbols(strings));
+  while( char ** p = strings; p != NULL && *p != NULL; p++ ){
 //      попробовать demangle libiberty
-        s += strings[i];
-        s += "\n";
-      }
-    }
-    catch( ... ){
-    }
-    ::free(strings);
+    fprintf(stderr,"%s\n",*p);
+    s += *p;
+    s += "\n";
   }
   return s;
 #elif !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))

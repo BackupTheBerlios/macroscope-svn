@@ -23,8 +23,8 @@ ENDIF (NOT LIB_LZO AND NOT LIB_LZO2)
 
 IF (NOT LIB_EXECINFO AND CMAKE_COMPILER_IS_GNUCXX)
   SET (ADD_SOURCES ${ADD_SOURCES}
-    execinfo.c
-    stacktraverse.c
+    execinfo.cpp
+    stacktraverse.cpp
   )
 ENDIF (NOT LIB_EXECINFO AND CMAKE_COMPILER_IS_GNUCXX)
 

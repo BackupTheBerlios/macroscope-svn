@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2003 Maxim Sobolev <sobomax@FreeBSD.org>
+/*-
+ * Copyright 2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,22 +22,17 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $Id: execinfo.h,v 1.2 2004/07/19 05:20:29 sobomax Exp $
  */
-
-#ifndef _EXECINFO_H_
-#define _EXECINFO_H_
-
-#ifdef __cplusplus
-extern "C" {
+//---------------------------------------------------------------------------
+#ifndef execinfoH
+#define execinfoH
+//---------------------------------------------------------------------------
+namespace ksys {
+//---------------------------------------------------------------------------
+char ** backtrace();
+char ** backtrace_symbols(char **);
+//---------------------------------------------------------------------------
+} // namespace ksys
+//---------------------------------------------------------------------------
 #endif
-
-intptr_t backtrace(void **,intptr_t);
-char ** backtrace_symbols(void **,intptr_t);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* _EXECINFO_H_ */
+//---------------------------------------------------------------------------
