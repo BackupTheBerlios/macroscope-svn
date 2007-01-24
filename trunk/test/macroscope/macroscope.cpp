@@ -98,7 +98,7 @@ void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, 
     if( !isatty(fileno(stderr)) )
 #endif
 #endif
-    fprintf(stderr, "\n");
+    fprintf(stderr,"\n");
   //    printf("%-20s\n",utf8::elapsedTime2Str(size * ct / pos - ct).c_str());
   }
 }
@@ -733,8 +733,7 @@ void Logger::main()
 } // namespace macroscope
 //------------------------------------------------------------------------------
 #if HAVE__MALLOC_OPTIONS
-//const char * _malloc_options = "HR";
-const char * _malloc_options = "H";
+const char * _malloc_options = "HR";
 #endif
 //------------------------------------------------------------------------------
 int main(int _argc, char * _argv[])

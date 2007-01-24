@@ -157,6 +157,7 @@ void Logger::writeUserTop(
     }
     writeHtmlTail(f);
     f.resize(f.tell());
+    if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
   }
 }
 //------------------------------------------------------------------------------
@@ -404,10 +405,12 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
   }
   writeHtmlTail(f);
   f.resize(f.tell());
+  if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
 }
 //------------------------------------------------------------------------------
 void Logger::writeHtmlYearOutput()
 {
+  if( verbose_ ) fprintf(stderr,"\n");
   cacheSize_ = config_.section("macroscope").value("traffic_cache_size",0);
   decoration();
   struct tm beginTime, endTime, curTime;
@@ -661,6 +664,7 @@ void Logger::writeHtmlYearOutput()
     utf8::int2Str((uintmax_t) trafCache_.count()) << "<BR>\n";
   writeHtmlTail(f);
   f.resize(f.tell());
+  if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
 }
 //------------------------------------------------------------------------------
 uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)
