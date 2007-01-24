@@ -37,6 +37,7 @@ Logger::~Logger()
 //------------------------------------------------------------------------------
 Logger::Logger() :
   shortUrl_("://"),
+  config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   ellapsed_(getlocaltimeofday()),
   trafCacheAutoDrop_(trafCache_)
 {
@@ -528,23 +529,23 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
 //------------------------------------------------------------------------------
 void Logger::main()
 {
-  config_.parse().override();
+  config_->parse().override();
   stdErr.rotationThreshold(
-    config_.value("debug_file_rotate_threshold",1024 * 1024)
+    config_->value("debug_file_rotate_threshold",1024 * 1024)
   );
   stdErr.rotatedFileCount(
-    config_.value("debug_file_rotate_count",10)
+    config_->value("debug_file_rotate_count",10)
   );
   stdErr.setDebugLevels(
-    config_.value("debug_levels","+0,+1,+2,+3")
+    config_->value("debug_levels","+0,+1,+2,+3")
   );
   stdErr.fileName(
-    config_.value("log_file",stdErr.fileName())
+    config_->value("log_file",stdErr.fileName())
   );
 
-  verbose_ = config_.section("macroscope").value("verbose", false);
+  verbose_ = config_->section("macroscope").value("verbose", false);
 
-  database_.ptr(Database::newDatabase(&config_));
+  database_.ptr(Database::newDatabase(config_.ptr()));
   statement_.ptr(database_->newAttachedStatement());
   stTrafIns_.ptr(database_->newAttachedStatement());
   stTrafUpd_.ptr(database_->newAttachedStatement());
@@ -651,14 +652,14 @@ void Logger::main()
     metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL)";
   }
 
-  if( (bool) config_.section("macroscope").value("DROP_DATABASE", false) ){
+  if( (bool) config_->section("macroscope").value("DROP_DATABASE", false) ){
     database_->attach();
     database_->drop();
     database_->create();
   }
 
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
-    const ConfigSection & section = config_.section("libadicpp").
+    const ConfigSection & section = config_->section("libadicpp").
       section("default_connection").section("firebird");
     utf8::String hostName, dbName;
     uintptr_t port;
@@ -697,7 +698,7 @@ void Logger::main()
   for( uintptr_t i = 0; i < metadata.count(); i++ ){
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
       if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
-        metadata[i] += "TYPE = " + config_.section("macroscope").text("mysql_table_type","INNODB");
+        metadata[i] += "TYPE = " + config_->section("macroscope").text("mysql_table_type","INNODB");
     try {
       statement_->execute(metadata[i]);
     }
@@ -711,21 +712,21 @@ void Logger::main()
 #else
   utf8::String prefix("macroscope.unix.");
 #endif
-  if( (bool) config_.valueByPath("macroscope.process_squid_log",true) ){
+  if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
     parseSquidLogFile(unScreenString(
-      config_.valueByPath(prefix + "squid.log_file_name")),
-      config_.valueByPath("macroscope.top10_url", true), 
-      config_.valueByPath("macroscope.skip_url"));
+      config_->valueByPath(prefix + "squid.log_file_name")),
+      config_->valueByPath("macroscope.top10_url", true), 
+      config_->valueByPath("macroscope.skip_url"));
   }
-  if( (bool) config_.valueByPath("macroscope.process_sendmail_log",true) ){
+  if( (bool) config_->valueByPath("macroscope.process_sendmail_log",true) ){
     parseSendmailLogFile(unScreenString(
-      config_.valueByPath(prefix + "sendmail.log_file_name")),
-      utf8::String("@") + config_.valueByPath("macroscope.sendmail.main_domain"),
-      config_.valueByPath("macroscope.sendmail.start_year"));
+      config_->valueByPath(prefix + "sendmail.log_file_name")),
+      utf8::String("@") + config_->valueByPath("macroscope.sendmail.main_domain"),
+      config_->valueByPath("macroscope.sendmail.start_year"));
   }
-  if( (bool) config_.valueByPath("macroscope.process_bpft_log",true) ){
-    for( uintptr_t i = 0; i < config_.sectionByPath("macroscope.bpft").sectionCount(); i++ )
-      parseBPFTLogFile(config_.sectionByPath("macroscope.bpft").section(i));
+  if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
+    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ )
+      parseBPFTLogFile(config_->sectionByPath("macroscope.bpft").section(i));
   }
   writeHtmlYearOutput();
 }

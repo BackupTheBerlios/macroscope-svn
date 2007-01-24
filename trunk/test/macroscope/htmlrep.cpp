@@ -52,7 +52,7 @@ void Logger::decoration()
   utf8::String  basePath("macroscope.decoration.");
   for( intptr_t i = sizeof(decos) / sizeof(decos[0]) - 1; i >= 0; i-- )
     for( intptr_t j = ttAll; j >= 0; j-- ){
-      decos[i].colors[j] = unScreenString(config_.valueByPath(basePath + decos[i].path + nicks[j]));
+      decos[i].colors[j] = unScreenString(config_->valueByPath(basePath + decos[i].path + nicks[j]));
     }
 }
 //------------------------------------------------------------------------------
@@ -161,8 +161,26 @@ void Logger::writeUserTop(
   }
 }
 //------------------------------------------------------------------------------
-void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & year)
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+Logger::MTWriter::~MTWriter()
 {
+}
+//------------------------------------------------------------------------------
+Logger::MTWriter::MTWriter(Logger & logger,const utf8::String & file,const struct tm & year) :
+  logger_(logger), file_(file), year_(year)
+{
+}
+//------------------------------------------------------------------------------
+void Logger::MTWriter::threadExecute()
+{
+  logger_.writeMonthHtmlOutput(file_,year_,true);
+}
+//------------------------------------------------------------------------------
+void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & year,bool threaded)
+{
+  if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_html_writer",true) )
+    threads_.add(newObjectV1<MTWriter>(*this,file,year)).resume();
   AsyncFile f(file);
   f.createIfNotExist(true).open();
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -172,9 +190,9 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
 #endif
   chModOwn(
     file,
-    config_.valueByPath(section + "file_mode",755),
-    config_.valueByPath(section + "file_user",ksys::getuid()),
-    config_.valueByPath(section + "file_group",ksys::getgid())
+    config_->valueByPath(section + "file_mode",755),
+    config_->valueByPath(section + "file_user",ksys::getuid()),
+    config_->valueByPath(section + "file_group",ksys::getgid())
   );
   writeHtmlHead(f);
   struct tm beginTime = year, endTime = year;
@@ -199,7 +217,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" <<
-        config_.valueByPath("macroscope.decoration.colors.table_head") <<
+        config_->valueByPath("macroscope.decoration.colors.table_head") <<
         "\" COLSPAN=" <<
         utf8::int2Str(uintmax_t(nonZeroMonthDaysColumns(endTime) + ttAll + 2)) <<
         " ALIGN=left nowrap>\n" <<
@@ -238,7 +256,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
             utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
             (getTraf(ttWWW, bt, endTime) > 0) +
             (getTraf(ttSMTP, bt, endTime) > 0)) << " BGCOLOR=\"" <<
-            config_.valueByPath("macroscope.decoration.colors.detail_head") <<
+            config_->valueByPath("macroscope.decoration.colors.detail_head") <<
             "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
             utf8::String::print("%02d", endTime.tm_mday) << "\n"
             "    </FONT>\n" "  </TH>\n"
@@ -284,7 +302,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
           getTraf(ttWWW, beginTime, endTime, user)) +
           int64_t(usersTrafTable(i, "ST_TRAF_SMTP") = getTraf(ttSMTP, beginTime, endTime, user));
       }
-      usersTrafTable.sort(sortUsersTrafTable, usersTrafTable);
+      usersTrafTable.sort(sortUsersTrafTable,usersTrafTable);
       for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
         if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER")) == 0 ) continue;
         utf8::String user(usersTrafTable(i,"ST_USER"));
@@ -314,10 +332,14 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         ;
 
         for( j = ttAll; j >= 0; j-- ){
-          f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+          f <<
+	    "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyColor_[j] << "\" nowrap>\n"
+	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           ;
           writeTraf(f, usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll, beginTime, endTime));
-          f << "    </FONT>\n" "  </TH>\n"
+          f <<
+	    "    </FONT>\n"
+	    "  </TH>\n"
           ;
         }
         // ѕечатаем трафик пользователей по дн€м
@@ -379,7 +401,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
         bt.tm_hour = 0;
         bt.tm_min = 0;
         bt.tm_sec = 0;
-        if( getTraf(ttAll, bt, et) > 0 ){
+        if( getTraf(ttAll,bt,et) > 0 ){
           for( j = ttAll; j >= 0; j-- ){
             if( getTraf(TrafType(j), bt, et) == 0 ) continue;
             f << 
@@ -389,10 +411,12 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
             if( j == ttAll ){
               writeTraf(f, getTraf(TrafType(j), bt, et), getTraf(ttAll, beginTime, endTime));
             }
-            else{
+            else {
               writeTraf(f, getTraf(TrafType(j), bt, et), getTraf(ttAll, bt, et));
             }
-            f << "    </FONT>\n" "  </TH>\n"
+            f <<
+	      "    </FONT>\n"
+	      "  </TH>\n"
             ;
           }
         }
@@ -411,23 +435,23 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & y
 void Logger::writeHtmlYearOutput()
 {
   if( verbose_ ) fprintf(stderr,"\n");
-  cacheSize_ = config_.section("macroscope").value("traffic_cache_size",0);
+  cacheSize_ = config_->section("macroscope").value("traffic_cache_size",0);
   decoration();
   struct tm beginTime, endTime, curTime;
   statement_->text("SELECT ");
-  if( dynamic_cast< FirebirdDatabase *>(database_.ptr()) != NULL )
+  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");
   statement_->text(statement_->text() + "ST_TIMESTAMP FROM INET_USERS_TRAF ORDER BY ST_TIMESTAMP");
-  if( dynamic_cast< MYSQLDatabase *>(database_.ptr()) != NULL )
+  if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
     statement_->text(statement_->text() + " LIMIT 0,1");
   statement_->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
     beginTime = statement_->valueAsMutant("ST_TIMESTAMP");
     statement_->text("SELECT ");
-    if( dynamic_cast< FirebirdDatabase *>(database_.ptr()) != NULL )
+    if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
       statement_->text(statement_->text() + "FIRST 1 ");
     statement_->text(statement_->text() + "ST_TIMESTAMP FROM INET_USERS_TRAF ORDER BY ST_TIMESTAMP DESC");
-    if( dynamic_cast< MYSQLDatabase *>(database_.ptr()) != NULL )
+    if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
       statement_->text(statement_->text() + " LIMIT 0,1");
     statement_->execute()->fetchAll();
     endTime = statement_->valueAsMutant("ST_TIMESTAMP");
@@ -443,7 +467,7 @@ void Logger::writeHtmlYearOutput()
 #endif
   htmlDir_ = excludeTrailingPathDelimiter(
     unScreenString(
-      config_.valueByPath(section + "directory")
+      config_->valueByPath(section + "directory")
     )
   );
   AsyncFile f(
@@ -452,15 +476,15 @@ void Logger::writeHtmlYearOutput()
   f.createIfNotExist(true).open();
   chModOwn(
     htmlDir_,
-    config_.valueByPath(section + "directory_mode",755),
-    config_.valueByPath(section + "directory_user",ksys::getuid()),
-    config_.valueByPath(section + "directory_group",ksys::getgid())
+    config_->valueByPath(section + "directory_mode",755),
+    config_->valueByPath(section + "directory_user",ksys::getuid()),
+    config_->valueByPath(section + "directory_group",ksys::getgid())
   );
   chModOwn(
     f.fileName(),
-    config_.valueByPath(section + "file_mode",755),
-    config_.valueByPath(section + "file_user",ksys::getuid()),
-    config_.valueByPath(section + "file_group",ksys::getgid())
+    config_->valueByPath(section + "file_mode",755),
+    config_->valueByPath(section + "file_user",ksys::getuid()),
+    config_->valueByPath(section + "file_group",ksys::getgid())
   );
   writeHtmlHead(f);
   beginTime.tm_mon = 0;
@@ -477,14 +501,14 @@ void Logger::writeHtmlYearOutput()
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
-    bool process = !(bool) config_.section("macroscope").value("refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
-    if( process && getTraf(ttAll, beginTime, endTime) > 0 ){
+    bool process = !(bool) config_->section("macroscope").value("refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
+    if( process && getTraf(ttAll,beginTime,endTime) > 0 ){
       utf8::String trafByYearFile(utf8::String::print("users-traf-by-%04d.html", endTime.tm_year + 1900));
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" <<
-        config_.valueByPath("macroscope.decoration.colors.table_head") <<
+        config_->valueByPath("macroscope.decoration.colors.table_head") <<
         "\" COLSPAN=" <<
         utf8::int2Str(uintmax_t(nonZeroYearMonthsColumns(endTime) + ttAll + 2)) <<
         " ALIGN=left nowrap>\n" <<
@@ -505,7 +529,10 @@ void Logger::writeHtmlYearOutput()
       intptr_t  i, j;
       // ѕечатаем заголовки суммарных трафиков пользовател€ за год
       for( i = ttAll; i >= 0; i-- ){
-        f << "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" << trafTypeHeadColor_[i] << "\" wrap>\n" << "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n" "    </FONT>\n" "  </TH>\n"
+        f <<
+	  "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" << trafTypeHeadColor_[i] << "\" wrap>\n" <<
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] <<
+	  "\n" "    </FONT>\n" "  </TH>\n"
         ;
       }
       // ѕечатаем заголовки только тех мес€цев в которых был не нулевой трафик
@@ -517,11 +544,14 @@ void Logger::writeHtmlYearOutput()
         bt.tm_sec = 0;
         endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
         if( getTraf(ttAll, bt, endTime) > 0 ){
-          f << "  <TH ALIGN=center COLSPAN=" <<
+          f <<
+	    "  <TH ALIGN=center COLSPAN=" <<
             utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
             (getTraf(ttWWW, bt, endTime) > 0) +
             (getTraf(ttSMTP, bt, endTime) > 0)) <<
-            " BGCOLOR=\"" << config_.valueByPath("macroscope.decoration.colors.detail_head") << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << utf8::String::print("%02d", endTime.tm_mon + 1) << "\n" "    </FONT>\n" "  </TH>\n"
+            " BGCOLOR=\"" << config_->valueByPath("macroscope.decoration.colors.detail_head") << "\" nowrap>\n"
+	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << utf8::String::print("%02d", endTime.tm_mon + 1) << "\n"
+	    "    </FONT>\n" "  </TH>\n"
           ;
         }
         endTime.tm_mon--;
@@ -539,9 +569,11 @@ void Logger::writeHtmlYearOutput()
         endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
         if( getTraf(ttAll, bt, endTime) > 0 ){
           for( i = ttAll; i >= 0; i-- ){
-            if( getTraf(TrafType(i), bt, endTime) == 0 )
-              continue;
-            f << "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[i] << "\" wrap>\n" << "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n" "    </FONT>\n" "  </TH>\n"
+            if( getTraf(TrafType(i), bt, endTime) == 0 ) continue;
+            f <<
+	      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[i] << "\" wrap>\n" <<
+	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n"
+	      "    </FONT>\n" "  </TH>\n"
             ;
           }
         }
@@ -552,35 +584,40 @@ void Logger::writeHtmlYearOutput()
       endTime.tm_mday = 31;
       // ѕечатаем трафик пользователей
       statement_->text("SELECT DISTINCT ST_USER FROM INET_USERS_TRAF " "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET");
-      Table< Mutant>  usersTrafTable;
+      Table<Mutant> usersTrafTable;
       statement_->prepare()->
-      paramAsMutant("BT", beginTime)->paramAsMutant("ET", endTime)->
-      execute()->unload(usersTrafTable);
+        paramAsMutant("BT", beginTime)->paramAsMutant("ET", endTime)->
+        execute()->unload(usersTrafTable);
       usersTrafTable.
-      addColumn("ST_TRAF").
-      addColumn("ST_TRAF_WWW").
-      addColumn("ST_TRAF_SMTP");
+        addColumn("ST_TRAF").
+        addColumn("ST_TRAF_WWW").
+        addColumn("ST_TRAF_SMTP");
       for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-        utf8::String  user  (usersTrafTable(i, "ST_USER"));
+        utf8::String user(usersTrafTable(i, "ST_USER"));
         usersTrafTable(i, "ST_TRAF") = int64_t(usersTrafTable(i, "ST_TRAF_WWW") = 
           getTraf(ttWWW, beginTime, endTime, user)) + 
-          int64_t(usersTrafTable(i, "ST_TRAF_SMTP") = 
-          getTraf(ttSMTP, beginTime, endTime, user));
+          int64_t(usersTrafTable(i,"ST_TRAF_SMTP") = 
+          getTraf(ttSMTP,beginTime,endTime,user));
       }
       usersTrafTable.sort(sortUsersTrafTable, usersTrafTable);
       for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-        if( getTraf(ttAll, beginTime, endTime, usersTrafTable(i, "ST_USER")) == 0 )
-          continue;
-        f << "<TR>\n" "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+        if( getTraf(ttAll, beginTime, endTime, usersTrafTable(i, "ST_USER")) == 0 ) continue;
+        f <<
+	  "<TR>\n" "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
           "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-          utf8::String(usersTrafTable(i, "ST_USER")) << "\n" "    </FONT>\n" "  </TH>\n"
+          utf8::String(usersTrafTable(i, "ST_USER")) << "\n" "    </FONT>\n"
+	  "  </TH>\n"
         ;
         for( j = ttAll; j >= 0; j-- ){
-          f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+          f <<
+	    "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyColor_[j] << "\" nowrap>\n"
+	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           ;
           writeTraf(f, usersTrafTable(i, trafTypeColumnName[j]), getTraf(ttAll, beginTime, endTime));
-          f << "    </FONT>\n" "  </TH>\n"
-          ;
+          f <<
+	    "    </FONT>\n"
+	    "  </TH>\n"
+	  ;
         }
         // ѕечатаем трафик пользователей помес€чно
         while( endTime.tm_mon >= 0 ){
@@ -608,15 +645,24 @@ void Logger::writeHtmlYearOutput()
         endTime.tm_mday = 31;
       }
       // ѕечатаем итоговый трафик пользователей за год
-      f << "<TR>\n" "  <TH ALIGN=right BGCOLOR=\"#00A0FF\" wrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" "Summary traffic of all users: "
+      f <<
+        "<TR>\n"
+	"  <TH ALIGN=right BGCOLOR=\"#00A0FF\" wrap>\n"
+	"    <FONT FACE=\"Arial\" SIZE=\"2\">\n" "Summary traffic of all users: "
       ;
-      f << "    </FONT>\n" "  </TH>\n"
+      f <<
+        "    </FONT>\n"
+        "  </TH>\n"
       ;
       for( j = ttAll; j >= 0; j-- ){
-        f << "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailColor_[j] << "\" nowrap>\n" "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        f <<
+	  "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailColor_[j] << "\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         ;
         writeTraf(f, getTraf(TrafType(j), beginTime, endTime), getTraf(ttAll, beginTime, endTime));
-        f << "    </FONT>\n" "  </TH>\n"
+        f <<
+	  "    </FONT>\n"
+	  "  </TH>\n"
         ;
       }
       // ѕечатаем итоговый трафик пользователей за мес€цы

@@ -36,6 +36,8 @@ using namespace adicpp;
 //------------------------------------------------------------------------------
 namespace macroscope {
 //------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 class Logger {
   public:
     ~Logger();
@@ -43,14 +45,40 @@ class Logger {
 
     void main();
   protected:
-    void parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl);
-    void parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear);
+    class MTLogParser : public Thread {
+      public:
+        ~MTLogParser();
+        MTLogParser(Logger & logger);
+
+        void threadExecute();
+      protected:
+      private:
+    };
+    friend class MTLogParser;
+    class MTWriter : public Thread {
+      public:
+        ~MTWriter();
+        MTWriter(Logger & logger,const utf8::String & file,const struct tm & year);
+
+        void threadExecute();
+      protected:
+        Logger & logger_;
+	const utf8::String file_;
+	const struct tm year_;
+      private:
+    };
+    friend class MTWriter;
+    
+    Vector<Thread> threads_;
+    
+    void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
+    void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
     void parseBPFTLogFile(const ConfigSection & section);
     void writeHtmlYearOutput();
   private:
     utf8::String shortUrl_;
-    Config config_;
-    AutoPtr<Database>  database_;
+    ConfigSPi config_;
+    AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
     AutoPtr<Statement> stTrafIns_;
     AutoPtr<Statement> stTrafUpd_;
@@ -143,7 +171,7 @@ class Logger {
     void writeHtmlHead(AsyncFile & f);
     void writeHtmlTail(AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,const struct tm & beginTime,const struct tm & endTime);
-    void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year);
+    void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
     Logger & writeBPFTHtmlReport(AsyncFile & f);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
