@@ -1,9 +1,9 @@
 #include <adicpp/lconfig.h>
 #include <adicpp/execinfo/stacktraverse.h>
 
-void * getreturnaddr(int level)
+void * getreturnaddr(intptr_t level)
 {
-    switch(level) {
+    switch( level ){
     case 0: return __builtin_return_address(1);
     case 1: return __builtin_return_address(2);
     case 2: return __builtin_return_address(3);
@@ -136,9 +136,9 @@ void * getreturnaddr(int level)
     }
 }
 
-void * getframeaddr(int level)
+void * getframeaddr(intptr_t level)
 {
-    switch(level) {
+    switch(level){
     case 0: return __builtin_frame_address(1);
     case 1: return __builtin_frame_address(2);
     case 2: return __builtin_frame_address(3);

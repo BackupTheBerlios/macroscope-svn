@@ -39,10 +39,10 @@ inline static void * realloc_safe(void * ptr,size_t size)
   return nptr;
 }
 
-int backtrace(void ** buffer,int size)
+intptr_t backtrace(void ** buffer,intptr_t size)
 {
-  int i;
-
+  intptr_t i;
+  assert( buffer != NULL );
   for( i = 1; getframeaddr(i + 1) != NULL && i != size + 1; i++ ){
     buffer[i - 1] = getreturnaddr(i);
     fprintf(stderr,"%p\n",buffer[i - 1]);
@@ -51,87 +51,60 @@ int backtrace(void ** buffer,int size)
   return i - 1;
 }
 
-char ** backtrace_symbols(void *const *buffer,int size)
+char ** backtrace_symbols(void ** buffer,intptr_t size)
 {
-  intptr_t i, clen, alen, offset;
+  intptr_t i, j, clen, alen, offset;
   char ** rval;
   char * cp;
   Dl_info info;
 
+  assert( buffer != NULL );
   clen = size * sizeof(char *);
-  rval = malloc(clen);
+  rval = buffer;//malloc(clen);
   if( rval == NULL ) return NULL;
-  cp = (char *) (rval + size);
   for( i = 0; i < size; i++ ){
+    cp = (char *) rval + clen;
+    alen = 0;
     if( dladdr(buffer[i],&info) != 0 ){
       if( info.dli_sname == NULL ) info.dli_sname = "???";
       if( info.dli_saddr == NULL ) info.dli_saddr = buffer[i];
       offset = buffer[i] - info.dli_saddr;
-/* "0x01234567 <function+offset> at filename" */
-      alen = 2 +                      /* "0x" */
-             (sizeof(void *) * 2) +   /* "01234567" */
-             2 +                      /* " <" */
-             strlen(info.dli_sname) + /* "function" */
-             1 +                      /* "+" */
-             D10(offset) +            /* "offset */
-             5 +                      /* "> at " */
-             strlen(info.dli_fname) + /* "filename" */
-             1;                       /* "\0" */
-      rval = realloc_safe(rval,clen + alen);
-      if( rval == NULL ) return NULL;
-      snprintf(cp,alen,"%p <%s+%"PRIdPTR"> at %s",buffer[i],info.dli_sname,offset,info.dli_fname);
+// "0x01234567 <function+offset> at filename"
+/*      alen = 2 +                      // "0x"
+             (sizeof(void *) * 2) +   // "01234567"
+             2 +                      // " <"
+             strlen(info.dli_sname) + // "function"
+             1 +                      // "+" */
+             D10(offset) +            // "offset
+             5 +                      // "> at "
+             strlen(info.dli_fname) + // "filename"
+             1;                       // "\0"*/
+      for(;;){
+        rval = realloc_safe(rval,clen + alen);
+        if( rval == NULL ) return NULL;
+        cp = (char *) rval + clen;
+        j = snprintf(cp,alen,"%p <%s+%"PRIdPTR"> at %s",buffer[i],info.dli_sname,offset,info.dli_fname);
+	if( j < alen ) break;
+	alen = (alen << 1) + (alen == 0);
+      }
+      alen = j;
     }
     else {
-      alen = 2 +                      /* "0x" */
-             (sizeof(void *) * 2) +   /* "01234567" */
-             1;                       /* "\0" */
-      rval = realloc_safe(rval, clen + alen);
-      if( rval == NULL ) return NULL;
-      snprintf(cp, alen, "%p", buffer[i]);
+      for(;;){
+/*      alen = 2 +                      // "0x"
+             (sizeof(void *) * 2) +   // "01234567"
+             1;                       // "\0"*/
+        rval = realloc_safe(rval,clen + alen);
+        if( rval == NULL ) return NULL;
+        cp = (char *) rval + clen;
+        j = snprintf(cp,alen,"%p",buffer[i]);
+	if( j < alen ) break;
+	alen = (alen << 1) + (alen == 0);
+      }
     }
     rval[i] = cp;
-    cp += alen;
+    clen += alen;
   }
+  rval = realloc_safe(rval,clen);
   return rval;
-}
-
-void backtrace_symbols_fd(void *const *buffer, int size, int fd)
-{
-    int i, len, offset;
-    char *buf;
-    Dl_info info;
-
-    for (i = 0; i < size; i++) {
-        if (dladdr(buffer[i], &info) != 0) {
-            if (info.dli_sname == NULL)
-                info.dli_sname = "???";
-            if (info.dli_saddr == NULL)
-                info.dli_saddr = buffer[i];
-            offset = buffer[i] - info.dli_saddr;
-            /* "0x01234567 <function+offset> at filename" */
-            len = 2 +                      /* "0x" */
-                  (sizeof(void *) * 2) +   /* "01234567" */
-                  2 +                      /* " <" */
-                  strlen(info.dli_sname) + /* "function" */
-                  1 +                      /* "+" */
-                  D10(offset) +            /* "offset */
-                  5 +                      /* "> at " */
-                  strlen(info.dli_fname) + /* "filename" */
-                  2;                       /* "\n\0" */
-            buf = alloca(len);
-            if (buf == NULL)
-                return;
-            snprintf(buf, len, "%p <%s+%d> at %s\n",
-              buffer[i], info.dli_sname, offset, info.dli_fname);
-        } else {
-            len = 2 +                      /* "0x" */
-                  (sizeof(void *) * 2) +   /* "01234567" */
-                  2;                       /* "\n\0" */
-            buf = alloca(len);
-            if (buf == NULL)
-                return;
-            snprintf(buf, len, "%p\n", buffer[i]);
-        }
-        write(fd, buf, len - 1);
-    }
 }

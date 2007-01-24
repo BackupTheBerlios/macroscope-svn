@@ -33,9 +33,8 @@
 extern "C" {
 #endif
 
-int     backtrace(void **, int);
-char ** backtrace_symbols(void *const *, int);
-void    backtrace_symbols_fd(void *const *, int, int);
+intptr_t backtrace(void **,intptr_t);
+char ** backtrace_symbols(void **,intptr_t);
 
 #ifdef __cplusplus
 }

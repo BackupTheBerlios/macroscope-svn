@@ -29,7 +29,7 @@
 #ifndef _STACKTRAVERSE_H_
 #define _STACKTRAVERSE_H_
 
-void *getreturnaddr(int);
-void *getframeaddr(int);
+void * getreturnaddr(intptr_t);
+void * getframeaddr(intptr_t);
 
 #endif /* _STACKTRAVERSE_H_ */
