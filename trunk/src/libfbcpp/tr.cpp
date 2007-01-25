@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
 #include <adicpp/fbcpp.h>
 //---------------------------------------------------------------------------
 namespace fbcpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -186,11 +185,11 @@ Transaction & Transaction::retainingHelper()
       break;
     case lrtCommit :
       if( api.isc_commit_transaction(status, &handle_) != 0 )
-        exceptionHandler(newObject<ETrCommit>(status, __PRETTY_FUNCTION__));
+        exceptionHandler(newObjectV1C2<ETrCommit>(status, __PRETTY_FUNCTION__));
       break;
     case lrtRollback :
       if( api.isc_rollback_transaction(status, &handle_) != 0 )
-        exceptionHandler(newObject<ETrRollback>(status, __PRETTY_FUNCTION__));
+        exceptionHandler(newObjectV1C2<ETrRollback>(status, __PRETTY_FUNCTION__));
       break;
   }
   lastRetainingTransaction_ = lrtNone;
@@ -200,7 +199,7 @@ Transaction & Transaction::retainingHelper()
 Transaction & Transaction::start()
 {
   if( !attached() )
-    newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__);
+    newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__);
   if( startCount_ == 0 ){
     retainingHelper(); // pumping retaining transactions
     ksys::AutoPtr< ISC_TEB> tebVector;
@@ -224,7 +223,7 @@ Transaction & Transaction::start()
     }
     ISC_STATUS_ARRAY  status;
     if( api.isc_start_multiple(status, &handle_, (short) databases_.count(), tebVector.ptr()) != 0 )
-      exceptionHandler(newObject<ETrStart>(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObjectV1C2<ETrStart>(status, __PRETTY_FUNCTION__));
   }
   startCount_++;
   lastRetainingTransaction_ = lrtNone;
@@ -234,21 +233,21 @@ Transaction & Transaction::start()
 Transaction & Transaction::prepare()
 {
   if( !active() )
-    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   ISC_STATUS_ARRAY  status;
   if( api.isc_prepare_transaction(status, &handle_) != 0 )
-    exceptionHandler(newObject<ETrPrepare>(status, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<ETrPrepare>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::commit()
 {
   if( !active() )
-    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   ISC_STATUS_ARRAY  status;
   if( startCount_ == 1 ){
     if( api.isc_commit_transaction(status, &handle_) != 0 )
-      exceptionHandler(newObject<ETrCommit>(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObjectV1C2<ETrCommit>(status, __PRETTY_FUNCTION__));
     startCount_--;
   }
   else if( startCount_ == 0 ){
@@ -264,11 +263,11 @@ Transaction & Transaction::commit()
 Transaction & Transaction::commitRetaining()
 {
   if( !active() )
-    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   if( startCount_ == 1 ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_commit_retaining(status, &handle_) != 0 )
-      exceptionHandler(newObject<ETrCommit>(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObjectV1C2<ETrCommit>(status, __PRETTY_FUNCTION__));
     lastRetainingTransaction_ = lrtCommit;
     startCount_--;
   }
@@ -285,11 +284,11 @@ Transaction & Transaction::commitRetaining()
 Transaction & Transaction::rollback()
 {
   if( !active() )
-    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   ISC_STATUS_ARRAY  status;
   if( startCount_ == 1 ){
     if( api.isc_rollback_transaction(status, &handle_) != 0 )
-      exceptionHandler(newObject<ETrRollback>(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObjectV1C2<ETrRollback>(status, __PRETTY_FUNCTION__));
     startCount_--;
   }
   else if( startCount_ == 0 ){
@@ -305,11 +304,11 @@ Transaction & Transaction::rollback()
 Transaction & Transaction::rollbackRetaining()
 {
   if( !active() )
-    exceptionHandler(newObject<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__));
   if( startCount_ == 1 ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_rollback_retaining(status, &handle_) != 0 )
-      exceptionHandler(newObject<ETrRollback>(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObjectV1C2<ETrRollback>(status, __PRETTY_FUNCTION__));
     lastRetainingTransaction_ = lrtRollback;
     startCount_--;
   }

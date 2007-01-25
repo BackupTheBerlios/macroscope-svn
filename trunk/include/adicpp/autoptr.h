@@ -95,7 +95,7 @@ template< class T> class AutoPtr {
 //---------------------------------------------------------------------------
 template< class T> inline AutoPtr< T>::~AutoPtr()
 {
-  delete ptr_;
+  deleteObject(ptr_);
 }
 //---------------------------------------------------------------------------
 template< class T> inline AutoPtr< T>::AutoPtr(T * ptr) : ptr_(ptr)
@@ -213,9 +213,9 @@ bool AutoPtr<T>::operator !=(const AutoPtr< T> & ptr) const
 }
 //---------------------------------------------------------------------------
 template< class T> inline
-AutoPtr< T> & AutoPtr<T>::operator =(T * ptr)
+AutoPtr< T> & AutoPtr<T>::operator = (T * ptr)
 {
-  delete ptr_;
+  deleteObject(ptr_);
   ptr_ = ptr;
   return *this;
 }

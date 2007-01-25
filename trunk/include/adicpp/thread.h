@@ -77,7 +77,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Thread {
+class Thread : public KsysObject {
   friend void initialize(int,char **);
   friend void cleanup();
   public:
@@ -122,7 +122,8 @@ class Thread {
     static Array<Action> & beforeExecuteActions();
     static Array<Action> & afterExecuteActions();
   protected:
-    virtual void threadExecute() = 0;
+    virtual void oaBeforeDestruction() { threadBeforeWait(); }
+    virtual void threadExecute() {}
     virtual void threadBeforeWait() {}
     uintptr_t       stackSize_;
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -144,6 +145,9 @@ class Thread {
 #else
     static void *           threadFunc(void * thread);
 #endif
+    Thread(const Thread &);
+    void operator = (const Thread &);
+    
     static void             initialize();
     static void             cleanup();
 };
@@ -252,20 +256,20 @@ inline const uintptr_t & Thread::stackSize() const
   return stackSize_;
 }
 //---------------------------------------------------------------------------
-inline Array< Thread::Action> & Thread::beforeExecuteActions()
+inline Array<Thread::Action> & Thread::beforeExecuteActions()
 {
-  return *reinterpret_cast< Array< Action> *>(beforeExecuteActions_);
+  return *reinterpret_cast<Array<Action> *>(beforeExecuteActions_);
 }
 //---------------------------------------------------------------------------
-inline Array< Thread::Action> & Thread::afterExecuteActions()
+inline Array<Thread::Action> & Thread::afterExecuteActions()
 {
-  return *reinterpret_cast< Array< Action> *>(afterExecuteActions_);
+  return *reinterpret_cast<Array<Action> *>(afterExecuteActions_);
 }
 //---------------------------------------------------------------------------
 extern uint8_t currentThreadPlaceHolder[];
-inline ThreadLocalVariable< Thread> & currentThread()
+inline ThreadLocalVariable<Thread> & currentThread()
 {
-  return *reinterpret_cast< ThreadLocalVariable< Thread> *>(currentThreadPlaceHolder);
+  return *reinterpret_cast<ThreadLocalVariable< Thread> *>(currentThreadPlaceHolder);
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

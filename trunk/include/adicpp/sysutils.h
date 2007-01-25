@@ -193,15 +193,27 @@ class guid_t
 {
 };
 //---------------------------------------------------------------------------
-inline utf8::String uuid2base64(const guid_t & u)
+inline utf8::String guidToBase32(const guid_t & u)
 {
-  return base64Encode(&u, sizeof(u));
+  return base32Encode(&u,sizeof(u));
 }
 //---------------------------------------------------------------------------
-inline guid_t base642uuid(const utf8::String & s)
+inline guid_t base32ToGUID(const utf8::String & s)
 {
   guid_t uuid;
-  base64Decode(s, &uuid, sizeof(uuid));
+  base32Decode(s,&uuid,sizeof(uuid));
+  return uuid;
+}
+//---------------------------------------------------------------------------
+inline utf8::String guidToBase64(const guid_t & u)
+{
+  return base64Encode(&u,sizeof(u));
+}
+//---------------------------------------------------------------------------
+inline guid_t base64ToGUID(const utf8::String & s)
+{
+  guid_t uuid;
+  base64Decode(s,&uuid,sizeof(uuid));
   return uuid;
 }
 //---------------------------------------------------------------------------
@@ -209,6 +221,8 @@ uintmax_t fibonacci(uintmax_t n);
 void createGUID(guid_t & uuid);
 utf8::String createGUIDAsBase32String();
 inline guid_t createGUID(){ guid_t uuid; createGUID(uuid); return uuid; }
+guid_t stringToGUID(const char * s);
+inline guid_t stringToGUID(const utf8::String & s){ return stringToGUID(s.c_str()); }
 void copyStrToClipboard(const utf8::String & s);
 int64_t getProcessStartTime(bool toLocalTime = false);
 intptr_t strToMonth(const utf8::String & month);
@@ -356,6 +370,12 @@ int64_t timeFromTimeString(const utf8::String & s,bool local = true);
 utf8::String getTimeString(int64_t t);
 int64_t timeFromTimeCodeString(const utf8::String & s,bool local = true);
 utf8::String getTimeCode(int64_t t);
+//---------------------------------------------------------------------------
+template <typename T> inline
+T ObjectT<T>::classId() const
+{
+  return guidToBase32(stringToGUID("e7e7f370-ac63-11db-8f3d-0011d8946e25"));
+}
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

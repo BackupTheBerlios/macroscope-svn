@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -76,7 +76,7 @@ DSQLStatement::~DSQLStatement()
 DSQLStatement & DSQLStatement::attach(Database & database)
 {
   if( attached() )
-    newObject<EDSQLStAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   database.dsqlStatements_.add(this, utf8::ptr2Str(this));
   database_ = &database;
   return *this;
@@ -97,11 +97,11 @@ DSQLStatement & DSQLStatement::detach()
 DSQLStatement & DSQLStatement::allocate()
 {
   if( !attached() )
-    newObject<EDSQLStNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( !allocated() ){
     handle_ = api.mysql_stmt_init(database_->handle_);
     if( handle_ == NULL )
-      database_->exceptionHandler(newObject<EDSQLStAllocate>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStAllocate>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   return *this;
@@ -111,7 +111,7 @@ DSQLStatement & DSQLStatement::free()
 {
   if( allocated() ){
     if( api.mysql_stmt_close(handle_) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStFree>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStFree>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     handle_ = NULL;
   }
@@ -159,7 +159,7 @@ DSQLStatement & DSQLStatement::prepare()
     utf8::String sql(compileSQLParameters());
     if( api.mysql_stmt_prepare(handle_, sql.c_str(), (unsigned long) sql.size()) != 0 ){
       if( api.mysql_errno(database_->handle_) != ER_UNSUPPORTED_PS )
-        database_->exceptionHandler(newObject<EDSQLStPrepare>(
+        database_->exceptionHandler(newObjectV1C2<EDSQLStPrepare>(
           api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     }
     params_.bind_.resize(api.mysql_stmt_param_count(handle_));
@@ -183,7 +183,7 @@ DSQLStatement & DSQLStatement::execute()
   if( params_.bind_.count() > 0 ){
     params_.bind();
     if( api.mysql_stmt_bind_param(handle_,params_.bind_.bind()) != 0 ){
-      database_->exceptionHandler(newObject<EDSQLStBindParam>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStBindParam>(
         api.mysql_errno(database_->handle_),
 	api.mysql_error(database_->handle_)
       ));
@@ -191,12 +191,12 @@ DSQLStatement & DSQLStatement::execute()
   }
   if( params_.bind_.count() == 0 && values_.bind_.count() == 0 ){
     if( api.mysql_query(database_->handle_, compileSQLParameters().c_str()) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStExecute>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   else{
     if( api.mysql_stmt_execute(handle_) != 0 ){
-      database_->exceptionHandler(newObject<EDSQLStExecute>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     }
   }
@@ -205,14 +205,14 @@ DSQLStatement & DSQLStatement::execute()
     values_.lengths_.resize(values_.bind_.count());
     values_.res_ = api.mysql_stmt_result_metadata(handle_);
     if( api.mysql_errno(database_->handle_) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStResultMetadata>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStResultMetadata>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     values_.fields_ = api.mysql_fetch_fields(values_.res_);
   }
   /* Now buffer all results to client */
   if( storeResults_ )
     if( api.mysql_stmt_store_result(handle_) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStStoreResult>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStStoreResult>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   if( database_->transaction_->startCount_ == 1 && values_.bind_.count() > 0 )
     values_.fetchAll();

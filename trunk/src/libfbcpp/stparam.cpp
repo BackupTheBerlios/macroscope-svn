@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,25 +32,25 @@ namespace fbcpp {
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLParam::getMutant()
 {
-  newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setMutant(const ksys::Mutant &)
 {
-  newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLParam::getString()
 {
-  newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setString(const utf8::String &)
 {
-  newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ ksys::Mutant DSQLParamScalar::getMutant()
     return ksys::Mutant();
 #if HAVE_LONG_DOUBLE
   long
-  #endif
+#endif
   double v;  
   switch( sqltype_ & ~1 ){
     case SQL_SHORT       :
@@ -112,7 +112,7 @@ ksys::Mutant DSQLParamScalar::getMutant()
       }
       return bigInt_;
   }
-  newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
@@ -130,7 +130,7 @@ DSQLParam & DSQLParamScalar::setMutant(const ksys::Mutant & value)
         if( sqlscale_ != 0 && value.type() == ksys::mtFloat ){
 #if HAVE_LONG_DOUBLE
           long
-          #endif
+#endif
           double v  = value;
           for( long j = sqlscale_; j < 0; j++ )
             v *= 10;
@@ -153,7 +153,7 @@ DSQLParam & DSQLParamScalar::setMutant(const ksys::Mutant & value)
         timeStamp_ = timeval2IscTimeStamp(value);
         break;
       default              :
-        newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
     }
     sqlind_ = 0;
   }
@@ -194,7 +194,7 @@ utf8::String DSQLParamScalar::getString()
       case SQL_TIMESTAMP   :
         return utf8::time2Str(iscTimeStamp2Time(timeStamp_));
       default              :
-        newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
     }
   }
   return utf8::String();
@@ -210,7 +210,7 @@ DSQLParam & DSQLParamScalar::setString(const utf8::String & value)
       if( !utf8::tryStr2Int(value, bigInt_) ){
 #if HAVE_LONG_DOUBLE
         long
-        #endif
+#endif
         double v  = ksys::Mutant(value);
         for( intptr_t j = sqlscale_; j < 0; j++ )
           v *= 10;
@@ -230,7 +230,7 @@ DSQLParam & DSQLParamScalar::setString(const utf8::String & value)
       timeStamp_ = time2IscTimeStamp(utf8::str2Time(value));
       break;
     default              :
-      newObject<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   }
   sqlind_ = 0;
   return *this;
@@ -326,7 +326,7 @@ DSQLParamArray & DSQLParamArray::checkData()
 DSQLParamArray & DSQLParamArray::checkDim(bool inRange)
 {
   if( !inRange )
-    newObject<EDSQLStInvalidArrayDim>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidArrayDim>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -335,12 +335,12 @@ DSQLParamArray & DSQLParamArray::setDataFromMutant(uintptr_t absIndex, const ksy
   checkData();
   uintptr_t elementOffset = elementSize_ * absIndex, len ;
   if( elementOffset >= (uintptr_t) dataSize_ )
-    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   char * data  = (char *) data_ + elementOffset;
   utf8::String  tempString;
 #if HAVE_LONG_DOUBLE
   long
-  #endif
+#endif
   double v;
   switch( desc_.array_desc_dtype ){
     case blr_varying   :
@@ -408,7 +408,7 @@ DSQLParamArray & DSQLParamArray::setDataFromMutant(uintptr_t absIndex, const ksy
       }
       break;
     default            :
-      newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -471,7 +471,7 @@ ksys::Mutant DSQLParamArray::getMutantFromArray(uintptr_t absIndex)
         return *(int64_t *) data;
     }
   }
-  newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
@@ -528,7 +528,7 @@ DSQLParamBlob & DSQLParamBlob::writeBuffer(const void * buf, uintptr_t size)
     ISC_STATUS_ARRAY  status;
     if( api.isc_put_segment(status, &handle_, (short) asize, (char *) buf) != 0 )
       statement_->database_->exceptionHandler(
-        newObjectV<EDSQLStPutSegment>(status, __PRETTY_FUNCTION__));
+        newObjectV1C2<EDSQLStPutSegment>(status, __PRETTY_FUNCTION__));
     buf = (const char *) buf + asize;
     size -= asize;
   }
@@ -566,7 +566,7 @@ DSQLParamText * DSQLParams::castParamToText(DSQLParam * param)
 DSQLParamScalar * DSQLParams::castParamToScalar(DSQLParam * param)
 {
   DSQLParamScalar * newParam;
-  if( (newParam = dynamic_cast< DSQLParamScalar *>(param)) == NULL ){
+  if( (newParam = dynamic_cast<DSQLParamScalar *>(param)) == NULL ){
     newParam = newObject<DSQLParamScalar>();
     DSQLParamText * paramText;
     if( (paramText = dynamic_cast< DSQLParamText *>(param)) != NULL )
@@ -579,8 +579,8 @@ DSQLParamScalar * DSQLParams::castParamToScalar(DSQLParam * param)
 DSQLParamArray * DSQLParams::castParamToArray(DSQLParam * param, XSQLVAR & v)
 {
   DSQLParamArray *  newParam;
-  if( (newParam = dynamic_cast< DSQLParamArray *>(param)) == NULL ){
-    newParam = newObjectV<DSQLParamArray>(*statement_);
+  if( (newParam = dynamic_cast<DSQLParamArray *>(param)) == NULL ){
+    newParam = newObjectR1<DSQLParamArray>(*statement_);
     try {
       statement_->arrayLookupBounds(v.relname, v.sqlname, newParam->desc_);
     }
@@ -597,8 +597,8 @@ DSQLParamArray * DSQLParams::castParamToArray(DSQLParam * param, XSQLVAR & v)
 DSQLParamBlob * DSQLParams::castParamToBlob(DSQLParam * param)
 {
   DSQLParamBlob * newParam;
-  if( (newParam = dynamic_cast< DSQLParamBlob *>(param)) == NULL ){
-    params_.changeObject(param, newParam = newObjectV<DSQLParamBlob>(*statement_));
+  if( (newParam = dynamic_cast<DSQLParamBlob *>(param)) == NULL ){
+    params_.changeObject(param, newParam = newObjectR1<DSQLParamBlob>(*statement_));
     newParam->handle_ = 0;
     newParam->id_.gds_quad_low = 0;
     newParam->id_.gds_quad_high = 0;
@@ -826,7 +826,7 @@ DSQLParamBlob & DSQLParams::asBlob(uintptr_t i)
 {
   DSQLParamBlob * blob  = dynamic_cast< DSQLParamBlob *>(checkParamIndex(i).indexToParam_.ptr()[i]->object());
   if( blob == NULL )
-    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *blob;
 }
 //---------------------------------------------------------------------------
@@ -834,7 +834,7 @@ DSQLParamBlob & DSQLParams::asBlob(const utf8::String & name)
 {
   DSQLParamBlob * blob  = dynamic_cast< DSQLParamBlob *>(checkParamName(name));
   if( blob == NULL )
-    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *blob;
 }
 //---------------------------------------------------------------------------
@@ -842,7 +842,7 @@ DSQLParamArray & DSQLParams::asArray(uintptr_t i)
 {
   DSQLParamArray *  array = dynamic_cast< DSQLParamArray *>(checkParamIndex(i).indexToParam_.ptr()[i]->object());
   if( array == NULL )
-    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *array;
 }
 //---------------------------------------------------------------------------
@@ -850,14 +850,14 @@ DSQLParamArray & DSQLParams::asArray(const utf8::String & name)
 {
   DSQLParamArray *  array = dynamic_cast< DSQLParamArray *>(checkParamName(name));
   if( array == NULL )
-    newObject<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *array;
 }
 //---------------------------------------------------------------------------
 DSQLParams & DSQLParams::checkParamIndex(uintptr_t i)
 {
   if( i >= params_.count() )
-    newObject<EDSQLStInvalidParamIndex>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParamIndex>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -865,7 +865,7 @@ DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
 {
   DSQLParam * param = params_.objectOfKey(paramName);
   if( param == NULL )
-    newObject<EDSQLStInvalidParamName>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParamName>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return param;
 }
 //---------------------------------------------------------------------------

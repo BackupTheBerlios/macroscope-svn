@@ -59,12 +59,12 @@ void Server::open()
   if( (bool) config_->valueByPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled",true) ){
     for( u = 1; u < spoolFibers_; u <<= 1 );
     spoolFibers_ = u;
-    while( u > 0 ) attachFiber(newObjectV<SpoolWalker>(*this,--u));
+    while( u > 0 ) attachFiber(newObjectR1V2<SpoolWalker>(*this,--u));
   }
   else {
     i = 0;
   }
-  attachFiber(newObjectV<SpoolWalker>(*this,--i)); // lost sheeps collector fiber and ctrl files handler
+  attachFiber(newObjectR1V2<SpoolWalker>(*this,--i)); // lost sheeps collector fiber and ctrl files handler
 }
 //------------------------------------------------------------------------------
 void Server::close()
@@ -75,7 +75,7 @@ void Server::close()
 //------------------------------------------------------------------------------
 Fiber * Server::newFiber()
 {
-  return newObjectV<ServerFiber>(*this);
+  return newObjectR1<ServerFiber>(*this);
 }
 //------------------------------------------------------------------------------
 utf8::String Server::spoolDirHelper() const
@@ -274,11 +274,11 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
 {
   MailQueueWalker * pWalker, * pWalker2;
   AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
-  pWalker2 = newObjectV<MailQueueWalker>(*this,host);
+  pWalker2 = newObjectR1C2<MailQueueWalker>(*this,host);
   sendMailFibers_.insert(*pWalker2,false,true,&pWalker);
   if( pWalker == pWalker2 ) attachFiber(pWalker);
   AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
-  pWalker->messages_.insToTail(*newObject<Message::Key>(id));
+  pWalker->messages_.insToTail(*newObjectC1<Message::Key>(id));
   bool step0 = true;
   try {
     rename(fileName,mqueueDir() + id + ".msg");

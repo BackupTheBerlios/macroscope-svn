@@ -535,6 +535,9 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
 //------------------------------------------------------------------------------
 void Logger::main()
 {
+  threads_.add(newObjectR1C2C3<MTWriter>(*this,"",tm()));
+  threads_.clear();
+  
   config_->parse().override();
   stdErr.rotationThreshold(
     config_->value("debug_file_rotate_threshold",1024 * 1024)

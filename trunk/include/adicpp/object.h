@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,85 +24,84 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#ifndef _fbevent_H_
-#define _fbevent_H_
+#ifndef objectH
+#define objectH
 //---------------------------------------------------------------------------
-namespace fbcpp {
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class EPB {
-    friend class EventHandler;
-  public:
-    ~EPB();
-    EPB();
-    EPB(EventHandler & eventHandler);
-  protected:
-  private:
-    EventHandler *    eventHandler_;
-    utf8::String      eventNames_[15];
-    uintptr_t         eventCount_;
-    char *            eventBuffer_;
-    char *            resultBuffer_;
-    uintptr_t         resultBufferLen_;
-    ISC_LONG          eventId_;
-    ISC_STATUS_ARRAY  vector_;
-    int32_t           eventFlag_;
-    bool              firstEvent_;
-};
-//---------------------------------------------------------------------------
-inline EPB::EPB() : eventHandler_(NULL)
-{
-}
+namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class EventHandler {
-  private:
-    class EventThread : public ksys::Thread {
-      private:
-        EventHandler * eventHandler_;
-        EventThread(const EventThread &){}
-        void operator = (const EventThread &){}
-      protected:
-        void threadExecute();
-      public:
-        EventThread(EventHandler & eventHandler);
-    };
-    friend class EventThread;
+template <typename T> class ObjectT {
   public:
-    virtual ~EventHandler();
-    EventHandler();
-
-    EventHandler &          attach(Database & database);
-    EventHandler &          detach();
-
-    EventHandler &          queue();
-    EventHandler &          cancel();
-
-    EventHandler &          checkEvent();
-
-    EventHandler &          clear();
-    EventHandler &          add(const utf8::String & eventName);
-    // properties
-    bool                    attached();
+    virtual ~ObjectT();
+    ObjectT();
+    
+// actions
+    virtual void oaAfterConstruction() {}
+    virtual void oaBeforeDestruction() {}
+    
+// methods
+    virtual ObjectT<T> * newObject() { return NULL; }
+    virtual ObjectT<T> * cloneObject() { return NULL; }
+    virtual T className() const { return "Object"; }
+    virtual T classId() const; // see body in sysutils.h
+    virtual T objectName() const { return ""; }
+    virtual T objectId() const { return ""; }
   protected:
-    static void eventFunction(EPB * epb, short length, char * updated);
-    Database * database_;
-    EventThread * thread_;
-    ksys::Vector<EPB>  epbs_;
-    ksys::Semaphore semaphore_;
-
-    void execute();
-    virtual EventHandler & eventHandler(const utf8::String & eventName, uintptr_t eventCount);
+    ObjectT(const ObjectT<T> &);
+    ObjectT<T> & operator = (const ObjectT<T> & a);
   private:
 };
 //---------------------------------------------------------------------------
-inline bool EventHandler::attached()
+template <typename T> inline
+ObjectT<T>::~ObjectT()
 {
-  return database_ != NULL;
 }
 //---------------------------------------------------------------------------
-} // namespace fbcpp
+template <typename T> inline
+ObjectT<T>::ObjectT()
+{
+}
 //---------------------------------------------------------------------------
-#endif /* _fbdb_H_ */
+template <typename T> inline
+ObjectT<T>::ObjectT(const ObjectT<T> &)
+{
+}
+//---------------------------------------------------------------------------
+template <typename T> inline
+ObjectT<T> & ObjectT<T>::operator = (const ObjectT<T> &)
+{
+  return *this;
+}
+//---------------------------------------------------------------------------
+#define KsysObject ksys::ObjectT<utf8::String>
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T>
+class ObjectActionsT {
+  public:
+    static void afterConstruction(void *) {}
+    static void beforeDestruction(void *) {}
+    static void afterConstruction(ObjectT<T> * object);
+    static void beforeDestruction(ObjectT<T> * object);
+};
+//---------------------------------------------------------------------------
+template <typename T> inline
+void ObjectActionsT<T>::afterConstruction(ObjectT<T> * object)
+{
+  object->oaAfterConstruction();
+}
+//---------------------------------------------------------------------------
+template <typename T> inline
+void ObjectActionsT<T>::beforeDestruction(ObjectT<T> * object)
+{
+  object->oaBeforeDestruction();
+}
+//---------------------------------------------------------------------------
+#define KsysObjectActions ksys::ObjectActionsT<utf8::String>
+//---------------------------------------------------------------------------
+} // namespace ksys
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------

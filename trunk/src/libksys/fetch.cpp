@@ -294,7 +294,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
               }
               if( code == 304 || code == 416 || code == 206 ) break;
               if( code != 200 )
-                newObject<Exception>(
+                newObjectV1C2<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
                   ERROR_INVALID_DATA,
 #else
@@ -313,7 +313,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
       if( crlf != NULL ) break;
     }
     if( crlf == NULL )
-      newObject<Exception>(
+      newObjectV1C2<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_INVALID_DATA,
 #else

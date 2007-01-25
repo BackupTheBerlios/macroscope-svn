@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,7 +60,7 @@ SVSharedSemaphore::SVSharedSemaphore(const utf8::String & name, uintptr_t flags,
       id_ = semget(name.strlen() > 0 ? getKey(name) : IPC_PRIVATE, (int) count, (int) (flags & ~(IPC_CREAT | IPC_EXCL)));
     if( id_ == -1 ){
       int32_t err = errno;
-      newObject<Exception>(err, name + ", key=" + utf8::int2Str((uintmax_t) getKey(name)) + ", " + __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err, name + ", key=" + utf8::int2Str((uintmax_t) getKey(name)) + ", " + __PRETTY_FUNCTION__)->throwSP();
     }
   }
   else{
@@ -77,7 +77,7 @@ key_t SVSharedSemaphore::getKey(const utf8::String & name)
   uintptr_t h = name.hash(true);
   key_t k = hashT< key_t>(&h, sizeof(h));
   if( k == IPC_PRIVATE && name.strlen() > 0 )
-    newObject<Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return k;
 }
 //---------------------------------------------------------------------------
@@ -90,7 +90,7 @@ SVSharedSemaphore & SVSharedSemaphore::post(uintptr_t sem)
   op.sem_flg = SEM_UNDO;
   if( semop(id_, &op, 1) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -104,7 +104,7 @@ SVSharedSemaphore & SVSharedSemaphore::wait(uintptr_t sem)
   op.sem_flg = 0/*SEM_UNDO*/;
   if( semop(id_, &op, 1) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -119,7 +119,7 @@ bool SVSharedSemaphore::tryWait(uintptr_t sem)
   errno = 0;
   if( semop(id_, &op, 1) != 0 && errno != EAGAIN ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return errno == 0;
 }
@@ -156,13 +156,13 @@ Semaphore::Semaphore()
   handle_ = NULL;
   if( sem_init(&handle_, 0, 0) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   handle_ = CreateSemaphoreA(NULL,0,~(ULONG) 0 >> 1,NULL);
   if( handle_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -174,12 +174,12 @@ Semaphore & Semaphore::post()
 #if HAVE_SEMAPHORE_H
   if( sem_post(&handle_) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   if( ReleaseSemaphore(handle_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
   return *this;
@@ -190,13 +190,13 @@ Semaphore & Semaphore::wait()
 #if HAVE_SEMAPHORE_H
   if( sem_wait(&handle_) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   DWORD r = WaitForSingleObject(handle_,INFINITE);
   if( r != WAIT_OBJECT_0 && r != WAIT_ABANDONED ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
   return *this;
@@ -220,7 +220,7 @@ bool Semaphore::timedWait(uint64_t timeout)
   int r = sem_timedwait(&handle_,&t);
   if( r != 0 && errno != ETIMEDOUT ){
     r = errno;
-    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
   return r == 0;
 #else
@@ -239,7 +239,7 @@ bool Semaphore::timedWait(uint64_t timeout)
   DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 #endif
@@ -252,14 +252,14 @@ bool Semaphore::tryWait()
   int r = sem_trywait(&handle_);
   if( r != 0 && errno != EAGAIN ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return r == 0;
 #elif defined(__WIN32__) || defined(__WIN64__)
   DWORD r = WaitForSingleObject(handle_,0);
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 #endif
@@ -330,7 +330,7 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
   }
   if( handle_ == SEM_FAILED ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   if( isWin9x() )
@@ -346,7 +346,7 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
   }
   if( handle_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -408,12 +408,12 @@ SharedSemaphore & SharedSemaphore::post()
 #if HAVE_SEMAPHORE_H
   if( sem_post(handle_) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   if( ReleaseSemaphore(handle_, 1, NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
   return *this;
@@ -424,13 +424,13 @@ SharedSemaphore & SharedSemaphore::wait()
 #if HAVE_SEMAPHORE_H
   if( sem_wait(handle_) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   DWORD r = WaitForSingleObject(handle_, INFINITE);
   if( r == WAIT_FAILED || r != WAIT_OBJECT_0 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
 #endif
   return *this;
@@ -442,14 +442,14 @@ bool SharedSemaphore::tryWait()
   int r = sem_trywait(handle_);
   if( r != 0 || errno != EAGAIN ){
     int32_t err = errno;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return r == 0;
 #elif defined(__WIN32__) || defined(__WIN64__)
   DWORD r = WaitForSingleObject(handle_, 0);
   if( r == WAIT_FAILED || r == WAIT_TIMEOUT ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return r == WAIT_OBJECT_0;
 #endif
@@ -458,14 +458,14 @@ bool SharedSemaphore::tryWait()
 bool SharedSemaphore::timedWait(uint64_t timeout)
 {
 #if HAVE_SEMAPHORE_H
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return false;
 #elif defined(__WIN32__) || defined(__WIN64__)
   uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);
   DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 #endif
@@ -587,7 +587,7 @@ l1:
 #else
   err = errno;
 #endif
-  newObject<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
 l2:
   length_ = length;
 }

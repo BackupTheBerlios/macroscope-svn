@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -241,7 +241,7 @@ DSQLParams & DSQLParams::asString(const utf8::String & paramName, const utf8::St
 DSQLParams & DSQLParams::checkParamIndex(uintptr_t i)
 {
   if( i >= params_.count() )
-    newObject<EDSQLStInvalidParamIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParamIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -249,7 +249,7 @@ DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
 {
   DSQLParam * param = params_.objectOfKey(paramName);
   if( param == NULL )
-    newObject<EDSQLStInvalidParamName>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParamName>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return param;
 }
 //---------------------------------------------------------------------------
@@ -273,7 +273,7 @@ ksys::HashedObjectListItem< utf8::String,DSQLParam> * DSQLParams::add(const utf8
   ksys::HashedObjectListItem< utf8::String,DSQLParam> * item;
   item = params_.itemOfKey(paramName);
   if( item == NULL )
-    params_.add(newObjectV<DSQLParam>(statement_), paramName, &item);
+    params_.add(newObjectR1<DSQLParam>(statement_), paramName, &item);
   item->object()->changed_ = true;
   return item;
 }

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -323,7 +323,7 @@ Database & Database::create(const utf8::String & name)
     isc_tr_handle trans = 0;
     ISC_STATUS_ARRAY status;
     if( api.isc_dsql_execute_immediate(status,&newdb,&trans,0,(char *) createSQL.c_str(),(short) dpb_.dialect(), NULL) != 0 ){
-      ksys::AutoPtr<EDBCreate> e(newObjectV<EDBCreate>(status,__PRETTY_FUNCTION__));
+      ksys::AutoPtr<EDBCreate> e(newObjectV1C2<EDBCreate>(status,__PRETTY_FUNCTION__));
       if( !e->searchCode(isc_db_or_file_exists) ) exceptionHandler(e.ptr(NULL));
     }
     else {
@@ -367,11 +367,11 @@ Database & Database::detachHelper()
 Database & Database::drop()
 {
   if( !attached() )
-    exceptionHandler(newObject<EDBNotAttached>((ISC_STATUS *) NULL,__PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<EDBNotAttached>((ISC_STATUS *) NULL,__PRETTY_FUNCTION__));
   detach2();
   ISC_STATUS_ARRAY status;
   if( api.isc_drop_database(status,&handle_) != 0 )
-    exceptionHandler(newObjectV<EDBDrop>(status, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<EDBDrop>(status, __PRETTY_FUNCTION__));
   api.close();
   return *this;
 }
@@ -384,7 +384,7 @@ Database & Database::attach(const utf8::String & name)
       dpb_.injectCharset();
       ISC_STATUS_ARRAY  status;
       if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 )
-        exceptionHandler(newObjectV<EDBAttach>(status, __PRETTY_FUNCTION__));
+        exceptionHandler(newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__));
     }
     catch( ksys::ExceptionSP & e ){
       if( !e->isFatalError() )
@@ -420,7 +420,7 @@ Database & Database::detach()
     detach2();
     ISC_STATUS_ARRAY  status;
     if( api.isc_detach_database(status, &handle_) != 0 )
-      exceptionHandler(newObjectV<EDBDetach>(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObjectV1C2<EDBDetach>(status, __PRETTY_FUNCTION__));
     api.close();
   }
   return *this;

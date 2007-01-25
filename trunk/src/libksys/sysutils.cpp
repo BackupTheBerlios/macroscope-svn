@@ -111,7 +111,7 @@ DirectoryChangeNotification::DirectoryChangeNotification() :
   createPath_(true)
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -135,13 +135,13 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
           createDirectory(pathName);
           return monitor(pathName,timeout);
         }
-        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     else if( FindNextChangeNotification(hFFCNotification_) == 0 ){
       int32_t err = GetLastError() + errorOffset;
       stop();
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   else {
@@ -166,7 +166,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
           createDirectory(pathName);
           return monitor(pathName,timeout);
         }
-        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
     }
   }
@@ -182,10 +182,10 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   assert( fiber->event_.type_ == etDirectoryChangeNotification );
   if( fiber->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
   if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
-    newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
+    newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -243,12 +243,12 @@ void createGUID(guid_t & uuid)
   if( status != RPC_S_OK ){
 //  if( FAILED(CoCreateGuid(&uuid)) ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_UUIDGEN
   if( uuidgen(&uuid,1) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_UUID_CREATE
   uuid_t * u;
@@ -256,13 +256,30 @@ void createGUID(guid_t & uuid)
   uuid_create(&u,&status);
   if( status != uuid_s_ok ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   uuid = *u;
   free(u);
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
+}
+//---------------------------------------------------------------------------
+guid_t stringToGUID(const char * s)
+{
+  guid_t uuid;
+#if defined(__WIN32__) || defined(__WIN64__)
+  RPC_STATUS status = UuidFromString(s,&uuid);
+  if( status != RPC_S_OK ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#elif HAVE_UUID_FROM_STRING
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+#else
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+#endif
+  return uuid;
 }
 //---------------------------------------------------------------------------
 utf8::String createGUIDAsBase32String()
@@ -411,7 +428,7 @@ utf8::String screenString(const utf8::String & s)
   char * q = a;
   for( p = s.c_str(); *p != '\0'; p += seql, q += l ) screenChar(p,seql,q,l);
   a[len] = '\0';
-  utf8::String::Container * container = newObject<utf8::String::Container>(0,a.ptr());
+  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,a.ptr());
   a.ptr(NULL);
   return container;
 }
@@ -586,7 +603,7 @@ utf8::String unScreenString(const utf8::String & s)
     }
   }
   a[len] = '\0';
-  utf8::String::Container * container = newObject<utf8::String::Container>(0,a.ptr());
+  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,a.ptr());
   a.ptr(NULL);
   return container;
 }
@@ -758,7 +775,7 @@ void changeCurrentDir(const utf8::String & name)
   if( chdir((const char *) anyPathName2HostPathName(name).getANSIString()) != 0 ) err = errno;
 #endif
   if( err != 0 )
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 utf8::String getTempPath()
@@ -906,7 +923,7 @@ bool createDirectory(const utf8::String & name)
     if( currentFiber()->event_.errno_ == EEXIST ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -939,7 +956,7 @@ bool createDirectory(const utf8::String & name)
 #else
   if( err != 0 && err != EEXIST )
 #endif
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
   oserror(err);
   return err == 0;
 }
@@ -981,7 +998,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
     if( fiber->event_.errno_ == ENOTDIR ) return false;
 #endif
     if( fiber->event_.errno_ != 0 && !noThrow )
-      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = removeDirectoryHelper(name);
@@ -1029,7 +1046,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
 #endif
   oserror(err);
   if( err != 0 && !noThrow )
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
   return err == 0;
 }
 //---------------------------------------------------------------------------
@@ -1050,7 +1067,7 @@ bool remove(const utf8::String & name,bool noThrow)
     if( fiber->event_.errno_ == ENOENT ) return false;
 #endif
     if( fiber->event_.errno_ != 0 && !noThrow )
-      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = 0;
@@ -1082,7 +1099,7 @@ bool remove(const utf8::String & name,bool noThrow)
       }
     }
     if( !noThrow )
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     oserror(err);
   }
   return err == 0;
@@ -1108,7 +1125,7 @@ void chModOwn(
   }
   if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m2) != 0 ){
     err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
   const struct passwd * u = getpwnam(utf8::String(user).getANSIString());
   uid_t userID(u != NULL ? u->pw_uid : (uid_t) user);
@@ -1116,7 +1133,7 @@ void chModOwn(
   gid_t groupID(g != NULL ? g->gr_gid : (gid_t) group);
   if( chown(anyPathName2HostPathName(pathName).getANSIString(),userID,groupID) != 0 ){
     err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
 }
 #else
@@ -1236,7 +1253,7 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
     }
     else if( mi.getChar() == '[' ){
 //      mi.next();
-      newObject<Exception>(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME")->throwSP();
+      newObjectV1C2<Exception>(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME")->throwSP();
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1265,7 +1282,7 @@ bool rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
     fiber->switchFiber(currentFiber()->mainFiber());
     assert( fiber->event_.type_ == etRename );
     if( fiber->event_.errno_ != 0 && !noThrow )
-      newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
+      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
     oserror(fiber->event_.errno_);
   }
   else {
@@ -1299,7 +1316,7 @@ bool rename(const utf8::String & oldPathName,const utf8::String & newPathName,bo
       }
 #endif
       if( !noThrow )
-        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
+        newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + oldPathName)->throwSP();
       oserror(err);
     }
   }
@@ -1318,7 +1335,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etRename );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + srcPathName)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + srcPathName)->throwSP();
   }
   else {
     if( bufferSize == 0 ) bufferSize = getpagesize();
@@ -1344,7 +1361,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     }
     if( r == 0 ){
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + srcPathName)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + srcPathName)->throwSP();
     }
 #else
     AsyncFile dstFile, srcFile;
@@ -1375,7 +1392,7 @@ void ksleep(uint64_t timeout)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etTimer );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   else {
 #if HAVE_NANOSLEEP
@@ -1437,7 +1454,7 @@ void getDirList(
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etDirList );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
     return;
   }
   int32_t err;
@@ -1455,7 +1472,7 @@ void getDirList(
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError();
       if( err == ERROR_PATH_NOT_FOUND ) return;
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
     try {
       do {
@@ -1471,7 +1488,7 @@ void getDirList(
     if( dir == NULL ){
       err = errno;
       if( err == ENOTDIR ) return;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
     }
     try {
       struct dirent * ent;
@@ -1481,7 +1498,7 @@ void getDirList(
       for(;;){
         if( readdir_r(dir,ent,&result) != 0 ){
           err = errno;
-          newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
+          newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
         }
         if( result == NULL ) break;
 #else
@@ -1518,7 +1535,7 @@ void getDirList(
       } while( FindNextFileA(handle,&fda) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
       }
     }
     catch( ... ){
@@ -1532,7 +1549,7 @@ void getDirList(
     if( handle == INVALID_HANDLE_VALUE ){
       err = GetLastError();
       if( err == ERROR_PATH_NOT_FOUND ) return;
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
+      newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
     }
     try {
       do {
@@ -1557,7 +1574,7 @@ void getDirList(
       } while( FindNextFileW(handle,&fdw) != 0 );
       if( GetLastError() != ERROR_NO_MORE_FILES ){
         err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
       }
     }
     catch( ... ){
@@ -1586,11 +1603,11 @@ void copyStrToClipboard(const utf8::String & s)
   int32_t err;
   if( OpenClipboard(NULL) == 0 ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EmptyClipboard() == 0 ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( isWin9x() ){
     utf8::AnsiString pass(s.getANSIString());
@@ -1601,13 +1618,13 @@ void copyStrToClipboard(const utf8::String & s)
     if( w == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     LPVOID ww = GlobalLock(w);
     if( ww == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     memcpy(ww,(const char *) pass,(strlen(pass) + 1) * sizeof(char));
     GlobalUnlock(ww);
@@ -1615,7 +1632,7 @@ void copyStrToClipboard(const utf8::String & s)
       err = GetLastError() + errorOffset;
       GlobalFree(w);
       CloseClipboard();
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   else {
@@ -1627,13 +1644,13 @@ void copyStrToClipboard(const utf8::String & s)
     if( w == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     LPVOID ww = GlobalLock(w);
     if( ww == NULL ){
       err = GetLastError() + errorOffset;
       CloseClipboard();
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     memcpy(ww,(const wchar_t *) pass,(lstrlenW(pass) + 1) * sizeof(wchar_t));
     GlobalUnlock(ww);
@@ -1641,7 +1658,7 @@ void copyStrToClipboard(const utf8::String & s)
       err = GetLastError() + errorOffset;
       GlobalFree(w);
       CloseClipboard();
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   CloseClipboard();
@@ -1669,7 +1686,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etExec );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
     return (pid_t) currentFiber()->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1735,7 +1752,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
   int32_t err;
   if( r == 0 ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( wait ){
     DWORD r = WaitForSingleObject(pi.hProcess,INFINITE);
@@ -1743,19 +1760,19 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
       err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     if( r != WAIT_OBJECT_0 ){
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
-      newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
     }
     DWORD exitCode;
     if( GetExitCodeProcess(pi.hProcess,&exitCode) == 0 ){
       err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     pi.dwProcessId = exitCode;
   }
@@ -1763,7 +1780,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
   CloseHandle(pi.hThread);
   return pi.dwProcessId;
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return 0;
 #endif
 }
@@ -1778,7 +1795,7 @@ int32_t waitForProcess(pid_t pid)
     currentFiber()->switchFiber(currentFiber()->mainFiber());
     assert( currentFiber()->event_.type_ == etWaitForProcess );
     if( currentFiber()->event_.errno_ != 0 )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return (int32_t) currentFiber()->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1786,28 +1803,28 @@ int32_t waitForProcess(pid_t pid)
   HANDLE hProcess = OpenProcess(NULL,FALSE,pid);
   if( hProcess == NULL ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   DWORD r = WaitForSingleObject(hProcess,INFINITE);
   if( r == WAIT_FAILED ){
     err = GetLastError() + errorOffset;
     CloseHandle(hProcess);
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( r != WAIT_OBJECT_0 ){
     CloseHandle(hProcess);
-    newObject<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
   }
   DWORD exitCode;
   if( GetExitCodeProcess(hProcess,&exitCode) == 0 ){
     err = GetLastError() + errorOffset;
     CloseHandle(hProcess);
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   CloseHandle(hProcess);
   return exitCode;
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return -1;
 #endif
 }
@@ -1844,10 +1861,10 @@ int64_t getProcessStartTime(bool toLocalTime)
       if( toLocalTime ) FileTimeToLocalFileTime(&creationTime.ft,&creationTime.ft);
   err = GetLastError();
   if( hProcess != NULL ) CloseHandle(hProcess);
-  if( err != ERROR_SUCCESS ) newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( err != ERROR_SUCCESS ) newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return -1;
 #endif
 }
@@ -2002,9 +2019,9 @@ uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size)
   size <<= 3;
   while( !sp.eof() ){
     uintptr_t c = sp.getChar();
-    if( c < 1 || c >= 256 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    if( c < 1 || c >= 256 ) newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     c = base64DecodeTable[c];
-    if( c >= 64 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    if( c >= 64 ) newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     if( i < size ){
       if( size - i <= 8 ){
         *(uint8_t *) ((uint8_t *) p + (i >> 3)) &= (uint8_t) (~(63u << (i & 7)));
@@ -2068,9 +2085,9 @@ uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size)
   size <<= 3;
   while( !sp.eof() ){
     uintptr_t c = sp.getChar();
-    if( c < 1 || c >= 256 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    if( c < 1 || c >= 256 ) newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     c = base32DecodeTable[c];
-    if( c >= 32 ) newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    if( c >= 32 ) newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     if( i < size ){
       if( size - i <= 8 ){
         *(uint8_t *) ((uint8_t *) p + (i >> 3)) &= (uint8_t) (~(31u << (i & 7)));
@@ -2140,7 +2157,7 @@ bool isWow64()
   BOOL bIsWow64 = FALSE;
   if( fnIsWow64Process != NULL && fnIsWow64Process(GetCurrentProcess(),&bIsWow64) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return bIsWow64 == FALSE ? false : true;
 }
@@ -2172,7 +2189,7 @@ utf8::String getMachineUniqueKey()
     // Initialize COM. ------------------------------------------
     CoInit_hres = CoInitializeEx(0,COINIT_MULTITHREADED);
     if( FAILED(CoInit_hres) )
-      newObject<Exception>(HRESULT_CODE(CoInit_hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(HRESULT_CODE(CoInit_hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     try {
       // Step 2: --------------------------------------------------
       // Set general COM security levels --------------------------
@@ -2193,7 +2210,7 @@ utf8::String getMachineUniqueKey()
           NULL                         // Reserved
         );
         if( FAILED(hres) && hres != RPC_E_TOO_LATE )
-          newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+          newObjectV1C2<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
       // Step 3: ---------------------------------------------------
       // Obtain the initial locator to WMI -------------------------
@@ -2205,7 +2222,7 @@ utf8::String getMachineUniqueKey()
         IID_IWbemLocator, (LPVOID *) &pLoc
       );
       if( FAILED(hres) )
-        newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       try {
         // Step 4: -----------------------------------------------------
         // Connect to WMI through the IWbemLocator::ConnectServer method
@@ -2224,7 +2241,7 @@ utf8::String getMachineUniqueKey()
           &pSvc                    // pointer to IWbemServices proxy
         );
         if( FAILED(hres) )
-          newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+          newObjectV1C2<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
         try {
           // Step 5: --------------------------------------------------
           // Set security levels on the proxy -------------------------
@@ -2239,7 +2256,7 @@ utf8::String getMachineUniqueKey()
              EOAC_NONE                    // proxy capabilities 
           );
           if( FAILED(hres) )
-            newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+            newObjectV1C2<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
           // Step 6: --------------------------------------------------
           // Use the IWbemServices pointer to make requests of WMI ----
           IEnumWbemClassObject * pEnumerator = NULL;
@@ -2251,7 +2268,7 @@ utf8::String getMachineUniqueKey()
             &pEnumerator
           );
           if( FAILED(hres) )
-            newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+            newObjectV1C2<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
           try {
             // Step 7: -------------------------------------------------
             // Get the data from the query in step 6 -------------------
@@ -2263,31 +2280,31 @@ utf8::String getMachineUniqueKey()
               try {
                 hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);
                 if( FAILED(hr) )
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtName) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtName,&vtName,0,0,VT_BSTR);
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"DeviceId", 0, &vtDeviceId, 0, 0);
                 if( FAILED(hr) )
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtDeviceId) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtDeviceId,&vtDeviceId,0,0,VT_BSTR);
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"Description", 0, &vtDescription, 0, 0);
                 if( FAILED(hr) )
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtDescription) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtDescription,&vtDescription,0,0,VT_BSTR);
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"ProcessorId", 0, &vtProcessorId, 0, 0);
                 if( FAILED(hr) )
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtProcessorId) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtProcessorId,&vtProcessorId,0,0,VT_BSTR);
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 if( s.strlen() > 0 ) s += "\n";
                 s += utf8::String(V_BSTR(&vtDeviceId)) + " " +
@@ -2317,7 +2334,7 @@ utf8::String getMachineUniqueKey()
             &pEnumerator
           );
           if( FAILED(hres) )
-            newObject<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+            newObjectV1C2<Exception>(HRESULT_CODE(hres) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
           try {
             // Step 7: -------------------------------------------------
             // Get the data from the query in step 6 -------------------
@@ -2329,22 +2346,22 @@ utf8::String getMachineUniqueKey()
               try {
                 hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);
                 if( FAILED(hr) )
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 if( V_VT(&vtName) != VT_BSTR ){
                   hr = VariantChangeTypeEx(&vtName,&vtName,0,0,VT_BSTR);
-                  newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                  newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
                 hr = pclsObj->Get(L"AdapterTypeId", 0, &vtAdapterTypeId, 0, 0);
                 if( FAILED(hr) ){
                   HRESULT hr2 = pclsObj->Get(L"AdapterType", 0, &vtAdapterTypeId, 0, 0);
                   if( FAILED(hr2) ){
                     hr = hr2;
-                    newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                    newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                   }
                   if( V_VT(&vtAdapterTypeId) != VT_NULL ){
                     if( V_VT(&vtAdapterTypeId) != VT_BSTR ){
                       hr = VariantChangeTypeEx(&vtAdapterTypeId,&vtAdapterTypeId,0,0,VT_BSTR);
-                      newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                      newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                     }
                   }
                 }
@@ -2363,16 +2380,16 @@ utf8::String getMachineUniqueKey()
                   }
                   if( V_VT(&vtAdapterTypeId) != VT_I4 ){
                     hr = VariantChangeTypeEx(&vtAdapterTypeId,&vtAdapterTypeId,0,0,VT_I4);
-                    newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                    newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                   }
                   if( V_I4(&vtAdapterTypeId) >= 0 && V_I4(&vtAdapterTypeId) != 3 ){
                     hr = pclsObj->Get(L"MACAddress", 0, &vtMACAddress, 0, 0);
                     if( FAILED(hr) )
-                      newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                      newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                     if( V_VT(&vtMACAddress) != VT_NULL ){
                       if( V_VT(&vtMACAddress) != VT_BSTR ){
                         hr = VariantChangeTypeEx(&vtMACAddress,&vtMACAddress,0,0,VT_BSTR);
-                        newObject<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+                        newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                       }
                       if( s.strlen() > 0 ) s += "\n";
                       s += utf8::String(V_BSTR(&vtName)) + " " + V_BSTR(&vtMACAddress);
@@ -2426,7 +2443,7 @@ utf8::String getMachineUniqueKey()
   VariantClear(&vtMACAddress);
   return s;
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return utf8::String();
 #endif
 #else
@@ -2529,8 +2546,8 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
       }
       exit(EINVAL);
     }
-//    newObject<Exception>(EINVAL,"Pirate copy detected")->throwSP();
-    newObject<Exception>(EINVAL,"nonsystem error 1726")->throwSP();
+//    newObjectV1C2<Exception>(EINVAL,"Pirate copy detected")->throwSP();
+    newObjectV1C2<Exception>(EINVAL,"nonsystem error 1726")->throwSP();
   }
   return pirate;
 }

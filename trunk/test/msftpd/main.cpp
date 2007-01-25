@@ -105,7 +105,7 @@ MSFTPServerFiber & MSFTPServerFiber::auth()
   ap.noAuth_ = config_->value("noauth",false);
   MSFTPError e = (MSFTPError) serverAuth(ap);
   if( e != eOK )
-    newObject<ksys::Exception>(e,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ksys::Exception>(e,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -378,7 +378,7 @@ MSFTPServer::MSFTPServer(const ksys::ConfigSP config) : config_(config)
 //------------------------------------------------------------------------------
 ksys::Fiber * MSFTPServer::newFiber()
 {
-  return newObject<MSFTPServerFiber>(config_);
+  return newObjectV1<MSFTPServerFiber>(config_);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

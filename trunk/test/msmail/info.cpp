@@ -41,14 +41,14 @@ Message::Message() :
 {
   utf8::String mId(createGUIDAsBase32String());
   file_.fileName(getTempPath() + mId + ".msg");
-  attributes_.insert(*newObject<Attribute>(messageIdKey,mId));
+  attributes_.insert(*newObjectC1C2<Attribute>(messageIdKey,mId));
 }
 //------------------------------------------------------------------------------
 Message::Message(const utf8::String & mId) :
   attributesAutoDrop_(attributes_), residentSize_(0), codePage_(CP_UTF8)
 {
   file_.fileName(getTempPath() + mId + ".msg");
-  attributes_.insert(*newObject<Attribute>(messageIdKey,mId));
+  attributes_.insert(*newObjectC1C2<Attribute>(messageIdKey,mId));
 }
 //------------------------------------------------------------------------------
 /*Message::Message(const Message & a) : attributesAutoDrop_(attributes_)
@@ -81,7 +81,7 @@ utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) co
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL )
-    newObject<Exception>(
+    newObjectV1C2<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
 #else
@@ -97,7 +97,7 @@ utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) co
   s.alloc((uintptr_t) p->size_ + 1);
   s[(uintptr_t) p->size_] = '\0';
   file_.readBuffer(p->index_,s,p->size_);
-  utf8::String::Container * container = newObject<utf8::String::Container>(0,s.ptr());
+  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,s.ptr());
   s.ptr(NULL);
   utf8::String ss(container);
   if( key.c_str()[0] != '#' ) ss = unScreenString(ss);
@@ -109,7 +109,7 @@ Message & Message::value(const utf8::String & key,const utf8::String & value,Att
   uintptr_t keySize = key.size(), valueSize = value.size();
   Attribute * p = attributes_.find(key);
   if( p == NULL ){
-    p = newObject<Attribute>(key);
+    p = newObjectC1<Attribute>(key);
     attributes_.insert(*p);
     residentSize_ += sizeof(Attribute) + keySize + 2;
   }
@@ -141,7 +141,7 @@ utf8::String Message::removeValue(const utf8::String & key)
 {
   Attribute * p = attributes_.find(key);
   if( p == NULL )
-    newObject<Exception>(
+    newObjectV1C2<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_NOT_FOUND + errorOffset
 #else
@@ -186,9 +186,9 @@ void Message::validateKey(const utf8::String & key)
   }
   if( invalid )
 #if defined(__WIN32__) || defined(__WIN64__)
-    newObject<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
 #else
-    newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //------------------------------------------------------------------------------
@@ -283,9 +283,9 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
-      newObject<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
 #else
-      newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 #endif
     }
   }
@@ -395,7 +395,7 @@ UserInfo & UserInfo::operator = (const UserInfo & a)
   sendedTo_.drop();
   a.sendedTo_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+    sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -449,7 +449,7 @@ KeyInfo & KeyInfo::operator = (const KeyInfo & a)
   sendedTo_.drop();
   a.sendedTo_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+    sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -502,7 +502,7 @@ GroupInfo & GroupInfo::operator = (const GroupInfo & a)
   sendedTo_.drop();
   a.sendedTo_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+    sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -563,7 +563,7 @@ ServerInfo & ServerInfo::operator = (const ServerInfo & a)
   sendedTo_.drop();
   a.sendedTo_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+    sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   connectErrorCount_ = a.connectErrorCount_;
   lastFailedConnectTime_ = a.lastFailedConnectTime_;
   return *this;
@@ -622,7 +622,7 @@ User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
   sendedTo_.drop();
   a.sendedTo_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+    sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -676,7 +676,7 @@ Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
   sendedTo_.drop();
   a.sendedTo_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+    sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -730,7 +730,7 @@ Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)
   sendedTo_.drop();
   a.sendedTo_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+    sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -777,7 +777,7 @@ bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sen
   UserInfo * p = users_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      users_.insert(*newObject<UserInfo>(info));
+      users_.insert(*newObjectC1<UserInfo>(info));
       r = true;
     }
   }
@@ -791,7 +791,7 @@ bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sen
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+      p->sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   }
   return r;
 }
@@ -808,7 +808,7 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendi
   KeyInfo * p = keys_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      keys_.insert(*newObject<KeyInfo>(info));
+      keys_.insert(*newObjectC1<KeyInfo>(info));
       r = true;
     }
   }
@@ -822,7 +822,7 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendi
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+      p->sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   }
   return r;
 }
@@ -839,7 +839,7 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & s
   GroupInfo * p = groups_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      groups_.insert(*newObject<GroupInfo>(info));
+      groups_.insert(*newObjectC1<GroupInfo>(info));
       r = true;
     }
   }
@@ -853,7 +853,7 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & s
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+      p->sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   }
   return r;
 }
@@ -870,7 +870,7 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
   ServerInfo * p = servers_.find(info);
   if( p == NULL ){
     if( info.sendedTo_.find(sendingTo) == NULL ){
-      servers_.insert(*newObject<ServerInfo>(info));
+      servers_.insert(*newObjectC1<ServerInfo>(info));
       r = true;
     }
   }
@@ -884,7 +884,7 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
     Array<InfoLinkKey *> list;
     info.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+      p->sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
     if( info.type_ == stNode && info.type_ != p->type_ ){
       p->type_ = info.type_;
       p->sendedTo_.drop();
@@ -906,7 +906,7 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::
   User2KeyLink * p = user2KeyLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
-      user2KeyLinks_.insert(*newObject<User2KeyLink>(link));
+      user2KeyLinks_.insert(*newObjectC1<User2KeyLink>(link));
       r = true;
     }
   }
@@ -920,7 +920,7 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+      p->sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   }
   return r;
 }
@@ -937,7 +937,7 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8
   Key2GroupLink * p = key2GroupLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
-      key2GroupLinks_.insert(*newObject<Key2GroupLink>(link));
+      key2GroupLinks_.insert(*newObjectC1<Key2GroupLink>(link));
       r = true;
     }
   }
@@ -951,7 +951,7 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+      p->sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   }
   return r;
 }
@@ -968,7 +968,7 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
   Key2ServerLink * p = key2ServerLinks_.find(link);
   if( p == NULL ){
     if( link.sendedTo_.find(sendingTo) == NULL ){
-      key2ServerLinks_.insert(*newObject<Key2ServerLink>(link));
+      key2ServerLinks_.insert(*newObjectC1<Key2ServerLink>(link));
       r = true;
     }
   }
@@ -987,7 +987,7 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
     Array<InfoLinkKey *> list;
     link.sendedTo_.list(list);
     for( intptr_t i = list.count() - 1; i >= 0; i-- )
-      p->sendedTo_.insert(*newObject<InfoLinkKey>(*list[i]),false);
+      p->sendedTo_.insert(*newObjectC1<InfoLinkKey>(*list[i]),false);
   }
   return r;
 }
@@ -1299,31 +1299,31 @@ Server::Data & Server::Data::setSendedToNL(const utf8::String & sendingTo)
   Array<UserInfo *> userList;
   users_.list(userList);
   for( i = userList.count() - 1; i >= 0; i-- )
-    userList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
+    userList[i]->sendedTo_.insert(*newObjectC1<InfoLinkKey>(sendingTo),false);
   Array<KeyInfo *> keyList;
   keys_.list(keyList);
   for( i = keyList.count() - 1; i >= 0; i-- )
-    keyList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
+    keyList[i]->sendedTo_.insert(*newObjectC1<InfoLinkKey>(sendingTo),false);
   Array<GroupInfo *> groupList;
   groups_.list(groupList);
   for( i = groupList.count() - 1; i >= 0; i-- )
-    groupList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
+    groupList[i]->sendedTo_.insert(*newObjectC1<InfoLinkKey>(sendingTo),false);
   Array<ServerInfo *> serverList;
   servers_.list(serverList);
   for( i = serverList.count() - 1; i >= 0; i-- )
-    serverList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
+    serverList[i]->sendedTo_.insert(*newObjectC1<InfoLinkKey>(sendingTo),false);
   Array<User2KeyLink *> user2KeyLinkList;
   user2KeyLinks_.list(user2KeyLinkList);
   for( i = user2KeyLinkList.count() - 1; i >= 0; i-- )
-    user2KeyLinkList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
+    user2KeyLinkList[i]->sendedTo_.insert(*newObjectC1<InfoLinkKey>(sendingTo),false);
   Array<Key2GroupLink *> key2GroupLinkList;
   key2GroupLinks_.list(key2GroupLinkList);
   for( i = key2GroupLinkList.count() - 1; i >= 0; i-- )
-    key2GroupLinkList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
+    key2GroupLinkList[i]->sendedTo_.insert(*newObjectC1<InfoLinkKey>(sendingTo),false);
   Array<Key2ServerLink *> key2ServerLinkList;
   key2ServerLinks_.list(key2ServerLinkList);
   for( i = key2ServerLinkList.count() - 1; i >= 0; i-- )
-    key2ServerLinkList[i]->sendedTo_.insert(*newObject<InfoLinkKey>(sendingTo),false);
+    key2ServerLinkList[i]->sendedTo_.insert(*newObjectC1<InfoLinkKey>(sendingTo),false);
   return *this;
 }
 //------------------------------------------------------------------------------

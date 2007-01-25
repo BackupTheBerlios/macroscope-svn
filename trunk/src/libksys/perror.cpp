@@ -115,7 +115,7 @@ utf8::String strError(int32_t err)
 //      memset(serr,'@',sel);
 //      fprintf(stderr,"%s %d sel = %u\n",__FILE__,__LINE__,sel);
       if( (er = strerror_r(err,serr,sel)) != 0 && er != ERANGE ){
-        newObject<Exception>(er,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(er,__PRETTY_FUNCTION__)->throwSP();
       }
       if( er == 0 ) break;
     }

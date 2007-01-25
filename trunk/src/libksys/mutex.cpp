@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -146,7 +146,7 @@ InterlockedMutex::~InterlockedMutex()
   if( mutex_ != NULL ){
     int r = pthread_mutex_destroy(&mutex_);
     if( r != 0 )
-      newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -185,7 +185,7 @@ InterlockedMutex::InterlockedMutex()
   sem_ = CreateSemaphoreA(NULL,1,~(ULONG) 0 >> 1, NULL);
   if( sem_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
@@ -195,7 +195,7 @@ void InterlockedMutex::acquire()
   DWORD r = WaitForSingleObject(sem_,INFINITE);
   if( r == WAIT_FAILED || (r != WAIT_OBJECT_0 && r != WAIT_ABANDONED) ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
@@ -205,7 +205,7 @@ bool InterlockedMutex::tryAcquire()
   DWORD r = WaitForSingleObject(sem_,0);
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 }
@@ -215,7 +215,7 @@ void InterlockedMutex::release()
 //  LeaveCriticalSection(&cs_);
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
@@ -227,34 +227,34 @@ InterlockedMutex::InterlockedMutex() : mutex_(NULL)
   /*pthread_mutexattr_t attr;
   if( pthread_mutexattr_init(&attr) != 0 ){
     r = errno;
-    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
 #if HAVE_SYSCONF
   if( sysconf(_POSIX_THREAD_PRIO_INHERIT) > 0 ){
     if( pthread_mutexattr_setprotocol(&attr,PTHREAD_PRIO_INHERIT) != 0 ){
       r = errno;
       pthread_mutexattr_destroy(&attr);
-      newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
     }
   }
 #endif*/
   r = pthread_mutex_init(&mutex_,NULL);
   if( r != 0 ){
     //pthread_mutexattr_destroy(&attr);
-    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
 void InterlockedMutex::acquire()
 {
   int r = pthread_mutex_lock(&mutex_);
-  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 bool InterlockedMutex::tryAcquire()
 {
   int r = pthread_mutex_trylock(&mutex_);
-  if( r != 0 && r != EBUSY ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 && r != EBUSY ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ void InterlockedMutex::release()
 {
   int r = pthread_mutex_unlock(&mutex_);
   if( r != 0 )
-    newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 #endif
@@ -340,48 +340,48 @@ void Mutex::singleWRLock(Mutex * mutex)
 Mutex::~Mutex()
 {
   int r = pthread_rwlock_destroy(&mutex_);
-  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 Mutex::Mutex()
 {
   mutex_ = NULL;
   int r = pthread_rwlock_init(&mutex_,NULL);
-  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 Mutex & Mutex::rdLock()
 {
   int r = pthread_rwlock_rdlock(&mutex_);
-  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
 bool Mutex::tryRDLock()
 {
   int r = pthread_rwlock_tryrdlock(&mutex_);
-  if( r != 0 && r != EBUSY ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 && r != EBUSY ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
 Mutex & Mutex::wrLock()
 {
   int r = pthread_rwlock_wrlock(&mutex_);
-  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
 bool Mutex::tryWRLock()
 {
   int r = pthread_rwlock_trywrlock(&mutex_);
-  if( r != 0 && r != EBUSY ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 && r != EBUSY ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
 Mutex & Mutex::unlock()
 {
   int r = pthread_rwlock_unlock(&mutex_);
-  if( r != 0 ) newObject<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -414,7 +414,7 @@ Event::Event()
   if( handle_ == NULL ){
     err = GetLastError() + errorOffset;
 #endif
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------

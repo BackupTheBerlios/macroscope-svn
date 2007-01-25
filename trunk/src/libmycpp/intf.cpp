@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -154,7 +154,7 @@ void API::open()
         9,
         utf8::String::Stream() << "Load " << libFileName << " failed\n"
       );
-      newObject<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -167,7 +167,7 @@ void API::open()
           9,
           utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
         );
-        newObject<ksys::Exception>(err + ksys::errorOffset, __PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<ksys::Exception>(err + ksys::errorOffset, __PRETTY_FUNCTION__)->throwSP();
       }
 #elif HAVE_DLFCN_H
       (&p_mysql_thread_safe)[i] = dlsym(handle_, symbols_[i]);
@@ -178,7 +178,7 @@ void API::open()
         ksys::stdErr.debug(9,
 	  utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
 	);
-        newObject<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }
@@ -195,7 +195,7 @@ void API::open()
       ksys::stdErr.debug(9,
         utf8::String::Stream() << "my_init couldn't initialize environment\n"
       );
-      newObject<ksys::Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
+      newObjectV1C2<ksys::Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
     }
   }
   count_++;

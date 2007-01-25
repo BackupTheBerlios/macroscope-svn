@@ -64,7 +64,7 @@ void LZO1X::initialize()
   int r = lzo_init();
   assert(r == LZO_E_OK);
   if( r != LZO_E_OK )
-    newObject<Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 #if __BCPLUSPLUS__
@@ -131,7 +131,7 @@ LZO1X & LZO1X::compress(AutoPtr<uint8_t> & buf,uint8_t * & p,int32_t & len)
     }
     assert( r == LZO_E_OK );
     if( r != LZO_E_OK )
-      newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     if( dst_len >= wBufPos_ ) goto l1;
     if( optimize_ ){
       lzo_uint orig_len = wBufPos_;
@@ -196,7 +196,7 @@ LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
     if( *(uint32_t *) (i8 + sizeof(int32_t) * 2 + a) != checksum ) a = -a;
   }
   if( a <= 0 || i32[1] <= 0 )
-    newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   rBufSize(i32[1]);
   lzo_uint srcLen = a, dst_len = i32[1];
 #if HAVE_LZO1X_DECOMPRESS_ASM_FAST_SAFE
@@ -253,7 +253,7 @@ LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
 #endif
   assert( r == LZO_E_OK && dst_len == rBufSize_ );
   if( r != LZO_E_OK || dst_len != rBufSize_ )
-    newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------

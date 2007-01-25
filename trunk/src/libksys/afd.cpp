@@ -202,14 +202,14 @@ file_t AsyncFile::openHelper(bool async)
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   if( async ){
     int flags = fcntl(handle,F_GETFL,0);
     if( flags == -1 || fcntl(handle,F_SETFL,flags | O_NONBLOCK) == -1 ){
       err = errno;
       ::close(handle);
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
   }
 #endif
@@ -232,7 +232,7 @@ AsyncFile & AsyncFile::open()
       fiber->switchFiber(fiber->mainFiber());
       assert( fiber->event_.type_ == etOpenFile );
       if( fiber->event_.errno_ != 0 )
-        newObject<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       descriptor_ = fiber->event_.fileDescriptor_;
     }
     else {
@@ -268,7 +268,7 @@ AsyncFile & AsyncFile::open()
       if( r == 0 ){
         int32_t err = GetLastError() + errorOffset;
         close();
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       alignment_ = bytesPerSector;
     }
@@ -304,14 +304,14 @@ uint64_t AsyncFile::size() const
   i.lo = GetFileSize(descriptor_, &i.hi);
   if( GetLastError() != ERROR_SUCCESS ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + " " + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + " " + fileName_)->throwSP();
   }
   return i.a;
 #else
   struct stat st;
   if( fstat(descriptor_,&st) != 0 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return st.st_size;
 #endif
@@ -329,12 +329,12 @@ AsyncFile & AsyncFile::resize(uint64_t nSize)
  */
     if( SetEndOfFile(descriptor_) == 0 ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
 #elif HAVE_FTRUNCATE
     if( ftruncate(descriptor_,nSize) == -1 ){
       err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
 #else
 #error resize not implemented
@@ -393,7 +393,7 @@ int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
     for(;;){
       if( ResetEvent(overlapped.hEvent) == 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       status = ReadFile(descriptor_,buf,a,&rr,&overlapped);
@@ -473,7 +473,7 @@ int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
     for(;;){
       if( ResetEvent(overlapped.hEvent) == 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       status = WriteFile(descriptor_,buf,a,&ww,&overlapped);
@@ -516,10 +516,10 @@ AsyncFile & AsyncFile::readBuffer(void * buf,uint64_t size)
     int64_t r = read(buf,size);
     if( r < 0 ){
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     if( r == 0 || (uint64_t) r != size )
-      newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<EFileEOF>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return *this;
 }
@@ -530,10 +530,10 @@ AsyncFile & AsyncFile::writeBuffer(const void * buf,uint64_t size)
     int64_t w = write(buf,size);
     if( w < 0 ){
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     if( (uint64_t) w != size )
-      newObject<Exception>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return *this;
 }
@@ -544,10 +544,10 @@ AsyncFile & AsyncFile::readBuffer(uint64_t pos,void * buf,uint64_t size)
     int64_t r = read(pos,buf,size);
     if( r < 0 ){
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     if( r == 0 || (uint64_t) r != size )
-      newObject<EFileEOF>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<EFileEOF>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return *this;
 }
@@ -558,10 +558,10 @@ AsyncFile & AsyncFile::writeBuffer(uint64_t pos,const void * buf,uint64_t size)
     int64_t w = write(pos,buf,size);
     if( w < 0 ){
       int32_t err = oserror() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     if( (uint64_t) w != size )
-      newObject<Exception>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(EIO,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return *this;
 }
@@ -581,7 +581,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
       fiber->thread()->postRequest(this);
       fiber->switchFiber(fiber->mainFiber());
       if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_LOCK_VIOLATION )
-        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     return fiber->event_.errno_ == 0;
 #else
@@ -594,7 +594,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
       if( fcntl(descriptor_,F_SETLKW,&fl) == 0 ) return true;
       if( errno != EAGAIN ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       return false;
     }
@@ -611,7 +611,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
     overlapped.hEvent = eventObject_;
     if( ResetEvent(overlapped.hEvent) == 0 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
     BOOL status = LockFileEx(
@@ -631,7 +631,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
     switch( err ){
       case ERROR_LOCK_VIOLATION : return false;
       default                   :
-        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
 #else
     struct flock fl;
@@ -642,7 +642,7 @@ bool AsyncFile::tryRDLock(uint64_t pos,uint64_t size)
     if( fcntl(descriptor_,F_SETLKW,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     return false;
 #endif
@@ -665,7 +665,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
       fiber->thread()->postRequest(this);
       fiber->switchFiber(fiber->mainFiber());
       if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_LOCK_VIOLATION )
-        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     return fiber->event_.errno_ == 0;
 #else
@@ -678,7 +678,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
       if( fcntl(descriptor_,F_SETLK,&fl) == 0 ) return true;
       if( errno != EAGAIN ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       return false;
     }
@@ -695,7 +695,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
     overlapped.hEvent = eventObject_;
     if( ResetEvent(overlapped.hEvent) == 0 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
     BOOL status = LockFileEx(
@@ -715,7 +715,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
     switch( err ){
       case ERROR_LOCK_VIOLATION : return false;
       default                   :
-        newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
 #else
     struct flock fl;
@@ -726,7 +726,7 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
     if( fcntl(descriptor_,F_SETLK,&fl) == 0 ) return true;
     if( errno != EAGAIN ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
     return false;
 #endif
@@ -748,7 +748,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       fiber->thread()->postRequest(this);
       fiber->switchFiber(fiber->mainFiber());
       if( fiber->event_.errno_ != 0 )
-        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
 #else
       struct flock fl;
       fl.l_start = pos;
@@ -757,7 +757,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(descriptor_,F_SETLKW,&fl) != 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
 #endif
     }
@@ -773,7 +773,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       overlapped.hEvent = eventObject_;
       if( ResetEvent(overlapped.hEvent) == 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       BOOL status = LockFileEx(
@@ -793,7 +793,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       switch( err ){
         case ERROR_SUCCESS        : break;
         default                   :
-          newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+          newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
 #else
       struct flock  fl;
@@ -803,7 +803,7 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(descriptor_, F_SETLKW, &fl) != 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
 #endif
     }
@@ -825,7 +825,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
       fiber->thread()->postRequest(this);
       fiber->switchFiber(fiber->mainFiber());
       if( fiber->event_.errno_ != 0 )
-        newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
 #else
       struct flock  fl;
       fl.l_start = pos;
@@ -834,7 +834,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(descriptor_, F_SETLKW, &fl) != 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
 #endif
     }
@@ -850,7 +850,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
       overlapped.hEvent = eventObject_;
       if( ResetEvent(overlapped.hEvent) == 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       BOOL status = LockFileEx(
@@ -870,7 +870,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
       switch( err ){
         case ERROR_SUCCESS        : break;
         default                   :
-          newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+          newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
 #else
       struct flock  fl;
@@ -880,7 +880,7 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
       fl.l_whence = SEEK_SET;
       if( fcntl(descriptor_,F_SETLKW,&fl) != 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
 #endif
     }
@@ -906,7 +906,7 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
     );
     if( status == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
 #else
     struct flock fl;
@@ -916,7 +916,7 @@ AsyncFile & AsyncFile::unLock(uint64_t pos,uint64_t size)
     fl.l_whence = SEEK_SET;
     if( fcntl(descriptor_,F_SETLK,&fl) != 0 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
     }
 #endif
   }
@@ -932,14 +932,14 @@ uint64_t AsyncFile::tell() const
   i.lo = SetFilePointer(descriptor_,0,&i.hi,FILE_CURRENT);
   if( GetLastError() != ERROR_SUCCESS ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return i.a;
 #else
   int64_t pos = lseek(descriptor_,0,SEEK_CUR);
   if( pos < 0 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return pos;
 #endif
@@ -952,13 +952,13 @@ AsyncFile & AsyncFile::seek(uint64_t pos)
   reinterpret_cast<uint64 *>(&pos)->lo = SetFilePointer(descriptor_,reinterpret_cast<uint64 *>(&pos)->lo,(PLONG) &reinterpret_cast<uint64 *>(&pos)->hi,FILE_BEGIN);
   if( GetLastError() != ERROR_SUCCESS ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
 #else
   int64_t lp = lseek(descriptor_,pos,SEEK_SET);
   if( lp < 0 || (uint64_t) lp != pos ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
 #endif
   return *this;
@@ -1077,14 +1077,14 @@ l1:
       intptr_t sl = utf8::mbcs2utf8s(buffer->codePage_,NULL,0,s,~uintptr_t(0) >> 1);
       if( sl < 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       AutoPtr<char> s2;
       s2.alloc(sl + 1);
       utf8::mbcs2utf8s(buffer->codePage_,s2,sl + 1,s,~uintptr_t(0) >> 1);
       s2.xchg(s);
     }
-    utf8::String::Container * container = newObject<utf8::String::Container>(0,s.ptr());
+    utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,s.ptr());
     s.ptr(NULL);
     str = container;
   }
@@ -1182,7 +1182,7 @@ void AsyncFile::redirectToStdin()
   HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( handle != NULL ){
     fileName("stdin");
@@ -1190,7 +1190,7 @@ void AsyncFile::redirectToStdin()
     std_ = true;
   }
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //------------------------------------------------------------------------------
@@ -1200,7 +1200,7 @@ void AsyncFile::redirectToStdout()
   HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( handle != NULL ){
     fileName("stdout");
@@ -1208,7 +1208,7 @@ void AsyncFile::redirectToStdout()
     std_ = true;
   }
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1218,7 +1218,7 @@ void AsyncFile::redirectToStderr()
   HANDLE handle = GetStdHandle(STD_ERROR_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( handle != NULL ){
     fileName("stderr");
@@ -1226,7 +1226,7 @@ void AsyncFile::redirectToStderr()
     std_ = true;
   }
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -1263,13 +1263,13 @@ DWORD AsyncFile::waitCommEvent()
     fiber->thread()->postRequest(this);
     fiber->switchFiber(fiber->mainFiber());
     if( fiber->event_.errno_ != 0 )
-      newObject<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     evtMask = fiber->event_.evtMask_;
   }
   else {
     if( WaitCommEvent(descriptor_,&evtMask,NULL) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   return evtMask;
@@ -1277,7 +1277,7 @@ DWORD AsyncFile::waitCommEvent()
 #else
 uint32_t AsyncFile::waitCommEvent()
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return 0;
 }
 #endif

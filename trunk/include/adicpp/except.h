@@ -41,6 +41,8 @@ inline void oserror(int32_t err){ errno = err; }
 //---------------------------------------------------------------------------
 class LogFile;
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 class Exception {
   public:
     virtual ~Exception();
@@ -55,14 +57,14 @@ class Exception {
     Exception & code(int32_t err);
     const utf8::String what() const;
     Exception & what(const utf8::String & error);
-    const Array<int32_t> & codes() const;
-    const Array<utf8::String> & whats() const;
     bool searchCode(int32_t code) const;
     bool searchCode(int32_t code1, int32_t code2) const;
     bool searchCode(int32_t code1, int32_t code2, int32_t code3) const;
     bool searchCode(int32_t code1, int32_t code2, int32_t code3, int32_t code4) const;
 
-    static Exception * newObject();
+//    static Exception * newObject();
+//    static Exception * newObject(int32_t code,const char * what);
+//    static Exception * newObject(int32_t code,const utf8::String & what);
 
     virtual utf8::String stdError(utf8::String::Stream * s = NULL) const;
     virtual const Exception & writeStdError(LogFile * log = NULL) const;
@@ -71,9 +73,12 @@ class Exception {
 
     const bool & stackBackTrace() const;
     Exception & stackBackTrace(bool v);
+
+    Array<int32_t> & codes() const;
+    Array<utf8::String> & whats() const;
   protected:
-    Array<int32_t> codes_;
-    Array<utf8::String> whats_;
+    mutable Array<int32_t> codes_;
+    mutable Array<utf8::String> whats_;
     mutable int32_t refCount_;
     bool stackBackTrace_;
   private:
@@ -93,12 +98,12 @@ inline Exception & Exception::what(const utf8::String & error)
   return *this;
 }
 //---------------------------------------------------------------------------
-inline const Array< int32_t> & Exception::codes() const
+inline Array<int32_t> & Exception::codes() const
 {
   return codes_;
 }
 //---------------------------------------------------------------------------
-inline const Array< utf8::String> & Exception::whats() const
+inline Array<utf8::String> & Exception::whats() const
 {
   return whats_;
 }
@@ -131,7 +136,7 @@ inline Exception & Exception::addRef()
 //---------------------------------------------------------------------------
 inline Exception & Exception::remRef()
 {
-  if( interlockedIncrement(refCount_, -1) == 1 ) delete this;
+  if( interlockedIncrement(refCount_, -1) == 1 ) deleteObject(this);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -146,8 +151,7 @@ inline Exception & Exception::stackBackTrace(bool v)
   return *this;
 }
 //---------------------------------------------------------------------------
-typedef
-SPRC< Exception>
+typedef SPRC<Exception>
 //SP<
 //  Exception,
 //  RefCounted<Exception>,
@@ -176,5 +180,21 @@ inline EOutOfMemory::EOutOfMemory(int32_t code,const utf8::String & what)
 }
 //---------------------------------------------------------------------------
 } // namespace ksys
+//---------------------------------------------------------------------------
+namespace utf8 {
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class EStr2Scalar : public ksys::Exception {
+  public:
+    EStr2Scalar(int32_t code,const utf8::String & what);
+};
+//---------------------------------------------------------------------------
+inline EStr2Scalar::EStr2Scalar(int32_t code,const utf8::String & what) :
+  ksys::Exception(code,what)
+{
+}
+//---------------------------------------------------------------------------
+} // namespace utf8
 //---------------------------------------------------------------------------
 #endif /* _Exception_H_ */

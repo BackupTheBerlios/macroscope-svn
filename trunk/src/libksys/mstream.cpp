@@ -38,9 +38,7 @@ MemoryStream::Container::Container(uintptr_t count)
     mcount_(0),
     refCount_(0)
 {
-  if( count > 0 )
-    for( mcount_ = 1; mcount_ < count; mcount_ <<= 1 )
-      ;
+  if( count > 0 ) for( mcount_ = 1; mcount_ < count; mcount_ <<= 1 );
 }
 //---------------------------------------------------------------------------
 void MemoryStream::initialize()
@@ -56,9 +54,9 @@ void MemoryStream::cleanup()
 MemoryStream & MemoryStream::readBuffer(void * buffer, uintptr_t count)
 {
   if( pos_ == container_->count_ )
-    newObject<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__)->throwSP();
   if( pos_ + count > container_->count_ )
-    newObject<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__)->throwSP();
   memcpy(buffer, container_->uptr_ + pos_, count);
   pos_ += count;
   return *this;
@@ -69,9 +67,9 @@ MemoryStream & MemoryStream::operator >> (utf8::String & s)
   uintptr_t pos = pos_;
   while( pos < container_->count_ && container_->uptr_[pos] != '\0' ) pos++;
   if( pos == pos_ && pos == container_->count_ )
-    newObject<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EMemoryStreamEOF>(EIO, __PRETTY_FUNCTION__)->throwSP();
   if( pos > pos_ && pos == container_->count_ )
-    newObject<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EMemoryStreamReadError>(EIO, __PRETTY_FUNCTION__)->throwSP();
   s = utf8::plane(container_->sptr_ + pos_, pos - pos_);
   pos_ = pos;
   return *this;
@@ -81,7 +79,7 @@ MemoryStream & MemoryStream::resize(uintptr_t newSize)
 {
   if( newSize > 0 ){
     if( container_.ptr() == &nullContainer() ){
-      container_ = newObject<Container>(newSize);
+      container_ = newObjectV1<Container>(newSize);
     }
     else{
       if( newSize > container_->mcount_ || newSize < (container_->mcount_ << 1) ){

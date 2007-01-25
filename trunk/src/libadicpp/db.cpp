@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -61,7 +61,7 @@ Database * Database::newDatabase(ksys::Config * config)
     my.ptr(NULL);
     return p;
   }
-  newObject<ksys::Exception>(EINVAL, "unknown or unsupported server type")->throwSP();
+  newObjectV1C2<ksys::Exception>(EINVAL, "unknown or unsupported server type")->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------

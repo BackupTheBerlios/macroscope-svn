@@ -68,7 +68,7 @@ KFTPClient::KFTPClient(const ksys::ConfigSP & config,const utf8::String & sectio
 KFTPClient & KFTPClient::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    newObject<ksys::Exception>(code,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ksys::Exception>(code,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -846,7 +846,7 @@ void ZebexPDL::fiberExecute()
   if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 /*  if( DeviceIoControl(serial.descriptor(),IOCTL_SERIAL_CLR_DTR,NULL,0,NULL,0,&bytesReturned,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
@@ -856,10 +856,10 @@ void ZebexPDL::fiberExecute()
   if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 #endif
@@ -944,7 +944,7 @@ void KFTPShell::open()
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )
-      attachFiber(newObjectV<KFTPClient>(config_,sectionName,errorCode_));
+      attachFiber(newObjectC1C2R3<KFTPClient>(config_,sectionName,errorCode_));
   }
 }
 //------------------------------------------------------------------------------

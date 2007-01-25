@@ -198,14 +198,14 @@ List< T> & List< T>::destroy()
   ListNode< T> *  node  = last_, * p;
   while( node != NULL ){
     p = node->prev();
-    delete node;
+    deleteObject(node);
     node = p;
   }
   return *this;
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
-List< T> & List< T>::init()
+List<T> & List<T>::init()
 {
   first_ = last_ = NULL;
   count_ = 0;
@@ -316,7 +316,7 @@ template< class T> inline
 List< T> & List< T>::remove(ListNode< T> * node)
 {
   extract(node);
-  delete node;
+  deleteObject(node);
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -339,7 +339,7 @@ template< class T> class ObjectListNode {
 //-----------------------------------------------------------------------------
 template< class T> inline ObjectListNode< T>::~ObjectListNode()
 {
-  delete object_;
+  deleteObject(object_);
 }
 //-----------------------------------------------------------------------------
 template< class T> inline ObjectListNode< T>::ObjectListNode(T * object, ObjectListNode< T> * prev, ObjectListNode< T> * next)
@@ -466,7 +466,7 @@ ObjectList< T> & ObjectList< T>::destroy()
   ObjectListNode< T> *  node  = last_, * p;
   while( node != NULL ){
     p = node->prev();
-    delete node;
+    deleteObject(node);
     node = p;
   }
   return *this;
@@ -562,7 +562,7 @@ T * ObjectList< T>::extractObject(ObjectListNode< T> * node)
   extract(node);
   T * object  = node->object();
   node->object() = NULL;
-  delete node;
+  deleteObject(node);
   return object;
 }
 //-----------------------------------------------------------------------------
@@ -570,7 +570,7 @@ template< class T> inline
 ObjectList< T> & ObjectList< T>::remove(ObjectListNode< T> * node)
 {
   extract(node);
-  delete node;
+  deleteObject(node);
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -834,7 +834,7 @@ template <
   T & (*O) (const EmbeddedListNode<T> &, T *)
 > inline EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::drop(const T & object)
 {
-  delete &remove(object);
+  deleteObject(&remove(object));
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -844,7 +844,7 @@ template <
   T & (*O) (const EmbeddedListNode<T> &,T *)
 > inline EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::drop(const EmbeddedListNode<T> & node)
 {
-  delete &remove(node);
+  deleteObject(&remove(node));
   return *this;
 }
 //-----------------------------------------------------------------------------

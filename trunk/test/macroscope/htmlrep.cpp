@@ -181,7 +181,7 @@ void Logger::MTWriter::threadExecute()
 void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded)
 {
   if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_html_writer",false) )
-    threads_.add(newObjectV1<MTWriter>(*this,file,year)).resume();
+    threads_.add(newObjectR1C2C3<MTWriter>(*this,file,year)).resume();
   AsyncFile f(file);
   f.createIfNotExist(true).open();
   Mutant m0(config_->valueByPath(section_ + "file_mode",755));
@@ -790,7 +790,7 @@ void Logger::writeHtmlTail(AsyncFile & f)
 //------------------------------------------------------------------------------
 int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et, const utf8::String & user)
 {
-  AutoPtr<TrafCacheEntry> tce(newObject<TrafCacheEntry>(user,bt,et,tt));
+  AutoPtr<TrafCacheEntry> tce(newObjectV1C2C3C4<TrafCacheEntry>(user,bt,et,tt));
   tce->bt_.tm_wday = 0;
   tce->bt_.tm_yday = 0;
   tce->et_.tm_wday = 0;

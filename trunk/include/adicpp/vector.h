@@ -29,7 +29,9 @@
 //-----------------------------------------------------------------------------
 namespace ksys {
 //-----------------------------------------------------------------------------
-template< class T> class Vector {
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
+template <class T> class Vector {
   private:
   protected:
     T **      ptr_;
@@ -37,21 +39,21 @@ template< class T> class Vector {
     uintptr_t max_;
   public:
     Vector();
-    Vector(const Vector< T> & s);
+    Vector(const Vector<T> & s);
     ~Vector();
 
-    Vector< T> &      operator =(const Vector< T> & s);
+    Vector<T> &      operator =(const Vector<T> & s);
     T &               operator[](intptr_t i);
     const T &         operator[](intptr_t i) const;
     T &               operator[](uintptr_t i);
     const T &         operator[](uintptr_t i) const;
-    Vector< T> &      operator <<(const T & val);
-    Vector< T> &      operator <<(T * val);
+    Vector<T> &      operator <<(const T & val);
+    Vector<T> &      operator <<(T * val);
 
-    Vector< T> &      assign(const Vector< T> & s);
+    Vector<T> &      assign(const Vector<T> & s);
     const uintptr_t & count() const;
-    Vector< T> &      clear();
-    Vector< T> &      resize(uintptr_t asize);
+    Vector<T> &      clear();
+    Vector<T> &      resize(uintptr_t asize);
     T ** const &      ptr() const;
 
     T &               add();
@@ -61,8 +63,8 @@ template< class T> class Vector {
     T &               insert(uintptr_t i, const T & val);
     T &               insert(uintptr_t i, T * val);
     T &               safeInsert(uintptr_t i, T * val);
-    Vector< T> &      replace(uintptr_t i, T * val);
-    Vector< T> &      remove(uintptr_t i);
+    Vector<T> &      replace(uintptr_t i, T * val);
+    Vector<T> &      remove(uintptr_t i);
     T *               cut(uintptr_t i);
 
     intptr_t          search(const T & element) const;
@@ -74,103 +76,103 @@ template< class T> class Vector {
     Vector<T> & xchg(uintptr_t e1,uintptr_t e2);
 };
 //---------------------------------------------------------------------------
-template< class T> inline Vector< T>::Vector() : ptr_(NULL), count_(0), max_(0)
+template <class T> inline Vector<T>::Vector() : ptr_(NULL), count_(0), max_(0)
 {
 }
 //---------------------------------------------------------------------------
-template< class T> inline Vector< T>::Vector(const Vector< T> & s) : ptr_(NULL), count_(0), max_(0)
+template <class T> inline Vector<T>::Vector(const Vector<T> & s) : ptr_(NULL), count_(0), max_(0)
 {
   assign(s);
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-Vector< T>::~Vector()
+Vector<T>::~Vector()
 {
-  while( count_ > 0 ) delete ptr_[--count_];
+  while( count_ > 0 ) deleteObject(ptr_[--count_]);
   xfree(ptr_);
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-Vector< T> & Vector<T>::operator =(const Vector< T> & s)
+template <class T> inline
+Vector<T> & Vector<T>::operator =(const Vector<T> & s)
 {
   return assign(s);
 }
 //---------------------------------------------------------------------------
-template< class T> inline
+template <class T> inline
 const T & Vector<T>::operator[](intptr_t i) const
 {
   assert((uintptr_t) i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
+template <class T> inline
 T & Vector<T>::operator[](intptr_t i)
 {
   assert((uintptr_t) i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
+template <class T> inline
 const T & Vector<T>::operator[](uintptr_t i) const
 {
   assert(i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
+template <class T> inline
 T & Vector<T>::operator[](uintptr_t i)
 {
   assert(i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-Vector< T> & Vector<T>::operator <<(const T & val)
+template <class T> inline
+Vector<T> & Vector<T>::operator <<(const T & val)
 {
   add(val);
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-Vector< T> & Vector<T>::operator <<(T * val)
+template <class T> inline
+Vector<T> & Vector<T>::operator <<(T * val)
 {
   add(val);
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-Vector< T> & Vector< T>::assign(const Vector< T> & s)
+Vector<T> & Vector<T>::assign(const Vector<T> & s)
 {
   resize(s.count_);
   for( intptr_t i = count_ - 1; i >= 0; i-- ) *ptr_[i] = *s.ptr_[i];
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-const uintptr_t & Vector< T>::count() const
+template <class T> inline
+const uintptr_t & Vector<T>::count() const
 {
   return count_;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-Vector< T> & Vector< T>::clear()
+template <class T> inline
+Vector<T> & Vector<T>::clear()
 {
   return resize(0);
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-Vector< T> & Vector< T>::resize(uintptr_t asize)
+Vector<T> & Vector<T>::resize(uintptr_t asize)
 {
-  while( count_ > asize ) delete ptr_[--count_];
+  while( count_ > asize ) deleteObject(ptr_[--count_]);
   uintptr_t max = 0;
   if( asize > 0 ) for( max = 1; max < asize; max <<= 1 );
   if( max != max_ ){
@@ -181,17 +183,17 @@ Vector< T> & Vector< T>::resize(uintptr_t asize)
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T ** const & Vector< T>::ptr() const
+template <class T> inline
+T ** const & Vector<T>::ptr() const
 {
   return ptr_;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-T & Vector< T>::add(const T & val)
+T & Vector<T>::add(const T & val)
 {
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
@@ -202,11 +204,11 @@ T & Vector< T>::add(const T & val)
   return *(ptr_[count_++] = newObject<T>()) = val;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-T & Vector< T>::add(T * val)
+T & Vector<T>::add(T * val)
 {
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
@@ -217,11 +219,11 @@ T & Vector< T>::add(T * val)
   return *(ptr_[count_++] = val);
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-T & Vector< T>::add()
+T & Vector<T>::add()
 {
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
@@ -232,11 +234,11 @@ T & Vector< T>::add()
   return *(ptr_[count_++] = newObject<T>());
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-T & Vector< T>::safeAdd(T * val)
+T & Vector<T>::safeAdd(T * val)
 {
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
@@ -246,18 +248,18 @@ T & Vector< T>::safeAdd(T * val)
       max_ = amax;
     }
     catch( ... ){
-      delete val;
+      deleteObject(val);
       throw;
     }
   }
   return *(ptr_[count_++] = val);
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-T & Vector< T>::insert(uintptr_t i, const T & val)
+T & Vector<T>::insert(uintptr_t i, const T & val)
 {
   assert(i <= count_);
   uintptr_t amax  = max_;
@@ -272,11 +274,11 @@ T & Vector< T>::insert(uintptr_t i, const T & val)
   return *ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-T & Vector< T>::safeInsert(uintptr_t i, T * val)
+T & Vector<T>::safeInsert(uintptr_t i, T * val)
 {
   assert((uintptr_t) i <= count_);
   uintptr_t amax  = max_;
@@ -287,7 +289,7 @@ T & Vector< T>::safeInsert(uintptr_t i, T * val)
       max_ = amax;
     }
     catch( ... ){
-      delete val;
+      deleteObject(val);
       throw;
     }
   }
@@ -297,11 +299,11 @@ T & Vector< T>::safeInsert(uintptr_t i, T * val)
   return *ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-T & Vector< T>::insert(uintptr_t i, T * val)
+T & Vector<T>::insert(uintptr_t i, T * val)
 {
   assert((uintptr_t) i <= count_);
   uintptr_t amax  = max_;
@@ -316,23 +318,23 @@ T & Vector< T>::insert(uintptr_t i, T * val)
   return *ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-Vector< T> & Vector< T>::replace(uintptr_t i, T * val)
+template <class T> inline
+Vector<T> & Vector<T>::replace(uintptr_t i, T * val)
 {
   assert(i < count_);
-  delete ptr_[i];
+  deleteObject(ptr_[i]);
   ptr_[i] = val;
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-Vector< T> & Vector< T>::remove(uintptr_t i)
+Vector<T> & Vector<T>::remove(uintptr_t i)
 {
   assert(i < count_);
-  delete ptr_[i];
+  deleteObject(ptr_[i]);
   memcpy(ptr_ + i, ptr_ + i + 1, sizeof(T *) * (count_ - i - 1));
   count_--;
   uintptr_t amax  = max_;
@@ -345,11 +347,11 @@ Vector< T> & Vector< T>::remove(uintptr_t i)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-T * Vector< T>::cut(uintptr_t i)
+T * Vector<T>::cut(uintptr_t i)
 {
   assert(i < count_);
   T * object  = ptr_[i];
@@ -365,7 +367,7 @@ T * Vector< T>::cut(uintptr_t i)
   return object;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -376,7 +378,7 @@ intptr_t Vector<T>::search(const T & element) const
   return i;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -398,7 +400,7 @@ intptr_t Vector<T>::bSearch(const T & element) const
   return -1;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif

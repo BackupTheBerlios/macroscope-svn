@@ -43,7 +43,7 @@ ServerFiber::ServerFiber(Server & server,utf8::String user,utf8::String key) :
 void ServerFiber::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void ServerFiber::getCode(int32_t noThrowCode)
@@ -93,7 +93,7 @@ void ServerFiber::auth()
     utf8::String::Stream stream;
     stream << "Authentification error from: " << remoteAddress().resolve(~uintptr_t(0)) << "\n";
     stdErr.debug(9,stream);
-    newObject<Exception>(e,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(e,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //------------------------------------------------------------------------------
@@ -451,7 +451,7 @@ void ServerFiber::processMailbox(
             putCode(i > 0 ? eOK : eLastMessage);
           }
           if( messageAccepted ){
-            ids.insert(*newObject<Message::Key>(id));
+            ids.insert(*newObjectC1<Message::Key>(id));
           }
           if( wait && !messageAccepted ) wait = false;
         }
@@ -759,7 +759,7 @@ MailQueueWalker::MailQueueWalker(Server & server,const utf8::String & host)
 void MailQueueWalker::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void MailQueueWalker::getCode(int32_t noThrowCode)
@@ -941,7 +941,7 @@ NodeClient::NodeClient(Server & server) :
 //------------------------------------------------------------------------------
 NodeClient * NodeClient::newClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly)
 {
-  NodeClient * p = newObjectV<NodeClient>(server);
+  NodeClient * p = newObjectR1<NodeClient>(server);
   p->dataType_ = dataType;
   p->nodeHostName_ = nodeHostName;
   p->periodicaly_ = periodicaly;
@@ -951,13 +951,13 @@ NodeClient * NodeClient::newClient(Server & server,ServerType dataType,const utf
 void NodeClient::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void NodeClient::checkCode(int32_t code,int32_t noThrowCode1,int32_t noThrowCode2)
 {
   if( code != eOK && code != noThrowCode1 && code != noThrowCode1)
-    newObject<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 int32_t NodeClient::getCode(int32_t noThrowCode)

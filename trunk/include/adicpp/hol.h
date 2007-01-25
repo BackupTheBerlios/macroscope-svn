@@ -580,7 +580,7 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::caseSensitive(bool 
 {
   if( caseSensitive != caseSensitive_ ){
     if( caseSensitive && !caseSensitive_ && count_ > 0 )
-      newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     caseSensitive_ = caseSensitive;
   }
   return *this;
@@ -598,9 +598,9 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::clear()
       HashedObjectListItem< TKey,TObj> *  pItem = *ppItem0;
       while( pItem != NULL ){
         if( ownsObjects_ )
-          delete pItem->object();
+          deleteObject(pItem->object());
         HashedObjectListItem< TKey,TObj> *  pItem1  = pItem->keyNext();
-        delete pItem;
+        deleteObject(pItem);
         pItem = pItem1;
       }
       ppItem0++;
@@ -672,7 +672,7 @@ uintptr_t HashedObjectList< TKey,TObj>::addHelper(HashedObjectListItem<TKey,TObj
   pObjectItem = objectHash_.find(item->object());
   pIndexItem = indexHash_.find(item->index());
   if( *pKeyItem != NULL || *pObjectItem != NULL || *pIndexItem != NULL ){
-    if( throwIfExists ) newObject<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
+    if( throwIfExists ) newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
     item = *pKeyItem;
     return item->index();
   }
@@ -692,14 +692,14 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeKey(const TKe
   HashedObjectListItem< TKey,TObj> ** ppOldKeyItem, * pOldKeyItem;
   ppOldKeyItem = keyHash_.find(oldKey, caseSensitive_);
   if( *ppOldKeyItem == NULL )
-    newObject<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
   *ppOldKeyItem = (pOldKeyItem = *ppOldKeyItem)->keyNext();
 
   HashedObjectListItem< TKey,TObj> ** ppNewKeyItem;
   ppNewKeyItem = keyHash_.find(newKey, caseSensitive_);
   if( *ppNewKeyItem != NULL ){
     *ppOldKeyItem = pOldKeyItem;
-    newObject<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
   }
   pOldKeyItem->key() = newKey;
   *ppNewKeyItem = pOldKeyItem;
@@ -713,16 +713,16 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeObject(TObj *
   HashedObjectListItem< TKey,TObj> ** ppOldObjectItem, * pOldObjectItem;
   ppOldObjectItem = objectHash_.find(oldObject);
   if( *ppOldObjectItem == NULL )
-    Exception::newObject()->code(ENOENT).what(__PRETTY_FUNCTION__).throwSP();
+    newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
   *ppOldObjectItem = (pOldObjectItem = *ppOldObjectItem)->objectNext();
 
   HashedObjectListItem< TKey,TObj> ** ppNewObjectItem;
   ppNewObjectItem = objectHash_.find(newObject);
   if( *ppNewObjectItem != NULL ){
     *ppOldObjectItem = pOldObjectItem;
-    Exception::newObject()->code(ENOENT).what(__PRETTY_FUNCTION__).throwSP();
+    newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
   }
-  if( ownsObjects_ ) delete pOldObjectItem->object();
+  if( ownsObjects_ ) deleteObject(pOldObjectItem->object());
   pOldObjectItem->object() = newObject;
   *ppNewObjectItem = pOldObjectItem;
   pOldObjectItem->objectNext() = NULL;
@@ -761,9 +761,9 @@ template< class TKey,class TObj> inline
 uintptr_t HashedObjectList<TKey,TObj>::add(TObj * object,const TKey & key,HashedObjectListItem<TKey,TObj> ** pItem,bool throwIfExist)
 {
   AutoPtr<HashedObjectListItem<TKey,TObj> > item(
-    newObject<HashedObjectListItem<TKey,TObj> >(key, object, count_)
+    newObjectC1V2V3<HashedObjectListItem<TKey,TObj> >(key,object,count_)
   );
-  HashedObjectListItem< TKey,TObj> * p = item.ptr();
+  HashedObjectListItem<TKey,TObj> * p = item.ptr();
   uintptr_t i = addHelper(p,throwIfExist);
   if( pItem != NULL ) *pItem = p;
   if( p == item.ptr() ) item.ptr(NULL);
@@ -773,8 +773,8 @@ uintptr_t HashedObjectList<TKey,TObj>::add(TObj * object,const TKey & key,Hashed
 template< class TKey,class TObj> inline
 HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByKey(const TKey & key)
 {
-  TObj *  object  = extractByKey(key);
-  if( ownsObjects_ ) delete object;
+  TObj * object = extractByKey(key);
+  if( ownsObjects_ ) deleteObject(object);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -783,7 +783,7 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByObject(TObj
 {
   object = extractByObject(object);
   if( ownsObjects_ )
-    delete object;
+    deleteObject(object);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -792,7 +792,7 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByIndex(uintp
 {
   TObj *  object  = extractByIndex(index);
   if( ownsObjects_ )
-    delete object;
+    deleteObject(object);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -808,14 +808,14 @@ TObj * HashedObjectList< TKey,TObj>::extractByKey(const TKey & key)
   pObjectItem = objectHash_.find((*pKeyItem)->object());
   pIndexItem = indexHash_.find((*pKeyItem)->index());
   if( *pKeyItem == NULL || *pObjectItem == NULL || *pIndexItem == NULL )
-    newObject<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
   HashedObjectListItem< TKey,TObj> *  pItem = *pKeyItem;
   *pKeyItem = (*pKeyItem)->keyNext();
   *pObjectItem = (*pObjectItem)->objectNext();
   *pIndexItem = (*pIndexItem)->indexNext();
   uintptr_t index   = pItem->index();
   TObj *    object  = pItem->object();
-  delete pItem;
+  deleteObject(pItem);
   renumeration(index);
   count_--;
   uintptr_t count = keyHash_.slotCount() << 4;
@@ -833,13 +833,13 @@ TObj * HashedObjectList< TKey,TObj>::extractByObject(TObj * object)
     pKeyItem = keyHash_.find((*pObjectItem)->key(), caseSensitive_);
     pIndexItem = indexHash_.find((*pObjectItem)->index());
     if( *pObjectItem == NULL || *pKeyItem == NULL || *pIndexItem == NULL )
-      newObject<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
     HashedObjectListItem< TKey,TObj> *  pItem = *pKeyItem;
     *pKeyItem = (*pKeyItem)->keyNext();
     *pObjectItem = (*pObjectItem)->objectNext();
     *pIndexItem = (*pIndexItem)->indexNext();
     uintptr_t index = pItem->index();
-    delete pItem;
+    deleteObject(pItem);
     renumeration(index);
     count_--;
     uintptr_t count = keyHash_.slotCount() << 4;
@@ -857,13 +857,13 @@ TObj * HashedObjectList< TKey,TObj>::extractByIndex(uintptr_t index)
   pObjectItem = objectHash_.find((*pIndexItem)->object());
   pKeyItem = keyHash_.find((*pIndexItem)->key(), caseSensitive_);
   if( *pIndexItem == NULL || *pObjectItem == NULL || *pKeyItem == NULL )
-    newObject<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
   HashedObjectListItem< TKey,TObj> *  pItem = *pKeyItem;
   *pKeyItem = (*pKeyItem)->keyNext();
   *pObjectItem = (*pObjectItem)->objectNext();
   *pIndexItem = (*pIndexItem)->indexNext();
   TObj *  object  = pItem->object();
-  delete pItem;
+  deleteObject(pItem);
   renumeration(index);
   count_--;
   uintptr_t count = keyHash_.slotCount() << 4;
@@ -965,12 +965,12 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByKey(Has
   ppObjectItem0 = donor.objectHash_.find((*ppKeyItem0)->object());
   ppIndexItem0 = donor.indexHash_.find((*ppKeyItem0)->index());
   if( *ppKeyItem0 == NULL || *ppObjectItem0 == NULL || *ppIndexItem0 == NULL || *ppKeyItem0 != *ppObjectItem0 || *ppKeyItem0 != *ppIndexItem0 )
-    newObject<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
 
   ppKeyItem1 = keyHash_.find(key, caseSensitive_);
   ppObjectItem1 = objectHash_.find((*ppKeyItem0)->object());
   if( *ppKeyItem1 != NULL || *ppObjectItem1 != NULL )
-    newObject<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
 
   HashedObjectListItem< TKey,TObj> *  pItem = *ppKeyItem0;
 
@@ -1004,12 +1004,12 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByObject(
   ppKeyItem0 = donor.keyHash_.find((*ppObjectItem0)->key(), donor.caseSensitive_);
   ppIndexItem0 = donor.indexHash_.find((*ppObjectItem0)->index());
   if( *ppObjectItem0 == NULL || *ppKeyItem0 == NULL || *ppIndexItem0 == NULL || *ppObjectItem0 != *ppKeyItem0 || *ppObjectItem0 != *ppIndexItem0 )
-    newObject<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
 
   ppKeyItem1 = keyHash_.find((*ppKeyItem0)->key(), caseSensitive_);
   ppObjectItem1 = objectHash_.find((*ppKeyItem0)->object());
   if( *ppKeyItem1 != NULL || *ppObjectItem1 != NULL )
-    newObject<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
 
   HashedObjectListItem< TKey,TObj> *  pItem = *ppKeyItem0;
 
@@ -1043,12 +1043,12 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByIndex(H
   ppObjectItem0 = donor.objectHash_.find((*ppIndexItem0)->object());
   ppKeyItem0 = donor.keyHash_.find((*ppIndexItem0)->key(), donor.caseSensitive_);
   if( *ppIndexItem0 == NULL || *ppObjectItem0 == NULL || *ppKeyItem0 == NULL || *ppIndexItem0 != *ppObjectItem0 || *ppIndexItem0 != *ppKeyItem0 )
-    newObject<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
 
   ppKeyItem1 = keyHash_.find((*ppKeyItem0)->key(), caseSensitive_);
   ppObjectItem1 = objectHash_.find((*ppKeyItem0)->object());
   if( *ppKeyItem1 != NULL || *ppObjectItem1 != NULL )
-    newObject<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
 
   HashedObjectListItem< TKey,TObj> *  pItem = *ppKeyItem0;
 

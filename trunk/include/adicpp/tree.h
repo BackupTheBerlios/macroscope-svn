@@ -112,7 +112,7 @@ AVLEmbeddedTreeNode<T> * AVLEmbeddedTreeNode<T>::InsertObject(AVLEmbeddedTreeNod
   while( *p->Node != NULL ){
     long c = f(Data,(*p->Node)->Data);
     if( c == 0 ){
-      delete this;
+      deleteObject(this);
       if( RetObj ) return *p->Node;
       return NULL;
     }
@@ -213,7 +213,7 @@ void AVLEmbeddedTreeNode<T>::Delete(AVLEmbeddedTreeNode<T> ** RootNode,T * AData
     p->Parent->RotateBase(*(p - 1)->Node,l,r);
     break;
   }
-  delete Result;
+  deleteObject(Result);
   return;
 }
 
@@ -257,7 +257,7 @@ void AVLEmbeddedTreeNode<T>::Clear(AVLEmbeddedTreeNode<T> ** RootNode)
 {
   AVLEmbeddedTreeNode<T> * p;
   Traverser trav(*RootNode);
-  while( (p = trav.Next()) != NULL ) delete p;
+  while( (p = trav.Next()) != NULL ) deleteObject(p);
   *RootNode = NULL;
 }
 
@@ -369,7 +369,7 @@ AVLEmbeddedTree<T>::Traverser::Traverser(
 template <class T> inline
 void AVLEmbeddedTree<T>::Destroyer(AVLEmbeddedTreeNode<T> * ANode)
 {
-  delete ANode;
+  deleteObject(ANode);
 }
 
 template <class T>
@@ -384,7 +384,7 @@ AVLEmbeddedTreeNode<T> * AVLEmbeddedTree<T>::InsertObject(const T AData)
 {
   AVLEmbeddedTreeNode<T> * ANode = newObject<AVLEmbeddedTreeNode<T> >(AData);
   AVLEmbeddedTreeNode<T> * ANode2 = ANode->InsertObject(&RootNode,f,true);
-  if( ANode != ANode2 ) delete AData;
+  if( ANode != ANode2 ) deleteObject(AData);
   return ANode2;
 }*/
 //-----------------------------------------------------------------------------
@@ -571,17 +571,17 @@ T * EmbeddedTree<T,N,O,C>::internalFind(
   }
   int32_t err = 0;
   if( pObject != NULL ){
-	  if( deleteIfExist ) delete &object;
-	  if( throwIfExist ){
+    if( deleteIfExist ) deleteObject(&object);
+    if( throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
-		  err = ERROR_ALREADY_EXISTS;
+      err = ERROR_ALREADY_EXISTS;
 #else
-		  err = EEXIST;
+      err = EEXIST;
 #endif
-	  }
+    }
   }
   else if( pObject == NULL ){
-    if( deleteIfNotExist ) delete &object;
+    if( deleteIfNotExist ) deleteObject(&object);
     if( throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
       err = ERROR_NOT_FOUND;
@@ -641,7 +641,7 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::insert(const T & object,bool thro
     count_++;
   }
   else if( deleteIfExist ){
-    delete &object;
+    deleteObject(&object);
   }
   if( pObject != NULL ) *pObject = obj;
   return *this;
@@ -660,7 +660,7 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::remove(const T & object,bool thro
   if( obj != NULL ){
   }
   else if( deleteIfNotExist ){
-    delete &object;
+    deleteObject(&object);
   }
   if( pObject != NULL ) *pObject = obj;
   return *this;

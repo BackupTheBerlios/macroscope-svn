@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,12 @@
 //---------------------------------------------------------------------------
 #include "utf8embd.h"
 //---------------------------------------------------------------------------
-namespace ksys { class Exception; }
+namespace ksys {
+//---------------------------------------------------------------------------
+void initialize(int,char **);
+void cleanup();
+//---------------------------------------------------------------------------
+}
 //---------------------------------------------------------------------------
 namespace utf8 {
 //---------------------------------------------------------------------------
@@ -62,7 +67,7 @@ template <typename T> class StringT {
         Container(T * string) : string_(string), refCount_(0){}
 
         void addRef(){ ksys::interlockedIncrement(refCount_, 1); }
-        void remRef(){ if( ksys::interlockedIncrement(refCount_, -1) == 1 ) delete this; }
+        void remRef(){ if( ksys::interlockedIncrement(refCount_, -1) == 1 ) ksys::kfree(this); }
       private:
         Container(const Container &) {}
         void operator = (const Container &) {}
@@ -75,8 +80,9 @@ template <typename T> inline StringT<T>::~StringT()
 }
 //---------------------------------------------------------------------------
 template <typename T> inline
-StringT<T>::StringT(T * string) : container_(newObject<Container>(string))
+StringT<T>::StringT(T * string) : container_((Container *) ksys::kmalloc(sizeof(Container)))
 {
+  new (container_.ptr()) Container(string);
 }
 //---------------------------------------------------------------------------
 template <typename T> inline
@@ -457,12 +463,12 @@ class String {
 //---------------------------------------------------------------------------
 inline String::Container & String::nullContainer()
 {
-  return *reinterpret_cast< Container *>(nullContainer_);
+  return *reinterpret_cast<Container *>(nullContainer_);
 }
 //---------------------------------------------------------------------------
 inline String::Container::~Container()
 {
-  ksys::xfree(string_);
+  ksys::kfree(string_);
 }
 //---------------------------------------------------------------------------
 inline String::Container::Container(int32_t refCount,char * str) :
@@ -994,25 +1000,6 @@ inline String::Stream & String::Stream::operator << (long double n)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-/*inline String::Stream & String::Stream::operator << (const utf8::String & s)
-{
-  uintptr_t size = s.size();
-  stream_.realloc(count_ + size);
-  memcpy(stream_.ptr() + count_,s.c_str(),size);
-  count_ += size;
-  return *this;
-}*/
-//---------------------------------------------------------------------------
-/*inline String::Stream & String::Stream::operator << (const Format & a)
-{
-  intptr_t size = a.format(NULL);
-  stream_.realloc(count_ + size);
-  memset(stream_.ptr() + count_,'A',size);
-  //a.format(stream_.ptr() + count_);
-  count_ += size;
-  return *this;
-}*/
-//---------------------------------------------------------------------------
 inline const char * String::Stream::plane() const
 {
   return stream_;
@@ -1022,16 +1009,6 @@ inline const uintptr_t & String::Stream::count() const
 {
   return count_;
 }
-//---------------------------------------------------------------------------
-/*inline utf8::String String::Stream::string()
-{
-  stream_.realloc(count_ + 1);
-  stream_[count_] = '\0';
-  String::Container * container = newObject<String::Container>(0,stream_.ptr());
-  stream_.ptr(NULL);
-  count_ = 0;
-  return container;
-}*/
 //---------------------------------------------------------------------------
 inline String::Stream & String::Stream::clear()
 {
@@ -1144,20 +1121,6 @@ inline String::Stream::Format::Format(long double a,const char * fmt) : ld_(a), 
 }
 //---------------------------------------------------------------------------
 #endif
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-template <typename T> class EStr2ScalarT : public T {
-  public:
-    EStr2ScalarT(int32_t code, const utf8::String & what);
-};
-//---------------------------------------------------------------------------
-template <typename T> inline
-EStr2ScalarT<T>::EStr2ScalarT(int32_t code,const utf8::String & what) : T(code, what)
-{
-}
-//---------------------------------------------------------------------------
-typedef EStr2ScalarT<ksys::Exception> EStr2Scalar;
 //---------------------------------------------------------------------------
 } // namespace utf8
 //---------------------------------------------------------------------------

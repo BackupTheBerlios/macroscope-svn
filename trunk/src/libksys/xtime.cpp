@@ -82,7 +82,7 @@ int64_t timeFromTimeString(const utf8::String & s,bool local)
   );
   if( a == -1 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( tma.tm_year == 0 && tma.tm_mon == 0 && tma.tm_mday == 0 &&
       tma.tm_hour == 0 && tma.tm_min == 0 && tma.tm_sec == 0 && usec == 0 ){
@@ -98,7 +98,7 @@ int64_t timeFromTimeString(const utf8::String & s,bool local)
   }
   if( tv.tv_sec < 0 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( local ){
     struct timeval tv2;
@@ -134,7 +134,7 @@ utf8::String getTimeString(int64_t t)
   );
   if( a == -1 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return s;
 }
@@ -166,7 +166,7 @@ int64_t timeFromTimeCodeString(const utf8::String & s,bool local)
   );
   if( a == -1 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   tma.tm_mon -= 1;
   tma.tm_year -= 1900;
@@ -178,7 +178,7 @@ int64_t timeFromTimeCodeString(const utf8::String & s,bool local)
   }
   if( tv.tv_sec < 0 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( local ){
     struct timeval tv2;
@@ -214,7 +214,7 @@ utf8::String getTimeCode(int64_t t)
   );
   if( a == -1 ){
     int32_t err = errno;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return s;
 }

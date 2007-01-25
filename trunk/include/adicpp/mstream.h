@@ -172,7 +172,7 @@ inline MemoryStream::Container & MemoryStream::Container::addRef()
 //---------------------------------------------------------------------------
 inline MemoryStream::Container & MemoryStream::Container::remRef()
 {
-  if( interlockedIncrement(refCount_, -1) == 1 ) delete this;
+  if( interlockedIncrement(refCount_, -1) == 1 ) deleteObject(this);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -487,7 +487,7 @@ inline MemoryStream & MemoryStream::seek(uintptr_t newPos)
 //---------------------------------------------------------------------------
 inline MemoryStream MemoryStream::unique() const
 {
-  Container * container = newObject<Container>(container_->count_);
+  Container * container = newObjectV1<Container>(container_->count_);
   memcpy(container->ptr_, container_->ptr_, container_->count_);
   return container;
 }

@@ -179,13 +179,13 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
 #undef SNPRINTF
       if( a == -1 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       utf8::utf8s2mbcs(codePage_,buf2,sizeof(buf2),buf,sizeof(buf));
       l = utf8::utf8s2mbcs(codePage_,NULL,0,stream.plane(),stream.count());
       if( a < 0 || l < 0 ){
         int32_t err = errno;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       AutoLock<FiberInterlockedMutex> lock(mutex_);
       resume();

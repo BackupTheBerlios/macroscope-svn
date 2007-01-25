@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -345,7 +345,7 @@ Service & Service::attach(const utf8::String & name)
     ISC_STATUS_ARRAY  status;
     if( api.isc_service_attach(status, 0, (char *) name.c_str(), &handle_, (short) spb_.spbLen_, spb_.spb_) != 0 ){
       ksys::AutoPtr<ksys::Exception> e(
-        newObject<EServiceAttach>(status, __PRETTY_FUNCTION__)
+        newObjectV1C2<EServiceAttach>(status, __PRETTY_FUNCTION__)
       );
       api.close();
       exceptionHandler(e.ptr(NULL));
@@ -360,7 +360,7 @@ Service & Service::detach()
   if( attached() ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_service_detach(status, &handle_) != 0 && !iscIsFatalError(status) )
-      exceptionHandler(newObject<EServiceDetach>(status, __PRETTY_FUNCTION__));
+      exceptionHandler(newObjectV1C2<EServiceDetach>(status, __PRETTY_FUNCTION__));
     handle_ = 0;
     api.close();
   }
@@ -387,7 +387,7 @@ Service & Service::invoke()
           ret = api.isc_service_start(status,&handle_,NULL,(short) request_.requestLen_,request_.request_);
           if( ret == 0 ) break;
           if( status[1] != isc_svc_in_use )
-            exceptionHandler(newObject<EServiceStart>(status, __PRETTY_FUNCTION__));
+            exceptionHandler(newObjectV1C2<EServiceStart>(status, __PRETTY_FUNCTION__));
           ksys::ksleep1();
         }
         break;
@@ -397,7 +397,7 @@ Service & Service::invoke()
         queryResponseLen_ = getpagesize();
         for( ; ; ){
           if( api.isc_service_query(status, &handle_, NULL, (short) spb_.spbLen_, spb_.spb_, (short) queryResponseLen_, queryResponse_, (short) request_.requestLen_, request_.request_) != 0 )
-            exceptionHandler(newObject<EServiceQuery>(status,__PRETTY_FUNCTION__));
+            exceptionHandler(newObjectV1C2<EServiceQuery>(status,__PRETTY_FUNCTION__));
           if( *queryResponse_ != isc_info_truncated ) break;
           ksys::xrealloc(queryResponse_, queryResponseLen_ << 1);
           queryResponseLen_ <<= 1;

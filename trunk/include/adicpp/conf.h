@@ -140,7 +140,7 @@ inline const ConfigSection & ConfigSection::section(const utf8::String & section
   item = subSections_.itemOfKey(section);
   if( item == NULL ){
     utf8::String s(section);
-    subSections_.add(newObject<ConfigSection>(s),section,&item);
+    subSections_.add(newObjectC1<ConfigSection>(s),section,&item);
   }
   return *item->object();
 }
@@ -351,7 +351,7 @@ void InterlockedConfig<T>::addRef()
 template <typename T> inline
 void InterlockedConfig<T>::remRef()
 {
-  if( interlockedIncrement(refCount_, -1) == 1 ) delete this;
+  if( interlockedIncrement(refCount_, -1) == 1 ) deleteObject(this);
 }
 //---------------------------------------------------------------------------
 typedef SPIARC<InterlockedConfig<InterlockedMutex> > ConfigSPi;

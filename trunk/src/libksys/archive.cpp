@@ -170,7 +170,7 @@ Archive & Archive::unpack(const utf8::String & path,Vector<utf8::String> * pList
   uint8_t magic[sizeof(magic_)];
   archive.readBuffer(magic,sizeof(magic));
   if( memcmp(magic,magic_,sizeof(magic)) != 0 )
-    newObject<Exception>(
+    newObjectV1C2<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_INVALID_DATA,
 #else

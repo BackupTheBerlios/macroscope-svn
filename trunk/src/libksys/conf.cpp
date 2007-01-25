@@ -97,7 +97,7 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
       b = ++e;
     }
   }
-  newObject<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
@@ -174,7 +174,7 @@ ConfigSection & ConfigSection::setValue(const utf8::String & key,const Mutant & 
 {
   HashedObjectListItem<utf8::String,Mutant> * item = values_.itemOfKey(key);
   if( item != NULL ) values_.removeByKey(key);
-  AutoPtr<Mutant> m(newObject<Mutant>(value));
+  AutoPtr<Mutant> m(newObjectC1<Mutant>(value));
   values_.add(m,key);
   m.ptr(NULL);
   return *const_cast<ConfigSection *>(this);
@@ -186,7 +186,7 @@ ConfigSection & ConfigSection::setValue(uintptr_t i,const Mutant & value) const
   assert( item != NULL );
   utf8::String key(item->key());
   values_.removeByIndex(i);
-  AutoPtr<Mutant> m(newObject<Mutant>(value));
+  AutoPtr<Mutant> m(newObjectC1<Mutant>(value));
   values_.add(m,key);
   m.ptr(NULL);
   return *const_cast<ConfigSection *>(this);
@@ -199,7 +199,7 @@ ConfigSection & ConfigSection::addSection(const ConfigSection & section)
     ConfigSection * subSection = section.subSections_.objectOfIndex(i);
     ConfigSection * subSection2 = subSections_.objectOfKey(subSection->name_);
     if( subSection2 == NULL ){
-      AutoPtr<ConfigSection> p(newObject<ConfigSection>(subSection->name_));
+      AutoPtr<ConfigSection> p(newObjectC1<ConfigSection>(subSection->name_));
       subSections_.add(p,subSection->name_);
       subSection2 = p.ptr(NULL);
     }
@@ -388,7 +388,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   }
   lastTokenType_ = tt;
   if( throwUnexpectedEof && tt == ttEof )
-    newObject<EConfig>(this, "unexpected end of file")->throwSP();
+    newObjectV1C2<EConfig>(this,"unexpected end of file")->throwSP();
   return token;
 }
 //---------------------------------------------------------------------------
@@ -419,7 +419,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     token = getToken(tt);
     if( tt == ttLeftBrace ) break;
     if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
-      newObject<EConfig>(this, "invalid section param")->throwSP();
+      newObjectV1C2<EConfig>(this, "invalid section param")->throwSP();
     if( param.strlen() > 0 ) param += ",";
     if( tt == ttQuotedString ){
       param += unScreenString(token);
@@ -430,7 +430,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     token = getToken(tt);
     if( tt == ttLeftBrace ) break;
     if( tt != ttColon )
-      newObject<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
+      newObjectV1C2<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
   }
   if( param.strlen() > 0 ) root.setValue(utf8::String(),param);
   return *this;
@@ -448,11 +448,11 @@ Config & Config::parseSectionBody(ConfigSection & root)
     }
     if( tt == ttRightBrace ){
       if( &root == this )
-        newObject<EConfig>(this, "unexpected token '" + token + "'")->throwSP();
+        newObjectV1C2<EConfig>(this, "unexpected token '" + token + "'")->throwSP();
       break;
     }
     if( (tt != ttString && tt != ttQuotedString && tt != ttNumeric) || token.strlen() == 0 )
-      newObject<EConfig>(this, "invalid section or key name")->throwSP();
+      newObjectV1C2<EConfig>(this, "invalid section or key name")->throwSP();
     utf8::String key(token);
     token = getToken(tt);
     if( tt != ttEqual ){
@@ -467,7 +467,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
       else { // try new subsection
         HashedObjectListItem<utf8::String,ConfigSection> * item = root.subSections_.itemOfKey(key);
         if( item == NULL ){
-          AutoPtr<ConfigSection> p(newObject<ConfigSection>(key));
+          AutoPtr<ConfigSection> p(newObjectC1<ConfigSection>(key));
           root.subSections_.add(p,key,&item);
           p.ptr(NULL);
         }
@@ -483,7 +483,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
         if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
-          newObject<EConfig>(this, "invalid section key value")->throwSP();
+          newObjectV1C2<EConfig>(this, "invalid section key value")->throwSP();
         if( value.strlen() > 0 ) value += ",";
         if( tt == ttQuotedString ){
           value += unScreenString(token);
@@ -494,7 +494,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
         if( tt != ttColon )
-          newObject<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
+          newObjectV1C2<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
       }
       root.setValue(key,value);
     }
@@ -524,7 +524,7 @@ Config & Config::parse()
 /*#ifndef NDEBUG
         fprintf(stderr,"config file %s used\n", (const char *) file_.fileName().getANSIString());
 #endif*/
-        buffer_ = newObjectV<AsyncFile::LineGetBuffer>(file_);
+        buffer_ = newObjectR1<AsyncFile::LineGetBuffer>(file_);
         buffer_->codePage_ = codePage_;
         line_ = 0;
         lastTokenType_ = ttUnknown;

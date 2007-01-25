@@ -234,6 +234,7 @@
 #cmakedefine HAVE_TZSET 1
 #cmakedefine HAVE_BE32ENC 1
 #cmakedefine HAVE_BE32DEC 1
+#cmakedefine HAVE_UUID_FROM_STRING 1
 #cmakedefine HAVE_CLOCK_GETRES 1
 #cmakedefine HAVE_CLOCK_GETTIME 1
 #cmakedefine HAVE_PTHREAD_CREATE 1

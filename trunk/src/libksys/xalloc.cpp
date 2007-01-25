@@ -40,7 +40,7 @@ void * kmalloc(size_t size)
     p = malloc(size);
 #endif
     if( p == NULL ){
-      newObject<EOutOfMemory>(
+      newObjectV1C2<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_NOT_ENOUGH_MEMORY + errorOffset,
 #else
@@ -73,7 +73,7 @@ void * krealloc(void * p, size_t size)
     a = realloc(p,size);
 #endif
     if( a == NULL )
-      newObject<EOutOfMemory>(
+      newObjectV1C2<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_NOT_ENOUGH_MEMORY + errorOffset,
 #else

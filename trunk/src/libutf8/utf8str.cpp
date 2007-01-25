@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@ String::Container * String::Container::container(uintptr_t l)
 {
   ksys::AutoPtr<char> string;
   string.alloc(l + 1);
-  String::Container * cp = newObject<Container>(0,string.ptr());
+  String::Container * cp = newObjectV1V2<Container>(0,string.ptr());
   string.ptr(NULL);
   return cp;
 }
@@ -73,7 +73,7 @@ String plane(const char * s, uintptr_t size)
   while( size > 0 && *s != '\0' ){
     uintptr_t l = utf8seqlen(s);
     if( l > size || l == 0 )
-      newObject<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
     s += l;
     size -= l;
   }
@@ -84,9 +84,9 @@ String plane(const char * s, uintptr_t size)
   return container;
 }
 //---------------------------------------------------------------------------
-String plane(ksys::AutoPtr< char> & s, uintptr_t size)
+String plane(ksys::AutoPtr<char> & s,uintptr_t size)
 {
-  String  str (plane(s.ptr(), size));
+  String str(plane(s.ptr(),size));
   s.ptr(NULL);
   return str;
 }
@@ -146,7 +146,7 @@ String::String(const wchar_t * s, uintptr_t l) : container_(&nullContainer())
   for( ul = 0, ll = l, a = s; ll > 0 && *a != L'\0'; a++, ll-- ){
     ql = ucs2utf8seq("", 0, *a);
     if( ql == 0 )
-      newObject<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
     ul += ql;
   }
   String::Container * container;
@@ -498,7 +498,7 @@ uintptr_t String::getMBCSString(const char * string,uintptr_t codePage,ksys::Aut
     sl = utf8s2mbcs(codePage,NULL,0,string,~uintptr_t(0) >> 1);
     if( sl < 0 ){
       int32_t err = errno;
-      newObject<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     if( eos ) sl += codePage == CP_UNICODE ? sizeof(wchar_t) : sizeof(char);
     s.realloc(sl);
@@ -1312,7 +1312,7 @@ intmax_t str2Int(const String & str)
 {
   intmax_t  a;
   if( !tryStr2Int(str, a) )
-    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return a;
 }
 //---------------------------------------------------------------------------
@@ -1371,7 +1371,7 @@ struct tm str2tm(const String & str)
 {
   struct tm tv;
   if( !tryStr2tm(str, tv) )
-    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return tv;
 }
 //---------------------------------------------------------------------------
@@ -1379,7 +1379,7 @@ int64_t str2Time(const String & str)
 {
   int64_t tv;
   if( !tryStr2Time(str, tv) )
-    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return tv;
 }
 //---------------------------------------------------------------------------
@@ -1387,7 +1387,7 @@ struct timeval str2Timeval(const String & str)
 {
   struct timeval  tv;
   if( !tryStr2Timeval(str, tv) )
-    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return tv;
 }
 //---------------------------------------------------------------------------
@@ -1520,7 +1520,7 @@ double str2Float(const String & str)
   double      a;
 #endif
   if( !tryStr2Float(str, a) )
-    newObject<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return a;
 }
 //---------------------------------------------------------------------------
@@ -1740,7 +1740,7 @@ intptr_t String::Stream::Format::format(char * buffer) const
   }
   if( size == -1 ){
 l1: int32_t err = errno;
-    newObject<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 //  if( buffer != NULL ) memcpy(buffer,p,size);
   return size;
@@ -1768,7 +1768,7 @@ String::Stream & String::Stream::operator << (const Format & a)
 utf8::String String::Stream::string()
 {
   if( stream_.ptr() == NULL ) return utf8::String();
-  String::Container * container = newObject<String::Container>(0,stream_.ptr());
+  String::Container * container = newObjectV1V2<String::Container>(0,stream_.ptr());
   stream_.ptr(NULL);
   count_ = 0;
   return container;

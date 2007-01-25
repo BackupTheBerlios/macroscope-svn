@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -250,7 +250,7 @@ DSQLValues & DSQLValues::freeRes()
   if( res_ != NULL ){
     api.mysql_free_result(res_);
     if( api.mysql_stmt_free_result(statement_.handle_) != 0 )
-      statement_.database_->exceptionHandler(newObject<EDSQLStFreeResult>(
+      statement_.database_->exceptionHandler(newObjectV1C2<EDSQLStFreeResult>(
         api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
     res_ = NULL;
   }
@@ -262,11 +262,11 @@ bool DSQLValues::fetch()
   long                    code;
   ksys::AutoPtr< DSQLRow> row (bind());
   if( api.mysql_stmt_bind_result(statement_.handle_, bind_.bind()) != 0 )
-    statement_.database_->exceptionHandler(newObject<EDSQLStBindResult>(
+    statement_.database_->exceptionHandler(newObjectV1C2<EDSQLStBindResult>(
       api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
   code = api.mysql_stmt_fetch(statement_.handle_);
   if( code == 1 )
-    statement_.database_->exceptionHandler(newObject<EDSQLStFetch>(
+    statement_.database_->exceptionHandler(newObjectV1C2<EDSQLStFetch>(
       api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
   if( code != MYSQL_NO_DATA ){
     fillRow(row);
@@ -347,7 +347,7 @@ l1:   return ksys::time2tm(*pll);
       ;
   }
 //  fprintf(stderr,"%d\n",fields_[i].type);
-  newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
@@ -412,14 +412,14 @@ l1:   return utf8::time2Str(*pll);
     default :
       ;
   }
-  newObject<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
 DSQLValues & DSQLValues::selectRow(uintptr_t i)
 {
   if( i >= rows_.count() )
-    newObject<EDSQLStInvalidRowIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidRowIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   row_ = i;
   return *this;
 }
@@ -427,9 +427,9 @@ DSQLValues & DSQLValues::selectRow(uintptr_t i)
 uintptr_t DSQLValues::checkValueIndex(uintptr_t i)
 {
   if( (uintptr_t) (intptr_t) row_ >= rows_.count() )
-    newObject<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__)->throwSP();
   if( i >= valuesIndex_.count() )
-    newObject<EDSQLStInvalidValueIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidValueIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return i;
 }
 //---------------------------------------------------------------------------

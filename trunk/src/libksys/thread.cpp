@@ -77,7 +77,7 @@ void * Thread::threadFunc(void * thread)
       reinterpret_cast<Thread *>(thread)->exitCode_ = 0;
 #endif
   }
-  catch( ksys::ExceptionSP & e ){
+  catch( ExceptionSP & e ){
     e->writeStdError();
     reinterpret_cast<Thread *>(thread)->exitCode_ = e->codes()[0];
   }
@@ -132,11 +132,11 @@ Thread & Thread::resume()
     handle_ = CreateThread(NULL,stackSize_,threadFunc,this,CREATE_SUSPENDED,&id_);
     if( handle_ == NULL ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     if( ResumeThread(handle_) == (DWORD) - 1 ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   else if( finished_ ){
@@ -174,7 +174,7 @@ l1:
   pthread_attr_destroy(&attr);
   //pthread_mutex_destroy(&mutex_);
   //mutex_ = NULL;
-  newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
 #endif
   return *this;
 }
@@ -184,10 +184,10 @@ Thread & Thread::suspend()
 #if defined(__WIN32__) || defined(__WIN64__)
   if( SuspendThread(handle_) == (DWORD) -1 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
   return *this;
 }
@@ -235,18 +235,18 @@ Thread & Thread::priority(uintptr_t pri)
     struct sched_param param;
     if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
 l1:   int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     param.sched_priority = pri;
     if( (errno = pthread_setschedparam(handle_,policy,&param)) != 0 ) goto l1;*/
     if( pthread_setprio(handle_,int(pri)) != 0 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #elif defined(__WIN32__) || defined(__WIN64__)
     if( SetThreadPriority(handle_,(int) pri) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #endif
   }
@@ -265,20 +265,20 @@ uintptr_t Thread::priority() const
     struct sched_param param;
     if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     pri = param.sched_priority;*/
     int a = pthread_getprio(handle_);
     if( a == -1 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     pri = a;
 #elif defined(__WIN32__) || defined(__WIN64__)
     pri = GetThreadPriority(handle_);
     if( pri == THREAD_PRIORITY_ERROR_RETURN ){
       int32_t err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 #endif
   }
@@ -496,7 +496,7 @@ bool Thread::isSuspended(uintptr_t tid)
   HINSTANCE hInstLib = LoadLibraryEx("ntdll.dll",NULL,DONT_RESOLVE_DLL_REFERENCES);
   if( hInstLib == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   PFNNtQuerySystemInformation pNtQuerySystemInformation =
     (PFNNtQuerySystemInformation) GetProcAddress(hInstLib,"NtQuerySystemInformation");
@@ -567,7 +567,7 @@ bool Thread::isSuspended(uintptr_t tid)
     LocalFree(pInfo);
     FreeLibrary(hInstLib);
     int32_t err = status + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   LocalFree(pInfo);
   FreeLibrary(hInstLib);

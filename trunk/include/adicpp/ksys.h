@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,11 +41,14 @@ template <typename T> inline void xchg(T & v1, T & v2)
 }
 //---------------------------------------------------------------------------
 #include "lconfig.h"
+#include "atomic.h"
+#include "object.h"
 #include "bits.h"
 #include "autoptr.h"
+#include "sp.h"
+#include "utf8str.h"
 #include "xalloc.h"
 #include "xtime.h"
-#include "sp.h"
 #include "rnd.h"
 #include "tlv.h"
 #include "hash.h"
@@ -54,7 +57,6 @@ template <typename T> inline void xchg(T & v1, T & v2)
 #include "mutex.h"
 #include "thread.h"
 #include "profiler.h"
-#include "utf8str.h"
 #include "except.h"
 //#include "tree.h"
 #include "qsort.h"

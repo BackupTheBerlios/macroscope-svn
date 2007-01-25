@@ -33,7 +33,7 @@
 //------------------------------------------------------------------------------
 void throwCycleThrow()
 {
-  newObject<Exception>(-1,__PRETTY_FUNCTION__ + utf8::String("12345"))->throwSP();
+  newObjectV1C2<Exception>(-1,__PRETTY_FUNCTION__ + utf8::String("12345"))->throwSP();
 }
 //------------------------------------------------------------------------------
 void throwCycle()

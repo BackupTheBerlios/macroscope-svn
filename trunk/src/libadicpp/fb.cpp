@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
 #include <adicpp/adicpp.h>
 //---------------------------------------------------------------------------
 namespace adicpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -151,7 +150,7 @@ FirebirdStatement * FirebirdStatement::attach(Database & database)
 {
   FirebirdDatabase * p = dynamic_cast<FirebirdDatabase *>(&database);
   if( p == NULL )
-    newObject<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   static_cast<fbcpp::DSQLStatement *>(this)->attach(*p,*p);
   return this;
 }

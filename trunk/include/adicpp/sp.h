@@ -435,7 +435,7 @@ template<class T> class SPIA {
 //-----------------------------------------------------------------------------
 template<class T> inline SPIA< T>::~SPIA()
 {
-  delete ptr_;
+  deleteObject(ptr_);
 }
 //-----------------------------------------------------------------------------
 template<class T> inline SPIA< T>::SPIA(T * ptr) : ptr_(ptr)
@@ -499,7 +499,7 @@ template <typename T,typename M> class SPEIA {
 //-----------------------------------------------------------------------------
 template <typename T,typename M> inline SPEIA<T,M>::~SPEIA()
 {
-  delete object_;
+  deleteObject(object_);
 }
 //-----------------------------------------------------------------------------
 template <typename T,typename M> inline
@@ -511,7 +511,7 @@ template <typename T,typename M> inline
 SPEIA<T,M> & SPEIA<T,M>::operator = (T * object)
 {
   mutex_.acquire();
-  delete object_;
+  deleteObject(object_);
   object_ = object;
   mutex_.release();
   return *this;

@@ -239,7 +239,7 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop() const
     walk = *head;
     while( walk != NULL ){
       w = walk->next();
-      delete &O(*walk,NULL);
+      deleteObject(&O(*walk,NULL));
       walk = w;
     }
     head++;
@@ -357,7 +357,7 @@ template <
 > inline
 EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop(T & object,bool throwIfNotExist) const
 {
-  delete &remove(object,throwIfNotExist);
+  deleteObject(&remove(object,throwIfNotExist));
   return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
@@ -405,7 +405,7 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bo
   }
   int32_t err = 0;
   if( *head != NULL ){
-    if( deleteIfExist ) delete &object;
+    if( deleteIfExist ) deleteObject(&object);
     if( throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
       err = ERROR_ALREADY_EXISTS;
@@ -415,7 +415,7 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bo
     }
   }
   else if( *head == NULL ){
-    if( deleteIfNotExist ) delete &object;
+    if( deleteIfNotExist ) deleteObject(&object);
     if( throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
       err = ERROR_NOT_FOUND;
@@ -425,7 +425,7 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bo
     }
   }
   if( err != 0 )
-    newObject<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
   return head;
 }
 //---------------------------------------------------------------------------

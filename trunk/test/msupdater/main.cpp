@@ -68,7 +68,7 @@ void MSUpdateSetuper::executeAction(const utf8::String & name,const ConfigSectio
     }
     stdErr.debug(5,s);
   }
-  if( result != 0 ) newObject<Exception>(result,__PRETTY_FUNCTION__)->throwSP();
+  if( result != 0 ) newObjectV1C2<Exception>(result,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void MSUpdateSetuper::fiberExecute()
@@ -242,7 +242,7 @@ void MSUpdateFetcher::fiberExecute()
         );
       }
       lastCheckUpdate = getlocaltimeofday();
-      thread()->server()->attachFiber(newObjectV<MSUpdateSetuper>(config_,setupSem_));
+      thread()->server()->attachFiber(newObjectC1R2<MSUpdateSetuper>(config_,setupSem_));
     }
     if( setupEnded ) ksleep(interval); else ksleep(1000000u);
   }
@@ -267,7 +267,7 @@ MSUpdaterService::MSUpdaterService() :
 //------------------------------------------------------------------------------
 void MSUpdaterService::start()
 {
-  attachFiber(newObject<MSUpdateFetcher>(config_));
+  attachFiber(newObjectC1<MSUpdateFetcher>(config_));
   stdErr.debug(0,utf8::String::Stream() << msupdater_version.gnu_ << " started\n");
 }
 //------------------------------------------------------------------------------

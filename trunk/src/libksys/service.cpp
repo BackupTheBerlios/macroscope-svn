@@ -60,7 +60,7 @@ Service & Service::serviceMain(uintptr_t n,DWORD dwArgc,LPWSTR * lpszArgv)
     );
     if( statusHandle_ == 0 ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     serviceStatus_.dwServiceType = serviceType_;
     serviceStatus_.dwCurrentState = SERVICE_START_PENDING;
@@ -69,13 +69,13 @@ Service & Service::serviceMain(uintptr_t n,DWORD dwArgc,LPWSTR * lpszArgv)
     serviceStatus_.dwCheckPoint = 0;
     if( SetServiceStatus(statusHandle_,&serviceStatus_) == 0 ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     start();
     serviceStatus_.dwCurrentState = SERVICE_RUNNING;
     if( SetServiceStatus(statusHandle_,&serviceStatus_) == 0 ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
 /*    MSG msg;
     for(;;){
@@ -86,14 +86,14 @@ Service & Service::serviceMain(uintptr_t n,DWORD dwArgc,LPWSTR * lpszArgv)
       if( msg.message == WM_QUIT ) break;
       if( WaitMessage() == 0 ){
         long err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
     }*/
     semaphore_.wait();
     serviceStatus_.dwCurrentState = SERVICE_STOP_PENDING;
     if( SetServiceStatus(statusHandle_,&serviceStatus_) == 0 ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     stop();
   }
@@ -169,7 +169,7 @@ Service & Service::install(SC_HANDLE hSCManager)
     }
     if( err != ERROR_SUCCESS ){
       if( handle != NULL ) CloseServiceHandle(handle);
-      newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   CloseServiceHandle(handle);
@@ -187,12 +187,12 @@ Service & Service::uninstall(SC_HANDLE hSCManager)
   );
   if( handle == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( DeleteService(handle) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     CloseServiceHandle(handle);
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   CloseServiceHandle(handle);
   return *this;
@@ -210,22 +210,22 @@ void Service::uninstall()
 //---------------------------------------------------------------------------
 void Service::start()
 {
-  newObject<Exception>(ENOSYS,"service " + serviceName_ + " not implemented start")->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not implemented start")->throwSP();
 }
 //---------------------------------------------------------------------------
 void Service::stop()
 {
-  newObject<Exception>(ENOSYS,"service " + serviceName_ + " not implemented stop")->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not implemented stop")->throwSP();
 }
 //---------------------------------------------------------------------------
 void Service::suspend()
 {
-  newObject<Exception>(ENOSYS,"service " + serviceName_ + " not support suspending")->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not support suspending")->throwSP();
 }
 //---------------------------------------------------------------------------
 void Service::resume()
 {
-  newObject<Exception>(ENOSYS,"service " + serviceName_ + " not support resuming")->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not support resuming")->throwSP();
 }
 //---------------------------------------------------------------------------
 utf8::String Service::status()
@@ -244,7 +244,7 @@ utf8::String Service::status()
     default            :;
   }
 #endif
-  newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   return "";
 }
 //---------------------------------------------------------------------------
@@ -296,7 +296,7 @@ Services::Services(const utf8::String &
   handle_ = OpenSCManagerW(NULL,NULL,SC_MANAGER_ALL_ACCESS | GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE);
   if( handle_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -382,7 +382,7 @@ Service & Services::serviceByName(const utf8::String & serviceName)
     if( services_[i].serviceName_.strcasecmp(serviceName) == 0 )
       return services_[i];
 #endif
-  newObject<Exception>(EINVAL,"Unknown service")->throwSP();
+  newObjectV1C2<Exception>(EINVAL,"Unknown service")->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
@@ -393,9 +393,9 @@ Services & Services::start(const utf8::String &
 )
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  control_ = newObject<SharedMemoryQueue>(controlName_);
+  control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    newObject<Exception>(EAGAIN,"dispatcher not started")->throwSP();
+    newObjectV1C2<Exception>(EAGAIN,"dispatcher not started")->throwSP();
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcStart << serviceName;
@@ -406,7 +406,7 @@ Services & Services::start(const utf8::String &
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
 #endif
-    newObject<Exception>(err,error)->throwSP();
+    newObjectV1C2<Exception>(err,error)->throwSP();
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -422,9 +422,9 @@ Services & Services::stop(const utf8::String &
 )
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  control_ = newObject<SharedMemoryQueue>(controlName_);
+  control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    newObject<Exception>(EAGAIN,"dispatcher not started")->throwSP();
+    newObjectV1C2<Exception>(EAGAIN,"dispatcher not started")->throwSP();
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcStop << serviceName;
@@ -435,7 +435,7 @@ Services & Services::stop(const utf8::String &
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
 #endif
-    newObject<Exception>(err,error)->throwSP();
+    newObjectV1C2<Exception>(err,error)->throwSP();
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -451,9 +451,9 @@ Services & Services::suspend(const utf8::String &
 )
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  control_ = newObject<SharedMemoryQueue>(controlName_);
+  control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    newObject<Exception>(EAGAIN,"dispatcher not started")->throwSP();
+    newObjectV1C2<Exception>(EAGAIN,"dispatcher not started")->throwSP();
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcSuspend << serviceName;
@@ -464,7 +464,7 @@ Services & Services::suspend(const utf8::String &
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
 #endif
-    newObject<Exception>(err,error)->throwSP();
+    newObjectV1C2<Exception>(err,error)->throwSP();
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -480,9 +480,9 @@ Services & Services::resume(const utf8::String &
 )
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  control_ = newObject<SharedMemoryQueue>(controlName_);
+  control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    newObject<Exception>(EAGAIN,"dispatcher not started")->throwSP();
+    newObjectV1C2<Exception>(EAGAIN,"dispatcher not started")->throwSP();
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcResume << serviceName;
@@ -493,7 +493,7 @@ Services & Services::resume(const utf8::String &
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
 #endif
-    newObject<Exception>(err,error)->throwSP();
+    newObjectV1C2<Exception>(err,error)->throwSP();
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -509,9 +509,9 @@ Services & Services::query(const utf8::String &
 )
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  control_ = newObject<SharedMemoryQueue>(controlName_);
+  control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    newObject<Exception>(EAGAIN,"dispatcher not started")->throwSP();
+    newObjectV1C2<Exception>(EAGAIN,"dispatcher not started")->throwSP();
   utf8::String sn(serviceName.strcasecmp("all") == 0 ? utf8::String() : serviceName);
   int32_t err;
   utf8::String error;
@@ -538,7 +538,7 @@ Services & Services::query(const utf8::String &
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
 #endif
-    newObject<Exception>(err,error)->throwSP();
+    newObjectV1C2<Exception>(err,error)->throwSP();
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -550,9 +550,9 @@ Services & Services::query(const utf8::String &
 Services & Services::stopServiceCtrlDispatcher()
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  control_ = newObject<SharedMemoryQueue>(controlName_);
+  control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
-    newObject<Exception>(EAGAIN,"dispatcher not started")->throwSP();
+    newObjectV1C2<Exception>(EAGAIN,"dispatcher not started")->throwSP();
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcStopDispatcher << utf8::String();
@@ -563,7 +563,7 @@ Services & Services::stopServiceCtrlDispatcher()
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) error.getANSIString());
 #endif
-    newObject<Exception>(err,error)->throwSP();
+    newObjectV1C2<Exception>(err,error)->throwSP();
   }
 #ifndef NDEBUG
   fprintf(stderr,"%s\n",__PRETTY_FUNCTION__);
@@ -592,21 +592,21 @@ Services & Services::startServiceCtrlDispatcher(
   serviceStartTable_[i].lpServiceProc = NULL;
   if( StartServiceCtrlDispatcherW(serviceStartTable_.ptr()) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_DAEMON
   if( daemonize ){
     int r = daemon(1,1);
     if( r < 0 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__);
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
     }
     if( r > 0 ) exit(EX_OK); // if parent then immediate exit
   }
   SharedMemoryQueue::unlink(controlName_);
-  control_ = newObject<SharedMemoryQueue>(controlName_);
+  control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( !control_->creator() )
-    newObject<Exception>(EAGAIN,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(EAGAIN,__PRETTY_FUNCTION__)->throwSP();
   Thread::resume();
   wait();
 #else
@@ -769,7 +769,7 @@ void Services::threadExecute()
         terminate();
       }
       else {
-        newObject<Exception>(EINVAL,"Unknown command")->throwSP();
+        newObjectV1C2<Exception>(EINVAL,"Unknown command")->throwSP();
       }
     }
     catch( ExceptionSP & e ){

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -150,7 +150,7 @@ MYSQLStatement * MYSQLStatement::attach(Database & database)
 {
   MYSQLDatabase * p = dynamic_cast<MYSQLDatabase *>(&database);
   if( p == NULL )
-    newObject<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   static_cast<mycpp::DSQLStatement *>(this)->attach(*p);
   return this;
 }

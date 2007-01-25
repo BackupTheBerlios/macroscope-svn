@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,7 @@ namespace mycpp {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-Transaction::Transaction()
-  : database_(NULL),
-    startCount_(0)
+Transaction::Transaction() : database_(NULL), startCount_(0)
 {
 }
 //---------------------------------------------------------------------------
@@ -43,10 +41,8 @@ Transaction::~Transaction()
 //---------------------------------------------------------------------------
 Transaction & Transaction::attach(Database & database)
 {
-  if( database_ != NULL && database_ != &database )
-    detach();
-  if( database.transaction_ != NULL )
-    database.transaction_->detach();
+  if( database_ != NULL && database_ != &database ) detach();
+  if( database.transaction_ != NULL ) database.transaction_->detach();
   database_ = &database;
   database.transaction_ = this;
   return *this;
@@ -54,10 +50,8 @@ Transaction & Transaction::attach(Database & database)
 //---------------------------------------------------------------------------
 Transaction & Transaction::detach()
 {
-  while( active() )
-    rollback();
-  if( database_ != NULL )
-    database_->transaction_ = NULL;
+  while( active() ) rollback();
+  if( database_ != NULL ) database_->transaction_ = NULL;
   database_ = NULL;
   return *this;
 }
@@ -65,7 +59,7 @@ Transaction & Transaction::detach()
 Transaction & Transaction::start()
 {
   if( !attached() )
-    newObject<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
     utf8::String  trSQL ("START TRANSACTION WITH ");
     if( isolation_.strcasecmp("REPEATABLE") == 0 )
@@ -77,7 +71,7 @@ Transaction & Transaction::start()
     else
       trSQL += "CONSISTENT SNAPSHOT";
     if( api.mysql_query(database_->handle_, trSQL.c_str()) != 0 )
-      database_->exceptionHandler(newObject<EDSQLStExecute>(
+      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   startCount_++;
@@ -87,11 +81,11 @@ Transaction & Transaction::start()
 Transaction & Transaction::commit()
 {
   if( !active() )
-    newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
     if( api.mysql_commit(database_->handle_) != 0 )
-      exceptionHandler(newObject<ETrCommit>(
+      exceptionHandler(newObjectV1C2<ETrCommit>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   startCount_--;
@@ -101,11 +95,11 @@ Transaction & Transaction::commit()
 Transaction & Transaction::rollback()
 {
   if( !active() )
-    newObject<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
     if( api.mysql_rollback(database_->handle_) != 0 )
-      exceptionHandler(newObject<ETrRollback>(
+      exceptionHandler(newObjectV1C2<ETrRollback>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
   startCount_--;

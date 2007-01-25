@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,7 +73,7 @@ Database & Database::allocHandle(MYSQL *& handle)
   if( handle == NULL )
     handle = api.mysql_init(NULL);
   if( handle == NULL )
-    exceptionHandler(newObject<EClientServer>(EINVAL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -124,11 +124,11 @@ Database & Database::create(const utf8::String & name)
     allocHandle(handle);
     api.mysql_real_connect(handle, hostName.strlen() > 0 ? hostName.c_str() : NULL, dpb_.user().c_str(), dpb_.password().c_str(), NULL, (unsigned int) port, hostName.strlen() > 0 ? hostName.c_str() : NULL, CLIENT_COMPRESS);
     if( api.mysql_errno(handle) != 0 )
-      exceptionHandler(newObject<EDBAttach>(api.mysql_errno(handle), api.mysql_error(handle)));
+      exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle), api.mysql_error(handle)));
     dbName = "CREATE DATABASE " + dbName + " DEFAULT CHARACTER SET UTF8";
     if( api.mysql_query(handle, dbName.c_str()) != 0 )
       if( api.mysql_errno(handle) != ER_DB_CREATE_EXISTS )
-        exceptionHandler(newObject<EDBCreate>(api.mysql_errno(handle), api.mysql_error(handle)));
+        exceptionHandler(newObjectV1C2<EDBCreate>(api.mysql_errno(handle), api.mysql_error(handle)));
   }
   catch( ksys::ExceptionSP & ){
     freeHandle(handle);
@@ -143,14 +143,14 @@ Database & Database::create(const utf8::String & name)
 Database & Database::drop()
 {
   if( !attached() )
-    exceptionHandler(newObject<EDBNotAttached>(EINVAL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<EDBNotAttached>(EINVAL, __PRETTY_FUNCTION__));
   if( transaction_ != NULL )
     while( transaction_->active() )
       transaction_->rollback();
   for( intptr_t  i = dsqlStatements_.count() - 1; i >= 0; i-- )
     dsqlStatements_.objectOfIndex(i)->free();
   if( api.mysql_query(handle_, (utf8::String("DROP DATABASE ") + handle_->db).c_str()) != 0 )
-    exceptionHandler(newObject<EDBDrop>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+    exceptionHandler(newObjectV1C2<EDBDrop>(api.mysql_errno(handle_), api.mysql_error(handle_)));
   freeHandle(handle_);
   api.close();
   return *this;
@@ -175,14 +175,14 @@ Database & Database::attach(const utf8::String & name)
       else if( dpb_.protocol().strcasecmp("MEMORY") == 0 )
         protocol = MYSQL_PROTOCOL_MEMORY;
       if( api.mysql_options(handle_, MYSQL_OPT_PROTOCOL, &protocol) != 0 )
-        exceptionHandler(newObject<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
       unsigned int  timeout = 180;
       if( api.mysql_options(handle_, MYSQL_OPT_READ_TIMEOUT, &timeout) != 0 )
-        exceptionHandler(newObject<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
       if( api.mysql_options(handle_, MYSQL_OPT_WRITE_TIMEOUT, &timeout) != 0 )
-        exceptionHandler(newObject<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
       if( api.mysql_options(handle_, MYSQL_SET_CHARSET_NAME, "utf8") != 0 )
-        exceptionHandler(newObject<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
 
       api.mysql_real_connect(
         handle_,
@@ -194,9 +194,9 @@ Database & Database::attach(const utf8::String & name)
         hostName.strlen() > 0 ? hostName.c_str() : NULL, 0//CLIENT_COMPRESS | CLIENT_MULTI_STATEMENTS
       );
       if( api.mysql_errno(handle_) != 0 )
-        exceptionHandler(newObject<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
       if( api.mysql_autocommit(handle_, false) != 0 )
-        exceptionHandler(newObject<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
     }
     catch( ksys::ExceptionSP & ){
       freeHandle(handle_);

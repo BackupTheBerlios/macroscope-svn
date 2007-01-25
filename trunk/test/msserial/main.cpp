@@ -123,12 +123,12 @@ void SerialPortFiber::main()
         isWR = mode.strcasecmp("WRITE") == 0;
         if( (isRD && service_.serialPorts_[i].reader_ != NULL) ||
             (isWR && service_.serialPorts_[i].writer_ != NULL) )
-          newObject<Exception>(EACCES,__PRETTY_FUNCTION__)->throwSP();
+          newObjectV1C2<Exception>(EACCES,__PRETTY_FUNCTION__)->throwSP();
         if( isRD || isWR ){
           control_ = &service_.serialPorts_[i];
           break;
         }
-        newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     if( control_ == NULL ){
@@ -136,7 +136,7 @@ void SerialPortFiber::main()
       control_->open(device);
     }
     if( control_->reader_ == NULL ){
-      control_->reader_ = newObjectV<SerialPortFiber>(service_,control_);
+      control_->reader_ = newObjectR1V2<SerialPortFiber>(service_,control_);
       control_->reader_->socket_ = socket_;
       socket_ = INVALID_SOCKET;
       thread()->server()->attachFiber(control_->reader_);
@@ -202,7 +202,7 @@ MSSerialService::MSSerialService() :
 //------------------------------------------------------------------------------
 Fiber * MSSerialService::newFiber()
 {
-  return newObjectV<SerialPortFiber>(*this);
+  return newObjectR1<SerialPortFiber>(*this);
 }
 //------------------------------------------------------------------------------
 void MSSerialService::start()

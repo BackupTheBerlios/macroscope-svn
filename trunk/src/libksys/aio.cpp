@@ -39,13 +39,13 @@ bool AsyncDescriptor::isSocket() const
 //------------------------------------------------------------------------------
 int64_t AsyncDescriptor::read2(void *,uint64_t)
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return -1;
 }
 //------------------------------------------------------------------------------
 int64_t AsyncDescriptor::write2(const void *,uint64_t)
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return -1;
 }
 //------------------------------------------------------------------------------
@@ -53,27 +53,27 @@ int64_t AsyncDescriptor::write2(const void *,uint64_t)
 //------------------------------------------------------------------------------
 void AsyncDescriptor::shutdown2()
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::flush2()
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::close2()
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::openAPI()
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 void AsyncDescriptor::closeAPI()
 {
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -128,7 +128,7 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
   for( i = sizeof(safeEvents_) / sizeof(safeEvents_[0]) - 1; i >= 0; i-- ){
     if( (safeEvents_[i] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
       err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
 #else
@@ -144,12 +144,12 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
     kqueue_ = kqueue();
     if( kqueue < 0 ){
       int32_t err = errno;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     kevents_.resize(64);
   }
 #else
-  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 #endif
 }
@@ -1728,7 +1728,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         for( i = connectSlaves_.count() - 1; i >= 0; i-- )
           if( connectSlaves_[i].transplant(currentFiber()->event_) ) break;
         if( i < 0 ){
-          AsyncIoSlave * p = newObject<AsyncIoSlave>(true);
+          AsyncIoSlave * p = newObjectV1<AsyncIoSlave>(true);
           AutoPtr<AsyncIoSlave> slave(p);
           if( connectSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
@@ -1794,7 +1794,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
 #endif
     default :;
   }
-  newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 void Requester::postRequest(AsyncEvent * event)
@@ -1817,7 +1817,7 @@ void Requester::postRequest(AsyncEvent * event)
   }
 #endif
 #endif
-  newObject<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

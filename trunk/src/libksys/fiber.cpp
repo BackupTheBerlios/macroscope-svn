@@ -368,7 +368,7 @@ void BaseServer::closeServer()
           }
           else if( WaitMessage() == 0 ){
             int32_t err = GetLastError() + errorOffset;
-            newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+            newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
           }
         }
         else
@@ -457,7 +457,7 @@ void BaseServer::DispatchWindowMessages()
     if( msg.message == WM_QUIT || !active() ) break;
     if( WaitMessage() == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
 #endif
@@ -488,7 +488,7 @@ FiberInterlockedMutex::FiberInterlockedMutex()
   sem_ = CreateSemaphoreA(NULL,1,~(ULONG) 0 >> 1, NULL);
   if( sem_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
@@ -497,7 +497,7 @@ bool FiberInterlockedMutex::tryAcquireHelper()
   DWORD r = WaitForSingleObject(sem_,0);
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 }
@@ -521,7 +521,7 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
       currentFiber()->switchFiber(currentFiber()->mainFiber());
       assert( currentFiber()->event_.type_ == etAcquireMutex );
       if( currentFiber()->event_.errno_ != 0 )
-        newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
       return true;
     }
   }
@@ -531,7 +531,7 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
       DWORD r = WaitForSingleObject(sem_,INFINITE);
       if( r == WAIT_FAILED || (r != WAIT_OBJECT_0 && r != WAIT_ABANDONED) ){
         int32_t err = GetLastError() + errorOffset;
-        newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #else
       mutex_.acquire();
@@ -551,7 +551,7 @@ void FiberInterlockedMutex::release()
 {
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 #endif
@@ -757,11 +757,11 @@ bool FiberSemaphore::timedWait(uint64_t timeout)
     assert( currentFiber()->event_.type_ == etAcquireSemaphore );
 #if defined(__WIN32__) || defined(__WIN64__)
     if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != WAIT_TIMEOUT )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.errno_ != WAIT_TIMEOUT;
 #else
     if( currentFiber()->event_.errno_ != 0 && currentFiber()->event_.errno_ != ETIMEDOUT )
-      newObject<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.errno_ != ETIMEDOUT;
 #endif
   }
