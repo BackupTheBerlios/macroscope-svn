@@ -299,7 +299,14 @@ static void * getframeaddr(intptr_t level)
     }
 }
 //---------------------------------------------------------------------------
-#define D10(x) ceil(log10(((x) == 0) ? 2 : ((x) + 1)))
+static inline bool isInvalidPointer(char * p,char * pp)
+{
+  return
+    (intptr_t(p) >= 0 && intptr_t(p) < getpagesize()) ||
+    p - pp > 0x100000 ||
+    p == NULL
+  ;
+}
 //---------------------------------------------------------------------------
 char ** backtrace()
 {
@@ -310,11 +317,11 @@ char ** backtrace()
   for( i = 0; i < 128; i++ ){
     buffer[i] = (char *) getframeaddr(i);
 //    fprintf(stderr,"%p %"PRIdPTR"\n",buffer[i],buffer[i] - prevFrameAddr);
-    if( buffer[i] == NULL || buffer[i] - prevFrameAddr > 0x100000 ) break;
+    if( isInvalidPointer(buffer[i],prevFrameAddr) ) break;
     prevFrameAddr = buffer[i];
     buffer[i] = (char *) getreturnaddr(i);
 //    fprintf(stderr,"%p %"PRIdPTR"\n",buffer[i],buffer[i] - prevReturnAddr);
-    if( buffer[i] == NULL ) break;
+    if( isInvalidPointer(buffer[i],buffer[i]) ) break;
     prevReturnAddr = buffer[i];
   }
   buffer[i] = NULL;

@@ -2645,6 +2645,27 @@ void initialize(int argc,char ** argv)
   catch( ... ){
   }
   new (machineUniqueCryptedKeyHolder) utf8::String();
+#if HAVE_CLOCK_GETRES
+//  struct timespec ts;
+//  clock_getres(CLOCK_REALTIME,&ts);
+//  fprintf(stderr,"timer resolution: %ld %ld\n",ts.tv_sec,ts.tv_nsec);
+//  uint64_t t2 = gettimeofday(), t3 = 0;
+//  while( gettimeofday() - t2 < 2000000u ){
+//    clock_gettime(CLOCK_REALTIME,&ts);
+//    if( t3 < (uint64_t) ts.tv_nsec ) t3 = ts.tv_nsec;
+//  }
+//  fprintf(stderr,"max tv_nsec: %"PRIu64"\n",t3);
+//  Semaphore sem;
+//  uint64_t t0 = gettimeofday(), t1 = t0;
+//  sem.timedWait(1000000u);
+//  t0 = gettimeofday() - t0;
+//  struct timespec ts0, ts1;
+//  clock_gettime(CLOCK_REALTIME,&ts0);
+//  ksleep(1000000u);
+//  clock_gettime(CLOCK_REALTIME,&ts1);
+//  fprintf(stderr,"sem_timedwait: %"PRIu64", start %ld %ld, stop %ld %ld, tod %"PRIu64"\n",t0,ts0.tv_sec,ts0.tv_nsec,ts1.tv_sec,ts1.tv_nsec,t1 / 1000000u);
+//  fprintf(stderr,"stop - start %ld %ld\n",ts1.tv_sec - ts1.tv_sec,ts1.tv_nsec - ts0.tv_nsec);
+#endif
 }
 //---------------------------------------------------------------------------
 void cleanup()

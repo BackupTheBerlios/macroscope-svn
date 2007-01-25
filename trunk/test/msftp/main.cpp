@@ -120,11 +120,7 @@ void KFTPClient::auth()
 void KFTPClient::put()
 {
   if( !config_->section(section_).isSection("put") ) return;
-  utf8::String local(
-    ksys::unScreenString(
-      config_->section(section_).section("put").text("local")
-    )
-  );
+  utf8::String local(config_->section(section_).section("put").text("local"));
   utf8::String localPath(
     ksys::includeTrailingPathDelimiter(ksys::getPathFromPathName(local))
   );
@@ -145,7 +141,7 @@ void KFTPClient::put()
   mode = config_->section(section_).section("put").text("mode",mode);
   utf8::String remotePath(
     ksys::includeTrailingPathDelimiter(
-      ksys::unScreenString(config_->section(section_).section("put").text("remote"))
+      config_->section(section_).section("put").text("remote")
     )
   );
   int64_t all = 0, ptime = getlocaltimeofday(), atime = 0, ttime;
@@ -312,9 +308,7 @@ void KFTPClient::get()
   if( !config_->section(section_).isSection("get") ) return;
   utf8::String localPath(
     ksys::includeTrailingPathDelimiter(
-      ksys::unScreenString(
-        config_->section(section_).section("get").text("local")
-      )
+      config_->section(section_).section("get").text("local")
     )
   );
   utf8::String exclude(config_->section(section_).section("get").text("exclude"));
@@ -323,7 +317,7 @@ void KFTPClient::get()
   utf8::String mode(config_->text("mode","auto"));
   mode = config_->section(section_).section("get").text("mode",mode);
   utf8::String remote(
-    ksys::unScreenString(config_->section(section_).section("get").text("remote"))
+    config_->section(section_).section("get").text("remote")
   );
   utf8::String remotel(ksys::includeTrailingPathDelimiter(ksys::getPathFromPathName(remote)));
   uint64_t bs = (uint64_t) config_->value("buffer_size",getpagesize());

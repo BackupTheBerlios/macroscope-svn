@@ -52,7 +52,7 @@ void Logger::decoration()
   utf8::String  basePath("macroscope.decoration.");
   for( intptr_t i = sizeof(decos) / sizeof(decos[0]) - 1; i >= 0; i-- )
     for( intptr_t j = ttAll; j >= 0; j-- ){
-      decos[i].colors[j] = unScreenString(config_->valueByPath(basePath + decos[i].path + nicks[j]));
+      decos[i].colors[j] = config_->valueByPath(basePath + decos[i].path + nicks[j]);
     }
 }
 //------------------------------------------------------------------------------
@@ -62,6 +62,7 @@ void Logger::writeUserTop(
   const struct tm & beginTime,
   const struct tm & endTime)
 {
+  if( !(bool) config_->valueByPath(prefix_ + "squid.top10_url",true) ) return;
   statement_->text(
     "SELECT"
     "    A.*"
@@ -177,23 +178,16 @@ void Logger::MTWriter::threadExecute()
   logger_.writeMonthHtmlOutput(file_,year_,true);
 }
 //------------------------------------------------------------------------------
-void Logger::writeMonthHtmlOutput(const utf8::String & file, const struct tm & year,bool threaded)
+void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded)
 {
-  if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_html_writer",true) )
+  if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_html_writer",false) )
     threads_.add(newObjectV1<MTWriter>(*this,file,year)).resume();
   AsyncFile f(file);
   f.createIfNotExist(true).open();
-#if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String section("macroscope.windows.html_report.");
-#else
-  utf8::String section("macroscope.unix.html_report.");
-#endif
-  chModOwn(
-    file,
-    config_->valueByPath(section + "file_mode",755),
-    config_->valueByPath(section + "file_user",ksys::getuid()),
-    config_->valueByPath(section + "file_group",ksys::getgid())
-  );
+  Mutant m0(config_->valueByPath(section_ + "file_mode",755));
+  Mutant m1(config_->valueByPath(section_ + "file_user",ksys::getuid()));
+  Mutant m2(config_->valueByPath(section_ + "file_group",ksys::getgid()));
+  chModOwn(file,m0,m1,m2);
   writeHtmlHead(f);
   struct tm beginTime = year, endTime = year;
   beginTime.tm_mon = 0;
@@ -460,32 +454,19 @@ void Logger::writeHtmlYearOutput()
     beginTime = endTime = time2tm(getlocaltimeofday());
   }
   curTime = time2tm(getlocaltimeofday());
-#if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String section("macroscope.windows.html_report.");
-#else
-  utf8::String section("macroscope.unix.html_report.");
-#endif
-  htmlDir_ = excludeTrailingPathDelimiter(
-    unScreenString(
-      config_->valueByPath(section + "directory")
-    )
-  );
+  htmlDir_ = excludeTrailingPathDelimiter(config_->valueByPath(section_ + "directory"));
   AsyncFile f(
-    includeTrailingPathDelimiter(htmlDir_) + "users-traf-by-year.html"
+    includeTrailingPathDelimiter(htmlDir_) + config_->valueByPath(section_ + "index_file_name","index.html")
   );
   f.createIfNotExist(true).open();
-  chModOwn(
-    htmlDir_,
-    config_->valueByPath(section + "directory_mode",755),
-    config_->valueByPath(section + "directory_user",ksys::getuid()),
-    config_->valueByPath(section + "directory_group",ksys::getgid())
-  );
-  chModOwn(
-    f.fileName(),
-    config_->valueByPath(section + "file_mode",755),
-    config_->valueByPath(section + "file_user",ksys::getuid()),
-    config_->valueByPath(section + "file_group",ksys::getgid())
-  );
+  Mutant m0(config_->valueByPath(section_ + "directory_mode",755));
+  Mutant m1(config_->valueByPath(section_ + "directory_user",ksys::getuid()));
+  Mutant m2(config_->valueByPath(section_ + "directory_group",ksys::getgid()));
+  chModOwn(htmlDir_,m0,m1,m2);
+  m0 = config_->valueByPath(section_ + "file_mode",755);
+  m1 = config_->valueByPath(section_ + "file_user",ksys::getuid());
+  m2 = config_->valueByPath(section_ + "file_group",ksys::getgid());
+  chModOwn(f.fileName(),m0,m1,m2);
   writeHtmlHead(f);
   beginTime.tm_mon = 0;
   beginTime.tm_mday = 1;
@@ -501,9 +482,9 @@ void Logger::writeHtmlYearOutput()
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
-    bool process = !(bool) config_->section("macroscope").value("refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
-    if( process && getTraf(ttAll,beginTime,endTime) > 0 ){
-      utf8::String trafByYearFile(utf8::String::print("users-traf-by-%04d.html", endTime.tm_year + 1900));
+    bool process = !(bool) config_->valueByPath(section_ + "refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
+    if( getTraf(ttAll,beginTime,endTime) > 0 ){
+      utf8::String trafByYearFile(utf8::String::print("users-traf-by-%04d.html",endTime.tm_year + 1900));
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
@@ -696,10 +677,12 @@ void Logger::writeHtmlYearOutput()
         et.tm_mon--;
       }
       f << "</TR>\n</TABLE>\n<BR>\n<BR>\n";
-      utf8::String fileName(
-        includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
-      );
-      writeMonthHtmlOutput(fileName, endTime);
+      if( process ){
+        utf8::String fileName(
+          includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
+        );
+        writeMonthHtmlOutput(fileName, endTime);
+      }
     }
     endTime.tm_year--;
     beginTime = beginTime2;

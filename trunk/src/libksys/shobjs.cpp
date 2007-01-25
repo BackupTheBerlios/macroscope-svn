@@ -207,8 +207,16 @@ bool Semaphore::timedWait(uint64_t timeout)
 #if HAVE_SEMAPHORE_H
 #if HAVE_SEM_TIMEDWAIT
   struct timespec t;
-  t.tv_sec = timeout / 1000000u;
-  t.tv_nsec = long(timeout % 1000000u);
+#if HAVE_CLOCK_GETTIME
+  clock_gettime(CLOCK_REALTIME,&t);
+//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec);
+  timeout = (uint64_t(1000000u) * t.tv_sec + timeout) * 1000u + t.tv_nsec;
+#else
+  timeout = (timeout + gettimeofday()) * 1000u;
+#endif
+  t.tv_sec = timeout / (1000000u * 1000u);
+  t.tv_nsec = timeout % (1000000u * 1000u);
+//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec);
   int r = sem_timedwait(&handle_,&t);
   if( r != 0 && errno != ETIMEDOUT ){
     r = errno;
@@ -217,15 +225,13 @@ bool Semaphore::timedWait(uint64_t timeout)
   return r == 0;
 #else
   bool r;
+  uint64_t t = gettimeofday();
   for(;;){
     r = tryWait();
     if( r ) break;
-    if( timeout == 0 ) break;
-    timeout--;
+    if( gettimeofday() - t >= timeout ) break;
     ksleep(1);
   }
-//  sem_timedwait();
-//  newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return r;
 #endif
 #elif defined(__WIN32__) || defined(__WIN64__)

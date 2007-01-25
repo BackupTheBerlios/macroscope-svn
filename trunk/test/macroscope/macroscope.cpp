@@ -37,6 +37,12 @@ Logger::~Logger()
 //------------------------------------------------------------------------------
 Logger::Logger() :
   shortUrl_("://"),
+#if defined(__WIN32__) || defined(__WIN64__)
+  prefix_("macroscope.windows."),
+#else
+  prefix_("macroscope.unix."),
+#endif
+  section_(prefix_ + "html_report."),
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   ellapsed_(getlocaltimeofday()),
   trafCacheAutoDrop_(trafCache_)
@@ -707,22 +713,17 @@ void Logger::main()
       if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME) ) throw;
     }
   }
-#if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String prefix("macroscope.windows.");
-#else
-  utf8::String prefix("macroscope.unix.");
-#endif
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
-    parseSquidLogFile(unScreenString(
-      config_->valueByPath(prefix + "squid.log_file_name")),
-      config_->valueByPath("macroscope.top10_url", true), 
-      config_->valueByPath("macroscope.skip_url"));
+    Mutant m0(config_->valueByPath(prefix_ + "squid.log_file_name"));
+    Mutant m1(config_->valueByPath(prefix_ + "squid.top10_url",true));
+    Mutant m2(config_->valueByPath(prefix_ + "squid.skip_url"));
+    parseSquidLogFile(m0,m1,m2);
   }
   if( (bool) config_->valueByPath("macroscope.process_sendmail_log",true) ){
-    parseSendmailLogFile(unScreenString(
-      config_->valueByPath(prefix + "sendmail.log_file_name")),
-      utf8::String("@") + config_->valueByPath("macroscope.sendmail.main_domain"),
-      config_->valueByPath("macroscope.sendmail.start_year"));
+    Mutant m0(config_->valueByPath(prefix_ + "sendmail.log_file_name"));
+    Mutant m1(utf8::String("@") + config_->valueByPath("macroscope.sendmail.main_domain"));
+    Mutant m2(config_->valueByPath("macroscope.sendmail.start_year"));
+    parseSendmailLogFile(m0,m1,m2);
   }
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ )

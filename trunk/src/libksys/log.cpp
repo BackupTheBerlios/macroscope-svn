@@ -110,6 +110,22 @@ LogFile & LogFile::fileName(const utf8::String & name)
   return *this;
 }
 //---------------------------------------------------------------------------
+static void exceptionStdErrorToSyslog(ExceptionSP & e)
+{
+  try {
+    utf8::OemString os(getNameFromPathName(getExecutableName()).getOEMString());
+    utf8::OemString er(e->stdError().getOEMString());
+#if HAVE_SYSLOG_H
+    openlog(os,LOG_PID,LOG_DAEMON);
+    syslog(LOG_ERR,er);
+    closelog();
+#endif
+    fprintf(stderr,"%s: %s",(const char * ) os,(const char * ) er);
+  }
+  catch( ... ){
+  }
+}
+//---------------------------------------------------------------------------
 LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stream)
 {
   if( debugLevel(level) ){
@@ -183,7 +199,8 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
       bufferPos_ += a + l;
       post = bufferPos_ - a - l == 0 || bufferPos_ >= getpagesize() * 16u || gettimeofday() - lastFlushTime_ >= bufferDataTTA_;
     }
-    catch( ... ){
+    catch( ExceptionSP & e ){
+      exceptionStdErrorToSyslog(e);
     }
     if( post ) bufferSemaphore_.post();
   }
@@ -226,16 +243,25 @@ void LogFile::threadExecute()
   for(;;){
     AutoPtr<char> buffer;
     uintptr_t bufferPos;
+    int64_t ft;
+    {
+      AutoLock<InterlockedMutex> lock(threadMutex_);
+      bufferPos = bufferPos_;
+      ft = bufferDataTTA_ - (gettimeofday() - lastFlushTime_);
+    }
+    if( bufferPos == 0 && !terminated_ ){
+      bufferSemaphore_.wait();
+      continue;
+    }
+    if( bufferPos > 0 && !terminated_ && ft >= 0 ){
+      bufferSemaphore_.timedWait(ft);
+    }
     {
       AutoLock<InterlockedMutex> lock(threadMutex_);
       buffer.xchg(buffer_);
       bufferPos = bufferPos_;
       bufferPos_ = 0;
       bufferSize_ = 0;
-    }
-    if( bufferPos == 0 && !terminated_ ){
-      bufferSemaphore_.wait();
-      continue;
     }
     if( terminated_ && (bufferPos == 0 || exception) ) break;
     if( bufferPos > 0 ){
@@ -256,18 +282,7 @@ void LogFile::threadExecute()
       }
       catch( ExceptionSP & e ){
         exception = true;
-        try {
-          utf8::OemString os(getNameFromPathName(getExecutableName()).getOEMString());
-          utf8::OemString er((getBackTrace(1) + e->stdError()).getOEMString());
-#if HAVE_SYSLOG_H
-          openlog(os,LOG_PID,LOG_DAEMON);
-          syslog(LOG_ERR,er);
-          closelog();
-#endif
-          fprintf(stderr,"%s: %s",(const char * ) os,(const char * ) er);
-	}
-        catch( ... ){
-	}
+        exceptionStdErrorToSyslog(e);
       }
     }
     if( exception ){

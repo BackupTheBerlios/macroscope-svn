@@ -110,7 +110,7 @@ static void saveSectionHelper(
   if( key.strlen() > 0 ){
     utf8::String::Iterator keyIt(key);
     while( !keyIt.eof() ){
-      if( keyIt.isBlank() || keyIt.isCntrl() ){
+      if( keyIt.isBlank() || keyIt.isCntrl() || keyIt.getChar() == '\"' ){
         key = "\"" + screenString(key) + "\"";
         break;
       }
@@ -119,7 +119,7 @@ static void saveSectionHelper(
   }
   utf8::String::Iterator valueIt(value);
   while( !valueIt.eof() ){
-    if( valueIt.isBlank() || valueIt.isCntrl() ){
+    if( valueIt.isBlank() || valueIt.isCntrl() || valueIt.getChar() == '\"' ){
       value = "\"" + screenString(value) + "\"";
       break;
     }
@@ -282,13 +282,13 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         if( screened ){
           screened = false;
           uintptr_t screenLen;
-          utf8::String sc = unScreenChar(aheadi_, screenLen);
-          ahead_.replace(aheadi_, aheadi_ + screenLen + 1, sc);
+          utf8::String sc = unScreenChar(aheadi_,screenLen);
+          ahead_.replace(aheadi_,aheadi_ + screenLen + 1,sc);
         }
         else if( aheadi_.getChar() == '\"' ){
           inQuoted = false;
           aheadi_.next();
-	        prevChar = 0;
+	  prevChar = 0;
           continue;
         }
         else if( aheadi_.getChar() == '\\' ){
@@ -300,13 +300,13 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         ctype = utf8::getC1Type(c = aheadi_.getChar());
         if( commentLevel > 0 ){
           if( prevChar == '*' && c == '/' ) commentLevel--;
-	        prevChar = c;
+	  prevChar = c;
           aheadi_.next();
           t = tt = ttUnknown;
           continue;
         }
         if( (ctype & (C1_SPACE | C1_CNTRL)) != 0 || c == '\r' || c == '\n' ){
-	        prevChar = 0;
+	  prevChar = 0;
           if( tt != ttUnknown ) break;
           aheadi_.next();
           continue;
@@ -339,27 +339,27 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         else if( c == '{' ){
           t = ttLeftBrace;
           maxTokenLen = 1;
-	        c = 0;
+	  c = 0;
         }
         else if( c == '}' ){
           t = ttRightBrace;
           maxTokenLen = 1;
-	        c = 0;
+	  c = 0;
         }
         else if( c == '=' ){
           t = ttEqual;
           maxTokenLen = 1;
-	        c = 0;
+	  c = 0;
         }
-        else if( c == ';' ){
+	else if( c == ';' ){
           t = ttSemicolon;
           maxTokenLen = 1;
-	        c = 0;
+	  c = 0;
         }
         else if( c == ',' ){
           t = ttColon;
           maxTokenLen = 1;
-	        c = 0;
+	  c = 0;
         }
         else if( (ctype & C1_CNTRL) == 0 ){
           if( tt != ttNumeric ||
@@ -368,9 +368,9 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
             t = ttString;
             maxTokenLen = ~uintptr_t(0);
           }
-	        else {
+	  else {
             c = 0;
-	        }
+	  }
         }
         else {
           t = ttUnknown;
@@ -396,14 +396,14 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
 #pragma option pop
 #endif
 //---------------------------------------------------------------------------
-Config & Config::putToken(const utf8::String & s, TokenType tt)
+Config & Config::putToken(const utf8::String & s,TokenType tt)
 {
   switch( tt ){
     case ttQuotedString :
-      ahead_.insert(aheadi_, "\"" + unScreenString(s) + "\"");
+      ahead_.insert(aheadi_,"\"" + screenString(s) + "\"");
       break;
     default :
-      ahead_.insert(aheadi_, s);
+      ahead_.insert(aheadi_,s);
       break;
   }
   return *this;
@@ -422,7 +422,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
       newObject<EConfig>(this, "invalid section param")->throwSP();
     if( param.strlen() > 0 ) param += ",";
     if( tt == ttQuotedString ){
-      param += screenString(token);
+      param += unScreenString(token);
     }
     else {
       param += token;
@@ -478,7 +478,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
     }
     else {
       utf8::String value;
-      for( ; ; ){
+      for(;;){
         // get key values
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
@@ -486,7 +486,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
           newObject<EConfig>(this, "invalid section key value")->throwSP();
         if( value.strlen() > 0 ) value += ",";
         if( tt == ttQuotedString ){
-          value += screenString(token);
+          value += unScreenString(token);
         }
         else {
           value += token;

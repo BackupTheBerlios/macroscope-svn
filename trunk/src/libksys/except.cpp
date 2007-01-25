@@ -76,11 +76,12 @@ void Exception::throwSP()
   if( stdErr.debugLevel(128) && stackBackTrace_ && ksys::stackBackTrace ){
     try {
       utf8::String::Stream stackTrace;
+//      fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
       stackTrace << "\n" <<
 #if __GNUG__
-        getBackTrace(5)
-#else
         getBackTrace(1)
+#else
+        getBackTrace(5)
 #endif
       ;
       if( stackTrace.count() > 1 ) stdErr.debug(128,stackTrace);
