@@ -549,6 +549,8 @@ void Logger::main()
     config_->value("log_file",stdErr.fileName())
   );
 
+  newObject<adicpp::MYSQLDatabase>();
+
   verbose_ = config_->section("macroscope").value("verbose", false);
 
   database_.ptr(Database::newDatabase(config_.ptr()));
