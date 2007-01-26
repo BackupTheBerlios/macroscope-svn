@@ -36,7 +36,7 @@ Message::~Message()
 {
 }
 //------------------------------------------------------------------------------
-Message::Message() :
+Message::Message(int) :
   attributesAutoDrop_(attributes_), residentSize_(0), codePage_(CP_UTF8)
 {
   utf8::String mId(createGUIDAsBase32String());
@@ -44,12 +44,12 @@ Message::Message() :
   attributes_.insert(*newObjectC1C2<Attribute>(messageIdKey,mId));
 }
 //------------------------------------------------------------------------------
-Message::Message(const utf8::String & mId) :
+/*Message::Message(const utf8::String & mId) :
   attributesAutoDrop_(attributes_), residentSize_(0), codePage_(CP_UTF8)
 {
   file_.fileName(getTempPath() + mId + ".msg");
   attributes_.insert(*newObjectC1C2<Attribute>(messageIdKey,mId));
-}
+}*/
 //------------------------------------------------------------------------------
 /*Message::Message(const Message & a) : attributesAutoDrop_(attributes_)
 {

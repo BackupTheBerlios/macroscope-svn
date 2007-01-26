@@ -585,7 +585,7 @@ DSQLParamArray * DSQLParams::castParamToArray(DSQLParam * param, XSQLVAR & v)
       statement_->arrayLookupBounds(v.relname, v.sqlname, newParam->desc_);
     }
     catch( ksys::ExceptionSP & ){
-      delete newParam;
+      deleteObject(newParam);
       throw;
     }
     params_.changeObject(param, newParam);

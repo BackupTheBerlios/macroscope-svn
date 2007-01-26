@@ -66,6 +66,7 @@ class EventHandler {
         void operator = (const EventThread &){}
       protected:
         void threadExecute();
+        void threadBeforeWait();
       public:
         EventThread(EventHandler & eventHandler);
     };

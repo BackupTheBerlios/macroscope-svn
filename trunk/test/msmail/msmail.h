@@ -77,8 +77,8 @@ class Message {
   friend AsyncFile & operator << (AsyncFile & s,const Message & a);
   public:
     ~Message();
-    Message();
-    Message(const utf8::String & mId);
+    Message(int = 0);
+    //Message(const utf8::String & mId);
 
     class Key {
       public:

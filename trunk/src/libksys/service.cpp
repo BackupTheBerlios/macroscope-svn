@@ -312,7 +312,7 @@ Services & Services::clear()
       if( e->code() != ENOSYS ) throw;
     }
     services_[i]->stop();*/
-    delete services_[i];
+    deleteObject(services_[i]);
     services_[i] = NULL;
   }
 #else

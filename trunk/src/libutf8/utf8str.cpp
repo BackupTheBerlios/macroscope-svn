@@ -282,13 +282,13 @@ String & String::resize(uintptr_t bCount)
 //---------------------------------------------------------------------------
 String String::lower() const
 {
-  uintptr_t   l = ksys::strlen(container_->string_);
+  uintptr_t l = ksys::strlen(container_->string_);
   Container * container;
   if( container_.ptr() != &nullContainer() ){
     container = Container::container(l);
     utf8s2Lower(container->string_, l + 1, container_->string_, l + 1);
     if( memcmp(container->string_, container_->string_, l) == 0 ){
-      delete container;
+      deleteObject(container);
       container = container_.ptr();
     }
   }
@@ -300,13 +300,13 @@ String String::lower() const
 //---------------------------------------------------------------------------
 String String::upper() const
 {
-  uintptr_t   l = ksys::strlen(container_->string_);
+  uintptr_t l = ksys::strlen(container_->string_);
   Container * container;
   if( container_.ptr() != &nullContainer() ){
     container = Container::container(l);
     utf8s2Upper(container->string_, l + 1, container_->string_, l + 1);
     if( memcmp(container->string_, container_->string_, l) == 0 ){
-      delete container;
+      deleteObject(container);
       container = container_.ptr();
     }
   }

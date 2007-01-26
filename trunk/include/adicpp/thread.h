@@ -77,7 +77,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Thread : public KsysObject {
+class Thread : virtual public KsysObject {
   friend void initialize(int,char **);
   friend void cleanup();
   public:
@@ -122,7 +122,8 @@ class Thread : public KsysObject {
     static Array<Action> & beforeExecuteActions();
     static Array<Action> & afterExecuteActions();
   protected:
-    virtual void oaBeforeDestruction() { threadBeforeWait(); }
+    void afterConstruction();
+    void beforeDestruction() { threadBeforeWait(); }
     virtual void threadExecute() {}
     virtual void threadBeforeWait() {}
     uintptr_t       stackSize_;
@@ -181,7 +182,6 @@ inline bool Thread::Action::operator ==(const Action & action) const
 //---------------------------------------------------------------------------
 inline Thread::~Thread()
 {
-//  assert(((started_ && finished_) || (!started_ && !finished_)) && handle_ == NULL);
   wait();
 }
 //---------------------------------------------------------------------------

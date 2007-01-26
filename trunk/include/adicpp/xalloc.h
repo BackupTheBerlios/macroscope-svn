@@ -87,22 +87,57 @@ inline void operator delete[](void * ptr)
 //---------------------------------------------------------------------------
 template <typename T> inline void deleteObject(T * object)
 {
-  KsysObjectActions::beforeDestruction(object);
-  delete object;
+  if( object != NULL ){
+    KsysObjectActions::beforeDestruction(object);
+    KsysObjectActions::beforeDestructor(object);
+    object->~T();
+    KsysObjectActions::afterDestructor(object);
+    ksys::kfree(object);
+  }
 }
 //---------------------------------------------------------------------------
 template <typename T> inline void deleteObject(const T * object)
 {
-  KsysObjectActions::beforeDestruction(const_cast<T *>(object));
-  delete object;
+  if( object != NULL ){
+    KsysObjectActions::beforeDestruction(const_cast<T *>(object));
+    KsysObjectActions::beforeDestructor(const_cast<T *>(object));
+    object->~T();
+    KsysObjectActions::afterDestructor(const_cast<T *>(object));
+    ksys::kfree(const_cast<T *>(object));
+  }
 }
 //---------------------------------------------------------------------------
 template <typename T> inline T * newObject()
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T;
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <typename T> inline T * newObject(intptr_t)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe) T;
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <typename T> inline T * newObject(uintptr_t)
+{
+  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe) T;
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -112,9 +147,12 @@ template <
 T * newObjectV1(Param1 p1)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -124,9 +162,12 @@ template <
 T * newObjectR1(Param1 & p1)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -136,9 +177,12 @@ template <
 T * newObjectC1(const Param1 & p1)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -148,9 +192,12 @@ template <
 > inline T * newObjectV1V2(Param1 p1,Param2 p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -160,9 +207,12 @@ template <
 > inline T * newObjectR1V2(Param1 & p1,Param2 p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -172,9 +222,12 @@ template <
 > inline T * newObjectR1R2(Param1 & p1,Param2 & p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -184,9 +237,12 @@ template <
 > inline T * newObjectV1C2(Param1 p1,const Param2 & p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -196,9 +252,12 @@ template <
 > inline T * newObjectR1C2(Param1 & p1,const Param2 & p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -208,9 +267,12 @@ template <
 > inline T * newObjectC1R2(const Param1 & p1,Param2 & p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -220,9 +282,12 @@ template <
 > inline T * newObjectC1C2(const Param1 & p1,const Param2 & p2)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -233,9 +298,12 @@ template <
 > inline T * newObjectR1R2R3(Param1 & p1,Param2 & p2,Param3 & p3)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -246,9 +314,12 @@ template <
 > inline T * newObjectC1C2C3(const Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -259,9 +330,12 @@ template <
 > inline T * newObjectC1V2V3(const Param1 & p1,Param2 p2,Param3 p3)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -272,9 +346,12 @@ template <
 > inline T * newObjectR1C2C3(Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -285,9 +362,12 @@ template <
 > inline T * newObjectC1C2R3(const Param1 & p1,const Param2 & p2,Param3 & p3)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -299,9 +379,12 @@ template <
 > inline T * newObjectR1R2R3R4(Param1 & p1,Param2 & p2,Param3 & p3,Param4 & p4)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3,p4);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -313,9 +396,12 @@ template <
 > inline T * newObjectV1C2C3C4(Param1 p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3,p4);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -327,9 +413,12 @@ template <
 > inline T * newObjectR1C2C3C4(Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3,p4);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -341,9 +430,12 @@ template <
 > inline T * newObjectC1C2C3C4(const Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
   ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  KsysObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe) T(p1,p2,p3,p4);
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return (T *) safe.ptr(NULL);
+  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
+  KsysObjectActions::afterConstructor(safe2.ptr());
+  KsysObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 #endif /* _XAlloc_H_ */

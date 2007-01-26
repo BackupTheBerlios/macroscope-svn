@@ -330,10 +330,13 @@
 #define GNUG_NORETURN
 #define GNUG_NAKED
 #endif
-
 //---------------------------------------------------------------------------
 #ifdef __cplusplus
 extern "C" {
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE__MALLOC_OPTIONS
+extern const char * _malloc_options;
 #endif
 //---------------------------------------------------------------------------
 #if !HAVE_GETPAGESIZE

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -152,6 +152,12 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 #endif
+}
+//---------------------------------------------------------------------------
+void AsyncIoSlave::threadBeforeWait()
+{
+  terminate();
+  post();
 }
 //---------------------------------------------------------------------------
 #if HAVE_KQUEUE
@@ -821,6 +827,12 @@ AsyncOpenFileSlave::AsyncOpenFileSlave()
 {
 }
 //------------------------------------------------------------------------------
+void AsyncOpenFileSlave::threadBeforeWait()
+{
+  terminate();
+  post();
+}
+//---------------------------------------------------------------------------
 bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
@@ -1031,6 +1043,12 @@ void AsyncTimerSlave::transplant(AsyncEvent & request)
   post();
 }
 //------------------------------------------------------------------------------
+void AsyncTimerSlave::threadBeforeWait()
+{
+  terminate();
+  post();
+}
+//---------------------------------------------------------------------------
 void AsyncTimerSlave::threadExecute()
 {
 //  priority(THREAD_PRIORITY_TIME_CRITICAL);
@@ -1122,6 +1140,12 @@ AsyncAcquireSlave::AsyncAcquireSlave()
 #endif
 }
 //------------------------------------------------------------------------------
+void AsyncAcquireSlave::threadBeforeWait()
+{
+  terminate();
+  post();
+}
+//---------------------------------------------------------------------------
 bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
@@ -1313,6 +1337,12 @@ AsyncWin9xDirectoryChangeNotificationSlave::AsyncWin9xDirectoryChangeNotificatio
   }
 }
 //------------------------------------------------------------------------------
+void AsyncWin9xDirectoryChangeNotificationSlave::threadBeforeWait()
+{
+  terminate();
+  post();
+}
+//---------------------------------------------------------------------------
 bool AsyncWin9xDirectoryChangeNotificationSlave::transplant(AsyncEvent & request)
 {
   intptr_t i;
@@ -1435,6 +1465,12 @@ AsyncStackBackTraceSlave::AsyncStackBackTraceSlave()
 {
 }
 //------------------------------------------------------------------------------
+void AsyncStackBackTraceSlave::threadBeforeWait()
+{
+  terminate();
+  post();
+}
+//---------------------------------------------------------------------------
 void AsyncStackBackTraceSlave::transplant(AsyncEvent & request)
 {
   AutoLock<InterlockedMutex> lock(*this);
@@ -1517,44 +1553,44 @@ void AsyncStackBackTraceSlave::threadExecute()
 //------------------------------------------------------------------------------
 Requester::~Requester()
 {
-  intptr_t i;
+//  intptr_t i;
 
   abort();
-  for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
+/*  for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
     ioSlaves_[i].terminate();
     ioSlaves_[i].post();
     ioSlaves_[i].Thread::wait();
-  }
+  }*/
 #if !defined(__WIN32__) && !defined(__WIN64__)
-  for( i = connectSlaves_.count() - 1; i >= 0; i-- ){
+/*  for( i = connectSlaves_.count() - 1; i >= 0; i-- ){
     connectSlaves_[i].terminate();
     connectSlaves_[i].post();
     connectSlaves_[i].Thread::wait();
-  }
+  }*/
 #endif
-  for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
+/*  for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
     ofSlaves_[i].terminate();
     ofSlaves_[i].post();
     ofSlaves_[i].Thread::wait();
-  }
-  for( i = acquireSlaves_.count() - 1; i >= 0; i-- ){
+  }*/
+/*  for( i = acquireSlaves_.count() - 1; i >= 0; i-- ){
     acquireSlaves_[i].terminate();
     acquireSlaves_[i].post();
     acquireSlaves_[i].Thread::wait();
-  }
+  }*/
 #if defined(__WIN32__) || defined(__WIN64__)
-  for( i = wdcnSlaves_.count() - 1; i >= 0; i-- ){
+/*  for( i = wdcnSlaves_.count() - 1; i >= 0; i-- ){
     wdcnSlaves_[i].terminate();
     wdcnSlaves_[i].post();
     wdcnSlaves_[i].Thread::wait();
-  }
+  }*/
 #ifndef NDEBUG
-  if( asyncStackBackTraceSlave_ != NULL ){
+/*  if( asyncStackBackTraceSlave_ != NULL ){
     asyncStackBackTraceSlave_->terminate();
     asyncStackBackTraceSlave_->post();
     asyncStackBackTraceSlave_->Thread::wait();
     asyncStackBackTraceSlave_ = NULL;
-  }
+  }*/
 #endif
 #endif
 }
@@ -1640,7 +1676,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
           for( i = ofSlaves_.count() - 1; i >= 0; i-- )
             if( ofSlaves_[i].finished() ){
-	            ofSlaves_[i].Thread::wait();
+//	            ofSlaves_[i].Thread::wait();
               ofSlaves_.remove(i);
             }
           ofSlavesSweepTime_ = gettimeofday();
@@ -1664,7 +1700,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( gettimeofday() - wdcnSlavesSweepTime_ >= 10000000 ){
           for( i = wdcnSlaves_.count() - 1; i >= 0; i-- )
             if( wdcnSlaves_[i].finished() ){
-	            wdcnSlaves_[i].Thread::wait();
+//	            wdcnSlaves_[i].Thread::wait();
               wdcnSlaves_.remove(i);
             }
           wdcnSlavesSweepTime_ = gettimeofday();
@@ -1696,7 +1732,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
           for( i = ioSlaves_.count() - 1; i >= 0; i-- )
             if( ioSlaves_[i].finished() ){
-              ioSlaves_[i].Thread::wait();
+//              ioSlaves_[i].Thread::wait();
               ioSlaves_.remove(i);
             }
           ioSlavesSweepTime_ = gettimeofday();
@@ -1720,7 +1756,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( gettimeofday() - connectSlavesSweepTime_ >= 10000000 ){
           for( i = connectSlaves_.count() - 1; i >= 0; i-- )
             if( connectSlaves_[i].finished() ){
-              connectSlaves_[i].Thread::wait();
+//              connectSlaves_[i].Thread::wait();
               connectSlaves_.remove(i);
             }
           connectSlavesSweepTime_ = gettimeofday();
@@ -1760,7 +1796,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         if( gettimeofday() - acquireSlavesSweepTime_ >= 10000000 ){
           for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
             if( acquireSlaves_[i].finished() ){
-	            acquireSlaves_[i].Thread::wait();
+//              acquireSlaves_[i].Thread::wait();
               acquireSlaves_.remove(i);
             }
           acquireSlavesSweepTime_ = gettimeofday();

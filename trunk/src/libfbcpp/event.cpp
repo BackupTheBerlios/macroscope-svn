@@ -51,6 +51,12 @@ EventHandler::EventThread::EventThread(EventHandler & eventHandler)
 {
 }
 //---------------------------------------------------------------------------
+void EventHandler::EventThread::threadBeforeWait()
+{
+  terminate();
+  eventHandler_->semaphore_.post();
+}
+//---------------------------------------------------------------------------
 void EventHandler::EventThread::threadExecute()
 {
   try{
@@ -151,10 +157,7 @@ EventHandler & EventHandler::cancel()
 {
   if( attached() ){
     if( thread_ != NULL ){
-      thread_->terminate();
-      semaphore_.post();
-      thread_->wait();
-      delete thread_;
+      deleteObject(thread_);
       thread_ = NULL;
     }
     for( intptr_t i = epbs_.count() - 1; i >= 0; i-- ){

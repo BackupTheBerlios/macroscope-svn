@@ -326,13 +326,13 @@ void ServerFiber::sendMail() // client sending mail
       remainder -= l;
     }
     file.seek(0);
-    msg = newObject<Message>();
+    msg = newObjectV1<msmail::Message>(0);
     file >> msg;
     file.close();
     msg->file().exclusive(true);
   }
   else {
-    msg = newObject<Message>();
+    msg = newObjectV1<Message>(0);
     msg->file().fileName(file.fileName()).createIfNotExist(true).exclusive(true);
     *this >> msg;
   }
@@ -413,7 +413,7 @@ void ServerFiber::processMailbox(
       e->writeStdError();
     }
     if( file.isOpen() && (isNewMessage || !onlyNewMail) ){
-      AutoPtr<Message> message(newObject<Message>());
+      AutoPtr<Message> message(newObjectV1<Message>(0));
       try {
         file >> message;
       }
@@ -563,7 +563,7 @@ void SpoolWalker::processQueue(bool & timeWait)
     }
     try {
       if( file.isOpen() ){
-        AutoPtr<Message> message(newObject<Message>());
+        AutoPtr<Message> message(newObjectV1<Message>(0));
         file >> message;
         utf8::String suser, skey, host;
         splitString(message->value("#Recepient"),suser,skey,"@");

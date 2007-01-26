@@ -255,7 +255,7 @@ void BaseThread::sweepFiber(Fiber * fiber)
     AutoLock<InterlockedMutex> lock(mutex_);
     fibers_.remove(*fiber);
   }
-  delete fiber;
+  deleteObject(fiber);
 #if defined(__WIN32__) || defined(__WIN64__)
   if( (server_->howCloseServer_ & server_->csDWM) != 0 && fibers_.count() == 0 )
     while( PostThreadMessage(mainThreadId,fiberFinishMessage,NULL,NULL) == 0 ) Sleep(1);
@@ -273,6 +273,12 @@ void BaseThread::postEvent(AsyncEvent * event)
   if( events_.count() < 2 ) semaphore_.post();
 }
 //---------------------------------------------------------------------------
+void BaseThread::threadBeforeWait()
+{
+  Thread::terminate();
+  semaphore_.post();
+}
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 BaseServer::~BaseServer()
@@ -302,14 +308,11 @@ void BaseServer::sweepThreads()
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
     thread->mutex_.acquire();
     if( thread->fibers_.count() == 0 ){
-      thread->mutex_.release();
-      thread->Thread::terminate();
-      thread->semaphore_.post();
       thread->wait();
       assert( thread->Thread::finished() );
       btp = btp->next();
       threads_.remove(*thread);
-      delete thread;
+      deleteObject(thread);
     }
     else {
       thread->mutex_.release();

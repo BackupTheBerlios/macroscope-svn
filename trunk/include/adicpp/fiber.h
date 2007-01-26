@@ -31,7 +31,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Fiber {
+class Fiber : virtual public KsysObject {
   friend void initialize(int,char **);
   friend void cleanup();
   friend class BaseThread;
@@ -211,6 +211,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #endif
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
   protected:
+    void threadBeforeWait();
   private:
     AsyncIoSlave(const AsyncIoSlave &){}
     void operator = (const AsyncIoSlave &){}
@@ -243,6 +244,7 @@ class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMu
 
     bool transplant(AsyncEvent & requests);
   protected:
+    void threadBeforeWait();
   private:
     AsyncOpenFileSlave(const AsyncOpenFileSlave &){}
     void operator = (const AsyncOpenFileSlave &){}
@@ -262,6 +264,7 @@ class AsyncTimerSlave : public Thread, public Semaphore, public InterlockedMutex
     void transplant(AsyncEvent & requests);
     void abortTimer();
   protected:
+    void threadBeforeWait();
   private:
     AsyncTimerSlave(const AsyncTimerSlave &){}
     void operator = (const AsyncTimerSlave &){}
@@ -280,6 +283,7 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
 
     bool transplant(AsyncEvent & requests);
   protected:
+    void threadBeforeWait();
   private:
     AsyncAcquireSlave(const AsyncAcquireSlave &){}
     void operator = (const AsyncAcquireSlave &){}
@@ -306,6 +310,7 @@ class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semapho
     bool transplant(AsyncEvent & requests);
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
   protected:
+    void threadBeforeWait();
   private:
     AsyncWin9xDirectoryChangeNotificationSlave(const AsyncAcquireSlave &){}
     void operator = (const AsyncWin9xDirectoryChangeNotificationSlave &){}
@@ -330,6 +335,7 @@ class AsyncStackBackTraceSlave : public Thread, public Semaphore, public Interlo
 
     void transplant(AsyncEvent & requests);
   protected:
+    void threadBeforeWait();
   private:
     AsyncStackBackTraceSlave(const AsyncStackBackTraceSlave &){}
     void operator = (const AsyncStackBackTraceSlave &){}
@@ -445,6 +451,7 @@ class BaseThread : public Thread, public Fiber {
     const uintptr_t & maxFibersPerThread() const;
     BaseThread & maxFibersPerThread(uintptr_t mfpt);
   protected:
+    void threadBeforeWait();
   private:
     BaseServer * server_;
     Semaphore semaphore_;
