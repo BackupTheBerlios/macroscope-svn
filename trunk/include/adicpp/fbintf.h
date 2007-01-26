@@ -497,7 +497,7 @@ class API {
     ksys::InterlockedMutex &  mutex();
     uintptr_t                 count_;
 
-    utf8::String              API::tryOpen();
+    utf8::String              tryOpen();
 
     static const char * const symbols_[];
 #endif
@@ -523,3 +523,4 @@ bool  iscIsFatalError(const ISC_STATUS_ARRAY status);
 } // namespace fbcpp
 //---------------------------------------------------------------------------
 #endif /* _fbintf_H_ */
+//---------------------------------------------------------------------------

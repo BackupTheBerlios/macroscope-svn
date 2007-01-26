@@ -36,7 +36,7 @@ Message::~Message()
 {
 }
 //------------------------------------------------------------------------------
-Message::Message(int) :
+Message::Message() :
   attributesAutoDrop_(attributes_), residentSize_(0), codePage_(CP_UTF8)
 {
   utf8::String mId(createGUIDAsBase32String());

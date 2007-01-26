@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,6 @@
 namespace fbcpp {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
 class SPB {
   friend class Service;
@@ -72,6 +71,14 @@ class SPB {
 //---------------------------------------------------------------------------
 class ServiceRequest {
   friend class Service;
+  public:
+    ~ServiceRequest();
+    ServiceRequest();
+
+    ServiceRequest &  clear();
+    ServiceRequest &  add(const utf8::String & name, const ksys::Mutant & value = ksys::Mutant());
+    // properties
+  protected:
   private:
 #ifdef _MSC_VER
 #pragma pack(push)
@@ -80,8 +87,8 @@ class ServiceRequest {
 #pragma option push -a1
 #endif
     struct PACKED RequestParam {
-        const char *  name_;
-        char          number;
+      const char *  name_;
+      char          number;
     };
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -98,21 +105,16 @@ class ServiceRequest {
     ServiceRequest &  writeLong(uintptr_t a);
     intptr_t          writeISCCode(const utf8::String & name);
     ServiceRequest &  writeBuffer(const void * buf, uintptr_t size);
-  public:
-                      ServiceRequest();
-                      ~ServiceRequest();
-
-    ServiceRequest &  clear();
-    ServiceRequest &  add(const utf8::String & name, const ksys::Mutant & value = ksys::Mutant());
-    // properties
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Service : virtual public Base {
   public:
-    virtual               ~Service();
-                          Service();
+    virtual ~Service();
+    Service();
+
+    void beforeDestruction() { detach(); }
 
     Service &             attach(const utf8::String & name);
     Service &             detach();
@@ -164,3 +166,4 @@ inline const utf8::String & Service::name()
 } // namespace fbcpp
 //---------------------------------------------------------------------------
 #endif /* _fbdb_H_ */
+//---------------------------------------------------------------------------

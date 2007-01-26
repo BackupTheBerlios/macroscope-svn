@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,11 +44,13 @@ enum FieldType {
   ftUnknown
 };
 //---------------------------------------------------------------------------
-class Statement {
+class Statement : virtual public ksys::Object {
   public:
     virtual ~Statement() {}
-    //    Statement();
+    Statement() {}
 
+    void beforeDestruction() { detach(); }
+    
     virtual Statement *                 attach(Database & database) = 0;
     virtual Statement *                 detach() = 0;
     virtual bool                        attached() = 0;
@@ -125,6 +127,8 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
     virtual ~FirebirdStatement();
     FirebirdStatement();
 
+    void beforeDestruction() { detach(); }
+
     FirebirdStatement * attach(Database & database);
     FirebirdStatement * detach();
     bool                attached();
@@ -179,6 +183,8 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
   public:
     ~MYSQLStatement();
     MYSQLStatement();
+
+    void beforeDestruction() { detach(); }
 
     MYSQLStatement *  attach(Database & database);
     MYSQLStatement *  detach();

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,9 +39,6 @@ inline int64_t str2Time(const utf8::String & s)
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class MYSQL_BIND_Holder {
-  private:
-    MYSQL_BIND *  bind_;
-    uintptr_t     count_;
   public:
     ~MYSQL_BIND_Holder();
     MYSQL_BIND_Holder();
@@ -50,6 +47,9 @@ class MYSQL_BIND_Holder {
     // properties
     MYSQL_BIND * const &  bind();
     const uintptr_t &     count();
+  private:
+    MYSQL_BIND *  bind_;
+    uintptr_t     count_;
 };
 //---------------------------------------------------------------------------
 inline MYSQL_BIND_Holder::MYSQL_BIND_Holder() : bind_(NULL), count_(0)
@@ -361,15 +361,17 @@ inline const MYSQL_FIELD & DSQLValues::field(uintptr_t i)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement {
-    friend class Database;
-    friend class Transaction;
-    friend class DSQLParams;
-    friend class DSQLValues;
+class DSQLStatement : virtual public ksys::Object {
+  friend class Database;
+  friend class Transaction;
+  friend class DSQLParams;
+  friend class DSQLValues;
   public:
-                    ~DSQLStatement();
-                    DSQLStatement();
+    virtual ~DSQLStatement();
+    DSQLStatement();
 
+    void beforeDestruction() { detach(); }
+    
     DSQLStatement & attach(Database & database);
     DSQLStatement & detach();
 
@@ -542,3 +544,4 @@ inline utf8::String DSQLStatement::valueAsString(const utf8::String & name)
 } // namespace mycpp
 //---------------------------------------------------------------------------
 #endif /* _myst_H_ */
+//---------------------------------------------------------------------------

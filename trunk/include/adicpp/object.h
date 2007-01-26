@@ -27,33 +27,34 @@
 #ifndef objectH
 #define objectH
 //---------------------------------------------------------------------------
-namespace ksys {
+namespace utf8 {
+class String;
+}
 //---------------------------------------------------------------------------
-template <typename T> class ObjectActionsT;
+namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T>
-class ObjectT {
-  friend class ObjectActionsT<T>;
+class Object {
+  friend class ObjectActions;
   public:
-    virtual ~ObjectT();
-    ObjectT();
+    virtual ~Object() {}
+    Object() {}
     
 // actions
     virtual void afterConstruction() {}
     virtual void beforeDestruction() {}
     
 // methods
-    virtual ObjectT<T> * newObject() { return NULL; }
-    virtual ObjectT<T> * cloneObject() { return NULL; }
-    virtual T className() const { return "Object"; }
-    virtual T classId() const; // see body in sysutils.h
-    virtual T objectName() const { return ""; }
-    virtual T objectId() const { return ""; }
+    virtual Object * createObject() { return NULL; }
+    virtual Object * cloneObject() { return NULL; }
+    virtual utf8::String className() const;
+    virtual utf8::String classId() const;
+    virtual utf8::String objectName() const;
+    virtual utf8::String objectId() const;
   protected:
-    ObjectT(const ObjectT<T> &);
-    ObjectT<T> & operator = (const ObjectT<T> & a);
+    Object(const Object &) {}
+    Object & operator = (const Object & a) { return *this; }
     
     struct {
       uint8_t heap_ : 1; // 1 if memory for object allocated in heap instead of stack or BSS
@@ -67,33 +68,9 @@ class ObjectT {
   private:
 };
 //---------------------------------------------------------------------------
-template <typename T> inline
-ObjectT<T>::~ObjectT()
-{
-}
-//---------------------------------------------------------------------------
-template <typename T> inline
-ObjectT<T>::ObjectT()
-{
-}
-//---------------------------------------------------------------------------
-template <typename T> inline
-ObjectT<T>::ObjectT(const ObjectT<T> &)
-{
-}
-//---------------------------------------------------------------------------
-template <typename T> inline
-ObjectT<T> & ObjectT<T>::operator = (const ObjectT<T> &)
-{
-  return *this;
-}
-//---------------------------------------------------------------------------
-#define KsysObject ksys::ObjectT<utf8::String>
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T>
-class ObjectActionsT {
+class ObjectActions {
   public:
     static void beforeConstructor(void *) {}
     static void afterConstructor(void *) {}
@@ -102,59 +79,57 @@ class ObjectActionsT {
     static void afterConstruction(void *) {}
     static void beforeDestruction(void *) {}
 
-    static void beforeConstructor(ObjectT<T> * object);
-    static void afterConstructor(ObjectT<T> * object);
-    static void beforeDestructor(ObjectT<T> * object);
-    static void afterDestructor(ObjectT<T> * object);
-    static void afterConstruction(ObjectT<T> * object);
-    static void beforeDestruction(ObjectT<T> * object);
+    static void beforeConstructor(Object * object);
+    static void afterConstructor(Object * object);
+    static void beforeDestructor(Object * object);
+    static void afterDestructor(Object * object);
+    static void afterConstruction(Object * object);
+    static void beforeDestruction(Object * object);
 };
 //---------------------------------------------------------------------------
-template <typename T> inline
-void ObjectActionsT<T>::beforeConstructor(ObjectT<T> * object)
+inline void ObjectActions::beforeConstructor(Object * object)
 {
-  memset(object,0,sizeof(ObjectT<T>));
-  object->heap_ = true;
-  object->constructor_ = true;
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+//  memset(object,0,sizeof(Object));
+//  object->heap_ = true;
+//  object->constructor_ = true;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-void ObjectActionsT<T>::afterConstructor(ObjectT<T> * object)
+inline void ObjectActions::afterConstructor(Object * object)
 {
-  object->constructor_ = false;
-  object->constructed_ = true;
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+//  object->constructor_ = false;
+//  object->constructed_ = true;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-void ObjectActionsT<T>::beforeDestructor(ObjectT<T> * object)
+inline void ObjectActions::beforeDestructor(Object * object)
 {
-  object->destructor_ = true;
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+//  object->destructor_ = true;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-void ObjectActionsT<T>::afterDestructor(ObjectT<T> * object)
+inline void ObjectActions::afterDestructor(Object * object)
 {
-  object->destructor_ = false;
-  object->destructed_ = true;
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+//  object->destructor_ = false;
+//  object->destructed_ = true;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-void ObjectActionsT<T>::afterConstruction(ObjectT<T> * object)
+inline void ObjectActions::afterConstruction(Object * object)
 {
-  object->afterConstruction_ = true;
-  object->afterConstruction();
-  object->afterConstruction_ = false;
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+//  object->afterConstruction_ = true;
+//  object->afterConstruction();
+//  object->afterConstruction_ = false;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-void ObjectActionsT<T>::beforeDestruction(ObjectT<T> * object)
+inline void ObjectActions::beforeDestruction(Object * object)
 {
-  object->beforeDestruction_ = true;
-  object->beforeDestruction();
-  object->beforeDestruction_ = false;
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+//  object->beforeDestruction_ = true;
+//  object->beforeDestruction();
+//  object->beforeDestruction_ = false;
 }
-//---------------------------------------------------------------------------
-#define KsysObjectActions ksys::ObjectActionsT<utf8::String>
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

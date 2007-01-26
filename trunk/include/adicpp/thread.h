@@ -77,7 +77,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Thread : virtual public KsysObject {
+class Thread : virtual public Object {
   friend void initialize(int,char **);
   friend void cleanup();
   public:

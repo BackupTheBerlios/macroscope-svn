@@ -30,38 +30,33 @@ namespace adicpp {
 //---------------------------------------------------------------------------
 Database * Database::newDatabase(ksys::Config * config)
 {
-  ksys::Config  lconfig;
-  if( config == NULL ) config = &lconfig;
+  ksys::Config lconfig;
+  if( config == NULL ) config = &lconfig.silent(true);
   config->parse().override();
-  const ksys::ConfigSection & section = config->section("libadicpp").section("default_connection");
-  utf8::String stype(section.value("server_type","MYSQL"));
-  if( stype.strcasecmp("FIREBIRD") == 0 ){
-    FirebirdDatabase * p = newObject<FirebirdDatabase>();
-    ksys::AutoPtr< FirebirdDatabase> fb(p);
-    const ksys::ConfigSection & section2  = section.section("firebird");
-    p->name(ksys::unScreenString(section2.value("database")));
-    p->params().add("user_name", section2.value("user", "sysdba"));
-    p->params().add("password", section2.value("password", "masterkey"));
-    p->params().add("role", section2.value("role"));
-    p->params().add("dialect", section2.value("dialect"));
-    p->params().add("page_size", section2.value("page_size"));
-    p->params().add("lc_ctype", section2.value("default_charset"));
-    p->params().add("lc_messages", section2.value("messages_charset"));
-    fb.ptr(NULL);
-    return p;
+  utf8::String stype0(config->valueByPath("libadicpp.default_connection.server_type","MYSQL"));
+  utf8::String stype(stype0.lower());
+  utf8::String section("libadicpp.default_connection." + stype);
+  if( stype.strcasecmp("firebird") == 0 ){
+    ksys::AutoPtr<FirebirdDatabase> p(newObject<FirebirdDatabase>());
+    p->name(config->valueByPath(section + ".database"));
+    p->params().add("user_name",config->valueByPath(section + ".user","sysdba"));
+    p->params().add("password",config->valueByPath(section + ".password","masterkey"));
+    p->params().add("role",config->valueByPath(section + ".role"));
+    p->params().add("dialect",config->valueByPath(section + ".dialect"));
+    p->params().add("page_size",config->valueByPath(section + ".page_size"));
+    p->params().add("lc_ctype",config->valueByPath(section + ".default_charset"));
+    p->params().add("lc_messages",config->valueByPath(section + ".messages_charset"));
+    return p.ptr(NULL);
   }
   if( stype.strcasecmp("MYSQL") == 0 ){
-    MYSQLDatabase * p = newObject<MYSQLDatabase>();
-    ksys::AutoPtr< MYSQLDatabase> my(p);
-    const ksys::ConfigSection & section2  = section.section("mysql");
-    p->name(ksys::unScreenString(section2.value("database")));
-    p->params().add("user_name", section2.value("user", "root"));
-    p->params().add("password", section2.value("password"));
-    p->params().add("protocol", section2.value("protocol"));
-    my.ptr(NULL);
-    return p;
+    ksys::AutoPtr<MYSQLDatabase> p(newObject<MYSQLDatabase>());
+    p->name(config->valueByPath(section + ".database"));
+    p->params().add("user_name",config->valueByPath(section + ".user","root"));
+    p->params().add("password",config->valueByPath(section + ".password"));
+    p->params().add("protocol",config->valueByPath(section + ".protocol"));
+    return p.ptr(NULL);
   }
-  newObjectV1C2<ksys::Exception>(EINVAL, "unknown or unsupported server type")->throwSP();
+  newObjectV1C2<ksys::Exception>(EINVAL,"unknown or unsupported server type: " + stype0)->throwSP();
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------

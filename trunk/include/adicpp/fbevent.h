@@ -32,7 +32,7 @@ namespace fbcpp {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class EPB {
-    friend class EventHandler;
+  friend class EventHandler;
   public:
     ~EPB();
     EPB();
@@ -57,23 +57,12 @@ inline EPB::EPB() : eventHandler_(NULL)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class EventHandler {
-  private:
-    class EventThread : public ksys::Thread {
-      private:
-        EventHandler * eventHandler_;
-        EventThread(const EventThread &){}
-        void operator = (const EventThread &){}
-      protected:
-        void threadExecute();
-        void threadBeforeWait();
-      public:
-        EventThread(EventHandler & eventHandler);
-    };
-    friend class EventThread;
+class EventHandler : virtual public ksys::Object {
   public:
     virtual ~EventHandler();
     EventHandler();
+    
+    void beforeDestruction() { detach(); }
 
     EventHandler &          attach(Database & database);
     EventHandler &          detach();
@@ -88,12 +77,26 @@ class EventHandler {
     // properties
     bool                    attached();
   protected:
-    static void eventFunction(EPB * epb, short length, char * updated);
+    class EventThread : public ksys::Thread {
+      public:
+        virtual ~EventThread() {}
+        EventThread(EventHandler & eventHandler);
+      protected:
+        void threadExecute();
+        void threadBeforeWait();
+      private:
+        EventHandler * eventHandler_;
+        EventThread(const EventThread &){}
+        void operator = (const EventThread &){}
+    };
+    friend class EventThread;
+
     Database * database_;
     EventThread * thread_;
     ksys::Vector<EPB>  epbs_;
     ksys::Semaphore semaphore_;
 
+    static void eventFunction(EPB * epb, short length, char * updated);
     void execute();
     virtual EventHandler & eventHandler(const utf8::String & eventName, uintptr_t eventCount);
   private:
@@ -107,3 +110,4 @@ inline bool EventHandler::attached()
 } // namespace fbcpp
 //---------------------------------------------------------------------------
 #endif /* _fbdb_H_ */
+//---------------------------------------------------------------------------

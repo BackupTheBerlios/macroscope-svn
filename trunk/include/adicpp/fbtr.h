@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,9 +39,9 @@ namespace fbcpp {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 struct PACKED ISC_TEB {
-    isc_db_handle * db_ptr;
-    uintptr_t       tpb_len;
-    char *          tpb_ptr;
+  isc_db_handle * db_ptr;
+  uintptr_t       tpb_len;
+  char *          tpb_ptr;
 };
 //---------------------------------------------------------------------------
 #ifdef _MSC_VER
@@ -53,7 +53,7 @@ struct PACKED ISC_TEB {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class TPB {
-    friend class Transaction;
+  friend class Transaction;
   public:
     ~TPB();
     TPB();
@@ -63,6 +63,8 @@ class TPB {
     TPB & add(const utf8::String & name, const utf8::String & tableName);
   protected:
   private:
+    TPB(const TPB &);
+    void operator = (const TPB &);
 #ifdef _MSC_VER
 #pragma pack(push)
 #pragma pack(1)
@@ -70,8 +72,8 @@ class TPB {
 #pragma option push -a1
 #endif
     struct PACKED TPBParam {
-        const char *  name_;
-        char          number;
+      const char *  name_;
+      char          number;
     };
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -89,14 +91,17 @@ class TPB {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Transaction : virtual public Base {
-    friend class Database;
-    friend class DSQLStatement;
+  friend class Database;
+  friend class DSQLStatement;
   public:
-    virtual         ~Transaction();
-                    Transaction();
-
+    virtual ~Transaction();
+    Transaction();
+    
     Transaction &   attach(Database & database);
     Transaction &   detach(Database & database);
+    Transaction &   detach();
+
+    void beforeDestruction() { detach(); }
 
     Transaction &   start();
     Transaction &   prepare();
@@ -145,3 +150,4 @@ inline bool Transaction::active()
 } // namespace fbcpp
 //---------------------------------------------------------------------------
 #endif /* _fbtr_H_ */
+//---------------------------------------------------------------------------

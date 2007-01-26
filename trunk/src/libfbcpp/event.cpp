@@ -104,8 +104,13 @@ void EventHandler::execute()
       }
     }
     ISC_STATUS_ARRAY status;
-    if( api.isc_que_events(status, &epb.eventHandler_->database_->handle_, &epb.eventId_, (short) epb.resultBufferLen_, epb.eventBuffer_, (isc_callback) epb.eventHandler_->eventFunction, &epb) != 0 )
-      break;
+    if( api.isc_que_events(status,
+          &epb.eventHandler_->database_->handle_,
+	  &epb.eventId_,
+	  (short) epb.resultBufferLen_,
+	  epb.eventBuffer_,
+	  (isc_callback) epb.eventHandler_->eventFunction,
+	  &epb) != 0 ) break;
   }
 }
 //---------------------------------------------------------------------------

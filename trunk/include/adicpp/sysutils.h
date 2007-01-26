@@ -371,12 +371,6 @@ utf8::String getTimeString(int64_t t);
 int64_t timeFromTimeCodeString(const utf8::String & s,bool local = true);
 utf8::String getTimeCode(int64_t t);
 //---------------------------------------------------------------------------
-template <typename T> inline
-T ObjectT<T>::classId() const
-{
-  return guidToBase32(stringToGUID("e7e7f370-ac63-11db-8f3d-0011d8946e25"));
-}
-//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
 #endif /* _Sysutils_H_ */

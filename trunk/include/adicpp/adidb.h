@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,12 +33,12 @@ namespace adicpp {
 //---------------------------------------------------------------------------
 class Statement;
 //---------------------------------------------------------------------------
-class Database {
+class Database : virtual public ksys::Object {
   public:
-    virtual ~Database()
-    {
-    }
-    //    Database();
+    virtual ~Database() {}
+    Database() {}
+
+    void beforeDestruction() { detach(); }
 
     static Database *     newDatabase(ksys::Config * config = NULL);
 
@@ -78,8 +78,10 @@ class Database {
 //---------------------------------------------------------------------------
 class FirebirdDatabase : public Database, public fbcpp::Database, public fbcpp::Transaction {
   public:
-    virtual             ~FirebirdDatabase();
-                        FirebirdDatabase();
+    virtual ~FirebirdDatabase();
+    FirebirdDatabase();
+
+    void beforeDestruction() { detach(); }
 
     Statement *         newStatement();
     Statement *         newAttachedStatement();
@@ -110,8 +112,10 @@ class FirebirdDatabase : public Database, public fbcpp::Database, public fbcpp::
 //---------------------------------------------------------------------------
 class MYSQLDatabase : public Database, public mycpp::Database, public mycpp::Transaction {
   public:
-    virtual         ~MYSQLDatabase();
-                    MYSQLDatabase();
+    virtual ~MYSQLDatabase();
+    MYSQLDatabase();
+
+    void beforeDestruction() { detach(); }
 
     Statement *     newStatement();
     Statement *     newAttachedStatement();

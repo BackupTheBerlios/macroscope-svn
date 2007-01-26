@@ -56,22 +56,18 @@ DPB & DPB::add(const utf8::String & name, const ksys::Mutant & value)
 //---------------------------------------------------------------------------
 Database::~Database()
 {
-  if( transaction_ != NULL )
-    transaction_->detach();
+  if( transaction_ != NULL ) transaction_->detach();
   detach();
 }
 //---------------------------------------------------------------------------
-Database::Database()
-  : handle_(NULL),
-    transaction_(NULL)
+Database::Database() : handle_(NULL),  transaction_(NULL)
 {
   dsqlStatements_.ownsObjects(false);
 }
 //---------------------------------------------------------------------------
 Database & Database::allocHandle(MYSQL *& handle)
 {
-  if( handle == NULL )
-    handle = api.mysql_init(NULL);
+  if( handle == NULL ) handle = api.mysql_init(NULL);
   if( handle == NULL )
     exceptionHandler(newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__));
   return *this;
@@ -145,8 +141,7 @@ Database & Database::drop()
   if( !attached() )
     exceptionHandler(newObjectV1C2<EDBNotAttached>(EINVAL, __PRETTY_FUNCTION__));
   if( transaction_ != NULL )
-    while( transaction_->active() )
-      transaction_->rollback();
+    while( transaction_->active() ) transaction_->rollback();
   for( intptr_t  i = dsqlStatements_.count() - 1; i >= 0; i-- )
     dsqlStatements_.objectOfIndex(i)->free();
   if( api.mysql_query(handle_, (utf8::String("DROP DATABASE ") + handle_->db).c_str()) != 0 )
@@ -203,8 +198,7 @@ Database & Database::attach(const utf8::String & name)
       api.close();
       throw;
     }
-    if( name.strlen() > 0 )
-      name_ = name;
+    if( name.strlen() > 0 ) name_ = name;
   }
   return *this;
 }
@@ -213,8 +207,7 @@ Database & Database::detach()
 {
   if( attached() ){
     if( transaction_ != NULL )
-      while( transaction_->active() )
-        transaction_->rollback();
+      while( transaction_->active() ) transaction_->rollback();
     for( intptr_t  i = dsqlStatements_.count() - 1; i >= 0; i-- )
       dsqlStatements_.objectOfIndex(i)->free();
     freeHandle(handle_);

@@ -124,8 +124,7 @@ Transaction::Transaction()
 //---------------------------------------------------------------------------
 Transaction::~Transaction()
 {
-  for( intptr_t i = databases_.count() - 1; i >= 0; i-- )
-    detach(*databases_[i]);
+  detach();
   while( dsqlStatements_.count() > 0 ){
     DSQLStatement * dsqlStatement = dsqlStatements_.objectOfIndex(0);
     dsqlStatement->free();
@@ -136,8 +135,8 @@ Transaction::~Transaction()
 //---------------------------------------------------------------------------
 Transaction & Transaction::attach(Database & database)
 {
-  utf8::String  dbKey (utf8::ptr2Str(&database));
-  tpbs_.add(newObject<TPB>(), dbKey);
+  utf8::String dbKey(utf8::ptr2Str(&database));
+  tpbs_.add(newObject<TPB>(),dbKey);
   try{
 #if __GNUG__
     databases_.add(&database);
@@ -165,14 +164,23 @@ Transaction & Transaction::attach(Database & database)
 //---------------------------------------------------------------------------
 Transaction & Transaction::detach(Database & database)
 {
-  while( active() )
-    rollback();
+  while( active() ) rollback();
   tpbs_.removeByKey(utf8::ptr2Str(&database));
   database.transactions_.removeByObject(this);
 #if __GNUG__
   databases_.remove(databases_.search(&database));
 #else  
   databases_.removeByObject(&database);
+#endif
+  return *this;
+}
+//---------------------------------------------------------------------------
+Transaction & Transaction::detach()
+{
+#if __GNUG__
+  while( databases_.count() > 0 ) detach(*databases_[0]);
+#else  
+  while( databases_.count() > 0 ) detach(*databases_.objectOfIndex(0));
 #endif
   return *this;
 }

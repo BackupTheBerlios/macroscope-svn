@@ -41,13 +41,13 @@ template <typename T> inline void xchg(T & v1, T & v2)
 }
 //---------------------------------------------------------------------------
 #include "lconfig.h"
-#include "atomic.h"
 #include "object.h"
+#include "xalloc.h"
+#include "atomic.h"
 #include "bits.h"
 #include "autoptr.h"
 #include "sp.h"
 #include "utf8str.h"
-#include "xalloc.h"
 #include "xtime.h"
 #include "rnd.h"
 #include "tlv.h"

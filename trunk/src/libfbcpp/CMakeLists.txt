@@ -1,4 +1,5 @@
 ADD_LIBRARY(fbcpp STATIC
+  tr.cpp
   db.cpp
   ecs.cpp
   event.cpp
@@ -8,5 +9,4 @@ ADD_LIBRARY(fbcpp STATIC
   stparam.cpp
   stvalue.cpp
   svc.cpp
-  tr.cpp
 )

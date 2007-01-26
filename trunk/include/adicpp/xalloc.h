@@ -88,10 +88,10 @@ inline void operator delete[](void * ptr)
 template <typename T> inline void deleteObject(T * object)
 {
   if( object != NULL ){
-    KsysObjectActions::beforeDestruction(object);
-    KsysObjectActions::beforeDestructor(object);
+    ksys::ObjectActions::beforeDestruction(object);
+    ksys::ObjectActions::beforeDestructor(object);
     object->~T();
-    KsysObjectActions::afterDestructor(object);
+    ksys::ObjectActions::afterDestructor(object);
     ksys::kfree(object);
   }
 }
@@ -99,44 +99,40 @@ template <typename T> inline void deleteObject(T * object)
 template <typename T> inline void deleteObject(const T * object)
 {
   if( object != NULL ){
-    KsysObjectActions::beforeDestruction(const_cast<T *>(object));
-    KsysObjectActions::beforeDestructor(const_cast<T *>(object));
-    object->~T();
-    KsysObjectActions::afterDestructor(const_cast<T *>(object));
+    ksys::ObjectActions::beforeDestruction(const_cast<T *>(object));
+    ksys::ObjectActions::beforeDestructor(const_cast<T *>(object));
+    const_cast<T *>(object)->~T();
+    ksys::ObjectActions::afterDestructor(const_cast<T *>(object));
     ksys::kfree(const_cast<T *>(object));
   }
 }
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T>
+class XAutoPtr {
+  public:
+    ~XAutoPtr() { deleteObject(ptr_); }
+    XAutoPtr(T * ptr) : ptr_(ptr) {}
+
+    T * operator ->() const { return ptr_; }
+    
+    T * ptr() const { return ptr_; }
+    T * ptr(T * ptr) const { ksys::xchg(ptr_,ptr); return ptr; }
+  protected:
+  private:
+    mutable T * ptr_;
+};
+//---------------------------------------------------------------------------
 template <typename T> inline T * newObject()
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T;
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
-  return safe2.ptr(NULL);
-}
-//---------------------------------------------------------------------------
-template <typename T> inline T * newObject(intptr_t)
-{
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T;
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
-  return safe2.ptr(NULL);
-}
-//---------------------------------------------------------------------------
-template <typename T> inline T * newObject(uintptr_t)
-{
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T;
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+//  fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor(reinterpret_cast<T *>(safe.ptr()));
+  new (safe.ptr()) T;
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -146,12 +142,13 @@ template <
 > inline
 T * newObjectV1(Param1 p1)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -161,12 +158,13 @@ template <
 > inline
 T * newObjectR1(Param1 & p1)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -176,12 +174,13 @@ template <
 > inline
 T * newObjectC1(const Param1 & p1)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -191,12 +190,13 @@ template <
   typename Param2
 > inline T * newObjectV1V2(Param1 p1,Param2 p2)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -206,12 +206,13 @@ template <
   typename Param2
 > inline T * newObjectR1V2(Param1 & p1,Param2 p2)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -221,12 +222,13 @@ template <
   typename Param2
 > inline T * newObjectR1R2(Param1 & p1,Param2 & p2)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -236,12 +238,13 @@ template <
   typename Param2
 > inline T * newObjectV1C2(Param1 p1,const Param2 & p2)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -251,12 +254,13 @@ template <
   typename Param2
 > inline T * newObjectR1C2(Param1 & p1,const Param2 & p2)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -266,12 +270,13 @@ template <
   typename Param2
 > inline T * newObjectC1R2(const Param1 & p1,Param2 & p2)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -281,12 +286,13 @@ template <
   typename Param2
 > inline T * newObjectC1C2(const Param1 & p1,const Param2 & p2)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -297,12 +303,13 @@ template <
   typename Param3
 > inline T * newObjectR1R2R3(Param1 & p1,Param2 & p2,Param3 & p3)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -313,12 +320,13 @@ template <
   typename Param3
 > inline T * newObjectC1C2C3(const Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -329,12 +337,13 @@ template <
   typename Param3
 > inline T * newObjectC1V2V3(const Param1 & p1,Param2 p2,Param3 p3)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -345,12 +354,13 @@ template <
   typename Param3
 > inline T * newObjectR1C2C3(Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -361,12 +371,13 @@ template <
   typename Param3
 > inline T * newObjectC1C2R3(const Param1 & p1,const Param2 & p2,Param3 & p3)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -378,12 +389,13 @@ template <
   typename Param4
 > inline T * newObjectR1R2R3R4(Param1 & p1,Param2 & p2,Param3 & p3,Param4 & p4)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3,p4);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3,p4);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -395,12 +407,13 @@ template <
   typename Param4
 > inline T * newObjectV1C2C3C4(Param1 p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3,p4);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3,p4);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -412,12 +425,13 @@ template <
   typename Param4
 > inline T * newObjectR1C2C3C4(Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3,p4);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3,p4);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -429,12 +443,13 @@ template <
   typename Param4
 > inline T * newObjectC1C2C3C4(const Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
-  ksys::AutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-  KsysObjectActions::beforeConstructor((T *) safe.ptr());
-  new (safe) T(p1,p2,p3,p4);
-  ksys::AutoPtr<T> safe2((T *) safe.ptr(NULL));
-  KsysObjectActions::afterConstructor(safe2.ptr());
-  KsysObjectActions::afterConstruction(safe2.ptr());
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  //fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3,p4);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------

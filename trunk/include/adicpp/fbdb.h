@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,18 +28,20 @@
 #define fbdbH
 //---------------------------------------------------------------------------
 namespace fbcpp {
-
+//---------------------------------------------------------------------------
+class Transaction;
+class DSQLStatement;
+class EventHandler;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Base {
-    friend class EClientServer;
+class Base : virtual public ksys::Object {
+  friend class EClientServer;
   public:
-    virtual ~Base()
-    {
-    }
+    virtual ~Base() {}
+    Base() {}
   protected:
-    virtual void  exceptionHandler(ksys::Exception * e) = 0;
+    virtual void exceptionHandler(ksys::Exception * e) = 0;
   private:
 };
 //---------------------------------------------------------------------------
@@ -146,14 +148,16 @@ inline const utf8::String & DPB::charset() const
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Database : virtual public Base {
-    friend class Transaction;
-    friend class DSQLStatement;
-    friend class EventHandler;
-    friend class DSQLParamBlob;
-    friend class DSQLValueBlob;
+  friend class Transaction;
+  friend class DSQLStatement;
+  friend class EventHandler;
+  friend class DSQLParamBlob;
+  friend class DSQLValueBlob;
   public:
-    virtual               ~Database();
-                          Database();
+    virtual ~Database();
+    Database();
+    
+    void beforeDestruction() { detach(); }
 
     Database &            create(const utf8::String & name = utf8::String());
     Database &            drop();
@@ -177,9 +181,9 @@ class Database : virtual public Base {
     DPB                                                 dpb_;
     utf8::String                                        name_;
 
-    ksys::HashedObjectList< utf8::String,Transaction>   transactions_;
-    ksys::HashedObjectList< utf8::String,DSQLStatement> dsqlStatements_;
-    ksys::HashedObjectList< utf8::String,EventHandler>  eventHandlers_;
+    ksys::HashedObjectList<utf8::String,Transaction>   transactions_;
+    ksys::HashedObjectList<utf8::String,DSQLStatement> dsqlStatements_;
+    ksys::HashedObjectList<utf8::String,EventHandler>  eventHandlers_;
 
     Database &            detach2();
     Database &            detachHelper();
@@ -206,9 +210,9 @@ inline const utf8::String & Database::name()
 }
 //---------------------------------------------------------------------------
 #if __GNUG__
-typedef ksys::Array< Database *>                        DatabaseEnum;
+typedef ksys::Array<Database *> DatabaseEnum;
 #else
-typedef ksys::HashedObjectList< utf8::String,Database>  DatabaseEnum;
+typedef ksys::HashedObjectList<utf8::String,Database> DatabaseEnum;
 #endif
 //---------------------------------------------------------------------------
 } // namespace fbcpp

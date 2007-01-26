@@ -36,6 +36,7 @@ ADD_LIBRARY(ksys STATIC
   mstream.cpp
   mutant.cpp
   mutex.cpp
+  object.cpp
   perror.cpp
   profiler.cpp
   rnd.cpp

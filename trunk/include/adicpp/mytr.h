@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,16 +28,17 @@
 #define _mytr_H_
 //---------------------------------------------------------------------------
 namespace mycpp {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Transaction : virtual public Base {
-    friend class Database;
-    friend class DSQLStatement;
+  friend class Database;
+  friend class DSQLStatement;
   public:
-    virtual               ~Transaction();
-                          Transaction();
+    virtual ~Transaction();
+    Transaction();
+
+    void beforeDestruction() { detach(); }
 
     Transaction &         attach(Database & database);
     Transaction &         detach();
@@ -85,3 +86,4 @@ inline const utf8::String & Transaction::isolation() const
 } // namespace mycpp
 //---------------------------------------------------------------------------
 #endif // _mytr_H_
+//---------------------------------------------------------------------------

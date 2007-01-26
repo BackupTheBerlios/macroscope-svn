@@ -39,7 +39,7 @@ SerialPortControl::~SerialPortControl()
   if( writer_ != NULL && !writer_->started() ) deleteObject(writer_);
 }
 //------------------------------------------------------------------------------
-SerialPortControl::SerialPortControl(int) :
+SerialPortControl::SerialPortControl() :
   control_(NULL),
   reader_(NULL),
   writer_(NULL)
@@ -132,7 +132,7 @@ void SerialPortFiber::main()
       }
     }
     if( control_ == NULL ){
-      control_ = &service_.serialPorts_.add(newObjectV1<SerialPortControl>(0));
+      control_ = &service_.serialPorts_.add(newObject<SerialPortControl>());
       control_->open(device);
     }
     if( control_->reader_ == NULL ){

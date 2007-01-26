@@ -36,7 +36,7 @@ class SerialPortControl {
   friend class MSSerialService;
   public:
     ~SerialPortControl();
-    SerialPortControl(int = 0);
+    SerialPortControl();
   protected:
   private:
     SerialPortControl(const SerialPortControl &);

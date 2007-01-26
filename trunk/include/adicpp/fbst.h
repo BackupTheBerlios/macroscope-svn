@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -530,8 +530,8 @@ class DSQLValue {
     virtual ksys::Mutant  getMutant();
     virtual utf8::String  getString();
   public:
-                          DSQLValue();
-    virtual               ~DSQLValue();
+    DSQLValue();
+    virtual ~DSQLValue();
 };
 //---------------------------------------------------------------------------
 inline DSQLValue::DSQLValue()
@@ -907,7 +907,7 @@ enum Stmt {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement {
+class DSQLStatement : virtual public ksys::Object {
   friend class Database;
   friend class Transaction;
   friend class DSQLParams;
@@ -917,8 +917,10 @@ class DSQLStatement {
   friend class DSQLParamArray;
   friend class DSQLValueArray;
   public:
-    ~DSQLStatement();
+    virtual ~DSQLStatement();
     DSQLStatement();
+
+    void beforeDestruction() { detach(); }
 
     DSQLStatement &   attach(Database & database, Transaction & transaction);
     DSQLStatement &   detach();
@@ -1141,3 +1143,4 @@ inline DSQLValueArray & DSQLStatement::valueAsArray(const utf8::String & name)
 } // namespace fbcpp
 //---------------------------------------------------------------------------
 #endif /* _fbst_H_ */
+//---------------------------------------------------------------------------

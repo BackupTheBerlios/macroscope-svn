@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,10 @@
 namespace mycpp {
 //---------------------------------------------------------------------------
 struct MYSQLErrorDesc {
-    const char *  error_;
-    int32_t       code_;
+  const char *  error_;
+  int32_t       code_;
 
-    bool operator > (const struct MYSQLErrorDesc & desc) const
+    bool operator > (const struct MYSQLErrorDesc & desc) const 
     {
       return code_ > desc.code_;
     }
@@ -61,3 +61,4 @@ extern utf8::String strErrorHandler(int32_t err);
 } // namespace mycpp
 //---------------------------------------------------------------------------
 #endif /* _myexcpt_H_ */
+//---------------------------------------------------------------------------
