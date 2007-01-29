@@ -524,9 +524,9 @@ BSTR String::getOLEString() const
   uintptr_t l = strlen();
   UINT t = 0;
   t = ~t;
-  if( l > t ) newObject<ksys::Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+  if( l > t ) newObjectV1C2<ksys::Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
   BSTR p = SysAllocStringLen(NULL,UINT(l));
-  if( p == NULL ) newObject<ksys::EOutOfMemory>(
+  if( p == NULL ) newObjectV1C2<ksys::EOutOfMemory>(
     ERROR_NOT_ENOUGH_MEMORY + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   Iterator i(*this);
   while( !i.eof() ){

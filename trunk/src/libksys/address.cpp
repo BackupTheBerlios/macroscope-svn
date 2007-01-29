@@ -362,7 +362,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
           continue;
         }
       }
-      newObject<ksys::Exception>(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<ksys::Exception>(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
   }
   else {
@@ -377,7 +377,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
           continue;
         }
       }
-      newObject<ksys::Exception>(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<ksys::Exception>(dwRetVal + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
   }
 }

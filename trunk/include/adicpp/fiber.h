@@ -135,7 +135,7 @@ inline Fiber & Fiber::createFiber(uintptr_t dwStackSize)
 #endif
   if( fiber_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -145,7 +145,7 @@ inline Fiber & Fiber::convertThreadToFiber()
   assert( fiber_ == NULL );
   if( (fiber_ = ConvertThreadToFiber(this)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return *this;
 }
@@ -454,6 +454,8 @@ class BaseThread : public Thread, public Fiber {
     const uintptr_t & maxFibersPerThread() const;
     BaseThread & maxFibersPerThread(uintptr_t mfpt);
   protected:
+    void afterConstruction() { Thread::afterConstruction(); Fiber::afterConstruction(); }
+    void beforeDestruction() { Thread::beforeDestruction(); Fiber::beforeDestruction(); }
     void threadBeforeWait();
   private:
     BaseServer * server_;

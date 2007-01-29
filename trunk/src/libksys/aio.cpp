@@ -1135,7 +1135,7 @@ AsyncAcquireSlave::AsyncAcquireSlave()
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
   if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -1333,7 +1333,7 @@ AsyncWin9xDirectoryChangeNotificationSlave::AsyncWin9xDirectoryChangeNotificatio
   for( i = sizeof(sems_) / sizeof(sems_[0]) - 1; i >= 0; i-- ) sems_[i] = NULL;
   if( (sems_[MAXIMUM_WAIT_OBJECTS - 1] = CreateEventA(NULL,TRUE,FALSE,NULL)) == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //------------------------------------------------------------------------------

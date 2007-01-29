@@ -67,7 +67,7 @@ template <typename T> class StringT {
         Container(T * string) : string_(string), refCount_(0){}
 
         void addRef(){ ksys::interlockedIncrement(refCount_, 1); }
-        void remRef(){ if( ksys::interlockedIncrement(refCount_, -1) == 1 ) ksys::kfree(this); }
+        void remRef(){ if( ksys::interlockedIncrement(refCount_, -1) == 1 ) deleteObject(this); }
       private:
         Container(const Container &) {}
         void operator = (const Container &) {}
@@ -80,9 +80,8 @@ template <typename T> inline StringT<T>::~StringT()
 }
 //---------------------------------------------------------------------------
 template <typename T> inline
-StringT<T>::StringT(T * string) : container_((Container *) ksys::kmalloc(sizeof(Container)))
+StringT<T>::StringT(T * string) : container_(newObjectV1<Container>(string))
 {
-  new (container_.ptr()) Container(string);
 }
 //---------------------------------------------------------------------------
 template <typename T> inline
@@ -483,7 +482,7 @@ inline void String::Container::addRef()
 //---------------------------------------------------------------------------
 inline void String::Container::remRef()
 {
-  if( ksys::interlockedIncrement(refCount_,-1) == 1 ) delete this;
+  if( ksys::interlockedIncrement(refCount_,-1) == 1 ) deleteObject(this);
 }
 //---------------------------------------------------------------------------
 inline void String::Container::release()

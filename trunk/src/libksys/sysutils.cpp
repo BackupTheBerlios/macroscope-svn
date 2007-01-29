@@ -265,7 +265,7 @@ guid_t stringToGUID(const char * s)
 {
   guid_t uuid;
 #if defined(__WIN32__) || defined(__WIN64__)
-  RPC_STATUS status = UuidFromString(s,&uuid);
+  RPC_STATUS status = UuidFromString((RPC_CSTR) s,&uuid);
   if( status != RPC_S_OK ){
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
@@ -2612,6 +2612,7 @@ void initialize(int argc,char ** argv)
     abort();
   }
 #endif
+  Object::initialize();
   LZO1X::initialize();
 //---------------------------------------------------------------------------
   {
@@ -2701,6 +2702,7 @@ void cleanup()
   MemoryStream::cleanup();
   Thread::cleanup();
   InterlockedMutex::cleanup();
+  Object::cleanup();
 #if defined(__WIN32__) || defined(__WIN64__)
   SetConsoleCtrlHandler(consoleCtrlHandler,FALSE);
 #endif

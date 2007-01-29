@@ -127,13 +127,16 @@ class XAutoPtr {
 template <typename T> inline T * newObject()
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
-//  fprintf(stderr,"%s %d %p\n",__FILE__,__LINE__,safe.ptr());
-  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+//  if( sizeof(T) >= sizeof(ksys::Object) )
+    ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe.ptr()) T;
-  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
-  ksys::ObjectActions::afterConstructor(safe2.ptr());
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
-  return safe2.ptr(NULL);
+//  if( sizeof(T) >= sizeof(ksys::Object) ){
+    XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+    ksys::ObjectActions::afterConstructor(safe2.ptr());
+    ksys::ObjectActions::afterConstruction(safe2.ptr());
+    return safe2.ptr(NULL);
+//  }
+//  return (T *) safe.ptr(NULL);
 }
 //---------------------------------------------------------------------------
 template <

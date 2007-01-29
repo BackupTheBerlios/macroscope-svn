@@ -334,26 +334,6 @@ typedef int64_t ptrdiff_t;
 #define __XSTRING(x) __STRING(x)
 #endif
 
-#if !SYSCONF_DIR
-#if defined(__WIN32__) || defined(__WIN64__)
-#define SYSCONF_DIR ksys::getExecutablePath()
-#elif BSD
-#define SYSCONF_DIR utf8::String("/usr/local/")
-#else
-#define SYSCONF_DIR utf8::String("/usr/")
-#endif
-#endif
-
-#if !SYSLOG_DIR
-#if defined(__WIN32__) || defined(__WIN64__)
-#define SYSLOG_DIR ksys::getExecutablePath()
-#elif BSD
-#define SYSLOG_DIR utf8::String("/var/log/")
-#else
-#define SYSLOG_DIR utf8::String("/var/log/")
-#endif
-#endif
-
 #ifndef SIZEOF_PID_T
 #define SIZEOF_PID_T 0
 #endif
@@ -556,6 +536,26 @@ typedef int32_t gid_t;
 
 #ifndef PACKED
 #define PACKED
+#endif
+
+#if !SYSCONF_DIR
+#if defined(__WIN32__) || defined(__WIN64__)
+#define SYSCONF_DIR ksys::getExecutablePath()
+#elif BSD
+#define SYSCONF_DIR utf8::String("/usr/local/")
+#else
+#define SYSCONF_DIR utf8::String("/usr/")
+#endif
+#endif
+
+#if !SYSLOG_DIR
+#if defined(__WIN32__) || defined(__WIN64__)
+#define SYSLOG_DIR ksys::getExecutablePath()
+#elif BSD
+#define SYSLOG_DIR utf8::String("/var/log/")
+#else
+#define SYSLOG_DIR utf8::String("/var/log/")
+#endif
 #endif
 
 #endif /* _bootconf_H_ */

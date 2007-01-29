@@ -564,7 +564,10 @@ void Logger::writeHtmlYearOutput()
       endTime.tm_mon = 11;
       endTime.tm_mday = 31;
       // Печатаем трафик пользователей
-      statement_->text("SELECT DISTINCT ST_USER FROM INET_USERS_TRAF " "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET");
+      statement_->text(
+        "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF "
+        "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+      );
       Table<Mutant> usersTrafTable;
       statement_->prepare()->
         paramAsMutant("BT", beginTime)->paramAsMutant("ET", endTime)->
@@ -788,7 +791,7 @@ void Logger::writeHtmlTail(AsyncFile & f)
     "</HTML>\n";
 }
 //------------------------------------------------------------------------------
-int64_t Logger::getTraf(TrafType tt, const struct tm & bt, const struct tm & et, const utf8::String & user)
+int64_t Logger::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user)
 {
   AutoPtr<TrafCacheEntry> tce(newObjectV1C2C3C4<TrafCacheEntry>(user,bt,et,tt));
   tce->bt_.tm_wday = 0;

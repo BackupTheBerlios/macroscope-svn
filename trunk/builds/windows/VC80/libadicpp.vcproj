@@ -324,11 +324,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\include\adicpp\atomic.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\include\adicpp\autoptr.h"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\include\adicpp\bits.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\include\adicpp\bootconf.h"
 				>
 			</File>
 			<File
@@ -529,6 +537,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\include\adicpp\mytr.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\include\adicpp\object.h"
 				>
 			</File>
 			<File
@@ -1312,10 +1324,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\ecs.cpp"
 				>
 				<FileConfiguration
@@ -1354,6 +1362,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\event.cpp"
@@ -1504,6 +1516,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libksys\object.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libpdbutils\pdbutils.cpp"
 				>
 			</File>
@@ -1549,10 +1565,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\socket.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\st.cpp"
 				>
 			</File>
 			<File
@@ -1636,15 +1648,15 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\st.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libksys\stat.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libpdbutils\stl_dbgtypes.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\stparam.cpp"
 				>
 			</File>
 			<File
@@ -1686,6 +1698,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\stparam.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
@@ -1744,6 +1760,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\tr.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libmycpp\tr.cpp"
 				>
 				<FileConfiguration
@@ -1782,10 +1802,6 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\tr.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libutf8\utf8c1.cpp"

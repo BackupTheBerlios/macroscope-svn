@@ -66,6 +66,8 @@ void * kmalloc(size_t size)
     memset((uintptr_t *) p + 1,0xFF,size);
     p = (uintptr_t *) p + 1;
 #endif
+    if( size >= sizeof(Object) )
+      memcpy(p,&Object::staticTemplate(),sizeof(Object));
   }
   return p;
 }

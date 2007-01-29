@@ -64,7 +64,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   eventObject_ = CreateEventA(NULL,TRUE,FALSE,NULL);
   if( eventObject_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
 #endif
 }
@@ -169,7 +169,7 @@ file_t AsyncFile::openHelper(bool async)
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }
-    newObject<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
 #else
   utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
@@ -304,7 +304,7 @@ uint64_t AsyncFile::size() const
   i.lo = GetFileSize(descriptor_, &i.hi);
   if( GetLastError() != ERROR_SUCCESS ){
     int32_t err = GetLastError() + errorOffset;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + " " + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
   return i.a;
 #else

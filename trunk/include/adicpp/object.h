@@ -33,9 +33,14 @@ class String;
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+void initialize(int,char **);
+void cleanup();
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class Object {
+  friend void initialize(int,char **);
+  friend void cleanup();
   friend class ObjectActions;
   public:
     virtual ~Object() {}
@@ -52,6 +57,8 @@ class Object {
     virtual utf8::String classId() const;
     virtual utf8::String objectName() const;
     virtual utf8::String objectId() const;
+
+    static Object & staticTemplate() { return *reinterpret_cast<Object *>(staticTemplate_); }
   protected:
     Object(const Object &) {}
     Object & operator = (const Object & a) { return *this; }
@@ -65,7 +72,10 @@ class Object {
       uint8_t afterConstruction_ : 1; // 1 if afterConstruction method in progress
       uint8_t beforeDestruction_ : 1; // 1 if beforeDestruction method in progress
     };
+    static uint8_t staticTemplate_[];
   private:
+    static void initialize();
+    static void cleanup();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
