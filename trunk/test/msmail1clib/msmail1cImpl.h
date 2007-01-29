@@ -285,7 +285,7 @@ class Client : public ksock::Client {
     ClientMailFiber * clientMailFiber_;
   private:
     Client(const Client &);
-    void operator = (const Client &){}
+    void operator = (const Client &) { assert( 0 ); }
 };
 //------------------------------------------------------------------------------
 } // namespace msmail

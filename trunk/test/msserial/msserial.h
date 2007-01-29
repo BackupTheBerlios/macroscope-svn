@@ -57,13 +57,14 @@ class SerialPortFiber : public ksock::ServerFiber {
   friend class MSSerialService;
   public:
     virtual ~SerialPortFiber();
+    SerialPortFiber() {}
     SerialPortFiber(MSSerialService & service,SerialPortControl * control = NULL);
   protected:
   private:
     SerialPortFiber(const SerialPortFiber &);
     void operator = (const SerialPortFiber &);
 
-    MSSerialService & service_;
+    MSSerialService * service_;
     SerialPortControl * control_;
 
     void removeControl();

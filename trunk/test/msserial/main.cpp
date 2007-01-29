@@ -53,7 +53,7 @@ void SerialPortControl::open(const utf8::String & device)
   int32_t err;
   if( SetupComm(device_.descriptor(),1600,1600) == 0 ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   COMMTIMEOUTS cto;
   memset(&cto,0,sizeof(cto));
@@ -64,15 +64,15 @@ void SerialPortControl::open(const utf8::String & device)
   cto.WriteTotalTimeoutConstant = MAXDWORD - 1;*/
   if( SetCommTimeouts(device_.descriptor(),&cto) == 0 ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( SetCommMask(device_.descriptor(),EV_RXCHAR) == 0 ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( PurgeComm(device_.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
     err = GetLastError() + errorOffset;
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -84,7 +84,7 @@ SerialPortFiber::~SerialPortFiber()
 }
 //------------------------------------------------------------------------------
 SerialPortFiber::SerialPortFiber(MSSerialService & service,SerialPortControl * control) :
-  service_(service), control_(control)
+  service_(&service), control_(control)
 {
 }
 //------------------------------------------------------------------------------
@@ -92,10 +92,10 @@ void SerialPortFiber::removeControl()
 {
   if( control_ != NULL ){
     if( control_->control_ == this ){
-      AutoLock<FiberInterlockedMutex> lock(service_.serialPortsMutex_);
-      for( intptr_t i = service_.serialPorts_.count() - 1; i >= 0; i-- )
-        if( &service_.serialPorts_[i] == control_ ){
-          service_.serialPorts_.remove(i);
+      AutoLock<FiberInterlockedMutex> lock(service_->serialPortsMutex_);
+      for( intptr_t i = service_->serialPorts_.count() - 1; i >= 0; i-- )
+        if( &service_->serialPorts_[i] == control_ ){
+          service_->serialPorts_.remove(i);
           control_ = NULL;
           break;
         }
@@ -111,32 +111,32 @@ void SerialPortFiber::main()
 {
   utf8::String device(readString()), mode(readString());
   if( control_ == NULL ){
-    AutoLock<FiberInterlockedMutex> lock(service_.serialPortsMutex_);
-    for( intptr_t i = service_.serialPorts_.count() - 1; i >= 0; i-- ){
+    AutoLock<FiberInterlockedMutex> lock(service_->serialPortsMutex_);
+    for( intptr_t i = service_->serialPorts_.count() - 1; i >= 0; i-- ){
       bool isRD = false, isWR = false;
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( service_.serialPorts_[i].device_.fileName().strcasecmp(device) == 0 ){
+      if( service_->serialPorts_[i].device_.fileName().strcasecmp(device) == 0 ){
 #else
-      if( service_.serialPorts_[i].device_.fileName().strcmp(device) == 0 ){
+      if( service_->serialPorts_[i].device_.fileName().strcmp(device) == 0 ){
 #endif
         isRD = mode.strcasecmp("READ")  == 0;
         isWR = mode.strcasecmp("WRITE") == 0;
-        if( (isRD && service_.serialPorts_[i].reader_ != NULL) ||
-            (isWR && service_.serialPorts_[i].writer_ != NULL) )
+        if( (isRD && service_->serialPorts_[i].reader_ != NULL) ||
+            (isWR && service_->serialPorts_[i].writer_ != NULL) )
           newObjectV1C2<Exception>(EACCES,__PRETTY_FUNCTION__)->throwSP();
         if( isRD || isWR ){
-          control_ = &service_.serialPorts_[i];
+          control_ = &service_->serialPorts_[i];
           break;
         }
         newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     if( control_ == NULL ){
-      control_ = &service_.serialPorts_.add(newObject<SerialPortControl>());
+      control_ = &service_->serialPorts_.add(newObject<SerialPortControl>());
       control_->open(device);
     }
     if( control_->reader_ == NULL ){
-      control_->reader_ = newObjectR1V2<SerialPortFiber>(service_,control_);
+      control_->reader_ = newObjectR1V2<SerialPortFiber>(*service_,control_);
       control_->reader_->socket_ = socket_;
       socket_ = INVALID_SOCKET;
       thread()->server()->attachFiber(control_->reader_);
@@ -233,8 +233,8 @@ int main(int ac,char * av[])
       intptr_t i;
       uintptr_t u;
     };
-    stdErr.fileName(SYSLOG_DIR + "msserial/msserial.conf");
-    Config::defaultFileName(SYSCONF_DIR + "msserial.conf");
+    stdErr.fileName(SYSLOG_DIR("msserial/") + "msserial.conf");
+    Config::defaultFileName(SYSCONF_DIR("") + "msserial.conf");
     Services services(msserial_version.gnu_);
     services.add(newObject<MSSerialService>());
 #if defined(__WIN32__) || defined(__WIN64__)

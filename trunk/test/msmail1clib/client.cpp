@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
+ * Copyright (C) 2005-2007 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -787,6 +787,15 @@ Client::~Client()
   close();
 }
 //------------------------------------------------------------------------------
+Client::Client(const Client &) :
+  config_(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()),
+  recvQueueAutoDrop_(recvQueue_),
+  sendQueueAutoDrop_(sendQueue_)
+{
+  assert( 0 );
+  newObjectV1C2<Exception>(ERROR_CALL_NOT_IMPLEMENTED + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+}
+//------------------------------------------------------------------------------
 Client::Client() :
   pAsyncEvent_(NULL),
   config_(newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()),
@@ -806,7 +815,7 @@ void Client::open()
   data_.clear();
   ftime_ = 0;
   if( asyncMessagesReceiving_ )
-    attachFiber(newObjectR1<ClientFiber>(*this));
+    attachFiber(newObjectR1<ClientFiber>(this));
   if( mk1100Port_ != 0 )
     attachFiber(newObjectR1<MK1100ClientFiber>(*this));
 }
@@ -859,7 +868,7 @@ HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pva
     msg = queue->find(id);
   }
   if( msg == NULL )
-    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   HRESULT hr = S_OK;
   if( msg->isValue(key) ){
     V_BSTR(pvarRetValue) = msg->value(key).getOLEString();
@@ -875,7 +884,7 @@ utf8::String Client::value(const utf8::String id,const utf8::String key,const ut
 {
   AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   Message * msg = sendQueue_.find(id);
-  if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( msg == NULL ) newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   utf8::String oldValue;
   if( msg->isValue(key) ) oldValue = msg->value(key);
   msg->value(key,value);
@@ -888,9 +897,9 @@ bool Client::attachFileToMessage(const utf8::String id,const utf8::String key,co
   {
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     Message * msg = sendQueue_.find(id);
-    if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    if( msg == NULL ) newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     if( msg->isValue(key) )
-      newObject<Exception>(ERROR_ALREADY_EXISTS + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(ERROR_ALREADY_EXISTS + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   AsyncFile file;
   file.fileName(fileName).readOnly(true).open();
@@ -903,12 +912,12 @@ bool Client::attachFileToMessage(const utf8::String id,const utf8::String key,co
     file.readBuffer(b,l);
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     msg = sendQueue_.find(id);
-    if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    if( msg == NULL ) newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     msg->value(key + "#" + utf8::int2HexStr(i,8),base64Encode(b,uintptr_t(l)));
   }
   AutoLock<FiberInterlockedMutex> lock(queueMutex_);
   msg = sendQueue_.find(id);
-  if( msg == NULL ) newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( msg == NULL ) newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   msg->value(key,"attached file '" + fileName + "', original size " + utf8::int2Str(file.size()) + ", block count " + utf8::int2Str(i));
   return true;
 }
@@ -920,7 +929,7 @@ bool Client::saveMessageAttachmentToFile(const utf8::String id,const utf8::Strin
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     Message * msg = recvQueue_.find(id);
     if( msg == NULL || !msg->isValue(key) )
-      newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   AsyncFile file;
   file.fileName(fileName).createIfNotExist(true).open();
@@ -931,7 +940,7 @@ bool Client::saveMessageAttachmentToFile(const utf8::String id,const utf8::Strin
       AutoLock<FiberInterlockedMutex> lock(queueMutex_);
       msg = recvQueue_.find(id);
       if( msg == NULL || !msg->isValue(key) )
-        newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       if( !msg->isValue(bkey) ) break;
       v = msg->value(bkey);
     }
@@ -959,12 +968,12 @@ bool Client::sendMessage(const utf8::String id,bool async)
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     if( clientMailFiber_ == NULL ){
       ClientMailFiber * clientMailFiber;
-      attachFiber(clientMailFiber = newObjectV<ClientMailFiber>(*this));
+      attachFiber(clientMailFiber = newObjectR1<ClientMailFiber>(*this));
       clientMailFiber_ = clientMailFiber;
     }
     AutoLock<FiberInterlockedMutex> lock2(clientMailFiber_->messageMutex_);
     clientMailFiber_->messages_.insToTail(
-      *newObject<ClientMailFiber::MessageControl>(msg,ClientMailFiber::MessageControl::msgSend,async)
+      *newObjectV1V2V3<ClientMailFiber::MessageControl>(msg,ClientMailFiber::MessageControl::msgSend,async)
     );
     if( clientMailFiber_->messages_.count() == 1 ) clientMailFiber_->semaphore_.post();
   }
@@ -1001,12 +1010,12 @@ bool Client::removeMessage(const utf8::String id,bool async)
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     if( clientMailFiber_ == NULL ){
       ClientMailFiber * clientMailFiber;
-      attachFiber(clientMailFiber = newObjectV<ClientMailFiber>(*this));
+      attachFiber(clientMailFiber = newObjectV1<ClientMailFiber>(*this));
       clientMailFiber_ = clientMailFiber;
     }
     AutoLock<FiberInterlockedMutex> lock2(clientMailFiber_->messageMutex_);
     clientMailFiber_->messages_.insToTail(
-      *newObject<ClientMailFiber::MessageControl>(msg,ClientMailFiber::MessageControl::msgRemove,async)
+      *newObjectV1V2V3<ClientMailFiber::MessageControl>(msg,ClientMailFiber::MessageControl::msgRemove,async)
     );
     if( clientMailFiber_->messages_.count() == 1 ) clientMailFiber_->semaphore_.post();
   }
@@ -1057,7 +1066,7 @@ utf8::String Client::getSendingMessageList() const
 //------------------------------------------------------------------------------
 void Client::getDB()
 {
-  attachFiber(newObjectV<ClientDBGetterFiber>(*this));
+  attachFiber(newObjectV1<ClientDBGetterFiber>(*this));
 }
 //------------------------------------------------------------------------------
 utf8::String Client::getDBList() const
@@ -1094,7 +1103,7 @@ utf8::String Client::copyMessage(const utf8::String id)
     }
   }
   if( msg == NULL )
-    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   AutoPtr<Message> message(newObject<Message>());
   utf8::String newId(message->id());
   message->file().fileName(
@@ -1121,7 +1130,7 @@ utf8::String Client::removeValue(const utf8::String id,const utf8::String key)
     msg = queue->find(id);
   }
   if( msg == NULL )
-    newObject<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return msg->removeValue(key);
 }
 //------------------------------------------------------------------------------
@@ -1140,7 +1149,7 @@ bool Client::installSerialPortScanner(uintptr_t serialPortNumber)
   if( !installed ){
     workFiberWait_.acquire();
     try {
-      attachFiber(newObjectV<SerialPortFiber>(*this,serialPortNumber));
+      attachFiber(newObjectV1V2<SerialPortFiber>(*this,serialPortNumber));
     }
     catch( ... ){
       workFiberWait_.release();
@@ -1208,7 +1217,7 @@ HRESULT Client::sendAsyncEvent(const utf8::String & source,const utf8::String & 
     hr = pAsyncEvent_->ExternalEvent(source0,event0,data0);
     if( FAILED(hr) ){
       ExceptionSP e(
-        newObject<Exception>(
+        newObjectV1C2<Exception>(
           HRESULT_CODE(hr) + errorOffset,
           utf8::String(__PRETTY_FUNCTION__) + " line " +
           utf8::int2Str(__LINE__) + ", pAsyncEvent_->ExternalEvent(" +
