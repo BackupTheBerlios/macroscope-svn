@@ -87,7 +87,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
   assert( event.errno_ == 0 );
   return event.string0_;
 #else
-  return utf8::String():
+  return utf8::String();
 #endif
 }
 //---------------------------------------------------------------------------
