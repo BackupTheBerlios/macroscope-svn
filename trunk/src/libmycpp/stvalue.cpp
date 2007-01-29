@@ -249,9 +249,9 @@ DSQLValues & DSQLValues::freeRes()
 {
   if( res_ != NULL ){
     api.mysql_free_result(res_);
-    if( api.mysql_stmt_free_result(statement_.handle_) != 0 )
-      statement_.database_->exceptionHandler(newObjectV1C2<EDSQLStFreeResult>(
-        api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
+    if( api.mysql_stmt_free_result(statement_->handle_) != 0 )
+      statement_->database_->exceptionHandler(newObjectV1C2<EDSQLStFreeResult>(
+        api.mysql_errno(statement_->database_->handle_), api.mysql_error(statement_->database_->handle_)));
     res_ = NULL;
   }
   return *this;
@@ -261,13 +261,13 @@ bool DSQLValues::fetch()
 {
   long                    code;
   ksys::AutoPtr< DSQLRow> row (bind());
-  if( api.mysql_stmt_bind_result(statement_.handle_, bind_.bind()) != 0 )
-    statement_.database_->exceptionHandler(newObjectV1C2<EDSQLStBindResult>(
-      api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
-  code = api.mysql_stmt_fetch(statement_.handle_);
+  if( api.mysql_stmt_bind_result(statement_->handle_, bind_.bind()) != 0 )
+    statement_->database_->exceptionHandler(newObjectV1C2<EDSQLStBindResult>(
+      api.mysql_errno(statement_->database_->handle_), api.mysql_error(statement_->database_->handle_)));
+  code = api.mysql_stmt_fetch(statement_->handle_);
   if( code == 1 )
-    statement_.database_->exceptionHandler(newObjectV1C2<EDSQLStFetch>(
-      api.mysql_errno(statement_.database_->handle_), api.mysql_error(statement_.database_->handle_)));
+    statement_->database_->exceptionHandler(newObjectV1C2<EDSQLStFetch>(
+      api.mysql_errno(statement_->database_->handle_), api.mysql_error(statement_->database_->handle_)));
   if( code != MYSQL_NO_DATA ){
     fillRow(row);
     rows_.add(row.ptr());

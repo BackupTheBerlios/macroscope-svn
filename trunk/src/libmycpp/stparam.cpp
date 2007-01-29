@@ -273,7 +273,7 @@ ksys::HashedObjectListItem< utf8::String,DSQLParam> * DSQLParams::add(const utf8
   ksys::HashedObjectListItem< utf8::String,DSQLParam> * item;
   item = params_.itemOfKey(paramName);
   if( item == NULL )
-    params_.add(newObjectR1<DSQLParam>(statement_), paramName, &item);
+    params_.add(newObjectR1<DSQLParam>(*statement_), paramName, &item);
   item->object()->changed_ = true;
   return item;
 }

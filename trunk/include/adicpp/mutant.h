@@ -538,6 +538,7 @@ inline char * Mutant::plane()
 //---------------------------------------------------------------------------
 class EMutant : public Exception {
   public:
+    EMutant() {}
     EMutant(int32_t code, const char * what);
     EMutant(int32_t code, const utf8::String & what);
 };

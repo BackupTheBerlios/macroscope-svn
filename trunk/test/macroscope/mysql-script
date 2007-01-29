@@ -1,6 +1,5 @@
-DROP TABLE \g
-CREATE USER 'korvin'@'localhost'\g
-SET PASSWORD FOR 'korvin'@'localhost' = PASSWORD('ntktgfnjh1')\g
-GRANT SELECT, INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, INDEX ON *.* TO 'korvin'@'localhost'\g
+CREATE USER 'macroscope'@'localhost'\g
+SET PASSWORD FOR 'macroscope'@'localhost' = PASSWORD('mkey')\g
+GRANT SELECT, INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, INDEX ON *.* TO 'macroscope'@'localhost'\g
 FLUSH PRIVILEGES\g
-SHOW GRANTS FOR 'korvin'@'localhost'\g
+SHOW GRANTS FOR 'macroscope'@'localhost'\g

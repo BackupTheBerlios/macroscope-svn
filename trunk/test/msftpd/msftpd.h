@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -110,3 +110,4 @@ static inline uint64_t partialBlockSize(uint64_t fileSize)
 }
 //---------------------------------------------------------------------------
 #endif
+//---------------------------------------------------------------------------

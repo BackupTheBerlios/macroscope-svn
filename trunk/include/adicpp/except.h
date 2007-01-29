@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@ class LogFile;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Exception {
+class Exception : virtual public Object {
   public:
     virtual ~Exception();
     Exception();
@@ -84,6 +84,8 @@ class Exception {
   private:
     Exception(const Exception &){}
     void operator = (const Exception &){}
+
+    void afterConstruction();
 };
 //---------------------------------------------------------------------------
 inline Exception & Exception::code(int32_t err)
@@ -165,6 +167,7 @@ ExceptionSP;
 //---------------------------------------------------------------------------
 class EOutOfMemory : public Exception {
   public:
+    EOutOfMemory() {}
     EOutOfMemory(int32_t code,const char * what);
     EOutOfMemory(int32_t code,const utf8::String & what);
 };
@@ -187,6 +190,7 @@ namespace utf8 {
 //---------------------------------------------------------------------------
 class EStr2Scalar : public ksys::Exception {
   public:
+    EStr2Scalar() {}
     EStr2Scalar(int32_t code,const utf8::String & what);
 };
 //---------------------------------------------------------------------------

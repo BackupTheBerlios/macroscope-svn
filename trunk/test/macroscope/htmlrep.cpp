@@ -169,13 +169,13 @@ Logger::MTWriter::~MTWriter()
 }
 //------------------------------------------------------------------------------
 Logger::MTWriter::MTWriter(Logger & logger,const utf8::String & file,const struct tm & year) :
-  logger_(logger), file_(file), year_(year)
+  logger_(&logger), file_(file), year_(year)
 {
 }
 //------------------------------------------------------------------------------
 void Logger::MTWriter::threadExecute()
 {
-  logger_.writeMonthHtmlOutput(file_,year_,true);
+  logger_->writeMonthHtmlOutput(file_,year_,true);
 }
 //------------------------------------------------------------------------------
 void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded)

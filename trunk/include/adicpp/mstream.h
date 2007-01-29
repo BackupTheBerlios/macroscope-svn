@@ -38,6 +38,15 @@ class MemoryStream {
   protected:
     class Container {
       friend class MemoryStream;
+      public:
+        ~Container();
+        Container() {}
+        Container(uintptr_t count);
+        Container(int32_t refCount,void * ptr,uintptr_t count);
+
+        Container & addRef();
+        Container & remRef();
+      protected:
       private:
         union {
           void *          ptr_;
@@ -47,13 +56,6 @@ class MemoryStream {
         uintptr_t count_;
         uintptr_t mcount_;
         int32_t   refCount_;
-      public:
-        ~Container();
-        Container(uintptr_t count);
-        Container(int32_t refCount, void * ptr, uintptr_t count);
-
-        Container & addRef();
-        Container & remRef();
     };
 
     SPRC< Container>  container_;
@@ -501,11 +503,13 @@ inline void * const & MemoryStream::raw() const
 //---------------------------------------------------------------------------
 class EMemoryStreamEOF : public Exception {
   public:
+    EMemoryStreamEOF() {}
     EMemoryStreamEOF(int32_t code, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
 class EMemoryStreamReadError : public Exception {
   public:
+    EMemoryStreamReadError() {}
     EMemoryStreamReadError(int32_t code, const utf8::String & what);
 };
 //---------------------------------------------------------------------------

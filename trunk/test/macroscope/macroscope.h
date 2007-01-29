@@ -48,23 +48,26 @@ class Logger {
     class MTLogParser : public Thread {
       public:
         ~MTLogParser();
+        MTLogParser() {}
         MTLogParser(Logger & logger);
 
         void threadExecute();
       protected:
       private:
+        Logger * logger_;
     };
     friend class MTLogParser;
     class MTWriter : public Thread {
       public:
         ~MTWriter();
+        MTWriter() {}
         MTWriter(Logger & logger,const utf8::String & file,const struct tm & year);
 
         void threadExecute();
       protected:
-        Logger & logger_;
-	const utf8::String file_;
-	const struct tm year_;
+        Logger * logger_;
+	      const utf8::String file_;
+	      const struct tm year_;
       private:
     };
     friend class MTWriter;

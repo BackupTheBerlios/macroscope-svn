@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
+ * Copyright (C) 2005-2007 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,12 +44,12 @@ Message::Message() :
   attributes_.insert(*newObjectC1C2<Attribute>(messageIdKey,mId));
 }
 //------------------------------------------------------------------------------
-/*Message::Message(const utf8::String & mId) :
+Message::Message(const utf8::String & mId) :
   attributesAutoDrop_(attributes_), residentSize_(0), codePage_(CP_UTF8)
 {
   file_.fileName(getTempPath() + mId + ".msg");
   attributes_.insert(*newObjectC1C2<Attribute>(messageIdKey,mId));
-}*/
+}
 //------------------------------------------------------------------------------
 /*Message::Message(const Message & a) : attributesAutoDrop_(attributes_)
 {

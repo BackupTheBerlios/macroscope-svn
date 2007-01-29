@@ -37,8 +37,7 @@ MSUpdateSetuper::~MSUpdateSetuper()
 {
 }
 //------------------------------------------------------------------------------
-MSUpdateSetuper::MSUpdateSetuper(const ConfigSP & config,Semaphore & setupSem) :
-  config_(config), setupSem_(setupSem)
+MSUpdateSetuper::MSUpdateSetuper(MSUpdateFetcher & fetcher) : fetcher_(&fetcher)
 {
 }
 //------------------------------------------------------------------------------
@@ -74,9 +73,9 @@ void MSUpdateSetuper::executeAction(const utf8::String & name,const ConfigSectio
 void MSUpdateSetuper::fiberExecute()
 {
   try {
-    config_->parse().override();
+    fetcher_->updater_->config_->parse().override();
     utf8::String localPath(includeTrailingPathDelimiter(
-      config_->valueByPath("update.storage",getExecutablePath() + "updates")
+      fetcher_->updater_->config_->valueByPath("update.storage",getExecutablePath() + "updates")
     ));
     Config updatesSetup;
     updatesSetup.codePage(CP_UTF8);
@@ -136,10 +135,10 @@ void MSUpdateSetuper::fiberExecute()
     updatesSetup.save();
   }
   catch( ... ){
-    setupSem_.post();
+    fetcher_->setupSem_.post();
     throw;
   }
-  setupSem_.post();
+  fetcher_->setupSem_.post();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -148,7 +147,7 @@ MSUpdateFetcher::~MSUpdateFetcher()
 {
 }
 //------------------------------------------------------------------------------
-MSUpdateFetcher::MSUpdateFetcher(const ConfigSP & config) : config_(config)
+MSUpdateFetcher::MSUpdateFetcher(MSUpdaterService & updater) : updater_(&updater)
 {
 }
 //------------------------------------------------------------------------------
@@ -158,16 +157,16 @@ void MSUpdateFetcher::fiberExecute()
   Fetcher fetch;
   uint64_t lastCheckUpdate = 0;
   while( !terminated_ ){
-    config_->parse().override();
-    uint64_t interval = config_->valueByPath("update.interval",180);
+    updater_->config_->parse().override();
+    uint64_t interval = updater_->config_->valueByPath("update.interval",180);
     interval *= 60000000u;
     bool setupEnded = setupSem_.tryWait();
     if( getlocaltimeofday() - lastCheckUpdate >= interval && setupEnded ){
-      fetch.url(config_->valueByPath("update.url"));
-      fetch.proxy(config_->valueByPath("update.proxy"));
-      fetch.resume(config_->valueByPath("update.resume",true));
+      fetch.url(updater_->config_->valueByPath("update.url"));
+      fetch.proxy(updater_->config_->valueByPath("update.proxy"));
+      fetch.resume(updater_->config_->valueByPath("update.resume",true));
       fetch.localPath(includeTrailingPathDelimiter(
-        config_->valueByPath("update.storage",getExecutablePath() + "updates")
+        updater_->config_->valueByPath("update.storage",getExecutablePath() + "updates")
       ));
       stdErr.debug(3,utf8::String::Stream() << this <<
         "Check for new updates on " << fetch.url() << " ...\n"
@@ -242,7 +241,7 @@ void MSUpdateFetcher::fiberExecute()
         );
       }
       lastCheckUpdate = getlocaltimeofday();
-      thread()->server()->attachFiber(newObjectC1R2<MSUpdateSetuper>(config_,setupSem_));
+      thread()->server()->attachFiber(newObjectR1<MSUpdateSetuper>(*this));
     }
     if( setupEnded ) ksleep(interval); else ksleep(1000000u);
   }
@@ -267,7 +266,7 @@ MSUpdaterService::MSUpdaterService() :
 //------------------------------------------------------------------------------
 void MSUpdaterService::start()
 {
-  attachFiber(newObjectC1<MSUpdateFetcher>(config_));
+  attachFiber(newObjectR1<MSUpdateFetcher>(*this));
   stdErr.debug(0,utf8::String::Stream() << msupdater_version.gnu_ << " started\n");
 }
 //------------------------------------------------------------------------------
@@ -310,8 +309,8 @@ int main(int ac,char * av[])
       intptr_t i;
       uintptr_t u;
     };
-    stdErr.fileName(SYSLOG_DIR + "msupdater/msupdater.conf");
-    Config::defaultFileName(SYSCONF_DIR + "msupdater.conf");
+    stdErr.fileName(SYSLOG_DIR("msupdater/") + "msupdater.conf");
+    Config::defaultFileName(SYSCONF_DIR("") + "msupdater.conf");
     Services services(msupdater_version.gnu_);
     services.add(newObject<MSUpdaterService>());
 #if defined(__WIN32__) || defined(__WIN64__)

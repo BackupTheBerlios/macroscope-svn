@@ -1094,13 +1094,13 @@ l1:
 AsyncFile::LineGetBuffer & AsyncFile::LineGetBuffer::seek(uint64_t pos)
 {
   if( pos < bufferFilePos_ || pos >= bufferFilePos_ + len_ ){
-    file_.seek(pos);
+    file_->seek(pos);
     bufferFilePos_ = pos;
     pos_ = 0;
     len_ = 0;
   }
   else {
-    file_.seek(pos);
+    file_->seek(pos);
     pos_ = uintptr_t(pos - bufferFilePos_);
   }
   return *this;

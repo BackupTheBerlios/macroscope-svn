@@ -57,8 +57,6 @@ class Object {
     virtual utf8::String classId() const;
     virtual utf8::String objectName() const;
     virtual utf8::String objectId() const;
-
-    static Object & staticTemplate() { return *reinterpret_cast<Object *>(staticTemplate_); }
   protected:
     Object(const Object &) {}
     Object & operator = (const Object & a) { return *this; }
@@ -72,7 +70,6 @@ class Object {
       uint8_t afterConstruction_ : 1; // 1 if afterConstruction method in progress
       uint8_t beforeDestruction_ : 1; // 1 if beforeDestruction method in progress
     };
-    static uint8_t staticTemplate_[];
   private:
     static void initialize();
     static void cleanup();
@@ -99,46 +96,40 @@ class ObjectActions {
 //---------------------------------------------------------------------------
 inline void ObjectActions::beforeConstructor(Object * object)
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
-//  memset(object,0,sizeof(Object));
-//  object->heap_ = true;
-//  object->constructor_ = true;
+  memset(object,0,sizeof(Object));
+  object->heap_ = true;
+  object->constructor_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::afterConstructor(Object * object)
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
-//  object->constructor_ = false;
-//  object->constructed_ = true;
+  object->constructor_ = false;
+  object->constructed_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::beforeDestructor(Object * object)
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
-//  object->destructor_ = true;
+  object->destructor_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::afterDestructor(Object * object)
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
-//  object->destructor_ = false;
-//  object->destructed_ = true;
+  object->destructor_ = false;
+  object->destructed_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::afterConstruction(Object * object)
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
-//  object->afterConstruction_ = true;
-//  object->afterConstruction();
-//  object->afterConstruction_ = false;
+  object->afterConstruction_ = true;
+  object->afterConstruction();
+  object->afterConstruction_ = false;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::beforeDestruction(Object * object)
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
-//  object->beforeDestruction_ = true;
-//  object->beforeDestruction();
-//  object->beforeDestruction_ = false;
+  object->beforeDestruction_ = true;
+  object->beforeDestruction();
+  object->beforeDestruction_ = false;
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

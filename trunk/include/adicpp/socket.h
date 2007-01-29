@@ -638,6 +638,7 @@ inline Client::Client()
 //---------------------------------------------------------------------------
 class EAsyncSocket : public ksys::Exception {
   public:
+    EAsyncSocket() {}
     EAsyncSocket(int32_t code,const char * what);
     EAsyncSocket(int32_t code,const utf8::String & what);
 };

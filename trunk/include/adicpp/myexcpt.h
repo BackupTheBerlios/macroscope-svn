@@ -49,6 +49,7 @@ extern const MYSQLErrorDesc mysqlErrors[];
 class EClientServer : public ksys::Exception {
   public:
     virtual ~EClientServer();
+    EClientServer() {}
     EClientServer(int32_t code, const utf8::String what);
 
     bool    isFatalError() const;

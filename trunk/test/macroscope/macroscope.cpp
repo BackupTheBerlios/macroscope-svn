@@ -549,10 +549,6 @@ void Logger::main()
     config_->value("log_file",stdErr.fileName())
   );
 
-  {
-    AutoPtr<adicpp::MYSQLDatabase> pp(newObject<adicpp::MYSQLDatabase>());
-  }
-
   verbose_ = config_->section("macroscope").value("verbose", false);
 
   database_.ptr(Database::newDatabase(config_.ptr()));
@@ -750,8 +746,8 @@ int main(int _argc, char * _argv[])
   utf8::String::Stream stream;
   try {
     uintptr_t i;
-    stdErr.fileName(SYSLOG_DIR + "macroscope/macroscope.log");
-    Config::defaultFileName(SYSCONF_DIR + "macroscope.conf");
+    stdErr.fileName(SYSLOG_DIR("macroscope/") + "macroscope.log");
+    Config::defaultFileName(SYSCONF_DIR("") + "macroscope.conf");
     bool dispatch = true;
     for( i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--version") == 0 ){

@@ -67,12 +67,13 @@ class AsyncFile : public AsyncDescriptor {
     class LineGetBuffer {
       public:
         ~LineGetBuffer() {}
+        LineGetBuffer() {}
         LineGetBuffer(AsyncFile & file,uintptr_t size = 0) : 
-          file_(file), bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false) {}
+          file_(&file), bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false) {}
 
         LineGetBuffer & seek(uint64_t pos);
 
-        AsyncFile & file_;
+        AsyncFile * file_;
         AutoPtr<uint8_t> buffer_;
         uint64_t bufferFilePos_;
         uintptr_t size_;
@@ -408,6 +409,7 @@ inline AutoFileRemove::AutoFileRemove(const utf8::String & name) : name_(name)
 //---------------------------------------------------------------------------
 class EFileEOF : public Exception {
   public:
+    EFileEOF() {}
     EFileEOF(int32_t code,const char * what);
     EFileEOF(int32_t code,const utf8::String & what);
 };

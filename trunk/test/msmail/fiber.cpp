@@ -35,7 +35,7 @@ ServerFiber::~ServerFiber()
 }
 //------------------------------------------------------------------------------
 ServerFiber::ServerFiber(Server & server,utf8::String user,utf8::String key) :
-  server_(server), serverType_(stNone), protocol_(0), user_(user), key_(key),
+  server_(&server), serverType_(stNone), protocol_(0), user_(user), key_(key),
   idsAutoDrop_(ids_)
 {
 }
@@ -60,34 +60,34 @@ void ServerFiber::putCode(int32_t code)
 //------------------------------------------------------------------------------
 bool ServerFiber::isValidUser(const utf8::String & user)
 {
-  return server_.config_->section("users").isSection(user);
+  return server_->config_->section("users").isSection(user);
 }
 //------------------------------------------------------------------------------
 utf8::String ServerFiber::getUserPassword(const utf8::String & user)
 {
-  return server_.config_->section("users").section(user).text("password");
+  return server_->config_->section("users").section(user).text("password");
 }
 //------------------------------------------------------------------------------
 void ServerFiber::auth()
 {
   AuthParams ap;
-  ap.maxRecvSize_ = server_.config_->parse().override().value("max_recv_size",-1);
-  ap.maxSendSize_ = server_.config_->value("max_send_size",-1);
-  ap.recvTimeout_ = server_.config_->value("recv_timeout",-1);
+  ap.maxRecvSize_ = server_->config_->parse().override().value("max_recv_size",-1);
+  ap.maxSendSize_ = server_->config_->value("max_send_size",-1);
+  ap.recvTimeout_ = server_->config_->value("recv_timeout",-1);
   if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
-  ap.sendTimeout_ = server_.config_->value("send_timeout",-1);
+  ap.sendTimeout_ = server_->config_->value("send_timeout",-1);
   if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
-  ap.encryption_ = server_.config_->section("encryption").text(utf8::String(),"default");
-  ap.threshold_ = server_.config_->section("encryption").value("threshold",1024 * 1024);
-  ap.compression_ = server_.config_->section("compression").text(utf8::String(),"default");
-  ap.compressionType_ = server_.config_->section("compression").text("type","default");
-  ap.crc_ = server_.config_->section("compression").text("crc","default");
-  ap.level_ = server_.config_->section("compression").value("max_level",9);
-  ap.optimize_ = server_.config_->section("compression").value("optimize",true);
-  ap.bufferSize_ = server_.config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.encryption_ = server_->config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = server_->config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = server_->config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = server_->config_->section("compression").text("type","default");
+  ap.crc_ = server_->config_->section("compression").text("crc","default");
+  ap.level_ = server_->config_->section("compression").value("max_level",9);
+  ap.optimize_ = server_->config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = server_->config_->section("compression").value("buffer_size",getpagesize() * 16);
   ap.noAuth_ = false;
-  if( server_.config_->isSection("users") )
-    ap.noAuth_ = server_.config_->section("users").value("noauth",ap.noAuth_);
+  if( server_->config_->isSection("users") )
+    ap.noAuth_ = server_->config_->section("users").value("noauth",ap.noAuth_);
   Error e = (Error) serverAuth(ap);
   if( e != eOK ){
     utf8::String::Stream stream;
@@ -99,8 +99,8 @@ void ServerFiber::auth()
 //------------------------------------------------------------------------------
 void ServerFiber::main()
 {
-  server_.config_->parse();
-  stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
+  server_->config_->parse();
+  stdErr.setDebugLevels(server_->config_->value("debug_levels","+0,+1,+2,+3"));
   union {
     uint8_t cmd;
     uint8_t ui8;
@@ -157,7 +157,7 @@ void ServerFiber::registerClient()
     terminate();
     return;
   }
-  if( !(bool) server_.config_->parse().valueByPath(
+  if( !(bool) server_->config_->parse().valueByPath(
         utf8::String(serverConfSectionName[serverType_]) + ".enabled",true) ){
     utf8::String host(remoteAddress().resolve(~uintptr_t(0)));
     utf8::String::Stream stream;
@@ -168,8 +168,8 @@ void ServerFiber::registerClient()
     return;
   }
   utf8::String host(remoteAddress().resolve(~uintptr_t(0)));
-  ServerInfo server(server_.bindAddrs()[0].resolve(defaultPort),stStandalone);
-  Server::Data & data = server_.data(serverType_);
+  ServerInfo server(server_->bindAddrs()[0].resolve(defaultPort),stStandalone);
+  Server::Data & data = server_->data(serverType_);
   Server::Data tdata, diff;
   tdata.ore(data);
   tdata.registerServerNL(server);
@@ -195,7 +195,7 @@ void ServerFiber::registerClient()
     diff.xorNL(data,tdata);
     startNodeClient = data.orNL(tdata);
   }
-  if( startNodeClient ) server_.startNodeClient(stStandalone);
+  if( startNodeClient ) server_->startNodeClient(stStandalone);
   putCode(serverType_ == stStandalone ? eOK : eInvalidServerType);
   flush();
   if( serverType_ == stStandalone ){
@@ -217,7 +217,7 @@ void ServerFiber::registerDB()
     stdErr.debug(6,stream);
     return;
   }
-  if( !(bool) server_.config_->parse().valueByPath(
+  if( !(bool) server_->config_->parse().valueByPath(
         utf8::String(serverConfSectionName[serverType_]) + ".enabled",false) ){
     terminate();
     stream << serverTypeName[serverType_] <<
@@ -225,7 +225,7 @@ void ServerFiber::registerDB()
     stdErr.debug(6,stream);
     return;
   }
-  bool irsl = server_.config_->valueByPath(
+  bool irsl = server_->config_->valueByPath(
     utf8::String(serverConfSectionName[serverType_]) + ".ignore_remote_send_list",false
   );
   uint32_t port;
@@ -254,7 +254,7 @@ void ServerFiber::registerDB()
     ": database changes received from " << hostDB << "\n";
   rdata.dumpNL(stream);
   stdErr.debug(6,stream);
-  Server::Data & data = server_.data(serverType_);
+  Server::Data & data = server_->data(serverType_);
   bool fullDump;
   {
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
@@ -275,7 +275,7 @@ void ServerFiber::registerDB()
   ldata.sendDatabaseNL(*this);
   putCode(eOK);
   flush();
-  if( dbChanged ) server_.startNodesExchange();
+  if( dbChanged ) server_->startNodesExchange();
   stream.clear() << serverTypeName[serverType_] <<
     ": database " << (fullDump ? "full dump" : "changes") << " sended to " << hostDB << "\n";
   ldata.dumpNL(stream);
@@ -290,7 +290,7 @@ void ServerFiber::getDB()
   if( serverType_ != stStandalone && serverType_ != stNode ) return;
   utf8::String host(remoteAddress().resolve(defaultPort));
   Server::Data tdata;
-  tdata.ore(server_.data(serverType_));
+  tdata.ore(server_->data(serverType_));
   tdata.sendDatabaseNL(*this);
   putCode(eOK);
   flush();
@@ -311,7 +311,7 @@ void ServerFiber::sendMail() // client sending mail
 
   *this >> id >> rest;
   AsyncFile file;
-  file.fileName(server_.incompleteDir() + id + ".msg").createIfNotExist(true).exclusive(true);
+  file.fileName(server_->incompleteDir() + id + ".msg").createIfNotExist(true).exclusive(true);
   if( rest ){
     file.open();
     *this << file.size() >> remainder;
@@ -358,7 +358,7 @@ void ServerFiber::sendMail() // client sending mail
     relay = "#Relay." + utf8::int2Str(i);
     if( !message->isValue(relay) ) break;
   }
-  message->value(relay,server_.bindAddrs()[0].resolve(defaultPort));
+  message->value(relay,server_->bindAddrs()[0].resolve(defaultPort));
   relay = relay + ".";
   message->value(relay + "Received",getTimeString(gettimeofday()));
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
@@ -370,7 +370,7 @@ void ServerFiber::sendMail() // client sending mail
     file2.removeAfterClose(false).close();
     rename(
       file2.fileName(),
-      server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + id + ".msg"
+      server_->spoolDir(id.hash(true) & (server_->spoolFibers_ - 1)) + id + ".msg"
     );
   }
   catch( ExceptionSP & e ){
@@ -396,7 +396,7 @@ void ServerFiber::processMailbox(
   bool & wait)
 {
   wait = true;
-  utf8::String myHost(server_.bindAddrs()[0].resolve(defaultPort));
+  utf8::String myHost(server_->bindAddrs()[0].resolve(defaultPort));
   Vector<utf8::String> list;
   getDirList(list,userMailBox + "*.msg",utf8::String(),false);
   Message::Keys ids;
@@ -428,7 +428,7 @@ void ServerFiber::processMailbox(
         splitString(message->value("#Recepient"),suser,skey,"@");
         bool lostSheep = true;
         {
-          Server::Data & data = server_.data(stStandalone);
+          Server::Data & data = server_->data(stStandalone);
           AutoMutexRDLock<FiberMutex> lock(data.mutex_);
           Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
           if( key2ServerLink != NULL )
@@ -437,7 +437,7 @@ void ServerFiber::processMailbox(
         lostSheep = user_.strcasecmp(suser) != 0 || lostSheep;
         if( lostSheep ){
           try {
-            rename(file.fileName(),server_.spoolDir(id.hash(true) & (server_.spoolFibers_ - 1)) + getNameFromPathName(list[i]));
+            rename(file.fileName(),server_->spoolDir(id.hash(true) & (server_->spoolFibers_ - 1)) + getNameFromPathName(list[i]));
           }
           catch( ExceptionSP & e ){
             e->writeStdError();
@@ -467,11 +467,11 @@ void ServerFiber::recvMail() // client receiving mail
 {
   bool waitForMail, onlyNewMail, wait;
   *this >> user_ >> key_ >> waitForMail >> onlyNewMail;
-  utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + user_));
+  utf8::String userMailBox(includeTrailingPathDelimiter(server_->mailDir() + user_));
   putCode(eOK);
-  server_.addRecvMailFiber(*this);
+  server_->addRecvMailFiber(*this);
   try {
-    server_.sendUserWatchdog(user_);
+    server_->sendUserWatchdog(user_);
     while( !terminated_ ){
       processMailbox(userMailBox,waitForMail,onlyNewMail,wait);
       if( !waitForMail ){
@@ -490,10 +490,10 @@ void ServerFiber::recvMail() // client receiving mail
     }
   }
   catch( ... ){
-    server_.remRecvMailFiber(*this);
+    server_->remRecvMailFiber(*this);
     throw;
   }
-  server_.remRecvMailFiber(*this);
+  server_->remRecvMailFiber(*this);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::removeMail() // client remove mail
@@ -501,7 +501,7 @@ void ServerFiber::removeMail() // client remove mail
   int32_t e = eOK;
   utf8::String mailForUser, id;
   *this >> mailForUser >> id;
-  utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + mailForUser));
+  utf8::String userMailBox(includeTrailingPathDelimiter(server_->mailDir() + mailForUser));
   utf8::String name(includeTrailingPathDelimiter(userMailBox) + id + ".msg");
   for( bool cont = true; cont;){
     try {
@@ -542,16 +542,16 @@ SpoolWalker::~SpoolWalker()
 {
 }
 //------------------------------------------------------------------------------
-SpoolWalker::SpoolWalker(Server & server,intptr_t id) : server_(server), id_(id)
+SpoolWalker::SpoolWalker(Server & server,intptr_t id) : server_(&server), id_(id)
 {
 }
 //------------------------------------------------------------------------------
 void SpoolWalker::processQueue(bool & timeWait)
 {
   timeWait = false;
-  utf8::String myHost(server_.bindAddrs()[0].resolve(defaultPort));
+  utf8::String myHost(server_->bindAddrs()[0].resolve(defaultPort));
   Vector<utf8::String> list;
-  getDirList(list,server_.spoolDir(id_) + "*.msg",utf8::String(),false);
+  getDirList(list,server_->spoolDir(id_) + "*.msg",utf8::String(),false);
   for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
     AsyncFile file(list[i]);
     try {
@@ -570,7 +570,7 @@ void SpoolWalker::processQueue(bool & timeWait)
         bool deliverLocaly = false;
         Key2ServerLink * key2ServerLink = NULL;
         {
-          Server::Data & data = server_.data(stStandalone);
+          Server::Data & data = server_->data(stStandalone);
           AutoMutexRDLock<FiberMutex> lock(data.mutex_);
           key2ServerLink = data.key2ServerLinks_.find(skey);
           if( key2ServerLink != NULL ){
@@ -584,7 +584,7 @@ void SpoolWalker::processQueue(bool & timeWait)
         }
         file.close();
         if( key2ServerLink == NULL ){
-          uint64_t messageTTL = server_.config_->valueByPath(
+          uint64_t messageTTL = server_->config_->valueByPath(
             utf8::String(serverConfSectionName[stStandalone]) +
             ".message_ttl",
             2678400u // 31 day
@@ -603,7 +603,7 @@ void SpoolWalker::processQueue(bool & timeWait)
               " not found in database.\n"
             ;
             message = NULL;
-            rename(file.fileName(),server_.spoolDir(-1) + getNameFromPathName(file.fileName()));
+            rename(file.fileName(),server_->spoolDir(-1) + getNameFromPathName(file.fileName()));
             stdErr.debug(1,stream);
           }
           else { // if collector
@@ -614,11 +614,11 @@ void SpoolWalker::processQueue(bool & timeWait)
 // robot response
           bool process = true;
           if( message->isValue("#request.user.online") && message->value("#request.user.online").strlen() == 0 ){
-            AutoLock<FiberInterlockedMutex> lock(server_.recvMailFibersMutex_);
-            ServerFiber sfib(server_,suser,skey);
-            ServerFiber * fib = server_.findRecvMailFiberNL(sfib);
+            AutoLock<FiberInterlockedMutex> lock(server_->recvMailFibersMutex_);
+            ServerFiber sfib(*server_,suser,skey);
+            ServerFiber * fib = server_->findRecvMailFiberNL(sfib);
             if( fib == NULL ){
-              server_.sendRobotMessage(
+              server_->sendRobotMessage(
                 message->value("#Sender"),
                 message->value("#Recepient"),
                 message->value("#Sender.Sended"),
@@ -640,7 +640,7 @@ void SpoolWalker::processQueue(bool & timeWait)
           }
 ////////////////
           if( process ){
-            utf8::String userMailBox(includeTrailingPathDelimiter(server_.mailDir() + suser));
+            utf8::String userMailBox(includeTrailingPathDelimiter(server_->mailDir() + suser));
             utf8::String::Stream stream;
             stream << "Message " << message->id() <<
               " received from " << message->value("#Sender") <<
@@ -674,7 +674,7 @@ void SpoolWalker::processQueue(bool & timeWait)
           ;
           utf8::String mId(message->id());
           message = NULL;
-          server_.sendMessage(host,mId,list[i]);
+          server_->sendMessage(host,mId,list[i]);
           stdErr.debug(0,stream);
         }
       }
@@ -688,24 +688,24 @@ void SpoolWalker::processQueue(bool & timeWait)
   }
   if( id_ < 0 ){ // if collector
     utf8::String::Stream stream;
-    utf8::String name(server_.spoolDir(id_) + "clear_node_database.ctrl");
+    utf8::String name(server_->spoolDir(id_) + "clear_node_database.ctrl");
     if( stat(name) ){
-      server_.data(stNode).clear();
+      server_->data(stNode).clear();
       remove(name,true);
       stream << serverTypeName[stNode] << " database droped by user request.\n";
       stdErr.debug(30,stream);
     }
-    name = server_.spoolDir(id_) + "clear_standalone_database.ctrl";
+    name = server_->spoolDir(id_) + "clear_standalone_database.ctrl";
     if( stat(name) ){
-      server_.data(stStandalone).clear();
+      server_->data(stStandalone).clear();
       remove(name,true);
       stream << serverTypeName[stStandalone] << " database droped by user request.\n";
       stdErr.debug(30,stream);
     }
-    name = server_.spoolDir(id_) + "clear_database.ctrl";
+    name = server_->spoolDir(id_) + "clear_database.ctrl";
     if( stat(name) ){
-      server_.data(stNode).clear();
-      server_.data(stStandalone).clear();
+      server_->data(stNode).clear();
+      server_->data(stStandalone).clear();
       remove(name,true);
       stream << serverTypeName[stNode] << " and " <<
         serverTypeName[stStandalone] << " database droped by user request.\n";
@@ -729,12 +729,12 @@ void SpoolWalker::fiberExecute()
     }
     if( terminated_ ) break;
     if( timeWait ){
-      uint64_t timeout = server_.config_->valueByPath(vName,60u);
+      uint64_t timeout = server_->config_->valueByPath(vName,60u);
       ksleep(timeout * 1000000u);
       stdErr.debug(9,utf8::String::Stream() << "Processing spool by timer... \n");
     }
     else {
-      dcn_.monitor(excludeTrailingPathDelimiter(server_.spoolDir(id_)));
+      dcn_.monitor(excludeTrailingPathDelimiter(server_->spoolDir(id_)));
       stdErr.debug(9,utf8::String::Stream() << "Processing spool by monitor... \n");
     }
   }
@@ -747,12 +747,12 @@ MailQueueWalker::~MailQueueWalker()
 }
 //------------------------------------------------------------------------------
 MailQueueWalker::MailQueueWalker(Server & server) :
-  server_(server), messagesAutoDrop_(messages_)
+  server_(&server), messagesAutoDrop_(messages_)
 {
 }
 //------------------------------------------------------------------------------
 MailQueueWalker::MailQueueWalker(Server & server,const utf8::String & host)
-  : server_(server), host_(host), messagesAutoDrop_(messages_)
+  : server_(&server), host_(host), messagesAutoDrop_(messages_)
 {
 }
 //------------------------------------------------------------------------------
@@ -772,23 +772,23 @@ void MailQueueWalker::getCode(int32_t noThrowCode)
 void MailQueueWalker::auth()
 {
   AuthParams ap;
-  ap.maxSendSize_ = server_.config_->value("max_send_size",-1);
-  ap.maxRecvSize_ = server_.config_->value("max_recv_size",-1);
-  ap.recvTimeout_ = server_.config_->value("recv_timeout",-1);
+  ap.maxSendSize_ = server_->config_->value("max_send_size",-1);
+  ap.maxRecvSize_ = server_->config_->value("max_recv_size",-1);
+  ap.recvTimeout_ = server_->config_->value("recv_timeout",-1);
   if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
-  ap.sendTimeout_ = server_.config_->value("send_timeout",-1);
+  ap.sendTimeout_ = server_->config_->value("send_timeout",-1);
   if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
-  ap.user_ = server_.config_->text("user","system");
-  ap.password_ = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
-  ap.encryption_ = server_.config_->section("encryption").text(utf8::String(),"default");
-  ap.threshold_ = server_.config_->section("encryption").value("threshold",1024 * 1024);
-  ap.compression_ = server_.config_->section("compression").text(utf8::String(),"default");
-  ap.compressionType_ = server_.config_->section("compression").value("type","default");
-  ap.crc_ = server_.config_->section("compression").value("crc","default");
-  ap.level_ = server_.config_->section("compression").value("level",9);
-  ap.optimize_ = server_.config_->section("compression").value("optimize",true);
-  ap.bufferSize_ = server_.config_->section("compression").value("buffer_size",getpagesize() * 16);
-  ap.noAuth_ = server_.config_->value("noauth",false);
+  ap.user_ = server_->config_->text("user","system");
+  ap.password_ = server_->config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
+  ap.encryption_ = server_->config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = server_->config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = server_->config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = server_->config_->section("compression").value("type","default");
+  ap.crc_ = server_->config_->section("compression").value("crc","default");
+  ap.level_ = server_->config_->section("compression").value("level",9);
+  ap.optimize_ = server_->config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = server_->config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.noAuth_ = server_->config_->value("noauth",false);
   checkCode(clientAuth(ap));
 }
 //------------------------------------------------------------------------------
@@ -834,7 +834,7 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
   }
   uint64_t cec;
   {
-    Server::Data & data = server_.data(stStandalone);
+    Server::Data & data = server_->data(stStandalone);
     AutoMutexWRLock<FiberMutex> lock(data.mutex_);
     ServerInfo * si = data.servers_.find(host_);
     if( si == NULL ) data.registerServerNL(host_);
@@ -853,7 +853,7 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
         host_ << " because previous connect try failed.\n"
       );
       cec *= 1000000u;
-      uint64_t mwtv = (uint64_t) server_.config_->parse().valueByPath(
+      uint64_t mwtv = (uint64_t) server_->config_->parse().valueByPath(
         utf8::String(serverConfSectionName[stStandalone]) +
         ".max_wait_time_before_try_connect",
         600u
@@ -868,7 +868,7 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
 void MailQueueWalker::main()
 {
   try {
-    server_.config_->parse();
+    server_->config_->parse();
     bool online = false, mwt;
     while( !terminated_ ){
       connectHost(online,mwt);
@@ -882,7 +882,7 @@ void MailQueueWalker::main()
           uint64_t restFrom, remainder, rb = recvBytes(), sb = sendBytes();
           *this << uint8_t(cmSendMail) << *mId << true >> restFrom;
           AsyncFile file;
-          file.fileName(server_.mqueueDir() + *mId + ".msg").readOnly(true).open().seek(restFrom);
+          file.fileName(server_->mqueueDir() + *mId + ".msg").readOnly(true).open().seek(restFrom);
           *this << (remainder = file.size() - restFrom);
           AutoPtr<uint8_t> b;
           size_t bl = getpagesize() * 16;
@@ -905,7 +905,7 @@ void MailQueueWalker::main()
           messages_.drop(*mId);
         }
         else {
-          uint64_t inactivityTime = (uint64_t) server_.config_->valueByPath(
+          uint64_t inactivityTime = (uint64_t) server_->config_->valueByPath(
             utf8::String(serverConfSectionName[stStandalone]) + ".mqueue_fiber_inactivity_time",
             60u
           ) * 1000000u;
@@ -922,10 +922,10 @@ void MailQueueWalker::main()
     }
   }
   catch( ExceptionSP & ){
-    server_.removeSender(*this);
+    server_->removeSender(*this);
     throw;
   }
-  server_.removeSender(*this);
+  server_->removeSender(*this);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -935,7 +935,7 @@ NodeClient::~NodeClient()
 }
 //------------------------------------------------------------------------------
 NodeClient::NodeClient(Server & server) :
-  server_(server), dataType_(stNone), periodicaly_(false)
+  server_(&server), dataType_(stNone), periodicaly_(false)
 {
 }
 //------------------------------------------------------------------------------
@@ -979,23 +979,23 @@ int32_t NodeClient::getCode(int32_t noThrowCode1,int32_t noThrowCode2)
 void NodeClient::auth()
 {
   AuthParams ap;
-  ap.maxSendSize_ = server_.config_->value("max_send_size",-1);
-  ap.maxRecvSize_ = server_.config_->value("max_recv_size",-1);
-  ap.recvTimeout_ = server_.config_->value("recv_timeout",-1);
+  ap.maxSendSize_ = server_->config_->value("max_send_size",-1);
+  ap.maxRecvSize_ = server_->config_->value("max_recv_size",-1);
+  ap.recvTimeout_ = server_->config_->value("recv_timeout",-1);
   if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
-  ap.sendTimeout_ = server_.config_->value("send_timeout",-1);
+  ap.sendTimeout_ = server_->config_->value("send_timeout",-1);
   if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
-  ap.user_ = server_.config_->text("user","system");
-  ap.password_ = server_.config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
-  ap.encryption_ = server_.config_->section("encryption").text(utf8::String(),"default");
-  ap.threshold_ = server_.config_->section("encryption").value("threshold",1024 * 1024);
-  ap.compression_ = server_.config_->section("compression").text(utf8::String(),"default");
-  ap.compressionType_ = server_.config_->section("compression").value("type","default");
-  ap.crc_ = server_.config_->section("compression").value("crc","default");
-  ap.level_ = server_.config_->section("compression").value("level",9);
-  ap.optimize_ = server_.config_->section("compression").value("optimize",true);
-  ap.bufferSize_ = server_.config_->section("compression").value("buffer_size",getpagesize() * 16);
-  ap.noAuth_ = server_.config_->value("noauth",false);
+  ap.user_ = server_->config_->text("user","system");
+  ap.password_ = server_->config_->text("password","sha256:jKHSsCN1gvGyn07F4xp8nvoUtDIkANkxjcVQ73matyM");
+  ap.encryption_ = server_->config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = server_->config_->section("encryption").value("threshold",1024 * 1024);
+  ap.compression_ = server_->config_->section("compression").text(utf8::String(),"default");
+  ap.compressionType_ = server_->config_->section("compression").value("type","default");
+  ap.crc_ = server_->config_->section("compression").value("crc","default");
+  ap.level_ = server_->config_->section("compression").value("level",9);
+  ap.optimize_ = server_->config_->section("compression").value("optimize",true);
+  ap.bufferSize_ = server_->config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.noAuth_ = server_->config_->value("noauth",false);
   checkCode(clientAuth(ap));
 }
 //------------------------------------------------------------------------------
@@ -1003,43 +1003,43 @@ void NodeClient::sweepHelper(ServerType serverType)
 {
   utf8::String::Stream stream;
   stream << serverTypeName[serverType] << ": sweep in " << serverTypeName[serverType] << " database\n";
-  uint64_t ttl = server_.config_->valueByPath(utf8::String(serverConfSectionName[serverType]) + ".ttl","");
-  uint64_t ttr = server_.config_->valueByPath(utf8::String(serverConfSectionName[serverType]) + ".ttr","");
-  if( server_.data(serverType).sweep(ttl * 1000000u,ttr * 1000000u,&stream) )
+  uint64_t ttl = server_->config_->valueByPath(utf8::String(serverConfSectionName[serverType]) + ".ttl","");
+  uint64_t ttr = server_->config_->valueByPath(utf8::String(serverConfSectionName[serverType]) + ".ttr","");
+  if( server_->data(serverType).sweep(ttl * 1000000u,ttr * 1000000u,&stream) )
     stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
 void NodeClient::main()
 {
-  server_.data(stStandalone).registerServer(
-    ServerInfo(server_.bindAddrs()[0].resolve(defaultPort),stStandalone)
+  server_->data(stStandalone).registerServer(
+    ServerInfo(server_->bindAddrs()[0].resolve(defaultPort),stStandalone)
   );
   intptr_t i;
   utf8::String server, host, enabledPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled");
-  Server::Data & data = server_.data(dataType_);
+  Server::Data & data = server_->data(dataType_);
   try {
     bool tryConnect = false, connected, exchanged, doWork;
     do {
-      server_.config_->parse();
-      stdErr.setDebugLevels(server_.config_->value("debug_levels","+0,+1,+2,+3"));
-      if( periodicaly_ ) checkMachineBinding(server_.config_->value("machine_key"),true);
+      server_->config_->parse();
+      stdErr.setDebugLevels(server_->config_->value("debug_levels","+0,+1,+2,+3"));
+      if( periodicaly_ ) checkMachineBinding(server_->config_->value("machine_key"),true);
       connected = exchanged = false;
       {
-        AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
+        AutoLock<FiberInterlockedMutex> lock(server_->nodeClientMutex_);
         doWork = 
           dataType_ != stStandalone ||
-          (server_.nodeClient_ == NULL && periodicaly_) ||
-          server_.nodeClient_ == this
+          (server_->nodeClient_ == NULL && periodicaly_) ||
+          server_->nodeClient_ == this
         ;
       }
-      if( doWork && periodicaly_ && !(bool) server_.config_->valueByPath(enabledPath,true) ) doWork = false;
+      if( doWork && periodicaly_ && !(bool) server_->config_->valueByPath(enabledPath,true) ) doWork = false;
       if( doWork ){
         if( dataType_ == stStandalone ){
-          server = server_.data(stStandalone).getNodeList();
-          host = server_.data(stNode).getNodeList();
+          server = server_->data(stStandalone).getNodeList();
+          host = server_->data(stNode).getNodeList();
           if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
           server += host;
-          host = server_.config_->parse().valueByPath(
+          host = server_->config_->parse().valueByPath(
             utf8::String(serverConfSectionName[stStandalone]) + ".node",""
           );
           if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
@@ -1072,7 +1072,7 @@ void NodeClient::main()
               lastFailedConnectTime = si->lastFailedConnectTime_;
             }
             if( cec > 0 ){
-              uintptr_t mwt = server_.config_->parse().valueByPath(
+              uintptr_t mwt = server_->config_->parse().valueByPath(
                 utf8::String(serverConfSectionName[dataType_]) +
                 ".max_wait_time_before_try_connect",
                 600u
@@ -1116,7 +1116,7 @@ void NodeClient::main()
               Server::Data rdata, ldata, diff, dump;
               uint64_t rStartTime;
               *this << uint8_t(cmRegisterDB) <<
-                uint32_t(ksock::api.ntohs(server_.bindAddrs()[0].addr4_.sin_port)) <<
+                uint32_t(ksock::api.ntohs(server_->bindAddrs()[0].addr4_.sin_port)) <<
                 uint64_t(getProcessStartTime()) >>
                 rStartTime;
               ;
@@ -1191,7 +1191,7 @@ void NodeClient::main()
       if( periodicaly_ ){
         sweepHelper(stStandalone);
         sweepHelper(stNode);
-        uint64_t timeout = server_.config_->
+        uint64_t timeout = server_->config_->
           valueByPath(
             utf8::String(serverConfSectionName[stStandalone]) + ".exchange_interval",
             600u
@@ -1199,17 +1199,17 @@ void NodeClient::main()
         ksleep(timeout * 1000000u);
       }
     } while( periodicaly_ && !terminated_ );
-    AutoLock<FiberInterlockedMutex> lock(server_.nodeClientMutex_);
+    AutoLock<FiberInterlockedMutex> lock(server_->nodeClientMutex_);
     if( !periodicaly_ && !exchanged ){
-      if( dataType_ == stStandalone ) server_.skippedNodeClientStarts_++;
-      if( dataType_ == stNode ) server_.skippedNodeExchangeStarts_++;
+      if( dataType_ == stStandalone ) server_->skippedNodeClientStarts_++;
+      if( dataType_ == stNode ) server_->skippedNodeExchangeStarts_++;
     }
   }
   catch( ExceptionSP & ){
-    if( !periodicaly_ ) server_.clearNodeClient(this);
+    if( !periodicaly_ ) server_->clearNodeClient(this);
     throw;
   }
-  if( !periodicaly_ ) server_.clearNodeClient(this);
+  if( !periodicaly_ ) server_->clearNodeClient(this);
 }
 //------------------------------------------------------------------------------
 } // namespace msmail

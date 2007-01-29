@@ -30,6 +30,16 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+void Exception::afterConstruction()
+{
+  if( !heap_ )
+    newObjectV1C2<Exception>(
+      EINVAL,
+      __PRETTY_FUNCTION__ + utf8::String(" ") +
+      "Exception must be allocated dynamicaly only via newObject function(s)."
+    )->throwSP();
+}
+//---------------------------------------------------------------------------
 /*Exception * Exception::newObject()
 {
   ksys::AutoPtr<Exception> safe((Exception *) ksys::kmalloc(sizeof(Exception)));

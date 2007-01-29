@@ -43,8 +43,8 @@ int main(int ac,char * av[])
       intptr_t i;
       uintptr_t u;
     };
-    ksys::stdErr.fileName(SYSLOG_DIR + "/mskey/mskey.log");
-    ksys::Config::defaultFileName(SYSCONF_DIR + "mskey.conf");
+    ksys::stdErr.fileName(SYSLOG_DIR("mskey/") + "mskey.log");
+    ksys::Config::defaultFileName(SYSCONF_DIR() + "mskey.conf");
     utf8::String expirationDate("00.00.0000");
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].strcmp("--version") == 0 ){

@@ -33,6 +33,7 @@ namespace fbcpp {
 //---------------------------------------------------------------------------
 class EDBCreate : public EClientServer {
   public:
+    EDBCreate() {}
     EDBCreate(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -45,6 +46,7 @@ inline EDBCreate::EDBCreate(const ISC_STATUS_ARRAY status, const utf8::String & 
 //---------------------------------------------------------------------------
 class EDBDrop : public EClientServer {
   public:
+    EDBDrop() {}
     EDBDrop(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -57,6 +59,7 @@ inline EDBDrop::EDBDrop(const ISC_STATUS_ARRAY status, const utf8::String & what
 //---------------------------------------------------------------------------
 class EDBNotAttached : public EClientServer {
   public:
+    EDBNotAttached() {}
     EDBNotAttached(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -69,6 +72,7 @@ inline EDBNotAttached::EDBNotAttached(const ISC_STATUS_ARRAY status, const utf8:
 //---------------------------------------------------------------------------
 class EDBAttach : public EClientServer {
   public:
+    EDBAttach() {}
     EDBAttach(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -81,6 +85,7 @@ inline EDBAttach::EDBAttach(const ISC_STATUS_ARRAY status, const utf8::String & 
 //---------------------------------------------------------------------------
 class EDBDetach : public EClientServer {
   public:
+    EDBDetach() {}
     EDBDetach(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -93,6 +98,7 @@ inline EDBDetach::EDBDetach(const ISC_STATUS_ARRAY status, const utf8::String & 
 //---------------------------------------------------------------------------
 class EDSQLStAttached : public EClientServer {
   public:
+    EDSQLStAttached() {}
     EDSQLStAttached(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -105,6 +111,7 @@ inline EDSQLStAttached::EDSQLStAttached(const ISC_STATUS_ARRAY status, const utf
 //---------------------------------------------------------------------------
 class EDSQLStNotAttached : public EClientServer {
   public:
+    EDSQLStNotAttached() {}
     EDSQLStNotAttached(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -117,6 +124,7 @@ inline EDSQLStNotAttached::EDSQLStNotAttached(const ISC_STATUS_ARRAY status, con
 //---------------------------------------------------------------------------
 class EDSQLStAllocate : public EClientServer {
   public:
+    EDSQLStAllocate() {}
     EDSQLStAllocate(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -129,6 +137,7 @@ inline EDSQLStAllocate::EDSQLStAllocate(const ISC_STATUS_ARRAY status, const utf
 //---------------------------------------------------------------------------
 class EDSQLStFree : public EClientServer {
   public:
+    EDSQLStFree() {}
     EDSQLStFree(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -141,6 +150,7 @@ inline EDSQLStFree::EDSQLStFree(const ISC_STATUS_ARRAY status, const utf8::Strin
 //---------------------------------------------------------------------------
 class EDSQLStPrepare : public EClientServer {
   public:
+    EDSQLStPrepare() {}
     EDSQLStPrepare(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -153,6 +163,7 @@ inline EDSQLStPrepare::EDSQLStPrepare(const ISC_STATUS_ARRAY status, const utf8:
 //---------------------------------------------------------------------------
 class EDSQLStDescribe : public EClientServer {
   public:
+    EDSQLStDescribe() {}
     EDSQLStDescribe(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -165,6 +176,7 @@ inline EDSQLStDescribe::EDSQLStDescribe(const ISC_STATUS_ARRAY status, const utf
 //---------------------------------------------------------------------------
 class EDSQLStDescribeBind : public EClientServer {
   public:
+    EDSQLStDescribeBind() {}
     EDSQLStDescribeBind(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -177,6 +189,7 @@ inline EDSQLStDescribeBind::EDSQLStDescribeBind(const ISC_STATUS_ARRAY status, c
 //---------------------------------------------------------------------------
 class EDSQLStExecute : public EClientServer {
   public:
+    EDSQLStExecute() {}
     EDSQLStExecute(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -189,6 +202,7 @@ inline EDSQLStExecute::EDSQLStExecute(const ISC_STATUS_ARRAY status, const utf8:
 //---------------------------------------------------------------------------
 class EDSQLStCreateCursor : public EClientServer {
   public:
+    EDSQLStCreateCursor() {}
     EDSQLStCreateCursor(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -201,6 +215,7 @@ inline EDSQLStCreateCursor::EDSQLStCreateCursor(const ISC_STATUS_ARRAY status, c
 //---------------------------------------------------------------------------
 class EDSQLStDropCursor : public EClientServer {
   public:
+    EDSQLStDropCursor() {}
     EDSQLStDropCursor(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -213,6 +228,7 @@ inline EDSQLStDropCursor::EDSQLStDropCursor(const ISC_STATUS_ARRAY status, const
 //---------------------------------------------------------------------------
 class EDSQLStFetch : public EClientServer {
   public:
+    EDSQLStFetch() {}
     EDSQLStFetch(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -225,6 +241,7 @@ inline EDSQLStFetch::EDSQLStFetch(const ISC_STATUS_ARRAY status, const utf8::Str
 //---------------------------------------------------------------------------
 class EDSQLStInfo : public EClientServer {
   public:
+    EDSQLStInfo() {}
     EDSQLStInfo(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -237,6 +254,7 @@ inline EDSQLStInfo::EDSQLStInfo(const ISC_STATUS_ARRAY status, const utf8::Strin
 //---------------------------------------------------------------------------
 class EDSQLStInvalidParamName : public EClientServer {
   public:
+    EDSQLStInvalidParamName() {}
     EDSQLStInvalidParamName(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -249,6 +267,7 @@ inline EDSQLStInvalidParamName::EDSQLStInvalidParamName(const ISC_STATUS_ARRAY s
 //---------------------------------------------------------------------------
 class EDSQLStInvalidParamIndex : public EClientServer {
   public:
+    EDSQLStInvalidParamIndex() {}
     EDSQLStInvalidParamIndex(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -261,6 +280,7 @@ inline EDSQLStInvalidParamIndex::EDSQLStInvalidParamIndex(const ISC_STATUS_ARRAY
 //---------------------------------------------------------------------------
 class EDSQLStInvalidParamValue : public EClientServer {
   public:
+    EDSQLStInvalidParamValue() {}
     EDSQLStInvalidParamValue(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -273,6 +293,7 @@ inline EDSQLStInvalidParamValue::EDSQLStInvalidParamValue(const ISC_STATUS_ARRAY
 //---------------------------------------------------------------------------
 class EDSQLStInvalidParam : public EClientServer {
   public:
+    EDSQLStInvalidParam() {}
     EDSQLStInvalidParam(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -285,6 +306,7 @@ inline EDSQLStInvalidParam::EDSQLStInvalidParam(const ISC_STATUS_ARRAY status, c
 //---------------------------------------------------------------------------
 class EDSQLStInvalidValueName : public EClientServer {
   public:
+    EDSQLStInvalidValueName() {}
     EDSQLStInvalidValueName(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -297,6 +319,7 @@ inline EDSQLStInvalidValueName::EDSQLStInvalidValueName(const ISC_STATUS_ARRAY s
 //---------------------------------------------------------------------------
 class EDSQLStInvalidValueIndex : public EClientServer {
   public:
+    EDSQLStInvalidValueIndex() {}
     EDSQLStInvalidValueIndex(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -309,6 +332,7 @@ inline EDSQLStInvalidValueIndex::EDSQLStInvalidValueIndex(const ISC_STATUS_ARRAY
 //---------------------------------------------------------------------------
 class EDSQLStInvalidValue : public EClientServer {
   public:
+    EDSQLStInvalidValue() {}
     EDSQLStInvalidValue(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -321,6 +345,7 @@ inline EDSQLStInvalidValue::EDSQLStInvalidValue(const ISC_STATUS_ARRAY status, c
 //---------------------------------------------------------------------------
 class EDSQLStInvalidRowIndex : public EClientServer {
   public:
+    EDSQLStInvalidRowIndex() {}
     EDSQLStInvalidRowIndex(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -333,6 +358,7 @@ inline EDSQLStInvalidRowIndex::EDSQLStInvalidRowIndex(const ISC_STATUS_ARRAY sta
 //---------------------------------------------------------------------------
 class EDSQLStArrayLookupBounds : public EClientServer {
   public:
+    EDSQLStArrayLookupBounds() {}
     EDSQLStArrayLookupBounds(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -345,6 +371,7 @@ inline EDSQLStArrayLookupBounds::EDSQLStArrayLookupBounds(const ISC_STATUS_ARRAY
 //---------------------------------------------------------------------------
 class EDSQLStArrayPutSlice : public EClientServer {
   public:
+    EDSQLStArrayPutSlice() {}
     EDSQLStArrayPutSlice(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -357,6 +384,7 @@ inline EDSQLStArrayPutSlice::EDSQLStArrayPutSlice(const ISC_STATUS_ARRAY status,
 //---------------------------------------------------------------------------
 class EDSQLStArrayGetSlice : public EClientServer {
   public:
+    EDSQLStArrayGetSlice() {}
     EDSQLStArrayGetSlice(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -369,6 +397,7 @@ inline EDSQLStArrayGetSlice::EDSQLStArrayGetSlice(const ISC_STATUS_ARRAY status,
 //---------------------------------------------------------------------------
 class EDSQLStCreateBlob : public EClientServer {
   public:
+    EDSQLStCreateBlob() {}
     EDSQLStCreateBlob(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -381,6 +410,7 @@ inline EDSQLStCreateBlob::EDSQLStCreateBlob(const ISC_STATUS_ARRAY status, const
 //---------------------------------------------------------------------------
 class EDSQLStOpenBlob : public EClientServer {
   public:
+    EDSQLStOpenBlob() {}
     EDSQLStOpenBlob(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -393,6 +423,7 @@ inline EDSQLStOpenBlob::EDSQLStOpenBlob(const ISC_STATUS_ARRAY status, const utf
 //---------------------------------------------------------------------------
 class EDSQLStCancelBlob : public EClientServer {
   public:
+    EDSQLStCancelBlob() {}
     EDSQLStCancelBlob(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -405,6 +436,7 @@ inline EDSQLStCancelBlob::EDSQLStCancelBlob(const ISC_STATUS_ARRAY status, const
 //---------------------------------------------------------------------------
 class EDSQLStCloseBlob : public EClientServer {
   public:
+    EDSQLStCloseBlob() {}
     EDSQLStCloseBlob(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -417,6 +449,7 @@ inline EDSQLStCloseBlob::EDSQLStCloseBlob(const ISC_STATUS_ARRAY status, const u
 //---------------------------------------------------------------------------
 class EDSQLStPutSegment : public EClientServer {
   public:
+    EDSQLStPutSegment() {}
     EDSQLStPutSegment(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -429,6 +462,7 @@ inline EDSQLStPutSegment::EDSQLStPutSegment(const ISC_STATUS_ARRAY status, const
 //---------------------------------------------------------------------------
 class EDSQLStGetSegment : public EClientServer {
   public:
+    EDSQLStGetSegment() {}
     EDSQLStGetSegment(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -441,6 +475,7 @@ inline EDSQLStGetSegment::EDSQLStGetSegment(const ISC_STATUS_ARRAY status, const
 //---------------------------------------------------------------------------
 class EDSQLStInvalidArrayDim : public EClientServer {
   public:
+    EDSQLStInvalidArrayDim() {}
     EDSQLStInvalidArrayDim(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -453,6 +488,7 @@ inline EDSQLStInvalidArrayDim::EDSQLStInvalidArrayDim(const ISC_STATUS_ARRAY sta
 //---------------------------------------------------------------------------
 class ETrActive : public EClientServer {
   public:
+    ETrActive() {}
     ETrActive(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -465,6 +501,7 @@ inline ETrActive::ETrActive(const ISC_STATUS_ARRAY status, const utf8::String & 
 //---------------------------------------------------------------------------
 class ETrNotActive : public EClientServer {
   public:
+    ETrNotActive() {}
     ETrNotActive(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -477,6 +514,7 @@ inline ETrNotActive::ETrNotActive(const ISC_STATUS_ARRAY status, const utf8::Str
 //---------------------------------------------------------------------------
 class ETrNotAttached : public EClientServer {
   public:
+    ETrNotAttached() {}
     ETrNotAttached(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -489,6 +527,7 @@ inline ETrNotAttached::ETrNotAttached(const ISC_STATUS_ARRAY status, const utf8:
 //---------------------------------------------------------------------------
 class ETrStart : public EClientServer {
   public:
+    ETrStart() {}
     ETrStart(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -501,6 +540,7 @@ inline ETrStart::ETrStart(const ISC_STATUS_ARRAY status, const utf8::String & wh
 //---------------------------------------------------------------------------
 class ETrPrepare : public EClientServer {
   public:
+    ETrPrepare() {}
     ETrPrepare(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -513,6 +553,7 @@ inline ETrPrepare::ETrPrepare(const ISC_STATUS_ARRAY status, const utf8::String 
 //---------------------------------------------------------------------------
 class ETrCommit : public EClientServer {
   public:
+    ETrCommit() {}
     ETrCommit(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -525,6 +566,7 @@ inline ETrCommit::ETrCommit(const ISC_STATUS_ARRAY status, const utf8::String & 
 //---------------------------------------------------------------------------
 class ETrRollback : public EClientServer {
   public:
+    ETrRollback() {}
     ETrRollback(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -537,6 +579,7 @@ inline ETrRollback::ETrRollback(const ISC_STATUS_ARRAY status, const utf8::Strin
 //---------------------------------------------------------------------------
 class EServiceAttach : public EClientServer {
   public:
+    EServiceAttach() {}
     EServiceAttach(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -549,6 +592,7 @@ inline EServiceAttach::EServiceAttach(const ISC_STATUS_ARRAY status, const utf8:
 //---------------------------------------------------------------------------
 class EServiceDetach : public EClientServer {
   public:
+    EServiceDetach() {}
     EServiceDetach(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -561,6 +605,7 @@ inline EServiceDetach::EServiceDetach(const ISC_STATUS_ARRAY status, const utf8:
 //---------------------------------------------------------------------------
 class EServiceStart : public EClientServer {
   public:
+    EServiceStart() {}
     EServiceStart(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -573,6 +618,7 @@ inline EServiceStart::EServiceStart(const ISC_STATUS_ARRAY status, const utf8::S
 //---------------------------------------------------------------------------
 class EServiceQuery : public EClientServer {
   public:
+    EServiceQuery() {}
     EServiceQuery(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -585,6 +631,7 @@ inline EServiceQuery::EServiceQuery(const ISC_STATUS_ARRAY status, const utf8::S
 //---------------------------------------------------------------------------
 class EEventQueue : public EClientServer {
   public:
+    EEventQueue() {}
     EEventQueue(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------
@@ -597,6 +644,7 @@ inline EEventQueue::EEventQueue(const ISC_STATUS_ARRAY status, const utf8::Strin
 //---------------------------------------------------------------------------
 class EEventCancel : public EClientServer {
   public:
+    EEventCancel() {}
     EEventCancel(const ISC_STATUS_ARRAY status, const utf8::String & what);
 };
 //---------------------------------------------------------------------------

@@ -29,36 +29,43 @@
 //------------------------------------------------------------------------------
 using namespace ksys;
 //------------------------------------------------------------------------------
+class MSUpdaterService;
+class MSUpdateFetcher;
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class MSUpdateSetuper : public Fiber {
   public:
     virtual ~MSUpdateSetuper();
-    MSUpdateSetuper(const ConfigSP & config,Semaphore & setupSem);
+    MSUpdateSetuper() {}
+    MSUpdateSetuper(MSUpdateFetcher & fetcher);
   protected:
     void fiberExecute();
   private:
-    ConfigSP config_;
-    Semaphore & setupSem_;
+    MSUpdateFetcher * fetcher_;
     void executeAction(const utf8::String & name,const ConfigSection & section);
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class MSUpdateFetcher : public Fiber {
+  friend class MSUpdateSetuper;
   public:
     virtual ~MSUpdateFetcher();
-    MSUpdateFetcher(const ConfigSP & config);
+    MSUpdateFetcher() {}
+    MSUpdateFetcher(MSUpdaterService & updater);
   protected:
     void fiberExecute();
   private:
-    ConfigSP config_;
+    MSUpdaterService * updater_;
     Semaphore setupSem_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class MSUpdaterService : public Service, protected BaseServer {
+  friend class MSUpdateSetuper;
+  friend class MSUpdateFetcher;
   public:
     MSUpdaterService();
 

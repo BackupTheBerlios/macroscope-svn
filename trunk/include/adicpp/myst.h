@@ -85,6 +85,7 @@ class DSQLParam {
   friend class DSQLStatement;
   public:
     ~DSQLParam();
+    DSQLParam() {}
     DSQLParam(DSQLStatement & statement);
   protected:
     DSQLStatement       * statement_;
@@ -126,6 +127,7 @@ class DSQLParams {
   friend class DSQLStatement;
   public:
     ~DSQLParams();
+    DSQLParams() {}
     DSQLParams(DSQLStatement & statement);
 
     uintptr_t count();
@@ -147,7 +149,7 @@ class DSQLParams {
     DSQLParams &                                          asString(const utf8::String & paramName, const utf8::String & value);
   protected:
   private:
-    DSQLStatement &                                                     statement_;
+    DSQLStatement * statement_;
     MYSQL_BIND_Holder                                                   bind_;
     ksys::HashedObjectList< utf8::String,DSQLParam>                     params_;
     ksys::Array< ksys::HashedObjectListItem< utf8::String,DSQLParam> *> indexToParam_;
@@ -164,7 +166,7 @@ inline DSQLParams::~DSQLParams()
 {
 }
 //---------------------------------------------------------------------------
-inline DSQLParams::DSQLParams(DSQLStatement & statement) : statement_(statement)
+inline DSQLParams::DSQLParams(DSQLStatement & statement) : statement_(&statement)
 {
   params_.caseSensitive(false);
 }
@@ -205,10 +207,39 @@ inline DSQLRow::~DSQLRow()
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLValues {
-    friend class DSQLStatement;
-    friend class Transaction;
+  friend class DSQLStatement;
+  friend class Transaction;
+  public:
+    ~DSQLValues();
+    DSQLValues() {}
+    DSQLValues(DSQLStatement & statement);
+
+    uintptr_t           rowCount();
+    intptr_t            rowIndex();
+    bool                fetch();
+    DSQLValues &        fetchAll();
+    DSQLValues &        selectRow(uintptr_t i);
+    DSQLValues &        selectFirst();
+    DSQLValues &        selectLast();
+
+    uintptr_t           count();
+    uintptr_t           checkValueIndex(uintptr_t i);
+    intptr_t            indexOfName(const utf8::String & name);
+    const utf8::String  nameOfIndex(uintptr_t i);
+
+    // access methods
+    bool                isNull(uintptr_t i);
+    bool                isNull(const utf8::String & name);
+
+    ksys::Mutant        asMutant(uintptr_t i);
+    ksys::Mutant        asMutant(const utf8::String & name);
+    utf8::String        asString(uintptr_t i);
+    utf8::String        asString(const utf8::String & name);
+
+    const MYSQL_FIELD & field(uintptr_t i);
+  protected:
   private:
-    DSQLStatement &                                 statement_;
+    DSQLStatement *                                 statement_;
     MYSQL_BIND_Holder                               bind_;
     MYSQL_RES *                                     res_;
     MYSQL_FIELD *                                   fields_;
@@ -240,39 +271,10 @@ class DSQLValues {
     DSQLValues &        fillRowHelper(struct fillRowVars & v, uintptr_t ds);
     intptr_t            getValueIndex(const utf8::String & name);
     DSQLValues &        freeRes();
-  public:
-                        DSQLValues(DSQLStatement & statement);
-                        ~DSQLValues();
-
-    uintptr_t           rowCount();
-    intptr_t            rowIndex();
-    bool                fetch();
-    DSQLValues &        fetchAll();
-    DSQLValues &        selectRow(uintptr_t i);
-    DSQLValues &        selectFirst();
-    DSQLValues &        selectLast();
-
-    uintptr_t           count();
-    uintptr_t           checkValueIndex(uintptr_t i);
-    intptr_t            indexOfName(const utf8::String & name);
-    const utf8::String  nameOfIndex(uintptr_t i);
-
-    // access methods
-    bool                isNull(uintptr_t i);
-    bool                isNull(const utf8::String & name);
-
-    ksys::Mutant        asMutant(uintptr_t i);
-    ksys::Mutant        asMutant(const utf8::String & name);
-    utf8::String        asString(uintptr_t i);
-    utf8::String        asString(const utf8::String & name);
-
-    const MYSQL_FIELD & field(uintptr_t i);
 };
 //---------------------------------------------------------------------------
 inline DSQLValues::DSQLValues(DSQLStatement & statement)
-  : statement_(statement),
-    res_(NULL),
-    row_(-1)
+  : statement_(&statement), res_(NULL), row_(-1)
 {
   valuesIndex_.caseSensitive(false);
   valuesIndex_.ownsObjects(false);

@@ -540,21 +540,21 @@ typedef int32_t gid_t;
 
 #if !SYSCONF_DIR
 #if defined(__WIN32__) || defined(__WIN64__)
-#define SYSCONF_DIR ksys::getExecutablePath()
+#define SYSCONF_DIR(a) ksys::getExecutablePath()
 #elif BSD
-#define SYSCONF_DIR utf8::String("/usr/local/")
+#define SYSCONF_DIR(a) utf8::String("/usr/local/" a)
 #else
-#define SYSCONF_DIR utf8::String("/usr/")
+#define SYSCONF_DIR(a) utf8::String("/usr/" a)
 #endif
 #endif
 
 #if !SYSLOG_DIR
 #if defined(__WIN32__) || defined(__WIN64__)
-#define SYSLOG_DIR ksys::getExecutablePath()
+#define SYSLOG_DIR(a) ksys::getExecutablePath()
 #elif BSD
-#define SYSLOG_DIR utf8::String("/var/log/")
+#define SYSLOG_DIR(a) utf8::String("/var/log/" a)
 #else
-#define SYSLOG_DIR utf8::String("/var/log/")
+#define SYSLOG_DIR(a) utf8::String("/var/log/" a)
 #endif
 #endif
 

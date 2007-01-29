@@ -78,7 +78,7 @@ class Message {
   public:
     ~Message();
     Message();
-    //Message(const utf8::String & mId);
+    Message(const utf8::String & mId);
 
     class Key {
       public:
@@ -659,13 +659,14 @@ class ServerFiber : public ksock::ServerFiber {
   friend class Server;
   public:
     virtual ~ServerFiber();
+    ServerFiber() : idsAutoDrop_(ids_) {}
     ServerFiber(Server & server,utf8::String user = utf8::String(),utf8::String key = utf8::String());
   protected:
     bool isValidUser(const utf8::String & user);
     utf8::String getUserPassword(const utf8::String & user);
     void main();
   private:
-    Server & server_;
+    Server * server_;
     ServerType serverType_;
     uint8_t protocol_;
 
@@ -717,9 +718,10 @@ class ServerFiber : public ksock::ServerFiber {
 class SpoolWalker : public Fiber {
   public:
     virtual ~SpoolWalker();
+    SpoolWalker() {}
     SpoolWalker(Server & server,intptr_t id);
   protected:
-    Server & server_;
+    Server * server_;
     intptr_t id_; // if negative then fiber must work as collector for lost sheeps
     DirectoryChangeNotification dcn_;
 
@@ -734,6 +736,7 @@ class MailQueueWalker : public ksock::ClientFiber {
   friend class Server;
   public:
     virtual ~MailQueueWalker();
+    MailQueueWalker() : messagesAutoDrop_(messages_) {}
     MailQueueWalker(Server & server);
     MailQueueWalker(Server & server,const utf8::String & host);
   protected:
@@ -754,7 +757,7 @@ class MailQueueWalker : public ksock::ClientFiber {
       return object1.host_.strcasecmp(object2.host_) == 0;
     }
     mutable EmbeddedHashNode<MailQueueWalker> hostHashNode_;
-    Server & server_;
+    Server * server_;
     utf8::String host_;
     FiberInterlockedMutex messagesMutex_;
     typedef EmbeddedList<
@@ -777,6 +780,7 @@ class NodeClient : public ksock::ClientFiber {
   friend class Server;
   public:
     virtual ~NodeClient();
+    NodeClient() {}
     NodeClient(Server & server);
     static NodeClient * newClient(Server & server,ServerType dataType,const utf8::String & nodeHostName,bool periodicaly);
   protected:
@@ -788,7 +792,7 @@ class NodeClient : public ksock::ClientFiber {
     void sweepHelper(ServerType serverType);
     void main();
   private:
-    Server & server_;
+    Server * server_;
     ServerType dataType_;
     utf8::String nodeHostName_;
     bool periodicaly_;

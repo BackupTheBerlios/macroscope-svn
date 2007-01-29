@@ -39,8 +39,6 @@ ISC_TIMESTAMP   tm2IscTimeStamp(struct tm stamp);
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class XSQLDAHolder {
-  private:
-    XSQLDA *  sqlda_;
   public:
     XSQLDAHolder();
     ~XSQLDAHolder();
@@ -50,6 +48,9 @@ class XSQLDAHolder {
     XSQLDA *              sqlda();
     const XSQLDA * const  sqlda() const;
     uintptr_t             count();
+  protected:
+  private:
+    XSQLDA *  sqlda_;
 };
 //---------------------------------------------------------------------------
 inline XSQLDA * XSQLDAHolder::sqlda()
@@ -71,7 +72,9 @@ inline uintptr_t XSQLDAHolder::count()
 //---------------------------------------------------------------------------
 class DSQLParam {
   friend class DSQLParams;
-  private:
+  public:
+    virtual ~DSQLParam();
+    DSQLParam();
   protected:
     short sqlind_;
     short sqltype_;
@@ -82,9 +85,7 @@ class DSQLParam {
     virtual DSQLParam &   setMutant(const ksys::Mutant & value);
     virtual utf8::String  getString();
     virtual DSQLParam &   setString(const utf8::String & value);
-  public:
-    virtual ~DSQLParam();
-    DSQLParam();
+  private:
 };
 //---------------------------------------------------------------------------
 inline DSQLParam::DSQLParam() : sqlscale_(0), changed_(false)
@@ -99,7 +100,9 @@ inline DSQLParam::~DSQLParam()
 //---------------------------------------------------------------------------
 class DSQLParamScalar : public DSQLParam {
   friend class DSQLParams;
-  private:
+  public:
+    virtual ~DSQLParamScalar();
+    DSQLParamScalar();
   protected:
     union {
         int64_t       bigInt_;
@@ -112,14 +115,14 @@ class DSQLParamScalar : public DSQLParam {
     DSQLParam &   setMutant(const ksys::Mutant & value);
     utf8::String  getString();
     DSQLParam &   setString(const utf8::String & value);
-  public:
-    virtual ~DSQLParamScalar();
-    DSQLParamScalar();
+  private:
 };
 //---------------------------------------------------------------------------
 class DSQLParamText : public DSQLParam {
   friend class DSQLParams;
-  private:
+  public:
+    virtual ~DSQLParamText();
+    DSQLParamText();
   protected:
     utf8::String  text_;
 
@@ -127,35 +130,15 @@ class DSQLParamText : public DSQLParam {
     DSQLParam &   setMutant(const ksys::Mutant & value);
     utf8::String  getString();
     DSQLParam &   setString(const utf8::String & Value);
-  public:
-                  DSQLParamText();
-    virtual       ~DSQLParamText();
+  private:
 };
 //---------------------------------------------------------------------------
 class DSQLParamArray : public DSQLParam {
   friend class DSQLParams;
-  private:
-    DSQLParamArray(const DSQLParamArray &){}
-    void operator = (const DSQLParamArray &){}
-  protected:
-    DSQLStatement   * statement_;
-    ISC_QUAD        id_;
-    ISC_ARRAY_DESC  desc_;
-    void *          data_;
-    ISC_LONG        dataSize_;
-    ISC_LONG        elementSize_;
-    uint16_t        dimElements_[sizeof(ISC_ARRAY_DESC().array_desc_bounds) / sizeof(ISC_ARRAY_DESC().array_desc_bounds[0])];
-
-    DSQLParamArray &        clear();
-    DSQLParamArray &        checkData();
-    DSQLParamArray &        checkDim(bool inRange);
-    bool                    isDimInBound(intptr_t dim, intptr_t i);
-    DSQLParamArray &        setDataFromMutant(uintptr_t absIndex, const ksys::Mutant & value);
-    ksys::Mutant            getMutantFromArray(uintptr_t absIndex);
-    DSQLParamArray &        putSlice();
   public:
+    virtual ~DSQLParamArray();
+    DSQLParamArray() {}
     DSQLParamArray(DSQLStatement & statement);
-    virtual                 ~DSQLParamArray();
 
     DSQLParamArray &        putElement(intptr_t i, const ksys::Mutant & value);
     DSQLParamArray &        putElement(intptr_t i, intptr_t j, const ksys::Mutant & value);
@@ -195,6 +178,25 @@ class DSQLParamArray : public DSQLParam {
     ksys::Mutant            getElByAbsIndex(uintptr_t i);
 
     const ISC_ARRAY_DESC &  desc() const;
+  protected:
+    DSQLStatement   * statement_;
+    ISC_QUAD        id_;
+    ISC_ARRAY_DESC  desc_;
+    void *          data_;
+    ISC_LONG        dataSize_;
+    ISC_LONG        elementSize_;
+    uint16_t        dimElements_[sizeof(ISC_ARRAY_DESC().array_desc_bounds) / sizeof(ISC_ARRAY_DESC().array_desc_bounds[0])];
+
+    DSQLParamArray &        clear();
+    DSQLParamArray &        checkData();
+    DSQLParamArray &        checkDim(bool inRange);
+    bool                    isDimInBound(intptr_t dim, intptr_t i);
+    DSQLParamArray &        setDataFromMutant(uintptr_t absIndex, const ksys::Mutant & value);
+    ksys::Mutant            getMutantFromArray(uintptr_t absIndex);
+    DSQLParamArray &        putSlice();
+  private:
+    DSQLParamArray(const DSQLParamArray &){}
+    void operator = (const DSQLParamArray &){}
 };
 //---------------------------------------------------------------------------
 inline const ISC_ARRAY_DESC & DSQLParamArray::desc() const
@@ -432,9 +434,15 @@ inline ksys::Mutant DSQLParamArray::getElByAbsIndex(uintptr_t i)
 //---------------------------------------------------------------------------
 class DSQLParamBlob : public DSQLParam {
   friend class DSQLParams;
-  private:
-    DSQLParamBlob(const DSQLParamBlob &){}
-    void operator = (const DSQLParamBlob &){}
+  public:
+    virtual ~DSQLParamBlob();
+    DSQLParamBlob() {}
+    DSQLParamBlob(DSQLStatement & statement);
+
+    DSQLParamBlob & createBlob();
+    DSQLParamBlob & closeBlob();
+    DSQLParamBlob & cancelBlob();
+    DSQLParamBlob & writeBuffer(const void * buf, uintptr_t size);
   protected:
     DSQLStatement   * statement_;
     ISC_QUAD        id_;
@@ -442,14 +450,9 @@ class DSQLParamBlob : public DSQLParam {
     ISC_BLOB_DESC   desc_;
 
     DSQLParam &     setString(const utf8::String & value);
-  public:
-    DSQLParamBlob(DSQLStatement & statement);
-    virtual         ~DSQLParamBlob();
-
-    DSQLParamBlob & createBlob();
-    DSQLParamBlob & closeBlob();
-    DSQLParamBlob & cancelBlob();
-    DSQLParamBlob & writeBuffer(const void * buf, uintptr_t size);
+  private:
+    DSQLParamBlob(const DSQLParamBlob &){}
+    void operator = (const DSQLParamBlob &){}
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -458,6 +461,7 @@ class DSQLParams {
   friend class DSQLStatement;
   public:
     ~DSQLParams();
+    DSQLParams() {}
     DSQLParams(DSQLStatement & statement);
 
     uintptr_t         count();
@@ -521,17 +525,17 @@ inline utf8::String DSQLParams::paramName(uintptr_t i)
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLValue {
-    friend class DSQLValues;
-  private:
+  friend class DSQLValues;
+  public:
+    DSQLValue();
+    virtual ~DSQLValue();
   protected:
     short sqltype_;
     short sqlind_;
 
     virtual ksys::Mutant  getMutant();
     virtual utf8::String  getString();
-  public:
-    DSQLValue();
-    virtual ~DSQLValue();
+  private:
 };
 //---------------------------------------------------------------------------
 inline DSQLValue::DSQLValue()
@@ -545,21 +549,23 @@ inline DSQLValue::~DSQLValue()
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DSQLValueText : public DSQLValue {
-    friend class DSQLValues;
-  private:
+  friend class DSQLValues;
+  public:
+    DSQLValueText();
+    virtual ~DSQLValueText();
   protected:
     utf8::String  text_;
 
     ksys::Mutant  getMutant();
     utf8::String  getString();
-  public:
-                  DSQLValueText();
-    virtual       ~DSQLValueText();
+  private:
 };
 //---------------------------------------------------------------------------
 class DSQLValueScalar : public DSQLValue {
-    friend class DSQLValues;
-  private:
+  friend class DSQLValues;
+  public:
+    virtual ~DSQLValueScalar();
+    DSQLValueScalar();
   protected:
     union {
         int64_t       bigInt_;
@@ -571,34 +577,15 @@ class DSQLValueScalar : public DSQLValue {
 
     ksys::Mutant  getMutant();
     utf8::String  getString();
-  public:
-                  DSQLValueScalar();
-    virtual       ~DSQLValueScalar();
+  private:
 };
 //---------------------------------------------------------------------------
 class DSQLValueArray : public DSQLValue {
   friend class DSQLValues;
-  private:
-    DSQLValueArray(const DSQLValueArray &){}
-    void operator = (const DSQLValueArray &){}
-  protected:
-    DSQLStatement   * statement_;
-    ISC_QUAD        id_;
-    ISC_ARRAY_DESC  desc_;
-    void *          data_;
-    ISC_LONG        dataSize_;
-    ISC_LONG        elementSize_;
-    uintptr_t       dimElements_[sizeof(ISC_ARRAY_DESC().array_desc_bounds) / sizeof(ISC_ARRAY_DESC().array_desc_bounds[0])];
-
-    DSQLValueArray &        clear();
-    DSQLValueArray &        checkData();
-    DSQLValueArray &        checkDim(bool inRange);
-    bool                    isDimInBound(intptr_t dim, intptr_t i);
-    ksys::Mutant            getMutantFromArray(uintptr_t absIndex);
-    DSQLValueArray &        getSlice();
   public:
+    virtual ~DSQLValueArray();
+    DSQLValueArray() {}
     DSQLValueArray(DSQLStatement & statement);
-    virtual                 ~DSQLValueArray();
 
     ksys::Mutant            getElement(intptr_t i);
     ksys::Mutant            getElement(intptr_t i, intptr_t j);
@@ -620,6 +607,24 @@ class DSQLValueArray : public DSQLValue {
     ksys::Mutant            getElByAbsIndex(uintptr_t i);
 
     const ISC_ARRAY_DESC &  desc() const;
+  protected:
+    DSQLStatement   * statement_;
+    ISC_QUAD        id_;
+    ISC_ARRAY_DESC  desc_;
+    void *          data_;
+    ISC_LONG        dataSize_;
+    ISC_LONG        elementSize_;
+    uintptr_t       dimElements_[sizeof(ISC_ARRAY_DESC().array_desc_bounds) / sizeof(ISC_ARRAY_DESC().array_desc_bounds[0])];
+
+    DSQLValueArray &        clear();
+    DSQLValueArray &        checkData();
+    DSQLValueArray &        checkDim(bool inRange);
+    bool                    isDimInBound(intptr_t dim, intptr_t i);
+    ksys::Mutant            getMutantFromArray(uintptr_t absIndex);
+    DSQLValueArray &        getSlice();
+  private:
+    DSQLValueArray(const DSQLValueArray &){}
+    void operator = (const DSQLValueArray &){}
 };
 //---------------------------------------------------------------------------
 inline const ISC_ARRAY_DESC & DSQLValueArray::desc() const
@@ -723,9 +728,16 @@ inline ksys::Mutant DSQLValueArray::getElByAbsIndex(uintptr_t i)
 //---------------------------------------------------------------------------
 class DSQLValueBlob : public DSQLValue {
   friend class DSQLValues;
-  private:
-    DSQLValueBlob(const DSQLValueBlob &){}
-    void operator = (const DSQLValueBlob &){}
+  public:
+    virtual ~DSQLValueBlob();
+    DSQLValueBlob() {}
+    DSQLValueBlob(DSQLStatement & statement);
+
+    DSQLValueBlob &       openBlob();
+    DSQLValueBlob &       closeBlob();
+    intptr_t              readBuffer(void * buf, uintptr_t size);
+
+    const ISC_BLOB_DESC & desc();
   protected:
     DSQLStatement   * statement_;
     ISC_QUAD        id_;
@@ -733,15 +745,9 @@ class DSQLValueBlob : public DSQLValue {
     ISC_BLOB_DESC   desc_;
 
     utf8::String          getString();
-  public:
-    DSQLValueBlob(DSQLStatement & statement);
-    virtual               ~DSQLValueBlob();
-
-    DSQLValueBlob &       openBlob();
-    DSQLValueBlob &       closeBlob();
-    intptr_t              readBuffer(void * buf, uintptr_t size);
-
-    const ISC_BLOB_DESC & desc();
+  private:
+    DSQLValueBlob(const DSQLValueBlob &){}
+    void operator = (const DSQLValueBlob &){}
 };
 //---------------------------------------------------------------------------
 inline const ISC_BLOB_DESC & DSQLValueBlob::desc()
@@ -753,24 +759,10 @@ inline const ISC_BLOB_DESC & DSQLValueBlob::desc()
 //---------------------------------------------------------------------------
 class DSQLValues {
   friend class DSQLStatement;
-  private:
-    DSQLValues(const DSQLValues &){}
-    void operator = (const DSQLValues &){}
-
-    DSQLStatement                                   * statement_;
-    XSQLDAHolder                                    sqlda_;
-    ksys::Vector< ksys::Vector< DSQLValue> >        rows_;
-    intptr_t                                        row_;
-    ksys::HashedObjectList< utf8::String,DSQLValue> valuesIndex_;
-
-    DSQLValues &                clear();
-    ksys::Vector< DSQLValue> *  bind();
-    DSQLValues &                fillRow(ksys::Vector< DSQLValue> * row);
-    void *                      getArrayPrepareMutant(DSQLValueArray * paramArray, ksys::Mutant & value, utf8::String & tempString, ISC_TIMESTAMP & tempStamp, ISC_LONG & sizeOfData);
-    DSQLValues &                getArrayPosMutant(DSQLValueArray * paramArray, ksys::Mutant & value, utf8::String & tempString, ISC_TIMESTAMP & tempStamp);
   public:
-                                DSQLValues(DSQLStatement & statement);
-                                ~DSQLValues();
+    ~DSQLValues();
+    DSQLValues() {}
+    DSQLValues(DSQLStatement & statement);
 
     uintptr_t                   rowCount();
     intptr_t                    rowIndex();
@@ -806,6 +798,22 @@ class DSQLValues {
     DSQLValueBlob &             asBlob(const utf8::String & name);
     DSQLValueArray &            asArray(uintptr_t i);
     DSQLValueArray &            asArray(const utf8::String & name);
+  protected:
+  private:
+    DSQLValues(const DSQLValues &){}
+    void operator = (const DSQLValues &){}
+
+    DSQLStatement                                   * statement_;
+    XSQLDAHolder                                    sqlda_;
+    ksys::Vector< ksys::Vector< DSQLValue> >        rows_;
+    intptr_t                                        row_;
+    ksys::HashedObjectList< utf8::String,DSQLValue> valuesIndex_;
+
+    DSQLValues &                clear();
+    ksys::Vector< DSQLValue> *  bind();
+    DSQLValues &                fillRow(ksys::Vector< DSQLValue> * row);
+    void *                      getArrayPrepareMutant(DSQLValueArray * paramArray, ksys::Mutant & value, utf8::String & tempString, ISC_TIMESTAMP & tempStamp, ISC_LONG & sizeOfData);
+    DSQLValues &                getArrayPosMutant(DSQLValueArray * paramArray, ksys::Mutant & value, utf8::String & tempString, ISC_TIMESTAMP & tempStamp);
 };
 //---------------------------------------------------------------------------
 inline DSQLValues & DSQLValues::clear()

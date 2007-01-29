@@ -51,9 +51,10 @@ class SerialPortFiber : public Fiber {
   friend class Client;
   public:
     virtual ~SerialPortFiber();
+    SerialPortFiber() {}
     SerialPortFiber(Client & client,uintptr_t serialPortNumber);
   protected:
-    Client & client_;
+    Client * client_;
     uintptr_t serialPortNumber_;
     AsyncFile * serial_;
 
@@ -98,9 +99,10 @@ class ClientFiber : public BaseClientFiber {
   friend class Client;
   public:
     virtual ~ClientFiber();
-    ClientFiber(Client & client,bool terminateAfterCheck = false,bool waitForMail = true,bool onlyNewMail = true);
+    ClientFiber() {}
+    ClientFiber(Client * client,bool terminateAfterCheck = false,bool waitForMail = true,bool onlyNewMail = true);
   protected:
-    Client & client_;
+    Client * client_;
     AutoPtr<Message> message_;
     ksock::SockAddr remoteAddress_;
     bool terminateAfterCheck_;
@@ -127,9 +129,10 @@ class ClientMailFiber : public BaseClientFiber {
   friend class Client;
   public:
     virtual ~ClientMailFiber();
+    ClientMailFiber() : messagesAutoDrop_(messages_) {}
     ClientMailFiber(Client & client);
   protected:
-    Client & client_;
+    Client * client_;
     FiberInterlockedMutex messageMutex_;
     FiberSemaphore semaphore_;
     class MessageControl {
@@ -186,6 +189,7 @@ class ClientMailFiber : public BaseClientFiber {
 class ClientDBGetterFiber : public ClientFiber {
   public:
     virtual ~ClientDBGetterFiber();
+    ClientDBGetterFiber() {}
     ClientDBGetterFiber(Client & client);
   protected:
     void main();
@@ -200,9 +204,10 @@ class MK1100ClientFiber : public ksock::ClientFiber {
   friend class Client;
   public:
     virtual ~MK1100ClientFiber();
+    MK1100ClientFiber() {}
     MK1100ClientFiber(Client & client);
   protected:
-    Client & client_;
+    Client * client_;
     void main();
   private:
     MK1100ClientFiber(const MK1100ClientFiber & a);

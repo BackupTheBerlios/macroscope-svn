@@ -49,6 +49,7 @@ class ConfigSection {
   friend class Config;
   public:
     ~ConfigSection();
+    ConfigSection() {}
     ConfigSection(const utf8::String & name);
 
     const utf8::String & name() const;
@@ -77,7 +78,6 @@ class ConfigSection {
     ConfigSection & addSection(const ConfigSection & section);
     Mutant & valueRefByPath(const utf8::String & path) const;
     Mutant & valueRef(const utf8::String & key) const;
-
   private:
     ConfigSection(const ConfigSection &);
     void operator = (const ConfigSection &);
@@ -361,6 +361,7 @@ typedef SPIARC<InterlockedConfig<FiberInterlockedMutex> > ConfigSP;
 //---------------------------------------------------------------------------
 class EConfig : public Exception {
   public:
+    EConfig() {}
     EConfig(Config * config,const char * what);
     EConfig(Config * config,const utf8::String & what);
 };

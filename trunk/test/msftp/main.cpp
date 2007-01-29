@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,22 +31,26 @@
 #include "version.c"
 #undef _VERSION_C_AS_HEADER_
 //------------------------------------------------------------------------------
+using namespace ksys;
+//------------------------------------------------------------------------------
+class KFTPShell;
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class KFTPClient : public ksock::ClientFiber {
   public:
     virtual ~KFTPClient();
-    KFTPClient(const ksys::ConfigSP & config,const utf8::String & section,int & errorCode);
+    KFTPClient() {}
+    KFTPClient(KFTPShell & shell,const utf8::String & section);
   protected:
     void main();
   private:
-    ksys::ConfigSP config_;
+    KFTPShell * shell_;
     utf8::String section_;
     utf8::String host_;
     ksock::SockAddr remoteAddress_;
-    int & errorCode_;
-    ksys::LogFile * log_;
-    ksys::LogFile logFile_;
+    LogFile * log_;
+    LogFile logFile_;
 
     KFTPClient & checkCode(int32_t code,int32_t noThrowCode = eOK);
     KFTPClient & getCode(int32_t noThrowCode = eOK);
@@ -55,20 +59,37 @@ class KFTPClient : public ksock::ClientFiber {
     void get();
 };
 //------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class KFTPShell : public ksock::Client {
+  friend KFTPClient;
+  public:
+    ~KFTPShell();
+    KFTPShell(int & errorCode);
+
+    void open();
+  protected:
+  private:
+    ConfigSP config_;
+    int & errorCode_;
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 KFTPClient::~KFTPClient()
 {
 }
 //------------------------------------------------------------------------------
-KFTPClient::KFTPClient(const ksys::ConfigSP & config,const utf8::String & section,int & errorCode) :
-  config_(config), section_(section), errorCode_(errorCode), log_(&ksys::stdErr)
+KFTPClient::KFTPClient(KFTPShell & shell,const utf8::String & section) :
+  shell_(&shell), section_(section), log_(&stdErr)
 {
-  host_ = config_->section(section_).text();
+  host_ = shell_->config_->section(section_).text();
 }
 //------------------------------------------------------------------------------
 KFTPClient & KFTPClient::checkCode(int32_t code,int32_t noThrowCode)
 {
   if( code != eOK && code != noThrowCode )
-    newObjectV1C2<ksys::Exception>(code,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -82,66 +103,66 @@ KFTPClient & KFTPClient::getCode(int32_t noThrowCode)
 void KFTPClient::auth()
 {
   AuthParams ap;
-  ap.maxRecvSize_ = config_->value("max_recv_size",-1);
-  ap.maxRecvSize_ = config_->section(section_).value("max_recv_size",ap.maxRecvSize_);
-  ap.maxSendSize_ = config_->value("max_send_size",-1);
-  ap.maxSendSize_ = config_->section(section_).value("max_send_size",ap.maxSendSize_);
-  ap.recvTimeout_ = config_->value("recv_timeout",-1);
-  ap.recvTimeout_ = config_->section(section_).value("recv_timeout",ap.recvTimeout_);
+  ap.maxRecvSize_ = shell_->config_->value("max_recv_size",-1);
+  ap.maxRecvSize_ = shell_->config_->section(section_).value("max_recv_size",ap.maxRecvSize_);
+  ap.maxSendSize_ = shell_->config_->value("max_send_size",-1);
+  ap.maxSendSize_ = shell_->config_->section(section_).value("max_send_size",ap.maxSendSize_);
+  ap.recvTimeout_ = shell_->config_->value("recv_timeout",-1);
+  ap.recvTimeout_ = shell_->config_->section(section_).value("recv_timeout",ap.recvTimeout_);
   if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
-  ap.sendTimeout_ = config_->value("send_timeout",-1);
-  ap.sendTimeout_ = config_->section(section_).value("send_timeout",ap.sendTimeout_);
+  ap.sendTimeout_ = shell_->config_->value("send_timeout",-1);
+  ap.sendTimeout_ = shell_->config_->section(section_).value("send_timeout",ap.sendTimeout_);
   if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
-  ap.user_ = config_->text("user");
-  ap.user_ = config_->section(section_).text("user",ap.user_);
-  ap.password_ = config_->text("password");
-  ap.password_ = config_->section(section_).text("password",ap.password_);
-  ap.encryption_ = config_->section("encryption").text(utf8::String(),"default");
-  ap.threshold_ = config_->section("encryption").value("threshold",1024 * 1024);
-  ap.encryption_ = config_->section(section_).section("encryption").text(utf8::String(),ap.encryption_);
-  ap.threshold_ = config_->section(section_).section("encryption").value("threshold",ap.threshold_);
-  ap.compression_ = config_->section("compression").text(utf8::String(),"default");
-  ap.compression_ = config_->section(section_).section("compression").text(utf8::String(),ap.compression_);
-  ap.compressionType_ = config_->section("compression").value("type","default");
-  ap.compressionType_ = config_->section(section_).section("compression").value("type",ap.compressionType_);
-  ap.crc_ = config_->section("compression").value("crc","default");
-  ap.crc_ = config_->section(section_).section("compression").value("crc",ap.crc_);
-  ap.level_ = config_->section("compression").value("level",9);
-  ap.level_ = config_->section(section_).section("compression").value("level",ap.level_);
-  ap.optimize_ = config_->section("compression").value("optimize",true);
-  ap.optimize_ = config_->section(section_).section("compression").value("optimize",ap.optimize_);
-  ap.bufferSize_ = config_->section("compression").value("buffer_size",getpagesize() * 16);
-  ap.bufferSize_ = config_->section(section_).section("compression").value("buffer_size",ap.bufferSize_);
-  ap.noAuth_ = config_->value("noauth",false);
-  ap.noAuth_ = config_->section(section_).value("noauth",ap.noAuth_);
+  ap.user_ = shell_->config_->text("user");
+  ap.user_ = shell_->config_->section(section_).text("user",ap.user_);
+  ap.password_ = shell_->config_->text("password");
+  ap.password_ = shell_->config_->section(section_).text("password",ap.password_);
+  ap.encryption_ = shell_->config_->section("encryption").text(utf8::String(),"default");
+  ap.threshold_ = shell_->config_->section("encryption").value("threshold",1024 * 1024);
+  ap.encryption_ = shell_->config_->section(section_).section("encryption").text(utf8::String(),ap.encryption_);
+  ap.threshold_ = shell_->config_->section(section_).section("encryption").value("threshold",ap.threshold_);
+  ap.compression_ = shell_->config_->section("compression").text(utf8::String(),"default");
+  ap.compression_ = shell_->config_->section(section_).section("compression").text(utf8::String(),ap.compression_);
+  ap.compressionType_ = shell_->config_->section("compression").value("type","default");
+  ap.compressionType_ = shell_->config_->section(section_).section("compression").value("type",ap.compressionType_);
+  ap.crc_ = shell_->config_->section("compression").value("crc","default");
+  ap.crc_ = shell_->config_->section(section_).section("compression").value("crc",ap.crc_);
+  ap.level_ = shell_->config_->section("compression").value("level",9);
+  ap.level_ = shell_->config_->section(section_).section("compression").value("level",ap.level_);
+  ap.optimize_ = shell_->config_->section("compression").value("optimize",true);
+  ap.optimize_ = shell_->config_->section(section_).section("compression").value("optimize",ap.optimize_);
+  ap.bufferSize_ = shell_->config_->section("compression").value("buffer_size",getpagesize() * 16);
+  ap.bufferSize_ = shell_->config_->section(section_).section("compression").value("buffer_size",ap.bufferSize_);
+  ap.noAuth_ = shell_->config_->value("noauth",false);
+  ap.noAuth_ = shell_->config_->section(section_).value("noauth",ap.noAuth_);
   checkCode(clientAuth(ap));
 }
 //------------------------------------------------------------------------------
 void KFTPClient::put()
 {
-  if( !config_->section(section_).isSection("put") ) return;
-  utf8::String local(config_->section(section_).section("put").text("local"));
+  if( !shell_->config_->section(section_).isSection("put") ) return;
+  utf8::String local(shell_->config_->section(section_).section("put").text("local"));
   utf8::String localPath(
-    ksys::includeTrailingPathDelimiter(ksys::getPathFromPathName(local))
+    includeTrailingPathDelimiter(getPathFromPathName(local))
   );
-  utf8::String exclude(config_->section(section_).section("put").text("exclude"));
-  bool recursive = config_->value("recursive",true);
-  recursive = config_->section(section_).section("put").value("recursive",recursive);
-  uint64_t partialBlockSize = config_->value("partial_block_size",getpagesize());
-  partialBlockSize = config_->section(section_).section("put").value("partial_block_size",partialBlockSize);
-  if( config_->section(section_).section("put").isValue("log_file") ){
-    logFile_.codePage(config_->section(section_).section("put").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
-    logFile_.fileName(config_->section(section_).section("put").text("log_file"));
+  utf8::String exclude(shell_->config_->section(section_).section("put").text("exclude"));
+  bool recursive = shell_->config_->value("recursive",true);
+  recursive = shell_->config_->section(section_).section("put").value("recursive",recursive);
+  uint64_t partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
+  partialBlockSize = shell_->config_->section(section_).section("put").value("partial_block_size",partialBlockSize);
+  if( shell_->config_->section(section_).section("put").isValue("log_file") ){
+    logFile_.codePage(shell_->config_->section(section_).section("put").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
+    logFile_.fileName(shell_->config_->section(section_).section("put").text("log_file"));
     log_ = &logFile_;
   }
 
-  ksys::Vector<utf8::String> list;
+  Vector<utf8::String> list;
   getDirList(list,local,exclude,recursive,false,true);
-  utf8::String mode(config_->text("mode","auto"));
-  mode = config_->section(section_).section("put").text("mode",mode);
+  utf8::String mode(shell_->config_->text("mode","auto"));
+  mode = shell_->config_->section(section_).section("put").text("mode",mode);
   utf8::String remotePath(
-    ksys::includeTrailingPathDelimiter(
-      config_->section(section_).section("put").text("remote")
+    includeTrailingPathDelimiter(
+      shell_->config_->section(section_).section("put").text("remote")
     )
   );
   int64_t all = 0, ptime = getlocaltimeofday(), atime = 0, ttime;
@@ -152,10 +173,10 @@ void KFTPClient::put()
     );
     try {
       int8_t cmd = int8_t(cmPutFile);
-      uint64_t bs = (uint64_t) config_->value("buffer_size",getpagesize());
-      bs = (uint64_t) config_->section(section_).section("put").value("buffer_size",bs);
+      uint64_t bs = (uint64_t) shell_->config_->value("buffer_size",getpagesize());
+      bs = (uint64_t) shell_->config_->section(section_).section("put").value("buffer_size",bs);
       if( bs == 0 ) bs = getpagesize();
-      ksys::AsyncFile file(list[i]);
+      AsyncFile file(list[i]);
       MSFTPStat rmst, lmst;
       if( lmst.stat(file.fileName()) ){
         file.open();
@@ -201,10 +222,10 @@ void KFTPClient::put()
         *this << cmd << rfile << file.tell() << ll << mtime << bs;
         if( cmd == cmPutFilePartial ) *this << partialBlockSize;
         getCode();
-        ksys::AutoPtr<uint8_t> b;
+        AutoPtr<uint8_t> b;
         b.alloc((size_t) bs);
         ttime = getlocaltimeofday();
-        ksys::SHA256 lhash, rhash;
+        SHA256 lhash, rhash;
         memset(lhash.sha256(),0,lhash.size());
         memset(rhash.sha256(),1,rhash.size());
         for( rl = l = 0; l < ll; l += lp ){
@@ -238,23 +259,23 @@ void KFTPClient::put()
           " kb transfered\n  " << list[i] << " to " << rfile << "\n"
         ;
         log_->debug(l > 0 ? 1 : 2,stream);
-        if( log_ != &ksys::stdErr ) ksys::stdErr.debug(l > 0 ? 1 : 2,stream);
+        if( log_ != &stdErr ) stdErr.debug(l > 0 ? 1 : 2,stream);
         all += l;
       }
     }
-    catch( ksys::ExceptionSP & e ){
+    catch( ExceptionSP & e ){
       switch( e->code() ){
         case 0 :
 #if defined(__WIN32__) || defined(__WIN64__)
-        case ERROR_SHARING_VIOLATION + ksys::errorOffset :
-        case ERROR_LOCK_VIOLATION + ksys::errorOffset :
-        case ERROR_INVALID_ACCESS + ksys::errorOffset :
-        case ERROR_FILE_NOT_FOUND + ksys::errorOffset :
-        case ERROR_PATH_NOT_FOUND + ksys::errorOffset :
-        case ERROR_ACCESS_DENIED + ksys::errorOffset :
-        case ERROR_INVALID_DRIVE + ksys::errorOffset :
-        case ERROR_SEEK + ksys::errorOffset :
-        case ERROR_SECTOR_NOT_FOUND + ksys::errorOffset :
+        case ERROR_SHARING_VIOLATION + errorOffset :
+        case ERROR_LOCK_VIOLATION + errorOffset :
+        case ERROR_INVALID_ACCESS + errorOffset :
+        case ERROR_FILE_NOT_FOUND + errorOffset :
+        case ERROR_PATH_NOT_FOUND + errorOffset :
+        case ERROR_ACCESS_DENIED + errorOffset :
+        case ERROR_INVALID_DRIVE + errorOffset :
+        case ERROR_SEEK + errorOffset :
+        case ERROR_SECTOR_NOT_FOUND + errorOffset :
 #else
         case EPERM : case ENOENT : case EACCES : case ENOTDIR :
 #endif
@@ -265,10 +286,10 @@ void KFTPClient::put()
       e->writeStdError(log_);
       utf8::String::Stream stream;
       stream << section_ << " " << host_ << " failed: " <<
-        ksys::strError(e->code()) << ", " << list[i] << "\n"
+        strError(e->code()) << ", " << list[i] << "\n"
       ;
       log_->debug(3,stream);
-      if( log_ != &ksys::stdErr ) ksys::stdErr.debug(3,stream);
+      if( log_ != &stdErr ) stdErr.debug(3,stream);
     }
     list.resize(list.count() - 1);
   }
@@ -300,47 +321,47 @@ void KFTPClient::put()
     utf8::String::Stream::Format(rscRatio() % 100u,"%02") << "%\n"
   ;
   log_->debug(0,stream);
-  if( log_ != &ksys::stdErr ) ksys::stdErr.debug(0,stream);
+  if( log_ != &stdErr ) stdErr.debug(0,stream);
 }
 //------------------------------------------------------------------------------
 void KFTPClient::get()
 {
-  if( !config_->section(section_).isSection("get") ) return;
+  if( !shell_->config_->section(section_).isSection("get") ) return;
   utf8::String localPath(
-    ksys::includeTrailingPathDelimiter(
-      config_->section(section_).section("get").text("local")
+    includeTrailingPathDelimiter(
+      shell_->config_->section(section_).section("get").text("local")
     )
   );
-  utf8::String exclude(config_->section(section_).section("get").text("exclude"));
-  bool recursive = config_->value("recursive",true);
-  recursive = config_->section(section_).section("get").value("recursive",recursive);
-  utf8::String mode(config_->text("mode","auto"));
-  mode = config_->section(section_).section("get").text("mode",mode);
+  utf8::String exclude(shell_->config_->section(section_).section("get").text("exclude"));
+  bool recursive = shell_->config_->value("recursive",true);
+  recursive = shell_->config_->section(section_).section("get").value("recursive",recursive);
+  utf8::String mode(shell_->config_->text("mode","auto"));
+  mode = shell_->config_->section(section_).section("get").text("mode",mode);
   utf8::String remote(
-    config_->section(section_).section("get").text("remote")
+    shell_->config_->section(section_).section("get").text("remote")
   );
-  utf8::String remotel(ksys::includeTrailingPathDelimiter(ksys::getPathFromPathName(remote)));
-  uint64_t bs = (uint64_t) config_->value("buffer_size",getpagesize());
-  bs = (uint64_t) config_->section(section_).section("get").value("buffer_size",bs);
+  utf8::String remotel(includeTrailingPathDelimiter(getPathFromPathName(remote)));
+  uint64_t bs = (uint64_t) shell_->config_->value("buffer_size",getpagesize());
+  bs = (uint64_t) shell_->config_->section(section_).section("get").value("buffer_size",bs);
   if( bs == 0 ) bs = getpagesize();
-  uint64_t partialBlockSize = config_->value("partial_block_size",getpagesize());
-  partialBlockSize = config_->section(section_).section("get").value("partial_block_size",partialBlockSize);
-  if( config_->section(section_).section("get").isValue("log_file") ){
-    logFile_.codePage(config_->section(section_).section("get").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
-    logFile_.fileName(config_->section(section_).section("get").text("log_file"));
+  uint64_t partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
+  partialBlockSize = shell_->config_->section(section_).section("get").value("partial_block_size",partialBlockSize);
+  if( shell_->config_->section(section_).section("get").isValue("log_file") ){
+    logFile_.codePage(shell_->config_->section(section_).section("get").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
+    logFile_.fileName(shell_->config_->section(section_).section("get").text("log_file"));
     log_ = &logFile_;
   }
 
   uint64_t all = 0, ptime = getlocaltimeofday(), atime = 0, ttime;
   uint64_t l, ll, lp, r, wl;
-  ksys::Vector<utf8::String> list;
+  Vector<utf8::String> list;
   *this << int8_t(cmList) << remote << exclude << uint8_t(recursive);
   getCode();
   *this >> ll;
   while( ll-- > 0 ) list.add(readString());
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
     try {
-      ksys::AsyncFile file(localPath + list[i]);
+      AsyncFile file(localPath + list[i]);
       file.createIfNotExist(true).open();
       MSFTPStat rmst, lmst;
       lmst.stat(file.fileName());
@@ -373,10 +394,10 @@ void KFTPClient::get()
       *this << cmd << remotel + list[i] << file.tell() << ll;
       if( cmd == cmGetFilePartial ) *this << partialBlockSize;
       getCode();
-      ksys::AutoPtr<uint8_t> b;
+      AutoPtr<uint8_t> b;
       b.alloc((size_t) bs);
       ttime = getlocaltimeofday();
-      ksys::SHA256 lhash, rhash;
+      SHA256 lhash, rhash;
       memset(lhash.sha256(),0,lhash.size());
       memset(rhash.sha256(),1,rhash.size());
       for( wl = l = 0; l < ll; l += lp ){
@@ -420,19 +441,19 @@ void KFTPClient::get()
       );
       all += l;
     }
-    catch( ksys::ExceptionSP & e ){
+    catch( ExceptionSP & e ){
       switch( e->code() ){
         case 0 :
 #if defined(__WIN32__) || defined(__WIN64__)
-        case ERROR_SHARING_VIOLATION + ksys::errorOffset :
-        case ERROR_LOCK_VIOLATION + ksys::errorOffset :
-        case ERROR_INVALID_ACCESS + ksys::errorOffset :
-        case ERROR_FILE_NOT_FOUND + ksys::errorOffset :
-        case ERROR_PATH_NOT_FOUND + ksys::errorOffset :
-        case ERROR_ACCESS_DENIED + ksys::errorOffset :
-        case ERROR_INVALID_DRIVE + ksys::errorOffset :
-        case ERROR_SEEK + ksys::errorOffset :
-        case ERROR_SECTOR_NOT_FOUND + ksys::errorOffset :
+        case ERROR_SHARING_VIOLATION + errorOffset :
+        case ERROR_LOCK_VIOLATION + errorOffset :
+        case ERROR_INVALID_ACCESS + errorOffset :
+        case ERROR_FILE_NOT_FOUND + errorOffset :
+        case ERROR_PATH_NOT_FOUND + errorOffset :
+        case ERROR_ACCESS_DENIED + errorOffset :
+        case ERROR_INVALID_DRIVE + errorOffset :
+        case ERROR_SEEK + errorOffset :
+        case ERROR_SECTOR_NOT_FOUND + errorOffset :
 #else
         case EPERM : case ENOENT : case EACCES : case ENOTDIR :
 #endif
@@ -443,7 +464,7 @@ void KFTPClient::get()
       e->writeStdError(log_);
       log_->debug(3,
         utf8::String::Stream() << section_ << " " << host_ << " failed: " <<
-        ksys::strError(e->code()) << ", " << list[i] << "\n"
+        strError(e->code()) << ", " << list[i] << "\n"
       );
     }
     list.resize(list.count() - 1);
@@ -508,7 +529,7 @@ class ZebexPDL {
       E_ILLEGAL_VALUE = 0x32
     };
     uintptr_t serialPortNumber_;
-    ksys::AsyncFile * serial_;
+    AsyncFile * serial_;
     uint16_t crc_;
 
     ZebexPDL & operator << (const PCC & pcc);
@@ -620,7 +641,7 @@ void ZebexPDL::clearTerminal()
   if( SetupComm(serial.descriptor(),1600,1600) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   COMMTIMEOUTS cto;
   memset(&cto,0,sizeof(cto));
@@ -628,37 +649,37 @@ void ZebexPDL::clearTerminal()
   if( SetCommTimeouts(serial.descriptor(),&cto) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( SetCommMask(serial.descriptor(),EV_RXCHAR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   /*if( EscapeCommFunction(serial.descriptor(),CLRRTS) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EscapeCommFunction(serial.descriptor(),CLRBREAK) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EscapeCommFunction(serial.descriptor(),SETDTR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }*/
 #endif
   clearTerminalHelper(0x31);
@@ -670,12 +691,12 @@ void ZebexPDL::clearTerminal()
   if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
 }
@@ -717,17 +738,17 @@ void ZebexPDL::fiberExecute()
   if( SetCommTimeouts(serial.descriptor(),&cto) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( SetCommMask(serial.descriptor(),EV_RXCHAR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( PurgeComm(serial.descriptor(),PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 
 #define FILE_DEVICE_SERIAL_PORT 0x0000001b
@@ -759,35 +780,35 @@ void ZebexPDL::fiberExecute()
   if( GetCommState(serial.descriptor(),&dcb) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   dcb.BaudRate = CBR_9600;
   dcb.StopBits = ONESTOPBIT;
   if( SetCommState(serial.descriptor(),&dcb) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 
   if( EscapeCommFunction(serial.descriptor(),CLRRTS) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EscapeCommFunction(serial.descriptor(),CLRDTR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EscapeCommFunction(serial.descriptor(),CLRBREAK) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   if( EscapeCommFunction(serial.descriptor(),SETDTR) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     serial.close();
-    newObject<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #endif
   uint8_t err;
@@ -870,9 +891,9 @@ void KFTPClient::main()
 //    ZebexPDL pdl;
 //    pdl.fiberExecute();
   
-    if( config_->section(section_).isValue("log_file") ){
-      logFile_.codePage(config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));
-      logFile_.fileName(config_->section(section_).text("log_file"));
+    if( shell_->config_->section(section_).isValue("log_file") ){
+      logFile_.codePage(shell_->config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));
+      logFile_.fileName(shell_->config_->section(section_).text("log_file"));
       log_ = &logFile_;
     }
     remoteAddress_.resolve(host_,MSFTPDefaultPort);
@@ -884,14 +905,14 @@ void KFTPClient::main()
     *this << int8_t(cmQuit);
     getCode();
   }
-  catch( ksys::ExceptionSP & e ){
+  catch( ExceptionSP & e ){
     log_->debug(8,utf8::String::Stream() << section_ << " " << host_ << " incomplete.\n");
-    if( errorCode_ == 0 ) errorCode_ = e->code();
+    if( shell_->errorCode_ == 0 ) shell_->errorCode_ = e->code();
     log_->close();
     throw;
   }
   catch( ... ){
-    if( errorCode_ == 0 ) errorCode_ = -1;
+    if( shell_->errorCode_ == 0 ) shell_->errorCode_ = -1;
     log_->close();
     throw;
   }
@@ -900,18 +921,6 @@ void KFTPClient::main()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class KFTPShell : public ksock::Client {
-  public:
-    ~KFTPShell();
-    KFTPShell(int & errorCode);
-
-    void open();
-  protected:
-  private:
-    ksys::ConfigSP config_;
-    int & errorCode_;
-};
-//------------------------------------------------------------------------------
 KFTPShell::~KFTPShell()
 {
   close();
@@ -919,7 +928,7 @@ KFTPShell::~KFTPShell()
 //------------------------------------------------------------------------------
 KFTPShell::KFTPShell(int & errorCode) :
   config_(
-    newObject<ksys::InterlockedConfig<ksys::FiberInterlockedMutex> >()
+    newObject<InterlockedConfig<FiberInterlockedMutex> >()
   ),
   errorCode_(errorCode)
 {
@@ -929,22 +938,22 @@ void KFTPShell::open()
 {
   intptr_t i;
   config_->parse().override();
-  ksys::stdErr.rotationThreshold(
+  stdErr.rotationThreshold(
     config_->value("debug_file_rotate_threshold",1024 * 1024)
   );
-  ksys::stdErr.rotatedFileCount(
+  stdErr.rotatedFileCount(
     config_->value("debug_file_rotate_count",10)
   );
-  ksys::stdErr.setDebugLevels(
+  stdErr.setDebugLevels(
     config_->value("debug_levels","+0,+1,+2,+3")
   );
-  ksys::stdErr.fileName(
-    config_->value("log_file",ksys::stdErr.fileName())
+  stdErr.fileName(
+    config_->value("log_file",stdErr.fileName())
   );
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )
-      attachFiber(newObjectC1C2R3<KFTPClient>(config_,sectionName,errorCode_));
+      attachFiber(newObjectR1C2<KFTPClient>(*this,sectionName));
   }
 }
 //------------------------------------------------------------------------------
@@ -970,7 +979,7 @@ struct rv dummy(
   return rv();
 }
 //------------------------------------------------------------------------------
-int main(int argc,char * argv[])
+int main(int _argc,char * _argv[])
 {
   struct rv a;
   a = dummy(
@@ -980,7 +989,7 @@ int main(int argc,char * argv[])
   );
   
   int errcode = 0;
-  adicpp::AutoInitializer autoInitializer(argc,argv);
+  adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
 
   try {
@@ -988,31 +997,31 @@ int main(int argc,char * argv[])
       intptr_t i;
       uintptr_t u;
     };
-    ksys::stdErr.fileName(SYSLOG_DIR + "msftp/msftp.conf");
-    ksys::Config::defaultFileName(SYSCONF_DIR + "msftp.conf");
+    stdErr.fileName(SYSLOG_DIR("msftp/") + "msftp.conf");
+    Config::defaultFileName(SYSCONF_DIR("") + "msftp.conf");
 #ifndef NDEBUG
-    fprintf(stderr,"%s\n",(const char *) ksys::getCurrentDir().getOEMString());
+    fprintf(stderr,"%s\n",(const char *) getCurrentDir().getOEMString());
 #endif
     bool dispatch = true;
-    for( u = 1; u < ksys::argv().count(); u++ ){
-      if( ksys::argv()[u].strcmp("--version") == 0 ){
-        ksys::stdErr.debug(9,utf8::String::Stream() << msftp_version.tex_ << "\n");
+    for( u = 1; u < argv().count(); u++ ){
+      if( argv()[u].strcmp("--version") == 0 ){
+        stdErr.debug(9,utf8::String::Stream() << msftp_version.tex_ << "\n");
         fprintf(stdout,"%s\n",msftp_version.tex_);
         dispatch = false;
         continue;
       }
-      if( ksys::argv()[u].strcmp("-c") == 0 && u + 1 < ksys::argv().count() ){
-        ksys::Config::defaultFileName(ksys::argv()[u + 1]);
+      if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+        Config::defaultFileName(argv()[u + 1]);
       }
-      else if( ksys::argv()[u].strcmp("--log") == 0 && u + 1 < ksys::argv().count() ){
-        ksys::stdErr.fileName(ksys::argv()[u + 1]);
+      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+        stdErr.fileName(argv()[u + 1]);
       }
-      else if( ksys::argv()[u].strcmp("--sha256") == 0 && u + 1 < ksys::argv().count() ){
-        ksys::SHA256 passwordSHA256;
-        passwordSHA256.make(ksys::argv()[u + 1].c_str(),ksys::argv()[u + 1].size());
-        utf8::String b64(ksys::base64Encode(passwordSHA256.sha256(),32));
+      else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
+        SHA256 passwordSHA256;
+        passwordSHA256.make(argv()[u + 1].c_str(),argv()[u + 1].size());
+        utf8::String b64(base64Encode(passwordSHA256.sha256(),32));
         fprintf(stdout,"%s\n",b64.c_str());
-        ksys::copyStrToClipboard(b64);
+        copyStrToClipboard(b64);
         dispatch = false;
       }
     }
@@ -1021,7 +1030,7 @@ int main(int argc,char * argv[])
       shell.open();
     }
   }
-  catch( ksys::ExceptionSP & e ){
+  catch( ExceptionSP & e ){
     e->writeStdError();
     errcode = e->code();
   }

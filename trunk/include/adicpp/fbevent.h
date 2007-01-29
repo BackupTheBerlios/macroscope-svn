@@ -80,6 +80,7 @@ class EventHandler : virtual public ksys::Object {
     class EventThread : public ksys::Thread {
       public:
         virtual ~EventThread() {}
+        EventThread() {}
         EventThread(EventHandler & eventHandler);
       protected:
         void threadExecute();

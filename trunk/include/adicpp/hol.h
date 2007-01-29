@@ -101,6 +101,7 @@ enum HashChainType {
 template< class TKey,class TObj> class HashedObjectListItem {
   public:
     ~HashedObjectListItem();
+    HashedObjectListItem() {}
     HashedObjectListItem(const TKey & key, TObj * object, uintptr_t index);
 
     HashedObjectListItem< TKey,TObj> ** next() const;

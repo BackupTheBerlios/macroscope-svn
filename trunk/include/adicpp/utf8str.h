@@ -64,7 +64,7 @@ template <typename T> class StringT {
 
         ~Container(){}
 
-        Container(T * string) : string_(string), refCount_(0){}
+        Container(T * string = NULL) : string_(string), refCount_(0){}
 
         void addRef(){ ksys::interlockedIncrement(refCount_, 1); }
         void remRef(){ if( ksys::interlockedIncrement(refCount_, -1) == 1 ) deleteObject(this); }
