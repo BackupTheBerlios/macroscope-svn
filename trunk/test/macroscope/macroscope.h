@@ -66,8 +66,8 @@ class Logger {
         void threadExecute();
       protected:
         Logger * logger_;
-	      const utf8::String file_;
-	      const struct tm year_;
+        utf8::String file_;
+        struct tm year_;
       private:
     };
     friend class MTWriter;

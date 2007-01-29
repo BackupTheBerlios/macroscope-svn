@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,12 @@ template <class T> class Vector {
     const T &         operator[](intptr_t i) const;
     T &               operator[](uintptr_t i);
     const T &         operator[](uintptr_t i) const;
+#if !HAVE_INTPTR_T_AS_INT
+    T &               operator[](int i) { return operator [] (intptr_t(i)); }
+    const T &         operator[](int i) const { return operator [] (intptr_t(i)); }
+    T &               operator[](unsigned int i) { return operator [] (uintptr_t(i)); }
+    const T &         operator[](unsigned int i) const { return operator [] (uintptr_t(i)); }
+#endif
     Vector<T> &      operator <<(const T & val);
     Vector<T> &      operator <<(T * val);
 
@@ -269,7 +275,7 @@ T & Vector<T>::insert(uintptr_t i, const T & val)
     max_ = amax;
   }
   memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
-  ptr_[i] = newObject<T>(val);
+  ptr_[i] = newObjectC1<T>(val);
   count_++;
   return *ptr_[i];
 }

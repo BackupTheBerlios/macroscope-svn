@@ -54,15 +54,15 @@ template <typename T,class RT = Array< T> > class Table {
     uintptr_t rowCount() const;
     uintptr_t columnCount() const;
 
-    T & cell(uintptr_t row, uintptr_t column);
-    T & cell(uintptr_t row, const utf8::String & columnName);
-    const T & cell(uintptr_t row, uintptr_t column) const;
-    const T & cell(uintptr_t row, const utf8::String & columnName) const;
+    T & cell(uintptr_t row,uintptr_t column);
+    T & cell(uintptr_t row,const utf8::String & columnName);
+    const T & cell(uintptr_t row,uintptr_t column) const;
+    const T & cell(uintptr_t row,const utf8::String & columnName) const;
 
-    T & operator ()(uintptr_t row, uintptr_t column);
-    T & operator ()(uintptr_t row, const utf8::String & columnName);
-    const T & operator ()(uintptr_t row, uintptr_t column) const;
-    const T & operator ()(uintptr_t row, const utf8::String & columnName) const;
+    T & operator ()(uintptr_t row,uintptr_t column);
+    T & operator ()(uintptr_t row,const utf8::String & columnName);
+    const T & operator ()(uintptr_t row,uintptr_t column) const;
+    const T & operator ()(uintptr_t row,const utf8::String & columnName) const;
   private:
     template <typename TT,typename P> class SortParam {
       public:
