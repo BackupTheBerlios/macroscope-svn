@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -63,12 +63,15 @@ template <typename T,class RT = Array< T> > class Table {
     T & operator ()(uintptr_t row,const utf8::String & columnName);
     const T & operator ()(uintptr_t row,uintptr_t column) const;
     const T & operator ()(uintptr_t row,const utf8::String & columnName) const;
+    
+    Mutant sum(uintptr_t column) const;
+    Mutant sum(const utf8::String & columnName) const;
   private:
     template <typename TT,typename P> class SortParam {
       public:
         const TT * table_;
         const P  * param_;
-        intptr_t (* const f_)(uintptr_t, uintptr_t, const P &);
+        intptr_t (* const f_)(uintptr_t,uintptr_t,const P &);
 
         SortParam(const TT & table, const P & param, intptr_t(*const f)(uintptr_t, uintptr_t, const P &))
           : table_(&table), param_(&param), f_(f) {}
@@ -308,9 +311,8 @@ uintptr_t Table<T,RT>::name2Index(const utf8::String & columnName, intptr_t & c)
 template <typename T,class RT> inline
 intptr_t Table<T,RT>::columnIndex(const utf8::String & columnName) const
 {
-  intptr_t  i = name2Index(columnName);
-  if( i >= 0 )
-    i = name2Index_[i].index_;
+  intptr_t i = name2Index(columnName);
+  if( i >= 0 ) i = name2Index_[i].index_;
   return i;
 }
 //-----------------------------------------------------------------------------
@@ -377,7 +379,32 @@ const T & Table<T,RT>::operator ()(uintptr_t row, uintptr_t column) const
 template <typename T,class RT> inline
 const T & Table<T,RT>::operator ()(uintptr_t row, const utf8::String & columnName) const
 {
-  return cell(row, columnName);
+  return cell(row,columnName);
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Mutant Table<T,RT>::sum(uintptr_t column) const
+{
+  assert( column < name2Index_.count() );
+  Mutant summa = 0;
+  for( intptr_t row = rows_.count() - 1; row >= 0; row-- ){
+    Mutant a = rows_[row][column];
+    if( summa.type() == mtFloat || a.type() == mtFloat ) 
+#if HAVE_LONG_DOUBLE    
+      summa = (long double) summa + (long double) a;
+#else
+      summa = (double) summa + (double) a;
+#endif
+    else
+      summa = intmax_t(summa) + intmax_t(a);
+  }
+  return summa;
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Mutant Table<T,RT>::sum(const utf8::String & columnName) const
+{
+  return sum(columnIndex(columnName));
 }
 //-----------------------------------------------------------------------------
 } // namespace ksys

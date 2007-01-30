@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -325,7 +325,7 @@ typedef int64_t ptrdiff_t;
 #endif
 #endif
 
-#if SIZEOF_LONG_DOUBLE > 0
+#if SIZEOF_LONG_DOUBLE > 0 && SIZEOF_LONG_DOUBLE > SIZEOF_DOUBLE
 #define HAVE_LONG_DOUBLE 1
 #endif
 

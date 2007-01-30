@@ -172,7 +172,7 @@ class Logger {
 
     utf8::String htmlDir_;
 
-    int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String());
+    int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
     void writeHtmlHead(AsyncFile & f);
     void writeHtmlTail(AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,const struct tm & beginTime,const struct tm & endTime);
@@ -181,6 +181,7 @@ class Logger {
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
     static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
+    static intptr_t sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
 
     utf8::String trafTypeNick_[ttCount];

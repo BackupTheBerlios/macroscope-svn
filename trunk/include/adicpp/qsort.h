@@ -28,7 +28,6 @@
 #define QSortBSearchH
 //-------------------------------------------------------------------------------
 namespace ksys {
-
 //-------------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
@@ -41,11 +40,8 @@ void qSort(T * ptr, intptr_t lb, intptr_t ub)
     if( ub - lb < 12 ){
       for( r = ub; r > lb; r-- ){
         for( m = r, l = m - 1; l >= lb; l-- )
-          if( ptr[m] < ptr[l] )
-            m = l;
-        T t = ptr[m];
-        ptr[m] = ptr[r];
-        ptr[r] = t;
+          if( ptr[m] < ptr[l] ) m = l;
+	xchg(ptr[m],ptr[r]);
       }
     }
     else{
@@ -54,20 +50,15 @@ void qSort(T * ptr, intptr_t lb, intptr_t ub)
       for(;;){
         while( l < r && ptr[m] > ptr[l] ) l++;
         while( r >= l && ptr[m] < ptr[r] ) r--;
-        if( l >= r )
-          break;
-        T t = ptr[l];
-        ptr[l] = ptr[r];
-        ptr[r] = t;
-        if( r == m )
-          m = l;
-        else if( l == m )
-          m = r;
+        if( l >= r ) break;
+	xchg(ptr[l],ptr[r]);
+        if( r == m ) m = l;
+        else if( l == m ) m = r;
         l++;
         r--;
       }
-      qSort< T>(ptr, lb, r);
-      qSort< T>(ptr, r + 1, ub);
+      qSort<T>(ptr,lb,r);
+      qSort<T>(ptr,r + 1,ub);
     }
   }
 }
@@ -105,7 +96,7 @@ void qSort(T * const ptr,intptr_t lb,intptr_t ub,const F f)
   }
 }
 //-------------------------------------------------------------------------------
-template< class T,intptr_t(*const f)(const T & p1, const T & p2)>
+template <class T,intptr_t(*const f)(const T & p1, const T & p2)>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
