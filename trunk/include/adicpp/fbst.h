@@ -1,4 +1,4 @@
-/*-
+/*
  * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
@@ -768,7 +768,7 @@ class DSQLValues {
     intptr_t                    rowIndex();
     bool                        fetch();
     DSQLValues &                fetchAll();
-    DSQLValues &                selectRow(uintptr_t i);
+    DSQLValues &                selectRow(uintptr_t row);
     DSQLValues &                selectFirst();
     DSQLValues &                selectLast();
 
@@ -784,6 +784,7 @@ class DSQLValues {
 
     uintptr_t                   indexOfName(const utf8::String & name);
     const utf8::String          nameOfIndex(uintptr_t i);
+    uintptr_t                   checkRowIndex(uintptr_t row);
     uintptr_t                   checkValueIndex(uintptr_t i);
 
     // access methods
@@ -820,6 +821,12 @@ inline DSQLValues & DSQLValues::clear()
 {
   rows_.clear();
   row_ = -1;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline DSQLValues & DSQLValues::selectRow(uintptr_t row)
+{
+  row_ = checkRowIndex(row);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -865,32 +872,32 @@ inline const utf8::String DSQLValues::nameOfIndex(uintptr_t i)
 //---------------------------------------------------------------------------
 inline bool DSQLValues::isNull(uintptr_t i)
 {
-  return rows_[row_][checkValueIndex(i)].sqlind_ < 0 ? true : false;
+  return rows_[checkRowIndex(row_)][checkValueIndex(i)].sqlind_ < 0 ? true : false;
 }
 //---------------------------------------------------------------------------
 inline bool DSQLValues::isNull(const utf8::String & valueName)
 {
-  return rows_[row_][checkValueIndex(valuesIndex_.indexOfKey(valueName))].sqlind_ < 0 ? true : false;
+  return rows_[checkRowIndex(row_)][checkValueIndex(valuesIndex_.indexOfKey(valueName))].sqlind_ < 0 ? true : false;
 }
 //---------------------------------------------------------------------------
 inline ksys::Mutant DSQLValues::asMutant(uintptr_t i)
 {
-  return rows_[row_][checkValueIndex(i)].getMutant();
+  return rows_[checkRowIndex(row_)][checkValueIndex(i)].getMutant();
 }
 //---------------------------------------------------------------------------
 inline ksys::Mutant DSQLValues::asMutant(const utf8::String & valueName)
 {
-  return rows_[row_][checkValueIndex(valuesIndex_.indexOfKey(valueName))].getMutant();
+  return rows_[checkRowIndex(row_)][checkValueIndex(valuesIndex_.indexOfKey(valueName))].getMutant();
 }
 //---------------------------------------------------------------------------
 inline utf8::String DSQLValues::asString(uintptr_t i)
 {
-  return rows_[row_][checkValueIndex(i)].getString();
+  return rows_[checkRowIndex(row_)][checkValueIndex(i)].getString();
 }
 //---------------------------------------------------------------------------
 inline utf8::String DSQLValues::asString(const utf8::String & valueName)
 {
-  return rows_[row_][checkValueIndex(valuesIndex_.indexOfKey(valueName))].getString();
+  return rows_[checkRowIndex(row_)][checkValueIndex(valuesIndex_.indexOfKey(valueName))].getString();
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

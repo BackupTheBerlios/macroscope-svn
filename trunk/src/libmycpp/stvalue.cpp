@@ -259,8 +259,8 @@ DSQLValues & DSQLValues::freeRes()
 //---------------------------------------------------------------------------
 bool DSQLValues::fetch()
 {
-  long                    code;
-  ksys::AutoPtr< DSQLRow> row (bind());
+  long code;
+  ksys::AutoPtr<DSQLRow> row(bind());
   if( api.mysql_stmt_bind_result(statement_->handle_, bind_.bind()) != 0 )
     statement_->database_->exceptionHandler(newObjectV1C2<EDSQLStBindResult>(
       api.mysql_errno(statement_->database_->handle_), api.mysql_error(statement_->database_->handle_)));
@@ -271,8 +271,7 @@ bool DSQLValues::fetch()
   if( code != MYSQL_NO_DATA ){
     fillRow(row);
     rows_.add(row.ptr());
-    if( row_ < 0 )
-      row_ = 0;
+    if( row_ < 0 ) row_ = 0;
     row.ptr(NULL);
   }
   return code != MYSQL_NO_DATA;
@@ -286,7 +285,7 @@ DSQLValues & DSQLValues::fetchAll()
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLValues::asMutant(uintptr_t i)
 {
-  DSQLRow & row = rows_[row_];
+  DSQLRow & row = rows_[checkRowIndex(row_)];
   if( row.index_[i = checkValueIndex(i)] < 0 )
     return ksys::Mutant();
   union {
@@ -353,7 +352,7 @@ l1:   return ksys::time2tm(*pll);
 //---------------------------------------------------------------------------
 utf8::String DSQLValues::asString(uintptr_t i)
 {
-  DSQLRow & row = rows_[row_];
+  DSQLRow & row = rows_[checkRowIndex(row_)];
   if( row.index_[i = checkValueIndex(i)] < 0 ) return utf8::String();
   union {
     char *            pc;
@@ -416,20 +415,17 @@ l1:   return utf8::time2Str(*pll);
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
-DSQLValues & DSQLValues::selectRow(uintptr_t i)
+uintptr_t DSQLValues::checkRowIndex(uintptr_t row)
 {
-  if( i >= rows_.count() )
-    newObjectV1C2<EDSQLStInvalidRowIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  row_ = i;
-  return *this;
+  if( (uintptr_t) (intptr_t) row >= rows_.count() )
+    newObjectV1C2<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__)->throwSP();
+  return row;
 }
 //---------------------------------------------------------------------------
 uintptr_t DSQLValues::checkValueIndex(uintptr_t i)
 {
-  if( (uintptr_t) (intptr_t) row_ >= rows_.count() )
-    newObjectV1C2<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__)->throwSP();
   if( i >= valuesIndex_.count() )
-    newObjectV1C2<EDSQLStInvalidValueIndex>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidValueIndex>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   return i;
 }
 //---------------------------------------------------------------------------

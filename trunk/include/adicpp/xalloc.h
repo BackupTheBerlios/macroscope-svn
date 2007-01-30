@@ -497,6 +497,25 @@ template <
   typename Param2,
   typename Param3,
   typename Param4
+> inline T * newObjectC1C2C3V4(const Param1 & p1,const Param2 & p2,const Param3 & p3,Param4 p4)
+{
+  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  const T st;
+  memcpy(safe.ptr(),&st,sizeof(void *) * 2);
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+  new (safe.ptr()) T(p1,p2,p3,p4);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  return safe2.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
+  typename Param2,
+  typename Param3,
+  typename Param4
 > inline T * newObjectV1V2V3V4(Param1 p1,Param2 p2,Param3 p3,Param4 p4)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));

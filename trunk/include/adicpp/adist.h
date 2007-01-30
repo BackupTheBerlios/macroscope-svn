@@ -107,16 +107,18 @@ inline
 #endif
 Statement & Statement::unload(Table & table)
 {
-  intptr_t  i, j, k, row;
+  intptr_t i, j, k, row, srow;
   table.clear();
   for( j = fieldCount(), i = 0; i < j; i++ )
     table.addColumn(fieldName(i));
+  srow = rowIndex();
   for( k = rowCount(), row = 0; row < k; row++ ){
     selectRow(row);
     table.addRow();
     for( i = 0; i < j; i++ )
-      table(row, i) = valueAsMutant(i);
+      table(row,i) = valueAsMutant(i);
   }
+  if( srow >= 0 ) selectRow(srow);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -239,3 +241,4 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
 } // namespace adicpp
 //---------------------------------------------------------------------------
 #endif // adidbH
+//---------------------------------------------------------------------------

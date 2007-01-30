@@ -81,7 +81,7 @@ ksys::Mutant DSQLValueScalar::getMutant()
     return ksys::Mutant();
 #if HAVE_LONG_DOUBLE
   long
-  #endif
+#endif
   double v;
   switch( sqltype_ & ~1 ){
     case SQL_SHORT       :
@@ -131,7 +131,7 @@ utf8::String DSQLValueScalar::getString()
 {
 #if HAVE_LONG_DOUBLE
   long
-  #endif
+#endif
   double v;
   if( sqlind_ >= 0 ){
     switch( sqltype_ & ~1 ){
@@ -259,8 +259,7 @@ DSQLValueArray & DSQLValueArray::getSlice()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-DSQLValueBlob::DSQLValueBlob(DSQLStatement & statement)
-  : statement_(&statement)
+DSQLValueBlob::DSQLValueBlob(DSQLStatement & statement) : statement_(&statement)
 {
 }
 //---------------------------------------------------------------------------
@@ -338,9 +337,7 @@ intptr_t DSQLValueBlob::readBuffer(void * buf, uintptr_t size)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-DSQLValues::DSQLValues(DSQLStatement & statement)
-  : statement_(&statement),
-    row_(~uintptr_t(0) >> 1)
+DSQLValues::DSQLValues(DSQLStatement & statement) : statement_(&statement), row_(~uintptr_t(0) >> 1)
 {
   valuesIndex_.caseSensitive(false).ownsObjects(false);
 }
@@ -462,8 +459,7 @@ DSQLValues & DSQLValues::fillRow(ksys::Vector< DSQLValue> * row)
   };
   for( intptr_t strLen, i = row->count() - 1; i >= 0; i-- ){
     XSQLVAR & v = sqlda_.sqlda()->sqlvar[i];
-    if( v.sqlind < 0 )
-      continue;
+    if( v.sqlind < 0 ) continue;
     value = &(*row)[i];
     switch( v.sqltype & ~1 ){
       case SQL_VARYING     :
@@ -515,18 +511,15 @@ DSQLValues & DSQLValues::fetchAll()
   return *this;
 }
 //---------------------------------------------------------------------------
-DSQLValues & DSQLValues::selectRow(uintptr_t i)
+uintptr_t DSQLValues::checkRowIndex(uintptr_t row)
 {
-  if( i >= rows_.count() )
+  if( row_ < 0 )
     newObjectV1C2<EDSQLStInvalidRowIndex>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
-  row_ = i;
-  return *this;
+  return row;
 }
 //---------------------------------------------------------------------------
 uintptr_t DSQLValues::checkValueIndex(uintptr_t i)
 {
-  if( row_ < 0 )
-    newObjectV1C2<EDSQLStInvalidRowIndex>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   if( i >= valuesIndex_.count() )
     newObjectV1C2<EDSQLStInvalidValueIndex>(
       (ISC_STATUS *) NULL, utf8::String(__PRETTY_FUNCTION__) + ", index = " + utf8::int2Str((intmax_t) i)

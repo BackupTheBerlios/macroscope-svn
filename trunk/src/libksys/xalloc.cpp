@@ -119,14 +119,14 @@ void kfree(void * p)
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 struct HeapBlockDesc {
-    void **   block_;
-    uintptr_t freeChunk_;
+  void ** block_;
+  uintptr_t freeChunk_;
 };
 //---------------------------------------------------------------------------
 struct HeapBlockBySizeDesc {
-    uintptr_t       count_;
-    HeapBlockDesc * blocks_;
-    uintptr_t       freeBlock_;
+  uintptr_t  count_;
+  HeapBlockDesc * blocks_;
+  uintptr_t  freeBlock_;
 };
 //---------------------------------------------------------------------------
 } // namespace ksys

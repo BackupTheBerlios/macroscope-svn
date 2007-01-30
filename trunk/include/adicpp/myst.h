@@ -218,11 +218,12 @@ class DSQLValues {
     intptr_t            rowIndex();
     bool                fetch();
     DSQLValues &        fetchAll();
-    DSQLValues &        selectRow(uintptr_t i);
+    DSQLValues &        selectRow(uintptr_t row);
     DSQLValues &        selectFirst();
     DSQLValues &        selectLast();
 
     uintptr_t           count();
+    uintptr_t           checkRowIndex(uintptr_t row);
     uintptr_t           checkValueIndex(uintptr_t i);
     intptr_t            indexOfName(const utf8::String & name);
     const utf8::String  nameOfIndex(uintptr_t i);
@@ -284,6 +285,12 @@ inline DSQLValues::~DSQLValues()
 {
 }
 //---------------------------------------------------------------------------
+inline DSQLValues & DSQLValues::selectRow(uintptr_t row)
+{
+  row_ = checkRowIndex(row);
+  return *this;
+}
+//---------------------------------------------------------------------------
 inline intptr_t valueIndexComparator(const utf8::String & s1, const utf8::String & s2)
 {
   return s1.strcasecmp(s2);
@@ -338,12 +345,12 @@ inline const utf8::String DSQLValues::nameOfIndex(uintptr_t i)
 //---------------------------------------------------------------------------
 inline bool DSQLValues::isNull(uintptr_t i)
 {
-  return rows_[row_].index_[checkValueIndex(i)] < 0;
+  return rows_[checkRowIndex(row_)].index_[checkValueIndex(i)] < 0;
 }
 //---------------------------------------------------------------------------
 inline bool DSQLValues::isNull(const utf8::String & name)
 {
-  return rows_[row_].index_[checkValueIndex(getValueIndex(name))] < 0;
+  return rows_[checkRowIndex(row_)].index_[checkValueIndex(getValueIndex(name))] < 0;
 }
 //---------------------------------------------------------------------------
 inline ksys::Mutant DSQLValues::asMutant(const utf8::String & name)

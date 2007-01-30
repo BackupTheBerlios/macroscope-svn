@@ -119,13 +119,8 @@ class Logger {
         TrafType      trafType_;
 
         TrafCacheEntry(){}
-        TrafCacheEntry(const utf8::String & user, const struct tm & bt, const struct tm & et, TrafType trafType)
-          : user_(user),
-            bt_(bt),
-            et_(et),
-            trafType_(trafType)
-        {
-        }
+        TrafCacheEntry(const utf8::String & user,const struct tm & bt,const struct tm & et,TrafType trafType)
+          : user_(user), bt_(bt), et_(et), trafType_(trafType) {}
 
         utf8::String id() const;
 
