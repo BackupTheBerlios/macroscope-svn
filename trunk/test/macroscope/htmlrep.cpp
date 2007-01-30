@@ -582,7 +582,7 @@ void Logger::writeHtmlYearOutput()
       f << "</TR>\n";
       endTime.tm_mon = 11;
       endTime.tm_mday = 31;
-      fprintf(stderr,"%s\n",utf8::tm2Str(beginTime).c_str());
+      if( verbose_ ) fprintf(stderr,"%s\n",utf8::tm2Str(beginTime).c_str());
       // Печатаем трафик пользователей
       Vector<Table<Mutant> > usersTrafTables;
       uintptr_t gCount = config_->sectionByPath("macroscope.groups").valueCount();
@@ -641,7 +641,7 @@ void Logger::writeHtmlYearOutput()
         statement_->prepare();
         for( u = enumStringParts(groupedUsers) - 1; u >= 0; u-- )
           statement_->paramAsString(u,stringPartByNo(groupedUsers,u));
-        usersTrafTables.resize(gCount + 1);
+        usersTrafTables.resize(usersTrafTables.count() + 1);
 	k = usersTrafTables.count() - 1;
         statement_->
           paramAsMutant("BT",beginTime)->
@@ -663,7 +663,7 @@ void Logger::writeHtmlYearOutput()
 	  usersTrafTables[k](u,"ST_USER") = groupedUsers;
 	  usersTrafTables[k](u,"ST_TRAF") = 0;
 	  usersTrafTables[k](u,"ST_TRAF_WWW") = 0;
-	  usersTrafTables[k](u,"ST_GROUP") = "ungrouped users";
+	  usersTrafTables[k](u,"ST_GROUP") = "group: ungrouped";
 	  usersTrafTables[k](u,"ST_TRAF_SMTP") = 0;
 	}
       }

@@ -26,6 +26,11 @@
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
 #include <adicpp/execinfo/execinfo.h>
+#if HAVE_LIBIBERTY_DEMANGLE_H
+#include <libiberty/demangle.h>
+#elif HAVE_DEMANGLE_H
+#include <demangle.h>
+#endif
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
@@ -345,7 +350,13 @@ char ** backtrace_symbols(char ** buffer)
       for(;;){
         buffer = (char **) krealloc(buffer,clen + alen);
         cp = (char *) buffer + clen;
+#if HAVE_LIBIBERTY_DEMANGLE_H || HAVE_DEMANGLE_H
+        cplus_demangle_set_style(auto_demangling);
+	char * result = cplus_demangle(info.dli_sname,DMGL_PARAMS | DMGL_ANSI | DMGL_TYPES);
+        j = snprintf(cp,alen,"%p <%s+%"PRIdPTR"> at %s",buffer[i],result,offset,info.dli_fname);
+#else
         j = snprintf(cp,alen,"%p <%s+%"PRIdPTR"> at %s",buffer[i],info.dli_sname,offset,info.dli_fname);
+#endif
 	if( j < alen ) break;
 	alen = (alen << 1) + (alen == 0);
       }

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -232,7 +232,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
         double timeStamp1;
         sscanf(slcp[0],"%lf",&timeStamp1);
         utf8::String  st_user (slcp[7]), st_url (slcp[6]);
-        st_user = st_user.lower();
+        st_user = st_user.lower().replaceAll("\"","");
         if( st_url.strcasestr(skipUrl).position() < 0 ){
           st_url = shortUrl(st_url).lower();
           Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
