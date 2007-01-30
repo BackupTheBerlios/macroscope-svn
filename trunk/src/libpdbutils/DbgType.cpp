@@ -552,7 +552,7 @@ queryArrayType(DWORD64 modBase, uintptr_t dwTypeIndex, DWORD_PTR address, DbgTyp
   DOUT("Array: count=[" << elcount << "]; elsize=[" << elsize << "]; ");
   for (uintptr_t i = 0; i < elcount; ++i)
   {
-    void* eladdr = *(void**)(address + (elsize * i));
+    void* eladdr = *(void **) uintptr_t(address + (elsize * i));
     DbgType subtype;
     if (querySymbolType(modBase, realTypeId, (intptr_t)&eladdr, elsize, subtype, queryFlags) == true)
     {

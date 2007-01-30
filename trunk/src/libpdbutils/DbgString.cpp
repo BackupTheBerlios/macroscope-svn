@@ -90,7 +90,7 @@ DbgString::_release()
     _ptr = 0;
     return;
   }
-  if (_ptr = 0)
+  if (_ptr == 0)
     return;
   delete[] _ptr;
   _ptr = 0;

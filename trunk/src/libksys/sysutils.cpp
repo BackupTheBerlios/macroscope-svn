@@ -2271,7 +2271,7 @@ utf8::String getMachineUniqueKey()
             IWbemClassObject * pclsObj;
             ULONG uReturn = 0;
             while( pEnumerator != NULL ){
-              HRESULT hr = pEnumerator->Next(WBEM_INFINITE,1,&pclsObj,&uReturn);
+              HRESULT hr = pEnumerator->Next(int(WBEM_INFINITE),1,&pclsObj,&uReturn);
               if( uReturn == 0 ) break;
               try {
                 hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);
@@ -2337,7 +2337,7 @@ utf8::String getMachineUniqueKey()
             IWbemClassObject * pclsObj;
             ULONG uReturn = 0;
             while( pEnumerator != NULL ){
-              HRESULT hr = pEnumerator->Next(WBEM_INFINITE,1,&pclsObj,&uReturn);
+              HRESULT hr = pEnumerator->Next(int(WBEM_INFINITE),1,&pclsObj,&uReturn);
               if( uReturn == 0 ) break;
               try {
                 hr = pclsObj->Get(L"Name", 0, &vtName, 0, 0);

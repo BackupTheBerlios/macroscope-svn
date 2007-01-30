@@ -158,7 +158,7 @@
 #cmakedefine HAVE_GETCWD 1
 #cmakedefine HAVE_GETPAGESIZE 1
 #cmakedefine HAVE_GETTIMEOFDAY 1
-#cmakedefine HAVE_MEMOVE 1
+#cmakedefine HAVE_MEMMOVE 1
 #cmakedefine HAVE_MEMSET 1
 #cmakedefine HAVE_MEMCPY 1
 #cmakedefine HAVE_STRCASECMP 1
