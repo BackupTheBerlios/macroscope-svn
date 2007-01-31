@@ -1,3 +1,3 @@
 #!/bin/sh
 
-mysql --user=root --password=ntktgfnjh1 --database=mysql < mysql-script
+mysql --user=root --database=mysql -p < mysql-script

@@ -59,10 +59,13 @@ void Logger::decoration()
 void Logger::writeUserTop(
   const utf8::String & file,
   const utf8::String & user,
+  uintptr_t isGroup,
   const struct tm & beginTime,
   const struct tm & endTime)
 {
-  if( !(bool) config_->valueByPath(prefix_ + "squid.top10_url",true) ) return;
+  if( !isGroup && !(bool) config_->valueByPath(prefix_ + "html_report.top10_url",true) ) return;
+  if( isGroup && !(bool) config_->valueByPath(prefix_ + "html_report.group_top10_url",false) ) return;
+  utf8::String users(genUserFilter(user,isGroup));
   statement_->text(
     "SELECT"
     "    A.*"
@@ -72,15 +75,18 @@ void Logger::writeUserTop(
     "          ST_URL, SUM(ST_URL_TRAF) AS SUM1, SUM(ST_URL_COUNT) AS SUM2"
     "        FROM"
     "            INET_USERS_MONTHLY_TOP_URL"
-    "        WHERE   ST_USER = :USER AND"
+    "        WHERE " + users +
     "                ST_TIMESTAMP >= :BT AND"
     "                ST_TIMESTAMP <= :ET"
     "        GROUP BY ST_URL"
     "    ) AS A "
     "ORDER BY A.SUM1"
   );
-  statement_->prepare()->
-    paramAsMutant("USER",user)->
+  intptr_t i;
+  statement_->prepare();
+  for( i = enumStringParts(user) - 1; i >= 0; i-- )
+    statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
+  statement_->
     paramAsMutant("BT",beginTime)->
     paramAsMutant("ET",endTime)->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
@@ -113,11 +119,11 @@ void Logger::writeUserTop(
       "</TR>\n"
     ;
     uint64_t at = 0;
-    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+    for( i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
       at += (uint64_t) statement_->valueAsMutant(1);
     }
-    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+    for( i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
       f <<
         "<TR>\n"
@@ -206,7 +212,8 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
     if( getTraf(ttAll,beginTime,endTime) > 0 ){
-      utf8::String trafByMonthFile(utf8::String::print("users-traf-by-%04d%02d.html", endTime.tm_year + 1900, endTime.tm_mon + 1));
+      if( verbose_ ) fprintf(stderr,"%s\n",(const char *) utf8::tm2Str(beginTime).getOEMString());
+      utf8::String trafByMonthFile(utf8::String::print("users-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1));
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
@@ -230,7 +237,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
         "    </FONT>\n"
         "  </TH>\n"
       ;
-      intptr_t  i, j;
+      intptr_t i, j, k;
       // ѕечатаем заголовки суммарных трафиков пользовател€ за мес€ц
       for( i = ttAll; i >= 0; i-- ){
         f << "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" <<
@@ -280,92 +287,84 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
       f << "</TR>\n";
       endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
       // ѕечатаем трафик пользователей
-      statement_->text(
-        "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF " 
-        "WHERE ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
-      );
-      Table<Mutant> usersTrafTable;
-      statement_->prepare()->
-        paramAsMutant("BT",beginTime)->paramAsMutant("ET",endTime)->
-          execute()->fetchAll()->unload(usersTrafTable);
-      usersTrafTable.
-        addColumn("ST_TRAF").addColumn("ST_TRAF_WWW").addColumn("ST_TRAF_SMTP");
-      for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-        utf8::String  user(usersTrafTable(i, "ST_USER"));
-        usersTrafTable(i, "ST_TRAF") = int64_t(usersTrafTable(i, "ST_TRAF_WWW") =
-          getTraf(ttWWW, beginTime, endTime, user)) +
-          int64_t(usersTrafTable(i, "ST_TRAF_SMTP") = getTraf(ttSMTP, beginTime, endTime, user));
-      }
-      usersTrafTable.sort(sortUsersTrafTable,usersTrafTable);
-      for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-        if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER")) == 0 ) continue;
-        utf8::String user(usersTrafTable(i,"ST_USER"));
-        utf8::String topByUserFile(
-          utf8::String::print(
-            "top-%04d%02d-",
-            endTime.tm_year + 1900,
-            endTime.tm_mon + 1
-          ) + user + ".html"
-        );
-        writeUserTop(
-          includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
-          user,
-          beginTime,
-          endTime
-        );
-        f <<
-          "<TR>\n"
-          "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
-          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-          "<A HREF=\"" << topByUserFile << "\">" <<
+      Vector<Table<Mutant> > usersTrafTables;
+      genUsersTable(usersTrafTables,beginTime,endTime);
+      for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
+        Table<Mutant> & usersTrafTable = usersTrafTables[k];
+        for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
+	  bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
+          if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
+          utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
+          utf8::String topByUserFile(
+            utf8::String::print(
+              "top-%04d%02d-",
+              endTime.tm_year + 1900,
+              endTime.tm_mon + 1
+            ) + user.replaceAll(":","-").replaceAll(" ","") + ".html"
+          );
+          writeUserTop(
+            includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
+            user,
+	    usersTrafTable(i,"ST_IS_GROUP"),
+            beginTime,
+            endTime
+          );
+          f <<
+            "<TR>\n"
+            "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+            "<A HREF=\"" << topByUserFile << "\">" <<
             user << "\n"
-          "</A>\n"
-//          utf8::String(usersTrafTable(i,"ST_USER")) << "\n"
-          "    </FONT>\n"
-          "  </TH>\n"
-        ;
-
-        for( j = ttAll; j >= 0; j-- ){
-          f <<
-	    "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyColor_[j] << "\" nowrap>\n"
-	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+            "</A>\n"
+            "    </FONT>\n"
+            "  </TH>\n"
           ;
-          writeTraf(f, usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll, beginTime, endTime));
-          f <<
-	    "    </FONT>\n"
-	    "  </TH>\n"
-          ;
-        }
-        // ѕечатаем трафик пользователей по дн€м
-        while( endTime.tm_mday > 0 ){
-          bt = endTime;
-          bt.tm_hour = 0;
-          bt.tm_min = 0;
-          bt.tm_sec = 0;
-          if( getTraf(ttAll, bt, endTime) > 0 ){
-            for( j = ttAll; j >= 0; j-- ){
-              if( getTraf(TrafType(j), bt, endTime) == 0 ) continue;
-              f <<
-                "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[j] << "\" nowrap>\n"
-                "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-              ;
-              writeTraf(
-                f,
-                getTraf(TrafType(j),
-                  bt,
-                  endTime,
-                  usersTrafTable(i,"ST_USER")
-                ),
-                getTraf(ttAll, bt, endTime)
-              );
-              f << "    </FONT>\n" "  </TH>\n"
-              ;
-            }
+          for( j = ttAll; j >= 0; j-- ){
+            f <<
+	      "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyColor_[j] << "\" nowrap>\n"
+	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+            ;
+            writeTraf(f,usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime));
+            f <<
+	      "    </FONT>\n"
+	      "  </TH>\n"
+            ;
           }
-          endTime.tm_mday--;
+        // ѕечатаем трафик пользователей по дн€м
+          while( endTime.tm_mday > 0 ){
+            bt = endTime;
+            bt.tm_hour = 0;
+            bt.tm_min = 0;
+            bt.tm_sec = 0;
+            if( getTraf(ttAll, bt, endTime) > 0 ){
+              for( j = ttAll; j >= 0; j-- ){
+                if( getTraf(TrafType(j), bt, endTime) == 0 ) continue;
+                f <<
+                  "  <TH ALIGN=right BGCOLOR=\"" << trafTypeBodyDataColor_[j] << "\" nowrap>\n"
+                  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+                ;
+                writeTraf(
+                  f,
+                  getTraf(
+		    TrafType(j),
+                    bt,
+                    endTime,
+                    usersTrafTable(i,"ST_USER"),
+		    usersTrafTable(i,"ST_IS_GROUP")
+                  ),
+                  getTraf(ttAll,bt,endTime)
+                );
+                f <<
+		  "    </FONT>\n"
+		  "  </TH>\n"
+                ;
+              }
+            }
+            endTime.tm_mday--;
+          }
+          f << "</TR>\n";
+          endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
         }
-        f << "</TR>\n";
-        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
       }
       // ѕечатаем итоговый трафик пользователей за мес€ц
       f <<
@@ -384,7 +383,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
           "  <TH ALIGN=right BGCOLOR=\"" << trafTypeTailColor_[j] << "\" nowrap>\n"
           "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         ;
-        writeTraf(f, getTraf(TrafType(j), beginTime, endTime), getTraf(ttAll, beginTime, endTime));
+        writeTraf(f,getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime));
         f << "    </FONT>\n" "  </TH>\n"
         ;
       }
@@ -403,10 +402,10 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
               "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             ;
             if( j == ttAll ){
-              writeTraf(f, getTraf(TrafType(j), bt, et), getTraf(ttAll, beginTime, endTime));
+              writeTraf(f,getTraf(TrafType(j),bt,et),getTraf(ttAll,beginTime,endTime));
             }
             else {
-              writeTraf(f, getTraf(TrafType(j), bt, et), getTraf(ttAll, bt, et));
+              writeTraf(f,getTraf(TrafType(j),bt,et),getTraf(ttAll,bt,et));
             }
             f <<
 	      "    </FONT>\n"
@@ -443,6 +442,126 @@ intptr_t Logger::sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2)
 {
   intmax_t s1(p1->sum("ST_TRAF")), s2(p2->sum("ST_TRAF"));
   return s1 > s2 ? 1 : s1 < s2 ? -1 : 0;
+}
+//------------------------------------------------------------------------------
+void Logger::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime)
+{
+  intptr_t i, k, u;
+  if( groups_ ){
+    utf8::String groupedUsers;
+    usersTrafTables.resize(gCount_);
+    for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
+      utf8::String key, value(config_->sectionByPath("macroscope.groups").value(k,&key));
+      statement_->text(
+        "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
+	genUserFilter(value,1) +
+        " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+      );
+      statement_->prepare();
+      for( u = enumStringParts(value) - 1; u >= 0; u-- )
+        statement_->paramAsString(u,stringPartByNo(value,u));
+      statement_->
+        paramAsMutant("BT",beginTime)->
+        paramAsMutant("ET",endTime)->
+        execute()->fetchAll()->
+        unload(usersTrafTables[k]);
+      usersTrafTables[k].
+        addColumn("ST_TRAF").
+        addColumn("ST_TRAF_WWW").
+        addColumn("ST_TRAF_SMTP").
+        addColumn("ST_GROUP").
+        addColumn("ST_IS_GROUP");
+      uintptr_t j = usersTrafTables[k].rowCount();
+      if( j == 0 ){
+        usersTrafTables.remove(k);
+        continue;
+      }
+      usersTrafTables[k].addRow()(j,"ST_IS_GROUP") = 1;
+      usersTrafTables[k](j,"ST_USER") = value;
+      usersTrafTables[k](j,"ST_TRAF") = 0;
+      usersTrafTables[k](j,"ST_TRAF_WWW") = 0;
+      usersTrafTables[k](j,"ST_GROUP") = "group: " + key;
+      usersTrafTables[k](j,"ST_TRAF_SMTP") = 0;
+      if( groupedUsers.strlen() > 0 ) groupedUsers += ",";
+      groupedUsers += value;
+    }
+    statement_->text(
+      "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
+      genUserFilter(groupedUsers,2) +
+      " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+    );
+    statement_->prepare();
+    for( u = enumStringParts(groupedUsers) - 1; u >= 0; u-- )
+      statement_->paramAsString("U" + utf8::int2Str(u),stringPartByNo(groupedUsers,u));
+    usersTrafTables.resize(usersTrafTables.count() + 1);
+    k = usersTrafTables.count() - 1;
+    statement_->
+      paramAsMutant("BT",beginTime)->
+      paramAsMutant("ET",endTime)->
+      execute()->fetchAll()->
+      unload(usersTrafTables[k]);
+    usersTrafTables[k].
+      addColumn("ST_TRAF").
+      addColumn("ST_TRAF_WWW").
+      addColumn("ST_TRAF_SMTP").
+      addColumn("ST_GROUP").
+      addColumn("ST_IS_GROUP");
+    uintptr_t j = usersTrafTables[k].rowCount();
+    if( j == 0 ){
+      usersTrafTables.remove(k);
+    }
+    else {
+      usersTrafTables[k].addRow()(j,"ST_IS_GROUP") = 2;
+      usersTrafTables[k](j,"ST_USER") = groupedUsers;
+      usersTrafTables[k](j,"ST_TRAF") = 0;
+      usersTrafTables[k](j,"ST_TRAF_WWW") = 0;
+      usersTrafTables[k](j,"ST_GROUP") = "group: ungrouped";
+      usersTrafTables[k](j,"ST_TRAF_SMTP") = 0;
+    }
+  }
+  else {
+    usersTrafTables.resize(1);
+    Table<Mutant> & usersTrafTable = usersTrafTables[0];
+    statement_->text(
+      "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE "
+      "ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+    );
+    statement_->prepare()->
+      paramAsMutant("BT",beginTime)->paramAsMutant("ET",endTime)->
+      execute()->fetchAll()->unload(usersTrafTable);
+    usersTrafTable.
+      addColumn("ST_TRAF").
+      addColumn("ST_TRAF_WWW").
+      addColumn("ST_TRAF_SMTP").
+      addColumn("ST_GROUP").
+      addColumn("ST_IS_GROUP");
+  }
+  for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
+    Table<Mutant> & usersTrafTable = usersTrafTables[k];
+    i = usersTrafTable.rowCount();
+    if( i == 0 ) continue;
+    i--;
+    if( (bool) usersTrafTable(i,"ST_IS_GROUP") ){
+      utf8::String users(usersTrafTable(i,"ST_USER"));
+      usersTrafTable(i,"ST_TRAF") = int64_t(usersTrafTable(i,"ST_TRAF_WWW") = 
+        getTraf(ttWWW,beginTime,endTime,users,usersTrafTable(i,"ST_IS_GROUP"))) + 
+        int64_t(usersTrafTable(i,"ST_TRAF_SMTP") =
+          getTraf(ttSMTP,beginTime,endTime,users,usersTrafTable(i,"ST_IS_GROUP")));
+    }
+  }
+  qSort(usersTrafTables.ptr(),0,usersTrafTables.count() - 1,sortUsersTrafTables);
+  for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
+    Table<Mutant> & usersTrafTable = usersTrafTables[k];
+    for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
+      if( (bool) usersTrafTable(i,"ST_IS_GROUP") ) continue;
+      utf8::String user(usersTrafTable(i,"ST_USER"));
+        usersTrafTable(i,"ST_TRAF") = int64_t(usersTrafTable(i,"ST_TRAF_WWW") = 
+          getTraf(ttWWW,beginTime,endTime,user)) + 
+          int64_t(usersTrafTable(i,"ST_TRAF_SMTP") = 
+          getTraf(ttSMTP,beginTime,endTime,user));
+    }
+    usersTrafTable.sort(sortUsersTrafTable,usersTrafTable);
+  }
 }
 //------------------------------------------------------------------------------
 void Logger::writeHtmlYearOutput()
@@ -498,11 +617,14 @@ void Logger::writeHtmlYearOutput()
   endTime.tm_min = 59;
   endTime.tm_sec = 59;
   struct tm beginTime2, bt, et;
+  gCount_ = config_->sectionByPath("macroscope.groups").valueCount();
+  groups_ = config_->valueByPath(section_ + "groups",false) && gCount_ > 0;
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
     bool process = !(bool) config_->valueByPath(section_ + "refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
     if( getTraf(ttAll,beginTime,endTime) > 0 ){
+      if( verbose_ ) fprintf(stderr,"%s\n",(const char *) utf8::tm2Str(beginTime).getOEMString());
       utf8::String trafByYearFile(utf8::String::print("users-traf-by-%04d.html",endTime.tm_year + 1900));
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
@@ -526,7 +648,7 @@ void Logger::writeHtmlYearOutput()
         "User\n"
         "    </FONT>\n" "  </TH>\n"
       ;
-      intptr_t i, j, k, u;
+      intptr_t i, j, k;
       // ѕечатаем заголовки суммарных трафиков пользовател€ за год
       for( i = ttAll; i >= 0; i-- ){
         f <<
@@ -582,136 +704,17 @@ void Logger::writeHtmlYearOutput()
       f << "</TR>\n";
       endTime.tm_mon = 11;
       endTime.tm_mday = 31;
-      if( verbose_ ) fprintf(stderr,"%s\n",utf8::tm2Str(beginTime).c_str());
       // ѕечатаем трафик пользователей
       Vector<Table<Mutant> > usersTrafTables;
-      uintptr_t gCount = config_->sectionByPath("macroscope.groups").valueCount();
-      bool groups = config_->valueByPath(section_ + "groups",false) && gCount > 0;
-      if( groups ){
-        utf8::String groupedUsers;
-        usersTrafTables.resize(gCount);
-        for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
-	  utf8::String key, value(config_->sectionByPath("macroscope.groups").value(k,&key));
-          statement_->text("SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE");
-          for( u = enumStringParts(value) - 1, i = u; u >= 0; u-- ){
-            if( i == u ) statement_->text(statement_->text() + " (");
-  	    statement_->text(statement_->text() + "ST_USER = :U" + utf8::int2Str(u));
-            if( u > 0 ) statement_->text(statement_->text() + " OR ");
-	    else
-            if( u == 0 ) statement_->text(statement_->text() + ") AND ");
-	  }
-          statement_->text(statement_->text() + "ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET");
-          statement_->prepare();
-          for( u = enumStringParts(value) - 1; u >= 0; u-- )
-  	    statement_->paramAsString(u,stringPartByNo(value,u));
-          statement_->
-            paramAsMutant("BT",beginTime)->
-	    paramAsMutant("ET",endTime)->
-            execute()->fetchAll()->
-	    unload(usersTrafTables[k]);
-          usersTrafTables[k].
-            addColumn("ST_TRAF").
-            addColumn("ST_TRAF_WWW").
-            addColumn("ST_TRAF_SMTP").
-            addColumn("ST_GROUP").
-            addColumn("ST_IS_GROUP");
-	  uintptr_t u = usersTrafTables[k].rowCount();
-	  if( u == 0 ){
-	    usersTrafTables.remove(k);
-	    continue;
-	  }
-	  usersTrafTables[k].addRow()(u,"ST_IS_GROUP") = 1;
-	  usersTrafTables[k](u,"ST_USER") = value;
-	  usersTrafTables[k](u,"ST_TRAF") = 0;
-	  usersTrafTables[k](u,"ST_TRAF_WWW") = 0;
-	  usersTrafTables[k](u,"ST_GROUP") = "group: " + key;
-	  usersTrafTables[k](u,"ST_TRAF_SMTP") = 0;
-	  if( groupedUsers.strlen() > 0 ) groupedUsers += ",";
-	  groupedUsers += value;
-	}
-        statement_->text("SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE");
-        for( u = enumStringParts(groupedUsers) - 1, i = u; u >= 0; u-- ){
-          if( i == u ) statement_->text(statement_->text() + " ");
-          statement_->text(statement_->text() + "ST_USER <> :U" + utf8::int2Str(u));
-          if( u > 0 ) statement_->text(statement_->text() + " AND ");
-          else
-          if( u == 0 ) statement_->text(statement_->text() + " AND ");
-        }
-        statement_->text(statement_->text() + "ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET");
-        statement_->prepare();
-        for( u = enumStringParts(groupedUsers) - 1; u >= 0; u-- )
-          statement_->paramAsString(u,stringPartByNo(groupedUsers,u));
-        usersTrafTables.resize(usersTrafTables.count() + 1);
-	k = usersTrafTables.count() - 1;
-        statement_->
-          paramAsMutant("BT",beginTime)->
-          paramAsMutant("ET",endTime)->
-          execute()->fetchAll()->
-          unload(usersTrafTables[k]);
-        usersTrafTables[k].
-          addColumn("ST_TRAF").
-          addColumn("ST_TRAF_WWW").
-          addColumn("ST_TRAF_SMTP").
-          addColumn("ST_GROUP").
-          addColumn("ST_IS_GROUP");
-	uintptr_t u = usersTrafTables[k].rowCount();
-        if( u == 0 ){
-          usersTrafTables.remove(k);
-        }
-	else {
-  	  usersTrafTables[k].addRow()(u,"ST_IS_GROUP") = 2;
-	  usersTrafTables[k](u,"ST_USER") = groupedUsers;
-	  usersTrafTables[k](u,"ST_TRAF") = 0;
-	  usersTrafTables[k](u,"ST_TRAF_WWW") = 0;
-	  usersTrafTables[k](u,"ST_GROUP") = "group: ungrouped";
-	  usersTrafTables[k](u,"ST_TRAF_SMTP") = 0;
-	}
-      }
-      else {
-        usersTrafTables.resize(1);
-        Table<Mutant> & usersTrafTable = usersTrafTables[0];
-        statement_->text("SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE");
-        statement_->text(statement_->text() + " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET");
-        statement_->prepare()->
-          paramAsMutant("BT",beginTime)->paramAsMutant("ET",endTime)->
-          execute()->fetchAll()->unload(usersTrafTable);
-        usersTrafTable.
-          addColumn("ST_TRAF").
-          addColumn("ST_TRAF_WWW").
-          addColumn("ST_TRAF_SMTP").
-          addColumn("ST_GROUP").
-          addColumn("ST_IS_GROUP");
-      }
+      genUsersTable(usersTrafTables,beginTime,endTime);
       for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
         Table<Mutant> & usersTrafTable = usersTrafTables[k];
-	i = usersTrafTable.rowCount();
-	if( i == 0 ) continue;
-	i--;
-	if( (bool) usersTrafTable(i,"ST_IS_GROUP") ){
-          utf8::String users(usersTrafTable(i,"ST_USER"));
-          usersTrafTable(i,"ST_TRAF") = int64_t(usersTrafTable(i,"ST_TRAF_WWW") = 
-            getTraf(ttWWW,beginTime,endTime,users,usersTrafTable(i,"ST_IS_GROUP"))) + 
-            int64_t(usersTrafTable(i,"ST_TRAF_SMTP") =
-              getTraf(ttSMTP,beginTime,endTime,users,usersTrafTable(i,"ST_IS_GROUP")));
-        }
-      }
-      qSort(usersTrafTables.ptr(),0,usersTrafTables.count() - 1,sortUsersTrafTables);
-      for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
-        Table<Mutant> & usersTrafTable = usersTrafTables[k];
-        for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-	  if( (bool) usersTrafTable(i,"ST_IS_GROUP") ) continue;
-          utf8::String user(usersTrafTable(i,"ST_USER"));
-          usersTrafTable(i,"ST_TRAF") = int64_t(usersTrafTable(i,"ST_TRAF_WWW") = 
-            getTraf(ttWWW,beginTime,endTime,user)) + 
-            int64_t(usersTrafTable(i,"ST_TRAF_SMTP") = 
-            getTraf(ttSMTP,beginTime,endTime,user));
-        }
-        usersTrafTable.sort(sortUsersTrafTable,usersTrafTable);
         for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
 	  bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
           if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
           f <<
-  	    "<TR>\n" "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+  	    "<TR>\n"
+	    "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
             utf8::String(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER")) << "\n"
 	    "    </FONT>\n"
@@ -822,7 +825,7 @@ void Logger::writeHtmlYearOutput()
         utf8::String fileName(
           includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
         );
-        //writeMonthHtmlOutput(fileName,endTime);
+        writeMonthHtmlOutput(fileName,endTime);
       }
     }
     endTime.tm_year--;
@@ -892,7 +895,7 @@ void Logger::writeTraf(AsyncFile & f, uint64_t qi, uint64_t qj)
 utf8::String Logger::TrafCacheEntry::id() const
 {
   return
-    user_ + utf8::time2Str(tm2Time(bt_)) + utf8::time2Str(tm2Time(et_)) + trafTypeColumnName[trafType_]
+    user_ + utf8::tm2Str(bt_) + utf8::tm2Str(et_) + trafTypeColumnName[trafType_]
   ;
 }
 //------------------------------------------------------------------------------
@@ -920,6 +923,20 @@ void Logger::writeHtmlTail(AsyncFile & f)
     "</HTML>\n";
 }
 //------------------------------------------------------------------------------
+utf8::String Logger::genUserFilter(const utf8::String & user,uintptr_t isGroup)
+{
+  utf8::String users;
+  intptr_t i, j;
+  for( i = enumStringParts(user) - 1, j = i; i >= 0; i-- ){
+    if( i == j ) users += isGroup > 1 ? " " : " (";
+    users += (isGroup > 1 ? "ST_USER <> :U" : "ST_USER = :U") + utf8::int2Str(i);
+    if( i > 0 ) users += isGroup > 1 ? " AND " : " OR ";
+    else
+    if( i >= 0 ) users += isGroup > 1 ? " AND" : ") AND";
+  }
+  return users;
+}
+//------------------------------------------------------------------------------
 int64_t Logger::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user,uintptr_t isGroup)
 {
   AutoPtr<TrafCacheEntry> tce(newObjectC1C2C3V4<TrafCacheEntry>(user,bt,et,tt));
@@ -931,15 +948,7 @@ int64_t Logger::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,co
   trafCache_.insert(tce,false,false,&pEntry);
   if( pEntry == tce ){
     tce.ptr(NULL);
-    utf8::String users;
-    intptr_t i, j;
-    for( i = enumStringParts(user) - 1, j = i; i >= 0; i-- ){
-      if( i == j ) users += isGroup > 1 ? " " : " (";
-      users += (isGroup > 1 ? "ST_USER <> :U" : "ST_USER = :U") + utf8::int2Str(i);
-      if( i > 0 ) users += isGroup > 1 ? " AND " : " OR ";
-      else
-      if( i >= 0 ) users += isGroup > 1 ? " AND" : ") AND";
-    }
+    utf8::String users(genUserFilter(user,isGroup));
     statement_->text(utf8::String("SELECT ") +
       (tt == ttAll || tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
       (tt == ttAll ? ", " : " ") +
@@ -949,8 +958,8 @@ int64_t Logger::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,co
       " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
     );
     statement_->prepare();
-    for( i = enumStringParts(user) - 1, j = i; i >= 0; i-- )
-      statement_->paramAsString(i,stringPartByNo(user,i));
+    for( intptr_t i = enumStringParts(user) - 1; i >= 0; i-- )
+      statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
     statement_->
       paramAsMutant("BT",bt)->paramAsMutant("ET",et)->
       execute()->fetchAll();

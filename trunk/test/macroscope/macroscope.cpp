@@ -769,6 +769,7 @@ int main(int _argc, char * _argv[])
       logger.main();
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
     }
+    errcode = 0;
   }
   catch( ExceptionSP & e ){
     e->writeStdError();

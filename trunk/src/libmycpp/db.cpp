@@ -28,7 +28,11 @@
 //---------------------------------------------------------------------------
 namespace mycpp {
 //---------------------------------------------------------------------------
-DPB::DPB()
+DPB::DPB() :
+  connectTimeout_(0),
+  readTimeout_(0),
+  writeTimeout_(0),
+  reconnect_(false)
 {
 }
 //---------------------------------------------------------------------------
@@ -49,6 +53,10 @@ DPB & DPB::add(const utf8::String & name, const ksys::Mutant & value)
   if( name.strcasecmp("user_name") == 0 ) user_ = value;
   else if( name.strcasecmp("password") == 0 ) password_ = value;
   else if( name.strcasecmp("protocol") == 0 ) protocol_ = value;
+  else if( name.strcasecmp("connect_timeout") == 0 ) connectTimeout_ = value;
+  else if( name.strcasecmp("read_timeout") == 0 ) readTimeout_ = value;
+  else if( name.strcasecmp("write_timeout") == 0 ) writeTimeout_ = value;
+  else if( name.strcasecmp("reconnect") == 0 ) reconnect_ = value;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -160,7 +168,7 @@ Database & Database::attach(const utf8::String & name)
     api.open();
     try{
       allocHandle(handle_);
-      unsigned int  protocol  = MYSQL_PROTOCOL_DEFAULT;
+      unsigned int protocol = MYSQL_PROTOCOL_DEFAULT;
       if( dpb_.protocol().strcasecmp("DEFAULT") == 0 )
         protocol = MYSQL_PROTOCOL_DEFAULT;
       else if( dpb_.protocol().strcasecmp("TCP") == 0 )
@@ -171,12 +179,19 @@ Database & Database::attach(const utf8::String & name)
         protocol = MYSQL_PROTOCOL_MEMORY;
       if( api.mysql_options(handle_, MYSQL_OPT_PROTOCOL, &protocol) != 0 )
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
-      unsigned int  timeout = 180;
-      if( api.mysql_options(handle_, MYSQL_OPT_READ_TIMEOUT, &timeout) != 0 )
+      unsigned int timeout = dpb_.connectTimeout();
+      if( api.mysql_options(handle_,MYSQL_OPT_CONNECT_TIMEOUT,&timeout) != 0 )
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
-      if( api.mysql_options(handle_, MYSQL_OPT_WRITE_TIMEOUT, &timeout) != 0 )
+      timeout = dpb_.readTimeout();
+      if( api.mysql_options(handle_,MYSQL_OPT_READ_TIMEOUT,&timeout) != 0 )
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
-      if( api.mysql_options(handle_, MYSQL_SET_CHARSET_NAME, "utf8") != 0 )
+      timeout = dpb_.writeTimeout();
+      if( api.mysql_options(handle_,MYSQL_OPT_WRITE_TIMEOUT,&timeout) != 0 )
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+      if( api.mysql_options(handle_,MYSQL_SET_CHARSET_NAME,"utf8") != 0 )
+        exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+      my_bool reconnect = dpb_.reconnect();
+      if( api.mysql_options(handle_,MYSQL_OPT_RECONNECT,&reconnect) != 0 )
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
 
       api.mysql_real_connect(

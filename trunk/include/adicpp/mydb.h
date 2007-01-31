@@ -48,19 +48,27 @@ class Base : virtual ksys::Object {
 //---------------------------------------------------------------------------
 class DPB {
   public:
-    DPB();
     ~DPB();
+    DPB();
 
-    DPB &                 clear();
-    DPB &                 add(const utf8::String & name, const ksys::Mutant & value);
-    const utf8::String &  user() const;
-    const utf8::String &  password() const;
-    const utf8::String &  protocol() const;
+    DPB & clear();
+    DPB & add(const utf8::String & name,const ksys::Mutant & value);
+    const utf8::String & user() const;
+    const utf8::String & password() const;
+    const utf8::String & protocol() const;
+    const unsigned int & connectTimeout() const;
+    const unsigned int & readTimeout() const;
+    const unsigned int & writeTimeout() const;
+    const bool & reconnect() const;
   protected:
   private:
-    utf8::String  user_;
-    utf8::String  password_;
-    utf8::String  protocol_;
+    utf8::String user_;
+    utf8::String password_;
+    utf8::String protocol_;
+    unsigned int connectTimeout_;
+    unsigned int readTimeout_;
+    unsigned int writeTimeout_;
+    bool reconnect_;
 };
 //---------------------------------------------------------------------------
 inline const utf8::String & DPB::user() const
@@ -76,6 +84,26 @@ inline const utf8::String & DPB::password() const
 inline const utf8::String & DPB::protocol() const
 {
   return protocol_;
+}
+//---------------------------------------------------------------------------
+inline const unsigned int & DPB::connectTimeout() const
+{
+  return connectTimeout_;
+}
+//---------------------------------------------------------------------------
+inline const unsigned int & DPB::readTimeout() const
+{
+  return readTimeout_;
+}
+//---------------------------------------------------------------------------
+inline const unsigned int & DPB::writeTimeout() const
+{
+  return writeTimeout_;
+}
+//---------------------------------------------------------------------------
+inline const bool & DPB::reconnect() const
+{
+  return reconnect_;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

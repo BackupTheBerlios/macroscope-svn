@@ -54,6 +54,10 @@ Database * Database::newDatabase(ksys::Config * config)
     p->params().add("user_name",config->valueByPath(section + ".user","root"));
     p->params().add("password",config->valueByPath(section + ".password"));
     p->params().add("protocol",config->valueByPath(section + ".protocol"));
+    p->params().add("connect_timeout",config->valueByPath(section + ".connect_timeout",0));
+    p->params().add("read_timeout",config->valueByPath(section + ".read_timeout",0));
+    p->params().add("write_timeout",config->valueByPath(section + ".write_timeout",0));
+    p->params().add("reconnect",config->valueByPath(section + ".reconnect",false));
     return p.ptr(NULL);
   }
   newObjectV1C2<ksys::Exception>(EINVAL,"unknown or unsupported server type: " + stype0)->throwSP();

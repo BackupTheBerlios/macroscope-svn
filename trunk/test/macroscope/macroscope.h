@@ -99,7 +99,9 @@ class Logger {
     AutoPtr<Statement> stMsgsDel2_;
     AutoPtr<Statement> stMsgsSelCount_;
     int64_t ellapsed_;
+    uintptr_t gCount_;
     bool verbose_;
+    bool groups_;
 
     void printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl);
     void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
@@ -170,13 +172,15 @@ class Logger {
     int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
     void writeHtmlHead(AsyncFile & f);
     void writeHtmlTail(AsyncFile & f);
-    void writeUserTop(const utf8::String & file,const utf8::String & user,const struct tm & beginTime,const struct tm & endTime);
+    void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
     Logger & writeBPFTHtmlReport(AsyncFile & f);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
     static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
     static intptr_t sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2);
+    void genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime);
+    utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
 
     utf8::String trafTypeNick_[ttCount];
