@@ -538,23 +538,23 @@ typedef int32_t gid_t;
 #define PACKED
 #endif
 
-#if !SYSCONF_DIR
+#ifndef SYSCONF_DIR
 #if defined(__WIN32__) || defined(__WIN64__)
 #define SYSCONF_DIR(a) ksys::getExecutablePath()
 #elif BSD
-#define SYSCONF_DIR(a) utf8::String("/usr/local/" a)
+#define SYSCONF_DIR(a) utf8::String("/usr/local/etc/") + a
 #else
-#define SYSCONF_DIR(a) utf8::String("/usr/" a)
+#define SYSCONF_DIR(a) utf8::String("/usr/etc/") + a
 #endif
 #endif
 
-#if !SYSLOG_DIR
+#ifndef SYSLOG_DIR
 #if defined(__WIN32__) || defined(__WIN64__)
 #define SYSLOG_DIR(a) ksys::getExecutablePath()
 #elif BSD
-#define SYSLOG_DIR(a) utf8::String("/var/log/" a)
+#define SYSLOG_DIR(a) utf8::String("/var/log/") + a
 #else
-#define SYSLOG_DIR(a) utf8::String("/var/log/" a)
+#define SYSLOG_DIR(a) utf8::String("/var/log/") + a
 #endif
 #endif
 

@@ -62,7 +62,7 @@ class KFTPClient : public ksock::ClientFiber {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class KFTPShell : public ksock::Client {
-  friend KFTPClient;
+  friend class KFTPClient;
   public:
     ~KFTPShell();
     KFTPShell(int & errorCode);
