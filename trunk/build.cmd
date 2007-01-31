@@ -23,4 +23,4 @@ rem call "%VS80COMNTOOLS%..\..\VC\vcvarsall.bat"
 cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -G "NMake Makefiles" .
 rem nmake clean
 rem del /s *.obj
-nmake
+if errorlevel = 0 nmake
