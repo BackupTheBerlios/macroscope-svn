@@ -21,6 +21,6 @@ goto exit
 call "%VS80COMNTOOLS%..\..\VC\vcvarsall.bat"
 
 cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -G "NMake Makefiles" .
-rem nmake clean
-rem del /s *.obj
-if errorlevel = 0 nmake
+del /s /f /q *.obj *.exe *.dll 1>null 2>null
+nmake
+if errorlevel = 0 nmake package
