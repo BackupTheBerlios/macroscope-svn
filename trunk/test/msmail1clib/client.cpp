@@ -301,7 +301,7 @@ void ClientFiber::connectHost(bool & online)
                       client_->connectedToServer_ = fqdn;
                       client_->connected_ = true;
                     }
-                    checkMachineBinding(client_->config_->value("machine_key"));
+//                    checkMachineBinding(client_->config_->value("machine_key"));
                     online = true;
                   }
                   catch( ExceptionSP & e ){
@@ -955,7 +955,7 @@ bool Client::saveMessageAttachmentToFile(const utf8::String id,const utf8::Strin
 //------------------------------------------------------------------------------
 bool Client::sendMessage(const utf8::String id,bool async)
 {
-  checkMachineBinding(config_->value("machine_key"));
+//  checkMachineBinding(config_->value("machine_key"));
   Message * msg;
   {
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);

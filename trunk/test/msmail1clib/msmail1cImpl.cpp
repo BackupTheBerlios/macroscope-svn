@@ -1883,7 +1883,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
   msmail1c::LockedFile * file = NULL;
   *pLastError = 0;
   try {
-    checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
+//    checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
     file = msmail1c_->findFileByName(name);
     if( file == NULL ) file = msmail1c_->addFile(name);
     file->lastError_ = 0;
