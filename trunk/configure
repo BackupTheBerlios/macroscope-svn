@@ -1,3 +1,4 @@
 #!/bin/sh
 
-cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release . && make && make package
+cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release . && make
+# && make package
