@@ -58,3 +58,5 @@ INSTALL (
 )
 
 INSTALL (FILES macroscope.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME macroscope.conf.template)
+INSTALL (FILES mysql-script DESTINATION "${INSTALL_ETC_DIR}" RENAME mysql-script)
+INSTALL (FILES mysql-user DESTINATION "${INSTALL_ETC_DIR}" RENAME mysql-user)
