@@ -1,4 +1,4 @@
 #!/bin/sh
 
-cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release . && make && make documentation
+cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release . && make && make documentation_html_tarz
 # && make package

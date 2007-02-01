@@ -1,18 +1,27 @@
+#IF (BUILD_DOCUMENTATION)
+
+ADD_CUSTOM_TARGET (
+  doc
+  DEPENDS html/index.html html.tar.gz
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
 IF (DOXYGEN_EXECUTABLE)
-  ADD_CUSTOM_TARGET(documentation
+  ADD_CUSTOM_COMMAND (
+    OUTPUT html/index.html
     COMMAND ${DOXYGEN_EXECUTABLE}
-    DEPENDS Doxyfile
+    DEPENDS Doxyfile mainpage.dox
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-ENDIF (DOXYGEN_EXECUTABLE)
-
-#IF (DOCUMENTATION_HTML_TARZ)
-  ADD_CUSTOM_TARGET(documentation_html_tarz
-    COMMAND $TAR_PROG -cfz html.tar html
-    DEPENDS documentation
+#  IF (DOCUMENTATION_HTML_TARZ)
+  ADD_CUSTOM_COMMAND (
+    OUTPUT html.tar.gz
+    COMMAND ${TAR} -cz -f html.tar.gz html
+    DEPENDS html/index.html
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
 #ENDIF (DOCUMENTATION_HTML_TARZ)
+ENDIF (DOXYGEN_EXECUTABLE)
 
 #INSTALL (FILES macroscope.conf DESTINATION "${INSTALL_ETC_DIR}" RENAME macroscope.conf.template)
 #INSTALL (FILES mysql-script DESTINATION "${INSTALL_ETC_DIR}" RENAME mysql-script)
