@@ -143,7 +143,7 @@ int main(int _argc,char * _argv[])
       intptr_t i;
       uintptr_t u;
     };
-    stdErr.fileName(SYSLOG_DIR("msmail/") + "msmail.conf");
+    stdErr.fileName(SYSLOG_DIR("msmail/") + "msmail.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msmail.conf");
     Services services(msmail_version.gnu_);
     AutoPtr<msmail::Service> serviceAP(newObject<msmail::Service>());
