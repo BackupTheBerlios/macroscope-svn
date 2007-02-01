@@ -292,23 +292,23 @@ bool Database::separateDBName(const utf8::String & name, utf8::String & hostName
 //---------------------------------------------------------------------------
 Database & Database::create(const utf8::String & name)
 {
-  utf8::String  createSQL ("CREATE DATABASE '" + (name.strlen() > 0 ? name : name_) + "' ");
+  utf8::String createSQL("CREATE DATABASE '" + (name.strlen() > 0 ? name : name_) + "' ");
   if( dpb_.user().strlen() == 0 ){
     createSQL += "USER 'SYSDBA' ";
   }
-  else{
+  else {
     createSQL += "USER '" + dpb_.user() + "' ";
   }
   if( dpb_.password().strlen() == 0 ){
     createSQL += "PASSWORD 'masterkey' ";
   }
-  else{
+  else {
     createSQL += "PASSWORD '" + dpb_.password() + "' ";
   }
   if( dpb_.pageSize() <= 0 ){
     createSQL += "PAGE_SIZE=1024 ";
   }
-  else{
+  else {
     createSQL += "PAGE_SIZE=" + utf8::int2Str((intmax_t) dpb_.pageSize()) + " ";
   }
   if( dpb_.fileLength() > 0 ){
@@ -328,9 +328,8 @@ Database & Database::create(const utf8::String & name)
       api.isc_detach_database(status, &newdb);
     }
   }
-  catch( ksys::ExceptionSP & e ){
-    if( !e->isFatalError() )
-      api.close();
+  catch( ksys::ExceptionSP & ){
+    api.close();
     throw;
   }
   api.close();

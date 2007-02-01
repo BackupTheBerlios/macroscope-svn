@@ -42,10 +42,10 @@ Database * Database::newDatabase(ksys::Config * config)
     p->params().add("user_name",config->valueByPath(section + ".user","sysdba"));
     p->params().add("password",config->valueByPath(section + ".password","masterkey"));
     p->params().add("role",config->valueByPath(section + ".role"));
-    p->params().add("dialect",config->valueByPath(section + ".dialect"));
-    p->params().add("page_size",config->valueByPath(section + ".page_size"));
-    p->params().add("lc_ctype",config->valueByPath(section + ".default_charset"));
-    p->params().add("lc_messages",config->valueByPath(section + ".messages_charset"));
+    p->params().add("sql_dialect",config->valueByPath(section + ".dialect",3));
+    p->params().add("page_size",config->valueByPath(section + ".page_size",16384));
+    p->params().add("lc_ctype",config->valueByPath(section + ".default_charset","UNICODE_FSS"));
+    p->params().add("lc_messages",config->valueByPath(section + ".messages_charset","WIN1251"));
     return p.ptr(NULL);
   }
   if( stype.strcasecmp("MYSQL") == 0 ){

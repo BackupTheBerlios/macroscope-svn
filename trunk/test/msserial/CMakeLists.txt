@@ -9,8 +9,6 @@ TARGET_LINK_LIBRARIES (msserial
   ${LIBPDBUTILS}
 )
 
-      
-
 SET_SOURCE_FILES_PROPERTIES (version.c PROPERTIES GENERATED YES)
 ADD_DEPENDENCIES (msserial version msserial_version)
 ADD_CUSTOM_TARGET(msserial_version
