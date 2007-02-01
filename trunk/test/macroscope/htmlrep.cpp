@@ -622,7 +622,6 @@ void Logger::writeHtmlYearOutput()
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
-    bool process = !(bool) config_->valueByPath(section_ + "refresh_only_current_year",true) || curTime.tm_year == beginTime.tm_year;
     if( getTraf(ttAll,beginTime,endTime) > 0 ){
       if( verbose_ ) fprintf(stderr,"%s\n",(const char *) utf8::tm2Str(beginTime).getOEMString());
       utf8::String trafByYearFile(utf8::String::print("users-traf-by-%04d.html",endTime.tm_year + 1900));
@@ -821,6 +820,8 @@ void Logger::writeHtmlYearOutput()
         et.tm_mon--;
       }
       f << "</TR>\n</TABLE>\n<BR>\n<BR>\n";
+      bool process = !(bool) config_->valueByPath(section_ + "refresh_only_current",true) ||
+        (curTime.tm_year == beginTime.tm_year && curTime.tm_mon == beginTime.tm_mon);
       if( process ){
         utf8::String fileName(
           includeTrailingPathDelimiter(htmlDir_) + trafByYearFile

@@ -154,7 +154,7 @@ HTML_HEADER            =
 HTML_FOOTER            = 
 HTML_STYLESHEET        = 
 HTML_ALIGN_MEMBERS     = YES
-GENERATE_HTMLHELP      = NO
+GENERATE_HTMLHELP      = YES
 CHM_FILE               = 
 HHC_LOCATION           = 
 GENERATE_CHI           = NO
@@ -162,7 +162,7 @@ BINARY_TOC             = NO
 TOC_EXPAND             = NO
 DISABLE_INDEX          = NO
 ENUM_VALUES_PER_LINE   = 4
-GENERATE_TREEVIEW      = NO
+GENERATE_TREEVIEW      = YES
 TREEVIEW_WIDTH         = 250
 #---------------------------------------------------------------------------
 # configuration options related to the LaTeX output
@@ -175,8 +175,8 @@ COMPACT_LATEX          = NO
 PAPER_TYPE             = a4wide
 EXTRA_PACKAGES         = 
 LATEX_HEADER           = 
-PDF_HYPERLINKS         = NO
-USE_PDFLATEX           = NO
+PDF_HYPERLINKS         = YES
+USE_PDFLATEX           = YES
 LATEX_BATCHMODE        = NO
 LATEX_HIDE_INDICES     = NO
 #---------------------------------------------------------------------------
