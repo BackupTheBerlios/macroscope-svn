@@ -679,31 +679,31 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} "${CMAKE_BINARY_DIR}/include")
 #SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -O -g3 -fstack-check -fno-inline-functions -fno-default-inline -fno-inline -fno-builtin -fno-omit-frame-pointer -fno-defer-pop -fno-merge-constants -fno-thread-jumps -fno-loop-optimize -fno-if-conversion -fno-if-conversion2 -fno-delayed-branch -fno-guess-branch-probability -fno-cprop-registers")
 #SET (CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE_UPPER}} -g3 -fms-extensions -fno-elide-constructors -fno-enforce-eh-specs")
 
-CONFIGURE_FILE("${CMAKE_BINARY_DIR}/include/adicpp/config.h.cmake" "${CMAKE_BINARY_DIR}/include/adicpp/config.h")
+CONFIGURE_FILE ("${CMAKE_BINARY_DIR}/include/adicpp/config.h.cmake" "${CMAKE_BINARY_DIR}/include/adicpp/config.h")
 
 # Targets definition
 
-ADD_SUBDIRECTORY(utils/version)
+ADD_SUBDIRECTORY (utils/version)
 
 IF (WIN32 AND NOT UNIX)
-  ADD_SUBDIRECTORY(src/libpdbutils)
+  ADD_SUBDIRECTORY (src/libpdbutils)
   SET (LIBPDBUTILS pdbutils)
-  ADD_SUBDIRECTORY(test/msmail1clib)
-  ADD_SUBDIRECTORY(test/mskey)
+  ADD_SUBDIRECTORY (test/msmail1clib)
+  ADD_SUBDIRECTORY (test/mskey)
 ENDIF (WIN32 AND NOT UNIX)
 
-ADD_SUBDIRECTORY(src/libadicpp)
-ADD_SUBDIRECTORY(src/libfbcpp)
-ADD_SUBDIRECTORY(src/libksys)
-ADD_SUBDIRECTORY(src/libmycpp)
-ADD_SUBDIRECTORY(src/libutf8)
-ADD_SUBDIRECTORY(test/macroscope)
-ADD_SUBDIRECTORY(test/msftp)
-ADD_SUBDIRECTORY(test/msftpd)
-ADD_SUBDIRECTORY(test/msmail)
-ADD_SUBDIRECTORY(test/msupdater)
-ADD_SUBDIRECTORY(test/msserial)
-ADD_SUBDIRECTORY(doc)
+ADD_SUBDIRECTORY (src/libadicpp)
+ADD_SUBDIRECTORY (src/libfbcpp)
+ADD_SUBDIRECTORY (src/libksys)
+ADD_SUBDIRECTORY (src/libmycpp)
+ADD_SUBDIRECTORY (src/libutf8)
+ADD_SUBDIRECTORY (test/macroscope)
+ADD_SUBDIRECTORY (test/msftp)
+ADD_SUBDIRECTORY (test/msftpd)
+ADD_SUBDIRECTORY (test/msmail)
+ADD_SUBDIRECTORY (test/msupdater)
+ADD_SUBDIRECTORY (test/msserial)
+ADD_SUBDIRECTORY (doc)
 
 # Install
 
@@ -749,7 +749,7 @@ ENDIF (NOT DEFINED CPACK_PACKAGE_FILE_NAME)
 STRING (TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
 SET (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-${CMAKE_BUILD_TYPE_LOWER}")
 
-SET (install_target macroscope)
+#SET (install_target macroscope)
 
 #SET (CPACK_GENERATOR "STGZ;TGZ;TZ")
 SET (CPACK_GENERATOR "STGZ;TGZ")
@@ -790,41 +790,41 @@ ENDIF(WIN32 AND NOT UNIX)
 #INCLUDE (InstallRequiredSystemLibraries)
 INCLUDE (CPack)
 
-IF (APPLE)
+#IF (APPLE)
   # Issue with packaging on the mac, so disable it for now
-  ADD_CUSTOM_COMMAND(
-    TARGET ${install_target}
-    POST_BUILD
-    COMMAND ${CMAKE_CTEST_COMMAND}
-    ARGS ${SI_CONFIG}
-    --build-and-test
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_BINARY_DIR}
-    --build-generator ${CMAKE_GENERATOR}
-    --build-project ${PROJECT_NAME}
-    --build-makeprogram ${CMAKE_MAKE_PROGRAM}
-    --build-noclean
-    --build-target install
-    COMMENT "Install Project"
-  )
-ELSE (APPLE)
-  ADD_CUSTOM_COMMAND(
-    TARGET ${install_target}
-    POST_BUILD
-    COMMAND ${CMAKE_CTEST_COMMAND}
-    ARGS ${SI_CONFIG}
-    --build-and-test
-    ${CMAKE_SOURCE_DIR}
-    ${CMAKE_BINARY_DIR}
-    --build-generator ${CMAKE_GENERATOR}
-    --build-project ${PROJECT_NAME}
-    --build-makeprogram ${CMAKE_MAKE_PROGRAM}
-    --build-noclean
-    --build-target install
-    --build-target package
-    COMMENT "Install Project"
-  )
-ENDIF (APPLE)
+#  ADD_CUSTOM_COMMAND(
+#    TARGET ${install_target}
+#    POST_BUILD
+#    COMMAND ${CMAKE_CTEST_COMMAND}
+#    ARGS ${SI_CONFIG}
+#    --build-and-test
+#    ${CMAKE_SOURCE_DIR}
+#    ${CMAKE_BINARY_DIR}
+#    --build-generator ${CMAKE_GENERATOR}
+#    --build-project ${PROJECT_NAME}
+#    --build-makeprogram ${CMAKE_MAKE_PROGRAM}
+#    --build-noclean
+#    --build-target install
+#    COMMENT "Install Project"
+#  )
+#ELSE (APPLE)
+#  ADD_CUSTOM_COMMAND(
+#    TARGET ${install_target}
+#    POST_BUILD
+#    COMMAND ${CMAKE_CTEST_COMMAND}
+#    ARGS ${SI_CONFIG}
+#    --build-and-test
+#    ${CMAKE_SOURCE_DIR}
+#    ${CMAKE_BINARY_DIR}
+#    --build-generator ${CMAKE_GENERATOR}
+#    --build-project ${PROJECT_NAME}
+#    --build-makeprogram ${CMAKE_MAKE_PROGRAM}
+#    --build-noclean
+#    --build-target install
+#    --build-target package
+#    COMMENT "Install Project"
+#  )
+#ENDIF (APPLE)
 
 INCLUDE (Documentation OPTIONAL)
 
