@@ -2159,6 +2159,8 @@ bool isWow64()
 }
 #endif
 //---------------------------------------------------------------------------
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//---------------------------------------------------------------------------
 utf8::String getMachineUniqueKey()
 {
 #if PRIVATE_RELEASE
@@ -2550,6 +2552,8 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
 #endif
 //---------------------------------------------------------------------------
 uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];
+//---------------------------------------------------------------------------
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // System initialization and finalization ///////////////////////////////////

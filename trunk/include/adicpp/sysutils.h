@@ -167,6 +167,7 @@ inline bool isWow64(){
 }
 #endif
 //---------------------------------------------------------------------------
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 utf8::String getMachineUniqueKey();
 utf8::String getMachineCleanUniqueKey();
 class SHA256Cryptor;
@@ -181,6 +182,7 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram = false);
 #else
 inline bool checkMachineBinding(const utf8::String &,bool abortProgram = false){ return false; }
 #endif
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
 //---------------------------------------------------------------------------
 class guid_t
 #if SIZEOF_UUID_T

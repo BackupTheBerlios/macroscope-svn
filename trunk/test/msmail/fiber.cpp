@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
+ * Copyright (C) 2005-2007 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -1022,7 +1022,9 @@ void NodeClient::main()
     do {
       server_->config_->parse();
       stdErr.setDebugLevels(server_->config_->value("debug_levels","+0,+1,+2,+3"));
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
       if( periodicaly_ ) checkMachineBinding(server_->config_->value("machine_key"),true);
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
       connected = exchanged = false;
       {
         AutoLock<FiberInterlockedMutex> lock(server_->nodeClientMutex_);
