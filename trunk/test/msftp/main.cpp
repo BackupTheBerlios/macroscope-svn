@@ -997,7 +997,7 @@ int main(int _argc,char * _argv[])
       intptr_t i;
       uintptr_t u;
     };
-    stdErr.fileName(SYSLOG_DIR("msftp/") + "msftp.conf");
+    stdErr.fileName(SYSLOG_DIR("msftp/") + "msftp.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msftp.conf");
 #ifndef NDEBUG
     fprintf(stderr,"%s\n",(const char *) getCurrentDir().getOEMString());

@@ -309,7 +309,7 @@ int main(int ac,char * av[])
       intptr_t i;
       uintptr_t u;
     };
-    stdErr.fileName(SYSLOG_DIR("msupdater/") + "msupdater.conf");
+    stdErr.fileName(SYSLOG_DIR("msupdater/") + "msupdater.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msupdater.conf");
     Services services(msupdater_version.gnu_);
     services.add(newObject<MSUpdaterService>());

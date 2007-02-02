@@ -469,7 +469,7 @@ int main(int _argc,char * _argv[])
       intptr_t i;
       uintptr_t u;
     };
-    stdErr.fileName(SYSLOG_DIR("msftpd/") + "msftpd.conf");
+    stdErr.fileName(SYSLOG_DIR("msftpd/") + "msftpd.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msftpd.conf");
     Services services(msftpd_version.gnu_);
     MSFTPService * service;

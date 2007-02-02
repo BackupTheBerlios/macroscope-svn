@@ -233,7 +233,7 @@ int main(int ac,char * av[])
       intptr_t i;
       uintptr_t u;
     };
-    stdErr.fileName(SYSLOG_DIR("msserial/") + "msserial.conf");
+    stdErr.fileName(SYSLOG_DIR("msserial/") + "msserial.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msserial.conf");
     Services services(msserial_version.gnu_);
     services.add(newObject<MSSerialService>());
