@@ -1,14 +1,26 @@
 IF (BUILD_DOCUMENTATION)
   ADD_CUSTOM_TARGET (
     doc ALL
-    DEPENDS html/index.html html.tar.gz
+    DEPENDS html/index.html
+    DEPENDS html.tar.gz
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
   IF (DOXYGEN_EXECUTABLE)
+    IF (DOXYGEN_DOT_EXECUTABLE)
+      SET (DOT YES)
+    ELSE (DOXYGEN_DOT_EXECUTABLE)
+      SET (DOT NO)
+    ENDIF (DOXYGEN_DOT_EXECUTABLE)
+    CONFIGURE_FILE (
+      "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.template"
+      "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+      !ONLY
+    )
     ADD_CUSTOM_COMMAND (
       OUTPUT html/index.html
       COMMAND ${DOXYGEN_EXECUTABLE}
-      DEPENDS Doxyfile mainpage.dox
+      DEPENDS Doxyfile
+      DEPENDS mainpage.dox
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     )
     IF (DOCUMENTATION_HTML_TARZ)
