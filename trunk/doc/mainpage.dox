@@ -13,7 +13,7 @@
  * \section modules Модули
  * \subsection module_macroscope macroscope
  * Генератор статистики использования траффика в HTML формате по
- * лог файлам программ: squid, sendmail.
+ * лог файлам программ: squid, sendmail, bpft.
  * \subsection module_msftp msftp
  * Клиент сервера обмена файлами.
  * \subsection module_msftpd msftpd
