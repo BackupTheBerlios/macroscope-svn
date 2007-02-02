@@ -27,7 +27,6 @@
 #include <adicpp/adicpp.h>
 //------------------------------------------------------------------------------
 #include "macroscope.h"
-#include "bpft.h"
 //------------------------------------------------------------------------------
 namespace macroscope {
 //------------------------------------------------------------------------------
@@ -437,102 +436,6 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   database_->commit();
 }
 //------------------------------------------------------------------------------
-void Logger::parseBPFTLogFile(const ConfigSection & section)
-{
-  AsyncFile flog(section.text("log_file_name"));
-  flog.readOnly(true).open();
-  database_->start();
-  int64_t offset = fetchLogFileLastOffset(flog.fileName());
-  flog.seek(offset);
-  int64_t lineNo = 0;
-  int64_t cl = getlocaltimeofday();
-  AutoPtr<Statement> statement(database_->newAttachedStatement());
-  union {
-    BPFTHeader header;
-    BPFTHeader32 header32;
-  };
-//  statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
-  statement_->text(
-    "INSERT INTO INET_BPFT_STAT ("
-    "  st_start,st_stop,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-    ") VALUES ("
-    "  :st_start,:st_stop,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
-    ")"
-  );
-  statement_->prepare();
-  bool log32bitOsCompatible = section.value("log_32bit_os_compatible",SIZEOF_VOID_P < 8);
-  for(;;){
-    struct tm start, stop;
-    uintptr_t entriesCount;
-    uint64_t safePos = flog.tell();
-    if( log32bitOsCompatible ){
-      if( flog.read(&header32,sizeof(header32)) != sizeof(header32) ){
-        flog.seek(safePos);
-        break;
-      }
-      start = timeval2tm(header32.start_);
-      stop = timeval2tm(header32.stop_);
-      entriesCount = header32.eCount_;
-    }
-    else {
-      if( flog.read(&header,sizeof(header)) != sizeof(header) ){
-        flog.seek(safePos);
-        break;
-      }
-      start = timeval2tm(header.start_);
-      stop = timeval2tm(header.stop_);
-      entriesCount = header.eCount_;
-    }
-    Array<BPFTEntry> entries;
-    Array<BPFTEntry32> entries32;
-    if( log32bitOsCompatible ){
-      entries32.resize(entriesCount);
-      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ){
-        flog.seek(safePos);
-        break;
-      }
-    }
-    else {
-      entries.resize(entriesCount);
-      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ){
-        flog.seek(safePos);
-        break;
-      }
-    }
-    for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
-      statement_->paramAsMutant("st_start",start);
-      statement_->paramAsMutant("st_stop",stop);
-      if( log32bitOsCompatible ){
-        statement_->paramAsMutant("st_src_ip",entries32[i].srcIp_.s_addr);
-        statement_->paramAsMutant("st_dst_ip",entries32[i].dstIp_.s_addr);
-        statement_->paramAsMutant("st_ip_proto",entries32[i].ipProtocol_);
-        statement_->paramAsMutant("st_src_port",entries32[i].srcPort_);
-        statement_->paramAsMutant("st_dst_port",entries32[i].dstPort_);
-        statement_->paramAsMutant("st_dgram_bytes",entries32[i].dgramSize_);
-        statement_->paramAsMutant("st_data_bytes",entries32[i].dataSize_);
-      }
-      else {
-        statement_->paramAsMutant("st_src_ip",entries[i].srcIp_.s_addr);
-        statement_->paramAsMutant("st_dst_ip",entries[i].dstIp_.s_addr);
-        statement_->paramAsMutant("st_ip_proto",entries[i].ipProtocol_);
-        statement_->paramAsMutant("st_src_port",entries[i].srcPort_);
-        statement_->paramAsMutant("st_dst_port",entries[i].dstPort_);
-        statement_->paramAsMutant("st_dgram_bytes",entries[i].dgramSize_);
-        statement_->paramAsMutant("st_data_bytes",entries[i].dataSize_);
-      }
-      statement_->execute();
-    }
-    updateLogFileLastOffset(flog.fileName(),flog.tell());
-    database_->commit();
-    database_->start();
-    printStat(lineNo,offset,flog.tell(),flog.size(),cl);
-    lineNo += entriesCount;
-  }
-  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
-  updateLogFileLastOffset(flog.fileName(),flog.tell());
-  database_->commit();
-}
-//------------------------------------------------------------------------------
 void Logger::main()
 {
   config_->parse().override();
@@ -646,7 +549,10 @@ void Logger::main()
       " st_src_port      SMALLINT NOT NULL,"
       " st_dst_port      SMALLINT NOT NULL,"
       " st_dgram_bytes   SMALLINT NOT NULL,"
-      " st_data_bytes    SMALLINT NOT NULL" ")" <<
+      " st_data_bytes    SMALLINT NOT NULL,"
+      " st_src_name      VARCHAR(70) NOT NULL,"
+      " st_dst_name      VARCHAR(70) NOT NULL"
+      ")" <<
       "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){

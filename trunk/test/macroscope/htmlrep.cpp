@@ -92,6 +92,10 @@ void Logger::writeUserTop(
   if( statement_->rowCount() > 0 ){
     AsyncFile f(file);
     f.createIfNotExist(true).open();
+    Mutant m0(config_->valueByPath(section_ + "file_mode",755));
+    Mutant m1(config_->valueByPath(section_ + "file_user",ksys::getuid()));
+    Mutant m2(config_->valueByPath(section_ + "file_group",ksys::getgid()));
+    chModOwn(f.fileName(),m0,m1,m2);
     writeHtmlHead(f);
     f <<
       "<TABLE WIDTH=100 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
