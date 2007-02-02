@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -97,6 +97,7 @@ inline VARIANTContainer & VARIANTContainer::operator = (const VARIANTContainer &
 inline VARIANTContainer & VARIANTContainer::operator = (const VARIANT & v)
 {
   changeType(const_cast<VARIANT *>(&v),0,0,V_VT(const_cast<VARIANT *>((const VARIANT *) &v)));
+  return *this;
 }
 //---------------------------------------------------------------------------
 inline VARIANTContainer & VARIANTContainer::changeType(VARTYPE vt,HRESULT * pRes)
