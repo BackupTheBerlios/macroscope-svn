@@ -92,6 +92,7 @@ inline VARIANTContainer::VARIANTContainer(const VARIANT & v)
 inline VARIANTContainer & VARIANTContainer::operator = (const VARIANTContainer & v)
 {
   changeType(v,0,0,V_VT(const_cast<VARIANT *>((const VARIANT *) &v)));
+  return *this;
 }
 //---------------------------------------------------------------------------
 inline VARIANTContainer & VARIANTContainer::operator = (const VARIANT & v)
