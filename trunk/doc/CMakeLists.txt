@@ -1,10 +1,4 @@
 IF (BUILD_DOCUMENTATION)
-  ADD_CUSTOM_TARGET (
-    doc ALL
-    DEPENDS html/index.html
-    DEPENDS html.tar.gz
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  )
   IF (DOXYGEN_EXECUTABLE)
     IF (DOXYGEN_DOT_EXECUTABLE)
       SET (DOT YES)
@@ -16,6 +10,20 @@ IF (BUILD_DOCUMENTATION)
       "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
       !ONLY
     )
+    IF (DOCUMENTATION_HTML_TARZ)
+      ADD_CUSTOM_TARGET (
+        doc ALL
+        DEPENDS html/index.html
+        DEPENDS macroscope-doc-html.tar.gz
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      )
+    ELSE (DOCUMENTATION_HTML_TARZ)
+      ADD_CUSTOM_TARGET (
+        doc ALL
+        DEPENDS html/index.html
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      )
+    ENDIF (DOCUMENTATION_HTML_TARZ)
     ADD_CUSTOM_COMMAND (
       OUTPUT html/index.html
       COMMAND ${DOXYGEN_EXECUTABLE}
@@ -25,12 +33,12 @@ IF (BUILD_DOCUMENTATION)
     )
     IF (DOCUMENTATION_HTML_TARZ)
       ADD_CUSTOM_COMMAND (
-        OUTPUT html.tar.gz
-        COMMAND ${TAR} ARGS -cz -f html.tar.gz html
+        OUTPUT macroscope-doc-html.tar.gz
+        COMMAND ${TAR} ARGS -cz -f macroscope-doc-html.tar.gz html
         DEPENDS html/index.html
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       )
-      INSTALL (FILES html.tar.gz DESTINATION "${INSTALL_DOC_DIR}")
+      INSTALL (FILES macroscope-doc-html.tar.gz DESTINATION "${INSTALL_DOC_DIR}")
     ENDIF (DOCUMENTATION_HTML_TARZ)
   ENDIF (DOXYGEN_EXECUTABLE)
 ENDIF (BUILD_DOCUMENTATION)
