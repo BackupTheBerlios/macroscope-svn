@@ -1650,13 +1650,14 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                     hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
                     if( SUCCEEDED(hr) ){
                       if( uintptr_t(V_I4(pv0) - 1) < msmail1c_->hashedArrays_.count() ){
-                        msmail1c_->hashedArrays_[uintptr_t(V_I4(pv0) - 1)].insert(
-                          *newObjectC1C2<msmail1c::HashedArrayKey>(V_BSTR(pv1),*pv2)
-                        );
-                        V_I4(pvarRetValue) = 1;
+		        AutoPtr<msmail1c::HashedArrayKey> item(newObjectC1C2<msmail1c::HashedArrayKey>(V_BSTR(pv1),*pv2));
+			msmail1c::HashedArrayKey * p;
+                        msmail1c_->hashedArrays_[uintptr_t(V_I4(pv0) - 1)].insert(item,false,false,&p);
+			if( p != item ) p->value_ = item->value_;
+                        V_I4(pvarRetValue) = p == item ? 1 : 0;
                       }
                       else {
-                        msmail1c_->lastError_ = ERROR_NOT_FOUND;
+                        hr = HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
                       }
                     }
                   }
@@ -1690,6 +1691,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                         hr = VariantChangeTypeEx(pvarRetValue,&key->value_,0,0,V_VT(&key->value_));
                       }
                       else {
+                        msmail1c_->lastError_ = ERROR_NOT_FOUND;
                         hr = VariantChangeTypeEx(pvarRetValue,pvarRetValue,0,0,VT_EMPTY);
                       }
                     }
@@ -1710,7 +1712,6 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           V_I4(pvarRetValue) = 1;
           break;
         case 27 : // InstallDeviceScanner
-          if( !msmail1c_->active_ ) newObjectV1C2<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1725,7 +1726,6 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;          
         case 28 : // RemoveDeviceScanner
-          if( !msmail1c_->active_ ) newObjectV1C2<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
