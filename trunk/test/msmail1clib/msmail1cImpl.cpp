@@ -1568,7 +1568,6 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 20 : // String2File
-          if( !msmail1c_->active_ ) newObjectV1C2<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
