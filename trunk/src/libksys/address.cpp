@@ -254,6 +254,7 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
       newObjectV1C2<EAsyncSocket>(fiber->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
     return fiber->event_.string0_;
   }
+  intmax_t serv;
   int32_t err = 0;
   utf8::String s;
   api.open();
@@ -278,28 +279,28 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
     );
     if( err == 0 ){
       s = hostName;
-      if( (uintptr_t) defPort != 0 && (uintptr_t) defPort != utf8::str2Int(servInfo) ){
+      if( addr4_.sin_port != 0 && (!utf8::tryStr2Int(servInfo,serv) || (intmax_t) defPort != serv) ){
         s += ":";
         s += servInfo;
       }
     }
   }
   else if( api.getnameinfo == NULL || api.GetNameInfoW == NULL ){
-	  struct hostent * he = api.gethostbyaddr(
+    struct hostent * he = api.gethostbyaddr(
       (const char *) &addr4_.sin_addr,
       addrSize(),
-	    addr4_.sin_family
-	  );
-	  if( he == NULL ){
-	    err = -1;
-	  }
-	  else {
-	    s = he->h_name;
-      if( (uintptr_t) defPort != 0 && (uintptr_t) defPort != api.ntohs(addr4_.sin_port) ){
+      addr4_.sin_family
+    );
+    if( he == NULL ){
+      err = -1;
+    }
+    else {
+      s = he->h_name;
+      if( addr4_.sin_port != 0 && (uintptr_t) defPort != api.ntohs(addr4_.sin_port) ){
         s += ":";
         s += utf8::int2Str(api.ntohs(addr4_.sin_port));
       }
-	  }
+    }
   }
   else {
     err = api.GetNameInfoW(
@@ -313,7 +314,7 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
     );
     if( err == 0 ){
       s = hostNameW;
-      if( (uintptr_t) defPort != 0 && (uintptr_t) defPort != utf8::str2Int(servInfoW) ){
+      if( addr4_.sin_port != 0 && (!utf8::tryStr2Int(servInfoW,serv) || (intmax_t) defPort != serv) ){
         s += ":";
         s += servInfoW;
       }
@@ -331,7 +332,13 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
     sizeof(servInfo),
     int(aiFlag)
   );
-  if( err == 0 ) s = hostName;
+  if( err == 0 ){
+    s = hostName;
+    if( addr4_.sin_port != 0 && (!utf8::tryStr2Int(servInfo,serv) || (intmax_t) defPort != serv) ){
+      s += ":";
+      s += utf8::int2Str(api.ntohs(addr4_.sin_port));
+    }
+  }
 #endif
   if( err != 0 ) err = errNo();
 //  struct hostent * pent = api.gethostbyaddr((const char *) &addr4_,(int) sockAddrSize(),addr4_.sin_family);

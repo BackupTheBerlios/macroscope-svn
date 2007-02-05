@@ -116,9 +116,9 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
         statement_->paramAsMutant("st_dgram_bytes",entries32[i].dgramSize_);
         statement_->paramAsMutant("st_data_bytes",entries32[i].dataSize_);
         srcAddr->addr4_.sin_addr = entries32[i].srcIp_;
-        srcAddr->addr4_.sin_port = entries32[i].srcPort_;
+        srcAddr->addr4_.sin_port = 0;//entries32[i].srcPort_;
         dstAddr->addr4_.sin_addr = entries32[i].dstIp_;
-        dstAddr->addr4_.sin_port = entries32[i].dstPort_;
+        dstAddr->addr4_.sin_port = 0;//entries32[i].dstPort_;
       }
       else {
         statement_->paramAsMutant("st_src_ip",entries[i].srcIp_.s_addr);
@@ -129,16 +129,16 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
         statement_->paramAsMutant("st_dgram_bytes",entries[i].dgramSize_);
         statement_->paramAsMutant("st_data_bytes",entries[i].dataSize_);
         srcAddr->addr4_.sin_addr = entries[i].srcIp_;
-        srcAddr->addr4_.sin_port = entries[i].srcPort_;
+        srcAddr->addr4_.sin_port = 0;//entries[i].srcPort_;
         dstAddr->addr4_.sin_addr = entries[i].dstIp_;
-        dstAddr->addr4_.sin_port = entries[i].dstPort_;
+        dstAddr->addr4_.sin_port = 0;//entries[i].dstPort_;
       }
       DNSCacheEntry * pAddr;
       srcAddr->addr4_.sin_family = PF_INET;
       dnsCache_.insert(srcAddr,false,false,&pAddr);
       if( pAddr == srcAddr ){
         srcAddr.ptr(NULL)->name_ = srcAddr->resolveAddr();
-//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
       }
       else {
         dnsCacheLRU_.remove(*pAddr);
@@ -149,7 +149,7 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
       dnsCache_.insert(dstAddr,false,false,&pAddr);
       if( pAddr == dstAddr ){
         dstAddr.ptr(NULL)->name_ = dstAddr->resolveAddr();
-//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
       }
       else {
         dnsCacheLRU_.remove(*pAddr);
