@@ -423,7 +423,7 @@ utf8::String SockAddr::gethostname()
             //addr.addr4_.sin_family = unicast->Address.lpSockaddr->sa_family;
             try {
               err = 0;
-              s = addr.resolve();
+              s = addr.resolveAddr();
             }
             catch( ksys::ExceptionSP & e ){
               err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
@@ -444,7 +444,7 @@ utf8::String SockAddr::gethostname()
         while( list != NULL ){
           try {
             err = 0;
-            s = addr.resolve(list->IpAddress.String).resolve();
+            s = addr.resolveName(list->IpAddress.String).resolveAddr();
           }
           catch( ksys::ExceptionSP & e ){
             err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
