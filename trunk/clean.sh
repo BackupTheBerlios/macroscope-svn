@@ -21,7 +21,6 @@ rm -Rf $work_dir/Makefile
 rm -Rf $work_dir/Makefile.in
 rm -Rf $work_dir/tools
 rm -Rf $work_dir/autom4te.cache
-rm -Rf $work_dir/configure
 rm -Rf $work_dir/aclocal.m4
 rm -Rf $work_dir/libtool
 rm -Rf $work_dir/config.h.in*
