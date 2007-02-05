@@ -53,9 +53,9 @@ DPB & DPB::add(const utf8::String & name, const ksys::Mutant & value)
   if( name.strcasecmp("user_name") == 0 ) user_ = value;
   else if( name.strcasecmp("password") == 0 ) password_ = value;
   else if( name.strcasecmp("protocol") == 0 ) protocol_ = value;
-  else if( name.strcasecmp("connect_timeout") == 0 ) connectTimeout_ = value;
-  else if( name.strcasecmp("read_timeout") == 0 ) readTimeout_ = value;
-  else if( name.strcasecmp("write_timeout") == 0 ) writeTimeout_ = value;
+  else if( name.strcasecmp("connect_timeout") == 0 ) connectTimeout_ = (unsigned int) value;
+  else if( name.strcasecmp("read_timeout") == 0 ) readTimeout_ = (unsigned int) value;
+  else if( name.strcasecmp("write_timeout") == 0 ) writeTimeout_ = (unsigned int) value;
   else if( name.strcasecmp("reconnect") == 0 ) reconnect_ = value;
   return *this;
 }
