@@ -896,7 +896,7 @@ void KFTPClient::main()
       logFile_.fileName(shell_->config_->section(section_).text("log_file"));
       log_ = &logFile_;
     }
-    remoteAddress_.resolve(host_,MSFTPDefaultPort);
+    remoteAddress_.resolveName(host_,MSFTPDefaultPort);
     connect(remoteAddress_);
 
     auth();

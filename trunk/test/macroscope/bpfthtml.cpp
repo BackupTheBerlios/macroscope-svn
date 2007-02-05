@@ -105,7 +105,8 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
     for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
       statement_->paramAsMutant("st_start",start);
       statement_->paramAsMutant("st_stop",stop);
-      ksock::SockAddr srcAddr, dstAddr;
+      AutoPtr<DNSCacheEntry> srcAddr(newObject<DNSCacheEntry>());
+      AutoPtr<DNSCacheEntry> dstAddr(newObject<DNSCacheEntry>());
       if( log32bitOsCompatible ){
         statement_->paramAsMutant("st_src_ip",entries32[i].srcIp_.s_addr);
         statement_->paramAsMutant("st_dst_ip",entries32[i].dstIp_.s_addr);
@@ -114,10 +115,10 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
         statement_->paramAsMutant("st_dst_port",entries32[i].dstPort_);
         statement_->paramAsMutant("st_dgram_bytes",entries32[i].dgramSize_);
         statement_->paramAsMutant("st_data_bytes",entries32[i].dataSize_);
-        srcAddr.addr4_.sin_addr = entries32[i].srcIp_;
-        srcAddr.addr4_.sin_port = entries32[i].srcPort_;
-        dstAddr.addr4_.sin_addr = entries32[i].dstIp_;
-        dstAddr.addr4_.sin_port = entries32[i].dstPort_;
+        srcAddr->addr4_.sin_addr = entries32[i].srcIp_;
+        srcAddr->addr4_.sin_port = entries32[i].srcPort_;
+        dstAddr->addr4_.sin_addr = entries32[i].dstIp_;
+        dstAddr->addr4_.sin_port = entries32[i].dstPort_;
       }
       else {
         statement_->paramAsMutant("st_src_ip",entries[i].srcIp_.s_addr);
@@ -127,13 +128,34 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
         statement_->paramAsMutant("st_dst_port",entries[i].dstPort_);
         statement_->paramAsMutant("st_dgram_bytes",entries[i].dgramSize_);
         statement_->paramAsMutant("st_data_bytes",entries[i].dataSize_);
-        srcAddr.addr4_.sin_addr = entries[i].srcIp_;
-        srcAddr.addr4_.sin_port = entries[i].srcPort_;
-        dstAddr.addr4_.sin_addr = entries[i].dstIp_;
-        dstAddr.addr4_.sin_port = entries[i].dstPort_;
+        srcAddr->addr4_.sin_addr = entries[i].srcIp_;
+        srcAddr->addr4_.sin_port = entries[i].srcPort_;
+        dstAddr->addr4_.sin_addr = entries[i].dstIp_;
+        dstAddr->addr4_.sin_port = entries[i].dstPort_;
       }
-      statement_->paramAsMutant("st_src_name",srcAddr.resolve());
-      statement_->paramAsMutant("st_dst_name",dstAddr.resolve());
+      DNSCacheEntry * pAddr;
+      srcAddr->addr4_.sin_family = PF_INET;
+      dnsCache_.insert(srcAddr,false,false,&pAddr);
+      if( pAddr == srcAddr ){
+        srcAddr.ptr(NULL)->name_ = srcAddr->resolveAddr();
+//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+      }
+      else {
+        dnsCacheLRU_.remove(*pAddr);
+      }
+      dnsCacheLRU_.insToHead(*pAddr);
+      statement_->paramAsMutant("st_src_name",pAddr->name_);
+      dstAddr->addr4_.sin_family = PF_INET;
+      dnsCache_.insert(dstAddr,false,false,&pAddr);
+      if( pAddr == dstAddr ){
+        dstAddr.ptr(NULL)->name_ = dstAddr->resolveAddr();
+//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+      }
+      else {
+        dnsCacheLRU_.remove(*pAddr);
+      }
+      dnsCacheLRU_.insToHead(*pAddr);
+      statement_->paramAsMutant("st_dst_name",pAddr->name_);
       statement_->execute();
     }
     updateLogFileLastOffset(flog.fileName(),flog.tell());

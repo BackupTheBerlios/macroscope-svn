@@ -91,7 +91,7 @@ void ServerFiber::auth()
   Error e = (Error) serverAuth(ap);
   if( e != eOK ){
     utf8::String::Stream stream;
-    stream << "Authentification error from: " << remoteAddress().resolve(~uintptr_t(0)) << "\n";
+    stream << "Authentification error from: " << remoteAddress().resolveAddr(~uintptr_t(0)) << "\n";
     stdErr.debug(9,stream);
     newObjectV1C2<Exception>(e,__PRETTY_FUNCTION__)->throwSP();
   }
@@ -159,7 +159,7 @@ void ServerFiber::registerClient()
   }
   if( !(bool) server_->config_->parse().valueByPath(
         utf8::String(serverConfSectionName[serverType_]) + ".enabled",true) ){
-    utf8::String host(remoteAddress().resolve(~uintptr_t(0)));
+    utf8::String host(remoteAddress().resolveAddr(~uintptr_t(0)));
     utf8::String::Stream stream;
     stream << serverTypeName[serverType_] <<
       ": functional disabled, but client " << host << " attempt to register.\n";
@@ -167,8 +167,8 @@ void ServerFiber::registerClient()
     terminate();
     return;
   }
-  utf8::String host(remoteAddress().resolve(~uintptr_t(0)));
-  ServerInfo server(server_->bindAddrs()[0].resolve(defaultPort),stStandalone);
+  utf8::String host(remoteAddress().resolveAddr(~uintptr_t(0)));
+  ServerInfo server(server_->bindAddrs()[0].resolveAddr(defaultPort),stStandalone);
   Server::Data & data = server_->data(serverType_);
   Server::Data tdata, diff;
   tdata.ore(data);
@@ -209,7 +209,7 @@ void ServerFiber::registerClient()
 void ServerFiber::registerDB()
 {
   utf8::String::Stream stream;
-  utf8::String host(remoteAddress().resolve(~uintptr_t(0))), server, service;
+  utf8::String host(remoteAddress().resolveAddr(~uintptr_t(0))), server, service;
   if( serverType_ != stNode ){
     terminate();
     stream << serverTypeName[serverType_] <<
@@ -288,7 +288,7 @@ void ServerFiber::registerDB()
 void ServerFiber::getDB()
 {
   if( serverType_ != stStandalone && serverType_ != stNode ) return;
-  utf8::String host(remoteAddress().resolve(defaultPort));
+  utf8::String host(remoteAddress().resolveAddr(defaultPort));
   Server::Data tdata;
   tdata.ore(server_->data(serverType_));
   tdata.sendDatabaseNL(*this);
@@ -358,7 +358,7 @@ void ServerFiber::sendMail() // client sending mail
     relay = "#Relay." + utf8::int2Str(i);
     if( !message->isValue(relay) ) break;
   }
-  message->value(relay,server_->bindAddrs()[0].resolve(defaultPort));
+  message->value(relay,server_->bindAddrs()[0].resolveAddr(defaultPort));
   relay = relay + ".";
   message->value(relay + "Received",getTimeString(gettimeofday()));
   message->value(relay + "Process.Id",utf8::int2Str(ksys::getpid()));
@@ -396,7 +396,7 @@ void ServerFiber::processMailbox(
   bool & wait)
 {
   wait = true;
-  utf8::String myHost(server_->bindAddrs()[0].resolve(defaultPort));
+  utf8::String myHost(server_->bindAddrs()[0].resolveAddr(defaultPort));
   Vector<utf8::String> list;
   getDirList(list,userMailBox + "*.msg",utf8::String(),false);
   Message::Keys ids;
@@ -549,7 +549,7 @@ SpoolWalker::SpoolWalker(Server & server,intptr_t id) : server_(&server), id_(id
 void SpoolWalker::processQueue(bool & timeWait)
 {
   timeWait = false;
-  utf8::String myHost(server_->bindAddrs()[0].resolve(defaultPort));
+  utf8::String myHost(server_->bindAddrs()[0].resolveAddr(defaultPort));
   Vector<utf8::String> list;
   getDirList(list,server_->spoolDir(id_) + "*.msg",utf8::String(),false);
   for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
@@ -799,7 +799,7 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
     close();
     ksock::SockAddr address;
     try {
-      address.resolve(host_,defaultPort);
+      address.resolveName(host_,defaultPort);
       try {
         connect(address);
         try {
@@ -1012,7 +1012,7 @@ void NodeClient::sweepHelper(ServerType serverType)
 void NodeClient::main()
 {
   server_->data(stStandalone).registerServer(
-    ServerInfo(server_->bindAddrs()[0].resolve(defaultPort),stStandalone)
+    ServerInfo(server_->bindAddrs()[0].resolveAddr(defaultPort),stStandalone)
   );
   intptr_t i;
   utf8::String server, host, enabledPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled");
@@ -1055,8 +1055,8 @@ void NodeClient::main()
         while( !exchanged && !terminated_ && --i >= 0 ){
           try {
             ksock::SockAddr remoteAddress;
-            remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
-            host = remoteAddress.resolve(defaultPort);
+            remoteAddress.resolveName(stringPartByNo(server,i),defaultPort);
+            host = remoteAddress.resolveAddr(defaultPort);
             close();
             tryConnect = false;
             uintptr_t cec = 0;

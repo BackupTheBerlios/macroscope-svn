@@ -268,8 +268,8 @@ void ClientFiber::connectHost(bool & online)
     utf8::String server(client_->config_->value("server",client_->mailServer_));
     for( intptr_t i = enumStringParts(server) - 1; i >= 0 && !terminated_ && !online; i-- ){
       try {
-        remoteAddress_.resolve(stringPartByNo(server,i),defaultPort);
-        utf8::String fqdn(remoteAddress_.resolve());
+        remoteAddress_.resolveName(stringPartByNo(server,i),defaultPort);
+        utf8::String fqdn(remoteAddress_.resolveAddr());
         try {
           connect(remoteAddress_);
           try {
@@ -492,8 +492,8 @@ void ClientMailFiber::connectHost(bool & online)
     for( intptr_t i = enumStringParts(server) - 1; i >= 0 && !terminated_; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
-        utf8::String fqdn(remoteAddress.resolve());
+        remoteAddress.resolveName(stringPartByNo(server,i),defaultPort);
+        utf8::String fqdn(remoteAddress.resolveAddr());
         try {
           connect(remoteAddress);
           try {
@@ -728,7 +728,7 @@ void ClientDBGetterFiber::main()
     for( i = enumStringParts(server) - 1; i >= 0; i-- ){
       ksock::SockAddr remoteAddress;
       try {
-        remoteAddress.resolve(stringPartByNo(server,i),defaultPort);
+        remoteAddress.resolveName(stringPartByNo(server,i),defaultPort);
         connect(remoteAddress);
         auth();
         i = -1;

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,11 +28,10 @@
 #define hashH
 //---------------------------------------------------------------------------
 namespace ksys {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template< class T> class HashFuncContainer {
+template <class T> class HashFuncContainer {
   public:
     static uintptr_t  hash(const void * key, uintptr_t len, uintptr_t h = 0);
     static uintptr_t  hash_rev(const void * key, uintptr_t len, uintptr_t h = 0);
@@ -48,23 +47,23 @@ typedef HashFuncContainer<int> HF;
 //---------------------------------------------------------------------------
 //#define HASH4(h,k,d) (h) = ((h) << 5) + (h) + *(const unsigned char *) (k); *reinterpret_cast<const void **>(&(k)) = (const unsigned char *) (k) + (d);
 //#define HASH5(h,k,d) (h) = ((h) << 5) + (h) + *((const unsigned char *) (k) + (d));
-template< typename T1,typename T2,typename T3> inline
+template <typename T1,typename T2,typename T3> inline
 void HASH4(T1 & h, T2 & k, T3 d)
 {
   h = (h << 5) + h + *(const uint8_t *) k;
   *reinterpret_cast< const void **>(&k) = (const uint8_t *) k + d;
 }
-template< typename T1,typename T2,typename T3> inline
+template <typename T1,typename T2,typename T3> inline
 void HASH5(T1 & h, T2 k, T3 d)
 {
   h = (h << 5) + h + *((const uint8_t *) k + d);
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-uintptr_t HashFuncContainer< T>::hash(const void * key, uintptr_t len, uintptr_t h)
+uintptr_t HashFuncContainer<T>::hash(const void * key, uintptr_t len, uintptr_t h)
 {
   const void *  pk  = key;
   key = (const uint8_t *) key + len;
@@ -91,11 +90,11 @@ uintptr_t HashFuncContainer< T>::hash(const void * key, uintptr_t len, uintptr_t
   return h;
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-uintptr_t HashFuncContainer< T>::hash_rev(const void * key, uintptr_t len, uintptr_t h)
+uintptr_t HashFuncContainer<T>::hash_rev(const void * key, uintptr_t len, uintptr_t h)
 {
   const void *  pk  = (const uint8_t *) key + len - 1;
   switch( len & 7 ){
@@ -121,11 +120,11 @@ uintptr_t HashFuncContainer< T>::hash_rev(const void * key, uintptr_t len, uintp
   return h;
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-uintptr_t HashFuncContainer< T>::hash(const char * s,uintptr_t h)
+uintptr_t HashFuncContainer<T>::hash(const char * s,uintptr_t h)
 {
   for( ; ; ){
     if( *s == '\0' ) break;
@@ -140,11 +139,11 @@ uintptr_t HashFuncContainer< T>::hash(const char * s,uintptr_t h)
   return h;
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-uint64_t HashFuncContainer< T>::hash_ll(const char * s,uint64_t h)
+uint64_t HashFuncContainer<T>::hash_ll(const char * s,uint64_t h)
 {
   for(;;){
     if( *s == '\0' ) break;
@@ -159,11 +158,11 @@ uint64_t HashFuncContainer< T>::hash_ll(const char * s,uint64_t h)
   return h;
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-uint64_t HashFuncContainer< T>::hash_ll(const void * key, uintptr_t len, uint64_t h)
+uint64_t HashFuncContainer<T>::hash_ll(const void * key, uintptr_t len, uint64_t h)
 {
   const void *  pk  = key;
   key = (const uint8_t *) key + len;
@@ -190,11 +189,11 @@ uint64_t HashFuncContainer< T>::hash_ll(const void * key, uintptr_t len, uint64_
   return h;
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-uint64_t HashFuncContainer< T>::hash_rev_ll(const void * key, uintptr_t len, uint64_t h)
+uint64_t HashFuncContainer<T>::hash_rev_ll(const void * key, uintptr_t len, uint64_t h)
 {
   const void *  pk  = (const uint8_t *) key + len - 1;
   switch( len & 7 ){
@@ -236,8 +235,8 @@ uintptr_t HashFuncContainer<T>::hash(const void * key,uintptr_t h)
   return h;
 }*/
 //---------------------------------------------------------------------------
-template< class T> inline
-uintptr_t HashFuncContainer< T>::hash(intptr_t key, uintptr_t h)
+template <class T> inline
+uintptr_t HashFuncContainer<T>::hash(intptr_t key, uintptr_t h)
 {
   HASH5(h, &key, 0);
   HASH5(h, &key, 1);
@@ -252,8 +251,8 @@ uintptr_t HashFuncContainer< T>::hash(intptr_t key, uintptr_t h)
   return h;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-uintptr_t HashFuncContainer< T>::hash(uintptr_t key, uintptr_t h)
+template <class T> inline
+uintptr_t HashFuncContainer<T>::hash(uintptr_t key, uintptr_t h)
 {
   HASH5(h, &key, 0);
   HASH5(h, &key, 1);
@@ -268,9 +267,9 @@ uintptr_t HashFuncContainer< T>::hash(uintptr_t key, uintptr_t h)
   return h;
 }
 //---------------------------------------------------------------------------
-template< class T>
+template <class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
 T hashT(const void * key, uintptr_t len, T h = 0)
 {

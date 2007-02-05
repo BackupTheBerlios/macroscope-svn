@@ -44,7 +44,8 @@ Logger::Logger() :
   section_(prefix_ + "html_report."),
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   ellapsed_(getlocaltimeofday()),
-  trafCacheAutoDrop_(trafCache_)
+  trafCacheAutoDrop_(trafCache_),
+  dnsCacheAutoDrop_(dnsCache_)
 {
 }
 //------------------------------------------------------------------------------
@@ -377,6 +378,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         if( (stat = strstr(sb.c_str(), "stat=")) != NULL ){
           stat += 5;
         }
+	st_user = st_user.lower().replaceAll("\"","");
         if( from != NULL && msgSize > 0 ){
           try{
             stMsgsIns_->prepare()->
@@ -540,6 +542,7 @@ void Logger::main()
       " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
       " ST_LAST_OFFSET        BIGINT NOT NULL"
       ")" <<
+//      "DROP TABLE INET_BPFT_STAT" <<
       "CREATE TABLE INET_BPFT_STAT ("
       " st_start         DATETIME NOT NULL,"
       " st_stop          DATETIME NOT NULL,"
@@ -550,8 +553,8 @@ void Logger::main()
       " st_dst_port      SMALLINT NOT NULL,"
       " st_dgram_bytes   SMALLINT NOT NULL,"
       " st_data_bytes    SMALLINT NOT NULL,"
-      " st_src_name      VARCHAR(70) NOT NULL,"
-      " st_dst_name      VARCHAR(70) NOT NULL"
+      " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
+      " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
       ")" <<
       "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;

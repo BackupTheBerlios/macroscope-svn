@@ -169,6 +169,63 @@ class Logger {
 
     utf8::String htmlDir_;
 
+    class DNSCacheEntry : public ksock::SockAddr {
+      public:
+        utf8::String name_;
+
+        ~DNSCacheEntry() {}
+        DNSCacheEntry() {}
+
+        static EmbeddedHashNode<DNSCacheEntry> & keyNode(const DNSCacheEntry & object){
+          return object.keyNode_;
+        }
+        static DNSCacheEntry & keyNodeObject(const EmbeddedHashNode<DNSCacheEntry> & node,DNSCacheEntry * p){
+          return node.object(p->keyNode_);
+        }
+        static uintptr_t keyNodeHash(const DNSCacheEntry & object){
+#if SIZEOF_SOCKADDR_IN6
+	  if( object.addr4_.sin_family == PF_INET6 )
+            return HF::hash(&object.addr6_.sin6_addr,sizeof(object.addr6_.sin6_addr));
+#endif
+          return HF::hash(&object.addr4_.sin_addr,sizeof(object.addr4_.sin_addr));
+	}
+        static bool keyHashNodeEqu(const DNSCacheEntry & object1,const DNSCacheEntry & object2){
+	  assert( object1.addr4_.sin_family == object2.addr4_.sin_family );
+#if SIZEOF_SOCKADDR_IN6
+	  if( object1.addr4_.sin_family == PF_INET6 )
+            return memcmp(&object1.addr6_.sin6_addr,&object2.addr6_.sin6_addr,sizeof(object2.addr6_.sin6_addr)) == 0;
+#endif
+          return memcmp(&object1.addr4_.sin_addr,&object2.addr4_.sin_addr,sizeof(object2.addr4_.sin_addr)) == 0;
+        }
+        
+        mutable EmbeddedHashNode<DNSCacheEntry> keyNode_;
+
+        static EmbeddedListNode<DNSCacheEntry> & listNode(const DNSCacheEntry & object){
+          return object.listNode_;
+        }
+        static DNSCacheEntry & listNodeObject(const EmbeddedListNode<DNSCacheEntry> & node,DNSCacheEntry * p = NULL){
+          return node.object(p->listNode_);
+        }
+
+        mutable EmbeddedListNode<DNSCacheEntry> listNode_;
+    };
+    typedef EmbeddedHash<
+      DNSCacheEntry,
+      DNSCacheEntry::keyNode,
+      DNSCacheEntry::keyNodeObject,
+      DNSCacheEntry::keyNodeHash,
+      DNSCacheEntry::keyHashNodeEqu
+    > DNSCache;
+    DNSCache dnsCache_;
+    AutoHashDrop<DNSCache> dnsCacheAutoDrop_;
+    typedef EmbeddedList<
+      DNSCacheEntry,
+      DNSCacheEntry::listNode,
+      DNSCacheEntry::listNodeObject
+    > DNSCacheLRU;
+    DNSCacheLRU dnsCacheLRU_;
+    uintptr_t dnsCacheSize_;
+
     int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
     void writeHtmlHead(AsyncFile & f);
     void writeHtmlTail(AsyncFile & f);

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,9 +47,9 @@ class InAddr {
 class SockAddr {
   public:
     union {
-        struct sockaddr_in  addr4_;
+      struct sockaddr_in  addr4_;
 #if SIZEOF_SOCKADDR_IN6
-        struct sockaddr_in6 addr6_;
+      struct sockaddr_in6 addr6_;
 #endif
     };
 
@@ -64,9 +64,9 @@ class SockAddr {
     operator const struct sockaddr_in6 & () const { return addr6_; }
 #endif
 
-    SockAddr & resolve(const utf8::String & addr,const ksys::Mutant & defPort = 0,int ai_flag = 0);
-    static void resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
-    utf8::String resolve(const ksys::Mutant & defPort = 0) const;
+    SockAddr & resolveName(const utf8::String & addr,const ksys::Mutant & defPort = 0,intptr_t ai_flag = 0);
+    static void resolveNameForBind(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
+    utf8::String resolveAddr(const ksys::Mutant & defPort = 0,intptr_t aiFlag = NI_NUMERICSERV) const;
 
     static utf8::String gethostname();
 

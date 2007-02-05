@@ -156,7 +156,7 @@ void Server::startNodesExchangeNL()
 {
   if( shutdown_ ) return;
   intptr_t i, j, c;
-  utf8::String me(bindAddrs()[0].resolve(defaultPort));
+  utf8::String me(bindAddrs()[0].resolveAddr(defaultPort));
   utf8::String hosts(data(stNode).getNodeList()), host;
   utf8::String neighbors = config_->parse().override().valueByPath(
     utf8::String(serverConfSectionName[stNode]) + ".neighbors",
@@ -170,8 +170,8 @@ void Server::startNodesExchangeNL()
   for( i = enumStringParts(neighbors) - 1; i >= 0; i-- ){
     host = stringPartByNo(neighbors,i);
     ksock::SockAddr addr;
-    addr.resolve(host,defaultPort);
-    host = addr.resolve(defaultPort);
+    addr.resolveName(host,defaultPort);
+    host = addr.resolveAddr(defaultPort);
     if( host.strcasecmp(me) == 0 ) continue;
     j = nodes.bSearchCase(host,c);
     if( c != 0 ) nodes.insert(j + (c > 0),host);
@@ -252,7 +252,7 @@ void Server::sendRobotMessage(
   m.value("#Sender.Process.Id",utf8::int2Str(ksys::getpid()));
   utf8::String psts(getTimeString(getProcessStartTime()));
   m.value("#Sender.Process.StartTime",psts);
-  m.value("#Sender.Host","robot@" + bindAddrs()[0].resolve(defaultPort));
+  m.value("#Sender.Host","robot@" + bindAddrs()[0].resolveAddr(defaultPort));
   m.value("#Relay.0.Process.Id",utf8::int2Str(ksys::getpid()));
   m.value("#Relay.0.Process.StartTime",psts);
   m.value("#Relay.0.Received",tms);

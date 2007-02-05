@@ -165,10 +165,10 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
   }
   ksock::SockAddr addr;
   if( proxy.strlen() > 0 ){
-    addr.resolve(proxy,proxyPort);
+    addr.resolveName(proxy,proxyPort);
   }
   else {
-    addr.resolve(host,port);
+    addr.resolveName(host,port);
   }
   Stat st;
   AsyncFile file(

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -165,19 +165,21 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   return s;
 }
 //------------------------------------------------------------------------------
-SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defPort,int ai_flag)
+SockAddr & SockAddr::resolveName(const utf8::String & addr,const ksys::Mutant & defPort,intptr_t ai_flag)
 {
-  if( ksys::currentFiber() != NULL ){
-    ksys::currentFiber()->event_.timeout_ = ~uint64_t(0);
-    ksys::currentFiber()->event_.string0_ = addr;
-    ksys::currentFiber()->event_.string1_ = defPort;
-    ksys::currentFiber()->event_.type_ = ksys::etResolveName;
-    ksys::currentFiber()->thread()->postRequest();
-    ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-    assert( ksys::currentFiber()->event_.type_ == ksys::etResolveName );
-    if( ksys::currentFiber()->event_.errno_ != 0 )
-      newObjectV1C2<EAsyncSocket>(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
-    memcpy(&addr4_,&ksys::currentFiber()->event_.address_.addr4_,ksys::currentFiber()->event_.address_.sockAddrSize());
+  ksys::Fiber * fiber = ksys::currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.string0_ = addr;
+    fiber->event_.string1_ = defPort;
+    fiber->event_.aiFlag_ = int(ai_flag);
+    fiber->event_.type_ = ksys::etResolveName;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == ksys::etResolveName );
+    if( fiber->event_.errno_ != 0 )
+      newObjectV1C2<EAsyncSocket>(fiber->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+    memcpy(&addr4_,&fiber->event_.address_.addr4_,fiber->event_.address_.sockAddrSize());
   }
   else {
     clear();
@@ -209,7 +211,7 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
       port = port.trim();
       api.open();
       try {
-        internalGetAddrInfo(host,port,defPort,ai_flag);
+        internalGetAddrInfo(host,port,defPort,int(ai_flag));
       }
       catch( ... ){
         api.close();
@@ -221,34 +223,36 @@ SockAddr & SockAddr::resolve(const utf8::String & addr,const ksys::Mutant & defP
   return *this;
 }
 //------------------------------------------------------------------------------
-void SockAddr::resolve(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort)
+void SockAddr::resolveNameForBind(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort)
 {
   intptr_t i = ksys::enumStringParts(bind);
   if( i <= 0 ){
     addrs.resize(1);
-    addrs[0].resolve(utf8::String(),defPort,AI_PASSIVE);
+    addrs[0].resolveName(utf8::String(),defPort,AI_PASSIVE);
   }
   else {
     for( intptr_t j = 0; j < i; j++ ){
       addrs.resize(j + 1);
-      addrs[j].resolve(ksys::stringPartByNo(bind,j),defPort,AI_PASSIVE);
+      addrs[j].resolveName(ksys::stringPartByNo(bind,j),defPort,AI_PASSIVE);
     }
   }
 }
 //------------------------------------------------------------------------------
-utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
+utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag) const
 {
-  if( ksys::currentFiber() != NULL ){
-    ksys::currentFiber()->event_.timeout_ = ~uint64_t(0);
-    ksys::currentFiber()->event_.address_ = *this;
-    ksys::currentFiber()->event_.defPort_ = defPort;
-    ksys::currentFiber()->event_.type_ = ksys::etResolveAddress;
-    ksys::currentFiber()->thread()->postRequest();
-    ksys::currentFiber()->switchFiber(ksys::currentFiber()->mainFiber());
-    assert( ksys::currentFiber()->event_.type_ == ksys::etResolveAddress );
-    if( ksys::currentFiber()->event_.errno_ != 0 )
-      newObjectV1C2<EAsyncSocket>(ksys::currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
-    return ksys::currentFiber()->event_.string0_;
+  ksys::Fiber * fiber = ksys::currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.address_ = *this;
+    fiber->event_.defPort_ = defPort;
+    fiber->event_.aiFlag_ = aiFlag;
+    fiber->event_.type_ = ksys::etResolveAddress;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(ksys::currentFiber()->mainFiber());
+    assert( fiber->event_.type_ == ksys::etResolveAddress );
+    if( fiber->event_.errno_ != 0 )
+      newObjectV1C2<EAsyncSocket>(fiber->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+    return fiber->event_.string0_;
   }
   int32_t err = 0;
   utf8::String s;
@@ -270,7 +274,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
       sizeof(hostName),
       servInfo,
       sizeof(servInfo),
-      NI_NUMERICSERV
+      int(aiFlag)
     );
     if( err == 0 ){
       s = hostName;
@@ -305,7 +309,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
       sizeof(hostNameW),
       servInfoW,
       sizeof(servInfoW),
-      NI_NUMERICSERV
+      int(aiFlag)
     );
     if( err == 0 ){
       s = hostNameW;
@@ -325,7 +329,7 @@ utf8::String SockAddr::resolve(const ksys::Mutant & defPort) const
     sizeof(hostName),
     servInfo,
     sizeof(servInfo),
-    NI_NUMERICSERV
+    int(aiFlag)
   );
   if( err == 0 ) s = hostName;
 #endif

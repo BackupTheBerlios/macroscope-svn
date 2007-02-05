@@ -434,7 +434,7 @@ void MSFTPService::start()
   serviceName_ = msftpConfig_->value("service_name","msftp");
   displayName_ = msftpConfig_->value("service_display_name","Macroscope FTP Service");
   Array<ksock::SockAddr> addrs;
-  ksock::SockAddr::resolve(
+  ksock::SockAddr::resolveNameForBind(
     msftpConfig_->text("bind"),
     addrs,
     MSFTPDefaultPort
