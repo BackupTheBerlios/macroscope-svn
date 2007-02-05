@@ -138,7 +138,7 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
       dnsCache_.insert(srcAddr,false,false,&pAddr);
       if( pAddr == srcAddr ){
         srcAddr.ptr(NULL)->name_ = srcAddr->resolveAddr();
-	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
       }
       else {
         dnsCacheLRU_.remove(*pAddr);
@@ -149,7 +149,7 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
       dnsCache_.insert(dstAddr,false,false,&pAddr);
       if( pAddr == dstAddr ){
         dstAddr.ptr(NULL)->name_ = dstAddr->resolveAddr();
-	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
       }
       else {
         dnsCacheLRU_.remove(*pAddr);
