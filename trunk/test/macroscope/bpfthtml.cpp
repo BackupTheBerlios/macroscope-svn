@@ -138,7 +138,7 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
       dnsCache_.insert(srcAddr,false,false,&pAddr);
       if( pAddr == srcAddr ){
         srcAddr.ptr(NULL)->name_ = srcAddr->resolveAddr();
-//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+	if( verbose_ ) fprintf(stderr,"%s, cache = %"PRIuPTR"\n",(const char *) pAddr->name_.getOEMString(),dnsCache_.count());
       }
       else {
         dnsCacheLRU_.remove(*pAddr);
@@ -149,7 +149,7 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
       dnsCache_.insert(dstAddr,false,false,&pAddr);
       if( pAddr == dstAddr ){
         dstAddr.ptr(NULL)->name_ = dstAddr->resolveAddr();
-//	if( verbose_ ) fprintf(stderr,"%s\n",(const char *) pAddr->name_.getOEMString());
+	if( verbose_ ) fprintf(stderr,"%s, cache = %"PRIuPTR"\n",(const char *) pAddr->name_.getOEMString(),dnsCache_.count());
       }
       else {
         dnsCacheLRU_.remove(*pAddr);
@@ -162,9 +162,11 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
     database_->commit();
     database_->start();
     printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+    if( verbose_ ) fprintf(stderr,"\n");
     lineNo += entriesCount;
   }
   printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+  if( verbose_ ) fprintf(stderr,"\n");
   updateLogFileLastOffset(flog.fileName(),flog.tell());
   database_->commit();
 }
