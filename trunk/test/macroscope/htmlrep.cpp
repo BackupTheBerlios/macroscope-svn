@@ -572,6 +572,7 @@ void Logger::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct
 //------------------------------------------------------------------------------
 void Logger::writeHtmlYearOutput()
 {
+  if( !(bool) config_->valueByPath(section_ + "enabled",true) ) return;
   if( verbose_ ) fprintf(stderr,"\n");
   cacheSize_ = config_->section("macroscope").value("traffic_cache_size",0);
   decoration();

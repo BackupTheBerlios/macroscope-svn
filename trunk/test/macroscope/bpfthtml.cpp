@@ -65,17 +65,102 @@ utf8::String Logger::resolveAddr(uint32_t ip4)
   return pAddr->name_;
 }
 //------------------------------------------------------------------------------
-Logger & Logger::writeBPFTHtmlReport(const ConfigSection & section)
+void Logger::writeBPFTMonthHtmlReport(const ConfigSection & section,const struct tm & year)
+{
+  struct tm beginTime, beginTime2, endTime;
+  beginTime = endTime = year;
+  beginTime.tm_mon = 11;
+  beginTime.tm_mday = 1;
+  beginTime.tm_hour = 0;
+  beginTime.tm_min = 0;
+  beginTime.tm_sec = 0;
+  endTime.tm_mon = 11;
+  endTime.tm_mday = 31;
+  endTime.tm_hour = 23;
+  endTime.tm_min = 59;
+  endTime.tm_sec = 59;
+  AsyncFile f(
+    includeTrailingPathDelimiter(htmlDir_) + utf8::String::print("bpft-traf-by-%04d.html",year.tm_year + 1900)
+  );
+  f.createIfNotExist(true).open();
+  Mutant m0(section.valueByPath("html_report.file_mode",755));
+  Mutant m1(section.valueByPath("html_report.file_user",ksys::getuid()));
+  Mutant m2(section.valueByPath("html_report.file_group",ksys::getgid()));
+  chModOwn(f.fileName(),m0,m1,m2);
+  writeHtmlHead(f);			      
+  while( tm2Time(endTime) >= tm2Time(beginTime) ){
+    if( verbose_ ) fprintf(stderr,"%s\n",(const char *) utf8::tm2Str(endTime).getOEMString());
+    beginTime2 = beginTime;
+    beginTime.tm_mon = endTime.tm_mon;
+    statement5_->paramAsMutant("BT",beginTime);
+    statement5_->paramAsMutant("ET",endTime);
+    statement5_->paramAsMutant("gateway",int(gateway_.addr4_.sin_addr.s_addr));
+    statement5_->execute();
+    while( statement5_->fetch() ){
+    }
+    endTime.tm_mon--;
+    endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+    beginTime = beginTime2;
+  }
+  writeHtmlTail(f);			      
+}
+//------------------------------------------------------------------------------
+void Logger::writeBPFTHtmlReport(const ConfigSection & section)
 {
 /*!
  * \TODO По ип сортировать по отношению к адресу нашего шлюза
  * \TODO далее детализация по портам, протоколу
  */
-  ksock::SockAddr gateway;
-  gateway.resolveName(section.text("gateway"));
-  database_->start();
+  if( !(bool) section.valueByPath("html_report.enabled",true) ) return;
+  gateway_.resolveName(section.text("gateway"));
   struct tm beginTime, beginTime2, endTime;
-  beginTime = endTime = time2tm(getlocaltimeofday());
+  statement_->text(
+    utf8::String("select ") +
+    (dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ? "FIRST 1 " : "") +
+    "st_start FROM INET_BPFT_STAT" +
+    (dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " LIMIT 0,1" : "")
+  )->execute()->fetchAll();
+  beginTime = statement_->valueAsMutant("st_start");
+  statement_->text(
+    utf8::String("select ") +
+    (dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ? "FIRST 1 " : "") +
+    "st_start FROM INET_BPFT_STAT ORDER BY st_start DESC" +
+    (dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " LIMIT 0,1" : "")
+  )->execute()->fetchAll();
+  endTime = statement_->valueAsMutant("st_start");
+  statement_->text(
+    "SELECT"
+    "  A.*"
+    "FROM ("
+    "  SELECT"
+    "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
+    "  FROM ("
+    "      SELECT"
+    "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+    "      FROM"
+    "        INET_BPFT_STAT"
+    "      WHERE "
+    "        st_start >= :BT AND st_stop <= :ET AND"
+    "        st_ip = :gateway"
+    "      GROUP BY st_ip"
+    "    UNION"
+    "      SELECT"
+    "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+    "      FROM"
+    "        INET_BPFT_STAT"
+    "      WHERE "
+    "        st_start >= :BT AND st_start <= :ET AND"
+    "        st_ip = :gateway"
+    "      GROUP BY st_ip"
+    "  ) AS B "
+    "  GROUP BY B.st_ip"
+    ") AS A "
+    "ORDER BY A.SUM1 DESC"
+  );
+  statement_->prepare();
+  statement5_->text(statement_->text());
+  statement5_->prepare();
+  database_->start();
   beginTime.tm_mon = 0;
   beginTime.tm_mday = 1;
   beginTime.tm_hour = 0;
@@ -86,43 +171,27 @@ Logger & Logger::writeBPFTHtmlReport(const ConfigSection & section)
   endTime.tm_hour = 23;
   endTime.tm_min = 59;
   endTime.tm_sec = 59;
+  htmlDir_ = excludeTrailingPathDelimiter(section.valueByPath("html_report.directory"));
+  Mutant m0(section.valueByPath("html_report.directory_mode",755));
+  Mutant m1(section.valueByPath("html_report.directory_user",ksys::getuid()));
+  Mutant m2(section.valueByPath("html_report.directory_group",ksys::getgid()));
+  chModOwn(htmlDir_,m0,m1,m2);
+  AsyncFile f(
+    includeTrailingPathDelimiter(htmlDir_) + section.valueByPath("html_report.index_file_name","index.html")
+  );
+  f.createIfNotExist(true).open();
+  m0 = section.valueByPath("html_report.file_mode",755);
+  m1 = section.valueByPath("html_report.file_user",ksys::getuid());
+  m2 = section.valueByPath("html_report.file_group",ksys::getgid());
+  chModOwn(f.fileName(),m0,m1,m2);
+  writeHtmlHead(f);			      
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     if( verbose_ ) fprintf(stderr,"%s\n",(const char *) utf8::tm2Str(endTime).getOEMString());
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
-    statement_->text(
-      "SELECT"
-      "  A.*"
-      "FROM ("
-      "  SELECT"
-      "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
-      "  FROM ("
-      "      SELECT"
-      "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-      "      FROM"
-      "        INET_BPFT_STAT"
-      "      WHERE "
-      "        st_start >= :BT AND st_stop <= :ET AND"
-      "        st_ip = :gateway"
-      "      GROUP BY st_ip"
-      "    UNION"
-      "      SELECT"
-      "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-      "      FROM"
-      "        INET_BPFT_STAT"
-      "      WHERE "
-      "        st_start >= :BT AND st_stop <= :ET AND"
-      "        st_ip = :gateway"
-      "      GROUP BY st_ip"
-      "  ) AS B "
-      "  GROUP BY B.st_ip"
-      ") AS A "
-      "ORDER BY A.SUM1 DESC"
-    );
-    statement_->prepare();
     statement_->paramAsMutant("BT",beginTime);
     statement_->paramAsMutant("ET",endTime);
-    statement_->paramAsMutant("gateway",int(gateway.addr4_.sin_addr.s_addr));
+    statement_->paramAsMutant("gateway",int(gateway_.addr4_.sin_addr.s_addr));
     statement_->execute();
     while( statement_->fetch() ){
       if( verbose_ ){
@@ -135,18 +204,20 @@ Logger & Logger::writeBPFTHtmlReport(const ConfigSection & section)
 	    i < statement_->fieldCount() - 1 ? ", " : "\n"
           );
 	}
-      }        
+      }
+      writeBPFTMonthHtmlReport(section,endTime);
     }
     endTime.tm_year--;
     beginTime = beginTime2;
   }	  
   database_->commit();
-  return *this;
+  writeHtmlTail(f);
 }
 //------------------------------------------------------------------------------
 void Logger::parseBPFTLogFile(const ConfigSection & section)
 {
   resolveDNSNames_ = section.value("resolve_dns_names",false);
+  bpftOnlyCurrentYear_ = section.value("only_current_year",false);
   statement2_->text(
     utf8::String("select ") +
     (dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ? "FIRST 1 " : "") +
@@ -165,13 +236,14 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
   database_->start();
   int64_t offset = fetchLogFileLastOffset(flog.fileName());
   flog.seek(offset);
-  int64_t lineNo = 0, tma = getlocaltimeofday();
+  int64_t lineNo = 0, tma = 0;
   int64_t cl = getlocaltimeofday();
   union {
     BPFTHeader header;
     BPFTHeader32 header32;
   };
 //  statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
+//  statement_->text("update INET_BPFT_STAT set st_src_name = '',st_dst_name = ''")->execute();
   statement_->text(
     "INSERT INTO INET_BPFT_STAT ("
     "  st_start,st_stop,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes,st_src_name,st_dst_name"
@@ -181,8 +253,8 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
   );
   statement_->prepare();
   bool log32bitOsCompatible = section.value("log_32bit_os_compatible",SIZEOF_VOID_P < 8);
+  struct tm start, stop, curTime = time2tm(getlocaltimeofday());
   for(;;){
-    struct tm start, stop;
     uintptr_t entriesCount;
     uint64_t safePos = flog.tell();
     if( log32bitOsCompatible ){
@@ -206,22 +278,38 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
     Array<BPFTEntry> entries;
     Array<BPFTEntry32> entries32;
     if( log32bitOsCompatible ){
-      entries32.resize(entriesCount);
-      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ){
-        flog.seek(safePos);
-        break;
+      if( bpftOnlyCurrentYear_ && start.tm_year != curTime.tm_year ){
+        flog.seek(flog.tell() + sizeof(BPFTEntry32) * entriesCount);
+        lineNo += entriesCount;
+        entriesCount = 0;
+      }
+      else {
+        entries32.resize(entriesCount);
+        if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ){
+          flog.seek(safePos);
+          break;
+        }
       }
     }
     else {
-      entries.resize(entriesCount);
-      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ){
-        flog.seek(safePos);
-        break;
+      if( bpftOnlyCurrentYear_ && start.tm_year != curTime.tm_year ){
+        flog.seek(flog.tell() + sizeof(BPFTEntry) * entriesCount);
+        lineNo += entriesCount;
+        entriesCount = 0;
+      }
+      else {
+        entries.resize(entriesCount);
+        if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ){
+          flog.seek(safePos);
+          break;
+        }
       }
     }
     for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
       statement_->paramAsMutant("st_start",start);
       statement_->paramAsMutant("st_stop",stop);
+      statement_->paramAsMutant("st_src_name",utf8::String());
+      statement_->paramAsMutant("st_dst_name",utf8::String());
       if( log32bitOsCompatible ){
         statement_->paramAsMutant("st_src_ip",entries32[i].srcIp_.s_addr);
         statement_->paramAsMutant("st_dst_ip",entries32[i].dstIp_.s_addr);
@@ -249,12 +337,11 @@ void Logger::parseBPFTLogFile(const ConfigSection & section)
 	}
       }
       statement_->execute();
-      if( gettimeofday() - tma >= 1000000 ){
-	tma = getlocaltimeofday();
-        printStat(lineNo,offset,flog.tell(),flog.size(),cl);
-      }
+      printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
       lineNo++;
     }
+    printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
+    updateLogFileLastOffset(flog.fileName(),flog.tell());
     database_->commit();
     database_->start();
     lineNo += entriesCount;

@@ -77,7 +77,9 @@ class Logger {
     void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
     void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
     void parseBPFTLogFile(const ConfigSection & section);
+
     void writeHtmlYearOutput();
+    void writeBPFTHtmlReport(const ConfigSection & section);
   private:
     utf8::String shortUrl_;
     utf8::String prefix_;
@@ -88,6 +90,7 @@ class Logger {
     AutoPtr<Statement> statement2_;
     AutoPtr<Statement> statement3_;
     AutoPtr<Statement> statement4_;
+    AutoPtr<Statement> statement5_;
     AutoPtr<Statement> stTrafIns_;
     AutoPtr<Statement> stTrafUpd_;
     AutoPtr<Statement> stMonUrlSel_;
@@ -106,14 +109,16 @@ class Logger {
     bool verbose_;
     bool groups_;
     bool resolveDNSNames_;
+    bool bpftOnlyCurrentYear_;
+    ksock::SockAddr gateway_;
 
-    void printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl);
+    void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
     void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
-    utf8::String  squidStrToWideString(const char * str);
-    Mutant  timeStampRoundToMin(const Mutant & timeStamp);
-    utf8::String  shortUrl(const utf8::String & url);
-    int64_t       fetchLogFileLastOffset(const utf8::String & logFileName);
-    Logger &      updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset);
+    utf8::String squidStrToWideString(const char * str);
+    Mutant timeStampRoundToMin(const Mutant & timeStamp);
+    utf8::String shortUrl(const utf8::String & url);
+    int64_t fetchLogFileLastOffset(const utf8::String & logFileName);
+    Logger & updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset);
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
     class TrafCacheEntry {
@@ -235,7 +240,7 @@ class Logger {
     void writeHtmlTail(AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
-    Logger & writeBPFTHtmlReport(const ConfigSection & section);
+    void writeBPFTMonthHtmlReport(const ConfigSection & section,const struct tm & year);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
     static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);

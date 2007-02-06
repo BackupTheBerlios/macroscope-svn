@@ -58,9 +58,10 @@ Mutant Logger::timeStampRoundToMin(const Mutant & timeStamp)
   return t;
 }
 //------------------------------------------------------------------------------
-void Logger::printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl)
+void Logger::printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma)
 {
-  if( verbose_ ){
+  if( verbose_ && (tma == NULL || getlocaltimeofday() - *tma >= 1000000) ){
+    if( tma != NULL ) *tma = getlocaltimeofday();
     int64_t ct  = getlocaltimeofday() - cl;
     int64_t q   = (ct * (size - pos)) / (pos - spos <= 0 ? 1 : pos - spos);
     size -= spos;
@@ -463,6 +464,7 @@ void Logger::main()
   statement2_.ptr(database_->newAttachedStatement());
   statement3_.ptr(database_->newAttachedStatement());
   statement4_.ptr(database_->newAttachedStatement());
+  statement5_.ptr(database_->newAttachedStatement());
   stTrafIns_.ptr(database_->newAttachedStatement());
   stTrafUpd_.ptr(database_->newAttachedStatement());
   stMonUrlSel_.ptr(database_->newAttachedStatement());
@@ -561,6 +563,10 @@ void Logger::main()
       " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
       " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
       ")" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_src_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_dst_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_start,st_src_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_start,st_dst_ip)" <<
       "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
@@ -644,10 +650,8 @@ void Logger::main()
       parseBPFTLogFile(config_->sectionByPath("macroscope.bpft").section(i));
   }
   writeHtmlYearOutput();
-  if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
-    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ )
-      writeBPFTHtmlReport(config_->sectionByPath("macroscope.bpft").section(i));
-  }
+  for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ )
+    writeBPFTHtmlReport(config_->sectionByPath("macroscope.bpft").section(i));
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope

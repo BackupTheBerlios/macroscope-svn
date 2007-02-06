@@ -7,7 +7,7 @@ SET (CMAKE_USE_RELATIVE_PATHS OFF)
 
 SITE_NAME (SITE)
 IF (NOT MAIN_SITE)
-  SET (MAIN_SITE system amber)
+  SET (MAIN_SITE system amber blackhole)
 ENDIF (NOT MAIN_SITE)
 
 #SET (CMAKE_BINARY_DIR "builds/cmake")
