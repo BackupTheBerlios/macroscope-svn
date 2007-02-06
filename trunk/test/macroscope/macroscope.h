@@ -76,10 +76,10 @@ class Logger {
     
     void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
     void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
-    void parseBPFTLogFile(const ConfigSection & section);
+    void parseBPFTLogFile();
 
     void writeHtmlYearOutput();
-    void writeBPFTHtmlReport(const ConfigSection & section);
+    void writeBPFTHtmlReport();
   private:
     utf8::String shortUrl_;
     utf8::String prefix_;
@@ -111,6 +111,7 @@ class Logger {
     bool resolveDNSNames_;
     bool bpftOnlyCurrentYear_;
     ksock::SockAddr gateway_;
+    uintmax_t minSignificantThreshold_;
 
     void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
     void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
@@ -240,7 +241,7 @@ class Logger {
     void writeHtmlTail(AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
-    void writeBPFTMonthHtmlReport(const ConfigSection & section,const struct tm & year);
+    void writeBPFTMonthHtmlReport(const struct tm & year);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
     static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
@@ -249,6 +250,7 @@ class Logger {
     utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
     utf8::String resolveAddr(uint32_t ip4);
+    utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf = 0);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];

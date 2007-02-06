@@ -120,7 +120,7 @@ DSQLStatement & DSQLStatement::free()
 //---------------------------------------------------------------------------
 bool DSQLStatement::isSQLTextDDL() const
 {
-  utf8::String  upperText (sqlText_.trimLeft().upper());
+  utf8::String upperText(sqlText_.trimLeft().upper());
   return
     upperText.strncasecmp("CREATE", 6) == 0 ||
     upperText.strncasecmp("ALTER", 5) == 0
@@ -142,7 +142,7 @@ utf8::String DSQLStatement::compileSQLParameters()
         while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
         if( i2 - i > 1 && !(i + 1).isDigit() ){
           params_.indexToParam_.add(params_.add(utf8::String(i + 1, i2)));
-          text.replace(i, i2, "?");
+          text.replace(i,i2,"?");
         }
       }
       i.next();

@@ -348,6 +348,7 @@ SET (CMAKE_EXTRA_INCLUDE_FILES
   uuid.h
   aio.h
   guiddef.h
+  stddef.h
 )
 
 CHECK_TYPE_SIZE (ptrdiff_t SIZEOF_PTRDIFF_T)

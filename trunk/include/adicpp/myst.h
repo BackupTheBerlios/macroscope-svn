@@ -92,14 +92,14 @@ class DSQLParam {
     utf8::String        string_;
     ksys::MemoryStream  stream_;
     union {
-        int64_t     int_;
-        double      float_;
-        MYSQL_TIME  timestamp_;
+      int64_t     int_;
+      double      float_;
     };
-    unsigned long     length_;
-    bool              changed_;
-    my_bool           isNull_;
-    ksys::MutantType  type_;
+    MYSQL_TIME timestamp_;
+    unsigned long length_;
+    bool changed_;
+    my_bool isNull_;
+    ksys::MutantType type_;
 
     ksys::Mutant  getMutant();
     DSQLParam &   setMutant(const ksys::Mutant & value);

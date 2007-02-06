@@ -105,11 +105,11 @@ class DSQLParamScalar : public DSQLParam {
     DSQLParamScalar();
   protected:
     union {
-        int64_t       bigInt_;
-        float         float_;
-        double        double_;
-        ISC_TIMESTAMP timeStamp_;
+      int64_t       bigInt_;
+      float         float_;
+      double        double_;
     };
+    ISC_TIMESTAMP timeStamp_;
 
     ksys::Mutant  getMutant();
     DSQLParam &   setMutant(const ksys::Mutant & value);

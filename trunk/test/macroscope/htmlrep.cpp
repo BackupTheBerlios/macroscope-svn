@@ -31,7 +31,9 @@
 namespace macroscope {
 //------------------------------------------------------------------------------
 static const char * const trafTypeColumnName[]  = {
-  "ST_TRAF_SMTP", "ST_TRAF_WWW", "ST_TRAF"
+  "ST_TRAF_SMTP",
+  "ST_TRAF_WWW",
+  "ST_TRAF"
 };
 //------------------------------------------------------------------------------
 void Logger::decoration()
@@ -701,7 +703,8 @@ void Logger::writeHtmlYearOutput()
             f <<
 	      "  <TH ALIGN=center BGCOLOR=\"" << trafTypeHeadDataColor_[i] << "\" wrap>\n" <<
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << trafTypeNick_[i] << "\n"
-	      "    </FONT>\n" "  </TH>\n"
+	      "    </FONT>\n"
+	      "  </TH>\n"
             ;
           }
         }

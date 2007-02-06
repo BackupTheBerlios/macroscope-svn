@@ -499,7 +499,7 @@ bool DSQLValues::fetch()
   if( code != 100 && code != isc_req_sync ){
     fillRow(row.ptr());
     rows_.add(row.ptr());
-    if( row_ < 0 ) row_ = 0;
+    if( row_ < 0 ) row_ = 0; else row_ = rows_.count() - 1;
     row.ptr(NULL);
   }
   return code != 100 && code != isc_req_sync;

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -135,7 +135,7 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
         intmax_t        i;
 #if HAVE_LONG_DOUBLE
         long
-        #endif
+#endif
         double f;
         const char *    cStr;
         const wchar_t * wStr;
@@ -727,7 +727,7 @@ Mutant::operator uintptr_t() const
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T
 Mutant::operator intmax_t() const
 {
   intmax_t  v;

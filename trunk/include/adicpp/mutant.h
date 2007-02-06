@@ -63,7 +63,7 @@ class Mutant {
 #endif
     Mutant(intptr_t a);
     Mutant(uintptr_t a);
-#if !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T
     Mutant(intmax_t a);
     Mutant(uintmax_t a);
 #endif
@@ -97,7 +97,7 @@ class Mutant {
 #endif
     Mutant &            operator =(intptr_t a);
     Mutant &            operator =(uintptr_t a);
-#if !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T
     Mutant &            operator =(intmax_t a);
     Mutant &            operator =(uintmax_t a);
 #endif
@@ -130,7 +130,7 @@ class Mutant {
 #endif
     operator intptr_t() const;
     operator uintptr_t() const;
-#if !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T
     operator intmax_t() const;
     operator uintmax_t() const;
 #endif
@@ -280,7 +280,7 @@ inline Mutant::Mutant(uintptr_t a) : int_(a), type_(mtInt)
 {
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T
 inline Mutant::Mutant(intmax_t a) : int_(a), type_(mtInt)
 {
 }
@@ -426,7 +426,7 @@ inline Mutant & Mutant::operator =(uintptr_t a)
   return *this;
 }
 //---------------------------------------------------------------------------
-#if !HAVE_INTPTR_T_AS_INT64_T
+#if !HAVE_INTMAX_T_AS_INTPTR_T
 inline Mutant & Mutant::operator =(intmax_t a)
 {
   clear().int_ = a;

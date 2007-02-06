@@ -646,12 +646,16 @@ void Logger::main()
     parseSendmailLogFile(m0,m1,m2);
   }
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
-    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ )
-      parseBPFTLogFile(config_->sectionByPath("macroscope.bpft").section(i));
+    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
+      section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name() + ".";
+      parseBPFTLogFile();
+    }
   }
   writeHtmlYearOutput();
-  for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ )
-    writeBPFTHtmlReport(config_->sectionByPath("macroscope.bpft").section(i));
+  for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
+    section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name() + ".";
+    writeBPFTHtmlReport();
+  }
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope
