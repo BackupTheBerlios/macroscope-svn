@@ -45,7 +45,9 @@ Logger::Logger() :
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   ellapsed_(getlocaltimeofday()),
   trafCacheAutoDrop_(trafCache_),
-  dnsCacheAutoDrop_(dnsCache_)
+  cacheSize_(0),
+  dnsCacheAutoDrop_(dnsCache_),
+  dnsCacheSize_(0)
 {
 }
 //------------------------------------------------------------------------------
@@ -458,6 +460,9 @@ void Logger::main()
 
   database_.ptr(Database::newDatabase(config_.ptr()));
   statement_.ptr(database_->newAttachedStatement());
+  statement2_.ptr(database_->newAttachedStatement());
+  statement3_.ptr(database_->newAttachedStatement());
+  statement4_.ptr(database_->newAttachedStatement());
   stTrafIns_.ptr(database_->newAttachedStatement());
   stTrafUpd_.ptr(database_->newAttachedStatement());
   stMonUrlSel_.ptr(database_->newAttachedStatement());
@@ -639,6 +644,10 @@ void Logger::main()
       parseBPFTLogFile(config_->sectionByPath("macroscope.bpft").section(i));
   }
   writeHtmlYearOutput();
+  if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
+    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ )
+      writeBPFTHtmlReport(config_->sectionByPath("macroscope.bpft").section(i));
+  }
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope
@@ -647,7 +656,7 @@ void Logger::main()
 const char * _malloc_options = "HR";
 #endif
 //------------------------------------------------------------------------------
-int main(int _argc, char * _argv[])
+int main(int _argc,char * _argv[])
 {
   int errcode = -1;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);

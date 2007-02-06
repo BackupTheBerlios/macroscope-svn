@@ -199,7 +199,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
   Mutant m2(config_->valueByPath(section_ + "file_group",ksys::getgid()));
   chModOwn(file,m0,m1,m2);
   writeHtmlHead(f);
-  struct tm beginTime = year, endTime = year;
+  struct tm beginTime = year, endTime = year, curTime = time2tm(getlocaltimeofday());
   beginTime.tm_mon = 0;
   beginTime.tm_mday = 1;
   beginTime.tm_hour = 0;
@@ -306,13 +306,15 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
               endTime.tm_mon + 1
             ) + user.replaceAll(":","-").replaceAll(" ","") + ".html"
           );
-          writeUserTop(
-            includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
-            user,
-	    usersTrafTable(i,"ST_IS_GROUP"),
-            beginTime,
-            endTime
-          );
+          if( !(bool) config_->valueByPath(section_ + "refresh_only_current",true) || (curTime.tm_year == endTime.tm_year && curTime.tm_mon == endTime.tm_mon) ){
+            writeUserTop(
+              includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
+              user,
+  	      usersTrafTable(i,"ST_IS_GROUP"),
+              beginTime,
+              endTime
+            );
+	  }
           f <<
             "<TR>\n"
             "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
@@ -824,9 +826,7 @@ void Logger::writeHtmlYearOutput()
         et.tm_mon--;
       }
       f << "</TR>\n</TABLE>\n<BR>\n<BR>\n";
-      bool process = !(bool) config_->valueByPath(section_ + "refresh_only_current",true) ||
-        (curTime.tm_year == beginTime.tm_year && curTime.tm_mon == beginTime.tm_mon);
-      if( process ){
+      if( !(bool) config_->valueByPath(section_ + "refresh_only_current",true) || curTime.tm_year == endTime.tm_year ){
         utf8::String fileName(
           includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
         );
@@ -836,7 +836,6 @@ void Logger::writeHtmlYearOutput()
     endTime.tm_year--;
     beginTime = beginTime2;
   }
-  writeBPFTHtmlReport(f);
   f << "Ellapsed time: " <<
     utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) << "\n<BR>\n" <<
     utf8::int2Str((uintmax_t) trafCache_.count()) << "<BR>\n";

@@ -85,6 +85,9 @@ class Logger {
     ConfigSPi config_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
+    AutoPtr<Statement> statement2_;
+    AutoPtr<Statement> statement3_;
+    AutoPtr<Statement> statement4_;
     AutoPtr<Statement> stTrafIns_;
     AutoPtr<Statement> stTrafUpd_;
     AutoPtr<Statement> stMonUrlSel_;
@@ -102,6 +105,7 @@ class Logger {
     uintptr_t gCount_;
     bool verbose_;
     bool groups_;
+    bool resolveDNSNames_;
 
     void printStat(int64_t lineNo, int64_t spos, int64_t pos, int64_t size, int64_t cl);
     void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
@@ -231,7 +235,7 @@ class Logger {
     void writeHtmlTail(AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
-    Logger & writeBPFTHtmlReport(AsyncFile & f);
+    Logger & writeBPFTHtmlReport(const ConfigSection & section);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
     static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
@@ -239,6 +243,7 @@ class Logger {
     void genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime);
     utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
+    utf8::String resolveAddr(uint32_t ip4);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];
