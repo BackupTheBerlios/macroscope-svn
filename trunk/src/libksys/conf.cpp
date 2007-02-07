@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -364,7 +364,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         else if( (ctype & C1_CNTRL) == 0 ){
           if( tt != ttNumeric ||
               (c != 'K' && c != 'k' && c != 'M' && c != 'm' &&
-               c != 'G' && c != 'g' && !isdigit((int) prevChar)) ){
+               c != 'G' && c != 'g' && c != 'T' && c != 't'&& !isdigit((int) prevChar)) ){
             t = ttString;
             maxTokenLen = ~uintptr_t(0);
           }

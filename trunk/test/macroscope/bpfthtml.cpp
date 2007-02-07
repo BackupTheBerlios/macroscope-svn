@@ -185,11 +185,36 @@ void Logger::writeBPFTHtmlReport()
     "  ) AS B "
     "  GROUP BY B.st_ip"
     ") AS A "
-    "ORDER BY A.SUM1 DESC"
+    "ORDER BY A.SUM1"
   );
   statement_->prepare();
   statement5_->text(statement_->text());
   statement5_->prepare();
+  statement6_->text(
+    "  SELECT"
+    "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
+    "  FROM ("
+    "      SELECT"
+    "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+    "      FROM"
+    "        INET_BPFT_STAT"
+    "      WHERE "
+    "        st_start >= :BT AND st_start <= :ET AND"
+    "        st_src_ip = :gateway AND st_dst_ip = :host"
+    "      GROUP BY st_dst_ip"
+    "    UNION ALL"
+    "      SELECT"
+    "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+    "      FROM"
+    "        INET_BPFT_STAT"
+    "      WHERE "
+    "        st_start >= :BT AND st_start <= :ET AND"
+    "        st_dst_ip = :gateway AND st_src_ip = :host"
+    "      GROUP BY st_src_ip"
+    "  ) AS B "
+    "  GROUP BY B.st_ip"
+  );
+  statement6_->prepare();
   database_->start();
   beginTime.tm_mon = 0;
   beginTime.tm_mday = 1;
@@ -209,6 +234,9 @@ void Logger::writeBPFTHtmlReport()
     includeTrailingPathDelimiter(htmlDir_) + config_->valueByPath(section_ + "html_report.index_file_name","index.html")
   );
   f.createIfNotExist(true).open();
+#ifndef NDEBUG
+  f.resize(0);
+#endif
   chModOwn(htmlDir_,m0,m1,m2);
   m0 = config_->valueByPath(section_ + "html_report.file_mode",755);
   m1 = config_->valueByPath(section_ + "html_report.file_user",ksys::getuid());
@@ -222,61 +250,218 @@ void Logger::writeBPFTHtmlReport()
     statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
     statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
     statement_->paramAsMutant("gateway",int(gateway_.addr4_.sin_addr.s_addr));
-    statement_->execute();
+    statement_->execute()->fetchAll();
+    //87.250.251.11 - yandex.ru
     f <<
+/*      <SCRIPT LANGUAGE="JavaScript">
+<!--
+function DNSQuery(name)
+{
+  this.name = name;
+    this.resolveAddr = resolveAddr;
+    }
+    function resolveAddr(obj)
+    {
+      obj.value = 'yandex.ru';
+        //document.write("<B>This is written from JavaScript</B>")
+	}
+	-->
+	</SCRIPT>
+	<FORM>
+	<INPUT TYPE=\"text\" name="rn0" onMouseOver="resolveAddr(this.form.rn0)" value="87.250.251.11">
+	</FORM>*/
+      "<applet code=DNSQuery.class>\n"
+      "</applet>\n"
       "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
       "<TR>\n"
-      "  <TH BGCOLOR=\"#00A0FF\" COLSPAN=" <<
-      "31" <<
-      " ALIGN=left nowrap>\n" <<
-      "<A HREF=\"" << utf8::String::print("bpft-traf-by-%04d.html",endTime.tm_year + 1900) << "\">" <<
-      utf8::int2Str(endTime.tm_year + 1900) << "\n"
-      "</A>\n"
+      "  <TH BGCOLOR=\"#00A0FF\" COLSPAN=27 ALIGN=left nowrap>\n" <<
+      "    <A HREF=\"" << utf8::String::print("bpft-traf-by-%04d.html",endTime.tm_year + 1900) << "\">" <<
+           utf8::int2Str(endTime.tm_year + 1900) << "\n"
+      "    </A>\n"
       "  </TH>\n"
       "</TR>\n"
       "<TR>\n"
-      "  <TH HEIGHT=4></TH>\n"
+      "  <TH HEIGHT=4>"
+      "  </TH>\n"
       "</TR>\n"
       "<TR>\n"
-      "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
       "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "Host\n"
+      "      Host\n"
       "    </FONT>\n"
       "  </TH>\n"
-      "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
       "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "Data bytes\n"
+      "      Data bytes\n"
       "    </FONT>\n"
       "  </TH>\n"
-      "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
       "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "Datagram bytes\n"
+      "      Datagram bytes\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      12\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      11\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      10\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      9\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      8\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      7\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      6\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      5\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      4\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      3\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      2\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+      "      1\n"
       "    </FONT>\n"
       "  </TH>\n"
       "</TR>\n"
     ;
-    while( statement_->fetch() ){
-      if( (uintmax_t) statement_->valueAsMutant("SUM1") < minSignificantThreshold_ ) continue;
+    Table<Mutant> table;
+    statement_->unload(table);
+    for( intptr_t i = table.rowCount() - 1; i >= 0; i-- ){
+      if( (uintmax_t) table(i,"SUM1") < minSignificantThreshold_ ) continue;
       f <<
         "<TR>\n"
 	"  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
 	"    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        resolveAddr(statement_->valueAsMutant("st_ip")) << "\n"
+        utf8::int2HexStr(table(i,"st_ip"),0) + " " + resolveAddr(table(i,"st_ip")) << "\n"
         "    </FONT>\n"
         "  </TH>\n"
-	"  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+	"  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
 	"    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        statement_->valueAsString("SUM2")<< "\n"
+        table(i,"SUM2")<< "\n"
         "    </FONT>\n"
         "  </TH>\n"
-	"  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+	"  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
 	"    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        statement_->valueAsString("SUM1")<< "\n"
+        table(i,"SUM1")<< "\n"
         "    </FONT>\n"
         "  </TH>\n"
+      ;
+      while( endTime.tm_mon >= 0 ){
+        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+        beginTime.tm_mon = endTime.tm_mon;
+        statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
+        statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+        statement6_->paramAsMutant("gateway",int(gateway_.addr4_.sin_addr.s_addr));
+        statement6_->paramAsMutant("host",table(i,"st_ip"));
+        statement6_->execute()->fetchAll();
+        f <<
+	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+	  (statement6_->rowCount() > 0 ?
+            statement6_->valueAsString("SUM2") : utf8::String()) << "\n"
+          "    </FONT>\n"
+          "  </TH>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+	  (statement6_->rowCount() > 0 ?
+            statement6_->valueAsString("SUM1") : utf8::String()) << "\n"
+          "    </FONT>\n"
+          "  </TH>\n"
+        ;
+        endTime.tm_mon--;
+      }
+      f <<
         "</TR>\n"
       ;
+      endTime.tm_mon = 11;
+      endTime.tm_mday = 31;
     }
+    f <<
+      "<TR>\n"
+      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+      "      Summary:\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+      table.sum("SUM2") << "\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+      table.sum("SUM1") << "\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+    ;
+    while( endTime.tm_mon >= 0 ){
+      endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+      beginTime.tm_mon = endTime.tm_mon;
+      statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
+      statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+      statement_->paramAsMutant("gateway",int(gateway_.addr4_.sin_addr.s_addr));
+      statement_->execute()->fetchAll();
+      statement_->unload(table);
+      f <<
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        (statement_->rowCount() > 0 ?
+          utf8::String(table.sum("SUM2")) : utf8::String()) << "\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+	(statement_->rowCount() > 0 ?
+          utf8::String(table.sum("SUM1")) : utf8::String()) << "\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+      ;
+      endTime.tm_mon--;
+    }
+    f <<
+      "</TR>\n"
+    ;
+    endTime.tm_mon = 11;
+    endTime.tm_mday = 31;
+    f << "</TABLE>\n<BR>\n<BR>\n";
 //    writeBPFTMonthHtmlReport(endTime);
     endTime.tm_year--;
     beginTime = beginTime2;
@@ -285,6 +470,35 @@ void Logger::writeBPFTHtmlReport()
   writeHtmlTail(f);
   f.resize(f.tell());
 }
+//------------------------------------------------------------------------------
+bool isMulticastAddress(uint32_t ip) {
+  return ((ip & 0xf0000000) == 0xe0000000);
+}
+public boolean isSiteLocalAddress() {
+        // refer to RFC 1918
+	        // 10/8 prefix
+		        // 172.16/12 prefix
+			        // 192.168/16 prefix
+				        return (((address >>> 24) & 0xFF) == 10)
+					            || ((((address >>> 24) & 0xFF) == 172)
+						                    && (((address >>> 16) & 0xF0) == 16))
+								                || ((((address >>> 24) & 0xFF) == 192)
+										                && (((address >>> 16) & 0xFF) == 168));
+												    }
+public boolean isMCGlobal() {
+        // 224.0.1.0 to 238.255.255.255
+	        byte[] byteAddr = getAddress();
+		        return ((byteAddr[0] & 0xff) >= 224 && (byteAddr[0] & 0xff) <= 238 ) &&
+			            !((byteAddr[0] & 0xff) == 224 && byteAddr[1] == 0 &&
+				                  byteAddr[2] == 0);
+						      }
+public boolean isMCLinkLocal() {
+        // 224.0.0/24 prefix and ttl == 1
+	        return (((address >>> 24) & 0xFF) == 224)
+		            && (((address >>> 16) & 0xFF) == 0)
+			                && (((address >>> 8) & 0xFF) == 0);
+					    }
+					    						      												    
 //------------------------------------------------------------------------------
 void Logger::parseBPFTLogFile()
 {
@@ -325,7 +539,7 @@ void Logger::parseBPFTLogFile()
   );
   statement_->prepare();
   bool log32bitOsCompatible = config_->valueByPath(section_ + "log_32bit_os_compatible",SIZEOF_VOID_P < 8);
-  struct tm start, stop, curTime = time2tm(getlocaltimeofday());
+  struct tm start, stop, curTime = time2tm(gettimeofday());
   for(;;){
     uintptr_t entriesCount;
     uint64_t safePos = flog.tell();

@@ -91,6 +91,7 @@ class Logger {
     AutoPtr<Statement> statement3_;
     AutoPtr<Statement> statement4_;
     AutoPtr<Statement> statement5_;
+    AutoPtr<Statement> statement6_;
     AutoPtr<Statement> stTrafIns_;
     AutoPtr<Statement> stTrafUpd_;
     AutoPtr<Statement> stMonUrlSel_;

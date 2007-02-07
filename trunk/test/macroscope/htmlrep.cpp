@@ -914,7 +914,7 @@ void Logger::writeHtmlHead(AsyncFile & f)
   //    "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"600\">\n"
   //    "<META HTTP-EQUIV=\"Pragma\" CONTENT=\"no-cache\">\n"
   //    "<META HTTP-EQUIV=\"Cache-Control\" content=\"no-cache\">\n"
-  "<TITLE>Statistics by user</TITLE>\n"
+  "<TITLE>Statistics</TITLE>\n"
   "</HEAD>\n"
   "<BODY lang=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
   ;
@@ -923,12 +923,14 @@ void Logger::writeHtmlHead(AsyncFile & f)
 void Logger::writeHtmlTail(AsyncFile & f)
 {
 #if HAVE_UNAME
-  struct utsname  un;
+  struct utsname un;
   uname(&un);
-  f << un.nodename << "\n<BR>\n";
+  f << "Generated on " << un.nodename << ", by " << macroscope_version.gnu_ << "\n<BR>\n";
 #endif
-  f << "</BODY>\n"
-    "</HTML>\n";
+  f <<
+    "</BODY>\n"
+    "</HTML>\n"
+  ;
 }
 //------------------------------------------------------------------------------
 utf8::String Logger::genUserFilter(const utf8::String & user,uintptr_t isGroup)

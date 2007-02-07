@@ -41,7 +41,6 @@ Logger::Logger() :
 #else
   prefix_("macroscope.unix."),
 #endif
-  section_(prefix_ + "html_report."),
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   ellapsed_(getlocaltimeofday()),
   trafCacheAutoDrop_(trafCache_),
@@ -465,6 +464,7 @@ void Logger::main()
   statement3_.ptr(database_->newAttachedStatement());
   statement4_.ptr(database_->newAttachedStatement());
   statement5_.ptr(database_->newAttachedStatement());
+  statement6_.ptr(database_->newAttachedStatement());
   stTrafIns_.ptr(database_->newAttachedStatement());
   stTrafUpd_.ptr(database_->newAttachedStatement());
   stMonUrlSel_.ptr(database_->newAttachedStatement());
@@ -633,6 +633,7 @@ void Logger::main()
       if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME) ) throw;
     }
   }
+  section_ = prefix_ + "html_report.";
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
     Mutant m0(config_->valueByPath(prefix_ + "squid.log_file_name"));
     Mutant m1(config_->valueByPath(prefix_ + "squid.top10_url",true));
@@ -651,6 +652,7 @@ void Logger::main()
       parseBPFTLogFile();
     }
   }
+  section_ = prefix_ + "html_report.";
   writeHtmlYearOutput();
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
     section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name() + ".";

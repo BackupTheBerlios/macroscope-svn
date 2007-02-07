@@ -96,7 +96,7 @@ int main(int ac, char*av[]){
       "+SSE3"
 #endif
 #ifdef CMAKE_SYSTEM_NAME
-      " for " __XSTRING(CMAKE_SYSTEM_NAME)
+      " for " __XSTRING(CMAKE_SYSTEM_NAME) " " __XSTRING(CMAKE_SYSTEM_VERSION)
 #endif
     ;
 
@@ -108,8 +108,10 @@ int main(int ac, char*av[]){
     time_t t;
     time(&t);
     //Wed Jan 02 02:03:55 1980
-    char * ts = ctime(&t);
+    char * ts = ctime(&t), * tsDay;
     ts[7] = '\0';
+    tsDay = ts + 8;
+    if( isspace(*tsDay) ) tsDay++;
     ts[10] = '\0';
     ts[19] = '\0';
     ts[24] = '\0';
@@ -182,19 +184,19 @@ int main(int ac, char*av[]){
       ver,rev,lev,
       ver,rev,lev, machine,
       ver,rev,lev, machine,
-      ts + 8,
+      tsDay,
       ts + 4,
       ts + 20,
       ts + 11,
       target,
       ver,rev,lev, machine,
-      ts + 8,
+      tsDay,
       ts + 4,
       ts + 20,
       ts + 11,
       target,
       ver,rev,lev, machine,
-      ts + 8,
+      tsDay,
       ts + 4,
       ts + 20,
       ts + 11,
@@ -202,13 +204,13 @@ int main(int ac, char*av[]){
       ver,rev,lev, machine,
       target,
       ver,rev,lev, machine,
-      ts + 8,
+      tsDay,
       ts + 4,
       ts + 20,
       ts + 11,
       target,
       ver,rev,lev, machine,
-      ts + 8,
+      tsDay,
       ts + 4,
       ts + 20,
       ts + 11,
