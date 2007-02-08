@@ -33,7 +33,7 @@ namespace macroscope {
 //------------------------------------------------------------------------------
 static inline bool isAddressMask(uint32_t ip)
 {
-  return ip & 0x80000000;
+  return (ip & 0x80000000) != 0;
 }
 //------------------------------------------------------------------------------
 static inline bool isMulticastAddress(uint32_t ip)
@@ -597,7 +597,7 @@ void Logger::parseBPFTLogFile()
   statement_->prepare();
   bool log32bitOsCompatible = config_->valueByPath(section_ + "log_32bit_os_compatible",SIZEOF_VOID_P < 8);
   struct tm start, stop, curTime = time2tm(gettimeofday());
-  ksock::APIAutoInitializer ksockAPIAutoInitializer();
+  ksock::APIAutoInitializer ksockAPIAutoInitializer;
   for(;;){
     uintptr_t entriesCount;
     uint64_t safePos = flog.tell();

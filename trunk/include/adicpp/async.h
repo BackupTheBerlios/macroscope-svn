@@ -158,7 +158,7 @@ class AsyncEvent {
       struct {
         ksock::SockAddr address_;
         uintptr_t defPort_;
-	int aiFlag_;
+	      intptr_t aiFlag_;
       };
     };
 #if _MSC_VER

@@ -262,64 +262,16 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
         }
         break;
       case      mtCStr :
-        if( m.type_ != mtCStr )
-          newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-        cStr = m.cStr_;
-        clear().cStr_ = cStr;
-        break;
       case      mtWStr :
-        if( m.type_ != mtWStr )
-          newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-        wStr = m.wStr_;
-        clear().wStr_ = wStr;
-        break;
       case       mtStr :
-        if( m.type_ != mtStr )
-          newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-        str = m.str_;
-        clear().str_ = str;
+        new (clear().raw_) utf8::String(m);
+        newType = mtString;
         break;
       case    mtString :
-        switch( m.type_ ){
-          case      mtNull :
-            new (clear().raw_) utf8::String;
-            break;
-          case       mtInt :
-            s = utf8::int2Str(m.int_);
-            new (clear().raw_) utf8::String(s);
-            break;
-          case      mtTime :
-            s = utf8::time2Str(m.int_);
-            new (clear().raw_) utf8::String(s);
-            break;
-          case     mtFloat :
-            s = utf8::float2Str(m.float_);
-            new (clear().raw_) utf8::String(s);
-            break;
-          case      mtCStr :
-            s = utf8::String(m.cStr_);
-            new (clear().raw_) utf8::String(s);
-            break;
-          case      mtWStr :
-            s = utf8::String(m.wStr_);
-            new (clear().raw_) utf8::String(s);
-            break;
-          case       mtStr :
-            s = utf8::plane(m.str_);
-            new (clear().raw_) utf8::String(s);
-            break;
-          case    mtString :
-            s = utf8::String(m.string());
-            new (clear().raw_) utf8::String(s);
-            break;
-          case    mtBinary :
-            newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-        }
+        new (clear().raw_) utf8::String(m);
         break;
       case    mtBinary :
-        if( m.type_ != mtBinary )
-          newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-        ms = m.stream();
+        ms = m;
         clear().stream() = ms;
     }
     type_ = newType;

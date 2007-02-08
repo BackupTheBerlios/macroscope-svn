@@ -169,7 +169,7 @@ DSQLStatement & DSQLStatement::prepare()
     prepared_ = true;
   }
   else if( executed_ ){
-    values_.clear();
+    values_.clear().valuesIndex_.clear();
     executed_ = false;
   }
   return *this;
