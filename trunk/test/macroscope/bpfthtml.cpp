@@ -525,14 +525,12 @@ function DNSQuery(name)
       f <<
         "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        (statement_->rowCount() > 0 ?
-          utf8::String(table[endTime.tm_mon + 1].sum("SUM2")) : utf8::String()) << "\n"
+        table[endTime.tm_mon + 1].sum("SUM2") << "\n"
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-	(statement_->rowCount() > 0 ?
-          utf8::String(table[endTime.tm_mon + 1].sum("SUM1")) : utf8::String()) << "\n"
+        table[endTime.tm_mon + 1].sum("SUM1") << "\n"
         "    </FONT>\n"
         "  </TH>\n"
       ;
