@@ -264,11 +264,13 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
       case      mtCStr :
       case      mtWStr :
       case       mtStr :
-        new (clear().raw_) utf8::String(m);
+        s = m;
+        new (clear().raw_) utf8::String(s);
         newType = mtString;
         break;
       case    mtString :
-        new (clear().raw_) utf8::String(m);
+        s = m;
+        new (clear().raw_) utf8::String(s);
         break;
       case    mtBinary :
         ms = m;
