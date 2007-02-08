@@ -116,10 +116,7 @@ Statement & Statement::unload(Table & table)
     selectRow(row);
     table.addRow();
     for( i = 0; i < j; i++ )
-      if( fieldName(i).strcmp("SUM1") == 0 )
-        table(row,i) = (uintmax_t) valueAsMutant(i);
-      else
-        table(row,i) = valueAsMutant(i);
+      table(row,i) = valueAsMutant(i);
   }
   if( srow >= 0 ) selectRow(srow);
   return *this;
