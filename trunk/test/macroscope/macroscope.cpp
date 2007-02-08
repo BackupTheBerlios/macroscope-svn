@@ -166,34 +166,33 @@ utf8::String Logger::shortUrl(const utf8::String & url)
 //------------------------------------------------------------------------------
 int64_t Logger::fetchLogFileLastOffset(const utf8::String & logFileName)
 {
-  statement_->text("SELECT ST_LAST_OFFSET FROM INET_LOG_FILE_STAT WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME");
-  statement_->prepare();
-  statement_->paramAsString("ST_LOG_FILE_NAME",logFileName);
-  statement_->execute();
+  stFileStatSel_->prepare();
+  stFileStatSel_->paramAsString("ST_LOG_FILE_NAME",logFileName);
+  stFileStatSel_->execute();
   int64_t offset  = 0;
-  if( statement_->fetch() ){
-    statement_->fetchAll();
-    offset = statement_->valueAsMutant("ST_LAST_OFFSET");
+  if( stFileStatSel_->fetch() ){
+    stFileStatSel_->fetchAll();
+    offset = stFileStatSel_->valueAsMutant("ST_LAST_OFFSET");
   }
   return offset;
 }
 //------------------------------------------------------------------------------
-Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset)
+Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName,int64_t offset)
 {
   stFileStatSel_->prepare();
-  stFileStatSel_->paramAsString("ST_LOG_FILE_NAME", logFileName);
+  stFileStatSel_->paramAsString("ST_LOG_FILE_NAME",logFileName);
   stFileStatSel_->execute();
   if( stFileStatSel_->fetch() ){
     stFileStatSel_->fetchAll();
     stFileStatUpd_->prepare();
-    stFileStatUpd_->paramAsString("ST_LOG_FILE_NAME", logFileName);
-    stFileStatUpd_->paramAsMutant("ST_LAST_OFFSET", offset);
+    stFileStatUpd_->paramAsString("ST_LOG_FILE_NAME",logFileName);
+    stFileStatUpd_->paramAsMutant("ST_LAST_OFFSET",offset);
     stFileStatUpd_->execute();
   }
   else{
     stFileStatIns_->prepare();
-    stFileStatIns_->paramAsString("ST_LOG_FILE_NAME", logFileName);
-    stFileStatIns_->paramAsMutant("ST_LAST_OFFSET", offset);
+    stFileStatIns_->paramAsString("ST_LOG_FILE_NAME",logFileName);
+    stFileStatIns_->paramAsMutant("ST_LAST_OFFSET",offset);
     stFileStatIns_->execute();
   }
   return *this;
@@ -552,16 +551,16 @@ void Logger::main()
 //      "DROP TABLE INET_BPFT_STAT" <<
       "CREATE TABLE INET_BPFT_STAT ("
       " st_start         DATETIME NOT NULL,"
-      " st_stop          DATETIME NOT NULL,"
-      " st_src_ip        INTEGER NOT NULL,"
-      " st_dst_ip        INTEGER NOT NULL,"
+//      " st_stop          DATETIME NOT NULL,"
+      " st_src_ip        CHAR(8) NOT NULL,"
+      " st_dst_ip        CHAR(8) NOT NULL,"
       " st_ip_proto      SMALLINT NOT NULL,"
       " st_src_port      SMALLINT NOT NULL,"
       " st_dst_port      SMALLINT NOT NULL,"
-      " st_dgram_bytes   SMALLINT NOT NULL,"
-      " st_data_bytes    SMALLINT NOT NULL,"
-      " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
-      " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
+      " st_dgram_bytes   INTEGER NOT NULL,"
+      " st_data_bytes    INTEGER NOT NULL"
+//      " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
+//      " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
       ")" <<
       "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_src_ip)" <<
       "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_dst_ip)" <<
@@ -624,13 +623,14 @@ void Logger::main()
   for( uintptr_t i = 0; i < metadata.count(); i++ ){
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
       if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
-        metadata[i] += "TYPE = " + config_->section("macroscope").text("mysql_table_type","INNODB");
+        metadata[i] += " TYPE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
     try {
       statement_->execute(metadata[i]);
     }
     catch( ExceptionSP & e ){
       //if( e->searchCode(isc_keytoobig) ) throw;
-      if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME) ) throw;
+      if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME) &&
+          !e->searchCode(ER_BAD_TABLE_ERROR) ) throw;
     }
   }
   section_ = prefix_ + "html_report.";

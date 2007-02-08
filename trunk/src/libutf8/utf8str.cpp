@@ -67,9 +67,9 @@ void String::cleanup()
   //  nullContainer().~Container();
 }
 //---------------------------------------------------------------------------
-String plane(const char * s, uintptr_t size)
+String plane(const char * s,uintptr_t size)
 {
-  const char *  a = s;
+  const char * a = s;
   while( size > 0 && *s != '\0' ){
     uintptr_t l = utf8seqlen(s);
     if( l > size || l == 0 )
@@ -79,8 +79,15 @@ String plane(const char * s, uintptr_t size)
   }
   if( s - a == 0 ) return utf8::String();
   String::Container * container = String::Container::container(uintptr_t(s - a));
-  memcpy(container->string_, a, s - a);
+  memcpy(container->string_,a,s - a);
   container->string_[s - a] = '\0';
+  return container;
+}
+//---------------------------------------------------------------------------
+String plane0(ksys::AutoPtr<char> & s)
+{
+  String::Container * container = newObjectV1V2<String::Container>(0,s.ptr());
+  s.ptr(NULL);
   return container;
 }
 //---------------------------------------------------------------------------

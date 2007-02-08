@@ -145,7 +145,7 @@ class String {
 
         ~Container();
         Container();
-        Container(int32_t refCount, char * string);
+        Container(int32_t refCount,char * string);
 
         static Container * container(uintptr_t l);
 
@@ -161,8 +161,8 @@ class String {
       friend class BaseString;
       friend class String;
       // typed constructors
-      friend String plane(const char * s, uintptr_t size = ~uintptr_t(0) >> 1);
-      friend String plane(ksys::AutoPtr<char> & s, uintptr_t size = ~uintptr_t(0) >> 1);
+      friend String plane(const char * s,uintptr_t size = ~uintptr_t(0) >> 1);
+      friend String plane(ksys::AutoPtr<char> & s,uintptr_t size = ~uintptr_t(0) >> 1);
       public:
         ~Iterator();
         Iterator(const Iterator & i);
@@ -348,7 +348,8 @@ class String {
     friend class Stream;
     // typed constructors
     friend String       plane(const char * s, uintptr_t size);
-    friend String       plane(ksys::AutoPtr<char> & s, uintptr_t size);
+    friend String       plane0(ksys::AutoPtr<char> & s);
+    friend String       plane(ksys::AutoPtr<char> & s,uintptr_t size);
     friend String       operator +(const char * s1, const String & s2);
     friend String       operator +(const wchar_t * s1, const String & s2);
   public:

@@ -67,7 +67,8 @@ class ConfigSection {
     utf8::String text(uintptr_t i,utf8::String * pKey = NULL) const;
 
     ConfigSection & sectionByPath(const utf8::String & path) const;
-    Mutant valueByPath(const utf8::String & path, const Mutant & defValue = Mutant()) const;
+    utf8::String textByPath(const utf8::String & path,const utf8::String & defText = utf8::String()) const;
+    Mutant valueByPath(const utf8::String & path,const Mutant & defValue = Mutant()) const;
 
     ConfigSection & saveSection(uintptr_t codePage,AsyncFile & file,bool recursive,uintptr_t level = 0);
 
@@ -159,6 +160,11 @@ inline Mutant & ConfigSection::valueRef(const utf8::String & key) const
   if( (item = values_.itemOfKey(key)) == NULL )
     values_.add(newObject<Mutant>(),key,&item);
   return *item->object();
+}
+//---------------------------------------------------------------------------
+inline utf8::String ConfigSection::textByPath(const utf8::String & path,const utf8::String & defText) const
+{
+  return valueByPath(path,defText);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

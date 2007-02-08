@@ -250,8 +250,10 @@ class Logger {
     void genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime);
     utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
-    utf8::String resolveAddr(uint32_t ip4);
+    utf8::String resolveAddr(uint32_t ip4,bool numeric = false);
     utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf = 0);
+    utf8::String ip4AddrToIndex(uint32_t ip4);
+    uint32_t indexToIp4Addr(const utf8::String & index);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];

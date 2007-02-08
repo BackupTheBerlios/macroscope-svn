@@ -925,9 +925,15 @@ void Logger::writeHtmlTail(AsyncFile & f)
 #if HAVE_UNAME
   struct utsname un;
   uname(&un);
-  f << "Generated on " << un.nodename << ", by " << macroscope_version.gnu_ << "\n<BR>\n";
-#endif
   f <<
+    "Generated on " << un.nodename << ", by " << macroscope_version.gnu_ << "\n" <<
+#if !PRIVATE_RELEASE
+    "<A HREF=\"http://developer.berlios.de/projects/macroscope/\" wrap>\n"
+    " home page http://developer.berlios.de/projects/macroscope/\n"
+    "</A>\n" <<
+#endif
+    "<BR>\n" <<
+#endif
     "</BODY>\n"
     "</HTML>\n"
   ;
