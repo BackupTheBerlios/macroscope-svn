@@ -76,19 +76,17 @@ static inline bool isMCLinkLocal(uint32_t ip)
 //------------------------------------------------------------------------------
 utf8::String Logger::ip4AddrToIndex(uint32_t ip4)
 {
-//  AutoPtr<char> b;
-//  b.alloc(sizeof(ip4) * 2 + 1);
-  char b[sizeof(ip4) * 2 + 1];
+  AutoPtr<char> b;
+  b.alloc(sizeof(ip4) * 2 + 1);
   uintptr_t shift = sizeof(ip4) * 8 - 4, i;
   for( i = 0; i < sizeof(ip4) * 2; i++, shift -= 4 ) b[i] = "0123456789ABCDEF"[(ip4 >> shift) & 0xF];
   b[i] = '\0';
-  return b;
-//  return utf8::plane0(b);
+  return utf8::plane0(b);
 }
 //------------------------------------------------------------------------------
 uint32_t Logger::indexToIp4Addr(const utf8::String & index)
 {
-  static const uint8_t m[2] = { 'A', '0' };
+  static const uint8_t m[2] = { '0', 'A' };
   uint32_t ip4 = 0, a;
   uintptr_t shift = sizeof(ip4) * 8 - 4, i;
   for( i = 0; i < sizeof(ip4) * 2; i++, shift -= 4 ){
