@@ -925,6 +925,13 @@ void Logger::writeHtmlTail(AsyncFile & f)
 #if HAVE_UNAME
   struct utsname un;
   uname(&un);
+#else
+  struct {
+    utf8::String nodename;
+  } un;
+  ksock::APIAutoInitializer ksockAPIAutoInitializer;
+  nodename = ksock::SockAddr::gethostname();
+#endif
   f <<
     "Generated on " << un.nodename << ", by " << macroscope_version.gnu_ << "\n" <<
 #if !PRIVATE_RELEASE
@@ -933,7 +940,6 @@ void Logger::writeHtmlTail(AsyncFile & f)
     "</A>\n" <<
 #endif
     "<BR>\n" <<
-#endif
     "</BODY>\n"
     "</HTML>\n"
   ;
