@@ -722,10 +722,10 @@ void Logger::parseBPFTLogFile()
   )->prepare();*/
   dnsCacheSize_ = config_->valueByPath(section_ + "dns_cache_size",0);
   AsyncFile flog(config_->valueByPath(section_ + "log_file_name"));
-  statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
+  /*statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
   stFileStatUpd_->prepare()->
     paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
-    paramAsMutant("ST_LAST_OFFSET",0)->execute();
+    paramAsMutant("ST_LAST_OFFSET",0)->execute();*/
   flog.readOnly(true).open();
   database_->start();
   int64_t offset = fetchLogFileLastOffset(flog.fileName());
@@ -799,12 +799,16 @@ void Logger::parseBPFTLogFile()
       }
     }
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL && entriesCount > 0 ){
-      statement2_->text(
-        "INSERT INTO INET_BPFT_STAT ("
-        "  st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-        ") VALUES "
-      );
+      bool executed = true;
       for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
+        if( executed ){
+	   statement2_->text(
+            "INSERT INTO INET_BPFT_STAT ("
+            "  st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+            ") VALUES "
+          );
+	   executed = false;
+	}
         statement2_->text(statement2_->text() + "(");
         if( log32bitOsCompatible ){
 	  statement2_->text(statement2_->text() +
@@ -830,9 +834,13 @@ void Logger::parseBPFTLogFile()
             utf8::int2Str(entries[i].dataSize_)
 	  );
 	}
-        statement2_->text(statement2_->text() + (i > 0 ? ")," : ")"));
+        statement2_->text(statement2_->text() + (i % 64 != 0 ? ")," : ")"));
+	if( i % 64 == 0 ){
+          statement2_->execute();
+	  executed = true;
+	}
       }
-      statement2_->execute();
+      assert( executed );
     }
     else for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
       if( log32bitOsCompatible ){
