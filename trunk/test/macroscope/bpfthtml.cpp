@@ -834,8 +834,8 @@ void Logger::parseBPFTLogFile()
             utf8::int2Str(entries[i].dataSize_)
 	  );
 	}
-        statement2_->text(statement2_->text() + (i % 64 != 0 ? ")," : ")"));
-	if( i % 64 == 0 ){
+        statement2_->text(statement2_->text() + (i % 128 != 0 ? ")," : ")"));
+	if( i % 128 == 0 ){
           statement2_->execute();
 	  executed = true;
 	}
