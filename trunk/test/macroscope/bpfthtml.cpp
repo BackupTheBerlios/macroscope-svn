@@ -99,49 +99,70 @@ uint32_t Logger::indexToIp4Addr(const utf8::String & index)
 //------------------------------------------------------------------------------
 utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
 {
-  uintmax_t q, b, c, t1, t2;
+  uintmax_t q, b, c, t1, t2, t3;
+  char * postfix;
 
   q = traf * 10000u / allTraf;
   b = q / 100u;
   c = q % 100u;
-  if( traf >= 1024u ) t2 = 1024u;
-  else
-  if( traf >= 1024u * 1024u ) t2 = 1024u * 1024u;
-  else
-  if( traf >= 1024u * 1024u * 1024u ) t2 = 1024u * 1024u * 1024u;
-  else
-  if( traf >= uintmax_t(1024u) * 1024u * 1024u * 1024u ) t2 = uintmax_t(1024u) * 1024u * 1024u * 1024u;
+  if( traf >= 1024u * 1024u * 1024u ){
+    t2 = 1024u * 1024u * 1024u;
+    postfix = "G";
+  }
+  else if( traf >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
+    t2 = uintmax_t(1024u) * 1024u * 1024u * 1024u;
+    postfix = "T";
+  }
+  else if( traf >= 1024u * 1024u ){
+    t2 = 1024u * 1024u;
+    postfix = "M";
+  }
+  else if( traf >= 1024u ){
+    t2 = 1024u;
+    postfix = "K";
+  }
+  else {
+    return utf8::String::print(
+      traf > 0 ? "%"PRIuMAX"<FONT FACE=\"Times New Roman\" SIZE=\"0\"> (%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" :  "-",
+      traf,
+      b,
+      c
+    );
+  }
   t1 = traf / t2;
-  t2 = traf % t2;
+  t3 = traf % t2;
+  ldouble mantissa = t3 / (t2 / 10000.);
   return utf8::String::print(
-    traf > 0 ? "%"PRIuMAX"<FONT FACE=\"Times New Roman\" SIZE=\"0\"> (%"PRIuMAX".%02"PRIuMAX"%%)</FONT>\n" :  "-",
-    traf,
+    traf > 0 ? "%"PRIuMAX".%04"PRIuMAX"%s<FONT FACE=\"Times New Roman\" SIZE=\"0\"> (%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" :  "-",
+    t1,
+    uintmax_t(mantissa),
+    postfix,
     b,
     c
   );
 }
 //------------------------------------------------------------------------------
-utf8::String Logger::resolveAddr(uint32_t ip4,bool/* numeric*/)
+utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
 {
   AutoPtr<DNSCacheEntry> addr(newObject<DNSCacheEntry>());
   addr->addr4_.sin_addr.s_addr = ip4;
   addr->addr4_.sin_port = 0;
   addr->addr4_.sin_family = PF_INET;
-  /*if( numeric )*/ return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
+  if( numeric ) return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
   DNSCacheEntry * pAddr = addr;
   dnsCache_.insert(addr,false,false,&pAddr);
   if( pAddr == addr ){
     if( resolveDNSNames_ ){
-      if( statement2_->paramAsMutant("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
+      /*if( statement2_->paramAsMutant("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
         addr.ptr(NULL)->name_ = statement2_->valueAsString(
           (uint32_t) statement2_->valueAsMutant("st_src_ip") == ip4 ? "st_src_name" : "st_dst_name"
         );
       }
-      else {
+      else {*/
         addr.ptr(NULL)->name_ = addr->resolveAddr();
-	statement3_->paramAsMutant("name",pAddr->name_)->paramAsMutant("ip",ip4AddrToIndex(ip4))->execute();
+	/*statement3_->paramAsMutant("name",pAddr->name_)->paramAsMutant("ip",ip4AddrToIndex(ip4))->execute();
 	statement4_->paramAsMutant("name",pAddr->name_)->paramAsMutant("ip",ip4AddrToIndex(ip4))->execute();
-      }
+      }*/
     }
     else {
       addr.ptr(NULL)->name_ = addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
@@ -174,6 +195,9 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
     includeTrailingPathDelimiter(htmlDir_) + utf8::String::print("bpft-traf-by-%04d.html",year.tm_year + 1900)
   );
   f.createIfNotExist(true).open();
+#ifndef NDEBUG
+  f.resize(0);
+#endif
   Mutant m0(config_->valueByPath(section_ + "html_report.file_mode",755));
   Mutant m1(config_->valueByPath(section_ + "html_report.file_user",ksys::getuid()));
   Mutant m2(config_->valueByPath(section_ + "html_report.file_group",ksys::getgid()));
@@ -182,14 +206,178 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
-    if( verbose_ ) fprintf(stderr,"%s\n",(const char *) utf8::tm2Str(beginTime).getOEMString());
-    statement5_->paramAsMutant("BT",beginTime);
-    statement5_->paramAsMutant("ET",endTime);
-    statement5_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
-    statement5_->execute();
-    while( statement5_->fetch() ){
+    statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
+    statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+    statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+    statement_->execute()->fetchAll();
+    if( (uintmax_t) statement_->sum("SUM1") > 0 ){
+      if( verbose_ ) fprintf(stderr,"%s %s\n",
+        (const char *) utf8::tm2Str(beginTime).getOEMString(),
+        (const char *) utf8::tm2Str(endTime).getOEMString()
+      );
+      Vector<Table<Mutant> > table;
+      table.resize(32);
+      statement_->unload(table[0]);
+      uintptr_t dayCount = 0;
+      while( endTime.tm_mday > 0 ){
+        beginTime.tm_mday = endTime.tm_mday;
+        statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
+        statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+        statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+        statement_->execute()->fetchAll();
+        statement_->unload(table[beginTime.tm_mday]);
+        dayCount += (uintmax_t) table[beginTime.tm_mday].sum("SUM1") > 0;
+        endTime.tm_mday--;
+      }
+      endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+      f <<
+        "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
+        "<TR>\n"
+        "  <TH BGCOLOR=\"#00A0FF\" COLSPAN=\"" + utf8::int2Str(dayCount * 2 + 3) + "\" ALIGN=left nowrap>\n" <<
+        "    <A HREF=\"" << utf8::String::print("bpft-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1) << "\">" <<
+             utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900) << "\n"
+        "    </A>\n"
+        "  </TH>\n"
+        "</TR>\n"
+        "<TR>\n"
+        "  <TH HEIGHT=4>"
+        "  </TH>\n"
+        "</TR>\n"
+        "<TR>\n"
+        "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        "      Host\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        "      Data bytes\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        "      Datagram bytes\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+      ;
+      while( endTime.tm_mday > 0 ){
+        if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 )
+	  f <<
+            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+            "      " + utf8::int2Str(endTime.tm_mday) + "\n"
+            "    </FONT>\n"
+            "  </TH>\n"
+	  ;
+        endTime.tm_mday--;
+      }
+      f <<
+        "<TR>\n"
+      ;
+      endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+      for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
+        if( (uintmax_t) table[0](i,"SUM1") < minSignificantThreshold_ ) continue;
+        uint32_t ip4 = indexToIp4Addr(table[0](i,"st_ip"));
+        f <<
+          "<TR>\n"
+  	  "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+          "      <A HREF=\"http://" << resolveAddr(ip4) << "\">\n" <<
+          resolveAddr(ip4) << "\n"
+          "      </A>\n"
+          "    </FONT>\n"
+          "  </TH>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+          formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) << "\n"
+          "    </FONT>\n"
+          "  </TH>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+          formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) << "\n"
+          "    </FONT>\n"
+          "  </TH>\n"
+        ;
+        while( endTime.tm_mday > 0 ){
+          beginTime.tm_mday = endTime.tm_mday;
+          if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 ){
+            statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
+            statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+            statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+            statement6_->paramAsMutant("host",table[0](i,"st_ip"));
+	    uintmax_t sum1 = 0, sum2 = 0;
+            if( statement6_->execute()->fetch() ){
+              statement6_->fetchAll();
+	      sum1 = statement6_->valueAsMutant("SUM1");
+	      sum2 = statement6_->valueAsMutant("SUM2");
+	    }
+            f <<
+  	      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+              formatTraf(sum2,table[endTime.tm_mday].sum("SUM1")) << "\n"
+              "    </FONT>\n"
+              "  </TH>\n"
+	      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+              formatTraf(sum1,table[endTime.tm_mday].sum("SUM1")) << "\n"
+              "    </FONT>\n"
+              "  </TH>\n"
+            ;
+	  }
+          endTime.tm_mday--;
+        }
+        f <<
+          "</TR>\n"
+        ;
+        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+      }
+      f <<
+        "<TR>\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        "      Summary:\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) << "\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) << "\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+      ;
+      while( endTime.tm_mday > 0 ){
+        if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 )
+          f <<
+            "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+            formatTraf(table[endTime.tm_mday].sum("SUM2"),table[0].sum("SUM1")) << "\n"
+            "    </FONT>\n"
+            "  </TH>\n"
+            "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+            formatTraf(table[endTime.tm_mday].sum("SUM1"),table[0].sum("SUM1")) << "\n"
+            "    </FONT>\n"
+            "  </TH>\n"
+          ;
+        endTime.tm_mday--;
+      }
+      f <<
+        "</TR>\n"
+        "</TABLE>\n<BR>\n<BR>\n"
+      ;
+      endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
     }
-    endTime.tm_mon--;
+    if( endTime.tm_mon == 0 ){
+      endTime.tm_mon = 11;
+      endTime.tm_year--;
+    }
+    else {
+      endTime.tm_mon--;
+    }
     endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
     beginTime = beginTime2;
   }
@@ -267,7 +455,8 @@ void Logger::writeBPFTHtmlReport()
     "        INET_BPFT_STAT"
     "      WHERE "
     "        st_start >= :BT AND st_start <= :ET AND"
-    "        st_src_ip = :gateway AND st_dst_ip = :host"
+    "        st_src_ip = :gateway AND"
+    "        st_dst_ip = :host"
     "      GROUP BY st_dst_ip"
     "    UNION ALL"
     "      SELECT"
@@ -276,7 +465,8 @@ void Logger::writeBPFTHtmlReport()
     "        INET_BPFT_STAT"
     "      WHERE "
     "        st_start >= :BT AND st_start <= :ET AND"
-    "        st_dst_ip = :gateway AND st_src_ip = :host"
+    "        st_dst_ip = :gateway AND"
+    "        st_src_ip = :host"
     "      GROUP BY st_src_ip"
     "  ) AS B "
     "  GROUP BY B.st_ip"
@@ -313,16 +503,33 @@ void Logger::writeBPFTHtmlReport()
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
-    if( verbose_ ) fprintf(stderr,"%s %s\n",
-      (const char *) utf8::tm2Str(beginTime).getOEMString(),
-      (const char *) utf8::tm2Str(endTime).getOEMString()
-    );
     statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
     statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
     statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
     statement_->execute()->fetchAll();
-    //87.250.251.11 - yandex.ru
-    f <<
+    if( (uintmax_t) statement_->sum("SUM1") > 0 ){
+      if( verbose_ ) fprintf(stderr,"%s %s\n",
+        (const char *) utf8::tm2Str(beginTime).getOEMString(),
+        (const char *) utf8::tm2Str(endTime).getOEMString()
+      );
+      Vector<Table<Mutant> > table;
+      table.resize(13);
+      statement_->unload(table[0]);
+      uintptr_t monCount = 0;
+      while( endTime.tm_mon >= 0 ){
+        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+        beginTime.tm_mon = endTime.tm_mon;
+        statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
+        statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+        statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+        statement_->execute()->fetchAll();
+        statement_->unload(table[beginTime.tm_mon + 1]);
+        monCount += (uintmax_t) table[beginTime.tm_mon + 1].sum("SUM1") > 0;
+        endTime.tm_mon--;
+      }
+      endTime.tm_mon = 11;
+      endTime.tm_mday = 31;
+      f <<
 /*      <SCRIPT LANGUAGE="JavaScript">
 <!--
 function DNSQuery(name)
@@ -340,213 +547,159 @@ function DNSQuery(name)
 	<FORM>
 	<INPUT TYPE=\"text\" name="rn0" onMouseOver="resolveAddr(this.form.rn0)" value="87.250.251.11">
 	</FORM>*/
-      "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
-      "<TR>\n"
-      "  <TH BGCOLOR=\"#00A0FF\" COLSPAN=27 ALIGN=left nowrap>\n" <<
-      "    <A HREF=\"" << utf8::String::print("bpft-traf-by-%04d.html",endTime.tm_year + 1900) << "\">" <<
-           utf8::int2Str(endTime.tm_year + 1900) << "\n"
-      "    </A>\n"
-      "  </TH>\n"
-      "</TR>\n"
-      "<TR>\n"
-      "  <TH HEIGHT=4>"
-      "  </TH>\n"
-      "</TR>\n"
-      "<TR>\n"
-      "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      Host\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      Data bytes\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      Datagram bytes\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      12\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      11\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      10\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      9\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      8\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      7\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      6\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      5\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      4\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      3\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      2\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "      1\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "</TR>\n"
-    ;
-    Vector<Table<Mutant> > table;
-    table.resize(13);
-    statement_->unload(table[0]);
-    while( endTime.tm_mon >= 0 ){
-      endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-      beginTime.tm_mon = endTime.tm_mon;
-      statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-      statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-      statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
-      statement_->execute()->fetchAll();
-      statement_->unload(table[beginTime.tm_mon + 1]);
-      endTime.tm_mon--;
-    }
-    endTime.tm_mon = 11;
-    endTime.tm_mday = 31;
-    for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-      if( (uintmax_t) table[0](i,"SUM1") < minSignificantThreshold_ ) continue;
-      uint32_t ip4 = indexToIp4Addr(table[0](i,"st_ip"));
-      f <<
+        "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
-	"  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
-	"    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-        "      <A HREF=\"http://" << resolveAddr(ip4) << "\">\n" <<
-        utf8::String(table[0](i,"st_ip")) + " " + resolveAddr(ip4) << "\n"
-        "      </A>\n"
+        "  <TH BGCOLOR=\"#00A0FF\" COLSPAN=\"" + utf8::int2Str(monCount * 2 + 3) + "\" ALIGN=left nowrap>\n" <<
+        "    <A HREF=\"" << utf8::String::print("bpft-traf-by-%04d.html",endTime.tm_year + 1900) << "\">" <<
+             utf8::int2Str(endTime.tm_year + 1900) << "\n"
+        "    </A>\n"
+        "  </TH>\n"
+        "</TR>\n"
+        "<TR>\n"
+        "  <TH HEIGHT=4>"
+        "  </TH>\n"
+        "</TR>\n"
+        "<TR>\n"
+        "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        "      Host\n"
         "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        "      Data bytes\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+        "      Datagram bytes\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+      ;
+      while( endTime.tm_mon >= 0 ){
+        if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 )
+	  f <<
+            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
+            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+            "      " + utf8::int2Str(endTime.tm_mon + 1) + "\n"
+            "    </FONT>\n"
+            "  </TH>\n"
+	  ;
+        endTime.tm_mon--;
+      }
+      endTime.tm_mon = 11;
+      for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
+        if( (uintmax_t) table[0](i,"SUM1") < minSignificantThreshold_ ) continue;
+        uint32_t ip4 = indexToIp4Addr(table[0](i,"st_ip"));
+        f <<
+          "<TR>\n"
+  	  "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+          "      <A HREF=\"http://" << resolveAddr(ip4) << "\">\n" <<
+          resolveAddr(ip4) << "\n"
+          "      </A>\n"
+          "    </FONT>\n"
 //        "    <OBJECT classid=\"java:DNSQuery.class\" type=\"application/x-java-applet\" alt=\"" <<
 //	resolveAddr(table(i,"st_ip"),true) <<
 //	"\" height=\"20\" width=\"150\">\n"
 //        "      <PARAM name=\"name\" value=\"" << resolveAddr(table(i,"st_ip"),true) << "\">\n"
 //        "    </OBJECT>\n"
-        "  </TH>\n"
-	"  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-	"    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        table[0](i,"SUM2") << "\n"
+          "  </TH>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+          formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) << "\n"
+          "    </FONT>\n"
+          "  </TH>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+          formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) << "\n"
+          "    </FONT>\n"
+          "  </TH>\n"
+        ;
+        while( endTime.tm_mon >= 0 ){
+          endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          beginTime.tm_mon = endTime.tm_mon;
+          if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 ){
+            statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
+            statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+            statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+            statement6_->paramAsMutant("host",table[0](i,"st_ip"));
+	    uintmax_t sum1 = 0, sum2 = 0;
+            if( statement6_->execute()->fetch() ){
+              statement6_->fetchAll();
+	      sum1 = statement6_->valueAsMutant("SUM1");
+	      sum2 = statement6_->valueAsMutant("SUM2");
+	    }
+            f <<
+  	      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+              formatTraf(sum2,table[endTime.tm_mon + 1].sum("SUM1")) << "\n"
+              "    </FONT>\n"
+              "  </TH>\n"
+	      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+              formatTraf(sum1,table[endTime.tm_mon + 1].sum("SUM1")) << "\n"
+              "    </FONT>\n"
+              "  </TH>\n"
+            ;
+	  }
+          endTime.tm_mon--;
+        }
+        f <<
+          "</TR>\n"
+        ;
+        endTime.tm_mon = 11;
+        endTime.tm_mday = 31;
+      }
+      f <<
+        "<TR>\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        "      Summary:\n"
         "    </FONT>\n"
         "  </TH>\n"
-	"  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-	"    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        table[0](i,"SUM1") << "\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) << "\n"
+        "    </FONT>\n"
+        "  </TH>\n"
+        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+        formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) << "\n"
         "    </FONT>\n"
         "  </TH>\n"
       ;
       while( endTime.tm_mon >= 0 ){
-        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-        beginTime.tm_mon = endTime.tm_mon;
-        statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-        statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-        statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
-        statement6_->paramAsMutant("host",table[0](i,"st_ip"));
-        statement6_->execute()->fetchAll();
-        f <<
-	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-	  (statement6_->rowCount() > 0 ?
-            statement6_->valueAsString("SUM2") : utf8::String()) << "\n"
-          "    </FONT>\n"
-          "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-	  (statement6_->rowCount() > 0 ?
-            statement6_->valueAsString("SUM1") : utf8::String()) << "\n"
-          "    </FONT>\n"
-          "  </TH>\n"
-        ;
+        if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 )
+          f <<
+            "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+            formatTraf(table[endTime.tm_mon + 1].sum("SUM2"),table[0].sum("SUM1")) << "\n"
+            "    </FONT>\n"
+            "  </TH>\n"
+            "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
+            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
+            formatTraf(table[endTime.tm_mon + 1].sum("SUM1"),table[0].sum("SUM1")) << "\n"
+            "    </FONT>\n"
+            "  </TH>\n"
+          ;
         endTime.tm_mon--;
       }
       f <<
         "</TR>\n"
+        "</TABLE>\n<BR>\n<BR>\n"
       ;
       endTime.tm_mon = 11;
       endTime.tm_mday = 31;
+      writeBPFTMonthHtmlReport(endTime);
     }
-    f <<
-      "<TR>\n"
-      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-      "      Summary:\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-      table[0].sum("SUM2") << "\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-      "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-      table[0].sum("SUM1") << "\n"
-      "    </FONT>\n"
-      "  </TH>\n"
-    ;
-    while( endTime.tm_mon >= 0 ){
-      f <<
-        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        table[endTime.tm_mon + 1].sum("SUM2") << "\n"
-        "    </FONT>\n"
-        "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"#00E0FF\" nowrap>\n"
-        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
-        table[endTime.tm_mon + 1].sum("SUM1") << "\n"
-        "    </FONT>\n"
-        "  </TH>\n"
-      ;
-      endTime.tm_mon--;
-    }
-    f <<
-      "</TR>\n"
-    ;
-    endTime.tm_mon = 11;
-    endTime.tm_mday = 31;
-    f << "</TABLE>\n<BR>\n<BR>\n";
-//    writeBPFTMonthHtmlReport(endTime);
     endTime.tm_year--;
     beginTime = beginTime2;
   }	  
   database_->commit();
+  f <<
+    "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n"
+  ;
   writeHtmlTail(f);
   f.resize(f.tell());
 }

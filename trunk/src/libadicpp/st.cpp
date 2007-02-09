@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,48 @@ namespace adicpp {
 #if defined(_MSC_VER) // for avoid linker warning
 int __ST_CPP_AVOID_MSC_VER_LINKER_WARN__;
 #endif
-  //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
+ksys::Mutant Statement::sum(uintptr_t fieldNum)
+{
+  intptr_t srow = rowIndex(), row;
+  ksys::Mutant summa = 0;
+  if( srow >= 0 ){
+    for( row = rowCount() - 1; row >= 0; row-- ){
+      selectRow(row);
+      if( summa.type() == ksys::mtFloat || fieldType(fieldNum) == ftFloat || fieldType(fieldNum) == ftDouble )
+#if HAVE_LONG_DOUBLE
+        summa = (long double) summa + (long double) valueAsMutant(fieldNum);
+#else
+        summa = (double) summa + (double) valueAsMutant(fieldNum);
+#endif
+      else
+        summa = intmax_t(summa) + intmax_t(valueAsMutant(fieldNum));
+    }
+    selectRow(srow);
+  }
+  return summa;
+}
+//---------------------------------------------------------------------------
+ksys::Mutant Statement::sum(const utf8::String & fieldName)
+{
+  intptr_t srow = rowIndex(), row, fieldNum = fieldIndex(fieldName,false);
+  ksys::Mutant summa = 0;
+  if( srow >= 0 ){
+    for( row = rowCount() - 1; row >= 0; row-- ){
+      selectRow(row);
+      if( summa.type() == ksys::mtFloat || fieldType(fieldNum) == ftFloat || fieldType(fieldNum) == ftDouble )
+#if HAVE_LONG_DOUBLE
+        summa = (long double) summa + (long double) valueAsMutant(fieldNum);
+#else
+        summa = (double) summa + (double) valueAsMutant(fieldNum);
+#endif
+      else
+        summa = intmax_t(summa) + intmax_t(valueAsMutant(fieldNum));
+    }
+    selectRow(srow);
+  }
+  return summa;
+}
+//---------------------------------------------------------------------------
 } // namespace adicpp
 //---------------------------------------------------------------------------

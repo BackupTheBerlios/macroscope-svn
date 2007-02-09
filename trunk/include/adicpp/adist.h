@@ -83,7 +83,6 @@ class Statement : virtual public ksys::Object {
     virtual Statement *                 selectLastRow() = 0;
     virtual uintptr_t                   rowCount() = 0;
     virtual intptr_t                    rowIndex() = 0;
-    virtual uintptr_t                   fieldCount() = 0;
     virtual ksys::Mutant                valueAsMutant(uintptr_t i) = 0;
     virtual ksys::Mutant                valueAsMutant(const utf8::String & name) = 0;
     virtual utf8::String                valueAsString(uintptr_t i) = 0;
@@ -92,11 +91,16 @@ class Statement : virtual public ksys::Object {
     virtual bool                        valueIsNull(uintptr_t i) = 0;
     virtual bool                        valueIsNull(const utf8::String & name) = 0;
 
+    virtual uintptr_t                   fieldCount() = 0;
     virtual FieldType                   fieldType(uintptr_t i) = 0;
     virtual FieldType                   fieldType(const utf8::String & name) = 0;
+    virtual intptr_t                    fieldIndex(const utf8::String & name,bool noThrow = true) = 0;
     virtual utf8::String                fieldName(uintptr_t i) = 0;
 
+    virtual ksys::Mutant sum(uintptr_t fieldNum);
+    virtual ksys::Mutant sum(const utf8::String & fieldName);
     template <class Table> Statement & unload(Table & table);
+    
   protected:
   private:
 };
@@ -163,7 +167,6 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
     FirebirdStatement * selectLastRow();
     uintptr_t           rowCount();
     intptr_t            rowIndex();
-    uintptr_t           fieldCount();
     ksys::Mutant        valueAsMutant(uintptr_t i);
     ksys::Mutant        valueAsMutant(const utf8::String & name);
     utf8::String        valueAsString(uintptr_t i);
@@ -172,8 +175,10 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
     bool                valueIsNull(uintptr_t i);
     bool                valueIsNull(const utf8::String & name);
 
+    uintptr_t           fieldCount();
     FieldType           fieldType(uintptr_t i);
     FieldType           fieldType(const utf8::String & name);
+    intptr_t            fieldIndex(const utf8::String & name,bool noThrow = true);
     utf8::String        fieldName(uintptr_t i);
   protected:
   private:
@@ -220,7 +225,6 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
     MYSQLStatement *  selectLastRow();
     uintptr_t         rowCount();
     intptr_t          rowIndex();
-    uintptr_t         fieldCount();
     ksys::Mutant      valueAsMutant(uintptr_t i);
     ksys::Mutant      valueAsMutant(const utf8::String & name);
     utf8::String      valueAsString(uintptr_t i);
@@ -229,8 +233,10 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
     bool              valueIsNull(uintptr_t i);
     bool              valueIsNull(const utf8::String & name);
 
+    uintptr_t         fieldCount();
     FieldType         fieldType(uintptr_t i);
     FieldType         fieldType(const utf8::String & name);
+    intptr_t          fieldIndex(const utf8::String & name,bool noThrow = true);
     utf8::String      fieldName(uintptr_t i);
   protected:
   private:

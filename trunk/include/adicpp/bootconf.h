@@ -163,10 +163,6 @@ typedef short wchar_t;
 #define SIZEOF_LONG_INT 0
 #endif
 
-#ifndef SIZEOF_LONG_DOUBLE
-#define SIZEOF_LONG_DOUBLE 0
-#endif
-
 #ifndef SIZEOF_INTPTR_T
 #define SIZEOF_INTPTR_T 0
 #endif
@@ -327,6 +323,9 @@ typedef int64_t ptrdiff_t;
 
 #if SIZEOF_LONG_DOUBLE > 0 && SIZEOF_LONG_DOUBLE > SIZEOF_DOUBLE
 #define HAVE_LONG_DOUBLE 1
+typedef long double ldouble;
+#else
+typedef double ldouble;
 #endif
 
 #ifndef __XSTRING
@@ -524,6 +523,22 @@ typedef int32_t gid_t;
 #define PRIX64          "I64X"    /* uint64_t */
 #define PRIXMAX         "I64X"    /* uintmax_t */
 #define PRIXPTR         "I64X"    /* uintptr_t */
+#endif
+
+#ifndef PRF_FLT
+#define PRF_FLT "f"
+#endif
+
+#ifndef PRF_DBL
+#define PRF_DBL "lf"
+#endif
+
+#ifndef PRF_LDBL
+#if HAVE_LONG_DOUBLE
+#define PRF_LDBL "Lf"
+#else
+#define PRF_LDBL "lf"
+#endif
 #endif
 
 #ifndef __GNUG__

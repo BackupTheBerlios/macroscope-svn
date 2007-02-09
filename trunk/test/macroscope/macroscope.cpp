@@ -42,7 +42,6 @@ Logger::Logger() :
   prefix_("macroscope.unix."),
 #endif
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
-  ellapsed_(getlocaltimeofday()),
   trafCacheAutoDrop_(trafCache_),
   cacheSize_(0),
   dnsCacheAutoDrop_(dnsCache_),
@@ -633,6 +632,7 @@ void Logger::main()
           !e->searchCode(ER_BAD_TABLE_ERROR) ) throw;
     }
   }
+  ellapsed_ = getlocaltimeofday();
   section_ = prefix_ + "html_report.";
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
     Mutant m0(config_->valueByPath(prefix_ + "squid.log_file_name"));
@@ -646,14 +646,14 @@ void Logger::main()
     Mutant m2(config_->valueByPath("macroscope.sendmail.start_year"));
     parseSendmailLogFile(m0,m1,m2);
   }
+  writeHtmlYearOutput();
+  ellapsed_ = getlocaltimeofday();
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
       section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name() + ".";
       parseBPFTLogFile();
     }
   }
-  section_ = prefix_ + "html_report.";
-  writeHtmlYearOutput();
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
     section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name() + ".";
     writeBPFTHtmlReport();

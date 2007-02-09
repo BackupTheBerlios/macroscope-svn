@@ -282,8 +282,7 @@ DSQLValues & DSQLValues::fetchAll()
 ksys::Mutant DSQLValues::asMutant(uintptr_t i)
 {
   DSQLRow & row = rows_[checkRowIndex(row_)];
-  if( row.index_[i = checkValueIndex(i)] < 0 )
-    return ksys::Mutant();
+  if( row.index_[i = checkValueIndex(i)] < 0 ) return ksys::Mutant();
   union {
     char *      pc;
     int16_t *   ps;
@@ -293,10 +292,19 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
     float *     pf;
     double *    pd;
   };
+  union {
+#if HAVE_LONG_DOUBLE
+    long
+#endif
+    double v;
+    intmax_t a;
+  };
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
   switch( fields_[i].type ){
     case MYSQL_TYPE_DECIMAL     :
     case MYSQL_TYPE_NEWDECIMAL  :
+      if( utf8::tryStr2Int(utf8::plane(pc),a) ) return a;
+      if( utf8::tryStr2Float(utf8::plane(pc),v) ) return v;
       return ksys::Mutant(pc,0);
     case MYSQL_TYPE_TINY        :
       return *pc;
@@ -339,7 +347,6 @@ l1:   return ksys::time2tm(*pll);
     default :
       ;
   }
-//  fprintf(stderr,"%d\n",fields_[i].type);
   newObjectV1C2<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }

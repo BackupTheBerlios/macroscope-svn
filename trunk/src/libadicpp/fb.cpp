@@ -294,11 +294,6 @@ intptr_t FirebirdStatement::rowIndex()
   return static_cast<fbcpp::DSQLStatement *>(this)->values().rowIndex();
 }
 //---------------------------------------------------------------------------
-uintptr_t FirebirdStatement::fieldCount()
-{
-  return static_cast<fbcpp::DSQLStatement *>(this)->values().count();
-}
-//---------------------------------------------------------------------------
 ksys::Mutant FirebirdStatement::valueAsMutant(uintptr_t i)
 {
   return static_cast<fbcpp::DSQLStatement *>(this)->valueAsMutant(i);
@@ -361,6 +356,11 @@ FieldType FirebirdStatement::fieldType(uintptr_t i)
   return ftUnknown;
 }
 //---------------------------------------------------------------------------
+uintptr_t FirebirdStatement::fieldCount()
+{
+  return static_cast<fbcpp::DSQLStatement *>(this)->values().count();
+}
+//---------------------------------------------------------------------------
 FieldType FirebirdStatement::fieldType(const utf8::String & name)
 {
   return fieldType(static_cast<fbcpp::DSQLStatement *>(this)->values().indexOfName(name));
@@ -369,6 +369,14 @@ FieldType FirebirdStatement::fieldType(const utf8::String & name)
 utf8::String FirebirdStatement::fieldName(uintptr_t i)
 {
   return static_cast<fbcpp::DSQLStatement *>(this)->values().nameOfIndex(i);
+}
+//---------------------------------------------------------------------------
+intptr_t FirebirdStatement::fieldIndex(const utf8::String & name,bool noThrow)
+{
+  intptr_t i = static_cast<fbcpp::DSQLStatement *>(this)->values().indexOfName(name);
+  if( i < 0 && !noThrow )
+    newObjectV1C2<ksys::Exception>(EINVAL,"invalid field name: " + name + ", " + __PRETTY_FUNCTION__)->throwSP();
+  return i;
 }
 //---------------------------------------------------------------------------
 } // namespace adicpp

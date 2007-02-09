@@ -294,11 +294,6 @@ intptr_t MYSQLStatement::rowIndex()
   return static_cast<mycpp::DSQLStatement *>(this)->values().rowIndex();
 }
 //---------------------------------------------------------------------------
-uintptr_t MYSQLStatement::fieldCount()
-{
-  return static_cast<mycpp::DSQLStatement *>(this)->values().count();
-}
-//---------------------------------------------------------------------------
 ksys::Mutant MYSQLStatement::valueAsMutant(uintptr_t i)
 {
   return static_cast<mycpp::DSQLStatement *>(this)->valueAsMutant(i);
@@ -379,6 +374,11 @@ FieldType MYSQLStatement::fieldType(uintptr_t i)
   return ftUnknown;
 }
 //---------------------------------------------------------------------------
+uintptr_t MYSQLStatement::fieldCount()
+{
+  return static_cast<mycpp::DSQLStatement *>(this)->values().count();
+}
+//---------------------------------------------------------------------------
 FieldType MYSQLStatement::fieldType(const utf8::String & name)
 {
   return fieldType(static_cast<mycpp::DSQLStatement *>(this)->values().indexOfName(name));
@@ -387,6 +387,14 @@ FieldType MYSQLStatement::fieldType(const utf8::String & name)
 utf8::String MYSQLStatement::fieldName(uintptr_t i)
 {
   return static_cast<mycpp::DSQLStatement *>(this)->values().nameOfIndex(i);
+}
+//---------------------------------------------------------------------------
+intptr_t MYSQLStatement::fieldIndex(const utf8::String & name,bool noThrow)
+{
+  intptr_t i = static_cast<mycpp::DSQLStatement *>(this)->values().indexOfName(name);
+  if( i < 0 && !noThrow )
+    newObjectV1C2<ksys::Exception>(EINVAL,"invalid field name: " + name + ", " + __PRETTY_FUNCTION__)->throwSP();
+  return i;
 }
 //---------------------------------------------------------------------------
 } // namespace adicpp
