@@ -29,8 +29,9 @@
 //---------------------------------------------------------------------------
 namespace mycpp {
 //---------------------------------------------------------------------------
-utf8::String  time2Str(int64_t t);
-int64_t       str2Time(const char * s);
+utf8::String tm2Str(const struct tm & tv);
+utf8::String time2Str(int64_t t);
+int64_t str2Time(const char * s);
 inline int64_t str2Time(const utf8::String & s)
 {
   return str2Time(s.c_str());

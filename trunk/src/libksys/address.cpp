@@ -192,14 +192,13 @@ SockAddr & SockAddr::resolveName(const utf8::String & addr,const ksys::Mutant & 
       addr4_.sin_family = PF_INET;
       char  b[4 + 4 + 4 + 3 + 1];
       sprintf(b, "%u.%u.%u.%u", a1, a2, a3, a4);
-      api.open();
+      ksock::APIAutoInitializer ksockAPIAutoInitializer;
       addr4_.sin_port = api.htons((u_short) port);
 #if defined(__WIN32__) || defined(__WIN64__)
       addr4_.sin_addr.S_un.S_addr = api.inet_addr(b);
 #else
       addr4_.sin_addr.s_addr = api.inet_addr(b);
 #endif
-      api.close();
     }
     else {
       utf8::String::Iterator  pi(addr.strstr(":"));
@@ -209,15 +208,8 @@ SockAddr & SockAddr::resolveName(const utf8::String & addr,const ksys::Mutant & 
       if( port.trim().strlen() == 0 ) port = defPort;
       host = host.trim();
       port = port.trim();
-      api.open();
-      try {
-        internalGetAddrInfo(host,port,defPort,int(ai_flag));
-      }
-      catch( ... ){
-        api.close();
-        throw;
-      }
-      api.close();
+      ksock::APIAutoInitializer ksockAPIAutoInitializer;
+      internalGetAddrInfo(host,port,defPort,int(ai_flag));
     }
   }
   return *this;
@@ -257,7 +249,7 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
   intmax_t serv;
   int32_t err = 0;
   utf8::String s;
-  api.open();
+  ksock::APIAutoInitializer ksockAPIAutoInitializer;
 #if defined(__WIN32__) || defined(__WIN64__)
   union {
     char hostName[NI_MAXHOST];
@@ -343,7 +335,6 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
   if( err != 0 ) err = errNo();
 //  struct hostent * pent = api.gethostbyaddr((const char *) &addr4_,(int) sockAddrSize(),addr4_.sin_family);
 //  if( pent != NULL ) s = pent->h_name; else err = errNo();
-  api.close();
   if( err != 0 )
     newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   return s;
@@ -399,98 +390,91 @@ utf8::String SockAddr::gethostname()
   SockAddr addr;
   int32_t err = 0;
   utf8::String s;
-  api.open();
-  try {
+  APIAutoInitializer ksockAPIAutoInitializer;
 #if defined(__WIN32__) || defined(__WIN64__)
-    ksys::AutoPtr<IpInfo> addresses;
-    getAdaptersAddresses(addresses);
-    if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
-      IP_ADAPTER_ADDRESSES * pAddress = &addresses->addresses_;
-      while( pAddress != NULL ){
+  ksys::AutoPtr<IpInfo> addresses;
+  getAdaptersAddresses(addresses);
+  if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
+    IP_ADAPTER_ADDRESSES * pAddress = &addresses->addresses_;
+    while( pAddress != NULL ){
 // exclude loopback interface
-        if( pAddress->IfType == MIB_IF_TYPE_LOOPBACK ) continue;
-        if( pAddress->PhysicalAddressLength == 0 ) continue;
-        PIP_ADAPTER_UNICAST_ADDRESS unicast = pAddress->FirstUnicastAddress;
-        while( unicast != NULL ){
-          if( unicast->Flags & (IP_ADAPTER_ADDRESS_DNS_ELIGIBLE | IP_ADAPTER_ADDRESS_PRIMARY) ){
-            addr.clear();
+      if( pAddress->IfType == MIB_IF_TYPE_LOOPBACK ) continue;
+      if( pAddress->PhysicalAddressLength == 0 ) continue;
+      PIP_ADAPTER_UNICAST_ADDRESS unicast = pAddress->FirstUnicastAddress;
+      while( unicast != NULL ){
+        if( unicast->Flags & (IP_ADAPTER_ADDRESS_DNS_ELIGIBLE | IP_ADAPTER_ADDRESS_PRIMARY) ){
+          addr.clear();
             //ksys::reverseByteArray(
-            memcpy(
-              &addr.addr4_,
-              unicast->Address.lpSockaddr,
-              unicast->Address.iSockaddrLength
-            );
+          memcpy(
+            &addr.addr4_,
+            unicast->Address.lpSockaddr,
+            unicast->Address.iSockaddrLength
+          );
             //addr.addr4_.sin_family = unicast->Address.lpSockaddr->sa_family;
-            try {
-              err = 0;
-              s = addr.resolveAddr();
-            }
-            catch( ksys::ExceptionSP & e ){
-              err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
-            }
-            if( err == 0 ) break;
-          }
-          unicast = unicast->Next;
-        }
-        if( err == 0 ) break;
-        pAddress = pAddress->Next;
-      }
-    }
-    else {
-      IP_ADAPTER_INFO * pAddress = &addresses->infos_;
-      while( pAddress != NULL ){
-        if( pAddress->Type == MIB_IF_TYPE_LOOPBACK ) continue;
-        PIP_ADDR_STRING list = &pAddress->IpAddressList;
-        while( list != NULL ){
           try {
             err = 0;
-            s = addr.resolveName(list->IpAddress.String).resolveAddr();
+            s = addr.resolveAddr();
           }
           catch( ksys::ExceptionSP & e ){
             err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
           }
           if( err == 0 ) break;
-          list = list->Next;
+        }
+        unicast = unicast->Next;
+      }
+      if( err == 0 ) break;
+      pAddress = pAddress->Next;
+    }
+  }
+  else {
+    IP_ADAPTER_INFO * pAddress = &addresses->infos_;
+    while( pAddress != NULL ){
+      if( pAddress->Type == MIB_IF_TYPE_LOOPBACK ) continue;
+      PIP_ADDR_STRING list = &pAddress->IpAddressList;
+      while( list != NULL ){
+        try {
+          err = 0;
+          s = addr.resolveName(list->IpAddress.String).resolveAddr();
+        }
+        catch( ksys::ExceptionSP & e ){
+          err = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
         }
         if( err == 0 ) break;
-        pAddress = pAddress->Next;
+        list = list->Next;
       }
+      if( err == 0 ) break;
+      pAddress = pAddress->Next;
     }
+  }
 #endif
-    if( s.strlen() == 0 ){
-      while( api.gethostname(s.c_str(),(socklen_t) s.size()) != 0 ){
+  if( s.strlen() == 0 ){
+    while( api.gethostname(s.c_str(),(socklen_t) s.size()) != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-        if( (err = errNo()) != WSAEFAULT ) break;
+      if( (err = errNo()) != WSAEFAULT ) break;
 #else
-        if( (err = errNo()) != EFAULT ) break;
+      if( (err = errNo()) != EFAULT ) break;
 #endif
-        s.resize((s.size() << 1) + (s.size() == 0));
-        err = 0;
-      }
-      s.resize(s.size());
-#if !defined(__WIN32__) && !defined(__WIN64__)
-      addr.internalGetAddrInfo(s,utf8::String(),0,0);
-      char hostName[NI_MAXHOST];
-      char servInfo[NI_MAXSERV];
-      err = api.getnameinfo(
-        (const sockaddr *) &addr.addr4_,
-        (socklen_t) addr.sockAddrSize(),
-        hostName,
-        sizeof(hostName),
-        servInfo,
-        sizeof(servInfo),
-        NI_NUMERICSERV
-      );
-      if( err == 0 ) s = hostName;
-      if( err != 0 ) err = errNo();
-#endif
+      s.resize((s.size() << 1) + (s.size() == 0));
+      err = 0;
     }
+    s.resize(s.size());
+#if !defined(__WIN32__) && !defined(__WIN64__)
+    addr.internalGetAddrInfo(s,utf8::String(),0,0);
+    char hostName[NI_MAXHOST];
+    char servInfo[NI_MAXSERV];
+    err = api.getnameinfo(
+      (const sockaddr *) &addr.addr4_,
+      (socklen_t) addr.sockAddrSize(),
+      hostName,
+      sizeof(hostName),
+      servInfo,
+      sizeof(servInfo),
+      NI_NUMERICSERV
+    );
+    if( err == 0 ) s = hostName;
+    if( err != 0 ) err = errNo();
+#endif
   }
-  catch( ... ){
-    api.close();
-    throw;
-  }
-  api.close();
   if( err != 0 )
     newObjectV1C2<EAsyncSocket>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return s;

@@ -28,9 +28,17 @@
 //---------------------------------------------------------------------------
 namespace mycpp {
 //---------------------------------------------------------------------------
+utf8::String tm2Str(const struct tm & tv)
+{
+  utf8::String s;
+  s.resize(19);
+  sprintf(s.c_str(),"%04d-%02d-%02d %02d:%02d:%02d", tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday, tv.tm_hour, tv.tm_min, tv.tm_sec);
+  return s;
+}
+//---------------------------------------------------------------------------
 utf8::String time2Str(int64_t t)
 {
-  struct tm     tv  = ksys::time2tm(t);
+  struct tm tv = ksys::time2tm(t);
   utf8::String  s;
   s.resize(19);
   sprintf(s.c_str(), "%04d-%02d-%02d %02d:%02d:%02d", tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday, tv.tm_hour, tv.tm_min, tv.tm_sec);

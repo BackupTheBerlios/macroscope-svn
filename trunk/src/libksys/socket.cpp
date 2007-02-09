@@ -70,23 +70,23 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
   int32_t err;
   if( socket_ == INVALID_SOCKET ){
     api.open();
-    try {
 #if defined(__WIN32__) || defined(__WIN64__)
 //  WSAPROTOCOL_INFO protocolInfo;
 //  memset(&protocolInfo,0,sizeof(protocolInfo));
 //  protocolInfo.dwMessageSize = 1;
-      if( ksys::isWin9x() )
-        socket_ = api.WSASocketA(domain,type,protocol,NULL,0,WSA_FLAG_OVERLAPPED);
-      else
-        socket_ = api.WSASocketW(domain,type,protocol,NULL,0,WSA_FLAG_OVERLAPPED);
+    if( ksys::isWin9x() )
+      socket_ = api.WSASocketA(domain,type,protocol,NULL,0,WSA_FLAG_OVERLAPPED);
+    else
+      socket_ = api.WSASocketW(domain,type,protocol,NULL,0,WSA_FLAG_OVERLAPPED);
 #else
-      socket_ = api.socket(domain,type,protocol);
+    socket_ = api.socket(domain,type,protocol);
 #endif
-      if( socket_ == INVALID_SOCKET ){
-        err = errNo();
-        api.close();
-        newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
+    if( socket_ == INVALID_SOCKET ){
+      err = errNo();
+      api.close();
+      newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    try {
 #if !defined(__WIN32__) && !defined(__WIN64__)
       int flags = fcntl(socket_,F_GETFL,0);
       if( flags == -1 || fcntl(socket_,F_SETFL,flags | O_NONBLOCK) == -1 ){

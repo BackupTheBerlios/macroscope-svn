@@ -722,10 +722,10 @@ void Logger::parseBPFTLogFile()
   )->prepare();*/
   dnsCacheSize_ = config_->valueByPath(section_ + "dns_cache_size",0);
   AsyncFile flog(config_->valueByPath(section_ + "log_file_name"));
-  /*statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
+  statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
   stFileStatUpd_->prepare()->
     paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
-    paramAsMutant("ST_LAST_OFFSET",0)->execute();*/
+    paramAsMutant("ST_LAST_OFFSET",0)->execute();
   flog.readOnly(true).open();
   database_->start();
   int64_t offset = fetchLogFileLastOffset(flog.fileName());
@@ -798,7 +798,43 @@ void Logger::parseBPFTLogFile()
         }
       }
     }
-    for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
+    if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL && entriesCount > 0 ){
+      statement2_->text(
+        "INSERT INTO INET_BPFT_STAT ("
+        "  st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+        ") VALUES "
+      );
+      for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
+        statement2_->text(statement2_->text() + "(");
+        if( log32bitOsCompatible ){
+	  statement2_->text(statement2_->text() +
+            "'" + mycpp::tm2Str(start) + "'," +
+	    "'" + ip4AddrToIndex(entries32[i].srcIp_.s_addr) + "'," +
+            "'" + ip4AddrToIndex(entries32[i].dstIp_.s_addr) +"'," +
+            utf8::int2Str(entries32[i].ipProtocol_) + "," +
+            utf8::int2Str(entries32[i].srcPort_) + "," +
+            utf8::int2Str(entries32[i].dstPort_) + "," +
+            utf8::int2Str(entries32[i].dgramSize_) + "," +
+            utf8::int2Str(entries32[i].dataSize_)
+	  );
+        }
+        else {
+	  statement2_->text(statement2_->text() +
+            "'" + mycpp::tm2Str(start) + "'," +
+	    "'" + ip4AddrToIndex(entries[i].srcIp_.s_addr) + "'," +
+            "'" + ip4AddrToIndex(entries[i].dstIp_.s_addr) +"'," +
+            utf8::int2Str(entries[i].ipProtocol_) + "," +
+            utf8::int2Str(entries[i].srcPort_) + "," +
+            utf8::int2Str(entries[i].dstPort_) + "," +
+            utf8::int2Str(entries[i].dgramSize_) + "," +
+            utf8::int2Str(entries[i].dataSize_)
+	  );
+	}
+        statement2_->text(statement2_->text() + (i > 0 ? ")," : ")"));
+      }
+      statement2_->execute();
+    }
+    else for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
       if( log32bitOsCompatible ){
 //        if( isMulticastAddress(ksock::api.ntohl(entries32[i].srcIp_.s_addr)) || isMulticastAddress(ksock::api.ntohl(entries32[i].dstIp_.s_addr)) ) continue;
 //        if( isMCGlobal(ksock::api.ntohl(entries32[i].srcIp_.s_addr)) || isMCGlobal(ksock::api.ntohl(entries32[i].dstIp_.s_addr)) ) continue;
@@ -833,6 +869,7 @@ void Logger::parseBPFTLogFile()
       statement_->execute();
       printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
       lineNo++;
+      entriesCount = 0;
     }
     printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
     updateLogFileLastOffset(flog.fileName(),flog.tell());

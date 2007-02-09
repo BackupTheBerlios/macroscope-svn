@@ -930,7 +930,7 @@ void Logger::writeHtmlTail(AsyncFile & f)
     utf8::String nodename;
   } un;
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
-  nodename = ksock::SockAddr::gethostname();
+  un.nodename = ksock::SockAddr::gethostname();
 #endif
   f <<
     "Generated on " << un.nodename << ", by " << macroscope_version.gnu_ << "\n" <<
