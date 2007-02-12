@@ -702,6 +702,7 @@ function DNSQuery(name)
   ;
   writeHtmlTail(f);
   f.resize(f.tell());
+  dnsCache_.drop();
 }
 //------------------------------------------------------------------------------
 void Logger::parseBPFTLogFile()

@@ -846,6 +846,7 @@ void Logger::writeHtmlYearOutput()
   writeHtmlTail(f);
   f.resize(f.tell());
   if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
+  trafCache_.drop();
 }
 //------------------------------------------------------------------------------
 uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)
@@ -933,13 +934,14 @@ void Logger::writeHtmlTail(AsyncFile & f)
   un.nodename = ksock::SockAddr::gethostname();
 #endif
   f <<
-    "Generated on " << un.nodename << ", by " << macroscope_version.gnu_ << "\n" <<
+    utf8::String("Generated on ") + un.nodename + ", by " + macroscope_version.gnu_ + "\n"
 #if !PRIVATE_RELEASE
     "<A HREF=\"http://developer.berlios.de/projects/macroscope/\" wrap>\n"
     " home page http://developer.berlios.de/projects/macroscope/\n"
-    "</A>\n" <<
+    "</A>\n"
 #endif
-    "<BR>\n" <<
+    "<BR>\n" +
+    utf8::time2Str(getlocaltimeofday()) +
     "</BODY>\n"
     "</HTML>\n"
   ;

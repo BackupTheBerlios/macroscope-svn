@@ -111,12 +111,12 @@ FILE_PATTERNS          = *.c \
                          *.dox \
                          *.py
 RECURSIVE              = YES
-EXCLUDE                = src \
-                         test \
-                         include \
-                         examples \
-                         bugs \
-                         utils
+EXCLUDE                = ../src \
+                         ../test \
+                         ../include \
+                         ../examples \
+                         ../bugs \
+                         ../utils
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *pdb* \
                          *dbg* \
