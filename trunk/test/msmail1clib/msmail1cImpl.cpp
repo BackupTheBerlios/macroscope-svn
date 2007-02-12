@@ -1869,6 +1869,8 @@ Cmsmail1c::msmail1c::LockedFile * Cmsmail1c::msmail1c::addFile(const utf8::Strin
   return &p;
 }
 //---------------------------------------------------------------------------
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//---------------------------------------------------------------------------
 STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG maxSleepTime,OUT LONG * pLastError)
 {
   ULONG tm;
@@ -2062,4 +2064,6 @@ err:
   CloseHandle(handle);
   return S_OK;
 }
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
