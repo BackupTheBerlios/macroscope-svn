@@ -159,13 +159,13 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
         );
       }
       else {*/
-        addr.ptr(NULL)->name_ = addr->resolveAddr();
+        addr.ptr(NULL)->name_ = pAddr->resolveAddr();
 	/*statement3_->paramAsMutant("name",pAddr->name_)->paramAsMutant("ip",ip4AddrToIndex(ip4))->execute();
 	statement4_->paramAsMutant("name",pAddr->name_)->paramAsMutant("ip",ip4AddrToIndex(ip4))->execute();
       }*/
     }
     else {
-      addr.ptr(NULL)->name_ = addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
+      addr.ptr(NULL)->name_ = pAddr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
     }
     if( dnsCacheSize_ > 0 && dnsCache_.count() >= dnsCacheSize_ )
       dnsCache_.drop(dnsCacheLRU_.remove(*dnsCacheLRU_.last()));
@@ -645,6 +645,7 @@ function DNSQuery(name)
 	  }
           endTime.tm_mon--;
         }
+        fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
         f <<
           "</TR>\n"
         ;
