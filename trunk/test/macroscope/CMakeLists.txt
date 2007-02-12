@@ -4,8 +4,7 @@ ADD_EXECUTABLE (macroscope
   bpfthtml.cpp
   version.c
 )
-
-
+ 
 TARGET_LINK_LIBRARIES (macroscope
   adicpp
   fbcpp
@@ -67,7 +66,7 @@ IF (PRIVATE_RELEASE AND CMAKE_BUILD_TYPE STREQUAL Release AND NOT CMAKE_GENERATO
     )
     ADD_CUSTOM_COMMAND (
       TARGET msmail POST_BUILD
-      COMMAND ${ASPR} ARGS -process "${CMAKE_CURRENT_BINARY_DIR}\\msmail.aspr"
+      COMMAND ${ASPR} ARGS -process "${CMAKE_CURRENT_BINARY_DIR}\\macroscope.aspr"
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT ""
     )
