@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -168,32 +168,9 @@ inline timeval64::operator const struct timeval () const
 int gettimeofday(struct timeval * tp, struct timezone * tzp);
 #endif
 //---------------------------------------------------------------------------
-inline int64_t gettimeofday()
-{
-  struct timeval t;
-  uint64_t a = ~(~uint64_t(0) >> 1);
-  if( gettimeofday(&t, NULL) == 0 ){
-    a = t.tv_sec;
-    a = a * 1000000u + t.tv_usec;
-  }
-  return a;
-}
-//---------------------------------------------------------------------------
-inline int64_t getlocaltimeofday()
-{
-  struct timeval tv;
-  struct timezone tz;
-  uint64_t a = ~(~uint64_t(0) >> 1);
-  gettimeofday(&tv,&tz);
-  a = tv.tv_sec - tz.tz_minuteswest * 60u + tz.tz_dsttime * 60u * 60u;
-  a = a * 1000000u + tv.tv_usec;
-  return a;
-}
-//---------------------------------------------------------------------------
-inline int64_t getgmtoffset()
-{
-  return getlocaltimeofday() - gettimeofday();
-}
+int64_t gettimeofday();
+int64_t getlocaltimeofday();
+int64_t getgmtoffset();
 //---------------------------------------------------------------------------
 #endif /* _Sysutils_H_ */
 //---------------------------------------------------------------------------

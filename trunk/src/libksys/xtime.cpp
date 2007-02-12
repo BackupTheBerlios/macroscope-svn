@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -261,4 +261,33 @@ int gettimeofday(struct timeval * tvp, struct timezone * tzp)
 }
 #endif
 //---------------------------------------------------------------------------
-
+int64_t gettimeofday()
+{
+  struct timeval t;
+  uint64_t a = ~(~uint64_t(0) >> 1);
+  if( gettimeofday(&t,NULL) == 0 ){
+    a = t.tv_sec;
+    a = a * 1000000u + t.tv_usec;
+  }
+  return a;
+}
+//---------------------------------------------------------------------------
+int64_t getlocaltimeofday()
+{
+  struct timeval tv;
+  struct timezone tz;
+  uint64_t a = ~(~uint64_t(0) >> 1);
+  gettimeofday(&tv,&tz);
+  a = tv.tv_sec - tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60u * 60u;
+  a = a * 1000000u + tv.tv_usec;
+  return a;
+}
+//---------------------------------------------------------------------------
+int64_t getgmtoffset()
+{
+  struct timeval tv;
+  struct timezone tz;
+  gettimeofday(&tv,&tz);
+  return (-tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60 * 60) * 1000000;
+}
+//---------------------------------------------------------------------------

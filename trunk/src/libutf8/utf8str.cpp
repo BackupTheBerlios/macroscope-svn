@@ -1401,8 +1401,7 @@ struct timeval str2Timeval(const String & str)
 String tm2Str(struct tm tv)
 {
   uintptr_t l = 10;
-  if( tv.tm_hour != 0 || tv.tm_min != 0 || tv.tm_sec != 0 )
-    l += 9;
+  if( tv.tm_hour != 0 || tv.tm_min != 0 || tv.tm_sec != 0 ) l += 9;
   String::Container * container = String::Container::container(l);
   sprintf(container->string_, "%02u.%02u.%04u", tv.tm_mday, tv.tm_mon + 1, tv.tm_year + 1900);
   if( tv.tm_hour != 0 || tv.tm_min != 0 || tv.tm_sec != 0 ){
@@ -1413,33 +1412,28 @@ String tm2Str(struct tm tv)
 //---------------------------------------------------------------------------
 String time2Str(int64_t tv)
 {
-  int64_t   us  = tv % 1000000u;
-  time_t    tt  = (time_t) (tv / 1000000u);
-  struct tm t   = *localtime(&tt);
-  uintptr_t l   = 10;
-  if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || us != 0 )
-    l += 9;
-  if( us != 0 )
-    l += 7;
+  int64_t us = tv % 1000000u;
+  time_t tt = (time_t) ((tv - getgmtoffset()) / 1000000u);
+  struct tm t = *localtime(&tt);
+  uintptr_t l = 10;
+  if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || us != 0 ) l += 9;
+  if( us != 0 ) l += 7;
   String::Container * container = String::Container::container(l);
   sprintf(container->string_, "%02u.%02u.%04u", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900);
   if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || us != 0 ){
     sprintf(container->string_ + 10, " %02u:%02u:%02u", t.tm_hour, t.tm_min, t.tm_sec);
-    if( us != 0 )
-      sprintf(container->string_ + 10 + 9, ".%06" PRId64, us);
+    if( us != 0 ) sprintf(container->string_ + 10 + 9, ".%06" PRId64, us);
   }
   return container;
 }
 //---------------------------------------------------------------------------
 String timeval2Str(const struct timeval & tv)
 {
-  time_t    tt  = tv.tv_sec;
-  struct tm t   = *localtime(&tt);
-  uintptr_t l   = 10;
-  if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || tv.tv_usec != 0 )
-    l += 9;
-  if( tv.tv_usec != 0 )
-    l += 7;
+  time_t tt = tv.tv_sec - getgmtoffset() / 1000000;
+  struct tm t = *localtime(&tt);
+  uintptr_t l = 10;
+  if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || tv.tv_usec != 0 ) l += 9;
+  if( tv.tv_usec != 0 ) l += 7;
   String::Container * container = String::Container::container(l);
   sprintf(container->string_, "%02u.%02u.%04u", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900);
   if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || tv.tv_usec != 0 ){
