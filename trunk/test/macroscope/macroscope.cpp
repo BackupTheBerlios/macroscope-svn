@@ -674,9 +674,9 @@ int main(int _argc,char * _argv[])
   int errcode = -1;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
-  fprintf(stderr,"%s\n",(const char *) utf8::time2Str(getlocaltimeofday()).getOEMString());
-  fprintf(stderr,"%s\n",(const char *) utf8::time2Str(gettimeofday()).getOEMString());
-  fprintf(stderr,"%s\n",(const char *) utf8::int2Str(getgmtoffset()).getOEMString());
+//  fprintf(stderr,"%s\n",(const char *) utf8::time2Str(getlocaltimeofday()).getOEMString());
+//  fprintf(stderr,"%s\n",(const char *) utf8::time2Str(gettimeofday()).getOEMString());
+//  fprintf(stderr,"%s\n",(const char *) utf8::int2Str(getgmtoffset()).getOEMString());
   utf8::String::Stream stream;
   try {
     uintptr_t i;
