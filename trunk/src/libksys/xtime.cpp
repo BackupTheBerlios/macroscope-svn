@@ -275,19 +275,33 @@ int64_t gettimeofday()
 int64_t getlocaltimeofday()
 {
   struct timeval tv;
-  struct timezone tz;
   uint64_t a = ~(~uint64_t(0) >> 1);
+#if defined(__WIN32__) || defined(__WIN64__)
+  struct timezone tz;
   gettimeofday(&tv,&tz);
   a = tv.tv_sec - tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60u * 60u;
   a = a * 1000000u + tv.tv_usec;
+#else
+  gettimeofday(&tv,NULL);
+  a = tv.tv_sec * uint64_t(1000000) + getgmtoffset() + tv.tv_usec;
+#endif
   return a;
 }
 //---------------------------------------------------------------------------
 int64_t getgmtoffset()
 {
+#if defined(__WIN32__) || defined(__WIN64__)
   struct timeval tv;
   struct timezone tz;
   gettimeofday(&tv,&tz);
   return (-tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60 * 60) * 1000000;
+#else
+  time_t tl, t = time(&tl);
+  if( tl - t == 0 ){
+    struct tm lt = *localtime(&t), gt = *gmtime(&t);
+    return (mktime(&gt) - mktime(&lt)) * int64_t(1000000);
+  }
+  return (tl - t) * int64_t(1000000);
+#endif
 }
 //---------------------------------------------------------------------------
