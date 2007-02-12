@@ -21,4 +21,4 @@ goto exit
 call "%VS80COMNTOOLS%..\..\VC\vcvarsall.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
 
 del /s /f /q *.obj *.exe *.dll *.ilk *.upx 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
-cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -DBUILD_DOCUMENTATION=ON -DDOCUMENTATION_HTML_TARZ=ON -G "NMake Makefiles" . && nmake && nmake package
+cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -DBUILD_DOCUMENTATION=ON -DDOCUMENTATION_HTML_TARZ=ON -G "NMake Makefiles" . && nmake package
