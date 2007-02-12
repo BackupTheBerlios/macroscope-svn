@@ -950,6 +950,9 @@ void KFTPShell::open()
   stdErr.fileName(
     config_->value("log_file",stdErr.fileName())
   );
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+  checkMachineBinding(config_->value("machine_key"),true);
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.strncasecmp("job",3) == 0 )

@@ -296,3 +296,5 @@
 /* #undef HAVE_INTMAX_T_AS_LONG_INT 0 */
 /* #undef HAVE_INTMAX_T_AS_LONG_LONG 0 */
 /* #undef HAVE_INTMAX_T_AS_INT64_T 0 */
+
+#define PRIVATE_RELEASE 1

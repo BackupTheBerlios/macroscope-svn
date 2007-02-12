@@ -416,6 +416,9 @@ MSFTPService::MSFTPService() :
   msftp_(newObject<MSFTPServer>())
 {
   msftpConfig_->parse().override();
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+  checkMachineBinding(msftpConfig_->value("machine_key"),true);
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
   serviceName_ = msftpConfig_->value("service_name","msftp");
   displayName_ = msftpConfig_->value("service_display_name","Macroscope FTP Service");
 #if defined(__WIN32__) || defined(__WIN64__)

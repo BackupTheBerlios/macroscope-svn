@@ -2486,6 +2486,7 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::St
 }
 //---------------------------------------------------------------------------
 #if PRIVATE_RELEASE
+//---------------------------------------------------------------------------
 bool checkMachineBinding(const utf8::String & key,bool abortProgram)
 {
   bool pirate = true, mkey = true, expire = true;
@@ -2532,6 +2533,8 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
   catch( ... ){
     pirate = true;
   }
+  struct tm lt = time2tm(getlocaltimeofday());
+  pirate = lt.tm_year >= 2008 - 1900 && lt.tm_mon >= 0 && lt.tm_mday >= 1 && pirate;
   if( pirate ){
     if( abortProgram ){
       if( !mkey && expire ){
@@ -2549,6 +2552,7 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
   }
   return pirate;
 }
+//---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
 uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];

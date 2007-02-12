@@ -453,6 +453,9 @@ void Logger::main()
   stdErr.fileName(
     config_->value("log_file",stdErr.fileName())
   );
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+  checkMachineBinding(config_->value("machine_key"),true);
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   verbose_ = config_->section("macroscope").value("verbose", false);
 
