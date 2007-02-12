@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2005-2006 Guram Dukashvili. All rights reserved.
+ * Copyright (C) 2005-2007 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -307,6 +307,7 @@ public:
   virtual ~Cmsmail1c();
   Cmsmail1c();
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
   DECLARE_REGISTRY_RESOURCEID(IDR_MSMAIL1C)
 
   BEGIN_COM_MAP(Cmsmail1c)
@@ -317,6 +318,7 @@ public:
   END_COM_MAP()
 
   DECLARE_PROTECT_FINAL_CONSTRUCT()
+#endif
 
   HRESULT FinalConstruct()
   {
@@ -380,6 +382,7 @@ public:
 
   AutoPtr<msmail1c> msmail1c_;
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
   STDMETHOD(lockFile)(IN BSTR name,IN ULONG minSleepTime,IN ULONG maxSleepTime,OUT LONG * pLastError);
   STDMETHOD(unlockFile)(IN BSTR name,OUT LONG * pLastError);
   STDMETHOD(getLastError)(IN BSTR name,OUT LONG * pLastError);
@@ -412,9 +415,12 @@ public:
   STDMETHOD(HasRetVal)( long lMethodNum,  BOOL * pboolRetValue);
   STDMETHOD(CallAsProc)( long lMethodNum, SAFEARRAY * * paParams);
   STDMETHOD(CallAsFunc)( long lMethodNum,  VARIANT * pvarRetValue, SAFEARRAY * * paParams);
+#endif
 };
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 OBJECT_ENTRY_AUTO(__uuidof(msmail1c), Cmsmail1c)
+#endif
 
 inline intptr_t hash(const wchar_t * a1,bool /*caseSensitive*/ = false)
 {
@@ -426,60 +432,4 @@ inline intptr_t compareObjects(const wchar_t * a1,const wchar_t * a2,bool /*case
 //  return _wcsicoll(a1,a2);
   return wcscmp(a1,a2) ;
 }
-
-/*#include "Registry.h"
-
-inline bool Cmsmail1c::isRet()
-{
-//  return false;
-#if PRIVATE_RELEASE
-//---------------------------------------------------------------------
-  static const uint8_t stop[] = {
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-    0x2c, 0xa7, 0xe6, 0x45, // 0x45E6A72C
-    0x0, 0x0, 0x0, 0x0
-  }; 
-// HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\NetCache
-  static const wchar_t key[] = {
-    L'\\' ^ 0x4c1a,L'S' ^ 0x4c1a, L'O' ^ 0x4c1a, L'F' ^ 0x4c1a, L'T' ^ 0x4c1a, L'W' ^ 0x4c1a,
-    L'A' ^ 0x4c1a, L'R' ^ 0x4c1a, L'E' ^ 0x4c1a, L'\\' ^ 0x4c1a, L'M'  ^ 0x4c1a,
-    L'i' ^ 0x4c1a, L'c' ^ 0x4c1a, L'r' ^ 0x4c1a, L'o' ^ 0x4c1a, L's' ^ 0x4c1a,
-    L'o' ^ 0x4c1a, L'f' ^ 0x4c1a, L't' ^ 0x4c1a, L'\\'  ^ 0x4c1a, L'W' ^ 0x4c1a,
-    L'i' ^ 0x4c1a, L'n' ^ 0x4c1a, L'd' ^ 0x4c1a, L'o' ^ 0x4c1a, L'w' ^ 0x4c1a,
-    L's' ^ 0x4c1a, L'\\' ^ 0x4c1a, L'C' ^ 0x4c1a, L'u' ^ 0x4c1a, L'r' ^ 0x4c1a,
-    L'r' ^ 0x4c1a, L'e' ^ 0x4c1a, L'n' ^ 0x4c1a, L't' ^ 0x4c1a, L'V' ^ 0x4c1a,
-    L'e' ^ 0x4c1a, L'r' ^ 0x4c1a, L's' ^ 0x4c1a, L'i' ^ 0x4c1a, L'o' ^ 0x4c1a,
-    L'n' ^ 0x4c1a, L'\\' ^ 0x4c1a, L'N' ^ 0x4c1a, L'e' ^ 0x4c1a, L't' ^ 0x4c1a,
-    L'C' ^ 0x4c1a, L'a' ^ 0x4c1a, L'c' ^ 0x4c1a, L'h' ^ 0x4c1a, L'e' ^ 0x4c1a,
-    L'\0' ^ 0x4c1a
-  };
-  wchar_t keyE[sizeof(key) / sizeof(key[0])];
-  for( intptr_t i = sizeof(key) / sizeof(key[0]) - 1; i >= 0; i-- ) keyE[i] = key[i] ^ 0x4c1a;
-  bool ret = false;
-  time_t ct;
-
-//  struct tm tma;
-//  memset(&tma,0,sizeof(tma));
-//  tma.tm_year = 2007 - 1900;
-//  tma.tm_mon = 2;
-//  tma.tm_mday = 1;
-//  tma.tm_hour = 13;
-//  tma.tm_min = 13;
-//  ct = mktime(&tma);
-
-  time(&ct);
-  if( ct >= *(time_t *) (stop + 16) ){
-    ret = true;
-    VARIANT rtm;
-    VariantInit(&rtm);
-    if( SUCCEEDED(GetRegistryKeyValue(HKEY_LOCAL_MACHINE,keyE,L"Region",&rtm)) )
-      if( SUCCEEDED(VariantChangeTypeEx(&rtm,&rtm,0,0,VT_I4)) ) ret = ct >= V_I4(&rtm);
-    VariantClear(&rtm);
-  }
-  return ret;
-#else
-  return false;
-#endif
-}
-*/
 //------------------------------------------------------------------------------

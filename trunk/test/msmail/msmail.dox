@@ -1,0 +1,14 @@
+/*!
+ * \page msmail_page msmail
+ * \anchor msmail_doc
+ * \if english
+ * \section msmail_intro What is msmail
+ * This is a programm.
+ * \endif
+ *
+ * \if russian
+ * \section msmail_intro Что такое msmail
+ * Сервер сообщений.
+ * \section msmail1c_objects Объекты msmail
+ * \endif
+ */
