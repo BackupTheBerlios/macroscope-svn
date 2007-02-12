@@ -396,9 +396,9 @@ void Logger::writeBPFTHtmlReport()
   if( !(bool) config_->valueByPath(section_ + "html_report.enabled",true) ) return;
   minSignificantThreshold_ = config_->valueByPath(section_ + "html_report.min_significant_threshold",0);
   gateway_.resolveName(config_->valueByPath(section_ + "gateway"));
-  if( verbose_ ) fprintf(stderr,"\ngateway resolved as %s, in db %"PRIuMAX"\n",
+  if( verbose_ ) fprintf(stderr,"\ngateway resolved as %s, in db %s\n",
     (const char *) gateway_.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString(),
-    uintmax_t(gateway_.addr4_.sin_addr.s_addr)
+    (const char *) ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr).getOEMString()
   );
   struct tm beginTime, beginTime2, endTime;
   statement_->text(
