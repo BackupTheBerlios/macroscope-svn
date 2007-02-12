@@ -934,10 +934,10 @@ void Logger::writeHtmlTail(AsyncFile & f)
   un.nodename = ksock::SockAddr::gethostname();
 #endif
   f <<
-    utf8::String("Generated on ") + un.nodename + ", by " + macroscope_version.gnu_ + "\n"
+    utf8::String("Generated on ") + un.nodename + ", by " + macroscope_version.gnu_ + "\n<BR>"
 #if !PRIVATE_RELEASE
     "<A HREF=\"http://developer.berlios.de/projects/macroscope/\" wrap>\n"
-    " home page http://developer.berlios.de/projects/macroscope/\n"
+    "  http://developer.berlios.de/projects/macroscope/\n"
     "</A>\n"
 #endif
     "<BR>\n" +
