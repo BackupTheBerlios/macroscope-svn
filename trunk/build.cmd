@@ -7,13 +7,13 @@ if /i %1 == x64       goto amd64
 if /i %1 == ia64      goto ia64
 
 :x86
-call "%INTEL_LICENSE_FILE%\..\..\..\Intel\Compiler\C++\9.1\IA32\Bin\iclvars.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
+rem call "%INTEL_LICENSE_FILE%\..\..\..\Intel\Compiler\C++\9.1\IA32\Bin\iclvars.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
 goto exit
 :amd64
-call "%INTEL_LICENSE_FILE%\..\..\..\Intel\Compiler\C++\9.1\EM64T\Bin\iclvars.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
+rem call "%INTEL_LICENSE_FILE%\..\..\..\Intel\Compiler\C++\9.1\EM64T\Bin\iclvars.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
 goto exit
 :ia64
-call "%INTEL_LICENSE_FILE%\..\..\..\Intel\Compiler\C++\9.1\Itanium\Bin\iclvars.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
+rem call "%INTEL_LICENSE_FILE%\..\..\..\Intel\Compiler\C++\9.1\Itanium\Bin\iclvars.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
 goto exit
 
 :exit

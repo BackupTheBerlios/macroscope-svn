@@ -35,6 +35,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 void initialize(int,char **);
 void cleanup();
+class ObjectFabric;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -57,23 +58,33 @@ class Object {
     virtual utf8::String classId() const;
     virtual utf8::String objectName() const;
     virtual utf8::String objectId() const;
+
+    static ObjectFabric & fabric();
   protected:
     Object(const Object &) {}
-    Object & operator = (const Object & a) { return *this; }
+    Object & operator = (const Object &) { return *this; }
     
     struct {
       uint8_t heap_ : 1; // 1 if memory for object allocated in heap instead of stack or BSS
+      uint8_t template_ : 1; // 1 if object instance placed in objectFabric
+      uint8_t clone_ : 1; // 1 if object copied via cloneObject() function
       uint8_t constructor_ : 1; // 1 if construction of object in progress
       uint8_t destructor_ : 1; // 1 if destruction of object in progress
       uint8_t constructed_ : 1; // 1 if construction of object is done
       uint8_t destructed_ : 1; // 1 if destruction of object is done
       uint8_t afterConstruction_ : 1; // 1 if afterConstruction method in progress
       uint8_t beforeDestruction_ : 1; // 1 if beforeDestruction method in progress
-    };
+    } object_;
+    static uint8_t fabric_[];
   private:
     static void initialize();
     static void cleanup();
 };
+//---------------------------------------------------------------------------
+inline ObjectFabric & Object::fabric()
+{
+  return *reinterpret_cast<ObjectFabric *>(fabric_);
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -96,41 +107,60 @@ class ObjectActions {
 //---------------------------------------------------------------------------
 inline void ObjectActions::beforeConstructor(Object * object)
 {
-  memset(object,0,sizeof(Object));
-  object->heap_ = true;
-  object->constructor_ = true;
+  memset(&object->object_,0,sizeof(object->object_));
+  object->object_.heap_ = true;
+  object->object_.constructor_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::afterConstructor(Object * object)
 {
-  object->constructor_ = false;
-  object->constructed_ = true;
+  object->object_.constructor_ = false;
+  object->object_.constructed_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::beforeDestructor(Object * object)
 {
-  object->destructor_ = true;
+  object->object_.destructor_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::afterDestructor(Object * object)
 {
-  object->destructor_ = false;
-  object->destructed_ = true;
+  object->object_.destructor_ = false;
+  object->object_.destructed_ = true;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::afterConstruction(Object * object)
 {
-  object->afterConstruction_ = true;
+  object->object_.afterConstruction_ = true;
   object->afterConstruction();
-  object->afterConstruction_ = false;
+  object->object_.afterConstruction_ = false;
 }
 //---------------------------------------------------------------------------
 inline void ObjectActions::beforeDestruction(Object * object)
 {
-  object->beforeDestruction_ = true;
+  object->object_.beforeDestruction_ = true;
   object->beforeDestruction();
-  object->beforeDestruction_ = false;
+  object->object_.beforeDestruction_ = false;
 }
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class ObjectFabric : public Object {
+  public:
+    virtual ~ObjectFabric() {}
+    ObjectFabric() {}
+    
+// methods
+    utf8::String className() const;
+    utf8::String classId() const;
+
+    void registerClass(Object * object);
+    void unregisterClass(const utf8::String & className);
+  protected:
+  private:
+    ObjectFabric(const ObjectFabric &);
+    void operator = (const ObjectFabric &);
+};
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

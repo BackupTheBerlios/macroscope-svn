@@ -123,7 +123,7 @@ class Thread : virtual public Object {
     static Array<Action> & afterExecuteActions();
   protected:
     void afterConstruction();
-    void beforeDestruction() { threadBeforeWait(); }
+    void beforeDestruction() { wait(); }
     virtual void threadExecute() {}
     virtual void threadBeforeWait() {}
     uintptr_t       stackSize_;
@@ -182,7 +182,6 @@ inline bool Thread::Action::operator ==(const Action & action) const
 //---------------------------------------------------------------------------
 inline Thread::~Thread()
 {
-  wait();
 }
 //---------------------------------------------------------------------------
 inline bool Thread::isSuspended() const

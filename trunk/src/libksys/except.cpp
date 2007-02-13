@@ -32,7 +32,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 void Exception::afterConstruction()
 {
-  if( !heap_ )
+  if( !object_.heap_ )
     newObjectV1C2<Exception>(
       EINVAL,
       __PRETTY_FUNCTION__ + utf8::String(" ") +

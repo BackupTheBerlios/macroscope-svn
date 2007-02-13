@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@ uint8_t currentThreadPlaceHolder[sizeof(ThreadLocalVariable<Thread>)];
 //---------------------------------------------------------------------------
 void Thread::afterConstruction()
 {
-  if( !heap_ )
+  if( !object_.heap_ )
     newObjectV1C2<Exception>(
       EINVAL,
       __PRETTY_FUNCTION__ + utf8::String(" ") +

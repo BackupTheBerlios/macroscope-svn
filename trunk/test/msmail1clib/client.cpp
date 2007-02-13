@@ -815,7 +815,7 @@ void Client::open()
   data_.clear();
   ftime_ = 0;
   if( asyncMessagesReceiving_ )
-    attachFiber(newObjectV1<ClientFiber>(this));
+    attachFiber(newObjectR1<ClientFiber>(this));
   if( mk1100Port_ != 0 )
     attachFiber(newObjectR1<MK1100ClientFiber>(*this));
 }
@@ -1066,7 +1066,7 @@ utf8::String Client::getSendingMessageList() const
 //------------------------------------------------------------------------------
 void Client::getDB()
 {
-  attachFiber(newObjectV1<ClientDBGetterFiber>(*this));
+  attachFiber(newObjectR1<ClientDBGetterFiber>(*this));
 }
 //------------------------------------------------------------------------------
 utf8::String Client::getDBList() const
