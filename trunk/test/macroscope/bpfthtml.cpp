@@ -86,7 +86,7 @@ utf8::String Logger::ip4AddrToIndex(uint32_t ip4)
 //------------------------------------------------------------------------------
 uint32_t Logger::indexToIp4Addr(const utf8::String & index)
 {
-  static const uint8_t m[2] = { '0', 'A' };
+  static const uint8_t m[2] = { '0', 'A' - 10 };
   uint32_t ip4 = 0, a;
   uintptr_t shift = sizeof(ip4) * 8 - 4, i;
   for( i = 0; i < sizeof(ip4) * 2; i++, shift -= 4 ){
@@ -210,7 +210,8 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
     beginTime.tm_mon = endTime.tm_mon;
     statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
     statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-    statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+    if( useGateway_ )
+      statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
     statement_->execute()->fetchAll();
     if( (uintmax_t) statement_->sum("SUM1") > 0 ){
       if( verbose_ ) fprintf(stderr,"%s %s\n",
@@ -225,7 +226,8 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         beginTime.tm_mday = endTime.tm_mday;
         statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
         statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-        statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+        if( useGateway_ )
+          statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
         statement_->execute()->fetchAll();
         statement_->unload(table[beginTime.tm_mday]);
         dayCount += (uintmax_t) table[beginTime.tm_mday].sum("SUM1") > 0;
@@ -305,7 +307,8 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
           if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 ){
             statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
             statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-            statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+            if( useGateway_ )
+              statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
             statement6_->paramAsMutant("host",table[0](i,"st_ip"));
 	    uintmax_t sum1 = 0, sum2 = 0;
             if( statement6_->execute()->fetch() ){
@@ -395,11 +398,26 @@ void Logger::writeBPFTHtmlReport()
  */
   if( !(bool) config_->valueByPath(section_ + "html_report.enabled",true) ) return;
   minSignificantThreshold_ = config_->valueByPath(section_ + "html_report.min_significant_threshold",0);
-  gateway_.resolveName(config_->valueByPath(section_ + "gateway"));
-  if( verbose_ ) fprintf(stderr,"\ngateway resolved as %s, in db %s\n",
-    (const char *) gateway_.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString(),
-    (const char *) ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr).getOEMString()
-  );
+  useGateway_ = config_->isValueByPath(section_ + "gateway");
+  if( useGateway_ ){
+    gateway_.resolveName(config_->valueByPath(section_ + "gateway"));
+    if( verbose_ ) fprintf(stderr,"\ngateway resolved as %s, in db %s\n",
+      (const char *) gateway_.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString(),
+      (const char *) ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr).getOEMString()
+    );
+  }
+/*  statement_->text(
+    "select distinct st_src_ip as st_ip FROM INET_BPFT_STAT "
+    "union "
+    "select distinct st_dst_ip as st_ip FROM INET_BPFT_STAT"
+  )->execute();
+  while( statement_->fetch() ){
+    fprintf(stderr,"%s %0X %s\n",
+      (const char *) statement_->valueAsString("st_ip").getOEMString(),
+      indexToIp4Addr(statement_->valueAsString("st_ip")),
+      (const char *) resolveAddr(indexToIp4Addr(statement_->valueAsString("st_ip"))).getOEMString()
+    );
+  }*/
   struct tm beginTime, beginTime2, endTime;
   statement_->text(
     utf8::String("select ") +
@@ -416,6 +434,16 @@ void Logger::writeBPFTHtmlReport()
   )->execute()->fetchAll();
   endTime = time2tm((uint64_t) statement_->valueAsMutant("st_start") - getgmtoffset());
   statement_->text(
+    "SELECT B.st_ip, sum(A.st_dgram_bytes) as SUM1, sum(A.st_data_bytes) as SUM2 "
+    "FROM INET_BPFT_STAT A,"
+    "  (SELECT DISTINCT st_src_ip AS st_ip FROM INET_BPFT_STAT"
+    "   UNION "
+    "   SELECT DISTINCT st_dst_ip AS st_ip FROM INET_BPFT_STAT) AS B"
+    "WHERE "
+    "  A.st_start >= :BT AND A.st_start <= :ET AND "
+    "  (A.st_src_ip = B.st_ip OR A.st_dst_ip = B.st_ip)"
+    "GROUP by B.st_ip"
+/*
     "SELECT"
     "  A.*"
     "FROM ("
@@ -427,8 +455,8 @@ void Logger::writeBPFTHtmlReport()
     "      FROM"
     "        INET_BPFT_STAT"
     "      WHERE "
-    "        st_start >= :BT AND st_start <= :ET AND"
-    "        st_src_ip = :gateway"
+    "        st_start >= :BT AND st_start <= :ET " +
+    utf8::String(useGateway_ ? "AND st_src_ip = :gateway" : "") +
     "      GROUP BY st_dst_ip"
     "    UNION ALL"
     "      SELECT"
@@ -436,13 +464,13 @@ void Logger::writeBPFTHtmlReport()
     "      FROM"
     "        INET_BPFT_STAT"
     "      WHERE "
-    "        st_start >= :BT AND st_start <= :ET AND"
-    "        st_dst_ip = :gateway"
+    "        st_start >= :BT AND st_start <= :ET " +
+    utf8::String(useGateway_ ? "AND st_dst_ip = :gateway" : "") +
     "      GROUP BY st_src_ip"
     "  ) AS B "
     "  GROUP BY B.st_ip"
     ") AS A "
-    "ORDER BY A.SUM1"
+    "ORDER BY A.SUM1"*/
   );
   statement_->prepare();
   statement5_->text(statement_->text());
@@ -456,8 +484,8 @@ void Logger::writeBPFTHtmlReport()
     "      FROM"
     "        INET_BPFT_STAT"
     "      WHERE "
-    "        st_start >= :BT AND st_start <= :ET AND"
-    "        st_src_ip = :gateway AND"
+    "        st_start >= :BT AND st_start <= :ET AND" +
+    utf8::String(useGateway_ ? " st_src_ip = :gateway AND" : "") +
     "        st_dst_ip = :host"
     "      GROUP BY st_dst_ip"
     "    UNION ALL"
@@ -466,8 +494,8 @@ void Logger::writeBPFTHtmlReport()
     "      FROM"
     "        INET_BPFT_STAT"
     "      WHERE "
-    "        st_start >= :BT AND st_start <= :ET AND"
-    "        st_dst_ip = :gateway AND"
+    "        st_start >= :BT AND st_start <= :ET AND" +
+    utf8::String(useGateway_ ? " st_dst_ip = :gateway AND" : "") +
     "        st_src_ip = :host"
     "      GROUP BY st_src_ip"
     "  ) AS B "
@@ -507,7 +535,8 @@ void Logger::writeBPFTHtmlReport()
     beginTime.tm_year = endTime.tm_year;
     statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
     statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-    statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+    if( useGateway_ )
+      statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
     statement_->execute()->fetchAll();
     if( (uintmax_t) statement_->sum("SUM1") > 0 ){
       if( verbose_ ) fprintf(stderr,"%s %s\n",
@@ -523,7 +552,8 @@ void Logger::writeBPFTHtmlReport()
         beginTime.tm_mon = endTime.tm_mon;
         statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
         statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-        statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+        if( useGateway_ )
+          statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
         statement_->execute()->fetchAll();
         statement_->unload(table[beginTime.tm_mon + 1]);
         monCount += (uintmax_t) table[beginTime.tm_mon + 1].sum("SUM1") > 0;
@@ -624,7 +654,8 @@ function DNSQuery(name)
           if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 ){
             statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
             statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
-            statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
+            if( useGateway_ )
+              statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
             statement6_->paramAsMutant("host",table[0](i,"st_ip"));
 	    uintmax_t sum1 = 0, sum2 = 0;
             if( statement6_->execute()->fetch() ){
@@ -725,10 +756,12 @@ void Logger::parseBPFTLogFile()
   )->prepare();*/
   dnsCacheSize_ = config_->valueByPath(section_ + "dns_cache_size",0);
   AsyncFile flog(config_->valueByPath(section_ + "log_file_name"));
-  /*statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
+/*
+  statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
   stFileStatUpd_->prepare()->
     paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
-    paramAsMutant("ST_LAST_OFFSET",0)->execute();*/
+    paramAsMutant("ST_LAST_OFFSET",0)->execute();
+ */
   flog.readOnly(true).open();
   database_->start();
   int64_t offset = fetchLogFileLastOffset(flog.fileName());
@@ -805,43 +838,43 @@ void Logger::parseBPFTLogFile()
       bool executed = true;
       for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
         if( executed ){
-	   statement2_->text(
+	        statement2_->text(
             "INSERT INTO INET_BPFT_STAT ("
             "  st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
             ") VALUES "
           );
-	   executed = false;
-	}
+	        executed = false;
+	      }
         statement2_->text(statement2_->text() + "(");
         if( log32bitOsCompatible ){
-	  statement2_->text(statement2_->text() +
+	        statement2_->text(statement2_->text() +
             "'" + mycpp::tm2Str(start) + "'," +
-	    "'" + ip4AddrToIndex(entries32[i].srcIp_.s_addr) + "'," +
+	          "'" + ip4AddrToIndex(entries32[i].srcIp_.s_addr) + "'," +
             "'" + ip4AddrToIndex(entries32[i].dstIp_.s_addr) +"'," +
             utf8::int2Str(entries32[i].ipProtocol_) + "," +
             utf8::int2Str(entries32[i].srcPort_) + "," +
             utf8::int2Str(entries32[i].dstPort_) + "," +
             utf8::int2Str(entries32[i].dgramSize_) + "," +
             utf8::int2Str(entries32[i].dataSize_)
-	  );
+	        );
         }
         else {
-	  statement2_->text(statement2_->text() +
+	        statement2_->text(statement2_->text() +
             "'" + mycpp::tm2Str(start) + "'," +
-	    "'" + ip4AddrToIndex(entries[i].srcIp_.s_addr) + "'," +
+	          "'" + ip4AddrToIndex(entries[i].srcIp_.s_addr) + "'," +
             "'" + ip4AddrToIndex(entries[i].dstIp_.s_addr) +"'," +
             utf8::int2Str(entries[i].ipProtocol_) + "," +
             utf8::int2Str(entries[i].srcPort_) + "," +
             utf8::int2Str(entries[i].dstPort_) + "," +
             utf8::int2Str(entries[i].dgramSize_) + "," +
             utf8::int2Str(entries[i].dataSize_)
-	  );
-	}
-        statement2_->text(statement2_->text() + (i % 128 != 0 ? ")," : ")"));
-	if( i % 128 == 0 ){
+	        );
+	      }
+        statement2_->text(statement2_->text() + (i % 256 != 0 ? ")," : ")"));
+	      if( i % 256 == 0 ){
           statement2_->execute();
-	  executed = true;
-	}
+	        executed = true;
+	      }
       }
       assert( executed );
     }

@@ -111,6 +111,7 @@ class Logger {
     bool groups_;
     bool resolveDNSNames_;
     bool bpftOnlyCurrentYear_;
+    bool useGateway_;
     ksock::SockAddr gateway_;
     uintmax_t minSignificantThreshold_;
 

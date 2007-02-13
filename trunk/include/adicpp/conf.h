@@ -66,6 +66,8 @@ class ConfigSection {
     utf8::String text(const utf8::String & key = utf8::String(), const utf8::String & defText = utf8::String()) const;
     utf8::String text(uintptr_t i,utf8::String * pKey = NULL) const;
 
+    bool isSectionByPath(const utf8::String & path) const;
+    bool isValueByPath(const utf8::String & path) const;
     ConfigSection & sectionByPath(const utf8::String & path) const;
     utf8::String textByPath(const utf8::String & path,const utf8::String & defText = utf8::String()) const;
     Mutant valueByPath(const utf8::String & path,const Mutant & defValue = Mutant()) const;

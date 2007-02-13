@@ -76,9 +76,41 @@ ConfigSection & ConfigSection::sectionByPath(const utf8::String & path) const
   return *const_cast<ConfigSection *>(section);
 }
 //---------------------------------------------------------------------------
+bool ConfigSection::isSectionByPath(const utf8::String & path) const
+{
+  utf8::String::Iterator b(path), e(path);
+  const ConfigSection * section = this;
+  for(;;){
+    while( e.getChar() != '.' && e.next() );
+    if( e - b < 1 ) break;
+    if( !section->isSection(utf8::String(b,e)) ) break;
+    if( e.eof() ) return true;
+    section = &section->section(utf8::String(b,e));
+    b = ++e;
+  }
+  return false;
+}
+//---------------------------------------------------------------------------
+bool ConfigSection::isValueByPath(const utf8::String & path) const
+{
+  utf8::String::Iterator b(path), e(path);
+  const ConfigSection * section = this;
+  for(;;){
+    while( e.getChar() != '.' && e.next() );
+    if( e - b < 1 ) break;
+    if( e.eof() ){
+      return section->isValue(utf8::String(b,e));
+    }
+    if( !section->isSection(utf8::String(b,e)) ) break;
+    section = &section->section(utf8::String(b,e));
+    b = ++e;
+  }
+  return false;
+}
+//---------------------------------------------------------------------------
 Mutant ConfigSection::valueByPath(const utf8::String & path, const Mutant & defValue) const
 {
-  Mutant &  m = valueRefByPath(path);
+  Mutant & m = valueRefByPath(path);
   return m.type() == mtNull && defValue.type() != mtNull ? defValue : m;
 }
 //---------------------------------------------------------------------------
