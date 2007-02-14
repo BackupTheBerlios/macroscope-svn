@@ -419,7 +419,7 @@ void Logger::writeBPFTHtmlReport()
     );
   }*/
   struct tm beginTime, beginTime2, endTime;
-  statement_->text(
+  /*statement_->text(
     utf8::String("select ") +
     (dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ? "FIRST 1 " : "") +
     "st_start FROM INET_BPFT_STAT" +
@@ -432,9 +432,12 @@ void Logger::writeBPFTHtmlReport()
     "st_start FROM INET_BPFT_STAT ORDER BY st_start DESC" +
     (dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " LIMIT 0,1" : "")
   )->execute()->fetchAll();
-  endTime = time2tm((uint64_t) statement_->valueAsMutant("st_start") - getgmtoffset());
+  endTime = time2tm((uint64_t) statement_->valueAsMutant("st_start") - getgmtoffset());*/
+  statement_->text("SELECT MIN(st_start) AS BT, MAX(st_start) AS ET FROM INET_BPFT_STAT")->
+    execute()->fetchAll();
+  beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") - getgmtoffset());
+  endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") - getgmtoffset());
   statement_->text(
-    useGateway_ ?
       "SELECT"
       "  A.*"
       "FROM ("
@@ -446,7 +449,8 @@ void Logger::writeBPFTHtmlReport()
       "      FROM"
       "        INET_BPFT_STAT"
       "      WHERE "
-      "        st_start >= :BT AND st_start <= :ET AND st_src_ip = :gateway"
+      "        st_start >= :BT AND st_start <= :ET" +
+      utf8::String(useGateway_ ? " AND st_src_ip = :gateway" : "") +
       "      GROUP BY st_dst_ip"
       "    UNION ALL"
       "      SELECT"
@@ -454,29 +458,13 @@ void Logger::writeBPFTHtmlReport()
       "      FROM"
       "        INET_BPFT_STAT"
       "      WHERE "
-      "        st_start >= :BT AND st_start <= :ET AND st_dst_ip = :gateway"
+      "        st_start >= :BT AND st_start <= :ET" +
+      utf8::String(useGateway_ ? " AND st_dst_ip = :gateway" : "") +
       "      GROUP BY st_src_ip"
       "  ) AS B "
       "  GROUP BY B.st_ip"
       ") AS A "
       "ORDER BY A.SUM1"
-    :
-    "SELECT "
-    "  * "
-    "FROM ("
-    "  SELECT B.st_ip as st_ip, sum(A.st_dgram_bytes) as SUM1, sum(A.st_data_bytes) as SUM2 "
-    "  FROM "
-    "    INET_BPFT_STAT A, "
-    "    (SELECT DISTINCT st_src_ip AS st_ip FROM INET_BPFT_STAT "
-    "     UNION "
-    "     SELECT DISTINCT st_dst_ip AS st_ip FROM INET_BPFT_STAT "
-    "    ) AS B "
-    "  WHERE "
-    "    A.st_start >= :BT AND A.st_start <= :ET AND "
-    "    (A.st_src_ip = B.st_ip OR A.st_dst_ip = B.st_ip) "
-    "  GROUP by B.st_ip "
-    ") AS C "
-    "ORDER BY C.SUM1"
   );
   statement_->prepare();
   statement5_->text(statement_->text());
@@ -737,7 +725,8 @@ function DNSQuery(name)
   }	  
   database_->commit();
   f <<
-    "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n"
+    "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n" +
+    "DNS cache size: " + utf8::int2Str((uintmax_t) dnsCache_.count()) + "<BR>\n";
   ;
   writeHtmlTail(f);
   f.resize(f.tell());
@@ -786,6 +775,9 @@ void Logger::parseBPFTLogFile()
     ")"
   );
   statement_->prepare();
+  /*statement3_->text(
+    "insert into INET_BPFT_STAT_IP (st_ip) VALUES (:ip)"
+  )->prepare();*/
   bool log32bitOsCompatible = config_->valueByPath(section_ + "log_32bit_os_compatible",SIZEOF_VOID_P < 8);
   struct tm start, stop, curTime = time2tm(gettimeofday());
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
@@ -842,18 +834,31 @@ void Logger::parseBPFTLogFile()
     }
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL && entriesCount > 0 ){
       bool executed = true;
+      utf8::String text;
       for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
         if( executed ){
-	        statement2_->text(
+	        text =
             "INSERT INTO INET_BPFT_STAT ("
             "  st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
             ") VALUES "
-          );
+          ;
 	        executed = false;
 	      }
-        statement2_->text(statement2_->text() + "(");
+        text += "(";
         if( log32bitOsCompatible ){
-	        statement2_->text(statement2_->text() +
+          /*try {
+            statement3_->paramAsString(0,ip4AddrToIndex(entries32[i].srcIp_.s_addr))->execute();
+          }
+          catch( ExceptionSP & e ){
+            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
+          }
+          try {
+            statement3_->paramAsString(0,ip4AddrToIndex(entries32[i].dstIp_.s_addr))->execute();
+          }
+          catch( ExceptionSP & e ){
+            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
+          }*/
+          text +=
             "'" + mycpp::tm2Str(start) + "'," +
 	          "'" + ip4AddrToIndex(entries32[i].srcIp_.s_addr) + "'," +
             "'" + ip4AddrToIndex(entries32[i].dstIp_.s_addr) +"'," +
@@ -862,10 +867,22 @@ void Logger::parseBPFTLogFile()
             utf8::int2Str(entries32[i].dstPort_) + "," +
             utf8::int2Str(entries32[i].dgramSize_) + "," +
             utf8::int2Str(entries32[i].dataSize_)
-	        );
+	        ;
         }
         else {
-	        statement2_->text(statement2_->text() +
+          /*try {
+            statement3_->paramAsString(0,ip4AddrToIndex(entries[i].srcIp_.s_addr))->execute();
+          }
+          catch( ExceptionSP & e ){
+            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
+          }
+          try {
+            statement3_->paramAsString(0,ip4AddrToIndex(entries[i].dstIp_.s_addr))->execute();
+          }
+          catch( ExceptionSP & e ){
+            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
+          }*/
+	        text +=
             "'" + mycpp::tm2Str(start) + "'," +
 	          "'" + ip4AddrToIndex(entries[i].srcIp_.s_addr) + "'," +
             "'" + ip4AddrToIndex(entries[i].dstIp_.s_addr) +"'," +
@@ -874,11 +891,16 @@ void Logger::parseBPFTLogFile()
             utf8::int2Str(entries[i].dstPort_) + "," +
             utf8::int2Str(entries[i].dgramSize_) + "," +
             utf8::int2Str(entries[i].dataSize_)
-	        );
+	        ;
 	      }
-        statement2_->text(statement2_->text() + (i % 256 != 0 ? ")," : ")"));
-	      if( i % 256 == 0 ){
-          statement2_->execute();
+#ifndef NDEBUG
+        const uintptr_t period = 8;
+#else
+        const uintptr_t period = 256;
+#endif
+        text += i % period != 0 ? ")," : ")";
+	      if( i % period == 0 ){
+          statement2_->text(text)->execute();
 	        executed = true;
 	      }
       }
@@ -886,8 +908,6 @@ void Logger::parseBPFTLogFile()
     }
     else for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
       if( log32bitOsCompatible ){
-//        if( isMulticastAddress(ksock::api.ntohl(entries32[i].srcIp_.s_addr)) || isMulticastAddress(ksock::api.ntohl(entries32[i].dstIp_.s_addr)) ) continue;
-//        if( isMCGlobal(ksock::api.ntohl(entries32[i].srcIp_.s_addr)) || isMCGlobal(ksock::api.ntohl(entries32[i].dstIp_.s_addr)) ) continue;
         statement_->paramAsMutant("st_src_ip",ip4AddrToIndex(entries32[i].srcIp_.s_addr));
         statement_->paramAsMutant("st_dst_ip",ip4AddrToIndex(entries32[i].dstIp_.s_addr));
         statement_->paramAsMutant("st_ip_proto",entries32[i].ipProtocol_);
@@ -895,14 +915,8 @@ void Logger::parseBPFTLogFile()
         statement_->paramAsMutant("st_dst_port",entries32[i].dstPort_);
         statement_->paramAsMutant("st_dgram_bytes",entries32[i].dgramSize_);
         statement_->paramAsMutant("st_data_bytes",entries32[i].dataSize_);
-	/*if( resolveDNSNames_ ){
-          statement_->paramAsMutant("st_src_name",resolveAddr(entries32[i].srcIp_.s_addr));
-          statement_->paramAsMutant("st_dst_name",resolveAddr(entries32[i].dstIp_.s_addr));
-	}*/
       }
       else {
-//        if( isMulticastAddress(ksock::api.ntohl(entries[i].srcIp_.s_addr)) || isMulticastAddress(ksock::api.ntohl(entries[i].dstIp_.s_addr)) ) continue;
-//        if( isMCGlobal(ksock::api.ntohl(entries[i].srcIp_.s_addr)) || isMCGlobal(ksock::api.ntohl(entries[i].dstIp_.s_addr)) ) continue;
         statement_->paramAsMutant("st_src_ip",ip4AddrToIndex(entries[i].srcIp_.s_addr));
         statement_->paramAsMutant("st_dst_ip",ip4AddrToIndex(entries[i].dstIp_.s_addr));
         statement_->paramAsMutant("st_ip_proto",entries[i].ipProtocol_);
@@ -910,10 +924,6 @@ void Logger::parseBPFTLogFile()
         statement_->paramAsMutant("st_dst_port",entries[i].dstPort_);
         statement_->paramAsMutant("st_dgram_bytes",entries[i].dgramSize_);
         statement_->paramAsMutant("st_data_bytes",entries[i].dataSize_);
-	/*if( resolveDNSNames_ ){
-          statement_->paramAsMutant("st_src_name",resolveAddr(entries[i].srcIp_.s_addr));
-          statement_->paramAsMutant("st_dst_name",resolveAddr(entries[i].dstIp_.s_addr));
-	}*/
       }
       statement_->paramAsMutant("st_start",start);
       statement_->execute();

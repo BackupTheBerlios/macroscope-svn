@@ -842,7 +842,7 @@ void Logger::writeHtmlYearOutput()
   }
   f << "Ellapsed time: " <<
     utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) << "\n<BR>\n" <<
-    utf8::int2Str((uintmax_t) trafCache_.count()) << "<BR>\n";
+    "Cache size: " << utf8::int2Str((uintmax_t) trafCache_.count()) << "<BR>\n";
   writeHtmlTail(f);
   f.resize(f.tell());
   if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());

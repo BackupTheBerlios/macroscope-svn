@@ -551,11 +551,15 @@ void Logger::main()
       " ST_LAST_OFFSET        BIGINT NOT NULL"
       ")" <<
 //      "DROP TABLE INET_BPFT_STAT" <<
+//      "DROP TABLE INET_BPFT_STAT_IP" <<
+//      "CREATE TABLE INET_BPFT_STAT_IP ("
+//      " st_ip        CHAR(8) CHARACTER SET ascii NOT NULL UNIQUE PRIMARY KEY"
+//      ")" <<
       "CREATE TABLE INET_BPFT_STAT ("
       " st_start         DATETIME NOT NULL,"
 //      " st_stop          DATETIME NOT NULL,"
-      " st_src_ip        CHAR(8) NOT NULL,"
-      " st_dst_ip        CHAR(8) NOT NULL,"
+      " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
       " st_ip_proto      SMALLINT NOT NULL,"
       " st_src_port      INTEGER NOT NULL,"
       " st_dst_port      INTEGER NOT NULL,"
@@ -563,6 +567,8 @@ void Logger::main()
       " st_data_bytes    INTEGER NOT NULL"
 //      " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
 //      " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
+//      " FOREIGN KEY (st_src_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE,"
+//      " FOREIGN KEY (st_dst_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE"
       ")" <<
       "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_src_ip)" <<
       "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_dst_ip)" <<
@@ -573,6 +579,7 @@ void Logger::main()
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
     metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL)";
+    metadata << "CREATE DESC INDEX INET_BPFT_STAT_IDX5 ON INET_BPFT_STAT (st_start)";
   }
   else if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
