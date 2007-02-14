@@ -231,8 +231,8 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
       if( traf > 0 && slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7], '%') == NULL && strcmp(slcp[7], "-") != 0 && strncmp(slcp[3], "NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
         double timeStamp1;
         sscanf(slcp[0],"%lf",&timeStamp1);
-        utf8::String  st_user (slcp[7]), st_url (slcp[6]);
-        st_user = st_user.lower().replaceAll("\"","");
+        utf8::String st_user(slcp[7]), st_url(slcp[6]);
+        st_user = st_user.lower().replaceAll("\"","").left(4096);
         if( st_url.strcasestr(skipUrl).position() < 0 ){
           st_url = shortUrl(st_url).lower();
           Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
@@ -252,20 +252,19 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
             stTrafUpd_->execute();
           }
           if( top10 ){
-            //int64_t urlHash = st_url.hash_ll(true);
-
+            int64_t urlHash = st_url.hash_ll(true);
             stMonUrlSel_->prepare()->
               paramAsString("ST_USER", st_user)->
               paramAsMutant("ST_TIMESTAMP", timeStamp)->
               paramAsMutant("ST_URL", st_url)->
-            //paramAsMutant(utf8::string("ST_URL_HASH"),urlHash)->
+              paramAsMutant("ST_URL_HASH",urlHash)->
               execute()->fetchAll();
             if( stMonUrlSel_->rowCount() > 0 ){
               stMonUrlUpd_->prepare()->
                 paramAsString("ST_USER", st_user)->
                 paramAsMutant("ST_TIMESTAMP", timeStamp)->
                 paramAsMutant("ST_URL", st_url)->
-                //paramAsMutant(utf8::string("ST_URL_HASH"),urlHash)->
+                paramAsMutant("ST_URL_HASH",urlHash)->
                 paramAsMutant("ST_URL_TRAF", traf)->execute();
             }
             else {
@@ -273,7 +272,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
                 paramAsString("ST_USER", st_user)->
                 paramAsMutant("ST_TIMESTAMP", timeStamp)->
                 paramAsMutant("ST_URL", st_url)->
-                //paramAsMutant(utf8::string("ST_URL_HASH"),urlHash)->
+                paramAsMutant("ST_URL_HASH",urlHash)->
                 paramAsMutant("ST_URL_TRAF", traf)->execute();
             }
           }
@@ -482,20 +481,20 @@ void Logger::main()
 
   stMonUrlSel_->text(
     "SELECT ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
-    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND " 
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
     "ST_URL = :ST_URL"
   );
   stMonUrlIns_->text(
     "INSERT INTO INET_USERS_MONTHLY_TOP_URL " 
-    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
-    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_TRAF, 1)"
+    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_HASH, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
+    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_HASH, :ST_URL_TRAF, 1)"
   );
   stMonUrlUpd_->text(
     "UPDATE INET_USERS_MONTHLY_TOP_URL "
     "SET "
     "ST_URL_TRAF = :ST_URL_TRAF + :ST_URL_TRAF," 
     "ST_URL_COUNT = ST_URL_COUNT + 1 "
-    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND " 
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
     "ST_URL = :ST_URL"
   );
   stFileStatSel_->text(
@@ -528,62 +527,65 @@ void Logger::main()
   Vector<utf8::String> metadata;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
     metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
-    metadata <<
-      "CREATE TABLE INET_USERS_TRAF ("
-      " ST_USER               VARCHAR(80) NOT NULL,"
-      " ST_TIMESTAMP          DATETIME NOT NULL,"
-      " ST_TRAF_WWW           INTEGER NOT NULL,"
-      " ST_TRAF_SMTP          INTEGER NOT NULL" ")" <<
-      "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
-      " ST_USER               VARCHAR(80) NOT NULL,"
-      " ST_TIMESTAMP          DATETIME NOT NULL,"
-      " ST_URL                VARCHAR(1000) NOT NULL,"
-//      " ST_URL_HASH           BIGINT NOT NULL,"
-      " ST_URL_TRAF           INTEGER NOT NULL,"
-      " ST_URL_COUNT          INTEGER NOT NULL"
-      ")" << 
-      "CREATE TABLE INET_SENDMAIL_MESSAGES ("
-      " ST_FROM               VARCHAR(240) NOT NULL,"
-      " ST_MSGID              VARCHAR(14) NOT NULL PRIMARY KEY,"
-      " ST_MSGSIZE            INTEGER NOT NULL" ")" <<
-      "CREATE TABLE INET_LOG_FILE_STAT ("
-      " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
-      " ST_LAST_OFFSET        BIGINT NOT NULL"
-      ")" <<
-//      "DROP TABLE INET_BPFT_STAT" <<
-//      "DROP TABLE INET_BPFT_STAT_IP" <<
-//      "CREATE TABLE INET_BPFT_STAT_IP ("
-//      " st_ip        CHAR(8) CHARACTER SET ascii NOT NULL UNIQUE PRIMARY KEY"
-//      ")" <<
-      "CREATE TABLE INET_BPFT_STAT ("
-      " st_start         DATETIME NOT NULL,"
-//      " st_stop          DATETIME NOT NULL,"
-      " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-      " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-      " st_ip_proto      SMALLINT NOT NULL,"
-      " st_src_port      INTEGER NOT NULL,"
-      " st_dst_port      INTEGER NOT NULL,"
-      " st_dgram_bytes   INTEGER NOT NULL,"
-      " st_data_bytes    INTEGER NOT NULL"
-//      " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
-//      " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
-//      " FOREIGN KEY (st_src_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE,"
-//      " FOREIGN KEY (st_dst_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE"
-      ")" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_src_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_dst_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_start,st_src_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_start,st_dst_ip)" <<
-      "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
+  metadata <<
+    "DROP TABLE INET_USERS_TRAF" <<
+    "CREATE TABLE INET_USERS_TRAF ("
+    " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
+    " ST_TIMESTAMP          DATETIME NOT NULL,"
+    " ST_TRAF_WWW           INTEGER NOT NULL,"
+    " ST_TRAF_SMTP          INTEGER NOT NULL" ")" <<
+    "DROP TABLE INET_USERS_MONTHLY_TOP_URL" <<
+    "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
+    " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
+    " ST_TIMESTAMP          DATETIME NOT NULL,"
+    " ST_URL                VARCHAR(4096) CHARACTER SET ascii NOT NULL,"
+    " ST_URL_HASH           BIGINT NOT NULL,"
+    " ST_URL_TRAF           INTEGER NOT NULL,"
+    " ST_URL_COUNT          INTEGER NOT NULL"
+    ")" << 
+    "DROP TABLE INET_SENDMAIL_MESSAGES" <<
+    "CREATE TABLE INET_SENDMAIL_MESSAGES ("
+    " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
+    " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+    " ST_MSGSIZE            INTEGER NOT NULL" ")" <<
+    "CREATE TABLE INET_LOG_FILE_STAT ("
+    " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
+    " ST_LAST_OFFSET        BIGINT NOT NULL"
+    ")" <<
+    "DROP TABLE INET_BPFT_STAT" <<
+//    "DROP TABLE INET_BPFT_STAT_IP" <<
+//    "CREATE TABLE INET_BPFT_STAT_IP ("
+//    " st_ip        CHAR(8) CHARACTER SET ascii NOT NULL UNIQUE PRIMARY KEY"
+//    ")" <<
+    "CREATE TABLE INET_BPFT_STAT ("
+    " st_start         DATETIME NOT NULL,"
+//    " st_stop          DATETIME NOT NULL,"
+    " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+    " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+    " st_ip_proto      SMALLINT NOT NULL,"
+    " st_src_port      INTEGER NOT NULL,"
+    " st_dst_port      INTEGER NOT NULL,"
+    " st_dgram_bytes   INTEGER NOT NULL,"
+    " st_data_bytes    INTEGER NOT NULL"
+//    " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
+//    " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
+//    " FOREIGN KEY (st_src_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE,"
+//    " FOREIGN KEY (st_dst_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE"
+    ")" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_dst_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_start,st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_start,st_dst_ip)" <<
+    "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-    metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL)";
+    metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
     metadata << "CREATE DESC INDEX INET_BPFT_STAT_IDX5 ON INET_BPFT_STAT (st_start)";
   }
   else if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-    metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL)";
+    metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
   }
 
   if( (bool) config_->section("macroscope").value("DROP_DATABASE", false) ){
