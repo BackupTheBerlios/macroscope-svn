@@ -406,6 +406,29 @@ void Logger::writeBPFTHtmlReport()
       (const char *) ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr).getOEMString()
     );
   }
+  utf8::String excludeSrcIp, excludeDstIp;
+  if( config_->isValueByPath(section_ + "html_report.exclude") ){
+    utf8::String ex(config_->valueByPath(section_ + "html_report.exclude"));
+    for( intptr_t j = enumStringParts(ex) - 1, i = j; i >= 0; i-- ){
+      if( j == i ){
+        excludeSrcIp = " AND (";
+        excludeDstIp = " AND (";
+      }
+      utf8::String index(ip4AddrToIndex(
+        ksock::SockAddr().resolveName(stringPartByNo(ex,i)).addr4_.sin_addr.s_addr
+      ));
+      excludeSrcIp += "st_src_ip <> '" + index + "'";
+      excludeDstIp += "st_dst_ip <> '" + index + "'";
+      if( i > 0 ){
+        excludeSrcIp += " AND ";
+        excludeDstIp += " AND ";
+      }
+      else {
+        excludeSrcIp += ") ";
+        excludeDstIp += ") ";
+      }
+    }
+  }
 /*  statement_->text(
     "select distinct st_src_ip as st_ip FROM INET_BPFT_STAT "
     "union "
@@ -451,6 +474,7 @@ void Logger::writeBPFTHtmlReport()
       "      WHERE "
       "        st_start >= :BT AND st_start <= :ET" +
       utf8::String(useGateway_ ? " AND st_src_ip = :gateway" : "") +
+      excludeDstIp +
       "      GROUP BY st_dst_ip"
       "    UNION ALL"
       "      SELECT"
@@ -460,6 +484,7 @@ void Logger::writeBPFTHtmlReport()
       "      WHERE "
       "        st_start >= :BT AND st_start <= :ET" +
       utf8::String(useGateway_ ? " AND st_dst_ip = :gateway" : "") +
+      excludeSrcIp +
       "      GROUP BY st_src_ip"
       "  ) AS B "
       "  GROUP BY B.st_ip"
