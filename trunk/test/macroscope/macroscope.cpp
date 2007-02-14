@@ -210,7 +210,12 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     "UPDATE INET_USERS_TRAF SET ST_TRAF_WWW = ST_TRAF_WWW + :ST_TRAF_WWW "
     "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP"
   );
-
+/*
+  statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
+  stFileStatUpd_->prepare()->
+    paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
+    paramAsMutant("ST_LAST_OFFSET",0)->execute();
+ */
   database_->start();
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
@@ -298,9 +303,21 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
 {
   AsyncFile flog(logFileName);
   flog.readOnly(true).open();
-  stTrafIns_->text("INSERT INTO INET_USERS_TRAF" "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)" "VALUES (:ST_USER, :ST_TIMESTAMP, 0, :ST_TRAF_SMTP)");
-  stTrafUpd_->text("UPDATE INET_USERS_TRAF SET ST_TRAF_SMTP = ST_TRAF_SMTP + :ST_TRAF_SMTP " "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP");
-
+  stTrafIns_->text(
+    "INSERT INTO INET_USERS_TRAF"
+    "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)"
+    "VALUES (:ST_USER, :ST_TIMESTAMP, 0, :ST_TRAF_SMTP)"
+  );
+  stTrafUpd_->text(
+    "UPDATE INET_USERS_TRAF SET ST_TRAF_SMTP = ST_TRAF_SMTP + :ST_TRAF_SMTP "
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP"
+  );
+/*
+  statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
+  stFileStatUpd_->prepare()->
+    paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
+    paramAsMutant("ST_LAST_OFFSET",0)->execute();
+ */
   database_->start();
   int64_t offset  = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
@@ -528,7 +545,7 @@ void Logger::main()
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
     metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
   metadata <<
-    "DROP TABLE INET_USERS_TRAF" <<
+//    "DROP TABLE INET_USERS_TRAF" <<
     "CREATE TABLE INET_USERS_TRAF ("
     " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
     " ST_TIMESTAMP          DATETIME NOT NULL,"
@@ -543,7 +560,7 @@ void Logger::main()
     " ST_URL_TRAF           INTEGER NOT NULL,"
     " ST_URL_COUNT          INTEGER NOT NULL"
     ")" << 
-    "DROP TABLE INET_SENDMAIL_MESSAGES" <<
+//    "DROP TABLE INET_SENDMAIL_MESSAGES" <<
     "CREATE TABLE INET_SENDMAIL_MESSAGES ("
     " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
     " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
@@ -552,7 +569,7 @@ void Logger::main()
     " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
     " ST_LAST_OFFSET        BIGINT NOT NULL"
     ")" <<
-    "DROP TABLE INET_BPFT_STAT" <<
+//    "DROP TABLE INET_BPFT_STAT" <<
 //    "DROP TABLE INET_BPFT_STAT_IP" <<
 //    "CREATE TABLE INET_BPFT_STAT_IP ("
 //    " st_ip        CHAR(8) CHARACTER SET ascii NOT NULL UNIQUE PRIMARY KEY"
