@@ -238,7 +238,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         "<TR>\n"
         "  <TH BGCOLOR=\"#00A0FF\" COLSPAN=\"" + utf8::int2Str(hourCount * 2 + 3) + "\" ALIGN=left nowrap>\n" <<
         "    <A HREF=\"" << utf8::String::print("bpft-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) << "\">" <<
-             utf8::String::print("bpft-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) << "\n"
+             utf8::String::print("%02d.%02d.%04d",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) << "\n"
         "    </A>\n"
         "  </TH>\n"
         "</TR>\n"
@@ -268,7 +268,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
 	  f <<
             "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"#00A0FF\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-            "      " + utf8::int2Str(endTime.tm_hour + 1) + "\n"
+            "      " + utf8::int2Str(endTime.tm_hour) + "\n"
             "    </FONT>\n"
             "  </TH>\n"
 	  ;
@@ -989,12 +989,12 @@ void Logger::parseBPFTLogFile()
     "update INET_BPFT_STAT set st_dst_name = :name where st_dst_ip = :ip"
   )->prepare();*/
   AsyncFile flog(config_->valueByPath(section_ + "log_file_name"));
-
+/*
   statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
   stFileStatUpd_->prepare()->
     paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
     paramAsMutant("ST_LAST_OFFSET",0)->execute();
- 
+ */
   flog.readOnly(true).open();
   database_->start();
   int64_t offset = fetchLogFileLastOffset(flog.fileName());
