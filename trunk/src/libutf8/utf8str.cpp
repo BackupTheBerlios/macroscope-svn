@@ -928,7 +928,10 @@ String::Iterator & String::Iterator::reset()
   cursor_ = 0;
   position_ = 0;
   while( position_ < position && container_->ustring_[cursor_] != 0 ){
-    cursor_ += utf8seqlen(container_->ustring_ + cursor_);
+    uintptr_t sl = utf8seqlen(container_->ustring_ + cursor_);
+    if( sl == 0 )
+      newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    cursor_ += sl;
     position_++;
   }
   return *this;

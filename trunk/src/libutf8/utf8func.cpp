@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,7 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#include <adicpp/lconfig.h>
-#include <adicpp/utf8embd.h>
+#include <adicpp/ksys.h>
 //---------------------------------------------------------------------------
 namespace utf8 {
 //---------------------------------------------------------------------------
@@ -84,7 +83,7 @@ intptr_t utf82ucs(const unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t & c
       utf8l -= 2;
     }
   }
-  else{
+  else {
     bad:
     r = -3;
     utf8s++;
@@ -466,8 +465,7 @@ uintptr_t utf8s2Upper(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uint
   while( utf8lS > 0 ){
     uintptr_t c;
     r = utf82ucs(*(const unsigned char **) &utf8sS, utf8lS, c);
-    if( r != 0 )
-      break;
+    if( r != 0 ) break;
     low = 0;
     high = (sizeof(upperTable) / sizeof(upperTable[0])) / 2 - 1;
     while( low <= high ){
@@ -495,11 +493,14 @@ uintptr_t utf8s2Upper(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uint
 //---------------------------------------------------------------------------
 uintptr_t utf8strlen(const char * utf8s)
 {
-  uintptr_t l = 0;
+  uintptr_t l = 0, sl;
 
   assert( utf8s != NULL );
   while( *utf8s != '\0' ){
-    utf8s += utf8seqlen((const unsigned char *) utf8s);
+    sl = utf8seqlen((const unsigned char *) utf8s);
+    if( sl == 0 )
+      newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    utf8s += sl;
     l++;
   }
   return l;
@@ -507,11 +508,14 @@ uintptr_t utf8strlen(const char * utf8s)
 //---------------------------------------------------------------------------
 uintptr_t utf8strlen(const char * utf8s, uintptr_t & size)
 {
-  uintptr_t     l = 0;
+  uintptr_t l = 0, sl;
   const char *  s = utf8s;
 
   while( *s != '\0' ){
-    s += utf8seqlen((const unsigned char *) s);
+    sl = utf8seqlen((const unsigned char *) s);
+    if( sl == 0 )
+      newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    s += sl;
     l++;
   }
   size = s - utf8s;
@@ -520,11 +524,14 @@ uintptr_t utf8strlen(const char * utf8s, uintptr_t & size)
 //---------------------------------------------------------------------------
 uintptr_t utf8strlen(const char * utf8s, uintptr_t l, uintptr_t & size)
 {
-  uintptr_t     q = 0;
-  const char *  s = utf8s;
+  uintptr_t q = 0, sl;
+  const char * s = utf8s;
 
   while( q < l && *s != '\0' ){
-    s += utf8seqlen((const unsigned char *) s);
+    sl = utf8seqlen((const unsigned char *) s);
+    if( sl == 0 )
+      newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    s += sl;
     q++;
   }
   size = s - utf8s;
