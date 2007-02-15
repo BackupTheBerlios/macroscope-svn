@@ -142,7 +142,16 @@ void Logger::parseSquidLogLine(char * p,uintptr_t size,Array<const char *> & slc
     if( i >= slcp.count() ) slcp.resize(i + 1);
     slcp[i] = p;
     *s++ = '\0';
-    if( i > 0 ) if( strcmp(slcp[i - 1], slcp[i]) == 0 ) i--;
+    // to ascii
+    /*while( *p != '\0' ){
+      uint8_t c = *p;
+      if( c < ' ' || (c & 0x80) != 0 ){
+        c &= 0x7F;
+        *p = c >= ' ' ? c : '?';
+      }
+      p++;
+    }*/
+    if( i > 0 ) if( strcmp(slcp[i - 1],slcp[i]) == 0 ) i--;
     p = s;
   }
 }
@@ -232,12 +241,12 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     size = sb.size();
     if( size > 0 && sb.c_str()[size - 1] == '\n' ){
       parseSquidLogLine(sb.c_str(),size,slcp);
-      intmax_t  traf  (utf8::str2Int(slcp[4]));
+      intmax_t  traf(utf8::str2Int(slcp[4]));
       if( traf > 0 && slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7], '%') == NULL && strcmp(slcp[7], "-") != 0 && strncmp(slcp[3], "NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
         double timeStamp1;
         sscanf(slcp[0],"%lf",&timeStamp1);
         utf8::String st_user(slcp[7]), st_url(slcp[6]);
-        st_user = st_user.lower().replaceAll("\"","").left(4096);
+        st_user = st_user.left(4096).replaceAll("\"","").lower();
         if( st_url.strcasestr(skipUrl).position() < 0 ){
           st_url = shortUrl(st_url).lower();
           Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
@@ -394,7 +403,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         if( (stat = strstr(sb.c_str(), "stat=")) != NULL ){
           stat += 5;
         }
-	st_user = st_user.lower().replaceAll("\"","");
+	      st_user = st_user.lower().replaceAll("\"","");
         if( from != NULL && msgSize > 0 ){
           try{
             stMsgsIns_->prepare()->
@@ -551,11 +560,11 @@ void Logger::main()
     " ST_TIMESTAMP          DATETIME NOT NULL,"
     " ST_TRAF_WWW           INTEGER NOT NULL,"
     " ST_TRAF_SMTP          INTEGER NOT NULL" ")" <<
-    "DROP TABLE INET_USERS_MONTHLY_TOP_URL" <<
+//    "DROP TABLE INET_USERS_MONTHLY_TOP_URL" <<
     "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
     " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
     " ST_TIMESTAMP          DATETIME NOT NULL,"
-    " ST_URL                VARCHAR(4096) CHARACTER SET ascii NOT NULL,"
+    " ST_URL                VARCHAR(4096) NOT NULL,"
     " ST_URL_HASH           BIGINT NOT NULL,"
     " ST_URL_TRAF           INTEGER NOT NULL,"
     " ST_URL_COUNT          INTEGER NOT NULL"
