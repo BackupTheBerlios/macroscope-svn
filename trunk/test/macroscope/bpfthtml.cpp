@@ -238,7 +238,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         "<TR>\n"
         "  <TH BGCOLOR=\"#00A0FF\" COLSPAN=\"" + utf8::int2Str(hourCount * 2 + 3) + "\" ALIGN=left nowrap>\n" <<
         "    <A HREF=\"" << utf8::String::print("bpft-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) << "\">" <<
-             utf8::String::print("%02d.%02d.%04d",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) << "\n"
+             utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) << "\n"
         "    </A>\n"
         "  </TH>\n"
         "</TR>\n"
