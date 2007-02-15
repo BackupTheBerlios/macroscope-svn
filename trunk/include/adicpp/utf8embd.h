@@ -142,20 +142,6 @@ uintptr_t       utf8s2Upper(char * utf8sD, uintptr_t utf8lD, const char * utf8sS
 //---------------------------------------------------------------------------
 inline uintptr_t utf8seqlen(const unsigned char * utf8s)
 {
-  /*uintptr_t l;
-
-#if SIZEOF_WCHAR_T > 2
-  if( (*utf8s & 0xFC) == 0xFC ){
-    l = 6;
-  }
-  else if( (*utf8s & 0xF8) == 0xF8 ){
-    l = 5;
-  }
-  else if( (*utf8s & 0xF0) == 0xF0 ){
-    l = 4;
-  }
-  else
-#endif*/
   static const uint8_t seqLens[64] = {
 //  000000  000001  000010, 000011, 000100, 000101, 000110, 000111
          1,      1,      1,      1,      1,      1,      1,      1,
@@ -175,19 +161,6 @@ inline uintptr_t utf8seqlen(const unsigned char * utf8s)
          3,      3,      3,      3,      4,      4,      5,      6
   };
   return seqLens[*utf8s >> 2];
-  /*if( (*utf8s & 0xE0) == 0xE0 ){
-    l = 3;
-  }
-  else if( (*utf8s & 0xC0) == 0xC0 ){
-    l = 2;
-  }
-  else if( *utf8s < 0x80 ){
-    l = 1;
-  }
-  else {
-    l = 0;
-  }
-  return l;*/
 }
 //---------------------------------------------------------------------------
 inline uintptr_t utf8seqlen(const char * utf8s)
@@ -224,37 +197,6 @@ inline uintptr_t utf82ucs(const unsigned char * utf8s,uintptr_t * l = NULL)
     default :
       assert( 0 );
   }
-/*#if SIZEOF_WCHAR_t_T > 2
-  if( (*utf8s & 0xFC) == 0xFC && utf8s[1] != 0 && utf8s[2] != 0 && utf8s[3] != 0 && utf8s[4] != 0 && utf8s[5] != 0 ){
-    c = ((uintptr_t) (*utf8s & 0x1) << 30) | ((uintptr_t) (utf8s[1] & 0x3F) << 24) | ((uintptr_t) (utf8s[2] & 0x3F) << 18) | ((uintptr_t) (utf8s[3] & 0x3F) << 12) | ((uintptr_t) (utf8s[4] & 0x3F) << 6) | (uintptr_t) (utf8s[5] & 0x3F);
-    *l = 6;
-  }
-  else if( (*utf8s & 0xF8) == 0xF8 && utf8s[1] != 0 && utf8s[2] != 0 && utf8s[3] != 0 && utf8s[4] != 0 ){
-    c = ((uintptr_t) (*utf8s & 0x3) << 24) | ((uintptr_t) (utf8s[1] & 0x3F) << 18) | ((uintptr_t) (utf8s[2] & 0x3F) << 12) | ((uintptr_t) (utf8s[3] & 0x3F) << 6) | (uintptr_t) (utf8s[4] & 0x3F);
-    *l = 5;
-  }
-  else if( (*utf8s & 0xF0) == 0xF0 && utf8s[1] != 0 && utf8s[2] != 0 && utf8s[3] != 0 ){
-    c = ((uintptr_t) (*utf8s & 0x7) << 18) | ((uintptr_t) (utf8s[1] & 0x3F) << 12) | ((uintptr_t) (utf8s[2] & 0x3F) << 6) | (uintptr_t) (utf8s[3] & 0x3F);
-    *l = 4;
-  }
-  else
-#endif
-  if( (*utf8s & 0xE0) == 0xE0 && utf8s[1] != 0 && utf8s[2] != 0 ){
-    c = ((uintptr_t) (*utf8s & 0xF) << 12) | ((uintptr_t) (utf8s[1] & 0x3F) << 6) | (uintptr_t) (utf8s[2] & 0x3F);
-    *l = 3;
-  }
-  else if( (*utf8s & 0xC0) == 0xC0 && utf8s[1] != 0 ){
-    c = ((uintptr_t) (*utf8s & 0x1F) << 6) | (uintptr_t) (utf8s[1] & 0x3F);
-    *l = 2;
-  }
-  else if( *utf8s < 0x80 ){
-    c = *utf8s;
-    *l = 1;
-  }
-  else {
-    c = uintptr_t(intptr_t(-1));
-    *l = 1;
-  }*/
   return c;
 }
 //---------------------------------------------------------------------------
@@ -273,108 +215,100 @@ inline uintptr_t utf82ucs(const char * utf8s,uintptr_t & l)
   return utf82ucs(reinterpret_cast<const unsigned char *>(utf8s),l);
 }
 //---------------------------------------------------------------------------
+inline intptr_t utf82ucs(const unsigned char * & utf8s,uintptr_t & utf8l,uintptr_t & c)
+{
+  intptr_t r = 0, l = utf8seqlen(utf8s);
+  switch( l ){
+    case 0 :
+      r = -3;
+      errno = EINVAL;
+      c = '?';
+      utf8s++;
+      l = 1;
+      break;
+    case 1 :
+      if( (intptr_t) utf8l > 0 ) c = *utf8s++;
+      break;
+    case 2 :
+      if( (intptr_t) utf8l > 1 ){
+        c = ((uintptr_t) (*utf8s & 0x1F) << 6) | (uintptr_t) (utf8s[1] & 0x3F);
+        utf8s += 2;
+      }
+      break;
+    case 3 :
+      if( (intptr_t) utf8l > 2 ){
+        c = ((uintptr_t) (*utf8s & 0xF) << 12) | ((uintptr_t) (utf8s[1] & 0x3F) << 6) | (uintptr_t) (utf8s[2] & 0x3F);
+        utf8s += 3;
+      }
+      break;
+    case 4 :
+      if( (intptr_t) utf8l > 3 ){
+        c = ((uintptr_t) (*utf8s & 0x7) << 18) | ((uintptr_t) (utf8s[1] & 0x3F) << 12) | ((uintptr_t) (utf8s[2] & 0x3F) << 6) | (uintptr_t) (utf8s[3] & 0x3F);
+        utf8s += 4;
+      }
+      break;
+    case 5 :
+      if( (intptr_t) utf8l > 4 ){
+        c = ((uintptr_t) (*utf8s & 0x3) << 24) | ((uintptr_t) (utf8s[1] & 0x3F) << 18) | ((uintptr_t) (utf8s[2] & 0x3F) << 12) | ((uintptr_t) (utf8s[3] & 0x3F) << 6) | (uintptr_t) (utf8s[4] & 0x3F);
+        utf8s += 5;
+      }
+      break;
+    case 6 :
+      if( (intptr_t) utf8l > 5 ){
+        c = ((uintptr_t) (*utf8s & 0x1) << 30) | ((uintptr_t) (utf8s[1] & 0x3F) << 24) | ((uintptr_t) (utf8s[2] & 0x3F) << 18) | ((uintptr_t) (utf8s[3] & 0x3F) << 12) | ((uintptr_t) (utf8s[4] & 0x3F) << 6) | (uintptr_t) (utf8s[5] & 0x3F);
+        utf8s += 6;
+      }
+      break;
+    default :
+      assert( 0 );
+  }
+  utf8l -= l;
+  return r;
+}
+//---------------------------------------------------------------------------
+inline intptr_t utf82ucs(const char * & utf8s,uintptr_t & utf8l,uintptr_t & c)
+{
+  return utf82ucs(*(const unsigned char **) &utf8s, utf8l, c);
+}
+//---------------------------------------------------------------------------
 uintptr_t utf8strlen(const char * utf8s);
 uintptr_t utf8strlen(const char * utf8s, uintptr_t & size);
 uintptr_t utf8strlen(const char * utf8s, uintptr_t l, uintptr_t & size);
 //---------------------------------------------------------------------------
+inline uintptr_t ucs2utf8seqlen(uintptr_t c)
+{
+  return
+    uint8_t(c < 0x80) * 1u +
+    uint8_t(uint8_t(c >= 0x80)      & uint8_t(c < 0x800))     * uint8_t(2u) +
+    uint8_t(uint8_t(c >= 0x800)     & uint8_t(c < 0x10000))   * uint8_t(3u) +
+    uint8_t(uint8_t(c >= 0x10000)   & uint8_t(c < 0x200000))  * uint8_t(4u) +
+    uint8_t(uint8_t(c >= 0x200000)  & uint8_t(c < 0x4000000)) * uint8_t(5u) +
+    uint8_t(uint8_t(c >= 0x4000000) & uint8_t(c < 0x8000000)) * uint8_t(6u)
+  ;
+}
+//---------------------------------------------------------------------------
 inline uintptr_t ucs2utf8seq(unsigned char * utf8s,uintptr_t c)
 {
-  uintptr_t utf8l;
-  if( c < 0x80 ){
-    *utf8s++ = (unsigned char) c;
-    utf8l = 1;
-  }
-  else if( c < 0x800 ){
-    utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[0] = (unsigned char) (0xC0 | c);
-    utf8l = 2;
-  }
-  else if( c < 0x10000 ){
-    utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[0] = (unsigned char) (0xE0 | c);
-    utf8l = 3;
-  }
-#if SIZEOF_WCHAR_T_T > 2
-  else if( c < 0x200000 ){
-    utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[0] = (unsigned char) (0xF0 | c);
-    utf8l = 4;
-  }
-  else if( c < 0x4000000 ){
-    utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[0] = (unsigned char) (0xF8 | c);
-    utf8l = 5;
-  }
-  else if( c < 0x8000000 ){
-    utf8s[5] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
-    c >>= 6;
-    utf8s[0] = (unsigned char) (0xFC | c);
-    utf8l = 6;
-  }
-#endif
-  else {
-    utf8l = 0;
-  }
-  return utf8l;
-}
-//---------------------------------------------------------------------------
-inline uintptr_t ucs2utf8seq(char * utf8s, uintptr_t c)
-{
-  return ucs2utf8seq((unsigned char *) utf8s, c);
-}
-//---------------------------------------------------------------------------
-inline uintptr_t ucs2utf8seq(unsigned char * utf8s, uintptr_t utf8l, uintptr_t c)
-{
-  if( c < 0x80 ){
-    if( utf8l > 0 )
-      *utf8s++ = (char) c;
-    utf8l = 1;
-  }
-  else if( c < 0x800 ){
-    if( utf8l > 1 ){
+  uintptr_t utf8l = ucs2utf8seqlen(c);
+  switch( utf8l ){
+    case 0 :
+      break;
+    case 1 :
+      *utf8s++ = (unsigned char) c;
+      break;
+    case 2 :
       utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[0] = (unsigned char) (0xC0 | c);
-    }
-    utf8l = 2;
-  }
-  else if( c < 0x10000 ){
-    if( utf8l > 2 ){
+      break;
+    case 3 :
       utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[0] = (unsigned char) (0xE0 | c);
-    }
-    utf8l = 3;
-  }
-#if SIZEOF_WCHAR_T > 2
-  else if( c < 0x200000 ){
-    if( utf8l > 3 ){
+      break;
+    case 4 :
       utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
@@ -382,11 +316,8 @@ inline uintptr_t ucs2utf8seq(unsigned char * utf8s, uintptr_t utf8l, uintptr_t c
       utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[0] = (unsigned char) (0xF0 | c);
-    }
-    utf8l = 4;
-  }
-  else if( c < 0x4000000 ){
-    if( utf8l > 4 ){
+      break;
+    case 5 :
       utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
@@ -396,11 +327,8 @@ inline uintptr_t ucs2utf8seq(unsigned char * utf8s, uintptr_t utf8l, uintptr_t c
       utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[0] = (unsigned char) (0xF8 | c);
-    }
-    utf8l = 5;
-  }
-  else if( c < 0x8000000 ){
-    if( utf8l > 5 ){
+      break;
+    case 6 :
       utf8s[5] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
@@ -412,14 +340,86 @@ inline uintptr_t ucs2utf8seq(unsigned char * utf8s, uintptr_t utf8l, uintptr_t c
       utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
       c >>= 6;
       utf8s[0] = (unsigned char) (0xFC | c);
-    }
-    utf8l = 6;
-  }
-#endif
-  else{
-    utf8l = 0;
+      break;
+    default :
+      assert( 0 );
   }
   return utf8l;
+}
+//---------------------------------------------------------------------------
+inline uintptr_t ucs2utf8seq(char * utf8s, uintptr_t c)
+{
+  return ucs2utf8seq((unsigned char *) utf8s, c);
+}
+//---------------------------------------------------------------------------
+inline uintptr_t ucs2utf8seq(unsigned char * utf8s,uintptr_t utf8l,uintptr_t c)
+{
+  uintptr_t l = ucs2utf8seqlen(c);
+  switch( l ){
+    case 0 :
+      break;
+    case 1 :
+      if( utf8l > 0 ) *utf8s = (unsigned char) c;
+      break;
+    case 2 :
+      if( utf8l > 1 ){
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xC0 | c);
+      }
+      break;
+    case 3 :
+      if( utf8l > 2 ){
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xE0 | c);
+      }
+      break;
+    case 4 :
+      if( utf8l > 3 ){
+        utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xF0 | c);
+      }
+      break;
+    case 5 :
+      if( utf8l > 4 ){
+        utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xF8 | c);
+      }
+      break;
+    case 6 :
+      if( utf8l > 5 ){
+        utf8s[5] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xFC | c);
+      }
+      break;
+    default :
+      assert( 0 );
+  }
+  return l;
 }
 //---------------------------------------------------------------------------
 inline uintptr_t ucs2utf8seq(char * utf8s, uintptr_t utf8l, uintptr_t c)
@@ -427,14 +427,92 @@ inline uintptr_t ucs2utf8seq(char * utf8s, uintptr_t utf8l, uintptr_t c)
   return ucs2utf8seq((unsigned char *) utf8s, utf8l, c);
 }
 //---------------------------------------------------------------------------
-intptr_t  utf82ucs(const unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t & c);
+intptr_t ucs2utf8(unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t c);
 //---------------------------------------------------------------------------
-inline intptr_t utf82ucs(const char *& utf8s, uintptr_t & utf8l, uintptr_t & c)
+inline intptr_t ucs2utf8(unsigned char * & utf8s,uintptr_t & utf8l,uintptr_t c)
 {
-  return utf82ucs(*(const unsigned char **) &utf8s, utf8l, c);
+  uintptr_t l = ucs2utf8seqlen(c);
+  intptr_t r = 0;
+  errno = 0;
+  switch( l ){
+    case 0 :
+//      newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+      if( (intptr_t) utf8l > 0 ){
+        *utf8s++ = '?';
+        r = -3;
+      }
+      errno = EINVAL;
+      l = 1;
+      break;
+    case 1 :
+      if( (intptr_t) utf8l > 0 ) *utf8s++ = (unsigned char) c;
+      break;
+    case 2 :
+      if( (intptr_t) utf8l > 1 ){
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xC0 | c);
+        utf8s += 2;
+      }
+      break;
+    case 3 :
+      if( (intptr_t) utf8l > 2 ){
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xE0 | c);
+        utf8s += 3;
+      }
+      break;
+    case 4 :
+      if( (intptr_t) utf8l > 3 ){
+        utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xF0 | c);
+        utf8s += 4;
+      }
+      break;
+    case 5 :
+      if( (intptr_t) utf8l > 4 ){
+        utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xF8 | c);
+        utf8s += 5;
+      }
+      break;
+    case 6 :
+      if( (intptr_t) utf8l > 5 ){
+        utf8s[5] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[4] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[3] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[2] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
+        c >>= 6;
+        utf8s[0] = (unsigned char) (0xFC | c);
+        utf8s += 6;
+      }
+//      break;
+//    default :
+//      assert( 0 );
+  }
+  utf8l -= l;
+  return r;
 }
-//---------------------------------------------------------------------------
-intptr_t  ucs2utf8(unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t c);
 //---------------------------------------------------------------------------
 inline intptr_t ucs2utf8(char *& utf8s, uintptr_t & utf8l, uintptr_t c)
 {

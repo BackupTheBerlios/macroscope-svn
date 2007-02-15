@@ -36,7 +36,7 @@ Database * Database::newDatabase(ksys::Config * config)
   utf8::String stype0(config->valueByPath("libadicpp.default_connection.server_type","MYSQL"));
   utf8::String stype(stype0.lower());
   utf8::String section("libadicpp.default_connection." + stype);
-  if( stype.strcasecmp("firebird") == 0 ){
+  if( stype.strcmp("firebird") == 0 ){
     ksys::AutoPtr<FirebirdDatabase> p(newObject<FirebirdDatabase>());
     p->name(config->valueByPath(section + ".database"));
     p->params().add("user_name",config->valueByPath(section + ".user","sysdba"));
@@ -48,7 +48,7 @@ Database * Database::newDatabase(ksys::Config * config)
     p->params().add("lc_messages",config->valueByPath(section + ".messages_charset","WIN1251"));
     return p.ptr(NULL);
   }
-  if( stype.strcasecmp("MYSQL") == 0 ){
+  if( stype.strcmp("mysql") == 0 ){
     ksys::AutoPtr<MYSQLDatabase> p(newObject<MYSQLDatabase>());
     p->name(config->valueByPath(section + ".database"));
     p->params().add("user_name",config->valueByPath(section + ".user","root"));
