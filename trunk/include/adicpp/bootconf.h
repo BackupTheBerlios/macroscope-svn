@@ -526,18 +526,18 @@ typedef int32_t gid_t;
 #endif
 
 #ifndef PRF_FLT
-#define PRF_FLT "f"
+#define PRF_FLT ""
 #endif
 
 #ifndef PRF_DBL
-#define PRF_DBL "lf"
+#define PRF_DBL "l"
 #endif
 
 #ifndef PRF_LDBL
 #if HAVE_LONG_DOUBLE
-#define PRF_LDBL "Lf"
+#define PRF_LDBL "L"
 #else
-#define PRF_LDBL "lf"
+#define PRF_LDBL "l"
 #endif
 #endif
 

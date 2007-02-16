@@ -235,6 +235,11 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   int64_t cl = getlocaltimeofday();
   AsyncFile::LineGetBuffer lgb(flog);
   lgb.codePage_ = CP_UTF8;
+  stTrafIns_->prepare();
+  stTrafUpd_->prepare();
+  stMonUrlSel_->prepare();
+  stMonUrlUpd_->prepare();
+  stMonUrlIns_->prepare();
   for(;;){
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
@@ -243,38 +248,37 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
       parseSquidLogLine(sb.c_str(),size,slcp);
       intmax_t  traf(utf8::str2Int(slcp[4]));
       if( traf > 0 && slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7], '%') == NULL && strcmp(slcp[7], "-") != 0 && strncmp(slcp[3], "NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
-        double timeStamp1;
-        sscanf(slcp[0],"%lf",&timeStamp1);
+        ldouble timeStamp1;
+        sscanf(slcp[0],"%"PRF_LDBL"f",&timeStamp1);
         utf8::String st_user(slcp[7]), st_url(slcp[6]);
         st_user = st_user.left(4096).replaceAll("\"","").lower();
         if( st_url.strcasestr(skipUrl).position() < 0 ){
           st_url = shortUrl(st_url).lower();
           Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
-          try{
-            stTrafIns_->prepare();
+          try {
+//	    newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
             stTrafIns_->paramAsString("ST_USER",st_user);
             stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
             stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
             stTrafIns_->execute();
           }
           catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
-            stTrafUpd_->prepare();
-            stTrafUpd_->paramAsString("ST_USER", st_user);
-            stTrafUpd_->paramAsMutant("ST_TIMESTAMP", timeStamp);
-            stTrafUpd_->paramAsMutant("ST_TRAF_WWW", traf);
+            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ENOSYS) ) throw;
+            stTrafUpd_->paramAsString("ST_USER",st_user);
+            stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
+            stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
             stTrafUpd_->execute();
           }
           if( top10 ){
             int64_t urlHash = st_url.hash_ll(true);
-            stMonUrlSel_->prepare()->
+            stMonUrlSel_->
               paramAsString("ST_USER", st_user)->
               paramAsMutant("ST_TIMESTAMP", timeStamp)->
               paramAsMutant("ST_URL", st_url)->
               paramAsMutant("ST_URL_HASH",urlHash)->
               execute()->fetchAll();
             if( stMonUrlSel_->rowCount() > 0 ){
-              stMonUrlUpd_->prepare()->
+              stMonUrlUpd_->
                 paramAsString("ST_USER", st_user)->
                 paramAsMutant("ST_TIMESTAMP", timeStamp)->
                 paramAsMutant("ST_URL", st_url)->
@@ -282,7 +286,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
                 paramAsMutant("ST_URL_TRAF", traf)->execute();
             }
             else {
-              stMonUrlIns_->prepare()->
+              stMonUrlIns_->
                 paramAsString("ST_USER", st_user)->
                 paramAsMutant("ST_TIMESTAMP", timeStamp)->
                 paramAsMutant("ST_URL", st_url)->

@@ -354,6 +354,7 @@ char ** backtrace_symbols(char ** buffer)
         cplus_demangle_set_style(auto_demangling);
 	char * result = cplus_demangle(info.dli_sname,DMGL_PARAMS | DMGL_ANSI | DMGL_TYPES);
         j = snprintf(cp,alen,"%p <%s+%"PRIdPTR"> at %s",buffer[i],result,offset,info.dli_fname);
+	free(result);
 #else
         j = snprintf(cp,alen,"%p <%s+%"PRIdPTR"> at %s",buffer[i],info.dli_sname,offset,info.dli_fname);
 #endif

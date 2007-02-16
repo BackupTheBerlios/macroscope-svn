@@ -38,8 +38,6 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
   AutoPtr<char *> strings(backtrace());
   strings.ptr(backtrace_symbols(strings));
   for( char ** p = strings; p != NULL && *p != NULL; p++ ){
-//      попробовать demangle libiberty
-//    fprintf(stderr,"%s\n",*p);
     if( --skipCount < 0 ){
       s += *p;
       s += "\n";

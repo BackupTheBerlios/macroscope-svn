@@ -192,7 +192,7 @@ void Logger::MTWriter::threadExecute()
 //------------------------------------------------------------------------------
 void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded)
 {
-  if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_html_writer",false) )
+  if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_engine",false) )
     threads_.add(newObjectR1C2C3<MTWriter>(*this,file,year)).resume();
   AsyncFile f(file);
   f.createIfNotExist(true).open();
