@@ -639,7 +639,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
 //------------------------------------------------------------------------------
 utf8::String Logger::getDecor(const utf8::String & dname)
 {
-  return getDecor("" + dname);
+  return config_->textByPath(section_ + ".decoration.color." + dname);
 }
 //------------------------------------------------------------------------------
 void Logger::writeBPFTHtmlReport()
