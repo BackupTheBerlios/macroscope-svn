@@ -938,7 +938,7 @@ void Logger::writeHtmlTail(AsyncFile & f)
     "<BR>\n"
     "Generated on " + un.nodename + ", by " + macroscope_version.gnu_ + "\n<BR>"
 #ifndef PRIVATE_RELEASE
-    "<A HREF=\"http://developer.berlios.de/projects/macroscope/\" wrap>\n"
+    "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
     "  http://developer.berlios.de/projects/macroscope/\n"
     "</A>\n"
 #endif
