@@ -82,7 +82,6 @@ class Logger {
     void writeBPFTHtmlReport();
   private:
     utf8::String shortUrl_;
-    utf8::String prefix_;
     utf8::String section_;
     ConfigSPi config_;
     AutoPtr<Database> database_;

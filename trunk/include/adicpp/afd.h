@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,7 +69,7 @@ class AsyncFile : public AsyncDescriptor {
         ~LineGetBuffer() {}
         LineGetBuffer() {}
         LineGetBuffer(AsyncFile & file,uintptr_t size = 0) : 
-          file_(&file), bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false) {}
+          file_(&file), bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false), detectUnicodeFFFE_(true) {}
 
         LineGetBuffer & seek(uint64_t pos);
 
@@ -81,6 +81,7 @@ class AsyncFile : public AsyncDescriptor {
         uintptr_t len_;
         uintptr_t codePage_;
         bool removeNewLine_;
+	bool detectUnicodeFFFE_;
     };
     bool gets(utf8::String & str,LineGetBuffer * buffer = NULL);
 

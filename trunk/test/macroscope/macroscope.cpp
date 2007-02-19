@@ -36,11 +36,6 @@ Logger::~Logger()
 //------------------------------------------------------------------------------
 Logger::Logger() :
   shortUrl_("://"),
-#if defined(__WIN32__) || defined(__WIN64__)
-  prefix_("macroscope.windows."),
-#else
-  prefix_("macroscope.unix."),
-#endif
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   trafCacheAutoDrop_(trafCache_),
   cacheSize_(0),
@@ -675,29 +670,29 @@ void Logger::main()
     }
   }
   ellapsed_ = getlocaltimeofday();
-  section_ = prefix_ + "html_report.";
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
-    Mutant m0(config_->valueByPath(prefix_ + "squid.log_file_name"));
-    Mutant m1(config_->valueByPath(prefix_ + "squid.top10_url",true));
-    Mutant m2(config_->valueByPath(prefix_ + "squid.skip_url"));
+    Mutant m0(config_->valueByPath("macroscope.squid.log_file_name"));
+    Mutant m1(config_->valueByPath("macroscope.squid.top10_url",true));
+    Mutant m2(config_->valueByPath("macroscope.squid.skip_url"));
     parseSquidLogFile(m0,m1,m2);
   }
   if( (bool) config_->valueByPath("macroscope.process_sendmail_log",true) ){
-    Mutant m0(config_->valueByPath(prefix_ + "sendmail.log_file_name"));
+    Mutant m0(config_->valueByPath("macroscope.sendmail.log_file_name"));
     Mutant m1(utf8::String("@") + config_->valueByPath("macroscope.sendmail.main_domain"));
     Mutant m2(config_->valueByPath("macroscope.sendmail.start_year"));
     parseSendmailLogFile(m0,m1,m2);
   }
+  section_ = "macroscope.html_report";
   writeHtmlYearOutput();
   ellapsed_ = getlocaltimeofday();
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-      section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name() + ".";
+      section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name();
       parseBPFTLogFile();
     }
   }
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-    section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name() + ".";
+    section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name();
     writeBPFTHtmlReport();
   }
 }

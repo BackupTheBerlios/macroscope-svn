@@ -471,7 +471,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
 Config & Config::parseSectionBody(ConfigSection & root)
 {
   TokenType tt;
-  utf8::String  token;
+  utf8::String token;
   for(;;){
     token = getToken(tt);
     if( tt == ttEof ){
@@ -495,6 +495,9 @@ Config & Config::parseSectionBody(ConfigSection & root)
           config.fileName(includeTrailingPathDelimiter(getPathFromPathName(file_.fileName())) + token);
         config.silent(true).parse();
         root.addSection(config);
+      }
+      if( key.strcasecmp("#charset") == 0 && tt == ttNumeric ){ // pragma
+        buffer_->codePage_ = Mutant(token);
       }
       else { // try new subsection
         HashedObjectListItem<utf8::String,ConfigSection> * item = root.subSections_.itemOfKey(key);

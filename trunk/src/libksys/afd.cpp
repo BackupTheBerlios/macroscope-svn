@@ -1043,6 +1043,11 @@ l1:
         buffer->len_ = (uintptr_t) r;
         buffer->pos_ = 0;
       }
+      if( buffer->detectUnicodeFFFE_ && buffer->bufferFilePos_ == 0 && buffer->pos_ == 0 && buffer->len_ >= 2 &&
+          buffer->buffer_[0] == 0xFF && buffer->buffer_[1] == 0xFE ){
+        buffer->pos_ += 2;
+	buffer->codePage_ = CP_UNICODE;
+      }
       bool nl = false;
       uintptr_t symSize;
       if( buffer->codePage_ == CP_UNICODE ){
