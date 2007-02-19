@@ -14,6 +14,7 @@
  * \subsection module_macroscope macroscope
  * Генератор статистики использования траффика в HTML формате по
  * лог файлам программ: squid, sendmail, bpft.
+ * \ref macroscope_doc "подробнее..."
  * \subsection module_msftp msftp
  * Клиент сервера обмена файлами.
  * \subsection module_msftpd msftpd
