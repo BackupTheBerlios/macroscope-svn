@@ -224,7 +224,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" <<
-        config_->valueByPath(section_ + ".decoration.colors.table_head") <<
+        getDecor("table_head") <<
         "\" COLSPAN=" <<
         utf8::int2Str(uintmax_t(nonZeroMonthDaysColumns(endTime) + ttAll + 2)) <<
         " ALIGN=left nowrap>\n" <<
@@ -263,7 +263,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
             utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
             (getTraf(ttWWW, bt, endTime) > 0) +
             (getTraf(ttSMTP, bt, endTime) > 0)) << " BGCOLOR=\"" <<
-            config_->valueByPath(section_ + ".decoration.colors.detail_head") <<
+            getDecor("detail_head") <<
             "\" nowrap>\n"
 	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
             utf8::String::print("%02d", endTime.tm_mday) << "\n"
@@ -641,7 +641,7 @@ void Logger::writeHtmlYearOutput()
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" <<
-        config_->valueByPath(section_ + ".decoration.colors.table_head") <<
+        getDecor("table_head") <<
         "\" COLSPAN=" <<
         utf8::int2Str(uintmax_t(nonZeroYearMonthsColumns(endTime) + ttAll + 2)) <<
         " ALIGN=left nowrap>\n" <<
@@ -682,7 +682,7 @@ void Logger::writeHtmlYearOutput()
             utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
             (getTraf(ttWWW, bt, endTime) > 0) +
             (getTraf(ttSMTP, bt, endTime) > 0)) <<
-            " BGCOLOR=\"" << config_->valueByPath(section_ + ".decoration.colors.detail_head") << "\" nowrap>\n"
+            " BGCOLOR=\"" << getDecor("detail_head") << "\" nowrap>\n"
 	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" << utf8::String::print("%02d",endTime.tm_mon + 1) << "\n"
 	    "    </FONT>\n" "  </TH>\n"
           ;
