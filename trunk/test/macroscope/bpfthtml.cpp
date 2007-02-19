@@ -242,7 +242,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
-        "  <TH BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.table_head") +
+        "  <TH BGCOLOR=\"" + getDecor("table_head") +
 	"\" COLSPAN=\"" + utf8::int2Str(hourCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
 	utf8::String::print(
@@ -262,17 +262,17 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         "  </TH>\n"
         "</TR>\n"
         "<TR>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.host") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.host") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Host\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.data") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.data") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Data bytes\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.dgram") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.dgram") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Datagram bytes\n"
         "    </FONT>\n"
@@ -282,7 +282,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         if( (uintmax_t) table[endTime.tm_hour + 1].sum("SUM1") > 0 )
 	  f <<
             "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" +
-	    config_->textByPath(section_ + ".decoration.colors.detail_head") + "\" nowrap>\n"
+	    getDecor("detail_head") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             "      " + utf8::int2Str(endTime.tm_hour) + "\n"
             "    </FONT>\n"
@@ -299,19 +299,19 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         uint32_t ip4 = indexToIp4Addr(table[0](i,"st_ip"));
         f <<
           "<TR>\n"
-  	  "  <TH ALIGN=left BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.host") + "\" nowrap>\n"
+  	  "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.host") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           "      <A HREF=\"http://" + resolveAddr(ip4) + "\">\n" +
           resolveAddr(ip4) + (resolveAddr(ip4).strcmp(resolveAddr(ip4,true)) == 0 ? utf8::String() : " (" + resolveAddr(ip4,true) + ")") + "\n" +
           "      </A>\n"
           "    </FONT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.data") + "\" nowrap>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.data") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.dgram") + "\" nowrap>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.dgram") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
@@ -332,12 +332,12 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
 	      sum2 = statement6_->valueAsMutant("SUM2");
 	    }
             f <<
-  	      "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.body.data") + "\" nowrap>\n"
+  	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum2,table[endTime.tm_hour + 1].sum("SUM1")) + "\n"
               "    </FONT>\n"
               "  </TH>\n"
-	      "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.body.dgram") + "\" nowrap>\n"
+	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.dgram") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum1,table[endTime.tm_hour + 1].sum("SUM1")) + "\n"
               "    </FONT>\n"
@@ -353,17 +353,17 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
       }
       f <<
         "<TR>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.host") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.host") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         "      Summary:\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.data") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.data") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) + "\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.dgram") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.dgram") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) + "\n"
         "    </FONT>\n"
@@ -372,12 +372,12 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
       while( endTime.tm_hour >= 0 ){
         if( (uintmax_t) table[endTime.tm_hour + 1].sum("SUM1") > 0 )
           f <<
-            "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.tail.data") + "\" nowrap>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.data") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             formatTraf(table[endTime.tm_hour + 1].sum("SUM2"),table[0].sum("SUM1")) + "\n"
             "    </FONT>\n"
             "  </TH>\n"
-            "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.tail.dgram") + "\" nowrap>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.dgram") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             formatTraf(table[endTime.tm_hour + 1].sum("SUM1"),table[0].sum("SUM1")) + "\n"
             "    </FONT>\n"
@@ -474,7 +474,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
-        "  <TH BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.table_head") + "\" COLSPAN=\"" +
+        "  <TH BGCOLOR=\"" + getDecor("table_head") + "\" COLSPAN=\"" +
 	utf8::int2Str(dayCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
 	utf8::String::print(
@@ -493,17 +493,17 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         "  </TH>\n"
         "</TR>\n"
         "<TR>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.host") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.host") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Host\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.data") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.data") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Data bytes\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.dgram") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.dgram") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Datagram bytes\n"
         "    </FONT>\n"
@@ -512,7 +512,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
       while( endTime.tm_mday > 0 ){
         if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 )
 	  f <<
-            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.detail_head") + "\" nowrap>\n"
+            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("detail_head") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             "      " + utf8::int2Str(endTime.tm_mday) + "\n"
             "    </FONT>\n"
@@ -529,19 +529,19 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         uint32_t ip4 = indexToIp4Addr(table[0](i,"st_ip"));
         f <<
           "<TR>\n"
-  	  "  <TH ALIGN=left BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.host") + "\" nowrap>\n"
+  	  "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.host") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           "      <A HREF=\"http://" + resolveAddr(ip4) + "\">\n" +
           resolveAddr(ip4) + (resolveAddr(ip4).strcmp(resolveAddr(ip4,true)) == 0 ? utf8::String() : " (" + resolveAddr(ip4,true) + ")") + "\n" +
           "      </A>\n"
           "    </FONT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.data") + "\" nowrap>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.data") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.dgram") + "\" nowrap>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.dgram") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
@@ -562,12 +562,12 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
 	      sum2 = statement6_->valueAsMutant("SUM2");
 	    }
             f <<
-  	      "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.body.data") + "\" nowrap>\n"
+  	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum2,table[endTime.tm_mday].sum("SUM1")) + "\n"
               "    </FONT>\n"
               "  </TH>\n"
-	      "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.body.dgram") + "\" nowrap>\n"
+	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.dgram") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum1,table[endTime.tm_mday].sum("SUM1")) + "\n"
               "    </FONT>\n"
@@ -583,17 +583,17 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
       }
       f <<
         "<TR>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.host") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.host") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         "      Summary:\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.data") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.data") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) + "\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.dgram") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.dgram") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" <<
         formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) + "\n"
         "    </FONT>\n"
@@ -602,12 +602,12 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
       while( endTime.tm_mday > 0 ){
         if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 )
           f <<
-            "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.tail.data") + "\" nowrap>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.data") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             formatTraf(table[endTime.tm_mday].sum("SUM2"),table[0].sum("SUM1")) + "\n"
             "    </FONT>\n"
             "  </TH>\n"
-            "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.tail.data") + "\" nowrap>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.dgram") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             formatTraf(table[endTime.tm_mday].sum("SUM1"),table[0].sum("SUM1")) + "\n"
             "    </FONT>\n"
@@ -635,6 +635,11 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
   }
   writeHtmlTail(f);
   f.resize(f.tell());
+}
+//------------------------------------------------------------------------------
+utf8::String Logger::getDecor(const utf8::String & dname)
+{
+  return getDecor("" + dname);
 }
 //------------------------------------------------------------------------------
 void Logger::writeBPFTHtmlReport()
@@ -845,7 +850,7 @@ function DNSQuery(name)
 	</FORM>*/
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
-        "  <TH BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.table_head") + "\" COLSPAN=\"" +
+        "  <TH BGCOLOR=\"" + getDecor("table_head") + "\" COLSPAN=\"" +
 	utf8::int2Str(monCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
 	utf8::String::print(
@@ -863,17 +868,17 @@ function DNSQuery(name)
         "  </TH>\n"
         "</TR>\n"
         "<TR>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.host") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.host") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Host\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.data") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.data") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Data bytes\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.head.dgram") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.dgram") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "      Datagram bytes\n"
         "    </FONT>\n"
@@ -882,7 +887,7 @@ function DNSQuery(name)
       while( endTime.tm_mon >= 0 ){
         if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 )
 	  f <<
-            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.detail_head") + "\" nowrap>\n"
+            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("detail_head") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             "      " + utf8::int2Str(endTime.tm_mon + 1) + "\n"
             "    </FONT>\n"
@@ -896,7 +901,7 @@ function DNSQuery(name)
         uint32_t ip4 = indexToIp4Addr(table[0](i,"st_ip"));
         f <<
           "<TR>\n"
-  	  "  <TH ALIGN=left BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.host") + "\" nowrap>\n"
+  	  "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.host") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           "      <A HREF=\"http://" + resolveAddr(ip4) + "\">\n" +
           resolveAddr(ip4) + (resolveAddr(ip4).strcmp(resolveAddr(ip4,true)) == 0 ? utf8::String() : " (" + resolveAddr(ip4,true) + ")") + "\n" +
@@ -908,12 +913,12 @@ function DNSQuery(name)
 //        "      <PARAM name=\"name\" value=\"" << resolveAddr(table(i,"st_ip"),true) << "\">\n"
 //        "    </OBJECT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.data") + "\" nowrap>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.data") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.body.dgram") + "\" nowrap>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.dgram") + "\" nowrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
@@ -935,12 +940,12 @@ function DNSQuery(name)
 	      sum2 = statement6_->valueAsMutant("SUM2");
 	    }
             f <<
-  	      "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.body.data") + "\" nowrap>\n"
+  	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum2,table[endTime.tm_mon + 1].sum("SUM1")) + "\n"
               "    </FONT>\n"
               "  </TH>\n"
-	      "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.body.dgram") + "\" nowrap>\n"
+	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.dgram") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum1,table[endTime.tm_mon + 1].sum("SUM1")) + "\n"
               "    </FONT>\n"
@@ -957,17 +962,17 @@ function DNSQuery(name)
       }
       f <<
         "<TR>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.host") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.host") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         "      Summary:\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.data") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.data") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) + "\n"
         "    </FONT>\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.tail.dgram") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.dgram") + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) + "\n"
         "    </FONT>\n"
@@ -976,12 +981,12 @@ function DNSQuery(name)
       while( endTime.tm_mon >= 0 ){
         if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 )
           f <<
-            "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.tail.data") + "\" nowrap>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.data") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             formatTraf(table[endTime.tm_mon + 1].sum("SUM2"),table[0].sum("SUM1")) + "\n"
             "    </FONT>\n"
             "  </TH>\n"
-            "  <TH ALIGN=right BGCOLOR=\"" + config_->textByPath(section_ + ".decoration.colors.details.tail.dgram") + "\" nowrap>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.dgram") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             formatTraf(table[endTime.tm_mon + 1].sum("SUM1"),table[0].sum("SUM1")) + "\n"
             "    </FONT>\n"

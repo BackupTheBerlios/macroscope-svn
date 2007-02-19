@@ -255,6 +255,7 @@ class Logger {
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf = 0);
     utf8::String ip4AddrToIndex(uint32_t ip4);
     uint32_t indexToIp4Addr(const utf8::String & index);
+    utf8::String getDecor(const utf8::String & dname);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];
