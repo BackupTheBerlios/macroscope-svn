@@ -275,6 +275,7 @@ bool removeDirectory(const utf8::String & name,bool recursive = true,bool noThro
 bool rename(const utf8::String & oldPathName,const utf8::String & newPathName,bool createPathIfNotExist = true,bool noThrow = false);
 void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uintptr_t bufferSize = 0);
 bool remove(const utf8::String & name,bool noThrow = false);
+bool nameFitMask(const utf8::String & name,const utf8::String & mask);
 void getDirList(
   Vector<utf8::String> & list,
   const utf8::String & dirAndMask,

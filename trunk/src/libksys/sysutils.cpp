@@ -1217,43 +1217,47 @@ utf8::String anyPathName2HostPathName(const utf8::String & pathName)
 //---------------------------------------------------------------------------
 bool nameFitMask(const utf8::String & name,const utf8::String & mask)
 {
+  uintptr_t c;
   utf8::String::Iterator ni(name), mi(mask);
   while( !ni.eof() && !mi.eof() ){
-    if( mi.getChar() == '?' ){
+    if( (c = mi.getChar()) == '?' ){
       ni.next();
       mi.next();
     }
-    else if( mi.getChar() == '*' ){
+    else if( c == '*' ){
       mi.next();
+      if( mi.eof() ){ ni.last(); break; }
 #if defined(__WIN32__) || defined(__WIN64__)
       while( ni.getUpperChar() != mi.getUpperChar() ){
         ni.next();
         if( ni.eof() ) break;
       }
-      if( utf8::String(ni).strcasecmp(mi) != 0 ){
-        mi.prev();
+      while( ni.getUpperChar() == (c = mi.getUpperChar()) && c != '*' && c != '?' && c != '[' ){
         ni.next();
+        mi.next();
+        if( ni.eof() ) break;
       }
 #else
       while( !mi.eof() && !ni.eof() && ni.getChar() != mi.getChar() ){
         ni.next();
         if( ni.eof() ) break;
       }
-      if( utf8::String(ni).strcmp(mi) != 0 ){
-        mi.prev();
+      while( ni.getChar() == (c = mi.getChar()) && c != '*' && c != '?' && c != '[' ){
         ni.next();
+        mi.next();
+        if( ni.eof() ) break;
       }
 #endif
     }
-    else if( mi.getChar() == '[' ){
+    else if( c == '[' ){
 //      mi.next();
       newObjectV1C2<Exception>(ENOSYS,utf8::String(__PRETTY_FUNCTION__) + " " + utf8::int2Str(__LINE__) + " FIXME")->throwSP();
     }
     else {
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( ni.getUpperChar() != mi.getUpperChar() ) break;
+      if( ni.getUpperChar() != c ) break;
 #else
-      if( ni.getChar() != mi.getChar() ) break;
+      if( ni.getChar() != c ) break;
 #endif
       ni.next();
       mi.next();
