@@ -29,9 +29,8 @@
 
 #include "stdafx.h"
 #include "resource.h"
-#if !defined(CMAKE_BUILD) || !CMAKE_GENERATOR_IS_VISUAL_STUDIO
-#include "msmail1clib.h"
-#elif CMAKE_BUILD_TYPE == 1
+#if CMAKE_GENERATOR_IS_VS
+#if CMAKE_BUILD_TYPE == 1
 #include "msmail1clib.dir/Debug/msmail1clib.h"
 #elif CMAKE_BUILD_TYPE == 2
 #include "msmail1clib.dir/Release/msmail1clib.h"
@@ -39,6 +38,9 @@
 #include "msmail1clib.dir/RelWithDebInfo/msmail1clib.h"
 #elif CMAKE_BUILD_TYPE == 4
 #include "msmail1clib.dir/MinSizeRel/msmail1clib.h"
+#endif
+#else
+#include "msmail1clib.h"
 #endif
 #include "dlldatax.h"
 #include <adicpp/adicpp.h>

@@ -1,15 +1,15 @@
 ADD_LIBRARY (msmail1clib SHARED
+  msmail1clib.idl
+  msmail1clib.def
+  msmail1clib.rc
+  msmail1c.rgs
+  msmail1clib.rgs
   client.cpp
   dlldatax.c
   msmail1cImpl.cpp
   msmail1clib.cpp 
-  msmail1clib.def
-  msmail1clib.idl
   Registry.cpp
   stdafx.cpp
-  msmail1clib.rc
-  msmail1c.rgs
-  msmail1clib.rgs
   version.c
 )
 
@@ -39,8 +39,25 @@ ADD_CUSTOM_COMMAND (
   DEPENDS version.in
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
-	
+
 GET_TARGET_PROPERTY (MSMAIL1CLIB_EXECUTABLE msmail1clib LOCATION)
+
+FIND_PROGRAM (IDL midl)
+IF (IDL)
+  IF (CMAKE_BUILD_TYPE MATCHES Deb)
+    SET (IDL_FLAGS /D \"_DEBUG\")
+  ENDIF (CMAKE_BUILD_TYPE MATCHES Deb)
+  SET (IDL_FLAGS ${IDL_FLAGS} /nologo /char signed /Oicf /no_robust /D _USRDLL /D _MERGE_PROXYSTUB)
+ENDIF (IDL)
+
+IF (NOT CMAKE_GENERATOR_IS_VS)
+  ADD_CUSTOM_TARGET (msmail1clib.tlb
+    COMMAND \"${IDL}\" ${IDL_FLAGS} /tlb msmail1clib.tlb /out \"${CMAKE_CURRENT_BINARY_DIR}\" /h msmail1clib.h /iid msmail1clib_i.c /proxy msmail1clib_p.c msmail1clib.idl
+    DEPENDS msmail1clib.idl
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  ADD_DEPENDENCIES (msmail1clib msmail1clib.tlb)
+ENDIF (NOT CMAKE_GENERATOR_IS_VS)
 
 FIND_PROGRAM (ICCPATCH iccpatch)
 IF (ICCPATCH AND CMAKE_CXX_COMPILER MATCHES icl)

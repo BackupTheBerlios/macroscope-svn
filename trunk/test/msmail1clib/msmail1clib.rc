@@ -124,9 +124,8 @@ END
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
-#ifndef CMAKE_BUILD
-1 TYPELIB "msmail1clib.tlb"
-#elif CMAKE_BUILD_TYPE == 1
+#if CMAKE_GENERATOR_IS_VS
+#if CMAKE_BUILD_TYPE == 1
 1 TYPELIB "msmail1clib.dir/Debug/msmail1clib.tlb"
 #elif CMAKE_BUILD_TYPE == 2
 1 TYPELIB "msmail1clib.dir/Release/msmail1clib.tlb"
@@ -134,4 +133,7 @@ END
 1 TYPELIB "msmail1clib.dir/RelWithDebInfo/msmail1clib.tlb"
 #elif CMAKE_BUILD_TYPE == 4
 1 TYPELIB "msmail1clib.dir/MinSizeRel/msmail1clib.tlb"
+#endif
+#else
+1 TYPELIB "msmail1clib.tlb"
 #endif
