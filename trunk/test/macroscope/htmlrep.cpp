@@ -303,6 +303,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
 	  bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
           if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
           utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
+	  utf8::String alias(config_->textByPath("macroscope.aliases." + user,user));
           utf8::String topByUserFile(
             utf8::String::print(
               "top-%04d%02d-",
@@ -324,8 +325,8 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
             "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             "<A HREF=\"" + topByUserFile + "\">" +
-            config_->textByPath("macroscope.aliases." + user,user) +
-	    (config_->textByPath("macroscope.aliases." + user,user).strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
+            alias +
+	    (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
             "</A>\n"
             "    </FONT>\n"
             "  </TH>\n"
@@ -725,12 +726,13 @@ void Logger::writeHtmlYearOutput()
 	  bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
           if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
 	  utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
+          utf8::String alias(config_->textByPath("macroscope.aliases." + user,user));
           f <<
   	    "<TR>\n"
 	    "  <TH ALIGN=left BGCOLOR=\"#00E0FF\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-            config_->textByPath("macroscope.aliases." + user,user) +
-	    (config_->textByPath("macroscope.aliases." + user,user).strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
+            alias +
+	    (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
 	    "    </FONT>\n"
 	    "  </TH>\n"
           ;

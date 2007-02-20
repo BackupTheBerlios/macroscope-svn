@@ -248,7 +248,8 @@ InterlockedMutex::InterlockedMutex() : mutex_(NULL)
 void InterlockedMutex::acquire()
 {
   int r = pthread_mutex_lock(&mutex_);
-  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 )
+    newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 bool InterlockedMutex::tryAcquire()
