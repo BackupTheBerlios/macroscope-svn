@@ -82,15 +82,20 @@ void Logger::writeUserTop(
     "                ST_TIMESTAMP <= :ET"
     "        GROUP BY ST_URL"
     "    ) AS A "
+    "WHERE"
+    "  A.SUM1 >= :threshold "
     "ORDER BY A.SUM1"
   );
   intptr_t i;
   statement_->prepare();
   for( i = enumStringParts(user) - 1; i >= 0; i-- )
     statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
+  uintmax_t threshold = config_->valueByPath(section_ + ".html_report.top10_min_significant_threshold",0);
   statement_->
     paramAsMutant("BT",beginTime)->
-    paramAsMutant("ET",endTime)->execute()->fetchAll();
+    paramAsMutant("ET",endTime)->
+    paramAsMutant("threshold",threshold)->
+    execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
     AsyncFile f(file);
     f.createIfNotExist(true).open();
@@ -171,6 +176,7 @@ void Logger::writeUserTop(
         "</TR>\n"
       ;
     }
+    f << "</TABLE>\n<BR>\n<BR>\n";
     writeHtmlTail(f);
     f.resize(f.tell());
     if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
@@ -969,7 +975,7 @@ void Logger::writeHtmlTail(AsyncFile & f)
   f <<
     utf8::time2Str(getlocaltimeofday()) +
     "<BR>\n"
-    "Generated on " + un.nodename + ", by " + macroscope_version.gnu_ + "\n<BR>"
+    "Generated on " + un.nodename + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
     "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
     "  http://developer.berlios.de/projects/macroscope/\n"
