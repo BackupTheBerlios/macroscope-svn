@@ -618,9 +618,11 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         "</TABLE>\n<BR>\n<BR>\n"
       ;
       endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+      if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",false) || endTime.tm_mon == curTime.tm_mon ){
+        table.clear();
+        writeBPFTDayHtmlReport(endTime);
+      }
     }
-    if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",false) || endTime.tm_mon == curTime.tm_mon )
-      writeBPFTDayHtmlReport(endTime);
     if( endTime.tm_mon == 0 ){
       endTime.tm_mon = 11;
       endTime.tm_year--;
@@ -998,8 +1000,10 @@ function DNSQuery(name)
       ;
       endTime.tm_mon = 11;
       endTime.tm_mday = 31;
-      if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",false) || endTime.tm_year == curTime.tm_year )
+      if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",false) || endTime.tm_year == curTime.tm_year ){
+        table.clear();
         writeBPFTMonthHtmlReport(endTime);
+      }
     }
     endTime.tm_year--;
     beginTime = beginTime2;
