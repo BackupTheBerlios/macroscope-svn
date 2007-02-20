@@ -43,7 +43,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -109,7 +109,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -179,7 +179,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -246,7 +246,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -1324,6 +1324,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libmycpp\ecs.cpp"
 				>
 				<FileConfiguration
@@ -1362,10 +1366,6 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\event.cpp"
@@ -1568,46 +1568,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libmycpp\st.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)1.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libadicpp\st.cpp"
 				>
 				<FileConfiguration
@@ -1650,6 +1610,46 @@
 			<File
 				RelativePath="..\..\..\src\libfbcpp\st.cpp"
 				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libmycpp\st.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)1.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libksys\stat.cpp"
@@ -1704,6 +1704,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
 				>
 				<FileConfiguration
@@ -1742,10 +1746,6 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\svc.cpp"
