@@ -1650,11 +1650,11 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                     hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv2);
                     if( SUCCEEDED(hr) ){
                       if( uintptr_t(V_I4(pv0) - 1) < msmail1c_->hashedArrays_.count() ){
-		        AutoPtr<msmail1c::HashedArrayKey> item(newObjectC1C2<msmail1c::HashedArrayKey>(V_BSTR(pv1),*pv2));
-			msmail1c::HashedArrayKey * p;
+            		        AutoPtr<msmail1c::HashedArrayKey> item(newObjectC1C2<msmail1c::HashedArrayKey>(V_BSTR(pv1),*pv2));
+			                  msmail1c::HashedArrayKey * p;
                         msmail1c_->hashedArrays_[uintptr_t(V_I4(pv0) - 1)].insert(item,false,false,&p);
-			if( p != item ) p->value_ = item->value_;
-                        V_I4(pvarRetValue) = p == item ? 1 : 0;
+                        if( p != item ) p->value_ = item->value_; else item.ptr(NULL);
+                        V_I4(pvarRetValue) = item == NULL ? 1 : 0;
                       }
                       else {
                         hr = HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
