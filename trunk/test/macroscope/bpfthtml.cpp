@@ -239,6 +239,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         endTime.tm_hour--;
       }
       endTime.tm_hour = 23;
+      utf8::String sectionName(config_->sectionByPath(section_).name());
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
@@ -246,9 +247,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
 	"\" COLSPAN=\"" + utf8::int2Str(hourCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
 	utf8::String::print(
-	  ("bpft-" +
-          config_->sectionByPath(section_).name() +
-	  "-traf-by-%04d%02d%02d.html").c_str(),
+	  ("bpft-" + sectionName + "-traf-by-%04d%02d%02d.html").c_str(),
 	  endTime.tm_year + 1900,
 	  endTime.tm_mon + 1,
 	  endTime.tm_mday
@@ -471,6 +470,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         endTime.tm_mday--;
       }
       endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+      utf8::String sectionName(config_->sectionByPath(section_).name());
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
@@ -478,9 +478,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
 	utf8::int2Str(dayCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
 	utf8::String::print(
-	  ("bpft-" +
-          config_->sectionByPath(section_).name() +
-  	  "-traf-by-%04d%02d.html").c_str(),
+	  ("bpft-" + sectionName + "-traf-by-%04d%02d.html").c_str(),
 	  endTime.tm_year + 1900,
 	  endTime.tm_mon + 1
 	) + "\">" <<
@@ -639,12 +637,13 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
 //------------------------------------------------------------------------------
 utf8::String Logger::getDecor(const utf8::String & dname)
 {
-  return config_->textByPath(section_ + ".decoration.color." + dname);
+  return config_->textByPath(section_ + ".html_report.decoration.colors." + dname);
 }
 //------------------------------------------------------------------------------
 void Logger::writeBPFTHtmlReport()
 {
   if( !(bool) config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
+  if( verbose_ ) fprintf(stderr,"\n");
   resolveDNSNames_ = config_->valueByPath(section_ + ".html_report.resolve_dns_names",false);
   dnsCacheSize_ = config_->valueByPath(section_ + ".html_report.dns_cache_size",0);
   minSignificantThreshold_ = config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
@@ -830,6 +829,7 @@ void Logger::writeBPFTHtmlReport()
       }
       endTime.tm_mon = 11;
       endTime.tm_mday = 31;
+      utf8::String sectionName(config_->sectionByPath(section_).name());
       f <<
 /*      <SCRIPT LANGUAGE="JavaScript">
 <!--
@@ -854,9 +854,7 @@ function DNSQuery(name)
 	utf8::int2Str(monCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
 	utf8::String::print(
-	  ("bpft-" +
-          config_->sectionByPath(section_).name() +
-	  "-traf-by-%04d.html").c_str(),
+	  ("bpft-" + sectionName + "-traf-by-%04d.html").c_str(),
 	  endTime.tm_year + 1900
 	) + "\">" +
         utf8::int2Str(endTime.tm_year + 1900) + "\n"

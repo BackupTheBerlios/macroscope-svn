@@ -983,17 +983,16 @@ String::Iterator String::Iterator::operator[](intptr_t relPos) const
 //---------------------------------------------------------------------------
 String int2Str(int a)
 {
-  int       x;
+  int x;
   uintptr_t l = int2StrLen((intmax_t) a);
   if( a < 0 ) x = -a; else x = a;
   String::Container * container = String::Container::container(l);
-  char *              p;
+  char * p;
   *(p = container->string_ + l) = '\0';
   do{
     *--p = (char) (x % 10u + '0');
     x /= 10u;
-  }
-  while( x != 0 );
+  } while( x != 0 );
   if( a < 0 ) *--p = '-';
   return container;
 }
@@ -1007,8 +1006,7 @@ String int2Str(unsigned int a)
   do{
     *--p = (char) (a % 10u + '0');
     a /= 10u;
-  }
-  while( a != 0 );
+  } while( a != 0 );
   return container;
 }
 //---------------------------------------------------------------------------
@@ -1163,8 +1161,7 @@ uintptr_t int2StrLen(intmax_t a)
 
   if( a < 0 ) x = -a; else x = a;
   for( l = 1, c = 10; c < x; c = sfSHL(c), l++ );
-  if( a < 0 || c == x ) l++;
-  return l;
+  return l + (a < 0) + (c == x);
 }
 //---------------------------------------------------------------------------
 uintptr_t int2StrLen(uintmax_t a)
@@ -1173,8 +1170,7 @@ uintptr_t int2StrLen(uintmax_t a)
   uintmax_t c;
 
   for( l = 1, c = 10; c < a; c = sfSHL(c), l++ );
-  if( c == a ) l++;
-  return l;
+  return l + (c == a);
 }
 //---------------------------------------------------------------------------
 String int2Str0(intmax_t a,uintptr_t padding)
@@ -1224,8 +1220,7 @@ uintptr_t int2StrLen(intptr_t a)
 
   if( a < 0 ) x = -a; else x = a;
   for( l = 1, c = 10; c < x; c = sfSHL(c), l++ );
-  if( a < 0 ) l++;
-  return l;
+  return l + (a < 0) + (c == x);
 }
 //---------------------------------------------------------------------------
 uintptr_t int2StrLen(uintptr_t a)
@@ -1234,7 +1229,7 @@ uintptr_t int2StrLen(uintptr_t a)
   uintmax_t c;
 
   for( l = 1, c = 10; c < a; c = sfSHL(c), l++ );
-  return l;
+  return l + (c == a);
 }
 //---------------------------------------------------------------------------
 String int2HexStr(uintmax_t a,uintptr_t padding)

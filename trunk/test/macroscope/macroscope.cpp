@@ -682,7 +682,7 @@ void Logger::main()
     Mutant m2(config_->valueByPath("macroscope.sendmail.start_year"));
     parseSendmailLogFile(m0,m1,m2);
   }
-  section_ = "macroscope.html_report";
+  section_ = "macroscope";
   writeHtmlYearOutput();
   ellapsed_ = getlocaltimeofday();
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
