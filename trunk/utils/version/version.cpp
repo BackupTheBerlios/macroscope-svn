@@ -96,7 +96,7 @@ int main(int ac, char*av[]){
       "+SSE3"
 #endif
 #ifdef CMAKE_SYSTEM_NAME
-      " for " __XSTRING(CMAKE_SYSTEM_NAME) " " __XSTRING(CMAKE_SYSTEM_VERSION)
+      " for " CMAKE_SYSTEM_NAME " " CMAKE_SYSTEM_VERSION
 #endif
     ;
 

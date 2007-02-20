@@ -29,7 +29,7 @@
 
 #include "stdafx.h"
 #include "resource.h"
-#ifndef CMAKE_BUILD
+#if !defined(CMAKE_BUILD) || !CMAKE_GENERATOR_IS_VISUAL_STUDIO
 #include "msmail1clib.h"
 #elif CMAKE_BUILD_TYPE == 1
 #include "msmail1clib.dir/Debug/msmail1clib.h"
