@@ -307,7 +307,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   database_->commit();
 }
 //------------------------------------------------------------------------------
-void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain, uintptr_t startYear)
+void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain,uintptr_t startYear)
 {
   AsyncFile flog(logFileName);
   flog.readOnly(true).open();
@@ -326,8 +326,19 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
     paramAsMutant("ST_LAST_OFFSET",0)->execute();
  */
+  tm lt;
+  statement_->text(
+    "SELECT MAX(ST_TIMESTAMP) AS ST_TIMESTAMP, COUNT(*) AS ROW_COUNT "
+    "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
+  );
   database_->start();
-  int64_t offset  = fetchLogFileLastOffset(logFileName);
+  if( statement_->execute()->fetch() ){
+    statement_->execute()->fetchAll();
+    lt = statement_->valueAsMutant("ST_TIMESTAMP");
+    if( (uintmax_t) statement_->valueAsMutant("ROW_COUNT") > 0 )
+      startYear = lt.tm_year + 1900;
+  }
+  int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
   int64_t   lineNo  = 1;
   uintptr_t size;
@@ -345,7 +356,6 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
       to = strstr(sb.c_str(), " to=");
       if( ((from != NULL || to != NULL)) && (id = strstr(sb.c_str(), "sm-mta[")) != NULL ){
         // get time
-        tm  lt;
         memset(&lt, 0, sizeof(lt));
         lt.tm_mon = (int) str2Month(sb.c_str());
         if( lt.tm_mon < mon ) startYear++;
@@ -404,11 +414,11 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         }
 	      st_user = st_user.lower().replaceAll("\"","");
         if( from != NULL && msgSize > 0 ){
-          try{
+          try {
             stMsgsIns_->prepare()->
-            paramAsString("ST_FROM", st_user)->
-            paramAsString("ST_MSGID", utf8::String(id, idl - id))->
-            paramAsMutant("ST_MSGSIZE", msgSize)->execute();
+              paramAsString("ST_FROM", st_user)->
+              paramAsString("ST_MSGID", utf8::String(id, idl - id))->
+              paramAsMutant("ST_MSGSIZE", msgSize)->execute();
           }
           catch( ExceptionSP & e ){
             if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) )
@@ -417,29 +427,27 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         }
         else if( to != NULL && stat != NULL && strncmp(stat, "Sent", 4) == 0 ){
           stMsgsSel_->prepare()->
-          paramAsString("ST_MSGID", utf8::String(id, idl - id))->
-          execute()->fetchAll();
+            paramAsString("ST_MSGID", utf8::String(id,idl - id))->
+            execute()->fetchAll();
           if( stMsgsSel_->rowCount() > 0 ){
-            if( st_user.strlen() == 0 )
-              st_user = stMsgsSel_->valueAsString("ST_FROM");
+            if( st_user.strlen() == 0 ) st_user = stMsgsSel_->valueAsString("ST_FROM");
             if( st_user.strlen() > 0 ){
               msgSize = stMsgsSel_->valueAsMutant("ST_MSGSIZE");
-              try{
+              try {
                 stTrafIns_->prepare()->
-                paramAsString("ST_USER", st_user)->
-                paramAsMutant("ST_TIMESTAMP", timeStampRoundToMin(lt))->
-                paramAsMutant("ST_TRAF_SMTP", msgSize)->execute();
+                  paramAsString("ST_USER", st_user)->
+                  paramAsMutant("ST_TIMESTAMP", timeStampRoundToMin(lt))->
+                  paramAsMutant("ST_TRAF_SMTP", msgSize)->execute();
               }
               catch( ExceptionSP & e ){
-                if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) )
-                  throw;
+                if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
                 stTrafUpd_->prepare()->
-                paramAsString("ST_USER", st_user)->
-                paramAsMutant("ST_TIMESTAMP", timeStampRoundToMin(lt))->
-                paramAsMutant("ST_TRAF_SMTP", msgSize)->execute();
+                  paramAsString("ST_USER", st_user)->
+                  paramAsMutant("ST_TIMESTAMP", timeStampRoundToMin(lt))->
+                  paramAsMutant("ST_TRAF_SMTP", msgSize)->execute();
               }
               stMsgsDel2_->prepare()->
-              paramAsString("ST_MSGID", stMsgsSel_->paramAsString("ST_MSGID"))->execute();
+                paramAsString("ST_MSGID", stMsgsSel_->paramAsString("ST_MSGID"))->execute();
             }
           }
         }
@@ -572,7 +580,8 @@ void Logger::main()
     "CREATE TABLE INET_SENDMAIL_MESSAGES ("
     " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
     " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
-    " ST_MSGSIZE            INTEGER NOT NULL" ")" <<
+    " ST_MSGSIZE            INTEGER NOT NULL"
+    ")" <<
     "CREATE TABLE INET_LOG_FILE_STAT ("
     " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
     " ST_LAST_OFFSET        BIGINT NOT NULL"
@@ -583,6 +592,7 @@ void Logger::main()
 //    " st_ip        CHAR(8) CHARACTER SET ascii NOT NULL UNIQUE PRIMARY KEY"
 //    ")" <<
     "CREATE TABLE INET_BPFT_STAT ("
+    " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
     " st_start         DATETIME NOT NULL,"
 //    " st_stop          DATETIME NOT NULL,"
     " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
@@ -597,10 +607,10 @@ void Logger::main()
 //    " FOREIGN KEY (st_src_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE,"
 //    " FOREIGN KEY (st_dst_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE"
     ")" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_src_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_dst_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_start,st_src_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_start,st_dst_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
     "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
@@ -687,12 +697,14 @@ void Logger::main()
   ellapsed_ = getlocaltimeofday();
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-      section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name();
+      sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
+      section_ = "macroscope.bpft." + sectionName_;
       parseBPFTLogFile();
     }
   }
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-    section_ = "macroscope.bpft." + config_->sectionByPath("macroscope.bpft").section(i).name();
+    sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
+    section_ = "macroscope.bpft." + sectionName_;
     writeBPFTHtmlReport();
   }
 }

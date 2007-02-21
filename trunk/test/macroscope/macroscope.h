@@ -83,6 +83,7 @@ class Logger {
   private:
     utf8::String shortUrl_;
     utf8::String section_;
+    utf8::String sectionName_;
     ConfigSPi config_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;

@@ -213,6 +213,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_mday = endTime.tm_mday;
+    statement_->paramAsString("st_if",sectionName_);
     statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
     statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
     if( useGateway_ )
@@ -229,6 +230,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
       uintptr_t hourCount = 0;
       while( endTime.tm_hour >= 0 ){
         beginTime.tm_hour = endTime.tm_hour;
+        statement_->paramAsString("st_if",sectionName_);
         statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
         statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
         if( useGateway_ )
@@ -239,19 +241,18 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         endTime.tm_hour--;
       }
       endTime.tm_hour = 23;
-      utf8::String sectionName(config_->sectionByPath(section_).name());
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" + getDecor("table_head") +
-	"\" COLSPAN=\"" + utf8::int2Str(hourCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
+      	"\" COLSPAN=\"" + utf8::int2Str(hourCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
-	utf8::String::print(
-	  ("bpft-" + sectionName + "-traf-by-%04d%02d%02d.html").c_str(),
-	  endTime.tm_year + 1900,
-	  endTime.tm_mon + 1,
-	  endTime.tm_mday
-	) + "\">" +
+	      utf8::String::print(
+	        ("bpft-" + sectionName_ + "-traf-by-%04d%02d%02d.html").c_str(),
+	        endTime.tm_year + 1900,
+	        endTime.tm_mon + 1,
+	        endTime.tm_mday
+	      ) + "\">" +
         utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n"
         "    </A>\n"
         "  </TH>\n"
@@ -319,17 +320,18 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         while( endTime.tm_hour >= 0 ){
           beginTime.tm_hour = endTime.tm_hour;
           if( (uintmax_t) table[endTime.tm_hour + 1].sum("SUM1") > 0 ){
+            statement6_->paramAsString("st_if",sectionName_);
             statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
             statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
             if( useGateway_ )
               statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
             statement6_->paramAsMutant("host",table[0](i,"st_ip"));
-	    uintmax_t sum1 = 0, sum2 = 0;
+      	    uintmax_t sum1 = 0, sum2 = 0;
             if( statement6_->execute()->fetch() ){
               statement6_->fetchAll();
-	      sum1 = statement6_->valueAsMutant("SUM1");
-	      sum2 = statement6_->valueAsMutant("SUM2");
-	    }
+	            sum1 = statement6_->valueAsMutant("SUM1");
+	            sum2 = statement6_->valueAsMutant("SUM2");
+	          }
             f <<
   	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
@@ -444,6 +446,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
+    statement_->paramAsString("st_if",sectionName_);
     statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
     statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
     if( useGateway_ )
@@ -460,6 +463,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
       uintptr_t dayCount = 0;
       while( endTime.tm_mday > 0 ){
         beginTime.tm_mday = endTime.tm_mday;
+        statement_->paramAsString("st_if",sectionName_);
         statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
         statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
         if( useGateway_ )
@@ -470,18 +474,17 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         endTime.tm_mday--;
       }
       endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-      utf8::String sectionName(config_->sectionByPath(section_).name());
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" + getDecor("table_head") + "\" COLSPAN=\"" +
-	utf8::int2Str(dayCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
+	      utf8::int2Str(dayCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
-	utf8::String::print(
-	  ("bpft-" + sectionName + "-traf-by-%04d%02d.html").c_str(),
-	  endTime.tm_year + 1900,
-	  endTime.tm_mon + 1
-	) + "\">" <<
+	      utf8::String::print(
+	        ("bpft-" + sectionName_ + "-traf-by-%04d%02d.html").c_str(),
+	        endTime.tm_year + 1900,
+	        endTime.tm_mon + 1
+	      ) + "\">" <<
         utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900) << "\n"
         "    </A>\n"
         "  </TH>\n"
@@ -548,17 +551,18 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         while( endTime.tm_mday > 0 ){
           beginTime.tm_mday = endTime.tm_mday;
           if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 ){
+            statement6_->paramAsString("st_if",sectionName_);
             statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
             statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
             if( useGateway_ )
               statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
             statement6_->paramAsMutant("host",table[0](i,"st_ip"));
-	    uintmax_t sum1 = 0, sum2 = 0;
+	          uintmax_t sum1 = 0, sum2 = 0;
             if( statement6_->execute()->fetch() ){
               statement6_->fetchAll();
-	      sum1 = statement6_->valueAsMutant("SUM1");
-	      sum2 = statement6_->valueAsMutant("SUM2");
-	    }
+	            sum1 = statement6_->valueAsMutant("SUM1");
+	            sum2 = statement6_->valueAsMutant("SUM2");
+	          }
             f <<
   	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
@@ -680,35 +684,11 @@ void Logger::writeBPFTHtmlReport()
       }
     }
   }
-/*  statement_->text(
-    "select distinct st_src_ip as st_ip FROM INET_BPFT_STAT "
-    "union "
-    "select distinct st_dst_ip as st_ip FROM INET_BPFT_STAT"
-  )->execute();
-  while( statement_->fetch() ){
-    fprintf(stderr,"%s %0X %s\n",
-      (const char *) statement_->valueAsString("st_ip").getOEMString(),
-      indexToIp4Addr(statement_->valueAsString("st_ip")),
-      (const char *) resolveAddr(indexToIp4Addr(statement_->valueAsString("st_ip"))).getOEMString()
-    );
-  }*/
   struct tm beginTime, beginTime2, endTime, curTime = time2tm(getlocaltimeofday());
-  /*statement_->text(
-    utf8::String("select ") +
-    (dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ? "FIRST 1 " : "") +
-    "st_start FROM INET_BPFT_STAT" +
-    (dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " LIMIT 0,1" : "")
-  )->execute()->fetchAll();
-  beginTime = time2tm((uint64_t) statement_->valueAsMutant("st_start") - getgmtoffset());
   statement_->text(
-    utf8::String("select ") +
-    (dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ? "FIRST 1 " : "") +
-    "st_start FROM INET_BPFT_STAT ORDER BY st_start DESC" +
-    (dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " LIMIT 0,1" : "")
-  )->execute()->fetchAll();
-  endTime = time2tm((uint64_t) statement_->valueAsMutant("st_start") - getgmtoffset());*/
-  statement_->text("SELECT MIN(st_start) AS BT, MAX(st_start) AS ET FROM INET_BPFT_STAT")->
-    execute()->fetchAll();
+    "SELECT MIN(st_start) AS BT, MAX(st_start) AS ET "
+    "FROM INET_BPFT_STAT WHERE st_if = :st_if"
+  )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
   beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") - getgmtoffset());
   endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") - getgmtoffset());
   statement_->text(
@@ -723,6 +703,7 @@ void Logger::writeBPFTHtmlReport()
       "      FROM"
       "        INET_BPFT_STAT"
       "      WHERE "
+      "        st_if = :st_if AND"
       "        st_start >= :BT AND st_start <= :ET" +
       utf8::String(useGateway_ ? " AND st_src_ip = :gateway" : "") +
       excludeDstIp +
@@ -733,6 +714,7 @@ void Logger::writeBPFTHtmlReport()
       "      FROM"
       "        INET_BPFT_STAT"
       "      WHERE "
+      "        st_if = :st_if AND"
       "        st_start >= :BT AND st_start <= :ET" +
       utf8::String(useGateway_ ? " AND st_dst_ip = :gateway" : "") +
       excludeSrcIp +
@@ -754,6 +736,7 @@ void Logger::writeBPFTHtmlReport()
     "      FROM"
     "        INET_BPFT_STAT"
     "      WHERE "
+    "        st_if = :st_if AND"
     "        st_start >= :BT AND st_start <= :ET AND" +
     utf8::String(useGateway_ ? " st_src_ip = :gateway AND" : "") +
     "        st_dst_ip = :host"
@@ -764,6 +747,7 @@ void Logger::writeBPFTHtmlReport()
     "      FROM"
     "        INET_BPFT_STAT"
     "      WHERE "
+    "        st_if = :st_if AND"
     "        st_start >= :BT AND st_start <= :ET AND" +
     utf8::String(useGateway_ ? " st_dst_ip = :gateway AND" : "") +
     "        st_src_ip = :host"
@@ -803,6 +787,7 @@ void Logger::writeBPFTHtmlReport()
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_year = endTime.tm_year;
+    statement_->paramAsString("st_if",sectionName_);
     statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
     statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
     if( useGateway_ )
@@ -820,6 +805,7 @@ void Logger::writeBPFTHtmlReport()
       while( endTime.tm_mon >= 0 ){
         endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
         beginTime.tm_mon = endTime.tm_mon;
+        statement_->paramAsString("st_if",sectionName_);
         statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
         statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
         if( useGateway_ )
@@ -831,7 +817,6 @@ void Logger::writeBPFTHtmlReport()
       }
       endTime.tm_mon = 11;
       endTime.tm_mday = 31;
-      utf8::String sectionName(config_->sectionByPath(section_).name());
       f <<
 /*      <SCRIPT LANGUAGE="JavaScript">
 <!--
@@ -853,12 +838,12 @@ function DNSQuery(name)
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" + getDecor("table_head") + "\" COLSPAN=\"" +
-	utf8::int2Str(monCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
+	      utf8::int2Str(monCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\"" +
-	utf8::String::print(
-	  ("bpft-" + sectionName + "-traf-by-%04d.html").c_str(),
-	  endTime.tm_year + 1900
-	) + "\">" +
+	      utf8::String::print(
+	        ("bpft-" + sectionName_ + "-traf-by-%04d.html").c_str(),
+	        endTime.tm_year + 1900
+	      ) + "\">" +
         utf8::int2Str(endTime.tm_year + 1900) + "\n"
         "    </A>\n"
         "  </TH>\n"
@@ -886,13 +871,13 @@ function DNSQuery(name)
       ;
       while( endTime.tm_mon >= 0 ){
         if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 )
-	  f <<
+	        f <<
             "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("detail_head") + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             "      " + utf8::int2Str(endTime.tm_mon + 1) + "\n"
             "    </FONT>\n"
             "  </TH>\n"
-	  ;
+	        ;
         endTime.tm_mon--;
       }
       endTime.tm_mon = 11;
@@ -913,13 +898,13 @@ function DNSQuery(name)
 //        "      <PARAM name=\"name\" value=\"" << resolveAddr(table(i,"st_ip"),true) << "\">\n"
 //        "    </OBJECT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.data") + "\" nowrap>\n"
-	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.data") + "\" nowrap>\n"
+	        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
           "  </TH>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.dgram") + "\" nowrap>\n"
-	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.dgram") + "\" nowrap>\n"
+	        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
           formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
           "    </FONT>\n"
           "  </TH>\n"
@@ -928,30 +913,31 @@ function DNSQuery(name)
           endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
           beginTime.tm_mon = endTime.tm_mon;
           if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 ){
+            statement6_->paramAsString("st_if",sectionName_);
             statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
             statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
             if( useGateway_ )
               statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
             statement6_->paramAsMutant("host",table[0](i,"st_ip"));
-	    uintmax_t sum1 = 0, sum2 = 0;
+	          uintmax_t sum1 = 0, sum2 = 0;
             if( statement6_->execute()->fetch() ){
               statement6_->fetchAll();
-	      sum1 = statement6_->valueAsMutant("SUM1");
-	      sum2 = statement6_->valueAsMutant("SUM2");
-	    }
+	            sum1 = statement6_->valueAsMutant("SUM1");
+	            sum2 = statement6_->valueAsMutant("SUM2");
+	          }
             f <<
-  	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n"
-	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+  	          "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n"
+	            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum2,table[endTime.tm_mon + 1].sum("SUM1")) + "\n"
               "    </FONT>\n"
               "  </TH>\n"
-	      "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.dgram") + "\" nowrap>\n"
-	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.dgram") + "\" nowrap>\n"
+	            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               formatTraf(sum1,table[endTime.tm_mon + 1].sum("SUM1")) + "\n"
               "    </FONT>\n"
               "  </TH>\n"
             ;
-	  }
+	        }
           endTime.tm_mon--;
         }
         f <<
@@ -1051,12 +1037,13 @@ void Logger::parseBPFTLogFile()
   };
   statement_->text(
     "INSERT INTO INET_BPFT_STAT ("
-    "  st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+    "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
     ") VALUES ("
-    "  :st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
+    "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
     ")"
   );
   statement_->prepare();
+  statement_->paramAsString("st_if",sectionName_);
   /*statement3_->text(
     "insert into INET_BPFT_STAT_IP (st_ip) VALUES (:ip)"
   )->prepare();*/
@@ -1121,26 +1108,15 @@ void Logger::parseBPFTLogFile()
         if( executed ){
 	        text =
             "INSERT INTO INET_BPFT_STAT ("
-            "  st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+            "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
             ") VALUES "
           ;
 	        executed = false;
 	      }
         text += "(";
         if( log32bitOsCompatible ){
-          /*try {
-            statement3_->paramAsString(0,ip4AddrToIndex(entries32[i].srcIp_.s_addr))->execute();
-          }
-          catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
-          }
-          try {
-            statement3_->paramAsString(0,ip4AddrToIndex(entries32[i].dstIp_.s_addr))->execute();
-          }
-          catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
-          }*/
           text +=
+            "'" + sectionName_ + "'," +
             "'" + mycpp::tm2Str(start) + "'," +
 	          "'" + ip4AddrToIndex(entries32[i].srcIp_.s_addr) + "'," +
             "'" + ip4AddrToIndex(entries32[i].dstIp_.s_addr) +"'," +
@@ -1152,19 +1128,8 @@ void Logger::parseBPFTLogFile()
 	        ;
         }
         else {
-          /*try {
-            statement3_->paramAsString(0,ip4AddrToIndex(entries[i].srcIp_.s_addr))->execute();
-          }
-          catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
-          }
-          try {
-            statement3_->paramAsString(0,ip4AddrToIndex(entries[i].dstIp_.s_addr))->execute();
-          }
-          catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_unique_key_violation,ER_DUP_ENTRY) ) throw;
-          }*/
 	        text +=
+            "'" + sectionName_ + "'," +
             "'" + mycpp::tm2Str(start) + "'," +
 	          "'" + ip4AddrToIndex(entries[i].srcIp_.s_addr) + "'," +
             "'" + ip4AddrToIndex(entries[i].dstIp_.s_addr) +"'," +
