@@ -325,16 +325,13 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
  */
   tm lt;
   statement_->text(
-    "SELECT MAX(ST_TIMESTAMP) AS ST_TIMESTAMP, COUNT(*) AS ROW_COUNT "
+    "SELECT MAX(ST_TIMESTAMP) AS ST_TIMESTAMP "
     "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
   );
   database_->start();
-  if( statement_->execute()->fetch() ){
-    statement_->execute()->fetchAll();
-    lt = statement_->valueAsMutant("ST_TIMESTAMP");
-    if( (uintmax_t) statement_->valueAsMutant("ROW_COUNT") > 0 )
-      startYear = lt.tm_year + 1900;
-  }
+  statement_->execute()->fetchAll();
+  lt = statement_->valueAsMutant("ST_TIMESTAMP");
+  if( !statement_->valueIsNull("ST_TIMESTAMP") ) startYear = lt.tm_year + 1900;
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
   int64_t   lineNo  = 1, tma = 0;
