@@ -815,7 +815,7 @@ void Client::open()
   data_.clear();
   ftime_ = 0;
   if( asyncMessagesReceiving_ )
-    attachFiber(newObjectR1<ClientFiber>(this));
+    attachFiber(newObjectV1<ClientFiber>(this));
   if( mk1100Port_ != 0 )
     attachFiber(newObjectR1<MK1100ClientFiber>(*this));
 }

@@ -48,6 +48,7 @@
 class Cmsmail1clibModule : public CAtlDllModuleT< Cmsmail1clibModule >
 {
 public :
+	virtual ~Cmsmail1clibModule() throw() {}
 	DECLARE_LIBID(LIBID_msmail1clibLib)
 	DECLARE_REGISTRY_APPID_RESOURCEID(IDR_MSMAIL1CLIB, "{5968CB6D-E48B-431E-9650-A14D5888C642}")
 };

@@ -306,7 +306,7 @@ class ATL_NO_VTABLE Cmsmail1c :
   public IDispatchImpl<ILanguageExtender, &__uuidof(ILanguageExtender), &LIBID_msmail1clibLib, /* wMajor = */ 1, /* wMinor = */ 0>
 {
 public:
-  virtual ~Cmsmail1c();
+  virtual ~Cmsmail1c() throw();
   Cmsmail1c();
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
