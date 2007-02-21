@@ -224,7 +224,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
 
-  int64_t lineNo = 1;
+  int64_t lineNo = 1, tma = 0;
   uintptr_t size;
   Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
@@ -251,14 +251,13 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
           st_url = shortUrl(st_url).lower();
           Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
           try {
-//	    newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
             stTrafIns_->paramAsString("ST_USER",st_user);
             stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
             stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
             stTrafIns_->execute();
           }
           catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ENOSYS) ) throw;
+            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
             stTrafUpd_->paramAsString("ST_USER",st_user);
             stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
             stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
@@ -293,18 +292,16 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
       }
     }
     if( lineNo % 8192 == 0 ){
-      updateLogFileLastOffset(logFileName, flog.tell());
+      updateLogFileLastOffset(logFileName,flog.tell());
       database_->commit();
       database_->start();
     }
-    if( lineNo % 1024 == 0 ){
-      printStat(lineNo, offset, flog.tell(), flog.size(), cl);
-    }
+    printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  printStat(lineNo, offset, flog.tell(), flog.size(), cl);
-  updateLogFileLastOffset(logFileName, flog.tell());
+  updateLogFileLastOffset(logFileName,flog.tell());
   database_->commit();
+  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------
 void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain,uintptr_t startYear)
@@ -340,7 +337,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   }
   int64_t offset = fetchLogFileLastOffset(logFileName);
   flog.seek(offset);
-  int64_t   lineNo  = 1;
+  int64_t   lineNo  = 1, tma = 0;
   uintptr_t size;
   intptr_t  mon     = 0;
   int64_t   cl      = getlocaltimeofday();
@@ -453,21 +450,19 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         }
       }
     }
-    if( lineNo % 65536 == 0 ){
-      updateLogFileLastOffset(logFileName, flog.tell());
+    if( lineNo % 8192 == 0 ){
+      updateLogFileLastOffset(logFileName,flog.tell());
       database_->commit();
       database_->start();
     }
-    if( lineNo % 2048 == 0 ){
-      printStat(lineNo, offset, flog.tell(), flog.size(), cl);
-    }
+    printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
   updateLogFileLastOffset(logFileName,flog.tell());
   stMsgsDel_->execute();
   stMsgsSelCount_->execute()->fetchAll();
   database_->commit();
+  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------
 void Logger::main()

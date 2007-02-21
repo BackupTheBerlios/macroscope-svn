@@ -121,7 +121,8 @@ file_t AsyncFile::openHelper(bool async)
       );
     else if( handle == INVALID_HANDLE_VALUE )
       handle = CreateFileA(
-        ansiFileName,GENERIC_READ,
+        ansiFileName,
+	GENERIC_READ,
         exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
         createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
@@ -151,7 +152,8 @@ file_t AsyncFile::openHelper(bool async)
       );
     else if( handle == INVALID_HANDLE_VALUE )
       handle = CreateFileW(
-        unicodeFileName,GENERIC_READ,
+        unicodeFileName,
+	GENERIC_READ,
         exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
         createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
