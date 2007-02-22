@@ -949,8 +949,12 @@ utf8::String Logger::TrafCacheEntry::id() const
 //------------------------------------------------------------------------------
 void Logger::writeHtmlHead(AsyncFile & f)
 {
-  f << "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
-    "<HTML>\n" "<HEAD>\n"
+  f <<
+    "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+    "<HTML>\n"
+    "<HEAD>\n"
+    "<meta http-equiv=\"Content-Type\" content=\"text/xhtml;charset=utf8\" />"
+    "<meta http-equiv=\"Content-Language\" content=\"en\" />"        
   //    "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"600\">\n"
   //    "<META HTTP-EQUIV=\"Pragma\" CONTENT=\"no-cache\">\n"
   //    "<META HTTP-EQUIV=\"Cache-Control\" content=\"no-cache\">\n"
