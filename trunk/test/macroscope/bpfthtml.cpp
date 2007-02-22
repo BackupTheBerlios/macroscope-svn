@@ -1027,18 +1027,10 @@ void Logger::parseBPFTLogFile()
  */
   flog.readOnly(true).open();
   database_->start();
+  if( (bool) config_->valueByPath(section_ + ".reset_log_file_position",false) )
+    updateLogFileLastOffset(flog.fileName(),0);
   int64_t offset = fetchLogFileLastOffset(flog.fileName());
-  if( flog.std() ){
-    AutoPtr<uint8_t> b;
-    b.alloc(getpagesize() * 16);
-    for( int64_t j, i = 0; i < offset; i += j ){
-      j = offset - i >= getpagesize() * 16 ? getpagesize() * 16 : offset - i;
-      flog.readBuffer(b,j);
-    }
-  }
-  else {
-    flog.seek(offset);
-  }
+  if( flog.seekable() ) flog.seek(offset);
   int64_t lineNo = 0, tma = 0;
   int64_t cl = getlocaltimeofday();
   union {
@@ -1065,7 +1057,7 @@ void Logger::parseBPFTLogFile()
     uint64_t safePos = flog.tell();
     if( log32bitOsCompatible ){
       if( flog.read(&header32,sizeof(header32)) != sizeof(header32) ){
-        flog.seek(safePos);
+        if( flog.seekable() ) flog.seek(safePos);
         break;
       }
       start = timeval2tm(header32.start_);
@@ -1074,7 +1066,7 @@ void Logger::parseBPFTLogFile()
     }
     else {
       if( flog.read(&header,sizeof(header)) != sizeof(header) ){
-        flog.seek(safePos);
+        if( flog.seekable() ) flog.seek(safePos);
         break;
       }
       start = timeval2tm(header.start_);
@@ -1084,32 +1076,18 @@ void Logger::parseBPFTLogFile()
     Array<BPFTEntry> entries;
     Array<BPFTEntry32> entries32;
     if( log32bitOsCompatible ){
-      /*if( bpftOnlyCurrentYear_ && start.tm_year != curTime.tm_year ){
-        flog.seek(flog.tell() + sizeof(BPFTEntry32) * entriesCount);
-        lineNo += entriesCount;
-        entriesCount = 0;
+      entries32.resize(entriesCount);
+      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ){
+        if( flog.seekable() ) flog.seek(safePos);
+        break;
       }
-      else {*/
-        entries32.resize(entriesCount);
-        if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ){
-          flog.seek(safePos);
-          break;
-        }
-      //}
     }
     else {
-      /*if( bpftOnlyCurrentYear_ && start.tm_year != curTime.tm_year ){
-        flog.seek(flog.tell() + sizeof(BPFTEntry) * entriesCount);
-        lineNo += entriesCount;
-        entriesCount = 0;
+      entries.resize(entriesCount);
+      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ){
+        if( flog.seekable() ) flog.seek(safePos);
+        break;
       }
-      else {*/
-        entries.resize(entriesCount);
-        if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ){
-          flog.seek(safePos);
-          break;
-        }
-      //}
     }
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL && entriesCount > 0 ){
       bool executed = true;
@@ -1189,13 +1167,13 @@ void Logger::parseBPFTLogFile()
       entriesCount = 0;
     }
     printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
-    updateLogFileLastOffset(flog.fileName(),flog.tell());
+    if( flog.seekable() ) updateLogFileLastOffset(flog.fileName(),flog.tell());
     database_->commit();
     database_->start();
     lineNo += entriesCount;
   }
   printStat(lineNo,offset,flog.tell(),flog.size(),cl);
-  updateLogFileLastOffset(flog.fileName(),flog.tell());
+  if( flog.seekable() ) updateLogFileLastOffset(flog.fileName(),flog.tell());
   database_->commit();
 }
 //------------------------------------------------------------------------------

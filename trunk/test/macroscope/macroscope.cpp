@@ -221,19 +221,10 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     paramAsMutant("ST_LAST_OFFSET",0)->execute();
  */
   database_->start();
+  if( (bool) config_->valueByPath("macroscope.squid.reset_log_file_position",false) )
+    updateLogFileLastOffset(logFileName,0);
   int64_t offset = fetchLogFileLastOffset(logFileName);
-  if( flog.std() ){
-    AutoPtr<uint8_t> b;
-    b.alloc(getpagesize() * 16);
-    for( int64_t j, i = 0; i < offset; i += j ){
-      j = offset - i >= getpagesize() * 16 ? getpagesize() * 16 : offset - i;
-      flog.readBuffer(b,j);
-    }
-  }
-  else {
-    flog.seek(offset);
-  }
-
+  if( flog.seekable() ) flog.seek(offset);
   int64_t lineNo = 1, tma = 0;
   uintptr_t size;
   Array<const char *> slcp;
@@ -304,14 +295,14 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
       }
     }
     if( lineNo % 8192 == 0 ){
-      updateLogFileLastOffset(logFileName,lgb.tell());
+      if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell());
       database_->commit();
       database_->start();
     }
     printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  updateLogFileLastOffset(logFileName,lgb.tell());
+  if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell());
   database_->commit();
   printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
@@ -341,21 +332,13 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
   );
   database_->start();
+  if( (bool) config_->valueByPath("macroscope.sendmail.reset_log_file_position",false) )
+    updateLogFileLastOffset(logFileName,0);
   statement_->execute()->fetchAll();
   lt = statement_->valueAsMutant("ST_TIMESTAMP");
   if( !statement_->valueIsNull("ST_TIMESTAMP") ) startYear = lt.tm_year + 1900;
   int64_t offset = fetchLogFileLastOffset(logFileName);
-  if( flog.std() ){
-    AutoPtr<uint8_t> b;
-    b.alloc(getpagesize() * 16);
-    for( int64_t j, i = 0; i < offset; i += j ){
-      j = offset - i >= getpagesize() * 16 ? getpagesize() * 16 : offset - i;
-      flog.readBuffer(b,j);
-    }
-  }
-  else {
-    flog.seek(offset);
-  }
+  if( flog.seekable() ) flog.seek(offset);
   int64_t   lineNo  = 1, tma = 0;
   uintptr_t size;
   intptr_t  mon     = 0;
@@ -470,14 +453,14 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
       }
     }
     if( lineNo % 8192 == 0 ){
-      updateLogFileLastOffset(logFileName,lgb.tell());
+      if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell());
       database_->commit();
       database_->start();
     }
     printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  updateLogFileLastOffset(logFileName,lgb.tell());
+  if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell());
   stMsgsDel_->execute();
   stMsgsSelCount_->execute()->fetchAll();
   database_->commit();

@@ -1034,14 +1034,17 @@ l1:
           r = read(buffer->buffer_,buffer->size_);
         }
         else {
-          r = read(buffer->bufferFilePos_ + buffer->len_,buffer->buffer_,buffer->size_);
+	  if( seekable_ )
+            r = read(buffer->bufferFilePos_ + buffer->len_,buffer->buffer_,buffer->size_);
+	  else
+            r = read(buffer->buffer_,buffer->size_);
           buffer->bufferFilePos_ += buffer->len_;
         }
         if( r <= 0 ){
           if( ss == 0 ) eof = true;
           break;
         }
-        seek(buffer->bufferFilePos_);
+        if( seekable_ ) seek(buffer->bufferFilePos_);
         buffer->len_ = (uintptr_t) r;
         buffer->pos_ = 0;
       }
@@ -1072,7 +1075,7 @@ l1:
         s[ss] = '\0';
       }
       buffer->pos_ = i;
-      seek(buffer->bufferFilePos_ + i);
+      if( seekable_ ) seek(buffer->bufferFilePos_ + i);
       if( nl ) break;
     }
   }
