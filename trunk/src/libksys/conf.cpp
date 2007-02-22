@@ -496,7 +496,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         config.silent(true).parse();
         root.addSection(config);
       }
-      if( key.strcasecmp("#charset") == 0 && tt == ttNumeric ){ // pragma
+      else if( key.strcasecmp("#charset") == 0 && tt == ttNumeric ){ // pragma
         buffer_->codePage_ = Mutant(token);
       }
       else { // try new subsection
