@@ -251,67 +251,69 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     size = sb.size();
     if( size > 0 && sb.c_str()[size - 1] == '\n' ){
       parseSquidLogLine(sb.c_str(),size,slcp);
-      intmax_t  traf(utf8::str2Int(slcp[4]));
-      if( traf > 0 && slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7], '%') == NULL && strcmp(slcp[7], "-") != 0 && strncmp(slcp[3], "NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
-        ldouble timeStamp1;
-        sscanf(slcp[0],"%"PRF_LDBL"f",&timeStamp1);
-        utf8::String st_user(slcp[7]), st_url(slcp[6]);
-        st_user = st_user.left(4096).replaceAll("\"","").lower();
-        if( st_url.strcasestr(skipUrl).position() < 0 ){
-          st_url = shortUrl(st_url).lower();
-          Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
-          try {
-            stTrafIns_->paramAsString("ST_USER",st_user);
-            stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
-            stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
-            stTrafIns_->execute();
-          }
-          catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
-            stTrafUpd_->paramAsString("ST_USER",st_user);
-            stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
-            stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
-            stTrafUpd_->execute();
-          }
-          if( top10 ){
-            int64_t urlHash = st_url.hash_ll(true);
-            stMonUrlSel_->
-              paramAsString("ST_USER", st_user)->
-              paramAsMutant("ST_TIMESTAMP", timeStamp)->
-              paramAsMutant("ST_URL", st_url)->
-              paramAsMutant("ST_URL_HASH",urlHash)->
-              execute()->fetchAll();
-            if( stMonUrlSel_->rowCount() > 0 ){
-              stMonUrlUpd_->
-                paramAsString("ST_USER", st_user)->
-                paramAsMutant("ST_TIMESTAMP", timeStamp)->
-                paramAsMutant("ST_URL", st_url)->
-                paramAsMutant("ST_URL_HASH",urlHash)->
-                paramAsMutant("ST_URL_TRAF", traf)->execute();
+      if( slcp.count() >= 7 ){
+        intmax_t traf(utf8::str2Int(slcp[4]));
+        if( traf > 0 && slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7], '%') == NULL && strcmp(slcp[7], "-") != 0 && strncmp(slcp[3], "NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
+          ldouble timeStamp1;
+          sscanf(slcp[0],"%"PRF_LDBL"f",&timeStamp1);
+          utf8::String st_user(slcp[7]), st_url(slcp[6]);
+          st_user = st_user.left(4096).replaceAll("\"","").lower();
+          if( st_url.strcasestr(skipUrl).position() < 0 ){
+            st_url = shortUrl(st_url).lower();
+            Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
+            try {
+              stTrafIns_->paramAsString("ST_USER",st_user);
+              stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
+              stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
+              stTrafIns_->execute();
             }
-            else {
-              stMonUrlIns_->
+            catch( ExceptionSP & e ){
+              if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
+              stTrafUpd_->paramAsString("ST_USER",st_user);
+              stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
+              stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
+              stTrafUpd_->execute();
+            }
+            if( top10 ){
+              int64_t urlHash = st_url.hash_ll(true);
+              stMonUrlSel_->
                 paramAsString("ST_USER", st_user)->
                 paramAsMutant("ST_TIMESTAMP", timeStamp)->
                 paramAsMutant("ST_URL", st_url)->
                 paramAsMutant("ST_URL_HASH",urlHash)->
-                paramAsMutant("ST_URL_TRAF", traf)->execute();
+                execute()->fetchAll();
+              if( stMonUrlSel_->rowCount() > 0 ){
+                stMonUrlUpd_->
+                  paramAsString("ST_USER", st_user)->
+                  paramAsMutant("ST_TIMESTAMP", timeStamp)->
+                  paramAsMutant("ST_URL", st_url)->
+                  paramAsMutant("ST_URL_HASH",urlHash)->
+                  paramAsMutant("ST_URL_TRAF", traf)->execute();
+              }
+              else {
+                stMonUrlIns_->
+                  paramAsString("ST_USER", st_user)->
+                  paramAsMutant("ST_TIMESTAMP", timeStamp)->
+                  paramAsMutant("ST_URL", st_url)->
+                  paramAsMutant("ST_URL_HASH",urlHash)->
+                  paramAsMutant("ST_URL_TRAF", traf)->execute();
+              }
             }
           }
         }
       }
     }
     if( lineNo % 8192 == 0 ){
-      updateLogFileLastOffset(logFileName,flog.tell());
+      updateLogFileLastOffset(logFileName,lgb.tell());
       database_->commit();
       database_->start();
     }
-    printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
+    printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  updateLogFileLastOffset(logFileName,flog.tell());
+  updateLogFileLastOffset(logFileName,lgb.tell());
   database_->commit();
-  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+  printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------
 void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain,uintptr_t startYear)
@@ -468,18 +470,18 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
       }
     }
     if( lineNo % 8192 == 0 ){
-      updateLogFileLastOffset(logFileName,flog.tell());
+      updateLogFileLastOffset(logFileName,lgb.tell());
       database_->commit();
       database_->start();
     }
-    printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
+    printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  updateLogFileLastOffset(logFileName,flog.tell());
+  updateLogFileLastOffset(logFileName,lgb.tell());
   stMsgsDel_->execute();
   stMsgsSelCount_->execute()->fetchAll();
   database_->commit();
-  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+  printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------
 void Logger::main()

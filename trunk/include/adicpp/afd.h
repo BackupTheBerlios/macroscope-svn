@@ -71,6 +71,7 @@ class AsyncFile : public AsyncDescriptor {
         LineGetBuffer(AsyncFile & file,uintptr_t size = 0) : 
           file_(&file), bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false), detectUnicodeFFFE_(true) {}
 
+        uint64_t tell();
         LineGetBuffer & seek(uint64_t pos);
 
         AsyncFile * file_;
@@ -81,7 +82,7 @@ class AsyncFile : public AsyncDescriptor {
         uintptr_t len_;
         uintptr_t codePage_;
         bool removeNewLine_;
-	bool detectUnicodeFFFE_;
+	      bool detectUnicodeFFFE_;
     };
     bool gets(utf8::String & str,LineGetBuffer * buffer = NULL);
 

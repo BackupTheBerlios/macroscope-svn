@@ -1098,6 +1098,11 @@ l1:
   return eof;
 }
 //---------------------------------------------------------------------------
+uint64_t AsyncFile::LineGetBuffer::tell()
+{
+  return bufferFilePos_ + pos_;
+}
+//---------------------------------------------------------------------------
 AsyncFile::LineGetBuffer & AsyncFile::LineGetBuffer::seek(uint64_t pos)
 {
   if( pos < bufferFilePos_ || pos >= bufferFilePos_ + len_ ){
