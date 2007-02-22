@@ -22,14 +22,14 @@ IF (BUILD_DOCUMENTATION)
     )
     IF (DOCUMENTATION_HTML_TARZ)
       ADD_CUSTOM_TARGET (
-        doc ALL
+        doc
         DEPENDS html/index.html
         DEPENDS macroscope-doc-html.tar.gz
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       )
     ELSE (DOCUMENTATION_HTML_TARZ)
       ADD_CUSTOM_TARGET (
-        doc ALL
+        doc
         DEPENDS html/index.html
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       )

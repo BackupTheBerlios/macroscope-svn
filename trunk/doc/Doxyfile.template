@@ -111,10 +111,16 @@ FILE_PATTERNS          = *.c \
                          *.dox \
                          *.py
 RECURSIVE              = YES
-EXCLUDE                = ../builds
+EXCLUDE                = ../builds \
+			 ../include/adicpp/fbapi \
+			 ../include/adicpp/myapi \
+			 ../include/adicpp/lzo \
+			 ../include/adicpp/pdbutils \
+			 ../include/adicpp/sha
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *pdb* \
                          *dbg* \
+                         config.h* \
                          */.svn/* \
                          cp*.cpp \
                          version.cpp \
