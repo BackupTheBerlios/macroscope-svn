@@ -222,7 +222,17 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
  */
   database_->start();
   int64_t offset = fetchLogFileLastOffset(logFileName);
-  flog.seek(offset);
+  if( flog.std() ){
+    AutoPtr<uint8_t> b;
+    b.alloc(getpagesize() * 16);
+    for( int64_t j, i = 0; i < offset; i += j ){
+      j = offset - i >= getpagesize() * 16 ? getpagesize() * 16 : offset - i;
+      flog.readBuffer(b,j);
+    }
+  }
+  else {
+    flog.seek(offset);
+  }
 
   int64_t lineNo = 1, tma = 0;
   uintptr_t size;
@@ -333,7 +343,17 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   lt = statement_->valueAsMutant("ST_TIMESTAMP");
   if( !statement_->valueIsNull("ST_TIMESTAMP") ) startYear = lt.tm_year + 1900;
   int64_t offset = fetchLogFileLastOffset(logFileName);
-  flog.seek(offset);
+  if( flog.std() ){
+    AutoPtr<uint8_t> b;
+    b.alloc(getpagesize() * 16);
+    for( int64_t j, i = 0; i < offset; i += j ){
+      j = offset - i >= getpagesize() * 16 ? getpagesize() * 16 : offset - i;
+      flog.readBuffer(b,j);
+    }
+  }
+  else {
+    flog.seek(offset);
+  }
   int64_t   lineNo  = 1, tma = 0;
   uintptr_t size;
   intptr_t  mon     = 0;

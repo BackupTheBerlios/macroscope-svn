@@ -1028,7 +1028,17 @@ void Logger::parseBPFTLogFile()
   flog.readOnly(true).open();
   database_->start();
   int64_t offset = fetchLogFileLastOffset(flog.fileName());
-  flog.seek(offset);
+  if( flog.std() ){
+    AutoPtr<uint8_t> b;
+    b.alloc(getpagesize() * 16);
+    for( int64_t j, i = 0; i < offset; i += j ){
+      j = offset - i >= getpagesize() * 16 ? getpagesize() * 16 : offset - i;
+      flog.readBuffer(b,j);
+    }
+  }
+  else {
+    flog.seek(offset);
+  }
   int64_t lineNo = 0, tma = 0;
   int64_t cl = getlocaltimeofday();
   union {

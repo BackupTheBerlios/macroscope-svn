@@ -1185,6 +1185,7 @@ void AsyncFile::closeAPI()
 //------------------------------------------------------------------------------
 void AsyncFile::redirectToStdin()
 {
+  close();
 #if defined(__WIN32__) || defined(__WIN64__)
   HANDLE handle = GetStdHandle(STD_INPUT_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
@@ -1195,14 +1196,23 @@ void AsyncFile::redirectToStdin()
     fileName("stdin");
     descriptor_ = handle;
     std_ = true;
+    seekable_ = false;
+  }
+  else {
+    std_ = false;
+    seekable_ = true;
   }
 #else
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  descriptor_ = STDIN_FILENO;
+  std_ = true;
+  seekable_ = false;
+///  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //------------------------------------------------------------------------------
 void AsyncFile::redirectToStdout()
 {
+  close();
 #if defined(__WIN32__) || defined(__WIN64__)
   HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
@@ -1213,14 +1223,22 @@ void AsyncFile::redirectToStdout()
     fileName("stdout");
     descriptor_ = handle;
     std_ = true;
+    seekable_ = false;
+  }
+  else {
+    std_ = false;
+    seekable_ = true;
   }
 #else
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  descriptor_ = STDOUT_FILENO;
+  std_ = true;
+  seekable_ = false;
 #endif
 }
 //---------------------------------------------------------------------------
 void AsyncFile::redirectToStderr()
 {
+  close();
 #if defined(__WIN32__) || defined(__WIN64__)
   HANDLE handle = GetStdHandle(STD_ERROR_HANDLE);
   if( handle == INVALID_HANDLE_VALUE ){
@@ -1231,9 +1249,16 @@ void AsyncFile::redirectToStderr()
     fileName("stderr");
     descriptor_ = handle;
     std_ = true;
+    seekable_ = false;
+  }
+  else {
+    std_ = false;
+    seekable_ = true;
   }
 #else
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  descriptor_ = STDERR_FILENO;
+  std_ = true;
+  seekable_ = false;
 #endif
 }
 //---------------------------------------------------------------------------
