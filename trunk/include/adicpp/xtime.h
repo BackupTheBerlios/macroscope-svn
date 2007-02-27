@@ -38,7 +38,7 @@ inline int64_t timeval2Time(const struct timeval & tv)
 //---------------------------------------------------------------------------
 inline struct timeval time2Timeval(int64_t a)
 {
-  struct timeval  tv;
+  struct timeval tv;
   tv.tv_sec = long(a / 1000000);
   tv.tv_usec = long(a % 1000000);
   return tv;
