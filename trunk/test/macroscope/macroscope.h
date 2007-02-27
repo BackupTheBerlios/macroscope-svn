@@ -118,7 +118,8 @@ class Logger {
     void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
     void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
     utf8::String squidStrToWideString(const char * str);
-    Mutant timeStampRoundToMin(const Mutant & timeStamp);
+    Mutant timeStampRoundToMin(int64_t ts);
+    Mutant timeStampRoundToMin(ldouble ts){ return timeStampRoundToMin(int64_t(ts)); }
     utf8::String shortUrl(const utf8::String & url);
     int64_t fetchLogFileLastOffset(const utf8::String & logFileName);
     Logger & updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset);

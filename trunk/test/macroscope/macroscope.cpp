@@ -44,9 +44,9 @@ Logger::Logger() :
 {
 }
 //------------------------------------------------------------------------------
-Mutant Logger::timeStampRoundToMin(const Mutant & timeStamp)
+Mutant Logger::timeStampRoundToMin(int64_t ts)
 {
-  struct tm t = timeStamp;
+  struct tm t = time2tm(ts);
   t.tm_sec = 0;
   return t;
 }
@@ -203,7 +203,7 @@ Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName,int64_
 //------------------------------------------------------------------------------
 static void fallBackToNewLine(AsyncFile & f)
 {
-  if( f.seekable() && f.size() > 0 ){
+  if( f.seekable() && f.size() > 0 && f.tell() > 0 ){
     char c = '\0';
     if( f.size() <= f.tell() ) f.seek(f.size() - 1);
     for(;;){
@@ -232,14 +232,15 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   stFileStatUpd_->prepare()->
     paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
     paramAsMutant("ST_LAST_OFFSET",0)->execute();
- */
+*/
   database_->start();
   if( (bool) config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
     updateLogFileLastOffset(logFileName,0);
   int64_t offset = fetchLogFileLastOffset(logFileName);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
-  int64_t lineNo = 1, tma = 0;
+  int64_t lineNo = 1, tma = 0, startTime;
+  startTime = timeFromTimeString(config_->valueByPath(section_ + ".squid.start_time","01.01.1980"));
   uintptr_t size;
   Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
@@ -250,7 +251,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   stMonUrlSel_->prepare();
   stMonUrlUpd_->prepare();
   stMonUrlIns_->prepare();
-  bool validLine = false;
+  bool validLine = false, startTimeLinePrinted = false;
   for(;;){
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
@@ -258,16 +259,30 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     validLine = size > 0 && sb.c_str()[size - 1] == '\n';
     parseSquidLogLine(sb.c_str(),size,slcp);
     validLine = validLine && slcp.count() >= 7;
+    ldouble timeStamp1;
     if( validLine ){
-      intmax_t traf(utf8::str2Int(slcp[4]));
-      if( traf > 0 && slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7], '%') == NULL && strcmp(slcp[7], "-") != 0 && strncmp(slcp[3], "NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
-        ldouble timeStamp1;
-        sscanf(slcp[0],"%"PRF_LDBL"f",&timeStamp1);
+      int r = sscanf(slcp[0],"%"PRF_LDBL"f",&timeStamp1);
+      timeStamp1 *= 1000000;
+      validLine = validLine && r == 1 && timeStamp1 >= startTime;
+      if( validLine && verbose_ && !startTimeLinePrinted ){
+        fprintf(stderr,"\nstart time %s, line: %"PRId64", offset: %"PRIu64"\n",
+	  (const char * ) utf8::time2Str(int64_t(timeStamp1)).getOEMString(),lineNo,lgb.tell() - size
+	);
+	startTimeLinePrinted = true;
+      }
+    }
+    uintmax_t traf;
+    if( validLine ){
+      int r = sscanf(slcp[4],"%"PRIuMAX,&traf);
+      validLine = validLine && r == 1 && traf > 0;
+    }
+    if( validLine ){
+      if( slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7],'%') == NULL && strcmp(slcp[7],"-") != 0 && strncmp(slcp[3],"NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
         utf8::String st_user(utf8::plane(slcp[7])), st_url(utf8::plane(slcp[6]));
         st_user = st_user.left(80).replaceAll("\"","").lower();
         if( st_url.strcasestr(skipUrl).position() < 0 ){
           st_url = shortUrl(st_url).left(4096).lower();
-          Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
+          Mutant timeStamp(timeStampRoundToMin(timeStamp1));
           try {
             stTrafIns_->paramAsString("ST_USER",st_user);
             stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
@@ -309,7 +324,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
         }
       }
     }
-    if( lineNo % 1024 == 0 ){
+    if( lineNo % 8192 == 0 ){
       if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell() - (validLine ? 0 : size));
       database_->commit();
       database_->start();
@@ -436,8 +451,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
               paramAsMutant("ST_MSGSIZE",msgSize)->execute();
           }
           catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) )
-              throw;
+            if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
           }
         }
         else if( to != NULL && stat != NULL && strncmp(stat, "Sent", 4) == 0 ){
@@ -451,14 +465,14 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
               try {
                 stTrafIns_->prepare()->
                   paramAsString("ST_USER", st_user)->
-                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(lt))->
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt)))->
                   paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               catch( ExceptionSP & e ){
                 if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
                 stTrafUpd_->prepare()->
                   paramAsString("ST_USER",st_user)->
-                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(lt))->
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt)))->
                   paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               stMsgsDel2_->prepare()->
