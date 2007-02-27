@@ -35,6 +35,10 @@
 #include <adicpp/fbapi/ibase.h>
 #endif
 
+#if FB_API_VER < 20
+typedef char ISC_SCHAR;
+#endif
+
 #include <adicpp/fbintf.h>
 #include <adicpp/fbdb.h>
 #include <adicpp/fbexcpt.h>
