@@ -203,11 +203,14 @@ Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName,int64_
 //------------------------------------------------------------------------------
 static void fallBackToNewLine(AsyncFile & f)
 {
-  char c;
-  for(;;){
-    f.readBuffer(&c,1);
-    if( c == '\n' || f.tell() < 2 ) break;
-    f.seek(f.tell() - 2);
+  if( f.seekable() && f.size() > 0 ){
+    char c = '\0';
+    if( f.size() <= f.tell() ) f.seek(f.size() - 1);
+    for(;;){
+      f.readBuffer(&c,1);
+      if( c == '\n' || f.tell() < 2 ) break;
+      f.seek(f.tell() - 2);
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -231,19 +234,17 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     paramAsMutant("ST_LAST_OFFSET",0)->execute();
  */
   database_->start();
-  if( (bool) config_->valueByPath("macroscope.squid.reset_log_file_position",false) )
+  if( (bool) config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
     updateLogFileLastOffset(logFileName,0);
   int64_t offset = fetchLogFileLastOffset(logFileName);
-  if( flog.seekable() ){
-    flog.seek(offset);
-    fallBackToNewLine(flog);
-  }
+  if( flog.seekable() ) flog.seek(offset);
+  fallBackToNewLine(flog);
   int64_t lineNo = 1, tma = 0;
   uintptr_t size;
   Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
   AsyncFile::LineGetBuffer lgb(flog);
-  lgb.codePage_ = CP_UTF8;
+  lgb.codePage_ = config_->valueByPath(section_ + ".squid.log_file_codepage",CP_ACP);
   stTrafIns_->prepare();
   stTrafUpd_->prepare();
   stMonUrlSel_->prepare();
@@ -263,9 +264,9 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
         ldouble timeStamp1;
         sscanf(slcp[0],"%"PRF_LDBL"f",&timeStamp1);
         utf8::String st_user(utf8::plane(slcp[7])), st_url(utf8::plane(slcp[6]));
-        st_user = st_user.left(4096).replaceAll("\"","").lower();
+        st_user = st_user.left(80).replaceAll("\"","").lower();
         if( st_url.strcasestr(skipUrl).position() < 0 ){
-          st_url = shortUrl(st_url).lower();
+          st_url = shortUrl(st_url).left(4096).lower();
           Mutant timeStamp(timeStampRoundToMin(timeStamp1 * 1000000));
           try {
             stTrafIns_->paramAsString("ST_USER",st_user);
@@ -346,22 +347,20 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
   );
   database_->start();
-  if( (bool) config_->valueByPath("macroscope.sendmail.reset_log_file_position",false) )
+  if( (bool) config_->valueByPath(section_ + ".sendmail.reset_log_file_position",false) )
     updateLogFileLastOffset(logFileName,0);
   statement_->execute()->fetchAll();
   lt = statement_->valueAsMutant("ST_TIMESTAMP");
   if( !statement_->valueIsNull("ST_TIMESTAMP") ) startYear = lt.tm_year + 1900;
   int64_t offset = fetchLogFileLastOffset(logFileName);
-  if( flog.seekable() ){
-    flog.seek(offset);
-    fallBackToNewLine(flog);
-  }
+  if( flog.seekable() ) flog.seek(offset);
+  fallBackToNewLine(flog);
   int64_t   lineNo  = 1, tma = 0;
   uintptr_t size;
   intptr_t  mon     = 0;
   int64_t   cl      = getlocaltimeofday();
   AsyncFile::LineGetBuffer lgb(flog);
-  lgb.codePage_ = CP_UTF8;
+  lgb.codePage_ = config_->valueByPath(section_ + ".sendmail.log_file_codepage",CP_ACP);
   for(;;){
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
@@ -395,8 +394,8 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
               if( *a == ':' ) from = a + 1;
               a++;
             }
-            if( *a == '@' && utf8::String(a,domain.strlen()).strcasecmp(domain) == 0 ){
-              st_user = utf8::String(from, a - from).lower();
+            if( *a == '@' && utf8::plane(a,domain.strlen()).strcasecmp(domain) == 0 ){
+              st_user = utf8::plane(from,a - from).lower();
             }
           }
         }
@@ -409,8 +408,8 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
               if( *a == ':' ) to = a + 1;
               a++;
             }
-            if( *a == '@' && utf8::String(a, domain.strlen()).strcasecmp(domain) == 0 ){
-              st_user = utf8::String(to, a - to).lower();
+            if( *a == '@' && utf8::plane(a,domain.strlen()).strcasecmp(domain) == 0 ){
+              st_user = utf8::plane(to,a - to).lower();
             }
           }
         }
@@ -432,9 +431,9 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         if( from != NULL && msgSize > 0 ){
           try {
             stMsgsIns_->prepare()->
-              paramAsString("ST_FROM", st_user)->
-              paramAsString("ST_MSGID", utf8::String(id, idl - id))->
-              paramAsMutant("ST_MSGSIZE", msgSize)->execute();
+              paramAsString("ST_FROM",st_user)->
+              paramAsString("ST_MSGID",utf8::plane(id, idl - id))->
+              paramAsMutant("ST_MSGSIZE",msgSize)->execute();
           }
           catch( ExceptionSP & e ){
             if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) )
@@ -443,7 +442,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
         }
         else if( to != NULL && stat != NULL && strncmp(stat, "Sent", 4) == 0 ){
           stMsgsSel_->prepare()->
-            paramAsString("ST_MSGID", utf8::String(id,idl - id))->
+            paramAsString("ST_MSGID",utf8::plane(id,idl - id))->
             execute()->fetchAll();
           if( stMsgsSel_->rowCount() > 0 ){
             if( st_user.strlen() == 0 ) st_user = stMsgsSel_->valueAsString("ST_FROM");
@@ -452,18 +451,18 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
               try {
                 stTrafIns_->prepare()->
                   paramAsString("ST_USER", st_user)->
-                  paramAsMutant("ST_TIMESTAMP", timeStampRoundToMin(lt))->
-                  paramAsMutant("ST_TRAF_SMTP", msgSize)->execute();
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(lt))->
+                  paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               catch( ExceptionSP & e ){
                 if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
                 stTrafUpd_->prepare()->
-                  paramAsString("ST_USER", st_user)->
-                  paramAsMutant("ST_TIMESTAMP", timeStampRoundToMin(lt))->
-                  paramAsMutant("ST_TRAF_SMTP", msgSize)->execute();
+                  paramAsString("ST_USER",st_user)->
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(lt))->
+                  paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               stMsgsDel2_->prepare()->
-                paramAsString("ST_MSGID", stMsgsSel_->paramAsString("ST_MSGID"))->execute();
+                paramAsString("ST_MSGID",stMsgsSel_->paramAsString("ST_MSGID"))->execute();
             }
           }
         }
@@ -580,7 +579,8 @@ void Logger::main()
     " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
     " ST_TIMESTAMP          DATETIME NOT NULL,"
     " ST_TRAF_WWW           INTEGER NOT NULL,"
-    " ST_TRAF_SMTP          INTEGER NOT NULL" ")" <<
+    " ST_TRAF_SMTP          INTEGER NOT NULL"
+    ")" <<
 //    "DROP TABLE INET_USERS_MONTHLY_TOP_URL" <<
     "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
     " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
@@ -636,7 +636,7 @@ void Logger::main()
     metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
     metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
   }
-
+  metadata << "CREATE INDEX INET_USERS_TRAF_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)";
   if( (bool) config_->section("macroscope").value("DROP_DATABASE", false) ){
     database_->attach();
     database_->drop();
@@ -644,8 +644,6 @@ void Logger::main()
   }
 
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
-    const ConfigSection & section = config_->section("libadicpp").
-      section("default_connection").section("firebird");
     utf8::String hostName, dbName;
     uintptr_t port;
     database_->separateDBName(database_->name(),hostName,dbName,port);
@@ -653,29 +651,45 @@ void Logger::main()
     utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
     fbcpp::Service service;
     service.params().
-      add("user_name",section.value("user")).
-      add("password",section.value("password"));
-    service.attach(serviceName);
-    service.request().
-      add("action_svc_properties").add("dbname",dbName).
-      add("prp_set_sql_dialect",3);
-    service.invoke();
-    service.request().clear().
-      add("action_svc_properties").add("dbname",dbName).
-      add("prp_reserve_space",isc_spb_prp_res_use_full);
-    service.invoke();
-    service.request().clear().add("action_svc_properties").add("dbname",dbName).
-      add("prp_page_buffers",8u * 1024u * 1024u / 16384u);
-    service.invoke();
-    service.request().clear().
-      add("action_svc_properties").add("dbname", dbName).
-      add("prp_write_mode",isc_spb_prp_wm_async);
-    service.invoke();
-    service.attach(serviceName);
-    service.request().clear().
-      add("action_svc_properties").add("dbname", dbName).
-      add("prp_sweep_interval",10000);
-    service.invoke();
+      add("user_name",config_->valueByPath("libadicpp.default_connection.firebird.user"));
+    service.params().
+      add("password",config_->valueByPath("libadicpp.default_connection.firebird.password"));
+    try {
+      service.attach(serviceName);
+      service.request().
+        add("action_svc_properties").add("dbname",dbName).
+        add("prp_set_sql_dialect",config_->valueByPath("libadicpp.default_connection.firebird.dialect",3));
+      service.invoke();
+      service.request().clear().
+        add("action_svc_properties").add("dbname",dbName).
+        add("prp_reserve_space",
+          (bool) config_->valueByPath("libadicpp.default_connection.firebird.reserve_space",false) ?
+            isc_spb_prp_res : isc_spb_prp_res_use_full
+        );
+      service.invoke();
+      service.request().clear().add("action_svc_properties").add("dbname",dbName).
+        add("prp_page_buffers",
+          config_->valueByPath("libadicpp.default_connection.firebird.page_buffers",2048u)
+        );
+      service.invoke();
+      service.request().clear().
+        add("action_svc_properties").add("dbname", dbName).
+        add("prp_write_mode",
+          (bool) config_->valueByPath("libadicpp.default_connection.firebird.async_write",0) ?
+            isc_spb_prp_wm_async : isc_spb_prp_wm_sync
+        );
+      service.invoke();
+      service.attach(serviceName);
+      service.request().clear().
+        add("action_svc_properties").add("dbname", dbName).
+        add("prp_sweep_interval",
+          config_->valueByPath("libadicpp.default_connection.firebird.sweep_interval",10000u)
+        );
+      service.invoke();
+    }
+    catch( ExceptionSP & e ){
+      if( !e->searchCode(isc_network_error) ) throw;
+    }
   }
 
   database_->attach();
@@ -693,6 +707,7 @@ void Logger::main()
           !e->searchCode(ER_BAD_TABLE_ERROR) ) throw;
     }
   }
+  section_ = "macroscope";
   ellapsed_ = getlocaltimeofday();
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
     Mutant m0(config_->valueByPath("macroscope.squid.log_file_name"));
@@ -706,7 +721,6 @@ void Logger::main()
     Mutant m2(config_->valueByPath("macroscope.sendmail.start_year"));
     parseSendmailLogFile(m0,m1,m2);
   }
-  section_ = "macroscope";
   writeHtmlYearOutput();
   ellapsed_ = getlocaltimeofday();
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
@@ -757,6 +771,15 @@ int main(int _argc,char * _argv[])
         stdErr.fileName(argv()[i + 1]);
       }
     }
+    /*AsyncFile f("C:/DB/test.txt");
+    f.readOnly(true).open();
+    AsyncFile::LineGetBuffer lgb(f);
+    utf8::String s0, s1, s2, s3;
+    bool ln0 = f.gets(s0,&lgb);
+    bool ln1 = f.gets(s1,&lgb);
+    bool ln2 = f.gets(s2,&lgb);
+    bool ln3 = f.gets(s3,&lgb);
+    uint64_t sz = lgb.tell();*/
     if( dispatch ){
       macroscope::Logger logger;
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");

@@ -1015,34 +1015,32 @@ int64_t Logger::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,co
   trafCache_.insert(tce,false,false,&pEntry);
   if( pEntry == tce ){
     tce.ptr(NULL);
-    utf8::String users(genUserFilter(user,isGroup));
-    statement_->text(utf8::String("SELECT ") +
-      (tt == ttAll || tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
-      (tt == ttAll ? ", " : " ") +
-      (tt == ttAll || tt == ttSMTP ? "SUM(ST_TRAF_SMTP) " : " ") +
-      "FROM INET_USERS_TRAF WHERE" +
-      (user.strlen() > 0 ? users : utf8::String()) +
-      " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
-    );
-    statement_->prepare();
-    for( intptr_t i = enumStringParts(user) - 1; i >= 0; i-- )
-      statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
-    statement_->
-      paramAsMutant("BT",bt)->paramAsMutant("ET",et)->
-      execute()->fetchAll();
+    utf8::String users;
+    switch( tt ){
+      case ttSMTP :
+      case ttWWW  :
+        users = genUserFilter(user,isGroup);
+        statement_->text(utf8::String("SELECT ") +
+          (tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
+          (tt == ttSMTP ? "SUM(ST_TRAF_SMTP) " : " ") +
+          "FROM INET_USERS_TRAF WHERE" +
+          (user.strlen() > 0 ? users : utf8::String()) +
+          " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+        );
+        statement_->prepare();
+        for( intptr_t i = enumStringParts(user) - 1; i >= 0; i-- )
+          statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
+        statement_->
+          paramAsMutant("BT",bt)->paramAsMutant("ET",et)->
+          execute()->fetchAll();
 //#ifndef NDEBUG
 //    for( intptr_t i = statement_->fieldCount() - 1; i >= 0; i-- )
 //      fprintf(stderr,"%s %d\n",(const char *) statement_->fieldName(i).getANSIString(),(int) i);
 //#endif
-    switch( tt ){
-      case ttSMTP :
-      case ttWWW  :
         pEntry->traf_ = statement_->valueAsMutant("SUM");
         break;
       case ttAll  :
-        pEntry->traf_ =
-          (int64_t) statement_->valueAsMutant("SUM") +
-          (int64_t) statement_->valueAsMutant("SUM_1");
+        pEntry->traf_ = getTraf(ttWWW,bt,et,user,isGroup) + getTraf(ttSMTP,bt,et,user,isGroup);
         break;
       default     :
         break;

@@ -1034,11 +1034,12 @@ l1:
           r = read(buffer->buffer_,buffer->size_);
         }
         else {
-	  if( seekable_ )
+      	  if( seekable_ )
             r = read(buffer->bufferFilePos_ + buffer->len_,buffer->buffer_,buffer->size_);
-	  else
+	        else
             r = read(buffer->buffer_,buffer->size_);
-          buffer->bufferFilePos_ += buffer->len_;
+          buffer->bufferFilePos_ += buffer->pos_;
+          buffer->pos_ = buffer->len_ = 0;
         }
         if( r <= 0 ){
           if( ss == 0 ) eof = true;
