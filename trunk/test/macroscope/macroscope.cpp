@@ -643,6 +643,7 @@ void Logger::main()
     database_->create();
   }
 
+#if !__FreeBSD__
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
     utf8::String hostName, dbName;
     uintptr_t port;
@@ -691,7 +692,7 @@ void Logger::main()
       if( !e->searchCode(isc_network_error) ) throw;
     }
   }
-
+#endif
   database_->attach();
 
   for( uintptr_t i = 0; i < metadata.count(); i++ ){
