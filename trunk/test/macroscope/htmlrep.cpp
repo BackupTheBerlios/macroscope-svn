@@ -92,8 +92,8 @@ void Logger::writeUserTop(
     statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
   uintmax_t threshold = config_->valueByPath(section_ + ".html_report.top10_min_significant_threshold",0);
   statement_->
-    paramAsMutant("BT",beginTime)->
-    paramAsMutant("ET",endTime)->
+    paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()))->
+    paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()))->
     paramAsMutant("threshold",threshold)->
     execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
@@ -213,7 +213,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
   Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
   chModOwn(file,m0,m1,m2);
   writeHtmlHead(f);
-  struct tm beginTime = year, endTime = year, curTime = time2tm(getlocaltimeofday());
+  struct tm beginTime = year, endTime = year;
   beginTime.tm_mon = 0;
   beginTime.tm_mday = 1;
   beginTime.tm_hour = 0;
@@ -332,7 +332,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
               endTime.tm_mon + 1
             ) + user.replaceAll(":","-").replaceAll(" ","") + ".html"
           );
-          if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || (curTime.tm_year == endTime.tm_year && curTime.tm_mon == endTime.tm_mon) ){
+          if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || (curTime_.tm_year == endTime.tm_year && curTime_.tm_mon == endTime.tm_mon) ){
             writeUserTop(
               includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
               user,
@@ -496,8 +496,8 @@ void Logger::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct
       for( u = enumStringParts(value) - 1; u >= 0; u-- )
         statement_->paramAsString(u,stringPartByNo(value,u));
       statement_->
-        paramAsMutant("BT",beginTime)->
-        paramAsMutant("ET",endTime)->
+        paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()))->
+        paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()))->
         execute()->fetchAll()->
         unload(usersTrafTables[k]);
       usersTrafTables[k].
@@ -531,8 +531,8 @@ void Logger::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct
     usersTrafTables.resize(usersTrafTables.count() + 1);
     k = usersTrafTables.count() - 1;
     statement_->
-      paramAsMutant("BT",beginTime)->
-      paramAsMutant("ET",endTime)->
+      paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()))->
+      paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()))->
       execute()->fetchAll()->
       unload(usersTrafTables[k]);
     usersTrafTables[k].
@@ -562,7 +562,8 @@ void Logger::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct
       "ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
     );
     statement_->prepare()->
-      paramAsMutant("BT",beginTime)->paramAsMutant("ET",endTime)->
+      paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()))->
+      paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()))->
       execute()->fetchAll()->unload(usersTrafTable);
     usersTrafTable.
       addColumn("ST_TRAF").
@@ -605,7 +606,9 @@ void Logger::writeHtmlYearOutput()
   if( verbose_ ) fprintf(stderr,"\n");
   cacheSize_ = config_->valueByPath(section_+ ".html_report.traffic_cache_size",0);
   decoration();
-  struct tm beginTime, endTime, curTime;
+  struct tm beginTime, endTime;
+  curTime_ = time2tm(getlocaltimeofday());
+  database_->start();
   statement_->text("SELECT ");
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");
@@ -614,7 +617,7 @@ void Logger::writeHtmlYearOutput()
     statement_->text(statement_->text() + " LIMIT 0,1");
   statement_->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
-    beginTime = statement_->valueAsMutant("ST_TIMESTAMP");
+    beginTime = time2tm((uint64_t) statement_->valueAsMutant("ST_TIMESTAMP") - getgmtoffset());
     statement_->text("SELECT ");
     if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
       statement_->text(statement_->text() + "FIRST 1 ");
@@ -622,12 +625,11 @@ void Logger::writeHtmlYearOutput()
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
       statement_->text(statement_->text() + " LIMIT 0,1");
     statement_->execute()->fetchAll();
-    endTime = statement_->valueAsMutant("ST_TIMESTAMP");
+    endTime = time2tm((uint64_t) statement_->valueAsMutant("ST_TIMESTAMP") - getgmtoffset());
   }
   else {
     beginTime = endTime = time2tm(getlocaltimeofday());
   }
-  curTime = time2tm(getlocaltimeofday());
   htmlDir_ = excludeTrailingPathDelimiter(config_->valueByPath(section_ + ".html_report.directory"));
   AsyncFile f(
     includeTrailingPathDelimiter(htmlDir_) + config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
@@ -869,7 +871,7 @@ void Logger::writeHtmlYearOutput()
         et.tm_mon--;
       }
       f << "</TR>\n</TABLE>\n<BR>\n<BR>\n";
-      if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || curTime.tm_year == endTime.tm_year ){
+      if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || curTime_.tm_year == endTime.tm_year ){
         utf8::String fileName(
           includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
         );
@@ -879,6 +881,7 @@ void Logger::writeHtmlYearOutput()
     endTime.tm_year--;
     beginTime = beginTime2;
   }
+  database_->commit();
   f << "Ellapsed time: " <<
     utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n" +
     "Cache size: " + utf8::int2Str((uintmax_t) trafCache_.count()) + "<BR>\n";
@@ -1031,7 +1034,8 @@ int64_t Logger::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,co
         for( intptr_t i = enumStringParts(user) - 1; i >= 0; i-- )
           statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
         statement_->
-          paramAsMutant("BT",bt)->paramAsMutant("ET",et)->
+          paramAsMutant("BT",time2tm(tm2Time(bt) + getgmtoffset()))->
+	  paramAsMutant("ET",time2tm(tm2Time(et) + getgmtoffset()))->
           execute()->fetchAll();
 //#ifndef NDEBUG
 //    for( intptr_t i = statement_->fieldCount() - 1; i >= 0; i-- )

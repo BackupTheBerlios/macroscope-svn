@@ -77,12 +77,8 @@ DSQLValueScalar::~DSQLValueScalar()
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLValueScalar::getMutant()
 {
-  if( sqlind_ < 0 )
-    return ksys::Mutant();
-#if HAVE_LONG_DOUBLE
-  long
-#endif
-  double v;
+  if( sqlind_ < 0 ) return ksys::Mutant();
+  ldouble v;
   switch( sqltype_ & ~1 ){
     case SQL_SHORT       :
       if( sqlscale_ != 0 ){
@@ -112,11 +108,7 @@ ksys::Mutant DSQLValueScalar::getMutant()
     case SQL_QUAD        :
     case SQL_INT64       :
       if( sqlscale_ != 0 ){
-#if HAVE_LONG_DOUBLE
-        v = (long double) bigInt_;
-#else
-        v = (double) bigInt_;
-#endif
+        v = (ldouble) bigInt_;
         for( intptr_t j = sqlscale_; j < 0; j++ )
           v /= 10;
         return v;
@@ -129,10 +121,7 @@ ksys::Mutant DSQLValueScalar::getMutant()
 //---------------------------------------------------------------------------
 utf8::String DSQLValueScalar::getString()
 {
-#if HAVE_LONG_DOUBLE
-  long
-#endif
-  double v;
+  ldouble v;
   if( sqlind_ >= 0 ){
     switch( sqltype_ & ~1 ){
       case SQL_SHORT       :
@@ -140,11 +129,7 @@ utf8::String DSQLValueScalar::getString()
       case SQL_QUAD        :
       case SQL_INT64       :
         if( sqlscale_ != 0 ){
-#if HAVE_LONG_DOUBLE
-          v = (long double) bigInt_;
-#else
-          v = (double) bigInt_;
-#endif
+          v = (ldouble) bigInt_;
           for( intptr_t j = sqlscale_; j < 0; j++ )
             v /= 10;
           return utf8::float2Str(v);
@@ -217,8 +202,7 @@ DSQLValueArray & DSQLValueArray::checkData()
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLValueArray::getMutantFromArray(uintptr_t absIndex)
 {
-  if( sqlind_ < 0 )
-    return ksys::Mutant();
+  if( sqlind_ < 0 ) return ksys::Mutant();
   checkData();
   uintptr_t elementOffset = elementSize_ * absIndex;
   if( elementOffset < (uintptr_t) dataSize_ ){

@@ -55,6 +55,7 @@ class Statement : virtual public ksys::Object {
     virtual Statement *                 detach() = 0;
     virtual bool                        attached() = 0;
 
+    virtual bool                        prepared() = 0;
     virtual Statement *                 prepare() = 0;
     virtual Statement *                 unprepare() = 0;
     virtual Statement *                 execute() = 0;
@@ -97,9 +98,9 @@ class Statement : virtual public ksys::Object {
     virtual intptr_t                    fieldIndex(const utf8::String & name,bool noThrow = true) = 0;
     virtual utf8::String                fieldName(uintptr_t i) = 0;
 
-    virtual ksys::Mutant sum(uintptr_t fieldNum);
-    virtual ksys::Mutant sum(const utf8::String & fieldName);
-    template <class Table> Statement & unload(Table & table);
+    virtual ksys::Mutant sum(uintptr_t fieldNum,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0));
+    virtual ksys::Mutant sum(const utf8::String & fieldName,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0));
+    template <class Table> Statement & unload(Table & table,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0));
     
   protected:
   private:
@@ -109,14 +110,19 @@ template <class Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Statement & Statement::unload(Table & table)
+Statement & Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum)
 {
-  intptr_t i, j, k, row, srow;
+  uintptr_t i, j, k, row;
+  intptr_t srow;
+  
   table.clear();
   for( j = fieldCount(), i = 0; i < j; i++ )
     table.addColumn(fieldName(i));
   srow = rowIndex();
-  for( k = rowCount(), row = 0; row < k; row++ ){
+  if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
+  k = rowCount();
+  if( k >= eRowNum ) k = eRowNum + 1;
+  for( row = sRowNum; row < k; row++ ){
     selectRow(row);
     table.addRow();
     for( i = 0; i < j; i++ )
@@ -139,6 +145,7 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
     FirebirdStatement * detach();
     bool                attached();
 
+    bool prepared();
     FirebirdStatement * prepare();
     FirebirdStatement * unprepare();
     FirebirdStatement * execute();
@@ -197,6 +204,7 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
     MYSQLStatement *  detach();
     bool              attached();
 
+    bool prepared();
     MYSQLStatement *  prepare();
     MYSQLStatement *  unprepare();
     MYSQLStatement *  execute();

@@ -40,7 +40,7 @@ ksys::Mutant DSQLParam::getMutant()
     case ksys::mtFloat  :
       return float_;
     case ksys::mtTime   :
-      return int_;
+      return ksys::Mutant(int_).changeType(ksys::mtTime);
     case ksys::mtCStr   :
     case ksys::mtWStr   :
     case ksys::mtStr    :
@@ -119,7 +119,7 @@ DSQLParams & DSQLParams::bind()
   memset(bind_.bind(), 0, sizeof(MYSQL_BIND) * bind_.count());
   for( uintptr_t i = 0; i < indexToParam_.count(); i++ ){
     param = indexToParam_[i]->object();
-    MYSQL_BIND &  v = bind_.bind()[i];
+    MYSQL_BIND & v = bind_.bind()[i];
     param->isNull_ = false;
     switch( param->type_ ){
       case ksys::mtNull :

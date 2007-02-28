@@ -110,10 +110,7 @@ TPB & TPB::add(const utf8::String & name, const utf8::String & tableName)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-Transaction::Transaction()
-  : handle_(0),
-    startCount_(0),
-    lastRetainingTransaction_(lrtNone)
+Transaction::Transaction() : handle_(0), startCount_(0), lastRetainingTransaction_(lrtNone)
 {
 #ifndef __GNUG__
   databases_.ownsObjects(false);
@@ -210,7 +207,7 @@ Transaction & Transaction::start()
     newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__);
   if( startCount_ == 0 ){
     retainingHelper(); // pumping retaining transactions
-    ksys::AutoPtr< ISC_TEB> tebVector;
+    ksys::AutoPtr<ISC_TEB> tebVector;
     tebVector.alloc(sizeof(ISC_TEB) * databases_.count());
     for( intptr_t i = databases_.count() - 1; i >= 0; i-- ){
 #if __GNUG__

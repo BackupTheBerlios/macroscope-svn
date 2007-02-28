@@ -114,12 +114,12 @@ class Logger {
     bool useGateway_;
     ksock::SockAddr gateway_;
     uintmax_t minSignificantThreshold_;
+    struct tm curTime_;
 
     void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
     void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
     utf8::String squidStrToWideString(const char * str);
-    Mutant timeStampRoundToMin(int64_t ts);
-    Mutant timeStampRoundToMin(ldouble ts){ return timeStampRoundToMin(int64_t(ts)); }
+    Mutant timeStampRoundToMin(uint64_t ts);
     utf8::String shortUrl(const utf8::String & url);
     int64_t fetchLogFileLastOffset(const utf8::String & logFileName);
     Logger & updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset);
@@ -258,6 +258,8 @@ class Logger {
     utf8::String ip4AddrToIndex(uint32_t ip4);
     uint32_t indexToIp4Addr(const utf8::String & index);
     utf8::String getDecor(const utf8::String & dname);
+    void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult = NULL,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
+    void clearBPFTCache();
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];

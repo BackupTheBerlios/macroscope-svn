@@ -412,6 +412,7 @@ class DSQLStatement : virtual public ksys::Object {
     bool            attached();
     bool            allocated();
     bool &          storeResults();
+    const bool & prepared() const;
     utf8::String    sqlText();
     DSQLStatement & sqlText(const utf8::String & sqlText);
     DSQLParams &    params();
@@ -483,6 +484,11 @@ inline DSQLStatement & DSQLStatement::unprepare()
 {
   prepared_ = false;
   return *this;
+}
+//---------------------------------------------------------------------------
+inline const bool & DSQLStatement::prepared() const
+{
+  return prepared_;
 }
 //---------------------------------------------------------------------------
 inline ksys::Mutant DSQLStatement::paramAsMutant(uintptr_t i)

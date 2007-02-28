@@ -61,18 +61,23 @@ Transaction & Transaction::start()
   if( !attached() )
     newObjectV1C2<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
-    utf8::String  trSQL ("START TRANSACTION WITH ");
+    utf8::String trSQL("SET SESSION TRANSACTION ISOLATION LEVEL ");
     if( isolation_.strcasecmp("REPEATABLE") == 0 )
       trSQL += "REPEATABLE READ";
     else if( isolation_.strcasecmp("READ_COMMITTED") == 0 )
       trSQL += "READ COMMITTED";
     else if( isolation_.strcasecmp("SERIALIZABLE") == 0 )
       trSQL += "SERIALIZABLE";
+//    else if( isolation_.strcasecmp("SNAPSHOT") == 0 )
+//      trSQL += " WITH CONSISTENT SNAPSHOT";
     else
-      trSQL += "CONSISTENT SNAPSHOT";
-    if( api.mysql_query(database_->handle_, trSQL.c_str()) != 0 )
+      trSQL += "READ COMMITTED";
+    if( api.mysql_query(database_->handle_,trSQL.c_str()) != 0 )
       database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+        api.mysql_errno(database_->handle_),api.mysql_error(database_->handle_)));
+    if( api.mysql_query(database_->handle_,"START TRANSACTION") != 0 )
+      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
+        api.mysql_errno(database_->handle_),api.mysql_error(database_->handle_)));
   }
   startCount_++;
   return *this;

@@ -46,13 +46,13 @@ inline struct timeval time2Timeval(int64_t a)
 //---------------------------------------------------------------------------
 inline int64_t tm2Time(struct tm t)
 {
-  return mktime(&t) * UINT64_C(1000000);
+  return timegm(&t) * UINT64_C(1000000);
 }
 //---------------------------------------------------------------------------
 inline struct timeval tm2Timeval(struct tm t)
 {
   struct timeval tv;
-  tv.tv_sec = (long) mktime(&t);
+  tv.tv_sec = (long) timegm(&t);
   tv.tv_usec = 0;
   return tv;
 }

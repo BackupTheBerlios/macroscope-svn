@@ -293,10 +293,7 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
     double *    pd;
   };
   union {
-#if HAVE_LONG_DOUBLE
-    long
-#endif
-    double v;
+    ldouble v;
     intmax_t a;
   };
   pc = (char *) (row.raw_.ptr() + row.index_[i]);
@@ -329,7 +326,7 @@ ksys::Mutant DSQLValues::asMutant(uintptr_t i)
     case MYSQL_TYPE_DATETIME    :
     case MYSQL_TYPE_YEAR        :
     case MYSQL_TYPE_NEWDATE     :
-l1:   return ksys::time2tm(*pll);
+l1:   return ksys::Mutant(*pll).changeType(ksys::mtTime);
     case MYSQL_TYPE_ENUM        :
       return *ps;
     case MYSQL_TYPE_SET         :
@@ -338,7 +335,7 @@ l1:   return ksys::time2tm(*pll);
     case MYSQL_TYPE_MEDIUM_BLOB :
     case MYSQL_TYPE_LONG_BLOB   :
     case MYSQL_TYPE_BLOB        :
-      return ksys::MemoryStream().readBuffer(pc, lengths_[i]).seek(0);
+      return ksys::MemoryStream().readBuffer(pc,lengths_[i]).seek(0);
     case MYSQL_TYPE_VAR_STRING  :
     case MYSQL_TYPE_STRING      :
       return utf8::plane(pc);

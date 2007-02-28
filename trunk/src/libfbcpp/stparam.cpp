@@ -66,26 +66,20 @@ DSQLParamScalar::~DSQLParamScalar()
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLParamScalar::getMutant()
 {
-  if( sqlind_ < 0 )
-    return ksys::Mutant();
-#if HAVE_LONG_DOUBLE
-  long
-#endif
-  double v;  
+  if( sqlind_ < 0 ) return ksys::Mutant();
+  ldouble v;  
   switch( sqltype_ & ~1 ){
     case SQL_SHORT       :
       if( sqlscale_ != 0 ){
         v = (short) bigInt_;
-        for( intptr_t j = sqlscale_; j < 0; j++ )
-          v /= 10;
+        for( intptr_t j = sqlscale_; j < 0; j++ ) v /= 10;
         return v;
       }
       return (short) bigInt_;
     case SQL_LONG        :
       if( sqlscale_ != 0 ){
         v = (int) bigInt_;
-        for( intptr_t j = sqlscale_; j < 0; j++ )
-          v /= 10;
+        for( intptr_t j = sqlscale_; j < 0; j++ ) v /= 10;
         return v;
       }
       return (int) bigInt_;
@@ -101,13 +95,8 @@ ksys::Mutant DSQLParamScalar::getMutant()
     case SQL_QUAD        :
     case SQL_INT64       :
       if( sqlscale_ != 0 ){
-#if HAVE_LONG_DOUBLE
-        v = (long double) bigInt_;
-#else
-        v = (double) bigInt_;
-#endif
-        for( intptr_t j = sqlscale_; j < 0; j++ )
-          v /= 10;
+        v = (ldouble) bigInt_;
+        for( intptr_t j = sqlscale_; j < 0; j++ ) v /= 10;
         return v;
       }
       return bigInt_;
@@ -128,12 +117,8 @@ DSQLParam & DSQLParamScalar::setMutant(const ksys::Mutant & value)
       case SQL_QUAD        :
       case SQL_INT64       :
         if( sqlscale_ != 0 && value.type() == ksys::mtFloat ){
-#if HAVE_LONG_DOUBLE
-          long
-#endif
-          double v  = value;
-          for( long j = sqlscale_; j < 0; j++ )
-            v *= 10;
+          ldouble v  = value;
+          for( long j = sqlscale_; j < 0; j++ ) v *= 10;
           bigInt_ = (int64_t) v;
         }
         else{
@@ -162,11 +147,7 @@ DSQLParam & DSQLParamScalar::setMutant(const ksys::Mutant & value)
 //---------------------------------------------------------------------------
 utf8::String DSQLParamScalar::getString()
 {
-#if HAVE_LONG_DOUBLE
-  long double v;
-#else
-  double      v;
-#endif
+  ldouble v;
   if( sqlind_ >= 0 ){
     switch( sqltype_ & ~1 ){
       case SQL_SHORT       :
@@ -174,13 +155,8 @@ utf8::String DSQLParamScalar::getString()
       case SQL_QUAD        :
       case SQL_INT64       :
         if( sqlscale_ != 0 ){
-#if HAVE_LONG_DOUBLE
-          v = (long double) bigInt_;
-#else
-          v = (double) bigInt_;
-#endif
-          for( intptr_t j = sqlscale_; j < 0; j++ )
-            v /= 10;
+          v = (ldouble) bigInt_;
+          for( intptr_t j = sqlscale_; j < 0; j++ ) v /= 10;
           return ksys::Mutant(v);
         }
         return utf8::int2Str(bigInt_);
@@ -208,12 +184,8 @@ DSQLParam & DSQLParamScalar::setString(const utf8::String & value)
     case SQL_QUAD        :
     case SQL_INT64       :
       if( !utf8::tryStr2Int(value, bigInt_) ){
-#if HAVE_LONG_DOUBLE
-        long
-#endif
-        double v  = ksys::Mutant(value);
-        for( intptr_t j = sqlscale_; j < 0; j++ )
-          v *= 10;
+        ldouble v  = ksys::Mutant(value);
+        for( intptr_t j = sqlscale_; j < 0; j++ ) v *= 10;
         bigInt_ = (int64_t) v;
       }
       break;
@@ -248,8 +220,7 @@ DSQLParamText::~DSQLParamText()
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLParamText::getMutant()
 {
-  if( sqlind_ < 0 )
-    return ksys::Mutant();
+  if( sqlind_ < 0 ) return ksys::Mutant();
   return text_;
 }
 //---------------------------------------------------------------------------
@@ -280,9 +251,7 @@ DSQLParam & DSQLParamText::setString(const utf8::String & value)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-DSQLParamArray::DSQLParamArray(DSQLStatement & statement)
-  : statement_(&statement),
-    data_(NULL)
+DSQLParamArray::DSQLParamArray(DSQLStatement & statement) : statement_(&statement), data_(NULL)
 {
   id_.gds_quad_low = 0;
   id_.gds_quad_high = 0;
@@ -338,10 +307,7 @@ DSQLParamArray & DSQLParamArray::setDataFromMutant(uintptr_t absIndex, const ksy
     newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   char * data  = (char *) data_ + elementOffset;
   utf8::String  tempString;
-#if HAVE_LONG_DOUBLE
-  long
-#endif
-  double v;
+  ldouble v;
   switch( desc_.array_desc_dtype ){
     case blr_varying   :
       tempString = value;
@@ -415,15 +381,10 @@ DSQLParamArray & DSQLParamArray::setDataFromMutant(uintptr_t absIndex, const ksy
 //---------------------------------------------------------------------------
 ksys::Mutant DSQLParamArray::getMutantFromArray(uintptr_t absIndex)
 {
-  if( sqlind_ < 0 )
-    return ksys::Mutant();
+  if( sqlind_ < 0 ) return ksys::Mutant();
   checkData();
   uintptr_t   elementOffset = elementSize_ * absIndex;
-#if HAVE_LONG_DOUBLE
-  long double v;
-#else
-  double      v;
-#endif
+  ldouble v;
   if( elementOffset < (uintptr_t) dataSize_ ){
     char *  data  = (char *) data_ + elementOffset;
     switch( desc_.array_desc_dtype ){
@@ -434,16 +395,14 @@ ksys::Mutant DSQLParamArray::getMutantFromArray(uintptr_t absIndex)
       case blr_short     :
         if( desc_.array_desc_scale != 0 ){
           v = *(int16_t *) data;
-          for( intptr_t j = desc_.array_desc_scale; j < 0; j++ )
-            v /= 10;
+          for( intptr_t j = desc_.array_desc_scale; j < 0; j++ )  v /= 10;
           return v;
         }
         return *(int16_t *) data;
       case blr_long      :
         if( desc_.array_desc_scale != 0 ){
           v = *(int32_t *) data;
-          for( intptr_t j = desc_.array_desc_scale; j < 0; j++ )
-            v /= 10;
+          for( intptr_t j = desc_.array_desc_scale; j < 0; j++ ) v /= 10;
           return v;
         }
         return *(int32_t *) data;
@@ -459,13 +418,8 @@ ksys::Mutant DSQLParamArray::getMutantFromArray(uintptr_t absIndex)
       case blr_quad      :
       case blr_int64     :
         if( desc_.array_desc_scale != 0 ){
-#if HAVE_LONG_DOUBLE
-          v = (long double) * (int64_t *) data;
-#else
-          v = (double) *(int64_t *) data;
-#endif
-          for( intptr_t j = desc_.array_desc_scale; j < 0; j++ )
-            v /= 10;
+          v = (ldouble) * (int64_t *) data;
+          for( intptr_t j = desc_.array_desc_scale; j < 0; j++ ) v /= 10;
           return v;
         }
         return *(int64_t *) data;
@@ -740,9 +694,9 @@ bool DSQLParams::isNull(uintptr_t i)
 DSQLParams & DSQLParams::setNull(uintptr_t i)
 {
   union {
-      DSQLParam *       param;
-      DSQLParamBlob *   paramBlob;
-      DSQLParamArray *  paramArray;
+    DSQLParam *       param;
+    DSQLParamBlob *   paramBlob;
+    DSQLParamArray *  paramArray;
   };
   param = checkParamIndex(i).indexToParam_.ptr()[i]->object();
   param->sqlind_ = -1;

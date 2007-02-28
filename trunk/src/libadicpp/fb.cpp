@@ -166,6 +166,11 @@ bool FirebirdStatement::attached()
   return static_cast<fbcpp::DSQLStatement *>(this)->attached();
 }
 //---------------------------------------------------------------------------
+bool FirebirdStatement::prepared()
+{
+  return static_cast<fbcpp::DSQLStatement *>(this)->prepared();
+}
+//---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::prepare()
 {
   static_cast<fbcpp::DSQLStatement *>(this)->prepare();

@@ -166,6 +166,11 @@ bool MYSQLStatement::attached()
   return static_cast<mycpp::DSQLStatement *>(this)->attached();
 }
 //---------------------------------------------------------------------------
+bool MYSQLStatement::prepared()
+{
+  return static_cast<mycpp::DSQLStatement *>(this)->prepared();
+}
+//---------------------------------------------------------------------------
 MYSQLStatement * MYSQLStatement::prepare()
 {
   static_cast<mycpp::DSQLStatement *>(this)->prepare();

@@ -44,7 +44,7 @@ Logger::Logger() :
 {
 }
 //------------------------------------------------------------------------------
-Mutant Logger::timeStampRoundToMin(int64_t ts)
+Mutant Logger::timeStampRoundToMin(uint64_t ts)
 {
   struct tm t = time2tm(ts);
   t.tm_sec = 0;
@@ -229,18 +229,16 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   );
 /*
   statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
-  stFileStatUpd_->prepare()->
-    paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
-    paramAsMutant("ST_LAST_OFFSET",0)->execute();
-*/
+  updateLogFileLastOffset(logFileName,0);
+ */
   database_->start();
   if( (bool) config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
     updateLogFileLastOffset(logFileName,0);
   int64_t offset = fetchLogFileLastOffset(logFileName);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
-  int64_t lineNo = 1, tma = 0, startTime;
-  startTime = timeFromTimeString(config_->valueByPath(section_ + ".squid.start_time","01.01.1980"));
+  int64_t lineNo = 1, tma = 0;
+  uint64_t startTime = timeFromTimeString(config_->valueByPath(section_ + ".squid.start_time","01.01.1980"));
   uintptr_t size;
   Array<const char *> slcp;
   int64_t cl = getlocaltimeofday();
@@ -258,12 +256,14 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     size = sb.size();
     validLine = size > 0 && sb.c_str()[size - 1] == '\n';
     parseSquidLogLine(sb.c_str(),size,slcp);
-    validLine = validLine && slcp.count() >= 7;
-    ldouble timeStamp1;
+    validLine = validLine && slcp.count() >= 7 && slcp[7] != NULL;
+    uint64_t timeStamp1;
     if( validLine ){
-      int r = sscanf(slcp[0],"%"PRF_LDBL"f",&timeStamp1);
-      timeStamp1 *= 1000000;
-      validLine = validLine && r == 1 && timeStamp1 >= startTime;
+      uint64_t a;
+      int r = sscanf(slcp[0],"%"PRIu64".%"PRIu64,&timeStamp1,&a);
+      timeStamp1 *= 1000000u;
+      timeStamp1 += a * 1000u;
+      validLine = validLine && r == 2 && timeStamp1 >= startTime;
       if( validLine && verbose_ && !startTimeLinePrinted ){
         fprintf(stderr,"\nstart time %s, line: %"PRId64", offset: %"PRIu64"\n",
 	  (const char * ) utf8::time2Str(int64_t(timeStamp1)).getOEMString(),lineNo,lgb.tell() - size
@@ -277,50 +277,57 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
       validLine = validLine && r == 1 && traf > 0;
     }
     if( validLine ){
-      if( slcp[3] != NULL && slcp[7] != NULL && strchr(slcp[7],'%') == NULL && strcmp(slcp[7],"-") != 0 && strncmp(slcp[3],"NONE", 4) != 0 && strncmp(slcp[3], "TCP_DENIED", 10) != 0 && strncmp(slcp[3], "UDP_DENIED", 10) != 0 ){
-        utf8::String st_user(utf8::plane(slcp[7])), st_url(utf8::plane(slcp[6]));
-        st_user = st_user.left(80).replaceAll("\"","").lower();
-        if( st_url.strcasestr(skipUrl).position() < 0 ){
-          st_url = shortUrl(st_url).left(4096).lower();
-          Mutant timeStamp(timeStampRoundToMin(timeStamp1));
-          try {
-            stTrafIns_->paramAsString("ST_USER",st_user);
-            stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
-            stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
-            stTrafIns_->execute();
-          }
-          catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
-            stTrafUpd_->paramAsString("ST_USER",st_user);
-            stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
-            stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
-            stTrafUpd_->execute();
-          }
-          if( top10 ){
-            int64_t urlHash = st_url.hash_ll(true);
-            stMonUrlSel_->
-              paramAsString("ST_USER", st_user)->
-              paramAsMutant("ST_TIMESTAMP", timeStamp)->
-              paramAsMutant("ST_URL", st_url)->
-              paramAsMutant("ST_URL_HASH",urlHash)->
-              execute()->fetchAll();
-            if( stMonUrlSel_->rowCount() > 0 ){
-              stMonUrlUpd_->
-                paramAsString("ST_USER", st_user)->
-                paramAsMutant("ST_TIMESTAMP", timeStamp)->
-                paramAsMutant("ST_URL", st_url)->
-                paramAsMutant("ST_URL_HASH",urlHash)->
-                paramAsMutant("ST_URL_TRAF", traf)->execute();
-            }
-            else {
-              stMonUrlIns_->
-                paramAsString("ST_USER", st_user)->
-                paramAsMutant("ST_TIMESTAMP", timeStamp)->
-                paramAsMutant("ST_URL", st_url)->
-                paramAsMutant("ST_URL_HASH",urlHash)->
-                paramAsMutant("ST_URL_TRAF", traf)->execute();
-            }
-          }
+      validLine = validLine && strchr(slcp[7],'%') == NULL;
+      validLine = validLine && strcmp(slcp[7],"-") != 0;
+      validLine = validLine && strncmp(slcp[3],"NONE",4) != 0;
+      validLine = validLine && strncmp(slcp[3],"TCP_DENIED",10) != 0;
+      validLine = validLine && strncmp(slcp[3],"UDP_DENIED",10) != 0;
+    }
+    utf8::String st_user, st_url;
+    if( validLine ){
+      st_user = utf8::plane(slcp[7]).left(80).replaceAll("\"","").lower();
+      st_url = utf8::plane(slcp[6]);
+      validLine = validLine && st_url.strcasestr(skipUrl).position() < 0;
+    }
+    if( validLine ){
+      st_url = shortUrl(st_url).left(4096).lower();
+      Mutant timeStamp(timeStampRoundToMin(timeStamp1));
+      try {
+        stTrafIns_->paramAsString("ST_USER",st_user);
+        stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
+        stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
+        stTrafIns_->execute();
+      }
+      catch( ExceptionSP & e ){
+        if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
+        stTrafUpd_->paramAsString("ST_USER",st_user);
+        stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
+        stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
+        stTrafUpd_->execute();
+      }
+      if( top10 ){
+        int64_t urlHash = st_url.hash_ll(true);
+        stMonUrlSel_->
+          paramAsString("ST_USER", st_user)->
+          paramAsMutant("ST_TIMESTAMP", timeStamp)->
+          paramAsMutant("ST_URL", st_url)->
+          paramAsMutant("ST_URL_HASH",urlHash)->
+          execute()->fetchAll();
+        if( stMonUrlSel_->rowCount() > 0 ){
+          stMonUrlUpd_->
+            paramAsString("ST_USER", st_user)->
+            paramAsMutant("ST_TIMESTAMP", timeStamp)->
+            paramAsMutant("ST_URL", st_url)->
+            paramAsMutant("ST_URL_HASH",urlHash)->
+            paramAsMutant("ST_URL_TRAF", traf)->execute();
+        }
+        else {
+          stMonUrlIns_->
+            paramAsString("ST_USER", st_user)->
+            paramAsMutant("ST_TIMESTAMP", timeStamp)->
+            paramAsMutant("ST_URL", st_url)->
+            paramAsMutant("ST_URL_HASH",urlHash)->
+            paramAsMutant("ST_URL_TRAF", traf)->execute();
         }
       }
     }
@@ -352,9 +359,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   );
 /*
   statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
-  stFileStatUpd_->prepare()->
-    paramAsString("ST_LOG_FILE_NAME",flog.fileName())->
-    paramAsMutant("ST_LAST_OFFSET",0)->execute();
+  updateLogFileLastOffset(flog.fileName(),0);
  */
   tm lt;
   statement_->text(
@@ -365,8 +370,11 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   if( (bool) config_->valueByPath(section_ + ".sendmail.reset_log_file_position",false) )
     updateLogFileLastOffset(logFileName,0);
   statement_->execute()->fetchAll();
-  lt = statement_->valueAsMutant("ST_TIMESTAMP");
-  if( !statement_->valueIsNull("ST_TIMESTAMP") ) startYear = lt.tm_year + 1900;
+  memset(&lt,0,sizeof(lt));
+  if( statement_->rowCount() > 0 && !statement_->valueIsNull("ST_TIMESTAMP") ){
+    lt = statement_->valueAsMutant("ST_TIMESTAMP");
+    startYear = lt.tm_year + 1900;
+  }
   int64_t offset = fetchLogFileLastOffset(logFileName);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
@@ -635,10 +643,19 @@ void Logger::main()
 //    " FOREIGN KEY (st_src_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE,"
 //    " FOREIGN KEY (st_dst_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE"
     ")" <<
+    "CREATE TABLE INET_BPFT_STAT_CACHE ("
+    " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
+    " st_bt            DATETIME NOT NULL,"
+    " st_et            DATETIME NOT NULL,"
+    " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL,"
+    " st_dgram_bytes   BIGINT NOT NULL,"
+    " st_data_bytes    BIGINT NOT NULL"
+    ")" <<
     "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
     "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
     "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
     "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_ip)" <<
     "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)"
   ;
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
@@ -727,7 +744,7 @@ void Logger::main()
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
     Mutant m0(config_->valueByPath("macroscope.squid.log_file_name"));
     Mutant m1(config_->valueByPath("macroscope.squid.top10_url",true));
-    Mutant m2(config_->valueByPath("macroscope.squid.skip_url"));
+    Mutant m2(config_->textByPath("macroscope.squid.skip_url").lower());
     parseSquidLogFile(m0,m1,m2);
   }
   if( (bool) config_->valueByPath("macroscope.process_sendmail_log",true) ){
@@ -795,6 +812,9 @@ int main(int _argc,char * _argv[])
     bool ln2 = f.gets(s2,&lgb);
     bool ln3 = f.gets(s3,&lgb);
     uint64_t sz = lgb.tell();*/
+    /*uint64_t lti = getlocaltimeofday(), lti2;
+    struct tm lt = time2tm(lti);
+    lti2 = tm2Time(lt);*/
     if( dispatch ){
       macroscope::Logger logger;
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");

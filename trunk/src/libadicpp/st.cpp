@@ -32,19 +32,20 @@ namespace adicpp {
 int __ST_CPP_AVOID_MSC_VER_LINKER_WARN__;
 #endif
 //---------------------------------------------------------------------------
-ksys::Mutant Statement::sum(uintptr_t fieldNum)
+ksys::Mutant Statement::sum(uintptr_t fieldNum,uintptr_t sRowNum,uintptr_t eRowNum)
 {
-  intptr_t srow = rowIndex(), row;
+  intptr_t srow = rowIndex();
+  uintptr_t row, k;
+  
   ksys::Mutant summa = 0;
   if( srow >= 0 ){
-    for( row = rowCount() - 1; row >= 0; row-- ){
+    if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
+    k = rowCount();
+    if( k >= eRowNum ) k = eRowNum + 1;
+    for( row = sRowNum; row < k; row++ ){
       selectRow(row);
       if( summa.type() == ksys::mtFloat || fieldType(fieldNum) == ftFloat || fieldType(fieldNum) == ftDouble )
-#if HAVE_LONG_DOUBLE
-        summa = (long double) summa + (long double) valueAsMutant(fieldNum);
-#else
-        summa = (double) summa + (double) valueAsMutant(fieldNum);
-#endif
+        summa = (ldouble) summa + (ldouble) valueAsMutant(fieldNum);
       else
         summa = intmax_t(summa) + intmax_t(valueAsMutant(fieldNum));
     }
@@ -53,19 +54,19 @@ ksys::Mutant Statement::sum(uintptr_t fieldNum)
   return summa;
 }
 //---------------------------------------------------------------------------
-ksys::Mutant Statement::sum(const utf8::String & fieldName)
+ksys::Mutant Statement::sum(const utf8::String & fieldName,uintptr_t sRowNum,uintptr_t eRowNum)
 {
-  intptr_t srow = rowIndex(), row, fieldNum = fieldIndex(fieldName,false);
+  uintptr_t row, k;
+  intptr_t srow = rowIndex(), fieldNum = fieldIndex(fieldName);
   ksys::Mutant summa = 0;
-  if( srow >= 0 ){
-    for( row = rowCount() - 1; row >= 0; row-- ){
+  if( srow >= 0 && fieldNum >= 0 ){
+    if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
+    k = rowCount();
+    if( k >= eRowNum ) k = eRowNum + 1;
+    for( row = sRowNum; row < k; row++ ){
       selectRow(row);
       if( summa.type() == ksys::mtFloat || fieldType(fieldNum) == ftFloat || fieldType(fieldNum) == ftDouble )
-#if HAVE_LONG_DOUBLE
-        summa = (long double) summa + (long double) valueAsMutant(fieldNum);
-#else
-        summa = (double) summa + (double) valueAsMutant(fieldNum);
-#endif
+        summa = (ldouble) summa + (ldouble) valueAsMutant(fieldNum);
       else
         summa = intmax_t(summa) + intmax_t(valueAsMutant(fieldNum));
     }
