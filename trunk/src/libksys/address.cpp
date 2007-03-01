@@ -137,10 +137,12 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   if( r != 0 ){
     int32_t err = errNo();
     ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__));
+#ifdef EAI_SYSTEM
     if( r != EAI_SYSTEM ){
       sp->addError(EINVAL,"EAI " + utf8::int2Str(r));
       sp->code(0) = EINVAL;
     }
+#endif
     sp->throwSP();
   }
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -340,10 +342,12 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
   if( err != 0 ){
     int32_t er = errNo();
     ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
+#ifdef EAI_SYSTEM
     if( err != EAI_SYSTEM ){
       sp->addError(EINVAL,"EAI " + utf8::int2Str(err));
       sp->code(0) = EINVAL;
     }
+#endif
     sp->throwSP();
   }
   return s;
@@ -487,10 +491,12 @@ utf8::String SockAddr::gethostname()
   if( err != 0 ){
     int32_t er = errNo();
     ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
+#ifdef EAI_SYSTEM
     if( err != EAI_SYSTEM ){
       sp->addError(EINVAL,"EAI " + utf8::int2Str(err));
       sp->code(0) = EINVAL;
     }
+#endif
     sp->throwSP();
   }
   return s;

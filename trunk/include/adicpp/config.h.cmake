@@ -141,6 +141,7 @@
 #cmakedefine HAVE_REALLOC 1
 #cmakedefine HAVE_MEMCMP 1
 #cmakedefine HAVE_MKTIME 1
+#cmakedefine HAVE_TIMEGM 1
 #cmakedefine HAVE_STAT 1
 #cmakedefine HAVE_STRERROR_R 1
 #cmakedefine HAVE_UTIME 1
