@@ -136,7 +136,12 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 #endif
   if( r != 0 ){
     int32_t err = errNo();
-    newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
+    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__));
+    if( r != EAI_SYSTEM ){
+      sp->addError(EINVAL,"EAI " + utf8::int2Str(r));
+      sp->code(0) = EINVAL;
+    }
+    sp->throwSP();
   }
 #if defined(__WIN32__) || defined(__WIN64__)
   if( ksys::isWin9x() && api.freeaddrinfo != NULL ){
@@ -332,11 +337,15 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
     }
   }
 #endif
-  if( err != 0 ) err = errNo();
-//  struct hostent * pent = api.gethostbyaddr((const char *) &addr4_,(int) sockAddrSize(),addr4_.sin_family);
-//  if( pent != NULL ) s = pent->h_name; else err = errNo();
-  if( err != 0 )
-    newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
+  if( err != 0 ){
+    int32_t er = errNo();
+    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
+    if( err != EAI_SYSTEM ){
+      sp->addError(EINVAL,"EAI " + utf8::int2Str(err));
+      sp->code(0) = EINVAL;
+    }
+    sp->throwSP();
+  }
   return s;
 }
 //------------------------------------------------------------------------------
@@ -475,8 +484,15 @@ utf8::String SockAddr::gethostname()
     if( err != 0 ) err = errNo();
 #endif
   }
-  if( err != 0 )
-    newObjectV1C2<EAsyncSocket>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( err != 0 ){
+    int32_t er = errNo();
+    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
+    if( err != EAI_SYSTEM ){
+      sp->addError(EINVAL,"EAI " + utf8::int2Str(err));
+      sp->code(0) = EINVAL;
+    }
+    sp->throwSP();
+  }
   return s;
 }
 //------------------------------------------------------------------------------

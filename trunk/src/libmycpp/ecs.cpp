@@ -54,16 +54,15 @@ EClientServer::~EClientServer()
 {
 }
 //---------------------------------------------------------------------------
-EClientServer::EClientServer(int32_t code,const utf8::String what)
-  : ksys::Exception(code,what)
+EClientServer::EClientServer(int32_t code,const utf8::String what) : ksys::Exception(code,what)
 {
-  if( whats_[0].strlen() == 0 ) whats_[0] += strErrorHandler(code);
+  if( errors_[0].what_.strlen() == 0 ) errors_[0].what_ += strErrorHandler(code);
 }
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const
 {
-  for( intptr_t i = codes_.count() - 1; i >= 0; i-- )
-    switch( codes_[i] ){
+  for( intptr_t i = errors_.count() - 1; i >= 0; i-- )
+    switch( errors_[i].code_ ){
       case ER_MASTER_NET_READ :
       case ER_MASTER_NET_WRITE :
         return true;

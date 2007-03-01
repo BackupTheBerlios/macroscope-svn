@@ -89,7 +89,7 @@ void * Thread::threadFunc(void * thread)
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
-    reinterpret_cast<Thread *>(thread)->exitCode_ = e->codes()[0];
+    reinterpret_cast<Thread *>(thread)->exitCode_ = e->code();
   }
   catch( ... ){
   }

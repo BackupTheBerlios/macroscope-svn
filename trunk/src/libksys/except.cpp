@@ -74,14 +74,12 @@ Exception::Exception() : refCount_(0), stackBackTrace_(true)
 //---------------------------------------------------------------------------
 Exception::Exception(int32_t code, const utf8::String & what) : refCount_(0), stackBackTrace_(true)
 {
-  codes_.add(code);
-  whats_.add(what);
+  addError(code,what);
 }
 //---------------------------------------------------------------------------
 Exception::Exception(int32_t code, const char * what) : refCount_(0), stackBackTrace_(true)
 {
-  codes_.add(code);
-  whats_.add(what);
+  addError(code,what);
 }
 //---------------------------------------------------------------------------
 bool Exception::isFatalError() const
@@ -89,14 +87,46 @@ bool Exception::isFatalError() const
   return false;
 }
 //---------------------------------------------------------------------------
-int32_t Exception::code() const
+Exception & Exception::clearError(uintptr_t i)
 {
-  return codes_.count() > 0 ? codes_[(uintptr_t) 0] : 0;
+  if( i == ~uintptr_t(0) ){
+    errors_.clear();
+  }
+  else {
+    errors_.remove(i);
+  }
+  return *this;
 }
 //---------------------------------------------------------------------------
-const utf8::String Exception::what() const
+Exception & Exception::addError(int32_t code,const utf8::String & what)
 {
-  return whats_.count() > 0 ? whats_[(uintptr_t) 0] : utf8::String();
+  errors_.add(Error(code,what));
+  return *this;
+}
+//---------------------------------------------------------------------------
+Exception & Exception::addError(int32_t code,const char * what)
+{
+  errors_.add(Error(code,what));
+  return *this;
+}
+//---------------------------------------------------------------------------
+bool Exception::searchCode(int32_t code) const
+{
+  intptr_t i;
+  for( i = errors_.count() - 1; i >= 0 && errors_[i].code_ != code; i-- );
+  return i >= 0;
+}
+//---------------------------------------------------------------------------
+int32_t & Exception::code(uintptr_t i) const
+{
+  assert( errors_.count() > 0 );
+  return errors_[i].code_;
+}
+//---------------------------------------------------------------------------
+utf8::String & Exception::what(uintptr_t i) const
+{
+  assert( errors_.count() > 0 );
+  return errors_[i].what_;
 }
 //---------------------------------------------------------------------------
 void Exception::throwSP()
@@ -127,16 +157,16 @@ utf8::String Exception::stdError(utf8::String::Stream * s) const
 {
   utf8::String::Stream stream;
   if( s == NULL ) s = &stream;
-  for( uintptr_t i = 0; i < whats_.count(); i++ ){
-    if( codes_[0] == 0 ) continue;
+  for( uintptr_t i = 0; i < errors_.count(); i++ ){
+    if( errors_[i].code_ == 0 ) continue;
     intmax_t a;
-    utf8::String serr(strError(codes_[i]));
+    utf8::String serr(strError(errors_[i].code_));
     if( !utf8::tryStr2Int(serr,a) ){
-      if( codes_[i] >= errorOffset ) *s << codes_[i] - errorOffset; else *s << codes_[i];
+      if( errors_[i].code_ >= errorOffset ) *s << errors_[i].code_ - errorOffset; else *s << errors_[i].code_;
       *s << " ";
     }
     if( serr.strlen() > 0 ) *s << serr << " ";
-    *s << whats_[i] << "\n";
+    *s << errors_[i].what_ << "\n";
   }
   return s == &stream ? s->string() : utf8::String();
 }

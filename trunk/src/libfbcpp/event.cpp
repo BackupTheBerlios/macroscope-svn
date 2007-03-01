@@ -67,7 +67,7 @@ void EventHandler::EventThread::threadExecute()
     exitCode_ = 0;
   }
   catch( ksys::ExceptionSP & e ){
-    exitCode_ = e->codes()[0];
+    exitCode_ = e->code();
   }
 }
 //---------------------------------------------------------------------------

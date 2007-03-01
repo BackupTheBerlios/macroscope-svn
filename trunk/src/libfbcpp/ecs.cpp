@@ -814,8 +814,7 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
   if( stat != NULL ){
     ISC_STATUS_ARRAY status;
     memcpy(status,stat,sizeof(status));
-    codes_.resize(0);
-    whats_.resize(0);
+    clearError();
     char error[1024];
     if( api.fb_interpret != NULL ){
       const ISC_STATUS * pStatus = status, * aStatus = pStatus;
@@ -827,8 +826,7 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
             strcat(error, e.c_str());
           }
         }
-        codes_.add(aStatus[1]);
-        whats_.add(error);
+        addError(aStatus[1],error);
         aStatus = pStatus;
       }
     }
@@ -842,8 +840,7 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
             strcat(error, e.c_str());
           }
         }
-        codes_.add(aStatus[1]);
-        whats_.add(error);
+        addError(aStatus[1],error);
         aStatus = pStatus;
       }
     }
@@ -852,8 +849,8 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const
 {
-  for( intptr_t i = codes_.count() - 1; i >= 0; i-- )
-    switch( codes_[i] ){
+  for( intptr_t i = errors_.count() - 1; i >= 0; i-- )
+    switch( errors_[i].code_ ){
       case isc_network_error          :
       case isc_net_read_err           :
       case isc_net_write_err          :

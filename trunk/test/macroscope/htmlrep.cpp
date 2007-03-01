@@ -163,14 +163,13 @@ void Logger::writeUserTop(
               (uint64_t) statement_->valueAsMutant(2) : 1u
             )
           ) / 1024u
-        ) << "\n"
+        ) + "\n"
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttWWW]) + "\" nowrap>\n"
-        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      ;
-      writeTraf(f,statement_->valueAsMutant(1),at);
-      f << "\n"
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+        formatTraf(statement_->valueAsMutant(1),at) +
+        "\n"
         "    </FONT>\n"
         "  </TH>\n"
         "</TR>\n"
@@ -355,10 +354,8 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
           for( j = ttAll; j >= 0; j-- ){
             f <<
 	      "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyColor_[j]) + "\" nowrap>\n"
-	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-            ;
-            writeTraf(f,usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime));
-            f <<
+	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+              formatTraf(usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime)) +
 	      "    </FONT>\n"
 	      "  </TH>\n"
             ;
@@ -374,20 +371,17 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
                 if( getTraf(TrafType(j), bt, endTime) == 0 ) continue;
                 f <<
                   "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[j]) + "\" nowrap>\n"
-                  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-                ;
-                writeTraf(
-                  f,
-                  getTraf(
-		    TrafType(j),
-                    bt,
-                    endTime,
-                    usersTrafTable(i,"ST_USER"),
-		    usersTrafTable(i,"ST_IS_GROUP")
-                  ),
-                  getTraf(ttAll,bt,endTime)
-                );
-                f <<
+                  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+                  formatTraf(
+                    getTraf(
+		      TrafType(j),
+                      bt,
+                      endTime,
+                      usersTrafTable(i,"ST_USER"),
+		      usersTrafTable(i,"ST_IS_GROUP")
+                    ),
+                    getTraf(ttAll,bt,endTime)
+                  ) +
 		  "    </FONT>\n"
 		  "  </TH>\n"
                 ;
@@ -414,10 +408,8 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
       for( j = ttAll; j >= 0; j-- ){
         f <<
           "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailColor_[j]) + "\" nowrap>\n"
-          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-        ;
-        writeTraf(f,getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime));
-        f <<
+          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	  formatTraf(getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime)) +
 	  "    </FONT>\n"
 	  "  </TH>\n"
         ;
@@ -434,15 +426,10 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
             if( getTraf(TrafType(j), bt, et) == 0 ) continue;
             f << 
               "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailDataColor_[j]) + "\" nowrap>\n" 
-              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-            ;
-            if( j == ttAll ){
-              writeTraf(f,getTraf(TrafType(j),bt,et),getTraf(ttAll,beginTime,endTime));
-            }
-            else {
-              writeTraf(f,getTraf(TrafType(j),bt,et),getTraf(ttAll,bt,et));
-            }
-            f <<
+              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+              (j == ttAll ? formatTraf(getTraf(TrafType(j),bt,et),getTraf(ttAll,beginTime,endTime)) :
+                            formatTraf(getTraf(TrafType(j),bt,et),getTraf(ttAll,bt,et))
+	      ) +
 	      "    </FONT>\n"
 	      "  </TH>\n"
             ;
@@ -773,10 +760,8 @@ void Logger::writeHtmlYearOutput()
           for( j = ttAll; j >= 0; j-- ){
             f <<
 	      "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyColor_[j]) + "\" nowrap>\n"
-  	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-            ;
-            writeTraf(f,usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime));
-            f <<
+  	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	      formatTraf(usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime)) +
 	      "    </FONT>\n"
 	      "  </TH>\n"
 	    ;
@@ -794,19 +779,17 @@ void Logger::writeHtmlYearOutput()
                 if( getTraf(TrafType(j),bt,endTime) == 0 ) continue;
                 f <<
 		  "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[j]) + "\" nowrap>\n"
-		  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-                ;
-                writeTraf(f,
-		  getTraf(
-		    TrafType(j),
-		    bt,
-		    endTime,
-		    usersTrafTable(i,"ST_USER"),
-		    usersTrafTable(i,"ST_IS_GROUP")
-		  ),
-		  getTraf(ttAll,bt,endTime)
-		);
-                f <<
+		  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+		  formatTraf(
+  		    getTraf(
+		      TrafType(j),
+		      bt,
+		      endTime,
+		      usersTrafTable(i,"ST_USER"),
+		      usersTrafTable(i,"ST_IS_GROUP")
+		    ),
+		    getTraf(ttAll,bt,endTime)
+		  ) +
 		  "    </FONT>\n"
 		  "  </TH>\n"
                 ;
@@ -832,10 +815,8 @@ void Logger::writeHtmlYearOutput()
       for( j = ttAll; j >= 0; j-- ){
         f <<
 	  "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailColor_[j]) + "\" nowrap>\n"
-	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-        ;
-        writeTraf(f,getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime));
-        f <<
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	  formatTraf(getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime)) +
 	  "    </FONT>\n"
 	  "  </TH>\n"
         ;
@@ -854,15 +835,10 @@ void Logger::writeHtmlYearOutput()
             if( getTraf(TrafType(j), bt, et) == 0 ) continue;
             f <<
               "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailDataColor_[j]) + "\" nowrap>\n"
-              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-            ;
-            if( j == ttAll ){
-              writeTraf(f,getTraf(TrafType(j), bt, et),getTraf(ttAll,beginTime,endTime));
-            }
-            else {
-              writeTraf(f,getTraf(TrafType(j), bt, et),getTraf(ttAll,bt,et));
-            }
-            f <<
+              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+              (j == ttAll ? formatTraf(getTraf(TrafType(j), bt, et),getTraf(ttAll,beginTime,endTime)) :
+                            formatTraf(getTraf(TrafType(j), bt, et),getTraf(ttAll,bt,et))
+	      ) +
               "    </FONT>\n"
               "  </TH>\n"
             ;

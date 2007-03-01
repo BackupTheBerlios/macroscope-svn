@@ -53,14 +53,13 @@ class Exception : virtual public Object {
     Exception & addRef();
     Exception & remRef();
 
-    int32_t code() const;
-    Exception & code(int32_t err);
-    const utf8::String what() const;
-    Exception & what(const utf8::String & error);
+    int32_t & code(uintptr_t i = 0) const;
+    utf8::String & what(uintptr_t i = 0) const;
     bool searchCode(int32_t code) const;
-    bool searchCode(int32_t code1, int32_t code2) const;
-    bool searchCode(int32_t code1, int32_t code2, int32_t code3) const;
-    bool searchCode(int32_t code1, int32_t code2, int32_t code3, int32_t code4) const;
+    bool searchCode(int32_t code1,int32_t code2) const;
+    bool searchCode(int32_t code1,int32_t code2,int32_t code3) const;
+    bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4) const;
+    bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5) const;
 
 //    static Exception * newObject();
 //    static Exception * newObject(int32_t code,const char * what);
@@ -74,11 +73,20 @@ class Exception : virtual public Object {
     const bool & stackBackTrace() const;
     Exception & stackBackTrace(bool v);
 
-    Array<int32_t> & codes() const;
-    Array<utf8::String> & whats() const;
+    Exception & clearError(uintptr_t i = ~uintptr_t(0));
+    Exception & addError(int32_t code,const utf8::String & what);
+    Exception & addError(int32_t code,const char * what);
   protected:
-    mutable Array<int32_t> codes_;
-    mutable Array<utf8::String> whats_;
+    class Error {
+      public:
+        ~Error() {}
+        Error(int32_t code,const utf8::String & what) : code_(code), what_(what) {}
+        Error(int32_t code,const char * what) : code_(code), what_(what) {}
+	
+        int32_t code_;
+        utf8::String what_;
+    };
+    mutable Array<Error> errors_;
     mutable int32_t refCount_;
     bool stackBackTrace_;
   private:
@@ -88,33 +96,6 @@ class Exception : virtual public Object {
     void afterConstruction();
 };
 //---------------------------------------------------------------------------
-inline Exception & Exception::code(int32_t err)
-{
-  codes_.add(err);
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline Exception & Exception::what(const utf8::String & error)
-{
-  whats_.add(error);
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline Array<int32_t> & Exception::codes() const
-{
-  return codes_;
-}
-//---------------------------------------------------------------------------
-inline Array<utf8::String> & Exception::whats() const
-{
-  return whats_;
-}
-//---------------------------------------------------------------------------
-inline bool Exception::searchCode(int32_t code) const
-{
-  return codes_.search(code) >= 0;
-}
-//---------------------------------------------------------------------------
 inline bool Exception::searchCode(int32_t code1, int32_t code2) const
 {
   return searchCode(code1) || searchCode(code2);
@@ -122,12 +103,17 @@ inline bool Exception::searchCode(int32_t code1, int32_t code2) const
 //---------------------------------------------------------------------------
 inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3) const
 {
-  return searchCode(code1, code2) || searchCode(code3);
+  return searchCode(code1,code2) || searchCode(code3);
 }
 //---------------------------------------------------------------------------
 inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3, int32_t code4) const
 {
-  return searchCode(code1, code2, code3) || searchCode(code4);
+  return searchCode(code1,code2,code3) || searchCode(code4);
+}
+//---------------------------------------------------------------------------
+inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,int32_t code4,int32_t code5) const
+{
+  return searchCode(code1,code2,code3,code4) || searchCode(code5);
 }
 //---------------------------------------------------------------------------
 inline Exception & Exception::addRef()
