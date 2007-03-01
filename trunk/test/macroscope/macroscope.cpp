@@ -372,7 +372,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     updateLogFileLastOffset(logFileName,0);
   statement_->execute()->fetchAll();
   memset(&lt,0,sizeof(lt));
-  if( statement_->rowCount() > 0 && !statement_->valueIsNull("ST_TIMESTAMP") ){
+  if( statement_->rowCount() > 0 && statement_->fieldIndex("ST_TIMESTAMP") >= 0 && !statement_->valueIsNull("ST_TIMESTAMP") ){
     lt = statement_->valueAsMutant("ST_TIMESTAMP");
     startYear = lt.tm_year + 1900;
   }

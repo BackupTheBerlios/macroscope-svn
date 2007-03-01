@@ -127,6 +127,7 @@ void Exception::throwSP()
 #endif
   if( errors_.count() == 0 ){
     refCount_ = 0;
+    assert( 0 );
   }
   throw ExceptionSP(this);
 }
