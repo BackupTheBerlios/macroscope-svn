@@ -670,7 +670,6 @@ void Logger::main()
   if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
     metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
-    metadata << "CREATE DESC INDEX INET_BPFT_STAT_IDX5 ON INET_BPFT_STAT (st_start)";
   }
   else if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
     metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
