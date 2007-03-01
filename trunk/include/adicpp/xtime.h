@@ -102,7 +102,7 @@ int64_t getgmtoffset();
 #if !HAVE_TIMEGM
 inline time_t timegm(struct tm * t)
 {
-  return mktime(t) - getgmtoffset();
+  return mktime(t) - getgmtoffset() / 1000000u;
 }
 #endif
 //---------------------------------------------------------------------------

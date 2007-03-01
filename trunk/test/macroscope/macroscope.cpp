@@ -742,8 +742,7 @@ void Logger::main()
     }
     catch( ExceptionSP & e ){
       //if( e->searchCode(isc_keytoobig) ) throw;
-      if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME) &&
-          !e->searchCode(ER_BAD_TABLE_ERROR) ) throw;
+      if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR) ) throw;
     }
   }
   section_ = "macroscope";
