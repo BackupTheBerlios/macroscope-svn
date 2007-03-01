@@ -40,30 +40,6 @@ void Exception::afterConstruction()
     )->throwSP();
 }
 //---------------------------------------------------------------------------
-/*Exception * Exception::newObject()
-{
-  ksys::AutoPtr<Exception> safe((Exception *) ksys::kmalloc(sizeof(Exception)));
-  new (safe) Exception;
-  KsysObjectActions::afterConstruction(safe.ptr());
-  return safe.ptr(NULL);
-}
-//---------------------------------------------------------------------------
-Exception * Exception::newObject(int32_t code,const utf8::String & what)
-{
-  AutoPtr<Exception> e(Exception::newObject());
-  e->codes().add(code);
-  e->whats().add(what);
-  return e.ptr(NULL);
-}
-//---------------------------------------------------------------------------
-Exception * Exception::newObject(int32_t code,const char * what)
-{
-  AutoPtr<Exception> e(Exception::newObject());
-  e->codes().add(code);
-  e->whats().add(what);
-  return e.ptr(NULL);
-}*/
-//---------------------------------------------------------------------------
 Exception::~Exception()
 {
 }
@@ -149,7 +125,9 @@ void Exception::throwSP()
     }
   }
 #endif
-  refCount_ = 0;
+  if( errors_.count() == 0 ){
+    refCount_ = 0;
+  }
   throw ExceptionSP(this);
 }
 //---------------------------------------------------------------------------
