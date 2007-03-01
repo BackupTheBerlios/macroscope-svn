@@ -112,7 +112,7 @@ inline
 #endif
 Statement & Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum)
 {
-  uintptr_t i, j, k, row;
+  uintptr_t i, j, k, row, tr;
   intptr_t srow;
   
   table.clear();
@@ -122,11 +122,11 @@ Statement & Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum)
   if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
   k = rowCount();
   if( k >= eRowNum ) k = eRowNum + 1;
-  for( row = sRowNum; row < k; row++ ){
+  for( tr = 0, row = sRowNum; row < k; row++, tr++ ){
     selectRow(row);
     table.addRow();
     for( i = 0; i < j; i++ )
-      table(row,i) = valueAsMutant(i);
+      table(tr,i) = valueAsMutant(i);
   }
   if( srow >= 0 ) selectRow(srow);
   return *this;

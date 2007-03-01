@@ -181,6 +181,7 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
 //------------------------------------------------------------------------------
 void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
+  intptr_t i;
   bool updateCache = true;
   for(;;){
     if( pStatement == statement_ ){
@@ -241,35 +242,33 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
     }
     statement4_->paramAsMutant("st_bt",pStatement->paramAsMutant("BT"));
     statement4_->paramAsMutant("st_et",pStatement->paramAsMutant("ET"));
-//    if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
-//      database_->commit();
-//      database_->start();
-//    }
-    for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
+    bool sign = true;
+    for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
       statement4_->paramAsString("st_ip",pStatement->valueAsString("st_ip"));
       uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
-      if( sum1 < minSignificantThreshold_ ){
-        sum1 = pStatement->sum("SUM1",0,i);
-        sum2 = pStatement->sum("SUM2",0,i);
+      if( pStatement == statement_ && sum1 < minSignificantThreshold_ && sign ){
         statement4_->paramAsString("st_ip",ip4AddrToIndex(0xFFFFFFFF));
-        i = 0;
+        statement4_->paramAsMutant("st_dgram_bytes",pStatement->sum("SUM1",0,i));
+        statement4_->paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
+        statement4_->execute();
+        sign = false;
       }
       statement4_->paramAsMutant("st_dgram_bytes",sum1);
       statement4_->paramAsMutant("st_data_bytes",sum2);
       statement4_->execute();
     }
-//    if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
-//      database_->commit();
-//      database_->start();
-//    }
   }
   if( pResult == NULL ){
     *pDgramBytes = pStatement->sum("SUM1");
     *pDataBytes = pStatement->sum("SUM2");
   }
   else {
-    pStatement->unload(*pResult);
+    for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
+      pStatement->selectRow(i);
+      if( (uintmax_t) pStatement->valueAsMutant("SUM1") < minSignificantThreshold_ ) break;
+    }
+    pStatement->unload(*pResult,i + 1);
   }
 }
 //------------------------------------------------------------------------------
@@ -282,22 +281,44 @@ void Logger::clearBPFTCache()
   curTimeETHour.tm_min = 59;
   curTimeETHour.tm_sec = 59;
   struct tm curTimeBTDay = curTimeBTHour;
+  curTimeBTDay.tm_hour = 0;
   struct tm curTimeETDay = curTimeETHour;
   curTimeETDay.tm_hour = 23;
   struct tm curTimeBTMon = curTimeBTDay;
+  curTimeBTMon.tm_mday = 1;
   struct tm curTimeETMon = curTimeETDay;
   curTimeETMon.tm_mday = (int) monthDays(curTimeETMon.tm_year + 1900,curTimeETMon.tm_mon);
   struct tm curTimeBTYear = curTimeBTMon;
+  curTimeBTYear.tm_mon = 0;
   struct tm curTimeETYear = curTimeETMon;
   curTimeETYear.tm_mon = 11;
+/*  fprintf(stderr,"year: %s %s\n",
+    (const char *) utf8::tm2Str(curTimeBTYear).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETYear).getOEMString()
+  );
+  fprintf(stderr,"mon: %s %s\n",
+    (const char *) utf8::tm2Str(curTimeBTMon).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETMon).getOEMString()
+  );
+  fprintf(stderr,"day: %s %s\n",
+    (const char *) utf8::tm2Str(curTimeBTDay).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETDay).getOEMString()
+  );
+  fprintf(stderr,"hour: %s %s\n",
+    (const char *) utf8::tm2Str(curTimeBTHour).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETHour).getOEMString()
+  );*/
   statement_->text(
-    "DELETE FROM INET_BPFT_STAT_CACHE WHERE "
-    " st_if = :if AND ("
-    "  (st_bt = :BTYear AND st_et = :ETYear) OR"
-    "  (st_bt = :BTMon  AND st_et = :ETMon) OR"
-    "  (st_bt = :BTDay AND st_et = :ETDay) OR"
-    "  (st_bt = :BTHour AND st_et = :ETHour)"
-    ")"
+    "DELETE FROM INET_BPFT_STAT_CACHE WHERE" +
+    utf8::String((bool) config_->valueByPath(section_ + ".html_report.clear_cache",false) ?
+      "" :
+      " st_if = :if AND ("
+      "  (st_bt = :BTYear AND st_et = :ETYear) OR"
+      "  (st_bt = :BTMon  AND st_et = :ETMon) OR"
+      "  (st_bt = :BTDay AND st_et = :ETDay) OR"
+      "  (st_bt = :BTHour AND st_et = :ETHour)"
+      ")"
+    )
   )->prepare();
   statement_->paramAsString("if",sectionName_);
   statement_->paramAsMutant("BTYear",time2tm(tm2Time(curTimeBTYear) + getgmtoffset()));
@@ -307,6 +328,10 @@ void Logger::clearBPFTCache()
   statement_->paramAsMutant("BTHour",time2tm(tm2Time(curTimeBTHour) + getgmtoffset()));
   statement_->paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) + getgmtoffset()));
   statement_->execute();
+/*#ifndef NDEBUG
+  database_->commit();
+  database_->start();
+#endif*/
 }
 //------------------------------------------------------------------------------
 void Logger::writeBPFTDayHtmlReport(const struct tm & month)

@@ -363,7 +363,8 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
  */
   tm lt;
   statement_->text(
-    "SELECT MAX(ST_TIMESTAMP) AS ST_TIMESTAMP "
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " MAX(ST_TIMESTAMP) AS ST_TIMESTAMP "
     "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
   );
   database_->start();
@@ -548,7 +549,8 @@ void Logger::main()
   stMsgsSelCount_.ptr(database_->newAttachedStatement());
 
   stMonUrlSel_->text(
-    "SELECT ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
     "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
     "ST_URL = :ST_URL"
   );
@@ -566,7 +568,8 @@ void Logger::main()
     "ST_URL = :ST_URL"
   );
   stFileStatSel_->text(
-    "SELECT ST_LAST_OFFSET FROM INET_LOG_FILE_STAT " 
+    "SELECT " + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " ST_LAST_OFFSET FROM INET_LOG_FILE_STAT " 
     "WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME"
   );
   stFileStatIns_->text(
@@ -584,11 +587,15 @@ void Logger::main()
     "VALUES (:ST_FROM,:ST_MSGID,:ST_MSGSIZE);"
   );
   stMsgsSel_->text(
-    "SELECT * FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID"
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " * FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID"
   );
   stMsgsDel_->text("DELETE FROM INET_SENDMAIL_MESSAGES");
   stMsgsDel2_->text("DELETE FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID");
-  stMsgsSelCount_->text("SELECT COUNT(*) FROM INET_SENDMAIL_MESSAGES");
+  stMsgsSelCount_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " COUNT(*) FROM INET_SENDMAIL_MESSAGES"
+  );
 
   database_->create();
 
@@ -740,7 +747,6 @@ void Logger::main()
     }
   }
   section_ = "macroscope";
-  ellapsed_ = getlocaltimeofday();
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
     Mutant m0(config_->valueByPath("macroscope.squid.log_file_name"));
     Mutant m1(config_->valueByPath("macroscope.squid.top10_url",true));
@@ -753,8 +759,8 @@ void Logger::main()
     Mutant m2(config_->valueByPath("macroscope.sendmail.start_year"));
     parseSendmailLogFile(m0,m1,m2);
   }
-  writeHtmlYearOutput();
   ellapsed_ = getlocaltimeofday();
+  writeHtmlYearOutput();
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
       sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
@@ -765,6 +771,7 @@ void Logger::main()
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
     sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
     section_ = "macroscope.bpft." + sectionName_;
+    ellapsed_ = getlocaltimeofday();
     writeBPFTHtmlReport();
   }
 }
