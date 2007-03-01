@@ -39,8 +39,8 @@ int64_t iscTimeStamp2Time(const ISC_TIMESTAMP & stamp)
 //---------------------------------------------------------------------------
 struct timeval iscTimeStamp2Timeval(const ISC_TIMESTAMP & stamp)
 {
-  struct timeval  tv;
-  int64_t         t = stamp.timestamp_date;
+  struct timeval tv;
+  int64_t t = stamp.timestamp_date;
   tv.tv_sec = long((t << 16) + (t << 14) + (t << 12) + (t << 8) + (t << 7) + stamp.timestamp_time / 10000 - INT64_C(3506727600));
   tv.tv_usec = (stamp.timestamp_time % 10000) * 100;
   return tv;
@@ -48,16 +48,14 @@ struct timeval iscTimeStamp2Timeval(const ISC_TIMESTAMP & stamp)
 //---------------------------------------------------------------------------
 struct tm iscTimeStamp2tm(const ISC_TIMESTAMP & stamp)
 {
-  time_t    t   = (stamp.timestamp_date << 16) + (stamp.timestamp_date << 14) + (stamp.timestamp_date << 12) + (stamp.timestamp_date << 8) + (stamp.timestamp_date << 7) + stamp.timestamp_time / 10000 - INT64_C(3506727600);
-  struct tm ta  = *localtime(&t);
-  ta.tm_isdst = 0;
-  return ta;
+  time_t t = (stamp.timestamp_date << 16) + (stamp.timestamp_date << 14) + (stamp.timestamp_date << 12) + (stamp.timestamp_date << 8) + (stamp.timestamp_date << 7) + stamp.timestamp_time / 10000 - INT64_C(3506727600);
+  return ksys::time2tm(t * 1000000u);
 }
 //---------------------------------------------------------------------------
 ISC_TIMESTAMP time2IscTimeStamp(int64_t stamp)
 {
   ISC_TIMESTAMP iscStamp;
-  int64_t       t = stamp / 1000000 + INT64_C(3506727600);
+  int64_t t = stamp / 1000000 + INT64_C(3506727600);
   iscStamp.timestamp_date = ISC_DATE(t / 86400);
   iscStamp.timestamp_time = ISC_TIME((t % 86400) * 10000 + (stamp % 1000000) / 100);
   return iscStamp;
@@ -65,17 +63,10 @@ ISC_TIMESTAMP time2IscTimeStamp(int64_t stamp)
 //---------------------------------------------------------------------------
 ISC_TIMESTAMP timeval2IscTimeStamp(const struct timeval & stamp)
 {
-  //  struct tm tmt(ksys::time2tm(ksys::timeval2Time(stamp))), tmt1;
-  //  ISC_TIMESTAMP iscStamp1;
-  //  api.isc_encode_timestamp(&tmt,&iscStamp1);
-  //  struct tm tmt2;
-  //  api.isc_decode_timestamp(&iscStamp1,&tmt2);
-
   ISC_TIMESTAMP iscStamp;
-  int64_t       t = stamp.tv_sec + INT64_C(3506727600);
+  int64_t t = stamp.tv_sec + INT64_C(3506727600);
   iscStamp.timestamp_date = ISC_DATE(t / 86400);
   iscStamp.timestamp_time = ISC_TIME((t % 86400) * 10000 + stamp.tv_usec / 100);
-  //  api.isc_decode_timestamp(&iscStamp,&tmt1);
   return iscStamp;
 }
 //---------------------------------------------------------------------------
@@ -83,7 +74,7 @@ ISC_TIMESTAMP tm2IscTimeStamp(struct tm stamp)
 {
   ISC_TIMESTAMP iscStamp;
   stamp.tm_isdst = 0;
-  int64_t t = mktime(&stamp) + INT64_C(3506727600);
+  int64_t t = timegm(&stamp) + INT64_C(3506727600);
   iscStamp.timestamp_date = ISC_DATE(t / 86400);
   iscStamp.timestamp_time = ISC_TIME((t % 86400) * 10000);
   return iscStamp;
@@ -91,32 +82,22 @@ ISC_TIMESTAMP tm2IscTimeStamp(struct tm stamp)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-XSQLDAHolder::XSQLDAHolder()
-  : sqlda_(NULL)
+XSQLDAHolder::XSQLDAHolder() : sqlda_(NULL)
 {
-#if _MSC_VER
-#pragma warning(disable:4307)
-#pragma warning(disable:4308)
-#endif
-  ksys::xmalloc(sqlda_, XSQLDA_LENGTH(0));
-#if _MSC_VER
-#pragma warning(default:4308)
-#pragma warning(default:4307)
-#endif
+  sqlda_ = (XSQLDA *) ksys::kmalloc(sizeof (XSQLDA) - sizeof (XSQLVAR));//XSQLDA_LENGTH(0))
   sqlda_->sqln = 0;
   sqlda_->version = SQLDA_VERSION1;
 }
 //---------------------------------------------------------------------------
 XSQLDAHolder::~XSQLDAHolder()
 {
-  ksys::xfree(sqlda_);
+  ksys::kfree(sqlda_);
 }
 //---------------------------------------------------------------------------
 XSQLDAHolder & XSQLDAHolder::resize(long n)
 {
-  if( n < 0 )
-    n = 0;
-  ksys::xrealloc(sqlda_, XSQLDA_LENGTH(n));
+  if( n < 0 ) n = 0;
+  ksys::xrealloc(sqlda_,XSQLDA_LENGTH(n));
   sqlda_->sqln = (short) n;
   return *this;
 }
