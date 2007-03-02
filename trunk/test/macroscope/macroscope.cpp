@@ -263,6 +263,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
       int r = sscanf(slcp[0],"%"PRIu64".%"PRIu64,&timeStamp1,&a);
       timeStamp1 *= 1000000u;
       timeStamp1 += a * 1000u;
+      timeStamp1 -= getgmtoffset(); // in database must be in GMT
       validLine = validLine && r == 2 && timeStamp1 >= startTime;
       if( validLine && verbose_ && !startTimeLinePrinted ){
         fprintf(stderr,"\nstart time %s, line: %"PRId64", offset: %"PRIu64"\n",
@@ -471,17 +472,18 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
             if( st_user.strlen() == 0 ) st_user = stMsgsSel_->valueAsString("ST_FROM");
             if( st_user.strlen() > 0 ){
               msgSize = stMsgsSel_->valueAsMutant("ST_MSGSIZE");
+	      // time in database must be in GMT
               try {
                 stTrafIns_->prepare()->
                   paramAsString("ST_USER", st_user)->
-                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt)))->
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt) - getgmtoffset()))->
                   paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               catch( ExceptionSP & e ){
                 if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
                 stTrafUpd_->prepare()->
                   paramAsString("ST_USER",st_user)->
-                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt)))->
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt) - getgmtoffset()))->
                   paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               stMsgsDel2_->prepare()->
