@@ -321,12 +321,12 @@ void Logger::clearBPFTCache()
     )
   )->prepare();
   statement_->paramAsString("if",sectionName_);
-  statement_->paramAsMutant("BTYear",time2tm(tm2Time(curTimeBTYear) + getgmtoffset()));
-  statement_->paramAsMutant("ETYear",time2tm(tm2Time(curTimeETYear) + getgmtoffset()));
-  statement_->paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTMon) + getgmtoffset()));
-  statement_->paramAsMutant("ETMon",time2tm(tm2Time(curTimeETMon) + getgmtoffset()));
-  statement_->paramAsMutant("BTHour",time2tm(tm2Time(curTimeBTHour) + getgmtoffset()));
-  statement_->paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) + getgmtoffset()));
+  statement_->paramAsMutant("BTYear",time2tm(tm2Time(curTimeBTYear) - getgmtoffset()));
+  statement_->paramAsMutant("ETYear",time2tm(tm2Time(curTimeETYear) - getgmtoffset()));
+  statement_->paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTMon) - getgmtoffset()));
+  statement_->paramAsMutant("ETMon",time2tm(tm2Time(curTimeETMon) - getgmtoffset()));
+  statement_->paramAsMutant("BTHour",time2tm(tm2Time(curTimeBTHour) - getgmtoffset()));
+  statement_->paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) - getgmtoffset()));
   statement_->execute();
 /*#ifndef NDEBUG
   database_->commit();
@@ -368,8 +368,8 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_mday = endTime.tm_mday;
-    statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-    statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+    statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+    statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
     Vector<Table<Mutant> > table;
     table.resize(25);
     getBPFTCached(statement_,&table[0]);
@@ -381,8 +381,8 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
       uintptr_t hourCount = 0;
       while( endTime.tm_hour >= 0 ){
         beginTime.tm_hour = endTime.tm_hour;
-        statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-        statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+        statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+        statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
         getBPFTCached(statement_,&table[beginTime.tm_hour + 1]);
         hourCount += (uintmax_t) table[beginTime.tm_hour + 1].sum("SUM1") > 0;
         endTime.tm_hour--;
@@ -467,8 +467,8 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
         while( endTime.tm_hour >= 0 ){
           beginTime.tm_hour = endTime.tm_hour;
           if( (uintmax_t) table[endTime.tm_hour + 1].sum("SUM1") > 0 ){
-            statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-            statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+            statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+            statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
             statement6_->paramAsMutant("host",table[0](i,"st_ip"));
             uintmax_t sum1, sum2;
             getBPFTCached(statement6_,NULL,&sum1,&sum2);
@@ -586,8 +586,8 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
-    statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-    statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+    statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+    statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
     Vector<Table<Mutant> > table;
     table.resize(32);
     getBPFTCached(statement_,&table[0]);
@@ -599,8 +599,8 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
       uintptr_t dayCount = 0;
       while( endTime.tm_mday > 0 ){
         beginTime.tm_mday = endTime.tm_mday;
-        statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-        statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+        statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+        statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
         getBPFTCached(statement_,&table[beginTime.tm_mday]);
         dayCount += (uintmax_t) table[beginTime.tm_mday].sum("SUM1") > 0;
         endTime.tm_mday--;
@@ -683,8 +683,8 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
         while( endTime.tm_mday > 0 ){
           beginTime.tm_mday = endTime.tm_mday;
           if( (uintmax_t) table[endTime.tm_mday].sum("SUM1") > 0 ){
-            statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-            statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+            statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+            statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
             statement6_->paramAsMutant("host",table[0](i,"st_ip"));
             uintmax_t sum1, sum2;
             getBPFTCached(statement6_,NULL,&sum1,&sum2);
@@ -819,8 +819,8 @@ void Logger::writeBPFTHtmlReport()
     "FROM INET_BPFT_STAT WHERE st_if = :st_if"
   )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
   if( statement_->fieldIndex("BT") >= 0 && statement_->fieldIndex("ET") >= 0 ){
-    beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") - getgmtoffset());
-    endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") - getgmtoffset());
+    beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
+    endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
     statement_->text(
         "SELECT"
         "  A.*"
@@ -921,8 +921,8 @@ void Logger::writeBPFTHtmlReport()
       beginTime2 = beginTime;
       beginTime.tm_year = endTime.tm_year;
       statement_->paramAsString("st_if",sectionName_);
-      statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-      statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+      statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+      statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
       Vector<Table<Mutant> > table;
       table.resize(13);
       getBPFTCached(statement_,&table[0]);
@@ -935,8 +935,8 @@ void Logger::writeBPFTHtmlReport()
         while( endTime.tm_mon >= 0 ){
           endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
           beginTime.tm_mon = endTime.tm_mon;
-          statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-          statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+          statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+          statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
           getBPFTCached(statement_,&table[beginTime.tm_mon + 1]);
           monCount += (uintmax_t) table[beginTime.tm_mon + 1].sum("SUM1") > 0;
           endTime.tm_mon--;
@@ -1039,8 +1039,8 @@ void Logger::writeBPFTHtmlReport()
             endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
             beginTime.tm_mon = endTime.tm_mon;
             if( (uintmax_t) table[endTime.tm_mon + 1].sum("SUM1") > 0 ){
-              statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) + getgmtoffset()));
-              statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) + getgmtoffset()));
+              statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
+              statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
               statement6_->paramAsMutant("host",table[0](i,"st_ip"));
               uintmax_t sum1, sum2;
               getBPFTCached(statement6_,NULL,&sum1,&sum2);

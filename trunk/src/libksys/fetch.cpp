@@ -140,7 +140,7 @@ time_t Fetcher::httpTime2asctime(const char * ht)
     (unsigned int *) &tma.tm_sec
   );
   tma.tm_year -= 1900;
-  time_t t = mktime(&tma) + getgmtoffset() / 1000000u;
+  time_t t = timegm(&tma);
 //  const char * tmp = asctime(gmtime(&t));
   return t;
 }
