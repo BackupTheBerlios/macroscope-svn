@@ -823,6 +823,8 @@ int main(int _argc,char * _argv[])
     /*uint64_t lti = getlocaltimeofday(), lti2;
     struct tm lt = time2tm(lti);
     lti2 = tm2Time(lt);*/
+    int64_t g = getgmtoffset();
+    g = g;
     if( dispatch ){
       macroscope::Logger logger;
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");

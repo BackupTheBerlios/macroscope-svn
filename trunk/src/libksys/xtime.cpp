@@ -297,11 +297,11 @@ int64_t getgmtoffset()
   return (-tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60 * 60) * 1000000;
 #else
   time_t tl, t = time(&tl);
-  if( tl - t == 0 ){
+//  if( tl - t == 0 ){
     struct tm lt = *localtime(&t), gt = *gmtime(&t);
     return (mktime(&lt) - mktime(&gt)) * int64_t(1000000);
-  }
-  return (tl - t) * int64_t(1000000);
+//  }
+//  return (tl - t) * int64_t(1000000);
 #endif
 }
 //---------------------------------------------------------------------------
