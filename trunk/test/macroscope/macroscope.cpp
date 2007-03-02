@@ -525,6 +525,9 @@ void Logger::main()
   checkMachineBinding(config_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
+  section_ = "macroscope.bpft.sk5";
+  fprintf(stderr,"%s\n",getDecor("table_head").c_str());
+
   verbose_ = config_->section("macroscope").value("verbose", false);
 
   database_.ptr(Database::newDatabase(config_.ptr()));

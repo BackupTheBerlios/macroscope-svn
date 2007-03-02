@@ -66,26 +66,40 @@ utf8::String ConfigSection::text(uintptr_t i,utf8::String * pKey) const
 ConfigSection & ConfigSection::sectionByPath(const utf8::String & path) const
 {
   utf8::String::Iterator b(path), e(path);
-  const ConfigSection * section = this;
+  Array<const ConfigSection *> sections;
+  sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 ) break;
-    section = &section->section(utf8::String(b,e));
+    if( e - b < 1 && e.eof() ) break;
+    utf8::String sname(utf8::String(b,e));
+    if( sname.strlen() == 0 ){
+      if( sections.count() > 1 ) sections.resize(sections.count() - 1);
+    }
+    else {
+      sections.add(&sections[sections.count() - 1]->section(sname));
+    }
     b = ++e;
   }
-  return *const_cast<ConfigSection *>(section);
+  return *const_cast<ConfigSection *>(sections[sections.count() - 1]);
 }
 //---------------------------------------------------------------------------
 bool ConfigSection::isSectionByPath(const utf8::String & path) const
 {
   utf8::String::Iterator b(path), e(path);
-  const ConfigSection * section = this;
+  Array<const ConfigSection *> sections;
+  sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 ) break;
-    if( !section->isSection(utf8::String(b,e)) ) break;
-    if( e.eof() ) return true;
-    section = &section->section(utf8::String(b,e));
+    if( e - b < 1 && e.eof() ) break;
+    utf8::String sname(utf8::String(b,e));
+    if( sname.strlen() == 0 ){
+      if( sections.count() > 1 ) sections.resize(sections.count() - 1);
+    }
+    else {
+      if( !sections[sections.count() - 1]->isSection(sname) ) break;
+      if( e.eof() ) return true;
+      sections.add(&sections[sections.count() - 1]->section(sname));
+    }
     b = ++e;
   }
   return false;
@@ -94,15 +108,22 @@ bool ConfigSection::isSectionByPath(const utf8::String & path) const
 bool ConfigSection::isValueByPath(const utf8::String & path) const
 {
   utf8::String::Iterator b(path), e(path);
-  const ConfigSection * section = this;
+  Array<const ConfigSection *> sections;
+  sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 ) break;
+    if( e - b < 1 && e.eof() ) break;
+    utf8::String sname(utf8::String(b,e));
     if( e.eof() ){
-      return section->isValue(utf8::String(b,e));
+      return sections[sections.count() - 1]->isValue(sname);
     }
-    if( !section->isSection(utf8::String(b,e)) ) break;
-    section = &section->section(utf8::String(b,e));
+    if( sname.strlen() == 0 ){
+      if( sections.count() > 1 ) sections.resize(sections.count() - 1);
+    }
+    else {
+      if( !sections[sections.count() - 1]->isSection(sname) ) break;
+      sections.add(&sections[sections.count() - 1]->section(sname));
+    }
     b = ++e;
   }
   return false;
@@ -117,17 +138,22 @@ Mutant ConfigSection::valueByPath(const utf8::String & path, const Mutant & defV
 Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
 {
   utf8::String::Iterator b(path), e(path);
-  const ConfigSection * section = this;
+  Array<const ConfigSection *> sections;
+  sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 ) break;
+    if( e - b < 1 && e.eof() ) break;
+    utf8::String sname(utf8::String(b,e));
     if( e.eof() ){
-      return section->valueRef(utf8::String(b,e));
+      return sections[sections.count() - 1]->valueRef(sname);
+    }
+    if( sname.strlen() == 0 ){
+      if( sections.count() > 1 ) sections.resize(sections.count() - 1);
     }
     else {
-      section = &section->section(utf8::String(b,e));
-      b = ++e;
+      sections.add(&sections[sections.count() - 1]->section(sname));
     }
+    b = ++e;
   }
   newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);

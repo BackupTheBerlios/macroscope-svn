@@ -768,7 +768,8 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
 //------------------------------------------------------------------------------
 utf8::String Logger::getDecor(const utf8::String & dname)
 {
-  return config_->textByPath(section_ + ".html_report.decoration.colors." + dname);
+  utf8::String defDecor(config_->textByPath(section_ + "..decoration.colors." + dname));
+  return config_->textByPath( section_ + ".html_report.decoration.colors." + dname,defDecor);
 }
 //------------------------------------------------------------------------------
 void Logger::writeBPFTHtmlReport()
@@ -907,9 +908,9 @@ void Logger::writeBPFTHtmlReport()
       includeTrailingPathDelimiter(htmlDir_) + config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
     );
     f.createIfNotExist(true).open();
-  #ifndef NDEBUG
+#ifndef NDEBUG
     f.resize(0);
-  #endif
+#endif
     chModOwn(htmlDir_,m0,m1,m2);
     m0 = config_->valueByPath(section_ + ".html_report.file_mode",755);
     m1 = config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
@@ -1158,21 +1159,14 @@ void Logger::parseBPFTLogFile()
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
   for(;;){
     uintptr_t entriesCount;
-    uint64_t safePos = flog.tell();
     if( log32bitOsCompatible ){
-      if( flog.read(&header32,sizeof(header32)) != sizeof(header32) ){
-        if( flog.seekable() ) flog.seek(safePos);
-        break;
-      }
+      if( flog.read(&header32,sizeof(header32)) != sizeof(header32) ) break;
       start = timeval2tm(header32.start_);
       stop = timeval2tm(header32.stop_);
       entriesCount = header32.eCount_;
     }
     else {
-      if( flog.read(&header,sizeof(header)) != sizeof(header) ){
-        if( flog.seekable() ) flog.seek(safePos);
-        break;
-      }
+      if( flog.read(&header,sizeof(header)) != sizeof(header) ) break;
       start = timeval2tm(header.start_);
       stop = timeval2tm(header.stop_);
       entriesCount = header.eCount_;
@@ -1181,17 +1175,11 @@ void Logger::parseBPFTLogFile()
     Array<BPFTEntry32> entries32;
     if( log32bitOsCompatible ){
       entries32.resize(entriesCount);
-      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ){
-        if( flog.seekable() ) flog.seek(safePos);
-        break;
-      }
+      if( flog.read(entries32,sizeof(BPFTEntry32) * entriesCount) != int64_t(sizeof(BPFTEntry32) * entriesCount) ) break;
     }
     else {
       entries.resize(entriesCount);
-      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ){
-        if( flog.seekable() ) flog.seek(safePos);
-        break;
-      }
+      if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ) break;
     }
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL && entriesCount > 0 ){
       bool executed = true;
@@ -1277,7 +1265,6 @@ void Logger::parseBPFTLogFile()
     lineNo += entriesCount;
   }
   printStat(lineNo,offset,flog.tell(),flog.size(),cl);
-  if( flog.seekable() ) updateLogFileLastOffset(flog.fileName(),flog.tell());
   database_->commit();
 }
 //------------------------------------------------------------------------------
