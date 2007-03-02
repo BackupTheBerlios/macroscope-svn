@@ -763,12 +763,14 @@ void Logger::main()
   if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
       sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
+      if( sectionName_.strcasecmp("decoration") == 0 ) continue;
       section_ = "macroscope.bpft." + sectionName_;
       parseBPFTLogFile();
     }
   }
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
     sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
+    if( sectionName_.strcasecmp("decoration") == 0 ) continue;
     section_ = "macroscope.bpft." + sectionName_;
     ellapsed_ = getlocaltimeofday();
     writeBPFTHtmlReport();
