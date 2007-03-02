@@ -316,21 +316,15 @@ Database & Database::create(const utf8::String & name)
   }
   createSQL += "DEFAULT CHARACTER SET " + dpb_.charset_;
   api.open();
-  try {
-    isc_db_handle newdb = 0;
-    isc_tr_handle trans = 0;
-    ISC_STATUS_ARRAY status;
-    if( api.isc_dsql_execute_immediate(status,&newdb,&trans,0,(char *) createSQL.c_str(),(short) dpb_.dialect(), NULL) != 0 ){
-      ksys::AutoPtr<EDBCreate> e(newObjectV1C2<EDBCreate>(status,__PRETTY_FUNCTION__));
-      if( !e->searchCode(isc_db_or_file_exists) ) exceptionHandler(e.ptr(NULL));
-    }
-    else {
-      api.isc_detach_database(status, &newdb);
-    }
+  isc_db_handle newdb = 0;
+  isc_tr_handle trans = 0;
+  ISC_STATUS_ARRAY status;
+  if( api.isc_dsql_execute_immediate(status,&newdb,&trans,0,(char *) createSQL.c_str(),(short) dpb_.dialect(), NULL) != 0 ){
+    ksys::AutoPtr<EDBCreate> e(newObjectV1C2<EDBCreate>(status,__PRETTY_FUNCTION__));
+    if( !e->searchCode(isc_db_or_file_exists) ) exceptionHandler(e.ptr(NULL));
   }
-  catch( ksys::ExceptionSP & ){
-    api.close();
-    throw;
+  else {
+    api.isc_detach_database(status, &newdb);
   }
   api.close();
   return *this;
