@@ -360,7 +360,7 @@ void Logger::writeBPFTDayHtmlReport(const struct tm & month)
 #ifndef NDEBUG
   f.resize(0);
 #endif
-  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",755));
+  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",644));
   Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
   Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
   chModOwn(f.fileName(),m0,m1,m2);
@@ -578,7 +578,7 @@ void Logger::writeBPFTMonthHtmlReport(const struct tm & year)
 #ifndef NDEBUG
   f.resize(0);
 #endif
-  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",755));
+  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",644));
   Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
   Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
   chModOwn(f.fileName(),m0,m1,m2);
@@ -912,7 +912,7 @@ void Logger::writeBPFTHtmlReport()
     f.resize(0);
 #endif
     chModOwn(htmlDir_,m0,m1,m2);
-    m0 = config_->valueByPath(section_ + ".html_report.file_mode",755);
+    m0 = config_->valueByPath(section_ + ".html_report.file_mode",644);
     m1 = config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
     m2 = config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
     chModOwn(f.fileName(),m0,m1,m2);

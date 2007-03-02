@@ -102,7 +102,7 @@ void Logger::writeUserTop(
 #ifndef NDEBUG
     f.resize(0);
 #endif
-    Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",755));
+    Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",644));
     Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
     Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
     chModOwn(f.fileName(),m0,m1,m2);
@@ -207,7 +207,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
 #ifndef NDEBUG
   f.resize(0);
 #endif
-  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",755));
+  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",644));
   Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
   Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
   chModOwn(file,m0,m1,m2);
@@ -618,14 +618,14 @@ void Logger::writeHtmlYearOutput()
       includeTrailingPathDelimiter(htmlDir_) + config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
     );
     f.createIfNotExist(true).open();
-  #ifndef NDEBUG
+#ifndef NDEBUG
     f.resize(0);
-  #endif
+#endif
     Mutant m0(config_->valueByPath(section_ + ".html_report.directory_mode",755));
     Mutant m1(config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid()));
     Mutant m2(config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid()));
     chModOwn(htmlDir_,m0,m1,m2);
-    m0 = config_->valueByPath(section_ + ".html_report.file_mode",755);
+    m0 = config_->valueByPath(section_ + ".html_report.file_mode",644);
     m1 = config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
     m2 = config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
     chModOwn(f.fileName(),m0,m1,m2);
