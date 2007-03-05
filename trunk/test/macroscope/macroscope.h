@@ -79,7 +79,8 @@ class Logger {
     void parseBPFTLogFile();
 
     void writeHtmlYearOutput();
-    void writeBPFTHtmlReport();
+    enum { rlYear, rlMon, rlDay, rlCount };
+    void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
   private:
     utf8::String shortUrl_;
     utf8::String section_;
@@ -122,7 +123,7 @@ class Logger {
     Mutant timeStampRoundToMin(uint64_t ts);
     utf8::String shortUrl(const utf8::String & url);
     int64_t fetchLogFileLastOffset(const utf8::String & logFileName);
-    Logger & updateLogFileLastOffset(const utf8::String & logFileName, int64_t offset);
+    Logger & updateLogFileLastOffset(const utf8::String & logFileName,int64_t offset);
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
     class TrafCacheEntry {
@@ -244,8 +245,6 @@ class Logger {
     void writeHtmlTail(AsyncFile & f);
     void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
-    void writeBPFTMonthHtmlReport(const struct tm & year);
-    void writeBPFTDayHtmlReport(const struct tm & mon);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
     uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
     static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);

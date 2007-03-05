@@ -102,7 +102,7 @@ void Logger::writeUserTop(
 #ifndef NDEBUG
     f.resize(0);
 #endif
-    Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",644));
+    Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",0644));
     Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
     Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
     chModOwn(f.fileName(),m0,m1,m2);
@@ -207,7 +207,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
 #ifndef NDEBUG
   f.resize(0);
 #endif
-  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",644));
+  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",0644));
   Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
   Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
   chModOwn(file,m0,m1,m2);
@@ -621,11 +621,11 @@ void Logger::writeHtmlYearOutput()
 #ifndef NDEBUG
     f.resize(0);
 #endif
-    Mutant m0(config_->valueByPath(section_ + ".html_report.directory_mode",755));
+    Mutant m0(config_->valueByPath(section_ + ".html_report.directory_mode",0755));
     Mutant m1(config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid()));
     Mutant m2(config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid()));
     chModOwn(htmlDir_,m0,m1,m2);
-    m0 = config_->valueByPath(section_ + ".html_report.file_mode",644);
+    m0 = config_->valueByPath(section_ + ".html_report.file_mode",0644);
     m1 = config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
     m2 = config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
     chModOwn(f.fileName(),m0,m1,m2);
@@ -936,7 +936,8 @@ void Logger::writeHtmlHead(AsyncFile & f)
   //    "<META HTTP-EQUIV=\"Cache-Control\" content=\"no-cache\">\n"
   "<TITLE>Statistics</TITLE>\n"
   "</HEAD>\n"
-  "<BODY lang=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+  "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+  "<FONT FACE=\"Arial\" SIZE=\"2\">\n"
   ;
 }
 //------------------------------------------------------------------------------
@@ -953,14 +954,16 @@ void Logger::writeHtmlTail(AsyncFile & f)
   un.nodename = ksock::SockAddr::gethostname();
 #endif
   f <<
-    utf8::time2Str(getlocaltimeofday()) +
-    "<BR>\n"
+    "Finish time: " + utf8::time2Str(getlocaltimeofday()) +
+    "<BR>\n" +
+    "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n" +
     "Generated on " + un.nodename + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
     "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
     "  http://developer.berlios.de/projects/macroscope/\n"
     "</A>\n"
 #endif
+    "</FONT>\n"
     "</BODY>\n"
     "</HTML>\n"
   ;
