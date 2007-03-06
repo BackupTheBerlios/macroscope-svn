@@ -504,7 +504,8 @@ DSQLParam * DSQLParams::checkParamIndex(uintptr_t i)
 //---------------------------------------------------------------------------
 DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
 {
-  DSQLParam * param = params_.find(DSQLParam(NULL,paramName));
+  DSQLParam fp(NULL,paramName);
+  DSQLParam * param = params_.find(fp);
   if( param == NULL )
     newObjectV1C2<EDSQLStInvalidParamName>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   return param;

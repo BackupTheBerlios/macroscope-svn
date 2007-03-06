@@ -253,28 +253,12 @@ DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
   return param;
 }
 //---------------------------------------------------------------------------
-DSQLParams & DSQLParams::resetChanged()
+ksys::HashedObjectListItem<utf8::String,DSQLParam> * DSQLParams::add(const utf8::String & paramName)
 {
-  for( intptr_t i = params_.count() - 1; i >= 0; i-- )
-    params_.objectOfIndex(i)->changed_ = false;
-  return *this;
-}
-//---------------------------------------------------------------------------
-DSQLParams & DSQLParams::removeUnchanged()
-{
-  for( intptr_t i = params_.count() - 1; i >= 0; i-- )
-    if( !params_.objectOfIndex(i)->changed_ )
-      params_.removeByIndex(i);
-  return *this;
-}
-//---------------------------------------------------------------------------
-ksys::HashedObjectListItem< utf8::String,DSQLParam> * DSQLParams::add(const utf8::String & paramName)
-{
-  ksys::HashedObjectListItem< utf8::String,DSQLParam> * item;
+  ksys::HashedObjectListItem<utf8::String,DSQLParam> * item;
   item = params_.itemOfKey(paramName);
   if( item == NULL )
     params_.add(newObjectR1<DSQLParam>(*statement_), paramName, &item);
-  item->object()->changed_ = true;
   return item;
 }
 //---------------------------------------------------------------------------

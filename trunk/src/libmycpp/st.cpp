@@ -126,37 +126,24 @@ DSQLStatement & DSQLStatement::free()
   return *this;
 }
 //---------------------------------------------------------------------------
-bool DSQLStatement::isSQLTextDDL() const
-{
-  utf8::String upperText(sqlText_.trimLeft().upper());
-  return
-    upperText.strncasecmp("CREATE", 6) == 0 ||
-    upperText.strncasecmp("ALTER", 5) == 0
-  ;
-}
-//---------------------------------------------------------------------------
 utf8::String DSQLStatement::compileSQLParameters()
 {
+  params_.params_.clear();
   params_.indexToParam_.clear();
-  params_.resetChanged();
-  utf8::String text(sqlText_);
-  if( !isSQLTextDDL() ){
-    text = text.unique();
-    utf8::String::Iterator i(text);
-    while( !i.eof() ){
-      uintptr_t c = i.getChar();
-      if( c == ':' ){
-        utf8::String::Iterator i2(i);
-        while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
-        if( i2 - i > 1 && !(i + 1).isDigit() ){
-          params_.indexToParam_.add(params_.add(utf8::String(i + 1, i2)));
-          text.replace(i,i2,"?");
-        }
+  utf8::String text(sqlText_.unique());
+  utf8::String::Iterator i(text);
+  while( !i.eof() ){
+    uintptr_t c = i.getChar();
+    if( c == ':' ){
+      utf8::String::Iterator i2(i);
+      while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
+      if( i2 - i > 1 && !(i + 1).isDigit() ){
+        params_.indexToParam_.add(params_.add(utf8::String(i + 1,i2)));
+        text.replace(i,i2,"?");
       }
-      i.next();
     }
+    i.next();
   }
-  params_.removeUnchanged();
   return text;
 }
 //---------------------------------------------------------------------------

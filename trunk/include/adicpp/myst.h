@@ -98,7 +98,6 @@ class DSQLParam {
     };
     MYSQL_TIME timestamp_;
     unsigned long length_;
-    bool changed_;
     my_bool isNull_;
     ksys::MutantType type_;
 
@@ -115,10 +114,8 @@ inline DSQLParam::~DSQLParam()
 {
 }
 //---------------------------------------------------------------------------
-inline DSQLParam::DSQLParam(DSQLStatement & statement)
-  : statement_(&statement),
-    changed_(false),
-    type_(ksys::mtNull)
+inline DSQLParam::DSQLParam(DSQLStatement & statement) :
+  statement_(&statement), type_(ksys::mtNull)
 {
 }
 //---------------------------------------------------------------------------
@@ -156,8 +153,6 @@ class DSQLParams {
     ksys::Array< ksys::HashedObjectListItem< utf8::String,DSQLParam> *> indexToParam_;
 
     DSQLParams &                                          bind();
-    DSQLParams &                                          resetChanged();
-    DSQLParams &                                          removeUnchanged();
     ksys::HashedObjectListItem< utf8::String,DSQLParam> * add(const utf8::String & paramName);
     DSQLParams &                                          checkParamIndex(uintptr_t i);
     DSQLParam *                                           checkParamName(const utf8::String & paramName);
@@ -429,7 +424,6 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLParams    params_;
     DSQLValues    values_;
 
-    bool            isSQLTextDDL() const;
     DSQLStatement & allocate();
     DSQLStatement & free();
     utf8::String    compileSQLParameters();
