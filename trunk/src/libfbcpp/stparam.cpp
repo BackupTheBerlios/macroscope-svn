@@ -182,7 +182,7 @@ utf8::String DSQLParam::getString()
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setString(const utf8::String & value)
 {
-  if( next_ != NULL ) next_->setMutant(value);
+  if( next_ != NULL ) next_->setString(value);
   switch( sqltype_ & ~1 ){
     case SQL_VARYING     :
     case SQL_TEXT        :

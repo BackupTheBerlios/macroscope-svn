@@ -419,15 +419,17 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
   }
   if( valuesIndex_.count() != row->count() ){
     for( i = 0; i < row->count(); i++ ){
-      XSQLVAR &     v   = sqlda_.sqlda()->sqlvar[i];
-      utf8::String  key (utf8::plane(v.sqlname, v.sqlname_length));
+      XSQLVAR & v = sqlda_.sqlda()->sqlvar[i];
+      utf8::String key(
+        v.sqlname_length > 0 ? utf8::plane(v.sqlname,v.sqlname_length) :
+          v.aliasname_length > 0 ? utf8::plane(v.aliasname,v.aliasname_length) : "V_" + utf8::int2Str(i)
+      );
       utf8::String testKey(key);
       for( j = 1; j < ~uintptr_t(0); j++ ){
-        if( valuesIndex_.objectOfKey(testKey) == NULL )
-          break;
+        if( valuesIndex_.objectOfKey(testKey) == NULL ) break;
         testKey = key + "_" + utf8::int2Str((intmax_t) j);
       }
-      valuesIndex_.add(row.ptr()->ptr()[i], testKey);
+      valuesIndex_.add(row.ptr()->ptr()[i],testKey);
     }
   }
   return row.ptr(NULL);

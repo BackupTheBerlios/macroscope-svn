@@ -2737,7 +2737,7 @@ intptr_t memncmp(const void * m1,uintptr_t n1,const void * m2,uintptr_t n2)
 {
   intptr_t c = n1 - n2;
   
-  for(;;)
+  for(;;){
     if( c != 0 || n1 == 0 ) break;
     c = intptr_t(*(const uint8_t *) m1) - intptr_t(*(const uint8_t *) m2);
     m1 = (const uint8_t *) m1 + 1;
