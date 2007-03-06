@@ -28,18 +28,6 @@
 //---------------------------------------------------------------------------
 namespace utf8 {
 //---------------------------------------------------------------------------
-intptr_t memncmp(const void * m1, const void * m2, uintptr_t n)
-{
-  intptr_t  c = 0;
-  while( n-- > 0 ){
-    c = intptr_t(*(const uint8_t *) m1) - intptr_t(*(const uint8_t *) m2);
-    if( c != 0 ) break;
-    m1 = *(const unsigned char **) m1 + 1;
-    m2 = *(const unsigned char **) m2 + 1;
-  }
-  return c;
-}
-//---------------------------------------------------------------------------
 char * strnstr(const char * s1,const char * s2,uintptr_t n)
 {
   uintptr_t k;

@@ -519,7 +519,6 @@ inline intptr_t ucs2utf8(char *& utf8s, uintptr_t & utf8l, uintptr_t c)
   return ucs2utf8(*(unsigned char **) &utf8s, utf8l, c);
 }
 //---------------------------------------------------------------------------
-intptr_t memncmp(const void * m1, const void * m2, uintptr_t n);
 char * strnstr(const char * s1, const char * s2,uintptr_t n);
 //---------------------------------------------------------------------------
 } // namespace utf8

@@ -2720,3 +2720,30 @@ void cleanup()
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
+intptr_t memncmp(const void * m1,const void * m2,uintptr_t n)
+{
+  intptr_t c = 0;
+  
+  while( n-- > 0 ){
+    c = intptr_t(*(const uint8_t *) m1) - intptr_t(*(const uint8_t *) m2);
+    if( c != 0 ) break;
+    m1 = (const uint8_t *) m1 + 1;
+    m2 = (const uint8_t *) m2 + 1;
+  }
+  return c;
+}
+//---------------------------------------------------------------------------
+intptr_t memncmp(const void * m1,uintptr_t n1,const void * m2,uintptr_t n2)
+{
+  intptr_t c = n1 - n2;
+  
+  for(;;)
+    if( c != 0 || n1 == 0 ) break;
+    c = intptr_t(*(const uint8_t *) m1) - intptr_t(*(const uint8_t *) m2);
+    m1 = (const uint8_t *) m1 + 1;
+    m2 = (const uint8_t *) m2 + 1;
+    n1--;
+  }
+  return c;
+}
+//---------------------------------------------------------------------------
