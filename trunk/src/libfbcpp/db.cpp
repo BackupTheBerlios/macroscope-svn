@@ -324,7 +324,7 @@ Database & Database::create(const utf8::String & name)
     if( !e->searchCode(isc_db_or_file_exists) ) exceptionHandler(e.ptr(NULL));
   }
   else {
-    api.isc_detach_database(status, &newdb);
+    api.isc_detach_database(status,&newdb);
   }
   api.close();
   return *this;
@@ -359,59 +359,43 @@ Database & Database::drop()
 {
   if( !attached() )
     exceptionHandler(newObjectV1C2<EDBNotAttached>((ISC_STATUS *) NULL,__PRETTY_FUNCTION__));
-  detach2();
   ISC_STATUS_ARRAY status;
   if( api.isc_drop_database(status,&handle_) != 0 )
     exceptionHandler(newObjectV1C2<EDBDrop>(status, __PRETTY_FUNCTION__));
-  api.close();
+  detach();
   return *this;
 }
 //---------------------------------------------------------------------------
 Database & Database::attach(const utf8::String & name)
 {
   if( !attached() ){
+    dpb_.injectCharset();
     api.open();
-    try{
-      dpb_.injectCharset();
-      ISC_STATUS_ARRAY  status;
-      if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 )
-        exceptionHandler(newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__));
-    }
-    catch( ksys::ExceptionSP & e ){
-      if( !e->isFatalError() )
-        api.close();
-      throw;
-    }
-    if( name.strlen() > 0 )
-      name_ = name;
-  }
-  return *this;
-}
-//---------------------------------------------------------------------------
-Database & Database::detach2()
-{
-  if( attached() ){
-    intptr_t  i;
-    for( i = eventHandlers_.count() - 1; i >= 0; i-- )
-      eventHandlers_.objectOfIndex(i)->cancel();
-    for( i = dsqlStatements_.count() - 1; i >= 0; i-- )
-      dsqlStatements_.objectOfIndex(i)->free();
-    for( i = transactions_.count() - 1; i >= 0; i-- ){
-      Transaction * transaction = transactions_.objectOfIndex(0);
-      while( transaction->active() )
-        transaction->rollback();
-    }
+    ISC_STATUS_ARRAY status;
+    if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 )
+      exceptionHandler(newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__));
+    if( name.strlen() > 0 ) name_ = name;
   }
   return *this;
 }
 //---------------------------------------------------------------------------
 Database & Database::detach()
 {
+  intptr_t  i;
+  for( i = eventHandlers_.count() - 1; i >= 0; i-- )
+    eventHandlers_.objectOfIndex(i)->cancel();
+  for( i = dsqlStatements_.count() - 1; i >= 0; i-- )
+    dsqlStatements_.objectOfIndex(i)->free();
+  for( i = transactions_.count() - 1; i >= 0; i-- ){
+    Transaction * transaction = transactions_.objectOfIndex(0);
+    while( transaction->active() )
+      transaction->rollback();
+  }
   if( attached() ){
-    detach2();
-    ISC_STATUS_ARRAY  status;
-    if( api.isc_detach_database(status, &handle_) != 0 )
-      exceptionHandler(newObjectV1C2<EDBDetach>(status, __PRETTY_FUNCTION__));
+    ISC_STATUS_ARRAY status;
+    api.isc_detach_database(status,&handle_);
+//    if( api.isc_detach_database(status, &handle_) != 0 )
+//      exceptionHandler(newObjectV1C2<EDBDetach>(status, __PRETTY_FUNCTION__));
     api.close();
   }
   return *this;
@@ -420,14 +404,9 @@ Database & Database::detach()
 void Database::processingException(ksys::Exception * e)
 {
   // handle fatal errors
-  EClientServer * p = dynamic_cast< EClientServer *>(e);
+  EClientServer * p = dynamic_cast<EClientServer *>(e);
   if( p != NULL ){
-    if( p->isFatalError() ){
-      ISC_STATUS_ARRAY  status;
-      api.isc_detach_database(status, &handle_);
-      detach2();
-      api.close();
-    }
+    if( p->isFatalError() ) detach();
   }
 }
 //---------------------------------------------------------------------------

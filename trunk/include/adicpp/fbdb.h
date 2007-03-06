@@ -185,8 +185,7 @@ class Database : virtual public Base {
     ksys::HashedObjectList<utf8::String,DSQLStatement> dsqlStatements_;
     ksys::HashedObjectList<utf8::String,EventHandler>  eventHandlers_;
 
-    Database &            detach2();
-    Database &            detachHelper();
+    Database & detachHelper();
 };
 //---------------------------------------------------------------------------
 inline isc_db_handle & Database::handle()

@@ -116,16 +116,10 @@ DSQLStatement::DSQLStatement()
     sqlTextChanged_(false),
     prepared_(false),
     executed_(false),
-#if _MSC_VER
-#pragma warning(disable:4355)
-#endif
-  params_(*this),
-    values_(*this),
-#if _MSC_VER
-#pragma warning(default:4355)
-#endif
-  stmtType(stmtUnknown)
+    stmtType(stmtUnknown)
 {
+  params_.statement_ = this;
+  values_.statement_ = this;
 }
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::attach(Database & database, Transaction & transaction)
@@ -180,7 +174,7 @@ DSQLStatement & DSQLStatement::allocate()
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::describe(XSQLDAHolder & sqlda)
 {
-  ISC_STATUS_ARRAY  status;
+  ISC_STATUS_ARRAY status;
   if( api.isc_dsql_describe(status, &handle_, (short) database_->dpb_.dialect(), sqlda.sqlda()) != 0 )
     database_->exceptionHandler(newObjectV1C2<EDSQLStDescribe>(status, __PRETTY_FUNCTION__));
   return *this;
@@ -188,43 +182,40 @@ DSQLStatement & DSQLStatement::describe(XSQLDAHolder & sqlda)
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::describeBind(XSQLDAHolder & sqlda)
 {
-  ISC_STATUS_ARRAY  status;
+  ISC_STATUS_ARRAY status;
   if( api.isc_dsql_describe_bind(status, &handle_, (short) database_->dpb_.dialect(), sqlda.sqlda()) != 0 )
     database_->exceptionHandler(newObjectV1C2<EDSQLStDescribeBind>(status, __PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------
-bool DSQLStatement::isSQLTextDDL() const
-{
-  utf8::String  upperText (sqlText_.trimLeft().upper());
-  return
-    upperText.strncasecmp("CREATE", 6) == 0 ||
-    upperText.strncasecmp("ALTER", 5) == 0
-  ;
-}
-//---------------------------------------------------------------------------
 utf8::String DSQLStatement::compileSQLParameters()
 {
+  params_.params_.drop();
   params_.indexToParam_.clear();
-  params_.resetChanged();
-  utf8::String text(sqlText_);
-  if( !isSQLTextDDL() ){
-    text = text.unique();
-    utf8::String::Iterator i(text);
-    while( !i.eof() ){
-      uintptr_t c = i.getChar();
-      if( c == ':' ){
-        utf8::String::Iterator i2(i);
-        while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
-        if( i2 - i > 1 ){
-          params_.indexToParam_.add(params_.add(utf8::String(i + 1, i2)));
-          text = text.replace(i, i2, "?");
+  utf8::String text(sqlText_.unique());
+  utf8::String::Iterator i(text);
+  while( !i.eof() ){
+    uintptr_t c = i.getChar();
+    if( c == ':' ){
+      utf8::String::Iterator i2(i);
+      while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
+      if( i2 - i > 1 ){
+        DSQLParam * param;
+        ksys::AutoPtr<DSQLParam> p(newObjectV1C2<DSQLParam>(this,utf8::String(i + 1,i2)));
+        params_.params_.insert(p,false,false,&param);
+        p->head_ = param;
+        if( p.ptr() != param ){
+          p->name_ = param->name_;
+          p->next_ = param->next_;
+          param->next_ = p;
         }
+        p.ptr(NULL);
+        params_.indexToParam_.add(param);
+        text.replace(i,i2,"?");
       }
-      i.next();
     }
+    i.next();
   }
-  params_.removeUnchanged();
   return text;
 }
 //---------------------------------------------------------------------------
@@ -232,9 +223,9 @@ DSQLStatement & DSQLStatement::prepare()
 {
   allocate();
   if( sqlTextChanged_ || !prepared_ ){
-    ISC_STATUS_ARRAY  status;
-    for( ; ; ){
-      if( api.isc_dsql_prepare(status, &transaction_->handle_, &handle_, 0, compileSQLParameters().c_str(), (short) database_->dpb_.dialect(), values_.sqlda_.sqlda()) == 0 )
+    ISC_STATUS_ARRAY status;
+    for(;;){
+      if( api.isc_dsql_prepare(status, &transaction_->handle_,&handle_,0,compileSQLParameters().c_str(),(short) database_->dpb_.dialect(),values_.sqlda_.sqlda()) == 0 )
         break;
       if( !findISCCode(status, isc_dsql_open_cursor_request) )
         database_->exceptionHandler(newObjectV1C2<EDSQLStPrepare>(status, __PRETTY_FUNCTION__));
@@ -247,27 +238,24 @@ DSQLStatement & DSQLStatement::prepare()
       if( values_.sqlda_.count() != (uintptr_t) values_.sqlda_.sqlda()->sqld ){
         bool  nd  = values_.sqlda_.count() < (uintptr_t) values_.sqlda_.sqlda()->sqld;
         values_.sqlda_.resize(values_.sqlda_.sqlda()->sqld);
-        if( nd )
-          describe(values_.sqlda_);
+        if( nd ) describe(values_.sqlda_);
       }
     }
     // bind input parameters
     describeBind(params_.sqlda_);
     if( params_.sqlda_.count() != (uintptr_t) params_.sqlda_.sqlda()->sqld ){
-      bool  nd  = params_.sqlda_.count() < (uintptr_t) params_.sqlda_.sqlda()->sqld;
+      bool nd = params_.sqlda_.count() < (uintptr_t) params_.sqlda_.sqlda()->sqld;
       params_.sqlda_.resize(params_.sqlda_.sqlda()->sqld);
-      if( nd )
-        describeBind(params_.sqlda_);
+      if( nd ) describeBind(params_.sqlda_);
     }
-    params_.bind(DSQLParams::preBind);
     // bind input parameters
     sqlTextChanged_ = false;
     prepared_ = true;
   }
   else if( executed_ ){
-    params_.bind(DSQLParams::preBindAfterExecute);
     executed_ = false;
   }
+  params_.bind();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -275,7 +263,6 @@ DSQLStatement & DSQLStatement::execute()
 {
   transaction_->start();
   prepare();
-  params_.bind(DSQLParams::postBind);
   for( ; ; ){
     ISC_STATUS_ARRAY  status;
     if( api.isc_dsql_execute(status, &transaction_->handle_, &handle_, (short) database_->dpb_.dialect(), params_.sqlda_.sqlda()) == 0 )

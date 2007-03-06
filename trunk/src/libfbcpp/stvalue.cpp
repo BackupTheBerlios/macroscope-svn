@@ -153,9 +153,8 @@ utf8::String DSQLValueScalar::getString()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-DSQLValueArray::DSQLValueArray(DSQLStatement & statement)
-  : statement_(&statement),
-    data_(NULL)
+DSQLValueArray::DSQLValueArray() :
+  statement_(NULL), data_(NULL)
 {
 }
 //---------------------------------------------------------------------------
@@ -237,13 +236,13 @@ ksys::Mutant DSQLValueArray::getMutantFromArray(uintptr_t absIndex)
 DSQLValueArray & DSQLValueArray::getSlice()
 {
   if( sqlind_ >= 0 )
-    statement_->arrayGetSlice(id_, desc_, data_, dataSize_);
+    statement_->arrayGetSlice(id_,desc_,data_,dataSize_);
   return *this;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-DSQLValueBlob::DSQLValueBlob(DSQLStatement & statement) : statement_(&statement)
+DSQLValueBlob::DSQLValueBlob() : statement_(NULL)
 {
 }
 //---------------------------------------------------------------------------
@@ -321,7 +320,7 @@ intptr_t DSQLValueBlob::readBuffer(void * buf, uintptr_t size)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-DSQLValues::DSQLValues(DSQLStatement & statement) : statement_(&statement), row_(~uintptr_t(0) >> 1)
+DSQLValues::DSQLValues() : statement_(NULL), row_(~uintptr_t(0) >> 1)
 {
   valuesIndex_.caseSensitive(false).ownsObjects(false);
 }
@@ -399,13 +398,15 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
         valueScalar->sqlscale_ = (char) v.sqlscale;
         break;
       case SQL_BLOB        :
-        row->safeAdd(valueBlob = newObjectR1<DSQLValueBlob>(*statement_));
+        row->safeAdd(valueBlob = newObject<DSQLValueBlob>());
+        valueBlob->statement_ = statement_;
         valueBlob->handle_ = 0;
         statement_->blobLookupDesc(v.relname, v.sqlname, valueBlob->desc_, NULL);
         v.sqldata = (char *) &valueBlob->id_;
         break;
       case SQL_ARRAY       :
-        row->safeAdd(valueArray = newObjectR1<DSQLValueArray>(*statement_));
+        row->safeAdd(valueArray = newObject<DSQLValueArray>());
+        valueArray->statement_ = statement_;
         valueArray->id_.gds_quad_low = 0;
         valueArray->id_.gds_quad_high = 0;
         statement_->arrayLookupBounds(v.relname, v.sqlname, valueArray->desc_);

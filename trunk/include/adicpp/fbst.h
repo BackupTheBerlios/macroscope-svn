@@ -72,158 +72,137 @@ inline uintptr_t XSQLDAHolder::count()
 //---------------------------------------------------------------------------
 class DSQLParam {
   friend class DSQLParams;
+  friend class DSQLStatement;
   public:
-    virtual ~DSQLParam();
-    DSQLParam();
-  protected:
-    short sqlind_;
-    short sqltype_;
-    char  sqlscale_;
-    bool  changed_;
+    ~DSQLParam();
+    DSQLParam(DSQLStatement * statement = NULL,const utf8::String & name = utf8::String());
 
-    virtual ksys::Mutant  getMutant();
-    virtual DSQLParam &   setMutant(const ksys::Mutant & value);
-    virtual utf8::String  getString();
-    virtual DSQLParam &   setString(const utf8::String & value);
-  private:
-};
-//---------------------------------------------------------------------------
-inline DSQLParam::DSQLParam() : sqlscale_(0), changed_(false)
-{
-}
-//---------------------------------------------------------------------------
-inline DSQLParam::~DSQLParam()
-{
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class DSQLParamScalar : public DSQLParam {
-  friend class DSQLParams;
-  public:
-    virtual ~DSQLParamScalar();
-    DSQLParamScalar();
+    ksys::Mutant getMutant();
+    DSQLParam & setMutant(const ksys::Mutant & value);
+    utf8::String getString();
+    DSQLParam & setString(const utf8::String & value);
+
+    DSQLParam & putElement(intptr_t i,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t n,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t n,intptr_t o,intptr_t i,intptr_t j,const ksys::Mutant & value);
+    DSQLParam & putElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t n,intptr_t o,intptr_t p,intptr_t i,intptr_t j,const ksys::Mutant & value);
+
+    ksys::Mutant getElement(intptr_t i);
+    ksys::Mutant getElement(intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t n,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t n,intptr_t o,intptr_t i,intptr_t j);
+    ksys::Mutant getElement(intptr_t a,intptr_t b,intptr_t c,intptr_t d,intptr_t e,intptr_t f,intptr_t g,intptr_t h,intptr_t k,intptr_t l,intptr_t m,intptr_t n,intptr_t o,intptr_t p,intptr_t i,intptr_t j);
+
+    DSQLParam & putElByAbsIndex(uintptr_t i,const ksys::Mutant & value);
+    ksys::Mutant getElByAbsIndex(uintptr_t i);
+
+    const ISC_ARRAY_DESC & arrayDesc() const;
+
+    DSQLParam & createBlob();
+    DSQLParam & closeBlob();
+    DSQLParam & cancelBlob();
+    DSQLParam & writeBuffer(const void * buf,uintptr_t size);
+    const ISC_BLOB_DESC & blobDesc() const;
   protected:
+    static ksys::EmbeddedHashNode<DSQLParam> & keyNode(const DSQLParam & object){
+      return object.keyNode_;
+    }
+    static DSQLParam & keyNodeObject(const ksys::EmbeddedHashNode<DSQLParam> & node,DSQLParam * p){
+      return node.object(p->keyNode_);
+    }
+    static uintptr_t keyNodeHash(const DSQLParam & object){
+      return object.name_.hash(false);
+    }
+    static bool keyHashNodeEqu(const DSQLParam & object1,const DSQLParam & object2){
+      return object1.name_.strcasecmp(object2.name_) == 0;
+    }
+    mutable ksys::EmbeddedHashNode<DSQLParam> keyNode_;
+    DSQLStatement * statement_;
+    utf8::String name_;
+    DSQLParam * head_;
+    DSQLParam * next_;
+
     union {
       int64_t       bigInt_;
       float         float_;
       double        double_;
     };
     ISC_TIMESTAMP timeStamp_;
-
-    ksys::Mutant  getMutant();
-    DSQLParam &   setMutant(const ksys::Mutant & value);
-    utf8::String  getString();
-    DSQLParam &   setString(const utf8::String & value);
+    utf8::String text_;
+// for arrays
+    ISC_ARRAY_DESC arrayDesc_;
+    void * data_;
+    ISC_LONG dataSize_;
+    ISC_LONG elementSize_;
+    uint16_t dimElements_[sizeof(ISC_ARRAY_DESC().array_desc_bounds) / sizeof(ISC_ARRAY_DESC().array_desc_bounds[0])];
+//for blobs
+    isc_blob_handle handle_;
+    ISC_BLOB_DESC blobDesc_;
+// shared members
+    ISC_QUAD id_;
+    short sqlind_;
+    short sqltype_;
+    short sqlscale_;
   private:
+// for arrays
+    DSQLParam & clear();
+    DSQLParam & checkData();
+    DSQLParam & checkDim(bool inRange);
+    bool isDimInBound(intptr_t dim, intptr_t i);
+    DSQLParam & setDataFromMutant(uintptr_t absIndex, const ksys::Mutant & value);
+    ksys::Mutant getMutantFromArray(uintptr_t absIndex);
+    DSQLParam & putSlice();
+    DSQLParam & setNull();
 };
 //---------------------------------------------------------------------------
-class DSQLParamText : public DSQLParam {
-  friend class DSQLParams;
-  public:
-    virtual ~DSQLParamText();
-    DSQLParamText();
-  protected:
-    utf8::String  text_;
-
-    ksys::Mutant  getMutant();
-    DSQLParam &   setMutant(const ksys::Mutant & value);
-    utf8::String  getString();
-    DSQLParam &   setString(const utf8::String & Value);
-  private:
-};
-//---------------------------------------------------------------------------
-class DSQLParamArray : public DSQLParam {
-  friend class DSQLParams;
-  public:
-    virtual ~DSQLParamArray();
-    DSQLParamArray() {}
-    DSQLParamArray(DSQLStatement & statement);
-
-    DSQLParamArray &        putElement(intptr_t i, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t i, intptr_t j, const ksys::Mutant & value);
-    DSQLParamArray &        putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t p, intptr_t i, intptr_t j, const ksys::Mutant & value);
-
-    ksys::Mutant            getElement(intptr_t i);
-    ksys::Mutant            getElement(intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t i, intptr_t j);
-    ksys::Mutant            getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t p, intptr_t i, intptr_t j);
-
-    DSQLParamArray &        putElByAbsIndex(uintptr_t i, const ksys::Mutant & value);
-    ksys::Mutant            getElByAbsIndex(uintptr_t i);
-
-    const ISC_ARRAY_DESC &  desc() const;
-  protected:
-    DSQLStatement   * statement_;
-    ISC_QUAD        id_;
-    ISC_ARRAY_DESC  desc_;
-    void *          data_;
-    ISC_LONG        dataSize_;
-    ISC_LONG        elementSize_;
-    uint16_t        dimElements_[sizeof(ISC_ARRAY_DESC().array_desc_bounds) / sizeof(ISC_ARRAY_DESC().array_desc_bounds[0])];
-
-    DSQLParamArray &        clear();
-    DSQLParamArray &        checkData();
-    DSQLParamArray &        checkDim(bool inRange);
-    bool                    isDimInBound(intptr_t dim, intptr_t i);
-    DSQLParamArray &        setDataFromMutant(uintptr_t absIndex, const ksys::Mutant & value);
-    ksys::Mutant            getMutantFromArray(uintptr_t absIndex);
-    DSQLParamArray &        putSlice();
-  private:
-    DSQLParamArray(const DSQLParamArray &){}
-    void operator = (const DSQLParamArray &){}
-};
-//---------------------------------------------------------------------------
-inline const ISC_ARRAY_DESC & DSQLParamArray::desc() const
+inline const ISC_ARRAY_DESC & DSQLParam::arrayDesc() const
 {
-  return desc_;
+  return arrayDesc_;
 }
 //---------------------------------------------------------------------------
-inline bool DSQLParamArray::isDimInBound(intptr_t dim, intptr_t i)
+inline bool DSQLParam::isDimInBound(intptr_t dim, intptr_t i)
 {
-  return i >= desc_.array_desc_bounds[dim].array_bound_lower && i <= desc_.array_desc_bounds[dim].array_bound_upper;
+  return i >= arrayDesc_.array_desc_bounds[dim].array_bound_lower && i <= arrayDesc_.array_desc_bounds[dim].array_bound_upper;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElByAbsIndex(uintptr_t i, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElByAbsIndex(uintptr_t i,const ksys::Mutant & value)
 {
   setDataFromMutant(i, value);
   sqlind_ = 0;
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t i, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t i,const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, i)).setDataFromMutant(i, value);
   sqlind_ = 0;
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, i) && isDimInBound(1, j));
   setDataFromMutant(i * dimElements_[0] + j, value);
@@ -231,7 +210,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t i, intptr_t j, const
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, i) && isDimInBound(2, j));
   setDataFromMutant(a * dimElements_[0] + i * dimElements_[1] + j, value);
@@ -239,7 +218,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t i, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, i) && isDimInBound(3, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + i * dimElements_[2] + j, value);
@@ -247,7 +226,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, i) && isDimInBound(4, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + i * dimElements_[4] + j, value);
@@ -255,7 +234,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, i) && isDimInBound(5, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + i * dimElements_[5] + j, value);
@@ -263,7 +242,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, i) && isDimInBound(6, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + i * dimElements_[5] + j, value);
@@ -271,7 +250,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, i) && isDimInBound(7, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + i * dimElements_[7] + j, value);
@@ -279,7 +258,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, i) && isDimInBound(8, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + i * dimElements_[8] + j, value);
@@ -287,7 +266,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, h) && isDimInBound(8, i) && isDimInBound(9, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + i * dimElements_[9] + j, value);
@@ -295,7 +274,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, h) && isDimInBound(8, k) && isDimInBound(9, i) && isDimInBound(10, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + i * dimElements_[10] + j, value);
@@ -303,7 +282,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, h) && isDimInBound(8, k) && isDimInBound(9, l) && isDimInBound(10, i) && isDimInBound(11, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + i * dimElements_[11] + j, value);
@@ -311,7 +290,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, h) && isDimInBound(8, k) && isDimInBound(9, l) && isDimInBound(10, m) && isDimInBound(11, i) && isDimInBound(12, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + i * dimElements_[12] + j, value);
@@ -319,7 +298,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, h) && isDimInBound(8, k) && isDimInBound(9, l) && isDimInBound(10, m) && isDimInBound(11, n) && isDimInBound(12, i) && isDimInBound(13, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + n * dimElements_[12] + i * dimElements_[13] + j, value);
@@ -327,7 +306,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, h) && isDimInBound(8, k) && isDimInBound(9, l) && isDimInBound(10, m) && isDimInBound(11, n) && isDimInBound(12, o) && isDimInBound(13, i) && isDimInBound(14, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + n * dimElements_[12] + o * dimElements_[13] + i * dimElements_[14] + j, value);
@@ -335,7 +314,7 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t p, intptr_t i, intptr_t j, const ksys::Mutant & value)
+inline DSQLParam & DSQLParam::putElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t p, intptr_t i, intptr_t j, const ksys::Mutant & value)
 {
   checkDim(isDimInBound(0, a) && isDimInBound(1, b) && isDimInBound(2, c) && isDimInBound(3, d) && isDimInBound(4, e) && isDimInBound(5, f) && isDimInBound(6, g) && isDimInBound(7, h) && isDimInBound(8, k) && isDimInBound(9, l) && isDimInBound(10, m) && isDimInBound(11, n) && isDimInBound(12, o) && isDimInBound(13, p) && isDimInBound(14, i) && isDimInBound(15, j));
   setDataFromMutant(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + n * dimElements_[12] + o * dimElements_[13] + p * dimElements_[14] + i * dimElements_[15] + j, value);
@@ -343,117 +322,97 @@ inline DSQLParamArray & DSQLParamArray::putElement(intptr_t a, intptr_t b, intpt
   return *this;
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t i)
+inline ksys::Mutant DSQLParam::getElement(intptr_t i)
 {
   checkDim(isDimInBound(0, i));
   return getMutantFromArray(i);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t i, intptr_t j)
 {
   checkDim(isDimInBound(0, i) && isDimInBound(1, j));
   return getMutantFromArray(i * dimElements_[0] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + i * dimElements_[1] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + i * dimElements_[2] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + i * dimElements_[4] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + i * dimElements_[5] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + i * dimElements_[6] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + i * dimElements_[7] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + i * dimElements_[8] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + i * dimElements_[9] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + i * dimElements_[10] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + i * dimElements_[11] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + i * dimElements_[12] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + n * dimElements_[12] + i * dimElements_[13] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + n * dimElements_[12] + o * dimElements_[13] + i * dimElements_[14] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t p, intptr_t i, intptr_t j)
+inline ksys::Mutant DSQLParam::getElement(intptr_t a, intptr_t b, intptr_t c, intptr_t d, intptr_t e, intptr_t f, intptr_t g, intptr_t h, intptr_t k, intptr_t l, intptr_t m, intptr_t n, intptr_t o, intptr_t p, intptr_t i, intptr_t j)
 {
   return getMutantFromArray(a * dimElements_[0] + b * dimElements_[1] + c * dimElements_[3] + d * dimElements_[4] + e * dimElements_[5] + f * dimElements_[6] + g * dimElements_[7] + h * dimElements_[8] + k * dimElements_[9] + l * dimElements_[10] + m * dimElements_[11] + n * dimElements_[12] + o * dimElements_[13] + p * dimElements_[14] + i * dimElements_[15] + j);
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLParamArray::getElByAbsIndex(uintptr_t i)
+inline ksys::Mutant DSQLParam::getElByAbsIndex(uintptr_t i)
 {
   return getMutantFromArray(i);
 }
 //---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class DSQLParamBlob : public DSQLParam {
-  friend class DSQLParams;
-  public:
-    virtual ~DSQLParamBlob();
-    DSQLParamBlob() {}
-    DSQLParamBlob(DSQLStatement & statement);
-
-    DSQLParamBlob & createBlob();
-    DSQLParamBlob & closeBlob();
-    DSQLParamBlob & cancelBlob();
-    DSQLParamBlob & writeBuffer(const void * buf, uintptr_t size);
-  protected:
-    DSQLStatement   * statement_;
-    ISC_QUAD        id_;
-    isc_blob_handle handle_;
-    ISC_BLOB_DESC   desc_;
-
-    DSQLParam &     setString(const utf8::String & value);
-  private:
-    DSQLParamBlob(const DSQLParamBlob &){}
-    void operator = (const DSQLParamBlob &){}
-};
+inline const ISC_BLOB_DESC & DSQLParam::blobDesc() const
+{
+  return blobDesc_;
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -461,55 +420,50 @@ class DSQLParams {
   friend class DSQLStatement;
   public:
     ~DSQLParams();
-    DSQLParams() {}
-    DSQLParams(DSQLStatement & statement);
+    DSQLParams();
 
     uintptr_t         count();
     // access methods
-    bool              isNull(uintptr_t i);
-    DSQLParams &      setNull(uintptr_t i);
-    bool              isNull(const utf8::String & paramName);
-    DSQLParams &      setNull(const utf8::String & paramName);
+    bool isNull(uintptr_t i);
+    DSQLParams & setNull(uintptr_t i);
+    bool isNull(const utf8::String & paramName);
+    DSQLParams & setNull(const utf8::String & paramName);
 
-    utf8::String      paramName(uintptr_t i);
-    ksys::Mutant      asMutant(uintptr_t i);
-    DSQLParams &      asMutant(uintptr_t i, const ksys::Mutant & value);
-    utf8::String      asString(uintptr_t i);
-    DSQLParams &      asString(uintptr_t i, const utf8::String & value);
-    DSQLParamBlob &   asBlob(uintptr_t i);
-    DSQLParamBlob &   asBlob(const utf8::String & name);
-    DSQLParamArray &  asArray(uintptr_t i);
-    DSQLParamArray &  asArray(const utf8::String & name);
+    utf8::String paramName(uintptr_t i);
+    ksys::Mutant asMutant(uintptr_t i);
+    DSQLParams & asMutant(uintptr_t i, const ksys::Mutant & value);
+    utf8::String asString(uintptr_t i);
+    DSQLParams & asString(uintptr_t i, const utf8::String & value);
+    DSQLParam & asBlob(uintptr_t i);
+    DSQLParam & asBlob(const utf8::String & name);
+    DSQLParam & asArray(uintptr_t i);
+    DSQLParam & asArray(const utf8::String & name);
 
-    ksys::Mutant      asMutant(const utf8::String & paramName);
-    DSQLParams &      asMutant(const utf8::String & paramName, const ksys::Mutant & value);
-    utf8::String      asString(const utf8::String & paramName);
-    DSQLParams &      asString(const utf8::String & paramName, const utf8::String & value);
+    ksys::Mutant asMutant(const utf8::String & paramName);
+    DSQLParams & asMutant(const utf8::String & paramName, const ksys::Mutant & value);
+    utf8::String asString(const utf8::String & paramName);
+    DSQLParams & asString(const utf8::String & paramName, const utf8::String & value);
   protected:
   private:
-    DSQLParams(const DSQLParams &){}
-    void operator = (const DSQLParams &){}
+    DSQLParams(const DSQLParams &);
+    void operator = (const DSQLParams &);
 
-    DSQLStatement                                                       * statement_;
-    XSQLDAHolder                                                        sqlda_;
-    ksys::HashedObjectList<utf8::String,DSQLParam>                      params_;
-    ksys::Array< ksys::HashedObjectListItem<utf8::String,DSQLParam> *>  indexToParam_;
-    utf8::String                                                        tempString_;
-    ISC_TIMESTAMP                                                       tempStamp_;
-    bool                                                                changed_;
+    DSQLStatement * statement_;
+    XSQLDAHolder sqlda_;
+    typedef ksys::EmbeddedHash<
+      DSQLParam,
+      DSQLParam::keyNode,
+      DSQLParam::keyNodeObject,
+      DSQLParam::keyNodeHash,
+      DSQLParam::keyHashNodeEqu
+    > Params;
+    Params params_;
+    ksys::AutoHashDrop<Params> paramsAutoDrop_;
+    ksys::Array<DSQLParam *> indexToParam_;
 
-    enum BindType { preBind, postBind, preBindAfterExecute };
-
-    DSQLParams &                                          bind(BindType bindType);
-    DSQLParams &                                          resetChanged();
-    DSQLParams &                                          removeUnchanged();
-    ksys::HashedObjectListItem< utf8::String,DSQLParam> * add(const utf8::String & paramName);
-    DSQLParams &                                          checkParamIndex(uintptr_t i);
-    DSQLParam *                                           checkParamName(const utf8::String & paramName);
-    DSQLParamText *                                       castParamToText(DSQLParam * param);
-    DSQLParamScalar *                                     castParamToScalar(DSQLParam * param);
-    DSQLParamArray *                                      castParamToArray(DSQLParam * param, XSQLVAR & v);
-    DSQLParamBlob *                                       castParamToBlob(DSQLParam * param);
+    DSQLParams & bind();
+    DSQLParam * checkParamIndex(uintptr_t i);
+    DSQLParam * checkParamName(const utf8::String & paramName);
 };
 //---------------------------------------------------------------------------
 inline uintptr_t DSQLParams::count()
@@ -517,9 +471,95 @@ inline uintptr_t DSQLParams::count()
   return params_.count();
 }
 //---------------------------------------------------------------------------
+inline DSQLParams & DSQLParams::setNull(uintptr_t i)
+{
+  checkParamIndex(i)->setNull();
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline DSQLParams & DSQLParams::setNull(const utf8::String & paramName)
+{
+  checkParamName(paramName)->setNull();
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool DSQLParams::isNull(const utf8::String & paramName)
+{
+  return checkParamName(paramName)->sqlind_ < 0 ? true : false;
+}
+//---------------------------------------------------------------------------
 inline utf8::String DSQLParams::paramName(uintptr_t i)
 {
-  return checkParamIndex(i).params_.keyOfIndex(i);
+  return checkParamIndex(i)->name_;
+}
+//---------------------------------------------------------------------------
+inline ksys::Mutant DSQLParams::asMutant(uintptr_t i)
+{
+  return checkParamIndex(i)->getMutant();
+}
+//---------------------------------------------------------------------------
+inline ksys::Mutant DSQLParams::asMutant(const utf8::String & paramName)
+{
+  return checkParamName(paramName)->getMutant();
+}
+//---------------------------------------------------------------------------
+inline utf8::String DSQLParams::asString(uintptr_t i)
+{
+  return checkParamIndex(i)->getString();
+}
+//---------------------------------------------------------------------------
+inline utf8::String DSQLParams::asString(const utf8::String & paramName)
+{
+  return checkParamName(paramName)->getString();
+}
+//---------------------------------------------------------------------------
+inline DSQLParams & DSQLParams::asMutant(uintptr_t i,const ksys::Mutant & value)
+{
+  checkParamIndex(i)->head_->setMutant(value);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline DSQLParams & DSQLParams::asMutant(const utf8::String & paramName,const ksys::Mutant & value)
+{
+  checkParamName(paramName)->setMutant(value);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline DSQLParams & DSQLParams::asString(uintptr_t i,const utf8::String & value)
+{
+  checkParamIndex(i)->head_->setString(value);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline DSQLParams & DSQLParams::asString(const utf8::String & paramName,const utf8::String & value)
+{
+  checkParamName(paramName)->setString(value);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline DSQLParam & DSQLParams::asBlob(uintptr_t i)
+{
+  return *checkParamIndex(i);
+}
+//---------------------------------------------------------------------------
+inline DSQLParam & DSQLParams::asBlob(const utf8::String & name)
+{
+  return *checkParamName(name);
+}
+//---------------------------------------------------------------------------
+inline DSQLParam & DSQLParams::asArray(uintptr_t i)
+{
+  return *checkParamIndex(i);
+}
+//---------------------------------------------------------------------------
+inline DSQLParam & DSQLParams::asArray(const utf8::String & name)
+{
+  return *checkParamName(name);
+}
+//---------------------------------------------------------------------------
+inline bool DSQLParams::isNull(uintptr_t i)
+{
+  return checkParamIndex(i)->sqlind_ < 0 ? true : false;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -584,8 +624,7 @@ class DSQLValueArray : public DSQLValue {
   friend class DSQLValues;
   public:
     virtual ~DSQLValueArray();
-    DSQLValueArray() {}
-    DSQLValueArray(DSQLStatement & statement);
+    DSQLValueArray();
 
     ksys::Mutant            getElement(intptr_t i);
     ksys::Mutant            getElement(intptr_t i, intptr_t j);
@@ -730,8 +769,7 @@ class DSQLValueBlob : public DSQLValue {
   friend class DSQLValues;
   public:
     virtual ~DSQLValueBlob();
-    DSQLValueBlob() {}
-    DSQLValueBlob(DSQLStatement & statement);
+    DSQLValueBlob();
 
     DSQLValueBlob &       openBlob();
     DSQLValueBlob &       closeBlob();
@@ -761,8 +799,7 @@ class DSQLValues {
   friend class DSQLStatement;
   public:
     ~DSQLValues();
-    DSQLValues() {}
-    DSQLValues(DSQLStatement & statement);
+    DSQLValues();
 
     uintptr_t                   rowCount();
     intptr_t                    rowIndex();
@@ -925,11 +962,10 @@ enum Stmt {
 class DSQLStatement : virtual public ksys::Object {
   friend class Database;
   friend class Transaction;
+  friend class DSQLParam;
   friend class DSQLParams;
   friend class DSQLValues;
-  friend class DSQLParamBlob;
   friend class DSQLValueBlob;
-  friend class DSQLParamArray;
   friend class DSQLValueArray;
   public:
     virtual ~DSQLStatement();
@@ -955,10 +991,10 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLStatement &   paramAsMutant(const utf8::String & name, const ksys::Mutant & value);
     DSQLStatement &   paramAsString(uintptr_t i, const utf8::String & Value);
     DSQLStatement &   paramAsString(const utf8::String & name, const utf8::String & Value);
-    DSQLParamBlob &   paramAsBlob(uintptr_t i);
-    DSQLParamBlob &   paramAsBlob(const utf8::String & name);
-    DSQLParamArray &  paramAsArray(uintptr_t i);
-    DSQLParamArray &  paramAsArray(const utf8::String & name);
+    DSQLParam & paramAsBlob(uintptr_t i);
+    DSQLParam & paramAsBlob(const utf8::String & name);
+    DSQLParam & paramAsArray(uintptr_t i);
+    DSQLParam & paramAsArray(const utf8::String & name);
 
     ksys::Mutant      valueAsMutant(uintptr_t i);
     ksys::Mutant      valueAsMutant(const utf8::String & name);
@@ -991,7 +1027,6 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLValues      values_;
     Stmt            stmtType;
 
-    bool              isSQLTextDDL() const;
     DSQLStatement &   allocate();
     DSQLStatement &   free();
     DSQLStatement &   describe(XSQLDAHolder & sqlda);
@@ -1099,22 +1134,22 @@ inline DSQLStatement & DSQLStatement::paramAsString(const utf8::String & name, c
   return *this;
 }
 //---------------------------------------------------------------------------
-inline DSQLParamBlob & DSQLStatement::paramAsBlob(uintptr_t i)
+inline DSQLParam & DSQLStatement::paramAsBlob(uintptr_t i)
 {
   return params_.asBlob(i);
 }
 //---------------------------------------------------------------------------
-inline DSQLParamBlob & DSQLStatement::paramAsBlob(const utf8::String & name)
+inline DSQLParam & DSQLStatement::paramAsBlob(const utf8::String & name)
 {
   return params_.asBlob(name);
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLStatement::paramAsArray(uintptr_t i)
+inline DSQLParam & DSQLStatement::paramAsArray(uintptr_t i)
 {
   return params_.asArray(i);
 }
 //---------------------------------------------------------------------------
-inline DSQLParamArray & DSQLStatement::paramAsArray(const utf8::String & name)
+inline DSQLParam & DSQLStatement::paramAsArray(const utf8::String & name)
 {
   return params_.asArray(name);
 }
