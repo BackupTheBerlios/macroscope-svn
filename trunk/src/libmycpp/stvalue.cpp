@@ -118,14 +118,13 @@ l1:     rbind.buffer_type = MYSQL_TYPE_STRING;
     bind_.bind()[i].buffer = row->raw_.ptr() + row->index_[i];
   if( valuesIndex_.count() != bind_.count() ){
     for( i = 0; i < bind_.count(); i++ ){
-      utf8::String            key (utf8::plane(fields_[i].name, fields_[i].name_length));
-      utf8::String::Iterator  it  (key.strstr("("));
+      utf8::String key(utf8::plane(fields_[i].name,fields_[i].name_length));
+      utf8::String::Iterator it(key.strstr("("));
       if( it.position() >= 0 )
         key = utf8::String(utf8::String::Iterator(key), it);
       utf8::String testKey(key);
       for( uintptr_t j = 1; j < ~uintptr_t(0); j++ ){
-        if( valuesIndex_.objectOfKey(testKey) == NULL )
-          break;
+        if( valuesIndex_.objectOfKey(testKey) == NULL ) break;
         testKey = key + "_" + utf8::int2Str((intmax_t) j);
       }
       valuesIndex_.add(&row->index_[i], testKey);

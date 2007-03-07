@@ -779,12 +779,23 @@ uintptr_t String::hash(bool caseSensitive) const
   if( caseSensitive ){
     h = ksys::HF::hash(container_->string_);
   }
-  else{
-    uintptr_t     c, l;
-    const char *  s = container_->string_;
-    for( h = 0; *s != '\0'; s += l ){
-      c = utf8c2UpperUCS(s, l);
-      h = ksys::HF::hash(&c, sizeof(c), h);
+  else {
+    uintptr_t l;
+    const char * s = container_->string_;
+    h = 0;
+    for(;;){
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
     }
   }
   return h;
@@ -792,16 +803,27 @@ uintptr_t String::hash(bool caseSensitive) const
 //---------------------------------------------------------------------------
 uint64_t String::hash_ll(bool caseSensitive) const
 {
-  uint64_t  h;
+  uint64_t h;
   if( caseSensitive ){
     h = ksys::HF::hash_ll(container_->string_);
   }
-  else{
-    uintptr_t     c, l;
-    const char *  s = container_->string_;
-    for( h = 0; *s != '\0'; s += l ){
-      c = utf8c2UpperUCS(s, l);
-      h = ksys::HF::hash_ll(&c, sizeof(c), h);
+  else {
+    uintptr_t l;
+    const char * s = container_->string_;
+    h = 0;
+    for(;;){
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
+      if( *s == '\0' ) break;
+      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      s += l;
     }
   }
   return h;

@@ -247,11 +247,16 @@ typedef unsigned __int32 uint32_t;
 typedef int int32_t;
 typedef unsigned int uint32_t;
 #define HAVE_INT32_T_AS_INT 1
+#define HAVE_INT_AS_INT32_T 1
 #else
 #error sizeof(int) != 4
 #endif
 #undef SIZEOF_INT32_T
 #define SIZEOF_INT32_T 4
+#if (_MSC_VER || _WIN32) && SIZEOF_INTPTR_T != 0
+#define HAVE_INT32_T_AS_INTPTR_T (SIZEOF_INT32_T == SIZEOF_VOID_P)
+#define HAVE_INTPTR_T_AS_INT32_T HAVE_INT32_T_AS_INTPTR_T
+#endif
 #endif
 
 #if SIZEOF_INT64_T == 0
@@ -272,6 +277,10 @@ typedef unsigned long uint64_t;
 #endif
 #undef SIZEOF_INT64_T
 #define SIZEOF_INT64_T 8
+#if (_MSC_VER || _WIN32) && SIZEOF_INTPTR_T != 0
+#define HAVE_INT64_T_AS_INTPTR_T (SIZEOF_INT64_T == SIZEOF_VOID_P)
+#define HAVE_INTPTR_T_AS_INT64_T HAVE_INT64_T_AS_INTPTR_T
+#endif
 #endif
 
 #if SIZEOF_INTMAX_T == 0
@@ -283,9 +292,11 @@ typedef uint64_t uintmax_t;
 #define HAVE_INT64_T_AS_INTMAX_T 1
 #if SIZEOF_INTPTR_T == SIZEOF_INTMAX_T
 #define HAVE_INTPTR_T_AS_INTMAX_T 1
+#define HAVE_MAXPTR_T_AS_INTPTR_T 1
 #endif
 #if SIZEOF_INTPTR_T == 8
 #define HAVE_INTPTR_T_AS_INT64_T 1
+#define HAVE_INT64_T_AS_INTPTR_T 1
 #endif
 #endif
 
@@ -296,17 +307,22 @@ typedef int intptr_t;
 typedef unsigned int uintptr_t;
 #define SIZEOF_INTPTR_T 4
 #define HAVE_INTPTR_T_AS_INT 1
+#define HAVE_INTPTR_T_AS_INT32_T HAVE_INT32_T_AS_INT
+#define HAVE_INT32_T_AS_INTPTR_T HAVE_INT32_T_AS_INT
 #elif SIZEOF_INT32_T == SIZEOF_VOID_P
 typedef int32_t intptr_t;
 typedef uint32_t uintptr_t;
 #define SIZEOF_INTPTR_T 4
 #define HAVE_INTPTR_T_AS_INT32_T 1
+#define HAVE_INT32_T_AS_INTPTR_T 1
 #elif SIZEOF_INT64_T == SIZEOF_VOID_P
 typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
 #define SIZEOF_INTPTR_T 8
 #define HAVE_INTPTR_T_AS_INT64_T 1
+#define HAVE_INT64_T_AS_INTPTR_T 1
 #define HAVE_INTPTR_T_AS_INTMAX_T 1
+#define HAVE_INTMAX_T_AS_INTPTR_T 1
 #endif
 #endif
 

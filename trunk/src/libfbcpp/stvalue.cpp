@@ -130,8 +130,7 @@ utf8::String DSQLValueScalar::getString()
       case SQL_INT64       :
         if( sqlscale_ != 0 ){
           v = (ldouble) bigInt_;
-          for( intptr_t j = sqlscale_; j < 0; j++ )
-            v /= 10;
+          for( intptr_t j = sqlscale_; j < 0; j++ ) v /= 10;
           return utf8::float2Str(v);
         }
         return utf8::int2Str(bigInt_);
@@ -180,10 +179,9 @@ DSQLValueArray & DSQLValueArray::checkDim(bool inRange)
 DSQLValueArray & DSQLValueArray::checkData()
 {
   if( data_ == NULL ){
-    intptr_t  i;
+    intptr_t i;
     dataSize_ = desc_.array_desc_length;
-    if( desc_.array_desc_dtype == blr_varying )
-      dataSize_ += 2;
+    if( desc_.array_desc_dtype == blr_varying ) dataSize_ += 2;
     elementSize_ = dataSize_;
     for( i = desc_.array_desc_dimensions - 1; i >= 0; i-- ){
       dimElements_[i] = desc_.array_desc_bounds[i].array_bound_upper - desc_.array_desc_bounds[i].array_bound_lower + 1;
@@ -254,14 +252,13 @@ utf8::String DSQLValueBlob::getString()
 {
   if( sqlind_ >= 0 ){
     closeBlob().openBlob();
-    intptr_t              r, l  = 0;
+    intptr_t r, l = 0;
     ksys::AutoPtr< char>  aref;
     aref.alloc(desc_.blob_desc_segment_size + 1);
     try{
-      for( ; ; ){
+      for(;;){
         r = readBuffer(aref.ptr() + l, desc_.blob_desc_segment_size);
-        if( r <= 0 )
-          break;
+        if( r <= 0 ) break;
         l += r;
         aref.realloc(l + desc_.blob_desc_segment_size + 1);
       }
@@ -298,17 +295,14 @@ intptr_t DSQLValueBlob::readBuffer(void * buf, uintptr_t size)
     r = 0;
     while( size > 0 ){
       len = (uint16_t) size;
-      if( size > (uintptr_t) desc_.blob_desc_segment_size )
-        len = desc_.blob_desc_segment_size;
+      if( size > (uintptr_t) desc_.blob_desc_segment_size ) len = desc_.blob_desc_segment_size;
       blobStat = api.isc_get_segment(status, &handle_, &segLen, len, (char *) buf);
       buf = (char *) buf + segLen;
       size -= segLen;
       r += segLen;
       if( blobStat != 0 ){
-        if( status[1] == isc_segment )
-          continue;
-        if( status[1] == isc_segstr_eof )
-          break;
+        if( status[1] == isc_segment ) continue;
+        if( status[1] == isc_segstr_eof ) break;
         statement_->database_->exceptionHandler(
           newObjectV1C2<EDSQLStGetSegment>(status, __PRETTY_FUNCTION__)
         );
@@ -365,11 +359,11 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
 {
   ksys::AutoPtr<ksys::Vector<DSQLValue> > row(newObject<ksys::Vector<DSQLValue> >());
   union {
-      DSQLValue *       value;
-      DSQLValueText *   valueText;
-      DSQLValueScalar * valueScalar;
-      DSQLValueArray *  valueArray;
-      DSQLValueBlob *   valueBlob;
+    DSQLValue *       value;
+    DSQLValueText *   valueText;
+    DSQLValueScalar * valueScalar;
+    DSQLValueArray *  valueArray;
+    DSQLValueBlob *   valueBlob;
   };
   uintptr_t i, j;
   for( i = 0; i < sqlda_.count(); i++ ){
@@ -421,8 +415,8 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
     for( i = 0; i < row->count(); i++ ){
       XSQLVAR & v = sqlda_.sqlda()->sqlvar[i];
       utf8::String key(
-        v.sqlname_length > 0 ? utf8::plane(v.sqlname,v.sqlname_length) :
-          v.aliasname_length > 0 ? utf8::plane(v.aliasname,v.aliasname_length) : "V_" + utf8::int2Str(i)
+        v.aliasname_length > 0 ? utf8::plane(v.aliasname,v.aliasname_length) :
+          v.sqlname_length > 0 ? utf8::plane(v.sqlname,v.sqlname_length) : "V_" + utf8::int2Str(i)
       );
       utf8::String testKey(key);
       for( j = 1; j < ~uintptr_t(0); j++ ){

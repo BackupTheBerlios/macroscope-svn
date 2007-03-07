@@ -33,15 +33,23 @@ namespace ksys {
 //---------------------------------------------------------------------------
 template <class T> class HashFuncContainer {
   public:
-    static uintptr_t  hash(const void * key, uintptr_t len, uintptr_t h = 0);
-    static uintptr_t  hash_rev(const void * key, uintptr_t len, uintptr_t h = 0);
-    static uint64_t   hash_ll(const void * key, uintptr_t len, uint64_t h = 0);
-    static uint64_t   hash_rev_ll(const void * key, uintptr_t len, uint64_t h = 0);
-    static uintptr_t  hash(const char * s, uintptr_t h = 0);
-    static uint64_t   hash_ll(const char * s, uint64_t h = 0);
+    static uintptr_t hash(const void * key, uintptr_t len, uintptr_t h = 0);
+    static uintptr_t hash_rev(const void * key, uintptr_t len, uintptr_t h = 0);
+    static uint64_t hash_ll(const void * key, uintptr_t len, uint64_t h = 0);
+    static uint64_t hash_rev_ll(const void * key, uintptr_t len, uint64_t h = 0);
+    static uintptr_t hash(const char * s, uintptr_t h = 0);
+    static uint64_t hash_ll(const char * s, uint64_t h = 0);
     //    static uintptr_t hash(const void * key,uintptr_t h);
-    static uintptr_t  hash(intptr_t key, uintptr_t h = 0);
-    static uintptr_t  hash(uintptr_t key, uintptr_t h = 0);
+#if !HAVE_INT32_T_AS_INTPTR_T
+    static uintptr_t hash(int32_t key,uintptr_t h = 0);
+    static uintptr_t hash(uint32_t key,uintptr_t h = 0);
+    static uint64_t hash_ll(int32_t key,uint64_t h = 0);
+    static uint64_t hash_ll(uint32_t key,uint64_t h = 0);
+#endif
+    static uintptr_t hash(intptr_t key,uintptr_t h = 0);
+    static uintptr_t hash(uintptr_t key,uintptr_t h = 0);
+    static uint64_t hash_ll(intptr_t key,uint64_t h = 0);
+    static uint64_t hash_ll(uintptr_t key,uint64_t h = 0);
 };
 typedef HashFuncContainer<int> HF;
 //---------------------------------------------------------------------------
@@ -235,18 +243,62 @@ uintptr_t HashFuncContainer<T>::hash(const void * key,uintptr_t h)
   return h;
 }*/
 //---------------------------------------------------------------------------
+#if !HAVE_INT32_T_AS_INTPTR_T
+//---------------------------------------------------------------------------
+template <class T> inline
+uintptr_t HashFuncContainer<T>::hash(int32_t key,uintptr_t h)
+{
+  HASH5(h,&key,0);
+  HASH5(h,&key,1);
+  HASH5(h,&key,2);
+  HASH5(h,&key,3);
+  return h;
+}
+//---------------------------------------------------------------------------
+template <class T> inline
+uintptr_t HashFuncContainer<T>::hash(uint32_t key,uintptr_t h)
+{
+  HASH5(h,&key,0);
+  HASH5(h,&key,1);
+  HASH5(h,&key,2);
+  HASH5(h,&key,3);
+  return h;
+}
+//---------------------------------------------------------------------------
+template <class T> inline
+uint64_t HashFuncContainer<T>::hash_ll(int32_t key,uint64_t h)
+{
+  HASH5(h,&key,0);
+  HASH5(h,&key,1);
+  HASH5(h,&key,2);
+  HASH5(h,&key,3);
+  return h;
+}
+//---------------------------------------------------------------------------
+template <class T> inline
+uint64_t HashFuncContainer<T>::hash_ll(uint32_t key,uint64_t h)
+{
+  HASH5(h,&key,0);
+  HASH5(h,&key,1);
+  HASH5(h,&key,2);
+  HASH5(h,&key,3);
+  return h;
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
 template <class T> inline
 uintptr_t HashFuncContainer<T>::hash(intptr_t key, uintptr_t h)
 {
-  HASH5(h, &key, 0);
-  HASH5(h, &key, 1);
-  HASH5(h, &key, 2);
-  HASH5(h, &key, 3);
+  HASH5(h,&key,0);
+  HASH5(h,&key,1);
+  HASH5(h,&key,2);
+  HASH5(h,&key,3);
 #if SIZEOF_INTPTR_T > 4
-  HASH5(h, &key, 4);
-  HASH5(h, &key, 5);
-  HASH5(h, &key, 6);
-  HASH5(h, &key, 7);
+  HASH5(h,&key,4);
+  HASH5(h,&key,5);
+  HASH5(h,&key,6);
+  HASH5(h,&key,7);
 #endif
   return h;
 }
@@ -263,6 +315,38 @@ uintptr_t HashFuncContainer<T>::hash(uintptr_t key, uintptr_t h)
   HASH5(h, &key, 5);
   HASH5(h, &key, 6);
   HASH5(h, &key, 7);
+#endif
+  return h;
+}
+//---------------------------------------------------------------------------
+template <class T> inline
+uint64_t HashFuncContainer<T>::hash_ll(intptr_t key,uint64_t h)
+{
+  HASH5(h,&key,0);
+  HASH5(h,&key,1);
+  HASH5(h,&key,2);
+  HASH5(h,&key,3);
+#if SIZEOF_INTPTR_T > 4
+  HASH5(h,&key,4);
+  HASH5(h,&key,5);
+  HASH5(h,&key,6);
+  HASH5(h,&key,7);
+#endif
+  return h;
+}
+//---------------------------------------------------------------------------
+template <class T> inline
+uint64_t HashFuncContainer<T>::hash_ll(uintptr_t key,uint64_t h)
+{
+  HASH5(h,&key,0);
+  HASH5(h,&key,1);
+  HASH5(h,&key,2);
+  HASH5(h,&key,3);
+#if SIZEOF_INTPTR_T > 4
+  HASH5(h,&key,4);
+  HASH5(h,&key,5);
+  HASH5(h,&key,6);
+  HASH5(h,&key,7);
 #endif
   return h;
 }

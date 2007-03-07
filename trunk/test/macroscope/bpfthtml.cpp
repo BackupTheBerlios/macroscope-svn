@@ -131,11 +131,10 @@ utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
   }
   t1 = traf / t2;
   t3 = traf % t2;
-  ldouble mantissa = t3 / (t2 / 10000.);
   return utf8::String::print(
     traf > 0 ? "%"PRIuMAX".%04"PRIuMAX"%s<FONT SIZE=0>(%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" :  "-",
     t1,
-    uintmax_t(mantissa),
+    uintmax_t(t3 / (t2 / 1024u)),
     postfix,
     b,
     c
