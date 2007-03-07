@@ -106,6 +106,8 @@ class Logger {
     AutoPtr<Statement> stMsgsDel_;
     AutoPtr<Statement> stMsgsDel2_;
     AutoPtr<Statement> stMsgsSelCount_;
+    AutoPtr<Statement> stDNSCacheSel_;
+    AutoPtr<Statement> stDNSCacheIns_;
     int64_t ellapsed_;
     uintptr_t gCount_;
     bool verbose_;

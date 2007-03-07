@@ -151,14 +151,29 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
   DNSCacheEntry * pAddr = addr;
   dnsCache_.insert(addr,false,false,&pAddr);
   if( pAddr == addr ){
-    if( resolveDNSNames_ ){
-      pAddr->name_ = pAddr->resolveAddr();
-      addr.ptr(NULL);
+    utf8::String name;
+    if( !stDNSCacheSel_->prepared() )
+      stDNSCacheSel_->text("SELECT st_name from INET_DNS_CACHE WHERE st_ip = :ip")->prepare();
+    if( stDNSCacheSel_->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
+      stDNSCacheSel_->fetchAll();
+      name = stDNSCacheSel_->valueAsString("st_name");
     }
     else {
-      pAddr->name_ = pAddr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
-      addr.ptr(NULL);
+      if( resolveDNSNames_ ){
+        name = pAddr->resolveAddr();
+        if( !stDNSCacheIns_->prepared() )
+          stDNSCacheIns_->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
+        stDNSCacheIns_->
+          paramAsString("ip",ip4AddrToIndex(ip4))->
+          paramAsString("name",name)->
+          execute();
+      }
+      else {
+        name = pAddr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
+      }
     }
+    pAddr->name_ = name;
+    addr.ptr(NULL);
     if( dnsCacheSize_ > 0 && dnsCache_.count() >= dnsCacheSize_ )
       dnsCache_.drop(dnsCacheLRU_.remove(*dnsCacheLRU_.last()));
   }

@@ -218,6 +218,25 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
 {
   AsyncFile flog(logFileName);
   flog.readOnly(true).open();
+  stMonUrlSel_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
+    "ST_URL = :ST_URL"
+  );
+  stMonUrlIns_->text(
+    "INSERT INTO INET_USERS_MONTHLY_TOP_URL " 
+    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_HASH, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
+    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_HASH, :ST_URL_TRAF, 1)"
+  );
+  stMonUrlUpd_->text(
+    "UPDATE INET_USERS_MONTHLY_TOP_URL "
+    "SET "
+    "ST_URL_TRAF = ST_URL_TRAF + :ST_URL_TRAF,"
+    "ST_URL_COUNT = ST_URL_COUNT + 1 "
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
+    "ST_URL = :ST_URL"
+  );
   stTrafIns_->text(
     "INSERT INTO INET_USERS_TRAF"
     "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)"
@@ -349,6 +368,20 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
 {
   AsyncFile flog(logFileName);
   flog.readOnly(true).open();
+  stMsgsIns_->text(
+    "INSERT INTO INET_SENDMAIL_MESSAGES (ST_FROM,ST_MSGID,ST_MSGSIZE) " 
+    "VALUES (:ST_FROM,:ST_MSGID,:ST_MSGSIZE);"
+  );
+  stMsgsSel_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " * FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID"
+  );
+  stMsgsDel_->text("DELETE FROM INET_SENDMAIL_MESSAGES");
+  stMsgsDel2_->text("DELETE FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID");
+  stMsgsSelCount_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    " COUNT(*) FROM INET_SENDMAIL_MESSAGES"
+  );
   stTrafIns_->text(
     "INSERT INTO INET_USERS_TRAF"
     "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)"
@@ -549,26 +582,9 @@ void Logger::main()
   stMsgsDel_.ptr(database_->newAttachedStatement());
   stMsgsDel2_.ptr(database_->newAttachedStatement());
   stMsgsSelCount_.ptr(database_->newAttachedStatement());
+  stDNSCacheSel_.ptr(database_->newAttachedStatement());
+  stDNSCacheIns_.ptr(database_->newAttachedStatement());
 
-  stMonUrlSel_->text(
-    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-    " ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
-    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
-    "ST_URL = :ST_URL"
-  );
-  stMonUrlIns_->text(
-    "INSERT INTO INET_USERS_MONTHLY_TOP_URL " 
-    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_HASH, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
-    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_HASH, :ST_URL_TRAF, 1)"
-  );
-  stMonUrlUpd_->text(
-    "UPDATE INET_USERS_MONTHLY_TOP_URL "
-    "SET "
-    "ST_URL_TRAF = ST_URL_TRAF + :ST_URL_TRAF,"
-    "ST_URL_COUNT = ST_URL_COUNT + 1 "
-    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
-    "ST_URL = :ST_URL"
-  );
   stFileStatSel_->text(
     "SELECT " + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
     " ST_LAST_OFFSET FROM INET_LOG_FILE_STAT " 
@@ -583,20 +599,6 @@ void Logger::main()
   stFileStatUpd_->text(
     "UPDATE INET_LOG_FILE_STAT SET ST_LAST_OFFSET = :ST_LAST_OFFSET " 
     "WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME"
-  );
-  stMsgsIns_->text(
-    "INSERT INTO INET_SENDMAIL_MESSAGES (ST_FROM,ST_MSGID,ST_MSGSIZE) " 
-    "VALUES (:ST_FROM,:ST_MSGID,:ST_MSGSIZE);"
-  );
-  stMsgsSel_->text(
-    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-    " * FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID"
-  );
-  stMsgsDel_->text("DELETE FROM INET_SENDMAIL_MESSAGES");
-  stMsgsDel2_->text("DELETE FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID");
-  stMsgsSelCount_->text(
-    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-    " COUNT(*) FROM INET_SENDMAIL_MESSAGES"
   );
 
   database_->create();
@@ -652,6 +654,10 @@ void Logger::main()
 //    " FOREIGN KEY (st_src_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE,"
 //    " FOREIGN KEY (st_dst_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE"
     ")" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
     "CREATE TABLE INET_BPFT_STAT_CACHE ("
     " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
     " st_bt            DATETIME NOT NULL,"
@@ -660,11 +666,11 @@ void Logger::main()
     " st_dgram_bytes   BIGINT NOT NULL,"
     " st_data_bytes    BIGINT NOT NULL"
     ")" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
     "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_ip)" <<
+    "CREATE TABLE INET_DNS_CACHE ("
+    " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+    " st_name          CHAR(64) CHARACTER SET ascii NOT NULL"
+    ")" <<
     "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
     "CREATE INDEX INET_USERS_TRAF_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
     "CREATE INDEX INET_USERS_TRAF_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
