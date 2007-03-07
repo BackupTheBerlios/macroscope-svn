@@ -585,6 +585,20 @@ void Logger::main()
   stDNSCacheSel_.ptr(database_->newAttachedStatement());
   stDNSCacheIns_.ptr(database_->newAttachedStatement());
 
+  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+    fbcpp::api.open();
+    struct tm tm0 = time2tm(gettimeofday()), tm1 = time2tm(getlocaltimeofday());
+    ISC_TIMESTAMP isct0 = fbcpp::tm2IscTimeStamp(tm0), isct1 = fbcpp::tm2IscTimeStamp(tm1);
+    ISC_TIMESTAMP isctm0, isctm1;
+    fbcpp::api.isc_encode_timestamp(&tm0,&isctm0);
+    fbcpp::api.isc_encode_timestamp(&tm1,&isctm1);
+    fprintf(stderr,"%"PRIdMAX", %"PRIdMAX,
+      intmax_t(intmax_t(isctm0.timestamp_time) - isct0.timestamp_time),
+      intmax_t(intmax_t(isctm1.timestamp_time) - isct1.timestamp_time)
+    );
+    fbcpp::api.close();
+  }
+
   stFileStatSel_->text(
     "SELECT " + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
     " ST_LAST_OFFSET FROM INET_LOG_FILE_STAT " 
@@ -740,16 +754,6 @@ void Logger::main()
   }
 //#endif
   database_->attach();
-
-  struct tm tm0 = time2tm(gettimeofday()), tm1 = time2tm(getlocaltimeofday());
-  ISC_TIMESTAMP isct0 = fbcpp::tm2IscTimeStamp(tm0), isct1 = fbcpp::tm2IscTimeStamp(tm1);
-  ISC_TIMESTAMP isctm0, isctm1;
-  fbcpp::api.isc_encode_timestamp(&tm0,&isctm0);
-  fbcpp::api.isc_encode_timestamp(&tm1,&isctm1);
-  fprintf(stderr,"%"PRIdMAX", %"PRIdMAX,
-    intmax_t(isctm0.timestamp_time - isct0.timestamp_time),
-    intmax_t(isctm1.timestamp_time - isct1.timestamp_time)
-  );
 
   for( uintptr_t i = 0; i < metadata.count(); i++ ){
     if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
