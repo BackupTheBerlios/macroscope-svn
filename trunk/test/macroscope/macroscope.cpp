@@ -585,14 +585,15 @@ void Logger::main()
   stDNSCacheSel_.ptr(database_->newAttachedStatement());
   stDNSCacheIns_.ptr(database_->newAttachedStatement());
 
-  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+  if( verbose_ && dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+    fprintf(stderr,"%"PRId64"\n",gettimeofday());
     fbcpp::api.open();
     struct tm tm0 = time2tm(gettimeofday()), tm1 = time2tm(getlocaltimeofday());
     ISC_TIMESTAMP isct0 = fbcpp::tm2IscTimeStamp(tm0), isct1 = fbcpp::tm2IscTimeStamp(tm1);
     ISC_TIMESTAMP isctm0, isctm1;
     fbcpp::api.isc_encode_timestamp(&tm0,&isctm0);
     fbcpp::api.isc_encode_timestamp(&tm1,&isctm1);
-    fprintf(stderr,"%"PRIdMAX", %"PRIdMAX,
+    fprintf(stderr,"%"PRIdMAX", %"PRIdMAX"\n",
       intmax_t(intmax_t(isctm0.timestamp_time) - isct0.timestamp_time),
       intmax_t(intmax_t(isctm1.timestamp_time) - isct1.timestamp_time)
     );
