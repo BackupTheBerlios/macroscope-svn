@@ -102,7 +102,7 @@ int64_t getgmtoffset();
 #if !HAVE_TIMEGM
 inline time_t timegm(struct tm * t)
 {
-  return mktime(t) - getgmtoffset() / 1000000u;
+  return mktime(t) + getgmtoffset() / 1000000u;
 }
 #endif
 //---------------------------------------------------------------------------
@@ -139,13 +139,13 @@ inline struct timeval tm2Timeval(struct tm t)
 inline struct tm time2tm(int64_t a)
 {
   time_t t = (time_t) (a / 1000000u);
-  struct tm ta;
 #if HAVE_GMTIME_S
+  struct tm ta;
   gmtime_s(&ta,&t);
-#else
-  ta = *gmtime(&t);
-#endif
   return ta;
+#else
+  return *gmtime(&t);
+#endif
 }
 //---------------------------------------------------------------------------
 inline struct tm timeval2tm(const struct timeval & a)

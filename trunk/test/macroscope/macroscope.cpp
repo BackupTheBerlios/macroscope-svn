@@ -847,6 +847,7 @@ int main(int _argc,char * _argv[])
     uint8_t dText[sizeof(text)];
     AutoPtr<uint8_t> cText;
     LZWFilter lzw;
+    lzw.initialize();
     lzw.compress(text,sizeof(text),true);
     cText.xchg(lzw.out());
     lzw.decompress(cText,lzw.outSize(),true);

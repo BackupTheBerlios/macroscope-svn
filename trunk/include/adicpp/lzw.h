@@ -47,7 +47,7 @@ class LZWFilterT {
     ~LZWFilterT();
     LZWFilterT(IO * io = NULL);
     
-    LZWFilterT<IO> & init();
+    LZWFilterT<IO> & initialize();
     LZWFilterT<IO> & cleanup();
     
     LZWFilterT<IO> & compress(const void * buf,uintptr_t count,bool lastBlock);
@@ -60,6 +60,9 @@ class LZWFilterT {
 
     class StringT {
       public:
+        ~StringT() {}
+        StringT() : l_(0) {}
+
         static EmbeddedHashNode<StringT> & keyNode(const StringT & object){
           return object.keyNode_;
         }
@@ -74,7 +77,7 @@ class LZWFilterT {
         }
 
         mutable EmbeddedHashNode<StringT> keyNode_;
-        uint8_t * s_;
+        AutoPtr<uint8_t> s_;
         uintptr_t l_;
       protected:
       private:
@@ -87,8 +90,7 @@ class LZWFilterT {
       StringT::keyHashNodeEqu
     > TableHash;
     TableHash tableHash_;
-    AutoPtr<StringT> table_;
-    uintptr_t count_;
+    Vector<StringT> table_;
     AutoPtr<uint8_t> out_;
     uintptr_t outCount_;
     uintptr_t outSize_;
@@ -112,7 +114,7 @@ LZWFilterT<IO>::LZWFilterT(IO * io) :
 }
 //---------------------------------------------------------------------------
 template <typename IO> inline
-LZWFilterT<IO> & LZWFilterT<IO>::init()
+LZWFilterT<IO> & LZWFilterT<IO>::initialize()
 {
   cleanup().initTable();
   return *this;
@@ -128,17 +130,12 @@ LZWFilterT<IO> & LZWFilterT<IO>::cleanup()
 template <typename IO> inline
 LZWFilterT<IO> & LZWFilterT<IO>::initTable()
 {
-  if( count_ == 0 ){
-    table_.resize(256);
-    while( count_ < 256 ){
-      StringT * pStr = &table_[count_];
-      pStr->s_ = NULL;
-      pStr->s_ = (StringT *) kmalloc(1);
-      pStr->s_[0] = (uint8_t) count_;
-      pStr->l_ = 1;
-      tableHash_.insert(*pStr);
-      count_++;
-    }
+  while( table_.count() < 256 ){
+    StringT * pStr = &table_.add()[table_.count() - 1];
+    pStr->s_.realloc(1);
+    pStr->s_[0] = (uint8_t) count_;
+    pStr->l_ = 1;
+    tableHash_.insert(*pStr);
   }
   return *this;
 }
@@ -146,8 +143,7 @@ LZWFilterT<IO> & LZWFilterT<IO>::initTable()
 template <typename IO> inline
 LZWFilterT<IO> & LZWFilterT<IO>::cleanupTable()
 {
-  while( count_ > 0 ) kfree(table_[--count_].s_);
-  table_.free();
+  table_.clear();
   tableHash_.clear();
   return *this;
 }
@@ -165,34 +161,34 @@ LZWFilterT<IO> & LZWFilterT<IO>::compress(const void * buf,uintptr_t count,bool 
 {
   uintptr_t ml;
   StringT * pStr, * pStr2;
-  if( count_ == 256 ){
-    table_.realloc(count_ + 1);
-    table_[count_].s_ = (uint8_t *) kmalloc(ml = 64);
-    table_[count_].l_ = 0;
-    count_++;
+  if( table_.count() == 256 ){
+    pStr = &table_.resize(table_.count() + 1)[table_.count() - 1];
+    pStr->s_.realloc(ml = 64);
+    pStr->l_ = 0;
   }
   else {
-    ml = table_[count_ - 1].l_;
+    ml = table_[table_.count() - 1].l_;
   }
   outSize_ = 0;
   while( count > 0 ){
-    pStr2 = &table_[count_ - 1];
+    pStr2 = &table_[table_.count() - 1];
     if( pStr2->l_ == ml ){
-      pStr2->s_ = (uint8_t *) krealloc(pStr2->s_,ml << 1);
+      pStr2->s_.realloc(ml << 1);
       ml <<= 1;
     }
     pStr2->s_[pStr2->l_++] = *(const uint8_t *) buf;
     tableHash_.insert(*pStr2,false,false,&pStr);
     if( pStr == pStr2 || (count == 1 && lastBlock) ){
-      pStr->s_ = (uint8_t *) krealloc(pStr->s_,pStr->l_);
+      if( ml > pStr2->l_ )
+        pStr2->s_.realloc(pStr2->l_);
       out_.realloc(outCount_ + sizeof(uint32_t));
-      *(uint32_t *) (out_.ptr() + outCount_) = uint32_t(count_ - 1);
+      *(uint32_t *) (out_.ptr() + outCount_) = uint32_t(table_.count() - 1);
       outCount_ += sizeof(uint32_t);
-      table_.realloc(count_ + 1);
-      table_[count_].s_ = NULL;
-      table_[count_].s_ = (uint8_t *) kmalloc(ml = 64);
-      table_[count_].l_ = 1;
-      table_[count_].s_[0] = pStr->s_[pStr->l_ - 1];
+      pStr2 = &table_.realloc(table_.count() + 1)[table_.count() - 1];
+      pStr2->s_ = NULL;
+      pStr2->s_.realloc(ml = 64);
+      pStr2->l_ = 1;
+      pStr2->s_[0] = pStr->s_[pStr->l_ - 1];
       count_++;
     }
     buf = (const uint8_t *) buf + 1;
@@ -227,7 +223,7 @@ LZWFilterT<IO> & LZWFilterT<IO>::decompress(const void * buf,uintptr_t count,boo
       out_[outCount_++] = prevStr->s_[0];
     }
 // Добавление строки в словарь на первую свободную позицию
-    pStr2 = &table_.realloc(count_ + 1)[count];
+    pStr2 = &table_.realloc(sizeof(StringT) * (count_ + 1))[count];
     pStr2->s_ = NULL;
     pStr2->s_ = (uint8_t *) kmalloc(prevStr->l_ + 1);
     pStr2->l_ = prevStr->l_ + 1;

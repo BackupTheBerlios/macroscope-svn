@@ -813,16 +813,16 @@ uint64_t String::hash_ll(bool caseSensitive) const
     h = 0;
     for(;;){
       if( *s == '\0' ) break;
-      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      h = ksys::HF::hash_ll(uint32_t(utf8c2UpperUCS(s,l)),h);
       s += l;
       if( *s == '\0' ) break;
-      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      h = ksys::HF::hash_ll(uint32_t(utf8c2UpperUCS(s,l)),h);
       s += l;
       if( *s == '\0' ) break;
-      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      h = ksys::HF::hash_ll(uint32_t(utf8c2UpperUCS(s,l)),h);
       s += l;
       if( *s == '\0' ) break;
-      h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
+      h = ksys::HF::hash_ll(uint32_t(utf8c2UpperUCS(s,l)),h);
       s += l;
     }
   }
