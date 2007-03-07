@@ -27,6 +27,9 @@
 #include <adicpp/adicpp.h>
 //------------------------------------------------------------------------------
 #include "macroscope.h"
+#ifndef NDEBUG
+#include <adicpp/lzw.h>
+#endif
 //------------------------------------------------------------------------------
 namespace macroscope {
 //------------------------------------------------------------------------------
@@ -585,8 +588,9 @@ void Logger::main()
   stDNSCacheSel_.ptr(database_->newAttachedStatement());
   stDNSCacheIns_.ptr(database_->newAttachedStatement());
 
+#ifndef NDEBUG
   if( verbose_ && dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
-    fprintf(stderr,"%"PRId64"\n",gettimeofday());
+    fprintf(stderr,"%"PRId64"\n",gettimeofday() / 1000000);
     fbcpp::api.open();
     struct tm tm0 = time2tm(gettimeofday()), tm1 = time2tm(getlocaltimeofday());
     ISC_TIMESTAMP isct0 = fbcpp::tm2IscTimeStamp(tm0), isct1 = fbcpp::tm2IscTimeStamp(tm1);
@@ -599,6 +603,7 @@ void Logger::main()
     );
     fbcpp::api.close();
   }
+#endif
 
   stFileStatSel_->text(
     "SELECT " + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
@@ -834,18 +839,19 @@ int main(int _argc,char * _argv[])
         stdErr.fileName(argv()[i + 1]);
       }
     }
-    /*AsyncFile f("C:/DB/test.txt");
-    f.readOnly(true).open();
-    AsyncFile::LineGetBuffer lgb(f);
-    utf8::String s0, s1, s2, s3;
-    bool ln0 = f.gets(s0,&lgb);
-    bool ln1 = f.gets(s1,&lgb);
-    bool ln2 = f.gets(s2,&lgb);
-    bool ln3 = f.gets(s3,&lgb);
-    uint64_t sz = lgb.tell();*/
-    /*uint64_t lti = getlocaltimeofday(), lti2;
-    struct tm lt = time2tm(lti);
-    lti2 = tm2Time(lt);*/
+#ifndef NDEBUG
+    static const uint8_t text[] = 
+      "012345678ABCDEF"
+      "012345678ABCDEF"
+    ;
+    uint8_t dText[sizeof(text)];
+    AutoPtr<uint8_t> cText;
+    LZWFilter lzw;
+    lzw.compress(text,sizeof(text),true);
+    cText.xchg(lzw.out());
+    lzw.decompress(cText,lzw.outSize(),true);
+    dText[0] = dText[0];
+#endif
     if( dispatch ){
       macroscope::Logger logger;
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
