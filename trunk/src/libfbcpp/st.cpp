@@ -28,10 +28,18 @@
 //---------------------------------------------------------------------------
 namespace fbcpp {
 //---------------------------------------------------------------------------
+const int64_t iscTimeOffset = INT64_C(3506727600) + INT64_C(10800);
+//---------------------------------------------------------------------------
 int64_t iscTimeStamp2Time(const ISC_TIMESTAMP & stamp)
 {
   int64_t t = stamp.timestamp_date;
-  t = (t << 16) + (t << 14) + (t << 12) + (t << 8) + (t << 7) + stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - INT64_C(3506727600);
+  t = 
+    (t << 16) +
+    (t << 14) +
+    (t << 12) +
+    (t << 8) +
+    (t << 7) +
+    stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - iscTimeOffset;
   t *= 1000000;
   t += (stamp.timestamp_time % ISC_TIME_SECONDS_PRECISION) * 100;
   return t;
@@ -41,26 +49,33 @@ struct timeval iscTimeStamp2Timeval(const ISC_TIMESTAMP & stamp)
 {
   struct timeval tv;
   int64_t t = stamp.timestamp_date;
-  tv.tv_sec = long((t << 16) + (t << 14) + (t << 12) + (t << 8) + (t << 7) + stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - INT64_C(3506727600));
+  tv.tv_sec = long(
+    (t << 16) + 
+    (t << 14) + 
+    (t << 12) + 
+    (t << 8) + 
+    (t << 7) +
+    stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - iscTimeOffset);
   tv.tv_usec = (stamp.timestamp_time % ISC_TIME_SECONDS_PRECISION) * 100;
   return tv;
 }
 //---------------------------------------------------------------------------
 struct tm iscTimeStamp2tm(const ISC_TIMESTAMP & stamp)
 {
-  time_t t = (stamp.timestamp_date << 16) +
-             (stamp.timestamp_date << 14) +
-	     (stamp.timestamp_date << 12) +
-	     (stamp.timestamp_date << 8) +
-	     (stamp.timestamp_date << 7) +
-	     stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - INT64_C(3506727600);
+  time_t t =
+    (stamp.timestamp_date << 16) +
+    (stamp.timestamp_date << 14) +
+    (stamp.timestamp_date << 12) +
+    (stamp.timestamp_date << 8) +
+    (stamp.timestamp_date << 7) +
+    stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - iscTimeOffset;
   return ksys::time2tm(t * 1000000u);
 }
 //---------------------------------------------------------------------------
 ISC_TIMESTAMP time2IscTimeStamp(int64_t stamp)
 {
   ISC_TIMESTAMP iscStamp;
-  int64_t t = stamp / 1000000 + INT64_C(3506727600);
+  int64_t t = stamp / 1000000 + iscTimeOffset;
   iscStamp.timestamp_date = ISC_DATE(t / 86400);
   iscStamp.timestamp_time = ISC_TIME((t % 86400) * ISC_TIME_SECONDS_PRECISION + (stamp % 1000000) / 100);
   return iscStamp;
@@ -69,7 +84,7 @@ ISC_TIMESTAMP time2IscTimeStamp(int64_t stamp)
 ISC_TIMESTAMP timeval2IscTimeStamp(const struct timeval & stamp)
 {
   ISC_TIMESTAMP iscStamp;
-  int64_t t = stamp.tv_sec + INT64_C(3506727600);
+  int64_t t = stamp.tv_sec + iscTimeOffset;
   iscStamp.timestamp_date = ISC_DATE(t / 86400);
   iscStamp.timestamp_time = ISC_TIME((t % 86400) * ISC_TIME_SECONDS_PRECISION + stamp.tv_usec / 100);
   return iscStamp;
@@ -78,8 +93,7 @@ ISC_TIMESTAMP timeval2IscTimeStamp(const struct timeval & stamp)
 ISC_TIMESTAMP tm2IscTimeStamp(struct tm stamp)
 {
   ISC_TIMESTAMP iscStamp;
-  stamp.tm_isdst = 0;
-  int64_t t = timegm(&stamp) + INT64_C(3506727600);
+  int64_t t = timegm(&stamp) + iscTimeOffset;
   iscStamp.timestamp_date = ISC_DATE(t / 86400);
   iscStamp.timestamp_time = ISC_TIME((t % 86400) * ISC_TIME_SECONDS_PRECISION);
   return iscStamp;
