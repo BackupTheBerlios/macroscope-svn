@@ -320,6 +320,7 @@
 #define GNUG_DESTRUCTOR __attribute__((destructor))
 #define DECLSPEC_NORETURN
 #define GNUG_NORETURN __attribute__((noreturn))
+#define __forceinline __inline__
 #else
 #define DECLSPEC_NOTHROW __declspec(nothrow)
 #define GNUG_NOTHROW
@@ -382,9 +383,21 @@ static inline uintptr_t getpagesize()
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_BE32ENC
+#if !HAVE_BE16ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-static __inline void be32enc(void * pp,uint32_t u)
+__forceinline void be16enc(void * pp,uint16_t u)
+{
+  unsigned char *p = (unsigned char *)pp;
+
+  p[0] = (u >> 8) & 0xff;
+  p[1] = u & 0xff;
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_BE32ENC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline void be32enc(void * pp,uint32_t u)
 {
   uint8_t * p = (uint8_t *) pp;
 
@@ -396,13 +409,119 @@ static __inline void be32enc(void * pp,uint32_t u)
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if !HAVE_BE32DEC
+#if !HAVE_BE64ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-static __inline uint32_t be32dec(const void * pp)
+__forceinline void be64enc(void *pp, uint64_t u)
+{
+  unsigned char *p = (unsigned char *)pp;
+
+  be32enc(p,(uint32_t) (u >> 32));
+  be32enc(p + 4,(uint32_t) (u & 0xffffffff));
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_LE16ENC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline void le16enc(void *pp, uint16_t u)
+{
+  unsigned char *p = (unsigned char *)pp;
+
+  p[0] = u & 0xff;
+  p[1] = (u >> 8) & 0xff;
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_LE32ENC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline void le32enc(void *pp, uint32_t u)
+{
+  unsigned char *p = (unsigned char *)pp;
+
+  p[0] = u & 0xff;
+  p[1] = (u >> 8) & 0xff;
+  p[2] = (u >> 16) & 0xff;
+  p[3] = (u >> 24) & 0xff;
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_LE64ENC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline void le64enc(void *pp, uint64_t u)
+{
+  unsigned char *p = (unsigned char *)pp;
+
+  le32enc(p,(uint32_t) (u & 0xffffffff));
+  le32enc(p + 4,(uint32_t) (u >> 32));
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_BE16DEC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline uint16_t be16dec(const void * pp)
+{
+  unsigned char const *p = (unsigned char const *)pp;
+ 
+  return ((p[0] << 8) | p[1]);
+}
+
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_BE32DEC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline uint32_t be32dec(const void * pp)
 {
   uint8_t const * p = (uint8_t const *) pp;
   
   return ((p[0] << 24) | (p[1] << 16) | (p[2] << 8) | p[3]);
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_BE64DEC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline uint64_t be64dec(const void *pp)
+{
+  unsigned char const *p = (unsigned char const *)pp;
+
+  return (((uint64_t)be32dec(p) << 32) | be32dec(p + 4));
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_LE16DEC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline uint16_t le16dec(const void *pp)
+{
+  unsigned char const *p = (unsigned char const *)pp;
+
+  return ((p[1] << 8) | p[0]);
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_LE32DEC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline uint32_t le32dec(const void *pp)
+{
+  unsigned char const *p = (unsigned char const *)pp;
+
+  return ((p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0]);
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if !HAVE_LE64DEC && BYTE_ORDER == LITTLE_ENDIAN
+//---------------------------------------------------------------------------
+__forceinline uint64_t le64dec(const void *pp)
+{
+  unsigned char const *p = (unsigned char const *)pp;
+
+  return (((uint64_t)le32dec(p + 4) << 32) | le32dec(p));
 }
 //---------------------------------------------------------------------------
 #endif

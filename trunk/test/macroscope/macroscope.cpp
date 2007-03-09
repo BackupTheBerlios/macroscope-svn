@@ -841,16 +841,24 @@ int main(int _argc,char * _argv[])
     }
 #ifndef NDEBUG
     static const uint8_t text[] = 
-      "012345678ABCDEF"
-      "012345678ABCDEF"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
     ;
     uint8_t dText[sizeof(text)];
     AutoPtr<uint8_t> cText;
     LZWFilter lzw;
+    Vector<utf8::String> fileNamesVector;
+    //getDirList(fileNamesVector,"c:/windows/system32/*.dll");
+    //getDirList(fileNamesVector,"c:/windows/system32/*.exe");
+    //getDirList(fileNamesVector,"G:/Library/Коллекция/*.txt");
+    Array<utf8::String> fileNames(fileNamesVector);
+    lzw.genStatisticTable(fileNames << getExecutableName());
     lzw.initialize();
     lzw.compress(text,sizeof(text),true);
     cText.xchg(lzw.out());
-    lzw.decompress(cText,lzw.outSize(),true);
+    uintptr_t outSize = lzw.outSize();
+    lzw.initialize();
+    lzw.decompress(cText,outSize,true);
     dText[0] = dText[0];
 #endif
     if( dispatch ){

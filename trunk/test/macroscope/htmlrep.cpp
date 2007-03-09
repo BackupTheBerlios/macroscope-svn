@@ -954,6 +954,7 @@ void Logger::writeHtmlTail(AsyncFile & f)
   un.nodename = ksock::SockAddr::gethostname();
 #endif
   f <<
+    "Start time: " + utf8::time2Str(ellapsed_) +
     "Finish time: " + utf8::time2Str(getlocaltimeofday()) +
     "<BR>\n" +
     "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n" +

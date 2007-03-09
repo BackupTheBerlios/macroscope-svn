@@ -39,10 +39,12 @@ template <class T> class Vector {
     uintptr_t max_;
   public:
     Vector();
+    Vector(const Array<T> & s);
     Vector(const Vector<T> & s);
     ~Vector();
 
-    Vector<T> &      operator =(const Vector<T> & s);
+    Vector<T> & operator =(const Array<T> & s);
+    Vector<T> & operator =(const Vector<T> & s);
     T &               operator[](intptr_t i);
     const T &         operator[](intptr_t i) const;
     T &               operator[](uintptr_t i);
@@ -91,6 +93,11 @@ template <class T> inline Vector<T>::Vector(const Vector<T> & s) : ptr_(NULL), c
   assign(s);
 }
 //---------------------------------------------------------------------------
+template <class T> inline Vector<T>::Vector(const Array<T> & s) : ptr_(NULL), count_(0), max_(0)
+{
+  *this = s;
+}
+//---------------------------------------------------------------------------
 template <class T>
 #ifndef __BCPLUSPLUS__
  inline
@@ -105,6 +112,14 @@ template <class T> inline
 Vector<T> & Vector<T>::operator =(const Vector<T> & s)
 {
   return assign(s);
+}
+//---------------------------------------------------------------------------
+template <class T> inline
+Vector<T> & Vector<T>::operator =(const Array<T> & s)
+{
+  resize(s.count_);
+  for( intptr_t i = count_ - 1; i >= 0; i-- ) *ptr_[i] = s[i];
+  return *this;
 }
 //---------------------------------------------------------------------------
 template <class T> inline

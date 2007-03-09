@@ -1439,19 +1439,20 @@ void getDirList(
   bool includeDirs,
   bool exMaskAsList)
 {
-  if( currentFiber() != NULL ){
-    currentFiber()->event_.timeout_ = ~uint64_t(0);
-    currentFiber()->event_.dirList_ = &list;
-    currentFiber()->event_.string0_ = dirAndMask;
-    currentFiber()->event_.string1_ = exMask;
-    currentFiber()->event_.recursive_ = recursive;
-    currentFiber()->event_.includeDirs_ = includeDirs;
-    currentFiber()->event_.exMaskAsList_ = exMaskAsList;
-    currentFiber()->event_.type_ = etDirList;
-    currentFiber()->thread()->postRequest();
-    currentFiber()->switchFiber(currentFiber()->mainFiber());
-    assert( currentFiber()->event_.type_ == etDirList );
-    if( currentFiber()->event_.errno_ != 0 )
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.dirList_ = &list;
+    fiber->event_.string0_ = dirAndMask;
+    fiber->event_.string1_ = exMask;
+    fiber->event_.recursive_ = recursive;
+    fiber->event_.includeDirs_ = includeDirs;
+    fiber->event_.exMaskAsList_ = exMaskAsList;
+    fiber->event_.type_ = etDirList;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == etDirList );
+    if( fiber->event_.errno_ != 0 )
       newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + dirAndMask)->throwSP();
     return;
   }

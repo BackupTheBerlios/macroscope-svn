@@ -29,16 +29,20 @@
 //-----------------------------------------------------------------------------
 namespace ksys {
 //-----------------------------------------------------------------------------
+template <class T> class Vector;
+//-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template< class T> class Array {
+template <class T> class Array {
   public:
     ~Array();
     Array(T * ptr = NULL);
     Array(const T & element);
-    Array(const Array< T> & array);
+    Array(const Array<T> & array);
+    Array(const Vector<T> & vector);
 
     Array<T> & operator = (const Array<T> & array);
+    Array<T> & operator = (const Vector<T> & vector);
     Array<T> & operator = (const T & element);
 #if !HAVE_INTPTR_T_AS_INT
     T &        operator [] (int i);
@@ -53,6 +57,8 @@ template< class T> class Array {
 
     operator T * (){ return ptr_; }
     operator const T * () const { return ptr_; }
+
+    Array<T> & operator << (const T & element){ return add(element); }
 
     const uintptr_t & count() const;
     Array<T> &       clear();
@@ -117,6 +123,11 @@ template< class T> inline Array< T>::Array(const Array< T> & array) : ptr_(NULL)
   *this = array;
 }
 //-----------------------------------------------------------------------------
+template <class T> inline Array<T>::Array(const Vector<T> & vector) : ptr_(NULL), count_(0)
+{
+  *this = vector;
+}
+//-----------------------------------------------------------------------------
 template< class T>
 #ifndef __BCPLUSPLUS__
 inline
@@ -127,6 +138,21 @@ Array< T> & Array<T>::operator =(const Array< T> & array)
   newArray.ptr_ = (T *) kmalloc(sizeof(T) * array.count_);
   while( newArray.count_ < array.count_ ){
     new (newArray.ptr_ + newArray.count_) T(array.ptr_[newArray.count_]);
+    newArray.count_++;
+  }
+  return replace(newArray);
+}
+//-----------------------------------------------------------------------------
+template <class T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+Array<T> & Array<T>::operator = (const Vector<T> & vector)
+{
+  Array<T> newArray;
+  newArray.ptr_ = (T *) kmalloc(sizeof(T) * vector.count());
+  while( newArray.count_ < vector.count() ){
+    new (newArray.ptr_ + newArray.count_) T(vector[newArray.count_]);
     newArray.count_++;
   }
   return replace(newArray);
