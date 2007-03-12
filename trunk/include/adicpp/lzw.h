@@ -102,6 +102,8 @@ class LZWFilterT {
     LZWFilterT<IO> & initTable();    
     LZWFilterT<IO> & cleanupTable();
     LZWFilterT<IO> & cleanupOut();
+    LZWFilterT<IO> & writeCode(StringT * pStr2);
+    uintptr_t readCode(const uint8_t * & buf,uintptr_t & count);
   private:
 };
 //---------------------------------------------------------------------------
@@ -161,6 +163,40 @@ LZWFilterT<IO> & LZWFilterT<IO>::cleanupOut()
 }
 //---------------------------------------------------------------------------
 template <typename IO> inline
+LZWFilterT<IO> & LZWFilterT<IO>::writeCode(StringT * pStr2)
+{
+  uint8_t fStr[sizeof(StringT)];
+  StringT * pStr = (StringT *) fStr;
+  pStr->l_ = pStr2->l_ - 1;
+  pStr->s_.ptr(pStr2->s_);
+  uint32_t i = uint32_t(tableHash_.find(*pStr)->i_);
+  if( outCount_ + sizeof(uint32_t) >= outMax_ ){
+    out_.realloc(outMax_ << 1);
+    outMax_ = outMax_ << 1;
+  }
+  if( i < (1u << 6) ){
+    *(uint8_t *) (out_.ptr() + outCount_) = uint8_t(i << 2);
+    outCount_ += sizeof(uint8_t);
+  }
+  else if( i < (1u << 14) ){
+    le16enc(out_.ptr() + outCount_,uint16_t((i << 2) | 1));
+    outCount_ += sizeof(uint16_t);
+  }
+  else if( i < (1u << 22) ){
+    le32enc(out_.ptr() + outCount_,uint32_t((i << 2) | 2));
+    outCount_ += sizeof(uint16_t) + sizeof(uint8_t);
+  }
+  else if( i < (1u << 30) ){
+    le32enc(out_.ptr() + outCount_,uint32_t((i << 2) | 3));
+    outCount_ += sizeof(uint32_t);
+  }
+  else {
+    assert( 0 );
+  }
+  return *this;
+}
+//---------------------------------------------------------------------------
+template <typename IO> inline
 LZWFilterT<IO> & LZWFilterT<IO>::compress(const void * buf,uintptr_t count,bool lastBlock)
 {
   uintptr_t ml;
@@ -187,48 +223,9 @@ LZWFilterT<IO> & LZWFilterT<IO>::compress(const void * buf,uintptr_t count,bool 
     }
     pStr2->s_[pStr2->l_++] = *(const uint8_t *) buf;
     tableHash_.insert(*pStr2,false,false,&pStr);
-    if( pStr == pStr2 || (count == 1 && lastBlock) ){
+    if( pStr == pStr2 ){
       if( ml > pStr2->l_ ) pStr2->s_.realloc(pStr2->l_);
-      uint8_t fStr[sizeof(StringT)];
-      pStr = (StringT *) fStr;
-      pStr->l_ = pStr2->l_ - 1;
-      pStr->s_.ptr(pStr2->s_);
-      uint32_t i = uint32_t(tableHash_.find(*pStr)->i_);
-      if( i < (1u << 6) ){
-        if( outCount_ + sizeof(uint8_t) >= outMax_ ){
-          out_.realloc(outMax_ << 1);
-          outMax_ = outMax_ << 1;
-        }
-        *(uint8_t *) (out_.ptr() + outCount_) = uint8_t(i << 2);
-        outCount_ += sizeof(uint8_t);
-      }
-      else if( i < (1u << 14) ){
-        if( outCount_ + sizeof(uint16_t) >= outMax_ ){
-          out_.realloc(outMax_ << 1);
-          outMax_ = outMax_ << 1;
-        }
-        be16enc(out_.ptr() + outCount_,uint16_t((i << 2) | 0x1));
-        outCount_ += sizeof(uint16_t);
-      }
-      else if( i < (1u << 22) ){
-        if( outCount_ + sizeof(uint16_t) + sizeof(uint8_t) >= outMax_ ){
-          out_.realloc(outMax_ << 1);
-          outMax_ = outMax_ << 1;
-        }
-        be32enc(out_.ptr() + outCount_,uint32_t((i << 2) | 0x2));
-        outCount_ += sizeof(uint16_t) + sizeof(uint8_t);
-      }
-      else if( i < (1u << 30) ){
-        if( outCount_ + sizeof(uint32_t) >= outMax_ ){
-          out_.realloc(outMax_ << 1);
-          outMax_ = outMax_ << 1;
-        }
-        be32enc(out_.ptr() + outCount_,uint32_t((i << 2) | 0x3));
-        outCount_ += sizeof(uint32_t);
-      }
-      else {
-        assert( 0 );
-      }
+      writeCode(pStr2);
       pStr2 = &table_.add();
       pStr2->s_.realloc(ml = 64);
       pStr2->l_ = 1;
@@ -238,10 +235,44 @@ LZWFilterT<IO> & LZWFilterT<IO>::compress(const void * buf,uintptr_t count,bool 
     buf = (const uint8_t *) buf + 1;
     count--;
   }
+  if( lastBlock ) writeCode(pStr2);
   io_->writeBuffer(out_,outSize_ = outCount_);
   outCount_ = 0;
   if( lastBlock ) cleanupTable();
   return *this;
+}
+//---------------------------------------------------------------------------
+template <typename IO> inline
+uintptr_t LZWFilterT<IO>::readCode(const uint8_t * & buf,uintptr_t & count)
+{
+  uintptr_t i;
+  switch( *buf & 3 ){
+    case 0 :
+      if( count == 0 ) break;
+      count--;
+      buf++;
+      return *(buf - 1) >> 2;
+    case 1 :
+      if( count < 2 ) break;
+      count -= 2;
+      buf += 2;
+      return le16dec(buf - 2) >> 2;
+    case 2 :
+      if( count < 3 ) break;
+      count -= 3;
+      i = 0;
+      memcpy(&i,buf,3);
+      return le32dec(&i) >> 2;
+      break;
+    case 3 :
+      if( count < 4 ) break;
+      count -= 4;
+      return le32dec(buf - 4) >> 2;
+    default :
+      assert(0);
+  }
+  newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  return 0;
 }
 //---------------------------------------------------------------------------
 template <typename IO> inline
@@ -254,31 +285,8 @@ LZWFilterT<IO> & LZWFilterT<IO>::decompress(const void * buf,uintptr_t count,boo
     out_.realloc(getpagesize());
     outMax_ = getpagesize();
   }
-  while( count >= 0 ){
-    uint32_t i, j;
-    switch( *(const uint8_t *) buf & 0x3 ){
-      case 0 :
-        i = *(const uint8_t *) buf >> 2;
-        j = 1;
-        break;
-      case 1 :
-        i = be16dec(buf) >> 2;
-        j = 2;
-        break;
-      case 2 :
-        i = 0;
-        memcpy(&i,buf,3);
-        i = be32dec(&i) >> 2;
-        j = 3;
-        break;
-      case 3 :
-        i = be32dec(buf) >> 2;
-        j = 4;
-        break;
-      default :
-        assert(0);
-        abort();
-    }
+  while( count > 0 ){
+    uintptr_t i = readCode(*(const uint8_t **) &buf,count);
     if( i < table_.count() ){ // Если строка найдена в таблице
       pStr = &table_[i];
 // Строка = строка для предыдущего кода + первый символ строки для текущего кода
@@ -315,8 +323,6 @@ LZWFilterT<IO> & LZWFilterT<IO>::decompress(const void * buf,uintptr_t count,boo
 // Добавление строки в словарь на первую свободную позицию
     
     prevStr = pStr;
-    buf = (const uint8_t *) buf + j;
-    count -= j;
   }
   io_->writeBuffer(out_,outSize_ = outCount_);
   outCount_ = 0;

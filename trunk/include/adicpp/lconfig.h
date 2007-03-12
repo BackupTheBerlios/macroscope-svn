@@ -425,10 +425,7 @@ __forceinline void be64enc(void *pp, uint64_t u)
 //---------------------------------------------------------------------------
 __forceinline void le16enc(void *pp, uint16_t u)
 {
-  unsigned char *p = (unsigned char *)pp;
-
-  p[0] = u & 0xff;
-  p[1] = (u >> 8) & 0xff;
+  *(uint16_t *) pp = u;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -437,12 +434,7 @@ __forceinline void le16enc(void *pp, uint16_t u)
 //---------------------------------------------------------------------------
 __forceinline void le32enc(void *pp, uint32_t u)
 {
-  unsigned char *p = (unsigned char *)pp;
-
-  p[0] = u & 0xff;
-  p[1] = (u >> 8) & 0xff;
-  p[2] = (u >> 16) & 0xff;
-  p[3] = (u >> 24) & 0xff;
+  *(uint32_t *) pp = u;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -451,10 +443,7 @@ __forceinline void le32enc(void *pp, uint32_t u)
 //---------------------------------------------------------------------------
 __forceinline void le64enc(void *pp, uint64_t u)
 {
-  unsigned char *p = (unsigned char *)pp;
-
-  le32enc(p,(uint32_t) (u & 0xffffffff));
-  le32enc(p + 4,(uint32_t) (u >> 32));
+  *(uint64_t *) pp = u;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -497,9 +486,7 @@ __forceinline uint64_t be64dec(const void *pp)
 //---------------------------------------------------------------------------
 __forceinline uint16_t le16dec(const void *pp)
 {
-  unsigned char const *p = (unsigned char const *)pp;
-
-  return ((p[1] << 8) | p[0]);
+  return *(uint16_t *) pp;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -508,9 +495,7 @@ __forceinline uint16_t le16dec(const void *pp)
 //---------------------------------------------------------------------------
 __forceinline uint32_t le32dec(const void *pp)
 {
-  unsigned char const *p = (unsigned char const *)pp;
-
-  return ((p[3] << 24) | (p[2] << 16) | (p[1] << 8) | p[0]);
+  return *(uint32_t *) pp;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -519,9 +504,7 @@ __forceinline uint32_t le32dec(const void *pp)
 //---------------------------------------------------------------------------
 __forceinline uint64_t le64dec(const void *pp)
 {
-  unsigned char const *p = (unsigned char const *)pp;
-
-  return (((uint64_t)le32dec(p + 4) << 32) | le32dec(p));
+  return *(uint64_t *) pp;
 }
 //---------------------------------------------------------------------------
 #endif
