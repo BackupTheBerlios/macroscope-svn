@@ -342,16 +342,20 @@ void Logger::clearBPFTCache()
       paramAsMutant("ETYear",time2tm(tm2Time(curTimeETYear) - getgmtoffset()))->
       paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTMon) - getgmtoffset()))->
       paramAsMutant("ETMon",time2tm(tm2Time(curTimeETMon) - getgmtoffset()))->
+      paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTDay) - getgmtoffset()))->
+      paramAsMutant("ETMon",time2tm(tm2Time(curTimeETDay) - getgmtoffset()))->
       paramAsMutant("BTHour",time2tm(tm2Time(curTimeBTHour) - getgmtoffset()))->
       paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) - getgmtoffset()));
   }
   statement_->execute();
   if( verbose_ ) fprintf(stderr,
-    "bpft cache cleared for:\n  %s %s\n  %s %s\n  %s %s\n",
+    "bpft cache cleared for:\n  %s %s\n  %s %s\n  %s %s\n  %s %s\n",
     (const char *) utf8::tm2Str(curTimeBTYear).getOEMString(),
     (const char *) utf8::tm2Str(curTimeETYear).getOEMString(),
     (const char *) utf8::tm2Str(curTimeBTMon).getOEMString(),
     (const char *) utf8::tm2Str(curTimeETMon).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeBTDay).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETDay).getOEMString(),
     (const char *) utf8::tm2Str(curTimeBTHour).getOEMString(),
     (const char *) utf8::tm2Str(curTimeETHour).getOEMString()
   );
