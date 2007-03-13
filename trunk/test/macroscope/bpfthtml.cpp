@@ -263,17 +263,18 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
     }
     statement4_->paramAsMutant("st_bt",pStatement->paramAsMutant("BT"));
     statement4_->paramAsMutant("st_et",pStatement->paramAsMutant("ET"));
-    bool sign = true;
+//    bool sign = true;
     for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
       statement4_->paramAsString("st_ip",pStatement->valueAsString("st_ip"));
       uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
-      if( pStatement == statement_ && sum1 < minSignificantThreshold_ && sign ){
+      if( pStatement == statement_ && sum1 < minSignificantThreshold_ /*&& sign*/ ){
         statement4_->paramAsString("st_ip",ip4AddrToIndex(0xFFFFFFFF));
         statement4_->paramAsMutant("st_dgram_bytes",pStatement->sum("SUM1",0,i));
         statement4_->paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
         statement4_->execute();
-        sign = false;
+//        sign = false;
+	break;
       }
       statement4_->paramAsMutant("st_dgram_bytes",sum1);
       statement4_->paramAsMutant("st_data_bytes",sum2);
