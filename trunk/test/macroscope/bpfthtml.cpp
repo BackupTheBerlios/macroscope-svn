@@ -157,6 +157,7 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
     if( stDNSCacheSel_->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
       stDNSCacheSel_->fetchAll();
       name = stDNSCacheSel_->valueAsString("st_name");
+      dnsCacheHitCount_++;
     }
     else {
       if( resolveDNSNames_ ){
@@ -171,6 +172,7 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
       else {
         name = pAddr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
       }
+      dnsCacheMissCount_++;
     }
     pAddr->name_ = name;
     addr.ptr(NULL);
@@ -179,6 +181,7 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
   }
   else {
     dnsCacheLRU_.remove(*pAddr);
+    dnsCacheHitCount_++;
   }
   dnsCacheLRU_.insToHead(*pAddr);
   return pAddr->name_;
@@ -186,18 +189,18 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
 //------------------------------------------------------------------------------
 void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
-  intptr_t i;
+  intptr_t i, j, k;
   bool updateCache = true;
   for(;;){
     if( pStatement == statement_ ){
       if( !statement2_->prepared() ){
         statement2_->text(
           "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-  	  "  st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-	  "FROM INET_BPFT_STAT_CACHE "
-	  "WHERE"
-	  "  st_if = :if AND st_bt = :BT AND st_et = :ET "
-	  "ORDER BY SUM1"
+  	      "  st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+	        "FROM INET_BPFT_STAT_CACHE "
+	        "WHERE"
+	        "  st_if = :if AND st_bt = :BT AND st_et = :ET "
+	        "ORDER BY SUM1, st_ip"
         )->prepare();
         statement2_->paramAsString("if",sectionName_);
       }
@@ -213,10 +216,10 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
       if( !statement3_->prepared() ){
         statement3_->text(
           "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-	  "  st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-	  "FROM INET_BPFT_STAT_CACHE "
-	  "WHERE"
-	  "  st_if = :if AND st_bt = :BT AND st_et = :ET AND st_ip = :host"
+	        "  st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+	        "FROM INET_BPFT_STAT_CACHE "
+	        "WHERE"
+	        "  st_if = :if AND st_bt = :BT AND st_et = :ET AND st_ip = :host"
         )->prepare();
         statement3_->paramAsString("if",sectionName_);
       }
@@ -269,11 +272,17 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
     *pDataBytes = pStatement->sum("SUM2");
   }
   else {
+    k = j = -1;
     for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
-      if( (uintmax_t) pStatement->valueAsMutant("SUM1") < minSignificantThreshold_ ) break;
+      if( (uintmax_t) pStatement->valueAsMutant("SUM1") < minSignificantThreshold_ ) j = i;
+      if( utf8::String(pStatement->valueAsMutant("st_ip")).strcmp(ip4AddrToIndex(0xFFFFFFFF)) == 0 ) k = i;
     }
-    pStatement->unload(*pResult,i + 1);
+    pStatement->unload(*pResult,j = j >= 0 ? j + 1 : 0);
+    if( k >= 0 && k <= j ){
+      pResult->addRow();
+      pStatement->unloadRow(*pResult,k);
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -335,6 +344,8 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
   Mutant m0, m1, m2;
   AsyncFile f;
   if( level == rlYear ){
+    dnsCacheHitCount_ = 0;
+    dnsCacheMissCount_ = 0;
     if( !(bool) config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
     if( verbose_ ) fprintf(stderr,"\n");
     resolveDNSNames_ = config_->valueByPath(section_ + ".html_report.resolve_dns_names",false);
@@ -824,7 +835,30 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     beginTime = beginTime2;
   }	  
   f <<
-    "DNS cache size: " + utf8::int2Str((uintmax_t) dnsCache_.count()) + "<BR>\n"
+    "DNS cache size: " + utf8::int2Str((uintmax_t) dnsCache_.count()) + ", "
+    "hit: " + utf8::int2Str(dnsCacheHitCount_) + ", " +
+    "miss: " + utf8::int2Str(dnsCacheMissCount_) + ", " +
+    "hit ratio: " + (
+      dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheHitCount_ > 0 ?
+        utf8::int2Str(dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_)) + "." +
+        utf8::int2Str(
+          dnsCacheHitCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheHitCount_) - 
+          dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u
+        )
+        :
+        utf8::String("-")
+    ) + ", " +
+    "miss ratio: " + (
+      dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheMissCount_ > 0 ?
+        utf8::int2Str(dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_)) + "." +
+        utf8::int2Str(
+          dnsCacheMissCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheHitCount_) - 
+          dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u
+        )
+        :
+        utf8::String("-")
+    ) +
+    "<BR>\n"
   ;
   writeHtmlTail(f);
   f.resize(f.tell());

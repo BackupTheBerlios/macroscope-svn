@@ -241,6 +241,8 @@ class Logger {
     > DNSCacheLRU;
     DNSCacheLRU dnsCacheLRU_;
     uintptr_t dnsCacheSize_;
+    uintmax_t dnsCacheHitCount_;
+    uintmax_t dnsCacheMissCount_;
 
     int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
     void writeHtmlHead(AsyncFile & f);

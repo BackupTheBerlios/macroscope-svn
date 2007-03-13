@@ -98,10 +98,7 @@ void Logger::writeUserTop(
     execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
     AsyncFile f(file);
-    f.createIfNotExist(true).open();
-#ifndef NDEBUG
-    f.resize(0);
-#endif
+    f.createIfNotExist(true).open().resize(0);
     Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",0644));
     Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
     Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
@@ -203,10 +200,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
   if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_engine",false) )
     threads_.add(newObjectR1C2C3<MTWriter>(*this,file,year)).resume();
   AsyncFile f(file);
-  f.createIfNotExist(true).open();
-#ifndef NDEBUG
-  f.resize(0);
-#endif
+  f.createIfNotExist(true).open().resize(0);
   Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",0644));
   Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
   Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
@@ -617,10 +611,7 @@ void Logger::writeHtmlYearOutput()
     AsyncFile f(
       includeTrailingPathDelimiter(htmlDir_) + config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
     );
-    f.createIfNotExist(true).open();
-#ifndef NDEBUG
-    f.resize(0);
-#endif
+    f.createIfNotExist(true).open().resize(0);
     Mutant m0(config_->valueByPath(section_ + ".html_report.directory_mode",0755));
     Mutant m1(config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid()));
     Mutant m2(config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid()));
@@ -854,9 +845,7 @@ void Logger::writeHtmlYearOutput()
       beginTime = beginTime2;
     }
     database_->commit();
-    f << "Ellapsed time: " <<
-      utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n" +
-      "Cache size: " + utf8::int2Str((uintmax_t) trafCache_.count()) + "<BR>\n";
+    f << "Cache size: " + utf8::int2Str((uintmax_t) trafCache_.count()) + "<BR>\n";
     writeHtmlTail(f);
     f.resize(f.tell());
     if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
