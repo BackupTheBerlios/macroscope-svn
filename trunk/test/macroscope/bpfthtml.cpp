@@ -189,27 +189,40 @@ utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
 //------------------------------------------------------------------------------
 void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
-  intptr_t i, j, k;
+  intptr_t i, cycle = 0;
   bool updateCache = true;
   for(;;){
     if( pStatement == statement_ ){
       if( !statement2_->prepared() ){
         statement2_->text(
           "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-  	      "  st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-	        "FROM INET_BPFT_STAT_CACHE "
-	        "WHERE"
-	        "  st_if = :if AND st_bt = :BT AND st_et = :ET "
-	        "ORDER BY SUM1, st_ip"
+	  " * FROM ("
+          "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+          "    st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+	  "  FROM INET_BPFT_STAT_CACHE "
+          "  WHERE"
+          "    st_if = :if AND st_bt = :BT AND st_et = :ET "
+          "  ORDER BY SUM1, st_ip "
+	  ") AS A "
+	  "WHERE A.st_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' OR A.SUM1 >= :threshold"
         )->prepare();
         statement2_->paramAsString("if",sectionName_);
       }
       statement2_->paramAsMutant("BT",pStatement->paramAsMutant("BT"));
       statement2_->paramAsMutant("ET",pStatement->paramAsMutant("ET"));
+      statement2_->paramAsMutant("threshold",minSignificantThreshold_);
       if( statement2_->execute()->fetch() ){
         statement2_->fetchAll();
         pStatement = statement2_;
         updateCache = false;
+#ifndef NDEBUG
+        if( verbose_ ) fprintf(stderr,
+          "bpft cache %s: %s %s\n",
+	  cycle == 0 ? "hit" : "miss",
+          (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
+          (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
+        );
+#endif
       }
     }
     else if( pStatement == statement6_ ){
@@ -266,23 +279,26 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
       statement4_->paramAsMutant("st_data_bytes",sum2);
       statement4_->execute();
     }
+    cycle++;
   }
   if( pResult == NULL ){
     *pDgramBytes = pStatement->sum("SUM1");
     *pDataBytes = pStatement->sum("SUM2");
   }
   else {
-    k = j = -1;
-    for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
-      pStatement->selectRow(i);
-      if( (uintmax_t) pStatement->valueAsMutant("SUM1") < minSignificantThreshold_ ) j = i;
-      if( utf8::String(pStatement->valueAsMutant("st_ip")).strcmp(ip4AddrToIndex(0xFFFFFFFF)) == 0 ) k = i;
-    }
-    pStatement->unload(*pResult,j = j >= 0 ? j + 1 : 0);
-    if( k >= 0 && k <= j ){
-      pResult->addRow();
-      pStatement->unloadRow(*pResult,k);
-    }
+//    k = j = -1;
+//    for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
+//      pStatement->selectRow(i);
+//      if( (uintmax_t) pStatement->valueAsMutant("SUM1") < minSignificantThreshold_ ) j = i;
+//      if( utf8::String(pStatement->valueAsMutant("st_ip")).strcmp(ip4AddrToIndex(0xFFFFFFFF)) == 0 ) k = i;
+//      if( i >= 0 && k >= 0 ) break;
+//    }
+//    pStatement->unload(*pResult,j = j >= 0 ? j + 1 : 0);
+//    if( k >= 0 && k <= j ){
+//      pResult->addRow();
+//      pStatement->unloadRow(*pResult,k);
+//    }
+    pStatement->unload(*pResult);
   }
 }
 //------------------------------------------------------------------------------
@@ -330,6 +346,15 @@ void Logger::clearBPFTCache()
       paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) - getgmtoffset()));
   }
   statement_->execute();
+  if( verbose_ ) fprintf(stderr,
+    "bpft cache cleared for:\n  %s %s\n  %s %s\n  %s %s\n",
+    (const char *) utf8::tm2Str(curTimeBTYear).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETYear).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeBTMon).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETMon).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeBTHour).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETHour).getOEMString()
+  );
 }
 //------------------------------------------------------------------------------
 utf8::String Logger::getDecor(const utf8::String & dname)

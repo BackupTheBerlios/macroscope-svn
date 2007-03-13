@@ -90,6 +90,14 @@
 #include <machine/atomic.h>
 #endif
 
+#if HAVE_MACHINE_CPUFUNC_H
+#include <machine/cpufunc.h>
+#endif
+
+#if HAVE_MACHINE_CPUFUNC_H
+#include <machine/specialreg.h>
+#endif
+
 #if HAVE_MEMORY_H
 #include <memory.h>
 #endif

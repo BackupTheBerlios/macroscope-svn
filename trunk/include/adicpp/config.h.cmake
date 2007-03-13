@@ -28,7 +28,11 @@
 #cmakedefine HAVE_SYS_TIME_H 1
 #cmakedefine HAVE_SYS_TIMEB_H 1
 #cmakedefine HAVE_SYS_STAT_H 1
+#cmakedefine HAVE_SYS_IOCTL_H 1
+#cmakedefine HAVE_SYS_SYSCTL_H 1
 #cmakedefine HAVE_MACHINE_ATOMIC_H 1
+#cmakedefine HAVE_MACHINE_CPUFUNC_H 1
+#cmakedefine HAVE_MACHINE_SPECIALREG_H 1
 #cmakedefine HAVE_UCONTEXT_H 1
 #cmakedefine HAVE_SYSLOG_H 1
 #cmakedefine HAVE_EXECINFO_H 1
@@ -40,6 +44,11 @@
 #cmakedefine HAVE_NETINET_IN_SYSTM_H 1
 #cmakedefine HAVE_NETINET_IP_H 1
 #cmakedefine HAVE_NETINET_TCP_H 1
+#cmakedefine HAVE_NET_IF_H 1
+#cmakedefine HAVE_NET_IF_TYPES_H 1
+#cmakedefine HAVE_NET_ROUTE_H 1
+#cmakedefine HAVE_NET_ETHERNET_H 1
+#cmakedefine HAVE_NET_IF_DL_H 1
 #cmakedefine HAVE_ARPA_INET_H 1
 #cmakedefine HAVE_NETDB_H 1
 #cmakedefine HAVE_PWD_H 1
@@ -275,6 +284,7 @@
 #cmakedefine HAVE_LZO1X_DECOMPRESS_ASM_SAFE 1
 #cmakedefine HAVE_LZO1X_DECOMPRESS_ASM_FAST 1
 #cmakedefine HAVE_LZO1X_DECOMPRESS_ASM_FAST_SAFE 1
+#cmakedefine HAVE_DO_CPUID 1
 
 #cmakedefine EMPTY_ARRAY_SIZE ${EMPTY_ARRAY_SIZE}
 

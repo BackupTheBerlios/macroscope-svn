@@ -2443,6 +2443,114 @@ utf8::String getMachineUniqueKey()
   VariantClear(&vtName);
   VariantClear(&vtMACAddress);
   return s;
+#elif HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H || HAVE_DO_CPUID
+  utf8::String key;
+#if HAVE_DO_CPUID
+  u_int regs[4];
+  do_cpuid(1,regs);
+  u_int cpu_id = regs[0]; // eax
+// regs[2]; // ecx
+  u_int cpu_feature = regs[3]; // edx
+  if( cpu_feature & CPUID_PSN ){
+    do_cpuid(3,regs);
+    char cpu_serial[32];
+    snprintf(cpu_serial,
+      sizeof(cpu_serial),
+      "%04x-%04x-%04x-%04x-%04x-%04x",
+      (cpu_id >> 16), (cpu_id & 0xffff),
+      (regs[3] >> 16), (regs[3] & 0xffff),
+      (regs[2] >> 16), (regs[2] & 0xffff)
+    );
+    key += cpu_serial;
+  }
+#endif
+#if HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H
+  int mib[6];
+  mib[0] = CTL_NET;
+  mib[1] = PF_ROUTE;
+  mib[2] = 0;
+  mib[3] = 0;                     /* address family */
+  mib[4] = NET_RT_IFLIST;
+  mib[5] = 0;
+  size_t needed;
+  AutoPtr<uint8_t> buf;
+
+  for(;;){
+    if( sysctl(mib,6,NULL,&needed,NULL,0) != 0 ){
+      int32_t err = errno;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    buf.realloc(needed);
+    if( sysctl(mib,6,buf,&needed,NULL,0) == 0 ) break;
+    if( errno != ENOMEM ){
+      int32_t err = errno;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    // Routing table grew, retrying
+  }
+  struct ifreq ifr;
+  struct if_msghdr * ifm, * nextifm;
+  struct ifa_msghdr * ifam;
+  struct sockaddr_dl * sdl;
+  const uint8_t * next = buf, * lim = next + needed;
+  while( next < lim ){
+    ifm = (struct if_msghdr *) next;
+    if( ifm->ifm_type == RTM_IFINFO ){
+      if( ifm->ifm_data.ifi_datalen == 0 )
+        ifm->ifm_data.ifi_datalen = sizeof(struct if_data);
+      sdl = (struct sockaddr_dl *)((char *)ifm + sizeof(struct if_msghdr) - sizeof(struct if_data) + ifm->ifm_data.ifi_datalen);
+//      if( ifm->ifm_flags & IFF_UP );
+//      if( sdl->sdl_type == IFT_ETHER );
+    }
+    else {
+      newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__ + utf8::String(" out of sync parsing NET_RT_IFLIST"))->throwSP();
+    }
+    char name[IFNAMSIZ];
+    memcpy(name,sdl->sdl_data,sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen);
+    name[sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen] = '\0';
+    ifr.ifr_addr.sa_family = AF_LINK;
+    strncpy(ifr.ifr_name,name,sizeof(ifr.ifr_name));
+    ksock::APIAutoInitializer ksockAPIAutoInitializer;
+    int s = socket(ifr.ifr_addr.sa_family,SOCK_DGRAM,0);
+    if( s == INVALID_SOCKET ){
+      int32_t err = errno;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( ioctl(s,SIOCGIFCAP,(caddr_t) &ifr) != 0 ){
+      int32_t err = errno;
+      close(s);
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    struct rt_addrinfo info;
+    info.rti_info[RTAX_IFA] = (struct sockaddr *) sdl;
+    if( sdl != NULL && sdl->sdl_alen > 0 ){
+      if( sdl->sdl_type == IFT_ETHER && sdl->sdl_alen == ETHER_ADDR_LEN ){
+#if HAVE_NET_ETHERNET_H
+        printf("name %s, ether %s\n",name,ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
+	key += ether_ntoa((const struct ether_addr *)LLADDR(sdl));
+#else
+#endif
+      }
+      else {
+        int n = sdl->sdl_nlen > 0 ? sdl->sdl_nlen + 1 : 0;
+#if HAVE_NET_IF_DL_H
+        printf("name %s, lladdr %s\n",name,link_ntoa(sdl) + n);
+	key += link_ntoa(sdl) + n;
+#else
+#endif
+      }
+    }
+    close(s);
+    while( next < lim ){
+      nextifm = (struct if_msghdr *) next;
+      if( nextifm->ifm_type != RTM_NEWADDR ) break;
+      if( ifam == NULL ) ifam = (struct ifa_msghdr *) nextifm;
+      next += nextifm->ifm_msglen;
+    }
+    next += ifm->ifm_msglen;
+  }
+#endif
+  return key;
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
   return utf8::String();

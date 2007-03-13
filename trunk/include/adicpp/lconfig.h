@@ -89,6 +89,26 @@
 #include <netinet/tcp.h>
 #endif
 
+#if HAVE_NET_IF_H
+#include <net/if.h>
+#endif
+
+#if HAVE_NET_IF_TYPES_H
+#include <net/if_types.h>
+#endif
+
+#if HAVE_NET_ROUTE_H
+#include <net/route.h>
+#endif
+
+#if HAVE_NET_ETHERNET_H
+#include <net/ethernet.h>
+#endif
+
+#if HAVE_NET_IF_DL_H
+#include <net/if_dl.h>
+#endif
+
 #if HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
@@ -207,6 +227,14 @@
 
 #if HAVE_SYS_EVENT_H
 #include <sys/event.h>
+#endif
+
+#if HAVE_SYS_IOCTL_H
+#include <sys/ioctl.h>
+#endif
+
+#if HAVE_SYS_SYSCTL_H
+#include <sys/sysctl.h>
 #endif
 
 #if HAVE_MATH_H
