@@ -25,6 +25,7 @@
  */
 
 #include <adicpp/lconfig.h>
+#include <adicpp/endian.h>
 #include <adicpp/sha/sha256.h>
 
 #if BYTE_ORDER == BIG_ENDIAN

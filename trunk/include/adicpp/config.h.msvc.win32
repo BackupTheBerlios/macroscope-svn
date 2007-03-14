@@ -28,7 +28,11 @@
 /* #undef HAVE_SYS_TIME_H 1 */
 #define HAVE_SYS_TIMEB_H 1
 #define HAVE_SYS_STAT_H 1
+/* #undef HAVE_SYS_IOCTL_H 1 */
+/* #undef HAVE_SYS_SYSCTL_H 1 */
 /* #undef HAVE_MACHINE_ATOMIC_H 1 */
+/* #undef HAVE_MACHINE_CPUFUNC_H 1 */
+/* #undef HAVE_MACHINE_SPECIALREG_H 1 */
 /* #undef HAVE_UCONTEXT_H 1 */
 /* #undef HAVE_SYSLOG_H 1 */
 /* #undef HAVE_EXECINFO_H 1 */
@@ -40,6 +44,11 @@
 /* #undef HAVE_NETINET_IN_SYSTM_H 1 */
 /* #undef HAVE_NETINET_IP_H 1 */
 /* #undef HAVE_NETINET_TCP_H 1 */
+/* #undef HAVE_NET_IF_H 1 */
+/* #undef HAVE_NET_IF_TYPES_H 1 */
+/* #undef HAVE_NET_ROUTE_H 1 */
+/* #undef HAVE_NET_ETHERNET_H 1 */
+/* #undef HAVE_NET_IF_DL_H 1 */
 /* #undef HAVE_ARPA_INET_H 1 */
 /* #undef HAVE_NETDB_H 1 */
 /* #undef HAVE_PWD_H 1 */
@@ -236,15 +245,27 @@
 /* #undef HAVE_BE16ENC 1 */
 /* #undef HAVE_BE32ENC 1 */
 /* #undef HAVE_BE64ENC 1 */
+/* #undef HAVE_BE16TOH 1 */
+/* #undef HAVE_BE32TOH 1 */
+/* #undef HAVE_BE64TOH 1 */
 /* #undef HAVE_LE16ENC 1 */
 /* #undef HAVE_LE32ENC 1 */
 /* #undef HAVE_LE64ENC 1 */
+/* #undef HAVE_LE16TOH 1 */
+/* #undef HAVE_LE32TOH 1 */
+/* #undef HAVE_LE64TOH 1 */
 /* #undef HAVE_BE16DEC 1 */
 /* #undef HAVE_BE32DEC 1 */
 /* #undef HAVE_BE64DEC 1 */
+/* #undef HAVE_HTOBE16 1 */
+/* #undef HAVE_HTOBE32 1 */
+/* #undef HAVE_HTOBE64 1 */
 /* #undef HAVE_LE16DEC 1 */
 /* #undef HAVE_LE32DEC 1 */
 /* #undef HAVE_LE64DEC 1 */
+/* #undef HAVE_HTOLE16 1 */
+/* #undef HAVE_HTOLE32 1 */
+/* #undef HAVE_HTOLE64 1 */
 /* #undef HAVE_UUID_FROM_STRING 1 */
 /* #undef HAVE_CLOCK_GETRES 1 */
 /* #undef HAVE_CLOCK_GETTIME 1 */
@@ -275,6 +296,7 @@
 /* #undef HAVE_LZO1X_DECOMPRESS_ASM_SAFE 1 */
 /* #undef HAVE_LZO1X_DECOMPRESS_ASM_FAST 1 */
 /* #undef HAVE_LZO1X_DECOMPRESS_ASM_FAST_SAFE 1 */
+/* #undef HAVE_DO_CPUID 1 */
 
 #define EMPTY_ARRAY_SIZE  
 
