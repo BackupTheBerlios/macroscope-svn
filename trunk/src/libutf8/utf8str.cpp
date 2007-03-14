@@ -1335,11 +1335,11 @@ bool tryStr2Int(const String & str, intmax_t & a, uintptr_t pow)
   return i.eof();
 }
 //---------------------------------------------------------------------------
-intmax_t str2Int(const String & str)
+intmax_t str2Int(const String & str,uintptr_t pow)
 {
-  intmax_t  a;
-  if( !tryStr2Int(str, a) )
-    newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  intmax_t a;
+  if( !tryStr2Int(str,a,pow) )
+    newObjectV1C2<EStr2Scalar>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   return a;
 }
 //---------------------------------------------------------------------------

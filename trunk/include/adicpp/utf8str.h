@@ -857,7 +857,7 @@ String          ptr2Str(const void * p);
 //---------------------------------------------------------------------------
 bool            tryStr2Int(const String & str, intmax_t & a, uintptr_t pow = 10);
 //---------------------------------------------------------------------------
-intmax_t        str2Int(const String & str);
+intmax_t        str2Int(const String & str,uintptr_t pow = 10);
 //---------------------------------------------------------------------------
 bool            tryStr2tm(const String & str, struct tm & tv);
 bool            tryStr2Time(const String & str, int64_t & tv);

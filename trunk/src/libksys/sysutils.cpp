@@ -2443,7 +2443,7 @@ utf8::String getMachineUniqueKey()
   VariantClear(&vtName);
   VariantClear(&vtMACAddress);
   return s;
-#elif HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H || HAVE_DO_CPUID
+#elif (HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H && HAVE_NET_IF_H && HAVE_NET_IF_TYPES_H) || HAVE_DO_CPUID
   utf8::String key;
 #if HAVE_DO_CPUID
   u_int regs[4];
@@ -2464,7 +2464,7 @@ utf8::String getMachineUniqueKey()
     key += cpuSerial;
   }
 #endif
-#if HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H
+#if HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H && HAVE_NET_IF_H && HAVE_NET_IF_TYPES_H
   int mib[6];
   mib[0] = CTL_NET;
   mib[1] = PF_ROUTE;
@@ -2500,12 +2500,12 @@ utf8::String getMachineUniqueKey()
         ifm->ifm_data.ifi_datalen = sizeof(struct if_data);
       sdl = (struct sockaddr_dl *)((char *)ifm + sizeof(struct if_msghdr) - sizeof(struct if_data) + ifm->ifm_data.ifi_datalen);
     }
-    else {
-      newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__ + utf8::String(" out of sync parsing NET_RT_IFLIST"))->throwSP();
-    }
+//    else {
+//      newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__ + utf8::String(" out of sync parsing NET_RT_IFLIST"))->throwSP();
+//    }
 //      if( ifm->ifm_flags & IFF_UP );
 //      if( sdl->sdl_type == IFT_ETHER );
-    if( (ifm->ifm_flags & IFF_LOOPBACK) == 0 && sdl->sdl_type == IFT_ETHER ){
+    if( ifm->ifm_type == RTM_IFINFO && (ifm->ifm_flags & IFF_LOOPBACK) == 0 && sdl->sdl_type == IFT_ETHER ){
       char name[IFNAMSIZ];
       memcpy(name,sdl->sdl_data,sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen);
       name[sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen] = '\0';

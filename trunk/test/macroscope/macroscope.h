@@ -44,6 +44,7 @@ class Logger {
     Logger();
 
     void main();
+    static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
     class MTLogParser : public Thread {
       public:
@@ -73,7 +74,7 @@ class Logger {
     friend class MTWriter;
     
     Vector<Thread> threads_;
-    
+
     void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
     void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
     void parseBPFTLogFile();
@@ -114,8 +115,6 @@ class Logger {
     bool groups_;
     bool resolveDNSNames_;
     bool bpftOnlyCurrentYear_;
-    bool useGateway_;
-    ksock::SockAddr gateway_;
     uintmax_t minSignificantThreshold_;
     struct tm curTime_;
 
@@ -243,6 +242,8 @@ class Logger {
     uintptr_t dnsCacheSize_;
     uintmax_t dnsCacheHitCount_;
     uintmax_t dnsCacheMissCount_;
+    utf8::String filter_;
+    int64_t filterHash_;
 
     int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
     void writeHtmlHead(AsyncFile & f);
@@ -257,12 +258,12 @@ class Logger {
     utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
     utf8::String resolveAddr(uint32_t ip4,bool numeric = false);
-    static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf = 0);
     utf8::String ip4AddrToIndex(uint32_t ip4);
     uint32_t indexToIp4Addr(const utf8::String & index);
     utf8::String getDecor(const utf8::String & dname);
-    void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult = NULL,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
+    void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
     void clearBPFTCache();
+    utf8::String getIPFilter(const utf8::String & text);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];

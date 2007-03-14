@@ -78,23 +78,133 @@ utf8::String Logger::ip4AddrToIndex(uint32_t ip4)
 {
   AutoPtr<char> b;
   b.alloc(sizeof(ip4) * 2 + 1);
-  uintptr_t shift = sizeof(ip4) * 8 - 4, i;
-  for( i = 0; i < sizeof(ip4) * 2; i++, shift -= 4 ) b[i] = "0123456789ABCDEF"[(ip4 >> shift) & 0xF];
-  b[i] = '\0';
+  uintptr_t i;
+  for( i = 0; i < sizeof(ip4); i++ )
+    for( intptr_t j = 1; j >= 0; j-- ) b[i * 2 + 1 - j] = "0123456789ABCDEF"[(ip4 >> (i * 8 + j * 4)) & 0xF];
+  b[i * 2] = '\0';
   return utf8::plane0(b);
 }
 //------------------------------------------------------------------------------
 uint32_t Logger::indexToIp4Addr(const utf8::String & index)
 {
-  static const uint8_t m[2] = { '0', 'A' - 10 };
-  uint32_t ip4 = 0, a;
-  uintptr_t shift = sizeof(ip4) * 8 - 4, i;
-  for( i = 0; i < sizeof(ip4) * 2; i++, shift -= 4 ){
-    a = index.c_str()[i];
-    a -= m[a > '9'];
-    ip4 |= a << shift;
+//#ifndef NDEBUG
+//  fprintf(stderr,"index: %s, %X\n",(const char *) index.getOEMString(),(uint32_t) utf8::str2Int(index,16));
+//#endif
+  return be32toh((uint32_t) utf8::str2Int(index,16));
+}
+//------------------------------------------------------------------------------
+utf8::String Logger::getIPFilter(const utf8::String & text)
+{
+  utf8::String filter;
+  utf8::String::Iterator i(text);
+  uintptr_t c[3], prev = '\0';
+  for(;;){
+    if( i.eof() ) break;
+    c[0] = i.getLowerChar();
+    c[1] = (i + 1).getLowerChar();
+    c[2] = (i + 2).getLowerChar();
+    if( (prev == '\0' || prev == '(' || prev == ')' || (utf8::getC1Type(prev) & C1_SPACE) != 0) &&
+        (c[0] == 's' && c[1] == 'r' && c[2] == 'c') ||
+        (c[0] == 'd' && c[1] == 's' && c[2] == 't') ){
+      utf8::String sd("st_" + utf8::String(i,i + 3).lower() + "_ip");
+      i += 3;
+      while( !i.eof() && i.isSpace() ) i.next();
+      if( (i - 1).isSpace() ){
+        if( i.getChar() == '(' ) i++;
+        utf8::String::Iterator j(i), net(j);
+        bool isNetwork = false;
+        while( !j.eof() && !j.isSpace() ){
+          if( j.getChar() == '/' ){
+  	    isNetwork = true;
+	    net = j;
+	  }
+	  j.next();
+        }
+        if( j.getChar() == ')' ) j--;
+        ksock::SockAddr addr;
+        if( isNetwork ){
+          uint32_t inet = addr.resolveName(utf8::String(i,net)).addr4_.sin_addr.s_addr;
+	  uint32_t mask = ~(~uint32_t(0) << utf8::str2Int(utf8::String(net + 1,j)));
+          filter += "(" + sd + " >= '" +
+  	    ip4AddrToIndex(inet & mask) + "' AND " + sd + " <= '" +
+	    ip4AddrToIndex(inet | ~mask) + "')"
+	  ;
+        }
+        else {
+          filter += sd + " = '" +
+	    ip4AddrToIndex(addr.resolveName(utf8::String(i,j)).addr4_.sin_addr.s_addr) +
+	    "'"
+	  ;
+        }
+        i = j;
+      }
+      prev = (i - 1).getChar();
+    }
+    else {
+      filter += utf8::String(i,i + 1);
+      prev = i.getChar();
+      i++;
+    }
   }
-  return ip4;
+  if( filter.strlen() > 0 ) filter = " AND (" + filter + ") ";
+#ifndef NDEBUG
+  fprintf(stderr,"filter:%s\n",(const char *) filter.getOEMString());
+#endif
+  return filter;
+}
+//------------------------------------------------------------------------------
+utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
+{
+  AutoPtr<DNSCacheEntry> addr(newObject<DNSCacheEntry>());
+  addr->addr4_.sin_addr.s_addr = ip4;
+  addr->addr4_.sin_port = 0;
+  addr->addr4_.sin_family = PF_INET;
+  if( numeric ) return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
+  DNSCacheEntry * pAddr = addr;
+  dnsCache_.insert(addr,false,false,&pAddr);
+  if( pAddr == addr ){
+    utf8::String name;
+l1: if( !stDNSCacheSel_->prepared() )
+      stDNSCacheSel_->text("SELECT st_name from INET_DNS_CACHE WHERE st_ip = :ip")->prepare();
+    if( stDNSCacheSel_->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
+      stDNSCacheSel_->fetchAll();
+      name = stDNSCacheSel_->valueAsString("st_name");
+      dnsCacheHitCount_++;
+    }
+    else {
+      if( resolveDNSNames_ ){
+        name = pAddr->resolveAddr();
+        if( !stDNSCacheIns_->prepared() )
+          stDNSCacheIns_->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
+        stDNSCacheIns_->
+          paramAsString("ip",ip4AddrToIndex(ip4))->
+          paramAsString("name",name);
+	bool dup = false;
+	try {
+  	  stDNSCacheIns_->execute();
+	}
+        catch( ExceptionSP & e ){
+          if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
+	  dup = true;
+	}
+	if( dup ) goto l1;
+      }
+      else {
+        name = pAddr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
+      }
+      dnsCacheMissCount_++;
+    }
+    pAddr->name_ = name;
+    addr.ptr(NULL);
+    if( dnsCacheSize_ > 0 && dnsCache_.count() >= dnsCacheSize_ )
+      dnsCache_.drop(dnsCacheLRU_.remove(*dnsCacheLRU_.last()));
+  }
+  else {
+    dnsCacheLRU_.remove(*pAddr);
+    dnsCacheHitCount_++;
+  }
+  dnsCacheLRU_.insToHead(*pAddr);
+  return pAddr->name_;
 }
 //------------------------------------------------------------------------------
 utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
@@ -141,55 +251,10 @@ utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
   );
 }
 //------------------------------------------------------------------------------
-utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
-{
-  AutoPtr<DNSCacheEntry> addr(newObject<DNSCacheEntry>());
-  addr->addr4_.sin_addr.s_addr = ip4;
-  addr->addr4_.sin_port = 0;
-  addr->addr4_.sin_family = PF_INET;
-  if( numeric ) return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
-  DNSCacheEntry * pAddr = addr;
-  dnsCache_.insert(addr,false,false,&pAddr);
-  if( pAddr == addr ){
-    utf8::String name;
-    if( !stDNSCacheSel_->prepared() )
-      stDNSCacheSel_->text("SELECT st_name from INET_DNS_CACHE WHERE st_ip = :ip")->prepare();
-    if( stDNSCacheSel_->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
-      stDNSCacheSel_->fetchAll();
-      name = stDNSCacheSel_->valueAsString("st_name");
-      dnsCacheHitCount_++;
-    }
-    else {
-      if( resolveDNSNames_ ){
-        name = pAddr->resolveAddr();
-        if( !stDNSCacheIns_->prepared() )
-          stDNSCacheIns_->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
-        stDNSCacheIns_->
-          paramAsString("ip",ip4AddrToIndex(ip4))->
-          paramAsString("name",name)->
-          execute();
-      }
-      else {
-        name = pAddr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
-      }
-      dnsCacheMissCount_++;
-    }
-    pAddr->name_ = name;
-    addr.ptr(NULL);
-    if( dnsCacheSize_ > 0 && dnsCache_.count() >= dnsCacheSize_ )
-      dnsCache_.drop(dnsCacheLRU_.remove(*dnsCacheLRU_.last()));
-  }
-  else {
-    dnsCacheLRU_.remove(*pAddr);
-    dnsCacheHitCount_++;
-  }
-  dnsCacheLRU_.insToHead(*pAddr);
-  return pAddr->name_;
-}
-//------------------------------------------------------------------------------
 void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
   intptr_t i, cycle = 0;
+  bool useCache = (bool) config_->valueByPath(section_ + ".html_report.use_cache",true);
   bool updateCache = true;
   for(;;){
     if( pStatement == statement_ ){
@@ -198,20 +263,21 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
           "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
 	  " * FROM ("
           "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-          "    st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+          "    st_src_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
 	  "  FROM INET_BPFT_STAT_CACHE "
           "  WHERE"
-          "    st_if = :if AND st_bt = :BT AND st_et = :ET "
-          "  ORDER BY SUM1, st_ip "
+          "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold" +
+          "  ORDER BY SUM1, st_src_ip "
 	  ") AS A "
-	  "WHERE A.st_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' OR A.SUM1 >= :threshold"
+	  "WHERE A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' OR A.SUM1 >= :threshold"
         )->prepare();
-        statement2_->paramAsString("if",sectionName_);
+        statement2_->paramAsString("if",sectionName_)->
+          paramAsMutant("hash",filterHash_)->
+          paramAsMutant("threshold",minSignificantThreshold_);
       }
       statement2_->paramAsMutant("BT",pStatement->paramAsMutant("BT"));
       statement2_->paramAsMutant("ET",pStatement->paramAsMutant("ET"));
-      statement2_->paramAsMutant("threshold",minSignificantThreshold_);
-      if( statement2_->execute()->fetch() ){
+      if( useCache && statement2_->execute()->fetch() ){
         statement2_->fetchAll();
         pStatement = statement2_;
         updateCache = false;
@@ -229,17 +295,20 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
       if( !statement3_->prepared() ){
         statement3_->text(
           "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-	        "  st_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-	        "FROM INET_BPFT_STAT_CACHE "
-	        "WHERE"
-	        "  st_if = :if AND st_bt = :BT AND st_et = :ET AND st_ip = :host"
+          "  st_src_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+          "FROM INET_BPFT_STAT_CACHE "
+          "WHERE"
+          "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
+	  "  st_filter_hash = :hash AND st_threshold = :threshold AND st_src_ip = :host"
         )->prepare();
-        statement3_->paramAsString("if",sectionName_);
+        statement3_->paramAsString("if",sectionName_)->
+          paramAsMutant("hash",filterHash_)->
+          paramAsMutant("threshold",minSignificantThreshold_);
       }
       statement3_->paramAsMutant("BT",pStatement->paramAsMutant("BT"));
       statement3_->paramAsMutant("ET",pStatement->paramAsMutant("ET"));
       statement3_->paramAsString("host",pStatement->paramAsString("host"));
-      if( statement3_->execute()->fetch() ){
+      if( useCache && statement3_->execute()->fetch() ){
         statement3_->fetchAll();
         pStatement = statement3_;
         updateCache = false;
@@ -248,28 +317,32 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
     else {
       assert( 0 );
     }
-    if( !updateCache ) break;
+    if( !updateCache || cycle > 0 ) break;
     if( !pStatement->execute()->fetch() ) break;
     pStatement->fetchAll();
     if( !statement4_->prepared() ){
       statement4_->text(
         "INSERT INTO INET_BPFT_STAT_CACHE ("
-        "  st_if, st_bt, st_et, st_ip, st_dgram_bytes, st_data_bytes"
+        "  st_if, st_bt, st_et, st_src_ip, st_dst_ip, st_filter_hash, st_threshold, st_dgram_bytes, st_data_bytes"
         ") VALUES ("
-        "  :st_if, :st_bt, :st_et, :st_ip, :st_dgram_bytes, :st_data_bytes"
+        "  :st_if, :st_bt, :st_et, :st_src_ip, :st_dst_ip, :st_filter_hash, :st_threshold, :st_dgram_bytes, :st_data_bytes"
         ")"
       )->prepare();
-      statement4_->paramAsString("st_if",sectionName_);
+      statement4_->paramAsString("st_if",sectionName_)->
+        paramAsMutant("st_filter_hash",filterHash_)->
+        paramAsMutant("st_threshold",minSignificantThreshold_);
     }
     statement4_->paramAsMutant("st_bt",pStatement->paramAsMutant("BT"));
     statement4_->paramAsMutant("st_et",pStatement->paramAsMutant("ET"));
 //    bool sign = true;
     for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
-      statement4_->paramAsString("st_ip",pStatement->valueAsString("st_ip"));
+      statement4_->paramAsString("st_src_ip",pStatement->valueAsString("st_ip"));
+      statement4_->paramAsString("st_dst_ip",pStatement->valueAsString("st_ip"));
       uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
       if( pStatement == statement_ && sum1 < minSignificantThreshold_ /*&& sign*/ ){
-        statement4_->paramAsString("st_ip",ip4AddrToIndex(0xFFFFFFFF));
+        statement4_->paramAsString("st_src_ip",ip4AddrToIndex(0xFFFFFFFF));
+        statement4_->paramAsString("st_dst_ip",ip4AddrToIndex(0xFFFFFFFF));
         statement4_->paramAsMutant("st_dgram_bytes",pStatement->sum("SUM1",0,i));
         statement4_->paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
         statement4_->execute();
@@ -325,16 +398,16 @@ void Logger::clearBPFTCache()
   curTimeETYear.tm_mon = 11;
   bool clearCache = config_->valueByPath(section_ + ".html_report.clear_cache",false);
   statement_->text(
-    utf8::String("DELETE FROM INET_BPFT_STAT_CACHE") +
+    utf8::String("DELETE FROM INET_BPFT_STAT_CACHE WHERE ") +
     (clearCache ? "" :
-      " WHERE"
-      " st_if = :if AND ("
+      "st_if = :if AND ("
       "  (st_bt = :BTYear AND st_et = :ETYear) OR"
       "  (st_bt = :BTMon  AND st_et = :ETMon) OR"
       "  (st_bt = :BTDay AND st_et = :ETDay) OR"
       "  (st_bt = :BTHour AND st_et = :ETHour)"
       ")"
-    )
+    ) +
+    " AND st_filter_hash = :hash AND st_threshold = :threshold"
   )->prepare();
   if( !clearCache ){
     statement_->
@@ -348,9 +421,10 @@ void Logger::clearBPFTCache()
       paramAsMutant("BTHour",time2tm(tm2Time(curTimeBTHour) - getgmtoffset()))->
       paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) - getgmtoffset()));
   }
-  statement_->execute();
+  statement_->paramAsMutant("hash",filterHash_)->
+    paramAsMutant("threshold",minSignificantThreshold_)->execute();
   if( verbose_ ) fprintf(stderr,
-    "bpft cache cleared for:\n  %s %s\n  %s %s\n  %s %s\n  %s %s\n",
+    "bpft cache cleared for:\n  %s %s\n  %s %s\n  %s %s\n  %s %s\n  %"PRId64"\n  %"PRId64"\n",
     (const char *) utf8::tm2Str(curTimeBTYear).getOEMString(),
     (const char *) utf8::tm2Str(curTimeETYear).getOEMString(),
     (const char *) utf8::tm2Str(curTimeBTMon).getOEMString(),
@@ -358,7 +432,9 @@ void Logger::clearBPFTCache()
     (const char *) utf8::tm2Str(curTimeBTDay).getOEMString(),
     (const char *) utf8::tm2Str(curTimeETDay).getOEMString(),
     (const char *) utf8::tm2Str(curTimeBTHour).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeETHour).getOEMString()
+    (const char *) utf8::tm2Str(curTimeETHour).getOEMString(),
+    filterHash_,
+    minSignificantThreshold_
   );
 }
 //------------------------------------------------------------------------------
@@ -370,6 +446,7 @@ utf8::String Logger::getDecor(const utf8::String & dname)
 //------------------------------------------------------------------------------
 void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
 {
+  utf8::String filter;
   struct tm beginTime, beginTime2, endTime;
   Mutant m0, m1, m2;
   AsyncFile f;
@@ -381,37 +458,8 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     resolveDNSNames_ = config_->valueByPath(section_ + ".html_report.resolve_dns_names",false);
     dnsCacheSize_ = config_->valueByPath(section_ + ".html_report.dns_cache_size",0);
     minSignificantThreshold_ = config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
-    useGateway_ = config_->isValueByPath(section_ + ".html_report.gateway");
-    if( useGateway_ ){
-      gateway_.resolveName(config_->valueByPath(section_ + ".html_report.gateway"));
-      if( verbose_ ) fprintf(stderr,"\ngateway resolved as %s, in db %s\n",
-        (const char *) gateway_.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString(),
-        (const char *) ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr).getOEMString()
-      );
-    }
-    utf8::String excludeSrcIp, excludeDstIp;
-    if( config_->isValueByPath(section_ + ".html_report.exclude") ){
-      utf8::String ex(config_->valueByPath(section_ + ".html_report.exclude"));
-      for( intptr_t j = enumStringParts(ex) - 1, i = j; i >= 0; i-- ){
-        if( j == i ){
-          excludeSrcIp = " AND (";
-          excludeDstIp = " AND (";
-        }
-        utf8::String index(ip4AddrToIndex(
-          ksock::SockAddr().resolveName(stringPartByNo(ex,i)).addr4_.sin_addr.s_addr
-        ));
-        excludeSrcIp += "st_src_ip <> '" + index + "'";
-        excludeDstIp += "st_dst_ip <> '" + index + "'";
-        if( i > 0 ){
-          excludeSrcIp += " AND ";
-          excludeDstIp += " AND ";
-        }
-        else {
-          excludeSrcIp += ") ";
-          excludeDstIp += ") ";
-        }
-      }
-    }
+    filter_ = getIPFilter(config_->textByPath(section_ + ".html_report.filter"));
+    filterHash_ = filter_.hash_ll(false);
     curTime_ = time2tm(getlocaltimeofday());
     database_->start();
     clearBPFTCache();
@@ -437,8 +485,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       "      WHERE "
       "        st_if = :st_if AND"
       "        st_start >= :BT AND st_start <= :ET" +
-      utf8::String(useGateway_ ? " AND st_src_ip = :gateway" : "") +
-      excludeDstIp +
+      filter_ +
       "      GROUP BY st_dst_ip"
       "    UNION ALL"
       "      SELECT"
@@ -448,8 +495,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       "      WHERE "
       "        st_if = :st_if AND"
       "        st_start >= :BT AND st_start <= :ET" +
-      utf8::String(useGateway_ ? " AND st_dst_ip = :gateway" : "") +
-      excludeSrcIp +
+      filter_ +
       "      GROUP BY st_src_ip"
       "  ) AS B "
       "  GROUP BY B.st_ip"
@@ -457,8 +503,6 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       "ORDER BY A.SUM1"
     );
     statement_->prepare()->paramAsString("st_if",sectionName_);
-    if( useGateway_ )
-      statement_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
     statement6_->text(
       "  SELECT"
       "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
@@ -469,9 +513,9 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       "        INET_BPFT_STAT"
       "      WHERE "
       "        st_if = :st_if AND"
-      "        st_start >= :BT AND st_start <= :ET AND" +
-      utf8::String(useGateway_ ? " st_src_ip = :gateway AND" : "") +
-      "        st_dst_ip = :host"
+      "        st_start >= :BT AND st_start <= :ET AND"
+      "        st_dst_ip = :host" +
+      filter_ +
       "      GROUP BY st_dst_ip"
       "    UNION ALL"
       "      SELECT"
@@ -480,17 +524,15 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       "        INET_BPFT_STAT"
       "      WHERE "
       "        st_if = :st_if AND"
-      "        st_start >= :BT AND st_start <= :ET AND" +
-      utf8::String(useGateway_ ? " st_dst_ip = :gateway AND" : "") +
-      "        st_src_ip = :host"
+      "        st_start >= :BT AND st_start <= :ET AND"
+      "        st_src_ip = :host" +
+      filter_ +
       "      GROUP BY st_src_ip"
       "  ) AS B "
       "  GROUP BY B.st_ip"
     );
     statement6_->prepare();
     statement6_->paramAsString("st_if",sectionName_);
-    if( useGateway_ )
-      statement6_->paramAsMutant("gateway",ip4AddrToIndex(gateway_.addr4_.sin_addr.s_addr));
     htmlDir_ = excludeTrailingPathDelimiter(config_->valueByPath(section_ + ".html_report.directory"));
   }
   else {
@@ -716,7 +758,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
           assert( 0 );
       }
       for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-        uint32_t ip4 = indexToIp4Addr(table[0](i,"st_ip"));
+        uint32_t ip4 = indexToIp4Addr(table[0](i,"st_src_ip"));
         f <<
           "<TR>\n"
           "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.host") + "\" nowrap>\n"
@@ -749,7 +791,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
           if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
             statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
             statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
-            statement6_->paramAsMutant("host",table[0](i,"st_ip"));
+            statement6_->paramAsMutant("host",table[0](i,"st_src_ip"));
             uintmax_t sum1, sum2;
             getBPFTCached(statement6_,NULL,&sum1,&sum2);
             f <<
@@ -863,18 +905,20 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
         assert( 0 );
     }
     beginTime = beginTime2;
-  }	  
+  }
+  filter = config_->textByPath(section_ + ".html_report.filter");
   f <<
     "Interface: " + sectionName_ + "<BR>\n" +
+    "Filter: <B>" + filter + "</B>, hash: " + utf8::int2Str(filterHash_) + "<BR>\n" +
     "DNS cache size: " + utf8::int2Str((uintmax_t) dnsCache_.count()) + ", "
     "hit: " + utf8::int2Str(dnsCacheHitCount_) + ", " +
     "miss: " + utf8::int2Str(dnsCacheMissCount_) + ", " +
     "hit ratio: " + (
       dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheHitCount_ > 0 ?
-        utf8::int2Str(dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_)) + "." +
+        utf8::int2Str(dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_)) + "." +
         utf8::int2Str0(
-          dnsCacheHitCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheHitCount_) - 
-          dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u,
+          dnsCacheHitCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheMissCount_) - 
+          dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_) * 100u,
 	  2
         )
         :
@@ -882,10 +926,10 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     ) + ", " +
     "miss ratio: " + (
       dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheMissCount_ > 0 ?
-        utf8::int2Str(dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_)) + "." +
+        utf8::int2Str(dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_)) + "." +
         utf8::int2Str0(
-          dnsCacheMissCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheHitCount_) - 
-          dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u,
+          dnsCacheMissCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheMissCount_) - 
+          dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_) * 100u,
 	  2
         )
         :
@@ -900,12 +944,12 @@ l1: if( (bool) config_->valueByPath(section_ + ".html_report.update_cache",true)
       database_->commit();
     else
       database_->rollback();
-    dnsCache_.drop();
   }
 }
 //------------------------------------------------------------------------------
 void Logger::parseBPFTLogFile()
 {
+  if( !(bool) config_->valueByPath(section_ + ".enabled",true) ) return;
   AsyncFile flog(config_->valueByPath(section_ + ".log_file_name"));
 /*
   statement_->text("DELETE FROM INET_BPFT_STAT")->execute();

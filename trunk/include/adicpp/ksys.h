@@ -39,6 +39,7 @@ template <typename T> inline void xchg(T & v1, T & v2)
 }
 //---------------------------------------------------------------------------
 #include "lconfig.h"
+#include "endian.h"
 #include "object.h"
 #include "xalloc.h"
 #include "atomic.h"

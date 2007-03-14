@@ -682,11 +682,15 @@ void Logger::main()
     " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
     " st_bt            DATETIME NOT NULL,"
     " st_et            DATETIME NOT NULL,"
-    " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL,"
+    " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+    " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+    " st_filter_hash   BIGINT NOT NULL,"
+    " st_threshold     BIGINT NOT NULL,"
     " st_dgram_bytes   BIGINT NOT NULL,"
     " st_data_bytes    BIGINT NOT NULL"
     ")" <<
-    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
     "CREATE TABLE INET_DNS_CACHE ("
     " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
     " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
@@ -788,21 +792,15 @@ void Logger::main()
   }
   ellapsed_ = getlocaltimeofday();
   writeHtmlYearOutput();
-  if( (bool) config_->valueByPath("macroscope.process_bpft_log",true) ){
-    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-      sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
-      if( sectionName_.strcasecmp("decoration") == 0 ) continue;
-      section_ = "macroscope.bpft." + sectionName_;
-      parseBPFTLogFile();
-    }
-  }
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
     sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
     if( sectionName_.strcasecmp("decoration") == 0 ) continue;
     section_ = "macroscope.bpft." + sectionName_;
+    parseBPFTLogFile();
     ellapsed_ = getlocaltimeofday();
     writeBPFTHtmlReport();
   }
+  dnsCache_.drop();
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope
