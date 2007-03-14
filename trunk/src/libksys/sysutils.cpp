@@ -2453,15 +2453,15 @@ utf8::String getMachineUniqueKey()
   u_int cpu_feature = regs[3]; // edx
   if( cpu_feature & CPUID_PSN ){
     do_cpuid(3,regs);
-    char cpu_serial[32];
-    snprintf(cpu_serial,
-      sizeof(cpu_serial),
+    char cpuSerial[32];
+    snprintf(cpuSerial,
+      sizeof(cpuSerial),
       "%04x-%04x-%04x-%04x-%04x-%04x",
       (cpu_id >> 16), (cpu_id & 0xffff),
       (regs[3] >> 16), (regs[3] & 0xffff),
       (regs[2] >> 16), (regs[2] & 0xffff)
     );
-    key += cpu_serial;
+    key += cpuSerial;
   }
 #endif
 #if HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H
@@ -2499,48 +2499,60 @@ utf8::String getMachineUniqueKey()
       if( ifm->ifm_data.ifi_datalen == 0 )
         ifm->ifm_data.ifi_datalen = sizeof(struct if_data);
       sdl = (struct sockaddr_dl *)((char *)ifm + sizeof(struct if_msghdr) - sizeof(struct if_data) + ifm->ifm_data.ifi_datalen);
-//      if( ifm->ifm_flags & IFF_UP );
-//      if( sdl->sdl_type == IFT_ETHER );
     }
     else {
       newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__ + utf8::String(" out of sync parsing NET_RT_IFLIST"))->throwSP();
     }
-    char name[IFNAMSIZ];
-    memcpy(name,sdl->sdl_data,sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen);
-    name[sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen] = '\0';
-    ifr.ifr_addr.sa_family = AF_INET;
-    strncpy(ifr.ifr_name,name,sizeof(ifr.ifr_name));
-    ksock::APIAutoInitializer ksockAPIAutoInitializer;
-    int s = socket(ifr.ifr_addr.sa_family,SOCK_DGRAM,0);
-    if( s == INVALID_SOCKET ){
-      int32_t err = errno;
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-    }
-    if( ioctl(s,SIOCGIFCAP,(caddr_t) &ifr) != 0 ){
-      int32_t err = errno;
-      close(s);
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-    }
-    struct rt_addrinfo info;
-    info.rti_info[RTAX_IFA] = (struct sockaddr *) sdl;
-    if( sdl != NULL && sdl->sdl_alen > 0 ){
-      if( sdl->sdl_type == IFT_ETHER && sdl->sdl_alen == ETHER_ADDR_LEN ){
+//      if( ifm->ifm_flags & IFF_UP );
+//      if( sdl->sdl_type == IFT_ETHER );
+    if( (ifm->ifm_flags & IFF_LOOPBACK) == 0 && sdl->sdl_type == IFT_ETHER ){
+      char name[IFNAMSIZ];
+      memcpy(name,sdl->sdl_data,sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen);
+      name[sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen] = '\0';
+      ifr.ifr_addr.sa_family = AF_INET;
+      strncpy(ifr.ifr_name,name,sizeof(ifr.ifr_name));
+      ksock::APIAutoInitializer ksockAPIAutoInitializer;
+      int s = socket(ifr.ifr_addr.sa_family,SOCK_DGRAM,0);
+      if( s == INVALID_SOCKET ){
+        int32_t err = errno;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+      if( ioctl(s,SIOCGIFCAP,(caddr_t) &ifr) != 0 ){
+        int32_t err = errno;
+        close(s);
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+      try {
+        struct rt_addrinfo info;
+        info.rti_info[RTAX_IFA] = (struct sockaddr *) sdl;
+        if( sdl != NULL && sdl->sdl_alen > 0 ){
+          if( sdl->sdl_type == IFT_ETHER && sdl->sdl_alen == ETHER_ADDR_LEN ){
 #if HAVE_NET_ETHERNET_H
-        printf("name %s, ether %s\n",name,ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
-	key += ether_ntoa((const struct ether_addr *)LLADDR(sdl));
+#ifndef NDEBUG
+            fprintf(stderr,"name %s, ether %s\n",name,ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
+#endif
+  	    key += ether_ntoa((const struct ether_addr *)LLADDR(sdl));
 #else
 #endif
-      }
-      else {
-        int n = sdl->sdl_nlen > 0 ? sdl->sdl_nlen + 1 : 0;
+          }
+          else {
+            int n = sdl->sdl_nlen > 0 ? sdl->sdl_nlen + 1 : 0;
 #if HAVE_NET_IF_DL_H
-        printf("name %s, lladdr %s\n",name,link_ntoa(sdl) + n);
-	key += link_ntoa(sdl) + n;
+#ifndef NDEBUG
+            fprintf(stderr,"name %s, lladdr %s\n",name,link_ntoa(sdl) + n);
+#endif
+	    key += link_ntoa(sdl) + n;
 #else
 #endif
+          }
+        }
       }
+      catch( ExceptionSP & ){
+        close(s);
+        throw;
+      }
+      close(s);
     }
-    close(s);
     while( next < lim ){
       nextifm = (struct if_msghdr *) next;
       if( nextifm->ifm_type != RTM_NEWADDR ) break;
@@ -2549,6 +2561,9 @@ utf8::String getMachineUniqueKey()
     }
     next += ifm->ifm_msglen;
   }
+#endif
+#ifndef NDEBUG
+  fprintf(stderr,"machine key: %s\n",(const char *) key.getOEMString());
 #endif
   return key;
 #else

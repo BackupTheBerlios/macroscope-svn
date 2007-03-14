@@ -838,6 +838,14 @@ int main(int _argc,char * _argv[])
       else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
         stdErr.fileName(argv()[i + 1]);
       }
+#if PRIVATE_RELEASE
+      else if( argv()[i].strcmp("--machine-key") == 0 ){
+        utf8::String key(getMachineCleanUniqueKey());
+        fprintf(stdout,"%s\n",(const char *) key.getOEMString());
+        copyStrToClipboard(key);
+        dispatch = false;
+      }
+#endif
     }
 #ifndef NDEBUG
 //    static const uint8_t text[] = 
