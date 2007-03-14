@@ -110,17 +110,15 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
       i += 3;
       while( !i.eof() && i.isSpace() ) i.next();
       if( (i - 1).isSpace() ){
-        if( i.getChar() == '(' ) i++;
         utf8::String::Iterator j(i), net(j);
         bool isNetwork = false;
-        while( !j.eof() && !j.isSpace() ){
+        while( !j.eof() && !j.isSpace() && j.getChar() != ')' ){
           if( j.getChar() == '/' ){
   	    isNetwork = true;
 	    net = j;
 	  }
 	  j.next();
         }
-        if( j.getChar() == ')' ) j--;
         ksock::SockAddr addr;
         if( isNetwork ){
           uint32_t inet = addr.resolveName(utf8::String(i,net)).addr4_.sin_addr.s_addr;

@@ -136,10 +136,12 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 #endif
   if( r != 0 ){
     int32_t err = errNo();
-    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__));
+    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(err,
+      __PRETTY_FUNCTION__ + utf8::String(" ") + host + (port.strlen() > 0 ? ":" + port : utf8::String())
+    ));
 #ifdef EAI_SYSTEM
     if( r != EAI_SYSTEM ){
-      sp->addError(EINVAL,"EAI " + utf8::int2Str(r));
+      sp->addError(EINVAL," EAI " + utf8::int2Str(r));
       sp->code(0) = EINVAL;
     }
 #endif
