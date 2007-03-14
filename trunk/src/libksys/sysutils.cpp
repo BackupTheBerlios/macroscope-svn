@@ -2508,7 +2508,7 @@ utf8::String getMachineUniqueKey()
     char name[IFNAMSIZ];
     memcpy(name,sdl->sdl_data,sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen);
     name[sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen] = '\0';
-    ifr.ifr_addr.sa_family = AF_LINK;
+    ifr.ifr_addr.sa_family = AF_INET;
     strncpy(ifr.ifr_name,name,sizeof(ifr.ifr_name));
     ksock::APIAutoInitializer ksockAPIAutoInitializer;
     int s = socket(ifr.ifr_addr.sa_family,SOCK_DGRAM,0);

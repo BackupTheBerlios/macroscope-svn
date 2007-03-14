@@ -865,15 +865,17 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     beginTime = beginTime2;
   }	  
   f <<
+    "Interface: " + sectionName_ + "<BR>\n" +
     "DNS cache size: " + utf8::int2Str((uintmax_t) dnsCache_.count()) + ", "
     "hit: " + utf8::int2Str(dnsCacheHitCount_) + ", " +
     "miss: " + utf8::int2Str(dnsCacheMissCount_) + ", " +
     "hit ratio: " + (
       dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheHitCount_ > 0 ?
         utf8::int2Str(dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_)) + "." +
-        utf8::int2Str(
+        utf8::int2Str0(
           dnsCacheHitCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheHitCount_) - 
-          dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u
+          dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u,
+	  2
         )
         :
         utf8::String("-")
@@ -881,9 +883,10 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     "miss ratio: " + (
       dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheMissCount_ > 0 ?
         utf8::int2Str(dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_)) + "." +
-        utf8::int2Str(
+        utf8::int2Str0(
           dnsCacheMissCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheHitCount_) - 
-          dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u
+          dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheHitCount_) * 100u,
+	  2
         )
         :
         utf8::String("-")
