@@ -353,7 +353,7 @@ InterlockedConfig<T>::InterlockedConfig() : refCount_(0)
 template <typename T> inline
 void InterlockedConfig<T>::addRef()
 {
-  interlockedIncrement(refCount_, 1);
+  interlockedIncrement(refCount_,1);
 }
 //---------------------------------------------------------------------------
 template <typename T> inline

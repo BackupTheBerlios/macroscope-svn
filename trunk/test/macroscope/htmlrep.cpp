@@ -173,32 +173,14 @@ void Logger::writeUserTop(
       ;
     }
     f << "</TABLE>\n<BR>\n<BR>\n";
-    writeHtmlTail(f);
+    writeHtmlTail(f,ellapsed_);
     f.resize(f.tell());
     if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
   }
 }
 //------------------------------------------------------------------------------
-////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
-Logger::MTWriter::~MTWriter()
-{
-}
-//------------------------------------------------------------------------------
-Logger::MTWriter::MTWriter(Logger & logger,const utf8::String & file,const struct tm & year) :
-  logger_(&logger), file_(file), year_(year)
-{
-}
-//------------------------------------------------------------------------------
-void Logger::MTWriter::threadExecute()
-{
-  logger_->writeMonthHtmlOutput(file_,year_,true);
-}
-//------------------------------------------------------------------------------
 void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded)
 {
-  if( !threaded && (bool) config_->valueByPath("macroscope.multithreaded_engine",false) )
-    threads_.add(newObjectR1C2C3<MTWriter>(*this,file,year)).resume();
   AsyncFile f(file);
   f.createIfNotExist(true).open().resize(0);
   Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",0644));
@@ -232,7 +214,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" +
-        getDecor("table_head") +
+        getDecor("table_head",section_) +
         "\" COLSPAN=" +
         utf8::int2Str(uintmax_t(nonZeroMonthDaysColumns(endTime) + ttAll + 2)) +
         " ALIGN=left nowrap>\n" +
@@ -245,7 +227,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
         "  <TH HEIGHT=4></TH>\n"
         "</TR>\n"
         "<TR>\n"
-        "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("head.user") + "\" nowrap>\n"
+        "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("head.user",section_) + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "User\n"
         "    </FONT>\n"
@@ -274,7 +256,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
             utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
             (getTraf(ttWWW, bt, endTime) > 0) +
             (getTraf(ttSMTP, bt, endTime) > 0)) + " BGCOLOR=\"" +
-            getDecor("detail_head") +
+            getDecor("detail_head",section_) +
             "\" nowrap>\n"
 	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             utf8::String::print("%02d", endTime.tm_mday) + "\n"
@@ -336,7 +318,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
 	  }
           f <<
             "<TR>\n"
-            "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.user") + "\" nowrap>\n"
+            "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.user",section_) + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             "<A HREF=\"" + topByUserFile + "\">" +
             alias +
@@ -390,7 +372,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
       // ѕечатаем итоговый трафик пользователей за мес€ц
       f <<
         "<TR>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.user") + "\" wrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.user",section_) + "\" wrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "Summary traffic of all users:"
       ;
@@ -436,7 +418,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
     endTime.tm_mon--;
     beginTime = beginTime2;
   }
-  writeHtmlTail(f);
+  writeHtmlTail(f,ellapsed_);
   f.resize(f.tell());
   if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
 }
@@ -591,19 +573,19 @@ void Logger::writeHtmlYearOutput()
   curTime_ = time2tm(getlocaltimeofday());
   database_->start();
   statement_->text("SELECT ");
-  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
+  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");
   statement_->text(statement_->text() + "ST_TIMESTAMP FROM INET_USERS_TRAF ORDER BY ST_TIMESTAMP");
-  if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
+  if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
     statement_->text(statement_->text() + " LIMIT 0,1");
   statement_->execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
     beginTime = time2tm((uint64_t) statement_->valueAsMutant("ST_TIMESTAMP") + getgmtoffset());
     statement_->text("SELECT ");
-    if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
+    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
       statement_->text(statement_->text() + "FIRST 1 ");
     statement_->text(statement_->text() + "ST_TIMESTAMP FROM INET_USERS_TRAF ORDER BY ST_TIMESTAMP DESC");
-    if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
+    if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
       statement_->text(statement_->text() + " LIMIT 0,1");
     statement_->execute()->fetchAll();
     endTime = time2tm((uint64_t) statement_->valueAsMutant("ST_TIMESTAMP") + getgmtoffset());
@@ -647,7 +629,7 @@ void Logger::writeHtmlYearOutput()
           "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
           "<TR>\n"
           "  <TH BGCOLOR=\"" +
-          getDecor("table_head") +
+          getDecor("table_head",section_) +
           "\" COLSPAN=" +
           utf8::int2Str(uintmax_t(nonZeroYearMonthsColumns(endTime) + ttAll + 2)) +
           " ALIGN=left nowrap>\n" +
@@ -660,7 +642,7 @@ void Logger::writeHtmlYearOutput()
           "  <TH HEIGHT=4></TH>\n"
           "</TR>\n"
           "<TR>\n"
-          "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("head.user") + "\" nowrap>\n"
+          "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("head.user",section_) + "\" nowrap>\n"
           "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           "User\n"
           "    </FONT>\n" "  </TH>\n"
@@ -690,7 +672,7 @@ void Logger::writeHtmlYearOutput()
               utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
               (getTraf(ttWWW, bt, endTime) > 0) +
               (getTraf(ttSMTP, bt, endTime) > 0)) +
-              " BGCOLOR=\"" << getDecor("detail_head") + "\" nowrap>\n"
+              " BGCOLOR=\"" << getDecor("detail_head",section_) + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" + utf8::String::print("%02d",endTime.tm_mon + 1) + "\n"
 	      "    </FONT>\n"
 	      "  </TH>\n"
@@ -737,7 +719,7 @@ void Logger::writeHtmlYearOutput()
             utf8::String alias(config_->textByPath("macroscope.aliases." + user,user));
             f <<
   	      "<TR>\n"
-	      "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.user") + "\" nowrap>\n"
+	      "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.user",section_) + "\" nowrap>\n"
               "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               alias +
 	      (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
@@ -792,8 +774,9 @@ void Logger::writeHtmlYearOutput()
         // ѕечатаем итоговый трафик пользователей за год
         f <<
           "<TR>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.user") + "\" wrap>\n"
-	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" "Summary traffic of all users: "
+	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.user",section_) + "\" wrap>\n"
+	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+	  "Summary traffic of all users: "
         ;
         f <<
           "    </FONT>\n"
@@ -846,7 +829,7 @@ void Logger::writeHtmlYearOutput()
     }
     database_->commit();
     f << "Cache size: " + utf8::int2Str((uintmax_t) trafCache_.count()) + "<BR>\n";
-    writeHtmlTail(f);
+    writeHtmlTail(f,ellapsed_);
     f.resize(f.tell());
     if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
     trafCache_.drop();
@@ -930,7 +913,7 @@ void Logger::writeHtmlHead(AsyncFile & f)
   ;
 }
 //------------------------------------------------------------------------------
-void Logger::writeHtmlTail(AsyncFile & f)
+void Logger::writeHtmlTail(AsyncFile & f,int64_t ellapsed)
 {
 #if HAVE_UNAME
   struct utsname un;
@@ -943,11 +926,11 @@ void Logger::writeHtmlTail(AsyncFile & f)
   un.nodename = ksock::SockAddr::gethostname();
 #endif
   f <<
-    "Start time: " + utf8::time2Str(ellapsed_) +
+    "Start time: " + utf8::time2Str(ellapsed) +
     "<BR>\n" +
     "Finish time: " + utf8::time2Str(getlocaltimeofday()) +
     "<BR>\n" +
-    "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed_)) + "\n<BR>\n" +
+    "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
     "Generated on " + un.nodename + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
     "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"

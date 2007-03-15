@@ -412,6 +412,7 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLStatement & sqlText(const utf8::String & sqlText);
     DSQLParams &    params();
     DSQLValues &    values();
+    Database * database() const;
   protected:
   private:
     MYSQL_STMT *  handle_;
@@ -428,6 +429,11 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLStatement & free();
     utf8::String    compileSQLParameters();
 };
+//---------------------------------------------------------------------------
+inline Database * DSQLStatement::database() const
+{
+  return database_;
+}
 //---------------------------------------------------------------------------
 inline int64_t DSQLStatement::insertId()
 {

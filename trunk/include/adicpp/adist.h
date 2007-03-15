@@ -50,6 +50,8 @@ class Statement : virtual public ksys::Object {
     Statement() {}
 
     void beforeDestruction() { detach(); }
+
+    virtual Database *                  database() = 0;
     
     virtual Statement *                 attach(Database & database) = 0;
     virtual Statement *                 detach() = 0;
@@ -170,6 +172,8 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
 
     void beforeDestruction() { detach(); }
 
+    Database * database();
+
     FirebirdStatement * attach(Database & database);
     FirebirdStatement * detach();
     bool                attached();
@@ -228,6 +232,8 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
     MYSQLStatement();
 
     void beforeDestruction() { detach(); }
+
+    Database * database();
 
     MYSQLStatement *  attach(Database & database);
     MYSQLStatement *  detach();

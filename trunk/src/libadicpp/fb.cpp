@@ -146,6 +146,11 @@ FirebirdStatement::FirebirdStatement()
 {
 }
 //---------------------------------------------------------------------------
+Database * FirebirdStatement::database()
+{
+  return dynamic_cast<adicpp::Database *>(static_cast<fbcpp::DSQLStatement *>(this)->database());
+}
+//---------------------------------------------------------------------------
 FirebirdStatement * FirebirdStatement::attach(Database & database)
 {
   FirebirdDatabase * p = dynamic_cast<FirebirdDatabase *>(&database);

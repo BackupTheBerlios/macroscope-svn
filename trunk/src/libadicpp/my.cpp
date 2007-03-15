@@ -146,6 +146,11 @@ MYSQLStatement::MYSQLStatement()
 {
 }
 //---------------------------------------------------------------------------
+Database * MYSQLStatement::database()
+{
+  return dynamic_cast<adicpp::Database *>(static_cast<mycpp::DSQLStatement *>(this)->database());
+}
+//---------------------------------------------------------------------------
 MYSQLStatement * MYSQLStatement::attach(Database & database)
 {
   MYSQLDatabase * p = dynamic_cast<MYSQLDatabase *>(&database);

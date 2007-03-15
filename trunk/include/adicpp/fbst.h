@@ -1014,6 +1014,7 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLStatement &   sqlText(const utf8::String & sqlText);
     DSQLParams &      params();
     DSQLValues &      values();
+    Database * database() const;
   protected:
   private:
     isc_stmt_handle handle_;
@@ -1043,6 +1044,11 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLStatement &   blobLookupDesc(char * tableName, char * columnName, ISC_BLOB_DESC & desc, char * globalColumnName);
     utf8::String      compileSQLParameters();
 };
+//---------------------------------------------------------------------------
+inline Database * DSQLStatement::database() const
+{
+  return database_;
+}
 //---------------------------------------------------------------------------
 inline isc_stmt_handle & DSQLStatement::handle()
 {

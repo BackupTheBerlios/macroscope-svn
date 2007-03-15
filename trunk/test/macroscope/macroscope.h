@@ -46,46 +46,9 @@ class Logger {
     void main();
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
-    class MTLogParser : public Thread {
-      public:
-        ~MTLogParser();
-        MTLogParser() {}
-        MTLogParser(Logger & logger);
-
-        void threadExecute();
-      protected:
-      private:
-        Logger * logger_;
-    };
-    friend class MTLogParser;
-    class MTWriter : public Thread {
-      public:
-        ~MTWriter();
-        MTWriter() {}
-        MTWriter(Logger & logger,const utf8::String & file,const struct tm & year);
-
-        void threadExecute();
-      protected:
-        Logger * logger_;
-        utf8::String file_;
-        struct tm year_;
-      private:
-    };
-    friend class MTWriter;
-    
-    Vector<Thread> threads_;
-
-    void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
-    void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
-    void parseBPFTLogFile();
-
-    void writeHtmlYearOutput();
-    enum { rlYear, rlMon, rlDay, rlCount };
-    void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
-  private:
     utf8::String shortUrl_;
     utf8::String section_;
-    utf8::String sectionName_;
+    struct tm curTime_;
     ConfigSPi config_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
@@ -99,32 +62,20 @@ class Logger {
     AutoPtr<Statement> stMonUrlSel_;
     AutoPtr<Statement> stMonUrlIns_;
     AutoPtr<Statement> stMonUrlUpd_;
-    AutoPtr<Statement> stFileStatSel_;
-    AutoPtr<Statement> stFileStatIns_;
-    AutoPtr<Statement> stFileStatUpd_;
+    
+    enum { stSel, stIns, stUpd };
+    AutoPtr<Statement> stFileStat_[3];
+    
     AutoPtr<Statement> stMsgsIns_;
     AutoPtr<Statement> stMsgsSel_;
     AutoPtr<Statement> stMsgsDel_;
     AutoPtr<Statement> stMsgsDel2_;
     AutoPtr<Statement> stMsgsSelCount_;
-    AutoPtr<Statement> stDNSCacheSel_;
-    AutoPtr<Statement> stDNSCacheIns_;
     int64_t ellapsed_;
     uintptr_t gCount_;
     bool verbose_;
     bool groups_;
-    bool resolveDNSNames_;
-    bool bpftOnlyCurrentYear_;
-    uintmax_t minSignificantThreshold_;
-    struct tm curTime_;
 
-    void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
-    void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
-    utf8::String squidStrToWideString(const char * str);
-    Mutant timeStampRoundToMin(uint64_t ts);
-    utf8::String shortUrl(const utf8::String & url);
-    int64_t fetchLogFileLastOffset(const utf8::String & logFileName);
-    Logger & updateLogFileLastOffset(const utf8::String & logFileName,int64_t offset);
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
     class TrafCacheEntry {
@@ -242,12 +193,65 @@ class Logger {
     uintptr_t dnsCacheSize_;
     uintmax_t dnsCacheHitCount_;
     uintmax_t dnsCacheMissCount_;
-    utf8::String filter_;
-    int64_t filterHash_;
+    InterlockedMutex dnsMutex_;
+
+    class BPFTThread : public Thread {
+      public:
+        ~BPFTThread();
+        BPFTThread() {}
+        BPFTThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName);
+
+        void threadExecute();
+      protected:
+        Logger * logger_;
+        utf8::String section_;
+        utf8::String sectionName_;
+        utf8::String htmlDir_;
+        int64_t ellapsed_;
+        uintmax_t minSignificantThreshold_;
+        struct tm curTime_;
+        utf8::String filter_;
+        int64_t filterHash_;
+        bool resolveDNSNames_;
+
+        AutoPtr<Database> database_;
+        AutoPtr<Statement> statement_;
+        AutoPtr<Statement> statement2_;
+        AutoPtr<Statement> statement3_;
+        AutoPtr<Statement> statement4_;
+        AutoPtr<Statement> statement5_;
+        AutoPtr<Statement> statement6_;
+        AutoPtr<Statement> stFileStat_[3];
+        AutoPtr<Statement> stDNSCache_[3];
+
+        void parseBPFTLogFile();
+        enum { rlYear, rlMon, rlDay, rlCount };
+        void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
+        void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
+        void clearBPFTCache();
+      private:
+    };
+    friend class BPFTThread;
+    
+    Vector<Thread> threads_;
+
+    void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
+    void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
+
+    void writeHtmlYearOutput();
+  private:
+
+    void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
+    void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
+    utf8::String squidStrToWideString(const char * str);
+    Mutant timeStampRoundToMin(uint64_t ts);
+    utf8::String shortUrl(const utf8::String & url);
+    static int64_t fetchLogFileLastOffset(AutoPtr<Statement> st[3],const utf8::String & logFileName);
+    static void updateLogFileLastOffset(AutoPtr<Statement> st[3],const utf8::String & logFileName,int64_t offset);
 
     int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
     void writeHtmlHead(AsyncFile & f);
-    void writeHtmlTail(AsyncFile & f);
+    void writeHtmlTail(AsyncFile & f,int64_t ellapsed);
     void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
     void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
     uintptr_t nonZeroYearMonthsColumns(struct tm byear);
@@ -257,13 +261,11 @@ class Logger {
     void genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime);
     utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
-    utf8::String resolveAddr(uint32_t ip4,bool numeric = false);
-    utf8::String ip4AddrToIndex(uint32_t ip4);
-    uint32_t indexToIp4Addr(const utf8::String & index);
-    utf8::String getDecor(const utf8::String & dname);
-    void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
-    void clearBPFTCache();
-    utf8::String getIPFilter(const utf8::String & text);
+    utf8::String resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,uint32_t ip4,bool numeric = false);
+    static utf8::String ip4AddrToIndex(uint32_t ip4);
+    static uint32_t indexToIp4Addr(const utf8::String & index);
+    utf8::String getDecor(const utf8::String & dname,const utf8::String & section);
+    static utf8::String getIPFilter(const utf8::String & text);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];

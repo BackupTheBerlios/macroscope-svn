@@ -116,7 +116,7 @@ Thread::Thread() :
 #if defined(__WIN32__) || defined(__WIN64__)
   stackSize_(64u * 1024u),
 #else
-  stackSize_(PTHREAD_STACK_MIN * 8),
+  stackSize_(64u * 1024u/*PTHREAD_STACK_MIN*/),
 #endif
 //#else
 //  stackSize_(PTHREAD_STACK_MIN),

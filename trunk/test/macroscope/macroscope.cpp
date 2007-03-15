@@ -170,38 +170,55 @@ utf8::String Logger::shortUrl(const utf8::String & url)
   return s;
 }
 //------------------------------------------------------------------------------
-int64_t Logger::fetchLogFileLastOffset(const utf8::String & logFileName)
+int64_t Logger::fetchLogFileLastOffset(AutoPtr<Statement> st[3],const utf8::String & logFileName)
 {
-  stFileStatSel_->prepare();
-  stFileStatSel_->paramAsString("ST_LOG_FILE_NAME",logFileName);
-  stFileStatSel_->execute();
-  int64_t offset  = 0;
-  if( stFileStatSel_->fetch() ){
-    stFileStatSel_->fetchAll();
-    offset = stFileStatSel_->valueAsMutant("ST_LAST_OFFSET");
+  if( !st[stSel]->prepared() ){
+    st[stSel]->text(
+      "SELECT " + utf8::String(dynamic_cast<MYSQLDatabase *>(st[stSel]->database()) != NULL ? " SQL_NO_CACHE" : "") +
+      " ST_LAST_OFFSET FROM INET_LOG_FILE_STAT " 
+      "WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME"
+    )->prepare();
   }
+  st[stSel]->paramAsString("ST_LOG_FILE_NAME",logFileName)->execute();
+  int64_t offset = 0;
+  if( st[stSel]->fetch() )
+    offset = st[stSel]->fetchAll()->valueAsMutant("ST_LAST_OFFSET");
   return offset;
 }
 //------------------------------------------------------------------------------
-Logger & Logger::updateLogFileLastOffset(const utf8::String & logFileName,int64_t offset)
+void Logger::updateLogFileLastOffset(AutoPtr<Statement> st[3],const utf8::String & logFileName,int64_t offset)
 {
-  stFileStatSel_->prepare();
-  stFileStatSel_->paramAsString("ST_LOG_FILE_NAME",logFileName);
-  stFileStatSel_->execute();
-  if( stFileStatSel_->fetch() ){
-    stFileStatSel_->fetchAll();
-    stFileStatUpd_->prepare();
-    stFileStatUpd_->paramAsString("ST_LOG_FILE_NAME",logFileName);
-    stFileStatUpd_->paramAsMutant("ST_LAST_OFFSET",offset);
-    stFileStatUpd_->execute();
+  if( !st[stSel]->prepared() ){
+    st[stSel]->text(
+      "SELECT " + utf8::String(dynamic_cast<MYSQLDatabase *>(st[stSel]->database()) != NULL ? " SQL_NO_CACHE" : "") +
+      " ST_LAST_OFFSET FROM INET_LOG_FILE_STAT " 
+      "WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME"
+    )->prepare();
+  }
+  st[stSel]->paramAsString("ST_LOG_FILE_NAME",logFileName)->execute();
+  if( st[stSel]->fetch() ){
+    st[stSel]->fetchAll();
+    if( !st[stUpd]->prepared() ){
+      st[stUpd]->text(
+        "UPDATE INET_LOG_FILE_STAT SET ST_LAST_OFFSET = :ST_LAST_OFFSET " 
+        "WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME"
+      )->prepare();
+    }
+    st[stUpd]->paramAsString("ST_LOG_FILE_NAME",logFileName)->
+      paramAsMutant("ST_LAST_OFFSET",offset)->execute();
   }
   else{
-    stFileStatIns_->prepare();
-    stFileStatIns_->paramAsString("ST_LOG_FILE_NAME",logFileName);
-    stFileStatIns_->paramAsMutant("ST_LAST_OFFSET",offset);
-    stFileStatIns_->execute();
+    if( !st[stIns]->prepared() ){
+      st[stIns]->text(
+        "INSERT INTO INET_LOG_FILE_STAT" 
+        "(ST_LOG_FILE_NAME, ST_LAST_OFFSET)" 
+        "VALUES" 
+        "(:ST_LOG_FILE_NAME,:ST_LAST_OFFSET)"
+      )->prepare();
+    }
+    st[stIns]->paramAsString("ST_LOG_FILE_NAME",logFileName)->
+      paramAsMutant("ST_LAST_OFFSET",offset)->execute();
   }
-  return *this;
 }
 //------------------------------------------------------------------------------
 static void fallBackToNewLine(AsyncFile & f)
@@ -222,7 +239,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   AsyncFile flog(logFileName);
   flog.readOnly(true).open();
   stMonUrlSel_->text(
-    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMonUrlSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
     " ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
     "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
     "ST_URL = :ST_URL"
@@ -255,8 +272,8 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
  */
   database_->start();
   if( (bool) config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
-    updateLogFileLastOffset(logFileName,0);
-  int64_t offset = fetchLogFileLastOffset(logFileName);
+    updateLogFileLastOffset(stFileStat_,logFileName,0);
+  int64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
   int64_t lineNo = 1, tma = 0;
@@ -355,14 +372,14 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
       }
     }
     if( lineNo % 8192 == 0 ){
-      if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell() - (validLine ? 0 : size));
+      if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell() - (validLine ? 0 : size));
       database_->commit();
       database_->start();
     }
     printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  if( validLine && flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell() - (validLine ? 0 : size));
+  if( validLine && flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell() - (validLine ? 0 : size));
   database_->commit();
   printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
@@ -376,13 +393,13 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     "VALUES (:ST_FROM,:ST_MSGID,:ST_MSGSIZE);"
   );
   stMsgsSel_->text(
-    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMsgsSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
     " * FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID"
   );
   stMsgsDel_->text("DELETE FROM INET_SENDMAIL_MESSAGES");
   stMsgsDel2_->text("DELETE FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID");
   stMsgsSelCount_->text(
-    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMsgsSelCount_->database()) != NULL ? " SQL_NO_CACHE" : "") +
     " COUNT(*) FROM INET_SENDMAIL_MESSAGES"
   );
   stTrafIns_->text(
@@ -400,20 +417,20 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
  */
   tm lt;
   statement_->text(
-    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ? " SQL_NO_CACHE" : "") +
     " MAX(ST_TIMESTAMP) AS ST_TIMESTAMP "
     "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
   );
   database_->start();
   if( (bool) config_->valueByPath(section_ + ".sendmail.reset_log_file_position",false) )
-    updateLogFileLastOffset(logFileName,0);
+    updateLogFileLastOffset(stFileStat_,logFileName,0);
   statement_->execute()->fetchAll();
   memset(&lt,0,sizeof(lt));
   if( statement_->rowCount() > 0 && statement_->fieldIndex("ST_TIMESTAMP") >= 0 && !statement_->valueIsNull("ST_TIMESTAMP") ){
     lt = statement_->valueAsMutant("ST_TIMESTAMP");
     startYear = lt.tm_year + 1900;
   }
-  int64_t offset = fetchLogFileLastOffset(logFileName);
+  int64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
   int64_t   lineNo  = 1, tma = 0;
@@ -530,14 +547,14 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
       }
     }
     if( lineNo % 1024 == 0 ){
-      if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell());
+      if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell());
       database_->commit();
       database_->start();
     }
     printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
     lineNo++;
   }
-  if( flog.seekable() ) updateLogFileLastOffset(logFileName,lgb.tell());
+  if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell());
   stMsgsDel_->execute();
   stMsgsSelCount_->execute()->fetchAll();
   database_->commit();
@@ -577,54 +594,19 @@ void Logger::main()
   stMonUrlSel_.ptr(database_->newAttachedStatement());
   stMonUrlIns_.ptr(database_->newAttachedStatement());
   stMonUrlUpd_.ptr(database_->newAttachedStatement());
-  stFileStatSel_.ptr(database_->newAttachedStatement());
-  stFileStatIns_.ptr(database_->newAttachedStatement());
-  stFileStatUpd_.ptr(database_->newAttachedStatement());
+  stFileStat_[stSel].ptr(database_->newAttachedStatement());
+  stFileStat_[stIns].ptr(database_->newAttachedStatement());
+  stFileStat_[stUpd].ptr(database_->newAttachedStatement());
   stMsgsIns_.ptr(database_->newAttachedStatement());
   stMsgsSel_.ptr(database_->newAttachedStatement());
   stMsgsDel_.ptr(database_->newAttachedStatement());
   stMsgsDel2_.ptr(database_->newAttachedStatement());
   stMsgsSelCount_.ptr(database_->newAttachedStatement());
-  stDNSCacheSel_.ptr(database_->newAttachedStatement());
-  stDNSCacheIns_.ptr(database_->newAttachedStatement());
-
-#ifndef NDEBUG
-  if( verbose_ && dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
-    fprintf(stderr,"%"PRId64"\n",gettimeofday() / 1000000);
-    fbcpp::api.open();
-    struct tm tm0 = time2tm(gettimeofday()), tm1 = time2tm(getlocaltimeofday());
-    ISC_TIMESTAMP isct0 = fbcpp::tm2IscTimeStamp(tm0), isct1 = fbcpp::tm2IscTimeStamp(tm1);
-    ISC_TIMESTAMP isctm0, isctm1;
-    fbcpp::api.isc_encode_timestamp(&tm0,&isctm0);
-    fbcpp::api.isc_encode_timestamp(&tm1,&isctm1);
-    fprintf(stderr,"%"PRIdMAX", %"PRIdMAX"\n",
-      intmax_t(intmax_t(isctm0.timestamp_time) - isct0.timestamp_time),
-      intmax_t(intmax_t(isctm1.timestamp_time) - isct1.timestamp_time)
-    );
-    fbcpp::api.close();
-  }
-#endif
-
-  stFileStatSel_->text(
-    "SELECT " + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
-    " ST_LAST_OFFSET FROM INET_LOG_FILE_STAT " 
-    "WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME"
-  );
-  stFileStatIns_->text(
-    "INSERT INTO INET_LOG_FILE_STAT" 
-    "(ST_LOG_FILE_NAME, ST_LAST_OFFSET)" 
-    "VALUES" 
-    "(:ST_LOG_FILE_NAME,:ST_LAST_OFFSET)"
-  );
-  stFileStatUpd_->text(
-    "UPDATE INET_LOG_FILE_STAT SET ST_LAST_OFFSET = :ST_LAST_OFFSET " 
-    "WHERE ST_LOG_FILE_NAME = :ST_LOG_FILE_NAME"
-  );
 
   database_->create();
 
   Vector<utf8::String> metadata;
-  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL )
+  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
     metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
   metadata <<
 //    "DROP TABLE INET_USERS_TRAF" <<
@@ -699,11 +681,11 @@ void Logger::main()
     "CREATE INDEX INET_USERS_TRAF_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
     "CREATE INDEX INET_USERS_TRAF_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
   ;
-  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
     metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
     metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
   }
-  else if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
+  else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
     metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
     metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
   }
@@ -714,7 +696,7 @@ void Logger::main()
   }
 
 //#if !__FreeBSD__
-  if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
     utf8::String hostName, dbName;
     uintptr_t port;
     database_->separateDBName(database_->name(),hostName,dbName,port);
@@ -766,7 +748,7 @@ void Logger::main()
   database_->attach();
 
   for( uintptr_t i = 0; i < metadata.count(); i++ ){
-    if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL )
+    if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
       if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
         metadata[i] += " TYPE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
     try {
@@ -792,15 +774,17 @@ void Logger::main()
   }
   ellapsed_ = getlocaltimeofday();
   writeHtmlYearOutput();
+  dnsCacheHitCount_ = 0;
+  dnsCacheMissCount_ = 0;
+  dnsCacheSize_ = config_->valueByPath("macroscope.bpft.dns_cache_size",0);
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-    sectionName_ = config_->sectionByPath("macroscope.bpft").section(i).name();
-    if( sectionName_.strcasecmp("decoration") == 0 ) continue;
-    section_ = "macroscope.bpft." + sectionName_;
-    parseBPFTLogFile();
-    ellapsed_ = getlocaltimeofday();
-    writeBPFTHtmlReport();
+    utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+    if( sectionName.strcasecmp("decoration") == 0 ) continue;
+    threads_.safeAdd(newObjectR1C2C3<BPFTThread>(*this,"macroscope.bpft." + sectionName,sectionName)).resume();
   }
+  threads_.clear();
   dnsCache_.drop();
+  dnsCacheLRU_.clear();
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope

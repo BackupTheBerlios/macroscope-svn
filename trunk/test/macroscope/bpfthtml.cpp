@@ -31,6 +31,12 @@
 //------------------------------------------------------------------------------
 namespace macroscope {
 //------------------------------------------------------------------------------
+//Data URL  
+//The  data url format allows the value of a small object to be encoded inline as base64 content. This looks like this:
+//<IMG SRC="data:image/gif;base64,[...]">
+// where the [...] is replaced with the base64 encoded image data. Since the content of an html element is limited,
+//  in worst case, to 1024 bytes, only fairly small images could be displayed this way. (I'm not sure where my memory of this limit comes from.)
+//------------------------------------------------------------------------------
 static inline bool isAddressMask(uint32_t ip)
 {
   return (ip & 0x80000000) != 0;
@@ -151,35 +157,36 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
   return filter;
 }
 //------------------------------------------------------------------------------
-utf8::String Logger::resolveAddr(uint32_t ip4,bool numeric)
+utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,uint32_t ip4,bool numeric)
 {
   AutoPtr<DNSCacheEntry> addr(newObject<DNSCacheEntry>());
   addr->addr4_.sin_addr.s_addr = ip4;
   addr->addr4_.sin_port = 0;
   addr->addr4_.sin_family = PF_INET;
   if( numeric ) return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
+  AutoLock<InterlockedMutex> lock(dnsMutex_);
   DNSCacheEntry * pAddr = addr;
   dnsCache_.insert(addr,false,false,&pAddr);
   if( pAddr == addr ){
     utf8::String name;
-l1: if( !stDNSCacheSel_->prepared() )
-      stDNSCacheSel_->text("SELECT st_name from INET_DNS_CACHE WHERE st_ip = :ip")->prepare();
-    if( stDNSCacheSel_->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
-      stDNSCacheSel_->fetchAll();
-      name = stDNSCacheSel_->valueAsString("st_name");
+l1: if( !st[stSel]->prepared() )
+      st[stSel]->text("SELECT st_name from INET_DNS_CACHE WHERE st_ip = :ip")->prepare();
+    if( st[stSel]->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
+      st[stSel]->fetchAll();
+      name = st[stSel]->valueAsString("st_name");
       dnsCacheHitCount_++;
     }
     else {
-      if( resolveDNSNames_ ){
+      if( resolveDNSNames ){
         name = pAddr->resolveAddr();
-        if( !stDNSCacheIns_->prepared() )
-          stDNSCacheIns_->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
-        stDNSCacheIns_->
+        if( !st[stIns]->prepared() )
+          st[stIns]->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
+        st[stIns]->
           paramAsString("ip",ip4AddrToIndex(ip4))->
           paramAsString("name",name);
 	bool dup = false;
 	try {
-  	  stDNSCacheIns_->execute();
+  	  st[stIns]->execute();
 	}
         catch( ExceptionSP & e ){
           if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
@@ -249,18 +256,118 @@ utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
   );
 }
 //------------------------------------------------------------------------------
-void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
+utf8::String Logger::getDecor(const utf8::String & dname,const utf8::String & section)
+{
+  utf8::String defDecor(config_->textByPath(section + "..decoration.colors." + dname));
+  return config_->textByPath(section + ".html_report.decoration.colors." + dname,defDecor);
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+Logger::BPFTThread::~BPFTThread()
+{
+}
+//------------------------------------------------------------------------------
+Logger::BPFTThread::BPFTThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName) :
+  logger_(&logger), section_(section), sectionName_(sectionName),
+  database_(Database::newDatabase(logger_->config_.ptr())),
+  statement_(database_->newAttachedStatement()),
+  statement2_(database_->newAttachedStatement()),
+  statement3_(database_->newAttachedStatement()),
+  statement4_(database_->newAttachedStatement()),
+  statement5_(database_->newAttachedStatement()),
+  statement6_(database_->newAttachedStatement())
+{
+  stFileStat_[stSel].ptr(database_->newAttachedStatement());
+  stFileStat_[stIns].ptr(database_->newAttachedStatement());
+  stFileStat_[stUpd].ptr(database_->newAttachedStatement());
+  stDNSCache_[stSel].ptr(database_->newAttachedStatement());
+  stDNSCache_[stIns].ptr(database_->newAttachedStatement());
+  stDNSCache_[stUpd].ptr(database_->newAttachedStatement());
+}
+//------------------------------------------------------------------------------
+void Logger::BPFTThread::threadExecute()
+{
+  database_->attach();
+  parseBPFTLogFile();
+  writeBPFTHtmlReport();
+  database_->detach();
+}
+//------------------------------------------------------------------------------
+void Logger::BPFTThread::clearBPFTCache()
+{
+  struct tm curTimeBTHour = curTime_;
+  curTimeBTHour.tm_min = 0;
+  curTimeBTHour.tm_sec = 0;
+  struct tm curTimeETHour = curTime_;
+  curTimeETHour.tm_min = 59;
+  curTimeETHour.tm_sec = 59;
+  struct tm curTimeBTDay = curTimeBTHour;
+  curTimeBTDay.tm_hour = 0;
+  struct tm curTimeETDay = curTimeETHour;
+  curTimeETDay.tm_hour = 23;
+  struct tm curTimeBTMon = curTimeBTDay;
+  curTimeBTMon.tm_mday = 1;
+  struct tm curTimeETMon = curTimeETDay;
+  curTimeETMon.tm_mday = (int) monthDays(curTimeETMon.tm_year + 1900,curTimeETMon.tm_mon);
+  struct tm curTimeBTYear = curTimeBTMon;
+  curTimeBTYear.tm_mon = 0;
+  struct tm curTimeETYear = curTimeETMon;
+  curTimeETYear.tm_mon = 11;
+  bool clearCache = logger_->config_->valueByPath(section_ + ".html_report.clear_cache",false);
+  statement_->text(
+    utf8::String("DELETE FROM INET_BPFT_STAT_CACHE WHERE ") +
+    (clearCache ? "" :
+      "st_if = :if AND ("
+      "  (st_bt = :BTYear AND st_et = :ETYear) OR"
+      "  (st_bt = :BTMon  AND st_et = :ETMon) OR"
+      "  (st_bt = :BTDay AND st_et = :ETDay) OR"
+      "  (st_bt = :BTHour AND st_et = :ETHour)"
+      ")"
+    ) +
+    " AND st_filter_hash = :hash AND st_threshold = :threshold"
+  )->prepare();
+  if( !clearCache ){
+    statement_->
+      paramAsString("if",sectionName_)->
+      paramAsMutant("BTYear",time2tm(tm2Time(curTimeBTYear) - getgmtoffset()))->
+      paramAsMutant("ETYear",time2tm(tm2Time(curTimeETYear) - getgmtoffset()))->
+      paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTMon) - getgmtoffset()))->
+      paramAsMutant("ETMon",time2tm(tm2Time(curTimeETMon) - getgmtoffset()))->
+      paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTDay) - getgmtoffset()))->
+      paramAsMutant("ETMon",time2tm(tm2Time(curTimeETDay) - getgmtoffset()))->
+      paramAsMutant("BTHour",time2tm(tm2Time(curTimeBTHour) - getgmtoffset()))->
+      paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) - getgmtoffset()));
+  }
+  statement_->paramAsMutant("hash",filterHash_)->
+    paramAsMutant("threshold",minSignificantThreshold_)->execute();
+  if( logger_->verbose_ ) fprintf(stderr,
+    "bpft cache cleared for:\n  %s %s\n  %s %s\n  %s %s\n  %s %s\n  %"PRId64"\n  %"PRId64"\n",
+    (const char *) utf8::tm2Str(curTimeBTYear).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETYear).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeBTMon).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETMon).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeBTDay).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETDay).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeBTHour).getOEMString(),
+    (const char *) utf8::tm2Str(curTimeETHour).getOEMString(),
+    filterHash_,
+    minSignificantThreshold_
+  );
+}
+//------------------------------------------------------------------------------
+void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
   intptr_t i, cycle = 0;
-  bool useCache = (bool) config_->valueByPath(section_ + ".html_report.use_cache",true);
+  bool useCache = (bool) logger_->config_->valueByPath(section_ + ".html_report.use_cache",true);
   bool updateCache = true;
   for(;;){
     if( pStatement == statement_ ){
       if( !statement2_->prepared() ){
         statement2_->text(
-          "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+          "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement2_->database()) != NULL ? " SQL_NO_CACHE" : "") +
 	  " * FROM ("
-          "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+          "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement2_->database()) != NULL ? " SQL_NO_CACHE" : "") +
           "    st_src_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
 	  "  FROM INET_BPFT_STAT_CACHE "
           "  WHERE"
@@ -280,7 +387,7 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
         pStatement = statement2_;
         updateCache = false;
 #ifndef NDEBUG
-        if( verbose_ ) fprintf(stderr,
+        if( logger_->verbose_ ) fprintf(stderr,
           "bpft cache %s: %s %s\n",
 	  cycle == 0 ? "hit" : "miss",
           (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
@@ -292,7 +399,7 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
     else if( pStatement == statement6_ ){
       if( !statement3_->prepared() ){
         statement3_->text(
-          "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ? " SQL_NO_CACHE" : "") +
+          "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement3_->database()) != NULL ? " SQL_NO_CACHE" : "") +
           "  st_src_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
           "FROM INET_BPFT_STAT_CACHE "
           "WHERE"
@@ -374,91 +481,21 @@ void Logger::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintma
   }
 }
 //------------------------------------------------------------------------------
-void Logger::clearBPFTCache()
-{
-  struct tm curTimeBTHour = curTime_;
-  curTimeBTHour.tm_min = 0;
-  curTimeBTHour.tm_sec = 0;
-  struct tm curTimeETHour = curTime_;
-  curTimeETHour.tm_min = 59;
-  curTimeETHour.tm_sec = 59;
-  struct tm curTimeBTDay = curTimeBTHour;
-  curTimeBTDay.tm_hour = 0;
-  struct tm curTimeETDay = curTimeETHour;
-  curTimeETDay.tm_hour = 23;
-  struct tm curTimeBTMon = curTimeBTDay;
-  curTimeBTMon.tm_mday = 1;
-  struct tm curTimeETMon = curTimeETDay;
-  curTimeETMon.tm_mday = (int) monthDays(curTimeETMon.tm_year + 1900,curTimeETMon.tm_mon);
-  struct tm curTimeBTYear = curTimeBTMon;
-  curTimeBTYear.tm_mon = 0;
-  struct tm curTimeETYear = curTimeETMon;
-  curTimeETYear.tm_mon = 11;
-  bool clearCache = config_->valueByPath(section_ + ".html_report.clear_cache",false);
-  statement_->text(
-    utf8::String("DELETE FROM INET_BPFT_STAT_CACHE WHERE ") +
-    (clearCache ? "" :
-      "st_if = :if AND ("
-      "  (st_bt = :BTYear AND st_et = :ETYear) OR"
-      "  (st_bt = :BTMon  AND st_et = :ETMon) OR"
-      "  (st_bt = :BTDay AND st_et = :ETDay) OR"
-      "  (st_bt = :BTHour AND st_et = :ETHour)"
-      ")"
-    ) +
-    " AND st_filter_hash = :hash AND st_threshold = :threshold"
-  )->prepare();
-  if( !clearCache ){
-    statement_->
-      paramAsString("if",sectionName_)->
-      paramAsMutant("BTYear",time2tm(tm2Time(curTimeBTYear) - getgmtoffset()))->
-      paramAsMutant("ETYear",time2tm(tm2Time(curTimeETYear) - getgmtoffset()))->
-      paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTMon) - getgmtoffset()))->
-      paramAsMutant("ETMon",time2tm(tm2Time(curTimeETMon) - getgmtoffset()))->
-      paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTDay) - getgmtoffset()))->
-      paramAsMutant("ETMon",time2tm(tm2Time(curTimeETDay) - getgmtoffset()))->
-      paramAsMutant("BTHour",time2tm(tm2Time(curTimeBTHour) - getgmtoffset()))->
-      paramAsMutant("ETHour",time2tm(tm2Time(curTimeETHour) - getgmtoffset()));
-  }
-  statement_->paramAsMutant("hash",filterHash_)->
-    paramAsMutant("threshold",minSignificantThreshold_)->execute();
-  if( verbose_ ) fprintf(stderr,
-    "bpft cache cleared for:\n  %s %s\n  %s %s\n  %s %s\n  %s %s\n  %"PRId64"\n  %"PRId64"\n",
-    (const char *) utf8::tm2Str(curTimeBTYear).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeETYear).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeBTMon).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeETMon).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeBTDay).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeETDay).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeBTHour).getOEMString(),
-    (const char *) utf8::tm2Str(curTimeETHour).getOEMString(),
-    filterHash_,
-    minSignificantThreshold_
-  );
-}
-//------------------------------------------------------------------------------
-utf8::String Logger::getDecor(const utf8::String & dname)
-{
-  utf8::String defDecor(config_->textByPath(section_ + "..decoration.colors." + dname));
-  return config_->textByPath( section_ + ".html_report.decoration.colors." + dname,defDecor);
-}
-//------------------------------------------------------------------------------
-void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
+void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
 {
   utf8::String filter;
   struct tm beginTime, beginTime2, endTime;
   Mutant m0, m1, m2;
   AsyncFile f;
   if( level == rlYear ){
-    dnsCacheHitCount_ = 0;
-    dnsCacheMissCount_ = 0;
-    if( !(bool) config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
-    if( verbose_ ) fprintf(stderr,"\n");
-    resolveDNSNames_ = config_->valueByPath(section_ + ".html_report.resolve_dns_names",false);
-    dnsCacheSize_ = config_->valueByPath(section_ + ".html_report.dns_cache_size",0);
-    minSignificantThreshold_ = config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
-    filter_ = getIPFilter(config_->textByPath(section_ + ".html_report.filter"));
+    if( !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
+    if( logger_->verbose_ ) fprintf(stderr,"\n");
+    ellapsed_ = getlocaltimeofday();
+    minSignificantThreshold_ = logger_->config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
+    filter_ = getIPFilter(logger_->config_->textByPath(section_ + ".html_report.filter"));
     filterHash_ = filter_.hash_ll(false);
-    curTime_ = time2tm(getlocaltimeofday());
+    curTime_ = time2tm(ellapsed_);
+    resolveDNSNames_ = logger_->config_->valueByPath("macroscope.bpft.resolve_dns_names",true);
     database_->start();
     clearBPFTCache();
     statement_->text(
@@ -531,7 +568,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     );
     statement6_->prepare();
     statement6_->paramAsString("st_if",sectionName_);
-    htmlDir_ = excludeTrailingPathDelimiter(config_->valueByPath(section_ + ".html_report.directory"));
+    htmlDir_ = excludeTrailingPathDelimiter(logger_->config_->valueByPath(section_ + ".html_report.directory"));
   }
   else {
     beginTime = endTime = *rt;
@@ -554,7 +591,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       av = 1;
       f.fileName(
         includeTrailingPathDelimiter(htmlDir_) +
-        config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
+        logger_->config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
       );
       break;
     case rlMon :
@@ -599,15 +636,15 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       return;
   }
   f.createIfNotExist(true).open().resize(0);
-  m0 = config_->valueByPath(section_ + ".html_report.directory_mode",0755);
-  m1 = config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid());
-  m2 = config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid());
+  m0 = logger_->config_->valueByPath(section_ + ".html_report.directory_mode",0755);
+  m1 = logger_->config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid());
+  m2 = logger_->config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid());
   chModOwn(htmlDir_,m0,m1,m2);
-  m0 = config_->valueByPath(section_ + ".html_report.file_mode",0644);
-  m1 = config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
-  m2 = config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
+  m0 = logger_->config_->valueByPath(section_ + ".html_report.file_mode",0644);
+  m1 = logger_->config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
+  m2 = logger_->config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
   chModOwn(f.fileName(),m0,m1,m2);
-  writeHtmlHead(f);
+  logger_->writeHtmlHead(f);
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     switch( level ){
@@ -641,7 +678,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     }
     getBPFTCached(statement_,&table[0]);
     if( (uintmax_t) table[0].sum("SUM1") > 0 ){
-      if( verbose_ ) fprintf(stderr,"%s %s\n",
+      if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
         (const char *) utf8::tm2Str(beginTime).getOEMString(),
         (const char *) utf8::tm2Str(endTime).getOEMString()
       );
@@ -684,7 +721,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       f <<
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
-        "  <TH BGCOLOR=\"" + getDecor("table_head") + "\" COLSPAN=\"" +
+        "  <TH BGCOLOR=\"" + logger_->getDecor("table_head",section_) + "\" COLSPAN=\"" +
         utf8::int2Str(colCount * 2 + 3) + "\" ALIGN=left nowrap>\n" +
         "    <A HREF=\""
       ;
@@ -723,20 +760,20 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
         "  </TH>\n"
         "</TR>\n"
         "<TR>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.host") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.host",section_) + "\" nowrap>\n"
         "    Host\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.data") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.data",section_) + "\" nowrap>\n"
         "    Data bytes\n"
         "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + getDecor("head.dgram") + "\" nowrap>\n"
+        "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.dgram",section_) + "\" nowrap>\n"
         "    Datagram bytes\n"
         "  </TH>\n"
       ;
       while( *pi >= sv ){
         if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
           f <<
-            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("detail_head") + "\" nowrap>\n"
+            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
             "    " + utf8::int2Str(*pi + (level == rlYear)) + "\n"
             "  </TH>\n"
 	  ;
@@ -756,18 +793,22 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
           assert( 0 );
       }
       for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-        uint32_t ip4 = indexToIp4Addr(table[0](i,"st_src_ip"));
+        uint32_t ip4 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
         f <<
           "<TR>\n"
-          "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.host") + "\" nowrap>\n"
-          "    <A HREF=\"http://" + resolveAddr(ip4) + "\">\n" +
-          resolveAddr(ip4) + (resolveAddr(ip4).strcmp(resolveAddr(ip4,true)) == 0 ? utf8::String() : " (" + resolveAddr(ip4,true) + ")") + "\n" +
+          "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n"
+          "    <A HREF=\"http://" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4) + "\">\n" +
+          logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4) + (
+	    logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4).strcmp(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4,true)) == 0 ?
+	      utf8::String() :
+	      " (" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4,true) + ")"
+	  ) + "\n" +
           "    </A>\n"
           "  </TH>\n"
-          "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.data") + "\" nowrap>\n" +
+          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
           formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
           "  </TH>\n"
-          "  <TH ALIGN=right BGCOLOR=\"" + getDecor("body.dgram") + "\" nowrap>\n" +
+          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.dgram",section_) + "\" nowrap>\n" +
           formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
           "  </TH>\n"
         ;
@@ -793,10 +834,10 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
             uintmax_t sum1, sum2;
             getBPFTCached(statement6_,NULL,&sum1,&sum2);
             f <<
-              "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.data") + "\" nowrap>\n" +
+              "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.data",section_) + "\" nowrap>\n" +
               formatTraf(sum2,table[*pi + av].sum("SUM1")) + "\n"
               "  </TH>\n"
-              "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.body.dgram") + "\" nowrap>\n" +
+              "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.dgram",section_) + "\" nowrap>\n" +
               formatTraf(sum1,table[*pi + av].sum("SUM1")) + "\n"
               "  </TH>\n"
             ;
@@ -821,23 +862,23 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
       }
       f <<
         "<TR>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.host") + "\" nowrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.host",section_) + "\" nowrap>\n"
         "    Summary:\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.data") + "\" nowrap>\n" +
+        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.data",section_) + "\" nowrap>\n" +
         formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) + "\n"
         "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.dgram") + "\" nowrap>\n" +
+        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.dgram",section_) + "\" nowrap>\n" +
         formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) + "\n"
         "  </TH>\n"
       ;
       while( *pi >= sv ){
         if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
           f <<
-            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.data") + "\" nowrap>\n" +
+            "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.data",section_) + "\" nowrap>\n" +
             formatTraf(table[*pi + av].sum("SUM2"),table[0].sum("SUM1")) + "\n"
             "  </TH>\n"
-            "  <TH ALIGN=right BGCOLOR=\"" + getDecor("details.tail.dgram") + "\" nowrap>\n" +
+            "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.dgram",section_) + "\" nowrap>\n" +
             formatTraf(table[*pi + av].sum("SUM1"),table[0].sum("SUM1")) + "\n"
             "  </TH>\n"
           ;
@@ -847,7 +888,7 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
         "</TR>\n"
         "</TABLE>\n<BR>\n<BR>\n"
       ;
-      bool nextLevel = !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",false);
+      bool nextLevel = !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",false);
       switch( level ){
         case rlYear :
           endTime.tm_mon = 11;
@@ -904,51 +945,55 @@ void Logger::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
     }
     beginTime = beginTime2;
   }
-  filter = config_->textByPath(section_ + ".html_report.filter");
-  f <<
-    "Interface: " + sectionName_ + "<BR>\n" +
-    "Filter: <B>" + filter + "</B>, hash: " + utf8::int2Str(filterHash_) + "<BR>\n" +
-    "DNS cache size: " + utf8::int2Str((uintmax_t) dnsCache_.count()) + ", "
-    "hit: " + utf8::int2Str(dnsCacheHitCount_) + ", " +
-    "miss: " + utf8::int2Str(dnsCacheMissCount_) + ", " +
-    "hit ratio: " + (
-      dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheHitCount_ > 0 ?
-        utf8::int2Str(dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_)) + "." +
-        utf8::int2Str0(
-          dnsCacheHitCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheMissCount_) - 
-          dnsCacheHitCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_) * 100u,
-	  2
-        )
-        :
-        utf8::String("-")
-    ) + ", " +
-    "miss ratio: " + (
-      dnsCacheHitCount_ + dnsCacheHitCount_ > 0 && dnsCacheMissCount_ > 0 ?
-        utf8::int2Str(dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_)) + "." +
-        utf8::int2Str0(
-          dnsCacheMissCount_ * 10000u / (dnsCacheHitCount_ + dnsCacheMissCount_) - 
-          dnsCacheMissCount_ * 100u / (dnsCacheHitCount_ + dnsCacheMissCount_) * 100u,
-	  2
-        )
-        :
-        utf8::String("-")
-    ) +
-    "<BR>\n"
-  ;
-  writeHtmlTail(f);
+  filter = logger_->config_->textByPath(section_ + ".html_report.filter");
+  {
+    AutoLock<InterlockedMutex> lock(logger_->dnsMutex_);
+    f <<
+      "Interface: " + sectionName_ + "<BR>\n" +
+      "Filter: <B>" + filter + "</B>, hash: " + utf8::int2Str(filterHash_) + "<BR>\n" +
+      "FilterSQL: <B>" + filter_ + "</B><BR>\n" +
+      "DNS cache size: " + utf8::int2Str((uintmax_t) logger_->dnsCache_.count()) + ", "
+      "hit: " + utf8::int2Str(logger_->dnsCacheHitCount_) + ", " +
+      "miss: " + utf8::int2Str(logger_->dnsCacheMissCount_) + ", " +
+      "hit ratio: " + (
+        logger_->dnsCacheHitCount_ + logger_->dnsCacheHitCount_ > 0 && logger_->dnsCacheHitCount_ > 0 ?
+          utf8::int2Str(logger_->dnsCacheHitCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_)) + "." +
+          utf8::int2Str0(
+            logger_->dnsCacheHitCount_ * 10000u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) - 
+            logger_->dnsCacheHitCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) * 100u,
+  	    2
+          )
+          :
+          utf8::String("-")
+      ) + ", " +
+      "miss ratio: " + (
+        logger_->dnsCacheHitCount_ + logger_->dnsCacheHitCount_ > 0 && logger_->dnsCacheMissCount_ > 0 ?
+          utf8::int2Str(logger_->dnsCacheMissCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_)) + "." +
+          utf8::int2Str0(
+            logger_->dnsCacheMissCount_ * 10000u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) - 
+            logger_->dnsCacheMissCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) * 100u,
+	    2
+          )
+          :
+          utf8::String("-")
+      ) +
+      "<BR>\n"
+    ;
+  }
+  logger_->writeHtmlTail(f,ellapsed_);
   f.resize(f.tell());
   if( level == rlYear ){
-l1: if( (bool) config_->valueByPath(section_ + ".html_report.update_cache",true) )
+l1: if( (bool) logger_->config_->valueByPath(section_ + ".html_report.update_cache",true) )
       database_->commit();
     else
       database_->rollback();
   }
 }
 //------------------------------------------------------------------------------
-void Logger::parseBPFTLogFile()
+void Logger::BPFTThread::parseBPFTLogFile()
 {
-  if( !(bool) config_->valueByPath(section_ + ".enabled",true) ) return;
-  AsyncFile flog(config_->valueByPath(section_ + ".log_file_name"));
+  if( !(bool) logger_->config_->valueByPath(section_ + ".enabled",true) ) return;
+  AsyncFile flog(logger_->config_->valueByPath(section_ + ".log_file_name"));
 /*
   statement_->text("DELETE FROM INET_BPFT_STAT")->execute();
   stFileStatUpd_->prepare()->
@@ -957,9 +1002,9 @@ void Logger::parseBPFTLogFile()
  */
   flog.readOnly(true).open();
   database_->start();
-  if( (bool) config_->valueByPath(section_ + ".reset_log_file_position",false) )
-    updateLogFileLastOffset(flog.fileName(),0);
-  int64_t offset = fetchLogFileLastOffset(flog.fileName());
+  if( (bool) logger_->config_->valueByPath(section_ + ".reset_log_file_position",false) )
+    Logger::updateLogFileLastOffset(stFileStat_,flog.fileName(),0);
+  int64_t offset = Logger::fetchLogFileLastOffset(stFileStat_,flog.fileName());
   if( flog.seekable() ) flog.seek(offset);
   int64_t lineNo = 0, tma = 0;
   int64_t cl = getlocaltimeofday();
@@ -976,7 +1021,7 @@ void Logger::parseBPFTLogFile()
   );
   statement_->prepare();
   statement_->paramAsString("st_if",sectionName_);
-  bool log32bitOsCompatible = config_->valueByPath(section_ + ".log_32bit_os_compatible",SIZEOF_VOID_P < 8);
+  bool log32bitOsCompatible = logger_->config_->valueByPath(section_ + ".log_32bit_os_compatible",SIZEOF_VOID_P < 8);
   struct tm start, stop;
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
   for(;;){
@@ -1003,7 +1048,7 @@ void Logger::parseBPFTLogFile()
       entries.resize(entriesCount);
       if( flog.read(entries,sizeof(BPFTEntry) * entriesCount) != int64_t(sizeof(BPFTEntry) * entriesCount) ) break;
     }
-    if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL && entriesCount > 0 ){
+    if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL && entriesCount > 0 ){
       bool executed = true;
       utf8::String text;
       for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
@@ -1076,17 +1121,17 @@ void Logger::parseBPFTLogFile()
       }
       statement_->paramAsMutant("st_start",start);
       statement_->execute();
-      printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
+      logger_->printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
       lineNo++;
       entriesCount = 0;
     }
-    printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
-    if( flog.seekable() ) updateLogFileLastOffset(flog.fileName(),flog.tell());
+    logger_->printStat(lineNo,offset,flog.tell(),flog.size(),cl,&tma);
+    if( flog.seekable() ) Logger::updateLogFileLastOffset(stFileStat_,flog.fileName(),flog.tell());
     database_->commit();
     database_->start();
     lineNo += entriesCount;
   }
-  printStat(lineNo,offset,flog.tell(),flog.size(),cl);
+  logger_->printStat(lineNo,offset,flog.tell(),flog.size(),cl);
   database_->commit();
 }
 //------------------------------------------------------------------------------
