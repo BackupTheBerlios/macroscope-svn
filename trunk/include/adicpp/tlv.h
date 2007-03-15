@@ -92,7 +92,7 @@ template <typename T> inline ThreadLocalVariable<T>::ThreadLocalVariable()
 #ifndef NDEBUG
   BOOL r =
 #endif
-  TlsSetValue(key_,0);
+  TlsSetValue(key_,(LPVOID) NULL);
 #ifndef NDEBUG
   assert( r != 0 );
 #endif
@@ -112,7 +112,7 @@ template <typename T> inline ThreadLocalVariable<T>::ThreadLocalVariable(const T
 #ifndef NDEBUG
   BOOL r =
 #endif
-  TlsSetValue(key_, defValue);
+  TlsSetValue(key_,(LPVOID) defValue);
 #ifndef NDEBUG
   assert( r != 0 );
 #endif
@@ -132,7 +132,7 @@ template <typename T> inline ThreadLocalVariable<T>::ThreadLocalVariable(const T
 #ifndef NDEBUG
   BOOL r =
 #endif
-  TlsSetValue(key_,(T) a);
+  TlsSetValue(key_,(LPVOID) (T) a);
 #ifndef NDEBUG
   assert( r != 0 );
 #endif
@@ -151,7 +151,7 @@ ThreadLocalVariable< T> & ThreadLocalVariable<T>::operator = (const T ptr)
 #ifndef NDEBUG
   BOOL  r =
 #endif
-  TlsSetValue(key_, ptr);
+  TlsSetValue(key_,(LPVOID) ptr);
 #ifndef NDEBUG
   assert( r != 0 );
 #endif

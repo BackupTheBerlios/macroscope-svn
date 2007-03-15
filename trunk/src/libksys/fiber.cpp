@@ -30,7 +30,7 @@ namespace ksys {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-uint8_t Fiber::currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber>)];
+uint8_t Fiber::currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber *>)];
 //------------------------------------------------------------------------------
 void Fiber::initialize()
 {
