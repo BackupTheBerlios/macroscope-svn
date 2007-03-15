@@ -302,9 +302,11 @@ void API::close()
   ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
   assert( count_ > 0 );
   if( count_ == 1 ){
-    int r = this->WSACleanup();
-    assert( r == 0 );
-    if( r != 0 ) abort();
+    /*int r = */this->WSACleanup();
+    /*int32_t err = this->WSAGetLastError();
+    assert( err == 0 && r == 0 );
+    if( r != 0 || err != 0 )
+      abort();*/
 #ifndef USE_STATIC_SOCKET_LIBRARY
     FreeLibrary(handle_);
     handle_ = NULL;

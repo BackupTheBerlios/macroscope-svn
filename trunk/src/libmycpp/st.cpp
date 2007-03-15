@@ -93,7 +93,6 @@ DSQLStatement & DSQLStatement::attach(Database & database)
 DSQLStatement & DSQLStatement::detach()
 {
   if( attached() ){
-    values_.freeRes();
     free();
     database_->dsqlStatements_.removeByObject(this);
     database_ = NULL;
@@ -117,6 +116,7 @@ DSQLStatement & DSQLStatement::allocate()
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::free()
 {
+  values_.freeRes();
   if( allocated() ){
     if( api.mysql_stmt_close(handle_) != 0 )
       database_->exceptionHandler(newObjectV1C2<EDSQLStFree>(
