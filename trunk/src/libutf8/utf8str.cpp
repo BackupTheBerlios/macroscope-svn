@@ -1198,7 +1198,7 @@ uintptr_t int2StrLen(uintmax_t a)
 String int2Str0(intmax_t a,uintptr_t padding)
 {
   intmax_t x;
-  uintptr_t l = int2StrLen((intmax_t) a);
+  uintptr_t l = int2StrLen(a);
   if( padding > l ) l = padding;
   if( a < 0 ) x = -a; else x = a;
   String::Container * container = String::Container::container(l);
@@ -1221,7 +1221,7 @@ String int2Str0(intmax_t a,uintptr_t padding)
 //---------------------------------------------------------------------------
 String int2Str0(uintmax_t a,uintptr_t padding)
 {
-  uintptr_t l = int2StrLen((uintmax_t) a);
+  uintptr_t l = int2StrLen(a);
   if( padding > l ) l = padding;
   String::Container * container = String::Container::container(l);
   char * p;
@@ -1229,7 +1229,9 @@ String int2Str0(uintmax_t a,uintptr_t padding)
   do {
     *--p = (char) (a % 10u + '0');
     a /= 10u;
-  } while( a != 0 || --l > 0 );
+    l--;
+  } while( a != 0 );
+  while( l-- > 0 ) *--p = '0';
   return container;
 }
 //---------------------------------------------------------------------------

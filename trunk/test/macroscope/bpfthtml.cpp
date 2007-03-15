@@ -288,6 +288,7 @@ Logger::BPFTThread::BPFTThread(Logger & logger,const utf8::String & section,cons
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::threadExecute()
 {
+  ksock::APIAutoInitializer ksockAPIAutoInitializer;
   database_->attach();
   parseBPFTLogFile();
   writeBPFTHtmlReport();
@@ -948,35 +949,37 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
   filter = logger_->config_->textByPath(section_ + ".html_report.filter");
   {
     AutoLock<InterlockedMutex> lock(logger_->dnsMutex_);
+    uintmax_t m0 = logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_;
+    utf8::String hitRatio("-"), missRatio("-");
+    if( m0 > 0 ){
+      if( logger_->dnsCacheHitCount_ > 0 )
+        hitRatio =
+          utf8::int2Str(logger_->dnsCacheHitCount_ * 100u / m0) + "." +
+          utf8::int2Str0(
+            logger_->dnsCacheHitCount_ * 10000u / m0 - 
+            logger_->dnsCacheHitCount_ * 100u / m0 * 100u,
+	          2
+          )
+        ;
+      if( logger_->dnsCacheMissCount_ > 0 )
+        missRatio =
+          utf8::int2Str(logger_->dnsCacheMissCount_ * 100u / m0) + "." +
+          utf8::int2Str0(
+            logger_->dnsCacheMissCount_ * 10000u / m0 - 
+            logger_->dnsCacheMissCount_ * 100u / m0 * 100u,
+            2
+          )
+        ;
+    }
     f <<
       "Interface: " + sectionName_ + "<BR>\n" +
       "Filter: <B>" + filter + "</B>, hash: " + utf8::int2Str(filterHash_) + "<BR>\n" +
       "FilterSQL: <B>" + filter_ + "</B><BR>\n" +
       "DNS cache size: " + utf8::int2Str((uintmax_t) logger_->dnsCache_.count()) + ", "
       "hit: " + utf8::int2Str(logger_->dnsCacheHitCount_) + ", " +
+      "hit ratio: " + hitRatio + ", " +
       "miss: " + utf8::int2Str(logger_->dnsCacheMissCount_) + ", " +
-      "hit ratio: " + (
-        logger_->dnsCacheHitCount_ + logger_->dnsCacheHitCount_ > 0 && logger_->dnsCacheHitCount_ > 0 ?
-          utf8::int2Str(logger_->dnsCacheHitCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_)) + "." +
-          utf8::int2Str0(
-            logger_->dnsCacheHitCount_ * 10000u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) - 
-            logger_->dnsCacheHitCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) * 100u,
-  	    2
-          )
-          :
-          utf8::String("-")
-      ) + ", " +
-      "miss ratio: " + (
-        logger_->dnsCacheHitCount_ + logger_->dnsCacheHitCount_ > 0 && logger_->dnsCacheMissCount_ > 0 ?
-          utf8::int2Str(logger_->dnsCacheMissCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_)) + "." +
-          utf8::int2Str0(
-            logger_->dnsCacheMissCount_ * 10000u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) - 
-            logger_->dnsCacheMissCount_ * 100u / (logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_) * 100u,
-	    2
-          )
-          :
-          utf8::String("-")
-      ) +
+      "miss ratio: " + missRatio +
       "<BR>\n"
     ;
   }
@@ -1023,7 +1026,6 @@ void Logger::BPFTThread::parseBPFTLogFile()
   statement_->paramAsString("st_if",sectionName_);
   bool log32bitOsCompatible = logger_->config_->valueByPath(section_ + ".log_32bit_os_compatible",SIZEOF_VOID_P < 8);
   struct tm start, stop;
-  ksock::APIAutoInitializer ksockAPIAutoInitializer;
   for(;;){
     uintptr_t entriesCount;
     if( log32bitOsCompatible ){
