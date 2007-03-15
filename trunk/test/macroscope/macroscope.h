@@ -213,6 +213,7 @@ class Logger {
         utf8::String filter_;
         int64_t filterHash_;
         bool resolveDNSNames_;
+        bool bidirectional_;
 
         AutoPtr<Database> database_;
         AutoPtr<Statement> statement_;

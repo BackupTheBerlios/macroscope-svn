@@ -34,12 +34,12 @@ uint8_t Fiber::currentFiberPlaceHolder[sizeof(ThreadLocalVariable<Fiber>)];
 //------------------------------------------------------------------------------
 void Fiber::initialize()
 {
-  new (currentFiberPlaceHolder) ThreadLocalVariable<Fiber>;
+  new (currentFiberPlaceHolder) ThreadLocalVariable<Fiber *>;
 }
 //------------------------------------------------------------------------------
 void Fiber::cleanup()
 {
-  reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder)->~ThreadLocalVariable<Fiber>();
+  reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder)->~ThreadLocalVariable<Fiber *>();
 }
 //------------------------------------------------------------------------------
 Fiber::~Fiber()

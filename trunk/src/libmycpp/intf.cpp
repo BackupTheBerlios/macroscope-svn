@@ -26,10 +26,8 @@
 //---------------------------------------------------------------------------
 #include <adicpp/mycpp.h>
 //---------------------------------------------------------------------------
-#if __BCPLUSPLUS__ || _MSC_VER
 using namespace ksys;
 using namespace utf8;
-#endif
 //---------------------------------------------------------------------------
 namespace mycpp {
 //---------------------------------------------------------------------------
@@ -76,28 +74,28 @@ const char * const  API::symbols_[] = {
 //---------------------------------------------------------------------------
 void API::initialize()
 {
-  new (mutex_) ksys::InterlockedMutex;
-  new (threadList_) ksys::Array< ThreadList>;
+  new (mutex_) InterlockedMutex;
+  new (threadCount_) ThreadLocalVariable<intptr_t>;
 #if !MYSQL_STATIC_LIBRARY  
   count_ = 0;
 #endif
-  ksys::Thread::afterExecuteActions().add(ksys::Thread::Action((void *) afterThreadExecute, this));
+  Thread::afterExecuteActions().add(Thread::Action((void *) afterThreadExecute,this));
 }
 //---------------------------------------------------------------------------
 void API::cleanup()
 {
-  ksys::Thread::afterExecuteActions().remove(ksys::Thread::afterExecuteActions().search(ksys::Thread::Action((void *) afterThreadExecute, this)));
-  threadList().~Array< ThreadList>();
+  Thread::afterExecuteActions().remove(Thread::afterExecuteActions().search(Thread::Action((void *) afterThreadExecute,this)));
+  threadCount().~ThreadLocalVariable<intptr_t>();
   mutex().~InterlockedMutex();
 }
 //---------------------------------------------------------------------------
 #if !MYSQL_STATIC_LIBRARY
 utf8::String API::tryOpen()
 {
-  utf8::String  libFileName;
+  utf8::String libFileName;
   if( handle_ == NULL ){
     try{
-      ksys::Config config;
+      Config config;
       config.silent(true).parse();
       static const char libKey[] = "libadicpp.mysql.client_library";
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -106,14 +104,14 @@ utf8::String API::tryOpen()
       libFileName = config.valueByPath(libKey,"libmysqlclient_r.so");
 #endif
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( ksys::isWin9x() ){
+      if( isWin9x() ){
         handle_ = LoadLibraryExA(anyPathName2HostPathName(libFileName).getANSIString(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       }
       else{
         handle_ = LoadLibraryExW(anyPathName2HostPathName(libFileName).getUNICODEString(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       }
 #elif HAVE_DLFCN_H
-      handle_ = dlopen(ksys::anyPathName2HostPathName(libFileName).getANSIString(),
+      handle_ = dlopen(anyPathName2HostPathName(libFileName).getANSIString(),
 #ifdef __linux__
         RTLD_GLOBAL | RTLD_NOW
 #else
@@ -122,7 +120,7 @@ utf8::String API::tryOpen()
       );
 #endif
     }
-    catch( ksys::ExceptionSP & ){
+    catch( ExceptionSP & ){
       if( handle_ != NULL ){
 #if defined(__WIN32__) || defined(__WIN64__)
         FreeLibrary(handle_);
@@ -139,7 +137,7 @@ utf8::String API::tryOpen()
 //---------------------------------------------------------------------------
 void API::open()
 {
-  ksys::AutoLock< ksys::InterlockedMutex> lock  (mutex());
+  AutoLock<InterlockedMutex> lock(mutex());
   if( count_ == 0 ){
 #if !MYSQL_STATIC_LIBRARY
     int32_t       err;
@@ -150,11 +148,11 @@ void API::open()
 #elif HAVE_DLFCN_H
       err = errno;
 #endif
-      ksys::stdErr.debug(
+      stdErr.debug(
         9,
         utf8::String::Stream() << "Load " << libFileName << " failed\n"
       );
-      newObjectV1C2<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -163,11 +161,11 @@ void API::open()
         err = GetLastError() + errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
-        ksys::stdErr.debug(
+        stdErr.debug(
           9,
           utf8::String::Stream() << "GetProcAddress(\"" << symbols_[i] << "\")\n"
         );
-        newObjectV1C2<ksys::Exception>(err + ksys::errorOffset, __PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
       }
 #elif HAVE_DLFCN_H
       (&p_mysql_thread_safe)[i] = dlsym(handle_, symbols_[i]);
@@ -175,10 +173,10 @@ void API::open()
         err = errno;
         dlclose(handle_);
         handle_ = NULL;
-        ksys::stdErr.debug(9,
+        stdErr.debug(9,
 	  utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
 	);
-        newObjectV1C2<ksys::Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }
@@ -192,32 +190,24 @@ void API::open()
 #endif
       handle_ = NULL;
 #endif
-      ksys::stdErr.debug(9,
+      stdErr.debug(9,
         utf8::String::Stream() << "my_init couldn't initialize environment\n"
       );
-      newObjectV1C2<ksys::Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
+      newObjectV1C2<Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
     }
   }
+  if( (intptr_t) threadCount() == 0 ) mysql_thread_init();
+  threadCount() = (intptr_t) threadCount() + 1;
   count_++;
-  intptr_t c, i;
-  API::ThreadList tl(gettid());
-  i = threadList().bSearch(tl, c);
-  if( c != 0 ){
-    threadList().insert(i += (c > 0), tl);
-    api.mysql_thread_init();
-  }
-  threadList()[i].count_++;
 }
 //---------------------------------------------------------------------------
 void API::close()
 {
-  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
-  API::ThreadList tl(gettid());
-  intptr_t i = threadList().bSearch(tl);
-  if( i >= 0 && --threadList()[i].count_ == 0 ){
-    threadList().remove(i);
-    api.mysql_thread_end();
-  }
+  AutoLock<InterlockedMutex> lock(mutex());
+  assert( count_ > 0 );
+  assert( (intptr_t) threadCount() > 0 );
+  if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
+  threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
     my_end(0);
 #if !MYSQL_STATIC_LIBRARY    
@@ -232,16 +222,9 @@ void API::close()
   count_--;
 }
 //---------------------------------------------------------------------------
-void API::afterThreadExecute(API * /*papi*/)
+void API::afterThreadExecute(API * papi)
 {
-  //  ENTER_MUTEX_SECTION(mutex());
-  //  API::ThreadList tl(gettid());
-  //  intptr_t i = threadList().bSearch(tl);
-  //  if( i >= 0 && threadList()[i].count_ > 0 ){
-  //    threadList().remove(i);
-  //    api.mysql_thread_end();
-  //  }
-  //  LEAVE_MUTEX_SECTION;
+  assert( (intptr_t) papi->threadCount() == 0 );
 }
 //---------------------------------------------------------------------------
 } // namespace mycpp

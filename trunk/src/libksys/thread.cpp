@@ -593,12 +593,12 @@ void Thread::initialize()
 {
   new (beforeExecuteActions_) Array<Action>;
   new (afterExecuteActions_) Array<Action>;
-  new (currentThreadPlaceHolder) ThreadLocalVariable<Thread>;
+  new (currentThreadPlaceHolder) ThreadLocalVariable<Thread *>;
 }
 //---------------------------------------------------------------------------
 void Thread::cleanup()
 {
-  currentThread().~ThreadLocalVariable<Thread>();
+  currentThread().~ThreadLocalVariable<Thread *>();
   afterExecuteActions().~Array<Action>();
   beforeExecuteActions().~Array<Action>();
 }

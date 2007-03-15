@@ -223,7 +223,7 @@ Database & Database::detach()
   if( attached() ){
     if( transaction_ != NULL )
       while( transaction_->active() ) transaction_->rollback();
-    for( intptr_t  i = dsqlStatements_.count() - 1; i >= 0; i-- )
+    for( intptr_t i = dsqlStatements_.count() - 1; i >= 0; i-- )
       dsqlStatements_.objectOfIndex(i)->free();
     freeHandle(handle_);
     api.close();

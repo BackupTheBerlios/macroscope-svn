@@ -290,8 +290,14 @@ void Logger::BPFTThread::threadExecute()
 {
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
   database_->attach();
-  parseBPFTLogFile();
-  writeBPFTHtmlReport();
+  try {
+    parseBPFTLogFile();
+    writeBPFTHtmlReport();
+  }
+  catch( ExceptionSP & ){
+    database_->detach();
+    throw;
+  }
   database_->detach();
 }
 //------------------------------------------------------------------------------
@@ -369,11 +375,11 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
           "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement2_->database()) != NULL ? " SQL_NO_CACHE" : "") +
 	  " * FROM ("
           "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement2_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-          "    st_src_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+          "    st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
 	  "  FROM INET_BPFT_STAT_CACHE "
           "  WHERE"
           "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold" +
-          "  ORDER BY SUM1, st_src_ip "
+          "  ORDER BY SUM1, st_src_ip, st_dst_ip "
 	  ") AS A "
 	  "WHERE A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' OR A.SUM1 >= :threshold"
         )->prepare();
@@ -401,11 +407,12 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       if( !statement3_->prepared() ){
         statement3_->text(
           "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement3_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-          "  st_src_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+          "  st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
           "FROM INET_BPFT_STAT_CACHE "
           "WHERE"
           "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
-	  "  st_filter_hash = :hash AND st_threshold = :threshold AND st_src_ip = :host"
+	  "  st_filter_hash = :hash AND st_threshold = :threshold AND " +
+	  (bidirectional_ ? "st_src_ip = :src AND st_dst_ip = :dst" : "st_src_ip = :host")
         )->prepare();
         statement3_->paramAsString("if",sectionName_)->
           paramAsMutant("hash",filterHash_)->
@@ -413,7 +420,13 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       }
       statement3_->paramAsMutant("BT",pStatement->paramAsMutant("BT"));
       statement3_->paramAsMutant("ET",pStatement->paramAsMutant("ET"));
-      statement3_->paramAsString("host",pStatement->paramAsString("host"));
+      if( bidirectional_ ){
+        statement3_->paramAsString("src",pStatement->paramAsString("src"));
+        statement3_->paramAsString("dst",pStatement->paramAsString("dst"));
+      }
+      else {
+        statement3_->paramAsString("host",pStatement->paramAsString("host"));
+      }
       if( useCache && statement3_->execute()->fetch() ){
         statement3_->fetchAll();
         pStatement = statement3_;
@@ -443,8 +456,14 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
 //    bool sign = true;
     for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
-      statement4_->paramAsString("st_src_ip",pStatement->valueAsString("st_ip"));
-      statement4_->paramAsString("st_dst_ip",pStatement->valueAsString("st_ip"));
+      if( bidirectional_ ){
+        statement4_->paramAsString("st_src_ip",pStatement->valueAsString("st_src_ip"));
+        statement4_->paramAsString("st_dst_ip",pStatement->valueAsString("st_dst_ip"));
+      }
+      else {
+        statement4_->paramAsString("st_src_ip",pStatement->valueAsString("st_ip"));
+        statement4_->paramAsString("st_dst_ip",pStatement->valueAsString("st_ip"));
+      }
       uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
       if( pStatement == statement_ && sum1 < minSignificantThreshold_ /*&& sign*/ ){
         statement4_->paramAsString("st_src_ip",ip4AddrToIndex(0xFFFFFFFF));
@@ -496,7 +515,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     filter_ = getIPFilter(logger_->config_->textByPath(section_ + ".html_report.filter"));
     filterHash_ = filter_.hash_ll(false);
     curTime_ = time2tm(ellapsed_);
-    resolveDNSNames_ = logger_->config_->valueByPath("macroscope.bpft.resolve_dns_names",true);
+    resolveDNSNames_ = logger_->config_->valueByPath(section_ + ".html_report.resolve_dns_names",true);
+    bidirectional_ = logger_->config_->valueByPath(section_ + ".html_report.bidirectional",false);
     database_->start();
     clearBPFTCache();
     statement_->text(
@@ -507,68 +527,105 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       goto l1;
     beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
     endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
-    statement_->text(
-      "SELECT"
-      "  A.*"
-      "FROM ("
-      "  SELECT"
-      "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
-      "  FROM ("
-      "      SELECT"
-      "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-      "      FROM"
-      "        INET_BPFT_STAT"
-      "      WHERE "
-      "        st_if = :st_if AND"
-      "        st_start >= :BT AND st_start <= :ET" +
-      filter_ +
-      "      GROUP BY st_dst_ip"
-      "    UNION ALL"
-      "      SELECT"
-      "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-      "      FROM"
-      "        INET_BPFT_STAT"
-      "      WHERE "
-      "        st_if = :st_if AND"
-      "        st_start >= :BT AND st_start <= :ET" +
-      filter_ +
-      "      GROUP BY st_src_ip"
-      "  ) AS B "
-      "  GROUP BY B.st_ip"
-      ") AS A "
-      "ORDER BY A.SUM1"
-    );
+    if( bidirectional_ ){
+      statement_->text(
+        "SELECT"
+        "  A.*"
+        "FROM ("
+        "  FROM ("
+        "    SELECT"
+        "      st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "    FROM"
+        "      INET_BPFT_STAT"
+        "    WHERE "
+        "      st_if = :st_if AND"
+        "      st_start >= :BT AND st_start <= :ET" + filter_ +
+        "    GROUP BY st_src_ip, st_dst_ip"
+        "  UNION ALL"
+        "    SELECT"
+        "      st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "    FROM"
+        "      INET_BPFT_STAT"
+        "    WHERE "
+        "      st_if = :st_if AND"
+        "      st_start >= :BT AND st_start <= :ET" + filter_ +
+        "    GROUP BY st_dst_ip, st_src_ip"
+        ") AS A "
+        "ORDER BY A.SUM1"
+      );
+      statement6_->text(
+        "SELECT"
+        "  st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2 "
+        "FROM"
+        "  INET_BPFT_STAT "
+        "WHERE"
+        "  st_if = :st_if AND"
+        "  st_start >= :BT AND st_start <= :ET AND"
+        "  st_src_ip = :src AND st_dst_ip = :dst" + filter_ +
+        " GROUP BY st_src_ip, st_dst_ip"
+      );
+    }
+    else {
+      statement_->text(
+        "SELECT"
+        "  A.*"
+        "FROM ("
+        "  SELECT"
+        "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
+        "  FROM ("
+        "      SELECT"
+        "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "      FROM"
+        "        INET_BPFT_STAT"
+        "      WHERE "
+        "        st_if = :st_if AND"
+        "        st_start >= :BT AND st_start <= :ET" + filter_ +
+        "      GROUP BY st_dst_ip"
+        "    UNION ALL"
+        "      SELECT"
+        "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "      FROM"
+        "        INET_BPFT_STAT"
+        "      WHERE "
+        "        st_if = :st_if AND"
+        "        st_start >= :BT AND st_start <= :ET" + filter_ +
+        "      GROUP BY st_src_ip"
+        "  ) AS B "
+        "  GROUP BY B.st_ip"
+        ") AS A "
+        "ORDER BY A.SUM1"
+      );
+      statement6_->text(
+        "  SELECT"
+        "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
+        "  FROM ("
+        "      SELECT"
+        "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "      FROM"
+        "        INET_BPFT_STAT"
+        "      WHERE "
+        "        st_if = :st_if AND"
+        "        st_start >= :BT AND st_start <= :ET AND"
+        "        st_dst_ip = :host" +
+        filter_ +
+        "      GROUP BY st_dst_ip"
+        "    UNION ALL"
+        "      SELECT"
+        "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "      FROM"
+        "        INET_BPFT_STAT"
+        "      WHERE "
+        "        st_if = :st_if AND"
+        "        st_start >= :BT AND st_start <= :ET AND"
+        "        st_src_ip = :host" +
+        filter_ +
+        "      GROUP BY st_src_ip"
+        "  ) AS B "
+        "  GROUP BY B.st_ip"
+      );
+    }
     statement_->prepare()->paramAsString("st_if",sectionName_);
-    statement6_->text(
-      "  SELECT"
-      "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
-      "  FROM ("
-      "      SELECT"
-      "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-      "      FROM"
-      "        INET_BPFT_STAT"
-      "      WHERE "
-      "        st_if = :st_if AND"
-      "        st_start >= :BT AND st_start <= :ET AND"
-      "        st_dst_ip = :host" +
-      filter_ +
-      "      GROUP BY st_dst_ip"
-      "    UNION ALL"
-      "      SELECT"
-      "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-      "      FROM"
-      "        INET_BPFT_STAT"
-      "      WHERE "
-      "        st_if = :st_if AND"
-      "        st_start >= :BT AND st_start <= :ET AND"
-      "        st_src_ip = :host" +
-      filter_ +
-      "      GROUP BY st_src_ip"
-      "  ) AS B "
-      "  GROUP BY B.st_ip"
-    );
-    statement6_->prepare();
-    statement6_->paramAsString("st_if",sectionName_);
+    statement6_->prepare()->paramAsString("st_if",sectionName_);
     htmlDir_ = excludeTrailingPathDelimiter(logger_->config_->valueByPath(section_ + ".html_report.directory"));
   }
   else {
@@ -794,7 +851,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           assert( 0 );
       }
       for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-        uint32_t ip4 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
+        uint32_t ip4 = logger_->indexToIp4Addr(table[0](i,"st_src_ip")), ip42 = 0;
+        if( bidirectional_ ) ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
         f <<
           "<TR>\n"
           "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n"
@@ -804,6 +862,18 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
 	      utf8::String() :
 	      " (" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4,true) + ")"
 	  ) + "\n" +
+          "    </A>\n" +
+	  (bidirectional_ ?
+	    " --> "
+            "    <A HREF=\"http://" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42) + "\">\n" +
+            logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42) + (
+  	      logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42).strcmp(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42,true)) == 0 ?
+	        utf8::String() :
+	        " (" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42,true) + ")"
+	    ) + "\n"
+	    :
+	    utf8::String()
+	  ) +
           "    </A>\n"
           "  </TH>\n"
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
@@ -831,7 +901,13 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
             statement6_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
             statement6_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
-            statement6_->paramAsMutant("host",table[0](i,"st_src_ip"));
+	    if( bidirectional_ ){
+              statement6_->paramAsMutant("src",table[0](i,"st_src_ip"));
+              statement6_->paramAsMutant("dst",table[0](i,"st_dst_ip"));
+	    }
+	    else {
+              statement6_->paramAsMutant("host",table[0](i,"st_src_ip"));
+	    }
             uintmax_t sum1, sum2;
             getBPFTCached(statement6_,NULL,&sum1,&sum2);
             f <<

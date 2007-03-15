@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,25 +35,26 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template<class T> class ThreadLocalVariable {
+template <typename T> class ThreadLocalVariable {
   public:
     ~ThreadLocalVariable();
-    ThreadLocalVariable(T * defValue = NULL);
+    ThreadLocalVariable();
+    ThreadLocalVariable(const T defValue);
+    ThreadLocalVariable(const ThreadLocalVariable<T> & a);
 
-    ThreadLocalVariable<T> & operator = (T * ptr);
-    T * operator -> () const;
-    operator T * () const;
-    operator T & () const;
-    T * ptr() const;
+    ThreadLocalVariable<T> & operator = (const T ptr);
+    ThreadLocalVariable<T> & operator = (const ThreadLocalVariable<T> & a){ *this = (T) a; return *this; }
+    
+    operator T () const;
 
-    bool operator == (const T * const ptr) const;
-    bool operator != (const T * const ptr) const;
-    bool operator <  (const T * const ptr) const;
-    bool operator >  (const T * const ptr) const;
-    bool operator <= (const T * const ptr) const;
-    bool operator >= (const T * const ptr) const;
+    bool operator == (const T ptr) const;
+    bool operator != (const T ptr) const;
+    bool operator <  (const T ptr) const;
+    bool operator >  (const T ptr) const;
+    bool operator <= (const T ptr) const;
+    bool operator >= (const T ptr) const;
 
-    ptrdiff_t operator - (const T * const ptr) const;
+    ptrdiff_t operator - (const T ptr) const;
   private:
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD key_;
@@ -62,7 +63,7 @@ template<class T> class ThreadLocalVariable {
 #endif
 };
 //---------------------------------------------------------------------------
-template<class T> inline ThreadLocalVariable<T>::~ThreadLocalVariable()
+template <typename T> inline ThreadLocalVariable<T>::~ThreadLocalVariable()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
 #ifndef NDEBUG
@@ -83,7 +84,27 @@ template<class T> inline ThreadLocalVariable<T>::~ThreadLocalVariable()
 #endif
 }
 //---------------------------------------------------------------------------
-template<class T> inline ThreadLocalVariable<T>::ThreadLocalVariable(T * defValue)
+template <typename T> inline ThreadLocalVariable<T>::ThreadLocalVariable()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  key_ = TlsAlloc();
+  assert( key_ != 0xFFFFFFFF );
+#ifndef NDEBUG
+  BOOL r =
+#endif
+  TlsSetValue(key_,0);
+#ifndef NDEBUG
+  assert( r != 0 );
+#endif
+#else
+  int r = pthread_key_create(&key_,NULL);
+  assert(r == 0);
+  r = pthread_setspecific(key_,(const void *) NULL);
+  assert(r == 0);
+#endif
+}
+//---------------------------------------------------------------------------
+template <typename T> inline ThreadLocalVariable<T>::ThreadLocalVariable(const T defValue)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   key_ = TlsAlloc();
@@ -98,13 +119,33 @@ template<class T> inline ThreadLocalVariable<T>::ThreadLocalVariable(T * defValu
 #else
   int r = pthread_key_create(&key_, NULL);
   assert(r == 0);
-  r = pthread_setspecific(key_, defValue);
+  r = pthread_setspecific(key_,(const void *) defValue);
   assert(r == 0);
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-ThreadLocalVariable< T> & ThreadLocalVariable<T>::operator =(T * ptr)
+template <typename T> inline ThreadLocalVariable<T>::ThreadLocalVariable(const ThreadLocalVariable<T> & a)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  key_ = TlsAlloc();
+  assert( key_ != 0xFFFFFFFF );
+#ifndef NDEBUG
+  BOOL r =
+#endif
+  TlsSetValue(key_,(T) a);
+#ifndef NDEBUG
+  assert( r != 0 );
+#endif
+#else
+  int r = pthread_key_create(&key_, NULL);
+  assert(r == 0);
+  r = pthread_setspecific(key_,(const void *) (T) a);
+  assert(r == 0);
+#endif
+}
+//---------------------------------------------------------------------------
+template <typename T> inline
+ThreadLocalVariable< T> & ThreadLocalVariable<T>::operator = (const T ptr)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
 #ifndef NDEBUG
@@ -117,8 +158,8 @@ ThreadLocalVariable< T> & ThreadLocalVariable<T>::operator =(T * ptr)
 #else
 #ifndef NDEBUG
   int r =
-  #endif
-  pthread_setspecific(key_, ptr);
+#endif
+  pthread_setspecific(key_,(const void *) ptr);
 #ifndef NDEBUG
   assert(r == 0);
 #endif
@@ -126,133 +167,98 @@ ThreadLocalVariable< T> & ThreadLocalVariable<T>::operator =(T * ptr)
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T * ThreadLocalVariable<T>::operator ->() const
+template <typename T> inline ThreadLocalVariable<T>::operator T () const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert( GetLastError() == NO_ERROR );
   return v;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_));
+  return reinterpret_cast<T>(pthread_getspecific(key_));
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline ThreadLocalVariable<T>::operator T *() const
+template <typename T> inline
+bool ThreadLocalVariable<T>::operator ==(const T ptr) const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
-  assert( GetLastError() == NO_ERROR );
-  return v;
-#else
-  return reinterpret_cast< T *>(pthread_getspecific(key_));
-#endif
-}
-//---------------------------------------------------------------------------
-template< class T> inline ThreadLocalVariable<T>::operator T & () const
-{
-#if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
-  assert( GetLastError() == NO_ERROR );
-  return *v;
-#else
-  return *reinterpret_cast<T *>(pthread_getspecific(key_));
-#endif
-}
-//---------------------------------------------------------------------------
-template< class T> inline
-T * ThreadLocalVariable< T>::ptr() const
-{
-#if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
-  assert( GetLastError() == NO_ERROR );
-  return v;
-#else
-  return reinterpret_cast< T *>(pthread_getspecific(key_));
-#endif
-}
-//---------------------------------------------------------------------------
-template< class T> inline
-bool ThreadLocalVariable<T>::operator ==(const T * const ptr) const
-{
-#if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert(GetLastError() == NO_ERROR);
   return v == ptr;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_)) == ptr;
+  return reinterpret_cast<T>(pthread_getspecific(key_)) == ptr;
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool ThreadLocalVariable<T>::operator !=(const T * const ptr) const
+template <typename T> inline
+bool ThreadLocalVariable<T>::operator !=(const T ptr) const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert(GetLastError() == NO_ERROR);
   return v != ptr;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_)) != ptr;
+  return reinterpret_cast<T>(pthread_getspecific(key_)) != ptr;
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool ThreadLocalVariable<T>::operator >(const T * const ptr) const
+template <typename T> inline
+bool ThreadLocalVariable<T>::operator >(const T ptr) const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert(GetLastError() == NO_ERROR);
   return v > ptr;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_)) > ptr;
+  return reinterpret_cast<T>(pthread_getspecific(key_)) > ptr;
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool ThreadLocalVariable<T>::operator <(const T * const ptr) const
+template <typename T> inline
+bool ThreadLocalVariable<T>::operator <(const T ptr) const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert(GetLastError() == NO_ERROR);
   return v < ptr;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_)) < ptr;
+  return reinterpret_cast<T>(pthread_getspecific(key_)) < ptr;
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool ThreadLocalVariable<T>::operator >=(const T * const ptr) const
+template <typename T> inline
+bool ThreadLocalVariable<T>::operator >=(const T ptr) const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert(GetLastError() == NO_ERROR);
   return v >= ptr;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_)) >= ptr;
+  return reinterpret_cast<T>(pthread_getspecific(key_)) >= ptr;
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool ThreadLocalVariable<T>::operator <=(const T * const ptr) const
+template <typename T> inline
+bool ThreadLocalVariable<T>::operator <=(const T ptr) const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert(GetLastError() == NO_ERROR);
   return v <= ptr;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_)) <= ptr;
+  return reinterpret_cast<T>(pthread_getspecific(key_)) <= ptr;
 #endif
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-ptrdiff_t ThreadLocalVariable<T>::operator -(const T * const ptr) const
+template <typename T> inline
+ptrdiff_t ThreadLocalVariable<T>::operator -(const T ptr) const
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  T * v = reinterpret_cast< T *>(TlsGetValue(key_));
+  T v = reinterpret_cast<T>(TlsGetValue(key_));
   assert(GetLastError() == NO_ERROR);
   return v - ptr;
 #else
-  return reinterpret_cast< T *>(pthread_getspecific(key_)) - ptr;
+  return reinterpret_cast<T>(pthread_getspecific(key_)) - ptr;
 #endif
 }
 //---------------------------------------------------------------------------
@@ -263,3 +269,4 @@ ptrdiff_t ThreadLocalVariable<T>::operator -(const T * const ptr) const
 } // namespace ksys
 //---------------------------------------------------------------------------
 #endif /* _tlv_H_ */
+//---------------------------------------------------------------------------

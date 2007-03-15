@@ -270,7 +270,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
   updateLogFileLastOffset(logFileName,0);
  */
-  database_->start();
+  database_->attach()->start();
   if( (bool) config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
     updateLogFileLastOffset(stFileStat_,logFileName,0);
   int64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
@@ -380,7 +380,7 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     lineNo++;
   }
   if( validLine && flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell() - (validLine ? 0 : size));
-  database_->commit();
+  database_->commit()->detach();
   printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------
@@ -421,7 +421,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     " MAX(ST_TIMESTAMP) AS ST_TIMESTAMP "
     "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
   );
-  database_->start();
+  database_->attach()->start();
   if( (bool) config_->valueByPath(section_ + ".sendmail.reset_log_file_position",false) )
     updateLogFileLastOffset(stFileStat_,logFileName,0);
   statement_->execute()->fetchAll();
@@ -557,7 +557,7 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
   if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell());
   stMsgsDel_->execute();
   stMsgsSelCount_->execute()->fetchAll();
-  database_->commit();
+  database_->commit()->detach();
   printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------
@@ -746,7 +746,6 @@ void Logger::main()
   }
 //#endif
   database_->attach();
-
   for( uintptr_t i = 0; i < metadata.count(); i++ ){
     if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
       if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
@@ -759,6 +758,7 @@ void Logger::main()
       if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR) ) throw;
     }
   }
+  database_->detach();
   section_ = "macroscope";
   if( (bool) config_->valueByPath("macroscope.process_squid_log",true) ){
     Mutant m0(config_->valueByPath("macroscope.squid.log_file_name"));

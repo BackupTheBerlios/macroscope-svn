@@ -203,8 +203,8 @@ void API::open()
 void API::close()
 {
 #if !FIREBIRD_STATIC_LIBRARY
-  assert(count_ > 0);
-  ksys::AutoLock< ksys::InterlockedMutex> lock  (mutex());
+  assert( count_ > 0 );
+  ksys::AutoLock<ksys::InterlockedMutex> lock  (mutex());
   if( count_ == 1 ){
 #if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);

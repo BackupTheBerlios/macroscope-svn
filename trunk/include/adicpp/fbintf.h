@@ -495,7 +495,7 @@ class API {
     char                      mutex_[sizeof(ksys::InterlockedMutex)];
 
     ksys::InterlockedMutex &  mutex();
-    uintptr_t                 count_;
+    intptr_t                 count_;
 
     utf8::String              tryOpen();
 
@@ -511,7 +511,7 @@ extern API  api;
 #if !FIREBIRD_STATIC_LIBRARY
 inline ksys::InterlockedMutex & API::mutex()
 {
-  return *reinterpret_cast< ksys::InterlockedMutex *>(mutex_);
+  return *reinterpret_cast<ksys::InterlockedMutex *>(mutex_);
 }
 #endif
 //---------------------------------------------------------------------------

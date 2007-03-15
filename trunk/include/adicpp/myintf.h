@@ -39,8 +39,8 @@ extern void initialize();
 extern void cleanup();
 //---------------------------------------------------------------------------
 class API {
-    friend void initialize();
-    friend void cleanup();
+  friend void initialize();
+  friend void cleanup();
   public:
 #if MYSQL_STATIC_LIBRARY
     unsigned int mysql_thread_safe()
@@ -327,50 +327,14 @@ class API {
 #pragma warning(pop)
 #endif
 #endif
-    void  open();
-    void  close();
+    void open();
+    void close();
   protected:
     uint8_t mutex_[sizeof(ksys::InterlockedMutex)];
-    struct ThreadList {
-        uintptr_t id_;
-        uintptr_t count_;
-
-        ThreadList(uintptr_t id = 0, uintptr_t count = 0)
-          : id_(id),
-            count_(count)
-        {
-        }
-        ThreadList(const ThreadList & tl)
-          : id_(tl.id_),
-            count_(tl.count_)
-        {
-        }
-        ThreadList & operator =(const ThreadList & tl)
-        {
-          id_ = tl.id_; count_ = tl.count_; return *this;
-        }
-        bool operator ==(const ThreadList & tl) const
-        {
-          return id_ == tl.id_;
-        }
-        bool operator !=(const ThreadList & tl) const
-        {
-          return id_ != tl.id_;
-        }
-        bool operator >(const ThreadList & tl) const
-        {
-          return id_ > tl.id_;
-        }
-        bool operator <(const ThreadList & tl) const
-        {
-          return id_ < tl.id_;
-        }
-    };
-    uint8_t                   threadList_[sizeof(ksys::Array< ThreadList>)];
-
-    ksys::InterlockedMutex &    mutex();
-    ksys::Array< ThreadList> &  threadList();
-    uintptr_t                 count_;
+    ksys::InterlockedMutex & mutex();
+    intptr_t                 count_;
+    uint8_t threadCount_[sizeof(ksys::ThreadLocalVariable<intptr_t>)];
+    ksys::ThreadLocalVariable<intptr_t> & threadCount();
 #if !MYSQL_STATIC_LIBRARY
 #if defined(__WIN32__) || defined(__WIN64__)
     HINSTANCE                 handle_;
@@ -384,23 +348,24 @@ class API {
 #endif
   private:
     static void                 afterThreadExecute(API * papi);
-
+	
     void                        initialize();
     void                        cleanup();
 };
 //---------------------------------------------------------------------------
-extern API  api;
+extern API api;
 //---------------------------------------------------------------------------
 inline ksys::InterlockedMutex & API::mutex()
 {
-  return *reinterpret_cast< ksys::InterlockedMutex *>(mutex_);
+  return *reinterpret_cast<ksys::InterlockedMutex *>(mutex_);
 }
 //---------------------------------------------------------------------------
-inline ksys::Array< API::ThreadList> & API::threadList()
+inline ksys::ThreadLocalVariable<intptr_t> & API::threadCount()
 {
-  return *reinterpret_cast< ksys::Array< ThreadList> *>(threadList_);
+  return *reinterpret_cast<ksys::ThreadLocalVariable<intptr_t> *>(threadCount_);
 }
 //---------------------------------------------------------------------------
 } // namespace mycpp
 //---------------------------------------------------------------------------
 #endif /* _myintf_H_ */
+//---------------------------------------------------------------------------

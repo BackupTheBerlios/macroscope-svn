@@ -165,7 +165,7 @@ inline Fiber & Fiber::clearFiber()
 //---------------------------------------------------------------------------
 inline void Fiber::switchFiber(Fiber * fiber)
 {
-  *reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder) = fiber;
+  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder) = fiber;
   SwitchToFiber(fiber->fiber_);
 }
 //---------------------------------------------------------------------------
@@ -173,7 +173,7 @@ inline void Fiber::switchFiber(Fiber * fiber)
 //---------------------------------------------------------------------------
 inline void Fiber::switchFiber(Fiber * fiber)
 {
-  *reinterpret_cast<ThreadLocalVariable<Fiber> *>(currentFiberPlaceHolder) = fiber;
+  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder) = fiber;
   switchFiber2(&stackPointer_,&fiber->stackPointer_,fiber);
 }
 //---------------------------------------------------------------------------
@@ -181,12 +181,12 @@ inline void Fiber::switchFiber(Fiber * fiber)
 //---------------------------------------------------------------------------
 inline Fiber * currentFiber()
 {
-  return *reinterpret_cast<ThreadLocalVariable<Fiber> *>(Fiber::currentFiberPlaceHolder);
+  return *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(Fiber::currentFiberPlaceHolder);
 }
 //---------------------------------------------------------------------------
 inline void setCurrentFiber(Fiber * fiber)
 {
-  *reinterpret_cast<ThreadLocalVariable<Fiber> *>(Fiber::currentFiberPlaceHolder) = fiber;
+  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(Fiber::currentFiberPlaceHolder) = fiber;
 }
 //---------------------------------------------------------------------------
 inline bool isRunInFiber()

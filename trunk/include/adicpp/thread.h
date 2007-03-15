@@ -266,9 +266,9 @@ inline Array<Thread::Action> & Thread::afterExecuteActions()
 }
 //---------------------------------------------------------------------------
 extern uint8_t currentThreadPlaceHolder[];
-inline ThreadLocalVariable<Thread> & currentThread()
+inline ThreadLocalVariable<Thread *> & currentThread()
 {
-  return *reinterpret_cast<ThreadLocalVariable< Thread> *>(currentThreadPlaceHolder);
+  return *reinterpret_cast<ThreadLocalVariable<Thread *> *>(currentThreadPlaceHolder);
 }
 //---------------------------------------------------------------------------
 } // namespace ksys
