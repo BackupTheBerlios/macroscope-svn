@@ -571,7 +571,7 @@ void Logger::writeHtmlYearOutput()
   decoration();
   struct tm beginTime, endTime;
   curTime_ = time2tm(getlocaltimeofday());
-  database_->start();
+  database_->attach()->start();
   statement_->text("SELECT ");
   if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");
@@ -827,7 +827,7 @@ void Logger::writeHtmlYearOutput()
       endTime.tm_year--;
       beginTime = beginTime2;
     }
-    database_->commit();
+    database_->commit()->detach();
     f << "Cache size: " + utf8::int2Str((uintmax_t) trafCache_.count()) + "<BR>\n";
     writeHtmlTail(f,ellapsed_);
     f.resize(f.tell());
