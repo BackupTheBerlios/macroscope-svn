@@ -411,6 +411,7 @@ DSQLStatement & DSQLStatement::free()
     if( api.isc_dsql_free_statement(status, &handle_, DSQL_drop) != 0 && status[1] != isc_bad_stmt_handle )
       database_->exceptionHandler(newObjectV1C2<EDSQLStFree>(status, __PRETTY_FUNCTION__));
     handle_ = 0;
+    prepared_ = false;
   }
   return *this;
 }

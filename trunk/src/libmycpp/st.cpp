@@ -122,6 +122,7 @@ DSQLStatement & DSQLStatement::free()
       database_->exceptionHandler(newObjectV1C2<EDSQLStFree>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     handle_ = NULL;
+    prepared_ = false;
   }
   return *this;
 }
