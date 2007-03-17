@@ -483,18 +483,22 @@ class API {
 #pragma warning(pop)
 #endif
 #endif   
-    void                      open();
-    void                      close();
+    void open();
+    void close();
+    utf8::String clientLibrary();
+    void clientLibrary(const utf8::String & lib);
   protected:
+    utf8::String clientLibraryNL();
 #if !FIREBIRD_STATIC_LIBRARY
 #if defined(__WIN32__) || defined(__WIN64__)
     HINSTANCE                 handle_;
 #else
     void *                    handle_;
 #endif
-    char                      mutex_[sizeof(ksys::InterlockedMutex)];
+    uint8_t mutex_[sizeof(ksys::InterlockedMutex)];
+    ksys::InterlockedMutex & mutex();
+    uint8_t clientLibrary_[sizeof(utf8::String)];
 
-    ksys::InterlockedMutex &  mutex();
     intptr_t                 count_;
 
     utf8::String              tryOpen();
@@ -514,6 +518,23 @@ inline ksys::InterlockedMutex & API::mutex()
   return *reinterpret_cast<ksys::InterlockedMutex *>(mutex_);
 }
 #endif
+//---------------------------------------------------------------------------
+inline utf8::String API::clientLibrary()
+{
+  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  return *reinterpret_cast<utf8::String *>(clientLibrary_);
+}
+//---------------------------------------------------------------------------
+inline utf8::String API::clientLibraryNL()
+{
+  return *reinterpret_cast<utf8::String *>(clientLibrary_);
+}
+//---------------------------------------------------------------------------
+inline void API::clientLibrary(const utf8::String & lib)
+{
+  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  *reinterpret_cast<utf8::String *>(clientLibrary_) = lib;
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

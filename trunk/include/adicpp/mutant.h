@@ -115,6 +115,13 @@ class Mutant {
 
     Mutant &            operator =(const Mutant & m);
 
+    bool operator == (const Mutant & m) const;
+    bool operator != (const Mutant & m) const;
+    bool operator >  (const Mutant & m) const;
+    bool operator >= (const Mutant & m) const;
+    bool operator <  (const Mutant & m) const;
+    bool operator <= (const Mutant & m) const;
+
     operator bool() const;
     operator char() const;
     operator unsigned char() const;

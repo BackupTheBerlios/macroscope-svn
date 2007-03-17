@@ -102,9 +102,11 @@ class Statement : virtual public ksys::Object {
 
     virtual ksys::Mutant sum(uintptr_t fieldNum,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0));
     virtual ksys::Mutant sum(const utf8::String & fieldName,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0));
-    template <typename Table> Statement & unloadColumns(Table & table);
+    template <typename Table> Statement & unloadColumns(Table & table,bool clearTable = true);
     template <typename Table> Statement & unload(Table & table,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0),bool clearTable = true);
+    template <typename Table> Statement & unloadByIndex(Table & table,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0),bool clearTable = true);
     template <typename Table> Statement & unloadRow(Table & table,uintptr_t stRowNum = ~uintptr_t(0),uintptr_t tableRowNum = ~uintptr_t(0));
+    template <typename Table> Statement & unloadRowByIndex(Table & table,uintptr_t stRowNum = ~uintptr_t(0),uintptr_t tableRowNum = ~uintptr_t(0));
   protected:
   private:
 };
@@ -113,12 +115,11 @@ template <typename Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Statement & Statement::unloadColumns(Table & table)
+Statement & Statement::unloadColumns(Table & table,bool clearTable)
 {
-  uintptr_t i, j;
-  for( j = fieldCount(), i = 0; i < j; i++ )
-    if( table.columnIndex(fieldName(i)) != 0 )
-      table.addColumn(fieldName(i));
+  if( clearTable ) table.clear();
+  for( uintptr_t j = fieldCount(), i = 0; i < j; i++ )
+    if( table.columnIndex(fieldName(i)) != 0 ) table.addColumn(fieldName(i));
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -128,12 +129,9 @@ inline
 #endif
 Statement & Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
 {
+  unloadColumns(table,clearTable);
   uintptr_t i, j, k, row, tr;
-  intptr_t srow;
-
-  if( clearTable ) table.clear();
-  unloadColumns(table);
-  srow = rowIndex();
+  intptr_t srow = rowIndex();
   if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
   k = rowCount();
   if( k >= eRowNum ) k = eRowNum + 1;
@@ -151,14 +149,50 @@ template <typename Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
+Statement & Statement::unloadByIndex(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
+{
+  unloadColumns(table,clearTable);
+  uintptr_t i, j, k, row, tr;
+  intptr_t srow = rowIndex();
+  if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
+  k = rowCount();
+  if( k >= eRowNum ) k = eRowNum + 1;
+  for( j = fieldCount(), tr = 0, row = sRowNum; row < k; row++, tr++ ){
+    selectRow(row);
+    table.addRow();
+    for( i = 0; i < j; i++ )
+      table(tr,i) = valueAsMutant(i);
+  }
+  if( srow >= 0 ) selectRow(srow);
+  return *this;
+}
+//---------------------------------------------------------------------------
+template <typename Table>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 Statement & Statement::unloadRow(Table & table,uintptr_t stRowNum,uintptr_t tableRowNum)
 {
-  uintptr_t i, j;
   intptr_t srow = rowIndex();
   if( stRowNum != ~uintptr_t(0) ) selectRow(stRowNum);
   if( tableRowNum == ~uintptr_t(0) ) tableRowNum = table.rowCount() - 1;
-  for( j = fieldCount(), i = 0; i < j; i++ )
+  for( uintptr_t j = fieldCount(), i = 0; i < j; i++ )
     table(tableRowNum,fieldName(i)) = valueAsMutant(i);
+  if( srow >= 0 ) selectRow(srow);
+  return *this;
+}
+//---------------------------------------------------------------------------
+template <typename Table>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+Statement & Statement::unloadRowByIndex(Table & table,uintptr_t stRowNum,uintptr_t tableRowNum)
+{
+  intptr_t srow = rowIndex();
+  if( stRowNum != ~uintptr_t(0) ) selectRow(stRowNum);
+  if( tableRowNum == ~uintptr_t(0) ) tableRowNum = table.rowCount() - 1;
+  for( uintptr_t j = fieldCount(), i = 0; i < j; i++ )
+    table(tableRowNum,i) = valueAsMutant(i);
   if( srow >= 0 ) selectRow(srow);
   return *this;
 }

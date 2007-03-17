@@ -28,15 +28,15 @@
 //---------------------------------------------------------------------------
 namespace adicpp {
 //---------------------------------------------------------------------------
-Database * Database::newDatabase(ksys::Config * config)
+Database * Database::newDatabase(const ksys::ConfigSection * config)
 {
-  ksys::Config lconfig;
-  if( config == NULL ) config = &lconfig.silent(true);
-  config->parse().override();
-  utf8::String stype0(config->valueByPath("libadicpp.default_connection.server_type","MYSQL"));
+  ksys::ConfigSection defConfig;
+  if( config == NULL ) config = &defConfig;
+  utf8::String stype0(config->valueByPath("server_type","MYSQL"));
   utf8::String stype(stype0.lower());
-  utf8::String section("libadicpp.default_connection." + stype);
+  utf8::String section(stype);
   if( stype.strcmp("firebird") == 0 ){
+    fbcpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
     ksys::AutoPtr<FirebirdDatabase> p(newObject<FirebirdDatabase>());
     p->name(config->valueByPath(section + ".database"));
     p->params().add("user_name",config->valueByPath(section + ".user","sysdba"));
@@ -49,6 +49,7 @@ Database * Database::newDatabase(ksys::Config * config)
     return p.ptr(NULL);
   }
   if( stype.strcmp("mysql") == 0 ){
+    mycpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
     ksys::AutoPtr<MYSQLDatabase> p(newObject<MYSQLDatabase>());
     p->name(config->valueByPath(section + ".database"));
     p->params().add("user_name",config->valueByPath(section + ".user","root"));
@@ -61,7 +62,7 @@ Database * Database::newDatabase(ksys::Config * config)
     return p.ptr(NULL);
   }
   newObjectV1C2<ksys::Exception>(EINVAL,"unknown or unsupported server type: " + stype0)->throwSP();
-  exit(ENOSYS);
+  return NULL;
 }
 //---------------------------------------------------------------------------
 } // namespace adicpp

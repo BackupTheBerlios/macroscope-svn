@@ -2489,9 +2489,9 @@ utf8::String getMachineUniqueKey()
     // Routing table grew, retrying
   }
   struct ifreq ifr;
-  struct if_msghdr * ifm, * nextifm;
+  struct if_msghdr * ifm, * ifm2 = NULL, * nextifm;
   struct ifa_msghdr * ifam;
-  struct sockaddr_dl * sdl;
+  struct sockaddr_dl * sdl, * sdl2 = NULL;
   const uint8_t * next = buf, * lim = next + needed;
   while( next < lim ){
     ifm = (struct if_msghdr *) next;
@@ -2506,6 +2506,8 @@ utf8::String getMachineUniqueKey()
 //      if( ifm->ifm_flags & IFF_UP );
 //      if( sdl->sdl_type == IFT_ETHER );
     if( ifm->ifm_type == RTM_IFINFO && (ifm->ifm_flags & IFF_LOOPBACK) == 0 && sdl->sdl_type == IFT_ETHER ){
+      if( ifm2 == NULL ) ifm2 = ifm;
+      if( sdl2 == NULL ) sdl2 = sdl;
       char name[IFNAMSIZ];
       memcpy(name,sdl->sdl_data,sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen);
       name[sizeof(name) < sdl->sdl_nlen ? sizeof(name)-1 : sdl->sdl_nlen] = '\0';
@@ -2553,13 +2555,14 @@ utf8::String getMachineUniqueKey()
       }
       close(s);
     }
+    next += ifm->ifm_msglen;
+    ifam = NULL;
     while( next < lim ){
       nextifm = (struct if_msghdr *) next;
       if( nextifm->ifm_type != RTM_NEWADDR ) break;
       if( ifam == NULL ) ifam = (struct ifa_msghdr *) nextifm;
       next += nextifm->ifm_msglen;
     }
-    next += ifm->ifm_msglen;
   }
 #endif
 #ifndef NDEBUG

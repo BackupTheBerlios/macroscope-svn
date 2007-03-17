@@ -90,10 +90,13 @@ void API::initialize()
   new (mutex_) ksys::InterlockedMutex;
   count_ = 0;
 #endif
+  new (clientLibrary_) utf8::String;
 }
 //---------------------------------------------------------------------------
 void API::cleanup()
 {
+  using namespace utf8;
+  reinterpret_cast<utf8::String *>(clientLibrary_)->~String();
 #if !FIREBIRD_STATIC_LIBRARY
   mutex().~InterlockedMutex();
 #endif
@@ -102,18 +105,15 @@ void API::cleanup()
 #if !FIREBIRD_STATIC_LIBRARY
 utf8::String API::tryOpen()
 {
-  utf8::String  libFileName;
+#if defined(__WIN32__) || defined(__WIN64__)
+  static const char libName[] = "fbclient.dll";
+#else
+  static const char libName[] = "libfbclient.so";
+#endif
+  utf8::String libFileName(clientLibraryNL());
+  if( libFileName.strlen() == 0 ) libFileName = libName;
   if( handle_ == NULL ){
     try {
-      ksys::Config config;
-      config.silent(true).parse();
-      static const char libKeyPath[] = "libadicpp.firebird.client_library";
-#if defined(__WIN32__) || defined(__WIN64__)
-      static const char libName[] = "fbclient.dll";
-#else
-      static const char libName[] = "libfbclient.so";
-#endif
-      libFileName = config.valueByPath(libKeyPath,libName);
 #if defined(__WIN32__) || defined(__WIN64__)
       if( ksys::isWin9x() ){
         handle_ = LoadLibraryExA(ksys::anyPathName2HostPathName(libFileName).getANSIString(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);

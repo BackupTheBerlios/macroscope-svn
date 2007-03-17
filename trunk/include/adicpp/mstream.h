@@ -58,11 +58,12 @@ class MemoryStream {
         int32_t   refCount_;
     };
 
-    SPRC< Container>  container_;
-    uintptr_t         pos_;
+    mutable SPRC<Container> container_;
+    uintptr_t pos_;
+    
     static uint8_t    nullContainer_[];
-
     static Container &  nullContainer();
+    
     MemoryStream(Container * container);
   public:
     ~MemoryStream();
@@ -147,7 +148,7 @@ class MemoryStream {
 
     MemoryStream        unique() const;
 
-    void * const &      raw() const;
+    void * raw() const;
     //    static MemoryStream reference(void * ptr,long count);
 };
 //---------------------------------------------------------------------------
@@ -496,7 +497,7 @@ inline MemoryStream MemoryStream::unique() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-inline void * const & MemoryStream::raw() const
+inline void * MemoryStream::raw() const
 {
   return container_->ptr_;
 }

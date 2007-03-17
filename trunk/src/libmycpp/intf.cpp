@@ -75,6 +75,7 @@ const char * const  API::symbols_[] = {
 void API::initialize()
 {
   new (mutex_) InterlockedMutex;
+  new (clientLibrary_) utf8::String;
   new (threadCount_) ThreadLocalVariable<intptr_t>;
 #if !MYSQL_STATIC_LIBRARY  
   count_ = 0;
@@ -86,23 +87,23 @@ void API::cleanup()
 {
   Thread::afterExecuteActions().remove(Thread::afterExecuteActions().search(Thread::Action((void *) afterThreadExecute,this)));
   threadCount().~ThreadLocalVariable<intptr_t>();
+  using namespace utf8;
+  reinterpret_cast<utf8::String *>(clientLibrary_)->~String();
   mutex().~InterlockedMutex();
 }
 //---------------------------------------------------------------------------
 #if !MYSQL_STATIC_LIBRARY
 utf8::String API::tryOpen()
 {
-  utf8::String libFileName;
-  if( handle_ == NULL ){
-    try{
-      Config config;
-      config.silent(true).parse();
-      static const char libKey[] = "libadicpp.mysql.client_library";
 #if defined(__WIN32__) || defined(__WIN64__)
-      libFileName = config.valueByPath(libKey,"libmysql.dll");
+  static const char libName[] = "libmysql.dll";
 #else
-      libFileName = config.valueByPath(libKey,"libmysqlclient_r.so");
+  static const char libName[] = "libmysqlclient_r.so";
 #endif
+  utf8::String libFileName(clientLibraryNL());
+  if( libFileName.strlen() == 0 ) libFileName = libName;
+  if( handle_ == NULL ){
+    try {
 #if defined(__WIN32__) || defined(__WIN64__)
       if( isWin9x() ){
         handle_ = LoadLibraryExA(anyPathName2HostPathName(libFileName).getANSIString(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);

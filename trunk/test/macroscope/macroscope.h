@@ -52,11 +52,6 @@ class Logger {
     ConfigSPi config_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
-    AutoPtr<Statement> statement2_;
-    AutoPtr<Statement> statement3_;
-    AutoPtr<Statement> statement4_;
-    AutoPtr<Statement> statement5_;
-    AutoPtr<Statement> statement6_;
     AutoPtr<Statement> stTrafIns_;
     AutoPtr<Statement> stTrafUpd_;
     AutoPtr<Statement> stMonUrlSel_;
@@ -217,17 +212,23 @@ class Logger {
 
         AutoPtr<Database> database_;
         AutoPtr<Statement> statement_;
-        AutoPtr<Statement> statement2_;
-        AutoPtr<Statement> statement3_;
-        AutoPtr<Statement> statement4_;
-        AutoPtr<Statement> statement5_;
-        AutoPtr<Statement> statement6_;
         AutoPtr<Statement> stFileStat_[3];
+        AutoPtr<Statement> stBPFTSel_;
+        AutoPtr<Statement> stBPFTHostSel_;
+        AutoPtr<Statement> stBPFTIns_;
+        AutoPtr<Statement> stBPFTIns2_;
+        AutoPtr<Statement> stBPFTCacheSel_;
+        AutoPtr<Statement> stBPFTCacheDel_;
+        AutoPtr<Statement> stBPFTCacheHostSel_;
+
+        AutoPtr<Database> dbtrUpdate_;
+        AutoPtr<Statement> stBPFTCacheIns_;
         AutoPtr<Statement> stDNSCache_[3];
 
         void parseBPFTLogFile();
         enum { rlYear, rlMon, rlDay, rlCount };
         void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
+	bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement,bool & updateCache);
         void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
         void clearBPFTCache();
       private:
@@ -241,7 +242,6 @@ class Logger {
 
     void writeHtmlYearOutput();
   private:
-
     void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
     void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
     utf8::String squidStrToWideString(const char * str);
@@ -267,6 +267,7 @@ class Logger {
     static uint32_t indexToIp4Addr(const utf8::String & index);
     utf8::String getDecor(const utf8::String & dname,const utf8::String & section);
     static utf8::String getIPFilter(const utf8::String & text);
+    static bool isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,const struct tm et);
 
     utf8::String trafTypeNick_[ttCount];
     utf8::String trafTypeHeadColor_[ttCount];

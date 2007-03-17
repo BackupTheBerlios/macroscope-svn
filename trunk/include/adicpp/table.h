@@ -31,7 +31,7 @@ namespace ksys {
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template <typename T,class RT = Array< T> > class Table {
+template <typename T,class RT = Array<T> > class Table {
   public:
     ~Table();
     Table();
@@ -55,18 +55,22 @@ template <typename T,class RT = Array< T> > class Table {
     uintptr_t columnCount() const;
 
     T & cell(uintptr_t row,uintptr_t column);
+    Table<T,RT> & cell(uintptr_t row,uintptr_t column,const T & value);
     T & cell(uintptr_t row,const utf8::String & columnName);
+    Table<T,RT> & cell(uintptr_t row,const utf8::String & columnName,const T & value);
     const T & cell(uintptr_t row,uintptr_t column) const;
     const T & cell(uintptr_t row,const utf8::String & columnName) const;
 
     T & operator ()(uintptr_t row,uintptr_t column);
+    Table<T,RT> & operator ()(uintptr_t row,uintptr_t column,const T & value);
     T & operator ()(uintptr_t row,const utf8::String & columnName);
+    Table<T,RT> & operator ()(uintptr_t row,const utf8::String & columnName,const T & value);
     const T & operator ()(uintptr_t row,uintptr_t column) const;
     const T & operator ()(uintptr_t row,const utf8::String & columnName) const;
     
     Mutant sum(uintptr_t column) const;
     Mutant sum(const utf8::String & columnName) const;
-  private:
+  protected:
     template <typename TT,typename P> class SortParam {
       public:
         const TT * table_;
@@ -84,12 +88,46 @@ template <typename T,class RT = Array< T> > class Table {
       return param.f_(&p1 - param.table_->rows_.ptr(), &p2 - param.table_->rows_.ptr(), *param.param_);
     }
   public:
-    template <typename P> Table<T,RT> & sort(intptr_t(*const f)(uintptr_t row1, uintptr_t row2, const P & param), const P & p)
+    template <typename P> Table<T,RT> & sort(intptr_t(*const f)(uintptr_t row1, uintptr_t row2, const P & param),const P & p)
     {
-      SortParam< Table<T,RT>,P> param(*this,p,f);
+      SortParam<Table<T,RT>,P> param(*this,p,f);
       intptr_t (*pSortHelper)(RT * const & p1,RT * const & p2,const SortParam< Table<T,RT>,P> & param);
       qSort(rows_.ptr(), 0, rows_.count() - 1, pSortHelper = sortHelper< RT,Table<T,RT>,P>, param);
       return *this;
+    }
+  protected:
+    struct DSP {
+      Table<T,RT> * table_;
+      uintptr_t column_;
+      bool descending_;
+    };
+    template <typename P> static intptr_t defaultSortFunction(uintptr_t row1,uintptr_t row2,const P & param){
+      intptr_t c = 0;
+      for( uintptr_t i = 0; i < param.count(); i++ ){
+        c = param[i].table_->cell(row1,param[i].column_) < param[i].table_->cell(row2,param[i].column_) ? -1 :
+	    param[i].table_->cell(row1,param[i].column_) > param[i].table_->cell(row2,param[i].column_) ? 1 : 0;
+	if( c != 0 ){
+	  c = param[i].descending_ ? -c : c;
+	  break;
+	}
+      }
+      return c;
+    }
+  public:
+    Table<T,RT> & sort(const utf8::String & sortOrder){
+      Array<DSP> param;
+      param.resize(enumStringParts(sortOrder));
+      for( uintptr_t i = 0; i < param.count(); i++ ){
+        utf8::String order(stringPartByNo(sortOrder,i));
+	utf8::String::Iterator it(order);
+        param[i].descending_ = false;
+	if( it.getChar() == '+' ){ it++; }
+	else
+	if( it.getChar() == '-' ){ it++; param[i].descending_ = true; }
+	param[i].column_ = columnIndex(it);
+	param[i].table_ = this;
+      }
+      return sort(defaultSortFunction<Array<DSP> >,param);
     }
   protected:
     class Name2Index {
@@ -336,11 +374,28 @@ T & Table<T,RT>::cell(uintptr_t row, uintptr_t column)
 }
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::cell(uintptr_t row, uintptr_t column,const T & value)
+{
+  assert(row < rows_.count() && column < name2Index_.count());
+  rows_[row][column] = value;
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
 T & Table<T,RT>::cell(uintptr_t row, const utf8::String & columnName)
 {
   uintptr_t column  = columnIndex(columnName);
   assert(row < rows_.count() && column < name2Index_.count());
   return rows_[row][column];
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::cell(uintptr_t row, const utf8::String & columnName,const T & value)
+{
+  uintptr_t column  = columnIndex(columnName);
+  assert(row < rows_.count() && column < name2Index_.count());
+  rows_[row][column] = value;
+  return *this;
 }
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline
@@ -365,9 +420,21 @@ T & Table<T,RT>::operator ()(uintptr_t row, uintptr_t column)
 }
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::operator ()(uintptr_t row, uintptr_t column,const T & value)
+{
+  return cell(row,column,value);
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
 T & Table<T,RT>::operator ()(uintptr_t row, const utf8::String & columnName)
 {
   return cell(row, columnName);
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::operator ()(uintptr_t row, const utf8::String & columnName,const T & value)
+{
+  return cell(row,columnName,value);
 }
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline

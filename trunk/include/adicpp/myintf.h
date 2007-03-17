@@ -329,9 +329,13 @@ class API {
 #endif
     void open();
     void close();
+    utf8::String clientLibrary();
+    void clientLibrary(const utf8::String & lib);
   protected:
     uint8_t mutex_[sizeof(ksys::InterlockedMutex)];
     ksys::InterlockedMutex & mutex();
+    utf8::String clientLibraryNL();
+    uint8_t clientLibrary_[sizeof(utf8::String)];
     intptr_t                 count_;
     uint8_t threadCount_[sizeof(ksys::ThreadLocalVariable<intptr_t>)];
     ksys::ThreadLocalVariable<intptr_t> & threadCount();
@@ -358,6 +362,23 @@ extern API api;
 inline ksys::InterlockedMutex & API::mutex()
 {
   return *reinterpret_cast<ksys::InterlockedMutex *>(mutex_);
+}
+//---------------------------------------------------------------------------
+inline utf8::String API::clientLibrary()
+{
+  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  return *reinterpret_cast<utf8::String *>(clientLibrary_);
+}
+//---------------------------------------------------------------------------
+inline utf8::String API::clientLibraryNL()
+{
+  return *reinterpret_cast<utf8::String *>(clientLibrary_);
+}
+//---------------------------------------------------------------------------
+inline void API::clientLibrary(const utf8::String & lib)
+{
+  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  *reinterpret_cast<utf8::String *>(clientLibrary_) = lib;
 }
 //---------------------------------------------------------------------------
 inline ksys::ThreadLocalVariable<intptr_t> & API::threadCount()

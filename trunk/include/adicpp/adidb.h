@@ -40,7 +40,7 @@ class Database : virtual public ksys::Object {
 
     void beforeDestruction() { detach(); }
 
-    static Database *     newDatabase(ksys::Config * config = NULL);
+    static Database *     newDatabase(const ksys::ConfigSection * config);
 
     virtual Statement *   newStatement() = 0;
     virtual Statement *   newAttachedStatement() = 0;
@@ -71,6 +71,17 @@ class Database : virtual public ksys::Object {
     //    virtual Database & alterFields(const utf8::String & tableName,const utf8::String & fields) = 0;
     //    virtual Database & dropFields(const utf8::String & tableName,const utf8::String & fields) = 0;
   protected:
+  private:
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class AutoDatabaseDetach {
+  public:
+    ~AutoDatabaseDetach(){ database_->detach(); }
+    AutoDatabaseDetach(Database & database) : database_(&database) { database_->attach(); }
+  protected:
+    Database * database_;
   private:
 };
 //---------------------------------------------------------------------------

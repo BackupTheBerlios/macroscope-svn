@@ -956,6 +956,132 @@ Mutant::operator MemoryStream() const
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
+bool Mutant::operator == (const Mutant & m) const
+{
+  bool r = false;
+  if( type_ == m.type_ ){
+    switch( type_ ){
+      case mtNull   : r = true; break;
+      case mtInt    : r = int_ == m.int_; break;
+      case mtFloat  : r = float_ == m.float_; break;
+      case mtTime   : r = int_ == m.int_; break;
+      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) == 0; break;
+      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) == 0; break;
+      case mtStr    : r = strcmp(str_,str_) == 0; break;
+      case mtString : r = string().strcmp(m.string()) == 0; break;
+      case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) == 0; break;
+      default       :
+        newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+bool Mutant::operator != (const Mutant & m) const
+{
+  bool r = true;
+  if( type_ == m.type_ ){
+    switch( type_ ){
+      case mtNull   : r = false; break;
+      case mtInt    : r = int_ != m.int_; break;
+      case mtFloat  : r = float_ != m.float_; break;
+      case mtTime   : r = int_ != m.int_; break;
+      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) != 0; break;
+      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) != 0; break;
+      case mtStr    : r = strcmp(str_,str_) != 0; break;
+      case mtString : r = string().strcmp(m.string()) != 0; break;
+      case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) != 0; break;
+      default       :
+        newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+bool Mutant::operator >  (const Mutant & m) const
+{
+  bool r = type_ > m.type_;
+  if( type_ == m.type_ ){
+    switch( type_ ){
+      case mtNull   : r = false; break;
+      case mtInt    : r = int_ > m.int_; break;
+      case mtFloat  : r = float_ > m.float_; break;
+      case mtTime   : r = int_ > m.int_; break;
+      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) > 0; break;
+      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) > 0; break;
+      case mtStr    : r = strcmp(str_,str_) > 0; break;
+      case mtString : r = string().strcmp(m.string()) > 0; break;
+      case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) > 0; break;
+      default       :
+        newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+bool Mutant::operator >= (const Mutant & m) const
+{
+  bool r = type_ > m.type_;
+  if( type_ == m.type_ ){
+    switch( type_ ){
+      case mtNull   : r = true; break;
+      case mtInt    : r = int_ >= m.int_; break;
+      case mtFloat  : r = float_ >= m.float_; break;
+      case mtTime   : r = int_ >= m.int_; break;
+      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) >= 0; break;
+      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) >= 0; break;
+      case mtStr    : r = strcmp(str_,str_) >= 0; break;
+      case mtString : r = string().strcmp(m.string()) >= 0; break;
+      case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) >= 0; break;
+      default       :
+        newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+bool Mutant::operator <  (const Mutant & m) const
+{
+  bool r = type_ < m.type_;
+  if( type_ == m.type_ ){
+    switch( type_ ){
+      case mtNull   : r = false; break;
+      case mtInt    : r = int_ < m.int_; break;
+      case mtFloat  : r = float_ < m.float_; break;
+      case mtTime   : r = int_ < m.int_; break;
+      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) < 0; break;
+      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) < 0; break;
+      case mtStr    : r = strcmp(str_,str_) < 0; break;
+      case mtString : r = string().strcmp(m.string()) < 0; break;
+      case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) < 0; break;
+      default       :
+        newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+bool Mutant::operator <= (const Mutant & m) const
+{
+  bool r = type_ < m.type_;
+  if( type_ == m.type_ ){
+    switch( type_ ){
+      case mtNull   : r = true; break;
+      case mtInt    : r = int_ <= m.int_; break;
+      case mtFloat  : r = float_ <= m.float_; break;
+      case mtTime   : r = int_ <= m.int_; break;
+      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) <= 0; break;
+      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) <= 0; break;
+      case mtStr    : r = strcmp(str_,str_) <= 0; break;
+      case mtString : r = string().strcmp(m.string()) <= 0; break;
+      case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) <= 0; break;
+      default       :
+        newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
 

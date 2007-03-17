@@ -76,9 +76,10 @@ class ConfigSection {
 
     ConfigSection & setValue(const utf8::String & key,const Mutant & value) const;
     ConfigSection & setValue(uintptr_t i,const Mutant & value) const;
-  protected:
+
     ConfigSection & clear();
     ConfigSection & addSection(const ConfigSection & section);
+  protected:
     Mutant & valueRefByPath(const utf8::String & path) const;
     Mutant & valueRef(const utf8::String & key) const;
   private:
