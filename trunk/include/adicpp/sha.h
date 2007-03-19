@@ -66,6 +66,8 @@ class SHA256 : private SHA256_CTX {
     uint8_t * sha256();
     const uint8_t * sha256() const;
     uintptr_t size() const;
+    SHA256 & sha256(const utf8::String & s,bool caseSensitive = true);
+    utf8::String sha256AsBase64String(const utf8::String & s,bool caseSensitive = true);
   protected:
     uint8_t sha256_[32];
   private:

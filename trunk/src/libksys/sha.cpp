@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,17 +27,55 @@
 #include <adicpp/ksys.h>
 //---------------------------------------------------------------------------
 extern "C" {
-  //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 #if HAVE_SHA256_H
 #include <sha256.h>
 #else
 #include <adicpp/sha/sha256.h>
 #endif
-  //---------------------------------------------------------------------------
+//---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------
 namespace ksys {
-
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+SHA256 & SHA256::sha256(const utf8::String & s,bool caseSensitive)
+{
+  init();
+  if( caseSensitive ){
+    update(s.c_str(),s.size());
+  }
+  else {
+    uintptr_t h, l;
+    const char * a = s.c_str();
+    for(;;){
+      if( *a == '\0' ) break;
+      h = utf8::utf8c2UpperUCS(a,l);
+      update(&h,sizeof(h));
+      a += l;
+      if( *a == '\0' ) break;
+      h = utf8::utf8c2UpperUCS(a,l);
+      update(&h,sizeof(h));
+      a += l;
+      if( *a == '\0' ) break;
+      h = utf8::utf8c2UpperUCS(a,l);
+      update(&h,sizeof(h));
+      a += l;
+      if( *a == '\0' ) break;
+      h = utf8::utf8c2UpperUCS(a,l);
+      update(&h,sizeof(h));
+      a += l;
+    }
+  }
+  return final();
+}
+//---------------------------------------------------------------------------
+utf8::String SHA256::sha256AsBase64String(const utf8::String & s,bool caseSensitive)
+{
+  sha256(s,caseSensitive);
+  return base64Encode(sha256_,sizeof(sha256_));
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

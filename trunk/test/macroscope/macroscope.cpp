@@ -664,7 +664,7 @@ void Logger::main()
     " st_et            DATETIME NOT NULL,"
     " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
     " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-    " st_filter_hash   BIGINT NOT NULL,"
+    " st_filter_hash   CHAR(43) CHARACTER SET ascii NOT NULL,"
     " st_threshold     BIGINT NOT NULL,"
     " st_dgram_bytes   BIGINT NOT NULL,"
     " st_data_bytes    BIGINT NOT NULL"

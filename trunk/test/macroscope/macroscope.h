@@ -206,7 +206,7 @@ class Logger {
         uintmax_t minSignificantThreshold_;
         struct tm curTime_;
         utf8::String filter_;
-        int64_t filterHash_;
+        utf8::String filterHash_;
         bool resolveDNSNames_;
         bool bidirectional_;
 

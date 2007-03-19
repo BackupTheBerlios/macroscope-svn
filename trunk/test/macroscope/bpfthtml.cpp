@@ -329,7 +329,8 @@ Logger::BPFTThread::BPFTThread(Logger & logger,const utf8::String & section,cons
 void Logger::BPFTThread::threadExecute()
 {
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
-  AutoDatabaseDetach autoDetach(database_);
+  AutoDatabaseDetach autoDatabaseDetach(database_);
+  AutoDatabaseDetach autoDBTRUpdateDetach(dbtrUpdate_);
   parseBPFTLogFile();
   writeBPFTHtmlReport();
 }
@@ -415,10 +416,10 @@ bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement,bool & upd
           "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold" +
           "  ORDER BY SUM1, st_src_ip, st_dst_ip "
 	  ") AS A "
-	  "WHERE A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' OR A.SUM1 >= :threshold"
+	  "WHERE (A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' AND A.st_dst_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "') OR A.SUM1 >= :threshold"
         )->prepare();
         stBPFTCacheSel_->paramAsString("if",sectionName_)->
-          paramAsMutant("hash",filterHash_)->
+          paramAsString("hash",filterHash_)->
           paramAsMutant("threshold",minSignificantThreshold_);
       }
       stBPFTCacheSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
@@ -448,13 +449,13 @@ bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement,bool & upd
           "  st_src_ip = :src AND st_dst_ip = :dst"
         )->prepare();
         stBPFTCacheHostSel_->paramAsString("if",sectionName_)->
-          paramAsMutant("hash",filterHash_)->
+          paramAsString("hash",filterHash_)->
           paramAsMutant("threshold",minSignificantThreshold_);
       }
       stBPFTCacheHostSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
         paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
-        paramAsString("src",pStatement->paramAsString(bidirectional_ ? "src" : "host"))->
-        paramAsString("dst",pStatement->paramAsString(bidirectional_ ? "dst" : "host"));
+        paramAsString("src",pStatement->paramAsString("src"))->
+        paramAsString("dst",pStatement->paramAsString("dst"));
       if( stBPFTCacheHostSel_->execute()->fetch() ){
         stBPFTCacheHostSel_->fetchAll();
         pStatement = stBPFTCacheHostSel_;
@@ -501,7 +502,7 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         ")"
       )->prepare();
       stBPFTCacheIns_->paramAsString("st_if",sectionName_)->
-        paramAsMutant("st_filter_hash",filterHash_)->
+        paramAsString("st_filter_hash",filterHash_)->
         paramAsMutant("st_threshold",minSignificantThreshold_);
     }
     stBPFTCacheIns_->
@@ -511,8 +512,8 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
       stBPFTCacheIns_->
-        paramAsString("st_src_ip",pStatement->valueAsString(bidirectional_ ? "st_src_ip" : "st_ip"))->
-        paramAsString("st_dst_ip",pStatement->valueAsString(bidirectional_ ? "st_dst_ip" : "st_ip"));
+        paramAsString("st_src_ip",pStatement->valueAsString("st_src_ip"))->
+        paramAsString("st_dst_ip",pStatement->valueAsString("st_dst_ip"));
       uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
       if( pStatement == statement_ && sum1 < minSignificantThreshold_ ){
         if( updateCache && !dup ){
@@ -574,7 +575,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     ellapsed_ = getlocaltimeofday();
     minSignificantThreshold_ = logger_->config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
     filter_ = getIPFilter(logger_->config_->textByPath(section_ + ".html_report.filter"));
-    filterHash_ = filter_.hash_ll(false);
+    filterHash_ = SHA256().sha256AsBase64String(filter_,false);
     curTime_ = time2tm(ellapsed_);
     resolveDNSNames_ = logger_->config_->valueByPath(section_ + ".html_report.resolve_dns_names",true);
     bidirectional_ = logger_->config_->valueByPath(section_ + ".html_report.bidirectional",false);
@@ -632,7 +633,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "  A.*"
         "FROM ("
         "  SELECT"
-        "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
+        "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
         "  FROM ("
         "      SELECT"
         "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
@@ -658,7 +659,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       );
       stBPFTHostSel_->text(
         "  SELECT"
-        "    B.st_ip AS st_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
+        "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
         "  FROM ("
         "      SELECT"
         "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
@@ -667,7 +668,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "      WHERE "
         "        st_if = :st_if AND"
         "        st_start >= :BT AND st_start <= :ET AND"
-        "        st_dst_ip = :host" +
+        "        st_dst_ip = :dst" +
         filter_ +
         "      GROUP BY st_dst_ip"
         "    UNION ALL"
@@ -678,7 +679,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "      WHERE "
         "        st_if = :st_if AND"
         "        st_start >= :BT AND st_start <= :ET AND"
-        "        st_src_ip = :host" +
+        "        st_src_ip = :src" +
         filter_ +
         "      GROUP BY st_src_ip"
         "  ) AS B "
@@ -818,8 +819,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           default    :
             assert( 0 );
         }
-        statement_->paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()));
-        statement_->paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
+        stBPFTSel_->
+	  paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+          paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
         getBPFTCached(stBPFTSel_,&table[*pi + av]);
         colCount += (uintmax_t) table[*pi + av].sum("SUM1") > 0;
         (*pi)--;
@@ -963,15 +965,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
             stBPFTHostSel_->
 	      paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-              paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
-	    if( bidirectional_ ){
-	      stBPFTHostSel_->
-                paramAsMutant("src",table[0](i,"st_src_ip"))->
-                paramAsMutant("dst",table[0](i,"st_dst_ip"));
-	    }
-	    else {
-	      stBPFTHostSel_->paramAsMutant("host",table[0](i,"st_src_ip"));
-	    }
+              paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
+              paramAsMutant("src",table[0](i,"st_src_ip"))->
+              paramAsMutant("dst",table[0](i,"st_dst_ip"));
             uintmax_t sum1, sum2;
             getBPFTCached(stBPFTHostSel_,NULL,&sum1,&sum2);
             f <<
@@ -1113,7 +1109,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     }
     f <<
       "Interface: " + sectionName_ + "<BR>\n" +
-      "Filter: <B>" + filter + "</B>, hash: " + utf8::int2Str(filterHash_) + "<BR>\n" +
+      "Filter: <B>" + filter + "</B>, hash: " + filterHash_ + "<BR>\n" +
       "FilterSQL: <B>" + filter_ + "</B><BR>\n" +
       "DNS cache size: " + utf8::int2Str((uintmax_t) logger_->dnsCache_.count()) + ", "
       "hit: " + utf8::int2Str(logger_->dnsCacheHitCount_) + ", " +

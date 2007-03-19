@@ -298,8 +298,9 @@ int64_t getgmtoffset()
 #else
   time_t tl, t = time(&tl);
 //  if( tl - t == 0 ){
-    struct tm lt = *localtime(&t), gt = *gmtime(&t);
-    return (mktime(&lt) - mktime(&gt)) * int64_t(1000000);
+    struct tm lt = *localtime(&t);//, gt = *gmtime(&t);
+    return lt.tm_gmtoff * int64_t(1000000);
+//    return (mktime(&lt) - mktime(&gt)) * int64_t(1000000);
 //  }
 //  return (tl - t) * int64_t(1000000);
 #endif
