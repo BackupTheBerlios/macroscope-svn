@@ -107,7 +107,7 @@ template <typename T,class RT = Array<T> > class Table {
         c = param[i].table_->cell(row1,param[i].column_) < param[i].table_->cell(row2,param[i].column_) ? -1 :
 	    param[i].table_->cell(row1,param[i].column_) > param[i].table_->cell(row2,param[i].column_) ? 1 : 0;
 	if( c != 0 ){
-	  c = param[i].descending_ ? -c : c;
+	  c = param[i].descending_ ? c : -c;
 	  break;
 	}
       }

@@ -218,6 +218,7 @@ class Logger {
         AutoPtr<Statement> stBPFTIns_;
         AutoPtr<Statement> stBPFTIns2_;
         AutoPtr<Statement> stBPFTCacheSel_;
+        AutoPtr<Statement> stBPFTCacheIns2_;
         AutoPtr<Statement> stBPFTCacheDel_;
         AutoPtr<Statement> stBPFTCacheHostSel_;
 
@@ -228,9 +229,10 @@ class Logger {
         void parseBPFTLogFile();
         enum { rlYear, rlMon, rlDay, rlCount };
         void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
-	bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement,bool & updateCache);
+	bool getBPFTCachedHelper(Statement * & pStatement);
         void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
         void clearBPFTCache();
+        utf8::String genHRef(uint32_t ip);
       private:
     };
     friend class BPFTThread;

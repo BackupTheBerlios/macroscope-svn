@@ -282,11 +282,23 @@ bool Logger::isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,
   struct tm curTimeETYear = curTimeETMon;
   curTimeETYear.tm_mon = 11;
   int64_t bt0 = tm2Time(bt), et0 = tm2Time(et);
-  return 
-    (bt0 == tm2Time(curTimeBTHour) && et0 == tm2Time(curTimeETHour)) ||
-    (bt0 == tm2Time(curTimeBTDay)  && et0 == tm2Time(curTimeETDay)) ||
-    (bt0 == tm2Time(curTimeBTMon)  && et0 == tm2Time(curTimeETMon)) ||
-    (bt0 == tm2Time(curTimeBTYear) && et0 == tm2Time(curTimeETYear))
+  return
+    (
+      bt.tm_year == et.tm_year && bt.tm_mon == et.tm_mon && bt.tm_mday == et.tm_mday && bt.tm_hour == et.tm_hour &&
+      bt0 == tm2Time(curTimeBTHour) && et0 == tm2Time(curTimeETHour)
+    ) ||
+    (
+      bt.tm_year == et.tm_year && bt.tm_mon == et.tm_mon && bt.tm_mday == et.tm_mday &&
+      bt0 == tm2Time(curTimeBTDay) && et0 == tm2Time(curTimeETDay)
+    ) ||
+    (
+      bt.tm_year == et.tm_year && bt.tm_mon == et.tm_mon &&
+      bt0 == tm2Time(curTimeBTMon) && et0 == tm2Time(curTimeETMon)
+    ) ||
+    (
+      bt.tm_year == et.tm_year &&
+      bt0 == tm2Time(curTimeBTYear) && et0 == tm2Time(curTimeETYear)
+    )
   ;
 }
 //------------------------------------------------------------------------------
@@ -310,6 +322,7 @@ Logger::BPFTThread::BPFTThread(Logger & logger,const utf8::String & section,cons
   stBPFTIns_ = database_->newAttachedStatement();
   stBPFTIns2_ = database_->newAttachedStatement();
   stBPFTCacheSel_ = database_->newAttachedStatement();
+  stBPFTCacheIns2_ = database_->newAttachedStatement();
   stBPFTCacheDel_ = database_->newAttachedStatement();
   stBPFTCacheHostSel_ = database_->newAttachedStatement();
 						         
@@ -394,104 +407,92 @@ void Logger::BPFTThread::clearBPFTCache()
   );*/
 }
 //------------------------------------------------------------------------------
-bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement,bool & updateCache)
+bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
 {
-  updateCache = false;
-  bool useCache = !Logger::isCurrentTimeInterval(
-    curTime_,
-    time2tm((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()),
-    time2tm((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset())
-  );
-  if( useCache ){
-    updateCache = true;
-    if( pStatement == stBPFTSel_ ){
-      if( !stBPFTCacheSel_->prepared() ){
-        stBPFTCacheSel_->text(
-          "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-          " * FROM ("
-          "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-          "    st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-  	  "  FROM INET_BPFT_STAT_CACHE "
-          "  WHERE"
-          "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold" +
-          "  ORDER BY SUM1, st_src_ip, st_dst_ip "
-	  ") AS A "
-	  "WHERE (A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' AND A.st_dst_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "') OR A.SUM1 >= :threshold"
-        )->prepare();
-        stBPFTCacheSel_->paramAsString("if",sectionName_)->
-          paramAsString("hash",filterHash_)->
-          paramAsMutant("threshold",minSignificantThreshold_);
-      }
-      stBPFTCacheSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
-        paramAsMutant("ET",pStatement->paramAsMutant("ET"));
-      if( stBPFTCacheSel_->execute()->fetch() ){
-        stBPFTCacheSel_->fetchAll();
-        pStatement = stBPFTCacheSel_;
-        updateCache = false;
-#ifndef NDEBUG
-        if( logger_->verbose_ ) fprintf(stderr,
-          "bpft cache hit: %s %s\n",
-          (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
-          (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
-        );
-#endif
-      }
+  bool updateCache = true;
+  if( pStatement == stBPFTSel_ ){
+    if( !stBPFTCacheSel_->prepared() ){
+      stBPFTCacheSel_->text(
+        "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+        " * FROM ("
+        "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+        "    st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+        "  FROM INET_BPFT_STAT_CACHE "
+        "  WHERE"
+        "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold" +
+        "  ORDER BY SUM1, st_src_ip, st_dst_ip "
+        ") AS A "
+        "WHERE (A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' AND A.st_dst_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "') OR A.SUM1 >= :threshold"
+      )->prepare();
+      stBPFTCacheSel_->paramAsString("if",sectionName_)->
+        paramAsString("hash",filterHash_)->
+        paramAsMutant("threshold",minSignificantThreshold_);
     }
-    else if( pStatement == stBPFTHostSel_ ){
-      if( !stBPFTCacheHostSel_->prepared() ){
-        stBPFTCacheHostSel_->text(
-          "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheHostSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-          "  st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-          "FROM INET_BPFT_STAT_CACHE "
-          "WHERE"
-          "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
-          "  st_filter_hash = :hash AND st_threshold = :threshold AND " +
-          "  st_src_ip = :src AND st_dst_ip = :dst"
-        )->prepare();
-        stBPFTCacheHostSel_->paramAsString("if",sectionName_)->
-          paramAsString("hash",filterHash_)->
-          paramAsMutant("threshold",minSignificantThreshold_);
-      }
-      stBPFTCacheHostSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
-        paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
-        paramAsString("src",pStatement->paramAsString("src"))->
-        paramAsString("dst",pStatement->paramAsString("dst"));
-      if( stBPFTCacheHostSel_->execute()->fetch() ){
-        stBPFTCacheHostSel_->fetchAll();
-        pStatement = stBPFTCacheHostSel_;
-        updateCache = false;
-      }
+    stBPFTCacheSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
+      paramAsMutant("ET",pStatement->paramAsMutant("ET"));
+    if( stBPFTCacheSel_->execute()->fetch() ){
+      stBPFTCacheSel_->fetchAll();
+      pStatement = stBPFTCacheSel_;
+      updateCache = false;
+#ifndef NDEBUG
+      if( logger_->verbose_ ) fprintf(stderr,
+        "bpft cache hit: %s %s\n",
+        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
+        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
+      );
+#endif
     }
     else {
-      assert( 0 );
+#ifndef NDEBUG
+      if( logger_->verbose_ ) fprintf(stderr,
+        "bpft cache miss: %s %s\n",
+        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
+        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
+      );
+#endif
+    }
+  }
+  else if( pStatement == stBPFTHostSel_ ){
+    if( !stBPFTCacheHostSel_->prepared() ){
+      stBPFTCacheHostSel_->text(
+        "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheHostSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+        "  st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+        "FROM INET_BPFT_STAT_CACHE "
+        "WHERE"
+        "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
+        "  st_filter_hash = :hash AND st_threshold = :threshold AND " +
+        "  st_src_ip = :src AND st_dst_ip = :dst"
+      )->prepare();
+      stBPFTCacheHostSel_->paramAsString("if",sectionName_)->
+        paramAsString("hash",filterHash_)->
+        paramAsMutant("threshold",minSignificantThreshold_);
+    }
+    stBPFTCacheHostSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
+      paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
+      paramAsString("src",pStatement->paramAsString("src"))->
+      paramAsString("dst",pStatement->paramAsString("dst"));
+    if( stBPFTCacheHostSel_->execute()->fetch() ){
+      stBPFTCacheHostSel_->fetchAll();
+      pStatement = stBPFTCacheHostSel_;
+      updateCache = false;
     }
   }
   else {
-    pStatement->execute()->fetchAll();
-#ifndef NDEBUG
-    if( logger_->verbose_ ) fprintf(stderr,
-      "bpft cache miss: %s %s\n",
-      (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
-      (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
-    );
-#endif
+    assert( 0 );
   }
   return updateCache;
 }
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
-  bool updateCache, useCache = getBPFTCachedHelper(pStatement,updateCache);
-  if( useCache && updateCache ){
+  bool curIntr = Logger::isCurrentTimeInterval(
+    curTime_,
+    time2tm((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()),
+    time2tm((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset())
+  );
+  bool updateCache = getBPFTCachedHelper(pStatement);
+  if( updateCache ){
     pStatement->execute()->fetchAll();
-#ifndef NDEBUG
-    if( logger_->verbose_ ) fprintf(stderr,
-      "bpft cache miss: %s %s\n",
-      (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
-      (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
-    );
-#endif
-    bool dup = false;
     dbtrUpdate_->start();
     if( !stBPFTCacheIns_->prepared() ){
       stBPFTCacheIns_->text(
@@ -508,6 +509,8 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     stBPFTCacheIns_->
       paramAsMutant("st_bt",pStatement->paramAsMutant("BT"))->
       paramAsMutant("st_et",pStatement->paramAsMutant("ET"));
+    if( !stBPFTCacheIns2_->prepared() )
+      stBPFTCacheIns2_->text(stBPFTCacheIns_->text())->prepare();
     if( pResult != NULL ) pStatement->unloadColumns(*pResult);
     for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
@@ -515,52 +518,54 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         paramAsString("st_src_ip",pStatement->valueAsString("st_src_ip"))->
         paramAsString("st_dst_ip",pStatement->valueAsString("st_dst_ip"));
       uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
-      if( pStatement == statement_ && sum1 < minSignificantThreshold_ ){
-        if( updateCache && !dup ){
-          try {
-            stBPFTCacheIns_->
-  	      paramAsString("st_src_ip",ip4AddrToIndex(0xFFFFFFFF))->
-              paramAsString("st_dst_ip",ip4AddrToIndex(0xFFFFFFFF))->
-              paramAsMutant("st_dgram_bytes",pStatement->sum("SUM1",0,i))->
-              paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i))->execute();
-          }
-          catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
-            dup = true;
-          }
-	}
+      if( pStatement == stBPFTSel_ && sum1 < minSignificantThreshold_ ){
+        stBPFTCacheIns_->
+          paramAsString("st_src_ip",ip4AddrToIndex(0xFFFFFFFF))->
+          paramAsString("st_dst_ip",ip4AddrToIndex(0xFFFFFFFF))->
+          paramAsMutant("st_dgram_bytes",pStatement->sum("SUM1",0,i))->
+          paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
+        if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
+//        catch( ExceptionSP & e ){
+//          if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
         if( pResult != NULL ){
-          pResult->addRow()
-           (pResult->rowCount() - 1,"st_src_ip",stBPFTCacheIns_->paramAsString("st_src_ip"))
-           (pResult->rowCount() - 1,"st_dst_ip",stBPFTCacheIns_->paramAsString("st_dst_ip"))
-           (pResult->rowCount() - 1,"SUM1",stBPFTCacheIns_->paramAsMutant("st_dgram_bytes"))
-           (pResult->rowCount() - 1,"SUM2",stBPFTCacheIns_->paramAsMutant("st_data_bytes")).
-           sort("SUM1,st_src_ip");
+	  uintptr_t row = pResult->rowCount();
+          pResult->addRow();
+          pResult->cell(row,"st_src_ip") = stBPFTCacheIns_->paramAsString("st_src_ip");
+          pResult->cell(row,"st_dst_ip") = stBPFTCacheIns_->paramAsString("st_dst_ip");
+          pResult->cell(row,"SUM1") = stBPFTCacheIns_->paramAsMutant("st_dgram_bytes");
+          pResult->cell(row,"SUM2") = stBPFTCacheIns_->paramAsMutant("st_data_bytes");
+	  pResult->sort("-SUM1,st_src_ip,st_dst_ip");
         }
         break;
       }
-      if( updateCache && !dup ){
-        try {
-          stBPFTCacheIns_->
-            paramAsMutant("st_dgram_bytes",sum1)->
-            paramAsMutant("st_data_bytes",sum2)->execute();
-        }
-        catch( ExceptionSP & e ){
-          if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
-          dup = true;
-        }
-      }
-      if( pResult != NULL ) pStatement->unloadRowByIndex(*pResult);
+      stBPFTCacheIns_->
+        paramAsMutant("st_dgram_bytes",sum1)->
+        paramAsMutant("st_data_bytes",sum2);
+      if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
+      if( pResult != NULL ) pStatement->unloadRowByIndex(pResult->addRow());
     }
-    if( dup ) dbtrUpdate_->rollback(); else dbtrUpdate_->commit();
-  }
-  else if( pResult == NULL ){
-    *pDgramBytes = pStatement->sum("SUM1");
-    *pDataBytes = pStatement->sum("SUM2");
+    dbtrUpdate_->commit();
   }
   else {
-    pStatement->unloadByIndex(*pResult);
+    if( pResult == NULL ){
+      *pDgramBytes = pStatement->sum("SUM1");
+      *pDataBytes = pStatement->sum("SUM2");
+    }
+    else {
+      pStatement->unloadByIndex(*pResult);
+    }
   }
+}
+//------------------------------------------------------------------------------
+utf8::String Logger::BPFTThread::genHRef(uint32_t ip)
+{
+  utf8::String name(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip));
+  utf8::String addr(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip,true));
+  return
+    "    <A HREF=\"http://" + name + "\">\n" + name +
+    (name.strcmp(addr) == 0 ?utf8::String() : " (" + addr + ")") +
+    "\n    </A>\n"
+  ;
 }
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
@@ -594,24 +599,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "SELECT"
         "  A.*"
         "FROM ("
-        "  FROM ("
-        "    SELECT"
-        "      st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-        "    FROM"
-        "      INET_BPFT_STAT"
-        "    WHERE "
-        "      st_if = :st_if AND"
-        "      st_start >= :BT AND st_start <= :ET" + filter_ +
-        "    GROUP BY st_src_ip, st_dst_ip"
-        "  UNION ALL"
-        "    SELECT"
-        "      st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-        "    FROM"
-        "      INET_BPFT_STAT"
-        "    WHERE "
-        "      st_if = :st_if AND"
-        "      st_start >= :BT AND st_start <= :ET" + filter_ +
-        "    GROUP BY st_dst_ip, st_src_ip"
+        "  SELECT"
+        "    st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "  FROM"
+        "    INET_BPFT_STAT"
+        "  WHERE "
+        "    st_if = :st_if AND"
+        "    st_start >= :BT AND st_start <= :ET" + filter_ +
+        "  GROUP BY st_src_ip, st_dst_ip"
         ") AS A "
         "ORDER BY A.SUM1"
       );
@@ -915,30 +910,13 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           assert( 0 );
       }
       for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-        uint32_t ip4 = logger_->indexToIp4Addr(table[0](i,"st_src_ip")), ip42 = 0;
-        if( bidirectional_ ) ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
+        uint32_t ip41 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
+        uint32_t ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
         f <<
           "<TR>\n"
-          "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n"
-          "    <A HREF=\"http://" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4) + "\">\n" +
-          logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4) + (
-	    logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4).strcmp(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4,true)) == 0 ?
-	      utf8::String() :
-	      " (" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip4,true) + ")"
-	  ) + "\n" +
-          "    </A>\n" +
-	  (bidirectional_ ?
-	    " --> "
-            "    <A HREF=\"http://" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42) + "\">\n" +
-            logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42) + (
-  	      logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42).strcmp(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42,true)) == 0 ?
-	        utf8::String() :
-	        " (" + logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip42,true) + ")"
-	    ) + "\n"
-	    :
-	    utf8::String()
-	  ) +
-          "    </A>\n"
+          "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
+	  genHRef(ip41) +
+	  (bidirectional_ ? " --> " + genHRef(ip42) : utf8::String()) +
           "  </TH>\n"
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
           formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
@@ -1171,6 +1149,7 @@ void Logger::BPFTThread::parseBPFTLogFile()
       stop = timeval2tm(header.stop_);
       entriesCount = header.eCount_;
     }
+    // TODO: clear cache on start and stop
     Array<BPFTEntry> entries;
     Array<BPFTEntry32> entries32;
     if( log32bitOsCompatible ){

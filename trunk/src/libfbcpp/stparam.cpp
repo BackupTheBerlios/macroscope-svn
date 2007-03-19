@@ -38,7 +38,7 @@ DSQLParam::~DSQLParam()
 DSQLParam::DSQLParam(DSQLStatement * statement,const utf8::String & name) :
   statement_(statement),
   name_(name),
-  head_(NULL), next_(NULL), sqlind_(-1), sqlscale_(0)
+  head_(NULL), next_(NULL), index_(-1), sqlind_(-1), sqlscale_(0)
 {
   data_ = NULL;
   id_.gds_quad_low = 0;

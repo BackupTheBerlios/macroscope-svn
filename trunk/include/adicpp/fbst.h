@@ -144,6 +144,7 @@ class DSQLParam {
     utf8::String name_;
     DSQLParam * head_;
     DSQLParam * next_;
+    intptr_t index_;
 
     union {
       int64_t       bigInt_;
@@ -430,6 +431,7 @@ class DSQLParams {
     DSQLParams & setNull(const utf8::String & paramName);
 
     utf8::String paramName(uintptr_t i);
+    intptr_t paramIndex(const utf8::String & name);
     ksys::Mutant asMutant(uintptr_t i);
     DSQLParams & asMutant(uintptr_t i, const ksys::Mutant & value);
     utf8::String asString(uintptr_t i);
@@ -468,7 +470,7 @@ class DSQLParams {
 //---------------------------------------------------------------------------
 inline uintptr_t DSQLParams::count()
 {
-  return params_.count();
+  return indexToParam_.count();
 }
 //---------------------------------------------------------------------------
 inline DSQLParams & DSQLParams::setNull(uintptr_t i)
@@ -491,6 +493,13 @@ inline bool DSQLParams::isNull(const utf8::String & paramName)
 inline utf8::String DSQLParams::paramName(uintptr_t i)
 {
   return checkParamIndex(i)->name_;
+}
+//---------------------------------------------------------------------------
+inline intptr_t DSQLParams::paramIndex(const utf8::String & name)
+{
+  DSQLParam fp(NULL,name);
+  DSQLParam * param = params_.find(fp);
+  return param == NULL ? -1 : param->index_;
 }
 //---------------------------------------------------------------------------
 inline ksys::Mutant DSQLParams::asMutant(uintptr_t i)

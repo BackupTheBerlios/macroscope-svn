@@ -669,8 +669,8 @@ void Logger::main()
     " st_dgram_bytes   BIGINT NOT NULL,"
     " st_data_bytes    BIGINT NOT NULL"
     ")" <<
-    "CREATE UNIQUE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
-    "CREATE UNIQUE INDEX INET_BPFT_STAT_CACHE_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
+    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
     "CREATE TABLE INET_DNS_CACHE ("
     " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
     " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"

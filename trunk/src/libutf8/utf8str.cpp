@@ -1437,8 +1437,8 @@ String time2Str(int64_t tv)
   if( tv < 0 )
     newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   int64_t us = tv % 1000000u;
-  time_t tt = (time_t) ((tv - getgmtoffset()) / 1000000u);
-  struct tm t = *localtime(&tt);
+  time_t tt = (time_t) (tv / 1000000u);
+  struct tm t = *gmtime(&tt);
   uintptr_t l = 10;
   if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || us != 0 ) l += 9;
   if( us != 0 ) l += 7;
@@ -1455,8 +1455,8 @@ String timeval2Str(const struct timeval & tv)
 {
   if( tv.tv_sec < 0 )
     newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
-  time_t tt = tv.tv_sec - getgmtoffset() / 1000000;
-  struct tm t = *localtime(&tt);
+  time_t tt = tv.tv_sec / 1000000;
+  struct tm t = *gmtime(&tt);
   uintptr_t l = 10;
   if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || tv.tv_usec != 0 ) l += 9;
   if( tv.tv_usec != 0 ) l += 7;

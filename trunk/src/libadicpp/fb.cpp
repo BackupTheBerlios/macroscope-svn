@@ -216,6 +216,14 @@ uintptr_t FirebirdStatement::paramCount()
   return static_cast<fbcpp::DSQLStatement *>(this)->params().count();
 }
 //---------------------------------------------------------------------------
+intptr_t FirebirdStatement::paramIndex(const utf8::String & name,bool noThrow)
+{
+  intptr_t i = static_cast<fbcpp::DSQLStatement *>(this)->params().paramIndex(name);
+  if( i < 0 && !noThrow )
+    newObjectV1C2<ksys::Exception>(EINVAL,"invalid param name: " + name + ", " + __PRETTY_FUNCTION__)->throwSP();
+  return i;
+}
+//---------------------------------------------------------------------------
 utf8::String FirebirdStatement::paramName(uintptr_t i)
 {
   return static_cast<fbcpp::DSQLStatement *>(this)->params().paramName(i);

@@ -228,6 +228,7 @@ utf8::String DSQLStatement::compileSQLParameters()
           p->next_ = param->next_;
           param->next_ = p;
         }
+	p->index_ = params_.indexToParam_.count();
         params_.indexToParam_.add(p.ptr(NULL));
         text.replace(i,i2,"?");
       }

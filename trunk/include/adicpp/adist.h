@@ -68,6 +68,7 @@ class Statement : virtual public ksys::Object {
     // query parameters methods
     virtual uintptr_t                   paramCount() = 0;
     virtual utf8::String                paramName(uintptr_t i) = 0;
+    virtual intptr_t                    paramIndex(const utf8::String & name,bool noThrow = true) = 0;
     virtual ksys::Mutant                paramAsMutant(uintptr_t i) = 0;
     virtual ksys::Mutant                paramAsMutant(const utf8::String & name) = 0;
     virtual utf8::String                paramAsString(uintptr_t i) = 0;
@@ -102,11 +103,12 @@ class Statement : virtual public ksys::Object {
 
     virtual ksys::Mutant sum(uintptr_t fieldNum,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0));
     virtual ksys::Mutant sum(const utf8::String & fieldName,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0));
-    template <typename Table> Statement & unloadColumns(Table & table,bool clearTable = true);
-    template <typename Table> Statement & unload(Table & table,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0),bool clearTable = true);
-    template <typename Table> Statement & unloadByIndex(Table & table,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0),bool clearTable = true);
-    template <typename Table> Statement & unloadRow(Table & table,uintptr_t stRowNum = ~uintptr_t(0),uintptr_t tableRowNum = ~uintptr_t(0));
-    template <typename Table> Statement & unloadRowByIndex(Table & table,uintptr_t stRowNum = ~uintptr_t(0),uintptr_t tableRowNum = ~uintptr_t(0));
+    template <typename Table> Statement * unloadColumns(Table & table,bool clearTable = true);
+    template <typename Table> Statement * unload(Table & table,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0),bool clearTable = true);
+    template <typename Table> Statement * unloadByIndex(Table & table,uintptr_t sRowNum = 0,uintptr_t eRowNum = ~uintptr_t(0),bool clearTable = true);
+    template <typename Table> Statement * unloadRow(Table & table,uintptr_t stRowNum = ~uintptr_t(0),uintptr_t tableRowNum = ~uintptr_t(0));
+    template <typename Table> Statement * unloadRowByIndex(Table & table,uintptr_t stRowNum = ~uintptr_t(0),uintptr_t tableRowNum = ~uintptr_t(0));
+    Statement * copyParams(Statement * statement);
   protected:
   private:
 };
@@ -115,19 +117,19 @@ template <typename Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Statement & Statement::unloadColumns(Table & table,bool clearTable)
+Statement * Statement::unloadColumns(Table & table,bool clearTable)
 {
   if( clearTable ) table.clear();
   for( uintptr_t j = fieldCount(), i = 0; i < j; i++ )
     if( table.columnIndex(fieldName(i)) != 0 ) table.addColumn(fieldName(i));
-  return *this;
+  return this;
 }
 //---------------------------------------------------------------------------
 template <typename Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Statement & Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
+Statement * Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
 {
   unloadColumns(table,clearTable);
   uintptr_t i, j, k, row, tr;
@@ -142,14 +144,14 @@ Statement & Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,
       table(tr,fieldName(i)) = valueAsMutant(i);
   }
   if( srow >= 0 ) selectRow(srow);
-  return *this;
+  return this;
 }
 //---------------------------------------------------------------------------
 template <typename Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Statement & Statement::unloadByIndex(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
+Statement * Statement::unloadByIndex(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
 {
   unloadColumns(table,clearTable);
   uintptr_t i, j, k, row, tr;
@@ -164,14 +166,14 @@ Statement & Statement::unloadByIndex(Table & table,uintptr_t sRowNum,uintptr_t e
       table(tr,i) = valueAsMutant(i);
   }
   if( srow >= 0 ) selectRow(srow);
-  return *this;
+  return this;
 }
 //---------------------------------------------------------------------------
 template <typename Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Statement & Statement::unloadRow(Table & table,uintptr_t stRowNum,uintptr_t tableRowNum)
+Statement * Statement::unloadRow(Table & table,uintptr_t stRowNum,uintptr_t tableRowNum)
 {
   intptr_t srow = rowIndex();
   if( stRowNum != ~uintptr_t(0) ) selectRow(stRowNum);
@@ -179,14 +181,14 @@ Statement & Statement::unloadRow(Table & table,uintptr_t stRowNum,uintptr_t tabl
   for( uintptr_t j = fieldCount(), i = 0; i < j; i++ )
     table(tableRowNum,fieldName(i)) = valueAsMutant(i);
   if( srow >= 0 ) selectRow(srow);
-  return *this;
+  return this;
 }
 //---------------------------------------------------------------------------
 template <typename Table>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Statement & Statement::unloadRowByIndex(Table & table,uintptr_t stRowNum,uintptr_t tableRowNum)
+Statement * Statement::unloadRowByIndex(Table & table,uintptr_t stRowNum,uintptr_t tableRowNum)
 {
   intptr_t srow = rowIndex();
   if( stRowNum != ~uintptr_t(0) ) selectRow(stRowNum);
@@ -194,7 +196,14 @@ Statement & Statement::unloadRowByIndex(Table & table,uintptr_t stRowNum,uintptr
   for( uintptr_t j = fieldCount(), i = 0; i < j; i++ )
     table(tableRowNum,i) = valueAsMutant(i);
   if( srow >= 0 ) selectRow(srow);
-  return *this;
+  return this;
+}
+//---------------------------------------------------------------------------
+inline Statement * Statement::copyParams(Statement * statement)
+{
+  for( intptr_t i = statement->paramCount() - 1; i >= 0; i-- )
+    paramAsMutant(statement->paramName(i),statement->paramAsMutant(statement->paramName(i)));
+  return this;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -223,6 +232,7 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
     // query parameters methods
     uintptr_t           paramCount();
     utf8::String        paramName(uintptr_t i);
+    intptr_t            paramIndex(const utf8::String & name,bool noThrow = true);
     ksys::Mutant        paramAsMutant(uintptr_t i);
     ksys::Mutant        paramAsMutant(const utf8::String & name);
     utf8::String        paramAsString(uintptr_t i);
@@ -284,6 +294,7 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
     // query parameters methods
     uintptr_t         paramCount();
     utf8::String      paramName(uintptr_t i);
+    intptr_t          paramIndex(const utf8::String & name,bool noThrow = true);
     ksys::Mutant      paramAsMutant(uintptr_t i);
     ksys::Mutant      paramAsMutant(const utf8::String & name);
     utf8::String      paramAsString(uintptr_t i);

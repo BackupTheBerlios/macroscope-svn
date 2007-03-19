@@ -216,6 +216,14 @@ uintptr_t MYSQLStatement::paramCount()
   return static_cast<mycpp::DSQLStatement *>(this)->params().count();
 }
 //---------------------------------------------------------------------------
+intptr_t MYSQLStatement::paramIndex(const utf8::String & name,bool noThrow)
+{
+  intptr_t i = static_cast<mycpp::DSQLStatement *>(this)->params().paramIndex(name);
+  if( i < 0 && !noThrow )
+    newObjectV1C2<ksys::Exception>(EINVAL,"invalid param name: " + name + ", " + __PRETTY_FUNCTION__)->throwSP();
+  return i;
+}
+//---------------------------------------------------------------------------
 utf8::String MYSQLStatement::paramName(uintptr_t i)
 {
   return static_cast<mycpp::DSQLStatement *>(this)->params().paramName(i);

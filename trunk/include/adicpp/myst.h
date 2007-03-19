@@ -130,6 +130,7 @@ class DSQLParams {
 
     uintptr_t count();
     utf8::String paramName(uintptr_t i);
+    intptr_t paramIndex(const utf8::String & name);
     // access methods
     bool                                                  isNull(uintptr_t i);
     DSQLParams &                                          setNull(uintptr_t i);
@@ -175,6 +176,11 @@ inline uintptr_t DSQLParams::count()
 inline utf8::String DSQLParams::paramName(uintptr_t i)
 {
   return checkParamIndex(i).params_.keyOfIndex(i);
+}
+//---------------------------------------------------------------------------
+inline intptr_t DSQLParams::paramIndex(const utf8::String & name)
+{
+  return params_.indexOfKey(name);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
