@@ -236,8 +236,6 @@ static void fallBackToNewLine(AsyncFile & f)
 //------------------------------------------------------------------------------
 void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl)
 {
-  AsyncFile flog(logFileName);
-  flog.readOnly(true).open();
   stMonUrlSel_->text(
     "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMonUrlSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
     " ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
@@ -266,6 +264,8 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
     "UPDATE INET_USERS_TRAF SET ST_TRAF_WWW = ST_TRAF_WWW + :ST_TRAF_WWW "
     "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP"
   );
+  AsyncFile flog(logFileName);
+  flog.readOnly(true).open();
 /*
   statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
   updateLogFileLastOffset(logFileName,0);
@@ -273,7 +273,8 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
   database_->attach()->start();
   if( (bool) config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
     updateLogFileLastOffset(stFileStat_,logFileName,0);
-  int64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  uint64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  if( offset > flog.size() ) updateLogFileLastOffset(stFileStat_,logFileName,offset = 0);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
   int64_t lineNo = 1, tma = 0;
@@ -386,8 +387,6 @@ void Logger::parseSquidLogFile(const utf8::String & logFileName, bool top10, con
 //------------------------------------------------------------------------------
 void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain,uintptr_t startYear)
 {
-  AsyncFile flog(logFileName);
-  flog.readOnly(true).open();
   stMsgsIns_->text(
     "INSERT INTO INET_SENDMAIL_MESSAGES (ST_FROM,ST_MSGID,ST_MSGSIZE) " 
     "VALUES (:ST_FROM,:ST_MSGID,:ST_MSGSIZE);"
@@ -421,6 +420,8 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     " MAX(ST_TIMESTAMP) AS ST_TIMESTAMP "
     "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
   );
+  AsyncFile flog(logFileName);
+  flog.readOnly(true).open();
   database_->attach()->start();
   if( (bool) config_->valueByPath(section_ + ".sendmail.reset_log_file_position",false) )
     updateLogFileLastOffset(stFileStat_,logFileName,0);
@@ -430,7 +431,8 @@ void Logger::parseSendmailLogFile(const utf8::String & logFileName, const utf8::
     lt = statement_->valueAsMutant("ST_TIMESTAMP");
     startYear = lt.tm_year + 1900;
   }
-  int64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  uint64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  if( offset > flog.size() ) updateLogFileLastOffset(stFileStat_,logFileName,offset = 0);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
   int64_t   lineNo  = 1, tma = 0;

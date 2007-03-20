@@ -534,7 +534,7 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
           pResult->cell(row,"st_dst_ip") = stBPFTCacheIns_->paramAsString("st_dst_ip");
           pResult->cell(row,"SUM1") = stBPFTCacheIns_->paramAsMutant("st_dgram_bytes");
           pResult->cell(row,"SUM2") = stBPFTCacheIns_->paramAsMutant("st_data_bytes");
-	  pResult->sort("-SUM1,st_src_ip,st_dst_ip");
+	  pResult->sort("SUM1,st_src_ip,st_dst_ip");
         }
         break;
       }
@@ -916,7 +916,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "<TR>\n"
           "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
 	  genHRef(ip41) +
-	  (bidirectional_ ? " --> " + genHRef(ip42) : utf8::String()) +
+	  (bidirectional_ ? " <B>--></B> " + genHRef(ip42) : utf8::String()) +
           "  </TH>\n"
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
           formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
@@ -1118,7 +1118,8 @@ void Logger::BPFTThread::parseBPFTLogFile()
   database_->start();
   if( (bool) logger_->config_->valueByPath(section_ + ".reset_log_file_position",false) )
     Logger::updateLogFileLastOffset(stFileStat_,flog.fileName(),0);
-  int64_t offset = Logger::fetchLogFileLastOffset(stFileStat_,flog.fileName());
+  uint64_t offset = Logger::fetchLogFileLastOffset(stFileStat_,flog.fileName());
+  if( offset > flog.size() ) updateLogFileLastOffset(stFileStat_,flog.fileName(),offset = 0);
   if( flog.seekable() ) flog.seek(offset);
   int64_t lineNo = 0, tma = 0;
   int64_t cl = getlocaltimeofday();
