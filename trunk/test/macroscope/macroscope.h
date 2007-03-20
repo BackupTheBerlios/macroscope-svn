@@ -1,4 +1,4 @@
-/*-
+/*-[21~
  * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
@@ -46,31 +46,13 @@ class Logger {
     void main();
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
-    utf8::String shortUrl_;
-    utf8::String section_;
-    struct tm curTime_;
+    enum { stSel, stIns, stUpd };
+
     ConfigSPi config_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
-    AutoPtr<Statement> stTrafIns_;
-    AutoPtr<Statement> stTrafUpd_;
-    AutoPtr<Statement> stMonUrlSel_;
-    AutoPtr<Statement> stMonUrlIns_;
-    AutoPtr<Statement> stMonUrlUpd_;
-    
-    enum { stSel, stIns, stUpd };
-    AutoPtr<Statement> stFileStat_[3];
-    
-    AutoPtr<Statement> stMsgsIns_;
-    AutoPtr<Statement> stMsgsSel_;
-    AutoPtr<Statement> stMsgsDel_;
-    AutoPtr<Statement> stMsgsDel2_;
-    AutoPtr<Statement> stMsgsSelCount_;
-    int64_t ellapsed_;
-    uintptr_t gCount_;
     bool verbose_;
-    bool groups_;
-
+    
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
     class TrafCacheEntry {
@@ -126,10 +108,75 @@ class Logger {
       TrafCacheEntry::listNodeObject
     > TrafCacheLRU;
     TrafCacheLRU trafCacheLRU_;
-    uintptr_t cacheSize_;
+    uintptr_t trafCacheSize_;
+    InterlockedMutex trafCacheMutex_;
 
-    utf8::String htmlDir_;
+    class SquidSendmailThread : public Thread {
+      public:
+        ~SquidSendmailThread();
+        SquidSendmailThread() {}
+        SquidSendmailThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName);
 
+        void threadExecute();
+      protected:
+        Logger * logger_;
+        utf8::String section_;
+        utf8::String sectionName_;
+        utf8::String shortUrl_;
+        utf8::String htmlDir_;
+        int64_t ellapsed_;
+        struct tm curTime_;
+        uintptr_t gCount_;
+        bool groups_;
+
+        AutoPtr<Database> database_;
+	
+        AutoPtr<Statement> statement_;
+        AutoPtr<Statement> stTrafIns_;
+        AutoPtr<Statement> stTrafUpd_;
+        AutoPtr<Statement> stMonUrlSel_;
+        AutoPtr<Statement> stMonUrlIns_;
+        AutoPtr<Statement> stMonUrlUpd_;
+    
+        AutoPtr<Statement> stFileStat_[3];
+    
+        AutoPtr<Statement> stMsgsIns_;
+        AutoPtr<Statement> stMsgsSel_;
+        AutoPtr<Statement> stMsgsDel_;
+        AutoPtr<Statement> stMsgsDel2_;
+        AutoPtr<Statement> stMsgsSelCount_;
+
+        utf8::String trafTypeNick_[ttCount];
+        utf8::String trafTypeHeadColor_[ttCount];
+        utf8::String trafTypeBodyColor_[ttCount];
+        utf8::String trafTypeTailColor_[ttCount];
+        utf8::String trafTypeHeadDataColor_[ttCount];
+        utf8::String trafTypeBodyDataColor_[ttCount];
+        utf8::String trafTypeTailDataColor_[ttCount];
+
+        void decoration();
+
+        void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
+        void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
+        void writeHtmlYearOutput();
+
+        void parseSquidLogLine(char * p, uintptr_t size,Array<const char *> & slcp);
+        utf8::String squidStrToWideString(const char * str);
+        utf8::String shortUrl(const utf8::String & url);
+
+        int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
+        void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
+        void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
+        uintptr_t nonZeroYearMonthsColumns(struct tm byear);
+        uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
+        static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
+        static intptr_t sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2);
+        void genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime);
+        utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
+      private:
+    };
+    friend class SquidSendmailThread;
+  
     class DNSCacheEntry : public ksock::SockAddr {
       public:
         utf8::String name_;
@@ -238,31 +285,15 @@ class Logger {
     friend class BPFTThread;
     
     Vector<Thread> threads_;
-
-    void parseSquidLogFile(const utf8::String & logFileName,bool top10,const utf8::String & skipUrl);
-    void parseSendmailLogFile(const utf8::String & logFileName,const utf8::String & domain,uintptr_t startYear);
-
-    void writeHtmlYearOutput();
-  private:
+    
+    static void fallBackToNewLine(AsyncFile & f);
+    static Mutant timeStampRoundToMin(uint64_t ts);
     void printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int64_t cl,int64_t * tma = NULL);
-    void parseSquidLogLine(char * p, uintptr_t size, Array< const char *> & slcp);
-    utf8::String squidStrToWideString(const char * str);
-    Mutant timeStampRoundToMin(uint64_t ts);
-    utf8::String shortUrl(const utf8::String & url);
     static int64_t fetchLogFileLastOffset(AutoPtr<Statement> st[3],const utf8::String & logFileName);
     static void updateLogFileLastOffset(AutoPtr<Statement> st[3],const utf8::String & logFileName,int64_t offset);
 
-    int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
-    void writeHtmlHead(AsyncFile & f);
-    void writeHtmlTail(AsyncFile & f,int64_t ellapsed);
-    void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
-    void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
-    uintptr_t nonZeroYearMonthsColumns(struct tm byear);
-    uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
-    static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
-    static intptr_t sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2);
-    void genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime);
-    utf8::String genUserFilter(const utf8::String & user,uintptr_t isGroup);
+    static void writeHtmlHead(AsyncFile & f);
+    static void writeHtmlTail(AsyncFile & f,int64_t ellapsed);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
     utf8::String resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,uint32_t ip4,bool numeric = false);
     static utf8::String ip4AddrToIndex(uint32_t ip4);
@@ -270,16 +301,7 @@ class Logger {
     utf8::String getDecor(const utf8::String & dname,const utf8::String & section);
     static utf8::String getIPFilter(const utf8::String & text);
     static bool isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,const struct tm et);
-
-    utf8::String trafTypeNick_[ttCount];
-    utf8::String trafTypeHeadColor_[ttCount];
-    utf8::String trafTypeBodyColor_[ttCount];
-    utf8::String trafTypeTailColor_[ttCount];
-    utf8::String trafTypeHeadDataColor_[ttCount];
-    utf8::String trafTypeBodyDataColor_[ttCount];
-    utf8::String trafTypeTailDataColor_[ttCount];
-
-    void decoration();
+  private:
 };
 //------------------------------------------------------------------------------
 } // namespace macroscope

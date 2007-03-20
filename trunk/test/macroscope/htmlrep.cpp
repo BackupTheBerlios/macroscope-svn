@@ -36,7 +36,63 @@ static const char * const trafTypeColumnName[]  = {
   "ST_TRAF"
 };
 //------------------------------------------------------------------------------
-void Logger::decoration()
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+Logger::SquidSendmailThread::~SquidSendmailThread()
+{
+}
+//------------------------------------------------------------------------------
+Logger::SquidSendmailThread::SquidSendmailThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName) :
+  logger_(&logger), section_(section), sectionName_(sectionName)
+{
+  shortUrl_ = "://";
+  
+  ConfigSection dbParamsSection;
+  dbParamsSection.addSection(logger_->config_->sectionByPath("libadicpp.default_connection"));
+      
+  database_ = Database::newDatabase(&dbParamsSection);
+	
+  statement_ = database_->newAttachedStatement();
+  stTrafIns_ = database_->newAttachedStatement();
+  stTrafUpd_ = database_->newAttachedStatement();
+  stMonUrlSel_ = database_->newAttachedStatement();
+  stMonUrlIns_ = database_->newAttachedStatement();
+  stMonUrlUpd_ = database_->newAttachedStatement();
+  stFileStat_[stSel] = database_->newAttachedStatement();
+  stFileStat_[stIns] = database_->newAttachedStatement();
+  stFileStat_[stUpd] = database_->newAttachedStatement();
+  stMsgsIns_ = database_->newAttachedStatement();
+  stMsgsSel_ = database_->newAttachedStatement();
+  stMsgsDel_ = database_->newAttachedStatement();
+  stMsgsDel2_ = database_->newAttachedStatement();
+  stMsgsSelCount_ = database_->newAttachedStatement();
+			     
+  stFileStat_[stSel] = database_->newAttachedStatement();
+  stFileStat_[stIns] = database_->newAttachedStatement();
+  stFileStat_[stUpd] = database_->newAttachedStatement();
+}
+//------------------------------------------------------------------------------
+void Logger::SquidSendmailThread::threadExecute()
+{
+  AutoDatabaseDetach autoDatabaseDetach(database_);
+  section_ = "macroscope";
+  if( (bool) logger_->config_->valueByPath(section_ + ".process_squid_log",true) ){
+    Mutant m0(logger_->config_->valueByPath(section_ + ".squid.log_file_name"));
+    Mutant m1(logger_->config_->valueByPath(section_ + ".squid.top10_url",true));
+    Mutant m2(logger_->config_->textByPath(section_ + ".squid.skip_url").lower());
+    parseSquidLogFile(m0,m1,m2);
+  }
+  if( (bool) logger_->config_->valueByPath(section_ + ".process_sendmail_log",true) ){
+    Mutant m0(logger_->config_->valueByPath(section_ + ".sendmail.log_file_name"));
+    Mutant m1(utf8::String("@") + logger_->config_->valueByPath(section_ + ".sendmail.main_domain"));
+    Mutant m2(logger_->config_->valueByPath(section_ + ".sendmail.start_year"));
+    parseSendmailLogFile(m0,m1,m2);
+  }
+  ellapsed_ = getlocaltimeofday();
+  writeHtmlYearOutput();
+}
+//------------------------------------------------------------------------------
+void Logger::SquidSendmailThread::decoration()
 {
   static const char * const nicks[] = { ".smtp", ".www", ".all" };
   struct deco {
@@ -54,19 +110,19 @@ void Logger::decoration()
   utf8::String basePath(section_ + ".html_report.decoration.");
   for( intptr_t i = sizeof(decos) / sizeof(decos[0]) - 1; i >= 0; i-- )
     for( intptr_t j = ttAll; j >= 0; j-- ){
-      decos[i].colors[j] = config_->valueByPath(basePath + decos[i].path + nicks[j]);
+      decos[i].colors[j] = logger_->config_->valueByPath(basePath + decos[i].path + nicks[j]);
     }
 }
 //------------------------------------------------------------------------------
-void Logger::writeUserTop(
+void Logger::SquidSendmailThread::writeUserTop(
   const utf8::String & file,
   const utf8::String & user,
   uintptr_t isGroup,
   const struct tm & beginTime,
   const struct tm & endTime)
 {
-  if( !isGroup && !(bool) config_->valueByPath(section_ + ".html_report.top10_url",true) ) return;
-  if( isGroup && !(bool) config_->valueByPath(section_ + ".html_report.group_top10_url",false) ) return;
+  if( !isGroup && !(bool) logger_->config_->valueByPath(section_ + ".html_report.top10_url",true) ) return;
+  if( isGroup && !(bool) logger_->config_->valueByPath(section_ + ".html_report.group_top10_url",false) ) return;
   utf8::String users(genUserFilter(user,isGroup));
   statement_->text(
     "SELECT"
@@ -90,7 +146,7 @@ void Logger::writeUserTop(
   statement_->prepare();
   for( i = enumStringParts(user) - 1; i >= 0; i-- )
     statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
-  uintmax_t threshold = config_->valueByPath(section_ + ".html_report.top10_min_significant_threshold",0);
+  uintmax_t threshold = logger_->config_->valueByPath(section_ + ".html_report.top10_min_significant_threshold",0);
   statement_->
     paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
     paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
@@ -99,9 +155,9 @@ void Logger::writeUserTop(
   if( statement_->rowCount() > 0 ){
     AsyncFile f(file);
     f.createIfNotExist(true).open().resize(0);
-    Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",0644));
-    Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
-    Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
+    Mutant m0(logger_->config_->valueByPath(section_ + ".html_report.file_mode",0644));
+    Mutant m1(logger_->config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
+    Mutant m2(logger_->config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
     chModOwn(f.fileName(),m0,m1,m2);
     writeHtmlHead(f);
     f <<
@@ -175,17 +231,17 @@ void Logger::writeUserTop(
     f << "</TABLE>\n<BR>\n<BR>\n";
     writeHtmlTail(f,ellapsed_);
     f.resize(f.tell());
-    if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
+    if( logger_->verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
   }
 }
 //------------------------------------------------------------------------------
-void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded)
+void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded)
 {
   AsyncFile f(file);
   f.createIfNotExist(true).open().resize(0);
-  Mutant m0(config_->valueByPath(section_ + ".html_report.file_mode",0644));
-  Mutant m1(config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
-  Mutant m2(config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
+  Mutant m0(logger_->config_->valueByPath(section_ + ".html_report.file_mode",0644));
+  Mutant m1(logger_->config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid()));
+  Mutant m2(logger_->config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid()));
   chModOwn(file,m0,m1,m2);
   writeHtmlHead(f);
   struct tm beginTime = year, endTime = year;
@@ -205,7 +261,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
     if( getTraf(ttAll,beginTime,endTime) > 0 ){
-      if( verbose_ ) fprintf(stderr,"%s %s\n",
+      if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
         (const char *) utf8::tm2Str(beginTime).getOEMString(),
         (const char *) utf8::tm2Str(endTime).getOEMString()
       );
@@ -214,7 +270,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
         "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
         "<TR>\n"
         "  <TH BGCOLOR=\"" +
-        getDecor("table_head",section_) +
+        logger_->getDecor("table_head",section_) +
         "\" COLSPAN=" +
         utf8::int2Str(uintmax_t(nonZeroMonthDaysColumns(endTime) + ttAll + 2)) +
         " ALIGN=left nowrap>\n" +
@@ -227,7 +283,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
         "  <TH HEIGHT=4></TH>\n"
         "</TR>\n"
         "<TR>\n"
-        "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("head.user",section_) + "\" nowrap>\n"
+        "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.user",section_) + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "User\n"
         "    </FONT>\n"
@@ -256,7 +312,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
             utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
             (getTraf(ttWWW, bt, endTime) > 0) +
             (getTraf(ttSMTP, bt, endTime) > 0)) + " BGCOLOR=\"" +
-            getDecor("detail_head",section_) +
+            logger_->getDecor("detail_head",section_) +
             "\" nowrap>\n"
 	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             utf8::String::print("%02d", endTime.tm_mday) + "\n"
@@ -299,7 +355,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
 	  bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
           if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
           utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
-	  utf8::String alias(config_->textByPath("macroscope.aliases." + user,user));
+	  utf8::String alias(logger_->config_->textByPath(section_ + ".aliases." + user,user));
           utf8::String topByUserFile(
             utf8::String::print(
               "top-%04d%02d-",
@@ -307,7 +363,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
               endTime.tm_mon + 1
             ) + user.replaceAll(":","-").replaceAll(" ","") + ".html"
           );
-          if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || (curTime_.tm_year == endTime.tm_year && curTime_.tm_mon == endTime.tm_mon) ){
+          if( !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || (curTime_.tm_year == endTime.tm_year && curTime_.tm_mon == endTime.tm_mon) ){
             writeUserTop(
               includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
               user,
@@ -318,7 +374,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
 	  }
           f <<
             "<TR>\n"
-            "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.user",section_) + "\" nowrap>\n"
+            "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.user",section_) + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
             "<A HREF=\"" + topByUserFile + "\">" +
             alias +
@@ -372,7 +428,7 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
       // Печатаем итоговый трафик пользователей за месяц
       f <<
         "<TR>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.user",section_) + "\" wrap>\n"
+        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.user",section_) + "\" wrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
         "Summary traffic of all users:"
       ;
@@ -420,10 +476,10 @@ void Logger::writeMonthHtmlOutput(const utf8::String & file,const struct tm & ye
   }
   writeHtmlTail(f,ellapsed_);
   f.resize(f.tell());
-  if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
+  if( logger_->verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
 }
 //------------------------------------------------------------------------------
-intptr_t Logger::sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table)
+intptr_t Logger::SquidSendmailThread::sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table)
 {
   intptr_t g1 = table(row1,"ST_IS_GROUP"), g2 = table(row2,"ST_IS_GROUP");
   intptr_t c = g1 > g2 ? 1 : g1 < g2 ? -1 : 0;
@@ -436,20 +492,20 @@ intptr_t Logger::sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mu
   return c;
 }
 //------------------------------------------------------------------------------
-intptr_t Logger::sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2)
+intptr_t Logger::SquidSendmailThread::sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2)
 {
   intmax_t s1(p1->sum("ST_TRAF")), s2(p2->sum("ST_TRAF"));
   return s1 > s2 ? 1 : s1 < s2 ? -1 : 0;
 }
 //------------------------------------------------------------------------------
-void Logger::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime)
+void Logger::SquidSendmailThread::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime)
 {
   intptr_t i, k, u;
   if( groups_ ){
     utf8::String groupedUsers;
     usersTrafTables.resize(gCount_);
     for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
-      utf8::String key, value(config_->sectionByPath("macroscope.groups").value(k,&key));
+      utf8::String key, value(logger_->config_->sectionByPath(section_ + ".groups").value(k,&key));
       statement_->text(
         "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
 	genUserFilter(value,1) +
@@ -563,11 +619,10 @@ void Logger::genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct
   }
 }
 //------------------------------------------------------------------------------
-void Logger::writeHtmlYearOutput()
+void Logger::SquidSendmailThread::writeHtmlYearOutput()
 {
-  if( !(bool) config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
-  if( verbose_ ) fprintf(stderr,"\n");
-  cacheSize_ = config_->valueByPath(section_+ ".html_report.traffic_cache_size",0);
+  if( !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
+  if( logger_->verbose_ ) fprintf(stderr,"\n");
   decoration();
   struct tm beginTime, endTime;
   curTime_ = time2tm(getlocaltimeofday());
@@ -589,18 +644,18 @@ void Logger::writeHtmlYearOutput()
       statement_->text(statement_->text() + " LIMIT 0,1");
     statement_->execute()->fetchAll();
     endTime = time2tm((uint64_t) statement_->valueAsMutant("ST_TIMESTAMP") + getgmtoffset());
-    htmlDir_ = excludeTrailingPathDelimiter(config_->valueByPath(section_ + ".html_report.directory"));
+    htmlDir_ = excludeTrailingPathDelimiter(logger_->config_->valueByPath(section_ + ".html_report.directory"));
     AsyncFile f(
-      includeTrailingPathDelimiter(htmlDir_) + config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
+      includeTrailingPathDelimiter(htmlDir_) + logger_->config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
     );
     f.createIfNotExist(true).open().resize(0);
-    Mutant m0(config_->valueByPath(section_ + ".html_report.directory_mode",0755));
-    Mutant m1(config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid()));
-    Mutant m2(config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid()));
+    Mutant m0(logger_->config_->valueByPath(section_ + ".html_report.directory_mode",0755));
+    Mutant m1(logger_->config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid()));
+    Mutant m2(logger_->config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid()));
     chModOwn(htmlDir_,m0,m1,m2);
-    m0 = config_->valueByPath(section_ + ".html_report.file_mode",0644);
-    m1 = config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
-    m2 = config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
+    m0 = logger_->config_->valueByPath(section_ + ".html_report.file_mode",0644);
+    m1 = logger_->config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
+    m2 = logger_->config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
     chModOwn(f.fileName(),m0,m1,m2);
     writeHtmlHead(f);
     beginTime.tm_mon = 0;
@@ -614,13 +669,13 @@ void Logger::writeHtmlYearOutput()
     endTime.tm_min = 59;
     endTime.tm_sec = 59;
     struct tm beginTime2, bt, et;
-    gCount_ = config_->sectionByPath(section_ + ".groups").valueCount();
-    groups_ = (bool) config_->valueByPath(section_ + ".html_report.groups",false) && gCount_ > 0;
+    gCount_ = logger_->config_->sectionByPath(section_ + ".groups").valueCount();
+    groups_ = (bool) logger_->config_->valueByPath(section_ + ".html_report.groups",false) && gCount_ > 0;
     while( tm2Time(endTime) >= tm2Time(beginTime) ){
       beginTime2 = beginTime;
       beginTime.tm_year = endTime.tm_year;
       if( getTraf(ttAll,beginTime,endTime) > 0 ){
-        if( verbose_ ) fprintf(stderr,"%s %s\n",
+        if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
           (const char *) utf8::tm2Str(beginTime).getOEMString(),
           (const char *) utf8::tm2Str(endTime).getOEMString()
         );
@@ -629,7 +684,7 @@ void Logger::writeHtmlYearOutput()
           "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
           "<TR>\n"
           "  <TH BGCOLOR=\"" +
-          getDecor("table_head",section_) +
+          logger_->getDecor("table_head",section_) +
           "\" COLSPAN=" +
           utf8::int2Str(uintmax_t(nonZeroYearMonthsColumns(endTime) + ttAll + 2)) +
           " ALIGN=left nowrap>\n" +
@@ -642,7 +697,7 @@ void Logger::writeHtmlYearOutput()
           "  <TH HEIGHT=4></TH>\n"
           "</TR>\n"
           "<TR>\n"
-          "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + getDecor("head.user",section_) + "\" nowrap>\n"
+          "  <TH ROWSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.user",section_) + "\" nowrap>\n"
           "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
           "User\n"
           "    </FONT>\n" "  </TH>\n"
@@ -672,7 +727,7 @@ void Logger::writeHtmlYearOutput()
               utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
               (getTraf(ttWWW, bt, endTime) > 0) +
               (getTraf(ttSMTP, bt, endTime) > 0)) +
-              " BGCOLOR=\"" << getDecor("detail_head",section_) + "\" nowrap>\n"
+              " BGCOLOR=\"" << logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" + utf8::String::print("%02d",endTime.tm_mon + 1) + "\n"
 	      "    </FONT>\n"
 	      "  </TH>\n"
@@ -716,10 +771,10 @@ void Logger::writeHtmlYearOutput()
 	    bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
             if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
 	    utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
-            utf8::String alias(config_->textByPath("macroscope.aliases." + user,user));
+            utf8::String alias(logger_->config_->textByPath(section_ + ".aliases." + user,user));
             f <<
   	      "<TR>\n"
-	      "  <TH ALIGN=left BGCOLOR=\"" + getDecor("body.user",section_) + "\" nowrap>\n"
+	      "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.user",section_) + "\" nowrap>\n"
               "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               alias +
 	      (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
@@ -774,7 +829,7 @@ void Logger::writeHtmlYearOutput()
         // Печатаем итоговый трафик пользователей за год
         f <<
           "<TR>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + getDecor("tail.user",section_) + "\" wrap>\n"
+	  "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.user",section_) + "\" wrap>\n"
 	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
 	  "Summary traffic of all users: "
         ;
@@ -817,7 +872,7 @@ void Logger::writeHtmlYearOutput()
           et.tm_mon--;
         }
         f << "</TR>\n</TABLE>\n<BR>\n<BR>\n";
-        if( !(bool) config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || curTime_.tm_year == endTime.tm_year ){
+        if( !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || curTime_.tm_year == endTime.tm_year ){
           utf8::String fileName(
             includeTrailingPathDelimiter(htmlDir_) + trafByYearFile
           );
@@ -828,15 +883,17 @@ void Logger::writeHtmlYearOutput()
       beginTime = beginTime2;
     }
     database_->commit()->detach();
-    f << "Cache size: " + utf8::int2Str((uintmax_t) trafCache_.count()) + "<BR>\n";
+    {
+      AutoLock<InterlockedMutex> lock(logger_->trafCacheMutex_);
+      f << "Cache size: " + utf8::int2Str((uintmax_t) logger_->trafCache_.count()) + "<BR>\n";
+    }
     writeHtmlTail(f,ellapsed_);
     f.resize(f.tell());
-    if( verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
-    trafCache_.drop();
+    if( logger_->verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
   }
 }
 //------------------------------------------------------------------------------
-uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)
+uintptr_t Logger::SquidSendmailThread::nonZeroYearMonthsColumns(struct tm byear)
 {
   byear.tm_mday = 1;
   byear.tm_hour = byear.tm_min = byear.tm_sec = 0;
@@ -855,7 +912,7 @@ uintptr_t Logger::nonZeroYearMonthsColumns(struct tm byear)
   return a;
 }
 //------------------------------------------------------------------------------
-uintptr_t Logger::nonZeroMonthDaysColumns(struct tm bmon)
+uintptr_t Logger::SquidSendmailThread::nonZeroMonthDaysColumns(struct tm bmon)
 {
   bmon.tm_mday = (int) monthDays(bmon.tm_year + 1900, bmon.tm_mon);
   bmon.tm_hour = bmon.tm_min = bmon.tm_sec = 0;
@@ -865,28 +922,468 @@ uintptr_t Logger::nonZeroMonthDaysColumns(struct tm bmon)
     emon.tm_hour = 23;
     emon.tm_min = 59;
     emon.tm_sec = 59;
-    a += getTraf(ttAll, bmon, emon) > 0;
-    a += getTraf(ttWWW, bmon, emon) > 0;
-    a += getTraf(ttSMTP, bmon, emon) > 0;
+    a += getTraf(ttAll,bmon,emon) > 0;
+    a += getTraf(ttWWW,bmon,emon) > 0;
+    a += getTraf(ttSMTP,bmon,emon) > 0;
     bmon.tm_mday--;
   }
   return a;
 }
 //------------------------------------------------------------------------------
-void Logger::writeTraf(AsyncFile & f, uint64_t qi, uint64_t qj)
+utf8::String Logger::SquidSendmailThread::genUserFilter(const utf8::String & user,uintptr_t isGroup)
 {
-  uint64_t  q, a  = qi % 1024u != 0, b , c ;
-
-  qj += qj == 0;
-  q = qi * 10000u / qj;
-  b = q / 100u;
-  c = q % 100u;
-  c += b == 0 && c == 0;
-  f << utf8::String::print(
-    qi > 0 ? "%"PRIu64"<FONT FACE=\"Times New Roman\" SIZE=\"0\"> (%"PRIu64".%02"PRIu64"%%)</FONT>\n" :
-    "-", (qi / 1024u) + a, b, c
-  );
+  utf8::String users;
+  intptr_t i, j;
+  for( i = enumStringParts(user) - 1, j = i; i >= 0; i-- ){
+    if( i == j ) users += isGroup > 1 ? " " : " (";
+    users += (isGroup > 1 ? "ST_USER <> :U" : "ST_USER = :U") + utf8::int2Str(i);
+    if( i > 0 ) users += isGroup > 1 ? " AND " : " OR ";
+    else
+    if( i >= 0 ) users += isGroup > 1 ? " AND" : ") AND";
+  }
+  return users;
 }
+//------------------------------------------------------------------------------
+int64_t Logger::SquidSendmailThread::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user,uintptr_t isGroup)
+{
+  AutoPtr<TrafCacheEntry> tce(newObjectC1C2C3V4<TrafCacheEntry>(user,bt,et,tt));
+  tce->bt_.tm_wday = 0;
+  tce->bt_.tm_yday = 0;
+  tce->et_.tm_wday = 0;
+  tce->et_.tm_yday = 0;
+  AutoLock<InterlockedMutex> lock(logger_->trafCacheMutex_);
+  TrafCacheEntry * pEntry = logger_->trafCache_.find(tce);
+  logger_->trafCache_.insert(tce,false,false,&pEntry);
+  if( pEntry == tce ){
+    tce.ptr(NULL);
+    utf8::String users;
+    switch( tt ){
+      case ttSMTP :
+      case ttWWW  :
+        users = genUserFilter(user,isGroup);
+        statement_->text(utf8::String("SELECT ") +
+          (tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
+          (tt == ttSMTP ? "SUM(ST_TRAF_SMTP) " : " ") +
+          "FROM INET_USERS_TRAF WHERE" +
+          (user.strlen() > 0 ? users : utf8::String()) +
+          " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+        );
+        statement_->prepare();
+        for( intptr_t i = enumStringParts(user) - 1; i >= 0; i-- )
+          statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
+        statement_->
+          paramAsMutant("BT",time2tm(tm2Time(bt) - getgmtoffset()))->
+	  paramAsMutant("ET",time2tm(tm2Time(et) - getgmtoffset()))->
+          execute()->fetchAll();
+        pEntry->traf_ = statement_->valueAsMutant("SUM");
+        break;
+      case ttAll  :
+        pEntry->traf_ = getTraf(ttWWW,bt,et,user,isGroup) + getTraf(ttSMTP,bt,et,user,isGroup);
+        break;
+      default     :
+        break;
+    }
+    if( logger_->trafCacheSize_ > 0 && logger_->trafCache_.count() >= logger_->trafCacheSize_ )
+      logger_->trafCache_.drop(logger_->trafCacheLRU_.remove(*logger_->trafCacheLRU_.last()));
+  }
+  else {
+    logger_->trafCacheLRU_.remove(*pEntry);
+  }
+  logger_->trafCacheLRU_.insToHead(*pEntry);
+  return pEntry->traf_;
+}
+//------------------------------------------------------------------------------
+void Logger::SquidSendmailThread::parseSquidLogLine(char * p,uintptr_t size,Array<const char *> & slcp)
+{
+  char *  rb  = p + size, * a, * s;
+  for( a = p; *a != '\r' && *a != '\n' && a < rb; a++ );
+  slcp = NULL;
+  for( uintptr_t i = 0; p < a; i++ ){
+    while( p < a && *p == ' ' ) p++;
+    s = p;
+    while( s < a ){
+      if( *s == '[' ){
+        while( s < a && *s != ']' ) s++;
+      }
+      else if( *s == '(' ){
+        while( s < a && *s != ')' ){
+          if( *s == '\'' ){
+            for( ++s; s < a && *s != '\''; s++ );
+            if( *s == '\'' ) s++;
+          }
+          else {
+            s++;
+          }
+        }
+      }
+      if( s < a ){
+        if( *s == ' ' ) break;
+        s++;
+      }
+    }
+    if( i >= slcp.count() ) slcp.resize(i + 1);
+    slcp[i] = p;
+    *s++ = '\0';
+    // to ascii
+    /*while( *p != '\0' ){
+      uint8_t c = *p;
+      if( c < ' ' || (c & 0x80) != 0 ){
+        c &= 0x7F;
+        *p = c >= ' ' ? c : '?';
+      }
+      p++;
+    }*/
+    if( i > 0 ) if( strcmp(slcp[i - 1],slcp[i]) == 0 ) i--;
+    p = s;
+  }
+}
+//------------------------------------------------------------------------------
+utf8::String Logger::SquidSendmailThread::shortUrl(const utf8::String & url)
+{
+  utf8::String s(url);
+  utf8::String::Iterator j(url);
+  j.last().prev();
+  if( j.getChar() == '?' ){
+    utf8::String::Iterator i(url.strstr(shortUrl_));
+    if( i.position() >= 0 ){
+      i += 3;
+      while( i.next() && i.getChar() != '/' );
+      s = utf8::String(utf8::String::Iterator(s),i);
+    }
+  }
+  return s;
+}
+//------------------------------------------------------------------------------
+void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl)
+{
+  stMonUrlSel_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMonUrlSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+    " ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
+    "ST_URL = :ST_URL"
+  );
+  stMonUrlIns_->text(
+    "INSERT INTO INET_USERS_MONTHLY_TOP_URL " 
+    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_HASH, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
+    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_HASH, :ST_URL_TRAF, 1)"
+  );
+  stMonUrlUpd_->text(
+    "UPDATE INET_USERS_MONTHLY_TOP_URL "
+    "SET "
+    "ST_URL_TRAF = ST_URL_TRAF + :ST_URL_TRAF,"
+    "ST_URL_COUNT = ST_URL_COUNT + 1 "
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
+    "ST_URL = :ST_URL"
+  );
+  stTrafIns_->text(
+    "INSERT INTO INET_USERS_TRAF"
+    "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)"
+    "VALUES (:ST_USER, :ST_TIMESTAMP, :ST_TRAF_WWW, 0)"
+  );
+  stTrafUpd_->text(
+    "UPDATE INET_USERS_TRAF SET ST_TRAF_WWW = ST_TRAF_WWW + :ST_TRAF_WWW "
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP"
+  );
+  AsyncFile flog(logFileName);
+  flog.readOnly(true).open();
+/*
+  statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
+  updateLogFileLastOffset(logFileName,0);
+ */
+  database_->attach()->start();
+  if( (bool) logger_->config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
+    updateLogFileLastOffset(stFileStat_,logFileName,0);
+  uint64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  if( offset > flog.size() ) updateLogFileLastOffset(stFileStat_,logFileName,offset = 0);
+  if( flog.seekable() ) flog.seek(offset);
+  fallBackToNewLine(flog);
+  int64_t lineNo = 1, tma = 0;
+  uint64_t startTime = timeFromTimeString(logger_->config_->valueByPath(section_ + ".squid.start_time","01.01.1980"));
+  uintptr_t size;
+  Array<const char *> slcp;
+  int64_t cl = getlocaltimeofday();
+  AsyncFile::LineGetBuffer lgb(flog);
+  lgb.codePage_ = logger_->config_->valueByPath(section_ + ".squid.log_file_codepage",CP_ACP);
+  stTrafIns_->prepare();
+  stTrafUpd_->prepare();
+  stMonUrlSel_->prepare();
+  stMonUrlUpd_->prepare();
+  stMonUrlIns_->prepare();
+  bool validLine = false, startTimeLinePrinted = false;
+  for(;;){
+    utf8::String sb;
+    if( flog.gets(sb,&lgb) ) break;
+    size = sb.size();
+    validLine = size > 0 && sb.c_str()[size - 1] == '\n';
+    parseSquidLogLine(sb.c_str(),size,slcp);
+    validLine = validLine && slcp.count() >= 7 && slcp[7] != NULL;
+    uint64_t timeStamp1;
+    if( validLine ){
+      uint64_t a;
+      int r = sscanf(slcp[0],"%"PRIu64".%"PRIu64,&timeStamp1,&a);
+      timeStamp1 *= 1000000u;
+      timeStamp1 += a * 1000u;
+      timeStamp1 -= getgmtoffset(); // in database must be in GMT
+      validLine = validLine && r == 2 && timeStamp1 >= startTime;
+      if( validLine && logger_->verbose_ && !startTimeLinePrinted ){
+        fprintf(stderr,"\nstart time %s, line: %"PRId64", offset: %"PRIu64"\n",
+	  (const char * ) utf8::time2Str(int64_t(timeStamp1)).getOEMString(),lineNo,lgb.tell() - size
+	);
+	startTimeLinePrinted = true;
+      }
+    }
+    uintmax_t traf;
+    if( validLine ){
+      int r = sscanf(slcp[4],"%"PRIuMAX,&traf);
+      validLine = validLine && r == 1 && traf > 0;
+    }
+    if( validLine ){
+      validLine = validLine && strchr(slcp[7],'%') == NULL;
+      validLine = validLine && strcmp(slcp[7],"-") != 0;
+      validLine = validLine && strncmp(slcp[3],"NONE",4) != 0;
+      validLine = validLine && strncmp(slcp[3],"TCP_DENIED",10) != 0;
+      validLine = validLine && strncmp(slcp[3],"UDP_DENIED",10) != 0;
+    }
+    utf8::String st_user, st_url;
+    if( validLine ){
+      st_user = utf8::plane(slcp[7]).left(80).replaceAll("\"","").lower();
+      st_url = utf8::plane(slcp[6]);
+      validLine = validLine && st_url.strcasestr(skipUrl).position() < 0;
+    }
+    if( validLine ){
+      st_url = shortUrl(st_url).left(4096).lower();
+      Mutant timeStamp(Logger::timeStampRoundToMin(timeStamp1));
+      try {
+        stTrafIns_->paramAsString("ST_USER",st_user);
+        stTrafIns_->paramAsMutant("ST_TIMESTAMP",timeStamp);
+        stTrafIns_->paramAsMutant("ST_TRAF_WWW",traf);
+        stTrafIns_->execute();
+      }
+      catch( ExceptionSP & e ){
+        if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
+        stTrafUpd_->paramAsString("ST_USER",st_user);
+        stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
+        stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
+        stTrafUpd_->execute();
+      }
+      if( top10 ){
+        int64_t urlHash = st_url.hash_ll(true);
+        stMonUrlSel_->
+          paramAsString("ST_USER", st_user)->
+          paramAsMutant("ST_TIMESTAMP", timeStamp)->
+          paramAsMutant("ST_URL", st_url)->
+          paramAsMutant("ST_URL_HASH",urlHash)->
+          execute()->fetchAll();
+        if( stMonUrlSel_->rowCount() > 0 ){
+          stMonUrlUpd_->
+            paramAsString("ST_USER", st_user)->
+            paramAsMutant("ST_TIMESTAMP", timeStamp)->
+            paramAsMutant("ST_URL", st_url)->
+            paramAsMutant("ST_URL_HASH",urlHash)->
+            paramAsMutant("ST_URL_TRAF", traf)->execute();
+        }
+        else {
+          stMonUrlIns_->
+            paramAsString("ST_USER", st_user)->
+            paramAsMutant("ST_TIMESTAMP", timeStamp)->
+            paramAsMutant("ST_URL", st_url)->
+            paramAsMutant("ST_URL_HASH",urlHash)->
+            paramAsMutant("ST_URL_TRAF", traf)->execute();
+        }
+      }
+    }
+    if( lineNo % 8192 == 0 ){
+      if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell() - (validLine ? 0 : size));
+      database_->commit();
+      database_->start();
+    }
+    logger_->printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
+    lineNo++;
+  }
+  if( validLine && flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell() - (validLine ? 0 : size));
+  database_->commit()->detach();
+  logger_->printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
+}
+//------------------------------------------------------------------------------
+void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logFileName, const utf8::String & domain,uintptr_t startYear)
+{
+  stMsgsIns_->text(
+    "INSERT INTO INET_SENDMAIL_MESSAGES (ST_FROM,ST_MSGID,ST_MSGSIZE) " 
+    "VALUES (:ST_FROM,:ST_MSGID,:ST_MSGSIZE);"
+  );
+  stMsgsSel_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMsgsSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+    " * FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID"
+  );
+  stMsgsDel_->text("DELETE FROM INET_SENDMAIL_MESSAGES");
+  stMsgsDel2_->text("DELETE FROM INET_SENDMAIL_MESSAGES WHERE ST_MSGID = :ST_MSGID");
+  stMsgsSelCount_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMsgsSelCount_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+    " COUNT(*) FROM INET_SENDMAIL_MESSAGES"
+  );
+  stTrafIns_->text(
+    "INSERT INTO INET_USERS_TRAF"
+    "(ST_USER, ST_TIMESTAMP, ST_TRAF_WWW, ST_TRAF_SMTP)"
+    "VALUES (:ST_USER, :ST_TIMESTAMP, 0, :ST_TRAF_SMTP)"
+  );
+  stTrafUpd_->text(
+    "UPDATE INET_USERS_TRAF SET ST_TRAF_SMTP = ST_TRAF_SMTP + :ST_TRAF_SMTP "
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP"
+  );
+/*
+  statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
+  updateLogFileLastOffset(flog.fileName(),0);
+ */
+  tm lt;
+  statement_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+    " MAX(ST_TIMESTAMP) AS ST_TIMESTAMP "
+    "FROM INET_USERS_TRAF WHERE ST_TRAF_SMTP > 0"
+  );
+  AsyncFile flog(logFileName);
+  flog.readOnly(true).open();
+  database_->attach()->start();
+  if( (bool) logger_->config_->valueByPath(section_ + ".sendmail.reset_log_file_position",false) )
+    updateLogFileLastOffset(stFileStat_,logFileName,0);
+  statement_->execute()->fetchAll();
+  memset(&lt,0,sizeof(lt));
+  if( statement_->rowCount() > 0 && statement_->fieldIndex("ST_TIMESTAMP") >= 0 && !statement_->valueIsNull("ST_TIMESTAMP") ){
+    lt = statement_->valueAsMutant("ST_TIMESTAMP");
+    startYear = lt.tm_year + 1900;
+  }
+  uint64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  if( offset > flog.size() ) updateLogFileLastOffset(stFileStat_,logFileName,offset = 0);
+  if( flog.seekable() ) flog.seek(offset);
+  fallBackToNewLine(flog);
+  int64_t   lineNo  = 1, tma = 0;
+  uintptr_t size;
+  intptr_t  mon     = 0;
+  int64_t   cl      = getlocaltimeofday();
+  AsyncFile::LineGetBuffer lgb(flog);
+  lgb.codePage_ = logger_->config_->valueByPath(section_ + ".sendmail.log_file_codepage",CP_ACP);
+  for(;;){
+    utf8::String sb;
+    if( flog.gets(sb,&lgb) ) break;
+    size = sb.size();
+    if( size > 0 && sb.c_str()[size - 1] == '\n' ){
+      char * a, * id, * idl, * prefix, * prefixl, * from, * to, * stat; //* relay;
+      from = strstr(sb.c_str(), "from=");
+      to = strstr(sb.c_str(), " to=");
+      if( ((from != NULL || to != NULL)) && (id = strstr(sb.c_str(), "sm-mta[")) != NULL ){
+        // get time
+        memset(&lt, 0, sizeof(lt));
+        lt.tm_mon = (int) str2Month(sb.c_str());
+        if( lt.tm_mon < mon ) startYear++;
+        mon = lt.tm_mon;
+        lt.tm_year = int(startYear - 1900);
+        sscanf(sb.c_str() + 4, "%u %u:%u:%u", &lt.tm_mday, &lt.tm_hour, &lt.tm_min, &lt.tm_sec);
+        // get msgid
+        prefix = id;
+        for( prefixl = prefix; *prefixl != '['; prefixl++ );
+        while( *id != ']' ) id++;
+        while( *++id == ':' );
+        while( *++id == ' ' );
+        for( idl = id; *idl != ':'; idl++ );
+        utf8::String  st_user;
+        // get from
+        if( from != NULL ){
+          if( from[5] == '<' ){
+            from += 6;
+            a = from;
+            while( *a != '@' && *a != '>' && *a != ',' ){
+              if( *a == ':' ) from = a + 1;
+              a++;
+            }
+            if( *a == '@' && utf8::plane(a,domain.strlen()).strcasecmp(domain) == 0 ){
+              st_user = utf8::plane(from,a - from).lower();
+            }
+          }
+        }
+        // get to
+        if( to != NULL ){
+          if( to[4] == '<' ){
+            to += 5;
+            a = to;
+            while( *a != '@' && *a != '>' && *a != ',' ){
+              if( *a == ':' ) to = a + 1;
+              a++;
+            }
+            if( *a == '@' && utf8::plane(a,domain.strlen()).strcasecmp(domain) == 0 ){
+              st_user = utf8::plane(to,a - to).lower();
+            }
+          }
+        }
+        // get size
+        uintptr_t msgSize = 0;
+        if( (a = strstr(sb.c_str(), "size=")) != NULL ){
+          sscanf(a + 5, "%"PRIuPTR, &msgSize);
+        }
+        // get nrcpts
+        uintptr_t nrcpts  = 0;
+        if( (a = strstr(sb.c_str(), "nrcpts=")) != NULL ){
+          sscanf(a + 7, "%"PRIuPTR, &nrcpts);
+        }
+        // get stat
+        if( (stat = strstr(sb.c_str(), "stat=")) != NULL ){
+          stat += 5;
+        }
+	      st_user = st_user.lower().replaceAll("\"","");
+        if( from != NULL && msgSize > 0 ){
+          try {
+            stMsgsIns_->prepare()->
+              paramAsString("ST_FROM",st_user)->
+              paramAsString("ST_MSGID",utf8::plane(id, idl - id))->
+              paramAsMutant("ST_MSGSIZE",msgSize)->execute();
+          }
+          catch( ExceptionSP & e ){
+            if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
+          }
+        }
+        else if( to != NULL && stat != NULL && strncmp(stat, "Sent", 4) == 0 ){
+          stMsgsSel_->prepare()->
+            paramAsString("ST_MSGID",utf8::plane(id,idl - id))->
+            execute()->fetchAll();
+          if( stMsgsSel_->rowCount() > 0 ){
+            if( st_user.strlen() == 0 ) st_user = stMsgsSel_->valueAsString("ST_FROM");
+            if( st_user.strlen() > 0 ){
+              msgSize = stMsgsSel_->valueAsMutant("ST_MSGSIZE");
+	      // time in database must be in GMT
+              try {
+                stTrafIns_->prepare()->
+                  paramAsString("ST_USER", st_user)->
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt) - getgmtoffset()))->
+                  paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
+              }
+              catch( ExceptionSP & e ){
+                if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
+                stTrafUpd_->prepare()->
+                  paramAsString("ST_USER",st_user)->
+                  paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt) - getgmtoffset()))->
+                  paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
+              }
+              stMsgsDel2_->prepare()->
+                paramAsString("ST_MSGID",stMsgsSel_->paramAsString("ST_MSGID"))->execute();
+            }
+          }
+        }
+      }
+    }
+    if( lineNo % 1024 == 0 ){
+      if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell());
+      database_->commit();
+      database_->start();
+    }
+    logger_->printStat(lineNo,offset,lgb.tell(),flog.size(),cl,&tma);
+    lineNo++;
+  }
+  if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell());
+  stMsgsDel_->execute();
+  stMsgsSelCount_->execute()->fetchAll();
+  database_->commit()->detach();
+  logger_->printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 utf8::String Logger::TrafCacheEntry::id() const
 {
@@ -942,87 +1439,6 @@ void Logger::writeHtmlTail(AsyncFile & f,int64_t ellapsed)
     "</HTML>\n"
   ;
 }
-//------------------------------------------------------------------------------
-utf8::String Logger::genUserFilter(const utf8::String & user,uintptr_t isGroup)
-{
-  utf8::String users;
-  intptr_t i, j;
-  for( i = enumStringParts(user) - 1, j = i; i >= 0; i-- ){
-    if( i == j ) users += isGroup > 1 ? " " : " (";
-    users += (isGroup > 1 ? "ST_USER <> :U" : "ST_USER = :U") + utf8::int2Str(i);
-    if( i > 0 ) users += isGroup > 1 ? " AND " : " OR ";
-    else
-    if( i >= 0 ) users += isGroup > 1 ? " AND" : ") AND";
-  }
-  return users;
-}
-//------------------------------------------------------------------------------
-int64_t Logger::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user,uintptr_t isGroup)
-{
-  AutoPtr<TrafCacheEntry> tce(newObjectC1C2C3V4<TrafCacheEntry>(user,bt,et,tt));
-  tce->bt_.tm_wday = 0;
-  tce->bt_.tm_yday = 0;
-  tce->et_.tm_wday = 0;
-  tce->et_.tm_yday = 0;
-  TrafCacheEntry * pEntry = trafCache_.find(tce);
-  trafCache_.insert(tce,false,false,&pEntry);
-  if( pEntry == tce ){
-    tce.ptr(NULL);
-    utf8::String users;
-    switch( tt ){
-      case ttSMTP :
-      case ttWWW  :
-        users = genUserFilter(user,isGroup);
-        statement_->text(utf8::String("SELECT ") +
-          (tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
-          (tt == ttSMTP ? "SUM(ST_TRAF_SMTP) " : " ") +
-          "FROM INET_USERS_TRAF WHERE" +
-          (user.strlen() > 0 ? users : utf8::String()) +
-          " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
-        );
-        statement_->prepare();
-        for( intptr_t i = enumStringParts(user) - 1; i >= 0; i-- )
-          statement_->paramAsString("U" + utf8::int2Str(i),stringPartByNo(user,i));
-        statement_->
-          paramAsMutant("BT",time2tm(tm2Time(bt) - getgmtoffset()))->
-	  paramAsMutant("ET",time2tm(tm2Time(et) - getgmtoffset()))->
-          execute()->fetchAll();
-//#ifndef NDEBUG
-//    for( intptr_t i = statement_->fieldCount() - 1; i >= 0; i-- )
-//      fprintf(stderr,"%s %d\n",(const char *) statement_->fieldName(i).getANSIString(),(int) i);
-//#endif
-        pEntry->traf_ = statement_->valueAsMutant("SUM");
-        break;
-      case ttAll  :
-        pEntry->traf_ = getTraf(ttWWW,bt,et,user,isGroup) + getTraf(ttSMTP,bt,et,user,isGroup);
-        break;
-      default     :
-        break;
-    }
-    if( cacheSize_ > 0 && trafCache_.count() >= cacheSize_ )
-      trafCache_.drop(trafCacheLRU_.remove(*trafCacheLRU_.last()));
-  }
-  else {
-    trafCacheLRU_.remove(*pEntry);
-  }
-  trafCacheLRU_.insToHead(*pEntry);
-  return pEntry->traf_;
-}
-//------------------------------------------------------------------------------
-/*  fprintf(fyear,
-    "<FONT FACE=\"Arial\">\n"
-    "  <A HREF=\"bpft-traf.html\">Статистика пакетного фильтра bpft</A><BR><BR>\n"
-    "</FONT>\n"
-  );
-  uint64_t k = AllTraf();
-  fprintf(fyear,
-    "<FONT FACE=\"Arial\">\n"
-    "Суммарный трафик: %qu,%04qu (Кб) %qu,%04qu (Мб) %qu,%04qu (Гб)\n"
-    "</FONT>\n<BR>\n<BR>\n",
-    k / 1024ULL,                     k % 1024ULL,
-    k / 1024ULL / 1024ULL,           (k / 1024ULL) % 1024ULL,
-    k / 1024ULL / 1024ULL / 1024ULL, (k / 1024ULL / 1024ULL) % 1024ULL
-  );*/
 //------------------------------------------------------------------------------
 } // namespace macrosocope
 //------------------------------------------------------------------------------
