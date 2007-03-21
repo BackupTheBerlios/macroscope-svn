@@ -163,13 +163,13 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,u
   addr->addr4_.sin_addr.s_addr = ip4;
   addr->addr4_.sin_port = 0;
   addr->addr4_.sin_family = PF_INET;
-  if( numeric ) return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
+  if( numeric || !resolveDNSNames ) return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
   AutoLock<InterlockedMutex> lock(dnsMutex_);
   DNSCacheEntry * pAddr = addr;
   dnsCache_.insert(addr,false,false,&pAddr);
   if( pAddr == addr ){
     utf8::String name;
-    if( resolveDNSNames ) st[stSel]->database()->start();
+    st[stSel]->database()->start();
     if( !st[stSel]->prepared() )
       st[stSel]->text("SELECT st_name from INET_DNS_CACHE WHERE st_ip = :ip")->prepare();
     if( st[stSel]->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
@@ -178,26 +178,21 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,u
       dnsCacheHitCount_++;
     }
     else {
-      if( resolveDNSNames ){
-        name = pAddr->resolveAddr();
-        if( !st[stIns]->prepared() )
-          st[stIns]->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
-        st[stIns]->
-          paramAsString("ip",ip4AddrToIndex(ip4))->
-          paramAsString("name",name);
-	try {
-  	  st[stIns]->execute();
-	}
-        catch( ExceptionSP & e ){
-          if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
-	}
-      }
-      else {
-        name = pAddr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
-      }
+		  name = pAddr->resolveAddr();
+		  if( !st[stIns]->prepared() )
+		    st[stIns]->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
+		  st[stIns]->
+		    paramAsString("ip",ip4AddrToIndex(ip4))->
+		    paramAsString("name",name);
+	    try {
+	      st[stIns]->execute();
+	    }
+      catch( ExceptionSP & e ){
+        if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
+	    }
       dnsCacheMissCount_++;
     }
-    if( resolveDNSNames ) st[stSel]->database()->commit();
+    st[stSel]->database()->commit();
     pAddr->name_ = name;
     addr.ptr(NULL);
     if( dnsCacheSize_ > 0 && dnsCache_.count() >= dnsCacheSize_ )
