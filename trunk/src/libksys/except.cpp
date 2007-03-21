@@ -125,7 +125,7 @@ void Exception::throwSP()
     }
   }
 #endif
-  if( errors_.count() == 0 ){
+  if( errors_.count() == 0 || code() == EINVAL ){
     refCount_ = 0;
     assert( 0 );
   }
