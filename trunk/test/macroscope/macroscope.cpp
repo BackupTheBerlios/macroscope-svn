@@ -220,10 +220,28 @@ void Logger::main()
       cgi_ <<
         "  </select>\n"
 	"  <BR>\n"
-        "  <label for=\"byear\">Start time</label>\n"
-	"  <select name=\"byear\" id=\"byear\">\n"
+        "  <label for=\"bday\">Start time</label>\n"
+	"  <select name=\"bday\" id=\"bday\">\n"
       ;
       struct tm curTime = time2tm(gettimeofday());
+      for( intptr_t i = 1; i <= (int) monthDays(curTime.tm_year + 1900,curTime.tm_mon); i++ ){
+        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+        if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
+        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+      }
+      cgi_ <<
+        "  </select>\n"
+	"  <select name=\"bmon\" id=\"bmon\">\n"
+      ;
+      for( intptr_t i = 1; i <= 12; i++ ){
+        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+        if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
+        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+      }
+      cgi_ <<
+        "  </select>\n"
+	"  <select name=\"byear\" id=\"byear\">\n"
+      ;
       for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
         cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
         if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
