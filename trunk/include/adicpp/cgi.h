@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,31 +24,29 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#ifndef radialerH
-#define radialerH
+#ifndef cgiH
+#define cgiH
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class RemoteAccessDialer {
+enum CGIMethod { cgiPOST, cgiGET, cgiCount };
+//---------------------------------------------------------------------------
+class CGI {
   public:
-    ~RemoteAccessDialer();
-    RemoteAccessDialer();
-
-    RemoteAccessDialer & open();
-    RemoteAccessDialer & close();
+    ~CGI();
+    CGI();
+    
+    void initalize();
+    CGIMethod method() const;
   protected:
+    utf8::String queryString_;
+    CGIMethod method_;
+    
+    void initalizeByMethodPOST();
+    void initalizeByMethodGET();
   private:
-#if defined(__WIN32__) || defined(__WIN64__)
-    RASDIALEXTENSIONS rasDialExtensions_;
-    utf8::String phonebook_;
-    union {
-      RASDIALPARAMSA rasDialParamsA_;
-      RASDIALPARAMSW rasDialParamsW_;
-    };
-    HRASCONN hRasConn_;
-#endif
 };
 //---------------------------------------------------------------------------
 } // namespace ksys
