@@ -92,12 +92,12 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 utf8::String getEnv(const utf8::String & name)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  uintptr_t sz;
+  DWORD sz;
   if( isWin9x() ){
+    AutoPtr<char> b;
     utf8::AnsiString s(name.getANSIString());
     sz = GetEnvironmentVariableA(s,b,0);
     if( sz != 0 ){
-      AutoPtr<char> b;
       b.alloc(sz);
       sz = GetEnvironmentVariableA(s,b,sz);
     }
@@ -108,10 +108,10 @@ utf8::String getEnv(const utf8::String & name)
     if( sz == 0 ) return utf8::String();
     return b.ptr();
   }
-  utf8::UnicodeString s(name.getUNICODEString());
+  AutoPtr<wchar_t> b;
+  utf8::WideString s(name.getUNICODEString());
   sz = GetEnvironmentVariableW(s,b,0);
   if( sz != 0 ){
-    AutoPtr<char> b;
     b.alloc(sz);
     sz = GetEnvironmentVariableW(s,b,sz);
   }

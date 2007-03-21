@@ -516,7 +516,7 @@ void Logger::SquidSendmailThread::genUsersTable(Vector<Table<Mutant> > & usersTr
     for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
       utf8::String key, value(logger_->config_->sectionByPath(section_ + ".groups").value(k,&key));
       if( perGroupReport_ )
-        logger_->config_->sectionByPath(section_ + ".groups").value(perGroupReportName_,&key);
+        logger_->config_->sectionByPath(section_ + ".groups").value(key = perGroupReportName_);
       statement_->text(
         "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
 	genUserFilter(value,1) +
@@ -1423,7 +1423,7 @@ void Logger::writeHtmlHead(AsyncFile & f)
     "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
     "<HTML>\n"
     "<HEAD>\n"
-    "<meta http-equiv=\"Content-Type\" content=\"text/xhtml;charset=utf8\" />\n"
+    "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\" />\n"
     "<meta http-equiv=\"Content-Language\" content=\"en\" />\n"
   //    "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"600\">\n"
   //    "<META HTTP-EQUIV=\"Pragma\" CONTENT=\"no-cache\">\n"
