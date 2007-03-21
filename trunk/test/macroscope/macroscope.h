@@ -124,10 +124,13 @@ class Logger {
         utf8::String sectionName_;
         utf8::String shortUrl_;
         utf8::String htmlDir_;
+        utf8::String perGroupReportName_;
+        utf8::String perGroupReportDir_;
         int64_t ellapsed_;
         struct tm curTime_;
         uintptr_t gCount_;
         bool groups_;
+	bool perGroupReport_;
 
         AutoPtr<Database> database_;
 	

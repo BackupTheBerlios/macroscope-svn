@@ -89,6 +89,102 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 #endif
 }
 //---------------------------------------------------------------------------
+utf8::String getenv(const utf8::String & name)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  uintptr_t sz;
+  if( isWin9x() ){
+    utf8::AnsiString s(name.getANSIString());
+    sz = GetEnvironmentVariableA(s,b,0);
+    if( sz != 0 ){
+      AutoPtr<char> b;
+      b.alloc(sz);
+      sz = GetEnvironmentVariableA(s,b,sz);
+    }
+    if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
+      int32_t err = GetLastError() + errorOffset;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( sz == 0 ) return utf8::String();
+    return b.ptr();
+  }
+  utf8::UnicodeString s(name.getUNICODEString());
+  sz = GetEnvironmentVariableW(s,b,0);
+  if( sz != 0 ){
+    AutoPtr<char> b;
+    b.alloc(sz);
+    sz = GetEnvironmentVariableW(s,b,sz);
+  }
+  if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  if( sz == 0 ) return utf8::String();
+  return b.ptr();
+#else
+  char * env = ::getenv(name.getANSIString());
+  if( env == NULL ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  return env;
+#endif
+}
+//---------------------------------------------------------------------------
+void setenv(const utf8::String & name,const utf8::String & value,bool overwrite)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  BOOL r;
+  if( isWin9x() ){
+    r = SetEnvironmentVariableA(name.getANSIString(),value.getANSIString());
+  }
+  else {
+    r = SetEnvironmentVariableW(name.getUNICODEString(),value.getUNICODEString());
+  }
+  if( r == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#else
+  if( ::setenv(name.getANSIString(),value.getANSIString(),overwrite) != 0 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#endif
+}
+//---------------------------------------------------------------------------
+void putenv(const utf8::String & string)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  utf8::String::Iterator i(string), j(string.strstr("="));
+  setenv(utf8::String(i,j),j + 1);
+#else
+  if( ::putenv(string.getANSIString()) != 0 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#endif
+}
+//---------------------------------------------------------------------------
+void unsetenv(const utf8::String & name)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  BOOL r;
+  if( isWin9x() ){
+    r = SetEnvironmentVariableA(name.getANSIString(),NULL);
+  }
+  else {
+    r = SetEnvironmentVariableW(name.getUNICODEString(),NULL);
+  }
+  if( r == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#else
+  ::unsetenv(name.getANSIString());
+#endif
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 DirectoryChangeNotification::~DirectoryChangeNotification()

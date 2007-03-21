@@ -88,8 +88,17 @@ void Logger::SquidSendmailThread::threadExecute()
     Mutant m2(logger_->config_->valueByPath(section_ + ".sendmail.start_year"));
     parseSendmailLogFile(m0,m1,m2);
   }
+  groups_ = perGroupReport_ = false;
   ellapsed_ = getlocaltimeofday();
   writeHtmlYearOutput();
+  if( groups_ ){
+    perGroupReport_ = true;
+    for( uintptr_t i = 0; i < logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").valueCount(); i++ ){
+      perGroupReportDir_ = logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").text(i,&perGroupReportName_);
+      ellapsed_ = getlocaltimeofday();
+      writeHtmlYearOutput();
+    }
+  }
 }
 //------------------------------------------------------------------------------
 void Logger::SquidSendmailThread::decoration()
@@ -363,7 +372,7 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
               endTime.tm_mon + 1
             ) + user.replaceAll(":","-").replaceAll(" ","") + ".html"
           );
-          if( !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || (curTime_.tm_year == endTime.tm_year && curTime_.tm_mon == endTime.tm_mon) ){
+          if( !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",true) || (curTime_.tm_year == endTime.tm_year &&    	curTime_.tm_mon == endTime.tm_mon) ){
             writeUserTop(
               includeTrailingPathDelimiter(htmlDir_) + topByUserFile,
               user,
@@ -506,6 +515,8 @@ void Logger::SquidSendmailThread::genUsersTable(Vector<Table<Mutant> > & usersTr
     usersTrafTables.resize(gCount_);
     for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
       utf8::String key, value(logger_->config_->sectionByPath(section_ + ".groups").value(k,&key));
+      if( perGroupReport_ )
+        logger_->config_->sectionByPath(section_ + ".groups").value(perGroupReportName_,&key);
       statement_->text(
         "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
 	genUserFilter(value,1) +
@@ -530,47 +541,51 @@ void Logger::SquidSendmailThread::genUsersTable(Vector<Table<Mutant> > & usersTr
         usersTrafTables.remove(k);
         continue;
       }
-      usersTrafTables[k].addRow()(j,"ST_IS_GROUP") = 1;
-      usersTrafTables[k](j,"ST_USER") = value;
-      usersTrafTables[k](j,"ST_TRAF") = 0;
-      usersTrafTables[k](j,"ST_TRAF_WWW") = 0;
-      usersTrafTables[k](j,"ST_GROUP") = "group: " + key;
-      usersTrafTables[k](j,"ST_TRAF_SMTP") = 0;
+      if( !perGroupReport_ ){
+        usersTrafTables[k].addRow()(j,"ST_IS_GROUP") = 1;
+        usersTrafTables[k](j,"ST_USER") = value;
+        usersTrafTables[k](j,"ST_TRAF") = 0;
+        usersTrafTables[k](j,"ST_TRAF_WWW") = 0;
+        usersTrafTables[k](j,"ST_GROUP") = "group: " + key;
+        usersTrafTables[k](j,"ST_TRAF_SMTP") = 0;
+      }
       if( groupedUsers.strlen() > 0 ) groupedUsers += ",";
       groupedUsers += value;
     }
-    statement_->text(
-      "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
-      genUserFilter(groupedUsers,2) +
-      " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
-    );
-    statement_->prepare();
-    for( u = enumStringParts(groupedUsers) - 1; u >= 0; u-- )
-      statement_->paramAsString("U" + utf8::int2Str(u),stringPartByNo(groupedUsers,u));
-    usersTrafTables.resize(usersTrafTables.count() + 1);
-    k = usersTrafTables.count() - 1;
-    statement_->
-      paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-      paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
-      execute()->fetchAll()->
-      unload(usersTrafTables[k]);
-    usersTrafTables[k].
-      addColumn("ST_TRAF").
-      addColumn("ST_TRAF_WWW").
-      addColumn("ST_TRAF_SMTP").
-      addColumn("ST_GROUP").
-      addColumn("ST_IS_GROUP");
-    uintptr_t j = usersTrafTables[k].rowCount();
-    if( j == 0 ){
-      usersTrafTables.remove(k);
-    }
-    else {
-      usersTrafTables[k].addRow()(j,"ST_IS_GROUP") = 2;
-      usersTrafTables[k](j,"ST_USER") = groupedUsers;
-      usersTrafTables[k](j,"ST_TRAF") = 0;
-      usersTrafTables[k](j,"ST_TRAF_WWW") = 0;
-      usersTrafTables[k](j,"ST_GROUP") = "group: ungrouped";
-      usersTrafTables[k](j,"ST_TRAF_SMTP") = 0;
+    if( !perGroupReport_ ){
+      statement_->text(
+        "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
+        genUserFilter(groupedUsers,2) +
+        " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
+      );
+      statement_->prepare();
+      for( u = enumStringParts(groupedUsers) - 1; u >= 0; u-- )
+        statement_->paramAsString("U" + utf8::int2Str(u),stringPartByNo(groupedUsers,u));
+      usersTrafTables.resize(usersTrafTables.count() + 1);
+      k = usersTrafTables.count() - 1;
+      statement_->
+        paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+        paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
+        execute()->fetchAll()->
+        unload(usersTrafTables[k]);
+      usersTrafTables[k].
+        addColumn("ST_TRAF").
+        addColumn("ST_TRAF_WWW").
+        addColumn("ST_TRAF_SMTP").
+        addColumn("ST_GROUP").
+        addColumn("ST_IS_GROUP");
+      uintptr_t j = usersTrafTables[k].rowCount();
+      if( j == 0 ){
+        usersTrafTables.remove(k);
+      }
+      else {
+        usersTrafTables[k].addRow()(j,"ST_IS_GROUP") = 2;
+        usersTrafTables[k](j,"ST_USER") = groupedUsers;
+        usersTrafTables[k](j,"ST_TRAF") = 0;
+        usersTrafTables[k](j,"ST_TRAF_WWW") = 0;
+        usersTrafTables[k](j,"ST_GROUP") = "group: ungrouped";
+        usersTrafTables[k](j,"ST_TRAF_SMTP") = 0;
+      }
     }
   }
   else {
@@ -645,6 +660,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
     statement_->execute()->fetchAll();
     endTime = time2tm((uint64_t) statement_->valueAsMutant("ST_TIMESTAMP") + getgmtoffset());
     htmlDir_ = excludeTrailingPathDelimiter(logger_->config_->valueByPath(section_ + ".html_report.directory"));
+    if( perGroupReport_ ) htmlDir_ = excludeTrailingPathDelimiter(perGroupReportDir_);
     AsyncFile f(
       includeTrailingPathDelimiter(htmlDir_) + logger_->config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
     );
@@ -671,6 +687,10 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
     struct tm beginTime2, bt, et;
     gCount_ = logger_->config_->sectionByPath(section_ + ".groups").valueCount();
     groups_ = (bool) logger_->config_->valueByPath(section_ + ".html_report.groups",false) && gCount_ > 0;
+    if( perGroupReport_ ){
+      gCount_ = 1;
+      groups_ = true;
+    }
     while( tm2Time(endTime) >= tm2Time(beginTime) ){
       beginTime2 = beginTime;
       beginTime.tm_year = endTime.tm_year;

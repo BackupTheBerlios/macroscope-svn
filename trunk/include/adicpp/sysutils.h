@@ -32,6 +32,11 @@ namespace ksys {
 extern bool stackBackTrace;
 utf8::String getBackTrace(/*intptr_t flags = pdbutils::DbgFrameGetAll,*/intptr_t skipCount = 0,Thread * thread = NULL);
 //---------------------------------------------------------------------------
+utf8::String getenv(const utf8::String & name);
+void setenv(const utf8::String & name,const utf8::String & value,bool overwrite = true);
+void putenv(const utf8::String & string);
+void unsetenv(const utf8::String & name);
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DirectoryChangeNotification {
