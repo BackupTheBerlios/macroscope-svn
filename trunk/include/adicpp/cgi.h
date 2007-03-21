@@ -31,15 +31,28 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-enum CGIMethod { cgiPOST, cgiGET, cgiCount };
+enum CGIMethod { cgiNone, cgiPOST, cgiGET, cgiHEAD };
 //---------------------------------------------------------------------------
 class CGI {
   public:
     ~CGI();
     CGI();
     
-    void initalize();
-    CGIMethod method() const;
+    void initialize();
+    CGI & print(const utf8::String & s);
+    CGIMethod method();
+    
+    CGI & operator << (const utf8::String & s){ return print(s); }
+    
+    utf8::String paramAsString(const utf8::String & name);
+    utf8::String paramAsString(uintptr_t i);
+    Mutant paramAsMutant(const utf8::String & name);
+    Mutant paramAsMutant(uintptr_t i);
+    intptr_t paramIndex(const utf8::String & name);
+    utf8::String paramName(uintptr_t i);
+    uintptr_t paramCount();
+    
+    bool isCGI(){ return method() != cgiNone; }
   protected:
     utf8::String queryString_;
     CGIMethod method_;
@@ -47,6 +60,8 @@ class CGI {
     void initalizeByMethodPOST();
     void initalizeByMethodGET();
   private:
+    CGI(const CGI &);
+    void operator = (const CGI &);
 };
 //---------------------------------------------------------------------------
 } // namespace ksys

@@ -83,6 +83,7 @@ template <typename T> inline void xchg(T & v1, T & v2)
 #include "archive.h"
 #include "radialer.h"
 #include "varcont.h"
+#include "cgi.h"
 #if defined(__WIN32__) || defined(__WIN64__)
 #include "pdbutils/pdbutils.h"
 #endif

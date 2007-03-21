@@ -191,7 +191,58 @@ void Logger::main()
   checkMachineBinding(config_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
-  verbose_ = config_->section("macroscope").value("verbose", false);
+  verbose_ = config_->section("macroscope").value("verbose",false);
+
+// print query form if is CGI and no CGI parameters
+  cgi_.initialize();
+//  if( cgi_.isCGI() ){
+//    if( cgi_.paramCount() == 0 ){
+      cgi_ <<
+        "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+        "<HTML>\n"
+        "<HEAD>\n"
+        "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\" />\n"
+        "<meta http-equiv=\"Content-Language\" content=\"en\" />\n"
+        "<TITLE>Statistics query form</TITLE>\n"
+        "</HEAD>\n"
+	"<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+        "<FORM ACTION=\"/cgi-bin/" + getNameFromPathName(getExecutableName()) + "\"" + " METHOD=\"POST\" accept-charset=\"utf8\">\n"
+        "  <label for=\"if\">Interface</label>\n"
+        "  <select name=\"if\" id=\"if\">\n"
+      ;
+      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
+        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+        if( sectionName.strcasecmp("decoration") == 0 ) continue;
+        cgi_ << "    <option value=\"" + sectionName + "\"";
+        if( i == 0 ) cgi_ << " selected=\"selected\"";
+        cgi_ << ">" + sectionName + "</option>\n";
+      }
+      cgi_ <<
+        "  </select>\n"
+	"  <BR>\n"
+        "  <label for=\"byear\">Start time</label>\n"
+	"  <select name=\"byear\" id=\"byear\">\n"
+      ;
+      struct tm curTime = time2tm(gettimeofday());
+      for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
+        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+        if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
+        cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
+      }
+      cgi_ <<
+        "  </select>\n"
+      ;
+      cgi_ <<
+        "  <BR>\n"
+        "  <INPUT TYPE=\"SUBMIT\" VALUE=\"Start\">\n"
+        "</FORM>\n"
+	"</BODY>\n"
+	"</HTML>\n"
+      ;
+      return;
+//    }
+    verbose_ = false;
+//  }
 
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));

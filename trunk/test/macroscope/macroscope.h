@@ -48,6 +48,7 @@ class Logger {
   protected:
     enum { stSel, stIns, stUpd };
 
+    CGI cgi_;
     ConfigSPi config_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
