@@ -164,6 +164,7 @@ class Logger {
         utf8::String squidStrToWideString(const char * str);
         utf8::String shortUrl(const utf8::String & url);
 
+        int64_t getTrafNL(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
         int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
         void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
         void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);

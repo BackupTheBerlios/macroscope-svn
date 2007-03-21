@@ -944,14 +944,13 @@ utf8::String Logger::SquidSendmailThread::genUserFilter(const utf8::String & use
   return users;
 }
 //------------------------------------------------------------------------------
-int64_t Logger::SquidSendmailThread::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user,uintptr_t isGroup)
+int64_t Logger::SquidSendmailThread::getTrafNL(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user,uintptr_t isGroup)
 {
   AutoPtr<TrafCacheEntry> tce(newObjectC1C2C3V4<TrafCacheEntry>(user,bt,et,tt));
   tce->bt_.tm_wday = 0;
   tce->bt_.tm_yday = 0;
   tce->et_.tm_wday = 0;
   tce->et_.tm_yday = 0;
-  AutoLock<InterlockedMutex> lock(logger_->trafCacheMutex_);
   TrafCacheEntry * pEntry = logger_->trafCache_.find(tce);
   logger_->trafCache_.insert(tce,false,false,&pEntry);
   if( pEntry == tce ){
@@ -978,7 +977,7 @@ int64_t Logger::SquidSendmailThread::getTraf(TrafType tt,const struct tm & bt,co
         pEntry->traf_ = statement_->valueAsMutant("SUM");
         break;
       case ttAll  :
-        pEntry->traf_ = getTraf(ttWWW,bt,et,user,isGroup) + getTraf(ttSMTP,bt,et,user,isGroup);
+        pEntry->traf_ = getTrafNL(ttWWW,bt,et,user,isGroup) + getTrafNL(ttSMTP,bt,et,user,isGroup);
         break;
       default     :
         break;
@@ -991,6 +990,12 @@ int64_t Logger::SquidSendmailThread::getTraf(TrafType tt,const struct tm & bt,co
   }
   logger_->trafCacheLRU_.insToHead(*pEntry);
   return pEntry->traf_;
+}
+//------------------------------------------------------------------------------
+int64_t Logger::SquidSendmailThread::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user,uintptr_t isGroup)
+{
+  AutoLock<InterlockedMutex> lock(logger_->trafCacheMutex_);
+  return getTrafNL(tt,bt,et,user,isGroup);
 }
 //------------------------------------------------------------------------------
 void Logger::SquidSendmailThread::parseSquidLogLine(char * p,uintptr_t size,Array<const char *> & slcp)
