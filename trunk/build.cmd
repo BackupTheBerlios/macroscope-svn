@@ -1,5 +1,7 @@
 @echo off
 
+if NOT DEFINED INTEL_LICENSE_FILE goto exit
+
 if "%1" == "" goto x86
 if /i %1 == x86       goto x86
 if /i %1 == amd64     goto amd64
@@ -18,6 +20,12 @@ goto exit
 
 :exit
 
-call "%VS80COMNTOOLS%..\..\VC\vcvarsall.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
+
+if DEFINED VS80COMNTOOLS (
+  call "%VS80COMNTOOLS%..\..\VC\vcvarsall.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
+)
+if DEFINED VS71COMNTOOLS (
+  call "%VS71COMNTOOLS%..\..\VC\vcvarsall.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
+)
 rem del /s /f /q *.obj *.exe *.dll *.ilk *.upx 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
 cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -DBUILD_DOCUMENTATION=ON -DDOCUMENTATION_HTML_TARZ=ON -G "NMake Makefiles" . && nmake

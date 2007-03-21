@@ -408,9 +408,15 @@ DSQLStatement & DSQLStatement::blobLookupDesc(char * tableName, char * columnNam
 DSQLStatement & DSQLStatement::free()
 {
   if( allocated() ){
-    ISC_STATUS_ARRAY  status;
-    if( api.isc_dsql_free_statement(status, &handle_, DSQL_drop) != 0 && status[1] != isc_bad_stmt_handle )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStFree>(status, __PRETTY_FUNCTION__));
+    ISC_STATUS_ARRAY status;
+    if( api.isc_dsql_free_statement(status,&handle_,DSQL_drop) != 0 && status[1] != isc_bad_stmt_handle ){
+      ksys::AutoPtr<EDSQLStFree> e(newObjectV1C2<EDSQLStFree>(status,__PRETTY_FUNCTION__));
+      if( e->isFatalError() ){
+        handle_ = 0;
+        prepared_ = false;
+      }
+      database_->exceptionHandler(e.ptr(NULL));
+    }
     handle_ = 0;
     prepared_ = false;
   }

@@ -815,7 +815,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             assert( 0 );
         }
         stBPFTSel_->
-	  paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+	        paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
           paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
         getBPFTCached(stBPFTSel_,&table[*pi + av]);
         colCount += (uintmax_t) table[*pi + av].sum("SUM1") > 0;
