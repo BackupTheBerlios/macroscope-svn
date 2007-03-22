@@ -70,10 +70,16 @@ class Logger {
 
         utf8::String id() const;
 
-        static EmbeddedHashNode<TrafCacheEntry> & keyNode(const TrafCacheEntry & object){
+        static EmbeddedHashNode<TrafCacheEntry,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+          return *reinterpret_cast<EmbeddedHashNode<TrafCacheEntry,uintptr_t> *>(link);
+        }
+        static uintptr_t ehLTN(const EmbeddedHashNode<TrafCacheEntry,uintptr_t> & node,uintptr_t * &){
+          return node.next();
+        }			    
+        static EmbeddedHashNode<TrafCacheEntry,uintptr_t> & keyNode(const TrafCacheEntry & object){
           return object.keyNode_;
         }
-        static TrafCacheEntry & keyNodeObject(const EmbeddedHashNode<TrafCacheEntry> & node,TrafCacheEntry * p){
+        static TrafCacheEntry & keyNodeObject(const EmbeddedHashNode<TrafCacheEntry,uintptr_t> & node,TrafCacheEntry * p){
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const TrafCacheEntry & object){
@@ -83,7 +89,7 @@ class Logger {
           return object1.id().strcasecmp(object2.id()) == 0;
         }
         
-        mutable EmbeddedHashNode<TrafCacheEntry> keyNode_;
+        mutable EmbeddedHashNode<TrafCacheEntry,uintptr_t> keyNode_;
 
         static EmbeddedListNode<TrafCacheEntry> & listNode(const TrafCacheEntry & object){
           return object.listNode_;
@@ -96,6 +102,10 @@ class Logger {
     };
     typedef EmbeddedHash<
       TrafCacheEntry,
+      uintptr_t,
+      uintptr_t *,
+      TrafCacheEntry::ehNLT,
+      TrafCacheEntry::ehLTN,
       TrafCacheEntry::keyNode,
       TrafCacheEntry::keyNodeObject,
       TrafCacheEntry::keyNodeHash,
@@ -189,10 +199,16 @@ class Logger {
         ~DNSCacheEntry() {}
         DNSCacheEntry() {}
 
-        static EmbeddedHashNode<DNSCacheEntry> & keyNode(const DNSCacheEntry & object){
+        static EmbeddedHashNode<DNSCacheEntry,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+          return *reinterpret_cast<EmbeddedHashNode<DNSCacheEntry,uintptr_t> *>(link);
+        }
+        static uintptr_t ehLTN(const EmbeddedHashNode<DNSCacheEntry,uintptr_t> & node,uintptr_t * &){
+          return node.next();
+        }			    
+        static EmbeddedHashNode<DNSCacheEntry,uintptr_t> & keyNode(const DNSCacheEntry & object){
           return object.keyNode_;
         }
-        static DNSCacheEntry & keyNodeObject(const EmbeddedHashNode<DNSCacheEntry> & node,DNSCacheEntry * p){
+        static DNSCacheEntry & keyNodeObject(const EmbeddedHashNode<DNSCacheEntry,uintptr_t> & node,DNSCacheEntry * p){
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const DNSCacheEntry & object){
@@ -211,7 +227,7 @@ class Logger {
           return memcmp(&object1.addr4_.sin_addr,&object2.addr4_.sin_addr,sizeof(object2.addr4_.sin_addr)) == 0;
         }
         
-        mutable EmbeddedHashNode<DNSCacheEntry> keyNode_;
+        mutable EmbeddedHashNode<DNSCacheEntry,uintptr_t> keyNode_;
 
         static EmbeddedListNode<DNSCacheEntry> & listNode(const DNSCacheEntry & object){
           return object.listNode_;
@@ -224,6 +240,10 @@ class Logger {
     };
     typedef EmbeddedHash<
       DNSCacheEntry,
+      uintptr_t,
+      uintptr_t *,
+      DNSCacheEntry::ehNLT,
+      DNSCacheEntry::ehLTN,
       DNSCacheEntry::keyNode,
       DNSCacheEntry::keyNodeObject,
       DNSCacheEntry::keyNodeHash,

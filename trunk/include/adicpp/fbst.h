@@ -127,10 +127,16 @@ class DSQLParam {
     DSQLParam & writeBuffer(const void * buf,uintptr_t size);
     const ISC_BLOB_DESC & blobDesc() const;
   protected:
-    static ksys::EmbeddedHashNode<DSQLParam> & keyNode(const DSQLParam & object){
+    static ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<ksys::EmbeddedHashNode<DSQLParam,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }
+    static ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & keyNode(const DSQLParam & object){
       return object.keyNode_;
     }
-    static DSQLParam & keyNodeObject(const ksys::EmbeddedHashNode<DSQLParam> & node,DSQLParam * p){
+    static DSQLParam & keyNodeObject(const ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & node,DSQLParam * p){
       return node.object(p->keyNode_);
     }
     static uintptr_t keyNodeHash(const DSQLParam & object){
@@ -139,7 +145,7 @@ class DSQLParam {
     static bool keyHashNodeEqu(const DSQLParam & object1,const DSQLParam & object2){
       return object1.name_.strcasecmp(object2.name_) == 0;
     }
-    mutable ksys::EmbeddedHashNode<DSQLParam> keyNode_;
+    mutable ksys::EmbeddedHashNode<DSQLParam,uintptr_t> keyNode_;
     DSQLStatement * statement_;
     utf8::String name_;
     DSQLParam * head_;
@@ -454,6 +460,10 @@ class DSQLParams {
     XSQLDAHolder sqlda_;
     typedef ksys::EmbeddedHash<
       DSQLParam,
+      uintptr_t,
+      uintptr_t *,
+      DSQLParam::ehNLT,
+      DSQLParam::ehLTN,
       DSQLParam::keyNode,
       DSQLParam::keyNodeObject,
       DSQLParam::keyNodeHash,

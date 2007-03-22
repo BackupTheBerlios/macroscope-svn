@@ -201,8 +201,8 @@ void Logger::main()
         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
         "<HTML>\n"
         "<HEAD>\n"
-        "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\" />\n"
-        "<meta http-equiv=\"Content-Language\" content=\"en\" />\n"
+        "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\">\n"
+        "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
         "<TITLE>Statistics query form</TITLE>\n"
         "</HEAD>\n"
 	"<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
@@ -220,11 +220,11 @@ void Logger::main()
       cgi_ <<
         "  </select>\n"
 	"  <BR>\n"
-        "  <label for=\"bday\">Start time</label>\n"
+        "  <label for=\"bday\">Begin time</label>\n"
 	"  <select name=\"bday\" id=\"bday\">\n"
       ;
       struct tm curTime = time2tm(gettimeofday());
-      for( intptr_t i = 1; i <= (int) monthDays(curTime.tm_year + 1900,curTime.tm_mon); i++ ){
+      for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
         cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
         if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
         cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
@@ -249,8 +249,81 @@ void Logger::main()
       }
       cgi_ <<
         "  </select>\n"
+	"  <BR>\n"
+        "  <label for=\"eday\">End time</label>\n"
+	"  <select name=\"eday\" id=\"eday\">\n"
+      ;
+      for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
+        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+        if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
+        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+      }
+      cgi_ <<
+        "  </select>\n"
+	"  <select name=\"emon\" id=\"emon\">\n"
+      ;
+      for( intptr_t i = 1; i <= 12; i++ ){
+        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+        if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
+        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+      }
+      cgi_ <<
+        "  </select>\n"
+	"  <select name=\"eyear\" id=\"eyear\">\n"
+      ;
+      for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
+        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+        if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
+        cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
+      }
+      cgi_ <<
+        "  </select>\n"
+        "  <BR>\n"
+        "  <input type=\"checkbox\" name=\"bidirectional\" id=\"bidirectional\">\n"
+        "  <label for=\"bidirectional\">Bidirectional</label>\n"
+        "  <BR>\n"
+        "  <input type=\"checkbox\" name=\"resolve\" id=\"resolve\" checked=\"checked\">\n"
+        "  <label for=\"resolve\">Resolve addresses by DNS</label>\n"
+        "  <BR>\n"
+        "  <label for=\"threshold\">Minimal significant threshold</label>\n"
+        "  <select name=\"threshold\" id=\"threshold\">\n"
+        "    <option value=\"64K\">\n"
+	"      64K\n"
+	"    </option>\n"
+        "    <option value=\"128K\">\n"
+	"      128K\n"
+	"    </option>\n"
+        "    <option value=\"256K\">\n"
+	"      256K\n"
+	"    </option>\n"
+        "    <option value=\"512K\">\n"
+	"      512K\n"
+	"    </option>\n"
+        "    <option value=\"1M\">\n"
+	"      1M\n"
+	"    </option>\n"
+        "    <option value=\"2M\">\n"
+	"      2M\n"
+	"    </option>\n"
+        "    <option value=\"4M\" selected=\"selected\">\n"
+	"      4M\n"
+	"    </option>\n"
+        "    <option value=\"8M\">\n"
+	"      8M\n"
+	"    </option>\n"
+        "    <option value=\"16M\">\n"
+	"      16M\n"
+	"    </option>\n"
+        "  </select>\n"
+        "  <label for=\"threshold2\">or type you custom value in bytes</label>\n"
+        "  <input type=\"text\" name=\"threshold2\" id=\"threshold2\">\n"
+        "  <BR>\n"
+	"  <P>Please type address filter or leave empty</P>\n"
+	"  <textarea name=\"filter\" rows=\"4\" cols=\"80\">\n"
+	"  </textarea>\n"
       ;
       cgi_ <<
+        "  <BR>\n"
         "  <BR>\n"
         "  <INPUT TYPE=\"SUBMIT\" VALUE=\"Start\">\n"
         "</FORM>\n"

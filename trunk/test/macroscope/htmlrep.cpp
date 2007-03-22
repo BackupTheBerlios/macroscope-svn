@@ -641,7 +641,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
   decoration();
   struct tm beginTime, endTime;
   curTime_ = time2tm(getlocaltimeofday());
-  database_->attach()->start();
+  database_->start();
   statement_->text("SELECT ");
   if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");
@@ -902,7 +902,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
       endTime.tm_year--;
       beginTime = beginTime2;
     }
-    database_->commit()->detach();
+    database_->commit();
     {
       AutoLock<InterlockedMutex> lock(logger_->trafCacheMutex_);
       f << "Cache size: " + utf8::int2Str((uintmax_t) logger_->trafCache_.count()) + "<BR>\n";
@@ -1423,8 +1423,8 @@ void Logger::writeHtmlHead(AsyncFile & f)
     "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
     "<HTML>\n"
     "<HEAD>\n"
-    "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\" />\n"
-    "<meta http-equiv=\"Content-Language\" content=\"en\" />\n"
+    "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\">\n"
+    "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
   //    "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"600\">\n"
   //    "<META HTTP-EQUIV=\"Pragma\" CONTENT=\"no-cache\">\n"
   //    "<META HTTP-EQUIV=\"Cache-Control\" content=\"no-cache\">\n"

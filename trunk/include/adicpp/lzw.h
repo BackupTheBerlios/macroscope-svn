@@ -65,10 +65,16 @@ class LZWFilterT {
         ~StringT() {}
         StringT() {}
 
-        static EmbeddedHashNode<StringT> & keyNode(const StringT & object){
+        static EmbeddedHashNode<StringT,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+          return *reinterpret_cast<EmbeddedHashNode<StringT,uintptr_t> *>(link);
+	}
+	static uintptr_t ehLTN(const EmbeddedHashNode<StringT,uintptr_t> & node,uintptr_t * &){
+	  return node.next();
+	}
+        static EmbeddedHashNode<StringT,uintptr_t> & keyNode(const StringT & object){
           return object.keyNode_;
         }
-        static StringT & keyNodeObject(const EmbeddedHashNode<StringT> & node,StringT * p){
+        static StringT & keyNodeObject(const EmbeddedHashNode<StringT,uintptr_t> & node,StringT * p){
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const StringT & object){
@@ -78,15 +84,18 @@ class LZWFilterT {
           return memncmp(object1.s_,object1.l_,object2.s_,object2.l_) == 0;
         }
 
-        mutable EmbeddedHashNode<StringT> keyNode_;
+        mutable EmbeddedHashNode<StringT,uintptr_t> keyNode_;
         AutoPtr<uint8_t> s_;
         uintptr_t l_;
-        uintptr_t i_;
       protected:
       private:
     };
     typedef EmbeddedHash<
       StringT,
+      uintptr_t,
+      uintptr_t *,
+      StringT::ehNLT,
+      StringT::ehLTN,
       StringT::keyNode,
       StringT::keyNodeObject,
       StringT::keyNodeHash,

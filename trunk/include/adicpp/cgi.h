@@ -44,11 +44,11 @@ class CGI {
     
     CGI & operator << (const utf8::String & s){ return print(s); }
     
-    utf8::String paramAsString(const utf8::String & name);
-    utf8::String paramAsString(uintptr_t i);
-    Mutant paramAsMutant(const utf8::String & name);
-    Mutant paramAsMutant(uintptr_t i);
-    intptr_t paramIndex(const utf8::String & name);
+    utf8::String paramAsString(const utf8::String & name,const utf8::String & defValue = utf8::String());
+    utf8::String paramAsString(uintptr_t i,const utf8::String & defValue = utf8::String());
+    Mutant paramAsMutant(const utf8::String & name,const Mutant & defValue = Mutant());
+    Mutant paramAsMutant(uintptr_t i,const Mutant & defValue = Mutant());
+    intptr_t paramIndex(const utf8::String & name,bool noThrow = true);
     utf8::String paramName(uintptr_t i);
     uintptr_t paramCount();
     
@@ -56,6 +56,51 @@ class CGI {
   protected:
     utf8::String queryString_;
     CGIMethod method_;
+    
+    class Param {
+      friend class CGI;
+      public:
+        ~Param() {}
+	Param(const utf8::String & name = utf8::String(),const utf8::String & value = utf8::String()) :
+	  name_(name), value_(value) {}
+      protected:
+        static EmbeddedHashNode<Param,uintptr_t> & ehNLT(const uintptr_t & link,Array<Param> * & param){
+          return keyNode((*param)[link]);
+        }
+        static uintptr_t ehLTN(const EmbeddedHashNode<Param,uintptr_t> & node,Array<Param> * & param){
+          return &keyNodeObject(node,NULL) - &(*param)[0];
+        }
+        static EmbeddedHashNode<Param,uintptr_t> & keyNode(const Param & object){
+          return object.keyNode_;
+        }
+	static Param & keyNodeObject(const EmbeddedHashNode<Param,uintptr_t> & node,Param * p){
+          return node.object(p->keyNode_);
+        }
+        static uintptr_t keyNodeHash(const Param & object){
+          return object.name_.hash(false);
+        }
+        static bool keyHashNodeEqu(const Param & object1,const Param & object2){
+          return object1.name_.strcasecmp(object2.name_) == 0;
+        }
+        mutable EmbeddedHashNode<Param,uintptr_t> keyNode_;
+	
+	utf8::String name_;
+	utf8::String value_;
+      private:
+    };
+    typedef EmbeddedHash<
+      Param,
+      uintptr_t,
+      Array<Param> *,
+      Param::ehNLT,
+      Param::ehLTN,
+      Param::keyNode,
+      Param::keyNodeObject,
+      Param::keyNodeHash,
+      Param::keyHashNodeEqu
+    > Params;
+    Params paramsHash_;
+    Array<Param> params_;
     
     void initalizeByMethodPOST();
     void initalizeByMethodGET();

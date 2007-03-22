@@ -36,6 +36,7 @@ CGI::~CGI()
 //------------------------------------------------------------------------------
 CGI::CGI() : method_(cgiNone)
 {
+  paramsHash_.param() = &params_;
 }
 //------------------------------------------------------------------------------
 void CGI::initialize()
@@ -72,8 +73,8 @@ void CGI::initalizeByMethodGET()
     while( !k.eof() && k.getChar() != '&' ) k.next();
     utf8::String name(j,i);
     utf8::String value(i + 1,k);
-    if( name.strlen() > 0 ){
-    }
+    if( name.strlen() > 0 )
+      paramsHash_.insert(params_[params_.add(Param(name,value)).count() - 1]);
     i = k;
   }
 }
@@ -127,6 +128,55 @@ CGIMethod CGI::method()
     }
   }
   return method_;
+}
+//------------------------------------------------------------------------------
+utf8::String CGI::paramAsString(const utf8::String & name,const utf8::String & defValue)
+{
+  intptr_t i = paramIndex(name);
+  return i < 0 ? defValue : params_[i].value_;
+}
+//------------------------------------------------------------------------------
+utf8::String CGI::paramAsString(uintptr_t i,const utf8::String & defValue)
+{
+  if( i >= params_.count() )
+    newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  return params_[i].value_;
+}
+//------------------------------------------------------------------------------
+Mutant CGI::paramAsMutant(const utf8::String & name,const Mutant & defValue)
+{
+  intptr_t i = paramIndex(name);
+  return i < 0 ? defValue : Mutant(params_[i].value_);
+}
+//------------------------------------------------------------------------------
+Mutant CGI::paramAsMutant(uintptr_t i,const Mutant & defValue)
+{
+  if( i >= params_.count() )
+    newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  return params_[i].value_;
+}
+//------------------------------------------------------------------------------
+intptr_t CGI::paramIndex(const utf8::String & name,bool noThrow)
+{
+  Param t(name);
+  Param * param = paramsHash_.find(t);
+  if( param == NULL ){
+    if( !noThrow ) newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
+    return -1;
+  }
+  return param - &params_[0];
+}
+//------------------------------------------------------------------------------
+utf8::String CGI::paramName(uintptr_t i)
+{
+  if( i >= params_.count() )
+    newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  return params_[i].name_;
+}
+//------------------------------------------------------------------------------
+uintptr_t CGI::paramCount()
+{
+  return params_.count();
 }
 //------------------------------------------------------------------------------
 } // namespace ksys

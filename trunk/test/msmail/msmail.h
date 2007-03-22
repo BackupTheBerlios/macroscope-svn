@@ -106,10 +106,16 @@ class Message {
 
         operator const utf8::String & () const { return key_; }
 
-        static EmbeddedHashNode<Key> & keyNode(const Key & object){
+        static EmbeddedHashNode<Key,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+          return *reinterpret_cast<EmbeddedHashNode<Key,uintptr_t> *>(link);
+        }
+        static uintptr_t ehLTN(const EmbeddedHashNode<Key,uintptr_t> & node,uintptr_t * &){
+          return node.next();
+        }			    
+        static EmbeddedHashNode<Key,uintptr_t> & keyNode(const Key & object){
           return object.keyNode_;
         }
-        static Key & keyNodeObject(const EmbeddedHashNode<Key> & node,Key * p){
+        static Key & keyNodeObject(const EmbeddedHashNode<Key,uintptr_t> & node,Key * p){
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const Key & object){
@@ -127,12 +133,16 @@ class Message {
         }
       protected:
       private:
-        mutable EmbeddedHashNode<Key> keyNode_;
+        mutable EmbeddedHashNode<Key,uintptr_t> keyNode_;
         mutable EmbeddedListNode<Key> listNode_;
         utf8::String key_;
     };
     typedef EmbeddedHash<
       Key,
+      uintptr_t,
+      uintptr_t *,
+      Key::ehNLT,
+      Key::ehLTN,
       Key::keyNode,
       Key::keyNodeObject,
       Key::keyNodeHash,
@@ -169,10 +179,16 @@ class Message {
         uintptr_t size_;
       protected:
       private:
-        static EmbeddedHashNode<Attribute> & keyNode(const Attribute & object){
+        static EmbeddedHashNode<Attribute,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+          return *reinterpret_cast<EmbeddedHashNode<Attribute,uintptr_t> *>(link);
+        }
+        static uintptr_t ehLTN(const EmbeddedHashNode<Attribute,uintptr_t> & node,uintptr_t * &){
+          return node.next();
+        }			    
+        static EmbeddedHashNode<Attribute,uintptr_t> & keyNode(const Attribute & object){
           return object.keyNode_;
         }
-        static Attribute & keyNodeObject(const EmbeddedHashNode<Attribute> & node,Attribute * p){
+        static Attribute & keyNodeObject(const EmbeddedHashNode<Attribute,uintptr_t> & node,Attribute * p){
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const Attribute & object){
@@ -181,7 +197,7 @@ class Message {
         static bool keyHashNodeEqu(const Attribute & object1,const Attribute & object2){
           return object1.key_ == object2.key_;
         }
-        mutable EmbeddedHashNode<Attribute> keyNode_;
+        mutable EmbeddedHashNode<Attribute,uintptr_t> keyNode_;
     };
 
     bool operator == (const Message & a) const { return id().strcmp(a.id()) == 0; }
@@ -201,10 +217,16 @@ class Message {
     Message & removeValueByLeft(const utf8::String & key);
     Message & copyUserAttributes(const Message & msg);
 
-    static EmbeddedHashNode<Message> & idNode(const Message & object){
+    static EmbeddedHashNode<Message,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<Message,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<Message,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<Message,uintptr_t> & idNode(const Message & object){
       return object.idNode_;
     }
-    static Message & idNodeObject(const EmbeddedHashNode<Message> & node,Message * p){
+    static Message & idNodeObject(const EmbeddedHashNode<Message,uintptr_t> & node,Message * p){
       return node.object(p->idNode_);
     }
     static uintptr_t idNodeHash(const Message & object){
@@ -222,9 +244,13 @@ class Message {
     Message(const Message & a);
     Message & operator = (const Message & a);
 
-    mutable EmbeddedHashNode<Message> idNode_;
+    mutable EmbeddedHashNode<Message,uintptr_t> idNode_;
     typedef EmbeddedHash<
       Attribute,
+      uintptr_t,
+      uintptr_t *,
+      Attribute::ehNLT,
+      Attribute::ehLTN,
       Attribute::keyNode,
       Attribute::keyNodeObject,
       Attribute::keyNodeHash,
@@ -260,6 +286,10 @@ inline AsyncFile & Message::file() const
 //------------------------------------------------------------------------------
 typedef EmbeddedHash<
   Message,
+  uintptr_t,
+  uintptr_t *,
+  Message::ehNLT,
+  Message::ehLTN,
   Message::idNode,
   Message::idNodeObject,
   Message::idNodeHash,
@@ -295,10 +325,16 @@ class InfoLinkKey {
     bool operator <  (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) <  0; }
     operator const utf8::String & () const { return key_; }
 
-    static EmbeddedHashNode<InfoLinkKey> & keyNode(const InfoLinkKey & object){
+    static EmbeddedHashNode<InfoLinkKey,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<InfoLinkKey,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<InfoLinkKey,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<InfoLinkKey,uintptr_t> & keyNode(const InfoLinkKey & object){
       return object.keyNode_;
     }
-    static InfoLinkKey & keyNodeObject(const EmbeddedHashNode<InfoLinkKey> & node,InfoLinkKey * p){
+    static InfoLinkKey & keyNodeObject(const EmbeddedHashNode<InfoLinkKey,uintptr_t> & node,InfoLinkKey * p){
       return node.object(p->keyNode_);
     }
     static uintptr_t keyNodeHash(const InfoLinkKey & object){
@@ -310,7 +346,7 @@ class InfoLinkKey {
 
   protected:
   private:
-    mutable EmbeddedHashNode<InfoLinkKey> keyNode_;
+    mutable EmbeddedHashNode<InfoLinkKey,uintptr_t> keyNode_;
     utf8::String key_;
 };
 //------------------------------------------------------------------------------
@@ -336,6 +372,10 @@ inline ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const InfoLinkKe
 //------------------------------------------------------------------------------
 typedef EmbeddedHash<
   InfoLinkKey,
+  uintptr_t,
+  uintptr_t *,
+  InfoLinkKey::ehNLT,
+  InfoLinkKey::ehLTN,
   InfoLinkKey::keyNode,
   InfoLinkKey::keyNodeObject,
   InfoLinkKey::keyNodeHash,
@@ -362,10 +402,16 @@ class UserInfo {
     bool operator <= (const UserInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
     bool operator <  (const UserInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
-    static EmbeddedHashNode<UserInfo> & hashNode(const UserInfo & object){
+    static EmbeddedHashNode<UserInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<UserInfo,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<UserInfo,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<UserInfo,uintptr_t> & hashNode(const UserInfo & object){
       return object.hashNode_;
     }
-    static UserInfo & hashNodeObject(const EmbeddedHashNode<UserInfo> & node,UserInfo * p){
+    static UserInfo & hashNodeObject(const EmbeddedHashNode<UserInfo,uintptr_t> & node,UserInfo * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const UserInfo & object){
@@ -377,7 +423,7 @@ class UserInfo {
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t rtime_; // время пометки на удаление
-    mutable EmbeddedHashNode<UserInfo> hashNode_;
+    mutable EmbeddedHashNode<UserInfo,uintptr_t> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
     AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
@@ -405,10 +451,16 @@ class KeyInfo {
     bool operator <= (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
     bool operator <  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
-    static EmbeddedHashNode<KeyInfo> & hashNode(const KeyInfo & object){
+    static EmbeddedHashNode<KeyInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<KeyInfo,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<KeyInfo,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<KeyInfo,uintptr_t> & hashNode(const KeyInfo & object){
       return object.hashNode_;
     }
-    static KeyInfo & hashNodeObject(const EmbeddedHashNode<KeyInfo> & node,KeyInfo * p){
+    static KeyInfo & hashNodeObject(const EmbeddedHashNode<KeyInfo,uintptr_t> & node,KeyInfo * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const KeyInfo & object){
@@ -420,7 +472,7 @@ class KeyInfo {
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t rtime_; // время пометки на удаление
-    mutable EmbeddedHashNode<KeyInfo> hashNode_;
+    mutable EmbeddedHashNode<KeyInfo,uintptr_t> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
     AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
@@ -448,10 +500,16 @@ class GroupInfo {
     bool operator <= (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
     bool operator <  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
-    static EmbeddedHashNode<GroupInfo> & hashNode(const GroupInfo & object){
+    static EmbeddedHashNode<GroupInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<GroupInfo,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<GroupInfo,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<GroupInfo,uintptr_t> & hashNode(const GroupInfo & object){
       return object.hashNode_;
     }
-    static GroupInfo & hashNodeObject(const EmbeddedHashNode<GroupInfo> & node,GroupInfo * p){
+    static GroupInfo & hashNodeObject(const EmbeddedHashNode<GroupInfo,uintptr_t> & node,GroupInfo * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const GroupInfo & object){
@@ -463,7 +521,7 @@ class GroupInfo {
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t rtime_; // время пометки на удаление
-    mutable EmbeddedHashNode<GroupInfo> hashNode_;
+    mutable EmbeddedHashNode<GroupInfo,uintptr_t> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
     AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
@@ -491,10 +549,16 @@ class ServerInfo {
     bool operator <= (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
     bool operator <  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
 
-    static EmbeddedHashNode<ServerInfo> & hashNode(const ServerInfo & object){
+    static EmbeddedHashNode<ServerInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<ServerInfo,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<ServerInfo,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<ServerInfo,uintptr_t> & hashNode(const ServerInfo & object){
       return object.hashNode_;
     }
-    static ServerInfo & hashNodeObject(const EmbeddedHashNode<ServerInfo> & node,ServerInfo * p){
+    static ServerInfo & hashNodeObject(const EmbeddedHashNode<ServerInfo,uintptr_t> & node,ServerInfo * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const ServerInfo & object){
@@ -507,7 +571,7 @@ class ServerInfo {
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t rtime_; // время пометки на удаление
     uint64_t stime_; // время старта процесса
-    mutable EmbeddedHashNode<ServerInfo> hashNode_;
+    mutable EmbeddedHashNode<ServerInfo,uintptr_t> hashNode_;
     utf8::String name_;
     ServerType type_;
     InfoLinkKeys sendedTo_;
@@ -538,10 +602,16 @@ class User2KeyLink {
     bool operator <= (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <= 0; }
     bool operator <  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <  0; }*/
 
-    static EmbeddedHashNode<User2KeyLink> & hashNode(const User2KeyLink & object){
+    static EmbeddedHashNode<User2KeyLink,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<User2KeyLink,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<User2KeyLink,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<User2KeyLink,uintptr_t> & hashNode(const User2KeyLink & object){
       return object.hashNode_;
     }
-    static User2KeyLink & hashNodeObject(const EmbeddedHashNode<User2KeyLink> & node,User2KeyLink * p){
+    static User2KeyLink & hashNodeObject(const EmbeddedHashNode<User2KeyLink,uintptr_t> & node,User2KeyLink * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const User2KeyLink & object){
@@ -553,7 +623,7 @@ class User2KeyLink {
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t rtime_; // время пометки на удаление
-    mutable EmbeddedHashNode<User2KeyLink> hashNode_;
+    mutable EmbeddedHashNode<User2KeyLink,uintptr_t> hashNode_;
     utf8::String user_;
     utf8::String key_;
     InfoLinkKeys sendedTo_;
@@ -582,10 +652,16 @@ class Key2GroupLink {
     bool operator <= (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <= 0; }
     bool operator <  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <  0; }*/
 
-    static EmbeddedHashNode<Key2GroupLink> & hashNode(const Key2GroupLink & object){
+    static EmbeddedHashNode<Key2GroupLink,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<Key2GroupLink,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<Key2GroupLink,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<Key2GroupLink,uintptr_t> & hashNode(const Key2GroupLink & object){
       return object.hashNode_;
     }
-    static Key2GroupLink & hashNodeObject(const EmbeddedHashNode<Key2GroupLink> & node,Key2GroupLink * p){
+    static Key2GroupLink & hashNodeObject(const EmbeddedHashNode<Key2GroupLink,uintptr_t> & node,Key2GroupLink * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const Key2GroupLink & object){
@@ -600,7 +676,7 @@ class Key2GroupLink {
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t rtime_; // время пометки на удаление
-    mutable EmbeddedHashNode<Key2GroupLink> hashNode_;
+    mutable EmbeddedHashNode<Key2GroupLink,uintptr_t> hashNode_;
     utf8::String key_;
     utf8::String group_;
     InfoLinkKeys sendedTo_;
@@ -629,10 +705,16 @@ class Key2ServerLink {
     bool operator <= (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }
     bool operator <  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }*/
 
-    static EmbeddedHashNode<Key2ServerLink> & hashNode(const Key2ServerLink & object){
+    static EmbeddedHashNode<Key2ServerLink,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<Key2ServerLink,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<Key2ServerLink,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<Key2ServerLink,uintptr_t> & hashNode(const Key2ServerLink & object){
       return object.hashNode_;
     }
-    static Key2ServerLink & hashNodeObject(const EmbeddedHashNode<Key2ServerLink> & node,Key2ServerLink * p){
+    static Key2ServerLink & hashNodeObject(const EmbeddedHashNode<Key2ServerLink,uintptr_t> & node,Key2ServerLink * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const Key2ServerLink & object){
@@ -644,7 +726,7 @@ class Key2ServerLink {
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
     uint64_t rtime_; // время пометки на удаление
-    mutable EmbeddedHashNode<Key2ServerLink> hashNode_;
+    mutable EmbeddedHashNode<Key2ServerLink,uintptr_t> hashNode_;
     utf8::String key_;
     utf8::String server_;
     InfoLinkKeys sendedTo_;
@@ -673,10 +755,16 @@ class ServerFiber : public ksock::ServerFiber {
     ServerFiber(const ServerFiber &);
     void operator = (const ServerFiber &);
     
-    static EmbeddedHashNode<ServerFiber> & hashNode(const ServerFiber & object){
+    static EmbeddedHashNode<ServerFiber,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<ServerFiber,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<ServerFiber,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<ServerFiber,uintptr_t> & hashNode(const ServerFiber & object){
       return object.hashNode_;
     }
-    static ServerFiber & hashNodeObject(const EmbeddedHashNode<ServerFiber> & node,ServerFiber * p){
+    static ServerFiber & hashNodeObject(const EmbeddedHashNode<ServerFiber,uintptr_t> & node,ServerFiber * p){
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const ServerFiber & object){
@@ -688,7 +776,7 @@ class ServerFiber : public ksock::ServerFiber {
     static bool hashNodeEqu(const ServerFiber & object1,const ServerFiber & object2){
       return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
     }
-    mutable EmbeddedHashNode<ServerFiber> hashNode_;
+    mutable EmbeddedHashNode<ServerFiber,uintptr_t> hashNode_;
     utf8::String user_;
     utf8::String key_;
     Message::Keys ids_;
@@ -744,10 +832,16 @@ class MailQueueWalker : public ksock::ClientFiber {
     void getCode(int32_t noThrowCode = eOK);
     void auth();
 
-    static EmbeddedHashNode<MailQueueWalker> & hostHashNode(const MailQueueWalker & object){
+    static EmbeddedHashNode<MailQueueWalker,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<MailQueueWalker,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<MailQueueWalker,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }			    
+    static EmbeddedHashNode<MailQueueWalker,uintptr_t> & hostHashNode(const MailQueueWalker & object){
       return object.hostHashNode_;
     }
-    static MailQueueWalker & hostHashNodeObject(const EmbeddedHashNode<MailQueueWalker> & node,MailQueueWalker * p){
+    static MailQueueWalker & hostHashNodeObject(const EmbeddedHashNode<MailQueueWalker,uintptr_t> & node,MailQueueWalker * p){
       return node.object(p->hostHashNode_);
     }
     static uintptr_t hostHashNodeHash(const MailQueueWalker & object){
@@ -756,7 +850,7 @@ class MailQueueWalker : public ksock::ClientFiber {
     static bool hostHashNodeEqu(const MailQueueWalker & object1,const MailQueueWalker & object2){
       return object1.host_.strcasecmp(object2.host_) == 0;
     }
-    mutable EmbeddedHashNode<MailQueueWalker> hostHashNode_;
+    mutable EmbeddedHashNode<MailQueueWalker,uintptr_t> hostHashNode_;
     Server * server_;
     utf8::String host_;
     FiberInterlockedMutex messagesMutex_;
@@ -879,6 +973,10 @@ class Server : public ksock::Server {
         mutable FiberMutex mutex_;
         typedef EmbeddedHash<
           UserInfo,
+	  uintptr_t,
+	  uintptr_t *,
+          UserInfo::ehNLT,
+          UserInfo::ehLTN,
           UserInfo::hashNode,
           UserInfo::hashNodeObject,
           UserInfo::hashNodeHash,
@@ -888,6 +986,10 @@ class Server : public ksock::Server {
         AutoHashDrop<Users> usersAutoDrop_;
         typedef EmbeddedHash<
           KeyInfo,
+	  uintptr_t,
+	  uintptr_t *,
+          KeyInfo::ehNLT,
+          KeyInfo::ehLTN,
           KeyInfo::hashNode,
           KeyInfo::hashNodeObject,
           KeyInfo::hashNodeHash,
@@ -897,6 +999,10 @@ class Server : public ksock::Server {
         AutoHashDrop<Keys> keysAutoDrop_;
         typedef EmbeddedHash<
           GroupInfo,
+	  uintptr_t,
+	  uintptr_t *,
+          GroupInfo::ehNLT,
+          GroupInfo::ehLTN,
           GroupInfo::hashNode,
           GroupInfo::hashNodeObject,
           GroupInfo::hashNodeHash,
@@ -906,6 +1012,10 @@ class Server : public ksock::Server {
         AutoHashDrop<Groups> groupsAutoDrop_;
         typedef EmbeddedHash<
           ServerInfo,
+	  uintptr_t,
+	  uintptr_t *,
+          ServerInfo::ehNLT,
+          ServerInfo::ehLTN,
           ServerInfo::hashNode,
           ServerInfo::hashNodeObject,
           ServerInfo::hashNodeHash,
@@ -915,6 +1025,10 @@ class Server : public ksock::Server {
         AutoHashDrop<Servers> serversAutoDrop_;
         typedef EmbeddedHash<
           User2KeyLink,
+	  uintptr_t,
+	  uintptr_t *,
+          User2KeyLink::ehNLT,
+          User2KeyLink::ehLTN,
           User2KeyLink::hashNode,
           User2KeyLink::hashNodeObject,
           User2KeyLink::hashNodeHash,
@@ -924,6 +1038,10 @@ class Server : public ksock::Server {
         AutoHashDrop<User2KeyLinks> user2KeyLinksAutoDrop_;
         typedef EmbeddedHash<
           Key2GroupLink,
+	  uintptr_t,
+	  uintptr_t *,
+          Key2GroupLink::ehNLT,
+          Key2GroupLink::ehLTN,
           Key2GroupLink::hashNode,
           Key2GroupLink::hashNodeObject,
           Key2GroupLink::hashNodeHash,
@@ -933,6 +1051,10 @@ class Server : public ksock::Server {
         AutoHashDrop<Key2GroupLinks> key2GroupLinksAutoDrop_;
         typedef EmbeddedHash<
           Key2ServerLink,
+	  uintptr_t,
+	  uintptr_t *,
+          Key2ServerLink::ehNLT,
+          Key2ServerLink::ehLTN,
           Key2ServerLink::hashNode,
           Key2ServerLink::hashNodeObject,
           Key2ServerLink::hashNodeHash,
@@ -970,6 +1092,10 @@ class Server : public ksock::Server {
     FiberInterlockedMutex recvMailFibersMutex_;
     EmbeddedHash<
       ServerFiber,
+      uintptr_t,
+      uintptr_t *,
+      ServerFiber::ehNLT,
+      ServerFiber::ehLTN,
       ServerFiber::hashNode,
       ServerFiber::hashNodeObject,
       ServerFiber::hashNodeHash,
@@ -981,6 +1107,10 @@ class Server : public ksock::Server {
     FiberInterlockedMutex sendMailFibersMutex_;
     EmbeddedHash<
       MailQueueWalker,
+      uintptr_t,
+      uintptr_t *,
+      MailQueueWalker::ehNLT,
+      MailQueueWalker::ehLTN,
       MailQueueWalker::hostHashNode,
       MailQueueWalker::hostHashNodeObject,
       MailQueueWalker::hostHashNodeHash,

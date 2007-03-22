@@ -178,18 +178,18 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,u
       dnsCacheHitCount_++;
     }
     else {
-		  name = pAddr->resolveAddr();
-		  if( !st[stIns]->prepared() )
-		    st[stIns]->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
-		  st[stIns]->
-		    paramAsString("ip",ip4AddrToIndex(ip4))->
-		    paramAsString("name",name);
-	    try {
-	      st[stIns]->execute();
-	    }
+      name = pAddr->resolveAddr();
+      if( !st[stIns]->prepared() )
+        st[stIns]->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
+      st[stIns]->
+        paramAsString("ip",ip4AddrToIndex(ip4))->
+	paramAsString("name",name);
+      try {
+        st[stIns]->execute();
+      }
       catch( ExceptionSP & e ){
         if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
-	    }
+      }
       dnsCacheMissCount_++;
     }
     st[stSel]->database()->commit();
@@ -339,7 +339,7 @@ void Logger::BPFTThread::threadExecute()
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
   AutoDatabaseDetach autoDatabaseDetach(database_);
   AutoDatabaseDetach autoDBTRUpdateDetach(dbtrUpdate_);
-  parseBPFTLogFile();
+  if( !logger_->cgi_.isCGI() ) parseBPFTLogFile();
   writeBPFTHtmlReport();
 }
 //------------------------------------------------------------------------------
@@ -570,10 +570,13 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
   Mutant m0, m1, m2;
   AsyncFile f;
   if( level == rlYear ){
-    if( !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
+    if( !logger_->cgi_.isCGI() && !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
     if( logger_->verbose_ ) fprintf(stderr,"\n");
     ellapsed_ = getlocaltimeofday();
     minSignificantThreshold_ = logger_->config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
+    if( logger_->cgi_.isCGI() ){
+      minSignificantThreshold_ = logger_->cgi_.paramAsMutant("threshold2",logger_->cgi_.paramAsMutant("threshold"));
+    }
     filter_ = getIPFilter(logger_->config_->textByPath(section_ + ".html_report.filter"));
     filterHash_ = SHA256().sha256AsBase64String(filter_,false);
     curTime_ = time2tm(ellapsed_);

@@ -31,77 +31,76 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T> class EmbeddedHashNode {
+template <typename T,typename LT> class EmbeddedHashNode {
   public:
     ~EmbeddedHashNode();
     EmbeddedHashNode();
 
-    EmbeddedHashNode<T> * & next() const;
-    T & object(const EmbeddedHashNode<T> & node) const;
+    LT & next() const;
+    T & object(const EmbeddedHashNode<T,LT> & node) const;
   protected:
-    mutable EmbeddedHashNode<T> * next_;
+    mutable LT next_;
   private:
-    EmbeddedHashNode(const EmbeddedHashNode<T> &){}
-    void operator = (const EmbeddedHashNode<T> &){}
 };
 //---------------------------------------------------------------------------
-template <typename T> inline
-EmbeddedHashNode<T>::~EmbeddedHashNode()
+template <typename T,typename LT> inline
+EmbeddedHashNode<T,LT>::~EmbeddedHashNode()
 {
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-EmbeddedHashNode<T>::EmbeddedHashNode() : next_(NULL)
+template <typename T,typename LT> inline
+EmbeddedHashNode<T,LT>::EmbeddedHashNode() : next_(NULL)
 {
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-EmbeddedHashNode<T> * & EmbeddedHashNode<T>::next() const
+template <typename T,typename LT> inline
+LT & EmbeddedHashNode<T,LT>::next() const
 {
   return next_;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
-T & EmbeddedHashNode<T>::object(const EmbeddedHashNode<T> & node) const
+template <typename T,typename LT> inline
+T & EmbeddedHashNode<T,LT>::object(const EmbeddedHashNode<T,LT> & node) const
 {
-  return *(T *) const_cast<uint8_t *>((const uint8_t *) this - (uintptr_t) const_cast<EmbeddedHashNode<T> *>(&node));
+  return *(T *) const_cast<uint8_t *>((const uint8_t *) this - (uintptr_t) const_cast<EmbeddedHashNode<T,LT> *>(&node));
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  // must return node embedded in object
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
-  // must return object of node embedded
-  uintptr_t (*H)(const T &),// must return computed hash of object key
-  bool (*E) (const T &, const T &)         // must return true if objects keys equals
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param), // must return node reference by node link type
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param), // must link value from node reference
+  EmbeddedHashNode<T,LT> & (*N) (const T &),     // must return node embedded in object
+  T & (*O) (const EmbeddedHashNode<T,LT> &,T *), // must return object of node embedded
+  uintptr_t (*H)(const T &),                        // must return computed hash of object key
+  bool (*E) (const T &, const T &)                  // must return true if objects keys equals
 >
 class EmbeddedHash {
   public:
     ~EmbeddedHash();
     EmbeddedHash();
 
-    EmbeddedHash<T,N,O,H,E> & xchg(const EmbeddedHash<T,N,O,H,E> & a) const;
-
-    EmbeddedHash<T,N,O,H,E> & clear() const;
-    EmbeddedHash<T,N,O,H,E> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL) const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & xchg(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & a) const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & clear() const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL) const;
     T & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = true) const;
     T & remove() const;
     T & first() const;
-    EmbeddedHash<T,N,O,H,E> & drop() const;
-    EmbeddedHash<T,N,O,H,E> & drop(T & object,bool throwIfNotExist = true) const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & drop() const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & drop(T & object,bool throwIfNotExist = true) const;
     T & search(const T & object,bool deleteIfExist = false,bool deleteIfNotExist = false) const;
     T * find(const T & object,bool deleteIfExist = false,bool deleteIfNotExist = false) const;
-    EmbeddedHash<T,N,O,H,E> & list(Array<T *> & l) const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & list(Array<T *> & l) const;
     const uintptr_t & count() const;
     const uintptr_t & estimatedChainLength() const;
-    EmbeddedHash<T,N,O,H,E> & estimatedChainLength(uintptr_t a) const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & estimatedChainLength(uintptr_t a) const;
     const uintptr_t & thresholdNumerator() const;
-    EmbeddedHash<T,N,O,H,E> & thresholdNumerator(uintptr_t a) const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & thresholdNumerator(uintptr_t a) const;
     const uintptr_t & thresholdDenominator() const;
-    EmbeddedHash<T,N,O,H,E> & thresholdDenominator(uintptr_t a) const;
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & thresholdDenominator(uintptr_t a) const;
     uintptr_t maxChainLength() const;
     uintptr_t minChainLength() const;
     uintptr_t avgChainLength() const;
@@ -117,7 +116,7 @@ class EmbeddedHash {
     }
     template <typename ST> ST & get(ST & stream) const
     {
-      EmbeddedHash<T,N,O,H,E> t;
+      EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> t;
       uint64_t u;
       stream >> u;
       while( u-- > 0 ){
@@ -130,50 +129,77 @@ class EmbeddedHash {
       xchg(t);
       return stream;
     }
+    
+    LPT & param() const;
   protected:
   private:
-    mutable EmbeddedHashNode<T> ** hash_;
-    mutable EmbeddedHashNode<T> * staticHash_[16];
+    mutable LT * hash_;
+    mutable LT staticHash_[16];
     mutable uintptr_t size_;
     mutable uintptr_t count_;
     mutable uintptr_t estimatedChainLength_;
     mutable uintptr_t thresholdNumerator_;
     mutable uintptr_t thresholdDenominator_;
+    mutable LPT param_;
 
-    EmbeddedHash(const EmbeddedHash<T,N,O,H,E> &);
-    void operator = (const EmbeddedHash<T,N,O,H,E> &);
+    EmbeddedHash(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> &);
+    void operator = (const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> &);
 
     uintptr_t staticHashCount() const { return sizeof(staticHash_) / sizeof(staticHash_[0]); }
     void clearStaticHash() const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) staticHash_[i] = NULL; }
-    void xchgStaticHash(const EmbeddedHash<T,N,O,H,E> & a) const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) ksys::xchg(staticHash_[i],a.staticHash_[i]); }
+    void xchgStaticHash(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & a) const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) ksys::xchg(staticHash_[i],a.staticHash_[i]); }
 
-    EmbeddedHashNode<T> ** internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const;
+    LT * internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const;
     enum OptType { optInc, optDec };
-    EmbeddedHashNode<T> * getChain() const;
-    void putChain(EmbeddedHashNode<T> * head) const;
+    LT getChain() const;
+    void putChain(LT head) const;
     void optimize(OptType o) const;
 };
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E>::~EmbeddedHash()
+LPT & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::param() const
+{
+  return param_;
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
+  uintptr_t(*H)(const T &),
+  bool (*E) (const T &, const T &)
+> inline
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::~EmbeddedHash()
 {
   clear();
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E>::EmbeddedHash() :
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::EmbeddedHash() :
   hash_(staticHash_),
   size_(staticHashCount()),
   count_(0),
@@ -186,12 +212,16 @@ EmbeddedHash<T,N,O,H,E>::EmbeddedHash() :
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::xchg(const EmbeddedHash<T,N,O,H,E> & a) const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::xchg(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & a) const
 {
   ksys::xchg(hash_,a.hash_);
   if( a.hash_ == staticHash_ ) a.hash_ = a.staticHash_;
@@ -202,44 +232,52 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::xchg(const EmbeddedHash<T,N,O
   ksys::xchg(estimatedChainLength_,a.estimatedChainLength_);
   ksys::xchg(thresholdNumerator_,a.thresholdNumerator_);
   ksys::xchg(thresholdDenominator_,a.thresholdDenominator_);
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::clear() const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::clear() const
 {
   if( size_ > staticHashCount() ) kfree(hash_);
   hash_ = staticHash_;
   clearStaticHash();
   size_ = staticHashCount();
   count_ = 0;
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop() const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::drop() const
 {
-  EmbeddedHashNode<T> ** head = hash_, ** tail = head + size_, * walk, * w;
+  LT * head = hash_, * tail = head + size_, walk, w;
   while( head < tail ){
     walk = *head;
     while( walk != NULL ){
-      w = walk->next();
-      deleteObject(&O(*walk,NULL));
+      w = NLT(walk,param_).next();
+      deleteObject(&O(NLT(walk,param_),NULL));
       walk = w;
     }
     head++;
@@ -249,159 +287,195 @@ EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop() const
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 >
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::list(Array<T *> & l) const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::list(Array<T *> & l) const
 {
   l.resize(count_);
   intptr_t i = 0;
-  EmbeddedHashNode<T> ** head = hash_, ** tail = head + size_, * walk;
+  LT * head = hash_, * tail = head + size_, walk;
   while( head < tail ){
     walk = *head;
     while( walk != NULL ){
-      l[i++] = &O(*walk,NULL);
-      walk = walk->next();
+      l[i++] = &O(NLT(walk,param_),NULL);
+      walk = NLT(walk,param_).next();
     }
     head++;
   }
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 >
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject) const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject) const
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,throwIfExist,false,deleteIfExist,false);
+  LT * head = internalFind(object,throwIfExist,false,deleteIfExist,false);
   if( *head == NULL ){
     if( pObject != NULL ) *pObject = const_cast<T *>(&object);
-    *head = &N(object);
-    N(object).next() = NULL;
+    *head = LTN(N(object),param_);
+    N(object).next() = LT(NULL);
     optimize(optInc);
   }
   else if( pObject != NULL ){
-    *pObject = &O(**head,NULL);
+    *pObject = &O(NLT(*head,param_),NULL);
   }
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::remove(const T & object,bool throwIfNotExist,bool deleteIfNotExist) const
+T & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::remove(const T & object,bool throwIfNotExist,bool deleteIfNotExist) const
 {
-  EmbeddedHashNode<T> ** head = internalFind(object,false,throwIfNotExist,false,deleteIfNotExist), * node;
+  LT * head = internalFind(object,false,throwIfNotExist,false,deleteIfNotExist), node;
   if( *head != NULL ){
     node = *head;
-    *head = node->next();
-    node->next() = NULL;
+    *head = NLT(node,param_).next();
+    NLT(node,param_).next() = LT(NULL);
     optimize(optDec);
-    return O(*node,NULL);
+    return O(NLT(node,param_),NULL);
   }
   return *const_cast<T *>(&object);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::remove() const
+T & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::remove() const
 {
   if( count_ > 0 ){
-    EmbeddedHashNode<T> ** p1 = hash_, ** p2 = p1 + size_, * node;
+    LT * p1 = hash_, * p2 = p1 + size_, node;
     while( p1 < p2 && *p1 == NULL ) p1++;
     node = *p1;
-    *p1 = node->next();
-    node->next() = NULL;
+    *p1 = NLT(node,param_).next();
+    NLT(node,param_).next() = LT(NULL);
     optimize(optDec);
-    return O(*node,NULL);
+    return O(NLT(node),NULL);
   }
   return *(T *) NULL;
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::first() const
+T & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::first() const
 {
   assert( count_ > 0 );
-  EmbeddedHashNode<T> ** p1 = hash_, ** p2 = p1 + size_;
+  LT * p1 = hash_, * p2 = p1 + size_;
   while( p1 < p2 && *p1 == NULL ) p1++;
-  return O(**p1,NULL);
+  return O(NLT(*p1,param_),NULL);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::drop(T & object,bool throwIfNotExist) const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::drop(T & object,bool throwIfNotExist) const
 {
   deleteObject(&remove(object,throwIfNotExist));
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T & EmbeddedHash<T,N,O,H,E>::search(const T & object,bool deleteIfExist,bool deleteIfNotExist) const
+T & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::search(const T & object,bool deleteIfExist,bool deleteIfNotExist) const
 {
-  return *internalFind(object,false,true,deleteIfExist,deleteIfNotExist)->object();
+  return NLT(*internalFind(object,false,true,deleteIfExist,deleteIfNotExist),param_)->object();
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t (*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-T * EmbeddedHash<T,N,O,H,E>::find(const T & object,bool deleteIfExist,bool deleteIfNotExist) const
+T * EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::find(const T & object,bool deleteIfExist,bool deleteIfNotExist) const
 {
-  EmbeddedHashNode<T> ** p = internalFind(object,false,false,deleteIfExist,deleteIfNotExist);
-  return *p == NULL ? NULL : &O(**p,NULL);
+  LT * p = internalFind(object,false,false,deleteIfExist,deleteIfNotExist);
+  return *p == NULL ? NULL : &O(NLT(*p,param_),NULL);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const
+LT * EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const
 {
-  EmbeddedHashNode<T> ** head = hash_ + (H(object) & (size_ - 1));
+  LT * head = hash_ + (H(object) & (size_ - 1));
   while( *head != NULL ){
-    if( E(O(**head,NULL), object) ) break;
-    head = &(*head)->next();
+    if( E(O(NLT(*head,param_),NULL),object) ) break;
+    head = &NLT(*head,param_).next();
   }
   int32_t err = 0;
   if( *head != NULL ){
@@ -431,68 +505,80 @@ EmbeddedHashNode<T> ** EmbeddedHash<T,N,O,H,E>::internalFind(const T & object,bo
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-EmbeddedHashNode<T> * EmbeddedHash<T,N,O,H,E>::getChain() const
+LT EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::getChain() const
 {
-  EmbeddedHashNode<T> * head = NULL, ** p0, ** p1, * a0, * a1;
+  LT head = NULL, * p0, * p1, a0, a1;
   p0 = hash_;
   p1 = p0 + size_;
   while( p0 < p1 ){
     a0 = *p0;
     while( a0 != NULL ){
-      a1 = a0->next();
-      a0->next() = head;
+      a1 = NLT(a0,param_).next();
+      NLT(a0,param_).next() = head;
       head = a0;
       a0 = a1;
     }
-    *p0++ = NULL;
+    *p0++ = LT(NULL);
   }
   return head;
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-void EmbeddedHash<T,N,O,H,E>::putChain(EmbeddedHashNode<T> * head) const
+void EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::putChain(LT head) const
 {
-  EmbeddedHashNode<T> ** p0, * a0;
+  LT * p0, a0;
   while( head != NULL ){
-    a0 = head->next();
-    p0 = internalFind(O(*head,NULL),false,false,false,false);
+    a0 = NLT(head,param_).next();
+    p0 = internalFind(O(NLT(head,param_),NULL),false,false,false,false);
     assert( p0 != NULL && *p0 == NULL );
     *p0 = head;
-    head->next() = NULL;
+    NLT(head,param_).next() = LT(NULL);
     head = a0;
   }
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-void EmbeddedHash<T,N,O,H,E>::optimize(OptType o) const
+void EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::optimize(OptType o) const
 {
-  EmbeddedHashNode<T> * head, ** a;
+  LT head, * a;
 // using golden section == 5/8 as optimization threshold
 //  uintptr_t count = size_ << 4, c = ((count << 2) + count) >> 3, i;
   uintptr_t count = size_ * estimatedChainLength_, c = count * thresholdNumerator_ / thresholdDenominator_, i;
@@ -502,16 +588,16 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o) const
       assert( size_ >= staticHashCount() );
       i = size_ << 1;
       if( size_ > staticHashCount() ){
-        a = (EmbeddedHashNode<T> **) krealloc(hash_,i * sizeof(EmbeddedHashNode<T> *));
+        a = (LT *) krealloc(hash_,i * sizeof(LT));
       }
       else {
-        a = (EmbeddedHashNode<T> **) kmalloc(i * sizeof(EmbeddedHashNode<T> *));
+        a = (LT *) kmalloc(i * sizeof(LT));
         memcpy(a,staticHash_,sizeof(staticHash_));
       }
       if( a != NULL ){
         hash_ = a;
         head = getChain();
-        while( size_ < i ) a[size_++] = NULL;
+        while( size_ < i ) a[size_++] = LT(NULL);
         putChain(head);
       }
       break;
@@ -521,7 +607,7 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o) const
       if( i >= staticHashCount() ){
         head = getChain();
         if( i > staticHashCount() ){
-          hash_ = (EmbeddedHashNode<T> **) krealloc(hash_,i * sizeof(EmbeddedHashNode<T> *));
+          hash_ = (LT *) krealloc(hash_,i * sizeof(LT));
           assert( hash_ != NULL );
         }
         else {
@@ -538,107 +624,139 @@ void EmbeddedHash<T,N,O,H,E>::optimize(OptType o) const
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-const uintptr_t & EmbeddedHash<T,N,O,H,E>::count() const
+const uintptr_t & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::count() const
 {
   return count_;
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-const uintptr_t & EmbeddedHash<T,N,O,H,E>::estimatedChainLength() const
+const uintptr_t & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::estimatedChainLength() const
 {
   return estimatedChainLength_;
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::estimatedChainLength(uintptr_t a) const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::estimatedChainLength(uintptr_t a) const
 {
   estimatedChainLength_ = a;
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-const uintptr_t & EmbeddedHash<T,N,O,H,E>::thresholdNumerator() const
+const uintptr_t & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::thresholdNumerator() const
 {
   return thresholdNumerator_;
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdNumerator(uintptr_t a) const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::thresholdNumerator(uintptr_t a) const
 {
   thresholdNumerator_ = a;
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-const uintptr_t & EmbeddedHash<T,N,O,H,E>::thresholdDenominator() const
+const uintptr_t & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::thresholdDenominator() const
 {
   return thresholdDenominator_;
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 > inline
-EmbeddedHash<T,N,O,H,E> & EmbeddedHash<T,N,O,H,E>::thresholdDenominator(uintptr_t a) const
+EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::thresholdDenominator(uintptr_t a) const
 {
   thresholdDenominator_ = a;
-  return *const_cast<EmbeddedHash<T,N,O,H,E> *>(this);
+  return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
 }
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-uintptr_t EmbeddedHash<T,N,O,H,E>::maxChainLength() const
+uintptr_t EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::maxChainLength() const
 {
   uintptr_t max = 0, m;
   for( intptr_t i = size_ - 1; i >= 0; i-- ){
-    EmbeddedHashNode<T> ** p;
-    for( m = 0, p = hash_ + i; *p != NULL; p = &(*p)->next(), m++ );
+    LT * p;
+    for( m = 0, p = hash_ + i; *p != NULL; p = &NLT(*p,param_).next(), m++ );
     if( m > max ) max = m;
   }
   return max;
@@ -646,20 +764,24 @@ uintptr_t EmbeddedHash<T,N,O,H,E>::maxChainLength() const
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-uintptr_t EmbeddedHash<T,N,O,H,E>::minChainLength() const
+uintptr_t EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::minChainLength() const
 {
   uintptr_t min = ~(uintptr_t) 0, m;
   for( intptr_t i = size_ - 1; i >= 0; i-- ){
-    EmbeddedHashNode<T> ** p;
-    for( m = 0, p = hash_ + i; *p != NULL; p = &(*p)->next(), m++ );
+    LT * p;
+    for( m = 0, p = hash_ + i; *p != NULL; p = &NLT(*p,param_).next(), m++ );
     if( m < min ) min = m;
   }
   return min;
@@ -667,20 +789,24 @@ uintptr_t EmbeddedHash<T,N,O,H,E>::minChainLength() const
 //---------------------------------------------------------------------------
 template <
   typename T,
-  EmbeddedHashNode<T> & (*N) (const T &),
-  T & (*O) (const EmbeddedHashNode<T> &, T *),
+  typename LT,
+  typename LPT,
+  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param),
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),
+  EmbeddedHashNode<T,LT> & (*N) (const T &),
+  T & (*O) (const EmbeddedHashNode<T,LT> &, T *),
   uintptr_t(*H)(const T &),
   bool (*E) (const T &, const T &)
 >
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-uintptr_t EmbeddedHash<T,N,O,H,E>::avgChainLength() const
+uintptr_t EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::avgChainLength() const
 {
   uintptr_t avg = 0, m;
   for( intptr_t i = size_ - 1; i >= 0; i-- ){
-    EmbeddedHashNode<T> ** p;
-    for( m = 0, p = hash_ + i; *p != NULL; p = &(*p)->next(), m++ );
+    LT * p;
+    for( m = 0, p = hash_ + i; *p != NULL; p = &NLT(*p,param_).next(), m++ );
     avg += m;
   }
   return size_ > 0 ? avg / size_ : 0;
@@ -733,10 +859,16 @@ class EmbeddedHashKey {
     KeyT key_;
     ValueT value_;
 
-    static EmbeddedHashNode<ClassT> & keyNode(const ClassT & object){
+    static EmbeddedHashNode<ClassT,uintptr_t> & NLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<ClassT,uintptr_t> *>(link);
+    }
+    static uintptr_t LTN(const EmbeddedHashNode<ClassT,uintptr_t> & node,uintptr_t * &){
+      return node.next();
+    }
+    static EmbeddedHashNode<ClassT,uintptr_t> & keyNode(const ClassT & object){
       return object.keyNode_;
     }
-    static ClassT & keyNodeObject(const EmbeddedHashNode<ClassT> & node,ClassT * p){
+    static ClassT & keyNodeObject(const EmbeddedHashNode<ClassT,uintptr_t> & node,ClassT * p){
       return node.object(p->keyNode_);
     }
     static uintptr_t keyNodeHash(const ClassT & object){
@@ -747,7 +879,7 @@ class EmbeddedHashKey {
     }
   protected:
   private:
-    mutable EmbeddedHashNode<ClassT> keyNode_;
+    mutable EmbeddedHashNode<ClassT,uintptr_t> keyNode_;
 };
 //---------------------------------------------------------------------------
 #define typedefEmbeddedHashKey(KeyT,ValueT,caseV) \
@@ -755,6 +887,10 @@ typedef EmbeddedHashKey<KeyT,ValueT,caseV>
 #define typedefEmbeddedHashKeys(KeyT,ValueT,caseV) \
 typedef EmbeddedHash<\
   EmbeddedHashKey<KeyT,ValueT,caseV>,\
+  uintptr_t,\
+  uintptr_t *,\
+  EmbeddedHashKey<KeyT,ValueT,caseV>::ehNLT,\
+  EmbeddedHashKey<KeyT,ValueT,caseV>::ehLTN,\
   EmbeddedHashKey<KeyT,ValueT,caseV>::keyNode,\
   EmbeddedHashKey<KeyT,ValueT,caseV>::keyNodeObject,\
   EmbeddedHashKey<KeyT,ValueT,caseV>::keyNodeHash,\
