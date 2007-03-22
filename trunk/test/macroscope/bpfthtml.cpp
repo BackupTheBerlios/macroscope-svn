@@ -327,7 +327,9 @@ Logger::BPFTThread::BPFTThread(Logger & logger,const utf8::String & section,cons
   
   dbtrUpdate_ = Database::newDatabase(&dbParamsSection);
   
+  stBPFTCacheSelForUpdate_ = dbtrUpdate_->newAttachedStatement();
   stBPFTCacheIns_ = dbtrUpdate_->newAttachedStatement();
+  stBPFTCacheUpd_ = dbtrUpdate_->newAttachedStatement();
   
   stDNSCache_[stSel] = dbtrUpdate_->newAttachedStatement();
   stDNSCache_[stIns] = dbtrUpdate_->newAttachedStatement();
@@ -414,7 +416,8 @@ bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
         "    st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
         "  FROM INET_BPFT_STAT_CACHE "
         "  WHERE"
-        "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold" +
+        "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold AND"
+	"    st_src_ip <> '@' AND st_dst_ip <> '@'" +
         "  ORDER BY SUM1, st_src_ip, st_dst_ip "
         ") AS A "
         "WHERE (A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' AND A.st_dst_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "') OR A.SUM1 >= :threshold"
@@ -487,7 +490,6 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
   );
   bool updateCache = getBPFTCachedHelper(pStatement);
   if( updateCache ){
-    pStatement->execute()->fetchAll();
     dbtrUpdate_->start();
     if( !stBPFTCacheIns_->prepared() ){
       stBPFTCacheIns_->text(
@@ -506,49 +508,104 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       paramAsMutant("st_et",pStatement->paramAsMutant("ET"));
     if( !stBPFTCacheIns2_->prepared() )
       stBPFTCacheIns2_->text(stBPFTCacheIns_->text())->prepare();
-    if( pResult != NULL ) pStatement->unloadColumns(*pResult);
-    for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
-      pStatement->selectRow(i);
+// lock for update cache record
+    if( !stBPFTCacheSelForUpdate_->prepared() ){
+      stBPFTCacheSelForUpdate_->text(
+        "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheHostSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+        "  st_src_ip, st_dst_ip "
+        "FROM INET_BPFT_STAT_CACHE "
+        "WHERE"
+        "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
+        "  st_filter_hash = :hash AND st_threshold = :threshold AND " +
+        "  st_src_ip = :src AND st_dst_ip = :dst "
+	"FOR UPDATE"
+      )->prepare();
+      stBPFTCacheSelForUpdate_->paramAsString("if",sectionName_)->
+        paramAsString("hash",filterHash_)->
+        paramAsMutant("threshold",minSignificantThreshold_);
+    }
+    stBPFTCacheSelForUpdate_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
+      paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
+      paramAsString("src","@")->
+      paramAsString("dst","@");
+    if( !stBPFTCacheUpd_->prepared() ){
+      stBPFTCacheUpd_->text(
+        "UPDATE INET_BPFT_STAT_CACHE SET"
+        "  st_dgram_bytes = st_dgram_bytes + 1 "
+        "WHERE"
+        "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
+        "  st_filter_hash = :hash AND st_threshold = :threshold AND "
+        "  st_src_ip = :src AND st_dst_ip = :dst "
+      )->prepare();
+      stBPFTCacheUpd_->paramAsString("st_if",sectionName_)->
+        paramAsString("st_filter_hash",filterHash_)->
+        paramAsMutant("st_threshold",minSignificantThreshold_);
+    }
+    stBPFTCacheSelForUpdate_->execute();
+    if( !stBPFTCacheSelForUpdate_->fetch() ){
       stBPFTCacheIns_->
-        paramAsString("st_src_ip",pStatement->valueAsString("st_src_ip"))->
-        paramAsString("st_dst_ip",pStatement->valueAsString("st_dst_ip"));
-      uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
-      if( pStatement == stBPFTSel_ && sum1 < minSignificantThreshold_ ){
+        paramAsString("st_src_ip","@")->
+        paramAsString("st_dst_ip","@")->
+        paramAsMutant("st_dgram_bytes",0)->
+        paramAsMutant("st_data_bytes",0)->execute();
+      dbtrUpdate_->commit()->start();
+      stBPFTCacheSelForUpdate_->execute();
+    }
+    stBPFTCacheSelForUpdate_->fetchAll();
+    assert( stBPFTCacheSelForUpdate_->rowCount() > 0 );
+// use fake update for locking records
+    stBPFTCacheUpd_->
+      paramAsMutant("st_bt",pStatement->paramAsMutant("BT"))->
+      paramAsMutant("st_et",pStatement->paramAsMutant("ET"))->
+      paramAsString("st_src_ip","@")->
+      paramAsString("st_dst_ip","@")->
+      execute();      
+// try to fetch cache filled from concurrent transaction
+    updateCache = getBPFTCachedHelper(pStatement);
+    if( updateCache ){  
+      pStatement->execute()->fetchAll();
+      if( pResult != NULL ) pStatement->unloadColumns(*pResult);
+      for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
+        pStatement->selectRow(i);
         stBPFTCacheIns_->
-          paramAsString("st_src_ip",ip4AddrToIndex(0xFFFFFFFF))->
-          paramAsString("st_dst_ip",ip4AddrToIndex(0xFFFFFFFF))->
-          paramAsMutant("st_dgram_bytes",pStatement->sum("SUM1",0,i))->
-          paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
-        if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
-//        catch( ExceptionSP & e ){
-//          if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
-        if( pResult != NULL ){
-	  uintptr_t row = pResult->rowCount();
-          pResult->addRow();
-          pResult->cell(row,"st_src_ip") = stBPFTCacheIns_->paramAsString("st_src_ip");
-          pResult->cell(row,"st_dst_ip") = stBPFTCacheIns_->paramAsString("st_dst_ip");
-          pResult->cell(row,"SUM1") = stBPFTCacheIns_->paramAsMutant("st_dgram_bytes");
-          pResult->cell(row,"SUM2") = stBPFTCacheIns_->paramAsMutant("st_data_bytes");
-	  pResult->sort("SUM1,st_src_ip,st_dst_ip");
+          paramAsString("st_src_ip",pStatement->valueAsString("st_src_ip"))->
+          paramAsString("st_dst_ip",pStatement->valueAsString("st_dst_ip"));
+        uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
+        if( pStatement == stBPFTSel_ && sum1 < minSignificantThreshold_ ){
+          stBPFTCacheIns_->
+            paramAsString("st_src_ip",ip4AddrToIndex(0xFFFFFFFF))->
+            paramAsString("st_dst_ip",ip4AddrToIndex(0xFFFFFFFF))->
+            paramAsMutant("st_dgram_bytes",pStatement->sum("SUM1",0,i))->
+            paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
+          if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
+          if( pResult != NULL ){
+  	    uintptr_t row = pResult->rowCount();
+            pResult->addRow();
+            pResult->cell(row,"st_src_ip") = stBPFTCacheIns_->paramAsString("st_src_ip");
+            pResult->cell(row,"st_dst_ip") = stBPFTCacheIns_->paramAsString("st_dst_ip");
+            pResult->cell(row,"SUM1") = stBPFTCacheIns_->paramAsMutant("st_dgram_bytes");
+            pResult->cell(row,"SUM2") = stBPFTCacheIns_->paramAsMutant("st_data_bytes");
+  	    pResult->sort("SUM1,st_src_ip,st_dst_ip");
+          }
+          break;
         }
-        break;
+        stBPFTCacheIns_->
+          paramAsMutant("st_dgram_bytes",sum1)->
+          paramAsMutant("st_data_bytes",sum2);
+        if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
+        if( pResult != NULL ) pStatement->unloadRowByIndex(pResult->addRow());
       }
-      stBPFTCacheIns_->
-        paramAsMutant("st_dgram_bytes",sum1)->
-        paramAsMutant("st_data_bytes",sum2);
-      if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
-      if( pResult != NULL ) pStatement->unloadRowByIndex(pResult->addRow());
+      dbtrUpdate_->commit();
+      return;
     }
     dbtrUpdate_->commit();
   }
+  if( pResult == NULL ){
+    *pDgramBytes = pStatement->sum("SUM1");
+    *pDataBytes = pStatement->sum("SUM2");
+  }
   else {
-    if( pResult == NULL ){
-      *pDgramBytes = pStatement->sum("SUM1");
-      *pDataBytes = pStatement->sum("SUM2");
-    }
-    else {
-      pStatement->unloadByIndex(*pResult);
-    }
+    pStatement->unloadByIndex(*pResult);
   }
 }
 //------------------------------------------------------------------------------
@@ -566,7 +623,7 @@ utf8::String Logger::BPFTThread::genHRef(uint32_t ip)
 void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
 {
   utf8::String filter;
-  struct tm beginTime, beginTime2, endTime;
+  struct tm beginTime, beginTime2, endTime, endTime2;
   Mutant m0, m1, m2;
   AsyncFile f;
   if( level == rlYear ){
@@ -574,14 +631,19 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     if( logger_->verbose_ ) fprintf(stderr,"\n");
     ellapsed_ = getlocaltimeofday();
     minSignificantThreshold_ = logger_->config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
-    if( logger_->cgi_.isCGI() ){
+    if( logger_->cgi_.isCGI() )
       minSignificantThreshold_ = logger_->cgi_.paramAsMutant("threshold2",logger_->cgi_.paramAsMutant("threshold"));
-    }
     filter_ = getIPFilter(logger_->config_->textByPath(section_ + ".html_report.filter"));
+    if( logger_->cgi_.isCGI() )
+      filter_ = logger_->cgi_.paramAsString("filter");
     filterHash_ = SHA256().sha256AsBase64String(filter_,false);
     curTime_ = time2tm(ellapsed_);
     resolveDNSNames_ = logger_->config_->valueByPath(section_ + ".html_report.resolve_dns_names",true);
+    if( logger_->cgi_.isCGI() )
+      resolveDNSNames_ = logger_->cgi_.paramAsMutant("resolve");
     bidirectional_ = logger_->config_->valueByPath(section_ + ".html_report.bidirectional",false);
+    if( logger_->cgi_.isCGI() )
+      bidirectional_ = logger_->cgi_.paramAsMutant("bidirectional");
     database_->start();
     clearBPFTCache();
     statement_->text(
@@ -603,7 +665,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "    INET_BPFT_STAT"
         "  WHERE "
         "    st_if = :st_if AND"
-        "    st_start >= :BT AND st_start <= :ET" + filter_ +
+        "    st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' " + filter_ +
         "  GROUP BY st_src_ip, st_dst_ip"
         ") AS A "
         "ORDER BY A.SUM1"
@@ -634,7 +696,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "        INET_BPFT_STAT"
         "      WHERE "
         "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET" + filter_ +
+        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' " + filter_ +
         "      GROUP BY st_dst_ip"
         "    UNION ALL"
         "      SELECT"
@@ -643,7 +705,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "        INET_BPFT_STAT"
         "      WHERE "
         "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET" + filter_ +
+        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' " + filter_ +
         "      GROUP BY st_src_ip"
         "  ) AS B "
         "  GROUP BY B.st_ip"
@@ -682,8 +744,29 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     stBPFTSel_->prepare()->paramAsString("st_if",sectionName_);
     stBPFTHostSel_->prepare()->paramAsString("st_if",sectionName_);
     htmlDir_ = excludeTrailingPathDelimiter(logger_->config_->valueByPath(section_ + ".html_report.directory"));
+    if( logger_->cgi_.isCGI() ){
+      memset(&cgiBT_,0,sizeof(cgiBT_));
+      cgiBT_.tm_year = (int) logger_->cgi_.paramAsMutant("byear") - 1900;
+      cgiBT_.tm_mon = (int) logger_->cgi_.paramAsMutant("bmon") - 1;
+      cgiBT_.tm_mday = (int) logger_->cgi_.paramAsMutant("bday") - 1;
+      memset(&cgiET_,0,sizeof(cgiET_));
+      cgiET_.tm_year = (int) logger_->cgi_.paramAsMutant("eyear") - 1900;
+      cgiET_.tm_mon = (int) logger_->cgi_.paramAsMutant("emon") - 1;
+      cgiET_.tm_mday = (int) logger_->cgi_.paramAsMutant("eday") - 1;
+      cgiET_.tm_hour = 23;
+      cgiET_.tm_min = 59;
+      cgiET_.tm_sec = 59;
+      if( tm2Time(cgiBT_) > tm2Time(cgiET_) ) ksys::xchg(cgiBT_,cgiET_);
+      if( tm2Time(cgiBT_) < tm2Time(beginTime) ) cgiBT_ = beginTime;
+      if( tm2Time(cgiET_) > tm2Time(endTime) ) cgiET_ = endTime;
+      if( cgiBT_.tm_year == cgiET_.tm_year ){
+        if( cgiBT_.tm_mon == cgiET_.tm_mon ) return writeBPFTHtmlReport(rlDay,&cgiBT_);
+        return writeBPFTHtmlReport(rlMon,&cgiBT_);
+      }
+    }
   }
   else {
+    assert( rt != NULL );
     beginTime = endTime = *rt;
   }
   int * pi, sv, av;
@@ -748,24 +831,42 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     case rlCount :
       return;
   }
-  f.createIfNotExist(true).open().resize(0);
-  m0 = logger_->config_->valueByPath(section_ + ".html_report.directory_mode",0755);
-  m1 = logger_->config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid());
-  m2 = logger_->config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid());
-  chModOwn(htmlDir_,m0,m1,m2);
-  m0 = logger_->config_->valueByPath(section_ + ".html_report.file_mode",0644);
-  m1 = logger_->config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
-  m2 = logger_->config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
-  chModOwn(f.fileName(),m0,m1,m2);
-  logger_->writeHtmlHead(f);
+  if( logger_->cgi_.isCGI() ){
+    f.fileName("stdout").open();
+  }
+  else {
+    f.createIfNotExist(true).open().resize(0);
+  
+    m0 = logger_->config_->valueByPath(section_ + ".html_report.directory_mode",0755);
+    m1 = logger_->config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid());
+    m2 = logger_->config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid());
+    chModOwn(htmlDir_,m0,m1,m2);
+    m0 = logger_->config_->valueByPath(section_ + ".html_report.file_mode",0644);
+    m1 = logger_->config_->valueByPath(section_ + ".html_report.file_user",ksys::getuid());
+    m2 = logger_->config_->valueByPath(section_ + ".html_report.file_group",ksys::getgid());
+    chModOwn(f.fileName(),m0,m1,m2);
+    logger_->writeHtmlHead(f);
+  }
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
+    endTime2 = endTime;
     switch( level ){
       case rlYear :
         beginTime.tm_year = endTime.tm_year;
+        if( logger_->cgi_.isCGI() ){
+	  if( beginTime.tm_year == cgiBT_.tm_year ) sv = beginTime.tm_mon = cgiBT_.tm_mon;
+	  if( endTime.tm_year == cgiET_.tm_year ){
+	    endTime.tm_mon = cgiET_.tm_mon;
+            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+	  }
+        }
         break;
       case rlMon :
         beginTime.tm_mon = endTime.tm_mon;
+        if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
+	  if( beginTime.tm_mon == cgiBT_.tm_mon ) sv = beginTime.tm_mday = cgiBT_.tm_mday;
+	  if( endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiBT_.tm_mday;
+        }
         break;
       case rlDay :
         beginTime.tm_mday = endTime.tm_mday;
@@ -813,7 +914,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             assert( 0 );
         }
         stBPFTSel_->
-	        paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+          paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
           paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
         getBPFTCached(stBPFTSel_,&table[*pi + av]);
         colCount += (uintmax_t) table[*pi + av].sum("SUM1") > 0;
@@ -823,9 +924,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         case rlYear :
           endTime.tm_mon = 11;
           endTime.tm_mday = 31;
+          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
+	    endTime.tm_mon = cgiET_.tm_mon;
+            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          }
           break;
         case rlMon :
           endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
           break;
         case rlDay :
           endTime.tm_hour = 23;
@@ -842,25 +948,37 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       ;
       switch( level ){
         case rlYear :
-          f <<
-            "bpft-" + sectionName_ +
-            utf8::String::print("-traf-by-%04d.html",endTime.tm_year + 1900) + "\">" +
-            utf8::int2Str(endTime.tm_year + 1900)
-          ;
+          if( logger_->cgi_.isCGI() ){
+	  }
+	  else {
+            f <<
+              "bpft-" + sectionName_ +
+              utf8::String::print("-traf-by-%04d.html",endTime.tm_year + 1900) + "\">" +
+              utf8::int2Str(endTime.tm_year + 1900)
+            ;
+	  }
           break;
         case rlMon :
-	  f <<
-            "bpft-" + sectionName_ +
-  	    utf8::String::print("-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1) + "\">" +
-	    utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900)
-	  ;
+          if( logger_->cgi_.isCGI() ){
+	  }
+	  else {
+  	    f <<
+              "bpft-" + sectionName_ +
+  	      utf8::String::print("-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1) + "\">" +
+	      utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900)
+	    ;
+	  }
           break;
         case rlDay :
-	  f <<
-            "bpft-" + sectionName_ +
-  	    utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) + "\">" +
-	    utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900)
-	  ;
+          if( logger_->cgi_.isCGI() ){
+	  }
+	  else {
+	    f <<
+              "bpft-" + sectionName_ +
+  	      utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) + "\">" +
+	      utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900)
+	    ;
+	  }
           break;
         default    :
           assert( 0 );
@@ -897,9 +1015,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       switch( level ){
         case rlYear :
           endTime.tm_mon = 11;
+          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
+	    endTime.tm_mon = cgiET_.tm_mon;
+            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          }
           break;
         case rlMon :
           endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
           break;
         case rlDay :
           endTime.tm_hour = 23;
@@ -962,9 +1085,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           case rlYear :
             endTime.tm_mon = 11;
             endTime.tm_mday = 31;
+            if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
+  	      endTime.tm_mon = cgiET_.tm_mon;
+              endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+            }
             break;
           case rlMon :
             endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+            if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
             break;
           case rlDay :
             endTime.tm_hour = 23;
@@ -1001,15 +1129,20 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "</TR>\n"
         "</TABLE>\n<BR>\n<BR>\n"
       ;
-      bool nextLevel = !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",false);
+      bool nextLevel = !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",false) || logger_->cgi_.isCGI();
       switch( level ){
         case rlYear :
           endTime.tm_mon = 11;
           endTime.tm_mday = 31;
+          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
+            endTime.tm_mon = cgiET_.tm_mon;
+            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          }
           nextLevel = nextLevel || endTime.tm_year == curTime_.tm_year;
           break;
         case rlMon :
           endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
           nextLevel = nextLevel || endTime.tm_mon == curTime_.tm_mon;
           break;
         case rlDay :
@@ -1024,6 +1157,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         writeBPFTHtmlReport(level + 1,&endTime);
       }
     }
+    endTime = endTime2;
     switch( level ){
       case rlYear :
         endTime.tm_year--;

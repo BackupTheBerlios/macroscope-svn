@@ -277,6 +277,8 @@ class Logger {
         int64_t ellapsed_;
         uintmax_t minSignificantThreshold_;
         struct tm curTime_;
+	struct tm cgiBT_;
+	struct tm cgiET_;
         utf8::String filter_;
         utf8::String filterHash_;
         bool resolveDNSNames_;
@@ -295,7 +297,9 @@ class Logger {
         AutoPtr<Statement> stBPFTCacheHostSel_;
 
         AutoPtr<Database> dbtrUpdate_;
+	AutoPtr<Statement> stBPFTCacheSelForUpdate_;
         AutoPtr<Statement> stBPFTCacheIns_;
+	AutoPtr<Statement> stBPFTCacheUpd_;
         AutoPtr<Statement> stDNSCache_[3];
 
         void parseBPFTLogFile();

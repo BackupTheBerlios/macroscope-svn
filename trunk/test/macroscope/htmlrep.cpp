@@ -516,7 +516,7 @@ void Logger::SquidSendmailThread::genUsersTable(Vector<Table<Mutant> > & usersTr
     for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
       utf8::String key, value(logger_->config_->sectionByPath(section_ + ".groups").value(k,&key));
       if( perGroupReport_ )
-        logger_->config_->sectionByPath(section_ + ".groups").value(key = perGroupReportName_);
+        value = logger_->config_->sectionByPath(section_ + ".groups").value(key = perGroupReportName_);
       statement_->text(
         "SELECT DISTINCT ST_USER FROM INET_USERS_TRAF WHERE " +
 	genUserFilter(value,1) +
@@ -1115,7 +1115,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
   statement_->text("DELETE FROM INET_USERS_TRAF")->execute();
   updateLogFileLastOffset(logFileName,0);
  */
-  database_->attach()->start();
+  database_->start();
   if( (bool) logger_->config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
     updateLogFileLastOffset(stFileStat_,logFileName,0);
   uint64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
@@ -1226,7 +1226,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
     lineNo++;
   }
   if( validLine && flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell() - (validLine ? 0 : size));
-  database_->commit()->detach();
+  database_->commit();
   logger_->printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------
@@ -1267,7 +1267,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
   );
   AsyncFile flog(logFileName);
   flog.readOnly(true).open();
-  database_->attach()->start();
+  database_->start();
   if( (bool) logger_->config_->valueByPath(section_ + ".sendmail.reset_log_file_position",false) )
     updateLogFileLastOffset(stFileStat_,logFileName,0);
   statement_->execute()->fetchAll();
@@ -1404,7 +1404,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
   if( flog.seekable() ) updateLogFileLastOffset(stFileStat_,logFileName,lgb.tell());
   stMsgsDel_->execute();
   stMsgsSelCount_->execute()->fetchAll();
-  database_->commit()->detach();
+  database_->commit();
   logger_->printStat(lineNo,offset,lgb.tell(),flog.size(),cl);
 }
 //------------------------------------------------------------------------------

@@ -195,8 +195,8 @@ void Logger::main()
 
 // print query form if is CGI and no CGI parameters
   cgi_.initialize();
-//  if( cgi_.isCGI() ){
-//    if( cgi_.paramCount() == 0 ){
+  if( cgi_.isCGI() ){
+    if( cgi_.paramCount() == 0 ){
       cgi_ <<
         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
         "<HTML>\n"
@@ -331,9 +331,9 @@ void Logger::main()
 	"</HTML>\n"
       ;
       return;
-//    }
+    }
     verbose_ = false;
-//  }
+  }
 
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
