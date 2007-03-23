@@ -474,7 +474,7 @@ void Logger::main()
       }
     }
 //#endif
-    database_->attach()->start();
+    database_->attach();
     for( uintptr_t i = 0; i < metadata.count(); i++ ){
       if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
         if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
@@ -492,18 +492,48 @@ void Logger::main()
       for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
         statement_->selectRow(i);
         if( statement_->valueAsString("RDB$RELATION_NAME").strncasecmp("RDB$",4) == 0 ) continue;
-        statement2_->text(
-          "ALTER INDEX " + statement_->valueAsString("RDB$INDEX_NAME") + " INACTIVE"
-        )->execute();
-        statement2_->text(
-          "ALTER INDEX " + statement_->valueAsString("RDB$INDEX_NAME") + " ACTIVE"
-        )->execute();
-        statement2_->text(
-          "SET STATISTICS INDEX " + statement_->valueAsString("RDB$INDEX_NAME")
-        )->execute();
+        utf8::String indexName(statement_->valueAsString("RDB$INDEX_NAME").trimRight());
+        int64_t ellapsed;
+        try {
+          if( verbose_ ) fprintf(stderr,"Deactivate index %s",
+            (const char *) indexName.getOEMString()
+          );
+          ellapsed = gettimeofday();
+          statement2_->text("ALTER INDEX " + indexName + " INACTIVE")->execute();
+          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+          );
+          if( verbose_ ) fprintf(stderr,"Activate index %s",
+            (const char *) indexName.getOEMString()
+          );
+          ellapsed = gettimeofday();
+          statement2_->text("ALTER INDEX " + indexName + " ACTIVE")->execute();
+          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+          );
+        }
+        catch( ExceptionSP & e ){
+          if( !e->searchCode(isc_integ_fail,isc_integ_deactivate_primary,isc_lock_conflict,isc_update_conflict) ) throw;
+          if( verbose_ ){
+            if( e->searchCode(isc_integ_deactivate_primary) )
+              fprintf(stderr," failed. Cannot deactivate index used by a PRIMARY/UNIQUE constraint.\n");
+            else if( e->searchCode(isc_lock_conflict) )
+              fprintf(stderr," failed. Lock conflict on no wait transaction.\n");
+            else if( e->searchCode(isc_update_conflict) )
+              fprintf(stderr," failed. Update conflicts with concurrent update.\n");
+          }
+        }
+        if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
+          (const char *) indexName.getOEMString()
+        );
+        ellapsed = gettimeofday();
+        statement2_->text("SET STATISTICS INDEX " + indexName)->execute();
+        if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+          (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+        );
       }
     }
-    database_->commit()->detach();
+    database_->commit();
 
     trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
     threads_.safeAdd(newObjectR1C2C3<SquidSendmailThread>(*this,"macroscope","macroscope")).resume();

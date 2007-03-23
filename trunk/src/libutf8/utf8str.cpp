@@ -547,15 +547,14 @@ BSTR String::getOLEString() const
 String String::trimLeft() const
 {
   Iterator sl(*this);
-  while( !sl.eof() && sl.isSpace() )
-    sl.next();
+  while( !sl.eof() && sl.isSpace() ) sl.next();
   Container * container;
   if( sl.eof() ){
     container = &nullContainer();
   }
   else if( sl.position() > 0 ){
     container = Container::container(ksys::strlen(container_->string_) - sl.cursor());
-    strcpy(container->string_, sl.c_str());
+    strcpy(container->string_,sl.c_str());
   }
   else{
     container = container_.ptr();
@@ -567,18 +566,18 @@ String String::trimRight() const
 {
   Iterator sr(*this);
   sr.last();
-  while( !sr.bof() && sr.isSpace() )
-    sr.prev();
+  while( sr.prev() && sr.isSpace() );
   Container * container;
   if( sr.bof() ){
     container = &nullContainer();
   }
   else if( sr.position() > 0 ){
+    sr++;
     container = Container::container(sr.cursor());
-    memcpy(container->string_, container_->string_, sr.cursor());
+    memcpy(container->string_,container_->string_,sr.cursor());
     container->string_[sr.cursor()] = '\0';
   }
-  else{
+  else {
     container = container_.ptr();
   }
   return container;
@@ -590,7 +589,7 @@ String String::trim() const
   while( !sl.eof() && sl.isSpace() ) sl.next();
   Iterator sr(sl);
   sr.last();
-  while( !sr.bof() && sr.isSpace() ) sr.prev();
+  while( !sr.bof() && (sr.isSpace() || sr.eof()) ) sr.prev();
   Container * container;
   if( sl.eof() && sr.bof() ){
     container = &nullContainer();

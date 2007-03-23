@@ -417,7 +417,7 @@ bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
         "  FROM INET_BPFT_STAT_CACHE "
         "  WHERE"
         "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold AND"
-	"    st_src_ip <> '@' AND st_dst_ip <> '@'" +
+	      "    st_src_ip <> '@' AND st_dst_ip <> '@'" +
         "  ORDER BY SUM1, st_src_ip, st_dst_ip "
         ") AS A "
         "WHERE (A.st_src_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "' AND A.st_dst_ip = '" + ip4AddrToIndex(0xFFFFFFFF) + "') OR A.SUM1 >= :threshold"
