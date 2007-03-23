@@ -25,31 +25,13 @@
 //------------------------------------------------------------------------------
 #include <adicpp/adicpp.h>
 #include "msmail.h"
-#include <adicpp/tree.h>
+//#include <adicpp/tree.h>
 //------------------------------------------------------------------------------
 #define _VERSION_C_AS_HEADER_
 #include "version.c"
 #undef _VERSION_C_AS_HEADER_
 //------------------------------------------------------------------------------
-void throwCycleThrow()
-{
-  newObjectV1C2<Exception>(-1,__PRETTY_FUNCTION__ + utf8::String("12345"))->throwSP();
-}
-//------------------------------------------------------------------------------
-void throwCycle()
-{
-  int32_t code;
-  for( intptr_t i = 100000; i > 0; i-- ){
-    try {
-      throwCycleThrow();
-    }
-    catch( ExceptionSP & e ){
-      code = e->code();
-    }
-  }
-}
-//------------------------------------------------------------------------------
-class Key {
+/*class Key {
   public:
     ~Key(){}
     Key(){}
@@ -76,7 +58,7 @@ class Key {
   private:
     mutable EmbeddedTreeNode<Key> keyNode_;
     utf8::String key_;
-};
+};*/
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
@@ -86,9 +68,6 @@ int main(int _argc,char * _argv[])
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
 
-//  msmail::Message::Keys guids;
-  //throwCycle();
-  //throwCycle();
   try {
 #ifndef NDEBUG
     /*EmbeddedTree<Key,Key::keyNode,Key::keyNodeObject,Key::keyNodeCompare> tree;
@@ -100,45 +79,6 @@ int main(int _argc,char * _argv[])
     file.close();
     errcode = errcode;*/
 #endif
-    /*Vector<msmail::Message::Key> vector;
-    for( intptr_t i = 1000000 - 1; i >= 0; i-- )
-      vector.add(createGUIDAsBase32String());
-    for( intptr_t i = vector.count() - 1; i >= 0; i-- )
-      guids.insert(*newObject<msmail::Message::Key>(vector[i]));
-    Array<msmail::Message::Key *> list;
-    guids.list(list);
-    uintptr_t avg = guids.avgChainLength();
-    uintptr_t max = guids.maxChainLength();
-    uintptr_t min = guids.minChainLength();
-    for( intptr_t i = vector.count() - 1; i >= 0; i-- )
-      guids.drop(vector[i]);*/
-    /*{
-      msmail::Server::Data data, data2, diff;
-      intptr_t i;
-      for( i = 0; i < 10000; i++ ){
-        data.registerUserNL(msmail::UserInfo("user_" + utf8::int2Str(i)));
-        data.registerKeyNL(msmail::KeyInfo("key_" + utf8::int2Str(i)));
-        data.registerGroupNL(msmail::GroupInfo("group_" + utf8::int2Str(i)));
-        data.registerServerNL(msmail::ServerInfo("server_" + utf8::int2Str(i),msmail::stStandalone));
-        data.registerUser2KeyLinkNL(msmail::User2KeyLink("user2key_" + utf8::int2Str(i),"key_" + utf8::int2Str(i)));
-        data.registerKey2GroupLinkNL(msmail::Key2GroupLink("key2group_" + utf8::int2Str(i),"group_" + utf8::int2Str(i)));
-        data.registerKey2ServerLinkNL(msmail::Key2ServerLink("key2server_" + utf8::int2Str(i),"server_" + utf8::int2Str(i)));
-      }
-      for( i = i; i < 20000; i++ ){
-        data2.registerUserNL(msmail::UserInfo("user_" + utf8::int2Str(i)));
-        data2.registerKeyNL(msmail::KeyInfo("key_" + utf8::int2Str(i)));
-        data2.registerGroupNL(msmail::GroupInfo("group_" + utf8::int2Str(i)));
-        data2.registerServerNL(msmail::ServerInfo("server_" + utf8::int2Str(i),msmail::stStandalone));
-        data2.registerUser2KeyLinkNL(msmail::User2KeyLink("user2key_" + utf8::int2Str(i),"key_" + utf8::int2Str(i)));
-        data2.registerKey2GroupLinkNL(msmail::Key2GroupLink("key2group_" + utf8::int2Str(i),"group_" + utf8::int2Str(i)));
-        data2.registerKey2ServerLinkNL(msmail::Key2ServerLink("key2server_" + utf8::int2Str(i),"server_" + utf8::int2Str(i)));
-      }
-      diff.xorNL(data,data2);
-      data2.setSendedToNL("host");
-      data.orNL(data2);
-
-      i = i;
-    }*/
     union {
       intptr_t i;
       uintptr_t u;
