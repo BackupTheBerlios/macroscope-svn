@@ -541,27 +541,29 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         paramAsString("st_filter_hash",filterHash_)->
         paramAsMutant("st_threshold",minSignificantThreshold_);
     }
-    stBPFTCacheSelForUpdate_->execute();
-    if( !stBPFTCacheSelForUpdate_->fetch() ){
-      stBPFTCacheIns_->
+    if( !curIntr ){
+      stBPFTCacheSelForUpdate_->execute();
+      if( !stBPFTCacheSelForUpdate_->fetch() ){
+        stBPFTCacheIns_->
+          paramAsString("st_src_ip","@")->
+          paramAsString("st_dst_ip","@")->
+          paramAsMutant("st_dgram_bytes",0)->
+          paramAsMutant("st_data_bytes",0)->execute();
+        dbtrUpdate_->commit()->start();
+        stBPFTCacheSelForUpdate_->execute();
+      }
+      stBPFTCacheSelForUpdate_->fetchAll();
+      assert( stBPFTCacheSelForUpdate_->rowCount() > 0 );
+// use fake update for locking records
+      stBPFTCacheUpd_->
+        paramAsMutant("st_bt",pStatement->paramAsMutant("BT"))->
+        paramAsMutant("st_et",pStatement->paramAsMutant("ET"))->
         paramAsString("st_src_ip","@")->
         paramAsString("st_dst_ip","@")->
-        paramAsMutant("st_dgram_bytes",0)->
-        paramAsMutant("st_data_bytes",0)->execute();
-      dbtrUpdate_->commit()->start();
-      stBPFTCacheSelForUpdate_->execute();
-    }
-    stBPFTCacheSelForUpdate_->fetchAll();
-    assert( stBPFTCacheSelForUpdate_->rowCount() > 0 );
-// use fake update for locking records
-    stBPFTCacheUpd_->
-      paramAsMutant("st_bt",pStatement->paramAsMutant("BT"))->
-      paramAsMutant("st_et",pStatement->paramAsMutant("ET"))->
-      paramAsString("st_src_ip","@")->
-      paramAsString("st_dst_ip","@")->
-      execute();      
+        execute();      
 // try to fetch cache filled from concurrent transaction
-    updateCache = getBPFTCachedHelper(pStatement);
+      updateCache = getBPFTCachedHelper(pStatement);
+    }
     if( updateCache ){  
       pStatement->execute()->fetchAll();
       if( pResult != NULL ) pStatement->unloadColumns(*pResult);
