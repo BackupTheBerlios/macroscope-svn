@@ -511,6 +511,14 @@ void Logger::main()
           if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
             (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
           );
+          if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
+            (const char *) indexName.getOEMString()
+          );
+          ellapsed = gettimeofday();
+          statement2_->text("SET STATISTICS INDEX " + indexName)->execute();
+          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+          );
         }
         catch( ExceptionSP & e ){
           if( !e->searchCode(isc_integ_fail,isc_integ_deactivate_primary,isc_lock_conflict,isc_update_conflict) ) throw;
@@ -523,14 +531,6 @@ void Logger::main()
               fprintf(stderr," failed. Update conflicts with concurrent update.\n");
           }
         }
-        if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
-          (const char *) indexName.getOEMString()
-        );
-        ellapsed = gettimeofday();
-        statement2_->text("SET STATISTICS INDEX " + indexName)->execute();
-        if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
-          (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
-        );
       }
     }
     database_->commit();
