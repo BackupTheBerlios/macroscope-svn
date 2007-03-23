@@ -859,11 +859,11 @@ class EmbeddedHashKey {
     KeyT key_;
     ValueT value_;
 
-    static EmbeddedHashNode<ClassT,uintptr_t> & NLT(const uintptr_t & link,uintptr_t * &){
+    static EmbeddedHashNode<ClassT,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<ClassT,uintptr_t> *>(link);
     }
-    static uintptr_t LTN(const EmbeddedHashNode<ClassT,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+    static uintptr_t ehLTN(const EmbeddedHashNode<ClassT,uintptr_t> & node,uintptr_t * &){
+      return reinterpret_cast<uintptr_t>(&node);
     }
     static EmbeddedHashNode<ClassT,uintptr_t> & keyNode(const ClassT & object){
       return object.keyNode_;

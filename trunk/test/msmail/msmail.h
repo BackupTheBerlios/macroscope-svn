@@ -110,7 +110,7 @@ class Message {
           return *reinterpret_cast<EmbeddedHashNode<Key,uintptr_t> *>(link);
         }
         static uintptr_t ehLTN(const EmbeddedHashNode<Key,uintptr_t> & node,uintptr_t * &){
-          return node.next();
+          return reinterpret_cast<uintptr_t>(&node);
         }			    
         static EmbeddedHashNode<Key,uintptr_t> & keyNode(const Key & object){
           return object.keyNode_;
@@ -183,7 +183,7 @@ class Message {
           return *reinterpret_cast<EmbeddedHashNode<Attribute,uintptr_t> *>(link);
         }
         static uintptr_t ehLTN(const EmbeddedHashNode<Attribute,uintptr_t> & node,uintptr_t * &){
-          return node.next();
+          return reinterpret_cast<uintptr_t>(&node);
         }			    
         static EmbeddedHashNode<Attribute,uintptr_t> & keyNode(const Attribute & object){
           return object.keyNode_;
@@ -221,7 +221,7 @@ class Message {
       return *reinterpret_cast<EmbeddedHashNode<Message,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<Message,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<Message,uintptr_t> & idNode(const Message & object){
       return object.idNode_;
@@ -329,7 +329,7 @@ class InfoLinkKey {
       return *reinterpret_cast<EmbeddedHashNode<InfoLinkKey,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<InfoLinkKey,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<InfoLinkKey,uintptr_t> & keyNode(const InfoLinkKey & object){
       return object.keyNode_;
@@ -406,7 +406,7 @@ class UserInfo {
       return *reinterpret_cast<EmbeddedHashNode<UserInfo,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<UserInfo,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<UserInfo,uintptr_t> & hashNode(const UserInfo & object){
       return object.hashNode_;
@@ -455,7 +455,7 @@ class KeyInfo {
       return *reinterpret_cast<EmbeddedHashNode<KeyInfo,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<KeyInfo,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<KeyInfo,uintptr_t> & hashNode(const KeyInfo & object){
       return object.hashNode_;
@@ -504,7 +504,7 @@ class GroupInfo {
       return *reinterpret_cast<EmbeddedHashNode<GroupInfo,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<GroupInfo,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<GroupInfo,uintptr_t> & hashNode(const GroupInfo & object){
       return object.hashNode_;
@@ -553,7 +553,7 @@ class ServerInfo {
       return *reinterpret_cast<EmbeddedHashNode<ServerInfo,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<ServerInfo,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<ServerInfo,uintptr_t> & hashNode(const ServerInfo & object){
       return object.hashNode_;
@@ -606,7 +606,7 @@ class User2KeyLink {
       return *reinterpret_cast<EmbeddedHashNode<User2KeyLink,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<User2KeyLink,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<User2KeyLink,uintptr_t> & hashNode(const User2KeyLink & object){
       return object.hashNode_;
@@ -656,7 +656,7 @@ class Key2GroupLink {
       return *reinterpret_cast<EmbeddedHashNode<Key2GroupLink,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<Key2GroupLink,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<Key2GroupLink,uintptr_t> & hashNode(const Key2GroupLink & object){
       return object.hashNode_;
@@ -709,7 +709,7 @@ class Key2ServerLink {
       return *reinterpret_cast<EmbeddedHashNode<Key2ServerLink,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<Key2ServerLink,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<Key2ServerLink,uintptr_t> & hashNode(const Key2ServerLink & object){
       return object.hashNode_;
@@ -759,7 +759,7 @@ class ServerFiber : public ksock::ServerFiber {
       return *reinterpret_cast<EmbeddedHashNode<ServerFiber,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<ServerFiber,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<ServerFiber,uintptr_t> & hashNode(const ServerFiber & object){
       return object.hashNode_;
@@ -836,7 +836,7 @@ class MailQueueWalker : public ksock::ClientFiber {
       return *reinterpret_cast<EmbeddedHashNode<MailQueueWalker,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const EmbeddedHashNode<MailQueueWalker,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }			    
     static EmbeddedHashNode<MailQueueWalker,uintptr_t> & hostHashNode(const MailQueueWalker & object){
       return object.hostHashNode_;

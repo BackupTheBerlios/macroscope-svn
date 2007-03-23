@@ -69,7 +69,7 @@ class LZWFilterT {
           return *reinterpret_cast<EmbeddedHashNode<StringT,uintptr_t> *>(link);
 	}
 	static uintptr_t ehLTN(const EmbeddedHashNode<StringT,uintptr_t> & node,uintptr_t * &){
-	  return node.next();
+	  return reinterpret_cast<uintptr_t>(&node);
 	}
         static EmbeddedHashNode<StringT,uintptr_t> & keyNode(const StringT & object){
           return object.keyNode_;

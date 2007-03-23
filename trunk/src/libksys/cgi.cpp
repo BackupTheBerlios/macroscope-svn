@@ -34,7 +34,7 @@ CGI::~CGI()
 {
 }
 //------------------------------------------------------------------------------
-CGI::CGI() : method_(cgiNone)
+CGI::CGI() : method_(cgiInit)
 {
   paramsHash_.param() = &params_;
 }
@@ -42,6 +42,7 @@ CGI::CGI() : method_(cgiNone)
 void CGI::initialize()
 {
   switch( method() ){
+    case cgiInit :
     case cgiNone :
       break;
     case cgiPOST :
@@ -82,7 +83,7 @@ void CGI::initalizeByMethodGET()
 void CGI::initalizeByMethodPOST()
 {
   AutoPtr<char> b;
-  uintptr_t count(utf8::str2Int(getEnv("CONTENT_LENGTH")));
+  uintptr_t count((uintptr_t) utf8::str2Int(getEnv("CONTENT_LENGTH")));
   b.alloc(count + 1);
   if( fread(b,count,1,stdin) != 1 ){
     int32_t err = errno;
@@ -115,7 +116,7 @@ void CGI::initalizeByMethodPOST()
 //------------------------------------------------------------------------------
 CGIMethod CGI::method()
 {
-  if( method_ == cgiNone ){
+  if( method_ == cgiInit ){
     if( getEnv("GATEWAY_INTERFACE").strlen() > 0 ){
       utf8::String requestMethod(getEnv("REQUEST_METHOD"));
       if( requestMethod.strcasecmp("POST") == 0 ) method_ = cgiPOST;
@@ -125,6 +126,9 @@ CGIMethod CGI::method()
       if( requestMethod.strcasecmp("HEAD") == 0 ) method_ = cgiHEAD;
       else
         method_ = ((queryString_ = getEnv("QUERY_STRING")).strlen() > 0 ? cgiGET : cgiPOST);
+    }
+    else {
+      method_ = cgiNone;
     }
   }
   return method_;

@@ -131,7 +131,7 @@ class DSQLParam {
       return *reinterpret_cast<ksys::EmbeddedHashNode<DSQLParam,uintptr_t> *>(link);
     }
     static uintptr_t ehLTN(const ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & node,uintptr_t * &){
-      return node.next();
+      return reinterpret_cast<uintptr_t>(&node);
     }
     static ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & keyNode(const DSQLParam & object){
       return object.keyNode_;

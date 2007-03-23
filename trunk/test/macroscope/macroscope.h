@@ -1,4 +1,4 @@
-/*-[21~
+/*-
  * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
