@@ -513,7 +513,7 @@ void Logger::main()
               (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
             );
           }
-          if( (bool) config_->section("macroscope").value("set_indices_statisctics",true) ){
+          if( (bool) config_->section("macroscope").value("set_indices_statistics",true) ){
             if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
               (const char *) indexName.getOEMString()
             );
