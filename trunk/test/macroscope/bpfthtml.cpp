@@ -183,7 +183,7 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,u
         st[stIns]->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
       st[stIns]->
         paramAsString("ip",ip4AddrToIndex(ip4))->
-	paramAsString("name",name);
+	      paramAsString("name",name);
       try {
         st[stIns]->execute();
       }
@@ -432,22 +432,6 @@ bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
       stBPFTCacheSel_->fetchAll();
       pStatement = stBPFTCacheSel_;
       updateCache = false;
-#ifndef NDEBUG
-      if( logger_->verbose_ ) fprintf(stderr,
-        "bpft cache hit: %s %s\n",
-        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
-        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
-      );
-#endif
-    }
-    else {
-#ifndef NDEBUG
-      if( logger_->verbose_ ) fprintf(stderr,
-        "bpft cache miss: %s %s\n",
-        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
-        (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
-      );
-#endif
     }
   }
   else if( pStatement == stBPFTHostSel_ ){
@@ -489,6 +473,15 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     time2tm((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset())
   );
   bool updateCache = getBPFTCachedHelper(pStatement);
+  if( logger_->verbose_ && (pStatement == stBPFTSel_ || pStatement == stBPFTCacheSel_) ){
+    fprintf(stderr,
+      "bpft cache %s%s: %s %s\n",
+      (curIntr ? "current time " : ""),
+      (updateCache ? "miss" : "hit"),
+      (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()).getOEMString(),
+      (const char *) utf8::time2Str((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset()).getOEMString()
+    );
+  }
   if( updateCache ){
     dbtrUpdate_->start();
     if( !stBPFTCacheIns_->prepared() ){
@@ -498,8 +491,8 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         ") VALUES ("
         "  :st_if, :st_bt, :st_et, :st_src_ip, :st_dst_ip, :st_filter_hash, :st_threshold, :st_dgram_bytes, :st_data_bytes"
         ")"
-      )->prepare();
-      stBPFTCacheIns_->paramAsString("st_if",sectionName_)->
+      )->prepare()->
+        paramAsString("st_if",sectionName_)->
         paramAsString("st_filter_hash",filterHash_)->
         paramAsMutant("st_threshold",minSignificantThreshold_);
     }
@@ -518,16 +511,17 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
         "  st_filter_hash = :hash AND st_threshold = :threshold AND " +
         "  st_src_ip = :src AND st_dst_ip = :dst "
-	"FOR UPDATE"
-      )->prepare();
-      stBPFTCacheSelForUpdate_->paramAsString("if",sectionName_)->
+	      "FOR UPDATE"
+      )->prepare()->
+        paramAsString("if",sectionName_)->
         paramAsString("hash",filterHash_)->
-        paramAsMutant("threshold",minSignificantThreshold_);
+        paramAsMutant("threshold",minSignificantThreshold_)->
+        paramAsString("src","@")->
+        paramAsString("dst","@");
     }
-    stBPFTCacheSelForUpdate_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
-      paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
-      paramAsString("src","@")->
-      paramAsString("dst","@");
+    stBPFTCacheSelForUpdate_->
+      paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
+      paramAsMutant("ET",pStatement->paramAsMutant("ET"));
     if( !stBPFTCacheUpd_->prepared() ){
       stBPFTCacheUpd_->text(
         "UPDATE INET_BPFT_STAT_CACHE SET"
@@ -536,10 +530,12 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
         "  st_filter_hash = :hash AND st_threshold = :threshold AND "
         "  st_src_ip = :src AND st_dst_ip = :dst "
-      )->prepare();
-      stBPFTCacheUpd_->paramAsString("st_if",sectionName_)->
-        paramAsString("st_filter_hash",filterHash_)->
-        paramAsMutant("st_threshold",minSignificantThreshold_);
+      )->prepare()->
+        paramAsString("if",sectionName_)->
+        paramAsString("hash",filterHash_)->
+        paramAsMutant("threshold",minSignificantThreshold_)->
+        paramAsString("src","@")->
+        paramAsString("dst","@");
     }
     if( !curIntr ){
       stBPFTCacheSelForUpdate_->execute();
@@ -556,10 +552,8 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       assert( stBPFTCacheSelForUpdate_->rowCount() > 0 );
 // use fake update for locking records
       stBPFTCacheUpd_->
-        paramAsMutant("st_bt",pStatement->paramAsMutant("BT"))->
-        paramAsMutant("st_et",pStatement->paramAsMutant("ET"))->
-        paramAsString("st_src_ip","@")->
-        paramAsString("st_dst_ip","@")->
+        paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
+        paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
         execute();      
 // try to fetch cache filled from concurrent transaction
       updateCache = getBPFTCachedHelper(pStatement);
@@ -581,13 +575,13 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
             paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
           if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
           if( pResult != NULL ){
-  	    uintptr_t row = pResult->rowCount();
+  	        uintptr_t row = pResult->rowCount();
             pResult->addRow();
             pResult->cell(row,"st_src_ip") = stBPFTCacheIns_->paramAsString("st_src_ip");
             pResult->cell(row,"st_dst_ip") = stBPFTCacheIns_->paramAsString("st_dst_ip");
             pResult->cell(row,"SUM1") = stBPFTCacheIns_->paramAsMutant("st_dgram_bytes");
             pResult->cell(row,"SUM2") = stBPFTCacheIns_->paramAsMutant("st_data_bytes");
-  	    pResult->sort("SUM1,st_src_ip,st_dst_ip");
+  	        pResult->sort("SUM1,st_src_ip,st_dst_ip");
           }
           break;
         }

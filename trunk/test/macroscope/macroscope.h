@@ -52,6 +52,7 @@ class Logger {
     ConfigSPi config_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
+    AutoPtr<Statement> statement2_;
     bool verbose_;
     
     // html reporter
@@ -74,7 +75,7 @@ class Logger {
           return *reinterpret_cast<EmbeddedHashNode<TrafCacheEntry,uintptr_t> *>(link);
         }
         static uintptr_t ehLTN(const EmbeddedHashNode<TrafCacheEntry,uintptr_t> & node,uintptr_t * &){
-          return node.next();
+          return reinterpret_cast<uintptr_t>(&node);
         }			    
         static EmbeddedHashNode<TrafCacheEntry,uintptr_t> & keyNode(const TrafCacheEntry & object){
           return object.keyNode_;
@@ -203,7 +204,7 @@ class Logger {
           return *reinterpret_cast<EmbeddedHashNode<DNSCacheEntry,uintptr_t> *>(link);
         }
         static uintptr_t ehLTN(const EmbeddedHashNode<DNSCacheEntry,uintptr_t> & node,uintptr_t * &){
-          return node.next();
+          return reinterpret_cast<uintptr_t>(&node);
         }			    
         static EmbeddedHashNode<DNSCacheEntry,uintptr_t> & keyNode(const DNSCacheEntry & object){
           return object.keyNode_;

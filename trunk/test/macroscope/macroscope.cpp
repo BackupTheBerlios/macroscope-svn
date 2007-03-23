@@ -334,172 +334,180 @@ void Logger::main()
     }
     verbose_ = false;
   }
+  else {
+    ConfigSection dbParamsSection;
+    dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
 
-  ConfigSection dbParamsSection;
-  dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
+    database_ = Database::newDatabase(&dbParamsSection);
+    statement_ = database_->newAttachedStatement();
+    statement2_ = database_->newAttachedStatement();
 
-  database_ = Database::newDatabase(&dbParamsSection);
-  statement_ = database_->newAttachedStatement();
-
-  database_->create();
-
-  Vector<utf8::String> metadata;
-  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
-    metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
-  metadata <<
-//    "DROP TABLE INET_USERS_TRAF" <<
-    "CREATE TABLE INET_USERS_TRAF ("
-    " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
-    " ST_TIMESTAMP          DATETIME NOT NULL,"
-    " ST_TRAF_WWW           INTEGER NOT NULL,"
-    " ST_TRAF_SMTP          INTEGER NOT NULL"
-    ")" <<
-//    "DROP TABLE INET_USERS_MONTHLY_TOP_URL" <<
-    "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
-    " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
-    " ST_TIMESTAMP          DATETIME NOT NULL,"
-    " ST_URL                VARCHAR(4096) NOT NULL,"
-    " ST_URL_HASH           BIGINT NOT NULL,"
-    " ST_URL_TRAF           INTEGER NOT NULL,"
-    " ST_URL_COUNT          INTEGER NOT NULL"
-    ")" << 
-//    "DROP TABLE INET_SENDMAIL_MESSAGES" <<
-    "CREATE TABLE INET_SENDMAIL_MESSAGES ("
-    " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
-    " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
-    " ST_MSGSIZE            INTEGER NOT NULL"
-    ")" <<
-    "CREATE TABLE INET_LOG_FILE_STAT ("
-    " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
-    " ST_LAST_OFFSET        BIGINT NOT NULL"
-    ")" <<
-//    "DROP TABLE INET_BPFT_STAT" <<
-//    "DROP TABLE INET_BPFT_STAT_IP" <<
-//    "CREATE TABLE INET_BPFT_STAT_IP ("
-//    " st_ip        CHAR(8) CHARACTER SET ascii NOT NULL UNIQUE PRIMARY KEY"
-//    ")" <<
-    "CREATE TABLE INET_BPFT_STAT ("
-    " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
-    " st_start         DATETIME NOT NULL,"
-//    " st_stop          DATETIME NOT NULL,"
-    " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-    " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-    " st_ip_proto      SMALLINT NOT NULL,"
-    " st_src_port      INTEGER NOT NULL,"
-    " st_dst_port      INTEGER NOT NULL,"
-    " st_dgram_bytes   INTEGER NOT NULL,"
-    " st_data_bytes    INTEGER NOT NULL"
-//    " st_src_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL,"
-//    " st_dst_name      VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") NOT NULL"
-//    " FOREIGN KEY (st_src_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE,"
-//    " FOREIGN KEY (st_dst_ip) REFERENCES INET_BPFT_STAT_IP(st_ip) ON DELETE CASCADE"
-    ")" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
-    "CREATE TABLE INET_BPFT_STAT_CACHE ("
-    " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
-    " st_bt            DATETIME NOT NULL,"
-    " st_et            DATETIME NOT NULL,"
-    " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-    " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-    " st_filter_hash   CHAR(43) CHARACTER SET ascii NOT NULL,"
-    " st_threshold     BIGINT NOT NULL,"
-    " st_dgram_bytes   BIGINT NOT NULL,"
-    " st_data_bytes    BIGINT NOT NULL"
-    ")" <<
-    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
-    "CREATE INDEX INET_BPFT_STAT_CACHE_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
-    "CREATE TABLE INET_DNS_CACHE ("
-    " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
-    " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
-    ")" <<
-    "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
-    "CREATE INDEX INET_USERS_TRAF_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
-    "CREATE INDEX INET_USERS_TRAF_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
-  ;
-  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-    metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-    metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
-  }
-  else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
-    metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-    metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
-  }
-  if( (bool) config_->section("macroscope").value("DROP_DATABASE",false) ){
-    database_->attach();
-    database_->drop();
     database_->create();
-  }
+
+    Vector<utf8::String> metadata;
+    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
+      metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
+    metadata <<
+  //    "DROP TABLE INET_USERS_TRAF" <<
+      "CREATE TABLE INET_USERS_TRAF ("
+      " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
+      " ST_TIMESTAMP          DATETIME NOT NULL,"
+      " ST_TRAF_WWW           INTEGER NOT NULL,"
+      " ST_TRAF_SMTP          INTEGER NOT NULL"
+      ")" <<
+  //    "DROP TABLE INET_USERS_MONTHLY_TOP_URL" <<
+      "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
+      " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
+      " ST_TIMESTAMP          DATETIME NOT NULL,"
+      " ST_URL                VARCHAR(4096) NOT NULL,"
+      " ST_URL_HASH           BIGINT NOT NULL,"
+      " ST_URL_TRAF           INTEGER NOT NULL,"
+      " ST_URL_COUNT          INTEGER NOT NULL"
+      ")" << 
+  //    "DROP TABLE INET_SENDMAIL_MESSAGES" <<
+      "CREATE TABLE INET_SENDMAIL_MESSAGES ("
+      " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
+      " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+      " ST_MSGSIZE            INTEGER NOT NULL"
+      ")" <<
+      "CREATE TABLE INET_LOG_FILE_STAT ("
+      " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
+      " ST_LAST_OFFSET        BIGINT NOT NULL"
+      ")" <<
+      "CREATE TABLE INET_BPFT_STAT ("
+      " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_start         DATETIME NOT NULL,"
+      " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_ip_proto      SMALLINT NOT NULL,"
+      " st_src_port      INTEGER NOT NULL,"
+      " st_dst_port      INTEGER NOT NULL,"
+      " st_dgram_bytes   INTEGER NOT NULL,"
+      " st_data_bytes    INTEGER NOT NULL"
+      ")" <<
+      "CREATE TABLE INET_BPFT_STAT_CACHE ("
+      " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_bt            DATETIME NOT NULL,"
+      " st_et            DATETIME NOT NULL,"
+      " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_filter_hash   CHAR(43) CHARACTER SET ascii NOT NULL,"
+      " st_threshold     BIGINT NOT NULL,"
+      " st_dgram_bytes   BIGINT NOT NULL,"
+      " st_data_bytes    BIGINT NOT NULL"
+      ")" <<
+      "CREATE TABLE INET_DNS_CACHE ("
+      " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+      " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
+      ")" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
+      "CREATE INDEX INET_BPFT_STAT_CACHE_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
+      "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
+      "CREATE INDEX INET_USERS_TRAF_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
+      "CREATE INDEX INET_USERS_TRAF_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
+    ;
+    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+      metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+      metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
+    }
+    else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
+      metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+      metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
+    }
+    if( (bool) config_->section("macroscope").value("DROP_DATABASE",false) ){
+      database_->attach();
+      database_->drop();
+      database_->create();
+    }
 
 //#if !__FreeBSD__
-  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-    utf8::String hostName, dbName;
-    uintptr_t port;
-    database_->separateDBName(database_->name(),hostName,dbName,port);
-    //  if( hostName.trim().strlen() > 0 ){
-    utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
-    fbcpp::Service service;
-    service.params().
-      add("user_name",config_->valueByPath("libadicpp.default_connection.firebird.user"));
-    service.params().
-      add("password",config_->valueByPath("libadicpp.default_connection.firebird.password"));
-    try {
-      service.attach(serviceName);
-      service.request().
-        add("action_svc_properties").add("dbname",dbName).
-        add("prp_set_sql_dialect",config_->valueByPath("libadicpp.default_connection.firebird.dialect",3));
-      service.invoke();
-      service.request().clear().
-        add("action_svc_properties").add("dbname",dbName).
-        add("prp_reserve_space",
-          (bool) config_->valueByPath("libadicpp.default_connection.firebird.reserve_space",false) ?
-            isc_spb_prp_res : isc_spb_prp_res_use_full
-        );
-      service.invoke();
-      service.request().clear().add("action_svc_properties").add("dbname",dbName).
-        add("prp_page_buffers",
-          config_->valueByPath("libadicpp.default_connection.firebird.page_buffers",2048u)
-        );
-      service.invoke();
-      service.request().clear().
-        add("action_svc_properties").add("dbname", dbName).
-        add("prp_write_mode",
-          (bool) config_->valueByPath("libadicpp.default_connection.firebird.async_write",0) ?
-            isc_spb_prp_wm_async : isc_spb_prp_wm_sync
-        );
-      service.invoke();
-      service.attach(serviceName);
-      service.request().clear().
-        add("action_svc_properties").add("dbname", dbName).
-        add("prp_sweep_interval",
-          config_->valueByPath("libadicpp.default_connection.firebird.sweep_interval",10000u)
-        );
-      service.invoke();
+    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+      utf8::String hostName, dbName;
+      uintptr_t port;
+      database_->separateDBName(database_->name(),hostName,dbName,port);
+      //  if( hostName.trim().strlen() > 0 ){
+      utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
+      fbcpp::Service service;
+      service.params().
+        add("user_name",config_->valueByPath("libadicpp.default_connection.firebird.user"));
+      service.params().
+        add("password",config_->valueByPath("libadicpp.default_connection.firebird.password"));
+      try {
+        service.attach(serviceName);
+        service.request().
+          add("action_svc_properties").add("dbname",dbName).
+          add("prp_set_sql_dialect",config_->valueByPath("libadicpp.default_connection.firebird.dialect",3));
+        service.invoke();
+        service.request().clear().
+          add("action_svc_properties").add("dbname",dbName).
+          add("prp_reserve_space",
+            (bool) config_->valueByPath("libadicpp.default_connection.firebird.reserve_space",false) ?
+              isc_spb_prp_res : isc_spb_prp_res_use_full
+          );
+        service.invoke();
+        service.request().clear().add("action_svc_properties").add("dbname",dbName).
+          add("prp_page_buffers",
+            config_->valueByPath("libadicpp.default_connection.firebird.page_buffers",2048u)
+          );
+        service.invoke();
+        service.request().clear().
+          add("action_svc_properties").add("dbname", dbName).
+          add("prp_write_mode",
+            (bool) config_->valueByPath("libadicpp.default_connection.firebird.async_write",0) ?
+              isc_spb_prp_wm_async : isc_spb_prp_wm_sync
+          );
+        service.invoke();
+        service.attach(serviceName);
+        service.request().clear().
+          add("action_svc_properties").add("dbname", dbName).
+          add("prp_sweep_interval",
+            config_->valueByPath("libadicpp.default_connection.firebird.sweep_interval",10000u)
+          );
+        service.invoke();
+      }
+      catch( ExceptionSP & e ){
+        if( !e->searchCode(isc_network_error) ) throw;
+      }
     }
-    catch( ExceptionSP & e ){
-      if( !e->searchCode(isc_network_error) ) throw;
-    }
-  }
 //#endif
-  database_->attach();
-  for( uintptr_t i = 0; i < metadata.count(); i++ ){
-    if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
-      if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
-        metadata[i] += " TYPE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
-    try {
-      statement_->execute(metadata[i]);
+    database_->attach()->start();
+    for( uintptr_t i = 0; i < metadata.count(); i++ ){
+      if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
+        if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
+          metadata[i] += " TYPE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
+      try {
+        statement_->execute(metadata[i]);
+      }
+      catch( ExceptionSP & e ){
+        //if( e->searchCode(isc_keytoobig) ) throw;
+        if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR) ) throw;
+      }
     }
-    catch( ExceptionSP & e ){
-      //if( e->searchCode(isc_keytoobig) ) throw;
-      if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR) ) throw;
+    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+      statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
+      for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+        statement_->selectRow(i);
+        if( statement_->valueAsString("RDB$RELATION_NAME").strncasecmp("RDB$",4) == 0 ) continue;
+        statement2_->text(
+          "ALTER INDEX " + statement_->valueAsString("RDB$INDEX_NAME") + " INACTIVE"
+        )->execute();
+        statement2_->text(
+          "ALTER INDEX " + statement_->valueAsString("RDB$INDEX_NAME") + " ACTIVE"
+        )->execute();
+        statement2_->text(
+          "SET STATISTICS INDEX " + statement_->valueAsString("RDB$INDEX_NAME")
+        )->execute();
+      }
     }
-  }
-  database_->detach();
+    database_->commit()->detach();
 
-  trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
-  threads_.safeAdd(newObjectR1C2C3<SquidSendmailThread>(*this,"macroscope","macroscope")).resume();
+    trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
+    threads_.safeAdd(newObjectR1C2C3<SquidSendmailThread>(*this,"macroscope","macroscope")).resume();
+  }
 
   dnsCacheHitCount_ = 0;
   dnsCacheMissCount_ = 0;
@@ -507,6 +515,7 @@ void Logger::main()
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
     utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
     if( sectionName.strcasecmp("decoration") == 0 ) continue;
+    if( cgi_.isCGI() && sectionName.strcasecmp(cgi_.paramAsString("if")) != 0 ) continue;
     threads_.safeAdd(newObjectR1C2C3<BPFTThread>(*this,"macroscope.bpft." + sectionName,sectionName)).resume();
   }
   threads_.clear();
