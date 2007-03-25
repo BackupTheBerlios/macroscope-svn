@@ -91,13 +91,11 @@ void Logger::SquidSendmailThread::threadExecute()
   groups_ = perGroupReport_ = false;
   ellapsed_ = getlocaltimeofday();
   writeHtmlYearOutput();
-  if( groups_ ){
-    perGroupReport_ = true;
-    for( uintptr_t i = 0; i < logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").valueCount(); i++ ){
-      perGroupReportDir_ = logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").text(i,&perGroupReportName_);
-      ellapsed_ = getlocaltimeofday();
-      writeHtmlYearOutput();
-    }
+  perGroupReport_ = true;
+  for( uintptr_t i = 0; i < logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").valueCount(); i++ ){
+    perGroupReportDir_ = logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").text(i,&perGroupReportName_);
+    ellapsed_ = getlocaltimeofday();
+    writeHtmlYearOutput();
   }
 }
 //------------------------------------------------------------------------------
