@@ -39,10 +39,10 @@ class CGI {
     CGI();
     
     void initialize();
-    CGI & print(const utf8::String & s);
+    CGI & print(const utf8::String & s){ out_ << s; return *this; }
     CGIMethod method();
     
-    CGI & operator << (const utf8::String & s){ return print(s); }
+    CGI & operator << (const utf8::String & s){ out_ << s; return *this; }
     
     utf8::String paramAsString(const utf8::String & name,const utf8::String & defValue = utf8::String());
     utf8::String paramAsString(uintptr_t i,const utf8::String & defValue = utf8::String());
@@ -56,6 +56,7 @@ class CGI {
     
     bool isCGI(){ return method() != cgiNone; }
   protected:
+    AsyncFile out_;
     utf8::String queryString_;
     CGIMethod method_;
     

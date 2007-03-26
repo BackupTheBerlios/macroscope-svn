@@ -43,7 +43,7 @@ class Logger {
     ~Logger();
     Logger();
 
-    void main();
+    int32_t main();
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
     enum { stSel, stIns, stUpd };

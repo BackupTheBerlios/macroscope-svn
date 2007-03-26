@@ -37,6 +37,7 @@ CGI::~CGI()
 CGI::CGI() : method_(cgiInit)
 {
   paramsHash_.param() = &params_;
+  out_.fileName("stdout").open();
 }
 //------------------------------------------------------------------------------
 void CGI::initialize()
@@ -49,19 +50,10 @@ void CGI::initialize()
       initalizeByMethodPOST();
     case cgiGET  :
       initalizeByMethodGET();
-      print(utf8::String::print("Content-Type:text/html;charset=utf-8%c%c\n",13,10));
+      out_ << utf8::String::print("Content-Type:text/html;charset=utf-8%c%c\n",13,10);
     case cgiHEAD  :
       ;
   }
-}
-//------------------------------------------------------------------------------
-CGI & CGI::print(const utf8::String & s)
-{
-  if( fwrite(s.c_str(),s.size(),1,stdout) != 1 ){
-    int32_t err = errno;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-  }
-  return *this;
 }
 //------------------------------------------------------------------------------
 utf8::String CGI::uudecode(const utf8::String & string)

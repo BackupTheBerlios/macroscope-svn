@@ -172,7 +172,7 @@ void Logger::fallBackToNewLine(AsyncFile & f)
   }
 }
 //------------------------------------------------------------------------------
-void Logger::main()
+int32_t Logger::main()
 {
   config_->parse().override();
   stdErr.rotationThreshold(
@@ -194,16 +194,17 @@ void Logger::main()
   verbose_ = config_->section("macroscope").value("verbose",false);
 
 // print query form if is CGI and no CGI parameters
-//  setEnv("GATEWAY_INTERFACE","CGI/1.1");
+/*  setEnv("GATEWAY_INTERFACE","CGI/1.1");
   setEnv("QUERY_STRING",
     "if=sk1&"
     "bday=22&bmon=3&byear=2007&"
-    "eday=22&emon=3&eyear=2007&"
+    "eday=23&emon=3&eyear=2007&"
     "resolve=on&"
+    "bidirectional=on&"
     "threshold=4M&"
     "threshold2=&"
-    "filter=src+192.168.0.0%2F16+and+dst+192.168.0.0%2F16"
-  );
+    "filter=src+sus+or+dst+sus"
+  );*/
   cgi_.initialize();
   if( cgi_.isCGI() ){
     if( cgi_.paramCount() == 0 ){
@@ -339,9 +340,9 @@ void Logger::main()
 	"</BODY>\n"
 	"</HTML>\n"
       ;
-      return;
+      return 0;
     }
-//    verbose_ = false;
+    verbose_ = false;
   }
   else {
     ConfigSection dbParamsSection;
@@ -561,7 +562,13 @@ void Logger::main()
     if( cgi_.isCGI() && sectionName.strcasecmp(cgi_.paramAsString("if")) != 0 ) continue;
     threads_.safeAdd(newObjectR1C2C3<BPFTThread>(*this,"macroscope.bpft." + sectionName,sectionName)).resume();
   }
+  int32_t exitCode = 0;
+  for( intptr_t i = threads_.count() - 1; i >= 0; i-- ){
+    threads_[i].wait();
+    if( exitCode == 0 && threads_[i].exitCode() != 0 ) exitCode = (int32_t) threads_[i].exitCode();
+  }
   threads_.clear();
+  return exitCode;
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope
@@ -572,7 +579,7 @@ const char * _malloc_options = "HR";
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  int errcode = -1;
+  int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
 //  fprintf(stderr,"%s\n",(const char *) utf8::time2Str(getlocaltimeofday()).getOEMString());
@@ -630,13 +637,13 @@ int main(int _argc,char * _argv[])
     //lzw.decompress(cText,outSize,true);
     //dText[0] = dText[0];
 #endif
+    errcode = 0;
     if( dispatch ){
       macroscope::Logger logger;
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
-      logger.main();
+      errcode = logger.main();
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
     }
-    errcode = 0;
   }
   catch( ExceptionSP & e ){
     e->writeStdError();

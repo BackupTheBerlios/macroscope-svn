@@ -419,15 +419,15 @@ int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
   }
   return r;
 #elif HAVE_PREAD
-  return pread(descriptor_,buf,size,pos);
+  return seekable_ ? pread(descriptor_,buf,size,pos) : ::read(descriptor_,buf,size);
 #else
   intptr_t r = -1;
-  uint64_t OldPos = tell();
+  uint64_t OldPos = seekable_ ? tell() : 0;
   int err;
-  seek(pos);
+  if( seekable_ ) seek(pos);
   r = ::read(descriptor_,buf,size);
   err = errno;
-  seek(OldPos);
+  if( seekable_ ) seek(OldPos);
   errno = err;
   return r;
 #endif
@@ -498,15 +498,15 @@ int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
   }
   return w;
 #elif HAVE_PWRITE
-  return pwrite(descriptor_,buf,size,pos);
+  return seekable_ ? pwrite(descriptor_,buf,size,pos) : ::write(descriptor_,buf,size);
 #else
   intptr_t r = -1;
-  uint64_t OldPos = tell();
+  uint64_t OldPos = seekable_ ? tell() : 0;
   int err;
-  seek(pos);
+  if( seekable_ ) seek(pos);
   r = ::write(descriptor_,buf,size);
   err = errno;
-  seek(OldPos);
+  if( seekable_ ) seek(OldPos);
   errno = err;
   return r;
 #endif

@@ -618,7 +618,6 @@ utf8::String Logger::BPFTThread::genHRef(uint32_t ip)
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
 {
-  utf8::String filter;
   struct tm beginTime, beginTime2, endTime, endTime2;
   Mutant m0, m1, m2;
   AsyncFile f;
@@ -749,11 +748,11 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       memset(&cgiBT_,0,sizeof(cgiBT_));
       cgiBT_.tm_year = (int) logger_->cgi_.paramAsMutant("byear") - 1900;
       cgiBT_.tm_mon = (int) logger_->cgi_.paramAsMutant("bmon") - 1;
-      cgiBT_.tm_mday = (int) logger_->cgi_.paramAsMutant("bday") - 1;
+      cgiBT_.tm_mday = (int) logger_->cgi_.paramAsMutant("bday");
       memset(&cgiET_,0,sizeof(cgiET_));
       cgiET_.tm_year = (int) logger_->cgi_.paramAsMutant("eyear") - 1900;
       cgiET_.tm_mon = (int) logger_->cgi_.paramAsMutant("emon") - 1;
-      cgiET_.tm_mday = (int) logger_->cgi_.paramAsMutant("eday") - 1;
+      cgiET_.tm_mday = (int) logger_->cgi_.paramAsMutant("eday");
       cgiET_.tm_hour = 23;
       cgiET_.tm_min = 59;
       cgiET_.tm_sec = 59;
@@ -766,17 +765,13 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       cgiET_.tm_hour = 23;
       cgiET_.tm_min = 59;
       cgiET_.tm_sec = 59;
-      if( cgiBT_.tm_year == cgiET_.tm_year ){
-        if( cgiBT_.tm_mon == cgiET_.tm_mon ) return writeBPFTHtmlReport(rlDay,&cgiBT_);
-        return writeBPFTHtmlReport(rlMon,&cgiBT_);
-      }
     }
   }
   else {
     assert( rt != NULL );
     beginTime = endTime = *rt;
   }
-  int * pi, sv, av;
+  int * pi, sv, av, fv;
   switch( level ){
     case rlYear :
       beginTime.tm_mon = 0;
@@ -792,6 +787,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       pi = &endTime.tm_mon;
       sv = 0;
       av = 1;
+      fv = 11;
       f.fileName(
         includeTrailingPathDelimiter(htmlDir_) +
         logger_->config_->valueByPath(section_ + ".html_report.index_file_name","index.html")
@@ -840,10 +836,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
   }
   if( logger_->cgi_.isCGI() ){
     f.fileName("stdout").open();
+    if( level == rlYear ) logger_->writeHtmlHead(f);
   }
   else {
     f.createIfNotExist(true).open().resize(0);
-  
     m0 = logger_->config_->valueByPath(section_ + ".html_report.directory_mode",0755);
     m1 = logger_->config_->valueByPath(section_ + ".html_report.directory_user",ksys::getuid());
     m2 = logger_->config_->valueByPath(section_ + ".html_report.directory_group",ksys::getgid());
@@ -855,20 +851,6 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     logger_->writeHtmlHead(f);
   }
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
-    if( logger_->cgi_.isCGI() ){
-      switch( level ){
-        case rlYear :
-          break;
-        case rlMon :
-          break;
-        case rlDay :
-	  if( beginTime.tm_year == cgiBT_.tm_year && beginTime.tm_mon == cgiBT_.tm_mon ) sv = beginTime.tm_mday = cgiBT_.tm_mday;
-	  if( endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiBT_.tm_mday;
-          break;
-        default    :
-          assert( 0 );
-      }
-    }
     beginTime2 = beginTime;
     endTime2 = endTime;
     switch( level ){
@@ -884,172 +866,33 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       default    :
         assert( 0 );
     }
-    stBPFTSel_->
-      paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-      paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
     Vector<Table<Mutant> > table;
-    switch( level ){
-      case rlYear :
-        table.resize(13);
-        break;
-      case rlMon :
-        table.resize(32);
-        break;
-      case rlDay :
-        table.resize(25);
-        break;
-      default    :
-        assert( 0 );
+    if( logger_->cgi_.isCGI() && (tm2Time(beginTime) < tm2Time(cgiBT_) || tm2Time(endTime) > tm2Time(cgiET_)) ){
     }
-    getBPFTCached(stBPFTSel_,&table[0]);
-    if( (uintmax_t) table[0].sum("SUM1") > 0 ){
-      if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
-        (const char *) utf8::tm2Str(beginTime).getOEMString(),
-        (const char *) utf8::tm2Str(endTime).getOEMString()
-      );
-      uintptr_t colCount = 0;
-      while( *pi >= sv ){
-        switch( level ){
-          case rlYear :
-            beginTime.tm_mon = endTime.tm_mon;
-            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-            break;
-          case rlMon :
-            beginTime.tm_mday = endTime.tm_mday;
-            break;
-          case rlDay :
-            beginTime.tm_hour = endTime.tm_hour;
-            break;
-          default    :
-            assert( 0 );
-        }
-        stBPFTSel_->
-          paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-          paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
-        getBPFTCached(stBPFTSel_,&table[*pi + av]);
-        colCount += (uintmax_t) table[*pi + av].sum("SUM1") > 0;
-        (*pi)--;
-      }
+    else {
+      stBPFTSel_->
+        paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+        paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
       switch( level ){
         case rlYear :
-          endTime.tm_mon = 11;
-          endTime.tm_mday = 31;
-          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
-	    endTime.tm_mon = cgiET_.tm_mon;
-            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-          }
+          table.resize(13);
           break;
         case rlMon :
-          endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
+          table.resize(32);
           break;
         case rlDay :
-          endTime.tm_hour = 23;
+          table.resize(25);
           break;
         default    :
           assert( 0 );
       }
-      f <<
-        "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
-        "<TR>\n"
-        "  <TH BGCOLOR=\"" + logger_->getDecor("table_head",section_) + "\" COLSPAN=\"" +
-        utf8::int2Str(colCount * 2 + 3) + "\" ALIGN=left nowrap>\n"
-      ;
-      switch( level ){
-        case rlYear :
-          f <<
-	    (logger_->cgi_.isCGI() ? utf8::String() :
-              "    <A HREF=\"bpft-" + sectionName_ +
-              utf8::String::print("-traf-by-%04d.html",endTime.tm_year + 1900) + "\">"
-	    ) +
-            utf8::int2Str(endTime.tm_year + 1900) + "\n" +
-	    (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-          ;
-          break;
-        case rlMon :
-          f <<
-	    (logger_->cgi_.isCGI() ? utf8::String() :
-              "    <A HREF=\"bpft-" + sectionName_ +
-              utf8::String::print("-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1) + "\">"
-	    ) +
-            utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
-	    (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-          ;
-          break;
-        case rlDay :
-          f <<
-	    (logger_->cgi_.isCGI() ? utf8::String() :
-              "    <A HREF=\"bpft-" + sectionName_ +
-              utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) + "\">"
-	    ) +
-            utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
-	    (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-          ;
-          break;
-        default    :
-          assert( 0 );
-      }
-      f <<
-        "  </TH>\n"
-        "</TR>\n"
-        "<TR>\n"
-        "  <TH HEIGHT=4>"
-        "  </TH>\n"
-        "</TR>\n"
-        "<TR>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.host",section_) + "\" nowrap>\n"
-        "    Host\n"
-        "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.data",section_) + "\" nowrap>\n"
-        "    Data bytes\n"
-        "  </TH>\n"
-        "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.dgram",section_) + "\" nowrap>\n"
-        "    Datagram bytes\n"
-        "  </TH>\n"
-      ;
-      while( *pi >= sv ){
-        if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
-          f <<
-            "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
-            "    " + utf8::int2Str(*pi + (level == rlYear)) + "\n"
-            "  </TH>\n"
-	  ;
-        (*pi)--;
-      }
-      switch( level ){
-        case rlYear :
-          endTime.tm_mon = 11;
-          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
-	    endTime.tm_mon = cgiET_.tm_mon;
-            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-          }
-          break;
-        case rlMon :
-          endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
-          break;
-        case rlDay :
-          endTime.tm_hour = 23;
-          break;
-        default    :
-          assert( 0 );
-      }
-      for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-        uint32_t ip41 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
-        uint32_t ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
-        f <<
-          "<TR>\n"
-          "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
-	  genHRef(ip41) +
-	  (bidirectional_ ? " <B>--></B> " + genHRef(ip42) : utf8::String()) +
-          "  </TH>\n"
-          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
-          formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
-          "  </TH>\n"
-          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.dgram",section_) + "\" nowrap>\n" +
-          formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
-          "  </TH>\n"
-        ;
+      getBPFTCached(stBPFTSel_,&table[0]);
+      if( (uintmax_t) table[0].sum("SUM1") > 0 ){
+        if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
+          (const char *) utf8::tm2Str(beginTime).getOEMString(),
+          (const char *) utf8::tm2Str(endTime).getOEMString()
+        );
+        uintptr_t colCount = 0;
         while( *pi >= sv ){
           switch( level ){
             case rlYear :
@@ -1065,38 +908,20 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             default    :
               assert( 0 );
           }
-          if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
-            stBPFTHostSel_->
-	      paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-              paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
-              paramAsMutant("src",table[0](i,"st_src_ip"))->
-              paramAsMutant("dst",table[0](i,"st_dst_ip"));
-            uintmax_t sum1, sum2;
-            getBPFTCached(stBPFTHostSel_,NULL,&sum1,&sum2);
-            f <<
-              "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.data",section_) + "\" nowrap>\n" +
-              formatTraf(sum2,table[*pi + av].sum("SUM1")) + "\n"
-              "  </TH>\n"
-              "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.dgram",section_) + "\" nowrap>\n" +
-              formatTraf(sum1,table[*pi + av].sum("SUM1")) + "\n"
-              "  </TH>\n"
-            ;
-	  }
-	  (*pi)--;
+          stBPFTSel_->
+            paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+            paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
+          getBPFTCached(stBPFTSel_,&table[*pi + av]);
+          colCount += (uintmax_t) table[*pi + av].sum("SUM1") > 0;
+          (*pi)--;
         }
-        f << "</TR>\n";
         switch( level ){
           case rlYear :
             endTime.tm_mon = 11;
             endTime.tm_mday = 31;
-            if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
-  	      endTime.tm_mon = cgiET_.tm_mon;
-              endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-            }
             break;
           case rlMon :
             endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-            if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
             break;
           case rlDay :
             endTime.tm_hour = 23;
@@ -1104,62 +929,203 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           default    :
             assert( 0 );
         }
-      }
-      f <<
-        "<TR>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.host",section_) + "\" nowrap>\n"
-        "    Summary:\n"
-        "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.data",section_) + "\" nowrap>\n" +
-        formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) + "\n"
-        "  </TH>\n"
-        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.dgram",section_) + "\" nowrap>\n" +
-        formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) + "\n"
-        "  </TH>\n"
-      ;
-      while( *pi >= sv ){
-        if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
-          f <<
-            "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.data",section_) + "\" nowrap>\n" +
-            formatTraf(table[*pi + av].sum("SUM2"),table[0].sum("SUM1")) + "\n"
-            "  </TH>\n"
-            "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.dgram",section_) + "\" nowrap>\n" +
-            formatTraf(table[*pi + av].sum("SUM1"),table[0].sum("SUM1")) + "\n"
-            "  </TH>\n"
-          ;
-        (*pi)--;
-      }
-      f <<
-        "</TR>\n"
-        "</TABLE>\n<BR>\n<BR>\n"
-      ;
-      bool nextLevel = !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",false) || logger_->cgi_.isCGI();
-      switch( level ){
-        case rlYear :
-          endTime.tm_mon = 11;
-          endTime.tm_mday = 31;
-          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year ){
-            endTime.tm_mon = cgiET_.tm_mon;
+        f <<
+          "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
+          "<TR>\n"
+          "  <TH BGCOLOR=\"" + logger_->getDecor("table_head",section_) + "\" COLSPAN=\"" +
+          utf8::int2Str(colCount * 2 + 3) + "\" ALIGN=left nowrap>\n"
+        ;
+        switch( level ){
+          case rlYear :
+            f <<
+  	      (logger_->cgi_.isCGI() ? utf8::String() :
+                "    <A HREF=\"bpft-" + sectionName_ +
+                utf8::String::print("-traf-by-%04d.html",endTime.tm_year + 1900) + "\">"
+              ) +
+              utf8::int2Str(endTime.tm_year + 1900) + "\n" +
+	      (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+            ;
+            break;
+          case rlMon :
+            f <<
+  	      (logger_->cgi_.isCGI() ? utf8::String() :
+                "    <A HREF=\"bpft-" + sectionName_ +
+                utf8::String::print("-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1) + "\">"
+	      ) +
+              utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
+	      (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+            ;
+            break;
+          case rlDay :
+            f <<
+	      (logger_->cgi_.isCGI() ? utf8::String() :
+                "    <A HREF=\"bpft-" + sectionName_ +
+                utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) + "\">"
+	      ) +
+              utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
+	      (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+            ;
+            break;
+          default    :
+            assert( 0 );
+        }
+        f <<
+          "  </TH>\n"
+          "</TR>\n"
+          "<TR>\n"
+          "  <TH HEIGHT=4>"
+          "  </TH>\n"
+          "</TR>\n"
+          "<TR>\n"
+          "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.host",section_) + "\" nowrap>\n"
+          "    Host\n"
+          "  </TH>\n"
+          "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.data",section_) + "\" nowrap>\n"
+          "    Data bytes\n"
+          "  </TH>\n"
+          "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.dgram",section_) + "\" nowrap>\n"
+          "    Datagram bytes\n"
+          "  </TH>\n"
+        ;
+        while( *pi >= sv ){
+          if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
+            f <<
+              "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
+              "    " + utf8::int2Str(*pi + (level == rlYear)) + "\n"
+              "  </TH>\n"
+	    ;
+          (*pi)--;
+        }
+        switch( level ){
+          case rlYear :
+            endTime.tm_mon = 11;
+            break;
+          case rlMon :
             endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+            break;
+          case rlDay :
+            endTime.tm_hour = 23;
+            break;
+          default    :
+            assert( 0 );
+        }
+        for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
+          uint32_t ip41 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
+          uint32_t ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
+	  utf8::String row(
+            "<TR>\n"
+            "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
+	    genHRef(ip41) +
+	    (bidirectional_ ? " <B>--></B> " + genHRef(ip42) : utf8::String()) +
+            "  </TH>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
+            formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
+            "  </TH>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.dgram",section_) + "\" nowrap>\n" +
+            formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
+            "  </TH>\n"
+          );
+          while( *pi >= sv ){
+            switch( level ){
+              case rlYear :
+                beginTime.tm_mon = endTime.tm_mon;
+                endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+                break;
+              case rlMon :
+                beginTime.tm_mday = endTime.tm_mday;
+                break;
+              case rlDay :
+                beginTime.tm_hour = endTime.tm_hour;
+                break;
+              default    :
+                assert( 0 );
+            }
+            if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
+              stBPFTHostSel_->
+	        paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+                paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
+                paramAsMutant("src",table[0](i,"st_src_ip"))->
+                paramAsMutant("dst",table[0](i,"st_dst_ip"));
+              uintmax_t sum1, sum2;
+              getBPFTCached(stBPFTHostSel_,NULL,&sum1,&sum2);
+              row +=
+                "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.data",section_) + "\" nowrap>\n" +
+                formatTraf(sum2,table[*pi + av].sum("SUM1")) + "\n"
+                "  </TH>\n"
+                "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.dgram",section_) + "\" nowrap>\n" +
+                formatTraf(sum1,table[*pi + av].sum("SUM1")) + "\n"
+                "  </TH>\n"
+              ;
+	    }
+	    (*pi)--;
           }
-          nextLevel = nextLevel || endTime.tm_year == curTime_.tm_year;
-          break;
-        case rlMon :
-          endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
-          if( logger_->cgi_.isCGI() && endTime.tm_year == cgiET_.tm_year && endTime.tm_mon == cgiET_.tm_mon ) endTime.tm_mday = cgiET_.tm_mday;
-          nextLevel = nextLevel || endTime.tm_mon == curTime_.tm_mon;
-          break;
-        case rlDay :
-          endTime.tm_hour = 23;
-          nextLevel = nextLevel || endTime.tm_mday == curTime_.tm_mday;
-          break;
-        default    :
-          assert( 0 );
+	  f << row + "</TR>\n";
+          switch( level ){
+            case rlYear :
+              endTime.tm_mon = 11;
+              endTime.tm_mday = 31;
+              break;
+            case rlMon :
+              endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+              break;
+            case rlDay :
+              endTime.tm_hour = 23;
+              break;
+            default    :
+              assert( 0 );
+          }
+        }
+        f <<
+          "<TR>\n"
+          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.host",section_) + "\" nowrap>\n"
+          "    Summary:\n"
+          "  </TH>\n"
+          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.data",section_) + "\" nowrap>\n" +
+          formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) + "\n"
+          "  </TH>\n"
+          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.dgram",section_) + "\" nowrap>\n" +
+          formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) + "\n"
+          "  </TH>\n"
+        ;
+        while( *pi >= sv ){
+          if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
+            f <<
+              "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.data",section_) + "\" nowrap>\n" +
+              formatTraf(table[*pi + av].sum("SUM2"),table[0].sum("SUM1")) + "\n"
+              "  </TH>\n"
+              "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.dgram",section_) + "\" nowrap>\n" +
+              formatTraf(table[*pi + av].sum("SUM1"),table[0].sum("SUM1")) + "\n"
+              "  </TH>\n"
+            ;
+          (*pi)--;
+        }
+        f <<
+          "</TR>\n"
+          "</TABLE>\n<BR>\n<BR>\n"
+        ;
       }
-      if( nextLevel ){
-        table.clear();
-        writeBPFTHtmlReport(level + 1,&endTime);
-      }
+    }
+    bool nextLevel = !(bool) logger_->config_->valueByPath(section_ + ".html_report.refresh_only_current",false) || logger_->cgi_.isCGI();
+    switch( level ){
+      case rlYear :
+        endTime.tm_mon = 11;
+        endTime.tm_mday = 31;
+        nextLevel = nextLevel || endTime.tm_year == curTime_.tm_year;
+        break;
+      case rlMon :
+        endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+        nextLevel = nextLevel || endTime.tm_mon == curTime_.tm_mon;
+        break;
+      case rlDay :
+        endTime.tm_hour = 23;
+        nextLevel = nextLevel || endTime.tm_mday == curTime_.tm_mday;
+        break;
+      default    :
+        assert( 0 );
+    }
+    if( nextLevel ){
+      table.clear();
+      writeBPFTHtmlReport(level + 1,&endTime);
     }
     endTime = endTime2;
     switch( level ){
@@ -1196,10 +1162,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     }
     beginTime = beginTime2;
   }
-  filter = logger_->config_->textByPath(section_ + ".html_report.filter");
-  if( logger_->cgi_.isCGI() )
-    filter_ = logger_->cgi_.paramAsString("filter");
-  {
+  if( !logger_->cgi_.isCGI() || level == rlYear ){
+    utf8::String filter(logger_->config_->textByPath(section_ + ".html_report.filter"));
+    if( logger_->cgi_.isCGI() )
+      filter = logger_->cgi_.paramAsString("filter");
     AutoLock<InterlockedMutex> lock(logger_->dnsMutex_);
     uintmax_t m0 = logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_;
     utf8::String hitRatio("-"), missRatio("-");
@@ -1234,14 +1200,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       "miss ratio: " + missRatio +
       "<BR>\n"
     ;
-  }
-  if( !logger_->cgi_.isCGI() ){
     logger_->writeHtmlTail(f,ellapsed_);
-    f.resize(f.tell());
   }
   if( level == rlYear ){
 l1: database_->rollback();
-    if( logger_->cgi_.isCGI() ) logger_->writeHtmlTail(f,ellapsed_);
   }
 }
 //------------------------------------------------------------------------------
