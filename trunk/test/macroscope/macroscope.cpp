@@ -194,6 +194,16 @@ void Logger::main()
   verbose_ = config_->section("macroscope").value("verbose",false);
 
 // print query form if is CGI and no CGI parameters
+//  setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  setEnv("QUERY_STRING",
+    "if=sk1&"
+    "bday=22&bmon=3&byear=2007&"
+    "eday=22&emon=3&eyear=2007&"
+    "resolve=on&"
+    "threshold=4M&"
+    "threshold2=&"
+    "filter=src+192.168.0.0%2F16+and+dst+192.168.0.0%2F16"
+  );
   cgi_.initialize();
   if( cgi_.isCGI() ){
     if( cgi_.paramCount() == 0 ){
@@ -201,12 +211,12 @@ void Logger::main()
         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
         "<HTML>\n"
         "<HEAD>\n"
-        "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\">\n"
+        "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
         "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
         "<TITLE>Statistics query form</TITLE>\n"
         "</HEAD>\n"
 	"<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
-        "<FORM ACTION=\"/cgi-bin/" + getNameFromPathName(getExecutableName()) + "\"" + " METHOD=\"POST\" accept-charset=\"utf8\">\n"
+        "<FORM ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"POST\" accept-charset=\"utf8\">\n"
         "  <label for=\"if\">Interface</label>\n"
         "  <select name=\"if\" id=\"if\">\n"
       ;
@@ -319,8 +329,7 @@ void Logger::main()
         "  <input type=\"text\" name=\"threshold2\" id=\"threshold2\">\n"
         "  <BR>\n"
 	"  <P>Please type address filter or leave empty</P>\n"
-	"  <textarea name=\"filter\" rows=\"4\" cols=\"80\">\n"
-	"  </textarea>\n"
+	"  <textarea name=\"filter\" rows=\"4\" cols=\"80\"></textarea>\n"
       ;
       cgi_ <<
         "  <BR>\n"
@@ -332,7 +341,7 @@ void Logger::main()
       ;
       return;
     }
-    verbose_ = false;
+//    verbose_ = false;
   }
   else {
     ConfigSection dbParamsSection;
@@ -537,7 +546,7 @@ void Logger::main()
         }
       }
     }
-    database_->commit();
+    database_->detach();
 
     trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
     threads_.safeAdd(newObjectR1C2C3<SquidSendmailThread>(*this,"macroscope","macroscope")).resume();

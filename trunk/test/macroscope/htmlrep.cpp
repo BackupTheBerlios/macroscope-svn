@@ -1421,7 +1421,7 @@ void Logger::writeHtmlHead(AsyncFile & f)
     "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
     "<HTML>\n"
     "<HEAD>\n"
-    "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf8\">\n"
+    "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
     "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
   //    "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"600\">\n"
   //    "<META HTTP-EQUIV=\"Pragma\" CONTENT=\"no-cache\">\n"

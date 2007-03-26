@@ -52,6 +52,8 @@ class CGI {
     utf8::String paramName(uintptr_t i);
     uintptr_t paramCount();
     
+    static utf8::String uudecode(const utf8::String & string);
+    
     bool isCGI(){ return method() != cgiNone; }
   protected:
     utf8::String queryString_;
@@ -65,10 +67,10 @@ class CGI {
 	  name_(name), value_(value) {}
       protected:
         static EmbeddedHashNode<Param,uintptr_t> & ehNLT(const uintptr_t & link,Array<Param> * & param){
-          return keyNode((*param)[link]);
+          return keyNode((*param)[link - 1]);
         }
         static uintptr_t ehLTN(const EmbeddedHashNode<Param,uintptr_t> & node,Array<Param> * & param){
-          return &keyNodeObject(node,NULL) - &(*param)[0];
+          return &keyNodeObject(node,NULL) - &(*param)[0] + 1;
         }
         static EmbeddedHashNode<Param,uintptr_t> & keyNode(const Param & object){
           return object.keyNode_;
