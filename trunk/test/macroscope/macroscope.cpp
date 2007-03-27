@@ -194,7 +194,7 @@ int32_t Logger::main()
   verbose_ = config_->section("macroscope").value("verbose",false);
 
 // print query form if is CGI and no CGI parameters
-/*  setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
   setEnv("QUERY_STRING",
     "if=sk1&"
     "bday=22&bmon=3&byear=2007&"
@@ -410,23 +410,24 @@ int32_t Logger::main()
       " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
       " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
       ")" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_CACHE_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
-      "CREATE INDEX INET_BPFT_STAT_CACHE_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
-      "CREATE UNIQUE INDEX INET_USERS_TRAF_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
-      "CREATE INDEX INET_USERS_TRAF_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
-      "CREATE INDEX INET_USERS_TRAF_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
+      "CREATE INDEX IBS_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
+      "CREATE INDEX IBS_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
+      "CREATE INDEX IBS_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
+      "CREATE INDEX IBS_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
+      "CREATE INDEX IBSC_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
+      "CREATE INDEX IBSC_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
+      "CREATE UNIQUE INDEX IUT_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
+      "CREATE INDEX IUT_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
+      "CREATE INDEX IUT_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
     ;
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-      metadata << "CREATE DESC INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-      metadata << "CREATE DESC INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
+      metadata << "CREATE DESC INDEX IBS_IDX5 ON INET_BPFT_STAT (st_if,st_start)";
+      metadata << "CREATE DESC INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+      metadata << "CREATE DESC INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
     }
     else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
-      metadata << "CREATE INDEX INET_USERS_TRAF_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-      metadata << "CREATE INDEX INET_USERS_MONTHLY_TOP_URL_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
+      metadata << "CREATE INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+      metadata << "CREATE INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
     }
     if( (bool) config_->section("macroscope").value("DROP_DATABASE",false) ){
       database_->attach();
@@ -582,9 +583,6 @@ int main(int _argc,char * _argv[])
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
-//  fprintf(stderr,"%s\n",(const char *) utf8::time2Str(getlocaltimeofday()).getOEMString());
-//  fprintf(stderr,"%s\n",(const char *) utf8::time2Str(gettimeofday()).getOEMString());
-//  fprintf(stderr,"%s\n",(const char *) utf8::int2Str(getgmtoffset()).getOEMString());
   utf8::String::Stream stream;
   try {
     uintptr_t i;

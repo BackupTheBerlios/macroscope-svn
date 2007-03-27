@@ -42,7 +42,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 #define NODEBUGMEM 1
 //---------------------------------------------------------------------------
-void * kmalloc(size_t size)
+void * kmalloc(size_t size,bool noThrow)
 {
   void * p = NULL;
   if( size > 0 ){
@@ -51,7 +51,7 @@ void * kmalloc(size_t size)
 #else
     p = malloc(size);
 #endif
-    if( p == NULL ){
+    if( p == NULL && !noThrow ){
       newObjectV1C2<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_NOT_ENOUGH_MEMORY + errorOffset,
@@ -70,9 +70,9 @@ void * kmalloc(size_t size)
   return p;
 }
 //---------------------------------------------------------------------------
-void * krealloc(void * p,size_t size)
+void * krealloc(void * p,size_t size,bool noThrow)
 {
-  if( p == NULL ) return kmalloc(size);
+  if( p == NULL ) return kmalloc(size,noThrow);
   void * a;
   if( size == 0 ){
     kfree(p);
@@ -84,7 +84,7 @@ void * krealloc(void * p,size_t size)
 #else
     a = realloc(p,size);
 #endif
-    if( a == NULL )
+    if( a == NULL && !noThrow )
       newObjectV1C2<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
         ERROR_NOT_ENOUGH_MEMORY + errorOffset,

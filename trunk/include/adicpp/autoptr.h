@@ -29,8 +29,8 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-void * kmalloc(size_t size);
-void * krealloc(void * p, size_t size);
+void * kmalloc(size_t size,bool noThrow);
+void * krealloc(void * p,size_t size,bool noThrow);
 void kfree(void * p);
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -251,7 +251,7 @@ AutoPtr< T> & AutoPtr< T>::alloc(size_t size)
 template< class T> inline
 AutoPtr< T> & AutoPtr< T>::realloc(size_t size)
 {
-  ptr_ = (T *) krealloc(ptr_, size);
+  ptr_ = (T *) krealloc(ptr_,size);
   return *this;
 }
 //---------------------------------------------------------------------------

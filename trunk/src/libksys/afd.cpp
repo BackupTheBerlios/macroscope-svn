@@ -398,7 +398,7 @@ int64_t AsyncFile::read(uint64_t pos,void * buf,uint64_t size)
         newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
-      status = ReadFile(descriptor_,buf,a,&rr,&overlapped);
+      status = ReadFile(descriptor_,buf,a,&rr,std_ || !seekable_ ? NULL : &overlapped);
       if( status != 0 || GetLastError() != ERROR_NO_SYSTEM_RESOURCES ) break;
       a >>= 1;
     }
@@ -478,7 +478,7 @@ int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
         newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
       }
       SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
-      status = WriteFile(descriptor_,buf,a,&ww,&overlapped);
+      status = WriteFile(descriptor_,buf,a,&ww,std_ || !seekable_ ? NULL : &overlapped);
       if( status != 0 || GetLastError() != ERROR_NO_SYSTEM_RESOURCES ) break;
       a >>= 1;
     }

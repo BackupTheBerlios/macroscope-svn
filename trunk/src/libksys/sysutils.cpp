@@ -112,7 +112,7 @@ utf8::String getEnv(const utf8::String & name)
   utf8::WideString s(name.getUNICODEString());
   sz = GetEnvironmentVariableW(s,b,0);
   if( sz != 0 ){
-    b.alloc(sz);
+    b.alloc(sz * sizeof(wchar_t));
     sz = GetEnvironmentVariableW(s,b,sz);
   }
   if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
@@ -2714,6 +2714,8 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::St
 //---------------------------------------------------------------------------
 bool checkMachineBinding(const utf8::String & key,bool abortProgram)
 {
+  struct tm lt = time2tm(getlocaltimeofday());
+  if( lt.tm_year < 2008 - 1900 ) return false;
   bool pirate = true, mkey = true, expire = true;
   try {
     SHA256Cryptor decryptor;
@@ -2758,8 +2760,6 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
   catch( ... ){
     pirate = true;
   }
-  struct tm lt = time2tm(getlocaltimeofday());
-  pirate = lt.tm_year >= 2008 - 1900 && lt.tm_mon >= 0 && lt.tm_mday >= 1 && pirate;
   if( pirate ){
     if( abortProgram ){
       if( !mkey && expire ){

@@ -151,9 +151,6 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
     }
   }
   if( filter.strlen() > 0 ) filter = " AND (" + filter + ") ";
-#ifndef NDEBUG
-  fprintf(stderr,"filter:%s\n",(const char *) filter.getOEMString());
-#endif
   return filter;
 }
 //------------------------------------------------------------------------------
@@ -591,10 +588,9 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
         if( pResult != NULL ) pStatement->unloadRowByIndex(pResult->addRow());
       }
-      dbtrUpdate_->commit();
-      return;
     }
     dbtrUpdate_->commit();
+    if( pResult != NULL ) return;
   }
   if( pResult == NULL ){
     *pDgramBytes = pStatement->sum("SUM1");
@@ -647,12 +643,22 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     database_->start();
     clearBPFTCache();
     statement_->text(
-      "SELECT MIN(st_start) AS BT, MAX(st_start) AS ET "
-      "FROM INET_BPFT_STAT WHERE st_if = :st_if"
-    )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
-    if( statement_->fieldIndex("BT") < 0 || statement_->fieldIndex("ET") < 0 || statement_->rowCount() == 0 )
-      goto l1;
+      "SELECT " +
+      utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ? "FIRST 1 " : "") +
+      "st_start AS BT FROM INET_BPFT_STAT WHERE st_if = :st_if ORDER BY st_if, st_start" +
+      utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ? " LIMIT 0,1" : "")
+    );
+    statement_->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
+    if( statement_->fieldIndex("BT") < 0 || statement_->rowCount() == 0 ) goto l1;
     beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
+    statement_->text(
+      "SELECT " +
+      utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ? "FIRST 1 " : "") +
+      "st_start AS ET FROM INET_BPFT_STAT WHERE st_if = :st_if ORDER BY st_if DESC, st_start DESC" +
+      utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ? " LIMIT 0,1" : "")
+    );
+    statement_->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
+    if( statement_->fieldIndex("ET") < 0 || statement_->rowCount() == 0 ) goto l1;
     endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
     if( bidirectional_ ){
       stBPFTSel_->text(
@@ -1012,11 +1018,11 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
           uint32_t ip41 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
           uint32_t ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
-	  utf8::String row(
+	        utf8::String row(
             "<TR>\n"
             "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
-	    genHRef(ip41) +
-	    (bidirectional_ ? " <B>--></B> " + genHRef(ip42) : utf8::String()) +
+	          genHRef(ip41) +
+	          (bidirectional_ ? " <B>--></B> " + genHRef(ip42) : utf8::String()) +
             "  </TH>\n"
             "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
             formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
@@ -1042,7 +1048,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             }
             if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
               stBPFTHostSel_->
-	        paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
+	              paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
                 paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
                 paramAsMutant("src",table[0](i,"st_src_ip"))->
                 paramAsMutant("dst",table[0](i,"st_dst_ip"));
@@ -1056,10 +1062,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
                 formatTraf(sum1,table[*pi + av].sum("SUM1")) + "\n"
                 "  </TH>\n"
               ;
-	    }
-	    (*pi)--;
+	          }
+	          (*pi)--;
           }
-	  f << row + "</TR>\n";
+	        f << row + "</TR>\n";
           switch( level ){
             case rlYear :
               endTime.tm_mon = 11;

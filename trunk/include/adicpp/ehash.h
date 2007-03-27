@@ -588,10 +588,10 @@ void EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::optimize(OptType o) const
       assert( size_ >= staticHashCount() );
       i = size_ << 1;
       if( size_ > staticHashCount() ){
-        a = (LT *) krealloc(hash_,i * sizeof(LT));
+        a = (LT *) krealloc(hash_,i * sizeof(LT),true);
       }
       else {
-        a = (LT *) kmalloc(i * sizeof(LT));
+        a = (LT *) kmalloc(i * sizeof(LT),true);
         memcpy(a,staticHash_,sizeof(staticHash_));
       }
       if( a != NULL ){
@@ -607,8 +607,8 @@ void EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::optimize(OptType o) const
       if( i >= staticHashCount() ){
         head = getChain();
         if( i > staticHashCount() ){
-          hash_ = (LT *) krealloc(hash_,i * sizeof(LT));
-          assert( hash_ != NULL );
+          a = (LT *) krealloc(hash_,i * sizeof(LT),true);
+          if( a == NULL ) i <<= 1; else hash_ = a;
         }
         else {
           kfree(hash_);
