@@ -132,16 +132,16 @@ inline
 Statement * Statement::unload(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
 {
   unloadColumns(table,clearTable);
-  uintptr_t i, j, k, row, tr;
+  uintptr_t i, j, k, row;
   intptr_t srow = rowIndex();
   if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
   k = rowCount();
   if( k >= eRowNum ) k = eRowNum + 1;
-  for( j = fieldCount(), tr = 0, row = sRowNum; row < k; row++, tr++ ){
+  for( j = fieldCount(), row = sRowNum; row < k; row++ ){
     selectRow(row);
     table.addRow();
     for( i = 0; i < j; i++ )
-      table(tr,fieldName(i)) = valueAsMutant(i);
+      table(table.rowCount() - 1,fieldName(i)) = valueAsMutant(i);
   }
   if( srow >= 0 ) selectRow(srow);
   return this;
@@ -154,16 +154,16 @@ inline
 Statement * Statement::unloadByIndex(Table & table,uintptr_t sRowNum,uintptr_t eRowNum,bool clearTable)
 {
   unloadColumns(table,clearTable);
-  uintptr_t i, j, k, row, tr;
+  uintptr_t i, j, k, row;
   intptr_t srow = rowIndex();
   if( sRowNum > eRowNum ) ksys::xchg(sRowNum,eRowNum);
   k = rowCount();
   if( k >= eRowNum ) k = eRowNum + 1;
-  for( j = fieldCount(), tr = 0, row = sRowNum; row < k; row++, tr++ ){
+  for( j = fieldCount(), row = sRowNum; row < k; row++ ){
     selectRow(row);
     table.addRow();
     for( i = 0; i < j; i++ )
-      table(tr,i) = valueAsMutant(i);
+      table(table.rowCount() - 1,i) = valueAsMutant(i);
   }
   if( srow >= 0 ) selectRow(srow);
   return this;

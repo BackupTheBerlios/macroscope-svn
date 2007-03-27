@@ -921,7 +921,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
   }
 }
 //------------------------------------------------------------------------------
-uintptr_t Logger::SquidSendmailThread::nonZeroYearMonthsColumns(struct tm byear)
+uintptr_t Logger::SquidSendmailThread::nonZeroYearMonthsColumns(struct tm byear,const utf8::String & user,uintptr_t isGroup)
 {
   byear.tm_mday = 1;
   byear.tm_hour = byear.tm_min = byear.tm_sec = 0;
@@ -932,15 +932,15 @@ uintptr_t Logger::SquidSendmailThread::nonZeroYearMonthsColumns(struct tm byear)
     eyear.tm_hour = 23;
     eyear.tm_min = 59;
     eyear.tm_sec = 59;
-    a += getTraf(ttAll,byear,eyear) > 0;
-    a += getTraf(ttWWW,byear,eyear) > 0;
-    a += getTraf(ttSMTP,byear,eyear) > 0;
+    a += getTraf(ttAll,byear,eyear,user,isGroup) > 0;
+    a += getTraf(ttWWW,byear,eyear,user,isGroup) > 0;
+    a += getTraf(ttSMTP,byear,eyear,user,isGroup) > 0;
     byear.tm_mon--;
   }
   return a;
 }
 //------------------------------------------------------------------------------
-uintptr_t Logger::SquidSendmailThread::nonZeroMonthDaysColumns(struct tm bmon)
+uintptr_t Logger::SquidSendmailThread::nonZeroMonthDaysColumns(struct tm bmon,const utf8::String & user,uintptr_t isGroup)
 {
   bmon.tm_mday = (int) monthDays(bmon.tm_year + 1900, bmon.tm_mon);
   bmon.tm_hour = bmon.tm_min = bmon.tm_sec = 0;
@@ -950,9 +950,9 @@ uintptr_t Logger::SquidSendmailThread::nonZeroMonthDaysColumns(struct tm bmon)
     emon.tm_hour = 23;
     emon.tm_min = 59;
     emon.tm_sec = 59;
-    a += getTraf(ttAll,bmon,emon) > 0;
-    a += getTraf(ttWWW,bmon,emon) > 0;
-    a += getTraf(ttSMTP,bmon,emon) > 0;
+    a += getTraf(ttAll,bmon,emon,user,isGroup) > 0;
+    a += getTraf(ttWWW,bmon,emon,user,isGroup) > 0;
+    a += getTraf(ttSMTP,bmon,emon,user,isGroup) > 0;
     bmon.tm_mday--;
   }
   return a;
