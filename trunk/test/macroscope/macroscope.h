@@ -183,8 +183,8 @@ class Logger {
         int64_t getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user = utf8::String(),uintptr_t isGroup = 0);
         void writeUserTop(const utf8::String & file,const utf8::String & user,uintptr_t isGroup,const struct tm & beginTime,const struct tm & endTime);
         void writeMonthHtmlOutput(const utf8::String & file,const struct tm & year,bool threaded = false);
-        uintptr_t nonZeroYearMonthsColumns(struct tm byear);
-        uintptr_t nonZeroMonthDaysColumns(struct tm bmon);
+        uintptr_t nonZeroYearMonthsColumns(struct tm byear,const utf8::String & user,uintptr_t isGroup);
+        uintptr_t nonZeroMonthDaysColumns(struct tm bmon,const utf8::String & user,uintptr_t isGroup);
         static intptr_t sortUsersTrafTable(uintptr_t row1,uintptr_t row2,const Table<Mutant> & table);
         static intptr_t sortUsersTrafTables(Table<Mutant> * & p1,Table<Mutant> * & p2);
         void genUsersTable(Vector<Table<Mutant> > & usersTrafTables,const struct tm & beginTime,const struct tm & endTime);

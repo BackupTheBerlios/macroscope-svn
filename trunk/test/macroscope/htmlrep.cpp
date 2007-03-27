@@ -267,7 +267,13 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
     endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
     beginTime2 = beginTime;
     beginTime.tm_mon = endTime.tm_mon;
-    if( getTraf(ttAll,beginTime,endTime) > 0 ){
+    utf8::String gtUser;
+    uintptr_t gtIsGroup = 0;
+    if( perGroupReport_ ){
+      gtUser = logger_->config_->valueByPath(section_ + ".groups." + perGroupReportName_);
+      gtIsGroup = 1;
+    }
+    if( getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup) > 0 ){
       if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
         (const char *) utf8::tm2Str(beginTime).getOEMString(),
         (const char *) utf8::tm2Str(endTime).getOEMString()
@@ -279,7 +285,7 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
         "  <TH BGCOLOR=\"" +
         logger_->getDecor("table_head",section_) +
         "\" COLSPAN=" +
-        utf8::int2Str(uintmax_t(nonZeroMonthDaysColumns(endTime) + ttAll + 2)) +
+        utf8::int2Str(uintmax_t(nonZeroMonthDaysColumns(endTime,gtUser,gtIsGroup) + ttAll + 2)) +
         " ALIGN=left nowrap>\n" +
         "<A HREF=\"" + trafByMonthFile + "\">" +
         utf8::int2Str(uintmax_t(endTime.tm_mon + 1)) + "\n"
@@ -313,18 +319,18 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
         bt.tm_hour = 0;
         bt.tm_min = 0;
         bt.tm_sec = 0;
-        if( getTraf(ttAll, bt, endTime) > 0 ){
+        if( getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0 ){
           f <<
-	    "  <TH ALIGN=center COLSPAN=" +
-            utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
-            (getTraf(ttWWW, bt, endTime) > 0) +
-            (getTraf(ttSMTP, bt, endTime) > 0)) + " BGCOLOR=\"" +
+	          "  <TH ALIGN=center COLSPAN=" +
+            utf8::int2Str((getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0) +
+            (getTraf(ttWWW,bt,endTime,gtUser,gtIsGroup) > 0) +
+            (getTraf(ttSMTP,bt,endTime,gtUser,gtIsGroup) > 0)) + " BGCOLOR=\"" +
             logger_->getDecor("detail_head",section_) +
             "\" nowrap>\n"
-	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             utf8::String::print("%02d", endTime.tm_mday) + "\n"
             "    </FONT>\n"
-	    "  </TH>\n"
+	          "  </TH>\n"
           ;
         }
         endTime.tm_mday--;
@@ -337,15 +343,15 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
         bt.tm_hour = 0;
         bt.tm_min = 0;
         bt.tm_sec = 0;
-        if( getTraf(ttAll, bt, endTime) > 0 ){
+        if( getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0 ){
           for( i = ttAll; i >= 0; i-- ){
-            if( getTraf(TrafType(i), bt, endTime) == 0 ) continue;
+            if( getTraf(TrafType(i),bt,endTime,gtUser,gtIsGroup) == 0 ) continue;
             f <<
-	      "  <TH ALIGN=center BGCOLOR=\"" +
-	      utf8::String(trafTypeHeadDataColor_[i]) + "\" wrap>\n" +
+	            "  <TH ALIGN=center BGCOLOR=\"" +
+	            utf8::String(trafTypeHeadDataColor_[i]) + "\" wrap>\n" +
               "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" + trafTypeNick_[i] + "\n"
               "    </FONT>\n"
-	      "  </TH>\n"
+	            "  </TH>\n"
             ;
           }
         }
@@ -359,10 +365,10 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
       for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
         Table<Mutant> & usersTrafTable = usersTrafTables[k];
         for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-	  bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
+	        bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
           if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
           utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
-	  utf8::String alias(logger_->config_->textByPath(section_ + ".aliases." + user,user));
+	        utf8::String alias(logger_->config_->textByPath(section_ + ".aliases." + user,user));
           utf8::String topByUserFile(
             utf8::String::print(
               "top-%04d%02d-",
@@ -394,7 +400,7 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
             f <<
 	      "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyColor_[j]) + "\" nowrap>\n"
 	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-              formatTraf(usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime)) +
+              formatTraf(usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) +
 	      "    </FONT>\n"
 	      "  </TH>\n"
             ;
@@ -405,24 +411,24 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
             bt.tm_hour = 0;
             bt.tm_min = 0;
             bt.tm_sec = 0;
-            if( getTraf(ttAll, bt, endTime) > 0 ){
+            if( getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0 ){
               for( j = ttAll; j >= 0; j-- ){
-                if( getTraf(TrafType(j), bt, endTime) == 0 ) continue;
+                if( getTraf(TrafType(j),bt,endTime,gtUser,gtIsGroup) == 0 ) continue;
                 f <<
                   "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[j]) + "\" nowrap>\n"
                   "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
                   formatTraf(
                     getTraf(
-		      TrafType(j),
+		                  TrafType(j),
                       bt,
                       endTime,
                       usersTrafTable(i,"ST_USER"),
-		      usersTrafTable(i,"ST_IS_GROUP")
+		                  usersTrafTable(i,"ST_IS_GROUP")
                     ),
-                    getTraf(ttAll,bt,endTime)
+                    getTraf(ttAll,bt,endTime,gtUser,gtIsGroup)
                   ) +
-		  "    </FONT>\n"
-		  "  </TH>\n"
+            		  "    </FONT>\n"
+		              "  </TH>\n"
                 ;
               }
             }
@@ -448,9 +454,9 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
         f <<
           "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailColor_[j]) + "\" nowrap>\n"
           "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-	  formatTraf(getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime)) +
-	  "    </FONT>\n"
-	  "  </TH>\n"
+	        formatTraf(getTraf(TrafType(j),beginTime,endTime,gtUser,gtIsGroup),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) +
+	        "    </FONT>\n"
+	        "  </TH>\n"
         ;
       }
       // ѕечатаем итоговый трафик пользователей за дни
@@ -460,17 +466,17 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
         bt.tm_hour = 0;
         bt.tm_min = 0;
         bt.tm_sec = 0;
-        if( getTraf(ttAll,bt,et) > 0 ){
+        if( getTraf(ttAll,bt,et,gtUser,gtIsGroup) > 0 ){
           for( j = ttAll; j >= 0; j-- ){
-            if( getTraf(TrafType(j), bt, et) == 0 ) continue;
+            if( getTraf(TrafType(j),bt,et,gtUser,gtIsGroup) == 0 ) continue;
             f << 
               "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailDataColor_[j]) + "\" nowrap>\n" 
               "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-              (j == ttAll ? formatTraf(getTraf(TrafType(j),bt,et),getTraf(ttAll,beginTime,endTime)) :
-                            formatTraf(getTraf(TrafType(j),bt,et),getTraf(ttAll,bt,et))
-	      ) +
-	      "    </FONT>\n"
-	      "  </TH>\n"
+              (j == ttAll ? formatTraf(getTraf(TrafType(j),bt,et,gtUser,gtIsGroup),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) :
+                            formatTraf(getTraf(TrafType(j),bt,et,gtUser,gtIsGroup),getTraf(ttAll,bt,et,gtUser,gtIsGroup))
+	            ) +
+	            "    </FONT>\n"
+	            "  </TH>\n"
             ;
           }
         }
@@ -685,14 +691,18 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
     struct tm beginTime2, bt, et;
     gCount_ = logger_->config_->sectionByPath(section_ + ".groups").valueCount();
     groups_ = (bool) logger_->config_->valueByPath(section_ + ".html_report.groups",false) && gCount_ > 0;
+    utf8::String gtUser;
+    uintptr_t gtIsGroup = 0;
     if( perGroupReport_ ){
       gCount_ = 1;
       groups_ = true;
+      gtUser = logger_->config_->valueByPath(section_ + ".groups." + perGroupReportName_);
+      gtIsGroup = 1;
     }
     while( tm2Time(endTime) >= tm2Time(beginTime) ){
       beginTime2 = beginTime;
       beginTime.tm_year = endTime.tm_year;
-      if( getTraf(ttAll,beginTime,endTime) > 0 ){
+      if( getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup) > 0 ){
         if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
           (const char *) utf8::tm2Str(beginTime).getOEMString(),
           (const char *) utf8::tm2Str(endTime).getOEMString()
@@ -704,7 +714,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
           "  <TH BGCOLOR=\"" +
           logger_->getDecor("table_head",section_) +
           "\" COLSPAN=" +
-          utf8::int2Str(uintmax_t(nonZeroYearMonthsColumns(endTime) + ttAll + 2)) +
+          utf8::int2Str(uintmax_t(nonZeroYearMonthsColumns(endTime,gtUser,gtIsGroup) + ttAll + 2)) +
           " ALIGN=left nowrap>\n" +
           "   <A HREF=\"" + trafByYearFile + "\">\n" +
           utf8::int2Str(endTime.tm_year + 1900) + "\n"
@@ -739,16 +749,16 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
           bt.tm_min = 0;
           bt.tm_sec = 0;
           endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
-          if( getTraf(ttAll, bt, endTime) > 0 ){
+          if( getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0 ){
             f <<
-	      "  <TH ALIGN=center COLSPAN=" +
-              utf8::int2Str((getTraf(ttAll, bt, endTime) > 0) +
-              (getTraf(ttWWW, bt, endTime) > 0) +
-              (getTraf(ttSMTP, bt, endTime) > 0)) +
+	            "  <TH ALIGN=center COLSPAN=" +
+              utf8::int2Str((getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0) +
+              (getTraf(ttWWW,bt,endTime,gtUser,gtIsGroup) > 0) +
+              (getTraf(ttSMTP,bt,endTime,gtUser,gtIsGroup) > 0)) +
               " BGCOLOR=\"" << logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
-	      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" + utf8::String::print("%02d",endTime.tm_mon + 1) + "\n"
-	      "    </FONT>\n"
-	      "  </TH>\n"
+	            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" + utf8::String::print("%02d",endTime.tm_mon + 1) + "\n"
+	            "    </FONT>\n"
+	            "  </TH>\n"
             ;
           }
           endTime.tm_mon--;
@@ -764,14 +774,14 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
           bt.tm_min = 0;
           bt.tm_sec = 0;
           endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
-          if( getTraf(ttAll, bt, endTime) > 0 ){
+          if( getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0 ){
             for( i = ttAll; i >= 0; i-- ){
-              if( getTraf(TrafType(i), bt, endTime) == 0 ) continue;
+              if( getTraf(TrafType(i),bt,endTime,gtUser,gtIsGroup) == 0 ) continue;
               f <<
-	        "  <TH ALIGN=center BGCOLOR=\"" + utf8::String(trafTypeHeadDataColor_[i]) + "\" wrap>\n" +
-	        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" + trafTypeNick_[i] + "\n"
-	        "    </FONT>\n"
-	        "  </TH>\n"
+	              "  <TH ALIGN=center BGCOLOR=\"" + utf8::String(trafTypeHeadDataColor_[i]) + "\" wrap>\n" +
+	              "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" + trafTypeNick_[i] + "\n"
+	              "    </FONT>\n"
+	              "  </TH>\n"
               ;
             }
           }
@@ -786,27 +796,27 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
         for( k = usersTrafTables.count() - 1; k >= 0; k-- ){
           Table<Mutant> & usersTrafTable = usersTrafTables[k];
           for( i = usersTrafTable.rowCount() - 1; i >= 0; i-- ){
-	    bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
+	          bool isGroup = usersTrafTable(i,"ST_IS_GROUP");
             if( getTraf(ttAll,beginTime,endTime,usersTrafTable(i,"ST_USER"),usersTrafTable(i,"ST_IS_GROUP")) == 0 ) continue;
-	    utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
+	          utf8::String user(usersTrafTable(i,isGroup ? "ST_GROUP" : "ST_USER"));
             utf8::String alias(logger_->config_->textByPath(section_ + ".aliases." + user,user));
             f <<
-  	      "<TR>\n"
-	      "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.user",section_) + "\" nowrap>\n"
+  	          "<TR>\n"
+	            "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.user",section_) + "\" nowrap>\n"
               "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               alias +
-	      (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
-	      "    </FONT>\n"
-	      "  </TH>\n"
+	            (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
+	            "    </FONT>\n"
+	            "  </TH>\n"
             ;
             for( j = ttAll; j >= 0; j-- ){
               f <<
-	        "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyColor_[j]) + "\" nowrap>\n"
-  	        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-	        formatTraf(usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime)) +
-	        "    </FONT>\n"
-	        "  </TH>\n"
-	      ;
+	              "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyColor_[j]) + "\" nowrap>\n"
+  	            "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	              formatTraf(usersTrafTable(i,trafTypeColumnName[j]),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) +
+	              "    </FONT>\n"
+	              "  </TH>\n"
+	            ;
             }
           // ѕечатаем трафик пользователей помес€чно
             while( endTime.tm_mon >= 0 ){
@@ -816,24 +826,24 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
               bt.tm_min = 0;
               bt.tm_sec = 0;
               endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900, endTime.tm_mon);
-              if( getTraf(ttAll,bt,endTime) > 0 ){
+              if( getTraf(ttAll,bt,endTime,gtUser,gtIsGroup) > 0 ){
                 for( j = ttAll; j >= 0; j-- ){
                   if( getTraf(TrafType(j),bt,endTime) == 0 ) continue;
                   f <<
-		    "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[j]) + "\" nowrap>\n"
-		    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-		    formatTraf(
-  		      getTraf(
-		        TrafType(j),
-		        bt,
-		        endTime,
-		        usersTrafTable(i,"ST_USER"),
-		        usersTrafTable(i,"ST_IS_GROUP")
-		      ),
-		      getTraf(ttAll,bt,endTime)
-		    ) +
-		    "    </FONT>\n"
-		    "  </TH>\n"
+		                "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[j]) + "\" nowrap>\n"
+		                "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+		                formatTraf(
+  		                  getTraf(
+		                    TrafType(j),
+		                    bt,
+		                    endTime,
+		                    usersTrafTable(i,"ST_USER"),
+		                    usersTrafTable(i,"ST_IS_GROUP")
+		                  ),
+		                  getTraf(ttAll,bt,endTime,gtUser,gtIsGroup)
+		                ) +
+		                "    </FONT>\n"
+		                "  </TH>\n"
                   ;
                 }
               }
@@ -847,9 +857,9 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
         // ѕечатаем итоговый трафик пользователей за год
         f <<
           "<TR>\n"
-	  "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.user",section_) + "\" wrap>\n"
-	  "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-	  "Summary traffic of all users: "
+	        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.user",section_) + "\" wrap>\n"
+	        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
+	        "Summary traffic of all users: "
         ;
         f <<
           "    </FONT>\n"
@@ -857,11 +867,11 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
         ;
         for( j = ttAll; j >= 0; j-- ){
           f <<
-	    "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailColor_[j]) + "\" nowrap>\n"
-	    "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-	    formatTraf(getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime)) +
-	    "    </FONT>\n"
-	    "  </TH>\n"
+	          "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailColor_[j]) + "\" nowrap>\n"
+	          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+	          formatTraf(getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) +
+	          "    </FONT>\n"
+	          "  </TH>\n"
           ;
         }
         // ѕечатаем итоговый трафик пользователей за мес€цы
@@ -873,15 +883,15 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
           bt.tm_min = 0;
           bt.tm_sec = 0;
           et.tm_mday = (int) monthDays(et.tm_year + 1900, et.tm_mon);
-          if( getTraf(ttAll, bt, et) > 0 ){
+          if( getTraf(ttAll,bt,et,gtUser,gtIsGroup) > 0 ){
             for( j = ttAll; j >= 0; j-- ){
-              if( getTraf(TrafType(j), bt, et) == 0 ) continue;
+              if( getTraf(TrafType(j),bt,et,gtUser,gtIsGroup) == 0 ) continue;
               f <<
                 "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailDataColor_[j]) + "\" nowrap>\n"
                 "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-                (j == ttAll ? formatTraf(getTraf(TrafType(j), bt, et),getTraf(ttAll,beginTime,endTime)) :
-                              formatTraf(getTraf(TrafType(j), bt, et),getTraf(ttAll,bt,et))
-	        ) +
+                (j == ttAll ? formatTraf(getTraf(TrafType(j),bt,et,gtUser,gtIsGroup),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) :
+                              formatTraf(getTraf(TrafType(j),bt,et,gtUser,gtIsGroup),getTraf(ttAll,bt,et,gtUser,gtIsGroup))
+	              ) +
                 "    </FONT>\n"
                 "  </TH>\n"
               ;
@@ -922,9 +932,9 @@ uintptr_t Logger::SquidSendmailThread::nonZeroYearMonthsColumns(struct tm byear)
     eyear.tm_hour = 23;
     eyear.tm_min = 59;
     eyear.tm_sec = 59;
-    a += getTraf(ttAll, byear, eyear) > 0;
-    a += getTraf(ttWWW, byear, eyear) > 0;
-    a += getTraf(ttSMTP, byear, eyear) > 0;
+    a += getTraf(ttAll,byear,eyear) > 0;
+    a += getTraf(ttWWW,byear,eyear) > 0;
+    a += getTraf(ttSMTP,byear,eyear) > 0;
     byear.tm_mon--;
   }
   return a;
