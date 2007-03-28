@@ -443,10 +443,7 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
         "<TR>\n"
         "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.user",section_) + "\" wrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-        "Summary traffic of all users:"
-      ;
-      f <<
-        "\n"
+        "Summary traffic of all users:\n"
         "    </FONT>\n"
         "  </TH>\n"
       ;
@@ -859,17 +856,15 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
           "<TR>\n"
 	        "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.user",section_) + "\" wrap>\n"
 	        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-	        "Summary traffic of all users: "
-        ;
-        f <<
-          "    </FONT>\n"
+	        "Summary traffic of all users:\n"
+	  "    </FONT>\n"
           "  </TH>\n"
         ;
         for( j = ttAll; j >= 0; j-- ){
           f <<
 	          "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeTailColor_[j]) + "\" nowrap>\n"
 	          "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-	          formatTraf(getTraf(TrafType(j),beginTime,endTime),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) +
+	          formatTraf(getTraf(TrafType(j),beginTime,endTime,gtUser,gtIsGroup),getTraf(ttAll,beginTime,endTime,gtUser,gtIsGroup)) +
 	          "    </FONT>\n"
 	          "  </TH>\n"
           ;
