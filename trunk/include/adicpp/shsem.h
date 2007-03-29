@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,14 @@
 #define _shsem_H_
 //---------------------------------------------------------------------------
 namespace ksys {
-
 //---------------------------------------------------------------------------
 #if HAVE_SYS_IPC_H && HAVE_SYS_SEM_H
+#ifndef SEM_R
+#define SEM_R 0
+#endif
+#ifndef SEM_A
+#define SEM_A 0
+#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

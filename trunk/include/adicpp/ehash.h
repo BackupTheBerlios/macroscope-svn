@@ -49,7 +49,7 @@ EmbeddedHashNode<T,LT>::~EmbeddedHashNode()
 }
 //---------------------------------------------------------------------------
 template <typename T,typename LT> inline
-EmbeddedHashNode<T,LT>::EmbeddedHashNode() : next_(NULL)
+EmbeddedHashNode<T,LT>::EmbeddedHashNode()
 {
 }
 //---------------------------------------------------------------------------
@@ -146,7 +146,7 @@ class EmbeddedHash {
     void operator = (const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> &);
 
     uintptr_t staticHashCount() const { return sizeof(staticHash_) / sizeof(staticHash_[0]); }
-    void clearStaticHash() const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) staticHash_[i] = NULL; }
+    void clearStaticHash() const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) staticHash_[i] = (LT) NULL; }
     void xchgStaticHash(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & a) const { for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) ksys::xchg(staticHash_[i],a.staticHash_[i]); }
 
     LT * internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const;
@@ -275,7 +275,7 @@ EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>:
   LT * head = hash_, * tail = head + size_, walk, w;
   while( head < tail ){
     walk = *head;
-    while( walk != NULL ){
+    while( walk != (LT) NULL ){
       w = NLT(walk,param_).next();
       deleteObject(&O(NLT(walk,param_),NULL));
       walk = w;
@@ -326,7 +326,7 @@ template <
 EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject) const
 {
   LT * head = internalFind(object,throwIfExist,false,deleteIfExist,false);
-  if( *head == NULL ){
+  if( *head == (LT) NULL ){
     if( pObject != NULL ) *pObject = const_cast<T *>(&object);
     *head = LTN(N(object),param_);
     N(object).next() = LT(NULL);
@@ -453,7 +453,7 @@ template <
 T * EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::find(const T & object,bool deleteIfExist,bool deleteIfNotExist) const
 {
   LT * p = internalFind(object,false,false,deleteIfExist,deleteIfNotExist);
-  return *p == NULL ? NULL : &O(NLT(*p,param_),NULL);
+  return *p == (LT) NULL ? (T *) NULL : &O(NLT(*p,param_),NULL);
 }
 //---------------------------------------------------------------------------
 template <
@@ -473,12 +473,12 @@ inline
 LT * EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::internalFind(const T & object,bool throwIfExist,bool throwIfNotExist,bool deleteIfExist,bool deleteIfNotExist) const
 {
   LT * head = hash_ + (H(object) & (size_ - 1));
-  while( *head != NULL ){
+  while( *head != (LT) NULL ){
     if( E(O(NLT(*head,param_),NULL),object) ) break;
     head = &NLT(*head,param_).next();
   }
   int32_t err = 0;
-  if( *head != NULL ){
+  if( *head != (LT) NULL ){
     if( deleteIfExist ) deleteObject(&object);
     if( throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -488,7 +488,7 @@ LT * EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::internalFind(const T & object,bool 
 #endif
     }
   }
-  else if( *head == NULL ){
+  else if( *head == (LT) NULL ){
     if( deleteIfNotExist ) deleteObject(&object);
     if( throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -519,12 +519,12 @@ inline
 #endif
 LT EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::getChain() const
 {
-  LT head = NULL, * p0, * p1, a0, a1;
+  LT head = (LT) NULL, * p0, * p1, a0, a1;
   p0 = hash_;
   p1 = p0 + size_;
   while( p0 < p1 ){
     a0 = *p0;
-    while( a0 != NULL ){
+    while( a0 != (LT) NULL ){
       a1 = NLT(a0,param_).next();
       NLT(a0,param_).next() = head;
       head = a0;
@@ -552,10 +552,10 @@ inline
 void EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::putChain(LT head) const
 {
   LT * p0, a0;
-  while( head != NULL ){
+  while( head != (LT) NULL ){
     a0 = NLT(head,param_).next();
     p0 = internalFind(O(NLT(head,param_),NULL),false,false,false,false);
-    assert( p0 != NULL && *p0 == NULL );
+    assert( p0 != NULL && *p0 == (LT) NULL );
     *p0 = head;
     NLT(head,param_).next() = LT(NULL);
     head = a0;
