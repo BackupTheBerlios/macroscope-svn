@@ -62,6 +62,8 @@ class LogFile : protected Thread {
     const uintptr_t & codePage() const;
     LogFile & bufferDataTTA(uint64_t a);
     const uint64_t & bufferDataTTA() const;
+
+    LogFile & flush(bool wait = false);
   protected:
     static const char * const priNicks_[];
     utf8::String file_;

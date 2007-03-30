@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -319,6 +319,27 @@ LogFile & LogFile::setAllDebugLevels(intptr_t value)
 {
   for( intptr_t i = sizeof(enabledLevels_) * 8 - 1; i >= 0; i-- )
     debugLevel(i,value);
+  return *this;
+}
+//---------------------------------------------------------------------------
+LogFile & LogFile::flush(bool wait)
+{
+  int64_t ft;
+  {
+    AutoLock<InterlockedMutex> lock2(threadMutex_);
+    if( bufferPos_ > 0 ){
+      bufferSemaphore_.post();
+      ft = lastFlushTime_;
+    }
+    else {
+      wait = false;
+    }
+  }
+  while( wait ){
+    AutoLock<InterlockedMutex> lock2(threadMutex_);
+    if( ft != lastFlushTime_ ) break;
+    ksleep1();
+  }
   return *this;
 }
 //---------------------------------------------------------------------------

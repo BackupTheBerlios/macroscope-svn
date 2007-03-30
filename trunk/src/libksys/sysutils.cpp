@@ -99,13 +99,13 @@ utf8::String getEnv(const utf8::String & name)
     sz = GetEnvironmentVariableA(s,b,0);
     if( sz != 0 ){
       b.alloc(sz);
-      sz = GetEnvironmentVariableA(s,b,sz);
+      sz = GetEnvironmentVariableA(s,b,sz) + 1;
     }
     if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
       int32_t err = GetLastError() + errorOffset;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
-    if( sz == 0 ) return utf8::String();
+    if( sz <= 1 ) return utf8::String();
     return b.ptr();
   }
   AutoPtr<wchar_t> b;
@@ -113,13 +113,13 @@ utf8::String getEnv(const utf8::String & name)
   sz = GetEnvironmentVariableW(s,b,0);
   if( sz != 0 ){
     b.alloc(sz * sizeof(wchar_t));
-    sz = GetEnvironmentVariableW(s,b,sz);
+    sz = GetEnvironmentVariableW(s,b,sz) + 1;
   }
   if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
-  if( sz == 0 ) return utf8::String();
+  if( sz <= 1 ) return utf8::String();
   return b.ptr();
 #else
   char * env = getenv(name.getANSIString());

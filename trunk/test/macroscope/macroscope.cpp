@@ -194,7 +194,8 @@ int32_t Logger::main()
   verbose_ = config_->section("macroscope").value("verbose",false);
 
 // print query form if is CGI and no CGI parameters
-  /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
+/*  setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  setEnv("REQUEST_METHOD","POST");
   setEnv("QUERY_STRING",
     "if=sk1&"
     "bday=22&bmon=3&byear=2007&"
@@ -205,6 +206,15 @@ int32_t Logger::main()
     "threshold2=&"
     "filter=src+sus+or+dst+sus"
   );*/
+/*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
+  LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
+  while( wcslen(pEnv) > 0 ){
+    stdErr.debug(9,utf8::String::Stream() << utf8::String(pEnv) << "\n");
+	  pEnv += wcslen(pEnv) + 1;
+  }
+  FreeEnvironmentStrings(pEnv);
+  stdErr.flush(true);
+#endif*/
   cgi_.initialize();
   if( cgi_.isCGI() ){
     if( cgi_.paramCount() == 0 ){
@@ -216,7 +226,7 @@ int32_t Logger::main()
         "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
         "<TITLE>Statistics query form</TITLE>\n"
         "</HEAD>\n"
-	"<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+	      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
         "<FORM ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"POST\" accept-charset=\"utf8\">\n"
         "  <label for=\"if\">Interface</label>\n"
         "  <select name=\"if\" id=\"if\">\n"
@@ -230,9 +240,9 @@ int32_t Logger::main()
       }
       cgi_ <<
         "  </select>\n"
-	"  <BR>\n"
+	      "  <BR>\n"
         "  <label for=\"bday\">Begin time</label>\n"
-	"  <select name=\"bday\" id=\"bday\">\n"
+	      "  <select name=\"bday\" id=\"bday\">\n"
       ;
       struct tm curTime = time2tm(gettimeofday());
       for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
@@ -242,7 +252,7 @@ int32_t Logger::main()
       }
       cgi_ <<
         "  </select>\n"
-	"  <select name=\"bmon\" id=\"bmon\">\n"
+	      "  <select name=\"bmon\" id=\"bmon\">\n"
       ;
       for( intptr_t i = 1; i <= 12; i++ ){
         cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
@@ -251,7 +261,7 @@ int32_t Logger::main()
       }
       cgi_ <<
         "  </select>\n"
-	"  <select name=\"byear\" id=\"byear\">\n"
+	      "  <select name=\"byear\" id=\"byear\">\n"
       ;
       for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
         cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
@@ -260,9 +270,9 @@ int32_t Logger::main()
       }
       cgi_ <<
         "  </select>\n"
-	"  <BR>\n"
+	      "  <BR>\n"
         "  <label for=\"eday\">End time</label>\n"
-	"  <select name=\"eday\" id=\"eday\">\n"
+	      "  <select name=\"eday\" id=\"eday\">\n"
       ;
       for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
         cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
@@ -271,7 +281,7 @@ int32_t Logger::main()
       }
       cgi_ <<
         "  </select>\n"
-	"  <select name=\"emon\" id=\"emon\">\n"
+	      "  <select name=\"emon\" id=\"emon\">\n"
       ;
       for( intptr_t i = 1; i <= 12; i++ ){
         cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
@@ -280,7 +290,7 @@ int32_t Logger::main()
       }
       cgi_ <<
         "  </select>\n"
-	"  <select name=\"eyear\" id=\"eyear\">\n"
+	      "  <select name=\"eyear\" id=\"eyear\">\n"
       ;
       for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
         cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
@@ -299,46 +309,46 @@ int32_t Logger::main()
         "  <label for=\"threshold\">Minimal significant threshold</label>\n"
         "  <select name=\"threshold\" id=\"threshold\">\n"
         "    <option value=\"64K\">\n"
-	"      64K\n"
-	"    </option>\n"
+	      "      64K\n"
+	      "    </option>\n"
         "    <option value=\"128K\">\n"
-	"      128K\n"
-	"    </option>\n"
+	      "      128K\n"
+	      "    </option>\n"
         "    <option value=\"256K\">\n"
-	"      256K\n"
-	"    </option>\n"
+	      "      256K\n"
+	      "    </option>\n"
         "    <option value=\"512K\">\n"
-	"      512K\n"
-	"    </option>\n"
+	      "      512K\n"
+	      "    </option>\n"
         "    <option value=\"1M\">\n"
-	"      1M\n"
-	"    </option>\n"
+	      "      1M\n"
+	      "    </option>\n"
         "    <option value=\"2M\">\n"
-	"      2M\n"
-	"    </option>\n"
+	      "      2M\n"
+	      "    </option>\n"
         "    <option value=\"4M\" selected=\"selected\">\n"
-	"      4M\n"
-	"    </option>\n"
+	      "      4M\n"
+	      "    </option>\n"
         "    <option value=\"8M\">\n"
-	"      8M\n"
-	"    </option>\n"
+	      "      8M\n"
+	      "    </option>\n"
         "    <option value=\"16M\">\n"
-	"      16M\n"
-	"    </option>\n"
+	      "      16M\n"
+	      "    </option>\n"
         "  </select>\n"
         "  <label for=\"threshold2\">or type you custom value in bytes</label>\n"
         "  <input type=\"text\" name=\"threshold2\" id=\"threshold2\">\n"
         "  <BR>\n"
-	"  <P>Please type address filter or leave empty</P>\n"
-	"  <textarea name=\"filter\" rows=\"4\" cols=\"80\"></textarea>\n"
+	      "  <P>Please type address filter or leave empty</P>\n"
+	      "  <textarea name=\"filter\" rows=\"4\" cols=\"80\"></textarea>\n"
       ;
       cgi_ <<
         "  <BR>\n"
         "  <BR>\n"
         "  <INPUT TYPE=\"SUBMIT\" VALUE=\"Start\">\n"
         "</FORM>\n"
-	"</BODY>\n"
-	"</HTML>\n"
+	      "</BODY>\n"
+	      "</HTML>\n"
       ;
       return 0;
     }

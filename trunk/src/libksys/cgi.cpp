@@ -58,31 +58,34 @@ void CGI::initialize()
 //------------------------------------------------------------------------------
 utf8::String CGI::uudecode(const utf8::String & string)
 {
-  uintptr_t count;
-  AutoPtr<char> b;
-  b.alloc((count = string.size()) + 1);
-  const char * src = string.c_str(), * last = src + count;
-  char * dest = b;
-  for( count = 0; src < last; count++ ){
-    if( *src == '+' ){
-      *dest++ = ' ';
-      src++;
+  uintptr_t count = string.size();
+  if( count > 0 ){
+    AutoPtr<char> b;
+    b.alloc(count + 1);
+    const char * src = string.c_str(), * last = src + count;
+    char * dest = b;
+    for( count = 0; src < last; count++ ){
+      if( *src == '+' ){
+        *dest++ = ' ';
+        src++;
+      }
+      else if( *src == '%' ){
+        int code;
+        if( sscanf(src + 1,"%2x",&code) != 1 ) code = '?';
+        *dest++ = (char) code;
+        src += 3;
+      }
+      else {
+        *dest++ = *src++;
+      }
     }
-    else if( *src == '%' ){
-      int code;
-      if( sscanf(src + 1,"%2x",&code) != 1 ) code = '?';
-      *dest++ = (char) code;
-      src += 3;
-    }
-    else {
-      *dest++ = *src++;
-    }
+    b[count] = '\0';
+    b.realloc(count + 1);
+    utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,b.ptr());
+    b.ptr(NULL);
+    return container;
   }
-  b[count] = '\0';
-  b.realloc(count + 1);
-  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,b.ptr());
-  b.ptr(NULL);
-  return container;
+  return utf8::String();
 }
 //------------------------------------------------------------------------------
 void CGI::initalizeByMethodGET()
@@ -105,16 +108,21 @@ void CGI::initalizeByMethodGET()
 void CGI::initalizeByMethodPOST()
 {
   uintptr_t count((uintptr_t) utf8::str2Int(getEnv("CONTENT_LENGTH")));
-  AutoPtr<char> b;
-  b.alloc(count + 1);
-  if( fread(b,count,1,stdin) != 1 ){
-    int32_t err = errno;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  if( count > 0 ){
+    AutoPtr<char> b;
+    b.alloc(count + 1);
+    if( fread(b,count,1,stdin) != 1 && count > 0 ){
+      int32_t err = errno;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    b[count] = '\0';
+    utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,b.ptr());
+    b.ptr(NULL);
+    queryString_ = container;
   }
-  b[count] = '\0';
-  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,b.ptr());
-  b.ptr(NULL);
-  queryString_ = container;
+  else {
+    queryString_ = utf8::String();
+  }
 }
 //------------------------------------------------------------------------------
 CGIMethod CGI::method()
@@ -122,12 +130,17 @@ CGIMethod CGI::method()
   if( method_ == cgiInit ){
     if( getEnv("GATEWAY_INTERFACE").strlen() > 0 ){
       utf8::String requestMethod(getEnv("REQUEST_METHOD"));
-      if( requestMethod.strcasecmp("POST") == 0 ) method_ = cgiPOST;
-      else
-      if( requestMethod.strcasecmp("GET") == 0 ) method_ = cgiGET;
-      else
-      if( requestMethod.strcasecmp("HEAD") == 0 ) method_ = cgiHEAD;
-      else if( (queryString_ = getEnv("QUERY_STRING")).trim().strlen() > 0 ){
+      queryString_ = getEnv("QUERY_STRING");
+      if( requestMethod.strcasecmp("POST") == 0 ){
+        method_ = cgiPOST;
+      }
+      else if( requestMethod.strcasecmp("GET") == 0 ){
+        method_ = cgiGET;
+      }
+      else if( requestMethod.strcasecmp("HEAD") == 0 ){
+        method_ = cgiHEAD;
+      }
+      else if( queryString_.trim().strlen() > 0 ){
         method_ = cgiGET;
       }
       else
