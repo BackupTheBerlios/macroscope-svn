@@ -839,6 +839,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       break;
     case rlCount :
       return;
+    default :
+      pi = NULL;
+      sv = av = fv = 0;
   }
   if( logger_->cgi_.isCGI() ){
     f.fileName("stdout").open();

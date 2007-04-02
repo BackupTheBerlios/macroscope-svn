@@ -53,6 +53,11 @@
 #endif
 #endif
 
+#ifdef __linux__
+#define _BSD_SOURCE 1
+#define _XOPEN_SOURCE 600
+#endif
+
 #if HAVE_STDAFX_H
 #include <stdafx.h>
 #endif

@@ -35,7 +35,7 @@ bool AsyncDescriptor::isSocket() const
   return false;
 }
 //------------------------------------------------------------------------------
-#if HAVE_KQUEUE
+#if HAVE_KQUEUE || __linux__
 //------------------------------------------------------------------------------
 int64_t AsyncDescriptor::read2(void *,uint64_t)
 {
@@ -148,7 +148,7 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
     }
     kevents_.resize(64);
   }
-#else
+#else // TODO: use epoll under linux
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 #endif
@@ -220,7 +220,7 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
           }
 	}
 #else
-        newObject<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+        newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
         if( requests_.count() == 0 ) post();
       }
@@ -593,9 +593,13 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
 	    iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
+#if __linux__
+	    iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
+#else
 	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
             iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
+#endif
 #if HAVE_AIO_READ
             if( aio_read(iocb) == 0 ) errno = EINPROGRESS;
 #else
@@ -614,9 +618,13 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
             iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
+#if __linux__
+            iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
+#else
             iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
             iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
+#endif
 #if HAVE_AIO_WRITE
             if( aio_write(iocb) == 0 ) errno = EINPROGRESS;
 #else

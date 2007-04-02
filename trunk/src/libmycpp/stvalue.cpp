@@ -413,7 +413,7 @@ l1:   return utf8::time2Str(*pll);
 uintptr_t DSQLValues::checkRowIndex(uintptr_t row)
 {
   if( (uintptr_t) (intptr_t) row >= rows_.count() )
-    newObjectV1C2<EDSQLStInvalidRowIndex>(NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidRowIndex>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   return row;
 }
 //---------------------------------------------------------------------------

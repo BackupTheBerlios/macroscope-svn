@@ -269,7 +269,7 @@ uintptr_t utf8s2Lower(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uint
   intptr_t  r = 0, l = utf8lD, low , high ;
 
   while( utf8lS > 0 ){
-    uintptr_t c;
+    uintptr_t c = 0;
     r = utf82ucs(*(const unsigned char **) &utf8sS, utf8lS, c);
     if( r != 0 ) break;
     low = 0;
@@ -302,7 +302,7 @@ uintptr_t utf8s2Upper(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uint
   intptr_t  r = 0, l = utf8lD, low , high ;
 
   while( utf8lS > 0 ){
-    uintptr_t c;
+    uintptr_t c = 0;
     r = utf82ucs(*(const unsigned char **) &utf8sS, utf8lS, c);
     if( r != 0 ) break;
     low = 0;

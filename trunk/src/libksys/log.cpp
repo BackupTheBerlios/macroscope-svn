@@ -134,11 +134,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
     AutoPtr<char> buf;
     bool post = false;
     try {
-      char buf[128];
-      union {
-        char buf2[128];
-        wchar_t buf2w[128];
-      };
+      char buf[128], buf2[128 * sizeof(wchar_t)];
       intptr_t a, l;
 #if HAVE_SNPRINTF
 #define SNPRINTF snprintf
@@ -324,7 +320,7 @@ LogFile & LogFile::setAllDebugLevels(intptr_t value)
 //---------------------------------------------------------------------------
 LogFile & LogFile::flush(bool wait)
 {
-  int64_t ft;
+  uint64_t ft;
   {
     AutoLock<InterlockedMutex> lock2(threadMutex_);
     if( bufferPos_ > 0 ){

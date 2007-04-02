@@ -178,7 +178,6 @@ LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
 {
   union {
     int32_t * i32;
-    uint32_t * u32;
     uint8_t * i8;
   };
   i8 = buf;

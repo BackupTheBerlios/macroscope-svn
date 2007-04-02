@@ -996,10 +996,7 @@ int main(int _argc,char * _argv[])
   autoInitializer = autoInitializer;
 
   try {
-    union {
-      intptr_t i;
-      uintptr_t u;
-    };
+    uintptr_t u;
     stdErr.fileName(SYSLOG_DIR("msftp/") + "msftp.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msftp.conf");
 #ifndef NDEBUG

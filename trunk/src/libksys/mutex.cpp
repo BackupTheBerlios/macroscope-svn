@@ -143,7 +143,8 @@ InterlockedMutex::~InterlockedMutex()
     sem_ = NULL;
   }
 #elif HAVE_PTHREAD_H
-  if( mutex_ != NULL ){
+  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
+  if( memcmp(&mutex_,&stm,sizeof(mutex_)) != 0 ){
     int r = pthread_mutex_destroy(&mutex_);
     if( r != 0 )
       newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -221,8 +222,10 @@ void InterlockedMutex::release()
 //---------------------------------------------------------------------------
 #elif HAVE_PTHREAD_H
 //---------------------------------------------------------------------------
-InterlockedMutex::InterlockedMutex() : mutex_(NULL)
+InterlockedMutex::InterlockedMutex()
 {
+  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
+  mutex_ = stm;
   int r;
   /*pthread_mutexattr_t attr;
   if( pthread_mutexattr_init(&attr) != 0 ){
@@ -393,8 +396,10 @@ Mutex & Mutex::unlock()
 Event::~Event()
 {
 #if HAVE_PTHREAD_H
-  if( mutex_ != NULL ) pthread_mutex_destroy(&mutex_);
-  if( handle_ != NULL ) pthread_cond_destroy(&handle_);
+  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
+  if( memcpy(&mutex_,&stm,sizeof(mutex_)) != 0 ) pthread_mutex_destroy(&mutex_);
+  static const pthread_cond_t stc = PTHREAD_COND_INITIALIZER;
+  if( memcmp(&handle_,&stc,sizeof(handle_)) != 0 ) pthread_cond_destroy(&handle_);
 #elif defined(__WIN32__) || defined(__WIN64__)
   if( handle_ != NULL ) CloseHandle(handle_);
 #endif
@@ -404,8 +409,10 @@ Event::Event()
 {
   int32_t err;
 #if HAVE_PTHREAD_H
-  handle_ = NULL;
-  mutex_ = NULL;
+  static const pthread_cond_t stc = PTHREAD_COND_INITIALIZER;
+  handle_ = stc;
+  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
+  mutex_ = stm;
   if( pthread_cond_init(&handle_,NULL) != 0 || pthread_mutex_init(&mutex_,NULL) != 0 ){
     err = errno;
     pthread_mutex_destroy(&mutex_);

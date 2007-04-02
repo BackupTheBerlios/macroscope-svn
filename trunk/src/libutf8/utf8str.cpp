@@ -1338,7 +1338,7 @@ bool tryStr2Int(const String & str, intmax_t & a, uintptr_t pow)
 //---------------------------------------------------------------------------
 intmax_t str2Int(const String & str,uintptr_t pow)
 {
-  intmax_t a;
+  intmax_t a = 0;
   if( !tryStr2Int(str,a,pow) )
     newObjectV1C2<EStr2Scalar>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   return a;
@@ -1433,10 +1433,8 @@ String tm2Str(struct tm tv)
 //---------------------------------------------------------------------------
 String time2Str(int64_t tv)
 {
-  if( tv < 0 )
-    newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
-  int64_t us = tv % 1000000u;
-  time_t tt = (time_t) (tv / 1000000u);
+  uint64_t us = uint64_t(tv) % 1000000u;
+  time_t tt = (time_t) (uint64_t(tv) / 1000000u);
   struct tm t = *gmtime(&tt);
   uintptr_t l = 10;
   if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || us != 0 ) l += 9;
@@ -1445,16 +1443,14 @@ String time2Str(int64_t tv)
   sprintf(container->string_, "%02u.%02u.%04u", t.tm_mday, t.tm_mon + 1, t.tm_year + 1900);
   if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || us != 0 ){
     sprintf(container->string_ + 10, " %02u:%02u:%02u", t.tm_hour, t.tm_min, t.tm_sec);
-    if( us != 0 ) sprintf(container->string_ + 10 + 9, ".%06" PRId64, us);
+    if( us != 0 ) sprintf(container->string_ + 10 + 9, ".%06" PRIu64, us);
   }
   return container;
 }
 //---------------------------------------------------------------------------
 String timeval2Str(const struct timeval & tv)
 {
-  if( tv.tv_sec < 0 )
-    newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
-  time_t tt = tv.tv_sec / 1000000;
+  time_t tt = tv.tv_sec / 1000000u;
   struct tm t = *gmtime(&tt);
   uintptr_t l = 10;
   if( t.tm_hour != 0 || t.tm_min != 0 || t.tm_sec != 0 || tv.tv_usec != 0 ) l += 9;
@@ -1471,16 +1467,14 @@ String timeval2Str(const struct timeval & tv)
 //---------------------------------------------------------------------------
 String elapsedTime2Str(int64_t t)
 {
-  if( t < 0 )
-    newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
-  int64_t
-    a = t / 1000000,
+  uint64_t
+    a = uint64_t(t) / 1000000u,
     days = a / 60 / 60 / 24,
     hours = a / 60 / 60 - days * 24,
     mins = a / 60 - days * 24 * 60 - hours * 60,
     secs = a - days * 24 * 60 * 60 - hours * 60 * 60 - mins * 60,
-    msecs = t % 1000000;
-  utf8::String  s;
+    msecs = uint64_t(t) % 1000000u;
+  utf8::String s;
   s.resize(3 + 3 + 3 + 6);
   sprintf(s.c_str(), "%02d:%02d:%02d.%06d", int(hours), int(mins), int(secs), int(msecs));
   utf8::String rs(int2Str(days));
@@ -1489,11 +1483,7 @@ String elapsedTime2Str(int64_t t)
   return rs;
 }
 //---------------------------------------------------------------------------
-#if HAVE_LONG_DOUBLE
-String float2Str(long double a)
-#else
-String float2Str(double a)
-#endif
+String float2Str(ldouble a)
 {
 #if HAVE_LONG_DOUBLE
   static const char fmt[] = "%Lg";
@@ -1513,39 +1503,22 @@ String float2Str(double a)
   return container;
 }
 //---------------------------------------------------------------------------
-#if HAVE_LONG_DOUBLE
-bool tryStr2Float(const String & str, long double & a)
-#else
-bool tryStr2Float(const String & str,double & a)
-#endif
+bool tryStr2Float(const String & str, ldouble & a)
 {
 #if HAVE_LONG_DOUBLE
   static const char fmt[] = "%Lg";
 #else
   static const char fmt[] = "%lg";
 #endif
-#if HAVE_LONG_DOUBLE
-  long double       x;
-#else
-  double            x;
-#endif
-  bool              r     = sscanf(str.c_str(), fmt, &x) == 1;
-
+  ldouble x;
+  bool r = sscanf(str.c_str(), fmt, &x) == 1;
   if( r ) a = x;
   return r;
 }
 //---------------------------------------------------------------------------
-#if HAVE_LONG_DOUBLE
-long double str2Float(const String & str)
-#else
-double str2Float(const String & str)
-#endif
+ldouble str2Float(const String & str)
 {
-#if HAVE_LONG_DOUBLE
-  long double a;
-#else
-  double      a;
-#endif
+  ldouble a = 0;
   if( !tryStr2Float(str, a) )
     newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return a;

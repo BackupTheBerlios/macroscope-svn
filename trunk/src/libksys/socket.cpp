@@ -336,7 +336,7 @@ uint64_t AsyncSocket::sysRecv(void * buf,uint64_t len)
 {
   uint64_t r = 0;
   if( len > maxRecvSize_ ) len = maxRecvSize_;
-#if HAVE_KQUEUE
+#if HAVE_KQUEUE || __linux__
 l1:
 #endif
   ksys::Fiber * fiber = ksys::currentFiber();
@@ -349,7 +349,7 @@ l1:
   assert( fiber->event_.type_ == ksys::etRead );
 #if defined(__WIN32__) || defined(__WIN64__)
   if( fiber->event_.errno_ != 0 || fiber->event_.count_ == 0 ){
-#elif HAVE_KQUEUE
+#elif HAVE_KQUEUE || __linux__
   switch( fiber->event_.errno_ ){
     case 0           :
       if( fiber->event_.count_ == 0 ) goto l2;
@@ -434,7 +434,7 @@ uint64_t AsyncSocket::sysSend(const void * buf,uint64_t len)
 {
   uint64_t w = 0;
   if( len > maxSendSize_ ) len = maxSendSize_;
-#if HAVE_KQUEUE
+#if HAVE_KQUEUE || __linux__
 l1:
 #endif
   ksys::Fiber * fiber = ksys::currentFiber();
@@ -447,7 +447,7 @@ l1:
   assert( fiber->event_.type_ == ksys::etWrite );
 #if defined(__WIN32__) || defined(__WIN64__)
   if( fiber->event_.errno_ != 0 || fiber->event_.count_ == 0 ){
-#elif HAVE_KQUEUE
+#elif HAVE_KQUEUE || __linux__
   switch( fiber->event_.errno_ ){
     case 0           :
       if( fiber->event_.count_ == 0 ) goto l2;
@@ -862,7 +862,7 @@ BOOL AsyncSocket::GetOverlappedResult(
   return api.WSAGetOverlappedResult(socket_,lpOverlapped,lpNumberOfBytesTransferred,bWait,lpdwFlags);
 }
 //---------------------------------------------------------------------------
-#elif HAVE_KQUEUE
+#elif HAVE_KQUEUE || __linux__
 //---------------------------------------------------------------------------
 int AsyncSocket::accept()
 {

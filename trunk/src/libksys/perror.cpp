@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -107,7 +107,7 @@ utf8::String strError(int32_t err)
     }*/
 #endif
     AutoPtr<char> serr;
-#if HAVE_STRERROR_R
+#if HAVE_STRERROR_R && !__linux__
     int32_t er;
     size_t sel = 16;
     for(;;){

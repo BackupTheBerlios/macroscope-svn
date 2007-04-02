@@ -167,7 +167,7 @@ class AsyncFile : public AsyncDescriptor {
     BOOL Read(LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
     BOOL Write(LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
     BOOL GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD lpdwFlags);
-#elif HAVE_KQUEUE
+#elif HAVE_KQUEUE || __linux__
     int accept();
     void connect(AsyncEvent * request);
 #endif

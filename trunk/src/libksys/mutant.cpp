@@ -136,14 +136,8 @@ Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
 {
   if( type_ != newType || this != &m ){
     union {
-        intmax_t        i;
-#if HAVE_LONG_DOUBLE
-        long
-#endif
-        double f;
-        const char *    cStr;
-        const wchar_t * wStr;
-        const char *    str;
+      intmax_t i;
+      ldouble f;
     };
     utf8::String  s;
     MemoryStream  ms;

@@ -33,7 +33,12 @@ extern "C" {
 //---------------------------------------------------------------------------
 #if !HAVE_BE16ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline void be16enc(void * pp,uint16_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+void be16enc(void * pp,uint16_t u)
 {
   unsigned char *p = (unsigned char *)pp;
 
@@ -45,7 +50,12 @@ __forceinline void be16enc(void * pp,uint16_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_BE32ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline void be32enc(void * pp,uint32_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+void be32enc(void * pp,uint32_t u)
 {
   uint8_t * p = (uint8_t *) pp;
 
@@ -59,7 +69,12 @@ __forceinline void be32enc(void * pp,uint32_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_BE64ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline void be64enc(void *pp, uint64_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+void be64enc(void *pp, uint64_t u)
 {
   unsigned char *p = (unsigned char *)pp;
 
@@ -71,7 +86,12 @@ __forceinline void be64enc(void *pp, uint64_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_HTOBE16 && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint16_t htobe16(uint16_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint16_t htobe16(uint16_t u)
 {
   return (u >> 8) | ((u & 0xff) << 8);
 }
@@ -80,7 +100,12 @@ __forceinline uint16_t htobe16(uint16_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_HTOBE32 && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint32_t htobe32(uint32_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint32_t htobe32(uint32_t u)
 {
   return (u >> 24) | ((u >> 8) & 0xff00) | ((u << 8) & 0xff0000) | (u << 24);
 }
@@ -89,7 +114,12 @@ __forceinline uint32_t htobe32(uint32_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_HTOBE64 && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint64_t htobe64(uint64_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint64_t htobe64(uint64_t u)
 {
   return ((uint64_t) htobe32((uint32_t) u) << 32) | htobe32((uint32_t) (u >> 32));
 }
@@ -98,7 +128,12 @@ __forceinline uint64_t htobe64(uint64_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_LE16ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline void le16enc(void *pp, uint16_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+void le16enc(void *pp, uint16_t u)
 {
   *(uint16_t *) pp = u;
 }
@@ -107,7 +142,12 @@ __forceinline void le16enc(void *pp, uint16_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_LE32ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline void le32enc(void *pp, uint32_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+void le32enc(void *pp, uint32_t u)
 {
   *(uint32_t *) pp = u;
 }
@@ -116,7 +156,12 @@ __forceinline void le32enc(void *pp, uint32_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_LE64ENC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline void le64enc(void *pp, uint64_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+void le64enc(void *pp, uint64_t u)
 {
   *(uint64_t *) pp = u;
 }
@@ -125,7 +170,12 @@ __forceinline void le64enc(void *pp, uint64_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_LE16TOH && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint16_t le16toh(uint16_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint16_t le16toh(uint16_t u)
 {
   return u;
 }
@@ -134,7 +184,12 @@ __forceinline uint16_t le16toh(uint16_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_LE32TOH && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint32_t le32toh(uint32_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint32_t le32toh(uint32_t u)
 {
   return u;
 }
@@ -143,7 +198,12 @@ __forceinline uint32_t le32toh(uint32_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_LE64TOH && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint64_t le64toh(uint64_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint64_t le64toh(uint64_t u)
 {
   return u;
 }
@@ -152,7 +212,12 @@ __forceinline uint64_t le64toh(uint64_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_BE16DEC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint16_t be16dec(const void * pp)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint16_t be16dec(const void * pp)
 {
   unsigned char const *p = (unsigned char const *)pp;
  
@@ -164,7 +229,12 @@ __forceinline uint16_t be16dec(const void * pp)
 //---------------------------------------------------------------------------
 #if !HAVE_BE32DEC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint32_t be32dec(const void * pp)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint32_t be32dec(const void * pp)
 {
   uint8_t const * p = (uint8_t const *) pp;
   
@@ -175,7 +245,12 @@ __forceinline uint32_t be32dec(const void * pp)
 //---------------------------------------------------------------------------
 #if !HAVE_BE64DEC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint64_t be64dec(const void *pp)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint64_t be64dec(const void *pp)
 {
   unsigned char const *p = (unsigned char const *)pp;
 
@@ -186,7 +261,12 @@ __forceinline uint64_t be64dec(const void *pp)
 //---------------------------------------------------------------------------
 #if !HAVE_BE16TOH && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint16_t be16toh(uint16_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint16_t be16toh(uint16_t u)
 {
   return (u >> 8) | (u & 0xff) << 8;
 }
@@ -196,7 +276,12 @@ __forceinline uint16_t be16toh(uint16_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_BE32TOH && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint32_t be32toh(uint32_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint32_t be32toh(uint32_t u)
 {
   return (u << 24) | ((u << 8) & 0xff0000) | ((u >> 8) & 0xff00) | (u >> 24);
 }
@@ -205,7 +290,12 @@ __forceinline uint32_t be32toh(uint32_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_BE64TOH && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint64_t be64toh(uint64_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint64_t be64toh(uint64_t u)
 {
   return ((uint64_t) be32toh((uint32_t) u) << 32) | be32toh((uint32_t) (u >> 32));
 }
@@ -214,7 +304,12 @@ __forceinline uint64_t be64toh(uint64_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_LE16DEC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint16_t le16dec(const void *pp)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint16_t le16dec(const void *pp)
 {
   return *(uint16_t *) pp;
 }
@@ -223,7 +318,12 @@ __forceinline uint16_t le16dec(const void *pp)
 //---------------------------------------------------------------------------
 #if !HAVE_LE32DEC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint32_t le32dec(const void *pp)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint32_t le32dec(const void *pp)
 {
   return *(uint32_t *) pp;
 }
@@ -232,7 +332,12 @@ __forceinline uint32_t le32dec(const void *pp)
 //---------------------------------------------------------------------------
 #if !HAVE_LE64DEC && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint64_t le64dec(const void *pp)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint64_t le64dec(const void *pp)
 {
   return *(uint64_t *) pp;
 }
@@ -241,7 +346,12 @@ __forceinline uint64_t le64dec(const void *pp)
 //---------------------------------------------------------------------------
 #if !HAVE_HTOLE16 && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint16_t htole16(uint16_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint16_t htole16(uint16_t u)
 {
   return u;
 }
@@ -250,7 +360,12 @@ __forceinline uint16_t htole16(uint16_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_HTOLE32 && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint32_t htole32(uint32_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint32_t htole32(uint32_t u)
 {
   return u;
 }
@@ -259,7 +374,12 @@ __forceinline uint32_t htole32(uint32_t u)
 //---------------------------------------------------------------------------
 #if !HAVE_HTOLE64 && BYTE_ORDER == LITTLE_ENDIAN
 //---------------------------------------------------------------------------
-__forceinline uint64_t htole64(uint64_t u)
+#if __GNUG__
+static __inline__
+#elif _MSC_VER
+__forceinline
+#endif
+uint64_t htole64(uint64_t u)
 {
   return u;
 }

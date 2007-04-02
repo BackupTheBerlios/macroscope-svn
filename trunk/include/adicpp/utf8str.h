@@ -132,6 +132,12 @@ typedef StringT<wchar_t> WideString;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+String plane(const char * s, uintptr_t size);
+String plane0(ksys::AutoPtr<char> & s);
+String plane(ksys::AutoPtr<char> & s,uintptr_t size);
+String operator +(const char * s1, const String & s2);
+String operator +(const wchar_t * s1, const String & s2);
+//---------------------------------------------------------------------------
 class String {
   friend void ksys::initialize(int,char **);
   friend void ksys::cleanup();

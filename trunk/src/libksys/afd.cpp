@@ -180,10 +180,16 @@ file_t AsyncFile::openHelper(bool async)
 #ifndef O_DIRECT
 #define O_DIRECT 0
 #endif
+#ifndef O_EXLOCK
+#define O_EXLOCK 0
+#endif
   if( !readOnly_ )
     handle = ::open(
       ansiFileName,
       O_RDWR |
+#ifdef O_LARGEFILE
+      O_LARGEFILE |
+#endif
       (createIfNotExist_ ? O_CREAT : 0) |
       (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
       um | S_IRUSR | S_IWUSR
@@ -192,6 +198,9 @@ file_t AsyncFile::openHelper(bool async)
     handle = ::open(
       ansiFileName,
       O_RDONLY |
+#ifdef O_LARGEFILE
+      O_LARGEFILE |
+#endif
       (createIfNotExist_ ? O_CREAT : 0) |
       (exclusive_ ? O_EXLOCK : 0) | (direct_ ? O_DIRECT : 0),
       um | S_IRUSR | S_IWUSR
@@ -1157,7 +1166,7 @@ BOOL AsyncFile::GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberO
   return ::GetOverlappedResult(descriptor_, lpOverlapped, lpNumberOfBytesTransferred, bWait);
 }
 //---------------------------------------------------------------------------
-#elif HAVE_KQUEUE
+#elif HAVE_KQUEUE || __linux__
 //---------------------------------------------------------------------------
 int AsyncFile::accept()
 {

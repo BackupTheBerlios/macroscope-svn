@@ -30,6 +30,7 @@
 #cmakedefine HAVE_SYS_STAT_H 1
 #cmakedefine HAVE_SYS_IOCTL_H 1
 #cmakedefine HAVE_SYS_SYSCTL_H 1
+#cmakedefine HAVE_SYS_EPOLL_H 1
 #cmakedefine HAVE_MACHINE_ATOMIC_H 1
 #cmakedefine HAVE_MACHINE_CPUFUNC_H 1
 #cmakedefine HAVE_MACHINE_SPECIALREG_H 1

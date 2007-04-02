@@ -132,13 +132,13 @@ Semaphore::~Semaphore()
 {
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
-  if( handle_ != NULL ){
+  if( pHandle_ != SEM_FAILED ){
 #ifndef NDEBUG
     int r =
 #endif
-    sem_destroy(&handle_);
+    sem_destroy(pHandle_);
 #ifndef NDEBUG
-    assert(r == 0);
+    assert( r == 0 );
 #endif
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
@@ -153,11 +153,12 @@ Semaphore::Semaphore()
 {
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
-  handle_ = NULL;
+  pHandle_ = SEM_FAILED;
   if( sem_init(&handle_, 0, 0) != 0 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
+  pHandle_ = &handle_;
 #elif defined(__WIN32__) || defined(__WIN64__)
   handle_ = CreateSemaphoreA(NULL,0,~(ULONG) 0 >> 1,NULL);
   if( handle_ == NULL ){
@@ -172,7 +173,7 @@ Semaphore::Semaphore()
 Semaphore & Semaphore::post()
 {
 #if HAVE_SEMAPHORE_H
-  if( sem_post(&handle_) != 0 ){
+  if( sem_post(pHandle_) != 0 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
@@ -188,7 +189,7 @@ Semaphore & Semaphore::post()
 Semaphore & Semaphore::wait()
 {
 #if HAVE_SEMAPHORE_H
-  if( sem_wait(&handle_) != 0 ){
+  if( sem_wait(pHandle_) != 0 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
@@ -217,7 +218,7 @@ bool Semaphore::timedWait(uint64_t timeout)
   t.tv_sec = timeout / (1000000u * 1000u);
   t.tv_nsec = timeout % (1000000u * 1000u);
 //  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec);
-  int r = sem_timedwait(&handle_,&t);
+  int r = sem_timedwait(pHandle_,&t);
   if( r != 0 && errno != ETIMEDOUT ){
     r = errno;
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -249,7 +250,7 @@ bool Semaphore::tryWait()
 {
 #if HAVE_SEMAPHORE_H
   errno = 0;
-  int r = sem_trywait(&handle_);
+  int r = sem_trywait(pHandle_);
   if( r != 0 && errno != EAGAIN ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
@@ -276,14 +277,15 @@ SharedSemaphore::~SharedSemaphore()
 #ifndef NDEBUG
   int r;
 #endif
-  if( handle_ != SEM_FAILED ){
+  if( pHandle_ != SEM_FAILED ){
 #ifndef NDEBUG
     r = 
 #endif
-    sem_close(handle_);
+    sem_close(pHandle_);
 #ifndef NDEBUG
     assert(r == 0 || errno == EINVAL);
 #endif
+    pHandle_ = SEM_FAILED;
     if( creator() ){
 #ifndef NDEBUG
       r =
@@ -306,7 +308,7 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
   SVSharedSemaphore(name, mode)
 #elif HAVE_SEMAPHORE_H
 SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
-  : handle_(SEM_FAILED),
+  : Semaphore(0),
     name_(genName(name).getANSIString()),
     creator_(false)
 #elif defined(__WIN32__) || defined(__WIN64__)
@@ -320,15 +322,15 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
 #ifndef NDEBUG
   fprintf(stderr,"%s %s\n",(const char *) name_,__PRETTY_FUNCTION__);
 #endif
-  handle_ = sem_open(name_, O_EXCL | O_CREAT, (mode_t) mode, 0);
-  if( handle_ == SEM_FAILED ){
+  pHandle_ = sem_open(name_, O_EXCL | O_CREAT, (mode_t) mode, 0);
+  if( pHandle_ == SEM_FAILED ){
     if( errno == EEXIST )
-      handle_ = sem_open(name_, 0, (mode_t) mode, 0);
+      pHandle_ = sem_open(name_, 0, (mode_t) mode, 0);
   }
   else {
     creator_ = true;
   }
-  if( handle_ == SEM_FAILED ){
+  if( pHandle_ == SEM_FAILED ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
@@ -401,78 +403,6 @@ void SharedSemaphore::unlink(const utf8::String & name)
 #endif
 }
 //---------------------------------------------------------------------------
-#if !USE_SV_SEMAPHORES
-//---------------------------------------------------------------------------
-SharedSemaphore & SharedSemaphore::post()
-{
-#if HAVE_SEMAPHORE_H
-  if( sem_post(handle_) != 0 ){
-    int32_t err = errno;
-    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
-  }
-#elif defined(__WIN32__) || defined(__WIN64__)
-  if( ReleaseSemaphore(handle_, 1, NULL) == 0 ){
-    int32_t err = GetLastError() + errorOffset;
-    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
-  }
-#endif
-  return *this;
-}
-//---------------------------------------------------------------------------
-SharedSemaphore & SharedSemaphore::wait()
-{
-#if HAVE_SEMAPHORE_H
-  if( sem_wait(handle_) != 0 ){
-    int32_t err = errno;
-    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
-  }
-#elif defined(__WIN32__) || defined(__WIN64__)
-  DWORD r = WaitForSingleObject(handle_, INFINITE);
-  if( r == WAIT_FAILED || r != WAIT_OBJECT_0 ){
-    int32_t err = GetLastError() + errorOffset;
-    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
-  }
-#endif
-  return *this;
-}
-//---------------------------------------------------------------------------
-bool SharedSemaphore::tryWait()
-{
-#if HAVE_SEMAPHORE_H
-  int r = sem_trywait(handle_);
-  if( r != 0 || errno != EAGAIN ){
-    int32_t err = errno;
-    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
-  }
-  return r == 0;
-#elif defined(__WIN32__) || defined(__WIN64__)
-  DWORD r = WaitForSingleObject(handle_, 0);
-  if( r == WAIT_FAILED || r == WAIT_TIMEOUT ){
-    int32_t err = GetLastError() + errorOffset;
-    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
-  }
-  return r == WAIT_OBJECT_0;
-#endif
-}
-//---------------------------------------------------------------------------
-bool SharedSemaphore::timedWait(uint64_t timeout)
-{
-#if HAVE_SEMAPHORE_H
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-  return false;
-#elif defined(__WIN32__) || defined(__WIN64__)
-  uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);
-  DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));
-  if( r == WAIT_FAILED ){
-    int32_t err = GetLastError() + errorOffset;
-    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
-  }
-  return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
-#endif
-}
-//---------------------------------------------------------------------------
-#endif
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 SharedMemory::~SharedMemory()
@@ -527,6 +457,12 @@ SharedMemory::SharedMemory(const utf8::String & name, uintptr_t length, const vo
   int32_t err;
   if( length == 0 ) length = getpagesize();
 #if HAVE_SYS_MMAN_H
+#ifndef MAP_NOSYNC
+#define MAP_NOSYNC 0
+#endif
+#ifndef MAP_NOCORE
+#define MAP_NOCORE 0
+#endif
   int mmap_flags  = MAP_NOSYNC | MAP_NOCORE | MAP_SHARED;
   if( memory != NULL ) mmap_flags |= MAP_FIXED;
   if( name.strlen() > 0 ){

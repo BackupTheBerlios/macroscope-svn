@@ -29,10 +29,6 @@
 #ifndef _lconfig_H_
 #define _lconfig_H_
 //---------------------------------------------------------------------------
-//#define _ANSI_SOURCE
-//#define _XOPEN_SOURCE 600
-//#define _POSIX_C_SOURCE 200112
-
 #if HAVE_SYSLOG_H
 #include <syslog.h>
 #endif
@@ -237,6 +233,10 @@
 #include <sys/sysctl.h>
 #endif
 
+#if HAVE_SYS_EPOLL_H
+#include <sys/epoll.h>
+#endif
+
 #if HAVE_MATH_H
 #include <math.h>
 #endif
@@ -334,11 +334,6 @@
 #define GNUG_NOTHROW __attribute__((nothrow))
 #if __x86_64__
 #define GNUG_CDECL
-#else
-#define GNUG_CDECL __attribute__((cdecl))
-#endif
-#if __x86_64__
-#define GNUG_CDECL
 #define GNUG_NAKED
 #else
 #define GNUG_CDECL __attribute__((cdecl))
@@ -348,7 +343,6 @@
 #define GNUG_DESTRUCTOR __attribute__((destructor))
 #define DECLSPEC_NORETURN
 #define GNUG_NORETURN __attribute__((noreturn))
-#define __forceinline __inline__
 #else
 #define DECLSPEC_NOTHROW __declspec(nothrow)
 #define GNUG_NOTHROW

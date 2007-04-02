@@ -125,7 +125,7 @@ Thread::Thread() :
   handle_(NULL),
   id_(~DWORD(0)),
 #elif HAVE_PTHREAD_H
-  handle_(NULL),// mutex_(NULL),
+  handle_((pthread_t) NULL),// mutex_(NULL),
 #endif
   exitCode_(0),
   started_(false), terminated_(false), finished_(false)
@@ -154,8 +154,9 @@ Thread & Thread::resume()
     resume();
   }
 #elif HAVE_PTHREAD_H
-  pthread_attr_t attr = NULL;
-  if( handle_ == NULL ){
+  pthread_attr_t attr;
+  memset(&attr,0,sizeof(attr));
+  if( handle_ == (pthread_t) NULL ){
     started_ = terminated_ = false;
 //    if( (errno = pthread_mutex_init(&mutex_,NULL)) != 0 ) goto l1;
     if( (errno = pthread_attr_init(&attr)) != 0 ) goto l1;
@@ -204,7 +205,7 @@ Thread & Thread::suspend()
 //---------------------------------------------------------------------------
 Thread & Thread::wait()
 {
-  if( handle_ != NULL ){
+  if( handle_ != (pthread_t) NULL ){
     threadBeforeWait();
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD exitCode;
@@ -228,7 +229,7 @@ Thread & Thread::wait()
       }
       mutex_ = NULL;
     }*/
-    handle_ = NULL;
+    handle_ = (pthread_t) NULL;
 #endif
   }
   return *this;

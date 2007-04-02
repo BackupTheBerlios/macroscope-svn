@@ -261,7 +261,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     BOOL    Read(LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
     BOOL    Write(LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
     BOOL    GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD lpdwFlags);
-#elif HAVE_KQUEUE
+#elif HAVE_KQUEUE || __linux__
     int     accept();
     void    connect(ksys::AsyncEvent * request);
     int64_t read2(void * buf, uint64_t len);

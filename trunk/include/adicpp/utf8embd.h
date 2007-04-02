@@ -170,7 +170,7 @@ inline uintptr_t utf8seqlen(const char * utf8s)
 //---------------------------------------------------------------------------
 inline uintptr_t utf82ucs(const unsigned char * utf8s,uintptr_t * l = NULL)
 {
-  uintptr_t c;
+  uintptr_t c = 0;
   if( l == NULL ) l = &c;
   switch( *l = utf8seqlen(utf8s) ){
     case 0 :

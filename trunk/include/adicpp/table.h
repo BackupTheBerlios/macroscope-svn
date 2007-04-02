@@ -230,19 +230,12 @@ inline
 #endif
 Table<T,RT> & Table<T,RT>::addColumn(const utf8::String & columnName)
 {
-#ifndef __BCPLUSPLUS__
-  union {
-#endif
-    intptr_t  i;
-    uintptr_t u;
-#ifndef __BCPLUSPLUS__
-  };
-#endif
-  intptr_t      c;
-  utf8::String  s (genColumnName(columnName, u, c));
-  name2Index_.insert(u += (c > 0), Name2Index(s, name2Index_.count()));
+  uintptr_t u;
+  intptr_t c;
+  utf8::String s(genColumnName(columnName,u,c));
+  name2Index_.insert(u += (c > 0),Name2Index(s,name2Index_.count()));
   index2Name_.add(&name2Index_[u]);
-  for( i = rows_.count() - 1; i >= 0; i-- )
+  for( intptr_t i = rows_.count() - 1; i >= 0; i-- )
     rows_[i].resize(name2Index_.count());
   return *this;
 }

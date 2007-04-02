@@ -303,7 +303,7 @@ EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>:
   LT * head = hash_, * tail = head + size_, walk;
   while( head < tail ){
     walk = *head;
-    while( walk != NULL ){
+    while( walk != (LT) NULL ){
       l[i++] = &O(NLT(walk,param_),NULL);
       walk = NLT(walk,param_).next();
     }
@@ -352,7 +352,7 @@ template <
 T & EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::remove(const T & object,bool throwIfNotExist,bool deleteIfNotExist) const
 {
   LT * head = internalFind(object,false,throwIfNotExist,false,deleteIfNotExist), node;
-  if( *head != NULL ){
+  if( *head != (LT) NULL ){
     node = *head;
     *head = NLT(node,param_).next();
     NLT(node,param_).next() = LT(NULL);

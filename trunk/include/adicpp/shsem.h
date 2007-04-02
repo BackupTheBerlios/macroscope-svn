@@ -97,11 +97,13 @@ class Semaphore
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
     sem_t   handle_;
+    sem_t   * pHandle_;
 #elif defined(__WIN32__) || defined(__WIN64__)
     HANDLE  handle_;
 #else
 #error you system not have semaphores API
 #endif
+    Semaphore(intptr_t) : pHandle_(SEM_FAILED) {}
   private:
     Semaphore(const Semaphore &){}
     void operator =(const Semaphore &) {}
@@ -112,6 +114,8 @@ class Semaphore
 class SharedSemaphore
 #if USE_SV_SEMAPHORES
  : public SVSharedSemaphore
+#else
+ : public Semaphore
 #endif
 {
   public:
@@ -128,16 +132,11 @@ class SharedSemaphore
     static utf8::String genName(const utf8::String & name);
     static void         unlink(const utf8::String & name);
 #if !USE_SV_SEMAPHORES
-    SharedSemaphore &   post();
-    SharedSemaphore &   wait();
-    bool                tryWait();
     const bool &        creator() const;
 #endif
-    bool timedWait(uint64_t timeout);
   protected:
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
-    sem_t *           handle_;
     utf8::AnsiString  name_;
     bool              creator_;
 #elif defined(__WIN32__) || defined(__WIN64__)

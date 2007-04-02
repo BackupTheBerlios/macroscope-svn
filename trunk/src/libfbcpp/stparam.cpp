@@ -343,12 +343,12 @@ ksys::Mutant DSQLParam::getMutantFromArray(uintptr_t absIndex)
   uintptr_t elementOffset = elementSize_ * absIndex;
   ldouble v;
   if( elementOffset < (uintptr_t) dataSize_ ){
-    char *  data  = (char *) data_ + elementOffset;
+    const char * data  = (char *) data_ + elementOffset;
     switch( arrayDesc_.array_desc_dtype ){
       case blr_varying   :
-        return utf8::plane(data + sizeof(short), *(short *) data);
+        return utf8::plane(data + sizeof(short),uintptr_t(*(short *) data));
       case blr_text      :
-        return utf8::plane(data, elementSize_);
+        return utf8::plane(data,elementSize_);
       case blr_short     :
         if( arrayDesc_.array_desc_scale != 0 ){
           v = *(int16_t *) data;

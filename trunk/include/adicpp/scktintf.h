@@ -507,6 +507,7 @@ class API {
     {
       return ::connect(s, name, namelen);
     }
+#undef htonl
     uint32_t htonl(uint32_t hostlong)
     {
       return ::htonl(hostlong);
@@ -516,6 +517,7 @@ class API {
     {
       return ::ntohl(netlong);
     }
+#undef htons
     uint16_t htons(uint16_t hostshort)
     {
       return ::htons(hostshort);

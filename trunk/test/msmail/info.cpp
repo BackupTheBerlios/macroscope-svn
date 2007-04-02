@@ -1069,10 +1069,7 @@ void Server::Data::sendDatabase(ksock::AsyncSocket & socket,const utf8::String &
 //------------------------------------------------------------------------------
 void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
 {
-  union {
-    intptr_t i;
-    uint64_t u;
-  };
+  uint64_t u;
   socket >> u;
   while( u-- > 0 ){
     UserInfo info;

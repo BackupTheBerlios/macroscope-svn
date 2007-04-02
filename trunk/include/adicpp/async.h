@@ -258,7 +258,7 @@ class AsyncDescriptor : public AsyncDescriptorKey {
     virtual BOOL GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD lpdwFlags = NULL) = 0;
 #endif
   protected:
-#if HAVE_KQUEUE
+#if HAVE_KQUEUE || __linux__
     virtual int accept() = 0;
     virtual void connect(AsyncEvent * request) = 0;
     virtual int64_t read2(void * buf, uint64_t len);
