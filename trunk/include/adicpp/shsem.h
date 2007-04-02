@@ -98,12 +98,12 @@ class Semaphore
 #elif HAVE_SEMAPHORE_H
     sem_t   handle_;
     sem_t   * pHandle_;
+    Semaphore(intptr_t) : pHandle_(SEM_FAILED) {}
 #elif defined(__WIN32__) || defined(__WIN64__)
     HANDLE  handle_;
 #else
 #error you system not have semaphores API
 #endif
-    Semaphore(intptr_t) : pHandle_(SEM_FAILED) {}
   private:
     Semaphore(const Semaphore &){}
     void operator =(const Semaphore &) {}

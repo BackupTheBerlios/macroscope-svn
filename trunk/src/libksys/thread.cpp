@@ -205,9 +205,9 @@ Thread & Thread::suspend()
 //---------------------------------------------------------------------------
 Thread & Thread::wait()
 {
-  if( handle_ != (pthread_t) NULL ){
-    threadBeforeWait();
 #if defined(__WIN32__) || defined(__WIN64__)
+  if( handle_ != NULL ){
+    threadBeforeWait();
     DWORD exitCode;
     BOOL r = GetExitCodeThread(handle_,&exitCode);
     if( r == 0 || exitCode == STILL_ACTIVE ){
@@ -217,6 +217,8 @@ Thread & Thread::wait()
     CloseHandle(handle_);
     handle_ = NULL;
 #elif HAVE_PTHREAD_H
+  if( handle_ != (pthread_t) NULL ){
+    threadBeforeWait();
     void * result;
     if( (errno = pthread_join(handle_,&result)) != 0 ){
       perror(NULL);
