@@ -25,7 +25,7 @@
 //------------------------------------------------------------------------------
 #include <adicpp/adicpp.h>
 #include "msmail.h"
-//#include <adicpp/tree.h>
+#include <adicpp/tree.h>
 //------------------------------------------------------------------------------
 #define _VERSION_C_AS_HEADER_
 #include "version.c"
@@ -78,7 +78,12 @@ int main(int _argc,char * _argv[])
     tree.saveEmbeddedTreeGraph(file);
     file.close();
     errcode = errcode;*/
+
 #endif
+    RBTree<intptr_t> tree;
+    tree.benchmark(10000000,3);
+    exit(0);
+
     uintptr_t u;
     stdErr.fileName(SYSLOG_DIR("msmail/") + "msmail.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msmail.conf");

@@ -270,6 +270,7 @@
 #cmakedefine HAVE_UUID_FROM_STRING 1
 #cmakedefine HAVE_CLOCK_GETRES 1
 #cmakedefine HAVE_CLOCK_GETTIME 1
+#cmakedefine HAVE_NICE 1
 #cmakedefine HAVE_PTHREAD_CREATE 1
 #cmakedefine HAVE_PTHREAD_DETACH 1
 #cmakedefine HAVE_PTHREAD_SELF 1

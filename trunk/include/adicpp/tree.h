@@ -731,108 +731,101 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile &
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template <typename T>
-class RBTree {
+class RBTreeNode {
   public:
-    class Node {
-      public:
-        Node * left_;         /* left child */
-        Node * right_;        /* right child */
-        Node * parent_;       /* parent */
-        NodeColor color_;     /* node color (BLACK, RED) */
-        T data_;
-    };
-    Node * insertNode(T data);
-    void deleteNode(Node * z);
-  protected:
-    static const Node sentinel_;
-    typedef enum { BLACK, RED } NodeColor;
-    Node * root_ = NIL;               /* root of Red-Black tree */
-
-    void rotateLeft(Node * x);
-    void rotateRight(Node * x);
-    void insertFixup(Node * x);
-    void deleteFixup(Node * x);
-  private:
+    RBTreeNode * left_;         /* left child */
+    RBTreeNode * right_;        /* right child */
+    RBTreeNode * parent_;       /* parent */
+    uint8_t color_;     /* node color (BLACK, RED) */
 };
 //-----------------------------------------------------------------------------
 template <typename T>
-const Node RBTree<T>::sentinel_ = { &sentinel_, &sentinel_, 0, BLACK };
+class RBTree {
+  public:
+    ~RBTree();
+    RBTree();
+    
+    RBTreeNode * find(RBTreeNode * data) const;
+    void insert(RBTreeNode * newEntry);
+    void remove(RBTreeNode * z);
+    void benchmark(uintptr_t elCount,uintptr_t cycles = 1);
+  protected:
+    typedef enum { BLACK, RED } RBTreeNodeColor;
+
+    mutable RBTreeNode sentinel_;
+    mutable RBTreeNode rootNode_;
+    RBTreeNode * root_;               /* root of Red-Black tree */
+
+    void rotateLeft(RBTreeNode * x);
+    void rotateRight(RBTreeNode * x);
+    void insertFixup(RBTreeNode * x);
+    void removeFixup(RBTreeNode * x);
+    RBTreeNode * getSuccessorOf(RBTreeNode * x) const;
+    void treeInsertHelp(RBTreeNode * z);
+  private:
+};
 //-----------------------------------------------------------------------------
 template <typename T> inline
-~RBTree<T>::RBTree<T>()
+RBTree<T>::~RBTree()
 {
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-RBTree<T>::RBTree<T>() : root_(&sentinel_)
+RBTree<T>::RBTree() : root_(&rootNode_)
 {
+  sentinel_.left_ = &sentinel_;
+  sentinel_.right_ = &sentinel_;
+  sentinel_.parent_ = NULL;
+  sentinel_.color_ = BLACK;
+  rootNode_ = sentinel_;
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-void RBTree<T>::rotateLeft(Node * x)
+void RBTree<T>::rotateLeft(RBTreeNode * x)
 {
-/**************************
- *  rotate node x to left *
- **************************/
-  Node *y = x->right_;
-/* establish x->right link */
+  RBTreeNode * y = x->right_;
   x->right_ = y->left_;
-  if( y->left != &sentinel_ ) y->left_->parent_ = x;
-/* establish y->parent link */
-  if( y != &sentinel_ ) y->parent_ = x->parent_;
-  if( x->parent_ ){
-    if( x == x->parent_->left_ )
-      x->parent_->left_ = y;
-    else
-      x->parent_->right_ = y;
+  if( y->left_ != &sentinel_ ) y->left_->parent_ = x;
+  y->parent_ = x->parent_;
+  if( x == x->parent_->left_ ){
+    x->parent_->left_ = y;
   }
   else {
-    root_ = y;
+    x->parent_->right_ = y;
   }
-/* link x and y */
   y->left_ = x;
-  if( x != &sentinel_ ) x->parent_ = y;
+  x->parent_ = y;
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-void RBTree<T>::rotateRight(Node * x)
+void RBTree<T>::rotateRight(RBTreeNode * y)
 {
-/****************************
- *  rotate node x to right  *
- ****************************/
-  Node * y = x->left_;
-/* establish x->left link */
-  x->left_ = y->right_;
-  if( y->right_ != &sentinel_ ) y->right_->parent_ = x;
-/* establish y->parent link */
-  if( y != &sentinel_ ) y->parent_ = x->parent_;
-  if( x->parent_ ){
-    if( x == x->parent_->right_ )
-      x->parent_->right_ = y;
-    else
-      x->parent_->left_ = y;
+  RBTreeNode * x = y->left_;
+  y->left_ = x->right_;
+  if( x->right_ != &sentinel_ ) x->right_->parent_ = y;
+  x->parent_ = y->parent_;
+  if( y == y->parent_->left_ ){
+    y->parent_->left_ = x;
   }
   else {
-    root_ = y;
+    y->parent_->right_ = x;
   }
-/* link x and y */
-  y->right_ = x;
-  if( x != &sentinel_ ) x->parent_ = y;
+  x->right_ = y;
+  y->parent_ = x;
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-void RBTree<T>::insertFixup(Node * x)
+void RBTree<T>::insertFixup(RBTreeNode * x)
 {
 /*************************************
  *  maintain Red-Black tree balance  *
- *  after inserting node x           *
+ *  after inserting RBTreeNode x           *
  *************************************/
 /* check Red-Black properties */
   while( x != root_ && x->parent_->color_ == RED ){
 /* we have a violation */
     if( x->parent_ == x->parent_->parent_->left_ ){
-      Node * y = x->parent_->parent_->right_;
+      RBTreeNode * y = x->parent_->parent_->right_;
       if( y->color_ == RED ){
 /* uncle is RED */
         x->parent_->color_ = BLACK;
@@ -848,14 +841,14 @@ void RBTree<T>::insertFixup(Node * x)
           rotateLeft(x);
         }
 /* recolor and rotate */
-        x->parent_->color = BLACK;
+        x->parent_->color_ = BLACK;
         x->parent_->parent_->color_ = RED;
         rotateRight(x->parent_->parent_);
       }
     }
     else {
 /* mirror image of above code */
-      Node * y = x->parent_->parent_->left_;
+      RBTreeNode * y = x->parent_->parent_->left_;
       if( y->color_ == RED ){
 /* uncle is RED */
         x->parent_->color_ = BLACK;
@@ -870,7 +863,7 @@ void RBTree<T>::insertFixup(Node * x)
           rotateRight(x);
         }
         x->parent_->color_ = BLACK;
-        x->parent_->parent_->color = RED;
+        x->parent_->parent_->color_ = RED;
         rotateLeft(x->parent_->parent_);
       }
     }
@@ -879,472 +872,323 @@ void RBTree<T>::insertFixup(Node * x)
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-Node * RBTree<T>::insertNode(T data)
+void RBTree<T>::treeInsertHelp(RBTreeNode * z)
 {
-  Node * current, * parent, * x;
-/***********************************************
- *  allocate node for data and insert in tree  *
- ***********************************************/
-/* find where node belongs */
-  current = root_;
-  parent = 0;
-  while( current != NIL ){
-    if( compEQ(data,current->data) ) return current;
-    parent = current;
-    current = compLT(data,current->data) ? current->left_ : current->right_;
-  }
-/* setup new node */
-  if ((x = malloc (sizeof(*x))) == 0) {
-        printf (&quot;insufficient memory (insertNode)\n&quot;);
-        exit(1);
-  }
-  x->data = data;
-  x->parent_ = parent;
-  x->left_ = &sentinel_;
-  x->right_ = &sentinel_;
-  x->color_ = RED;
-/* insert node in tree */
-  if( parent ){
-    if(compLT(data,parent->data_))
-      parent->left_ = x;
-    else
-      parent->right_ = x;
-  }
-  else {
-    root_ = x;
-  }
-  insertFixup(x);
-  return x;
-}
-//-----------------------------------------------------------------------------
-template <typename T> inline
-void RBTree<T>::deleteFixup(Node * x)
-{
-/*************************************
- *  maintain Red-Black tree balance  *
- *  after deleting node x            *
- *************************************/
-  while( x != root_ && x->color_ == BLACK ){
-    if( x == x->parent_->left_ ){
-      Node * w = x->parent_->right_;
-      if( w->color_ == RED ){
-        w->color_ = BLACK;
-        x->parent_->color_ = RED;
-        rotateLeft(x->parent_);
-        w = x->parent_->right_;
-      }
-      if( w->left_->color_ == BLACK && w->right_->color_ == BLACK ){
-        w->color_ = RED;
-        x = x->parent_;
-      }
-      else {
-        if( w->right_->color_ == BLACK ){
-          w->left_->color_ = BLACK;
-          w->color_ = RED;
-          rotateRight (w);
-          w = x->parent_->right_;
-        }
-        w->color_ = x->parent_->color_;
-        x->parent_->color_ = BLACK;
-        w->right_->color_ = BLACK;
-        rotateLeft(x->parent_);
-        x = root_;
-      }
+  RBTreeNode * y = root_;
+  RBTreeNode * x = root_->left_;
+    
+  z->left_ = z->right_ = &sentinel_;
+  while( x != &sentinel_ ){
+    y = x;
+    if( x > z ){
+      x = x->left_;
     }
     else {
-      Node * w = x->parent_->left_;
-      if( w->color_ == RED ){
-        w->color_ = BLACK;
-        x->parent_->color_ = RED;
-        rotateRight(x->parent_);
-        w = x->parent_->left_;
-      }
-      if( w->right_->color_ == BLACK && w->left_->color_ == BLACK ){
-        w->color_ = RED;
-        x = x->parent_;
-      }
-      else {
-        if( w->left_->color_ == BLACK ){
-          w->right_->color_ = BLACK;
-          w->color_ = RED;
-          rotateLeft(w);
-          w = x->parent_->left_;
-        }
-        w->color_ = x->parent_->color_;
-        x->parent_->color_ = BLACK;
-        w->left_->color_ = BLACK;
-        rotateRight(x->parent_);
-        x = root_;
-      }
+      x = x->right_;
     }
   }
-  x->color = BLACK;
+  z->parent_ = y;
+  if( y == root_ || y > z ){ 
+    y->left_ = z;
+  }
+  else {
+    y->right_ = z;
+  }
 }
 //-----------------------------------------------------------------------------
 template <typename T> inline
-void RBTree<T>::deleteNode(Node * z)
+void RBTree<T>::insert(RBTreeNode * newEntry)
 {
-  Node * x, * y;
-/*****************************
- *  delete node z from tree  *
- *****************************/
-  if( !z || z == &sentinel_ ) return;
-  if( z->left_ == &sentinel_ || z->right_ == &sentinel_ ){
-/* y has a NIL node as a child */
-    y = z;
+  RBTreeNode * newNode, * y, * x = newEntry;
+  treeInsertHelp(x);
+  newNode = x;
+  x->color_ = RED;
+  while( x->parent_->color_ == RED ){
+    if( x->parent_ == x->parent_->parent_->left_ ){
+      y = x->parent_->parent_->right_;
+      if( y->color_ == RED ){
+	x->parent_->color_ = BLACK;
+	y->color_ = BLACK;
+	x->parent_->parent_->color_ = RED;
+	x = x->parent_->parent_;
+      }
+      else {
+	if( x == x->parent_->right_){
+	  x = x->parent_;
+	  rotateLeft(x);
+	}
+	x->parent_->color_ = BLACK;
+	x->parent_->parent_->color_ = RED;
+	rotateRight(x->parent_->parent_);
+      } 
+    }
+    else {
+      y = x->parent_->parent_->left_;
+      if( y->color_ == RED ){
+	x->parent_->color_ = BLACK;
+	y->color_ = BLACK;
+	x->parent_->parent_->color_ = RED;
+	x = x->parent_->parent_;
+      }
+      else {
+	if( x == x->parent_->left_ ){
+	  x = x->parent_;
+	  rotateRight(x);
+	}
+	x->parent_->color_ = BLACK;
+	x->parent_->parent_->color_ = RED;
+	rotateLeft(x->parent_->parent_);
+      } 
+    }
   }
-  else {
-/* find tree successor with a NIL node as a child */
-    y = z->right_;
+  root_->left_->color_ = BLACK;
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+void RBTree<T>::removeFixup(RBTreeNode * x)
+{
+  RBTreeNode * w, * rootLeft = root_->left_;
+
+  while( x->color_ != RED && rootLeft != x ){
+    if( x == x->parent_->left_ ){
+      w = x->parent_->right_;
+      if( w->color_ == RED ){
+	w->color_ = BLACK;
+	x->parent_->color_ = RED;
+	rotateLeft(x->parent_);
+	w = x->parent_->right_;
+      }
+      if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+	w->color_ = RED;
+	x = x->parent_;
+      }
+      else {
+	if( w->right_->color_ != RED ){
+	  w->left_->color_ = BLACK;
+	  w->color_ = RED;
+	  rotateRight(w);
+	  w = x->parent_->right_;
+	}
+	w->color_ = x->parent_->color_;
+	x->parent_->color_ = BLACK;
+	w->right_->color_ = BLACK;
+	rotateLeft(x->parent_);
+	x = rootLeft; /* this is to exit while loop */
+      }
+    }
+    else { /* the code below is has left and right switched from above */
+      w = x->parent_->left_;
+      if( w->color_ == RED ){
+	w->color_ = BLACK;
+	x->parent_->color_ = RED;
+	rotateRight(x->parent_);
+	w = x->parent_->left_;
+      }
+      if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+	w->color_ = RED;
+	x = x->parent_;
+      }
+      else {
+	if( w->left_->color_ != RED ){
+	  w->right_->color_ = BLACK;
+	  w->color_ = RED;
+	  rotateLeft(w);
+	  w = x->parent_->left_;
+	}
+	w->color_ = x->parent_->color_;
+	x->parent_->color_ = BLACK;
+	w->left_->color_ = BLACK;
+	rotateRight(x->parent_);
+	x = rootLeft; /* this is to exit while loop */
+      }
+    }
+  }
+  x->color_ = BLACK;
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+RBTreeNode * RBTree<T>::getSuccessorOf(RBTreeNode * x) const
+{
+  RBTreeNode * y;
+/* assignment to y is intentional */  
+  if( (y = x->right_) != &sentinel_ ){
+/* returns the minium of the right subtree of x */  
     while( y->left_ != &sentinel_ ) y = y->left_;
+    return y;
   }
+  y = x->parent_;
+/* sentinel used instead of checking for nil */    
+  while( x == y->right_ ){
+    x = y;
+    y = y->parent_;
+  }
+  if( y == root_ ) return &sentinel_;
+  return y;
+}
+//-----------------------------------------------------------------------------
+template <typename T> inline
+void RBTree<T>::remove(RBTreeNode * z)
+{
+  RBTreeNode * x, * y;
+/*****************************
+ *  delete RBTreeNode z from tree  *
+ *****************************/
+  y = ((z->left_ == &sentinel_) || (z->right_ == &sentinel_)) ? z : getSuccessorOf(z);
+  x = (y->left_ == &sentinel_) ? y->right_ : y->left_;
+    
 /* x is y's only child */
   if( y->left_ != &sentinel_ ) x = y->left_; else x = y->right_;
-/* remove y from the parent chain */
-  x->parent_ = y->parent_;
-  if( y->parent_ ){
-    if( y == y->parent_->left_ )
-      y->parent_->left_ = x;
-    else
-      y->parent_->right_ = x;
+/* assignment of y->p to x->p is intentional */  
+  if( root_ == (x->parent_ = y->parent_) ){
+    root_->left_ = x;
   }
   else {
-    root_ = x;
+    if( y == y->parent_->left_ ){
+      y->parent_->left_ = x;
+    }
+    else {
+      y->parent_->right_ = x;
+    }
   }
   if( y != z ){
-    y->left_->parent_ = z;
-    y->right_->parent_ = z;
-    if( y->parent_->left_ == y ) y->parent_->left_ = z; else y->parent_->right_ = z;
-//    z->data_ = y->data_;
+    y->left_ = z->left_;
+    y->right_ = z->right_;
+    y->parent_ = z->parent_;
+    z->left_->parent_ = z->right_->parent_ = y;
+    if( z == z->parent_->left_ ){
+      z->parent_->left_ = y;
+    }
+    else {
+      z->parent_->right_ = y;
+    }
+    if( y->color_ != RED ){
+      y->color_ = z->color_;
+      removeFixup(x);
+    }
+    else {
+      y->color_ = z->color_;
+    }
   }
-  if( y->color_ == BLACK ) deleteFixup(x);
-  free(y);
+  else if( y->color_ != RED ){
+    removeFixup(x);
+  }
 }
 //-----------------------------------------------------------------------------
-///////////////////////////////////////////////////////////////////////////////
+template <typename T> inline
+RBTreeNode * RBTree<T>::find(RBTreeNode * data) const
+{
+  RBTreeNode * current = root_;
+  for(;;){
+    if( current == &sentinel_ ){ current = NULL; break; }
+    if( data == current ) break;
+    current = data < current ? current->left_ : current->right_;
+  }
+  return current;
+}
 //-----------------------------------------------------------------------------
-typedef int T;                  /* type of item to be stored */
-#define compLT(a,b) (a < b)
-#define compEQ(a,b) (a == b)
+template <typename T> inline
+void RBTree<T>::benchmark(uintptr_t elCount,uintptr_t cycles)
+{
+  Array<RBTreeNode> nodes;
+  nodes.resize(elCount);
+  Array<RBTreeNode *> pNodes;
+  pNodes.resize(elCount);
+  Randomizer rnd;
 
-/* Red-Black tree description */
-typedef enum { BLACK, RED } nodeColor;
+  assert( root_ == &rootNode_ );
 
-typedef struct Node_ {
-    struct Node_ *left;         /* left child */
-    struct Node_ *right;        /* right child */
-    struct Node_ *parent;       /* parent */
-    nodeColor color;            /* node color (BLACK, RED) */
-    T data;                     /* data stored in node */
-} Node;
+  uint64_t seqInsTime = 0, seqFindTime = 0, seqRemTime = 0;
+  uint64_t rndInsTime = 0, rndFindTime = 0, rndRemTime = 0;
 
-#define NIL &sentinel           /* all leafs are sentinels */
-Node sentinel = { NIL, NIL, 0, BLACK, 0};
+#if HAVE_NICE
+  nice(-20);
+#endif
+  for( intptr_t cycle = cycles - 1; cycle >= 0; cycle-- ){
+    uint64_t t = gettimeofday();
+    for( intptr_t i = elCount - 1; i >= 0; i-- ) insert(&nodes[i]);
+    seqInsTime += gettimeofday() - t;
+    t = gettimeofday();
+    for( intptr_t i = elCount - 1; i >= 0; i-- )
+      if( find(&nodes[i]) == NULL ) fprintf(stderr,"seq find failed %"PRIdPTR"\n",i);
+    seqFindTime += gettimeofday() - t;
+    t = gettimeofday();
+    for( intptr_t i = elCount - 1; i >= 0; i-- ) remove(&nodes[i]);
+    seqRemTime += gettimeofday() - t;
 
-Node *root = NIL;               /* root of Red-Black tree */
+    assert( root_ == &rootNode_ );
 
-void rotateLeft(Node *x) {
-
-   /**************************
-    *  rotate node x to left *
-    **************************/
-
-    Node *y = x->right;
-
-    /* establish x->right link */
-    x->right = y->left;
-    if (y->left != NIL) y->left->parent = x;
-
-    /* establish y->parent link */
-    if (y != NIL) y->parent = x->parent;
-    if (x->parent) {
-        if (x == x->parent->left)
-            x->parent->left = y;
-        else
-            x->parent->right = y;
-    } else {
-        root = y;
+    rnd.srand(cycle);
+    for( intptr_t i = elCount - 1; i >= 0; i-- ) pNodes[i] = &nodes[i];
+    for( intptr_t i = elCount - 1; i >= 0; i-- ){
+      ksys::xchg(
+        pNodes[rnd.random() % (elCount)],
+        pNodes[rnd.random() % (elCount)]
+      );
     }
+    t = gettimeofday();
+    for( intptr_t i = elCount - 1; i >= 0; i-- ) insert(pNodes[i]);
+    rndInsTime += gettimeofday() - t;
+    t = gettimeofday();
+    for( intptr_t i = elCount - 1; i >= 0; i-- )
+      if( find(pNodes[i]) == NULL ) fprintf(stderr,"rnd find failed %"PRIdPTR"\n",i);
+    rndFindTime += gettimeofday() - t;
+    t = gettimeofday();
+    for( intptr_t i = elCount - 1; i >= 0; i-- ) remove(pNodes[i]);
+    rndRemTime += gettimeofday() - t;
 
-    /* link x and y */
-    y->left = x;
-    if (x != NIL) x->parent = y;
-}
+    assert( root_ == &rootNode_ );
+  }
 
-void rotateRight(Node *x) {
+  seqInsTime /= cycles;
+  seqFindTime /= cycles;
+  seqRemTime /= cycles;
+  rndInsTime /= cycles;
+  rndFindTime /= cycles;
+  rndRemTime /= cycles;
+  
+  fprintf(stderr,"seq inserts: %8"PRIu64".%04"PRIu64" ips, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqInsTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqInsTime -
+    uint64_t(elCount) * 1000000u / seqInsTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqInsTime).getOEMString()
+  );
+  fprintf(stderr,"  seq finds: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqFindTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqFindTime -
+    uint64_t(elCount) * 1000000u / seqFindTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqFindTime).getOEMString()
+  );
+  fprintf(stderr,"seq removes: %8"PRIu64".%04"PRIu64" rps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqRemTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqRemTime -
+    uint64_t(elCount) * 1000000u / seqRemTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqRemTime).getOEMString()
+  );
 
-   /****************************
-    *  rotate node x to right  *
-    ****************************/
+  fprintf(stderr,"rnd inserts: %8"PRIu64".%04"PRIu64" ips, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / rndInsTime,
+    uint64_t(elCount) * 10000u * 1000000u / rndInsTime -
+    uint64_t(elCount) * 1000000u / rndInsTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(rndInsTime).getOEMString()
+  );
+  fprintf(stderr,"  rnd finds: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / rndFindTime,
+    uint64_t(elCount) * 10000u * 1000000u / rndFindTime -
+    uint64_t(elCount) * 1000000u / rndFindTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(rndFindTime).getOEMString()
+  );
+  fprintf(stderr,"rnd removes: %8"PRIu64".%04"PRIu64" rps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / rndRemTime,
+    uint64_t(elCount) * 10000u * 1000000u / rndRemTime -
+    uint64_t(elCount) * 1000000u / rndRemTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(rndRemTime).getOEMString()
+  );
 
-    Node *y = x->left;
+  uint64_t index = uint64_t(elCount) * 10000u * 1000000u;
+  index /= (seqInsTime + seqFindTime + seqRemTime + rndInsTime + rndFindTime + rndRemTime) / 6;
+  index /= 100000u;
 
-    /* establish x->left link */
-    x->left = y->right;
-    if (y->right != NIL) y->right->parent = x;
-
-    /* establish y->parent link */
-    if (y != NIL) y->parent = x->parent;
-    if (x->parent) {
-        if (x == x->parent->right)
-            x->parent->right = y;
-        else
-            x->parent->left = y;
-    } else {
-        root = y;
-    }
-
-    /* link x and y */
-    y->right = x;
-    if (x != NIL) x->parent = y;
-}
-
-void insertFixup(Node *x) {
-
-   /*************************************
-    *  maintain Red-Black tree balance  *
-    *  after inserting node x           *
-    *************************************/
-
-    /* check Red-Black properties */
-    while (x != root && x->parent->color == RED) {
-        /* we have a violation */
-        if (x->parent == x->parent->parent->left) {
-            Node *y = x->parent->parent->right;
-            if (y->color == RED) {
-
-                /* uncle is RED */
-                x->parent->color = BLACK;
-                y->color = BLACK;
-                x->parent->parent->color = RED;
-                x = x->parent->parent;
-            } else {
-
-                /* uncle is BLACK */
-                if (x == x->parent->right) {
-                    /* make x a left child */
-                    x = x->parent;
-                    rotateLeft(x);
-                }
-
-                /* recolor and rotate */
-                x->parent->color = BLACK;
-                x->parent->parent->color = RED;
-                rotateRight(x->parent->parent);
-            }
-        } else {
-
-            /* mirror image of above code */
-            Node *y = x->parent->parent->left;
-            if (y->color == RED) {
-
-                /* uncle is RED */
-                x->parent->color = BLACK;
-                y->color = BLACK;
-                x->parent->parent->color = RED;
-                x = x->parent->parent;
-            } else {
-
-                /* uncle is BLACK */
-                if (x == x->parent->left) {
-                    x = x->parent;
-                    rotateRight(x);
-                }
-                x->parent->color = BLACK;
-                x->parent->parent->color = RED;
-                rotateLeft(x->parent->parent);
-            }
-        }
-    }
-    root->color = BLACK;
-}
-
-Node *insertNode(T data) {
-    Node *current, *parent, *x;
-
-   /***********************************************
-    *  allocate node for data and insert in tree  *
-    ***********************************************/
-
-    /* find where node belongs */
-    current = root;
-    parent = 0;
-    while (current != NIL) {
-        if (compEQ(data, current->data)) return (current);
-        parent = current;
-        current = compLT(data, current->data) ?
-            current->left : current->right;
-    }
-
-    /* setup new node */
-    if ((x = malloc (sizeof(*x))) == 0) {
-        printf (&quot;insufficient memory (insertNode)\n&quot;);
-        exit(1);
-    }
-    x->data = data;
-    x->parent = parent;
-    x->left = NIL;
-    x->right = NIL;
-    x->color = RED;
-
-    /* insert node in tree */
-    if(parent) {
-        if(compLT(data, parent->data))
-            parent->left = x;
-        else
-            parent->right = x;
-    } else {
-        root = x;
-    }
-
-    insertFixup(x);
-    return(x);
-}
-
-void deleteFixup(Node *x) {
-
-   /*************************************
-    *  maintain Red-Black tree balance  *
-    *  after deleting node x            *
-    *************************************/
-
-    while (x != root && x->color == BLACK) {
-        if (x == x->parent->left) {
-            Node *w = x->parent->right;
-            if (w->color == RED) {
-                w->color = BLACK;
-                x->parent->color = RED;
-                rotateLeft (x->parent);
-                w = x->parent->right;
-            }
-            if (w->left->color == BLACK && w->right->color == BLACK) {
-                w->color = RED;
-                x = x->parent;
-            } else {
-                if (w->right->color == BLACK) {
-                    w->left->color = BLACK;
-                    w->color = RED;
-                    rotateRight (w);
-                    w = x->parent->right;
-                }
-                w->color = x->parent->color;
-                x->parent->color = BLACK;
-                w->right->color = BLACK;
-                rotateLeft (x->parent);
-                x = root;
-            }
-        } else {
-            Node *w = x->parent->left;
-            if (w->color == RED) {
-                w->color = BLACK;
-                x->parent->color = RED;
-                rotateRight (x->parent);
-                w = x->parent->left;
-            }
-            if (w->right->color == BLACK && w->left->color == BLACK) {
-                w->color = RED;
-                x = x->parent;
-            } else {
-                if (w->left->color == BLACK) {
-                    w->right->color = BLACK;
-                    w->color = RED;
-                    rotateLeft (w);
-                    w = x->parent->left;
-                }
-                w->color = x->parent->color;
-                x->parent->color = BLACK;
-                w->left->color = BLACK;
-                rotateRight (x->parent);
-                x = root;
-            }
-        }
-    }
-    x->color = BLACK;
-}
-
-void deleteNode(Node *z) {
-    Node *x, *y;
-
-   /*****************************
-    *  delete node z from tree  *
-    *****************************/
-
-    if (!z || z == NIL) return;
-
-
-    if (z->left == NIL || z->right == NIL) {
-        /* y has a NIL node as a child */
-        y = z;
-    } else {
-        /* find tree successor with a NIL node as a child */
-        y = z->right;
-        while (y->left != NIL) y = y->left;
-    }
-
-    /* x is y's only child */
-    if (y->left != NIL)
-        x = y->left;
-    else
-        x = y->right;
-
-    /* remove y from the parent chain */
-    x->parent = y->parent;
-    if (y->parent)
-        if (y == y->parent->left)
-            y->parent->left = x;
-        else
-            y->parent->right = x;
-    else
-        root = x;
-
-    if (y != z) z->data = y->data;
-
-
-    if (y->color == BLACK)
-        deleteFixup (x);
-
-    free (y);
-}
-
-Node *findNode(T data) {
-
-   /*******************************
-    *  find node containing data  *
-    *******************************/
-
-    Node *current = root;
-    while(current != NIL)
-        if(compEQ(data, current->data))
-            return (current);
-        else
-            current = compLT (data, current->data) ?
-                current->left : current->right;
-    return(0);
-}
-
-void main(int argc, char **argv) {
-    int a, maxnum, ct;
-    Node *t;
-
-    /* command-line:
-     *
-     *   rbt maxnum
-     *
-     *   rbt 2000
-     *       process 2000 records
-     *
-     */
-
-    maxnum = atoi(argv[1]);
-
-    for (ct = maxnum; ct; ct--) {
-        a = rand() % 9 + 1;
-        if ((t = findNode(a)) != NULL) {
-            deleteNode(t);
-        } else {
-            insertNode(a);
-        }
-    }
+  fprintf(stderr,"overall index: %"PRIu64".%04"PRIu64"\n",index / 10000u,index - (index / 10000u) * 10000u);
 }
 //-----------------------------------------------------------------------------
 } // namespace ksys
