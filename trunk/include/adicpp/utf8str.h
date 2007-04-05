@@ -437,6 +437,7 @@ class String {
     static String       print(const char * fmt, ...);
     String              catPrint(const char * fmt, ...);
 
+    bool                isNull() const;
     bool                isEqu(const String & s) const;
 
     bool                hashKeyEqu(const utf8::String & key, bool caseSensitive) const;
@@ -529,6 +530,11 @@ inline char * String::c_str()
 inline const char * String::c_str() const
 {
   return (const char *) container_->string_;
+}
+//---------------------------------------------------------------------------
+inline bool String::isNull() const
+{
+  return container_->string_[0] == '\0';
 }
 //---------------------------------------------------------------------------
 inline String & String::lowerInPlace()

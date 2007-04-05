@@ -120,25 +120,25 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
         bool isNetwork = false;
         while( !j.eof() && !j.isSpace() && j.getChar() != ')' ){
           if( j.getChar() == '/' ){
-  	    isNetwork = true;
-	    net = j;
-	  }
-	  j.next();
+      	    isNetwork = true;
+	          net = j;
+	        }
+	        j.next();
         }
         ksock::SockAddr addr;
         if( isNetwork ){
           uint32_t inet = addr.resolveName(utf8::String(i,net)).addr4_.sin_addr.s_addr;
-	  uint32_t mask = ~(~uint32_t(0) << utf8::str2Int(utf8::String(net + 1,j)));
+	        uint32_t mask = ~(~uint32_t(0) << utf8::str2Int(utf8::String(net + 1,j)));
           filter += "(" + sd + " >= '" +
-  	    ip4AddrToIndex(inet & mask) + "' AND " + sd + " <= '" +
-	    ip4AddrToIndex(inet | ~mask) + "')"
-	  ;
+  	        ip4AddrToIndex(inet & mask) + "' AND " + sd + " <= '" +
+	          ip4AddrToIndex(inet | ~mask) + "')"
+	        ;
         }
         else {
           filter += sd + " = '" +
-	    ip4AddrToIndex(addr.resolveName(utf8::String(i,j)).addr4_.sin_addr.s_addr) +
-	    "'"
-	  ;
+	          ip4AddrToIndex(addr.resolveName(utf8::String(i,j)).addr4_.sin_addr.s_addr) +
+	          "'"
+	        ;
         }
         i = j;
       }
@@ -150,7 +150,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
       i++;
     }
   }
-  if( filter.strlen() > 0 ) filter = " AND (" + filter + ") ";
+  if( !filter.isNull() > 0 ) filter = " (" + filter + ") ";
   return filter;
 }
 //------------------------------------------------------------------------------
@@ -671,7 +671,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "    INET_BPFT_STAT"
         "  WHERE "
         "    st_if = :st_if AND"
-        "    st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' " + filter_ +
+        "    st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@'" +
+        (filter_.isNull() ? utf8::String() : " AND " + filter_) +
         "  GROUP BY st_src_ip, st_dst_ip"
         ") AS A "
         "ORDER BY A.SUM1"
@@ -684,14 +685,15 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "WHERE"
         "  st_if = :st_if AND"
         "  st_start >= :BT AND st_start <= :ET AND"
-        "  st_src_ip = :src AND st_dst_ip = :dst" + filter_ +
+        "  st_src_ip = :src AND st_dst_ip = :dst" +
+        (filter_.isNull() ? utf8::String() : " AND " + filter_) +
         " GROUP BY st_src_ip, st_dst_ip"
       );
     }
     else {
       stBPFTSel_->text(
         "SELECT"
-        "  A.*"
+        "  *"
         "FROM ("
         "  SELECT"
         "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
@@ -702,7 +704,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "        INET_BPFT_STAT"
         "      WHERE "
         "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' " + filter_ +
+        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' "
         "      GROUP BY st_dst_ip"
         "    UNION ALL"
         "      SELECT"
@@ -711,14 +713,18 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "        INET_BPFT_STAT"
         "      WHERE "
         "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' " + filter_ +
+        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' "
         "      GROUP BY st_src_ip"
         "  ) AS B "
         "  GROUP BY B.st_ip"
         ") AS A "
-        "ORDER BY A.SUM1"
+        "WHERE " + (filter_.isNull() ? utf8::String() : filter_) +
+        "ORDER BY SUM1"
       );
       stBPFTHostSel_->text(
+        "SELECT"
+        "  *"
+        "FROM ("
         "  SELECT"
         "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
         "  FROM ("
@@ -729,8 +735,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "      WHERE "
         "        st_if = :st_if AND"
         "        st_start >= :BT AND st_start <= :ET AND"
-        "        st_dst_ip = :dst" +
-        filter_ +
+        "        st_dst_ip = :dst"
         "      GROUP BY st_dst_ip"
         "    UNION ALL"
         "      SELECT"
@@ -740,11 +745,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "      WHERE "
         "        st_if = :st_if AND"
         "        st_start >= :BT AND st_start <= :ET AND"
-        "        st_src_ip = :src" +
-        filter_ +
+        "        st_src_ip = :src"
         "      GROUP BY st_src_ip"
         "  ) AS B "
         "  GROUP BY B.st_ip"
+        ") AS A "
+        "WHERE " + (filter_.isNull() ? utf8::String() : filter_)
       );
     }
     stBPFTSel_->prepare()->paramAsString("st_if",sectionName_);
