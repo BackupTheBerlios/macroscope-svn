@@ -124,7 +124,7 @@ Database & Database::create(const utf8::String & name)
   separateDBName(name.strlen() > 0 ? name : name_, hostName, dbName, port);
   api.open();
   MYSQL * handle  = NULL;
-  try{
+  try {
     allocHandle(handle);
     api.mysql_real_connect(handle, hostName.strlen() > 0 ? hostName.c_str() : NULL, dpb_.user().c_str(), dpb_.password().c_str(), NULL, (unsigned int) port, hostName.strlen() > 0 ? hostName.c_str() : NULL, CLIENT_COMPRESS);
     if( api.mysql_errno(handle) != 0 )

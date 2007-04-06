@@ -150,7 +150,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
       i++;
     }
   }
-  if( !filter.isNull() > 0 ) filter = " (" + filter + ") ";
+  if( !filter.isNull() ) filter = " (" + filter + ") ";
   return filter;
 }
 //------------------------------------------------------------------------------

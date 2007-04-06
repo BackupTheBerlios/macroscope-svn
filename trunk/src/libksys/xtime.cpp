@@ -294,7 +294,7 @@ int64_t getgmtoffset()
   struct timeval tv;
   struct timezone tz;
   gettimeofday(&tv,&tz);
-  return (-tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60 * 60) * 1000000;
+  return (-tz.tz_minuteswest * int64_t(60)/* + tz.tz_dsttime * 60 * 60*/) * 1000000;
 #else
   time_t tl, t = time(&tl);
 //  if( tl - t == 0 ){

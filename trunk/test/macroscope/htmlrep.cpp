@@ -1139,6 +1139,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
   stMonUrlIns_->prepare();
   bool validLine = false, startTimeLinePrinted = false;
   for(;;){
+//    fprintf(stderr,"%"PRId64"\n",lineNo);
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
     size = sb.size();

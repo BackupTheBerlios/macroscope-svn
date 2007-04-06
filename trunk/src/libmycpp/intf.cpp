@@ -101,7 +101,7 @@ utf8::String API::tryOpen()
   static const char libName[] = "libmysqlclient_r.so";
 #endif
   utf8::String libFileName(clientLibraryNL());
-  if( libFileName.strlen() == 0 ) libFileName = libName;
+  if( libFileName.isNull() ) libFileName = libName;
   if( handle_ == NULL ){
     try {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -182,7 +182,7 @@ void API::open()
 #endif
     }
 #endif
-    if( my_init() ){
+/*    if( my_init() ){
 #if !MYSQL_STATIC_LIBRARY    
 #if defined(__WIN32__) || defined(__WIN64__)
       FreeLibrary(handle_);
@@ -195,9 +195,9 @@ void API::open()
         utf8::String::Stream() << "my_init couldn't initialize environment\n"
       );
       newObjectV1C2<Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
-    }
+    }*/
   }
-  if( (intptr_t) threadCount() == 0 ) mysql_thread_init();
+//  if( (intptr_t) threadCount() == 0 ) mysql_thread_init();
   threadCount() = (intptr_t) threadCount() + 1;
   count_++;
 }
@@ -207,10 +207,10 @@ void API::close()
   AutoLock<InterlockedMutex> lock(mutex());
   assert( count_ > 0 );
   assert( (intptr_t) threadCount() > 0 );
-  if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
+//  if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
   threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
-    my_end(0);
+//    my_end(0);
 #if !MYSQL_STATIC_LIBRARY    
 #if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);
