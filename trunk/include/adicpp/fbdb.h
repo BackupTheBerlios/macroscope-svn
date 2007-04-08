@@ -56,7 +56,7 @@ class DPB {
     const uintptr_t &     dpbLen() const;
     char * const          dpb() const;
     DPB &                 clear();
-    DPB &                 add(const utf8::String & name, const ksys::Mutant & value);
+    DPB &                 add(const utf8::String & name,const ksys::Mutant & value);
     const uintptr_t &     dialect();
     const uintptr_t &     pageSize();
     const int64_t &       fileLength();
@@ -64,8 +64,10 @@ class DPB {
     const utf8::String &  password() const;
     const utf8::String &  role() const;
     const utf8::String &  charset() const;
+    const uintptr_t &     timeout() const;
   protected:
     DPB &                 injectCharset();
+    DPB &                 injectTimeout();
   private:
 #ifdef _MSC_VER
 #pragma pack(push)
@@ -74,8 +76,8 @@ class DPB {
 #pragma option push -a1
 #endif
     struct PACKED DPBParam {
-        const char *  name_;
-        char          number;
+      const char *  name_;
+      char          number;
     };
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -93,6 +95,8 @@ class DPB {
     utf8::String    role_;
     utf8::String    charset_;
     bool            charsetInDPB_;
+    uintptr_t       timeout_;
+    bool            timeoutInDPB_;
 
     DPB &     writeChar(uintptr_t code);
     DPB &     writeLong(uintptr_t a);
@@ -103,6 +107,11 @@ class DPB {
 inline const uintptr_t & DPB::dpbLen() const
 {
   return dpbLen_;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & DPB::timeout() const
+{
+  return timeout_;
 }
 //---------------------------------------------------------------------------
 inline char * const DPB::dpb() const

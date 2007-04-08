@@ -126,6 +126,8 @@ DPB & DPB::clear()
   role_.resize(0);
   charset_ = "UNICODE_FSS";
   charsetInDPB_ = false;
+  timeout_ = ~(uint32_t(1) << (sizeof(uint32_t) * 8 - 1));
+  timeoutInDPB_ = false;
   writeChar(isc_dpb_version1);
   return *this;
 }
@@ -137,6 +139,15 @@ DPB & DPB::injectCharset()
     writeISCCode("lc_ctype");
     writeChar(sizeof(charset) - 1).
     writeBuffer(charset, sizeof(charset) - 1).charsetInDPB_ = true;
+  }
+  return *this;
+}
+//---------------------------------------------------------------------------
+DPB & DPB::injectTimeout()
+{
+  if( !timeoutInDPB_ ){
+    add("connect_timeout",timeout_);
+    timeoutInDPB_ = true;
   }
   return *this;
 }
@@ -242,6 +253,10 @@ l1:   sValue = value;
     case isc_dpb_begin_log       :
     case isc_dpb_quit_log        :
       writeChar(1).writeChar(0);
+      break;
+    case isc_dpb_connect_timeout :
+    case isc_dpb_dummy_packet_interval :
+      writeChar(4).writeLong(timeout_);
       break;
   }
   return *this;
@@ -369,7 +384,7 @@ Database & Database::drop()
 Database & Database::attach(const utf8::String & name)
 {
   if( !attached() ){
-    dpb_.injectCharset();
+    dpb_.injectCharset().injectTimeout();
     api.open();
     ISC_STATUS_ARRAY status;
     if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 )
