@@ -325,10 +325,8 @@ ISC_STATUS DSQLStatement::fetch(ISC_STATUS_ARRAY status)
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::info()
 {
-  static char       stmtInfo[]  = {
-    isc_info_sql_stmt_type
-  };
-  char              infoBuffer[20];
+  static char stmtInfo[] = { isc_info_sql_stmt_type };
+  char infoBuffer[20];
   ISC_STATUS_ARRAY  status;
   if( api.isc_dsql_sql_info(status, &handle_, sizeof(stmtInfo), stmtInfo, sizeof(infoBuffer), infoBuffer) != 0 )
     database_->exceptionHandler(newObjectV1C2<EDSQLStInfo>(status, __PRETTY_FUNCTION__));
@@ -411,11 +409,7 @@ DSQLStatement & DSQLStatement::free()
     ISC_STATUS_ARRAY status;
     if( api.isc_dsql_free_statement(status,&handle_,DSQL_drop) != 0 && status[1] != isc_bad_stmt_handle ){
       ksys::AutoPtr<EDSQLStFree> e(newObjectV1C2<EDSQLStFree>(status,__PRETTY_FUNCTION__));
-      if( e->isFatalError() ){
-        handle_ = 0;
-        prepared_ = false;
-      }
-      database_->exceptionHandler(e.ptr(NULL));
+      if( !e->isFatalError() ) database_->exceptionHandler(e.ptr(NULL));
     }
     handle_ = 0;
     prepared_ = false;

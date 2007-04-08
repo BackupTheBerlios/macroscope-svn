@@ -852,15 +852,12 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const
 {
-  for( intptr_t i = errors_.count() - 1; i >= 0; i-- )
-    switch( errors_[i].code_ ){
-      case isc_network_error          :
-      case isc_net_read_err           :
-      case isc_net_write_err          :
-      case isc_lost_db_connection     :
-        return true;
-    }
-  return false;
+  return searchCode(
+    isc_network_error,
+    isc_net_read_err,
+    isc_net_write_err,
+    isc_lost_db_connection
+  );
 }
 //---------------------------------------------------------------------------
 } // namespace fbcpp
