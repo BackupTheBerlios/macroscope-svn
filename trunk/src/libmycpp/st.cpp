@@ -118,7 +118,7 @@ DSQLStatement & DSQLStatement::free()
 {
   values_.freeRes();
   if( allocated() ){
-    if( api.mysql_stmt_close(handle_) != 0 )
+    if( api.mysql_stmt_close(handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
       database_->exceptionHandler(newObjectV1C2<EDSQLStFree>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     handle_ = NULL;

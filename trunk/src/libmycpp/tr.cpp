@@ -89,7 +89,7 @@ Transaction & Transaction::commit()
     newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
-    if( api.mysql_commit(database_->handle_) != 0 )
+    if( api.mysql_commit(database_->handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
       exceptionHandler(newObjectV1C2<ETrCommit>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
@@ -103,7 +103,7 @@ Transaction & Transaction::rollback()
     newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
-    if( api.mysql_rollback(database_->handle_) != 0 )
+    if( api.mysql_rollback(database_->handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
       exceptionHandler(newObjectV1C2<ETrRollback>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }

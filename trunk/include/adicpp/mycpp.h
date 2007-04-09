@@ -33,13 +33,16 @@
 #include <mysql/mysql.h>
 #include <mysql/mysqld_error.h>
 #include <mysql/my_pthread.h>
+#include <mysql/errmsg.h>
 #elif HAVE_MYSQL_H
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <my_pthread.h>
+#include <errmsg.h>
 #else
 #include <adicpp/myapi/mysql.h>
 #include <adicpp/myapi/mysqld_error.h>
+#include <adicpp/myapi/errmsg.h>
 //#include <adicpp/myapi/my_global.h>
 //#include <adicpp/myapi/my_sys.h>
 #endif
