@@ -69,6 +69,7 @@ utf8::String DSQLValueText::getString()
 //---------------------------------------------------------------------------
 DSQLValueScalar::DSQLValueScalar()
 {
+  memset(&timeStamp_,0,sizeof(timeStamp_));
 }
 //---------------------------------------------------------------------------
 DSQLValueScalar::~DSQLValueScalar()
@@ -83,16 +84,14 @@ ksys::Mutant DSQLValueScalar::getMutant()
     case SQL_SHORT       :
       if( sqlscale_ != 0 ){
         v = (int16_t) bigInt_;
-        for( intptr_t j = sqlscale_; j < 0; j++ )
-          v /= 10;
+        for( intptr_t j = sqlscale_; j < 0; j++ ) v /= 10;
         return v;
       }
       return (short) bigInt_;
     case SQL_LONG        :
       if( sqlscale_ != 0 ){
         v = (int32_t) bigInt_;
-        for( intptr_t j = sqlscale_; j < 0; j++ )
-          v /= 10;
+        for( intptr_t j = sqlscale_; j < 0; j++ )  v /= 10;
         return v;
       }
       return (int32_t) bigInt_;
@@ -109,8 +108,7 @@ ksys::Mutant DSQLValueScalar::getMutant()
     case SQL_INT64       :
       if( sqlscale_ != 0 ){
         v = (ldouble) bigInt_;
-        for( intptr_t j = sqlscale_; j < 0; j++ )
-          v /= 10;
+        for( intptr_t j = sqlscale_; j < 0; j++ ) v /= 10;
         return v;
       }
       return bigInt_;

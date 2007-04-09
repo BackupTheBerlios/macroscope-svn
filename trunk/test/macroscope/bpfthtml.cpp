@@ -572,13 +572,13 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
             paramAsMutant("st_data_bytes",pStatement->sum("SUM2",0,i));
           if( curIntr ) stBPFTCacheIns2_->copyParams(stBPFTCacheIns_)->execute(); else stBPFTCacheIns_->execute();
           if( pResult != NULL ){
-  	    uintptr_t row = pResult->rowCount();
+  	        uintptr_t row = pResult->rowCount();
             pResult->addRow();
             pResult->cell(row,"st_src_ip") = stBPFTCacheIns_->paramAsString("st_src_ip");
             pResult->cell(row,"st_dst_ip") = stBPFTCacheIns_->paramAsString("st_dst_ip");
             pResult->cell(row,"SUM1") = stBPFTCacheIns_->paramAsMutant("st_dgram_bytes");
             pResult->cell(row,"SUM2") = stBPFTCacheIns_->paramAsMutant("st_data_bytes");
-  	    pResult->sort("SUM1,st_src_ip,st_dst_ip");
+  	        pResult->sort("SUM1,st_src_ip,st_dst_ip");
           }
           break;
         }
@@ -953,32 +953,32 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         switch( level ){
           case rlYear :
             f <<
-  	      (logger_->cgi_.isCGI() ? utf8::String() :
+      	      (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d.html",endTime.tm_year + 1900) + "\">"
               ) +
               utf8::int2Str(endTime.tm_year + 1900) + "\n" +
-	      (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
             ;
             break;
           case rlMon :
             f <<
-  	      (logger_->cgi_.isCGI() ? utf8::String() :
+  	          (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1) + "\">"
-	      ) +
+	            ) +
               utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
-	      (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
             ;
             break;
           case rlDay :
             f <<
-	      (logger_->cgi_.isCGI() ? utf8::String() :
+	            (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) + "\">"
-	      ) +
+	            ) +
               utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
-	      (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
             ;
             break;
           default    :
@@ -1008,7 +1008,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
               "    " + utf8::int2Str(*pi + (level == rlYear)) + "\n"
               "  </TH>\n"
-	    ;
+	          ;
           (*pi)--;
         }
         switch( level ){
