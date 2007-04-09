@@ -642,24 +642,34 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       bidirectional_ = logger_->cgi_.paramAsMutant("bidirectional");
     database_->start();
     clearBPFTCache();
-    statement_->text(
-      "SELECT " +
-      utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ? "FIRST 1 " : "") +
-      "st_start AS BT FROM INET_BPFT_STAT WHERE st_if = :st_if ORDER BY st_if, st_start" +
-      utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ? " LIMIT 0,1" : "")
-    );
-    statement_->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
-    if( statement_->fieldIndex("BT") < 0 || statement_->rowCount() == 0 ) goto l1;
-    beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
-    statement_->text(
-      "SELECT " +
-      utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ? "FIRST 1 " : "") +
-      "st_start AS ET FROM INET_BPFT_STAT WHERE st_if = :st_if ORDER BY st_if DESC, st_start DESC" +
-      utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ? " LIMIT 0,1" : "")
-    );
-    statement_->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
-    if( statement_->fieldIndex("ET") < 0 || statement_->rowCount() == 0 ) goto l1;
-    endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
+    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+      statement_->text(
+        "SELECT FIRST 1 st_start AS BT FROM INET_BPFT_STAT "
+        "WHERE st_if = :st_if ORDER BY st_if, st_start"
+      )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
+      if( statement_->fieldIndex("BT") < 0 || statement_->rowCount() == 0 ) goto l1;
+      beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
+      statement_->text(
+        "SELECT FIRST 1 st_start AS ET FROM INET_BPFT_STAT "
+        "WHERE st_if = :st_if ORDER BY st_if desc, st_start desc"
+      )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
+      if( statement_->fieldIndex("ET") < 0 || statement_->rowCount() == 0 ) goto l1;
+      endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
+    }
+    else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
+      statement_->text(
+        "SELECT MAX(st_start) AS BT, MAX(st_start) AS ET FROM INET_BPFT_STAT WHERE st_if = :st_if"
+      )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
+      if( statement_->fieldIndex("BT") < 0 || statement_->fieldIndex("ET") < 0 ||
+          statement_->rowCount() == 0 ||
+          (statement_->valueAsMutant("BT") == Mutant(0) &&
+           statement_->valueAsMutant("ET") == Mutant(0)) ) goto l1;
+      beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
+      endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
+    }
+    else {
+      assert( 0 );
+    }
     if( bidirectional_ ){
       stBPFTSel_->text(
         "SELECT"
