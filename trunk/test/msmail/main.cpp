@@ -80,8 +80,7 @@ int main(int _argc,char * _argv[])
     errcode = errcode;*/
 
 #endif
-    RBTree<intptr_t> tree;
-    tree.benchmark(10000000,3);
+    RBTree<int,int,RBTreeNode<int,int> >::benchmark(10000000,3);
     exit(0);
 
     uintptr_t u;
