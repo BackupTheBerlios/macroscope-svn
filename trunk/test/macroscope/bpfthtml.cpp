@@ -272,6 +272,7 @@ bool Logger::isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,
   struct tm curTimeBTYear = curTimeBTMon;
   curTimeBTYear.tm_mon = 0;
   struct tm curTimeETYear = curTimeETMon;
+  curTimeETYear.tm_mday = 31;
   curTimeETYear.tm_mon = 11;
   int64_t bt0 = tm2Time(bt), et0 = tm2Time(et);
   return

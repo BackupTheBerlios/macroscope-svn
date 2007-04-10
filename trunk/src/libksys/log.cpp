@@ -320,7 +320,7 @@ LogFile & LogFile::setAllDebugLevels(intptr_t value)
 //---------------------------------------------------------------------------
 LogFile & LogFile::flush(bool wait)
 {
-  uint64_t ft;
+  uint64_t ft = 0;
   {
     AutoLock<InterlockedMutex> lock2(threadMutex_);
     if( bufferPos_ > 0 ){
