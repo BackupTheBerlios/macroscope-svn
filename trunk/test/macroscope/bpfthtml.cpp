@@ -659,7 +659,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     }
     else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
       statement_->text(
-        "SELECT MAX(st_start) AS BT, MAX(st_start) AS ET FROM INET_BPFT_STAT WHERE st_if = :st_if"
+        "SELECT MIN(st_start) AS BT, MAX(st_start) AS ET FROM INET_BPFT_STAT WHERE st_if = :st_if"
       )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
       if( statement_->fieldIndex("BT") < 0 || statement_->fieldIndex("ET") < 0 ||
           statement_->rowCount() == 0 ||

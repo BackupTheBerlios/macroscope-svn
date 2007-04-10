@@ -194,18 +194,18 @@ int32_t Logger::main()
   verbose_ = config_->section("macroscope").value("verbose",false);
 
 // print query form if is CGI and no CGI parameters
-/*  setEnv("GATEWAY_INTERFACE","CGI/1.1");
-  setEnv("REQUEST_METHOD","POST");
+  setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  setEnv("REQUEST_METHOD","GET");
   setEnv("QUERY_STRING",
     "if=sk1&"
-    "bday=22&bmon=3&byear=2007&"
-    "eday=23&emon=3&eyear=2007&"
+    "bday=9&bmon=4&byear=2007&"
+    "eday=9&emon=4&eyear=2007&"
     "resolve=on&"
     "bidirectional=on&"
-    "threshold=4M&"
+    "threshold=16M&"
     "threshold2=&"
     "filter=src+sus+or+dst+sus"
-  );*/
+  );
 /*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
   LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
   while( wcslen(pEnv) > 0 ){
@@ -352,7 +352,7 @@ int32_t Logger::main()
       ;
       return 0;
     }
-    verbose_ = false;
+//    verbose_ = false;
   }
   else {
     ConfigSection dbParamsSection;
