@@ -61,7 +61,7 @@ EClientServer::EClientServer(int32_t code,const utf8::String what) : ksys::Excep
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const
 {
-  return searchCode(CR_SERVER_GONE_ERROR,ER_MASTER_NET_READ,ER_MASTER_NET_WRITE);
+  return searchCode(CR_SERVER_GONE_ERROR,CR_SERVER_LOST,ER_MASTER_NET_READ,ER_MASTER_NET_WRITE);
 }
 //---------------------------------------------------------------------------
 } // namespace mycpp

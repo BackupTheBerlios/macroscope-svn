@@ -68,7 +68,8 @@ const char * const  API::symbols_[] = {
   "mysql_free_result",
   "mysql_fetch_fields",
   "mysql_insert_id",
-  "mysql_options"
+  "mysql_options",
+  "mysql_ping"
 };
 #endif
 //---------------------------------------------------------------------------

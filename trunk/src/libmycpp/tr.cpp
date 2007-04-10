@@ -118,7 +118,7 @@ void Transaction::processingException(ksys::Exception * e)
     if( p->isFatalError() ){
       startCount_ = 0;
     }
-    else{
+    else {
       if( active() ) rollback();
     }
   }

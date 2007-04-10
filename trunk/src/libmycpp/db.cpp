@@ -236,6 +236,7 @@ void Database::processingException(ksys::Exception * e)
   EClientServer * p = dynamic_cast< EClientServer *>(e);
   if( p != NULL ){
     if( p->isFatalError() ){
+      p = p;
     }
   }
 }

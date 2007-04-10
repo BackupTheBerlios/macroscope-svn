@@ -171,6 +171,10 @@ class API {
     {
       return ::mysql_options(mysql, option, (const char *) arg);
     }
+    int mysql_ping(MYSQL * mysql)
+    {
+      return ::mysql_ping(mysql);
+    }
 #else
 #if _MSC_VER
 #pragma warning(push,3)
@@ -320,6 +324,10 @@ class API {
                                               enum mysql_option option,
                                               const void * arg);
                 void *  p_mysql_options;
+            };
+            union {
+                int (STDCALL * mysql_ping)(MYSQL *mysql);
+                void *  p_mysql_ping;
             };
         };
     };
