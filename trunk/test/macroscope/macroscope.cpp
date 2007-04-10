@@ -446,7 +446,8 @@ int32_t Logger::main()
     }
 
 //#if !__FreeBSD__
-    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL &&
+        (bool) config_->valueByPath("libadicpp.default_connection.firebird.set_properties",false) ){
       utf8::String hostName, dbName;
       uintptr_t port;
       database_->separateDBName(database_->name(),hostName,dbName,port);

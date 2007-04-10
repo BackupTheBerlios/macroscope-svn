@@ -29,9 +29,9 @@
 namespace mycpp {
 //---------------------------------------------------------------------------
 DPB::DPB() :
-  connectTimeout_(0),
-  readTimeout_(0),
-  writeTimeout_(0),
+  connectTimeout_(~((unsigned int) 0)),
+  readTimeout_(~((unsigned int) 0)),
+  writeTimeout_(~((unsigned int) 0)),
   reconnect_(false)
 {
 }
