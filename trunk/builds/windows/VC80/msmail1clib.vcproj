@@ -84,6 +84,7 @@
 				Name="VCLinkerTool"
 				RegisterOutput="true"
 				IgnoreImportLibrary="true"
+				OutputFile="c:\windows\system32\$(ProjectName).dll"
 				LinkIncremental="2"
 				ModuleDefinitionFile="..\..\..\test\msmail1clib\msmail1clib.def"
 				GenerateDebugInformation="true"

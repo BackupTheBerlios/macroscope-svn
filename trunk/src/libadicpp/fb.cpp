@@ -85,6 +85,17 @@ bool FirebirdDatabase::attached()
   return static_cast<fbcpp::Database *>(this)->attached();
 }
 //---------------------------------------------------------------------------
+FirebirdDatabase * FirebirdDatabase::isolation(const utf8::String & isolation)
+{
+  static_cast<fbcpp::Transaction *>(this)->isolation(isolation);
+  return this;
+}
+//---------------------------------------------------------------------------
+utf8::String FirebirdDatabase::isolation()
+{
+  return static_cast<fbcpp::Transaction *>(this)->isolation();
+}
+//---------------------------------------------------------------------------
 FirebirdDatabase * FirebirdDatabase::start()
 {
   static_cast<fbcpp::Transaction *>(this)->start();

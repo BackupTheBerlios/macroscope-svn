@@ -85,6 +85,17 @@ bool MYSQLDatabase::attached()
   return static_cast<mycpp::Database *>(this)->attached();
 }
 //---------------------------------------------------------------------------
+MYSQLDatabase * MYSQLDatabase::isolation(const utf8::String & isolation)
+{
+  static_cast<mycpp::Transaction *>(this)->isolation(isolation);
+  return this;
+}
+//---------------------------------------------------------------------------
+utf8::String MYSQLDatabase::isolation()
+{
+  return static_cast<mycpp::Transaction *>(this)->isolation();
+}
+//---------------------------------------------------------------------------
 MYSQLDatabase * MYSQLDatabase::start()
 {
   static_cast<mycpp::Transaction *>(this)->start();

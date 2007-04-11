@@ -100,6 +100,9 @@ uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size);
 utf8::String base32Encode(const void * p,uintptr_t l);
 uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size);
 //---------------------------------------------------------------------------
+void writeProtectedMemory(void * memory,const void * data,uintptr_t count);
+void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::String & importedDllName,const utf8::String & funcName);
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 extern uint8_t argvPlaceHolder[sizeof(Array< utf8::String>)];

@@ -2784,6 +2784,91 @@ uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];
 //---------------------------------------------------------------------------
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 //---------------------------------------------------------------------------
+void writeProtectedMemory(void * memory,const void * data,uintptr_t count)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  DWORD old;
+  BOOL r = VirtualProtect(
+    memory,
+    count,
+    PAGE_EXECUTE_READWRITE,
+    &old
+  );
+  if( r == 0 ){
+    int32_t err = GetLastError();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  SIZE_T w = 0;
+/*  r = WriteProcessMemory(
+    GetCurrentProcess(),
+    memory,
+    data,
+    count,
+    w
+  );*/
+  if( r == 0 || w != count ){
+    int32_t err = GetLastError();
+    VirtualProtect(memory,count,old,&old);
+    if( w != count ) err = ERROR_INVALID_DATA;
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  VirtualProtect(memory,count,old,&old);
+#else
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+#endif
+}
+//---------------------------------------------------------------------------
+void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::String & importedDllName,const utf8::String & funcName)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  union {
+    HMODULE hModule;
+    uintptr_t basePointer;
+  };
+  if( isWin9x() ){
+    hModule = GetModuleHandleA(dllName.getANSIString());
+  }
+  else {
+    hModule = GetModuleHandleW(dllName.getUNICODEString());
+  }
+  if( hModule == NULL ){
+    int32_t err = GetLastError();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  /*FARPROC procAddr = GetProcAddress(GetModuleHandle("KERNEL32.DLL"),funcName.getANSIString());
+  if( procAddr == NULL ){
+    int32_t err = GetLastError();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }*/
+  ULONG size;
+  PVOID importTableOffset = ImageDirectoryEntryToData(hModule,TRUE,IMAGE_DIRECTORY_ENTRY_IMPORT,&size);
+  if( importTableOffset == NULL ){
+    int32_t err = GetLastError();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  uintptr_t rva = uintptr_t(importTableOffset) - basePointer;
+  for(;;){
+    uintptr_t dllNameOffset = *(uintptr_t *)(rva + 12 + basePointer);
+    if( dllNameOffset == 0 ){
+      newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( utf8::String((const char *)(basePointer + dllNameOffset)).strcasecmp(importedDllName) != 0 ){
+      rva += 20;
+      continue;
+    }
+    uintptr_t funcNamesOffset = *(uintptr_t *)(rva + basePointer);
+    for(;;){
+      const char * funcNameOffset = (const char *) *(uintptr_t *)(funcNamesOffset + basePointer);
+      if( *funcNameOffset == NULL ) break;
+      funcNameOffset += sizeof(uintptr_t);
+    }
+  }
+#else
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  return NULL;
+#endif
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // System initialization and finalization ///////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////

@@ -350,6 +350,3 @@
 /* #undef HAVE_INTMAX_T_AS_INT64_T 0 */
 
 #define PRIVATE_RELEASE 1
-/* #undef CMAKE_GENERATOR_IS_VS 1 */
-#define CMAKE_SYSTEM_NAME "Windows"
-#define CMAKE_SYSTEM_VERSION "5.2"

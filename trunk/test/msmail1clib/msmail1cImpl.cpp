@@ -106,7 +106,8 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"RemoveDeviceScanner", L"”далить—канер”стройства",
       L"AttachFileToMessage", L"ѕрикрепить‘айл —ообщению",
       L"SaveMessageAttachmentToFile", L"—охранитьѕрикрепление—ообщени€¬‘айл",
-      L"ReceiveMessages", L"ѕолучить—ообщени€"
+      L"ReceiveMessages", L"ѕолучить—ообщени€",
+      L"RepairLocking", L"ѕочинитьЅлокировки"
     };
     msmail1c_->functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
@@ -250,7 +251,7 @@ HRESULT Cmsmail1c::FindProp(BSTR bstrPropName,long * plPropNum)
   if( _wcsicoll(bstrPropName,L"AsyncMessagesReceiving") == 0 ) *plPropNum = 23;
   else
   if( _wcsicoll(bstrPropName,L"јсинхронноеѕолучение—ообщений") == 0 ) *plPropNum = 23;
-  else
+  else 
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
 }
@@ -1101,6 +1102,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"ѕолучить—ообщени€")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 32 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RepairLocking")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ѕочинитьЅлокировки")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1140,6 +1149,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 29 : *plParams = 3; break;
     case 30 : *plParams = 3; break;
     case 31 : *plParams = 1; break;
+    case 32 : *plParams = 0; break;
     default :
       *plParams = -1;
       return E_NOTIMPL;
@@ -1808,6 +1818,13 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             }
             SafeArrayUnlock(*paParams);
           }
+          break;
+        case 32 : // RepairLocking
+          writeProtectedMemory(
+            findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile"),
+            "    ",
+            4
+          );
           break;
         default :
           hr = E_NOTIMPL;

@@ -103,6 +103,9 @@ class Transaction : virtual public Base {
 
     void beforeDestruction() { detach(); }
 
+    Transaction &   isolation(const utf8::String & isolation);
+    const utf8::String & isolation() const;
+
     Transaction &   start();
     Transaction &   prepare();
     Transaction &   commit();
@@ -123,6 +126,7 @@ class Transaction : virtual public Base {
   private:
     isc_tr_handle                                       handle_;
     uintptr_t                                           startCount_;
+    utf8::String isolation_;
 
     DatabaseEnum                                        databases_;
     ksys::HashedObjectList< utf8::String,TPB>           tpbs_;
@@ -131,6 +135,11 @@ class Transaction : virtual public Base {
     enum { lrtNone, lrtCommit, lrtRollback } lastRetainingTransaction_;
     Transaction & retainingHelper();
 };
+//---------------------------------------------------------------------------
+inline const utf8::String & Transaction::isolation() const
+{
+  return isolation_;
+}
 //---------------------------------------------------------------------------
 inline isc_tr_handle & Transaction::handle()
 {

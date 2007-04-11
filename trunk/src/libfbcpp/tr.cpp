@@ -201,6 +201,20 @@ Transaction & Transaction::retainingHelper()
   return *this;
 }
 //---------------------------------------------------------------------------
+Transaction & Transaction::isolation(const utf8::String & isolation)
+{
+  isolation_ = isolation;
+  for( intptr_t i = databases_.count() - 1; i >= 0; i-- ){
+#if __GNUG__
+    TPB * tpb = tpbs_.objectOfKey(utf8::ptr2Str(databases_[i]));
+#else
+    TPB * tpb = tpbs_.objectOfKey(databases_.keyOfIndex(i));
+#endif
+    tpb->clear();
+  }
+  return *this;
+}
+//---------------------------------------------------------------------------
 Transaction & Transaction::start()
 {
   if( !attached() )
@@ -218,10 +232,35 @@ Transaction & Transaction::start()
       TPB * tpb = tpbs_.objectOfKey(databases_.keyOfIndex(i));
 #endif
       if( tpb->tpbLen_ == 0 ){
-        tpb->add("version3");
-        tpb->add("read_committed");
-        tpb->add("rec_version");
-        tpb->add("nowait");
+        if( isolation_.strcasecmp("REPEATABLE") == 0 ){
+          tpb->add("version3");
+          tpb->add("concurrency");
+          tpb->add("read");
+          tpb->add("write");
+          tpb->add("nowait");
+        }
+        else if( isolation_.strcasecmp("SERIALIZABLE") == 0 ){
+          tpb->add("version3");
+          tpb->add("consistency");
+          tpb->add("read");
+          tpb->add("write");
+          tpb->add("wait");
+        }
+        else if( isolation_.strcasecmp("READ_COMMITTED") == 0 ){
+l1:       tpb->add("version3");
+          tpb->add("read_committed");
+          tpb->add("rec_version");
+          tpb->add("nowait");
+        }
+        else if( isolation_.strcasecmp("READ_ONLY_COMMITTED") == 0 ){
+          tpb->add("version3");
+          tpb->add("read");
+          tpb->add("read_committed");
+          tpb->add("rec_version");
+          tpb->add("nowait");
+        }
+        else
+          goto l1;
       }
       tebVector[i].tpb_len = tpb->tpbLen_;
       tebVector[i].tpb_ptr = tpb->tpb_;

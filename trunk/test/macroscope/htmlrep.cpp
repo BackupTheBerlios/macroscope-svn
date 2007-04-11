@@ -642,7 +642,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
   decoration();
   struct tm beginTime, endTime;
   curTime_ = time2tm(getlocaltimeofday());
-  database_->start();
+  database_->isolation("REPEATABLE")->start();
   statement_->text("SELECT ");
   if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");

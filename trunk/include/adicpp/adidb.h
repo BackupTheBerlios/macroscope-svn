@@ -51,6 +51,8 @@ class Database : virtual public ksys::Object {
     virtual Database *    detach() = 0;
     virtual bool          attached() = 0;
 
+    virtual Database *    isolation(const utf8::String & isolation) = 0;
+    virtual utf8::String  isolation() = 0;
     virtual Database *    start() = 0;
     virtual Database *    rollback() = 0;
     virtual Database *    commit() = 0;
@@ -103,6 +105,8 @@ class FirebirdDatabase : public Database, public fbcpp::Database, public fbcpp::
     FirebirdDatabase *  detach();
     bool                attached();
 
+    FirebirdDatabase *  isolation(const utf8::String & isolation);
+    utf8::String        isolation();
     FirebirdDatabase *  start();
     FirebirdDatabase *  rollback();
     FirebirdDatabase *  commit();
@@ -137,6 +141,8 @@ class MYSQLDatabase : public Database, public mycpp::Database, public mycpp::Tra
     MYSQLDatabase * detach();
     bool            attached();
 
+    MYSQLDatabase * isolation(const utf8::String & isolation);
+    utf8::String    isolation();
     MYSQLDatabase * start();
     MYSQLDatabase * rollback();
     MYSQLDatabase * commit();

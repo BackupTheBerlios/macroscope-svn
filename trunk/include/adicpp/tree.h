@@ -1209,7 +1209,7 @@ class RBTreeBenchmarkObject {
       return node.object<RBTreeBenchmarkObject>(reinterpret_cast<RBTreeBenchmarkObject *>(NULL)->treeNode_);
     }
     static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1){
-      return a0.key_ - a1.key_;
+      return a0.key_ > a1.key_ ? 1 : a0.key_ < a1.key_ ? -1 : 0;
     }
     mutable RBTreeNode treeNode_;
 };
@@ -1264,8 +1264,8 @@ void RBTree<OT,O2N,N2O,CO>::benchmark(uintptr_t elCount,uintptr_t cycles)
     for( intptr_t i = elCount - 1; i >= 0; i-- ) pNodes[i] = &nodes[i];
     for( intptr_t i = elCount - 1; i >= 0; i-- ){
       ksys::xchg(
-        pNodes[rnd.random() % (elCount)],
-        pNodes[rnd.random() % (elCount)]
+        pNodes[uintptr_t(rnd.random() % elCount)],
+        pNodes[uintptr_t(rnd.random() % elCount)]
       );
     }
     t = gettimeofday();
