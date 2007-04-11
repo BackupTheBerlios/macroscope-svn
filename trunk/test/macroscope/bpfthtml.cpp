@@ -625,9 +625,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     minSignificantThreshold_ = logger_->config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
     if( logger_->cgi_.isCGI() )
       minSignificantThreshold_ = logger_->cgi_.paramAsMutant(
-        logger_->cgi_.paramAsString("threshold2").strlen() > 0 ?
-        "threshold2" :
-        "threshold"
+        logger_->cgi_.paramAsString("threshold2").isNull() ?
+        "threshold" :
+        "threshold2"
       );
     filter_ = logger_->config_->textByPath(section_ + ".html_report.filter");
     if( logger_->cgi_.isCGI() )
@@ -682,9 +682,11 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "    INET_BPFT_STAT"
         "  WHERE "
         "    st_if = :st_if AND"
-        "    st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@'" +
+        "    st_start >= :BT AND st_start <= :ET " +
         (filter_.isNull() ? utf8::String() : " AND " + filter_) +
-        "  GROUP BY st_src_ip, st_dst_ip"
+        "  GROUP BY st_src_ip, st_dst_ip"/* +
+        utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ?
+          "  PLAN (INET_BPFT_STAT INDEX (IBS_IDX4))" : "") +*/
         ") AS A "
         "ORDER BY A.SUM1"
       );
@@ -698,7 +700,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "  st_start >= :BT AND st_start <= :ET AND"
         "  st_src_ip = :src AND st_dst_ip = :dst" +
         (filter_.isNull() ? utf8::String() : " AND " + filter_) +
-        " GROUP BY st_src_ip, st_dst_ip"
+        " GROUP BY st_src_ip, st_dst_ip"/* +
+        utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ?
+          " PLAN (INET_BPFT_STAT INDEX (IBS_IDX4))" : "")*/
       );
     }
     else {
@@ -715,7 +719,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "        INET_BPFT_STAT"
         "      WHERE "
         "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' "
+        "        st_start >= :BT AND st_start <= :ET "
         "      GROUP BY st_dst_ip"
         "    UNION ALL"
         "      SELECT"
@@ -724,7 +728,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "        INET_BPFT_STAT"
         "      WHERE "
         "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET AND st_src_ip <> '@' AND st_dst_ip <> '@' "
+        "        st_start >= :BT AND st_start <= :ET "
         "      GROUP BY st_src_ip"
         "  ) AS B "
         "  GROUP BY B.st_ip"

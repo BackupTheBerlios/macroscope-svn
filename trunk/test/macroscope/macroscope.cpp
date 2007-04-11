@@ -420,12 +420,12 @@ int32_t Logger::main()
       " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
       " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
       ")" <<
-      "CREATE INDEX IBS_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
-      "CREATE INDEX IBS_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
-      "CREATE INDEX IBS_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip)" <<
-      "CREATE INDEX IBS_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip)" <<
-      "CREATE INDEX IBSC_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip)" <<
-      "CREATE INDEX IBSC_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
+//      "CREATE INDEX IBS_IDX1 ON INET_BPFT_STAT (st_if,st_src_ip)" <<
+//      "CREATE INDEX IBS_IDX2 ON INET_BPFT_STAT (st_if,st_dst_ip)" <<
+      "CREATE INDEX IBS_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip,st_dst_ip)" <<
+      "CREATE INDEX IBS_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_dst_ip,st_src_ip)" <<
+      "CREATE INDEX IBSC_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip,st_dst_ip)" <<
+//      "CREATE INDEX IBSC_IDX2 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_dst_ip)" <<
       "CREATE UNIQUE INDEX IUT_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
       "CREATE INDEX IUT_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
       "CREATE INDEX IUT_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
