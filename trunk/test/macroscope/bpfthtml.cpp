@@ -671,6 +671,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     else {
       assert( 0 );
     }
+//    stdErr.debug(9,utf8::String::Stream() << __FILE__ << ", " << __LINE__ << "\n").flush();
     if( bidirectional_ ){
       stBPFTSel_->text(
         "SELECT"
