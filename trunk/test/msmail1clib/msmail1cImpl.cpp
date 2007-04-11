@@ -1822,8 +1822,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
         case 32 : // RepairLocking
           writeProtectedMemory(
             findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile"),
-            "    ",
-            4
+            reparedLockFile,
+            sizeof(uintptr_t)
           );
           break;
         default :
@@ -2082,5 +2082,81 @@ err:
   return S_OK;
 }
 //---------------------------------------------------------------------------
+BOOL WINAPI Cmsmail1c::reparedLockFile(
+  HANDLE hFile,
+  DWORD dwFileOffsetLow,
+  DWORD dwFileOffsetHigh,
+  DWORD nNumberOfBytesToLockLow,
+  DWORD nNumberOfBytesToLockHigh)
+{
+  HANDLE hEvent = CreateEvent(NULL,TRUE,FALSE,NULL));
+  if( hEvent == NULL ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+    }
+    if( !file->locked_ ){
+      memset(&Overlapped,0,sizeof(Overlapped));
+      Overlapped.hEvent = file->hEvent_;
+      DWORD flags = LOCKFILE_EXCLUSIVE_LOCK, err;
+      /*if( maxSleepTime == 0 && minSleepTime == 0 ){
+        flags |= LOCKFILE_FAIL_IMMEDIATELY;
+      }
+      else {
+      }*/
+      SetLastError(0);
+      BOOL lk = LockFileEx(file->handle_,flags,0,~DWORD(0),~DWORD(0),&Overlapped);
+      err = GetLastError();
+      if( lk == 0 && err != ERROR_IO_PENDING && err != ERROR_LOCK_VIOLATION ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+      if( err == ERROR_IO_PENDING ){
+        DWORD st = (DWORD) msmail1c_->rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
+        st = maxSleepTime == 0 && minSleepTime == 0 ? 0 : st;
+        DWORD state = WaitForSingleObject(file->hEvent_,st);
+        if( state == WAIT_TIMEOUT ){
+          CancelIo(file->handle_);
+          *pLastError = WAIT_TIMEOUT;
+        }
+        else if( state == WAIT_ABANDONED ){
+          CancelIo(file->handle_);
+          *pLastError = WAIT_TIMEOUT;
+        }
+        else {
+          DWORD NumberOfBytesTransferred;
+          GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE);
+          file->locked_ = true;
+        }
+      }
+      else if( err == ERROR_LOCK_VIOLATION ){
+        *pLastError = WAIT_TIMEOUT;
+      }
+      else {
+      /*char pid[10 + 1];
+      memset(pid,'\0',sizeof(pid));
+      _snprintf(pid,sizeof(pid) / sizeof(pid[0]),"%d",ksys::getpid());
+      DWORD NumberOfBytesWritten = 0;
+      memset(&Overlapped,0,sizeof(Overlapped));
+      Overlapped.hEvent = file->hEvent_;
+      SetLastError(0);
+      lk = WriteFile(file->handle_,pid,DWORD(::strlen(pid) * sizeof(pid[0])),&NumberOfBytesWritten,&Overlapped);
+      if( lk == 0 && GetLastError() == ERROR_IO_PENDING ){
+        DWORD state = WaitForSingleObject(file->hEvent_,INFINITE);
+        if( state == WAIT_TIMEOUT ){
+          CancelIo(file->handle_);
+        }
+        else if( state == WAIT_ABANDONED ){
+        }
+        if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesWritten,FALSE) == 0 ){
+        }
+      }
+      SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
+      SetEndOfFile(file->handle_);*/
+        file->locked_ = true;
+      }
+    }
+}
+//------------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------

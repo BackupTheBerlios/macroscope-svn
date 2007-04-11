@@ -2798,14 +2798,14 @@ void writeProtectedMemory(void * memory,const void * data,uintptr_t count)
     int32_t err = GetLastError();
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
-  SIZE_T w = 0;
-/*  r = WriteProcessMemory(
+  SIZE_T w;
+  r = WriteProcessMemory(
     GetCurrentProcess(),
     memory,
     data,
     count,
     w
-  );*/
+  );
   if( r == 0 || w != count ){
     int32_t err = GetLastError();
     VirtualProtect(memory,count,old,&old);
@@ -2849,18 +2849,37 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
   uintptr_t rva = uintptr_t(importTableOffset) - basePointer;
   for(;;){
     uintptr_t dllNameOffset = *(uintptr_t *)(rva + 12 + basePointer);
-    if( dllNameOffset == 0 ){
+    if( dllNameOffset == 0 )
       newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-    }
     if( utf8::String((const char *)(basePointer + dllNameOffset)).strcasecmp(importedDllName) != 0 ){
       rva += 20;
       continue;
     }
-    uintptr_t funcNamesOffset = *(uintptr_t *)(rva + basePointer);
+    uintptr_t funcNamesOffset = *(uintptr_t *)(rva + basePointer), nFuncName = 0;
     for(;;){
-      const char * funcNameOffset = (const char *) *(uintptr_t *)(funcNamesOffset + basePointer);
-      if( *funcNameOffset == NULL ) break;
-      funcNameOffset += sizeof(uintptr_t);
+      uintptr_t funcNameOffset = *(uintptr_t *)(funcNamesOffset + basePointer);
+      if( funcNameOffset == 0 )
+        newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      nFuncName++;
+      utf8::String name((const char *)(basePointer + funcNameOffset) + 2);
+      if( name.strcmp(funcName) != 0 ){
+        funcNamesOffset += sizeof(uintptr_t);
+        nFuncName++;
+        continue;
+      }
+      uintptr_t funcAddrsOffset = *(uintptr_t *)(rva + 16 + basePointer), nFuncAddr = 0;
+      for(;;){
+        uintptr_t funcAddrOffset = *(uintptr_t *)(funcAddrsOffset + basePointer);
+        if( funcAddrOffset == 0 )
+          newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+        nFuncAddr++;
+        if( nFuncAddr != nFuncName ){
+          funcAddrsOffset += sizeof(uintptr_t);
+          nFuncAddr++;
+          continue;
+        }
+        return (void *) *(uintptr_t *)(funcAddrsOffset + basePointer);
+      }
     }
   }
 #else

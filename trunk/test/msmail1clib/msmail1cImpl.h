@@ -418,6 +418,13 @@ public:
   STDMETHOD(CallAsProc)( long lMethodNum, SAFEARRAY * * paParams);
   STDMETHOD(CallAsFunc)( long lMethodNum,  VARIANT * pvarRetValue, SAFEARRAY * * paParams);
 #endif
+  static BOOL WINAPI reparedLockFile(
+    HANDLE hFile,
+    DWORD dwFileOffsetLow,
+    DWORD dwFileOffsetHigh,
+    DWORD nNumberOfBytesToLockLow,
+    DWORD nNumberOfBytesToLockHigh
+  );
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
