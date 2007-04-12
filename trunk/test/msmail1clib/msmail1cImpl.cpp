@@ -69,6 +69,13 @@ Cmsmail1c::msmail1c::msmail1c() :
 //------------------------------------------------------------------------------
 // IInitDone Methods
 //------------------------------------------------------------------------------
+/*void * Cmsmail1c::oldBKENDGetProcAddress_;
+void * Cmsmail1c::oldDBENG32LockFile_;
+void * Cmsmail1c::oldMSVCRTLockFile_;
+void * Cmsmail1c::oldMSVCR71LockFile_;
+void * Cmsmail1c::oldMFC42LockFile_;
+Cmsmail1c::ImportedEntry Cmsmail1c::oldSEVENGetProcAddress_;*/
+//------------------------------------------------------------------------------
 HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
 {
 //  stdErr.enableDebugLevel(9);
@@ -123,11 +130,75 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
 //  uintptr_t avg = functions_.avgChainLength();
   msmail1c_->pBackConnection_ = pBackConnection;
   msmail1c_->pBackConnection_->AddRef();
+  memset(lockFileJmpCodeSafe_,0,sizeof(lockFileJmpCodeSafe_));
+  memset(unLockFileJmpCodeSafe_,0,sizeof(unLockFileJmpCodeSafe_));
   return S_OK;
 }
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::Done()
 {
+/*  if( oldBKENDGetProcAddress_ != NULL ){
+    void * proc = findProcImportedEntryAddress("bkend.dll","KERNEL32.DLL","GetProcAddress");
+    writeProtectedMemory(
+      proc,
+      &oldBKENDGetProcAddress_,
+      sizeof(uintptr_t)
+    );
+    oldBKENDGetProcAddress_ = NULL;
+  }
+  if( oldDBENG32LockFile_ != NULL ){
+    void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile");
+    writeProtectedMemory(
+      proc,
+      &oldDBENG32LockFile_,
+      sizeof(uintptr_t)
+    );
+    oldDBENG32LockFile_ = NULL;
+  }
+  if( oldMSVCRTLockFile_ != NULL ){
+    void * proc = findProcImportedEntryAddress("msvcrt.dll","KERNEL32.DLL","LockFile");
+    writeProtectedMemory(
+      proc,
+      &oldMSVCRTLockFile_,
+      sizeof(uintptr_t)
+    );
+    oldMSVCRTLockFile_ = NULL;
+  }
+  if( oldMSVCR71LockFile_ != NULL ){
+    void * proc = findProcImportedEntryAddress("msvcr71.dll","KERNEL32.DLL","LockFile");
+    writeProtectedMemory(
+      proc,
+      &oldMSVCR71LockFile_,
+      sizeof(uintptr_t)
+    );
+    oldMSVCR71LockFile_ = NULL;
+  }
+  if( oldMFC42LockFile_ != NULL ){
+    void * proc = findProcImportedEntryAddress("mfc42.dll","KERNEL32.DLL","LockFile");
+    writeProtectedMemory(
+      proc,
+      &oldMFC42LockFile_,
+      sizeof(uintptr_t)
+    );
+    oldMFC42LockFile_ = NULL;
+  }
+  if( oldSEVENGetProcAddress_.p_ != NULL ){
+    void * proc = findProcImportedEntryAddress("seven.dll","KERNEL32.DLL","GetProcAddress");
+    writeProtectedMemory(
+      proc,
+      &oldSEVENGetProcAddress_.p_,
+      sizeof(uintptr_t)
+    );
+    oldSEVENGetProcAddress_.p_ = NULL;
+  }*/
+  if( lockFileJmpCodeSafe_[0] != 0 ){
+    writeProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
+    memset(lockFileJmpCodeSafe_,0,sizeof(lockFileJmpCodeSafe_));
+  }
+  if( unLockFileJmpCodeSafe_[0] != 0 ){
+    writeProtectedMemory(UnlockFile,unLockFileJmpCodeSafe_,sizeof(unLockFileJmpCodeSafe_));
+    memset(unLockFileJmpCodeSafe_,0,sizeof(unLockFileJmpCodeSafe_));
+  }
   msmail1c_ = NULL;
   return S_OK;
 }
@@ -1201,6 +1272,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
   if( SUCCEEDED(hr) ){
     LONG lIndex = -1;
     V_I4(pvarRetValue) = 0;
+    msmail1c_->lastError_ = ERROR_SUCCESS;
     try {
       switch( lMethodNum ){
         case 0 : // LockFile
@@ -1820,11 +1892,100 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 32 : // RepairLocking
-          writeProtectedMemory(
-            findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile"),
-            reparedLockFile,
-            sizeof(uintptr_t)
-          );
+          {
+            //void * proc, * p;
+            /*proc = findProcImportedEntryAddress("bkend.dll","KERNEL32.DLL","GetProcAddress");
+            readProtectedMemory(proc,&p,sizeof(void *));
+            if( oldBKENDGetProcAddress_ == NULL && p != reparedGetProcAddress ){
+              void * a = reparedGetProcAddress;
+              writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+              oldBKENDGetProcAddress_ = p;
+              V_I4(pvarRetValue) = 1;
+            }
+            else {
+              msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+            }
+            if( V_I4(pvarRetValue) ){
+              proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile");
+              readProtectedMemory(proc,&p,sizeof(void *));
+              if( oldDBENG32LockFile_ == NULL && p != reparedLockFile ){
+                void * a = reparedLockFile;
+                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                oldDBENG32LockFile_ = p;
+              }
+              else {
+                V_I4(pvarRetValue) = 0;
+                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              }
+            }
+            if( V_I4(pvarRetValue) ){
+              proc = findProcImportedEntryAddress("msvcrt.dll","KERNEL32.DLL","LockFile");
+              readProtectedMemory(proc,&p,sizeof(void *));
+              if( oldMSVCRTLockFile_ == NULL && p != reparedLockFile ){
+                void * a = reparedLockFile;
+                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                oldMSVCRTLockFile_ = p;
+              }
+              else {
+                V_I4(pvarRetValue) = 0;
+                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              }
+            }
+            if( V_I4(pvarRetValue) ){
+              proc = findProcImportedEntryAddress("mfc42.dll","KERNEL32.DLL","LockFile");
+              readProtectedMemory(proc,&p,sizeof(void *));
+              if( oldMFC42LockFile_ == NULL && p != reparedLockFile ){
+                void * a = reparedLockFile;
+                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                oldMFC42LockFile_ = p;
+              }
+              else {
+                V_I4(pvarRetValue) = 0;
+                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              }
+            }*/
+            /*if( V_I4(pvarRetValue) ){
+              HMODULE hModule = LoadLibraryA("msvcr71.dll");
+              proc = findProcImportedEntryAddress("msvcr71.dll","KERNEL32.DLL","LockFile");
+              readProtectedMemory(proc,&p,sizeof(void *));
+              if( oldMSVCR71LockFile_ == NULL && p != reparedLockFile ){
+                void * a = reparedLockFile;
+                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                oldMSVCR71LockFile_ = p;
+              }
+              else {
+                V_I4(pvarRetValue) = 0;
+                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              }
+            }*//*
+            if( V_I4(pvarRetValue) ){
+              proc = findProcImportedEntryAddress("seven.dll","KERNEL32.DLL","GetProcAddress");
+              readProtectedMemory(proc,&p,sizeof(void *));
+              if( oldSEVENGetProcAddress_.p_ == NULL && p != reparedGetProcAddress ){
+                void * a = reparedGetProcAddress;
+                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                oldSEVENGetProcAddress_.p_ = p;
+                V_I4(pvarRetValue) = 1;
+              }
+              else {
+                V_I4(pvarRetValue) = 0;
+                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              }
+            }*/
+          }
+          if( lockFileJmpCodeSafe_[0] == 0 ){
+            uint8_t jmpCode[sizeof(lockFileJmpCodeSafe_)] = { 0xB8, 0, 0, 0, 0, 0xFF, 0xE0 };
+            readProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
+            *(void **) (jmpCode + 1) = repairedLockFile;
+            writeProtectedMemory(LockFile,jmpCode,sizeof(jmpCode));
+            readProtectedMemory(UnlockFile,unLockFileJmpCodeSafe_,sizeof(unLockFileJmpCodeSafe_));
+            *(void **) (jmpCode + 1) = repairedUnlockFile;
+            writeProtectedMemory(UnlockFile,jmpCode,sizeof(jmpCode));
+            V_I4(pvarRetValue) = 1;
+          }
+          else {
+            msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+          }
           break;
         default :
           hr = E_NOTIMPL;
@@ -2082,80 +2243,80 @@ err:
   return S_OK;
 }
 //---------------------------------------------------------------------------
-BOOL WINAPI Cmsmail1c::reparedLockFile(
+/*FARPROC WINAPI Cmsmail1c::reparedGetProcAddress(HMODULE hModule,LPCSTR lpProcName)
+{
+  return
+    GetModuleHandleA("KERNEL32.DLL") == hModule &&
+    strcmp(lpProcName,"LockFile") == 0 ?
+      (FARPROC) reparedLockFile :
+      oldSEVENGetProcAddress_.f_(hModule,lpProcName)
+  ;
+}*/
+//---------------------------------------------------------------------------
+BOOL WINAPI Cmsmail1c::repairedLockFile(
   HANDLE hFile,
   DWORD dwFileOffsetLow,
   DWORD dwFileOffsetHigh,
   DWORD nNumberOfBytesToLockLow,
   DWORD nNumberOfBytesToLockHigh)
 {
-  HANDLE hEvent = CreateEvent(NULL,TRUE,FALSE,NULL));
-  if( hEvent == NULL ){
-        err = GetLastError() + errorOffset;
-        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
+  OVERLAPPED overlapped;
+  memset(&overlapped,0,sizeof(overlapped));
+  overlapped.Offset = dwFileOffsetLow;
+  overlapped.OffsetHigh = dwFileOffsetHigh;
+  overlapped.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+  if( overlapped.hEvent == NULL ) return FALSE;
+  BOOL lk = LockFileEx(
+    hFile,
+    LOCKFILE_EXCLUSIVE_LOCK/* | LOCKFILE_FAIL_IMMEDIATELY*/,
+    0,
+    nNumberOfBytesToLockLow,
+    nNumberOfBytesToLockHigh,
+    &overlapped
+  );
+  DWORD err = GetLastError();
+  if( lk == FALSE && err == ERROR_IO_PENDING ){
+    err = WaitForSingleObject(overlapped.hEvent,1000);
+    if( err == WAIT_TIMEOUT ){
+      CancelIo(hFile);
+      err = WAIT_TIMEOUT;
     }
-    if( !file->locked_ ){
-      memset(&Overlapped,0,sizeof(Overlapped));
-      Overlapped.hEvent = file->hEvent_;
-      DWORD flags = LOCKFILE_EXCLUSIVE_LOCK, err;
-      /*if( maxSleepTime == 0 && minSleepTime == 0 ){
-        flags |= LOCKFILE_FAIL_IMMEDIATELY;
-      }
-      else {
-      }*/
-      SetLastError(0);
-      BOOL lk = LockFileEx(file->handle_,flags,0,~DWORD(0),~DWORD(0),&Overlapped);
+    else if( err == WAIT_ABANDONED ){
+      CancelIo(hFile);
+      err = WAIT_TIMEOUT;
+    }
+    else if( err == WAIT_OBJECT_0 ){
+      DWORD NumberOfBytesTransferred;
+      GetOverlappedResult(hFile,&overlapped,&NumberOfBytesTransferred,FALSE);
+      SetLastError(ERROR_SUCCESS);
+      lk = TRUE;
+    }
+    else if( err == WAIT_FAILED ){
       err = GetLastError();
-      if( lk == 0 && err != ERROR_IO_PENDING && err != ERROR_LOCK_VIOLATION ){
-        err = GetLastError() + errorOffset;
-        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
-      if( err == ERROR_IO_PENDING ){
-        DWORD st = (DWORD) msmail1c_->rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
-        st = maxSleepTime == 0 && minSleepTime == 0 ? 0 : st;
-        DWORD state = WaitForSingleObject(file->hEvent_,st);
-        if( state == WAIT_TIMEOUT ){
-          CancelIo(file->handle_);
-          *pLastError = WAIT_TIMEOUT;
-        }
-        else if( state == WAIT_ABANDONED ){
-          CancelIo(file->handle_);
-          *pLastError = WAIT_TIMEOUT;
-        }
-        else {
-          DWORD NumberOfBytesTransferred;
-          GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE);
-          file->locked_ = true;
-        }
-      }
-      else if( err == ERROR_LOCK_VIOLATION ){
-        *pLastError = WAIT_TIMEOUT;
-      }
-      else {
-      /*char pid[10 + 1];
-      memset(pid,'\0',sizeof(pid));
-      _snprintf(pid,sizeof(pid) / sizeof(pid[0]),"%d",ksys::getpid());
-      DWORD NumberOfBytesWritten = 0;
-      memset(&Overlapped,0,sizeof(Overlapped));
-      Overlapped.hEvent = file->hEvent_;
-      SetLastError(0);
-      lk = WriteFile(file->handle_,pid,DWORD(::strlen(pid) * sizeof(pid[0])),&NumberOfBytesWritten,&Overlapped);
-      if( lk == 0 && GetLastError() == ERROR_IO_PENDING ){
-        DWORD state = WaitForSingleObject(file->hEvent_,INFINITE);
-        if( state == WAIT_TIMEOUT ){
-          CancelIo(file->handle_);
-        }
-        else if( state == WAIT_ABANDONED ){
-        }
-        if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesWritten,FALSE) == 0 ){
-        }
-      }
-      SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
-      SetEndOfFile(file->handle_);*/
-        file->locked_ = true;
-      }
+      CancelIo(hFile);
     }
+    else {
+      CancelIo(hFile);
+      err = ERROR_INVALID_DATA;
+    }
+  }
+  CloseHandle(overlapped.hEvent);
+  SetLastError(err);
+  return lk;
+}
+//------------------------------------------------------------------------------
+BOOL WINAPI Cmsmail1c::repairedUnlockFile(
+  HANDLE hFile,
+  DWORD dwFileOffsetLow,
+  DWORD dwFileOffsetHigh,
+  DWORD nNumberOfBytesToUnlockLow,
+  DWORD nNumberOfBytesToUnlockHigh)
+{
+  OVERLAPPED overlapped;
+  memset(&overlapped,0,sizeof(overlapped));
+  overlapped.Offset = dwFileOffsetLow;
+  overlapped.OffsetHigh = dwFileOffsetHigh;
+  return UnlockFileEx(hFile,0,nNumberOfBytesToUnlockLow,nNumberOfBytesToUnlockHigh,&overlapped);
 }
 //------------------------------------------------------------------------------
 #endif

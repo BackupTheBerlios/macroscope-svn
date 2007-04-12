@@ -132,7 +132,7 @@ class ClientMailFiber : public BaseClientFiber {
   public:
     virtual ~ClientMailFiber();
     ClientMailFiber() : messagesAutoDrop_(messages_) {}
-    ClientMailFiber(Client & client);
+    ClientMailFiber(Client * client);
   protected:
     Client * client_;
     FiberInterlockedMutex messageMutex_;
@@ -418,12 +418,34 @@ public:
   STDMETHOD(CallAsProc)( long lMethodNum, SAFEARRAY * * paParams);
   STDMETHOD(CallAsFunc)( long lMethodNum,  VARIANT * pvarRetValue, SAFEARRAY * * paParams);
 #endif
-  static BOOL WINAPI reparedLockFile(
+/*  static void * oldBKENDGetProcAddress_;
+  static void * oldDBENG32LockFile_;
+  static void * oldMSVCRTLockFile_;
+  static void * oldMSVCR71LockFile_;
+  static void * oldMFC42LockFile_;
+  union ImportedEntry {
+    FARPROC (WINAPI * f_)(HMODULE,LPCSTR);
+    void * p_;
+  };
+  static ImportedEntry oldSEVENGetProcAddress_;
+  static FARPROC WINAPI reparedGetProcAddress(HMODULE hModule,LPCSTR lpProcName);*/
+
+  uint8_t lockFileJmpCodeSafe_[7];
+  uint8_t unLockFileJmpCodeSafe_[7];
+
+  static BOOL WINAPI repairedLockFile(
     HANDLE hFile,
     DWORD dwFileOffsetLow,
     DWORD dwFileOffsetHigh,
     DWORD nNumberOfBytesToLockLow,
     DWORD nNumberOfBytesToLockHigh
+  );
+  static BOOL WINAPI repairedUnlockFile(
+    HANDLE hFile,
+    DWORD dwFileOffsetLow,
+    DWORD dwFileOffsetHigh,
+    DWORD nNumberOfBytesToUnlockLow,
+    DWORD nNumberOfBytesToUnlockHigh
   );
 };
 

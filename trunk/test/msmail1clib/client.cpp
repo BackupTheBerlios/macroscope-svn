@@ -461,8 +461,8 @@ ClientMailFiber::~ClientMailFiber()
 {
 }
 //------------------------------------------------------------------------------
-ClientMailFiber::ClientMailFiber(Client & client) :
-  client_(&client), messagesAutoDrop_(messages_)
+ClientMailFiber::ClientMailFiber(Client * client) :
+  client_(client), messagesAutoDrop_(messages_)
 {
 }
 //------------------------------------------------------------------------------
@@ -968,7 +968,7 @@ bool Client::sendMessage(const utf8::String id,bool async)
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     if( clientMailFiber_ == NULL ){
       ClientMailFiber * clientMailFiber;
-      attachFiber(clientMailFiber = newObjectR1<ClientMailFiber>(*this));
+      attachFiber(clientMailFiber = newObjectV1<ClientMailFiber>(this));
       clientMailFiber_ = clientMailFiber;
     }
     AutoLock<FiberInterlockedMutex> lock2(clientMailFiber_->messageMutex_);
@@ -1010,7 +1010,7 @@ bool Client::removeMessage(const utf8::String id,bool async)
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     if( clientMailFiber_ == NULL ){
       ClientMailFiber * clientMailFiber;
-      attachFiber(clientMailFiber = newObjectV1<ClientMailFiber>(*this));
+      attachFiber(clientMailFiber = newObjectV1<ClientMailFiber>(this));
       clientMailFiber_ = clientMailFiber;
     }
     AutoLock<FiberInterlockedMutex> lock2(clientMailFiber_->messageMutex_);

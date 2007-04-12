@@ -2784,6 +2784,27 @@ uint8_t machineUniqueCryptedKeyHolder[sizeof(utf8::String)];
 //---------------------------------------------------------------------------
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 //---------------------------------------------------------------------------
+void readProtectedMemory(const void * memory,void * data,uintptr_t count)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  SIZE_T rb;
+  BOOL r = ReadProcessMemory(
+    GetCurrentProcess(),
+    memory,
+    data,
+    count,
+    &rb
+  );
+  if( r == 0 || rb != count ){
+    int32_t err = GetLastError();
+    if( rb != count ) err = ERROR_INVALID_DATA;
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+#else
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+#endif
+}
+//---------------------------------------------------------------------------
 void writeProtectedMemory(void * memory,const void * data,uintptr_t count)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -2804,7 +2825,7 @@ void writeProtectedMemory(void * memory,const void * data,uintptr_t count)
     memory,
     data,
     count,
-    w
+    &w
   );
   if( r == 0 || w != count ){
     int32_t err = GetLastError();
@@ -2835,11 +2856,6 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
     int32_t err = GetLastError();
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
-  /*FARPROC procAddr = GetProcAddress(GetModuleHandle("KERNEL32.DLL"),funcName.getANSIString());
-  if( procAddr == NULL ){
-    int32_t err = GetLastError();
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-  }*/
   ULONG size;
   PVOID importTableOffset = ImageDirectoryEntryToData(hModule,TRUE,IMAGE_DIRECTORY_ENTRY_IMPORT,&size);
   if( importTableOffset == NULL ){
@@ -2878,7 +2894,7 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
           nFuncAddr++;
           continue;
         }
-        return (void *) *(uintptr_t *)(funcAddrsOffset + basePointer);
+        return (void *) (funcAddrsOffset + basePointer);
       }
     }
   }
