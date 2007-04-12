@@ -32,6 +32,7 @@ ADD_LIBRARY(ksys STATIC
   except.cpp
   fetch.cpp
   fiber.cpp
+  henum.cpp
   log.cpp
   lzo.cpp
   mstream.cpp

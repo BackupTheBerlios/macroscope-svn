@@ -132,6 +132,7 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
   msmail1c_->pBackConnection_->AddRef();
   memset(lockFileJmpCodeSafe_,0,sizeof(lockFileJmpCodeSafe_));
   memset(unLockFileJmpCodeSafe_,0,sizeof(unLockFileJmpCodeSafe_));
+  memset(flushFileBuffersJmpCodeSafe_,0,sizeof(flushFileBuffersJmpCodeSafe_));
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -198,6 +199,10 @@ HRESULT Cmsmail1c::Done()
   if( unLockFileJmpCodeSafe_[0] != 0 ){
     writeProtectedMemory(UnlockFile,unLockFileJmpCodeSafe_,sizeof(unLockFileJmpCodeSafe_));
     memset(unLockFileJmpCodeSafe_,0,sizeof(unLockFileJmpCodeSafe_));
+  }
+  if( flushFileBuffersJmpCodeSafe_[0] != 0 ){
+    writeProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
+    memset(flushFileBuffersJmpCodeSafe_,0,sizeof(flushFileBuffersJmpCodeSafe_));
   }
   msmail1c_ = NULL;
   return S_OK;
@@ -1973,14 +1978,22 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               }
             }*/
           }
+          checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
           if( lockFileJmpCodeSafe_[0] == 0 ){
             uint8_t jmpCode[sizeof(lockFileJmpCodeSafe_)] = { 0xB8, 0, 0, 0, 0, 0xFF, 0xE0 };
+
             readProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
             *(void **) (jmpCode + 1) = repairedLockFile;
             writeProtectedMemory(LockFile,jmpCode,sizeof(jmpCode));
+
             readProtectedMemory(UnlockFile,unLockFileJmpCodeSafe_,sizeof(unLockFileJmpCodeSafe_));
             *(void **) (jmpCode + 1) = repairedUnlockFile;
             writeProtectedMemory(UnlockFile,jmpCode,sizeof(jmpCode));
+
+            readProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
+            *(void **) (jmpCode + 1) = repairedFlushFileBuffers;
+            writeProtectedMemory(FlushFileBuffers,jmpCode,sizeof(jmpCode));            
+
             V_I4(pvarRetValue) = 1;
           }
           else {
@@ -2062,7 +2075,7 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
   msmail1c::LockedFile * file = NULL;
   *pLastError = 0;
   try {
-//    checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
+    checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
     file = msmail1c_->findFileByName(name);
     if( file == NULL ) file = msmail1c_->addFile(name);
     file->lastError_ = 0;
@@ -2264,8 +2277,8 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
   memset(&overlapped,0,sizeof(overlapped));
   overlapped.Offset = dwFileOffsetLow;
   overlapped.OffsetHigh = dwFileOffsetHigh;
-  overlapped.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
-  if( overlapped.hEvent == NULL ) return FALSE;
+  overlapped.hEvent = NULL; //CreateEvent(NULL,TRUE,FALSE,NULL);
+//  if( overlapped.hEvent == NULL ) return FALSE;
   BOOL lk = LockFileEx(
     hFile,
     LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
@@ -2314,7 +2327,7 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
       err = ERROR_INVALID_DATA;
     }
   }
-  CloseHandle(overlapped.hEvent);
+  //CloseHandle(overlapped.hEvent);
   SetLastError(err);
   return lk;
 }
@@ -2331,6 +2344,13 @@ BOOL WINAPI Cmsmail1c::repairedUnlockFile(
   overlapped.Offset = dwFileOffsetLow;
   overlapped.OffsetHigh = dwFileOffsetHigh;
   return UnlockFileEx(hFile,0,nNumberOfBytesToUnlockLow,nNumberOfBytesToUnlockHigh,&overlapped);
+}
+//------------------------------------------------------------------------------
+BOOL WINAPI Cmsmail1c::repairedFlushFileBuffers(HANDLE /*hFile*/)
+{
+//  utf8::String ext(getFileNameByHandle(hFile).right(4));
+//  if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
+  return TRUE;
 }
 //------------------------------------------------------------------------------
 #endif

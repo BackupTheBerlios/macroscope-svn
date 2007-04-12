@@ -341,7 +341,10 @@ template <
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
 #else
+#pragma warning (push)
+#pragma warning (disable:4700)
   memcpy(safe.ptr(),&st,sizeof(T));
+#pragma warning (pop)
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe.ptr()) T(p1,p2);

@@ -301,7 +301,7 @@ void ClientFiber::connectHost(bool & online)
                       client_->connectedToServer_ = fqdn;
                       client_->connected_ = true;
                     }
-//                    checkMachineBinding(client_->config_->value("machine_key"));
+                    checkMachineBinding(client_->config_->value("machine_key"));
                     online = true;
                   }
                   catch( ExceptionSP & e ){

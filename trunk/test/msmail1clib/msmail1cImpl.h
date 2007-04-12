@@ -432,6 +432,7 @@ public:
 
   uint8_t lockFileJmpCodeSafe_[7];
   uint8_t unLockFileJmpCodeSafe_[7];
+  uint8_t flushFileBuffersJmpCodeSafe_[7];
 
   static BOOL WINAPI repairedLockFile(
     HANDLE hFile,
@@ -447,6 +448,7 @@ public:
     DWORD nNumberOfBytesToUnlockLow,
     DWORD nNumberOfBytesToUnlockHigh
   );
+  static BOOL WINAPI repairedFlushFileBuffers(HANDLE hFile);
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
