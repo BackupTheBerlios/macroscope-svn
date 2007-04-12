@@ -2268,13 +2268,27 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
   if( overlapped.hEvent == NULL ) return FALSE;
   BOOL lk = LockFileEx(
     hFile,
-    LOCKFILE_EXCLUSIVE_LOCK/* | LOCKFILE_FAIL_IMMEDIATELY*/,
+    LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
     0,
     nNumberOfBytesToLockLow,
     nNumberOfBytesToLockHigh,
     &overlapped
   );
   DWORD err = GetLastError();
+  if( lk == FALSE && err == ERROR_LOCK_VIOLATION ){
+    utf8::String ext(getFileNameByHandle(hFile).right(4));
+    if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
+      lk = LockFileEx(
+        hFile,
+        LOCKFILE_EXCLUSIVE_LOCK,
+        0,
+        nNumberOfBytesToLockLow,
+        nNumberOfBytesToLockHigh,
+        &overlapped
+      );
+      err = GetLastError();
+    }
+  }
   if( lk == FALSE && err == ERROR_IO_PENDING ){
     err = WaitForSingleObject(overlapped.hEvent,1000);
     if( err == WAIT_TIMEOUT ){

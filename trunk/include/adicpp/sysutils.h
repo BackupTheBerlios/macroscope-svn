@@ -87,6 +87,8 @@ inline const uintptr_t & DirectoryChangeNotification::bufferSize() const
   return bufferSize_;
 }
 //---------------------------------------------------------------------------
+utf8::String getFileNameByHandle(HANDLE hFile);
+//---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
 uintptr_t rfcBase64Encode(

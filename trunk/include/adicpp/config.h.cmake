@@ -69,6 +69,8 @@
 #cmakedefine HAVE_WINSOCK_H 1
 #cmakedefine HAVE_WINSOCK2_H 1
 #cmakedefine HAVE_WINDOWS_H 1
+#cmakedefine HAVE_NTDLL_H 1
+#cmakedefine HAVE_NTSTATUS_H 1
 #cmakedefine HAVE_MSWSOCK_H 1
 #cmakedefine HAVE_WBEMIDL_H 1
 #cmakedefine HAVE_DBGHELP_H 1
