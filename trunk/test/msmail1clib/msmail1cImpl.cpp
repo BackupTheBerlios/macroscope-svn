@@ -1992,7 +1992,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
 
             readProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
             *(void **) (jmpCode + 1) = repairedFlushFileBuffers;
-            writeProtectedMemory(FlushFileBuffers,jmpCode,sizeof(jmpCode));            
+            writeProtectedMemory(FlushFileBuffers,jmpCode,sizeof(jmpCode));
 
             V_I4(pvarRetValue) = 1;
           }
@@ -2273,6 +2273,7 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
   DWORD nNumberOfBytesToLockLow,
   DWORD nNumberOfBytesToLockHigh)
 {
+  utf8::String name(getFileNameByHandle(hFile));
   OVERLAPPED overlapped;
   memset(&overlapped,0,sizeof(overlapped));
   overlapped.Offset = dwFileOffsetLow;
@@ -2346,8 +2347,9 @@ BOOL WINAPI Cmsmail1c::repairedUnlockFile(
   return UnlockFileEx(hFile,0,nNumberOfBytesToUnlockLow,nNumberOfBytesToUnlockHigh,&overlapped);
 }
 //------------------------------------------------------------------------------
-BOOL WINAPI Cmsmail1c::repairedFlushFileBuffers(HANDLE /*hFile*/)
+BOOL WINAPI Cmsmail1c::repairedFlushFileBuffers(HANDLE hFile)
 {
+  utf8::String name(getFileNameByHandle(hFile));
 //  utf8::String ext(getFileNameByHandle(hFile).right(4));
 //  if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
   return TRUE;

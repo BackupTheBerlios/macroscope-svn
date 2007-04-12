@@ -330,6 +330,10 @@ template <
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
+#if _MSC_VER
+#pragma warning (push)
+#pragma warning (disable:4700)
+#endif
 template <
   typename T,
   typename Param1,
@@ -341,10 +345,7 @@ template <
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
 #else
-#pragma warning (push)
-#pragma warning (disable:4700)
   memcpy(safe.ptr(),&st,sizeof(T));
-#pragma warning (pop)
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
   new (safe.ptr()) T(p1,p2);
@@ -353,6 +354,9 @@ template <
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
+#if _MSC_VER
+#pragma warning (pop)
+#endif
 //---------------------------------------------------------------------------
 template <
   typename T,
