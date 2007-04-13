@@ -497,26 +497,6 @@ int32_t Logger::main()
     }
 //#endif
     database_->attach();
-/*    if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
-      Table<utf8::String> tables;
-      statement_->text("SHOW TABLES")->execute()->fetchAll()->unloadByIndex(tables);
-      Table<Mutant> indices;
-      for( intptr_t i = tables.rowCount() - 1; i >= 0; i-- ){
-        statement_->text("SHOW INDEX FROM " + tables(i,0))->execute();
-        while( statement_->fetch() )
-	  if( (intmax_t) statement_->valueAsMutant("Seq_in_index") == 1 )
-	    statement_->unloadRowByIndex(indices);
-      }
-      for( intptr_t i = indices.rowCount() - 1; i >= 0; i-- ){
-        utf8::String name(indices(i,"Key_name"));
-        if( verbose_ ) fprintf(stderr,"Drop index %s",(const char *) name.getOEMString());
-        int64_t ellapsed = gettimeofday();
-        statement_->text("DROP INDEX " + name + " ON " + indices(i,"Table"))->execute();
-        if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
-          (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
-        );
-      }
-    }*/
     for( uintptr_t i = 0; i < metadata.count(); i++ ){
       if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
         if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
@@ -578,6 +558,36 @@ int32_t Logger::main()
           }
         }
       }
+    }
+    else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
+      Table<utf8::String> tables;
+      statement_->text("SHOW TABLES")->execute()->fetchAll()->unloadByIndex(tables);
+      //Table<Mutant> indices;
+      utf8::String engine(config_->textByPath("macroscope.mysql_table_type","INNODB"));
+      uint64_t ellapsed;
+      for( intptr_t i = tables.rowCount() - 1; i >= 0; i-- ){
+        /*statement_->text("SHOW INDEX FROM " + tables(i,0))->execute();
+        while( statement_->fetch() )
+	  if( (intmax_t) statement_->valueAsMutant("Seq_in_index") == 1 )
+	    statement_->unloadRowByIndex(indices);*/
+        if( (bool) config_->section("macroscope").value("reactivate_indices",true) ){
+          if( verbose_ ) fprintf(stderr,"Alter table %s",(const char *) tables(i,0).getOEMString());
+          ellapsed = gettimeofday();
+  	  statement_->text("ALTER TABLE " + tables(i,0) + " ENGINE=" + engine)->execute();
+          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+          );
+	}
+      }
+      /*for( intptr_t i = indices.rowCount() - 1; i >= 0; i-- ){
+        utf8::String name(indices(i,"Key_name"));
+        if( verbose_ ) fprintf(stderr,"Drop index %s",(const char *) name.getOEMString());
+        int64_t ellapsed = gettimeofday();
+        statement_->text("DROP INDEX " + name + " ON " + indices(i,"Table"))->execute();
+        if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+          (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+        );
+      }*/
     }
     database_->detach();
 
