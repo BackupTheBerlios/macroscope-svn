@@ -83,7 +83,10 @@ inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 #endif
 }
 
+inline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a){ return interlockedIncrement(*(int32_t *) &v,a); }
+
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
+inline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a){ return interlockedIncrement(*(int64_t *) &v,a); }
 
 inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {

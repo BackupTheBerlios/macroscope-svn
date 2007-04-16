@@ -6,6 +6,7 @@
 #cmakedefine HAVE_DIRENT_H 1
 #cmakedefine HAVE_ERROR_H 1
 #cmakedefine HAVE_IBASE_H 1
+#cmakedefine HAVE_PCAP_H 1
 #cmakedefine HAVE_MYSQL_H 1
 #cmakedefine HAVE_MYSQL_MYSQL_H 1
 #cmakedefine HAVE_LZO_LZO1X_H 1

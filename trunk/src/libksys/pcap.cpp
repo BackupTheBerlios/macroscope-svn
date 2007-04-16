@@ -1,0 +1,284 @@
+/*-
+ * Copyright 2007 Guram Dukashvili
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+//---------------------------------------------------------------------------
+#include <adicpp/ksys.h>
+#if HAVE_PCAP_H
+#include <pcap.h>
+#endif
+//------------------------------------------------------------------------------
+namespace ksys {
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+const uint16_t IPPacketHeader::RF = 0x8000;
+const uint16_t IPPacketHeader::DF = 0x4000;
+const uint16_t IPPacketHeader::MF = 0x2000;
+const uint16_t IPPacketHeader::OFFMASK = 0x1fff;
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+const uint8_t TCPPacketHeader::FIN = 0x01;
+const uint8_t TCPPacketHeader::SYN = 0x02;
+const uint8_t TCPPacketHeader::RST = 0x04;
+const uint8_t TCPPacketHeader::PUSH = 0x08;
+const uint8_t TCPPacketHeader::ACK = 0x10;
+const uint8_t TCPPacketHeader::URG = 0x20;
+const uint8_t TCPPacketHeader::ECE = 0x40;
+const uint8_t TCPPacketHeader::CWR = 0x80;
+const uint8_t TCPPacketHeader::FLAGS = FIN | SYN | RST | ACK | URG | ECE | CWR;
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+PCAP::~PCAP()
+{
+}
+//------------------------------------------------------------------------------
+PCAP::PCAP() : handle_(NULL), groupingPeriod_(pgpNone), packetsAutoDrop_(packetsList_)
+{
+}
+//------------------------------------------------------------------------------
+void PCAP::threadBeforeWait()
+{
+  if( handle_ != NULL ){
+    pcap_breakloop((pcap_t *) handle_);
+  }
+}
+//------------------------------------------------------------------------------
+void PCAP::threadExecute()
+{
+  pcap_t *handle;                /* Session handle */
+  char dev[] = "rl0";            /* Device to sniff on */
+  char errbuf[PCAP_ERRBUF_SIZE]; /* Error string */
+  struct bpf_program fp;         /* The compiled filter expression */
+  char filter_exp[] = "port 23"; /* The filter expression */
+  bpf_u_int32 mask;              /* The netmask of our sniffing device *
+  bpf_u_int32 net;               /* The IP of our sniffing device */
+  if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
+    fprintf(stderr, "Can't get netmask for device %s\n", dev);
+    net = 0;
+    mask = 0;
+  }
+  pcap_open_live();
+  pcap_compile(handle, &fp, filter_exp, 0, net);
+  pcap_setfilter(handle, &fp);
+  pcap_loop((pcap_t *) handle_,-1,pcapCallback,this);
+  pcap_freecode(&fp);
+  pcap_close((pcap_t *) handle_);
+  handle_ = NULL;
+  if( packets_ != NULL ){
+    AutoLock<InterlockedMutex> lock(packetsListMutex_);
+    packetsList_.insToTail(*packets_.ptr(NULL));
+    grouperSem_.post();
+  }
+  grouper_->terminate().wait();
+  databaseInserter_->terminate().wait();
+  lazyWriter_->terminate().wait();
+}
+//------------------------------------------------------------------------------
+void PCAP::pcapCallback(u_char * args,const struct pcap_pkthdr * header,const u_char * packet)
+{
+  reinterpret_cast<PCAP *>(args)->capture(timeval2Time(header->ts),header->caplen,header->len,(const uint8_t *) packet);
+}
+//------------------------------------------------------------------------------
+void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet)
+{
+#define SIZE_ETHERNET 14
+  const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
+  const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
+  uintptr_t sizeIp = ip->hl() * 4;
+  if( size_ip < 20 ){
+    stdErr.debug(8,utf8::String::Stream() << __PRETTY_FUNCTION__ << ", Invalid IP header length: " << sizeIp << " bytes\n");
+    return;
+  }
+  const TCPPacketHeader * tcp = (const TCPPacketHeader *)(packet + SIZE_ETHERNET + sizeIp);
+  uintptr_t sizeTcp = 0;
+  if( ip->proto_ == IPPROTO_TCP ){
+    sizeTcp = tcp->off() * 4;
+    if( sizeTcp < 20 ){
+      stdErr.debug(8,utf8::String::Stream() << __PRETTY_FUNCTION__ << ", Invalid TCP header length: " << sizeTcp << " bytes\n");
+      return;
+    }
+  }
+  payload = packet + SIZE_ETHERNET + size_ip + size_tcp;
+  if( packets_ == NULL || packets_->packets_ == packets_->count() ){
+    if( packets_ != NULL ){
+      AutoLock<InterlockedMutex> lock(packetsListMutex_);
+      packetsList_.insToTail(*packets_.ptr(NULL));
+      grouperSem_.post();
+    }
+    packets_ = newObjectV1<Packets>(getpagesize() * 16u / sizeof(Packet));
+  }
+  Packet & pkt = packets_[packets_->packets_];
+  pkt.timestamp_ = timestamp;
+  pkt.pktSize_ = len;
+  pkt.dataSize_ = len - (payload - packet);
+  memcpy(&pkt.srcAddr_,&ip->src_,sizeof(pkt.srcAddr_));
+  memcpy(&pkt.dstAddr_,&ip->dst_,sizeof(pkt.dstAddr_));
+  pkt.srcPort_ = ip->proto_ == IPPROTO_TCP ? tcp->srcPort_ : 0;
+  pkt.dstPort_ = ip->proto_ == IPPROTO_TCP ? tcp->dstPort_ : 0;
+  pkt.proto_ = ip->proto_;							  
+  packets_->packets_++;
+}
+//------------------------------------------------------------------------------
+void PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const Packet *,uintptr_t)
+{
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+PCAP::PacketGroup & PCAP::PacketGroup::setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod)
+{
+  struct tm t = time2tm(timestamp);
+  switch( groupingPeriod ){
+    case pgpNone :
+      bt_ = et_ = timestamp_;
+      break;
+    case pgpSec  :
+      bt_ = et_ = tm2time(t);
+      break;
+    case pgpMin  :
+      t.tm_sec = 0;
+      bt_ = tm2time(t);
+      t.tm_sec = 59;
+      et_ = tm2time(t);
+      break;
+    case pgpHour :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      bt_ = tm2time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      et_ = tm2time(t);
+      break;
+    case pgpDay  :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      t.tm_hour = 0;
+      bt_ = tm2time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      t.tm_hour = 23;
+      et_ = tm2time(t);
+      break;
+    case pgpMon  :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      t.tm_hour = 0;
+      t.tm_mday = 1;
+      bt_ = tm2time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      t.tm_hour = 23;
+      t.tm_mday = (int) monthDays(t.tm_year + 1900,t.tm_mon);
+      et_ = tm2time(t);
+      break;
+    case pgpYear :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      t.tm_hour = 0;
+      t.tm_mday = 1;
+      t.tm_mon = 0;
+      bt_ = tm2time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      t.tm_hour = 23;
+      t.tm_mday = 31;
+      t.tm_mon = 11;
+      et_ = tm2time(t);
+      break;
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+void PCAP::Grouper::threadBeforeWait()
+{
+  if( pcap_ != NULL ) pcap_->grouperSem_.post();
+}
+//------------------------------------------------------------------------------
+void PCAP::Grouper::threadExecute()
+{
+  while( !terminated_ ){
+    pcap_->grouperSem_.wait();
+    AutoPtr<Packets> packets;
+    {
+      AutoLock<InterlockedMutex> lock(pcap_->packetsListMutex_);
+      if( pcap_->packetsList_.count() > 0 ) packets.ptr(packetsList_.remove(*packetsList_.first()));
+    }
+    if( packets == NULL || packets->packets_ == 0 ) continue;
+    AutoPtr<PacketGroup> group;
+    for( intptr_t i = packets->packets_ - 1; i >= 0; i-- ){
+      const Packet & pkt = (*packets.ptr())[i];
+      if( group == NULL ) group.ptr(newObject<PacketGroup>());
+      group->setBounds(pkt.timestamp_,pcap_->groupingPeriod_);
+      PacketGroup * pGroup;
+      {
+        AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+        pcap_->groupTree_.insert(group,false,false,&pGroup);
+      }
+      if( pGroup == group ) group.ptr(NULL);
+      if( pGroup->count_ == pGroup->maxCount_ ){
+        pGroup->packets_.realloc(((pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4)) * sizeof(HashedPacket));
+	pGroup->maxCount_ = (pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4);
+      }
+      HashedPacket & hpkt = pGroup->packets_[pGroup->count_], * p;
+      hpkt.pktSize_ = pkt.pktSize;
+      hpkt.dataSize_ = pkt.dataSize;
+      memcpy(&hpkt.srcAddr_,&pkt.srcAddr_,sizeof(pkt.srcAddr_));
+      memcpy(&hpkt.dstAddr_,&pkt.dstAddr_,sizeof(pkt.dstAddr_));
+      hpkt.srcPort_ = pkt.srcPort_;
+      hpkt.dstPort_ = pkt.dstPort_;
+      hpkt.proto_ = pkt.proto_;
+      pGroup->packetsHash_.insert(hpkt,false,false,&p);
+      if( p != &hpkt ){
+        p->pktSize_ += pkt.pktSize;
+        p->dataSize_ += pkt.dataSize;
+      }
+      else {
+        pGroup->count_++;
+      }
+    }
+    pcap_->databaseInserterSem_.post();
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+void PCAP::LazyWriter::threadBeforeWait()
+{
+  if( pcap_ != NULL ) pcap_->lazyWriterSem_.post();
+}
+//------------------------------------------------------------------------------
+void PCAP::LazyWriter::threadExecute()
+{
+  while( !terminated_ ){
+    pcap_->lazyWriterSem_.wait();
+  }
+}
+//------------------------------------------------------------------------------
+} // namespace ksys
+//------------------------------------------------------------------------------
