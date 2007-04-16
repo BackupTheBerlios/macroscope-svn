@@ -121,10 +121,11 @@ class Thread : virtual public Object {
 
     static Array<Action> & beforeExecuteActions();
     static Array<Action> & afterExecuteActions();
+
+    virtual void threadExecute() {}
   protected:
     void afterConstruction();
     void beforeDestruction() { wait(); }
-    virtual void threadExecute() {}
     virtual void threadBeforeWait() {}
     uintptr_t       stackSize_;
 #if defined(__WIN32__) || defined(__WIN64__)

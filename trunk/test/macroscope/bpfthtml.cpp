@@ -301,8 +301,9 @@ Logger::BPFTThread::~BPFTThread()
 {
 }
 //------------------------------------------------------------------------------
-Logger::BPFTThread::BPFTThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName) :
-  logger_(&logger), section_(section), sectionName_(sectionName)
+Logger::BPFTThread::BPFTThread(
+  Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage) :
+  logger_(&logger), section_(section), sectionName_(sectionName), stage_(stage)
 {
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(logger_->config_->sectionByPath("libadicpp.default_connection"));
@@ -339,8 +340,15 @@ void Logger::BPFTThread::threadExecute()
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
   AutoDatabaseDetach autoDatabaseDetach(database_);
   AutoDatabaseDetach autoDBTRUpdateDetach(dbtrUpdate_);
-  if( !logger_->cgi_.isCGI() ) parseBPFTLogFile();
-  writeBPFTHtmlReport();
+  switch( stage_ ){
+    case 0 :
+      if( !logger_->cgi_.isCGI() ) parseBPFTLogFile();
+      break;
+    case 1 :
+      writeBPFTHtmlReport();
+      break;
+    default : assert( 0 );
+  }
 }
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::clearBPFTCache()

@@ -509,6 +509,12 @@ int32_t Logger::main()
         if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR) ) throw;
       }
     }
+  }
+// parse log files
+  int32_t err0 = doWork(0);
+  int32_t err1 = waitThreads();
+// optimize database (optional)
+  if( !cgi_.isCGI() ){
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
       statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
       for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
@@ -590,20 +596,54 @@ int32_t Logger::main()
       }*/
     }
     database_->detach();
-
-    trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
-    threads_.safeAdd(newObjectR1C2C3<SquidSendmailThread>(*this,"macroscope","macroscope")).resume();
   }
-
+// generate reports
+  int32_t err2 = doWork(1);
+  int32_t err3 = waitThreads();
+  return err0 != 0 ? err0 : err1 != 0 ? err1 : err2 != 0 ? err2 : err3;
+}
+//------------------------------------------------------------------------------
+int32_t Logger::doWork(uintptr_t stage)
+{
+  int32_t exitCode = 0;
+  utf8::String mtMode(config_->textByPath("macroscope.multithreaded_mode","BOTH"));
+  if( !cgi_.isCGI() ){
+    trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
+    threads_.safeAdd(newObjectR1C2C3C4<SquidSendmailThread>(*this,"macroscope","macroscope",stage));
+    if( mtMode.strcasecmp("BOTH") == 0 ||
+        (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
+        (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
+      threads_[threads_.count() - 1].resume();
+    }
+    else {
+      threads_[threads_.count() - 1].threadExecute();
+    }
+  }
   dnsCacheHitCount_ = 0;
   dnsCacheMissCount_ = 0;
   dnsCacheSize_ = config_->valueByPath("macroscope.bpft.dns_cache_size",0);
   for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
     utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
     if( sectionName.strcasecmp("decoration") == 0 ) continue;
-    if( cgi_.isCGI() && sectionName.strcasecmp(cgi_.paramAsString("if")) != 0 ) continue;
-    threads_.safeAdd(newObjectR1C2C3<BPFTThread>(*this,"macroscope.bpft." + sectionName,sectionName)).resume();
+    if( cgi_.isCGI() && (sectionName.strcasecmp(cgi_.paramAsString("if")) != 0 || stage < 1) ) continue;
+    threads_.safeAdd(
+      newObjectR1C2C3C4<BPFTThread>(
+        *this,"macroscope.bpft." + sectionName,sectionName,stage)
+      );
+    if( mtMode.strcasecmp("BOTH") == 0 ||
+        (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
+        (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
+      threads_[threads_.count() - 1].resume();
+    }
+    else {
+      threads_[threads_.count() - 1].threadExecute();
+    }
   }
+  return exitCode;
+}
+//------------------------------------------------------------------------------
+int32_t Logger::waitThreads()
+{
   int32_t exitCode = 0;
   for( intptr_t i = threads_.count() - 1; i >= 0; i-- ){
     threads_[i].wait();

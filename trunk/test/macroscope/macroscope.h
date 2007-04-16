@@ -127,7 +127,7 @@ class Logger {
       public:
         ~SquidSendmailThread();
         SquidSendmailThread() {}
-        SquidSendmailThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName);
+        SquidSendmailThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage);
 
         void threadExecute();
       protected:
@@ -142,7 +142,8 @@ class Logger {
         struct tm curTime_;
         uintptr_t gCount_;
         bool groups_;
-	bool perGroupReport_;
+	      bool perGroupReport_;
+        uintptr_t stage_;
 
         AutoPtr<Database> database_;
 	
@@ -267,7 +268,7 @@ class Logger {
       public:
         ~BPFTThread();
         BPFTThread() {}
-        BPFTThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName);
+        BPFTThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage);
 
         void threadExecute();
       protected:
@@ -278,12 +279,13 @@ class Logger {
         int64_t ellapsed_;
         uintmax_t minSignificantThreshold_;
         struct tm curTime_;
-	struct tm cgiBT_;
-	struct tm cgiET_;
+      	struct tm cgiBT_;
+	      struct tm cgiET_;
         utf8::String filter_;
         utf8::String filterHash_;
         bool resolveDNSNames_;
         bool bidirectional_;
+        uintptr_t stage_;
 
         AutoPtr<Database> database_;
         AutoPtr<Statement> statement_;
@@ -331,6 +333,8 @@ class Logger {
     utf8::String getDecor(const utf8::String & dname,const utf8::String & section);
     static utf8::String getIPFilter(const utf8::String & text);
     static bool isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,const struct tm et);
+    int32_t doWork(uintptr_t stage);
+    int32_t waitThreads();
   private:
 };
 //------------------------------------------------------------------------------

@@ -42,8 +42,9 @@ Logger::SquidSendmailThread::~SquidSendmailThread()
 {
 }
 //------------------------------------------------------------------------------
-Logger::SquidSendmailThread::SquidSendmailThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName) :
-  logger_(&logger), section_(section), sectionName_(sectionName)
+Logger::SquidSendmailThread::SquidSendmailThread(
+  Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage) :
+  logger_(&logger), section_(section), sectionName_(sectionName), stage_(stage)
 {
   shortUrl_ = "://";
   
@@ -76,26 +77,33 @@ void Logger::SquidSendmailThread::threadExecute()
 {
   AutoDatabaseDetach autoDatabaseDetach(database_);
   section_ = "macroscope";
-  if( (bool) logger_->config_->valueByPath(section_ + ".process_squid_log",true) ){
-    Mutant m0(logger_->config_->valueByPath(section_ + ".squid.log_file_name"));
-    Mutant m1(logger_->config_->valueByPath(section_ + ".squid.top10_url",true));
-    Mutant m2(logger_->config_->textByPath(section_ + ".squid.skip_url").lower());
-    parseSquidLogFile(m0,m1,m2);
-  }
-  if( (bool) logger_->config_->valueByPath(section_ + ".process_sendmail_log",true) ){
-    Mutant m0(logger_->config_->valueByPath(section_ + ".sendmail.log_file_name"));
-    Mutant m1(utf8::String("@") + logger_->config_->valueByPath(section_ + ".sendmail.main_domain"));
-    Mutant m2(logger_->config_->valueByPath(section_ + ".sendmail.start_year"));
-    parseSendmailLogFile(m0,m1,m2);
-  }
-  groups_ = perGroupReport_ = false;
-  ellapsed_ = getlocaltimeofday();
-  writeHtmlYearOutput();
-  perGroupReport_ = true;
-  for( uintptr_t i = 0; i < logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").valueCount(); i++ ){
-    perGroupReportDir_ = logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").text(i,&perGroupReportName_);
-    ellapsed_ = getlocaltimeofday();
-    writeHtmlYearOutput();
+  switch( stage_ ){
+    case 0 :
+      if( (bool) logger_->config_->valueByPath(section_ + ".process_squid_log",true) ){
+        Mutant m0(logger_->config_->valueByPath(section_ + ".squid.log_file_name"));
+        Mutant m1(logger_->config_->valueByPath(section_ + ".squid.top10_url",true));
+        Mutant m2(logger_->config_->textByPath(section_ + ".squid.skip_url").lower());
+        parseSquidLogFile(m0,m1,m2);
+      }
+      if( (bool) logger_->config_->valueByPath(section_ + ".process_sendmail_log",true) ){
+        Mutant m0(logger_->config_->valueByPath(section_ + ".sendmail.log_file_name"));
+        Mutant m1(utf8::String("@") + logger_->config_->valueByPath(section_ + ".sendmail.main_domain"));
+        Mutant m2(logger_->config_->valueByPath(section_ + ".sendmail.start_year"));
+        parseSendmailLogFile(m0,m1,m2);
+      }
+      break;
+    case 1 :
+      groups_ = perGroupReport_ = false;
+      ellapsed_ = getlocaltimeofday();
+      writeHtmlYearOutput();
+      perGroupReport_ = true;
+      for( uintptr_t i = 0; i < logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").valueCount(); i++ ){
+        perGroupReportDir_ = logger_->config_->sectionByPath(section_ + ".html_report.groups_report_directories").text(i,&perGroupReportName_);
+        ellapsed_ = getlocaltimeofday();
+        writeHtmlYearOutput();
+      }
+      break;
+    default : assert( 0 );
   }
 }
 //------------------------------------------------------------------------------
