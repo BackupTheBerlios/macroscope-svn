@@ -1146,6 +1146,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
   stMonUrlUpd_->prepare();
   stMonUrlIns_->prepare();
   bool validLine = false, startTimeLinePrinted = false;
+  uintptr_t identColumn = logger_->config_->valueByPath(section_ + ".squid.identity_column",7);
   for(;;){
 //    fprintf(stderr,"%"PRId64"\n",lineNo);
     utf8::String sb;
@@ -1183,7 +1184,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
     }
     utf8::String st_user, st_url;
     if( validLine ){
-      st_user = utf8::plane(slcp[7]).left(80).replaceAll("\"","").lower();
+      st_user = utf8::plane(slcp[identColumn]).left(80).replaceAll("\"","").lower();
       st_url = utf8::plane(slcp[6]);
       validLine = validLine && st_url.strcasestr(skipUrl).position() < 0;
     }
