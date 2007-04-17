@@ -814,27 +814,27 @@ uintptr_t EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E>::avgChainLength() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T> class AutoHashDrop {
+template <typename T> class AutoDrop {
   public:
-    ~AutoHashDrop();
-    AutoHashDrop(T & hash);
+    ~AutoDrop();
+    AutoDrop(T & object);
   protected:
   private:
-    T * hash_;
+    T * object_;
 
-    AutoHashDrop(const AutoHashDrop<T> &);
-    void operator = (const AutoHashDrop<T> &);
+    AutoDrop(const AutoDrop<T> &);
+    void operator = (const AutoDrop<T> &);
 };
 //---------------------------------------------------------------------------
-template <typename T> inline AutoHashDrop<T>::~AutoHashDrop()
+template <typename T> inline AutoDrop<T>::~AutoDrop()
 {
-  hash_->drop();
+  object_->drop();
 }
 //---------------------------------------------------------------------------
 template <typename T> inline
-AutoHashDrop<T>::AutoHashDrop(T & hash) : hash_(&hash)
+AutoDrop<T>::AutoDrop(T & object) : object_(&object)
 {
-  assert( hash_ != NULL );
+  assert( object_ != NULL );
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

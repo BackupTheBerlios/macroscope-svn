@@ -113,7 +113,7 @@ class Logger {
       TrafCacheEntry::keyHashNodeEqu
     > TrafCache;
     TrafCache trafCache_;
-    AutoHashDrop<TrafCache> trafCacheAutoDrop_;
+    AutoDrop<TrafCache> trafCacheAutoDrop_;
     typedef EmbeddedList<
       TrafCacheEntry,
       TrafCacheEntry::listNode,
@@ -252,7 +252,7 @@ class Logger {
       DNSCacheEntry::keyHashNodeEqu
     > DNSCache;
     DNSCache dnsCache_;
-    AutoHashDrop<DNSCache> dnsCacheAutoDrop_;
+    AutoDrop<DNSCache> dnsCacheAutoDrop_;
     typedef EmbeddedList<
       DNSCacheEntry,
       DNSCacheEntry::listNode,

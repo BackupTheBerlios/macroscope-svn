@@ -257,7 +257,7 @@ class Message {
       Attribute::keyHashNodeEqu
     > Attributes;
     mutable Attributes attributes_;
-    AutoHashDrop<Attributes> attributesAutoDrop_;
+    AutoDrop<Attributes> attributesAutoDrop_;
     uintptr_t residentSize_;
     uintptr_t codePage_;
     mutable AsyncFile file_;
@@ -426,7 +426,7 @@ class UserInfo {
     mutable EmbeddedHashNode<UserInfo,uintptr_t> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
-    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    AutoDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -475,7 +475,7 @@ class KeyInfo {
     mutable EmbeddedHashNode<KeyInfo,uintptr_t> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
-    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    AutoDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -524,7 +524,7 @@ class GroupInfo {
     mutable EmbeddedHashNode<GroupInfo,uintptr_t> hashNode_;
     utf8::String name_;
     InfoLinkKeys sendedTo_;
-    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    AutoDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -575,7 +575,7 @@ class ServerInfo {
     utf8::String name_;
     ServerType type_;
     InfoLinkKeys sendedTo_;
-    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    AutoDrop<InfoLinkKeys> sendedToAutoDrop_;
     uintptr_t connectErrorCount_;
     uint64_t lastFailedConnectTime_;
   protected:
@@ -627,7 +627,7 @@ class User2KeyLink {
     utf8::String user_;
     utf8::String key_;
     InfoLinkKeys sendedTo_;
-    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    AutoDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -680,7 +680,7 @@ class Key2GroupLink {
     utf8::String key_;
     utf8::String group_;
     InfoLinkKeys sendedTo_;
-    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    AutoDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -730,7 +730,7 @@ class Key2ServerLink {
     utf8::String key_;
     utf8::String server_;
     InfoLinkKeys sendedTo_;
-    AutoHashDrop<InfoLinkKeys> sendedToAutoDrop_;
+    AutoDrop<InfoLinkKeys> sendedToAutoDrop_;
   protected:
   private:
 };
@@ -782,7 +782,7 @@ class ServerFiber : public ksock::ServerFiber {
     utf8::String user_;
     utf8::String key_;
     Message::Keys ids_;
-    AutoHashDrop<Message::Keys> idsAutoDrop_;
+    AutoDrop<Message::Keys> idsAutoDrop_;
     DirectoryChangeNotification dcn_;
 
     void putCode(int32_t code);
@@ -985,7 +985,7 @@ class Server : public ksock::Server {
           UserInfo::hashNodeEqu
         > Users;
         Users users_;
-        AutoHashDrop<Users> usersAutoDrop_;
+        AutoDrop<Users> usersAutoDrop_;
         typedef EmbeddedHash<
           KeyInfo,
 	  uintptr_t,
@@ -998,7 +998,7 @@ class Server : public ksock::Server {
           KeyInfo::hashNodeEqu
         > Keys;
         Keys keys_;
-        AutoHashDrop<Keys> keysAutoDrop_;
+        AutoDrop<Keys> keysAutoDrop_;
         typedef EmbeddedHash<
           GroupInfo,
 	  uintptr_t,
@@ -1011,7 +1011,7 @@ class Server : public ksock::Server {
           GroupInfo::hashNodeEqu
         > Groups;
         Groups groups_;
-        AutoHashDrop<Groups> groupsAutoDrop_;
+        AutoDrop<Groups> groupsAutoDrop_;
         typedef EmbeddedHash<
           ServerInfo,
 	  uintptr_t,
@@ -1024,7 +1024,7 @@ class Server : public ksock::Server {
           ServerInfo::hashNodeEqu
         > Servers;
         Servers servers_;
-        AutoHashDrop<Servers> serversAutoDrop_;
+        AutoDrop<Servers> serversAutoDrop_;
         typedef EmbeddedHash<
           User2KeyLink,
 	  uintptr_t,
@@ -1037,7 +1037,7 @@ class Server : public ksock::Server {
           User2KeyLink::hashNodeEqu
         > User2KeyLinks;
         User2KeyLinks user2KeyLinks_;
-        AutoHashDrop<User2KeyLinks> user2KeyLinksAutoDrop_;
+        AutoDrop<User2KeyLinks> user2KeyLinksAutoDrop_;
         typedef EmbeddedHash<
           Key2GroupLink,
 	  uintptr_t,
@@ -1050,7 +1050,7 @@ class Server : public ksock::Server {
           Key2GroupLink::hashNodeEqu
         > Key2GroupLinks;
         Key2GroupLinks key2GroupLinks_;
-        AutoHashDrop<Key2GroupLinks> key2GroupLinksAutoDrop_;
+        AutoDrop<Key2GroupLinks> key2GroupLinksAutoDrop_;
         typedef EmbeddedHash<
           Key2ServerLink,
 	  uintptr_t,
@@ -1063,7 +1063,7 @@ class Server : public ksock::Server {
           Key2ServerLink::hashNodeEqu
         > Key2ServerLinks;
         Key2ServerLinks key2ServerLinks_;
-        AutoHashDrop<Key2ServerLinks> key2ServerLinksAutoDrop_;
+        AutoDrop<Key2ServerLinks> key2ServerLinksAutoDrop_;
     };
   protected:
     Fiber * newFiber();

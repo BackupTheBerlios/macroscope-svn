@@ -278,9 +278,9 @@ class Client : public ksock::Client {
   protected:
     mutable FiberInterlockedMutex queueMutex_;
     Messages recvQueue_;
-    AutoHashDrop<Messages> recvQueueAutoDrop_;
+    AutoDrop<Messages> recvQueueAutoDrop_;
     Messages sendQueue_;
-    AutoHashDrop<Messages> sendQueueAutoDrop_;
+    AutoDrop<Messages> sendQueueAutoDrop_;
     Server::Data data_;
     uint64_t ftime_;
     Array<SerialPortFiber *> serialPortsFibers_;
@@ -372,7 +372,7 @@ public:
       typedefEmbeddedHashKey(const wchar_t *,uint8_t,true) Function;
       typedefEmbeddedHashKeys(const wchar_t *,uint8_t,true) Functions;
       Functions functions_;
-      AutoHashDrop<Functions> functionsAutoDrop_;
+      AutoDrop<Functions> functionsAutoDrop_;
 
       typedefEmbeddedHashKey(utf8::String,VARIANTContainer,true) HashedArrayKey;
       typedefEmbeddedHashKeys(utf8::String,VARIANTContainer,true) HashedArrayKeys;

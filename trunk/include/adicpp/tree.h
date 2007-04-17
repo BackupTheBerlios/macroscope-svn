@@ -469,6 +469,8 @@ EmbeddedTreeNode3<T>::EmbeddedTreeNode3()
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
+class AsyncFile;
+//-----------------------------------------------------------------------------
 template <
   typename T,
   EmbeddedTreeNode<T> & (*N)(const T &),
@@ -758,6 +760,10 @@ class RBTree {
     OT * find(const OT & object) const;
     RBTree<OT,O2N,N2O,CO> & insert(const OT & object,bool throwIfExist = true,bool deleteIfExist = true,OT ** pObject = NULL);
     RBTree<OT,O2N,N2O,CO> & remove(const OT & object);
+    RBTree<OT,O2N,N2O,CO> & drop(const OT & object);
+
+    RBTree<OT,O2N,N2O,CO> & clear();
+    RBTree<OT,O2N,N2O,CO> & drop();
 
     void benchmark(uintptr_t elCount,uintptr_t cycles = 1);
     
@@ -788,12 +794,66 @@ class RBTree {
       }
       return *pObject;
     }*/
+    class Walker {
+      public:
+        Walker(const RBTree<OT,O2N,N2O,CO> & tree) : tree_(tree), sp_(0) {
+          path_[0].node_ = tree_.root_;
+          path_[0].left_ = tree_.root_->left_;
+          path_[0].right_ = tree_.root_->right_;
+          path_[0].pointer_ = -1;
+        }
+        OT & object() const { return N2O(*path_[sp_].node_); }
+        bool next(){
+          for(;;){
+            if( path_[sp_].pointer_ < 0 ){
+              path_[sp_].pointer_++;
+              if( path_[sp_].left_ != &tree_.sentinel_ ){
+                path_[sp_ + 1].node_ = path_[sp_].left_;
+                path_[sp_ + 1].left_ = path_[sp_].left_->left_;
+                path_[sp_ + 1].right_ = path_[sp_].left_->right_;
+                path_[sp_ + 1].pointer_ = -1;
+                sp_++;
+              }
+            }
+            else if( path_[sp_].pointer_ > 0 ){
+              path_[sp_].pointer_++;
+              if( path_[sp_].pointer_ > 1 ){
+                sp_--;
+              }
+              else if( path_[sp_].right_ != &tree_.sentinel_ ){
+                path_[sp_ + 1].node_ = path_[sp_].right_;
+                path_[sp_ + 1].left_ = path_[sp_].right_->left_;
+                path_[sp_ + 1].right_ = path_[sp_].right_->right_;
+                path_[sp_ + 1].pointer_ = -1;
+                sp_++;
+              }
+            }
+            else {
+              break;
+            }
+          }
+          return sp_ >= 0;
+        }
+      protected:
+        class Node {
+          public:
+            RBTreeNode * node_;
+            RBTreeNode * left_;
+            RBTreeNode * right_;
+            intptr_t pointer_;
+        };
+        const RBTree<OT,O2N,N2O,CO> & tree_;
+        Node path_[sizeof(uintptr_t) * 8 + 2];
+        intptr_t sp_;
+    };
+    friend class Walker;
   protected:
     typedef enum { BLACK, RED } RBTreeNodeColor;
 
     mutable RBTreeNode sentinel_;
     mutable RBTreeNode rootNode_;
-    RBTreeNode * root_;
+    mutable RBTreeNode * root_;
+    uintptr_t count_;
 
     void rotateLeft(RBTreeNode * x);
     void rotateRight(RBTreeNode * x);
@@ -802,7 +862,6 @@ class RBTree {
     RBTreeNode * getSuccessorOf(RBTreeNode * x) const;
     RBTreeNode * treeInsertHelp(RBTreeNode * z);
   private:
-
     RBTree(const RBTree<OT,O2N,N2O,CO> &);
     void operator = (const RBTree<OT,O2N,N2O,CO> &);
 };
@@ -823,16 +882,13 @@ template <
   OT & N2O(const RBTreeNode &),
   intptr_t CO(const OT &,const OT &)
 > inline
-RBTree<OT,O2N,N2O,CO>::RBTree() : root_(&rootNode_)
+RBTree<OT,O2N,N2O,CO>::RBTree()
 {
   sentinel_.left_ = &sentinel_;
   sentinel_.right_ = &sentinel_;
   sentinel_.parent_ = NULL;
   sentinel_.color_ = BLACK;
-  rootNode_.left_ = &sentinel_;
-  rootNode_.right_ = &sentinel_;
-  rootNode_.parent_ = NULL;
-  rootNode_.color_ = BLACK;
+  clear();
 }
 //-----------------------------------------------------------------------------
 template <
@@ -998,41 +1054,42 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::insert(const OT & object,bool thr
     if( x->parent_ == x->parent_->parent_->left_ ){
       y = x->parent_->parent_->right_;
       if( y->color_ == RED ){
-	x->parent_->color_ = BLACK;
-	y->color_ = BLACK;
-	x->parent_->parent_->color_ = RED;
-	x = x->parent_->parent_;
+	      x->parent_->color_ = BLACK;
+	      y->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      x = x->parent_->parent_;
       }
       else {
-	if( x == x->parent_->right_){
-	  x = x->parent_;
-	  rotateLeft(x);
-	}
-	x->parent_->color_ = BLACK;
-	x->parent_->parent_->color_ = RED;
-	rotateRight(x->parent_->parent_);
+	      if( x == x->parent_->right_){
+	        x = x->parent_;
+	        rotateLeft(x);
+	      }
+	      x->parent_->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      rotateRight(x->parent_->parent_);
       } 
     }
     else {
       y = x->parent_->parent_->left_;
       if( y->color_ == RED ){
-	x->parent_->color_ = BLACK;
-	y->color_ = BLACK;
-	x->parent_->parent_->color_ = RED;
-	x = x->parent_->parent_;
+	      x->parent_->color_ = BLACK;
+	      y->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      x = x->parent_->parent_;
       }
       else {
-	if( x == x->parent_->left_ ){
-	  x = x->parent_;
-	  rotateRight(x);
-	}
-	x->parent_->color_ = BLACK;
-	x->parent_->parent_->color_ = RED;
-	rotateLeft(x->parent_->parent_);
+	      if( x == x->parent_->left_ ){
+	        x = x->parent_;
+	        rotateRight(x);
+	      }
+	      x->parent_->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      rotateLeft(x->parent_->parent_);
       } 
     }
   }
   root_->left_->color_ = BLACK;
+  count_++;
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -1050,53 +1107,53 @@ void RBTree<OT,O2N,N2O,CO>::removeFixup(RBTreeNode * x)
     if( x == x->parent_->left_ ){
       w = x->parent_->right_;
       if( w->color_ == RED ){
-	w->color_ = BLACK;
-	x->parent_->color_ = RED;
-	rotateLeft(x->parent_);
-	w = x->parent_->right_;
+	      w->color_ = BLACK;
+	      x->parent_->color_ = RED;
+	      rotateLeft(x->parent_);
+	      w = x->parent_->right_;
       }
       if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
-	w->color_ = RED;
-	x = x->parent_;
+	      w->color_ = RED;
+	      x = x->parent_;
       }
       else {
-	if( w->right_->color_ != RED ){
-	  w->left_->color_ = BLACK;
-	  w->color_ = RED;
-	  rotateRight(w);
-	  w = x->parent_->right_;
-	}
-	w->color_ = x->parent_->color_;
-	x->parent_->color_ = BLACK;
-	w->right_->color_ = BLACK;
-	rotateLeft(x->parent_);
-	x = rootLeft; /* this is to exit while loop */
+	      if( w->right_->color_ != RED ){
+	        w->left_->color_ = BLACK;
+	        w->color_ = RED;
+	        rotateRight(w);
+	        w = x->parent_->right_;
+	      }
+	      w->color_ = x->parent_->color_;
+	      x->parent_->color_ = BLACK;
+	      w->right_->color_ = BLACK;
+	      rotateLeft(x->parent_);
+	      x = rootLeft; /* this is to exit while loop */
       }
     }
     else { /* the code below is has left and right switched from above */
       w = x->parent_->left_;
       if( w->color_ == RED ){
-	w->color_ = BLACK;
-	x->parent_->color_ = RED;
-	rotateRight(x->parent_);
-	w = x->parent_->left_;
+	      w->color_ = BLACK;
+	      x->parent_->color_ = RED;
+	      rotateRight(x->parent_);
+	      w = x->parent_->left_;
       }
       if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
-	w->color_ = RED;
-	x = x->parent_;
+	      w->color_ = RED;
+	      x = x->parent_;
       }
       else {
-	if( w->left_->color_ != RED ){
-	  w->right_->color_ = BLACK;
-	  w->color_ = RED;
-	  rotateLeft(w);
-	  w = x->parent_->left_;
-	}
-	w->color_ = x->parent_->color_;
-	x->parent_->color_ = BLACK;
-	w->left_->color_ = BLACK;
-	rotateRight(x->parent_);
-	x = rootLeft; /* this is to exit while loop */
+	      if( w->left_->color_ != RED ){
+	        w->right_->color_ = BLACK;
+	        w->color_ = RED;
+	        rotateLeft(w);
+	        w = x->parent_->left_;
+	      }
+	      w->color_ = x->parent_->color_;
+	      x->parent_->color_ = BLACK;
+	      w->left_->color_ = BLACK;
+	      rotateRight(x->parent_);
+	      x = rootLeft; /* this is to exit while loop */
       }
     }
   }
@@ -1175,7 +1232,51 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::remove(const OT & object)
   else if( y->color_ != RED ){
     removeFixup(x);
   }
+  count_--;
   return *this;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename OT,
+  RBTreeNode & O2N(const OT &),
+  OT & N2O(const RBTreeNode &),
+  intptr_t CO(const OT &,const OT &)
+> inline
+RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::drop(const OT & object)
+{
+  remove(object);
+  deleteObject(&object);
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename OT,
+  RBTreeNode & O2N(const OT &),
+  OT & N2O(const RBTreeNode &),
+  intptr_t CO(const OT &,const OT &)
+> inline
+RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::clear()
+{
+  root_ = &rootNode_;
+  rootNode_.left_ = &sentinel_;
+  rootNode_.right_ = &sentinel_;
+  rootNode_.parent_ = NULL;
+  rootNode_.color_ = BLACK;
+  count_ = 0;
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <
+  typename OT,
+  RBTreeNode & O2N(const OT &),
+  OT & N2O(const RBTreeNode &),
+  intptr_t CO(const OT &,const OT &)
+> inline
+RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::drop()
+{
+  Walker walker(*this);
+  while( walker.next() ) deleteObject(&walker.object());
+  return clear();
 }
 //-----------------------------------------------------------------------------
 template <

@@ -56,26 +56,30 @@ PCAP::~PCAP()
 {
 }
 //------------------------------------------------------------------------------
-PCAP::PCAP() : handle_(NULL), groupingPeriod_(pgpNone), packetsAutoDrop_(packetsList_)
+PCAP::PCAP() : handle_(NULL), groupingPeriod_(pgpNone),
+  packetsAutoDrop_(packetsList_), groupTreeAutoDrop_(groupTree_)
 {
 }
 //------------------------------------------------------------------------------
 void PCAP::threadBeforeWait()
 {
+#if HAVE_PCAP_H
   if( handle_ != NULL ){
     pcap_breakloop((pcap_t *) handle_);
   }
+#endif
 }
 //------------------------------------------------------------------------------
 void PCAP::threadExecute()
 {
-  pcap_t *handle;                /* Session handle */
-  char dev[] = "rl0";            /* Device to sniff on */
-  char errbuf[PCAP_ERRBUF_SIZE]; /* Error string */
-  struct bpf_program fp;         /* The compiled filter expression */
-  char filter_exp[] = "port 23"; /* The filter expression */
-  bpf_u_int32 mask;              /* The netmask of our sniffing device *
-  bpf_u_int32 net;               /* The IP of our sniffing device */
+#if HAVE_PCAP_H
+  pcap_t *handle;                // Session handle
+  char dev[] = "rl0";            // Device to sniff on
+  char errbuf[PCAP_ERRBUF_SIZE]; // Error string
+  struct bpf_program fp;         // The compiled filter expression
+  char filter_exp[] = "port 23"; // The filter expression
+  bpf_u_int32 mask;              // The netmask of our sniffing device
+  bpf_u_int32 net;               // The IP of our sniffing device
   if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
     fprintf(stderr, "Can't get netmask for device %s\n", dev);
     net = 0;
@@ -96,15 +100,24 @@ void PCAP::threadExecute()
   grouper_->terminate().wait();
   databaseInserter_->terminate().wait();
   lazyWriter_->terminate().wait();
+#endif
 }
 //------------------------------------------------------------------------------
-void PCAP::pcapCallback(u_char * args,const struct pcap_pkthdr * header,const u_char * packet)
+void PCAP::pcapCallback(void * args,const void * header,const void * packet)
 {
-  reinterpret_cast<PCAP *>(args)->capture(timeval2Time(header->ts),header->caplen,header->len,(const uint8_t *) packet);
+#if HAVE_PCAP_H
+  reinterpret_cast<PCAP *>(args)->capture(
+    timeval2Time(reinterpret_cast<const struct pcap_pkthdr *>(header)->ts),
+    reinterpret_cast<const struct pcap_pkthdr *>(header)->caplen,
+    reinterpret_cast<const struct pcap_pkthdr *>(header)->len,
+    (const uint8_t *) packet
+  );
+#endif
 }
 //------------------------------------------------------------------------------
 void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet)
 {
+#if HAVE_PCAP_H
 #define SIZE_ETHERNET 14
   const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
   const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
@@ -141,9 +154,10 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   pkt.dstPort_ = ip->proto_ == IPPROTO_TCP ? tcp->dstPort_ : 0;
   pkt.proto_ = ip->proto_;							  
   packets_->packets_++;
+#endif
 }
 //------------------------------------------------------------------------------
-void PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const Packet *,uintptr_t)
+void PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintptr_t)
 {
 }
 //------------------------------------------------------------------------------
@@ -154,46 +168,46 @@ PCAP::PacketGroup & PCAP::PacketGroup::setBounds(uint64_t timestamp,PacketGroupi
   struct tm t = time2tm(timestamp);
   switch( groupingPeriod ){
     case pgpNone :
-      bt_ = et_ = timestamp_;
+      bt_ = et_ = timestamp;
       break;
     case pgpSec  :
-      bt_ = et_ = tm2time(t);
+      bt_ = et_ = tm2Time(t);
       break;
     case pgpMin  :
       t.tm_sec = 0;
-      bt_ = tm2time(t);
+      bt_ = tm2Time(t);
       t.tm_sec = 59;
-      et_ = tm2time(t);
+      et_ = tm2Time(t);
       break;
     case pgpHour :
       t.tm_sec = 0;
       t.tm_min = 0;
-      bt_ = tm2time(t);
+      bt_ = tm2Time(t);
       t.tm_sec = 59;
       t.tm_min = 59;
-      et_ = tm2time(t);
+      et_ = tm2Time(t);
       break;
     case pgpDay  :
       t.tm_sec = 0;
       t.tm_min = 0;
       t.tm_hour = 0;
-      bt_ = tm2time(t);
+      bt_ = tm2Time(t);
       t.tm_sec = 59;
       t.tm_min = 59;
       t.tm_hour = 23;
-      et_ = tm2time(t);
+      et_ = tm2Time(t);
       break;
     case pgpMon  :
       t.tm_sec = 0;
       t.tm_min = 0;
       t.tm_hour = 0;
       t.tm_mday = 1;
-      bt_ = tm2time(t);
+      bt_ = tm2Time(t);
       t.tm_sec = 59;
       t.tm_min = 59;
       t.tm_hour = 23;
       t.tm_mday = (int) monthDays(t.tm_year + 1900,t.tm_mon);
-      et_ = tm2time(t);
+      et_ = tm2Time(t);
       break;
     case pgpYear :
       t.tm_sec = 0;
@@ -201,13 +215,13 @@ PCAP::PacketGroup & PCAP::PacketGroup::setBounds(uint64_t timestamp,PacketGroupi
       t.tm_hour = 0;
       t.tm_mday = 1;
       t.tm_mon = 0;
-      bt_ = tm2time(t);
+      bt_ = tm2Time(t);
       t.tm_sec = 59;
       t.tm_min = 59;
       t.tm_hour = 23;
       t.tm_mday = 31;
       t.tm_mon = 11;
-      et_ = tm2time(t);
+      et_ = tm2Time(t);
       break;
   }
   return *this;
@@ -227,7 +241,8 @@ void PCAP::Grouper::threadExecute()
     AutoPtr<Packets> packets;
     {
       AutoLock<InterlockedMutex> lock(pcap_->packetsListMutex_);
-      if( pcap_->packetsList_.count() > 0 ) packets.ptr(packetsList_.remove(*packetsList_.first()));
+      if( pcap_->packetsList_.count() > 0 )
+        packets.ptr(&pcap_->packetsList_.remove(*pcap_->packetsList_.first()));
     }
     if( packets == NULL || packets->packets_ == 0 ) continue;
     AutoPtr<PacketGroup> group;
@@ -243,11 +258,11 @@ void PCAP::Grouper::threadExecute()
       if( pGroup == group ) group.ptr(NULL);
       if( pGroup->count_ == pGroup->maxCount_ ){
         pGroup->packets_.realloc(((pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4)) * sizeof(HashedPacket));
-	pGroup->maxCount_ = (pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4);
+	      pGroup->maxCount_ = (pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4);
       }
       HashedPacket & hpkt = pGroup->packets_[pGroup->count_], * p;
-      hpkt.pktSize_ = pkt.pktSize;
-      hpkt.dataSize_ = pkt.dataSize;
+      hpkt.pktSize_ = pkt.pktSize_;
+      hpkt.dataSize_ = pkt.dataSize_;
       memcpy(&hpkt.srcAddr_,&pkt.srcAddr_,sizeof(pkt.srcAddr_));
       memcpy(&hpkt.dstAddr_,&pkt.dstAddr_,sizeof(pkt.dstAddr_));
       hpkt.srcPort_ = pkt.srcPort_;
@@ -255,8 +270,8 @@ void PCAP::Grouper::threadExecute()
       hpkt.proto_ = pkt.proto_;
       pGroup->packetsHash_.insert(hpkt,false,false,&p);
       if( p != &hpkt ){
-        p->pktSize_ += pkt.pktSize;
-        p->dataSize_ += pkt.dataSize;
+        p->pktSize_ += pkt.pktSize_;
+        p->dataSize_ += pkt.dataSize_;
       }
       else {
         pGroup->count_++;

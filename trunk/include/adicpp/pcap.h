@@ -74,8 +74,8 @@ struct PACKED IPPacketHeader {
 struct PACKED TCPPacketHeader {
   uint16_t srcPort_;       /* source port */
   uint16_t dstPort_;       /* destination port */
-  tcp_seq seq_;         /* sequence number */
-  tcp_seq ack_;         /* acknowledgement number */
+  uint32_t seq_;         /* sequence number */
+  uint32_t ack_;         /* acknowledgement number */
   uint8_t offx2_;        /* data offset, rsvd */
   uint8_t flags_;
   uint16_t win_;         /* window */
@@ -116,63 +116,44 @@ class PCAP : public Thread {
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
-	uint16_t dstPort_;
+	      uint16_t dstPort_;
         uint16_t pktSize_;
         uint16_t dataSize_;
         uint8_t proto_;
     };
-    virtual void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count);
-  private:
-							          
-    class Packets : public Array<Packet> {
-      public:
-	Packets() {}
-	Packets(uintptr_t packets = 0) : packets_(0) { resize(packets); }
-
-        uintptr_t packets_;
-	
-        static EmbeddedListNode<Packets> & listNode(const Packets & object){
-          return object.listNode_;
-        }
-        static Packets & listObject(const EmbeddedListNode<Packets> & node,Packets * p){
-          return node.object(p->listNode_);
-	}
-	mutable EmbeddedListNode<Packets> listNode_;
-    };
-    typedef EmbeddedList<Packets,Packets::listNode,Packets::listObject> PacketsList;
-
     class HashedPacket {
       public:
         static EmbeddedHashNode<HashedPacket,uintptr_t> & ehNLT(const uintptr_t & link,const AutoPtr<HashedPacket> * & param){
-	  return keyNode(param[link - 1]);
-	}
-	static uintptr_t ehLTN(const EmbeddedHashNode<HashedPacket,uintptr_t> & node,const AutoPtr<HashedPacket> * & param){
-	  return &keyNodeObject(node) - param.ptr() + 1;
-	}
-	static EmbeddedHashNode<HashedPacket,uintptr_t> & keyNode(const HashedPacket & object){
-	  return object.keyNode_;
-	}
-	static HashedPacket & keyNodeObject(const EmbeddedHashNode<HashedPacket,uintptr_t> & node,HashedPacket * p){
-	  return node.object(p->keyNode_);
-	}
-	static uintptr_t keyNodeHash(const HashedPacket & object){
-	  uintptr_t h = HF::hash(&object.srcAddr_,sizeof(object.srcAddr_));
-	  h = HF::hash(&object.dstAddr_,sizeof(object.dstAddr_),h);
-	  h = HF::hash(&object.srcPort_,sizeof(object.srcPort_),h);
-	  return HF::hash(&object.proto_,sizeof(object.proto_),h);
+	        return keyNode(param[link - 1]);
+	      }
+	      static uintptr_t ehLTN(const EmbeddedHashNode<HashedPacket,uintptr_t> & node,const AutoPtr<HashedPacket> * & param){
+	        return &keyNodeObject(node,NULL) - param->ptr() + 1;
+	      }
+	      static EmbeddedHashNode<HashedPacket,uintptr_t> & keyNode(const HashedPacket & object){
+	        return object.keyNode_;
+	      }
+	      static HashedPacket & keyNodeObject(const EmbeddedHashNode<HashedPacket,uintptr_t> & node,HashedPacket * p){
+	        return node.object(p->keyNode_);
+	      }
+	      static uintptr_t keyNodeHash(const HashedPacket & object){
+	        uintptr_t h = HF::hash(&object.srcAddr_,sizeof(object.srcAddr_));
+	        h = HF::hash(&object.dstAddr_,sizeof(object.dstAddr_),h);
+	        h = HF::hash(&object.srcPort_,sizeof(object.srcPort_),h);
+	        return HF::hash(&object.proto_,sizeof(object.proto_),h);
         }
         static bool keyHashNodeEqu(const HashedPacket & object1,const HashedPacket & object2){
           intptr_t c = memcmp(&object1.srcAddr_,&object2.srcAddr_,sizeof(&object1.srcAddr_));
-	  if( c == 0 ){
-	    c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_));
-  	    if( c == 0 ){
-	      c = intptr_t(object1.srcPort_) - intptr_t(object2.srcPort_);
-	      if( c == 0 ){
-  	        c = intptr_t(object1.dstPort_) - intptr_t(object2.dstPort_);
-  	        if( c == 0 ) c = intptr_t(object1.proto_) - intptr_t(object2.proto_);
-	      }
-	    }
-	  }
+	        if( c == 0 ){
+	          c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_));
+  	          if( c == 0 ){
+	            c = intptr_t(object1.srcPort_) - intptr_t(object2.srcPort_);
+	            if( c == 0 ){
+	              c = intptr_t(object1.dstPort_) - intptr_t(object2.dstPort_);
+	              if( c == 0 ) c = intptr_t(object1.proto_) - intptr_t(object2.proto_);
+	            }
+	          }
+	        }
+          return c == 0;
         }
         mutable EmbeddedHashNode<HashedPacket,uintptr_t> keyNode_;
 	
@@ -181,9 +162,28 @@ class PCAP : public Thread {
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
-	uint16_t dstPort_;
+	      uint16_t dstPort_;
         uint8_t proto_;
     };
+    virtual void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count);
+  private:
+    class Packets : public Array<Packet> {
+      public:
+	      Packets() {}
+	      Packets(uintptr_t packets) : packets_(0) { resize(packets); }
+
+        uintptr_t packets_;
+	
+        static EmbeddedListNode<Packets> & listNode(const Packets & object){
+          return object.listNode_;
+        }
+        static Packets & listObject(const EmbeddedListNode<Packets> & node,Packets * p){
+          return node.object(p->listNode_);
+  	  }
+	    mutable EmbeddedListNode<Packets> listNode_;
+    };
+    typedef EmbeddedList<Packets,Packets::listNode,Packets::listObject> PacketsList;
+
     typedef EmbeddedHash<
       HashedPacket,
       uintptr_t,
@@ -198,29 +198,29 @@ class PCAP : public Thread {
 
     class PacketGroup {
       public:
-        PacketGroup() : count_(0), maxCount_(0), packetsHashAutoDrop_(packets_) { packetsHash_.param(&packets_); }
+        PacketGroup() : count_(0), maxCount_(0) { packetsHash_.param() = &packets_; }
       
         uint64_t bt_;
-	uint64_t et_;
+	      uint64_t et_;
       
         AutoPtr<HashedPacket> packets_;
-	uintptr_t count_;
-	uintptr_t maxCount_;
+	      uintptr_t count_;
+	      uintptr_t maxCount_;
         PacketsHash packetsHash_;
 	
-	PacketGroup & setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod);
+	      PacketGroup & setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod);
       
         static RBTreeNode & treeO2N(const PacketGroup & object){
           return object.treeNode_;
-	}
-	static PacketGroup & treeN2O(const RBTreeNode & node){
-	  return node.object<PacketGroup>(reinterpret_cast<PacketGroup *>(NULL)->treeNode_);
-	}
-	static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
-	  assert( (a0.bt_ > a1.et_ && a0.et_ > a1.et_) || (a0.et_ < a1.bt_ && a0.bt_ < a1.bt_));
-	  return a0.bt_ > a1.bt_ ? 1 : a0.bt_ < a1.bt_ ? -1 : 0;
-	}
-	mutable RBTreeNode treeNode_;
+	    }
+	    static PacketGroup & treeN2O(const RBTreeNode & node){
+	      return node.object<PacketGroup>(reinterpret_cast<PacketGroup *>(NULL)->treeNode_);
+	    }
+	    static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
+	      assert( (a0.bt_ > a1.et_ && a0.et_ > a1.et_) || (a0.et_ < a1.bt_ && a0.bt_ < a1.bt_));
+	      return a0.bt_ > a1.bt_ ? 1 : a0.bt_ < a1.bt_ ? -1 : 0;
+	    }
+	    mutable RBTreeNode treeNode_;
     };
     typedef
       RBTree<

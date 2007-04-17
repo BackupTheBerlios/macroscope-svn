@@ -470,7 +470,7 @@ class DSQLParams {
       DSQLParam::keyHashNodeEqu
     > Params;
     Params params_;
-    ksys::AutoHashDrop<Params> paramsAutoDrop_;
+    ksys::AutoDrop<Params> paramsAutoDrop_;
     ksys::Array<DSQLParam *> indexToParam_;
 
     DSQLParams & bind();

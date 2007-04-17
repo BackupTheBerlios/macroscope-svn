@@ -400,7 +400,7 @@ void ServerFiber::processMailbox(
   Vector<utf8::String> list;
   getDirList(list,userMailBox + "*.msg",utf8::String(),false);
   Message::Keys ids;
-  AutoHashDrop<Message::Keys> idsAutoDrop(ids);
+  AutoDrop<Message::Keys> idsAutoDrop(ids);
   for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
     utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
     bool isNewMessage = ids_.find(id) == NULL;

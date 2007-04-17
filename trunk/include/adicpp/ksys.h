@@ -62,6 +62,7 @@ template <typename T> inline void xchg(T & v1, T & v2)
 #include "vector.h"
 #include "hol.h"
 #include "ehash.h"
+#include "tree.h"
 #include "mstream.h"
 #include "mutant.h"
 #include "sysutils.h"
