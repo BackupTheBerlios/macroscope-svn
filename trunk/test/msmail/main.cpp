@@ -80,10 +80,6 @@ int main(int _argc,char * _argv[])
     errcode = errcode;*/
 
 #endif
-    RBTreeBenchmarkTree tree;
-    tree.benchmark(10000000,3);
-    exit(0);
-
     uintptr_t u;
     stdErr.fileName(SYSLOG_DIR("msmail/") + "msmail.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msmail.conf");
@@ -160,6 +156,11 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[u].strcmp("--stop-disp") == 0 ){
         services.stopServiceCtrlDispatcher();
+        dispatch = false;
+      }
+      else if( argv()[u].strcmp("--benchmark") == 0 ){
+        RBTreeBenchmarkTree tree;
+        tree.benchmark(10000000,3);
         dispatch = false;
       }
       else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
