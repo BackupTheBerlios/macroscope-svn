@@ -109,6 +109,16 @@ class PCAP : public Thread {
     PCAP();
 
     enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear };
+
+    const utf8::String & device() const;
+    PCAP & device(const utf8::String & device);
+    const utf8::String & filter() const;
+    PCAP & filter(const utf8::String & filter);
+    const bool & promisc() const;
+    PCAP & promisc(bool a);
+
+    const PacketGroupingPeriod & groupingPeriod() const;
+    PCAP & groupingPeriod(PacketGroupingPeriod groupingPeriod);
   protected:
     class Packet {
       public:
@@ -214,7 +224,8 @@ class PCAP : public Thread {
           return object.treeNode_;
 	    }
 	    static PacketGroup & treeN2O(const RBTreeNode & node){
-	      return node.object<PacketGroup>(reinterpret_cast<PacketGroup *>(NULL)->treeNode_);
+	      PacketGroup * p = NULL;
+	      return node.object<PacketGroup>(p->treeNode_);
 	    }
 	    static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
 	      assert( (a0.bt_ > a1.et_ && a0.et_ > a1.et_) || (a0.et_ < a1.bt_ && a0.bt_ < a1.bt_));
@@ -250,7 +261,7 @@ class PCAP : public Thread {
         void threadBeforeWait();
         void threadExecute();
     };
-    friend class Grouper;
+    friend class DatabaseInserter;
 
     class LazyWriter : public Thread {
       public:
@@ -278,6 +289,9 @@ class PCAP : public Thread {
     InterlockedMutex groupTreeMutex_;
     PacketGroupTree groupTree_;
     AutoDrop<PacketGroupTree> groupTreeAutoDrop_;
+    utf8::String device_;
+    utf8::String filter_;
+    bool promisc_;
         
     void threadBeforeWait();
     void threadExecute();

@@ -85,10 +85,10 @@ void PCAP::threadExecute()
     net = 0;
     mask = 0;
   }
-  pcap_open_live();
+  pcap_open_live(device_.getANSIString(),0,promisc_,0,errbuf);
   pcap_compile(handle, &fp, filter_exp, 0, net);
   pcap_setfilter(handle, &fp);
-  pcap_loop((pcap_t *) handle_,-1,pcapCallback,this);
+  pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
   pcap_freecode(&fp);
   pcap_close((pcap_t *) handle_);
   handle_ = NULL;
@@ -119,10 +119,10 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 {
 #if HAVE_PCAP_H
 #define SIZE_ETHERNET 14
-  const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
+//  const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
   const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
   uintptr_t sizeIp = ip->hl() * 4;
-  if( size_ip < 20 ){
+  if( sizeIp < 20 ){
     stdErr.debug(8,utf8::String::Stream() << __PRETTY_FUNCTION__ << ", Invalid IP header length: " << sizeIp << " bytes\n");
     return;
   }
@@ -135,7 +135,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
       return;
     }
   }
-  payload = packet + SIZE_ETHERNET + size_ip + size_tcp;
+  const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp;
   if( packets_ == NULL || packets_->packets_ == packets_->count() ){
     if( packets_ != NULL ){
       AutoLock<InterlockedMutex> lock(packetsListMutex_);
@@ -144,7 +144,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     }
     packets_ = newObjectV1<Packets>(getpagesize() * 16u / sizeof(Packet));
   }
-  Packet & pkt = packets_[packets_->packets_];
+  Packet & pkt = (*packets_.ptr())[packets_->packets_];
   pkt.timestamp_ = timestamp;
   pkt.pktSize_ = len;
   pkt.dataSize_ = len - (payload - packet);
