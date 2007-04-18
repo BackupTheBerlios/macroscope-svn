@@ -1154,7 +1154,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
     size = sb.size();
     validLine = size > 0 && sb.c_str()[size - 1] == '\n';
     parseSquidLogLine(sb.c_str(),size,slcp);
-    validLine = validLine && slcp.count() >= 7 && slcp[7] != NULL;
+    validLine = validLine && slcp.count() >= 7 && slcp[identColumn] != NULL;
     uint64_t timeStamp1;
     if( validLine ){
       uint64_t a;
@@ -1176,8 +1176,8 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
       validLine = validLine && r == 1 && traf > 0;
     }
     if( validLine ){
-      validLine = validLine && strchr(slcp[7],'%') == NULL;
-      validLine = validLine && strcmp(slcp[7],"-") != 0;
+      validLine = validLine && strchr(slcp[identColumn],'%') == NULL;
+      validLine = validLine && strcmp(slcp[identColumn],"-") != 0;
       validLine = validLine && strncmp(slcp[3],"NONE",4) != 0;
       validLine = validLine && strncmp(slcp[3],"TCP_DENIED",10) != 0;
       validLine = validLine && strncmp(slcp[3],"UDP_DENIED",10) != 0;
