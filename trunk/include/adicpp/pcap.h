@@ -189,8 +189,8 @@ class PCAP : public Thread {
         }
         static Packets & listObject(const EmbeddedListNode<Packets> & node,Packets * p){
           return node.object(p->listNode_);
-  	  }
-	    mutable EmbeddedListNode<Packets> listNode_;
+  	}
+	mutable EmbeddedListNode<Packets> listNode_;
     };
     typedef EmbeddedList<Packets,Packets::listNode,Packets::listObject> PacketsList;
 
@@ -211,27 +211,28 @@ class PCAP : public Thread {
         PacketGroup() : count_(0), maxCount_(0) { packetsHash_.param() = &packets_; }
       
         uint64_t bt_;
-	      uint64_t et_;
+        uint64_t et_;
       
         AutoPtr<HashedPacket> packets_;
-	      uintptr_t count_;
-	      uintptr_t maxCount_;
+        uintptr_t count_;
+        uintptr_t maxCount_;
         PacketsHash packetsHash_;
 	
-	      PacketGroup & setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod);
+        PacketGroup & setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod);
+	bool isInBounds(uint64_t timestamp) const { return timestamp >= bt_ && timestamp <= et_; }
       
         static RBTreeNode & treeO2N(const PacketGroup & object){
           return object.treeNode_;
-	    }
-	    static PacketGroup & treeN2O(const RBTreeNode & node){
-	      PacketGroup * p = NULL;
-	      return node.object<PacketGroup>(p->treeNode_);
-	    }
-	    static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
-	      assert( (a0.bt_ > a1.et_ && a0.et_ > a1.et_) || (a0.et_ < a1.bt_ && a0.bt_ < a1.bt_));
-	      return a0.bt_ > a1.bt_ ? 1 : a0.bt_ < a1.bt_ ? -1 : 0;
-	    }
-	    mutable RBTreeNode treeNode_;
+	}
+	static PacketGroup & treeN2O(const RBTreeNode & node){
+	  PacketGroup * p = NULL;
+	  return node.object<PacketGroup>(p->treeNode_);
+	}
+	static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
+	  assert( (a0.bt_ > a1.et_ && a0.et_ > a1.et_) || (a0.et_ < a1.bt_ && a0.bt_ < a1.bt_));
+	  return a0.bt_ > a1.bt_ ? 1 : a0.bt_ < a1.bt_ ? -1 : 0;
+	}
+	mutable RBTreeNode treeNode_;
     };
     typedef
       RBTree<

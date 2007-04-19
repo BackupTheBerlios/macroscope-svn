@@ -73,33 +73,48 @@ void PCAP::threadBeforeWait()
 void PCAP::threadExecute()
 {
 #if HAVE_PCAP_H
-  pcap_t *handle;                // Session handle
-  char dev[] = "rl0";            // Device to sniff on
   char errbuf[PCAP_ERRBUF_SIZE]; // Error string
   struct bpf_program fp;         // The compiled filter expression
-  char filter_exp[] = "port 23"; // The filter expression
   bpf_u_int32 mask;              // The netmask of our sniffing device
   bpf_u_int32 net;               // The IP of our sniffing device
-  if (pcap_lookupnet(dev, &net, &mask, errbuf) == -1) {
-    fprintf(stderr, "Can't get netmask for device %s\n", dev);
-    net = 0;
-    mask = 0;
+  bool freeCode = false;
+  
+  try {
+    if( pcap_lookupnet(device_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
+    handle_ = pcap_open_live(device_.getANSIString(),0,promisc_,0,errbuf);
+    if( handle_ == NULL ) goto errexit;
+    if( pcap_compile((pcap_t *) handle_,&fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;
+    freeCode = true;
+    if( pcap_setfilter((pcap_t *) handle_,&fp) != 0 ) goto errexit;
+    pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
+    pcap_freecode(&fp);
+    pcap_close((pcap_t *) handle_);
+    handle_ = NULL;
+    if( packets_ != NULL ){
+      AutoLock<InterlockedMutex> lock(packetsListMutex_);
+      packetsList_.insToTail(*packets_.ptr(NULL));
+      grouperSem_.post();
+    }
+    grouper_->terminate().wait();
+    databaseInserter_->terminate().wait();
+    lazyWriter_->terminate().wait();
   }
-  pcap_open_live(device_.getANSIString(),0,promisc_,0,errbuf);
-  pcap_compile(handle, &fp, filter_exp, 0, net);
-  pcap_setfilter(handle, &fp);
-  pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
-  pcap_freecode(&fp);
-  pcap_close((pcap_t *) handle_);
-  handle_ = NULL;
-  if( packets_ != NULL ){
-    AutoLock<InterlockedMutex> lock(packetsListMutex_);
-    packetsList_.insToTail(*packets_.ptr(NULL));
-    grouperSem_.post();
+  catch( ExceptionSP & e ){
+    if( handle_ != NULL ){
+      if( freeCode ) pcap_freecode(&fp);
+      pcap_close((pcap_t *) handle_);
+      handle_ = NULL;
+    }
+    throw;
   }
-  grouper_->terminate().wait();
-  databaseInserter_->terminate().wait();
-  lazyWriter_->terminate().wait();
+errexit:  
+  int32_t err = errno;
+  if( handle_ != NULL ){
+    if( freeCode ) pcap_freecode(&fp);
+    pcap_close((pcap_t *) handle_);
+    handle_ = NULL;
+  }
+  newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + errbuf)->throwSP();
 #endif
 }
 //------------------------------------------------------------------------------
@@ -258,7 +273,7 @@ void PCAP::Grouper::threadExecute()
       if( pGroup == group ) group.ptr(NULL);
       if( pGroup->count_ == pGroup->maxCount_ ){
         pGroup->packets_.realloc(((pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4)) * sizeof(HashedPacket));
-	      pGroup->maxCount_ = (pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4);
+        pGroup->maxCount_ = (pGroup->count_ << 1) + ((pGroup->count_ == 0) << 4);
       }
       HashedPacket & hpkt = pGroup->packets_[pGroup->count_], * p;
       hpkt.pktSize_ = pkt.pktSize_;
@@ -278,6 +293,32 @@ void PCAP::Grouper::threadExecute()
       }
     }
     pcap_->databaseInserterSem_.post();
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+void PCAP::DatabaseInserter::threadBeforeWait()
+{
+  if( pcap_ != NULL ) pcap_->databaseInserterSem_.post();
+}
+//------------------------------------------------------------------------------
+void PCAP::DatabaseInserter::threadExecute()
+{
+  while( !terminated_ ){
+    pcap_->databaseInserterSem_.wait();
+    for(;;){
+      PacketGroup * group = NULL;
+      {
+        AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+        PacketGroupTree::Walker walker(pcap_->groupTree_);
+	if( walker.next() ) group = &walker.object();
+      }
+      if( group == NULL ) break;
+      pcap_->insertPacketsInDatabase(group->bt_,group->et_,group->packets_,group->count_);
+      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      pcap_->groupTree_.drop(*group);
+    }    
   }
 }
 //------------------------------------------------------------------------------
