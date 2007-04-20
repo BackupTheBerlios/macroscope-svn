@@ -302,6 +302,39 @@ class PCAP : public Thread {
     void operator = (const PCAP &);
 };
 //---------------------------------------------------------------------------
+inline const utf8::String & PCAP::device() const
+{
+  return device_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::device(const utf8::String & device)
+{
+  device_ = device;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const utf8::String & PCAP::filter() const
+{
+  return filter_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::filter(const utf8::String & filter)
+{
+  filter_ = filter;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const bool & PCAP::promisc() const
+{
+  return promisc_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::promisc(bool a)
+{
+  promisc_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
 #endif

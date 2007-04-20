@@ -54,6 +54,24 @@ class Logger {
     AutoPtr<Statement> statement_;
     AutoPtr<Statement> statement2_;
     bool verbose_;
+
+    class Sniffer : public PCAP {
+      public:
+        ~Sniffer();
+        Sniffer();
+	Sniffer(Logger & logger,const utf8::String & section,const utf8::String & sectionName);
+      protected:
+        Logger * logger_;
+        utf8::String section_;
+        utf8::String sectionName_;
+        AutoPtr<Database> database_;
+        AutoPtr<Statement> statement_;
+	
+        void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count);
+      private:
+        Sniffer(const Sniffer &);
+        void operator = (const Sniffer &);
+    };
     
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };

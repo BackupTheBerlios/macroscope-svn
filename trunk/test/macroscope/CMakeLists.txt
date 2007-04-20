@@ -2,6 +2,7 @@ ADD_EXECUTABLE (macroscope
   macroscope.cpp
   htmlrep.cpp
   bpfthtml.cpp
+  sniffer.cpp
   version.c
 )
  
