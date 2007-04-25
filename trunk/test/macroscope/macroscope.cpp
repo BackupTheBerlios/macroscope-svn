@@ -225,7 +225,7 @@ int32_t Logger::main(bool sniffer)
   stdErr.flush(true);
 #endif*/
   cgi_.initialize();
-  if( !cgi_.isCGI() ){
+  if( cgi_.isCGI() ){
     if( cgi_.paramCount() == 0 ){
       cgi_ <<
         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
