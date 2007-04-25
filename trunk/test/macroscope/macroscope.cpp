@@ -240,8 +240,8 @@ int32_t Logger::main(bool sniffer)
         "  <label for=\"if\">Interface</label>\n"
         "  <select name=\"if\" id=\"if\">\n"
       ;
-      database_->attach();
-      statement_->text("select distinct st_if from INET_BPFT_STAT where st_if > ''")->execute();
+      database_->attach()->start();
+      statement_->text("select distinct st_if from INET_BPFT_STAT")->execute();
       while( statement_->fetch() ){
 //      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
 //        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
@@ -251,7 +251,7 @@ int32_t Logger::main(bool sniffer)
         if( statement_->rowIndex() == 0 ) cgi_ << " selected=\"selected\"";
         cgi_ << ">" + sectionName + "</option>\n";
       }
-      database_->detach();
+      database_->commit()->detach();
       cgi_ <<
         "  </select>\n"
 	      "  <BR>\n"
