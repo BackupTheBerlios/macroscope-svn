@@ -741,8 +741,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "      GROUP BY st_src_ip"
         "  ) AS B "
         "  GROUP BY B.st_ip"
-        ") AS A "
-        "WHERE " + (filter_.isNull() ? utf8::String() : filter_) +
+        ") AS A " +
+        (filter_.isNull() ? utf8::String() : "WHERE "  + filter_) +
         "ORDER BY SUM1"
       );
       stBPFTHostSel_->text(
@@ -773,8 +773,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "      GROUP BY st_src_ip"
         "  ) AS B "
         "  GROUP BY B.st_ip"
-        ") AS A "
-        "WHERE " + (filter_.isNull() ? utf8::String() : filter_)
+        ") AS A " +
+        (filter_.isNull() ? utf8::String() : "WHERE "  + filter_)
       );
     }
     stBPFTSel_->prepare()->paramAsString("st_if",sectionName_);
