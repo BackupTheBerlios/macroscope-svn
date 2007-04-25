@@ -74,6 +74,15 @@ class SockAddr {
     socklen_t addrSize() const;
 
     SockAddr & clear();
+    
+    static utf8::String addr2Index(const struct in_addr & addr);
+    static utf8::String saddr2Index(const struct sockaddr_in & addr);
+#if SIZEOF_SOCKADDR_IN6
+    static utf8::String addr2Index(const struct in6_addr & addr);
+    static utf8::String saddr2Index(const struct sockaddr_in6 & addr);
+#endif
+    utf8::String addr2Index() const;
+    utf8::String saddr2Index() const;
   protected:
 #if defined(__WIN32__) || defined(__WIN64__)
     union IpInfo {
@@ -123,4 +132,3 @@ inline socklen_t SockAddr::addrSize() const
 //---------------------------------------------------------------------------
 #endif /* _sockaddr_H_ */
 //---------------------------------------------------------------------------
-

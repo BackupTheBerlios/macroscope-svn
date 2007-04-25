@@ -105,13 +105,13 @@ struct PACKED TCPPacketHeader {
 //---------------------------------------------------------------------------
 class PCAP : public Thread {
   public:
-    ~PCAP();
+    virtual ~PCAP();
     PCAP();
 
     enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear };
 
-    const utf8::String & device() const;
-    PCAP & device(const utf8::String & device);
+    const utf8::String & interface() const;
+    PCAP & interface(const utf8::String & interface);
     const utf8::String & filter() const;
     PCAP & filter(const utf8::String & filter);
     const bool & promisc() const;
@@ -126,7 +126,7 @@ class PCAP : public Thread {
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
-	      uint16_t dstPort_;
+	uint16_t dstPort_;
         uint16_t pktSize_;
         uint16_t dataSize_;
         uint8_t proto_;
@@ -172,7 +172,7 @@ class PCAP : public Thread {
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
-	      uint16_t dstPort_;
+        uint16_t dstPort_;
         uint8_t proto_;
     };
     virtual void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count);
@@ -290,7 +290,7 @@ class PCAP : public Thread {
     InterlockedMutex groupTreeMutex_;
     PacketGroupTree groupTree_;
     AutoDrop<PacketGroupTree> groupTreeAutoDrop_;
-    utf8::String device_;
+    utf8::String interface_;
     utf8::String filter_;
     bool promisc_;
         
@@ -302,14 +302,14 @@ class PCAP : public Thread {
     void operator = (const PCAP &);
 };
 //---------------------------------------------------------------------------
-inline const utf8::String & PCAP::device() const
+inline const utf8::String & PCAP::interface() const
 {
-  return device_;
+  return interface_;
 }
 //---------------------------------------------------------------------------
-inline PCAP & PCAP::device(const utf8::String & device)
+inline PCAP & PCAP::interface(const utf8::String & interface)
 {
-  device_ = device;
+  interface_ = interface;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -332,6 +332,17 @@ inline const bool & PCAP::promisc() const
 inline PCAP & PCAP::promisc(bool a)
 {
   promisc_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const PCAP::PacketGroupingPeriod & PCAP::groupingPeriod() const
+{
+  return groupingPeriod_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::groupingPeriod(PacketGroupingPeriod groupingPeriod)
+{
+  groupingPeriod_ = groupingPeriod;
   return *this;
 }
 //---------------------------------------------------------------------------

@@ -24,46 +24,31 @@
  * SUCH DAMAGE.
  */
 //------------------------------------------------------------------------------
-#include <adicpp/adicpp.h>
+#ifndef _snifferH_
+#define _snifferH_
 //------------------------------------------------------------------------------
-#include "sniffer.h"
+using namespace ksys;
+using namespace adicpp;
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------
-Sniffer::~Sniffer()
-{
-}
+////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-Sniffer::Sniffer(Database * database) : database_(database)
-{
-}
-//------------------------------------------------------------------------------
-void Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count)
-{
-  if( !database_->attached() ) database_->attach();
-  if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
-  if( !statement_->prepared() )
-    statement_->text(
-      "INSERT INTO INET_BPFT_STAT ("
-      "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-      ") VALUES ("
-      "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
-      ")"
-    )->prepare()->paramAsString(0/*"st_if"*/,interface());
-  database_->start();
-  while( count-- > 0 ){
-    statement_->
-      paramAsMutant(1/*"st_src_ip"*/,     ksock::SockAddr::addr2Index(packets[count].srcAddr_))->
-      paramAsMutant(2/*"st_dst_ip"*/,     ksock::SockAddr::addr2Index(packets[count].dstAddr_))->
-      paramAsMutant(3/*"st_ip_proto"*/,   packets[count].proto_)->
-      paramAsMutant(4/*"st_src_port"*/,   packets[count].srcPort_)->
-      paramAsMutant(5/*"st_dst_port"*/,   packets[count].dstPort_)->
-      paramAsMutant(6/*"st_dgram_bytes"*/,packets[count].pktSize_)->
-      paramAsMutant(7/*"st_data_bytes"*/, packets[count].dataSize_)->
-      execute();
-  }
-  database_->commit();
-}
+class Sniffer : public PCAP {
+  public:
+    virtual ~Sniffer();
+    Sniffer(Database * database = NULL);
+  protected:
+    AutoPtr<Database> database_;
+    AutoPtr<Statement> statement_;
+
+    void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count);
+  private:
+    Sniffer(const Sniffer &);
+    void operator = (const Sniffer &);
+};
 //------------------------------------------------------------------------------
 } // namespace ksys
+//------------------------------------------------------------------------------
+#endif
 //------------------------------------------------------------------------------

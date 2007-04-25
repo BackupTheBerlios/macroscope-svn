@@ -80,14 +80,16 @@ void PCAP::threadExecute()
   bool freeCode = false;
   
   try {
-    if( pcap_lookupnet(device_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
-    handle_ = pcap_open_live(device_.getANSIString(),0,promisc_,0,errbuf);
+    if( pcap_lookupnet(interface_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
+    handle_ = pcap_open_live(interface_.getANSIString(),0,promisc_,0,errbuf);
     if( handle_ == NULL ) goto errexit;
-    if( pcap_compile((pcap_t *) handle_,&fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;
-    freeCode = true;
-    if( pcap_setfilter((pcap_t *) handle_,&fp) != 0 ) goto errexit;
+    if( !filter_.isNull() ){
+      if( pcap_compile((pcap_t *) handle_,&fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;
+      freeCode = true;
+      if( pcap_setfilter((pcap_t *) handle_,&fp) != 0 ) goto errexit;
+    }
     pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
-    pcap_freecode(&fp);
+    if( freeCode ) pcap_freecode(&fp);
     pcap_close((pcap_t *) handle_);
     handle_ = NULL;
     if( packets_ != NULL ){

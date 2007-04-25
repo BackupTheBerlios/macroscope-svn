@@ -27,6 +27,7 @@
 #include <adicpp/adicpp.h>
 //------------------------------------------------------------------------------
 #include "macroscope.h"
+#include "sniffer.h"
 #ifndef NDEBUG
 #include <adicpp/lzw.h>
 #endif
@@ -172,8 +173,9 @@ void Logger::fallBackToNewLine(AsyncFile & f)
   }
 }
 //------------------------------------------------------------------------------
-int32_t Logger::main()
+int32_t Logger::main(bool sniffer)
 {
+  sniffer_ = sniffer;
   config_->parse().override();
   stdErr.rotationThreshold(
     config_->value("debug_file_rotate_threshold",1024 * 1024)
@@ -192,6 +194,12 @@ int32_t Logger::main()
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   verbose_ = config_->section("macroscope").value("verbose",false);
+
+  ConfigSection dbParamsSection;
+  dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
+
+  database_ = Database::newDatabase(&dbParamsSection);
+  statement_ = database_->newAttachedStatement();
 
 // print query form if is CGI and no CGI parameters
   /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
@@ -231,13 +239,18 @@ int32_t Logger::main()
         "  <label for=\"if\">Interface</label>\n"
         "  <select name=\"if\" id=\"if\">\n"
       ;
-      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+      database_->attach();
+      statement_->text("select distinct st_if from INET_BPFT_STAT")->execute();
+      while( statement_->fetch() ){
+//      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
+//        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+        utf8::String sectionName(statement_->valueAsString("st_if"));
         if( sectionName.strcasecmp("decoration") == 0 ) continue;
         cgi_ << "    <option value=\"" + sectionName + "\"";
-        if( i == 0 ) cgi_ << " selected=\"selected\"";
+        if( statement_->rowIndex() == 0 ) cgi_ << " selected=\"selected\"";
         cgi_ << ">" + sectionName + "</option>\n";
       }
+      database_->detach();
       cgi_ <<
         "  </select>\n"
 	      "  <BR>\n"
@@ -355,11 +368,6 @@ int32_t Logger::main()
     verbose_ = false;
   }
   else {
-    ConfigSection dbParamsSection;
-    dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
-
-    database_ = Database::newDatabase(&dbParamsSection);
-    statement_ = database_->newAttachedStatement();
     statement2_ = database_->newAttachedStatement();
 
     database_->create();
@@ -402,8 +410,8 @@ int32_t Logger::main()
       " st_ip_proto      SMALLINT NOT NULL,"
       " st_src_port      INTEGER NOT NULL,"
       " st_dst_port      INTEGER NOT NULL,"
-      " st_dgram_bytes   INTEGER NOT NULL,"
-      " st_data_bytes    INTEGER NOT NULL"
+      " st_dgram_bytes   BIGINT NOT NULL,"
+      " st_data_bytes    BIGINT NOT NULL"
       ")" <<
       "CREATE TABLE INET_BPFT_STAT_CACHE ("
       " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
@@ -514,7 +522,7 @@ int32_t Logger::main()
   int32_t err0 = doWork(0);
   int32_t err1 = waitThreads();
 // optimize database (optional)
-  if( !cgi_.isCGI() ){
+  if( !sniffer && !cgi_.isCGI() ){
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
       statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
       for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
@@ -606,37 +614,72 @@ int32_t Logger::main()
 int32_t Logger::doWork(uintptr_t stage)
 {
   int32_t exitCode = 0;
-  utf8::String mtMode(config_->textByPath("macroscope.multithreaded_mode","BOTH"));
-  if( !cgi_.isCGI() ){
-    trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
-    threads_.safeAdd(newObjectR1C2C3C4<SquidSendmailThread>(*this,"macroscope","macroscope",stage));
-    if( mtMode.strcasecmp("BOTH") == 0 ||
-        (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
-        (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
-      threads_[threads_.count() - 1].resume();
-    }
-    else {
-      threads_[threads_.count() - 1].threadExecute();
+  if( sniffer_ && !cgi_.isCGI() ){
+    if( stage == 1 ){
+      ConfigSection dbParamsSection;
+      dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
+      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
+        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+        if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
+        AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
+        AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database));
+        database.ptr(NULL);
+        sniffer->interface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
+        sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
+        utf8::String groupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none"));
+        if( groupingPeriod.strcasecmp("None") == 0 ) sniffer->groupingPeriod(PCAP::pgpNone);
+        else
+        if( groupingPeriod.strcasecmp("Sec") == 0 ) sniffer->groupingPeriod(PCAP::pgpSec);
+        else
+        if( groupingPeriod.strcasecmp("Min") == 0 ) sniffer->groupingPeriod(PCAP::pgpMin);
+        else
+        if( groupingPeriod.strcasecmp("Hour") == 0 ) sniffer->groupingPeriod(PCAP::pgpHour);
+        else
+        if( groupingPeriod.strcasecmp("Day") == 0 ) sniffer->groupingPeriod(PCAP::pgpDay);
+        else
+        if( groupingPeriod.strcasecmp("Mon") == 0 ) sniffer->groupingPeriod(PCAP::pgpMon);
+        else
+        if( groupingPeriod.strcasecmp("Year") == 0 ) sniffer->groupingPeriod(PCAP::pgpYear);
+        else
+          sniffer->groupingPeriod(PCAP::pgpNone);
+        threads_.safeAdd(sniffer.ptr(NULL));
+//        threads_[threads_.count() - 1].resume();
+      }
     }
   }
-  dnsCacheHitCount_ = 0;
-  dnsCacheMissCount_ = 0;
-  dnsCacheSize_ = config_->valueByPath("macroscope.bpft.dns_cache_size",0);
-  for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-    utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
-    if( sectionName.strcasecmp("decoration") == 0 ) continue;
-    if( cgi_.isCGI() && (sectionName.strcasecmp(cgi_.paramAsString("if")) != 0 || stage < 1) ) continue;
-    threads_.safeAdd(
-      newObjectR1C2C3C4<BPFTThread>(
-        *this,"macroscope.bpft." + sectionName,sectionName,stage)
-      );
-    if( mtMode.strcasecmp("BOTH") == 0 ||
-        (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
-        (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
-      threads_[threads_.count() - 1].resume();
+  else {
+    utf8::String mtMode(config_->textByPath("macroscope.multithreaded_mode","BOTH"));
+    if( !cgi_.isCGI() ){
+      trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
+      threads_.safeAdd(newObjectR1C2C3C4<SquidSendmailThread>(*this,"macroscope","macroscope",stage));
+      if( mtMode.strcasecmp("BOTH") == 0 ||
+          (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
+          (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
+        threads_[threads_.count() - 1].resume();
+      }
+      else {
+        threads_[threads_.count() - 1].threadExecute();
+      }
     }
-    else {
-      threads_[threads_.count() - 1].threadExecute();
+    dnsCacheHitCount_ = 0;
+    dnsCacheMissCount_ = 0;
+    dnsCacheSize_ = config_->valueByPath("macroscope.bpft.dns_cache_size",0);
+    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
+      utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+      if( sectionName.strcasecmp("decoration") == 0 ) continue;
+      if( cgi_.isCGI() && (sectionName.strcasecmp(cgi_.paramAsString("if")) != 0 || stage < 1) ) continue;
+      threads_.safeAdd(
+        newObjectR1C2C3C4<BPFTThread>(
+          *this,"macroscope.bpft." + sectionName,sectionName,stage)
+        );
+      if( mtMode.strcasecmp("BOTH") == 0 ||
+          (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
+          (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
+        threads_[threads_.count() - 1].resume();
+      }
+      else {
+        threads_[threads_.count() - 1].threadExecute();
+      }
     }
   }
   return exitCode;
@@ -669,7 +712,7 @@ int main(int _argc,char * _argv[])
     uintptr_t i;
     stdErr.fileName(SYSLOG_DIR("macroscope/") + "macroscope.log");
     Config::defaultFileName(SYSCONF_DIR("") + "macroscope.conf");
-    bool dispatch = true;
+    bool dispatch = true, sniffer = false;
     for( i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << macroscope_version.tex_ << "\n");
@@ -682,6 +725,9 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
         stdErr.fileName(argv()[i + 1]);
+      }
+      else if( argv()[i].strcmp("--sniffer") == 0 ){
+        sniffer = true;
       }
 #if PRIVATE_RELEASE
       else if( argv()[i].strcmp("--machine-key") == 0 ){
@@ -720,7 +766,7 @@ int main(int _argc,char * _argv[])
     if( dispatch ){
       macroscope::Logger logger;
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
-      errcode = logger.main();
+      errcode = logger.main(sniffer);
       stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
     }
   }

@@ -504,6 +504,45 @@ utf8::String SockAddr::gethostname()
   return s;
 }
 //------------------------------------------------------------------------------
+utf8::String SockAddr::addr2Index(const struct in_addr & addr)
+{
+  ksys::AutoPtr<char> b;
+  b.alloc(sizeof(addr.s_addr) * 2 + 1);
+  const uint8_t * ip = (const uint8_t *) &addr.s_addr;
+  uintptr_t i;
+  for( i = 0; i < sizeof(addr.s_addr); i++ )
+  for( intptr_t j = 1; j >= 0; j-- ) b[i * 2 + 1 - j] = "0123456789ABCDEF"[(ip[(i * 8 + j * 4) >> 3] >> (j * 4)) & 0xF];
+  b[i * 2] = '\0';
+  return utf8::plane0(b);
+}
+//------------------------------------------------------------------------------
+#if SIZEOF_SOCKADDR_IN6
+//------------------------------------------------------------------------------
+utf8::String SockAddr::addr2Index(const struct in6_addr & addr)
+{
+  ksys::AutoPtr<char> b;
+  b.alloc(sizeof(addr) * 2 + 1);
+  const uint8_t * ip = (const uint8_t *) &addr;
+  uintptr_t i;
+  for( i = 0; i < sizeof(addr); i++ )
+  for( intptr_t j = 1; j >= 0; j-- ) b[i * 2 + 1 - j] = "0123456789ABCDEF"[(ip[(i * 8 + j * 4) >> 3] >> (j * 4)) & 0xF];
+  b[i * 2] = '\0';
+  return utf8::plane0(b);
+}
+//------------------------------------------------------------------------------
+#endif
+//------------------------------------------------------------------------------
+utf8::String SockAddr::addr2Index() const
+{
+  if( addr4_.sin_family == PF_INET ) return addr2Index(addr4_.sin_addr);
+#if SIZEOF_SOCKADDR_IN6
+  else if( addr6_.sin6_family == PF_INET6 ) return addr2Index(addr6_.sin6_addr);
+#endif
+  else
+    newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__);
+  return utf8::String();
+}
+//---------------------------------------------------------------------------
 #if __BCPLUSPLUS__
 #pragma option pop
 #endif

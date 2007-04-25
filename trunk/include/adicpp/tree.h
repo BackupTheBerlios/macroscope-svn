@@ -832,7 +832,7 @@ class RBTree {
               break;
             }
           }
-          return sp_ >= 0;
+          return sp_ > 0;
         }
       protected:
         class Node {
@@ -1274,9 +1274,12 @@ template <
 > inline
 RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::drop()
 {
-  Walker walker(*this);
-  while( walker.next() ) deleteObject(&walker.object());
-  return clear();
+  if( count_ > 0 ){
+    Walker walker(*this);
+    while( walker.next() ) deleteObject(&walker.object());
+    clear();
+  }
+  return *this;
 }
 //-----------------------------------------------------------------------------
 template <

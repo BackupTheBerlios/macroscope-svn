@@ -43,7 +43,7 @@ class Logger {
     ~Logger();
     Logger();
 
-    int32_t main();
+    int32_t main(bool sniffer);
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
     enum { stSel, stIns, stUpd };
@@ -54,25 +54,8 @@ class Logger {
     AutoPtr<Statement> statement_;
     AutoPtr<Statement> statement2_;
     bool verbose_;
+    bool sniffer_;
 
-    class Sniffer : public PCAP {
-      public:
-        ~Sniffer();
-        Sniffer();
-	Sniffer(Logger & logger,const utf8::String & section,const utf8::String & sectionName);
-      protected:
-        Logger * logger_;
-        utf8::String section_;
-        utf8::String sectionName_;
-        AutoPtr<Database> database_;
-        AutoPtr<Statement> statement_;
-	
-        void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count);
-      private:
-        Sniffer(const Sniffer &);
-        void operator = (const Sniffer &);
-    };
-    
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
     class TrafCacheEntry {
@@ -160,7 +143,7 @@ class Logger {
         struct tm curTime_;
         uintptr_t gCount_;
         bool groups_;
-	      bool perGroupReport_;
+        bool perGroupReport_;
         uintptr_t stage_;
 
         AutoPtr<Database> database_;
