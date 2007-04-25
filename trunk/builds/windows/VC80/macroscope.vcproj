@@ -361,6 +361,10 @@
 				RelativePath="..\..\..\test\macroscope\macroscope.cpp"
 				>
 			</File>
+			<File
+				RelativePath="..\..\..\test\macroscope\sniffer.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"

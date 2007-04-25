@@ -80,8 +80,8 @@ void PCAP::threadExecute()
   bool freeCode = false;
   
   try {
-    if( pcap_lookupnet(interface_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
-    handle_ = pcap_open_live(interface_.getANSIString(),0,promisc_,0,errbuf);
+    if( pcap_lookupnet(iface_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
+    handle_ = pcap_open_live(iface_.getANSIString(),0,promisc_,0,errbuf);
     if( handle_ == NULL ) goto errexit;
     if( !filter_.isNull() ){
       if( pcap_compile((pcap_t *) handle_,&fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;

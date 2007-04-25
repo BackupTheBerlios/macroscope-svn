@@ -110,8 +110,8 @@ class PCAP : public Thread {
 
     enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear };
 
-    const utf8::String & interface() const;
-    PCAP & interface(const utf8::String & interface);
+    const utf8::String & iface() const;
+    PCAP & iface(const utf8::String & iface);
     const utf8::String & filter() const;
     PCAP & filter(const utf8::String & filter);
     const bool & promisc() const;
@@ -290,7 +290,7 @@ class PCAP : public Thread {
     InterlockedMutex groupTreeMutex_;
     PacketGroupTree groupTree_;
     AutoDrop<PacketGroupTree> groupTreeAutoDrop_;
-    utf8::String interface_;
+    utf8::String iface_;
     utf8::String filter_;
     bool promisc_;
         
@@ -302,14 +302,14 @@ class PCAP : public Thread {
     void operator = (const PCAP &);
 };
 //---------------------------------------------------------------------------
-inline const utf8::String & PCAP::interface() const
+inline const utf8::String & PCAP::iface() const
 {
-  return interface_;
+  return iface_;
 }
 //---------------------------------------------------------------------------
-inline PCAP & PCAP::interface(const utf8::String & interface)
+inline PCAP & PCAP::iface(const utf8::String & iface)
 {
-  interface_ = interface;
+  iface_ = iface;
   return *this;
 }
 //---------------------------------------------------------------------------

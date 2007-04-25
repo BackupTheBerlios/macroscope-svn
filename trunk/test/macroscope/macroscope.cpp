@@ -202,18 +202,19 @@ int32_t Logger::main(bool sniffer)
   statement_ = database_->newAttachedStatement();
 
 // print query form if is CGI and no CGI parameters
-  /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  setEnv("GATEWAY_INTERFACE","CGI/1.1");
   setEnv("REQUEST_METHOD","GET");
   setEnv("QUERY_STRING",
     "if=sk1&"
-    "bday=9&bmon=4&byear=2007&"
-    "eday=9&emon=4&eyear=2007&"
+    "bday=1&bmon=4&byear=2007&"
+    "eday=31&emon=4&eyear=2007&"
     "resolve=on&"
     "bidirectional=on&"
-    "threshold=16M&"
-    "threshold2=1024&"
-    "filter=src+lip2002+or+dst+lip2002"
-  );*/
+    "threshold=512K&"
+    "threshold2=&"
+    "totals=Mon&"
+    "filter=src+nik+or+dst+nik"
+  );
 /*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
   LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
   while( wcslen(pEnv) > 0 ){
@@ -347,6 +348,18 @@ int32_t Logger::main(bool sniffer)
 	      "    </option>\n"
         "    <option value=\"16M\">\n"
 	      "      16M\n"
+	      "    </option>\n"
+        "  </select>\n"
+        "  <label for=\"totals\">Maximum totals</label>\n"
+        "  <select name=\"totals\" id=\"totals\">\n"
+        "    <option value=\"Day\" selected=\"selected\">\n"
+	      "      Day\n"
+	      "    </option>\n"
+        "    <option value=\"Mon\">\n"
+	      "      Mon\n"
+	      "    </option>\n"
+        "    <option value=\"Year\">\n"
+	      "      Year\n"
 	      "    </option>\n"
         "  </select>\n"
         "  <label for=\"threshold2\">or type you custom value in bytes</label>\n"
@@ -624,7 +637,8 @@ int32_t Logger::doWork(uintptr_t stage)
         AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
         AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database));
         database.ptr(NULL);
-        sniffer->interface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
+        sniffer->ifName(sectionName);
+        sniffer->iface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
         sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
         utf8::String groupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none"));
         if( groupingPeriod.strcasecmp("None") == 0 ) sniffer->groupingPeriod(PCAP::pgpNone);

@@ -626,6 +626,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
   struct tm beginTime, beginTime2, endTime, endTime2;
   Mutant m0, m1, m2;
   AsyncFile f;
+  intptr_t totalsLevel;
+
   if( level == rlYear ){
     if( !logger_->cgi_.isCGI() && !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
     if( logger_->verbose_ ) fprintf(stderr,"\n");
@@ -876,6 +878,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
   if( logger_->cgi_.isCGI() ){
     f.fileName("stdout").open();
     if( level == rlYear ) logger_->writeHtmlHead(f);
+    utf8::String totals(logger_->cgi_.paramAsString("totals"));
+    if( totals.strcasecmp("Day") == 0 ) totalsLevel = rlDay;
+    else
+    if( totals.strcasecmp("Mon") == 0 ) totalsLevel = rlMon;
+    else
+    if( totals.strcasecmp("Year") == 0 ) totalsLevel = rlYear;
   }
   else {
     f.createIfNotExist(true).open().resize(0);
@@ -906,7 +914,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         assert( 0 );
     }
     Vector<Table<Mutant> > table;
-    if( logger_->cgi_.isCGI() && (tm2Time(beginTime) < tm2Time(cgiBT_) || tm2Time(endTime) > tm2Time(cgiET_)) ){
+    if( logger_->cgi_.isCGI() &&
+        (tm2Time(cgiET_) < tm2Time(beginTime) || tm2Time(cgiBT_) > tm2Time(endTime) ||
+         level < totalsLevel) ){
     }
     else {
       stBPFTSel_->
