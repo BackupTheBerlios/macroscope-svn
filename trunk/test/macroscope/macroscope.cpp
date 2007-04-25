@@ -225,7 +225,7 @@ int32_t Logger::main(bool sniffer)
   stdErr.flush(true);
 #endif*/
   cgi_.initialize();
-  if( cgi_.isCGI() ){
+  if( !cgi_.isCGI() ){
     if( cgi_.paramCount() == 0 ){
       cgi_ <<
         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
@@ -241,12 +241,12 @@ int32_t Logger::main(bool sniffer)
         "  <select name=\"if\" id=\"if\">\n"
       ;
       database_->attach();
-      statement_->text("select distinct st_if from INET_BPFT_STAT")->execute();
+      statement_->text("select distinct st_if from INET_BPFT_STAT where st_if > ''")->execute();
       while( statement_->fetch() ){
 //      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
 //        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
         utf8::String sectionName(statement_->valueAsString("st_if"));
-        if( sectionName.strcasecmp("decoration") == 0 ) continue;
+//        if( sectionName.strcasecmp("decoration") == 0 ) continue;
         cgi_ << "    <option value=\"" + sectionName + "\"";
         if( statement_->rowIndex() == 0 ) cgi_ << " selected=\"selected\"";
         cgi_ << ">" + sectionName + "</option>\n";
