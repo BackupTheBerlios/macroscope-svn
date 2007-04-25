@@ -626,7 +626,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
   struct tm beginTime, beginTime2, endTime, endTime2;
   Mutant m0, m1, m2;
   AsyncFile f;
-  intptr_t totalsLevel;
+  intptr_t totalsLevel = 0;
 
   if( level == rlYear ){
     if( !logger_->cgi_.isCGI() && !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
