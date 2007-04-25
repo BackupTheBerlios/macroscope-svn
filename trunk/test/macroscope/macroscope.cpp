@@ -202,7 +202,7 @@ int32_t Logger::main(bool sniffer)
   statement_ = database_->newAttachedStatement();
 
 // print query form if is CGI and no CGI parameters
-  setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
   setEnv("REQUEST_METHOD","GET");
   setEnv("QUERY_STRING",
     "if=sk1&"
@@ -214,7 +214,7 @@ int32_t Logger::main(bool sniffer)
     "threshold2=&"
     "totals=Mon&"
     "filter=src+nik+or+dst+nik"
-  );
+  );*/
 /*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
   LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
   while( wcslen(pEnv) > 0 ){
