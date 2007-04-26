@@ -18,7 +18,6 @@ del /s /f /q Makefile 2>nul
 del /s /f /q Makefile.in 2>nul
 del /s /f /q tools 2>nul
 del /s /f /q autom4te.cache 2>nul
-del /s /f /q configure 2>nul
 del /s /f /q aclocal.m4 2>nul
 del /s /f /q libtool 2>nul
 del /s /f /q config.h 2>nul
@@ -92,7 +91,7 @@ rd tools 2>nul
 del /s /f /q CMakeCache.txt install_manifest.txt cmake_install.cmake 2>nul
 del /s /f /q CPack* 2>nul
 del /s /f /q *.vcproj.cmake 2>nul
-del /s /f /q INSTALL.vcproj PACKAGE.vcproj 2>nul
+del /s /f /q INSTALL.vcproj PACKAGE.vcproj ALL_BUILD.vcproj ZERO_CHECK.vcproj 2>nul
 
 del /s /f /q builds\cmake\*.vcproj 2>nul
 del /s /f /q builds\cmake\*.sln 2>nul
