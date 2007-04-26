@@ -1198,7 +1198,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
         stTrafIns_->execute();
       }
       catch( ExceptionSP & e ){
-        if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
+        if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
         stTrafUpd_->paramAsString("ST_USER",st_user);
         stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
         stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);

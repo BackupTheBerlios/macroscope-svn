@@ -47,6 +47,10 @@
 //#include <adicpp/myapi/my_sys.h>
 #endif
 
+#ifndef ER_DUP_ENTRY_WITH_KEY_NAME
+#define ER_DUP_ENTRY_WITH_KEY_NAME 1582
+#endif
+
 #include <adicpp/myintf.h>
 #include <adicpp/mydb.h>
 #include <adicpp/myexcpt.h>

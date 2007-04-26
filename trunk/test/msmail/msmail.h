@@ -464,7 +464,7 @@ class KeyInfo {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const KeyInfo & object){
-      return object.name_.hash(true);
+      return object.name_.hash(false);
     }
     static bool hashNodeEqu(const KeyInfo & object1,const KeyInfo & object2){
       return object1.name_.strcasecmp(object2.name_) == 0;
@@ -513,7 +513,7 @@ class GroupInfo {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const GroupInfo & object){
-      return object.name_.hash(true);
+      return object.name_.hash(false);
     }
     static bool hashNodeEqu(const GroupInfo & object1,const GroupInfo & object2){
       return object1.name_.strcasecmp(object2.name_) == 0;

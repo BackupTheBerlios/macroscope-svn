@@ -14,7 +14,7 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA */
 
 /* Error messages for MySQL clients */
-/* (Error messages for the daemon are in share/language/errmsg.sys) */
+/* (Error messages for the daemon are in sql/share/errmsg.txt) */
 
 #ifdef	__cplusplus
 extern "C" {
@@ -28,9 +28,7 @@ extern const char *client_errors[];	/* Error messages */
 
 #define CR_MIN_ERROR		2000	/* For easier client code */
 #define CR_MAX_ERROR		2999
-#if defined(OS2) && defined(MYSQL_SERVER)
-#define CER(X) client_errors[(X)-CR_MIN_ERROR]
-#elif !defined(ER)
+#if !defined(ER)
 #define ER(X) client_errors[(X)-CR_MIN_ERROR]
 #endif
 #define CLIENT_ERRMAP		2	/* Errormap used by my_error() */
