@@ -1735,7 +1735,7 @@ intptr_t String::Stream::Format::format(char * buffer) const
       for( int i = 0; i < size; i++ ) fprintf(stderr,"%c",p[i]);
       fprintf(stderr,"\\n\n");
     }*/
-    if( (size == -1 && errno != ERANGE) || (size > 0 && size < size2) || buffer != NULL ) break;
+    if( (size == -1 && errno != ERANGE) || (size >= 0 && size < size2) || buffer != NULL ) break;
     p = b.realloc(size2 <<= 1);
   }
   if( size == -1 ){

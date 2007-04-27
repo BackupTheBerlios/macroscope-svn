@@ -571,7 +571,7 @@ typedef int32_t gid_t;
 #endif
 
 #ifndef __GNUG__
-#if !defined(__GNUG__) && MSC_VER < 1300 && !defined(__PRETTY_FUNCTION__)
+#if !defined(__GNUG__) && _MSC_VER < 1300 && !defined(__PRETTY_FUNCTION__)
 #define __PRETTY_FUNCTION__ ""
 #elif _MSC_VER >= 1300 && !defined(__PRETTY_FUNCTION__)
 #define __PRETTY_FUNCTION__ __FUNCSIG__

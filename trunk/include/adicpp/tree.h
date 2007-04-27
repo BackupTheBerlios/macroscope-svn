@@ -1048,7 +1048,7 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::insert(const OT & object,bool thr
     )->throwSP();
     return *this;
   }
-  if( pObject != NULL ) *pObject = NULL;
+  if( pObject != NULL ) *pObject = const_cast<OT *>(&object);
   x->color_ = RED;
   while( x->parent_->color_ == RED ){
     if( x->parent_ == x->parent_->parent_->left_ ){

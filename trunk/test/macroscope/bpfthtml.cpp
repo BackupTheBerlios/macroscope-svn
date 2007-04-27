@@ -211,13 +211,13 @@ utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
   q = traf * 10000u / allTraf;
   b = q / 100u;
   c = q % 100u;
-  if( traf >= 1024u * 1024u * 1024u ){
-    t2 = 1024u * 1024u * 1024u;
-    postfix = "G";
-  }
-  else if( traf >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
+  if( traf >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
     t2 = uintmax_t(1024u) * 1024u * 1024u * 1024u;
     postfix = "T";
+  }
+  else if( traf >= 1024u * 1024u * 1024u ){
+    t2 = 1024u * 1024u * 1024u;
+    postfix = "G";
   }
   else if( traf >= 1024u * 1024u ){
     t2 = 1024u * 1024u;

@@ -346,7 +346,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         else if( aheadi_.getChar() == '\"' ){
           inQuoted = false;
           aheadi_.next();
-	  prevChar = 0;
+	        prevChar = 0;
           continue;
         }
         else if( aheadi_.getChar() == '\\' ){
@@ -358,7 +358,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         ctype = utf8::getC1Type(c = aheadi_.getChar());
         if( commentLevel > 0 ){
           if( prevChar == '*' && c == '/' ) commentLevel--;
-	  prevChar = c;
+	        prevChar = c;
           aheadi_.next();
           t = tt = ttUnknown;
           continue;
@@ -546,12 +546,12 @@ Config & Config::parseSectionBody(ConfigSection & root)
         if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
           newObjectV1C2<EConfig>(this, "invalid section key value")->throwSP();
         if( value.strlen() > 0 ) value += ",";
-        if( tt == ttQuotedString ){
+        /*if( tt == ttQuotedString ){
           value += unScreenString(token);
         }
-        else {
+        else {*/
           value += token;
-        }
+        //}
         token = getToken(tt);
         if( tt == ttSemicolon ) break;
         if( tt != ttColon )

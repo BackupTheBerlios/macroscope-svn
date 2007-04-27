@@ -49,7 +49,7 @@ void Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
       ") VALUES ("
       "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
       ")"
-    )->prepare()->paramAsString(0/*"st_if"*/,iface());
+    )->prepare()->paramAsString(0/*"st_if"*/,/*iface()*/ "test");
   database_->start();
   while( count-- > 0 ){
     statement_->

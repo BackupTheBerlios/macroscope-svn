@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
 #include <adicpp/mycpp.h>
 //---------------------------------------------------------------------------
 namespace mycpp {
-
 //---------------------------------------------------------------------------
 void initialize()
 {

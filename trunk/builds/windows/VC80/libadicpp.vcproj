@@ -340,6 +340,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\include\adicpp\cgi.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\include\adicpp\conf.h"
 				>
 			</File>
@@ -1328,10 +1332,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\ecs.cpp"
 				>
 				<FileConfiguration
@@ -1370,6 +1370,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\event.cpp"
@@ -1580,10 +1584,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\st.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\st.cpp"
 				>
 				<FileConfiguration
@@ -1664,6 +1664,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\st.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libksys\stat.cpp"
 				>
 			</File>
@@ -1716,6 +1720,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
 				>
 				<FileConfiguration
@@ -1754,10 +1762,6 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\stvalue.cpp"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\svc.cpp"

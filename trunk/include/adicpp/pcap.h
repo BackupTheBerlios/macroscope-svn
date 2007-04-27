@@ -103,7 +103,12 @@ struct PACKED TCPPacketHeader {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+extern void initialize(int argc,char ** argv);
+extern void cleanup();
+//---------------------------------------------------------------------------
 class PCAP : public Thread {
+  friend void initialize(int argc,char ** argv);
+  friend void cleanup();
   public:
     virtual ~PCAP();
     PCAP();
@@ -114,11 +119,27 @@ class PCAP : public Thread {
     PCAP & iface(const utf8::String & iface);
     const utf8::String & filter() const;
     PCAP & filter(const utf8::String & filter);
+    const utf8::String & tempFile() const;
+    PCAP & tempFile(const utf8::String & tempFile);
+    const uintptr_t & swapThreshold() const;
+    PCAP & swapThreshold(uintptr_t a);
+    const ldouble & swapLowWatermark() const;
+    PCAP & swapLowWatermark(ldouble a);
+    const ldouble & swapHighWatermark() const;
+    PCAP & swapHighWatermark(ldouble a);
+    const uint64_t & swapInWatchTime() const;
+    PCAP & swapInWatchTime(uint64_t a);
     const bool & promisc() const;
     PCAP & promisc(bool a);
+    const bool & ports() const;
+    PCAP & ports(bool a);
+    const bool & protocols() const;
+    PCAP & protocols(bool a);
 
     const PacketGroupingPeriod & groupingPeriod() const;
     PCAP & groupingPeriod(PacketGroupingPeriod groupingPeriod);
+
+    static void printAllDevices();
   protected:
     class Packet {
       public:
@@ -126,15 +147,15 @@ class PCAP : public Thread {
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
-	uint16_t dstPort_;
+	      uint16_t dstPort_;
         uint16_t pktSize_;
         uint16_t dataSize_;
-        uint8_t proto_;
+        int16_t proto_;
     };
     class HashedPacket {
       public:
         static EmbeddedHashNode<HashedPacket,uintptr_t> & ehNLT(const uintptr_t & link,const AutoPtr<HashedPacket> * & param){
-	        return keyNode(param[link - 1]);
+	        return keyNode((*param)[link - 1]);
 	      }
 	      static uintptr_t ehLTN(const EmbeddedHashNode<HashedPacket,uintptr_t> & node,const AutoPtr<HashedPacket> * & param){
 	        return &keyNodeObject(node,NULL) - param->ptr() + 1;
@@ -149,18 +170,19 @@ class PCAP : public Thread {
 	        uintptr_t h = HF::hash(&object.srcAddr_,sizeof(object.srcAddr_));
 	        h = HF::hash(&object.dstAddr_,sizeof(object.dstAddr_),h);
 	        h = HF::hash(&object.srcPort_,sizeof(object.srcPort_),h);
+	        h = HF::hash(&object.dstPort_,sizeof(object.dstPort_),h);
 	        return HF::hash(&object.proto_,sizeof(object.proto_),h);
         }
         static bool keyHashNodeEqu(const HashedPacket & object1,const HashedPacket & object2){
           intptr_t c = memcmp(&object1.srcAddr_,&object2.srcAddr_,sizeof(&object1.srcAddr_));
 	        if( c == 0 ){
 	          c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_));
-  	          if( c == 0 ){
-	            c = intptr_t(object1.srcPort_) - intptr_t(object2.srcPort_);
-	            if( c == 0 ){
-	              c = intptr_t(object1.dstPort_) - intptr_t(object2.dstPort_);
-	              if( c == 0 ) c = intptr_t(object1.proto_) - intptr_t(object2.proto_);
-	            }
+	          if( c == 0 ){
+              c = intptr_t(object1.srcPort_) - intptr_t(object2.srcPort_);
+              if( c == 0 ){
+                c = intptr_t(object1.dstPort_) - intptr_t(object2.dstPort_);
+                if( c == 0 ) c = intptr_t(object1.proto_) - intptr_t(object2.proto_);
+              }
 	          }
 	        }
           return c == 0;
@@ -173,7 +195,7 @@ class PCAP : public Thread {
         struct in_addr dstAddr_;
         uint16_t srcPort_;
         uint16_t dstPort_;
-        uint8_t proto_;
+        int16_t proto_;
     };
     virtual void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count);
   private:
@@ -189,8 +211,8 @@ class PCAP : public Thread {
         }
         static Packets & listObject(const EmbeddedListNode<Packets> & node,Packets * p){
           return node.object(p->listNode_);
-  	}
-	mutable EmbeddedListNode<Packets> listNode_;
+  	    }
+      	mutable EmbeddedListNode<Packets> listNode_;
     };
     typedef EmbeddedList<Packets,Packets::listNode,Packets::listObject> PacketsList;
 
@@ -208,31 +230,36 @@ class PCAP : public Thread {
 
     class PacketGroup {
       public:
-        PacketGroup() : count_(0), maxCount_(0) { packetsHash_.param() = &packets_; }
+        PacketGroup() : maxCount_(0) { packetsHash_.param() = &packets_; }
       
-        uint64_t bt_;
-        uint64_t et_;
+        class SwapFileHeader {
+          public:
+            SwapFileHeader() : count_(0) {}
+
+            uint64_t bt_;
+            uint64_t et_;
+            uintptr_t count_;
+        };
+        SwapFileHeader header_;
       
         AutoPtr<HashedPacket> packets_;
-        uintptr_t count_;
         uintptr_t maxCount_;
         PacketsHash packetsHash_;
 	
         PacketGroup & setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod);
-	bool isInBounds(uint64_t timestamp) const { return timestamp >= bt_ && timestamp <= et_; }
+	      bool isInBounds(uint64_t timestamp) const { return timestamp >= header_.bt_ && timestamp <= header_.et_; }
       
         static RBTreeNode & treeO2N(const PacketGroup & object){
           return object.treeNode_;
-	}
-	static PacketGroup & treeN2O(const RBTreeNode & node){
-	  PacketGroup * p = NULL;
-	  return node.object<PacketGroup>(p->treeNode_);
-	}
-	static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
-	  assert( (a0.bt_ > a1.et_ && a0.et_ > a1.et_) || (a0.et_ < a1.bt_ && a0.bt_ < a1.bt_));
-	  return a0.bt_ > a1.bt_ ? 1 : a0.bt_ < a1.bt_ ? -1 : 0;
-	}
-	mutable RBTreeNode treeNode_;
+	      }
+	      static PacketGroup & treeN2O(const RBTreeNode & node){
+	        PacketGroup * p = NULL;
+	        return node.object<PacketGroup>(p->treeNode_);
+	      }
+	      static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
+	        return a0.header_.bt_ > a1.header_.et_ ? 1 : a0.header_.et_ < a1.header_.bt_ ? -1 : 0;
+	      }
+	      mutable RBTreeNode treeNode_;
     };
     typedef
       RBTree<
@@ -292,14 +319,27 @@ class PCAP : public Thread {
     AutoDrop<PacketGroupTree> groupTreeAutoDrop_;
     utf8::String iface_;
     utf8::String filter_;
+    utf8::String tempFile_;
+    uintptr_t swapThreshold_;
+    uilock_t memoryUsage_;
+    ldouble swapLowWatermark_;
+    ldouble swapHighWatermark_;
+    uint64_t swapInWatchTime_;
     bool promisc_;
-        
+    bool ports_;
+    bool protocols_;
+    
+    void shutdown(void * fp);
     void threadBeforeWait();
     void threadExecute();
     static void pcapCallback(void *,const void *,const void *);
     void capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet);
+
     PCAP(const PCAP &);
     void operator = (const PCAP &);
+
+    static void initialize();
+    static void cleanup();
 };
 //---------------------------------------------------------------------------
 inline const utf8::String & PCAP::iface() const
@@ -310,6 +350,7 @@ inline const utf8::String & PCAP::iface() const
 inline PCAP & PCAP::iface(const utf8::String & iface)
 {
   iface_ = iface;
+  tempFile_ = getTempPath() + base32Encode(iface_.c_str(),iface_.size()) + ".tmp";
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -324,6 +365,17 @@ inline PCAP & PCAP::filter(const utf8::String & filter)
   return *this;
 }
 //---------------------------------------------------------------------------
+inline const utf8::String & PCAP::tempFile() const
+{
+  return tempFile_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::tempFile(const utf8::String & tempFile)
+{
+  tempFile_ = tempFile;
+  return *this;
+}
+//---------------------------------------------------------------------------
 inline const bool & PCAP::promisc() const
 {
   return promisc_;
@@ -335,6 +387,39 @@ inline PCAP & PCAP::promisc(bool a)
   return *this;
 }
 //---------------------------------------------------------------------------
+inline const bool & PCAP::ports() const
+{
+  return ports_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::ports(bool a)
+{
+  ports_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const bool & PCAP::protocols() const
+{
+  return protocols_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::protocols(bool a)
+{
+  protocols_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & PCAP::swapThreshold() const
+{
+  return swapThreshold_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::swapThreshold(uintptr_t a)
+{
+  swapThreshold_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
 inline const PCAP::PacketGroupingPeriod & PCAP::groupingPeriod() const
 {
   return groupingPeriod_;
@@ -343,6 +428,39 @@ inline const PCAP::PacketGroupingPeriod & PCAP::groupingPeriod() const
 inline PCAP & PCAP::groupingPeriod(PacketGroupingPeriod groupingPeriod)
 {
   groupingPeriod_ = groupingPeriod;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const ldouble & PCAP::swapLowWatermark() const
+{
+  return swapLowWatermark_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::swapLowWatermark(ldouble a)
+{
+  swapLowWatermark_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const ldouble & PCAP::swapHighWatermark() const
+{
+  return swapHighWatermark_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::swapHighWatermark(ldouble a)
+{
+  swapHighWatermark_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uint64_t & PCAP::swapInWatchTime() const
+{
+  return swapInWatchTime_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::swapInWatchTime(uint64_t a)
+{
+  swapInWatchTime_ = a;
   return *this;
 }
 //---------------------------------------------------------------------------

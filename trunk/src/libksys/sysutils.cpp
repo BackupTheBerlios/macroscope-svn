@@ -2995,6 +2995,7 @@ void initialize(int argc,char ** argv)
   TProfiler::initialize();
 #endif
   ksock::api.initialize();
+  PCAP::initialize();
   try {
     utf8::String cwd(getCurrentDir());
     utf8::String::Iterator i(cwd);
@@ -3038,6 +3039,7 @@ void initialize(int argc,char ** argv)
 void cleanup()
 {
   stdErr.close();
+  PCAP::cleanup();
   machineUniqueCryptedKey().~String();
   ksock::api.cleanup();
 #ifdef NETMAIL_ENABLE_PROFILER

@@ -83,10 +83,7 @@ inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 #endif
 }
 
-inline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a){ return interlockedIncrement(*(int32_t *) &v,a); }
-
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
-inline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a){ return interlockedIncrement(*(int64_t *) &v,a); }
 
 inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {
@@ -189,6 +186,23 @@ int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_
 #endif
 //---------------------------------------------------------------------------
 void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int32_t cmpValue);
+inline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a){ return interlockedIncrement(*(int32_t *) &v,(int32_t) a); }
+inline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a){ return interlockedIncrement(*(int64_t *) &v,(int64_t) a); }
+#if SIZEOF_VOID_P <= 4
+#if !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INT32_T_AS_INTPTR_T
+inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(int32_t *) &v,(int32_t) a); }
+inline uintptr_t interlockedIncrement(volatile uintptr_t & v,uintptr_t a){ return interlockedIncrement(*(int32_t *) &v,(int32_t) a); }
+#endif
+typedef int32_t ilock_t;
+typedef uint32_t uilock_t;
+#elif SIZEOF_VOID_P <= 8
+#if !HAVE_INTPTR_T_AS_INT64_T && !HAVE_INT64_T_AS_INTPTR_T
+inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(int64_t *) &v,(int64_t) a); }
+inline uintptr_t interlockedIncrement(volatile uintptr_t & v,uintptr_t a){ return interlockedIncrement(*(int64_t *) &v,(int64_t) a); }
+#endif
+typedef int64_t ilock_t;
+typedef uint64_t uilock_t;
+#endif
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

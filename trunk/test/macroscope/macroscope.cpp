@@ -636,11 +636,19 @@ int32_t Logger::doWork(uintptr_t stage)
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
         if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
         AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
-        AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database));
+        AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database.ptr()));
         database.ptr(NULL);
         sniffer->ifName(sectionName);
         sniffer->iface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
+        sniffer->tempFile(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.temp_file",sniffer->tempFile()));
         sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
+        sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_hreshold",sniffer->swapThreshold()));
+        sniffer->promisc(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.promisc",sniffer->promisc()));
+        sniffer->ports(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.ports",sniffer->ports()));
+        sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
+        sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));
+        sniffer->swapHighWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_high_watermark",sniffer->swapHighWatermark()));
+        sniffer->swapInWatchTime(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_in_watch_time",sniffer->swapInWatchTime()));
         utf8::String groupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none"));
         if( groupingPeriod.strcasecmp("None") == 0 ) sniffer->groupingPeriod(PCAP::pgpNone);
         else
@@ -658,7 +666,7 @@ int32_t Logger::doWork(uintptr_t stage)
         else
           sniffer->groupingPeriod(PCAP::pgpNone);
         threads_.safeAdd(sniffer.ptr(NULL));
-//        threads_[threads_.count() - 1].resume();
+        threads_[threads_.count() - 1].resume();
       }
     }
   }
@@ -705,7 +713,10 @@ int32_t Logger::waitThreads()
   int32_t exitCode = 0;
   for( intptr_t i = threads_.count() - 1; i >= 0; i-- ){
     threads_[i].wait();
-    if( exitCode == 0 && threads_[i].exitCode() != 0 ) exitCode = (int32_t) threads_[i].exitCode();
+    if( exitCode == 0 && threads_[i].exitCode() != 0 ){
+      exitCode = (int32_t) threads_[i].exitCode();
+      if( exitCode >= errorOffset ) exitCode -= exitCode;
+    }
   }
   threads_.clear();
   return exitCode;
@@ -743,6 +754,10 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[i].strcmp("--sniffer") == 0 ){
         sniffer = true;
+      }
+      else if( argv()[i].strcmp("--iflist") == 0 ){
+        PCAP::printAllDevices();
+        dispatch = false;
       }
 #if PRIVATE_RELEASE
       else if( argv()[i].strcmp("--machine-key") == 0 ){
