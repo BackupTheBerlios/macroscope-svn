@@ -146,11 +146,26 @@ class PCAP : public Thread {
         uint64_t timestamp_;
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
-        uint16_t srcPort_;
-	      uint16_t dstPort_;
         uint16_t pktSize_;
         uint16_t dataSize_;
+        uint16_t srcPort_;
+	      uint16_t dstPort_;
         int16_t proto_;
+
+        bool operator == (const Packet & object) const {
+          intptr_t c = memcmp(&srcAddr_,&object.srcAddr_,sizeof(srcAddr_));
+	        if( c == 0 ){
+	          c = memcmp(&dstAddr_,&object.dstAddr_,sizeof(dstAddr_));
+	          if( c == 0 ){
+              c = intptr_t(srcPort_) - intptr_t(object.srcPort_);
+              if( c == 0 ){
+                c = intptr_t(dstPort_) - intptr_t(object.dstPort_);
+                if( c == 0 ) c = intptr_t(proto_) - intptr_t(object.proto_);
+              }
+	          }
+	        }
+          return c == 0;
+        }
     };
     class HashedPacket {
       public:
@@ -189,15 +204,15 @@ class PCAP : public Thread {
         }
         mutable EmbeddedHashNode<HashedPacket,uintptr_t> keyNode_;
 	
-        uint64_t pktSize_;
-        uint64_t dataSize_;
+        uintmax_t pktSize_;
+        uintmax_t dataSize_;
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
         uint16_t dstPort_;
         int16_t proto_;
     };
-    virtual void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count);
+    virtual bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count);
   private:
     class Packets : public Array<Packet> {
       public:

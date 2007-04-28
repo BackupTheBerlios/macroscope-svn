@@ -45,7 +45,7 @@ class Sniffer : public PCAP {
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
 
-    void insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count);
+    bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count);
   private:
     Sniffer(const Sniffer &);
     void operator = (const Sniffer &);

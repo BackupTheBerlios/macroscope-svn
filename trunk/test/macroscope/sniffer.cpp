@@ -38,31 +38,39 @@ Sniffer::Sniffer(Database * database) : database_(database)
 {
 }
 //------------------------------------------------------------------------------
-void Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count)
+bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count)
 {
-  if( !database_->attached() ) database_->attach();
-  if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
-  if( !statement_->prepared() )
-    statement_->text(
-      "INSERT INTO INET_BPFT_STAT ("
-      "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-      ") VALUES ("
-      "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
-      ")"
-    )->prepare()->paramAsString(0/*"st_if"*/,/*iface()*/ "test");
-  database_->start();
-  while( count-- > 0 ){
-    statement_->
-      paramAsMutant(1/*"st_src_ip"*/,     ksock::SockAddr::addr2Index(packets[count].srcAddr_))->
-      paramAsMutant(2/*"st_dst_ip"*/,     ksock::SockAddr::addr2Index(packets[count].dstAddr_))->
-      paramAsMutant(3/*"st_ip_proto"*/,   packets[count].proto_)->
-      paramAsMutant(4/*"st_src_port"*/,   packets[count].srcPort_)->
-      paramAsMutant(5/*"st_dst_port"*/,   packets[count].dstPort_)->
-      paramAsMutant(6/*"st_dgram_bytes"*/,packets[count].pktSize_)->
-      paramAsMutant(7/*"st_data_bytes"*/, packets[count].dataSize_)->
-      execute();
+  bool r = true;
+  try {
+    if( !database_->attached() ) database_->attach();
+    if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+    if( !statement_->prepared() )
+      statement_->text(
+        "INSERT INTO INET_BPFT_STAT ("
+        "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+        ") VALUES ("
+        "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
+        ")"
+      )->prepare()->paramAsString(0/*"st_if"*/,/*iface()*/ "test");
+    database_->start();
+    while( count-- > 0 ){
+//      statement_->
+//        paramAsMutant(1/*"st_src_ip"*/,     ksock::SockAddr::addr2Index(packets[count].srcAddr_))->
+//        paramAsMutant(2/*"st_dst_ip"*/,     ksock::SockAddr::addr2Index(packets[count].dstAddr_))->
+//        paramAsMutant(3/*"st_ip_proto"*/,   packets[count].proto_)->
+//        paramAsMutant(4/*"st_src_port"*/,   packets[count].srcPort_)->
+//        paramAsMutant(5/*"st_dst_port"*/,   packets[count].dstPort_)->
+//        paramAsMutant(6/*"st_dgram_bytes"*/,packets[count].pktSize_)->
+//        paramAsMutant(7/*"st_data_bytes"*/, packets[count].dataSize_)->
+//        execute();
+    }
+    database_->commit();
   }
-  database_->commit();
+  catch( ExceptionSP & e ){
+    e->writeStdError();
+    r = false;
+  }
+  return r;
 }
 //------------------------------------------------------------------------------
 } // namespace ksys

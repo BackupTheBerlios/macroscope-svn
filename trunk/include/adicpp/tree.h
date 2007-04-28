@@ -817,10 +817,10 @@ class RBTree {
             }
             else if( path_[sp_].pointer_ > 0 ){
               path_[sp_].pointer_++;
-              if( path_[sp_].pointer_ > 1 ){
+              if( path_[sp_].pointer_ > 2 || path_[sp_].right_ == &tree_.sentinel_ ){
                 sp_--;
               }
-              else if( path_[sp_].right_ != &tree_.sentinel_ ){
+              else {
                 path_[sp_ + 1].node_ = path_[sp_].right_;
                 path_[sp_ + 1].left_ = path_[sp_].right_->left_;
                 path_[sp_ + 1].right_ = path_[sp_].right_->right_;
@@ -829,6 +829,7 @@ class RBTree {
               }
             }
             else {
+              path_[sp_].pointer_++;
               break;
             }
           }
