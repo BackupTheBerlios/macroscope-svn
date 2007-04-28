@@ -706,8 +706,8 @@ void PCAP::DatabaseInserter::threadExecute()
       while( walker.next() ){
         pGroup = &walker.object();
         if( pGroup->header_.et_ < ct ){
-          group.ptr(p);
-          pcap_->groupTree_.remove(*p);
+          group.ptr(pGroup);
+          pcap_->groupTree_.remove(*pGroup);
           break;
         }
       }
@@ -734,6 +734,7 @@ void PCAP::DatabaseInserter::threadExecute()
         group->packets_,
         group->header_.count_
       );
+      PacketGroup::SwapFileHeader header = group->header_;
       if( success ){
         interlockedIncrement(pcap_->memoryUsage_,-ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup)));
       }
@@ -741,7 +742,7 @@ void PCAP::DatabaseInserter::threadExecute()
         AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
         pcap_->groupTree_.insert(group,false,false,&pGroup);
         if( pGroup != group ){
-          pGroup->joinGroup(group);
+          pGroup->joinGroup(group,pcap_->memoryUsage_);
         }
         else {
           group.ptr(NULL);
@@ -750,8 +751,8 @@ void PCAP::DatabaseInserter::threadExecute()
       if( stdErr.debugLevel(7) )
         stdErr.debug(7,utf8::String::Stream() <<
           "Device: " << pcap_->iface_ << ", stop processing packets group in: " <<
-          utf8::time2Str(group->header_.bt_) << " - " <<
-          utf8::time2Str(group->header_.et_) << ", processed: " <<
+          utf8::time2Str(header.bt_) << " - " <<
+          utf8::time2Str(header.et_) << ", processed: " <<
           (success ? header.count_ : 0) << ", memory usage: " <<
           formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
           __PRETTY_FUNCTION__ << "\n"
@@ -849,7 +850,7 @@ void PCAP::LazyWriter::threadExecute()
             interlockedIncrement(pcap_->memoryUsage_,uilock_t(sizeof(PacketGroup) + groupSize));
           }
           else {
-            pGroup->joinGroup(group);
+            pGroup->joinGroup(group,pcap_->memoryUsage_);
           }
         }
         post = true;
@@ -864,24 +865,24 @@ void PCAP::LazyWriter::threadExecute()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group)
+PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,uilock_t & memoryUsage)
 {
-  for( intptr_t i = group->header_.count_ - 1; i >= 0; i-- ){
+  for( intptr_t i = group.header_.count_ - 1; i >= 0; i-- ){
     if( header_.count_ == maxCount_ ){
       uintptr_t count = (header_.count_ << 1) + ((header_.count_ == 0) << 4);
-      pGroup->packets_.realloc(count * sizeof(HashedPacket));
-      interlockedIncrement(pcap_->memoryUsage_,uilock_t((count - maxCount_) * sizeof(HashedPacket)));
+      packets_.realloc(count * sizeof(HashedPacket));
+      interlockedIncrement(memoryUsage,uilock_t((count - maxCount_) * sizeof(HashedPacket)));
       maxCount_ = count;
     }
     HashedPacket & pkt = packets_[header_.count_], * p;
-    pkt = group->packets_[i];
+    pkt = group.packets_[i];
     packetsHash_.insert(pkt,false,false,&p);
     if( p != &pkt ){
       p->pktSize_ += pkt.pktSize_;
       p->dataSize_ += pkt.dataSize_;
     }
     else {
-      pGroup->header_.count_++;
+      header_.count_++;
     }
   }
   return *this;
