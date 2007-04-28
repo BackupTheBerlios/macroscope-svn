@@ -54,15 +54,16 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
       )->prepare()->paramAsString(0/*"st_if"*/,/*iface()*/ "test");
     database_->start();
     while( count-- > 0 ){
-//      statement_->
-//        paramAsMutant(1/*"st_src_ip"*/,     ksock::SockAddr::addr2Index(packets[count].srcAddr_))->
-//        paramAsMutant(2/*"st_dst_ip"*/,     ksock::SockAddr::addr2Index(packets[count].dstAddr_))->
-//        paramAsMutant(3/*"st_ip_proto"*/,   packets[count].proto_)->
-//        paramAsMutant(4/*"st_src_port"*/,   packets[count].srcPort_)->
-//        paramAsMutant(5/*"st_dst_port"*/,   packets[count].dstPort_)->
-//        paramAsMutant(6/*"st_dgram_bytes"*/,packets[count].pktSize_)->
-//        paramAsMutant(7/*"st_data_bytes"*/, packets[count].dataSize_)->
-//        execute();
+      statement_->
+        paramAsMutant(1/*"st_start"*/,      bt)->
+        paramAsMutant(2/*"st_src_ip"*/,     ksock::SockAddr::addr2Index(packets[count].srcAddr_))->
+        paramAsMutant(3/*"st_dst_ip"*/,     ksock::SockAddr::addr2Index(packets[count].dstAddr_))->
+        paramAsMutant(4/*"st_ip_proto"*/,   packets[count].proto_)->
+        paramAsMutant(5/*"st_src_port"*/,   packets[count].srcPort_)->
+        paramAsMutant(6/*"st_dst_port"*/,   packets[count].dstPort_)->
+        paramAsMutant(7/*"st_dgram_bytes"*/,packets[count].pktSize_)->
+        paramAsMutant(8/*"st_data_bytes"*/, packets[count].dataSize_)->
+        execute();
     }
     database_->commit();
   }
