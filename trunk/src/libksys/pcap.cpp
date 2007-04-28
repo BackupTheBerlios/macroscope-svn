@@ -425,6 +425,70 @@ void PCAP::pcapCallback(void * args,const void * header,const void * packet)
 #endif
 }
 //------------------------------------------------------------------------------
+void PCAP::setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const
+{
+  struct tm t = time2tm(timestamp);
+  switch( groupingPeriod_ ){
+    case pgpNone :
+      bt = et = timestamp;
+      break;
+    case pgpSec  :
+      bt = tm2Time(t);
+      et = bt + 999999;
+      break;
+    case pgpMin  :
+      t.tm_sec = 0;
+      bt = tm2Time(t);
+      t.tm_sec = 59;
+      et = tm2Time(t) + 999999;
+      break;
+    case pgpHour :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      bt = tm2Time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      et = tm2Time(t) + 999999;
+      break;
+    case pgpDay  :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      t.tm_hour = 0;
+      bt = tm2Time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      t.tm_hour = 23;
+      et = tm2Time(t) + 999999;
+      break;
+    case pgpMon  :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      t.tm_hour = 0;
+      t.tm_mday = 1;
+      bt = tm2Time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      t.tm_hour = 23;
+      t.tm_mday = (int) monthDays(t.tm_year + 1900,t.tm_mon);
+      et = tm2Time(t) + 999999;
+      break;
+    case pgpYear :
+      t.tm_sec = 0;
+      t.tm_min = 0;
+      t.tm_hour = 0;
+      t.tm_mday = 1;
+      t.tm_mon = 0;
+      bt = tm2Time(t);
+      t.tm_sec = 59;
+      t.tm_min = 59;
+      t.tm_hour = 23;
+      t.tm_mday = 31;
+      t.tm_mon = 11;
+      et = tm2Time(t) + 999999;
+      break;
+  }
+}
+//------------------------------------------------------------------------------
 void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet)
 {
 #if HAVE_PCAP_H
@@ -491,22 +555,24 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     bool swapOut = interlockedIncrement(memoryUsage_,0) >= swapThreshold_ * swapHighWatermark_ / 100;
     if( swapOut ) lazyWriterSem_.post();
   }
+  uint64_t bt, et;
+  setBounds(timestamp,bt,et);
   Packet & pkt = (*packets_.ptr())[packets_->packets_];
-  pkt.timestamp_ = timestamp;
-  pkt.pktSize_ = uint16_t(len);
-  pkt.dataSize_ = uint16_t(len - (payload - packet));
+  pkt.timestamp_ = bt;
+  pkt.pktSize_ = len;
+  pkt.dataSize_ = len - (payload - packet);
   memcpy(&pkt.srcAddr_,&ip->src_,sizeof(pkt.srcAddr_));
   memcpy(&pkt.dstAddr_,&ip->dst_,sizeof(pkt.dstAddr_));
   pkt.srcPort_ = ip->proto_ == IPPROTO_TCP && ports_ ? tcp->srcPort_ : 0;
   pkt.dstPort_ = ip->proto_ == IPPROTO_TCP && ports_ ? tcp->dstPort_ : 0;
   pkt.proto_ = protocols_ ? ip->proto_ : -1;
-  /*for( intptr_t i = packets_->packets_ - 1, j = i - 5; i >= 0 && i >= j; i-- )
+  for( intptr_t i = packets_->packets_ - 1, j = i - 5; i >= 0 && i >= j; i-- )
     if( pkt == (*packets_.ptr())[i] ){
       Packet & pkt2 = (*packets_.ptr())[i];
       pkt2.pktSize_ += pkt.pktSize_;
       pkt2.dataSize_ += pkt.dataSize_;
       return;
-    }*/
+    }
   packets_->packets_++;
 #endif
 }
@@ -517,70 +583,6 @@ bool PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintpt
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
-PCAP::PacketGroup & PCAP::PacketGroup::setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod)
-{
-  struct tm t = time2tm(timestamp);
-  switch( groupingPeriod ){
-    case pgpNone :
-      header_.bt_ = header_.et_ = timestamp;
-      break;
-    case pgpSec  :
-      header_.bt_ = header_.et_ = tm2Time(t);
-      break;
-    case pgpMin  :
-      t.tm_sec = 0;
-      header_.bt_ = tm2Time(t);
-      t.tm_sec = 59;
-      header_.et_ = tm2Time(t);
-      break;
-    case pgpHour :
-      t.tm_sec = 0;
-      t.tm_min = 0;
-      header_.bt_ = tm2Time(t);
-      t.tm_sec = 59;
-      t.tm_min = 59;
-      header_.et_ = tm2Time(t);
-      break;
-    case pgpDay  :
-      t.tm_sec = 0;
-      t.tm_min = 0;
-      t.tm_hour = 0;
-      header_.bt_ = tm2Time(t);
-      t.tm_sec = 59;
-      t.tm_min = 59;
-      t.tm_hour = 23;
-      header_.et_ = tm2Time(t);
-      break;
-    case pgpMon  :
-      t.tm_sec = 0;
-      t.tm_min = 0;
-      t.tm_hour = 0;
-      t.tm_mday = 1;
-      header_.bt_ = tm2Time(t);
-      t.tm_sec = 59;
-      t.tm_min = 59;
-      t.tm_hour = 23;
-      t.tm_mday = (int) monthDays(t.tm_year + 1900,t.tm_mon);
-      header_.et_ = tm2Time(t);
-      break;
-    case pgpYear :
-      t.tm_sec = 0;
-      t.tm_min = 0;
-      t.tm_hour = 0;
-      t.tm_mday = 1;
-      t.tm_mon = 0;
-      header_.bt_ = tm2Time(t);
-      t.tm_sec = 59;
-      t.tm_min = 59;
-      t.tm_hour = 23;
-      t.tm_mday = 31;
-      t.tm_mon = 11;
-      header_.et_ = tm2Time(t);
-      break;
-  }
-  return *this;
-}
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -594,7 +596,7 @@ void PCAP::Grouper::threadBeforeWait()
 //------------------------------------------------------------------------------
 void PCAP::Grouper::threadExecute()
 {
-  priority(THREAD_PRIORITY_ABOVE_NORMAL);
+  //priority(THREAD_PRIORITY_ABOVE_NORMAL);
   while( !terminated_ ){
     pcap_->grouperSem_.wait();
     AutoPtr<Packets> packets;
@@ -616,7 +618,7 @@ void PCAP::Grouper::threadExecute()
             pcap_->groupTree_.insert(group,false,false,&pGroup);
           }
           group.ptr(newObject<PacketGroup>());
-          group->setBounds(pkt.timestamp_,pcap_->groupingPeriod_);
+          pcap_->setBounds(pkt.timestamp_,group->header_.bt_,group->header_.et_);
           {
             AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
             pcap_->groupTree_.insert(group,false,false,&pGroup);
@@ -830,7 +832,7 @@ void PCAP::LazyWriter::threadExecute()
           uintptr_t groupSize = group->header_.count_ * sizeof(HashedPacket);
           group->packets_.alloc(groupSize);
           tempFile.readBuffer(pos - groupSize,group->packets_,groupSize);
-          tempFile.resize(pos - groupSize - sizeof(PacketGroup::SwapFileHeader));
+          tempFile.resize(pos - groupSize);
           PacketGroup * pGroup;
           {
             AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
@@ -867,6 +869,8 @@ void PCAP::LazyWriter::threadExecute()
         remove(tempFile.fileName(),true);
         if( post ) pcap_->databaseInserterSem_.post();
       }
+      else
+        break;
     }
   }
 }

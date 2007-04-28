@@ -642,8 +642,8 @@ int32_t Logger::doWork(uintptr_t stage)
         sniffer->iface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
         sniffer->tempFile(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.temp_file",sniffer->tempFile()));
         sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
-        sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_hreshold",sniffer->swapThreshold()));
-        sniffer->promisc(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.promisc",sniffer->promisc()));
+        sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_threshold",sniffer->swapThreshold()));
+        sniffer->promisc(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.promiscuous",sniffer->promisc()));
         sniffer->ports(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.ports",sniffer->ports()));
         sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
         sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));

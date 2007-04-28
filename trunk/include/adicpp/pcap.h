@@ -140,31 +140,36 @@ class PCAP : public Thread {
     PCAP & groupingPeriod(PacketGroupingPeriod groupingPeriod);
 
     static void printAllDevices();
+
+    void setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const;
   protected:
     class Packet {
       public:
+        uint64_t pktSize_;
+        uint64_t dataSize_;
         uint64_t timestamp_;
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
-        uint16_t pktSize_;
-        uint16_t dataSize_;
         uint16_t srcPort_;
 	      uint16_t dstPort_;
         int16_t proto_;
 
         bool operator == (const Packet & object) const {
-          intptr_t c = memcmp(&srcAddr_,&object.srcAddr_,sizeof(srcAddr_));
-	        if( c == 0 ){
-	          c = memcmp(&dstAddr_,&object.dstAddr_,sizeof(dstAddr_));
-	          if( c == 0 ){
-              c = intptr_t(srcPort_) - intptr_t(object.srcPort_);
-              if( c == 0 ){
-                c = intptr_t(dstPort_) - intptr_t(object.dstPort_);
-                if( c == 0 ) c = intptr_t(proto_) - intptr_t(object.proto_);
-              }
+          bool r = timestamp_ == object.timestamp_;
+          if( r ){
+            r = memcmp(&srcAddr_,&object.srcAddr_,sizeof(srcAddr_)) == 0;
+	          if( r ){
+	            r = memcmp(&dstAddr_,&object.dstAddr_,sizeof(dstAddr_)) == 0;
+	            if( r ){
+                r = srcPort_ == object.srcPort_;
+                if( r ){
+                  r = dstPort_ == object.dstPort_;
+                  if( r ) r = proto_ == object.proto_;
+                }
+	            }
 	          }
-	        }
-          return c == 0;
+          }
+          return r;
         }
     };
     class HashedPacket {
@@ -261,7 +266,6 @@ class PCAP : public Thread {
         uintptr_t maxCount_;
         PacketsHash packetsHash_;
 	
-        PacketGroup & setBounds(uint64_t timestamp,PacketGroupingPeriod groupingPeriod);
 	      bool isInBounds(uint64_t timestamp) const { return timestamp >= header_.bt_ && timestamp <= header_.et_; }
       
         static RBTreeNode & treeO2N(const PacketGroup & object){
