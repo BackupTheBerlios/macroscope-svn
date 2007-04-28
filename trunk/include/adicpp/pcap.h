@@ -266,6 +266,8 @@ class PCAP : public Thread {
         uintptr_t maxCount_;
         PacketsHash packetsHash_;
 	
+        PacketGroup & joinGroup(const PacketGroup & group);
+
 	      bool isInBounds(uint64_t timestamp) const { return timestamp >= header_.bt_ && timestamp <= header_.et_; }
       
         static RBTreeNode & treeO2N(const PacketGroup & object){

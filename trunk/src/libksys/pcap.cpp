@@ -697,61 +697,69 @@ void PCAP::DatabaseInserter::threadExecute()
 {
   priority(THREAD_PRIORITY_HIGHEST);
   while( !terminated_ ){
-    pcap_->databaseInserterSem_.wait();
-    for(;;){
-      bool swapOut = interlockedIncrement(pcap_->memoryUsage_,0) >= pcap_->swapThreshold() * pcap_->swapHighWatermark_ / 100 || terminated_;
-      PacketGroup * group = NULL, * p;
-      {
-        AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
-        PacketGroupTree::Walker walker(pcap_->groupTree_);
-        uint64_t ct = gettimeofday();
-        while( walker.next() ){
-          p = &walker.object();
-          if( p->header_.et_ < ct ){
-            group = p;
-            break;
-          }
+    PacketGroup * pGroup;
+    AutoPtr<PacketGroup> group;
+    {
+      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      PacketGroupTree::Walker walker(pcap_->groupTree_);
+      uint64_t ct = gettimeofday();
+      while( walker.next() ){
+        pGroup = &walker.object();
+        if( pGroup->header_.et_ < ct ){
+          group.ptr(p);
+          pcap_->groupTree_.remove(*p);
+          break;
         }
       }
-      if( swapOut ){
-        pcap_->lazyWriterSem_.post();
+    }
+    bool swapOut = interlockedIncrement(pcap_->memoryUsage_,0) >= pcap_->swapThreshold() * pcap_->swapHighWatermark_ / 100 || terminated_;
+    if( swapOut ){
+      pcap_->lazyWriterSem_.post();
+      pcap_->databaseInserterSem_.timedWait(pcap_->swapInWatchTime_);
+    }
+    if( group != NULL ){
+      if( stdErr.debugLevel(7) )
+        stdErr.debug(7,utf8::String::Stream() <<
+          "Device: " << pcap_->iface_ << ", start processing packets group in: " <<
+          utf8::time2Str(group->header_.bt_) << " - " <<
+          utf8::time2Str(group->header_.et_) << ", count: " <<
+          group->header_.count_ << ", memory usage: " <<
+          formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
+          __PRETTY_FUNCTION__ << "\n"
+        );
+
+      bool success = pcap_->insertPacketsInDatabase(
+        group->header_.bt_,
+        group->header_.et_,
+        group->packets_,
+        group->header_.count_
+      );
+      if( success ){
+        interlockedIncrement(pcap_->memoryUsage_,-ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup)));
       }
       else {
-        if( group == NULL ) break;
-
-        if( stdErr.debugLevel(7) )
-          stdErr.debug(7,utf8::String::Stream() <<
-            "Device: " << pcap_->iface_ << ", start processing packets group in: " <<
-            utf8::time2Str(group->header_.bt_) << " - " <<
-            utf8::time2Str(group->header_.et_) << ", count: " <<
-            group->header_.count_ << ", memory usage: " <<
-            formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
-            __PRETTY_FUNCTION__ << "\n"
-          );
-
-        bool success = pcap_->insertPacketsInDatabase(
-          group->header_.bt_,
-          group->header_.et_,
-          group->packets_,
-          group->header_.count_
-        );
-        PacketGroup::SwapFileHeader header = group->header_;
-        if( success ){
-          AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
-          interlockedIncrement(pcap_->memoryUsage_,-ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup)));
-          pcap_->groupTree_.drop(*group);
+        AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+        pcap_->groupTree_.insert(group,false,false,&pGroup);
+        if( pGroup != group ){
+          pGroup->joinGroup(group);
         }
-        if( stdErr.debugLevel(7) )
-          stdErr.debug(7,utf8::String::Stream() <<
-            "Device: " << pcap_->iface_ << ", stop processing packets group in: " <<
-            utf8::time2Str(header.bt_) << " - " <<
-            utf8::time2Str(header.et_) << ", processed: " <<
-            (success ? header.count_ : 0) << ", memory usage: " <<
-            formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
-            __PRETTY_FUNCTION__ << "\n"
-          );
+        else {
+          group.ptr(NULL);
+        }
       }
-    }    
+      if( stdErr.debugLevel(7) )
+        stdErr.debug(7,utf8::String::Stream() <<
+          "Device: " << pcap_->iface_ << ", stop processing packets group in: " <<
+          utf8::time2Str(group->header_.bt_) << " - " <<
+          utf8::time2Str(group->header_.et_) << ", processed: " <<
+          (success ? header.count_ : 0) << ", memory usage: " <<
+          formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
+          __PRETTY_FUNCTION__ << "\n"
+        );
+    }
+    else {
+      pcap_->databaseInserterSem_.wait();
+    }
   }
 }
 //------------------------------------------------------------------------------
@@ -770,107 +778,113 @@ void PCAP::LazyWriter::threadExecute()
   priority(THREAD_PRIORITY_HIGHEST);
   AsyncFile tempFile(pcap_->tempFile_);
   while( !terminated_ ){
-    if( !tempFile.isOpen() || tempFile.size() == 0 ){
-      pcap_->lazyWriterSem_.wait();
+    AutoPtr<PacketGroup> group;
+    {
+      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      PacketGroupTree::Walker walker(pcap_->groupTree_);
+      while( walker.next() ){
+        group.ptr(&walker.object());
+        pcap_->groupTree_.remove(walker.object());
+      }
     }
-    else {
-      pcap_->lazyWriterSem_.timedWait(pcap_->swapInWatchTime_);
+    if( group == NULL ){
+      if( !tempFile.isOpen() || tempFile.size() == 0 ){
+        pcap_->lazyWriterSem_.wait();
+      }
+      else {
+        pcap_->lazyWriterSem_.timedWait(pcap_->swapInWatchTime_);
+      }
+      continue;
     }
-    for(;;){
-      bool swapOut = interlockedIncrement(pcap_->memoryUsage_,0) >= pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100 || terminated_;
-      if( swapOut ){
-        AutoPtr<PacketGroup> group;
-        {
-          AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
-          PacketGroupTree::Walker walker(pcap_->groupTree_);
-          if( walker.next() ){
-            group.ptr(&walker.object());
-            pcap_->groupTree_.remove(walker.object());
-          }
-        }
-        if( group == NULL ) break;
-        bool swapped = false;
+    bool swapOut = interlockedIncrement(pcap_->memoryUsage_,0) >= pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100 || terminated_;
+    if( swapOut ){
+      bool swapped = false;
+      try {
+        tempFile.createIfNotExist(true).open();
+        uint64_t size = tempFile.size();
         try {
-          tempFile.createIfNotExist(true).open();
-          uint64_t size = tempFile.size();
-          try {
-            tempFile.seek(size).
-              writeBuffer(group->packets_,group->header_.count_ * sizeof(HashedPacket)).
-              writeBuffer(&group->header_,sizeof(group->header_))
-            ;
-            size += group->header_.count_ * sizeof(HashedPacket) + sizeof(group->header_);
-            swapped = true;
-            interlockedIncrement(pcap_->memoryUsage_,-ilock_t(group->header_.count_ * sizeof(HashedPacket) + sizeof(PacketGroup)));
-          }
-          catch( ExceptionSP & e ){
-            e->writeStdError();
-          }
-          tempFile.resize(size);
+          tempFile.seek(size).
+            writeBuffer(group->packets_,group->header_.count_ * sizeof(HashedPacket)).
+            writeBuffer(&group->header_,sizeof(group->header_))
+          ;
+          size += group->header_.count_ * sizeof(HashedPacket) + sizeof(group->header_);
+          swapped = true;
+          interlockedIncrement(pcap_->memoryUsage_,-ilock_t(group->header_.count_ * sizeof(HashedPacket) + sizeof(PacketGroup)));
         }
         catch( ExceptionSP & e ){
           e->writeStdError();
         }
-        if( swapped && stdErr.debugLevel(7) )
-          stdErr.debug(7,utf8::String::Stream() <<
-            "Device: " << pcap_->iface_ << ", swapout packets group in: " <<
-            utf8::time2Str(group->header_.bt_) << " - " <<
-            utf8::time2Str(group->header_.et_) << ", count: " <<
-            group->header_.count_ << ", memory usage: " <<
-            formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
-            __PRETTY_FUNCTION__ << "\n"
-          );
-      } // swapin
-      else if( tempFile.createIfNotExist(false).tryOpen() && tempFile.size() > 0 ){
-        bool post = false;
-        while( tempFile.size() > 0 ){
-          uint64_t pos = tempFile.size() - sizeof(PacketGroup::SwapFileHeader);
-          AutoPtr<PacketGroup> group(newObject<PacketGroup>());
-          tempFile.readBuffer(pos,&group->header_,sizeof(group->header_));
-          group->maxCount_ = group->header_.count_;
-          uintptr_t groupSize = group->header_.count_ * sizeof(HashedPacket);
-          group->packets_.alloc(groupSize);
-          tempFile.readBuffer(pos - groupSize,group->packets_,groupSize);
-          tempFile.resize(pos - groupSize);
-          PacketGroup * pGroup;
-          {
-            AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
-            pcap_->groupTree_.insert(group,false,false,&pGroup);
-            if( pGroup == group ){
-              group.ptr(NULL);
-              interlockedIncrement(pcap_->memoryUsage_,uilock_t(sizeof(PacketGroup) + groupSize));
-            }
-            else {
-              for( intptr_t i = group->header_.count_ - 1; i >= 0; i-- ){
-                if( pGroup->header_.count_ == pGroup->maxCount_ ){
-                  uintptr_t count = (pGroup->header_.count_ << 1) + ((pGroup->header_.count_ == 0) << 4);
-                  pGroup->packets_.realloc(count * sizeof(HashedPacket));
-                  interlockedIncrement(pcap_->memoryUsage_,uilock_t((count - pGroup->maxCount_) * sizeof(HashedPacket)));
-                  pGroup->maxCount_ = count;
-                }
-                HashedPacket & pkt = pGroup->packets_[pGroup->header_.count_], * p;
-                pkt = group->packets_[i];
-                pGroup->packetsHash_.insert(pkt,false,false,&p);
-                if( p != &pkt ){
-                  p->pktSize_ += pkt.pktSize_;
-                  p->dataSize_ += pkt.dataSize_;
-                }
-                else {
-                  pGroup->header_.count_++;
-                }
-              }
-            }
-          }
-          post = true;
-        }
-        assert( tempFile.size() == 0 );
-        tempFile.close();
-        remove(tempFile.fileName(),true);
-        if( post ) pcap_->databaseInserterSem_.post();
+        tempFile.resize(size);
       }
-      else
-        break;
+      catch( ExceptionSP & e ){
+        e->writeStdError();
+      }
+      if( swapped && stdErr.debugLevel(7) )
+        stdErr.debug(7,utf8::String::Stream() <<
+          "Device: " << pcap_->iface_ << ", swapout packets group in: " <<
+          utf8::time2Str(group->header_.bt_) << " - " <<
+          utf8::time2Str(group->header_.et_) << ", count: " <<
+          group->header_.count_ << ", memory usage: " <<
+          formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
+          __PRETTY_FUNCTION__ << "\n"
+        );
+    } // swapin
+    else if( tempFile.createIfNotExist(false).tryOpen() && tempFile.size() > 0 ){
+      bool post = false;
+      while( tempFile.size() > 0 ){
+        uint64_t pos = tempFile.size() - sizeof(PacketGroup::SwapFileHeader);
+        AutoPtr<PacketGroup> group(newObject<PacketGroup>());
+        tempFile.readBuffer(pos,&group->header_,sizeof(group->header_));
+        group->maxCount_ = group->header_.count_;
+        uintptr_t groupSize = group->header_.count_ * sizeof(HashedPacket);
+        group->packets_.alloc(groupSize);
+        tempFile.readBuffer(pos - groupSize,group->packets_,groupSize);
+        tempFile.resize(pos - groupSize);
+        PacketGroup * pGroup;
+        {
+          AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+          pcap_->groupTree_.insert(group,false,false,&pGroup);
+          if( pGroup == group ){
+            group.ptr(NULL);
+            interlockedIncrement(pcap_->memoryUsage_,uilock_t(sizeof(PacketGroup) + groupSize));
+          }
+          else {
+            pGroup->joinGroup(group);
+          }
+        }
+        post = true;
+      }
+      assert( tempFile.size() == 0 );
+      tempFile.close();
+      remove(tempFile.fileName(),true);
+      if( post ) pcap_->databaseInserterSem_.post();
     }
   }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group)
+{
+  for( intptr_t i = group->header_.count_ - 1; i >= 0; i-- ){
+    if( header_.count_ == maxCount_ ){
+      uintptr_t count = (header_.count_ << 1) + ((header_.count_ == 0) << 4);
+      pGroup->packets_.realloc(count * sizeof(HashedPacket));
+      interlockedIncrement(pcap_->memoryUsage_,uilock_t((count - maxCount_) * sizeof(HashedPacket)));
+      maxCount_ = count;
+    }
+    HashedPacket & pkt = packets_[header_.count_], * p;
+    pkt = group->packets_[i];
+    packetsHash_.insert(pkt,false,false,&p);
+    if( p != &pkt ){
+      p->pktSize_ += pkt.pktSize_;
+      p->dataSize_ += pkt.dataSize_;
+    }
+    else {
+      pGroup->header_.count_++;
+    }
+  }
+  return *this;
 }
 //------------------------------------------------------------------------------
 } // namespace ksys
