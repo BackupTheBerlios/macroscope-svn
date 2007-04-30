@@ -60,6 +60,7 @@ class Exception : virtual public Object {
     bool searchCode(int32_t code1,int32_t code2,int32_t code3) const;
     bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4) const;
     bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5) const;
+    bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5,int32_t code6) const;
 
 //    static Exception * newObject();
 //    static Exception * newObject(int32_t code,const char * what);
@@ -114,6 +115,11 @@ inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3, i
 inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,int32_t code4,int32_t code5) const
 {
   return searchCode(code1,code2,code3,code4) || searchCode(code5);
+}
+//---------------------------------------------------------------------------
+inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,int32_t code4,int32_t code5,int32_t code6) const
+{
+  return searchCode(code1,code2,code3,code4,code5) || searchCode(code6);
 }
 //---------------------------------------------------------------------------
 inline Exception & Exception::addRef()

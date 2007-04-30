@@ -1374,7 +1374,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
               paramAsMutant("ST_MSGSIZE",msgSize)->execute();
           }
           catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
+            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
           }
         }
         else if( to != NULL && stat != NULL && strncmp(stat, "Sent", 4) == 0 ){
@@ -1393,7 +1393,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
                   paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               catch( ExceptionSP & e ){
-                if( !e->searchCode(isc_no_dup, ER_DUP_ENTRY) ) throw;
+                if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
                 stTrafUpd_->prepare()->
                   paramAsString("ST_USER",st_user)->
                   paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt) - getgmtoffset()))->

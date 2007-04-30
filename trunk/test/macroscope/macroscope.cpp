@@ -528,15 +528,18 @@ int32_t Logger::main(bool sniffer)
       }
       catch( ExceptionSP & e ){
         //if( e->searchCode(isc_keytoobig) ) throw;
-        if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR) ) throw;
+        if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,
+            ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
       }
     }
+    database_->detach();
   }
 // parse log files
   int32_t err0 = doWork(0);
   int32_t err1 = waitThreads();
 // optimize database (optional)
   if( !sniffer && !cgi_.isCGI() ){
+    database_->attach();
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
       statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
       for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
@@ -588,24 +591,34 @@ int32_t Logger::main(bool sniffer)
       }
     }
     else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
-      Table<utf8::String> tables;
-      statement_->text("SHOW TABLES")->execute()->fetchAll()->unloadByIndex(tables);
-      //Table<Mutant> indices;
-      utf8::String engine(config_->textByPath("macroscope.mysql_table_type","INNODB"));
-      uint64_t ellapsed;
-      for( intptr_t i = tables.rowCount() - 1; i >= 0; i-- ){
-        /*statement_->text("SHOW INDEX FROM " + tables(i,0))->execute();
-        while( statement_->fetch() )
-	  if( (intmax_t) statement_->valueAsMutant("Seq_in_index") == 1 )
-	    statement_->unloadRowByIndex(indices);*/
-        if( (bool) config_->section("macroscope").value("reactivate_indices",true) ){
+      if( (bool) config_->section("macroscope").value("reactivate_indices",true) ){
+        Table<utf8::String> tables;
+        utf8::String hostName, dbName;
+        uintptr_t port;
+        database_->separateDBName(database_->name(),hostName,dbName,port);
+        statement_->text(
+          "SELECT table_name,table_schema "
+          "FROM INFORMATION_SCHEMA.TABLES "
+          "WHERE upper(table_schema) = :schema"
+          )->
+          prepare()->
+          paramAsString("schema",dbName.upper())->
+          execute()->fetchAll()->unloadByIndex(tables);
+        //Table<Mutant> indices;
+        utf8::String engine(config_->textByPath("macroscope.mysql_table_type","INNODB"));
+        uint64_t ellapsed;
+        for( intptr_t i = tables.rowCount() - 1; i >= 0; i-- ){
+          /*statement_->text("SHOW INDEX FROM " + tables(i,0))->execute();
+          while( statement_->fetch() )
+	    if( (intmax_t) statement_->valueAsMutant("Seq_in_index") == 1 )
+	      statement_->unloadRowByIndex(indices);*/
           if( verbose_ ) fprintf(stderr,"Alter table %s",(const char *) tables(i,0).getOEMString());
           ellapsed = gettimeofday();
-  	  statement_->text("ALTER TABLE " + tables(i,0) + " ENGINE=" + engine)->execute();
+	        statement_->text("ALTER TABLE " + tables(i,0) + " ENGINE=" + engine)->execute();
           if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
             (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
           );
-	}
+        }
       }
       /*for( intptr_t i = indices.rowCount() - 1; i >= 0; i-- ){
         utf8::String name(indices(i,"Key_name"));
