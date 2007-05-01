@@ -551,7 +551,10 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
       getpagesize() * 16 / sizeof(Packet)
 #endif
     );
-    interlockedIncrement(memoryUsage_,uilock_t(packets_->count() * sizeof(Packet) + sizeof(Packets)));
+    interlockedIncrement(
+      memoryUsage_,
+      uilock_t(packets_->count() * sizeof(Packet) + sizeof(Packets))
+    );
     bool swapOut = interlockedIncrement(memoryUsage_,0) >= swapThreshold_ * swapHighWatermark_ / 100;
     if( swapOut ) lazyWriterSem_.post();
   }
@@ -624,16 +627,17 @@ void PCAP::Grouper::threadExecute()
             AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
             pcap_->groupTree_.insert(group,false,false,&pGroup);
             pcap_->groupTree_.remove(*pGroup);
-            if( pGroup != group ){
-              group = pGroup;
-            }
+            if( pGroup != group ) group = pGroup;
             header = pGroup->header_;
           }
         }
         if( pGroup->header_.count_ == pGroup->maxCount_ ){
           uintptr_t count = (pGroup->header_.count_ << 1) + ((pGroup->header_.count_ == 0) << 4);
           pGroup->packets_.realloc(count * sizeof(HashedPacket));
-          interlockedIncrement(pcap_->memoryUsage_,uilock_t((count - pGroup->maxCount_) * sizeof(HashedPacket)));
+          interlockedIncrement(
+            pcap_->memoryUsage_,
+            uilock_t((count - pGroup->maxCount_) * sizeof(HashedPacket))
+          );
           pGroup->maxCount_ = count;
         }
         HashedPacket & hpkt = pGroup->packets_[pGroup->header_.count_], * p;
@@ -663,7 +667,10 @@ void PCAP::Grouper::threadExecute()
       group.ptr(NULL);
       throw;
     }
-    interlockedIncrement(pcap_->memoryUsage_,-ilock_t(packets->count() * sizeof(Packet) + sizeof(Packets)));
+    interlockedIncrement(
+      pcap_->memoryUsage_,
+      -ilock_t(packets->count() * sizeof(Packet) + sizeof(Packets))
+    );
     pcap_->databaseInserterSem_.post();
     if( stdErr.debugLevel(6) ){
       int pcapStatSize;
@@ -724,7 +731,9 @@ void PCAP::DatabaseInserter::threadExecute()
           utf8::time2Str(group->header_.bt_) << " - " <<
           utf8::time2Str(group->header_.et_) << ", count: " <<
           group->header_.count_ << ", memory usage: " <<
-          formatByteLength(interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()) << ", " <<
+          formatByteLength(
+            interlockedIncrement(pcap_->memoryUsage_,0),pcap_->swapThreshold()
+          ) << ", " <<
           __PRETTY_FUNCTION__ << "\n"
         );
 
@@ -736,13 +745,20 @@ void PCAP::DatabaseInserter::threadExecute()
       );
       PacketGroup::SwapFileHeader header = group->header_;
       if( success ){
-        interlockedIncrement(pcap_->memoryUsage_,-ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup)));
+        interlockedIncrement(
+          pcap_->memoryUsage_,
+          -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+        );
       }
       else {
         AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
         pcap_->groupTree_.insert(group,false,false,&pGroup);
         if( pGroup != group ){
           pGroup->joinGroup(group,pcap_->memoryUsage_);
+          interlockedIncrement(
+            pcap_->memoryUsage_,
+            -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+          );
         }
         else {
           group.ptr(NULL);
@@ -810,7 +826,10 @@ void PCAP::LazyWriter::threadExecute()
           ;
           size += group->header_.count_ * sizeof(HashedPacket) + sizeof(group->header_);
           swapped = true;
-          interlockedIncrement(pcap_->memoryUsage_,-ilock_t(group->header_.count_ * sizeof(HashedPacket) + sizeof(PacketGroup)));
+          interlockedIncrement(
+            pcap_->memoryUsage_,
+            -ilock_t(group->header_.count_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+          );
         }
         catch( ExceptionSP & e ){
           e->writeStdError();
@@ -847,7 +866,10 @@ void PCAP::LazyWriter::threadExecute()
           pcap_->groupTree_.insert(group,false,false,&pGroup);
           if( pGroup == group ){
             group.ptr(NULL);
-            interlockedIncrement(pcap_->memoryUsage_,uilock_t(sizeof(PacketGroup) + groupSize));
+            interlockedIncrement(
+              pcap_->memoryUsage_,
+              uilock_t(sizeof(PacketGroup) + groupSize)
+            );
           }
           else {
             pGroup->joinGroup(group,pcap_->memoryUsage_);
@@ -871,7 +893,10 @@ PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,uiloc
     if( header_.count_ == maxCount_ ){
       uintptr_t count = (header_.count_ << 1) + ((header_.count_ == 0) << 4);
       packets_.realloc(count * sizeof(HashedPacket));
-      interlockedIncrement(memoryUsage,uilock_t((count - maxCount_) * sizeof(HashedPacket)));
+      interlockedIncrement(
+        memoryUsage,
+        uilock_t((count - maxCount_) * sizeof(HashedPacket))
+      );
       maxCount_ = count;
     }
     HashedPacket & pkt = packets_[header_.count_], * p;
