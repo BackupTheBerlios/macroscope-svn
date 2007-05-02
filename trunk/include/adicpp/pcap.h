@@ -127,8 +127,8 @@ class PCAP : public Thread {
     PCAP & swapLowWatermark(ldouble a);
     const ldouble & swapHighWatermark() const;
     PCAP & swapHighWatermark(ldouble a);
-    const uint64_t & swapInWatchTime() const;
-    PCAP & swapInWatchTime(uint64_t a);
+    const uint64_t & swapWatchTime() const;
+    PCAP & swapWatchTime(uint64_t a);
     const bool & promisc() const;
     PCAP & promisc(bool a);
     const bool & ports() const;
@@ -217,7 +217,8 @@ class PCAP : public Thread {
         uint16_t dstPort_;
         int16_t proto_;
     };
-    virtual bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count);
+    virtual bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count) throw();
+    void threadExecute();
   private:
     class Packets : public Array<Packet> {
       public:
@@ -314,12 +315,16 @@ class PCAP : public Thread {
 
     class LazyWriter : public Thread {
       public:
-        LazyWriter(PCAP * pcap = NULL) : pcap_(pcap) {}
+        LazyWriter(PCAP * pcap = NULL) : pcap_(pcap), lastSwapOut_(0), lastSwapIn_(0) {}
       private:
         PCAP * pcap_;
+        uint64_t lastSwapOut_;
+        uint64_t lastSwapIn_;
 	
         void threadBeforeWait();
         void threadExecute();
+        void swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group);
+        void swapIn(AsyncFile & tempFile);
     };
     friend class LazyWriter;
 	        
@@ -345,14 +350,13 @@ class PCAP : public Thread {
     uilock_t memoryUsage_;
     ldouble swapLowWatermark_;
     ldouble swapHighWatermark_;
-    uint64_t swapInWatchTime_;
+    uint64_t swapWatchTime_;
     bool promisc_;
     bool ports_;
     bool protocols_;
     
     void shutdown(void * fp);
     void threadBeforeWait();
-    void threadExecute();
     static void pcapCallback(void *,const void *,const void *);
     void capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet);
 
@@ -474,14 +478,14 @@ inline PCAP & PCAP::swapHighWatermark(ldouble a)
   return *this;
 }
 //---------------------------------------------------------------------------
-inline const uint64_t & PCAP::swapInWatchTime() const
+inline const uint64_t & PCAP::swapWatchTime() const
 {
-  return swapInWatchTime_;
+  return swapWatchTime_;
 }
 //---------------------------------------------------------------------------
-inline PCAP & PCAP::swapInWatchTime(uint64_t a)
+inline PCAP & PCAP::swapWatchTime(uint64_t a)
 {
-  swapInWatchTime_ = a;
+  swapWatchTime_ = a;
   return *this;
 }
 //---------------------------------------------------------------------------

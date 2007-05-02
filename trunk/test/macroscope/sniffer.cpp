@@ -54,8 +54,10 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
       )->prepare()->paramAsString(0/*"st_if"*/,/*iface()*/ "test");
     database_->start();
     while( count-- > 0 ){
+      Mutant m(bt);
+      m.changeType(mtTime);
       statement_->
-        paramAsMutant(1/*"st_start"*/,      bt)->
+        paramAsMutant(1/*"st_start"*/,      m)->
         paramAsMutant(2/*"st_src_ip"*/,     ksock::SockAddr::addr2Index(packets[count].srcAddr_))->
         paramAsMutant(3/*"st_dst_ip"*/,     ksock::SockAddr::addr2Index(packets[count].dstAddr_))->
         paramAsMutant(4/*"st_ip_proto"*/,   packets[count].proto_)->
@@ -72,6 +74,18 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     r = false;
   }
   return r;
+}
+//------------------------------------------------------------------------------
+void Sniffer::threadExecute()
+{
+  try {
+    PCAP::threadExecute();
+  }
+  catch( ... ){
+    database_->detach();
+    throw;
+  }
+  database_->detach();
 }
 //------------------------------------------------------------------------------
 } // namespace ksys

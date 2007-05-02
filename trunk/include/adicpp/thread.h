@@ -84,6 +84,12 @@ class Thread : virtual public Object {
     virtual ~Thread();
     Thread();
 
+#if defined(__WIN32__) || defined(__WIN64__)
+    static uintptr_t waitForSignal(uintptr_t mId = WM_QUIT);
+#else
+    static uintptr_t waitForSignal(uintptr_t sId = 0);
+#endif
+
     Thread & resume();
     Thread & suspend();
     static bool isSuspended(uintptr_t tid);

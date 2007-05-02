@@ -173,9 +173,8 @@ void Logger::fallBackToNewLine(AsyncFile & f)
   }
 }
 //------------------------------------------------------------------------------
-int32_t Logger::main(bool sniffer)
+void Logger::readConfig()
 {
-  sniffer_ = sniffer;
   config_->parse().override();
   stdErr.rotationThreshold(
     config_->value("debug_file_rotate_threshold",1024 * 1024)
@@ -194,6 +193,14 @@ int32_t Logger::main(bool sniffer)
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   verbose_ = config_->section("macroscope").value("verbose",false);
+}
+//------------------------------------------------------------------------------
+int32_t Logger::main(bool sniffer,bool daemon)
+{
+  sniffer_ = sniffer;
+  daemon_ = daemon;
+
+  readConfig();
 
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
@@ -634,6 +641,7 @@ int32_t Logger::main(bool sniffer)
   }
 // generate reports
   int32_t err2 = doWork(1);
+  if( sniffer && daemon ) Thread::waitForSignal();
   int32_t err3 = waitThreads();
   return err0 != 0 ? err0 : err1 != 0 ? err1 : err2 != 0 ? err2 : err3;
 }
@@ -643,6 +651,7 @@ int32_t Logger::doWork(uintptr_t stage)
   int32_t exitCode = 0;
   if( sniffer_ && !cgi_.isCGI() ){
     if( stage == 1 ){
+      readConfig();
       ConfigSection dbParamsSection;
       dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
@@ -661,7 +670,7 @@ int32_t Logger::doWork(uintptr_t stage)
         sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
         sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));
         sniffer->swapHighWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_high_watermark",sniffer->swapHighWatermark()));
-        sniffer->swapInWatchTime(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_in_watch_time",sniffer->swapInWatchTime()));
+        sniffer->swapWatchTime(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_watch_time",sniffer->swapWatchTime()));
         utf8::String groupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none"));
         if( groupingPeriod.strcasecmp("None") == 0 ) sniffer->groupingPeriod(PCAP::pgpNone);
         else
@@ -735,6 +744,60 @@ int32_t Logger::waitThreads()
   return exitCode;
 }
 //------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+SnifferService::SnifferService() : logger_(NULL)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  serviceType_ = SERVICE_WIN32_OWN_PROCESS;
+  startType_ = SERVICE_AUTO_START;
+  errorControl_ = SERVICE_ERROR_IGNORE;
+  binaryPathName_ = getExecutableName();
+  serviceStatus_.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+  serviceStatus_.dwWaitHint = 600000; // give me 600 seconds for start or stop 
+#endif
+}
+//------------------------------------------------------------------------------
+void SnifferService::install()
+{
+  Config config;
+  config.parse().override();
+  serviceName_ = config.textByPath("macroscope.service_name","macroscope");
+  displayName_ = config.textByPath("macroscope.service_display_name","Macroscope Packet Collection Service");
+#if defined(__WIN32__) || defined(__WIN64__)
+  utf8::String startType(config.textByPath("macroscope.service_start_type","auto"));
+  if( startType.strcasecmp("auto") == 0 ){
+    startType_ = SERVICE_AUTO_START;
+  }
+  else if( startType.strcasecmp("manual") == 0 ){
+    startType_ = SERVICE_DEMAND_START;
+  }
+#endif
+}
+//------------------------------------------------------------------------------
+void SnifferService::uninstall()
+{
+  install();
+}
+//------------------------------------------------------------------------------
+void SnifferService::start()
+{
+  install();
+  logger_->doWork(1);
+  stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started (" << serviceName_ << ")\n");
+}
+//------------------------------------------------------------------------------
+void SnifferService::stop()
+{
+  logger_->waitThreads();
+  stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stopped (" << serviceName_ << ")\n");
+}
+//------------------------------------------------------------------------------
+bool SnifferService::active()
+{
+  return logger_->threads_.count() > 0;
+}
+//------------------------------------------------------------------------------
 } // namespace macroscope
 //------------------------------------------------------------------------------
 #if HAVE__MALLOC_OPTIONS
@@ -751,7 +814,19 @@ int main(int _argc,char * _argv[])
     uintptr_t i;
     stdErr.fileName(SYSLOG_DIR("macroscope/") + "macroscope.log");
     Config::defaultFileName(SYSCONF_DIR("") + "macroscope.conf");
-    bool dispatch = true, sniffer = false;
+    Services services(macroscope_version.gnu_);
+    AutoPtr<macroscope::SnifferService> serviceAP(newObject<macroscope::SnifferService>());
+    services.add(serviceAP);
+    macroscope::SnifferService * service = serviceAP.ptr(NULL);
+    bool dispatch = true, sniffer = false, daemonize = false, svc = false;
+    for( i = 1; i < argv().count(); i++ ){
+      if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
+        Config::defaultFileName(argv()[i + 1]);
+      }
+      else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
+        stdErr.fileName(argv()[i + 1]);
+      }
+    }
     for( i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << macroscope_version.tex_ << "\n");
@@ -759,17 +834,30 @@ int main(int _argc,char * _argv[])
         dispatch = false;
         continue;
       }
-      if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
-        Config::defaultFileName(argv()[i + 1]);
-      }
-      else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
-        stdErr.fileName(argv()[i + 1]);
-      }
-      else if( argv()[i].strcmp("--sniffer") == 0 ){
+      if( argv()[i].strcmp("--sniffer") == 0 ){
         sniffer = true;
       }
       else if( argv()[i].strcmp("--iflist") == 0 ){
         PCAP::printAllDevices();
+        dispatch = false;
+      }
+      else if( argv()[i].strcmp("--service") == 0 ){
+        svc = true;
+      }
+      else if( argv()[i].strcmp("--daemon") == 0 ){
+        daemonize = true;
+      }
+      else if( argv()[i].strcmp("--install") == 0 ){
+        for( uintptr_t j = i + 1; j < argv().count(); j++ )
+          if( argv()[j].isSpace() )
+            service->args(service->args() + " \"" + argv()[j] + "\"");
+          else
+            service->args(service->args() + " " + argv()[j]);
+        services.install();
+        dispatch = false;
+      }
+      else if( argv()[i].strcmp("--uninstall") == 0 ){
+        services.uninstall();
         dispatch = false;
       }
 #if PRIVATE_RELEASE
@@ -806,11 +894,23 @@ int main(int _argc,char * _argv[])
     //dText[0] = dText[0];
 #endif
     errcode = 0;
-    if( dispatch ){
+    if( dispatch || sniffer ){
       macroscope::Logger logger;
-      stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
-      errcode = logger.main(sniffer);
-      stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
+      if( dispatch && svc && sniffer ){
+        service->logger_ = &logger;
+        services.startServiceCtrlDispatcher();
+      }
+      else if( dispatch ){
+#if HAVE_DAEMON
+        if( daemonize && daemon(1,1) != 0 ){
+          int32_t err = errno;
+          newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
+        }
+#endif
+        stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
+        errcode = logger.main(sniffer,daemonize);
+        stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
+      }
     }
   }
   catch( ExceptionSP & e ){

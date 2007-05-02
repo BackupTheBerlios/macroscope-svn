@@ -1938,8 +1938,20 @@ static BOOL WINAPI consoleCtrlHandler(DWORD dwCtrlType)
   }
   return TRUE;
 }
+#else
+static uint8_t sigSemPlaceHolder[sizeof(Semaphore)];
+static inline Semaphore & sigSem()
+{
+  return *reinterpret_cast<Semaphore *>(sigSemPlaceHolder);
+}
+static uintptr_t sigCount[_SIG_MAXSIG];
+static void sigTERMHandler(int,struct __siginfo *,void *)
+{
+  sigSem.wait();
+}
 #endif
 //---------------------------------------------------------------------------
+static uint64_t processStartTime;
 int64_t getProcessStartTime(bool toLocalTime)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1959,8 +1971,7 @@ int64_t getProcessStartTime(bool toLocalTime)
   if( err != ERROR_SUCCESS ) newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
 #else
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-  return -1;
+  return toLocalTime ? processStartTime + getgmtoffset() : processStartTime;
 #endif
 }
 //---------------------------------------------------------------------------
@@ -2957,6 +2968,7 @@ void initialize(int argc,char ** argv)
   SetProcessShutdownParameters(0x400,SHUTDOWN_NORETRY);
   SetConsoleCtrlHandler(consoleCtrlHandler,TRUE);
 #elif HAVE_SIGNAL_H
+  if( processStartTime == 0 ) processStartTime = gettimeofday();
   sigset_t ss;
   if( sigemptyset(&ss) != 0 ||
       sigaddset(&ss,SIGSYS) != 0 ||

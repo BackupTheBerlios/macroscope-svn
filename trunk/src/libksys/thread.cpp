@@ -211,7 +211,10 @@ Thread & Thread::wait()
     DWORD exitCode;
     BOOL r = GetExitCodeThread(handle_,&exitCode);
     if( r == 0 || exitCode == STILL_ACTIVE ){
-      WaitForSingleObject(handle_,INFINITE);
+      if( WaitForSingleObject(handle_,INFINITE) == WAIT_FAILED ){
+        int32_t err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
       GetExitCodeThread(handle_,&exitCode);
     }
     CloseHandle(handle_);
@@ -585,6 +588,32 @@ bool Thread::isSuspended(uintptr_t tid)
   LocalFree(pInfo);
   FreeLibrary(hInstLib);
   return r;
+}
+//---------------------------------------------------------------------------
+uintptr_t Thread::waitForSignal(uintptr_t mId)
+{
+  MSG msg;
+  for(;;){
+    if( PeekMessage(&msg,NULL,0,0,PM_REMOVE) != 0 ){
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+    if( msg.message == mId ) break;
+    if( WaitMessage() == 0 ){
+      int32_t err = GetLastError() + errorOffset;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return msg.message;
+}
+//---------------------------------------------------------------------------
+#else
+//---------------------------------------------------------------------------
+uintptr_t Thread::waitForSignal(uintptr_t sId)
+{
+  for(;;){
+    if( SIGINT SIGQUIT SIGTERM
+  }
 }
 //---------------------------------------------------------------------------
 #endif

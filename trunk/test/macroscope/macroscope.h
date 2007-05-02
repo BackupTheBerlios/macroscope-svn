@@ -38,12 +38,16 @@ namespace macroscope {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class SnifferService;
+//------------------------------------------------------------------------------
 class Logger {
+  friend class SnifferService;
   public:
     ~Logger();
     Logger();
 
-    int32_t main(bool sniffer);
+    void readConfig();
+    int32_t main(bool sniffer,bool daemon);
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
     enum { stSel, stIns, stUpd };
@@ -55,6 +59,7 @@ class Logger {
     AutoPtr<Statement> statement2_;
     bool verbose_;
     bool sniffer_;
+    bool daemon_;
 
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
@@ -337,6 +342,22 @@ class Logger {
     int32_t doWork(uintptr_t stage);
     int32_t waitThreads();
   private:
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class SnifferService : public Service {
+  public:
+    Logger * logger_;
+
+    SnifferService();
+  protected:
+  private:
+    void install();
+    void uninstall();
+    void start();
+    void stop();
+    bool active();
 };
 //------------------------------------------------------------------------------
 } // namespace macroscope

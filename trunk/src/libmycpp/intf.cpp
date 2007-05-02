@@ -199,7 +199,7 @@ void API::open()
     }*/
   }
 //  if( (intptr_t) threadCount() == 0 ) mysql_thread_init();
-  threadCount() = (intptr_t) threadCount() + 1;
+//  threadCount() = (intptr_t) threadCount() + 1;
   count_++;
 }
 //---------------------------------------------------------------------------
@@ -207,9 +207,9 @@ void API::close()
 {
   AutoLock<InterlockedMutex> lock(mutex());
   assert( count_ > 0 );
-  assert( (intptr_t) threadCount() > 0 );
+//  assert( (intptr_t) threadCount() > 0 );
 //  if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
-  threadCount() = (intptr_t) threadCount() - 1;
+//  threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
 //    my_end(0);
 #if !MYSQL_STATIC_LIBRARY    
