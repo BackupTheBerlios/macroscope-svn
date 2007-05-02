@@ -587,7 +587,6 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
             pResult->cell(row,"st_dst_ip") = stBPFTCacheIns_->paramAsString("st_dst_ip");
             pResult->cell(row,"SUM1") = stBPFTCacheIns_->paramAsMutant("st_dgram_bytes");
             pResult->cell(row,"SUM2") = stBPFTCacheIns_->paramAsMutant("st_data_bytes");
-  	        pResult->sort("SUM1,st_src_ip,st_dst_ip");
           }
           break;
         }
@@ -599,7 +598,10 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       }
     }
     dbtrUpdate_->commit();
-    if( pResult != NULL ) return;
+    if( pResult != NULL ){
+      pResult->sort("SUM1,st_src_ip,st_dst_ip");
+      return;
+    }
   }
   if( pResult == NULL ){
     *pDgramBytes = pStatement->sum("SUM1");

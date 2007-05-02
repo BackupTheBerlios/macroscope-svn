@@ -209,19 +209,19 @@ int32_t Logger::main(bool sniffer,bool daemon)
   statement_ = database_->newAttachedStatement();
 
 // print query form if is CGI and no CGI parameters
-  /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  setEnv("GATEWAY_INTERFACE","CGI/1.1");
   setEnv("REQUEST_METHOD","GET");
   setEnv("QUERY_STRING",
-    "if=sk1&"
-    "bday=1&bmon=4&byear=2007&"
-    "eday=31&emon=4&eyear=2007&"
+    "if=test&"
+    "bday=02&bmon=5&byear=2007&"
+    "eday=02&emon=5&eyear=2007&"
     "resolve=on&"
     "bidirectional=on&"
     "threshold=512K&"
-    "threshold2=&"
-    "totals=Mon&"
-    "filter=src+nik+or+dst+nik"
-  );*/
+    "threshold2=1&"
+    "totals=Day&"
+    "filter="
+  );
 /*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
   LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
   while( wcslen(pEnv) > 0 ){
@@ -709,22 +709,26 @@ int32_t Logger::doWork(uintptr_t stage)
     dnsCacheHitCount_ = 0;
     dnsCacheMissCount_ = 0;
     dnsCacheSize_ = config_->valueByPath("macroscope.bpft.dns_cache_size",0);
-    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-      utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+    for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount() || cgi_.isCGI(); i++ ){
+      utf8::String sectionName(cgi_.isCGI() ? cgi_.paramAsString("if") : config_->sectionByPath("macroscope.bpft").section(i).name());
       if( sectionName.strcasecmp("decoration") == 0 ) continue;
-      if( cgi_.isCGI() && (sectionName.strcasecmp(cgi_.paramAsString("if")) != 0 || stage < 1) ) continue;
+      if( cgi_.isCGI() && stage < 1 ) break;
       threads_.safeAdd(
         newObjectR1C2C3C4<BPFTThread>(
           *this,"macroscope.bpft." + sectionName,sectionName,stage)
         );
-      if( mtMode.strcasecmp("BOTH") == 0 ||
-          (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
-          (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
+      if( !cgi_.isCGI() && 
+          (mtMode.strcasecmp("BOTH") == 0 ||
+            (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
+            (stage == 1 && mtMode.strcasecmp("REPORT") == 0)
+          )
+      ){
         threads_[threads_.count() - 1].resume();
       }
       else {
         threads_[threads_.count() - 1].threadExecute();
       }
+      if( cgi_.isCGI() ) break;
     }
   }
   return exitCode;
