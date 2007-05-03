@@ -192,7 +192,8 @@ void Logger::readConfig()
   checkMachineBinding(config_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
-  verbose_ = config_->section("macroscope").value("verbose",false);
+  verbose_ = config_->valueByPath("macroscope.verbose",false);
+  setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()));
 }
 //------------------------------------------------------------------------------
 int32_t Logger::main(bool sniffer,bool daemon)
@@ -209,19 +210,21 @@ int32_t Logger::main(bool sniffer,bool daemon)
   statement_ = database_->newAttachedStatement();
 
 // print query form if is CGI and no CGI parameters
-  setEnv("GATEWAY_INTERFACE","CGI/1.1");
+  /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
   setEnv("REQUEST_METHOD","GET");
   setEnv("QUERY_STRING",
     "if=test&"
-    "bday=02&bmon=5&byear=2007&"
-    "eday=02&emon=5&eyear=2007&"
+    "bday=03&bmon=5&byear=2007&"
+    "eday=03&emon=5&eyear=2007&"
     "resolve=on&"
     "bidirectional=on&"
-    "threshold=512K&"
-    "threshold2=1&"
-    "totals=Day&"
+    "protocols=on&"
+    "ports=on&"
+    "threshold=64K&"
+    "threshold2=&"
+    "totals=Mon&"
     "filter="
-  );
+  );*/
 /*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
   LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
   while( wcslen(pEnv) > 0 ){
@@ -334,8 +337,14 @@ int32_t Logger::main(bool sniffer,bool daemon)
 	      "    </option>\n"
         "  </select>\n"
         "  <BR>\n"
-        "  <input type=\"checkbox\" name=\"bidirectional\" id=\"bidirectional\">\n"
+        "  <input type=\"checkbox\" name=\"bidirectional\" id=\"bidirectional\" checked=\"checked\">\n"
         "  <label for=\"bidirectional\">Bidirectional</label>\n"
+        "  <BR>\n"
+        "  <input type=\"checkbox\" name=\"protocols\" id=\"protocols\" checked=\"checked\">\n"
+        "  <label for=\"protocols\">Protocols</label>\n"
+        "  <BR>\n"
+        "  <input type=\"checkbox\" name=\"ports\" id=\"ports\" checked=\"checked\">\n"
+        "  <label for=\"ports\">Ports</label>\n"
         "  <BR>\n"
         "  <input type=\"checkbox\" name=\"resolve\" id=\"resolve\" checked=\"checked\">\n"
         "  <label for=\"resolve\">Resolve addresses by DNS</label>\n"

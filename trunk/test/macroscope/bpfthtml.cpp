@@ -301,9 +301,17 @@ Logger::BPFTThread::~BPFTThread()
 {
 }
 //------------------------------------------------------------------------------
+Logger::BPFTThread::BPFTThread() : cachedPacketSumLRUAutoDrop_(cachedPacketSumLRU_)
+{
+}
+//------------------------------------------------------------------------------
 Logger::BPFTThread::BPFTThread(
   Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage) :
-  logger_(&logger), section_(section), sectionName_(sectionName), stage_(stage)
+  logger_(&logger), section_(section), sectionName_(sectionName), stage_(stage),
+  cachedPacketSumLRUAutoDrop_(cachedPacketSumLRU_),
+  cachedPacketSumSize_(0),
+  cachedPacketSumHitCount_(0),
+  cachedPacketSumMissCount_(0)
 {
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(logger_->config_->sectionByPath("libadicpp.default_connection"));
@@ -473,7 +481,7 @@ bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
-  bool curIntr = Logger::isCurrentTimeInterval(
+  /*bool curIntr = Logger::isCurrentTimeInterval(
     curTime_,
     time2tm((uint64_t) pStatement->paramAsMutant("BT") + getgmtoffset()),
     time2tm((uint64_t) pStatement->paramAsMutant("ET") + getgmtoffset())
@@ -602,23 +610,95 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       pResult->sort("SUM1,st_src_ip,st_dst_ip");
       return;
     }
-  }
+  }*/
+  CachedPacketSum * p;
+  AutoPtr<CachedPacketSum> pktSum;
   if( pResult == NULL ){
-    *pDgramBytes = pStatement->sum("SUM1");
-    *pDataBytes = pStatement->sum("SUM2");
+    pktSum = p = newObject<CachedPacketSum>();
+    p->bt_ = pStatement->paramAsMutant("BT");
+    p->et_ = pStatement->paramAsMutant("ET");
+    p->srcAddr_.S_un.S_addr = indexToIp4Addr(pStatement->paramAsString("src"));
+    p->dstAddr_.S_un.S_addr = indexToIp4Addr(pStatement->paramAsString("dst"));
+    p->srcPort_ = ports_ ? pStatement->paramAsMutant("src_port") : 0;
+    p->dstPort_ = ports_ ? pStatement->paramAsMutant("dst_port") : 0;
+    p->proto_ = protocols_ ? pStatement->paramAsMutant("proto") : -1;
+    cachedPacketSumHash_.insert(*p,false,false,&p);
+    if( p == pktSum ){
+      pStatement->execute()->fetchAll();
+      p->pktSize_ = pStatement->sum("SUM1");
+      p->dataSize_ = pStatement->sum("SUM2");
+      pktSum.ptr(NULL);
+      if( cachedPacketSumSize_ > 0 && cachedPacketSumLRU_.count() * sizeof(CachedPacketSum) > cachedPacketSumSize_ )
+        cachedPacketSumLRU_.drop(*cachedPacketSumLRU_.last());
+      cachedPacketSumMissCount_++;
+    }
+    else {
+      cachedPacketSumLRU_.remove(*p);
+      cachedPacketSumHitCount_++;
+    }
+    cachedPacketSumLRU_.insToHead(*p);
+    *pDgramBytes = p->pktSize_;
+    *pDataBytes = p->dataSize_;
   }
   else {
-    pStatement->unloadByIndex(*pResult);
+    pStatement->execute()->fetchAll()->unloadColumns(*pResult);
+    for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
+      pStatement->selectRow(i);
+      uintmax_t sum1 = pStatement->valueAsMutant("SUM1"), sum2 = pStatement->valueAsMutant("SUM2");
+      uintptr_t row = pResult->rowCount();
+      if( sum1 < minSignificantThreshold_ ){
+        pResult->addRow();
+        pResult->cell(row,"st_src_ip") = ip4AddrToIndex(0xFFFFFFFF);
+        pResult->cell(row,"st_dst_ip") = ip4AddrToIndex(0xFFFFFFFF);
+        if( ports_ ){
+          pResult->cell(row,"st_src_port") = 0;
+          pResult->cell(row,"st_src_port") = 0;
+        }
+        if( protocols_ )
+          pResult->cell(row,"st_ip_proto") = -1;
+        pResult->cell(row,"SUM1") = pStatement->sum("SUM1",0,i);
+        pResult->cell(row,"SUM2") = pStatement->sum("SUM2",0,i);
+      }
+      else {
+        pStatement->unloadRowByIndex(pResult->addRow());
+      }
+      pktSum = p = newObject<CachedPacketSum>();
+      p->bt_ = pStatement->paramAsMutant("BT");
+      p->et_ = pStatement->paramAsMutant("ET");
+      p->srcAddr_.S_un.S_addr = indexToIp4Addr(pResult->cell(row,"st_src_ip"));
+      p->dstAddr_.S_un.S_addr = indexToIp4Addr(pResult->cell(row,"st_dst_ip"));
+      p->srcPort_ = ports_ ? pResult->cell(row,"st_src_port") : 0;
+      p->dstPort_ = ports_ ? pResult->cell(row,"st_dst_port") : 0;
+      p->proto_ = protocols_ ? pResult->cell(row,"st_ip_proto") : -1;
+      p->pktSize_ = pResult->cell(row,"SUM1");
+      p->dataSize_ = pResult->cell(row,"SUM2");
+      cachedPacketSumHash_.insert(*p,false,false,&p);
+      if( p == pktSum ){
+        pktSum.ptr(NULL);
+        if( cachedPacketSumSize_ > 0 && cachedPacketSumLRU_.count() * sizeof(CachedPacketSum) > cachedPacketSumSize_ )
+          cachedPacketSumLRU_.drop(*cachedPacketSumLRU_.last());
+        cachedPacketSumMissCount_++;
+      }
+      else {
+        cachedPacketSumLRU_.remove(*p);
+        cachedPacketSumHitCount_++;
+      }
+      cachedPacketSumLRU_.insToHead(*p);
+      if( sum1 < minSignificantThreshold_ ) break;
+    }
+//    pStatement->unloadByIndex(*pResult);
+    pResult->sort("SUM1");
   }
 }
 //------------------------------------------------------------------------------
-utf8::String Logger::BPFTThread::genHRef(uint32_t ip)
+utf8::String Logger::BPFTThread::genHRef(uint32_t ip,uintptr_t port)
 {
   utf8::String name(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip));
   utf8::String addr(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip,true));
   return
     "    <A HREF=\"http://" + name + "\">\n" + name +
     (name.strcmp(addr) == 0 ?utf8::String() : " (" + addr + ")") +
+    (port > 0 ? ":" + utf8::int2Str(port) : utf8::String()) +
     "\n    </A>\n"
   ;
 }
@@ -653,6 +733,13 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     bidirectional_ = logger_->config_->valueByPath(section_ + ".html_report.bidirectional",false);
     if( logger_->cgi_.isCGI() )
       bidirectional_ = logger_->cgi_.paramAsMutant("bidirectional");
+    protocols_ = logger_->config_->valueByPath(section_ + ".html_report.protocols",false);
+    if( logger_->cgi_.isCGI() )
+      protocols_ = logger_->cgi_.paramAsMutant("protocols");
+    ports_ = logger_->config_->valueByPath(section_ + ".html_report.ports",false);
+    if( logger_->cgi_.isCGI() )
+      ports_ = logger_->cgi_.paramAsMutant("ports");
+    if( !bidirectional_ ) protocols_ = ports_ = false;
     database_->start();
     clearBPFTCache();
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
@@ -686,34 +773,40 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
 //    stdErr.debug(9,utf8::String::Stream() << __FILE__ << ", " << __LINE__ << "\n").flush();
     if( bidirectional_ ){
       stBPFTSel_->text(
-        "SELECT"
-        "  A.*"
-        "FROM ("
-        "  SELECT"
-        "    st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "  SELECT " +
+        utf8::String(ports_ ? "st_src_ip, st_src_port, st_dst_ip, st_dst_port," : "st_src_ip, st_dst_ip,") +
+        utf8::String(protocols_ ? " st_ip_proto," : "") +
+        "    SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
         "  FROM"
         "    INET_BPFT_STAT"
         "  WHERE "
         "    st_if = :st_if AND"
         "    st_start >= :BT AND st_start <= :ET " +
         (filter_.isNull() ? utf8::String() : " AND " + filter_) +
-        "  GROUP BY st_src_ip, st_dst_ip"/* +
+        "  GROUP BY " +
+        (ports_ ? "st_src_ip, st_src_port, st_dst_ip, st_dst_port " : "st_src_ip, st_dst_ip ") +
+        (protocols_ ? ", st_ip_proto " : "") +
+        "  ORDER BY SUM1"
+        /* +
         utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ?
           "  PLAN (INET_BPFT_STAT INDEX (IBS_IDX4))" : "") +*/
-        ") AS A "
-        "ORDER BY A.SUM1"
       );
       stBPFTHostSel_->text(
         "SELECT"
-        "  st_src_ip, st_dst_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2 "
+        "  SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2 "
         "FROM"
         "  INET_BPFT_STAT "
         "WHERE"
         "  st_if = :st_if AND"
         "  st_start >= :BT AND st_start <= :ET AND"
         "  st_src_ip = :src AND st_dst_ip = :dst" +
-        (filter_.isNull() ? utf8::String() : " AND " + filter_) +
-        " GROUP BY st_src_ip, st_dst_ip"/* +
+        utf8::String(ports_ ? 
+          " AND st_src_port = :src_port AND st_dst_port = :dst_port" : ""
+        ) +
+        utf8::String(protocols_ ? 
+          " AND st_ip_proto = :proto " : ""
+        )
+        /* +
         utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ?
           " PLAN (INET_BPFT_STAT INDEX (IBS_IDX4))" : "")*/
       );
@@ -749,15 +842,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         (filter_.isNull() ? utf8::String() : "WHERE "  + filter_) +
         "ORDER BY SUM1"
       );
-      stBPFTHostSel_->text(
+      stBPFTHostSel_->text(// переписать через вложеный 
         "SELECT"
-        "  *"
+        "  SUM(A.SUM1) AS SUM1, SUM(A.SUM2) AS SUM2 "
         "FROM ("
-        "  SELECT"
-        "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
-        "  FROM ("
         "      SELECT"
-        "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
         "      FROM"
         "        INET_BPFT_STAT"
         "      WHERE "
@@ -767,7 +857,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "      GROUP BY st_dst_ip"
         "    UNION ALL"
         "      SELECT"
-        "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+        "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
         "      FROM"
         "        INET_BPFT_STAT"
         "      WHERE "
@@ -775,10 +865,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "        st_start >= :BT AND st_start <= :ET AND"
         "        st_src_ip = :src"
         "      GROUP BY st_src_ip"
-        "  ) AS B "
-        "  GROUP BY B.st_ip"
-        ") AS A " +
-        (filter_.isNull() ? utf8::String() : "WHERE "  + filter_)
+        "  ) AS A "
+        "GROUP BY A.COLIDX"
       );
     }
     stBPFTSel_->prepare()->paramAsString("st_if",sectionName_);
@@ -1062,12 +1150,19 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         }
         for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
           uint32_t ip41 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
+          intptr_t ip41Port = ports_ ? ksock::api.ntohs(table[0](i,"st_src_port")) : 0;
           uint32_t ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
+          intptr_t ip42Port = ports_ ? ksock::api.ntohs(table[0](i,"st_dst_port")) : 0;
+          intptr_t ipProto = protocols_ ? table[0](i,"st_ip_proto") : -1;
 	        utf8::String row(
             "<TR>\n"
             "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
-	          genHRef(ip41) +
-	          (bidirectional_ ? " <B>--></B> " + genHRef(ip42) : utf8::String()) +
+	          genHRef(ip41,ip41Port) +
+            (bidirectional_ ?
+              " <B>--></B> " + genHRef(ip42,ip42Port) :
+              utf8::String()
+            ) +
+            (ipProto >= 0 ? " " + PCAP::protoAsString(ipProto) : "") +
             "  </TH>\n"
             "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
             formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
@@ -1097,6 +1192,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
                 paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
                 paramAsMutant("src",table[0](i,"st_src_ip"))->
                 paramAsMutant("dst",table[0](i,"st_dst_ip"));
+              if( ports_ )
+                stBPFTHostSel_->
+                  paramAsMutant("src_port",table[0](i,"st_src_port"))->
+                  paramAsMutant("dst_port",table[0](i,"st_dst_port"));
+              if( protocols_ )
+                stBPFTHostSel_->paramAsMutant("proto",ipProto);
               uintmax_t sum1, sum2;
               getBPFTCached(stBPFTHostSel_,NULL,&sum1,&sum2);
               row +=
@@ -1240,6 +1341,28 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           )
         ;
     }
+    m0 = cachedPacketSumHitCount_ + cachedPacketSumMissCount_;
+    utf8::String hitRatio2("-"), missRatio2("-");
+    if( m0 > 0 ){
+      if( cachedPacketSumHitCount_ > 0 )
+        hitRatio2 =
+          utf8::int2Str(cachedPacketSumHitCount_ * 100u / m0) + "." +
+          utf8::int2Str0(
+            cachedPacketSumHitCount_ * 10000u / m0 - 
+            cachedPacketSumHitCount_ * 100u / m0 * 100u,
+	          2
+          )
+        ;
+      if( cachedPacketSumMissCount_ > 0 )
+        missRatio2 =
+          utf8::int2Str(cachedPacketSumMissCount_ * 100u / m0) + "." +
+          utf8::int2Str0(
+            cachedPacketSumMissCount_ * 10000u / m0 - 
+            cachedPacketSumMissCount_ * 100u / m0 * 100u,
+            2
+          )
+        ;
+    }
     f <<
       "Interface: " + sectionName_ + "<BR>\n" +
       "Filter: <B>" + filter + "</B>, hash: " + filterHash_ + "<BR>\n" +
@@ -1249,6 +1372,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       "hit ratio: " + hitRatio + ", " +
       "miss: " + utf8::int2Str(logger_->dnsCacheMissCount_) + ", " +
       "miss ratio: " + missRatio +
+      "<BR>\n"
+      "PKTSUM cache size: " + utf8::int2Str(cachedPacketSumLRU_.count() * sizeof(CachedPacketSum)) + ", "
+      "hit: " + utf8::int2Str(cachedPacketSumHitCount_) + ", " +
+      "hit ratio: " + hitRatio2 + ", " +
+      "miss: " + utf8::int2Str(cachedPacketSumMissCount_) + ", " +
+      "miss ratio: " + missRatio2 +
       "<BR>\n"
     ;
     logger_->writeHtmlTail(f,ellapsed_);

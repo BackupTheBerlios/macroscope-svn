@@ -221,15 +221,15 @@ class Logger {
         }
         static uintptr_t keyNodeHash(const DNSCacheEntry & object){
 #if SIZEOF_SOCKADDR_IN6
-	  if( object.addr4_.sin_family == PF_INET6 )
+	        if( object.addr4_.sin_family == PF_INET6 )
             return HF::hash(&object.addr6_.sin6_addr,sizeof(object.addr6_.sin6_addr));
 #endif
           return HF::hash(&object.addr4_.sin_addr,sizeof(object.addr4_.sin_addr));
-	}
+	      }
         static bool keyHashNodeEqu(const DNSCacheEntry & object1,const DNSCacheEntry & object2){
-	  assert( object1.addr4_.sin_family == object2.addr4_.sin_family );
+	        assert( object1.addr4_.sin_family == object2.addr4_.sin_family );
 #if SIZEOF_SOCKADDR_IN6
-	  if( object1.addr4_.sin_family == PF_INET6 )
+	        if( object1.addr4_.sin_family == PF_INET6 )
             return memcmp(&object1.addr6_.sin6_addr,&object2.addr6_.sin6_addr,sizeof(object2.addr6_.sin6_addr)) == 0;
 #endif
           return memcmp(&object1.addr4_.sin_addr,&object2.addr4_.sin_addr,sizeof(object2.addr4_.sin_addr)) == 0;
@@ -273,11 +273,97 @@ class Logger {
     class BPFTThread : public Thread {
       public:
         ~BPFTThread();
-        BPFTThread() {}
+        BPFTThread();
         BPFTThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage);
 
         void threadExecute();
       protected:
+        class CachedPacketSum {
+          public:
+            static EmbeddedHashNode<CachedPacketSum,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t &){
+	            return *reinterpret_cast<EmbeddedHashNode<CachedPacketSum,uintptr_t> *>(link);
+	          }
+	          static uintptr_t ehLTN(const EmbeddedHashNode<CachedPacketSum,uintptr_t> & node,uintptr_t &){
+	            return reinterpret_cast<uintptr_t>(&node);
+	          }
+	          static EmbeddedHashNode<CachedPacketSum,uintptr_t> & keyNode(const CachedPacketSum & object){
+	            return object.keyNode_;
+	          }
+	          static CachedPacketSum & keyNodeObject(const EmbeddedHashNode<CachedPacketSum,uintptr_t> & node,CachedPacketSum * p){
+	            return node.object(p->keyNode_);
+	          }
+	          static uintptr_t keyNodeHash(const CachedPacketSum & object){
+	            uintptr_t h = HF::hash(&object.bt_,sizeof(object.bt_));
+              h = HF::hash(&object.et_,sizeof(object.et_),h);
+	            h = HF::hash(&object.srcAddr_,sizeof(object.srcAddr_),h);
+	            h = HF::hash(&object.dstAddr_,sizeof(object.dstAddr_),h);
+	            h = HF::hash(&object.srcPort_,sizeof(object.srcPort_),h);
+	            h = HF::hash(&object.dstPort_,sizeof(object.dstPort_),h);
+	            return HF::hash(&object.proto_,sizeof(object.proto_),h);
+            }
+            static bool keyHashNodeEqu(const CachedPacketSum & object1,const CachedPacketSum & object2){
+              bool c = object1.bt_ == object2.bt_;
+              if( c ){
+                c = object1.et_ == object2.et_;
+                if( c ){
+                  c = memcmp(&object1.srcAddr_,&object2.srcAddr_,sizeof(&object1.srcAddr_)) == 0;
+	                if( c ){
+	                  c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_)) == 0;
+	                  if( c ){
+                      c = object1.srcPort_ == object2.srcPort_;
+                      if( c ){
+                        c = object1.dstPort_ == object2.dstPort_;
+                        if( c ) c = object1.proto_ == object2.proto_;
+                      }
+	                  }
+                  }
+                }
+	            }
+              return c;
+            }
+            mutable EmbeddedHashNode<CachedPacketSum,uintptr_t> keyNode_;
+
+            static EmbeddedListNode<CachedPacketSum> & listNode(const CachedPacketSum & object){
+              return object.listNode_;
+            }
+            static CachedPacketSum & listNodeObject(const EmbeddedListNode<CachedPacketSum> & node,CachedPacketSum * p = NULL){
+              return node.object(p->listNode_);
+            }
+            mutable EmbeddedListNode<CachedPacketSum> listNode_;
+
+    	      uint64_t bt_;
+    	      uint64_t et_;
+            uintmax_t pktSize_;
+            uintmax_t dataSize_;
+            struct in_addr srcAddr_;
+            struct in_addr dstAddr_;
+            uint16_t srcPort_;
+            uint16_t dstPort_;
+            int16_t proto_;
+        };
+        typedef EmbeddedHash<
+          CachedPacketSum,
+          uintptr_t,
+          uintptr_t,
+          CachedPacketSum::ehNLT,
+          CachedPacketSum::ehLTN,
+          CachedPacketSum::keyNode,
+          CachedPacketSum::keyNodeObject,
+          CachedPacketSum::keyNodeHash,
+          CachedPacketSum::keyHashNodeEqu
+        > CachedPacketSumHash;
+        CachedPacketSumHash cachedPacketSumHash_;
+        typedef EmbeddedList<
+          CachedPacketSum,
+          CachedPacketSum::listNode,
+          CachedPacketSum::listNodeObject
+        > CachedPacketSumLRU;
+        CachedPacketSumLRU cachedPacketSumLRU_;
+        AutoDrop<CachedPacketSumLRU> cachedPacketSumLRUAutoDrop_;
+        uintptr_t cachedPacketSumSize_;
+        uintmax_t cachedPacketSumHitCount_;
+        uintmax_t cachedPacketSumMissCount_;
+
         Logger * logger_;
         utf8::String section_;
         utf8::String sectionName_;
@@ -289,9 +375,11 @@ class Logger {
 	      struct tm cgiET_;
         utf8::String filter_;
         utf8::String filterHash_;
+        uintptr_t stage_;
         bool resolveDNSNames_;
         bool bidirectional_;
-        uintptr_t stage_;
+        bool protocols_;
+        bool ports_;
 
         AutoPtr<Database> database_;
         AutoPtr<Statement> statement_;
@@ -306,18 +394,18 @@ class Logger {
         AutoPtr<Statement> stBPFTCacheHostSel_;
 
         AutoPtr<Database> dbtrUpdate_;
-	AutoPtr<Statement> stBPFTCacheSelForUpdate_;
+	      AutoPtr<Statement> stBPFTCacheSelForUpdate_;
         AutoPtr<Statement> stBPFTCacheIns_;
-	AutoPtr<Statement> stBPFTCacheUpd_;
+	      AutoPtr<Statement> stBPFTCacheUpd_;
         AutoPtr<Statement> stDNSCache_[3];
 
         void parseBPFTLogFile();
         enum { rlYear, rlMon, rlDay, rlCount };
         void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
-	bool getBPFTCachedHelper(Statement * & pStatement);
+	      bool getBPFTCachedHelper(Statement * & pStatement);
         void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
         void clearBPFTCache();
-        utf8::String genHRef(uint32_t ip);
+        utf8::String genHRef(uint32_t ip,uintptr_t port);
       private:
     };
     friend class BPFTThread;

@@ -89,6 +89,74 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 #endif
 }
 //---------------------------------------------------------------------------
+Mutant getProcessPriority()
+{
+  Mutant m;
+#if defined(__WIN32__) || defined(__WIN64__)
+  switch( GetPriorityClass(GetCurrentProcess()) ){
+    case IDLE_PRIORITY_CLASS :
+      m = "IDLE_PRIORITY_CLASS";
+      break;
+    case BELOW_NORMAL_PRIORITY_CLASS :
+      m = "BELOW_NORMAL_PRIORITY_CLASS";
+      break;
+    case NORMAL_PRIORITY_CLASS :
+      m = "NORMAL_PRIORITY_CLASS";
+      break;
+    case ABOVE_NORMAL_PRIORITY_CLASS :
+      m = "ABOVE_NORMAL_PRIORITY_CLASS";
+      break;
+    case HIGH_PRIORITY_CLASS :
+      m = "HIGH_PRIORITY_CLASS";
+      break;
+    case REALTIME_PRIORITY_CLASS :
+      m = "REALTIME_PRIORITY_CLASS";
+      break;
+    default :
+      m = GetPriorityClass(GetCurrentProcess());
+  }
+#endif
+  return m;
+}
+//---------------------------------------------------------------------------
+void setProcessPriority(const Mutant & m)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  int32_t err = 0;
+  BOOL r;
+  try {
+    r = SetPriorityClass(GetCurrentProcess(),m);
+    if( r == 0 ) err = GetLastError();
+  }
+  catch( ExceptionSP & ){
+    r = 0;
+  }
+  if( r == 0 && err == 0 ){
+    utf8::String s(m);
+    if( s.strcasecmp("IDLE_PRIORITY_CLASS") == 0 )
+      r = SetPriorityClass(GetCurrentProcess(),IDLE_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
+      r = SetPriorityClass(GetCurrentProcess(),BELOW_NORMAL_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("NORMAL_PRIORITY_CLASS") == 0 )
+      r = SetPriorityClass(GetCurrentProcess(),NORMAL_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
+      r = SetPriorityClass(GetCurrentProcess(),ABOVE_NORMAL_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("HIGH_PRIORITY_CLASS") == 0 )
+      r = SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("REALTIME_PRIORITY_CLASS") == 0 )
+      r = SetPriorityClass(GetCurrentProcess(),REALTIME_PRIORITY_CLASS);
+    err = GetLastError();
+  }
+  if( r == 0 && err != 0 )
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+#endif
+}
+//---------------------------------------------------------------------------
 utf8::String getEnv(const utf8::String & name)
 {
 #if defined(__WIN32__) || defined(__WIN64__)

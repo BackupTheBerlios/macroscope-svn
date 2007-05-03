@@ -32,12 +32,16 @@ namespace ksys {
 extern bool stackBackTrace;
 utf8::String getBackTrace(/*intptr_t flags = pdbutils::DbgFrameGetAll,*/intptr_t skipCount = 0,Thread * thread = NULL);
 //---------------------------------------------------------------------------
+Mutant getProcessPriority();
+void setProcessPriority(const Mutant & m);
+//---------------------------------------------------------------------------
 utf8::String getEnv(const utf8::String & name);
 void setEnv(const utf8::String & name,const utf8::String & value,bool overwrite = true);
 void putEnv(const utf8::String & string);
 void unSetEnv(const utf8::String & name);
 //---------------------------------------------------------------------------
-#if HAVE_SIGNAL_H
+#if defined(__WIN32__) || defined(__WIN64__)
+#elif HAVE_SIGNAL_H
 extern uilock_t signalsCounters[_SIG_MAXSIG];
 void waitForAnySignal();
 #endif
