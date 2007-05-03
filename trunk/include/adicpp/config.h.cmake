@@ -146,6 +146,7 @@
 #cmakedefine SIZEOF__STAT64 ${SIZEOF__STAT64}
 #cmakedefine SIZEOF_KEVENT ${SIZEOF_KEVENT}
 #cmakedefine SIZEOF_UTIMBUF ${SIZEOF_UTIMBUF}
+#cmakedefine SIZEOF_UCONTEXT_T ${SIZEOF_UCONTEXT_T}
 
 #cmakedefine HAVE_CHOWN 1
 #cmakedefine HAVE_OPENDIR 1

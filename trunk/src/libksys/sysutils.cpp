@@ -1924,33 +1924,6 @@ int32_t waitForProcess(pid_t pid)
 #endif
 }
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-static BOOL WINAPI consoleCtrlHandler(DWORD dwCtrlType)
-{
-  switch( dwCtrlType ){
-    default                  :
-    case CTRL_C_EVENT        :
-    case CTRL_BREAK_EVENT    :
-    case CTRL_CLOSE_EVENT    :
-    case CTRL_LOGOFF_EVENT   :
-    case CTRL_SHUTDOWN_EVENT :
-      while( PostThreadMessage(mainThreadId,WM_QUIT,0,0) == 0 ) ksleep1();
-  }
-  return TRUE;
-}
-#else
-static uint8_t sigSemPlaceHolder[sizeof(Semaphore)];
-static inline Semaphore & sigSem()
-{
-  return *reinterpret_cast<Semaphore *>(sigSemPlaceHolder);
-}
-static uintptr_t sigCount[_SIG_MAXSIG];
-static void sigTERMHandler(int,struct __siginfo *,void *)
-{
-  sigSem.wait();
-}
-#endif
-//---------------------------------------------------------------------------
 static uint64_t processStartTime;
 int64_t getProcessStartTime(bool toLocalTime)
 {
@@ -2925,6 +2898,38 @@ void initializeArguments(int argc,char ** argv)
   while( --argc >= 0 ) ksys::argv()[argc] = argv[argc];
 }
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+static BOOL WINAPI consoleCtrlHandler(DWORD dwCtrlType)
+{
+  switch( dwCtrlType ){
+    default                  :
+    case CTRL_C_EVENT        :
+    case CTRL_BREAK_EVENT    :
+    case CTRL_CLOSE_EVENT    :
+    case CTRL_LOGOFF_EVENT   :
+    case CTRL_SHUTDOWN_EVENT :
+      while( PostThreadMessage(mainThreadId,WM_QUIT,0,0) == 0 ) ksleep1();
+  }
+  return TRUE;
+}
+#elif HAVE_SIGNAL_H
+static uint8_t signalsCountersSemPlaceHolder[sizeof(Semaphore)];
+static inline Semaphore & signalsCountersSem()
+{
+  return *reinterpret_cast<Semaphore *>(signalsCountersSemPlaceHolder);
+}
+void waitForSignalsSemaphore()
+{
+  signalsCountersSem().wait();
+}
+uilock_t signalsCounters[_SIG_MAXSIG];
+static void sigHandler(int sig,siginfo_t * siginfo,ucontext_t * uap)
+{
+  interlockedIncrement(signalsCounters[sig - 1],1);
+  signalsCountersSem().post();
+}
+#endif
+//---------------------------------------------------------------------------
 void initialize(int argc,char ** argv)
 {
 // runtime checks for system or compiler incompatibilities
@@ -2967,8 +2972,10 @@ void initialize(int argc,char ** argv)
   fiberFinishMessage = RegisterWindowMessageA("A08C6FDA-1417-43C5-A17D-D146500B5886");
   SetProcessShutdownParameters(0x400,SHUTDOWN_NORETRY);
   SetConsoleCtrlHandler(consoleCtrlHandler,TRUE);
-#elif HAVE_SIGNAL_H
+#else
   if( processStartTime == 0 ) processStartTime = gettimeofday();
+#if HAVE_SIGNAL_H
+  new (signalsCountersSemPlaceHolder) Semaphore;
   sigset_t ss;
   if( sigemptyset(&ss) != 0 ||
       sigaddset(&ss,SIGSYS) != 0 ||
@@ -2976,6 +2983,20 @@ void initialize(int argc,char ** argv)
     perror(NULL);
     abort();
   }
+  struct sigaction act;//, oact;
+  memset(&act,0,sizeof(act));
+  act.sa_flags = SA_SIGINFO;
+  act.sa_handler = (void (*)(int)) sigHandler;
+  if( sigaction(SIGHUP,&act,NULL) != 0 ||
+      sigaction(SIGINT,&act,NULL) != 0 ||
+      sigaction(SIGQUIT,&act,NULL) != 0 ||
+      sigaction(SIGTERM,&act,NULL) != 0 ||
+      sigaction(SIGXCPU,&act,NULL) != 0 ||
+      sigaction(SIGXFSZ,&act,NULL) != 0 ){
+    perror(NULL);
+    abort();
+  }
+#endif
 #endif
   Object::initialize();
   LZO1X::initialize();
@@ -3072,6 +3093,8 @@ void cleanup()
   Object::cleanup();
 #if defined(__WIN32__) || defined(__WIN64__)
   SetConsoleCtrlHandler(consoleCtrlHandler,FALSE);
+#elif HAVE_SIGNAL_H
+  signalsCountersSem().~Semaphore();
 #endif
 }
 //---------------------------------------------------------------------------

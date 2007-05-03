@@ -612,7 +612,13 @@ uintptr_t Thread::waitForSignal(uintptr_t mId)
 uintptr_t Thread::waitForSignal(uintptr_t sId)
 {
   for(;;){
-    if( SIGINT SIGQUIT SIGTERM
+    waitForAnySignal();
+    if( sId == 0 ){
+      if( signalsCounters[SIGINT - 1] > 0 ) return SIGINT;
+      if( signalsCounters[SIGQUIT - 1] > 0 ) return SIGQUIT;
+      if( signalsCounters[SIGTERM - 1] > 0 ) return SIGTERM;
+    }
+    else if( signalsCounters[sId - 1] > 0 ) return sId;
   }
 }
 //---------------------------------------------------------------------------

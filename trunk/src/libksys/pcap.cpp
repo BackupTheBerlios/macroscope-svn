@@ -126,8 +126,13 @@ class PCAP_API {
     char * PROTOF(pcap_geterr)(pcap_t *);
     int PROTOF(pcap_setmode)(pcap_t *,int mode);
 
+#if defined(__WIN32__) || defined(__WIN64__)
     PCAP_API & open();
     PCAP_API & close();
+#else
+    PCAP_API & open() { return *this; }
+    PCAP_API & close() { return *this; }
+#endif
   protected:
 #if defined(__WIN32__) || defined(__WIN64__)
     HINSTANCE handle_;
@@ -141,6 +146,8 @@ class PCAP_API {
 };
 //------------------------------------------------------------------------------
 static PCAP_API api;
+//------------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
 //------------------------------------------------------------------------------
 PCAP_API & PCAP_API::open()
 {
@@ -160,7 +167,6 @@ PCAP_API & PCAP_API::open()
     "pcap_setmode"
   };
   AutoLock<InterlockedMutex> lock(api.mutex());
-#if defined(__WIN32__) || defined(__WIN64__)
   if( isWin9x() ){
     api.handle_ = LoadLibraryExA("wpcap.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
   }
@@ -188,7 +194,6 @@ PCAP_API & PCAP_API::open()
       newObjectV1C2<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
     }
   }
-#endif
   api.count_++;
   return *this;
 }
@@ -198,26 +203,30 @@ PCAP_API & PCAP_API::close()
   AutoLock<InterlockedMutex> lock(mutex());
   assert( count_ > 0 );
   if( count_ == 1 ){
-#if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);
     handle_ = NULL;
-#endif
   }
   count_--;
   return *this;
 }
 //------------------------------------------------------------------------------
+#endif
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 void PCAP::initialize()
 {
+#if defined(__WIN32__) || defined(__WIN64__)
   new (api.mutex_) InterlockedMutex;
   api.count_ = 0;
+#endif
 }
 //------------------------------------------------------------------------------
 void PCAP::cleanup()
 {
+#if defined(__WIN32__) || defined(__WIN64__)
   api.mutex().~InterlockedMutex();
+#endif
 }
 //------------------------------------------------------------------------------
 PCAP::~PCAP()
@@ -238,17 +247,14 @@ PCAP::PCAP() : handle_(NULL), groupingPeriod_(pgpNone),
 }
 //------------------------------------------------------------------------------
 /* From tcptraceroute, convert a numeric IP address to a string */
-#define IPTOSBUFFERS	12
-static inline char * iptos(u_long in)
+static inline utf8::String iptos(u_long in)
 {
-	static char output[IPTOSBUFFERS][3*4+3+1];
-	static short which;
-	u_char *p;
-
-	p = (u_char *)&in;
-	which = (which + 1 == IPTOSBUFFERS ? 0 : which + 1);
-	sprintf(output[which], "%d.%d.%d.%d", p[0], p[1], p[2], p[3]);
-	return output[which];
+  char output[3 * 4 + 3 + 1];
+  u_char * p;
+  
+  p = (u_char *)&in;
+  sprintf(output,"%d.%d.%d.%d",p[0],p[1],p[2],p[3]);
+  return output;
 }
 //------------------------------------------------------------------------------
 /*#ifndef __MINGW32__ // Cygnus doesn't have IPv6
@@ -303,13 +309,13 @@ void PCAP::printAllDevices()
         case AF_INET:
           fprintf(stdout,"\tAddress Family Name: AF_INET\n");
           if( a->addr )
-            fprintf(stdout,"\tAddress: %s\n",iptos(((struct sockaddr_in *)a->addr)->sin_addr.s_addr));
+            fprintf(stdout,"\tAddress: %s\n",(const char *) iptos(((struct sockaddr_in *)a->addr)->sin_addr.s_addr).getOEMString());
           if( a->netmask )
-            fprintf(stdout,"\tNetmask: %s\n",iptos(((struct sockaddr_in *)a->netmask)->sin_addr.s_addr));
+            fprintf(stdout,"\tNetmask: %s\n",(const char *) iptos(((struct sockaddr_in *)a->netmask)->sin_addr.s_addr).getOEMString());
           if( a->broadaddr )
-            fprintf(stdout,"\tBroadcast Address: %s\n",iptos(((struct sockaddr_in *)a->broadaddr)->sin_addr.s_addr));
+            fprintf(stdout,"\tBroadcast Address: %s\n",(const char *) iptos(((struct sockaddr_in *)a->broadaddr)->sin_addr.s_addr).getOEMString());
           if( a->dstaddr )
-            fprintf(stdout,"\tDestination Address: %s\n",iptos(((struct sockaddr_in *)a->dstaddr)->sin_addr.s_addr));
+            fprintf(stdout,"\tDestination Address: %s\n",(const char *) iptos(((struct sockaddr_in *)a->dstaddr)->sin_addr.s_addr).getOEMString());
           break;
   	    /*case AF_INET6:
           fprintf(stdout,"\tAddress Family Name: AF_INET6\n");
@@ -324,9 +330,9 @@ void PCAP::printAllDevices()
       }
     }
     fprintf(stdout,"\n");
-	}
-	/* Free the device list */
-	api.pcap_freealldevs(alldevs);
+  }
+/* Free the device list */
+  api.pcap_freealldevs(alldevs);
   api.close();
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
@@ -577,7 +583,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 #endif
 }
 //------------------------------------------------------------------------------
-bool PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintptr_t)
+bool PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintptr_t) throw()
 {
   return true;
 }

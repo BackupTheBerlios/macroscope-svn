@@ -37,6 +37,11 @@ void setEnv(const utf8::String & name,const utf8::String & value,bool overwrite 
 void putEnv(const utf8::String & string);
 void unSetEnv(const utf8::String & name);
 //---------------------------------------------------------------------------
+#if HAVE_SIGNAL_H
+extern uilock_t signalsCounters[_SIG_MAXSIG];
+void waitForAnySignal();
+#endif
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DirectoryChangeNotification {

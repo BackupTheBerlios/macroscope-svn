@@ -241,6 +241,10 @@
 #include <math.h>
 #endif
 
+#if HAVE_UCONTEXT_H
+#include <ucontext.h>
+#endif
+
 // C++ headers
 #ifdef __cplusplus
 

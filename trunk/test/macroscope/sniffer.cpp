@@ -38,7 +38,7 @@ Sniffer::Sniffer(Database * database) : database_(database)
 {
 }
 //------------------------------------------------------------------------------
-bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count)
+bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count) throw()
 {
   bool r = true;
   try {

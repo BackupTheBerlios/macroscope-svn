@@ -357,6 +357,7 @@ SET (CMAKE_EXTRA_INCLUDE_FILES
   sys/event.h
   sys/utime.h
   sys/endian.h
+  ucontext.h
   utime.h
   uuid.h
   aio.h
