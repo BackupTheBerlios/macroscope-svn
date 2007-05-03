@@ -110,7 +110,7 @@ class PCAP_API {
 #if defined(__WIN32__) || defined(__WIN64__)
 #define PROTOF(x) (__cdecl * x)
 #else
-#define PROTOF(x) x
+#define PROTOF(x) (* x)
 #endif
     void PROTOF(pcap_breakloop)(pcap_t *);
     int	PROTOF(pcap_lookupnet)(const char *,bpf_u_int32 *,bpf_u_int32 *,char *);
@@ -126,28 +126,23 @@ class PCAP_API {
     char * PROTOF(pcap_geterr)(pcap_t *);
     int PROTOF(pcap_setmode)(pcap_t *,int mode);
 
-#if defined(__WIN32__) || defined(__WIN64__)
     PCAP_API & open();
     PCAP_API & close();
-#else
-    PCAP_API & open() { return *this; }
-    PCAP_API & close() { return *this; }
-#endif
   protected:
 #if defined(__WIN32__) || defined(__WIN64__)
     HINSTANCE handle_;
+#else
+    void * handle_;
+#endif
     intptr_t count_;
     uint8_t mutex_[sizeof(InterlockedMutex)];
     InterlockedMutex & mutex(){ return *reinterpret_cast<InterlockedMutex *>(mutex_); }
-#endif
   private:
     PCAP_API(const PCAP_API &);
     void operator = (const PCAP_API &);
 };
 //------------------------------------------------------------------------------
 static PCAP_API api;
-//------------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
 //------------------------------------------------------------------------------
 PCAP_API & PCAP_API::open()
 {
@@ -167,32 +162,56 @@ PCAP_API & PCAP_API::open()
     "pcap_setmode"
   };
   AutoLock<InterlockedMutex> lock(api.mutex());
-  if( isWin9x() ){
-    api.handle_ = LoadLibraryExA("wpcap.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
-  }
-  else{
-    api.handle_ = LoadLibraryExW(L"wpcap.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
-  }
+#if defined(__WIN32__) || defined(__WIN64__)
+#define LIB_NAME "wpcap.dll"
+//  if( isWin9x() ){
+    api.handle_ = LoadLibraryExA(LIB_NAME,NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
+//  }
+//  else{
+//    api.handle_ = LoadLibraryExW(L"wpcap.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
+//  }
+#elif HAVE_DLFCN_H
+#define LIB_NAME "libpcap.so"
+    api.handle_ = dlopen(LIB_NAME,
+#ifdef __linux__
+      RTLD_GLOBAL | RTLD_NOW
+#else
+      0
+#endif
+    );
+#endif
   if( handle_ == NULL ){
-    int32_t err = GetLastError() + errorOffset;
+    int32_t err = oserror() + errorOffset;
     stdErr.debug(
       9,
-      utf8::String::Stream() << "Load wpcap.dll failed\n"
+      utf8::String::Stream() << "Load " LIB_NAME " failed\n"
     );
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
+#undef LIB_NAME
   for( uintptr_t i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++ ){
+#if defined(__WIN32__) || defined(__WIN64__)
+#define FUNC_NAME "GetProcAddress"
     ((void **) &api.pcap_breakloop)[i] = GetProcAddress(handle_,symbols[i]);
+#elif HAVE_DLFCN_H
+#define FUNC_NAME "dlsym"
+    ((void **) &api.pcap_breakloop)[i] = dlsym(handle_,symbols[i]);
+#endif
     if( ((void **) &api.pcap_breakloop)[i] == NULL ){
-      int32_t err = GetLastError() + errorOffset;
+      int32_t err = oserror() + errorOffset;
+#if defined(__WIN32__) || defined(__WIN64__)
       FreeLibrary(handle_);
+#elif HAVE_DLFCN_H
+      dlclose(handle_);
+#endif
       handle_ = NULL;
       stdErr.debug(
         9,
-        utf8::String::Stream() << "GetProcAddress(\"" << symbols[i] << "\")\n"
+        utf8::String::Stream() << FUNC_NAME "(\"" << symbols[i] << "\")\n"
       );
-      newObjectV1C2<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
+#undef FUNC_NAME
   }
   api.count_++;
   return *this;
@@ -203,14 +222,16 @@ PCAP_API & PCAP_API::close()
   AutoLock<InterlockedMutex> lock(mutex());
   assert( count_ > 0 );
   if( count_ == 1 ){
+#if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);
+#elif HAVE_DLFCN_H
+    dlclose(handle_);
+#endif
     handle_ = NULL;
   }
   count_--;
   return *this;
 }
-//------------------------------------------------------------------------------
-#endif
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
