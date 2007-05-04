@@ -808,7 +808,7 @@ void SnifferService::stop()
 //------------------------------------------------------------------------------
 bool SnifferService::active()
 {
-  return logger_->threads_.count() > 0;
+  return logger_ != NULL && logger_->threads_.count() > 0;
 }
 //------------------------------------------------------------------------------
 } // namespace macroscope

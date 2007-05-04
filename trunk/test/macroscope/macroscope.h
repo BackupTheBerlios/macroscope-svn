@@ -405,7 +405,7 @@ class Logger {
 	      bool getBPFTCachedHelper(Statement * & pStatement);
         void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
         void clearBPFTCache();
-        utf8::String genHRef(uint32_t ip,uintptr_t port);
+        utf8::String genHRef(const in_addr & ip,uintptr_t port);
       private:
     };
     friend class BPFTThread;
@@ -421,9 +421,9 @@ class Logger {
     static void writeHtmlHead(AsyncFile & f);
     static void writeHtmlTail(AsyncFile & f,int64_t ellapsed);
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
-    utf8::String resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,uint32_t ip4,bool numeric = false);
-    static utf8::String ip4AddrToIndex(uint32_t ip4);
-    static uint32_t indexToIp4Addr(const utf8::String & index);
+    utf8::String resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,const struct in_addr & ip4,bool numeric = false);
+    static utf8::String ip4AddrToIndex(const struct in_addr & ip4);
+    static struct in_addr indexToIp4Addr(const utf8::String & index);
     utf8::String getDecor(const utf8::String & dname,const utf8::String & section);
     static utf8::String getIPFilter(const utf8::String & text);
     static bool isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,const struct tm et);

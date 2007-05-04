@@ -51,6 +51,9 @@ class SockAddr {
 #if SIZEOF_SOCKADDR_IN6
       struct sockaddr_in6 addr6_;
 #endif
+#if SIZEOF_SOCKADDR_DL
+      struct sockaddr_dl addrDL_;
+#endif
     };
 
     operator struct sockaddr_in * () { return &addr4_; }
@@ -83,6 +86,10 @@ class SockAddr {
 #endif
     utf8::String addr2Index() const;
     utf8::String saddr2Index() const;
+    static utf8::String addressFamilyAsString(uintptr_t family);
+    utf8::String addressFamilyAsString() const { return addressFamilyAsString(addr4_.sin_family); }
+    static utf8::String protoAsString(uintptr_t proto);
+    static uintptr_t stringAsProto(const utf8::String & proto);
   protected:
 #if defined(__WIN32__) || defined(__WIN64__)
     union IpInfo {
@@ -103,28 +110,26 @@ class SockAddr {
 inline socklen_t SockAddr::sockAddrSize() const
 {
   socklen_t l = 0;
-  //#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-  //  return addr4_.sin_len;
-  //#else
-  if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_);
+  if( addr4_.sin_family == AF_INET ) l = sizeof(addr4_);
 #if SIZEOF_SOCKADDR_IN6
-  else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_);
+  else if( addr6_.sin6_family == AF_INET6 ) l = sizeof(addr6_);
 #endif
-  //#endif
+#if SIZEOF_SOCKADDR_DL
+  else if( addrDL_.sdl_family == AF_LINK ) l = sizeof(addrDL_);
+#endif
   return l;
 }
 //---------------------------------------------------------------------------
 inline socklen_t SockAddr::addrSize() const
 {
   socklen_t l = 0;
-  //#if HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
-  //  return addr4_.sin_len;
-  //#else
-  if( addr4_.sin_family == PF_INET ) l = sizeof(addr4_.sin_addr);
+  if( addr4_.sin_family == AF_INET ) l = sizeof(addr4_.sin_addr);
 #if SIZEOF_SOCKADDR_IN6
-  else if( addr6_.sin6_family == PF_INET6 ) l = sizeof(addr6_.sin6_addr);
+  else if( addr6_.sin6_family == AF_INET6 ) l = sizeof(addr6_.sin6_addr);
 #endif
-  //#endif
+#if SIZEOF_SOCKADDR_DL
+  else if( addrDL_.sdl_family == AF_LINK ) l = sizeof(addrDL_);
+#endif
   return l;
 }
 //---------------------------------------------------------------------------

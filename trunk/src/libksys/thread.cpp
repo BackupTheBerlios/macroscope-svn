@@ -590,6 +590,10 @@ bool Thread::isSuspended(uintptr_t tid)
   return r;
 }
 //---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+//---------------------------------------------------------------------------
 uintptr_t Thread::waitForSignal(uintptr_t mId)
 {
   MSG msg;
@@ -607,12 +611,12 @@ uintptr_t Thread::waitForSignal(uintptr_t mId)
   return msg.message;
 }
 //---------------------------------------------------------------------------
-#else
+#elif HAVE_SIGNAL_H
 //---------------------------------------------------------------------------
 uintptr_t Thread::waitForSignal(uintptr_t sId)
 {
   for(;;){
-    waitForAnySignal();
+    waitForSignalsSemaphore();
     if( sId == 0 ){
       if( signalsCounters[SIGINT - 1] > 0 ) return SIGINT;
       if( signalsCounters[SIGQUIT - 1] > 0 ) return SIGQUIT;

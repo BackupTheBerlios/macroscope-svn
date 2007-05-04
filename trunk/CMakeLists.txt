@@ -416,8 +416,10 @@ SET (CMAKE_EXTRA_INCLUDE_FILES
   netinet/in.h
   arpa/inet.h
   sys/socket.h
+  net/if_dl.h
 )
 CHECK_TYPE_SIZE ("struct sockaddr_in6" SIZEOF_SOCKADDR_IN6)
+CHECK_TYPE_SIZE ("struct sockaddr_dl" SIZEOF_SOCKADDR_DL)
 CHECK_TYPE_SIZE (socklen_t SIZEOF_SOCKLEN_T)
 
 SET (CMAKE_EXTRA_INCLUDE_FILES sys/stat.h)

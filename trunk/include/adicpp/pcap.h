@@ -140,7 +140,6 @@ class PCAP : public Thread {
     PCAP & groupingPeriod(PacketGroupingPeriod groupingPeriod);
 
     static void printAllDevices();
-    static utf8::String protoAsString(uintptr_t proto);
 
     void setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const;
   protected:

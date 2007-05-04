@@ -109,7 +109,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
 
     bool isSocket() const;
     // low level methods
-    AsyncSocket &     open(int domain = PF_INET, int type = SOCK_STREAM, int protocol = IPPROTO_IP);
+    AsyncSocket &     open(int domain = AF_INET,int type = SOCK_STREAM,int protocol = IPPROTO_IP);
     AsyncSocket &     close();
     AsyncSocket &     shutdown(int how = SHUT_RDWR);
 

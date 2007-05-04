@@ -543,6 +543,273 @@ utf8::String SockAddr::addr2Index() const
   return utf8::String();
 }
 //---------------------------------------------------------------------------
+utf8::String SockAddr::addressFamilyAsString(uintptr_t family)
+{
+  const char * s;
+  switch( family ){
+    case AF_UNSPEC      : s = "UNSPEC"; break;
+    case AF_LOCAL       : s = "LOCAL"; break;
+    case AF_INET        : s = "INET"; break;
+    case AF_IMPLINK     : s = "IMPLINK"; break;
+    case AF_PUP         : s = "PUP"; break;
+    case AF_CHAOS       : s = "CHAOS"; break;
+    case AF_NETBIOS     : s = "NETBIOS"; break;
+    case AF_ISO         : s = "ISO"; break;
+    case AF_ECMA        : s = "ECMA"; break;
+    case AF_DATAKIT     : s = "DATAKIT"; break;
+    case AF_CCITT       : s = "CCITT"; break;
+    case AF_SNA         : s = "SNA"; break;
+    case AF_DECnet      : s = "DECnet"; break;
+    case AF_DLI         : s = "DLI"; break;
+    case AF_LAT         : s = "LAT"; break;
+    case AF_HYLINK      : s = "HYLINK"; break;
+    case AF_APPLETALK   : s = "APPLETALK"; break;
+    case AF_ROUTE       : s = "ROUTE"; break;
+    case AF_LINK        : s = "LINK"; break;
+    case AF_COIP        : s = "COIP"; break;
+    case AF_CNT         : s = "CNT"; break;
+    case AF_SIP         : s = "SIP"; break;
+    case AF_IPX         : s = "IPX"; break;
+    case AF_ISDN        : s = "ISDN"; break;
+    case AF_INET6       : s = "INET6"; break;
+    case AF_NATM        : s = "ATM"; break;
+    case AF_ATM         : s = "ATM"; break;
+    case AF_NETGRAPH    : s = "NETGRAPH"; break;
+    case AF_SLOW        : s = "SLOW"; break;
+    case AF_SCLUSTER    : s = "SCLUSTER"; break;
+    case AF_ARP         : s = "ARP"; break;
+    case AF_BLUETOOTH   : s = "BLUETOOTH"; break;
+    default             :
+      return utf8::int2Str(family);
+  }
+  return s;
+}
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+#define IPPROTO_ST              7               /* Stream protocol II */
+#define IPPROTO_EGP             8               /* exterior gateway protocol */
+#define IPPROTO_PIGP            9               /* private interior gateway */
+#define IPPROTO_RCCMON          10              /* BBN RCC Monitoring */
+#define IPPROTO_NVPII           11              /* network voice protocol*/
+#define IPPROTO_PUP             12              /* pup */
+#define IPPROTO_ARGUS           13              /* Argus */
+#define IPPROTO_EMCON           14              /* EMCON */
+#define IPPROTO_XNET            15              /* Cross Net Debugger */
+#define IPPROTO_CHAOS           16              /* Chaos*/
+#define IPPROTO_MUX             18              /* Multiplexing */
+#define IPPROTO_MEAS            19              /* DCN Measurement Subsystems */
+#define IPPROTO_HMP             20              /* Host Monitoring */
+#define IPPROTO_PRM             21              /* Packet Radio Measurement */
+#define IPPROTO_IDP             22              /* xns idp */
+#define IPPROTO_TRUNK1          23              /* Trunk-1 */
+#define IPPROTO_TRUNK2          24              /* Trunk-2 */
+#define IPPROTO_LEAF1           25              /* Leaf-1 */
+#define IPPROTO_LEAF2           26              /* Leaf-2 */
+#define IPPROTO_RDP             27              /* Reliable Data */
+#define IPPROTO_IRTP            28              /* Reliable Transaction */
+#define IPPROTO_TP              29              /* tp-4 w/ class negotiation */
+#define IPPROTO_BLT             30              /* Bulk Data Transfer */
+#define IPPROTO_NSP             31              /* Network Services */
+#define IPPROTO_INP             32              /* Merit Internodal */
+#define IPPROTO_SEP             33              /* Sequential Exchange */
+#define IPPROTO_3PC             34              /* Third Party Connect */
+#define IPPROTO_IDPR            35              /* InterDomain Policy Routing */
+#define IPPROTO_XTP             36              /* XTP */
+#define IPPROTO_DDP             37              /* Datagram Delivery */
+#define IPPROTO_CMTP            38              /* Control Message Transport */
+#define IPPROTO_TPXX            39              /* TP++ Transport */
+#define IPPROTO_IL              40              /* IL transport protocol */
+#define IPPROTO_IPV6            41              /* IP6 header */
+#define IPPROTO_SDRP            42              /* Source Demand Routing */
+#define IPPROTO_ROUTING         43              /* IP6 routing header */
+#define IPPROTO_FRAGMENT        44              /* IP6 fragmentation header */
+#define IPPROTO_IDRP            45              /* InterDomain Routing*/
+#define IPPROTO_RSVP            46              /* resource reservation */
+#define IPPROTO_GRE             47              /* General Routing Encap. */
+#define IPPROTO_MHRP            48              /* Mobile Host Routing */
+#define IPPROTO_BHA             49              /* BHA */
+#define IPPROTO_ESP             50              /* IP6 Encap Sec. Payload */
+#define IPPROTO_INLSP           52              /* Integ. Net Layer Security */
+#define IPPROTO_SWIPE           53              /* IP with encryption */
+#define IPPROTO_NHRP            54              /* Next Hop Resolution */
+#define IPPROTO_MOBILE          55              /* IP Mobility */
+#define IPPROTO_TLSP            56              /* Transport Layer Security */
+#define IPPROTO_SKIP            57              /* SKIP */
+#define IPPROTO_ICMPV6          58              /* ICMP6 */
+#define IPPROTO_NONE            59              /* IP6 no next header */
+#define IPPROTO_DSTOPTS         60              /* IP6 destination option */
+#define IPPROTO_AHIP            61              /* any host internal protocol */
+#define IPPROTO_CFTP            62              /* CFTP */
+#define IPPROTO_HELLO           63              /* "hello" routing protocol */
+#define IPPROTO_SATEXPAK        64              /* SATNET/Backroom EXPAK */
+#define IPPROTO_KRYPTOLAN       65              /* Kryptolan */
+#define IPPROTO_RVD             66              /* Remote Virtual Disk */
+#define IPPROTO_IPPC            67              /* Pluribus Packet Core */
+#define IPPROTO_ADFS            68              /* Any distributed FS */
+#define IPPROTO_SATMON          69              /* Satnet Monitoring */
+#define IPPROTO_VISA            70              /* VISA Protocol */
+#define IPPROTO_IPCV            71              /* Packet Core Utility */
+#define IPPROTO_CPNX            72              /* Comp. Prot. Net. Executive */
+#define IPPROTO_CPHB            73              /* Comp. Prot. HeartBeat */
+#define IPPROTO_WSN             74              /* Wang Span Network */
+#define IPPROTO_PVP             75              /* Packet Video Protocol */
+#define IPPROTO_BRSATMON        76              /* BackRoom SATNET Monitoring */
+#define IPPROTO_ND              77              /* Sun net disk proto (temp.) */
+#define IPPROTO_WBMON           78              /* WIDEBAND Monitoring */
+#define IPPROTO_WBEXPAK         79              /* WIDEBAND EXPAK */
+#define IPPROTO_EON             80              /* ISO cnlp */
+#define IPPROTO_VMTP            81              /* VMTP */
+#define IPPROTO_SVMTP           82              /* Secure VMTP */
+#define IPPROTO_VINES           83              /* Banyon VINES */
+#define IPPROTO_TTP             84              /* TTP */
+#define IPPROTO_IGP             85              /* NSFNET-IGP */
+#define IPPROTO_DGP             86              /* dissimilar gateway prot. */
+#define IPPROTO_TCF             87              /* TCF */
+#define IPPROTO_IGRP            88              /* Cisco/GXS IGRP */
+#define IPPROTO_OSPFIGP         89              /* OSPFIGP */
+#define IPPROTO_SRPC            90              /* Strite RPC protocol */
+#define IPPROTO_LARP            91              /* Locus Address Resoloution */
+#define IPPROTO_MTP             92              /* Multicast Transport */
+#define IPPROTO_AX25            93              /* AX.25 Frames */
+#define IPPROTO_IPEIP           94              /* IP encapsulated in IP */
+#define IPPROTO_MICP            95              /* Mobile Int.ing control */
+#define IPPROTO_SCCSP           96              /* Semaphore Comm. security */
+#define IPPROTO_ETHERIP         97              /* Ethernet IP encapsulation */
+#define IPPROTO_ENCAP           98              /* encapsulation header */
+#define IPPROTO_APES            99              /* any private encr. scheme */
+#define IPPROTO_GMTP            100             /* GMTP*/
+#define IPPROTO_IPCOMP          108             /* payload compression (IPComp) */
+#define IPPROTO_SCTP            132             /* SCTP */
+#define IPPROTO_PIM             103             /* Protocol Independent Mcast */
+#define IPPROTO_CARP            112             /* CARP */
+#define IPPROTO_PGM             113             /* PGM */
+#define IPPROTO_PFSYNC          240             /* PFSYNC */
+#endif
+static const struct {
+  const char * const name_;
+  uint8_t proto_;
+} protos[] = {
+  {          "", IPPROTO_IP        },
+  {      "ICMP", IPPROTO_ICMP      },
+  {      "IGMP", IPPROTO_IGMP      },
+  {       "GGP", IPPROTO_GGP       },
+  {      "IPV4", IPPROTO_IPV4      },
+  {       "TCP", IPPROTO_TCP       },
+  {        "ST", IPPROTO_ST        },
+  {       "EGP", IPPROTO_EGP       },
+  {      "PIGP", IPPROTO_PIGP      },
+  {    "RCCMON", IPPROTO_RCCMON    },
+  {     "NVPII", IPPROTO_NVPII     },
+  {       "PUP", IPPROTO_PUP       },
+  {     "ARGUS", IPPROTO_ARGUS     },
+  {     "EMCON", IPPROTO_EMCON     },
+  {      "XNET", IPPROTO_XNET      },
+  {     "CHAOS", IPPROTO_CHAOS     },
+  {       "UDP", IPPROTO_UDP       },
+  {       "MUX", IPPROTO_MUX       },
+  {      "MEAS", IPPROTO_MEAS      },
+  {       "HMP", IPPROTO_HMP       },
+  {       "PRM", IPPROTO_PRM       },
+  {       "IDP", IPPROTO_IDP       },
+  {    "TRUNK1", IPPROTO_TRUNK1    },
+  {    "TRUNK2", IPPROTO_TRUNK2    },
+  {     "LEAF1", IPPROTO_LEAF1     },
+  {     "LEAF2", IPPROTO_LEAF2     },
+  {       "RDP", IPPROTO_RDP       },
+  {      "IRTP", IPPROTO_IRTP      },
+  {        "TP", IPPROTO_TP        },
+  {       "BLT", IPPROTO_BLT       },
+  {       "NSP", IPPROTO_NSP       },
+  {       "INP", IPPROTO_INP       },
+  {       "SEP", IPPROTO_SEP       },
+  {       "3PC", IPPROTO_3PC       },
+  {      "IDPR", IPPROTO_IDPR      },
+  {       "XTP", IPPROTO_XTP       },
+  {       "DDP", IPPROTO_DDP       },
+  {      "CMTP", IPPROTO_CMTP      },
+  {      "TPXX", IPPROTO_TPXX      },
+  {        "IL", IPPROTO_IL        },
+  {      "IPV6", IPPROTO_IPV6      },
+  {      "SDRP", IPPROTO_SDRP      },
+  {   "ROUTING", IPPROTO_ROUTING   },
+  {  "FRAGMENT", IPPROTO_FRAGMENT  },
+  {      "IDRP", IPPROTO_IDRP      },
+  {      "RSVP", IPPROTO_RSVP      },
+  {       "GRE", IPPROTO_GRE       },
+  {      "MHRP", IPPROTO_MHRP      },
+  {       "BHA", IPPROTO_BHA       },
+  {       "ESP", IPPROTO_ESP       },
+  {        "AH", IPPROTO_AH        },
+  {     "INLSP", IPPROTO_INLSP     },
+  {     "SWIPE", IPPROTO_SWIPE     },
+  {      "NHRP", IPPROTO_NHRP      },
+  {    "MOBILE", IPPROTO_MOBILE    },
+  {      "TLSP", IPPROTO_TLSP      },
+  {      "SKIP", IPPROTO_SKIP      },
+  {    "ICMPV6", IPPROTO_ICMPV6    },
+  {      "NONE", IPPROTO_NONE      },
+  {   "DSTOPTS", IPPROTO_DSTOPTS   },
+  {      "AHIP", IPPROTO_AHIP      },
+  {      "CFTP", IPPROTO_CFTP      },
+  {     "HELLO", IPPROTO_HELLO     },
+  {   "SATEPAK", IPPROTO_SATEXPAK  },
+  { "KRYPTOLAN", IPPROTO_KRYPTOLAN },
+  {       "RVD", IPPROTO_RVD       },
+  {      "IPPC", IPPROTO_IPPC      },
+  {      "ADFS", IPPROTO_ADFS      },
+  {    "SATMON", IPPROTO_SATMON    },
+  {      "VISA", IPPROTO_VISA      },
+  {      "IPCV", IPPROTO_IPCV      },
+  {      "CPNX", IPPROTO_CPNX      },
+  {      "CPHB", IPPROTO_CPHB      },
+  {       "WSN", IPPROTO_WSN       },
+  {       "PVP", IPPROTO_PVP       },
+  {  "BRSATMON", IPPROTO_BRSATMON  },
+  {        "ND", IPPROTO_ND        },
+  {     "WBMON", IPPROTO_WBMON     },
+  {   "WBEXPAK", IPPROTO_WBEXPAK   },
+  {       "EON", IPPROTO_EON       },
+  {      "VMTP", IPPROTO_VMTP      },
+  {     "SVMTP", IPPROTO_SVMTP     },
+  {     "VINES", IPPROTO_VINES     },
+  {       "TTP", IPPROTO_TTP       },
+  {       "IGP", IPPROTO_IGP       },
+  {       "DGP", IPPROTO_DGP       },
+  {       "TCP", IPPROTO_TCF       },
+  {      "IGRP", IPPROTO_IGRP      },
+  {   "OSPFIGP", IPPROTO_OSPFIGP   },
+  {      "SRPC", IPPROTO_SRPC      },
+  {      "LARP", IPPROTO_LARP      },
+  {       "MTP", IPPROTO_MTP       },
+  {      "AX25", IPPROTO_AX25      },
+  {     "IPEIP", IPPROTO_IPEIP     },
+  {      "MICP", IPPROTO_MICP      },
+  {     "SCCSP", IPPROTO_SCCSP     },
+  {   "ETHERIP", IPPROTO_ETHERIP   },
+  {     "ENCAP", IPPROTO_ENCAP     },
+  {      "APES", IPPROTO_APES      },
+  {      "GMTP", IPPROTO_GMTP      },
+  {    "IPCOMP", IPPROTO_IPCOMP    },
+  {      "SCTP", IPPROTO_SCTP      },
+  {       "PIM", IPPROTO_PIM       },
+  {      "CARP", IPPROTO_CARP      },
+  {       "PGM", IPPROTO_PGM       },
+  {    "PFSYNC", IPPROTO_PFSYNC    }
+};
+utf8::String SockAddr::protoAsString(uintptr_t proto)
+{
+  for( intptr_t i = sizeof(protos) / sizeof(protos[0]) - 1; i >= 0; i-- )
+    if( protos[i].proto_ == proto ) return protos[i].name_;
+  return utf8::int2Str(proto);
+}
+//------------------------------------------------------------------------------
+uintptr_t SockAddr::stringAsProto(const utf8::String & proto)
+{
+  for( intptr_t i = sizeof(protos) / sizeof(protos[0]) - 1; i >= 0; i-- )
+    if( proto.strcasecmp(protos[i].name_) == 0 ) return protos[i].proto_;
+  return utf8::str2Int(proto);
+}
+//------------------------------------------------------------------------------
 #if __BCPLUSPLUS__
 #pragma option pop
 #endif

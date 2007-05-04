@@ -43,7 +43,7 @@ void unSetEnv(const utf8::String & name);
 #if defined(__WIN32__) || defined(__WIN64__)
 #elif HAVE_SIGNAL_H
 extern uilock_t signalsCounters[_SIG_MAXSIG];
-void waitForAnySignal();
+void waitForSignalsSemaphore();
 #endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

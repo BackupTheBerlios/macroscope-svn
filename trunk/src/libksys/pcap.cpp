@@ -122,6 +122,7 @@ class PCAP_API {
     void PROTOF(pcap_close)(pcap_t *);
     int	PROTOF(pcap_findalldevs)(pcap_if_t **,char *);
     void PROTOF(pcap_freealldevs)(pcap_if_t *);
+    int PROTOF(pcap_stats)(pcap_t *,struct pcap_stat *);
     struct pcap_stat * PROTOF(pcap_stats_ex)(pcap_t *,int *);
     char * PROTOF(pcap_geterr)(pcap_t *);
     int PROTOF(pcap_setmode)(pcap_t *,int mode);
@@ -157,6 +158,7 @@ PCAP_API & PCAP_API::open()
     "pcap_close",
     "pcap_findalldevs",
     "pcap_freealldevs",
+    "pcap_stats",
     "pcap_stats_ex",
     "pcap_geterr",
     "pcap_setmode"
@@ -197,7 +199,9 @@ PCAP_API & PCAP_API::open()
 #define FUNC_NAME "dlsym"
     ((void **) &api.pcap_breakloop)[i] = dlsym(handle_,symbols[i]);
 #endif
-    if( ((void **) &api.pcap_breakloop)[i] == NULL ){
+    if( ((void **) &api.pcap_breakloop)[i] == NULL &&
+        (void **) &api.pcap_breakloop + i != (void **) &api.pcap_stats_ex &&
+	(void **) &api.pcap_breakloop + i != (void **) &api.pcap_setmode ){
       int32_t err = oserror() + errorOffset;
 #if defined(__WIN32__) || defined(__WIN64__)
       FreeLibrary(handle_);
@@ -207,7 +211,7 @@ PCAP_API & PCAP_API::open()
       handle_ = NULL;
       stdErr.debug(
         9,
-        utf8::String::Stream() << FUNC_NAME "(\"" << symbols[i] << "\")\n"
+        utf8::String::Stream() << FUNC_NAME "(\"" << symbols[i] << "\") falied\n"
       );
       newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
@@ -250,222 +254,6 @@ void PCAP::cleanup()
 #endif
 }
 //------------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-#define IPPROTO_ST              7               /* Stream protocol II */
-#define IPPROTO_EGP             8               /* exterior gateway protocol */
-#define IPPROTO_PIGP            9               /* private interior gateway */
-#define IPPROTO_RCCMON          10              /* BBN RCC Monitoring */
-#define IPPROTO_NVPII           11              /* network voice protocol*/
-#define IPPROTO_PUP             12              /* pup */
-#define IPPROTO_ARGUS           13              /* Argus */
-#define IPPROTO_EMCON           14              /* EMCON */
-#define IPPROTO_XNET            15              /* Cross Net Debugger */
-#define IPPROTO_CHAOS           16              /* Chaos*/
-#define IPPROTO_MUX             18              /* Multiplexing */
-#define IPPROTO_MEAS            19              /* DCN Measurement Subsystems */
-#define IPPROTO_HMP             20              /* Host Monitoring */
-#define IPPROTO_PRM             21              /* Packet Radio Measurement */
-#define IPPROTO_IDP             22              /* xns idp */
-#define IPPROTO_TRUNK1          23              /* Trunk-1 */
-#define IPPROTO_TRUNK2          24              /* Trunk-2 */
-#define IPPROTO_LEAF1           25              /* Leaf-1 */
-#define IPPROTO_LEAF2           26              /* Leaf-2 */
-#define IPPROTO_RDP             27              /* Reliable Data */
-#define IPPROTO_IRTP            28              /* Reliable Transaction */
-#define IPPROTO_TP              29              /* tp-4 w/ class negotiation */
-#define IPPROTO_BLT             30              /* Bulk Data Transfer */
-#define IPPROTO_NSP             31              /* Network Services */
-#define IPPROTO_INP             32              /* Merit Internodal */
-#define IPPROTO_SEP             33              /* Sequential Exchange */
-#define IPPROTO_3PC             34              /* Third Party Connect */
-#define IPPROTO_IDPR            35              /* InterDomain Policy Routing */
-#define IPPROTO_XTP             36              /* XTP */
-#define IPPROTO_DDP             37              /* Datagram Delivery */
-#define IPPROTO_CMTP            38              /* Control Message Transport */
-#define IPPROTO_TPXX            39              /* TP++ Transport */
-#define IPPROTO_IL              40              /* IL transport protocol */
-#define IPPROTO_IPV6            41              /* IP6 header */
-#define IPPROTO_SDRP            42              /* Source Demand Routing */
-#define IPPROTO_ROUTING         43              /* IP6 routing header */
-#define IPPROTO_FRAGMENT        44              /* IP6 fragmentation header */
-#define IPPROTO_IDRP            45              /* InterDomain Routing*/
-#define IPPROTO_RSVP            46              /* resource reservation */
-#define IPPROTO_GRE             47              /* General Routing Encap. */
-#define IPPROTO_MHRP            48              /* Mobile Host Routing */
-#define IPPROTO_BHA             49              /* BHA */
-#define IPPROTO_ESP             50              /* IP6 Encap Sec. Payload */
-#define IPPROTO_INLSP           52              /* Integ. Net Layer Security */
-#define IPPROTO_SWIPE           53              /* IP with encryption */
-#define IPPROTO_NHRP            54              /* Next Hop Resolution */
-#define IPPROTO_MOBILE          55              /* IP Mobility */
-#define IPPROTO_TLSP            56              /* Transport Layer Security */
-#define IPPROTO_SKIP            57              /* SKIP */
-#define IPPROTO_ICMPV6          58              /* ICMP6 */
-#define IPPROTO_NONE            59              /* IP6 no next header */
-#define IPPROTO_DSTOPTS         60              /* IP6 destination option */
-#define IPPROTO_AHIP            61              /* any host internal protocol */
-#define IPPROTO_CFTP            62              /* CFTP */
-#define IPPROTO_HELLO           63              /* "hello" routing protocol */
-#define IPPROTO_SATEXPAK        64              /* SATNET/Backroom EXPAK */
-#define IPPROTO_KRYPTOLAN       65              /* Kryptolan */
-#define IPPROTO_RVD             66              /* Remote Virtual Disk */
-#define IPPROTO_IPPC            67              /* Pluribus Packet Core */
-#define IPPROTO_ADFS            68              /* Any distributed FS */
-#define IPPROTO_SATMON          69              /* Satnet Monitoring */
-#define IPPROTO_VISA            70              /* VISA Protocol */
-#define IPPROTO_IPCV            71              /* Packet Core Utility */
-#define IPPROTO_CPNX            72              /* Comp. Prot. Net. Executive */
-#define IPPROTO_CPHB            73              /* Comp. Prot. HeartBeat */
-#define IPPROTO_WSN             74              /* Wang Span Network */
-#define IPPROTO_PVP             75              /* Packet Video Protocol */
-#define IPPROTO_BRSATMON        76              /* BackRoom SATNET Monitoring */
-#define IPPROTO_ND              77              /* Sun net disk proto (temp.) */
-#define IPPROTO_WBMON           78              /* WIDEBAND Monitoring */
-#define IPPROTO_WBEXPAK         79              /* WIDEBAND EXPAK */
-#define IPPROTO_EON             80              /* ISO cnlp */
-#define IPPROTO_VMTP            81              /* VMTP */
-#define IPPROTO_SVMTP           82              /* Secure VMTP */
-#define IPPROTO_VINES           83              /* Banyon VINES */
-#define IPPROTO_TTP             84              /* TTP */
-#define IPPROTO_IGP             85              /* NSFNET-IGP */
-#define IPPROTO_DGP             86              /* dissimilar gateway prot. */
-#define IPPROTO_TCF             87              /* TCF */
-#define IPPROTO_IGRP            88              /* Cisco/GXS IGRP */
-#define IPPROTO_OSPFIGP         89              /* OSPFIGP */
-#define IPPROTO_SRPC            90              /* Strite RPC protocol */
-#define IPPROTO_LARP            91              /* Locus Address Resoloution */
-#define IPPROTO_MTP             92              /* Multicast Transport */
-#define IPPROTO_AX25            93              /* AX.25 Frames */
-#define IPPROTO_IPEIP           94              /* IP encapsulated in IP */
-#define IPPROTO_MICP            95              /* Mobile Int.ing control */
-#define IPPROTO_SCCSP           96              /* Semaphore Comm. security */
-#define IPPROTO_ETHERIP         97              /* Ethernet IP encapsulation */
-#define IPPROTO_ENCAP           98              /* encapsulation header */
-#define IPPROTO_APES            99              /* any private encr. scheme */
-#define IPPROTO_GMTP            100             /* GMTP*/
-#define IPPROTO_IPCOMP          108             /* payload compression (IPComp) */
-#define IPPROTO_SCTP            132             /* SCTP */
-#define IPPROTO_PIM             103             /* Protocol Independent Mcast */
-#define IPPROTO_CARP            112             /* CARP */
-#define IPPROTO_PGM             113             /* PGM */
-#define IPPROTO_PFSYNC          240             /* PFSYNC */
-#endif
-utf8::String PCAP::protoAsString(uintptr_t proto)
-{
-  const char * s;
-  switch( proto ){
-    case IPPROTO_IP              : s = ""; break;
-    case IPPROTO_ICMP            : s = "ICMP"; break;
-    case IPPROTO_IGMP            : s = "IGMP"; break;
-    case IPPROTO_GGP             : s = "GGP"; break;
-    case IPPROTO_IPV4            : s = "IPV4";
-    case IPPROTO_TCP             : s = "TCP"; break;
-    case IPPROTO_ST              : s = "ST"; break;
-    case IPPROTO_EGP             : s = "EGP"; break;
-    case IPPROTO_PIGP            : s = "PIGP"; break;
-    case IPPROTO_RCCMON          : s = "RCCMON"; break;
-    case IPPROTO_NVPII           : s = "NVPII"; break;
-    case IPPROTO_PUP             : s = "PUP"; break;
-    case IPPROTO_ARGUS           : s = "ARGUS"; break;
-    case IPPROTO_EMCON           : s = "EMCON"; break;
-    case IPPROTO_XNET            : s = "XNET"; break;
-    case IPPROTO_CHAOS           : s = "CHAOS"; break;
-    case IPPROTO_UDP             : s = "UDP"; break;
-    case IPPROTO_MUX             : s = "MUX"; break;
-    case IPPROTO_MEAS            : s = "MEAS"; break;
-    case IPPROTO_HMP             : s = "HMP"; break;
-    case IPPROTO_PRM             : s = "PRM"; break;
-    case IPPROTO_IDP             : s = "IDP"; break;
-    case IPPROTO_TRUNK1          : s = "TRUNK1"; break;
-    case IPPROTO_TRUNK2          : s = "TRUNK2"; break;
-    case IPPROTO_LEAF1           : s = "LEAF1"; break;
-    case IPPROTO_LEAF2           : s = "LEAF2"; break;
-    case IPPROTO_RDP             : s = "RDP"; break;
-    case IPPROTO_IRTP            : s = "IRTP"; break;
-    case IPPROTO_TP              : s = "TP"; break;
-    case IPPROTO_BLT             : s = "BLT"; break;
-    case IPPROTO_NSP             : s = "NSP"; break;
-    case IPPROTO_INP             : s = "INP"; break;
-    case IPPROTO_SEP             : s = "SEP"; break;
-    case IPPROTO_3PC             : s = "3PC"; break;
-    case IPPROTO_IDPR            : s = "IDPR"; break;
-    case IPPROTO_XTP             : s = "XTP"; break;
-    case IPPROTO_DDP             : s = "DDP"; break;
-    case IPPROTO_CMTP            : s = "CMTP"; break;
-    case IPPROTO_TPXX            : s = "TPXX"; break;
-    case IPPROTO_IL              : s = "IL"; break;
-    case IPPROTO_IPV6            : s = "IPV6"; break;
-    case IPPROTO_SDRP            : s = "SDRP"; break;
-    case IPPROTO_ROUTING         : s = "ROUTING"; break;
-    case IPPROTO_FRAGMENT        : s = "FRAGMENT"; break;
-    case IPPROTO_IDRP            : s = "IDRP"; break;
-    case IPPROTO_RSVP            : s = "RSVP"; break;
-    case IPPROTO_GRE             : s = "GRE"; break;
-    case IPPROTO_MHRP            : s = "MHRP"; break;
-    case IPPROTO_BHA             : s = "BHA"; break;
-    case IPPROTO_ESP             : s = "ESP"; break;
-    case IPPROTO_AH              : s = "AH"; break;
-    case IPPROTO_INLSP           : s = "INLSP"; break;
-    case IPPROTO_SWIPE           : s = "SWIPE"; break;
-    case IPPROTO_NHRP            : s = "NHRP"; break;
-    case IPPROTO_MOBILE          : s = "MOBILE"; break;
-    case IPPROTO_TLSP            : s = "TLSP"; break;
-    case IPPROTO_SKIP            : s = "SKIP"; break;
-    case IPPROTO_ICMPV6          : s = "ICMPV6"; break;
-    case IPPROTO_NONE            : s = "NONE"; break;
-    case IPPROTO_DSTOPTS         : s = "DSTOPTS"; break;
-    case IPPROTO_AHIP            : s = "AHIP"; break;
-    case IPPROTO_CFTP            : s = "CFTP"; break;
-    case IPPROTO_HELLO           : s = "HELLO"; break;
-    case IPPROTO_SATEXPAK        : s = "SATEXPAK"; break;
-    case IPPROTO_KRYPTOLAN       : s = "KRYPTOLAN"; break;
-    case IPPROTO_RVD             : s = "RVD"; break;
-    case IPPROTO_IPPC            : s = "IPPC"; break;
-    case IPPROTO_ADFS            : s = "ADFS"; break;
-    case IPPROTO_SATMON          : s = "SATMON"; break;
-    case IPPROTO_VISA            : s = "VISA"; break;
-    case IPPROTO_IPCV            : s = "IPCV"; break;
-    case IPPROTO_CPNX            : s = "CPNX"; break;
-    case IPPROTO_CPHB            : s = "CPHB"; break;
-    case IPPROTO_WSN             : s = "WSN"; break;
-    case IPPROTO_PVP             : s = "PVP"; break;
-    case IPPROTO_BRSATMON        : s = "BRSATMON"; break;
-    case IPPROTO_ND              : s = "ND"; break;
-    case IPPROTO_WBMON           : s = "WBMON"; break;
-    case IPPROTO_WBEXPAK         : s = "WBEXPAK"; break;
-    case IPPROTO_EON             : s = "EON"; break;
-    case IPPROTO_VMTP            : s = "VMTP"; break;
-    case IPPROTO_SVMTP           : s = "SVMTP"; break;
-    case IPPROTO_VINES           : s = "VINES"; break;
-    case IPPROTO_TTP             : s = "TTP"; break;
-    case IPPROTO_IGP             : s = "IGP"; break;
-    case IPPROTO_DGP             : s = "DGP"; break;
-    case IPPROTO_TCF             : s = "TCF"; break;
-    case IPPROTO_IGRP            : s = "IGRP"; break;
-    case IPPROTO_OSPFIGP         : s = "OSPFIGP"; break;
-    case IPPROTO_SRPC            : s = "SRPC"; break;
-    case IPPROTO_LARP            : s = "LARP"; break;
-    case IPPROTO_MTP             : s = "MTP"; break;
-    case IPPROTO_AX25            : s = "AX25"; break;
-    case IPPROTO_IPEIP           : s = "IPEIP"; break;
-    case IPPROTO_MICP            : s = "MICP"; break;
-    case IPPROTO_SCCSP           : s = "SCCSP"; break;
-    case IPPROTO_ETHERIP         : s = "ETHERIP"; break;
-    case IPPROTO_ENCAP           : s = "ENCAP"; break;
-    case IPPROTO_APES            : s = "APES"; break;
-    case IPPROTO_GMTP            : s = "GMTP"; break;
-    case IPPROTO_IPCOMP          : s = "IPCOMP"; break;
-    case IPPROTO_SCTP            : s = "SCTP"; break;
-    case IPPROTO_PIM             : s = "PIM"; break;
-    case IPPROTO_CARP            : s = "CARP"; break;
-    case IPPROTO_PGM             : s = "PGM"; break;
-    case IPPROTO_PFSYNC          : s = "PFSYNC"; break;
-    default                      :
-      return utf8::int2Str(proto);
-  }
-  return s;
-}
-//------------------------------------------------------------------------------
 PCAP::~PCAP()
 {
 }
@@ -483,88 +271,71 @@ PCAP::PCAP() : handle_(NULL), groupingPeriod_(pgpNone),
 //  tempFile_ = getTempPath() + createGUIDAsBase32String() + ".tmp";
 }
 //------------------------------------------------------------------------------
-/* From tcptraceroute, convert a numeric IP address to a string */
-static inline utf8::String iptos(u_long in)
-{
-  char output[3 * 4 + 3 + 1];
-  u_char * p;
-  
-  p = (u_char *)&in;
-  sprintf(output,"%d.%d.%d.%d",p[0],p[1],p[2],p[3]);
-  return output;
-}
-//------------------------------------------------------------------------------
-/*#ifndef __MINGW32__ // Cygnus doesn't have IPv6
-static inline char * ip6tos(struct sockaddr * sockaddr,char * address,int addrlen)
-{
-	socklen_t sockaddrlen;
-#if defined(__WIN32__) || defined(__WIN64__)
-	sockaddrlen = sizeof(struct sockaddr_in6);
-#else
-	sockaddrlen = sizeof(struct sockaddr_storage);
-#endif
-	if( getnameinfo(sockaddr, 
-		    sockaddrlen, 
-		    address, 
-		    addrlen, 
-		    NULL, 
-		    0, 
-		    NI_NUMERICHOST) != 0 ) address = NULL;
-	return address;
-}
-#endif // __MINGW32__*/
-//------------------------------------------------------------------------------
 void PCAP::printAllDevices()
 {
 #if HAVE_PCAP_H
-	pcap_if_t * alldevs;
-	pcap_if_t * d;
-	char errbuf[PCAP_ERRBUF_SIZE + 1];
-	
-	/* Retrieve the device list */
+  pcap_if_t * alldevs;
+  pcap_if_t * d;
+  char errbuf[PCAP_ERRBUF_SIZE + 1];
+
+/* Retrieve the device list */
   api.open();
-  if( api.pcap_findalldevs(&alldevs,errbuf) != 0 ){
+  memset(errbuf,0,sizeof(errbuf));
+  oserror(0);
+  if( api.pcap_findalldevs(&alldevs,errbuf) != 0 || errbuf[0] != '\0' ){
     int32_t err = oserror() + errorOffset;
     api.close();
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + errbuf)->throwSP();
   }
-	/* Scan the list printing every entry */
+/* Scan the list printing every entry */
   for( d = alldevs; d != NULL; d = d->next ){
     pcap_addr_t * a;
-    //char ip6str[128];
     /* Name */
     fprintf(stdout,"%s\n",d->name);
     /* Description */
-    if( d->description )
+    if( d->description != NULL )
       fprintf(stdout,"\tDescription: %s\n",d->description);
     /* Loopback Address*/
-    fprintf(stdout,"\tLoopback: %s\n",(d->flags & PCAP_IF_LOOPBACK)?"yes":"no");
+    fprintf(stdout,"\tLoopback: %s\n",(d->flags & PCAP_IF_LOOPBACK) ? "yes" : "no");
     /* IP addresses */
     for( a = d->addresses; a != NULL; a = a->next ){
-      fprintf(stdout,"\tAddress Family: #%d\n",a->addr->sa_family);
+//      fprintf(stdout,"\tAddress Family: #%d\n",a->addr->sa_family);
+      fprintf(stdout,"\t%s",(const char *) ksock::SockAddr::addressFamilyAsString(a->addr->sa_family).lower().getOEMString());
+      ksock::SockAddr * addr;
       switch( a->addr->sa_family ){
-        case AF_INET:
-          fprintf(stdout,"\tAddress Family Name: AF_INET\n");
-          if( a->addr )
-            fprintf(stdout,"\tAddress: %s\n",(const char *) iptos(((struct sockaddr_in *)a->addr)->sin_addr.s_addr).getOEMString());
-          if( a->netmask )
-            fprintf(stdout,"\tNetmask: %s\n",(const char *) iptos(((struct sockaddr_in *)a->netmask)->sin_addr.s_addr).getOEMString());
-          if( a->broadaddr )
-            fprintf(stdout,"\tBroadcast Address: %s\n",(const char *) iptos(((struct sockaddr_in *)a->broadaddr)->sin_addr.s_addr).getOEMString());
-          if( a->dstaddr )
-            fprintf(stdout,"\tDestination Address: %s\n",(const char *) iptos(((struct sockaddr_in *)a->dstaddr)->sin_addr.s_addr).getOEMString());
-          break;
-  	    /*case AF_INET6:
-          fprintf(stdout,"\tAddress Family Name: AF_INET6\n");
-  #ifndef __MINGW32__ // Cygnus doesn't have IPv6
-          if( a->addr )
-            fprintf(stdout,"\tAddress: %s\n", ip6tos(a->addr, ip6str, sizeof(ip6str)));
-  #endif
-		      break;*/
-        default:
-          fprintf(stdout,"\tAddress Family Name: Unknown\n");
+        /*case AF_LINK  :
+          fprintf(stdout,"\tAddress: %s\n",(const char *) (
+            utf8::int2HexStr(((uint8_t *) a->addr)[0],2) + ":" +
+            utf8::int2HexStr(((uint8_t *) a->addr)[1],2) + ":" +
+            utf8::int2HexStr(((uint8_t *) a->addr)[2],2) + ":" +
+            utf8::int2HexStr(((uint8_t *) a->addr)[3],2) + ":" +
+            utf8::int2HexStr(((uint8_t *) a->addr)[4],2) + ":").getOEMString()
+	  );
+	  break;*/
+        case AF_INET  :
+#if SIZEOF_SOCKADDR_IN6
+        case AF_INET6 :
+#endif
+#if SIZEOF_SOCKADDR_DL
+        case AF_LINK :
+#endif
+	  addr = (ksock::SockAddr *) a->addr;
+          fprintf(stdout," %s",(const char *) addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString());
+          if( a->netmask != NULL && a->addr->sa_family != AF_INET6 ){
+	    addr = (ksock::SockAddr *) a->netmask;
+            fprintf(stdout," netmask %s",(const char *) addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString());
+	  }
+          if( a->broadaddr != NULL ){
+	    addr = (ksock::SockAddr *) a->broadaddr;
+            fprintf(stdout," broadcast %s",(const char *) addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString());
+	  }
+          if( a->dstaddr != NULL ){
+	    addr = (ksock::SockAddr *) a->dstaddr;
+            fprintf(stdout," destination address %s",(const char *) addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV).getOEMString());
+	  }
           break;
       }
+      fprintf(stdout,"\n");
     }
     fprintf(stdout,"\n");
   }
@@ -734,13 +505,20 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 {
 #if HAVE_PCAP_H
 #define SIZE_ETHERNET 14
+#define ETHERTYPE_IP 0x0800
   const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
   const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
-  uintptr_t sizeIp = ip->hl() * 4;
+  uintptr_t sizeIp = 0;
+  if( ethernet->type_ == ETHERTYPE_IP ) sizeIp = ip->hl() * 4;
   if( sizeIp < 20 ){
     if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
-        "Device: " << iface_ << ", invalid IP header length: " << sizeIp << " bytes, from MAC: " <<
+        "Device: " << iface_ <<
+	(ethernet->type_ == ETHERTYPE_IP ?
+	  ", invalid IP header length: " :
+	  ", not IP type ethernet packet, header length: "
+	) <<
+	sizeIp << " bytes, from MAC: " <<
         utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[1],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[2],2) << ":" <<
@@ -945,8 +723,14 @@ void PCAP::Grouper::threadExecute()
     );
     if( stdErr.debugLevel(4) ){
       int pcapStatSize;
-      struct pcap_stat * ps;
-      if( (ps = api.pcap_stats_ex((pcap_t *) pcap_->handle_,&pcapStatSize)) != NULL ){
+      struct pcap_stat * ps, stat;
+      if( api.pcap_stats_ex == NULL ){
+        if( pcap_stats((pcap_t *) pcap_->handle_,&stat) != 0 ) ps = NULL; else ps = &stat;
+      }
+      else {
+        ps = api.pcap_stats_ex((pcap_t *) pcap_->handle_,&pcapStatSize);
+      }
+      if( ps != NULL ){
         stdErr.debug(4,utf8::String::Stream() <<
           "Device: " << pcap_->iface_ <<
           ", recv: " << ps->ps_recv <<
