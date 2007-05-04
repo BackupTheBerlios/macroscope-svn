@@ -353,6 +353,7 @@ void PCAP::threadBeforeWait()
   if( handle_ != NULL ){
     terminate();
     api.pcap_breakloop((pcap_t *) handle_);
+    pthread_cancel(Thread::handle_);
   }
 #endif
 }
