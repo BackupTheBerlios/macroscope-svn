@@ -725,7 +725,7 @@ void PCAP::Grouper::threadExecute()
       int pcapStatSize;
       struct pcap_stat * ps, stat;
       if( api.pcap_stats_ex == NULL ){
-        if( pcap_stats((pcap_t *) pcap_->handle_,&stat) != 0 ) ps = NULL; else ps = &stat;
+        if( api.pcap_stats((pcap_t *) pcap_->handle_,&stat) != 0 ) ps = NULL; else ps = &stat;
       }
       else {
         ps = api.pcap_stats_ex((pcap_t *) pcap_->handle_,&pcapStatSize);

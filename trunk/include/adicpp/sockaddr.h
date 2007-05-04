@@ -80,9 +80,15 @@ class SockAddr {
     
     static utf8::String addr2Index(const struct in_addr & addr);
     static utf8::String saddr2Index(const struct sockaddr_in & addr);
+    static struct in_addr indexToAddr4(const utf8::String & index);
 #if SIZEOF_SOCKADDR_IN6
     static utf8::String addr2Index(const struct in6_addr & addr);
     static utf8::String saddr2Index(const struct sockaddr_in6 & addr);
+    static struct in6_addr indexToAddr6(const utf8::String & index);
+#endif
+#if SIZEOF_SOCKADDR_DL
+    static struct sockaddr_dl indexToSAddrDL(const utf8::String & index);
+    static utf8::String saddr2Index(const struct sockaddr_dl & addr);
 #endif
     utf8::String addr2Index() const;
     utf8::String saddr2Index() const;

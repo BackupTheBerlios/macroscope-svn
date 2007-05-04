@@ -508,7 +508,7 @@ utf8::String SockAddr::addr2Index(const struct in_addr & addr)
 {
   ksys::AutoPtr<char> b;
   b.alloc(sizeof(addr.s_addr) * 2 + 1);
-  const uint8_t * ip = (const uint8_t *) &addr.s_addr;
+  const uint8_t * ip = (const uint8_t *) &addr;
   uintptr_t i;
   for( i = 0; i < sizeof(addr.s_addr); i++ )
   for( intptr_t j = 1; j >= 0; j-- ) b[i * 2 + 1 - j] = "0123456789ABCDEF"[(ip[(i * 8 + j * 4) >> 3] >> (j * 4)) & 0xF];
@@ -532,16 +532,87 @@ utf8::String SockAddr::addr2Index(const struct in6_addr & addr)
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
+#if SIZEOF_SOCKADDR_DL
+//------------------------------------------------------------------------------
+utf8::String SockAddr::saddr2Index(const struct sockaddr_dl & addr)
+{
+  return link_ntoa(&addr);
+}
+//------------------------------------------------------------------------------
+#endif
+//------------------------------------------------------------------------------
 utf8::String SockAddr::addr2Index() const
 {
-  if( addr4_.sin_family == PF_INET ) return addr2Index(addr4_.sin_addr);
+  if( addr4_.sin_family == AF_INET ) return addr2Index(addr4_.sin_addr);
 #if SIZEOF_SOCKADDR_IN6
-  else if( addr6_.sin6_family == PF_INET6 ) return addr2Index(addr6_.sin6_addr);
+  else if( addr6_.sin6_family == AF_INET6 ) return addr2Index(addr6_.sin6_addr);
+#endif
+#if SIZEOF_SOCKADDR_DL
+  else if( addrDL_.sdl_family == AF_LINK ) return addr2Index(addrDL_);
 #endif
   else
     newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__);
   return utf8::String();
 }
+//---------------------------------------------------------------------------
+struct in_addr SockAddr::indexToAddr4(const utf8::String & index)
+{
+  struct in_addr addr;
+  *(uint32_t *) &addr = be32toh((uint32_t) utf8::str2Int(index,16));
+  return addr;
+}
+//------------------------------------------------------------------------------
+#if SIZEOF_SOCKADDR_IN6
+//------------------------------------------------------------------------------
+struct in6_addr SockAddr::indexToAddr6(const utf8::String & index)
+{
+  struct in6_addr addr;
+  memset(&addr,0,sizeof(addr));
+  newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__);
+  return addr;
+}
+//------------------------------------------------------------------------------
+#endif
+//------------------------------------------------------------------------------
+#ifndef AF_LOCAL
+#define AF_LOCAL AF_UNIX
+#endif
+#ifndef AF_ROUTE
+#define AF_ROUTE 17
+#endif
+#ifndef AF_LINK
+#define AF_LINK 18
+#endif
+#ifndef AF_COIP
+#define AF_COIP 20
+#endif
+#ifndef AF_CNT
+#define AF_CNT 21
+#endif
+#ifndef AF_ISDN
+#define AF_ISDN 26
+#endif
+#ifndef AF_NATM
+#define AF_NATM 29
+#endif
+#ifndef AF_SLOW
+#define AF_SLOW 33
+#endif
+#ifndef AF_SCLUSTER
+#define AF_SCLUSTER 34
+#endif
+#ifndef AF_SIP
+#define AF_SIP 24
+#endif
+#ifndef AF_ARP
+#define AF_ARP 35
+#endif
+#ifndef AF_BLUETOOTH
+#define AF_BLUETOOTH 36
+#endif
+#ifndef AF_NETGRAPH
+#define AF_NETGRAPH 32
+#endif
 //---------------------------------------------------------------------------
 utf8::String SockAddr::addressFamilyAsString(uintptr_t family)
 {
@@ -564,7 +635,9 @@ utf8::String SockAddr::addressFamilyAsString(uintptr_t family)
     case AF_LAT         : s = "LAT"; break;
     case AF_HYLINK      : s = "HYLINK"; break;
     case AF_APPLETALK   : s = "APPLETALK"; break;
+#if !defined(__WIN32__) && !defined(__WIN64__)
     case AF_ROUTE       : s = "ROUTE"; break;
+#endif
     case AF_LINK        : s = "LINK"; break;
     case AF_COIP        : s = "COIP"; break;
     case AF_CNT         : s = "CNT"; break;
@@ -775,7 +848,7 @@ static const struct {
   {       "TTP", IPPROTO_TTP       },
   {       "IGP", IPPROTO_IGP       },
   {       "DGP", IPPROTO_DGP       },
-  {       "TCP", IPPROTO_TCF       },
+  {       "TCF", IPPROTO_TCF       },
   {      "IGRP", IPPROTO_IGRP      },
   {   "OSPFIGP", IPPROTO_OSPFIGP   },
   {      "SRPC", IPPROTO_SRPC      },
@@ -807,7 +880,7 @@ uintptr_t SockAddr::stringAsProto(const utf8::String & proto)
 {
   for( intptr_t i = sizeof(protos) / sizeof(protos[0]) - 1; i >= 0; i-- )
     if( proto.strcasecmp(protos[i].name_) == 0 ) return protos[i].proto_;
-  return utf8::str2Int(proto);
+  return (uintptr_t) utf8::str2Int(proto);
 }
 //------------------------------------------------------------------------------
 #if __BCPLUSPLUS__

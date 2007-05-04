@@ -214,16 +214,16 @@ int32_t Logger::main(bool sniffer,bool daemon)
   setEnv("REQUEST_METHOD","GET");
   setEnv("QUERY_STRING",
     "if=test&"
-    "bday=03&bmon=5&byear=2007&"
-    "eday=03&emon=5&eyear=2007&"
+    "bday=04&bmon=5&byear=2007&"
+    "eday=04&emon=5&eyear=2007&"
     "resolve=on&"
     "bidirectional=on&"
     "protocols=on&"
     "ports=on&"
     "threshold=64K&"
     "threshold2=&"
-    "totals=Mon&"
-    "filter="
+    "totals=Day&"
+    "filter=(src+amber+or+dst+amber)+and+(src_port+8010+or+dst_port+8010)+and+proto+tcp"
   );*/
 /*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
   LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
@@ -383,6 +383,8 @@ int32_t Logger::main(bool sniffer,bool daemon)
         "  <input type=\"text\" name=\"threshold2\" id=\"threshold2\">\n"
         "  <BR>\n"
 	      "  <P>Please type address filter or leave empty</P>\n"
+        "  <BR>\n"
+        "  <P>Example: src amber or dst amber) and (src_port 80 or dst_port www) and proto tcp</P>\n"
 	      "  <textarea name=\"filter\" rows=\"4\" cols=\"80\"></textarea>\n"
       ;
       cgi_ <<

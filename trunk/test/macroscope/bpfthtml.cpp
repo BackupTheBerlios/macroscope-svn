@@ -80,28 +80,6 @@ static inline bool isMCLinkLocal(uint32_t ip)
       && (((ip >> 8) & 0xFF) == 0);
 }
 //------------------------------------------------------------------------------
-utf8::String Logger::ip4AddrToIndex(const struct in_addr & ip4)
-{
-  AutoPtr<char> b;
-  b.alloc(sizeof(ip4) * 2 + 1);
-  uintptr_t i;
-  for( i = 0; i < sizeof(ip4); i++ )
-    for( intptr_t j = 1; j >= 0; j-- ) b[i * 2 + 1 - j] = "0123456789ABCDEF"[((*(const uint32_t *) &ip4) >> (i * 8 + j * 4)) & 0xF];
-  b[i * 2] = '\0';
-  return utf8::plane0(b);
-}
-//------------------------------------------------------------------------------
-struct in_addr Logger::indexToIp4Addr(const utf8::String & index)
-{
-//#ifndef NDEBUG
-//  fprintf(stderr,"index: %s, %X\n",(const char *) index.getOEMString(),(uint32_t) utf8::str2Int(index,16));
-//#endif
-  struct in_addr addr;
-  *(uint32_t *) &addr = utf8::str2Int(index,16);
-  be32dec(&addr);
-  return addr;
-}
-//------------------------------------------------------------------------------
 utf8::String Logger::getIPFilter(const utf8::String & text)
 {
   utf8::String filter;
@@ -133,51 +111,51 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
           while( !j.eof() && !j.isSpace() && j.getChar() != ')' ){
             if( j.getChar() == '/' ){
               isNetwork = true;
-  	      net = j;
-	    }
-	    j.next();
+  	          net = j;
+	          }
+	          j.next();
           }
           if( isNetwork ){
             union {
-	      struct in_addr ineta;
-	      uint32_t inet;
+	            struct in_addr ineta;
+	            uint32_t inet;
             };
-	    ineta = addr.resolveName(utf8::String(i,net)).addr4_.sin_addr;
-	    uint32_t mask = ~(~uint32_t(0) << utf8::str2Int(utf8::String(net + 1,j)));
-	    inet &= mask;
+	          ineta = addr.resolveName(utf8::String(i,net)).addr4_.sin_addr;
+	          uint32_t mask = ~(~uint32_t(0) << utf8::str2Int(utf8::String(net + 1,j)));
+	          inet &= mask;
             struct in_addr inet1 = ineta;
-	    ineta = addr.addr4_.sin_addr;
-	    inet |= ~mask;
+	          ineta = addr.addr4_.sin_addr;
+	          inet |= ~mask;
             struct in_addr inet2 = ineta;
             filter += "(" + sd + " >= '" +
-  	      ip4AddrToIndex(inet1) + "' AND " + sd + " <= '" +
-	      ip4AddrToIndex(inet2) + "')"
-	    ;
+              ksock::SockAddr::addr2Index(inet1) + "' AND " + sd + " <= '" +
+	            ksock::SockAddr::addr2Index(inet2) + "')"
+	          ;
           }
           else {
             filter += sd + " = '" +
-	      ip4AddrToIndex(addr.resolveName(utf8::String(i,j)).addr4_.sin_addr) +
-	       "'"
-	    ;
+	            ksock::SockAddr::addr2Index(addr.resolveName(utf8::String(i,j)).addr4_.sin_addr) +
+	             "'"
+	          ;
           }
           i = j;
-	}
+	      }
         else if( sd.strcasecmp("src_port") == 0 || sd.strcasecmp("dst_port") == 0 ){
           sd = "st_" + sd.lower();
           utf8::String::Iterator j(i);
           while( j.next() && !j.isSpace() && j.getChar() != ')' );
           filter += sd + " = " +
-	    utf8::int2Str(ksock::api.ntohs(addr.resolveName(":" + utf8::String(i,j)).addr4_.sin_port))
-	  ;
+	          utf8::int2Str(addr.resolveName(":" + utf8::String(i,j)).addr4_.sin_port)
+	        ;
           i = j;
-	}
+	      }
         else if( sd.strcasecmp("proto") == 0 ){
           sd = "st_ip_proto";
           utf8::String::Iterator j(i);
           while( j.next() && !j.isSpace() && j.getChar() != ')' );
           filter += sd + " = " + utf8::int2Str(ksock::SockAddr::stringAsProto(utf8::String(i,j)));
           i = j;
-	}
+	      }
       }
       prev = (i - 1).getChar();
     }
@@ -206,7 +184,7 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,c
     st[stSel]->database()->start();
     if( !st[stSel]->prepared() )
       st[stSel]->text("SELECT st_name from INET_DNS_CACHE WHERE st_ip = :ip")->prepare();
-    if( st[stSel]->paramAsString("ip",ip4AddrToIndex(ip4))->execute()->fetch() ){
+    if( st[stSel]->paramAsString("ip",ksock::SockAddr::addr2Index(ip4))->execute()->fetch() ){
       st[stSel]->fetchAll();
       name = st[stSel]->valueAsString("st_name");
       dnsCacheHitCount_++;
@@ -216,7 +194,7 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,c
       if( !st[stIns]->prepared() )
         st[stIns]->text("INSERT INTO INET_DNS_CACHE (st_ip,st_name) VALUES (:ip,:name)")->prepare();
       st[stIns]->
-        paramAsString("ip",ip4AddrToIndex(ip4))->
+        paramAsString("ip",ksock::SockAddr::addr2Index(ip4))->
 	      paramAsString("name",name);
       try {
         st[stIns]->execute();
@@ -476,7 +454,8 @@ bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
         "    st_src_ip <> '@' AND st_dst_ip <> '@'" +
         "  ORDER BY SUM1, st_src_ip, st_dst_ip "
         ") AS A "
-        "WHERE (A.st_src_ip = '" + ip4AddrToIndex(baddr) + "' AND A.st_dst_ip = '" + ip4AddrToIndex(baddr) + "') OR A.SUM1 >= :threshold"
+        "WHERE (A.st_src_ip = '" + ksock::SockAddr::addr2Index(baddr) +
+        "' AND A.st_dst_ip = '" + ksock::SockAddr::addr2Index(baddr) + "') OR A.SUM1 >= :threshold"
       )->prepare();
       stBPFTCacheSel_->paramAsString("if",sectionName_)->
         paramAsString("hash",filterHash_)->
@@ -659,8 +638,8 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     pktSum = p = newObject<CachedPacketSum>();
     p->bt_ = pStatement->paramAsMutant("BT");
     p->et_ = pStatement->paramAsMutant("ET");
-    p->srcAddr_ = indexToIp4Addr(pStatement->paramAsString("src"));
-    p->dstAddr_ = indexToIp4Addr(pStatement->paramAsString("dst"));
+    p->srcAddr_ = ksock::SockAddr::indexToAddr4(pStatement->paramAsString("src"));
+    p->dstAddr_ = ksock::SockAddr::indexToAddr4(pStatement->paramAsString("dst"));
     p->srcPort_ = ports_ ? (uint16_t) pStatement->paramAsMutant("src_port") : 0;
     p->dstPort_ = ports_ ? (uint16_t) pStatement->paramAsMutant("dst_port") : 0;
     p->proto_ = protocols_ ? (int16_t) pStatement->paramAsMutant("proto") : -1;
@@ -692,8 +671,8 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         struct in_addr baddr;
         baddr.s_addr = INADDR_BROADCAST;
         pResult->addRow();
-        pResult->cell(row,"st_src_ip") = ip4AddrToIndex(baddr);
-        pResult->cell(row,"st_dst_ip") = ip4AddrToIndex(baddr);
+        pResult->cell(row,"st_src_ip") = ksock::SockAddr::addr2Index(baddr);
+        pResult->cell(row,"st_dst_ip") = ksock::SockAddr::addr2Index(baddr);
         if( ports_ ){
           pResult->cell(row,"st_src_port") = 0;
           pResult->cell(row,"st_src_port") = 0;
@@ -709,8 +688,8 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       pktSum = p = newObject<CachedPacketSum>();
       p->bt_ = pStatement->paramAsMutant("BT");
       p->et_ = pStatement->paramAsMutant("ET");
-      p->srcAddr_ = indexToIp4Addr(pResult->cell(row,"st_src_ip"));
-      p->dstAddr_ = indexToIp4Addr(pResult->cell(row,"st_dst_ip"));
+      p->srcAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_src_ip"));
+      p->dstAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_dst_ip"));
       p->srcPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_src_port") : 0;
       p->dstPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_dst_port") : 0;
       p->proto_ = protocols_ ? (int16_t) pResult->cell(row,"st_ip_proto") : -1;
@@ -1193,9 +1172,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             assert( 0 );
         }
         for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-          struct in_addr ip41 = logger_->indexToIp4Addr(table[0](i,"st_src_ip"));
+          struct in_addr ip41 = ksock::SockAddr::indexToAddr4(table[0](i,"st_src_ip"));
           intptr_t ip41Port = ports_ ? ksock::api.ntohs(table[0](i,"st_src_port")) : 0;
-          struct in_addr ip42 = logger_->indexToIp4Addr(table[0](i,"st_dst_ip"));
+          struct in_addr ip42 = ksock::SockAddr::indexToAddr4(table[0](i,"st_dst_ip"));
           intptr_t ip42Port = ports_ ? ksock::api.ntohs(table[0](i,"st_dst_port")) : 0;
           intptr_t ipProto = protocols_ ? (int16_t) table[0](i,"st_ip_proto") : -1;
 	        utf8::String row(
@@ -1505,8 +1484,8 @@ void Logger::BPFTThread::parseBPFTLogFile()
           text +=
             "'" + sectionName_ + "'," +
             "'" + mycpp::tm2Str(start) + "'," +
-            "'" + ip4AddrToIndex(entries32[i].srcIp_) + "'," +
-            "'" + ip4AddrToIndex(entries32[i].dstIp_) +"'," +
+            "'" + ksock::SockAddr::addr2Index(entries32[i].srcIp_) + "'," +
+            "'" + ksock::SockAddr::addr2Index(entries32[i].dstIp_) +"'," +
             utf8::int2Str(entries32[i].ipProtocol_) + "," +
             utf8::int2Str(entries32[i].srcPort_) + "," +
             utf8::int2Str(entries32[i].dstPort_) + "," +
@@ -1518,8 +1497,8 @@ void Logger::BPFTThread::parseBPFTLogFile()
           text +=
             "'" + sectionName_ + "'," +
             "'" + mycpp::tm2Str(start) + "'," +
-            "'" + ip4AddrToIndex(entries[i].srcIp_) + "'," +
-            "'" + ip4AddrToIndex(entries[i].dstIp_) +"'," +
+            "'" + ksock::SockAddr::addr2Index(entries[i].srcIp_) + "'," +
+            "'" + ksock::SockAddr::addr2Index(entries[i].dstIp_) +"'," +
             utf8::int2Str(entries[i].ipProtocol_) + "," +
             utf8::int2Str(entries[i].srcPort_) + "," +
             utf8::int2Str(entries[i].dstPort_) + "," +
@@ -1543,8 +1522,8 @@ void Logger::BPFTThread::parseBPFTLogFile()
     else for( intptr_t i = entriesCount - 1; i >= 0; i-- ){
       if( log32bitOsCompatible ){
         stBPFTIns_->
-	  paramAsMutant("st_src_ip",ip4AddrToIndex(entries32[i].srcIp_))->
-          paramAsMutant("st_dst_ip",ip4AddrToIndex(entries32[i].dstIp_))->
+	        paramAsMutant("st_src_ip",ksock::SockAddr::addr2Index(entries32[i].srcIp_))->
+          paramAsMutant("st_dst_ip",ksock::SockAddr::addr2Index(entries32[i].dstIp_))->
           paramAsMutant("st_ip_proto",entries32[i].ipProtocol_)->
           paramAsMutant("st_src_port",entries32[i].srcPort_)->
           paramAsMutant("st_dst_port",entries32[i].dstPort_)->
@@ -1553,8 +1532,8 @@ void Logger::BPFTThread::parseBPFTLogFile()
       }
       else {
         stBPFTIns_->
-          paramAsMutant("st_src_ip",ip4AddrToIndex(entries[i].srcIp_))->
-          paramAsMutant("st_dst_ip",ip4AddrToIndex(entries[i].dstIp_))->
+          paramAsMutant("st_src_ip",ksock::SockAddr::addr2Index(entries[i].srcIp_))->
+          paramAsMutant("st_dst_ip",ksock::SockAddr::addr2Index(entries[i].dstIp_))->
           paramAsMutant("st_ip_proto",entries[i].ipProtocol_)->
           paramAsMutant("st_src_port",entries[i].srcPort_)->
           paramAsMutant("st_dst_port",entries[i].dstPort_)->
