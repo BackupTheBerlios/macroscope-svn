@@ -652,7 +652,7 @@ int32_t Logger::main(bool sniffer,bool daemon)
   }
 // generate reports
   int32_t err2 = doWork(1);
-  if( sniffer && daemon ) Thread::waitForSignal();
+  if( sniffer ) Thread::waitForSignal();
   int32_t err3 = waitThreads();
   return err0 != 0 ? err0 : err1 != 0 ? err1 : err2 != 0 ? err2 : err3;
 }

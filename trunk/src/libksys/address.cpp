@@ -548,7 +548,7 @@ utf8::String SockAddr::addr2Index() const
   else if( addr6_.sin6_family == AF_INET6 ) return addr2Index(addr6_.sin6_addr);
 #endif
 #if SIZEOF_SOCKADDR_DL
-  else if( addrDL_.sdl_family == AF_LINK ) return addr2Index(addrDL_);
+  else if( addrDL_.sdl_family == AF_LINK ) return saddr2Index(addrDL_);
 #endif
   else
     newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__);

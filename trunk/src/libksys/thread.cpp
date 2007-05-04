@@ -49,7 +49,11 @@ void * Thread::threadFunc(void * thread)
 #endif
 {
 #if HAVE_PTHREAD_H
-  if( (errno = pthread_setcancelstate(PTHREAD_CANCEL_DISABLE,NULL)) != 0 ){
+  if( (errno = pthread_setcancelstate(PTHREAD_CANCEL_ENABLE,NULL)) != 0 ){
+    perror(NULL);
+    abort();
+  }
+  if( (errno = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS,NULL)) != 0 ){
     perror(NULL);
     abort();
   }
