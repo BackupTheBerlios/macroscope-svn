@@ -401,6 +401,7 @@ void PCAP::threadExecute()
     databaseInserter_ = newObjectV1<DatabaseInserter>(this);
     lazyWriter_ = newObjectV1<LazyWriter>(this);
     memoryUsage_ = 0;
+    curPeriod_ = 0;
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
@@ -507,6 +508,12 @@ void PCAP::setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const
 void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet)
 {
 #if HAVE_PCAP_H
+  uint64_t bt, et;
+  setBounds(timestamp,bt,et);
+  if( groupingPeriod_ > pgpNone && bt != curPeriod_ ){
+    curPeriod_ = bt;
+    grouperSem_.post();
+  }
 #define SIZE_ETHERNET 14
 #define ETHERTYPE_IP 8
   const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
@@ -579,8 +586,6 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     );
     lazyWriterSem_.post();
   }
-  uint64_t bt, et;
-  setBounds(timestamp,bt,et);
   Packet & pkt = (*packets_.ptr())[packets_->packets_];
   pkt.timestamp_ = bt;
   pkt.pktSize_ = len;

@@ -351,6 +351,7 @@ class PCAP : public Thread {
     ldouble swapLowWatermark_;
     ldouble swapHighWatermark_;
     uint64_t swapWatchTime_;
+    uint64_t curPeriod_;
     bool promisc_;
     bool ports_;
     bool protocols_;
