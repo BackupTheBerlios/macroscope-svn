@@ -512,16 +512,16 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
   const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
   uintptr_t sizeIp = 0;
-  if( ethernet->type_ == ETHERTYPE_IP ) sizeIp = ip->hl() * 4;
+//  if( ethernet->type_ == ETHERTYPE_IP )
+  sizeIp = ip->hl() * 4;
   if( sizeIp < 20 ){
     if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
         "Device: " << iface_ <<
-	(ethernet->type_ == ETHERTYPE_IP ?
-	  ", invalid IP header length: " :
-	  ", not IP type ethernet packet, header length: "
-	) <<
-	sizeIp << " bytes, from MAC: " <<
+        ", unsupported ethernet frame type: 0x" <<
+        utf8::int2HexStr(ethernet->type_,4) <<
+        ", invalid IP header length: " <<
+	      sizeIp << " bytes, from MAC: " <<
         utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[1],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[2],2) << ":" <<
