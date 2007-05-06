@@ -383,7 +383,6 @@ int32_t Logger::main(bool sniffer,bool daemon)
         "  <input type=\"text\" name=\"threshold2\" id=\"threshold2\">\n"
         "  <BR>\n"
 	      "  <P>Please type address filter or leave empty</P>\n"
-        "  <BR>\n"
         "  <P>Example: src amber or dst amber) and (src_port 80 or dst_port www) and proto tcp</P>\n"
 	      "  <textarea name=\"filter\" rows=\"4\" cols=\"80\"></textarea>\n"
       ;
