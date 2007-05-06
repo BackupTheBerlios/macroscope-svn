@@ -353,7 +353,9 @@ void PCAP::threadBeforeWait()
   if( handle_ != NULL ){
     terminate();
     api.pcap_breakloop((pcap_t *) handle_);
+#if !defined(__WIN32__) && !defined(__WIN64__)
     pthread_cancel(Thread::handle_);
+#endif
   }
 #endif
 }
@@ -506,7 +508,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 {
 #if HAVE_PCAP_H
 #define SIZE_ETHERNET 14
-#define ETHERTYPE_IP 0x0800
+#define ETHERTYPE_IP 8
   const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
   const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
   uintptr_t sizeIp = 0;
