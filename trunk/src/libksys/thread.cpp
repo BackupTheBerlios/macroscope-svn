@@ -240,6 +240,7 @@ Thread & Thread::wait()
     }*/
     handle_ = (pthread_t) NULL;
 #endif
+    threadAfterWait();
   }
   return *this;
 }

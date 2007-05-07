@@ -57,6 +57,7 @@ DPB & DPB::add(const utf8::String & name, const ksys::Mutant & value)
   else if( name.strcasecmp("read_timeout") == 0 ) readTimeout_ = (unsigned int) value;
   else if( name.strcasecmp("write_timeout") == 0 ) writeTimeout_ = (unsigned int) value;
   else if( name.strcasecmp("reconnect") == 0 ) reconnect_ = value;
+  else if( name.strcasecmp("compress") == 0 ) compress_ = value;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -201,7 +202,7 @@ Database & Database::attach(const utf8::String & name)
         dpb_.password().c_str(), 
         dbName.c_str(), 
         (unsigned int) port, 
-        hostName.strlen() > 0 ? hostName.c_str() : NULL, 0//CLIENT_COMPRESS | CLIENT_MULTI_STATEMENTS
+        hostName.strlen() > 0 ? hostName.c_str() : NULL,dpb_.compress() ? CLIENT_COMPRESS : 0// | CLIENT_MULTI_STATEMENTS
       );
       if( api.mysql_errno(handle_) != 0 )
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));

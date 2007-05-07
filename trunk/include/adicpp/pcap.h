@@ -95,6 +95,16 @@ struct PACKED TCPPacketHeader {
   uint8_t off() const { return (offx2_ & 0xf0) >> 4; }
 };
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+/* UDP header */
+struct PACKED UDPPacketHeader {
+  uint16_t srcPort_;               /* source port */
+  uint16_t dstPort_;               /* destination port */
+  uint16_t ulen_;                /* udp length */
+  uint16_t sum_;                 /* udp checksum */
+};				
+//---------------------------------------------------------------------------
 #ifdef _MSC_VER
 #pragma pack(pop)
 #elif defined(__BCPLUSPLUS__)
@@ -329,6 +339,7 @@ class PCAP : public Thread {
     friend class LazyWriter;
 	        
     void * handle_;
+    void * fp_;
     PacketGroupingPeriod groupingPeriod_;
     PacketsList packetsList_;
     InterlockedMutex packetsListMutex_;
@@ -355,9 +366,11 @@ class PCAP : public Thread {
     bool promisc_;
     bool ports_;
     bool protocols_;
+    bool fc_;
     
-    void shutdown(void * fp);
+    void shutdown();
     void threadBeforeWait();
+    void threadAfterWait();
     static void pcapCallback(void *,const void *,const void *);
     void capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet);
 

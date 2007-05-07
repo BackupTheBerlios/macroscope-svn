@@ -59,6 +59,7 @@ Database * Database::newDatabase(const ksys::ConfigSection * config)
     p->params().add("read_timeout",config->valueByPath(section + ".read_timeout",0));
     p->params().add("write_timeout",config->valueByPath(section + ".write_timeout",0));
     p->params().add("reconnect",config->valueByPath(section + ".reconnect",false));
+    p->params().add("compress",config->valueByPath(section + ".compress",false));
     return p.ptr(NULL);
   }
   newObjectV1C2<ksys::Exception>(EINVAL,"unknown or unsupported server type: " + stype0)->throwSP();

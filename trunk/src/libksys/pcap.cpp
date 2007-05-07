@@ -258,7 +258,7 @@ PCAP::~PCAP()
 {
 }
 //------------------------------------------------------------------------------
-PCAP::PCAP() : handle_(NULL), groupingPeriod_(pgpNone),
+PCAP::PCAP() : handle_(NULL), fp_(NULL), groupingPeriod_(pgpNone),
   packetsAutoDrop_(packetsList_), groupTreeAutoDrop_(groupTree_),
   swapThreshold_(16u * 1024u * 1024u),
   swapLowWatermark_(50),
@@ -266,7 +266,8 @@ PCAP::PCAP() : handle_(NULL), groupingPeriod_(pgpNone),
   swapWatchTime_(5000000),
   promisc_(false),
   ports_(true),
-  protocols_(true)
+  protocols_(true),
+  fc_(false)
 {
 //  tempFile_ = getTempPath() + createGUIDAsBase32String() + ".tmp";
 }
@@ -353,26 +354,48 @@ void PCAP::threadBeforeWait()
   if( handle_ != NULL ){
     terminate();
     api.pcap_breakloop((pcap_t *) handle_);
-#if !defined(__WIN32__) && !defined(__WIN64__)
-    pthread_cancel(Thread::handle_);
+#if !defined(__WIN32__) && !defined(__WIN64__) && HAVE_PTHREAD_H
+    if( (errno = pthread_cancel(Thread::handle_)) != 0 ){
+      perror(NULL);
+      abort();
+    }
 #endif
   }
 #endif
 }
 //------------------------------------------------------------------------------
-void PCAP::shutdown(void * fp)
+void PCAP::threadAfterWait()
 {
-  if( grouper_ != NULL ) grouper_->wait();
+  shutdown();
+}
+//------------------------------------------------------------------------------
+void PCAP::shutdown()
+{
+  if( packets_ != NULL ){
+    AutoLock<InterlockedMutex> lock(packetsListMutex_);
+    packetsList_.insToTail(*packets_.ptr(NULL));
+    grouperSem_.post();
+  }
   if( databaseInserter_ != NULL ) databaseInserter_->wait();
+  if( grouper_ != NULL ) grouper_->wait();
   if( lazyWriter_ != NULL ) lazyWriter_->wait();
   grouper_ = NULL;
   databaseInserter_ = NULL;
   lazyWriter_ = NULL;
   if( handle_ != NULL ){
-    if( fp != NULL ) api.pcap_freecode((struct bpf_program *) fp);
+    struct bpf_program * fp = (struct bpf_program *) fp_;
+    if( fp != NULL ){
+      if( fc_ ){
+        api.pcap_freecode(fp);
+	fc_ = false;
+      }
+      kfree(fp);
+      fp_ = NULL;
+    }
     api.pcap_close((pcap_t *) handle_);
     handle_ = NULL;
   }
+  stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture stopped.\n");
 }
 //------------------------------------------------------------------------------
 void PCAP::threadExecute()
@@ -381,20 +404,21 @@ void PCAP::threadExecute()
 //    fprintf(stderr,"%s\n",formatByteLength(len,swapThreshold_).c_str());
 #if HAVE_PCAP_H
   char errbuf[PCAP_ERRBUF_SIZE + 1]; // Error string
-  struct bpf_program fp;         // The compiled filter expression
+  struct bpf_program * fp;         // The compiled filter expression
   bpf_u_int32 mask;              // The netmask of our sniffing device
   bpf_u_int32 net;               // The IP of our sniffing device
-  bool freeCode = false;
 //  stdErr.bufferDataTTA(0);
+  api.open();
   try {
-    api.open();
+    fp_ = kmalloc(sizeof(struct bpf_program));
+    fp = (struct bpf_program *) fp_;
     if( api.pcap_lookupnet(iface_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
-    handle_ = api.pcap_open_live(iface_.getANSIString(),0,promisc_,0,errbuf);
+    handle_ = api.pcap_open_live(iface_.getANSIString(),INT_MAX,promisc_,0,errbuf);
     if( handle_ == NULL ) goto errexit;
     if( !filter_.isNull() ){
-      if( api.pcap_compile((pcap_t *) handle_,&fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;
-      freeCode = true;
-      if( api.pcap_setfilter((pcap_t *) handle_,&fp) != 0 ) goto errexit;
+      if( api.pcap_compile((pcap_t *) handle_,fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;
+      fc_ = true;
+      if( api.pcap_setfilter((pcap_t *) handle_,fp) != 0 ) goto errexit;
     }
     //if( api.pcap_setmode((pcap_t *) handle_,MODE_MON) != 0 ) goto errexit;
     grouper_ = newObjectV1<Grouper>(this);
@@ -405,22 +429,18 @@ void PCAP::threadExecute()
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
+    stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture started.\n");
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
-    if( packets_ != NULL ){
-      AutoLock<InterlockedMutex> lock(packetsListMutex_);
-      packetsList_.insToTail(*packets_.ptr(NULL));
-      grouperSem_.post();
-    }
     oserror(0);
   }
   catch( ExceptionSP & ){
-    shutdown(freeCode ? &fp : NULL);
+    shutdown();
     api.close();
     throw;
   }
 errexit:
   int32_t err = oserror();
-  shutdown(freeCode ? &fp : NULL);
+  shutdown();
   api.close();
   if( err != 0 )
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + errbuf + ", device: " + iface_)->throwSP();
@@ -587,26 +607,32 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   }
   const TCPPacketHeader * tcp = (const TCPPacketHeader *)(packet + SIZE_ETHERNET + sizeIp);
   uintptr_t sizeTcp = 0;
-  if( sizeIp >= 20 && ip->proto_ == IPPROTO_TCP ){
+  const UDPPacketHeader * udp = (const UDPPacketHeader *)(packet + SIZE_ETHERNET + sizeIp);
+  uintptr_t sizeUdp = 0;
+  if( sizeIp >= 20 ){
     ksock::SockAddr src, dst;
     src.addr4_.sin_addr = ip->src_;
     src.addr4_.sin_port = 0;
     dst.addr4_.sin_addr = ip->dst_;
     dst.addr4_.sin_port = 0;
-    if( capLen < SIZE_ETHERNET + sizeIp + 20 ){
+    uintptr_t size = 0;
+    if( ip->proto_ == IPPROTO_TCP ) size = 20;
+    else if( ip->proto_ == IPPROTO_UDP ) size = sizeof(UDPPacketHeader);
+    if( capLen < SIZE_ETHERNET + sizeIp + size ){
       if( stdErr.debugLevel(80) )
         stdErr.debug(80,utf8::String::Stream() <<
-          "Device: " << iface_ << ", captured length less then TCP packet header, from: " <<
+          "Device: " << iface_ << ", captured length less then " <<
+	  ksock::SockAddr::protoAsString(ip->proto_) <<
+	  " packet header, from: " <<
           src.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << " to: " <<
           dst.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << "\n"
         );
       return;
     }
-    sizeTcp = tcp->off() * 4;
-    if( sizeTcp < 20 ){
-      src.addr4_.sin_port = tcp->srcPort_;
-      dst.addr4_.sin_port = tcp->dstPort_;
+    if( ip->proto_ == IPPROTO_TCP && (sizeTcp = tcp->off() * 4) < 20 ){
       if( stdErr.debugLevel(80) ){
+        src.addr4_.sin_port = tcp->srcPort_;
+        dst.addr4_.sin_port = tcp->dstPort_;
         stdErr.debug(80,utf8::String::Stream() <<
           "Device: " << iface_ << ", invalid TCP header length: " << sizeTcp << " bytes, from: " <<
           src.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << " to: " <<
@@ -614,6 +640,9 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
         );
       }
       return;
+    }
+    else if( ip->proto_ == IPPROTO_UDP ){
+      sizeUdp = sizeof(UDPPacketHeader);
     }
   }
   uint64_t bt, et;
@@ -640,7 +669,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     );
     lazyWriterSem_.post();
   }
-  const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp;
+  const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp + sizeUdp;
   Packet & pkt = (*packets_.ptr())[packets_->packets_];
   pkt.timestamp_ = bt;
   pkt.pktSize_ = len;
@@ -656,8 +685,18 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 #endif
   memcpy(&pkt.srcAddr_,&ip->src_,sizeof(pkt.srcAddr_));
   memcpy(&pkt.dstAddr_,&ip->dst_,sizeof(pkt.dstAddr_));
-  pkt.srcPort_ = sizeTcp >= 20 && ip->proto_ == IPPROTO_TCP && ports_ ? tcp->srcPort_ : 0;
-  pkt.dstPort_ = sizeTcp >= 20 && ip->proto_ == IPPROTO_TCP && ports_ ? tcp->dstPort_ : 0;
+  pkt.srcPort_ = 0;
+  pkt.dstPort_ = 0;
+  if( ports_ ){
+    if( ip->proto_ == IPPROTO_TCP ){
+      pkt.srcPort_ = tcp->srcPort_;
+      pkt.dstPort_ = tcp->dstPort_;
+    }
+    else if( ip->proto_ == IPPROTO_UDP ){
+      pkt.srcPort_ = udp->srcPort_;
+      pkt.dstPort_ = udp->dstPort_;
+    }
+  }
   pkt.proto_ = protocols_ ? ip->proto_ : -1;
   for( intptr_t i = packets_->packets_ - 1, j = i - 5; i >= 0 && i >= j; i-- )
     if( pkt == (*packets_.ptr())[i] ){

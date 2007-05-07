@@ -133,6 +133,7 @@ class Thread : virtual public Object {
     void afterConstruction();
     void beforeDestruction() { wait(); }
     virtual void threadBeforeWait() {}
+    virtual void threadAfterWait() {}
     uintptr_t       stackSize_;
 #if defined(__WIN32__) || defined(__WIN64__)
     HANDLE          handle_;

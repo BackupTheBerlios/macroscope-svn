@@ -60,6 +60,7 @@ class DPB {
     const unsigned int & readTimeout() const;
     const unsigned int & writeTimeout() const;
     const bool & reconnect() const;
+    const bool & compress() const;
   protected:
   private:
     utf8::String user_;
@@ -69,6 +70,7 @@ class DPB {
     unsigned int readTimeout_;
     unsigned int writeTimeout_;
     bool reconnect_;
+    bool compress_;
 };
 //---------------------------------------------------------------------------
 inline const utf8::String & DPB::user() const
@@ -104,6 +106,11 @@ inline const unsigned int & DPB::writeTimeout() const
 inline const bool & DPB::reconnect() const
 {
   return reconnect_;
+}
+//---------------------------------------------------------------------------
+inline const bool & DPB::compress() const
+{
+  return compress_;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
