@@ -907,6 +907,9 @@ int main(int _argc,char * _argv[])
     //lzw.initialize();
     //lzw.decompress(cText,outSize,true);
     //dText[0] = dText[0];
+    struct tm tt, tt2;
+    tt = time2tm(gettimeofday());
+    tt2 = time2tm(getlocaltimeofday());
 #endif
     errcode = 0;
     if( dispatch || sniffer ){

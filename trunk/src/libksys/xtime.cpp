@@ -104,7 +104,7 @@ int64_t timeFromTimeString(const utf8::String & s,bool local)
     struct timeval tv2;
     struct timezone tz;
     gettimeofday(&tv2,&tz);
-    tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+    tv.tv_sec += -tz.tz_minuteswest * 60u + tz.tz_dsttime * 60u * 60u;
   }
   tv.tv_usec = usec;
   return timeval2Time(tv);
@@ -184,7 +184,7 @@ int64_t timeFromTimeCodeString(const utf8::String & s,bool local)
     struct timeval tv2;
     struct timezone tz;
     gettimeofday(&tv2,&tz);
-    tv.tv_sec -= tz.tz_minuteswest * 60u/* + tz.tz_dsttime * 60u * 60u*/;
+    tv.tv_sec += -tz.tz_minuteswest * 60u + tz.tz_dsttime * 60u * 60u;
   }
   tv.tv_usec = usec;
   return timeval2Time(tv);
@@ -217,6 +217,62 @@ utf8::String getTimeCode(int64_t t)
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
   return s;
+}
+//---------------------------------------------------------------------------
+struct tm time2tm(int64_t a)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  union {
+    FILETIME fileTime;
+    ULARGE_INTEGER sti;
+  };
+  SYSTEMTIME systemTime;
+  sti.QuadPart = a * 10u + UINT64_C(11644473600) * 10000000u;
+  if( FileTimeToSystemTime(&fileTime,&systemTime) == 0 ){
+    int32_t err = GetLastError();
+    newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  struct tm t;
+  memset(&t,0,sizeof(t));
+  t.tm_year = systemTime.wYear - 1900;
+  t.tm_mon = systemTime.wMonth - 1;
+  t.tm_mday = systemTime.wDay;
+  t.tm_hour = systemTime.wHour;
+  t.tm_min = systemTime.wMinute;
+  t.tm_sec = systemTime.wSecond;
+  return t;
+#else
+  time_t t = (time_t) (a / 1000000u);
+  return *gmtime(&t);
+#endif
+}
+//---------------------------------------------------------------------------
+struct tm timeval2tm(const struct timeval & a)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  union {
+    FILETIME fileTime;
+    ULARGE_INTEGER sti;
+  };
+  SYSTEMTIME systemTime;
+  sti.QuadPart = (a.tv_sec + UINT64_C(11644473600)) * 10000000u;
+  if( FileTimeToSystemTime(&fileTime,&systemTime) == 0 ){
+    int32_t err = GetLastError();
+    newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  struct tm t;
+  memset(&t,0,sizeof(t));
+  t.tm_year = systemTime.wYear - 1900;
+  t.tm_mon = systemTime.wMonth - 1;
+  t.tm_mday = systemTime.wDay;
+  t.tm_hour = systemTime.wHour;
+  t.tm_min = systemTime.wMinute;
+  t.tm_sec = systemTime.wSecond;
+  return t;
+#else
+  time_t t = (time_t) a.tv_sec;
+  return *gmtime(&t);
+#endif
 }
 //---------------------------------------------------------------------------
 } // namespace ksys
@@ -279,7 +335,7 @@ int64_t getlocaltimeofday()
 #if defined(__WIN32__) || defined(__WIN64__)
   struct timezone tz;
   gettimeofday(&tv,&tz);
-  a = tv.tv_sec - tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60u * 60u;
+  a = tv.tv_sec + (-tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60u * 60u);
   a = a * 1000000u + tv.tv_usec;
 #else
   gettimeofday(&tv,NULL);
@@ -294,7 +350,7 @@ int64_t getgmtoffset()
   struct timeval tv;
   struct timezone tz;
   gettimeofday(&tv,&tz);
-  return (-tz.tz_minuteswest * int64_t(60)/* + tz.tz_dsttime * 60 * 60*/) * 1000000;
+  return (-tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60 * 60) * 1000000;
 #else
   time_t tl, t = time(&tl);
 //  if( tl - t == 0 ){
@@ -305,4 +361,29 @@ int64_t getgmtoffset()
 //  return (tl - t) * int64_t(1000000);
 #endif
 }
+//---------------------------------------------------------------------------
+#if !HAVE_TIMEGM
+time_t timegm(struct tm * t)
+{
+  union {
+    FILETIME fileTime;
+    ULARGE_INTEGER sti;
+  };
+  SYSTEMTIME systemTime;
+  systemTime.wYear = t->tm_year + 1900;
+  systemTime.wMonth = t->tm_mon + 1;
+  systemTime.wDay = t->tm_mday;
+  systemTime.wHour = t->tm_hour;
+  systemTime.wMinute = t->tm_min;
+  systemTime.wSecond = t->tm_sec;
+  systemTime.wMilliseconds = 0;
+  if( SystemTimeToFileTime(&systemTime,&fileTime) == 0 ){
+    int32_t err = GetLastError();
+    newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  sti.QuadPart -= UINT64_C(11644473600) * 10000000u;
+  return (time_t) sti.QuadPart / 10000000u;
+//  return mktime(t) - (getgmtoffset() / 1000000u);
+}
+#endif
 //---------------------------------------------------------------------------

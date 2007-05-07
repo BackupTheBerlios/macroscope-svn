@@ -100,10 +100,7 @@ int64_t getlocaltimeofday();
 int64_t getgmtoffset();
 //---------------------------------------------------------------------------
 #if !HAVE_TIMEGM
-inline time_t timegm(struct tm * t)
-{
-  return mktime(t) + getgmtoffset() / 1000000u;
-}
+time_t timegm(struct tm * t);
 #endif
 //---------------------------------------------------------------------------
 namespace ksys {
@@ -136,29 +133,9 @@ inline struct timeval tm2Timeval(struct tm t)
   return tv;
 }
 //---------------------------------------------------------------------------
-inline struct tm time2tm(int64_t a)
-{
-  time_t t = (time_t) (a / 1000000u);
-#if HAVE_GMTIME_S
-  struct tm ta;
-  gmtime_s(&ta,&t);
-  return ta;
-#else
-  return *gmtime(&t);
-#endif
-}
+struct tm time2tm(int64_t a);
 //---------------------------------------------------------------------------
-inline struct tm timeval2tm(const struct timeval & a)
-{
-  time_t t = (time_t) a.tv_sec;
-  struct tm ta;
-#if HAVE_GMTIME_S
-  gmtime_s(&ta,&t);
-#else
-  ta = *gmtime(&t);
-#endif
-  return ta;
-}
+struct tm timeval2tm(const struct timeval & a);
 //---------------------------------------------------------------------------
 inline bool isLeapYear(uintptr_t year)
 {

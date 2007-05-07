@@ -776,7 +776,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       ports_ = logger_->cgi_.paramAsMutant("ports");
     if( !bidirectional_ ) protocols_ = ports_ = false;
     database_->start();
-    clearBPFTCache();
+//    clearBPFTCache();
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
       statement_->text(
         "SELECT FIRST 1 st_start AS BT FROM INET_BPFT_STAT "
