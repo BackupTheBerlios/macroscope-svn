@@ -728,7 +728,9 @@ void PCAP::Grouper::threadBeforeWait()
 //------------------------------------------------------------------------------
 void PCAP::Grouper::threadExecute()
 {
+#ifndef __FreeBSD__
   priority(THREAD_PRIORITY_ABOVE_NORMAL);
+#endif
   uintptr_t count = 0;
   for(;;){
     bool term;
@@ -876,7 +878,9 @@ void PCAP::DatabaseInserter::threadBeforeWait()
 //------------------------------------------------------------------------------
 void PCAP::DatabaseInserter::threadExecute()
 {
+#ifndef __FreeBSD__
   priority(THREAD_PRIORITY_HIGHEST);
+#endif
   while( !terminated_ ){
     PacketGroup * pGroup;
     AutoPtr<PacketGroup> group;
@@ -1071,7 +1075,9 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
 //------------------------------------------------------------------------------
 void PCAP::LazyWriter::threadExecute()
 {
+#ifndef __FreeBSD__
   priority(THREAD_PRIORITY_HIGHEST);
+#endif
   AsyncFile tempFile(pcap_->tempFile_);
   tempFile.createIfNotExist(false).tryOpen();
   lastSwapIn_ = 0;
