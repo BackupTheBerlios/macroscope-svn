@@ -662,39 +662,52 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     *pDataBytes = p->dataSize_;
   }
   else {
+    bool threshold = false;
     pStatement->execute()->fetchAll()->unloadColumns(*pResult);
     for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
       uintptr_t row = pResult->rowCount();
       uintmax_t sum1 = pStatement->valueAsMutant("SUM1");
-      if( sum1 < minSignificantThreshold_ ){
-        struct in_addr baddr;
-        baddr.s_addr = INADDR_BROADCAST;
-        pResult->addRow();
-        pResult->cell(row,"st_src_ip") = ksock::SockAddr::addr2Index(baddr);
-        pResult->cell(row,"st_dst_ip") = ksock::SockAddr::addr2Index(baddr);
-        if( ports_ ){
-          pResult->cell(row,"st_src_port") = 0;
-          pResult->cell(row,"st_src_port") = 0;
-        }
-        if( protocols_ )
-          pResult->cell(row,"st_ip_proto") = -1;
-        pResult->cell(row,"SUM1") = pStatement->sum("SUM1",0,i);
-        pResult->cell(row,"SUM2") = pStatement->sum("SUM2",0,i);
-      }
-      else {
-        pStatement->unloadRowByIndex(pResult->addRow());
-      }
       pktSum = p = newObject<CachedPacketSum>();
       p->bt_ = pStatement->paramAsMutant("BT");
       p->et_ = pStatement->paramAsMutant("ET");
-      p->srcAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_src_ip"));
-      p->dstAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_dst_ip"));
-      p->srcPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_src_port") : 0;
-      p->dstPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_dst_port") : 0;
-      p->proto_ = protocols_ ? (int16_t) pResult->cell(row,"st_ip_proto") : -1;
-      p->pktSize_ = pResult->cell(row,"SUM1");
-      p->dataSize_ = pResult->cell(row,"SUM2");
+      if( threshold ){
+        p->srcAddr_ = ksock::SockAddr::indexToAddr4(pStatement->valueAsMutant("st_src_ip"));
+        p->dstAddr_ = ksock::SockAddr::indexToAddr4(pStatement->valueAsMutant("st_dst_ip"));
+        p->srcPort_ = ports_ ? (uint16_t) pStatement->valueAsMutant("st_src_port") : 0;
+        p->dstPort_ = ports_ ? (uint16_t) pStatement->valueAsMutant("st_dst_port") : 0;
+        p->proto_ = protocols_ ? (int16_t) pStatement->valueAsMutant("st_ip_proto") : -1;
+        p->pktSize_ = pStatement->valueAsMutant("SUM1");
+        p->dataSize_ = pStatement->valueAsMutant("SUM2");
+      }
+      else {
+        if( sum1 < minSignificantThreshold_ ){
+          struct in_addr baddr;
+          baddr.s_addr = INADDR_BROADCAST;
+          pResult->addRow();
+          pResult->cell(row,"st_src_ip") = ksock::SockAddr::addr2Index(baddr);
+          pResult->cell(row,"st_dst_ip") = ksock::SockAddr::addr2Index(baddr);
+          if( ports_ ){
+            pResult->cell(row,"st_src_port") = 0;
+            pResult->cell(row,"st_src_port") = 0;
+          }
+          if( protocols_ )
+            pResult->cell(row,"st_ip_proto") = -1;
+          pResult->cell(row,"SUM1") = pStatement->sum("SUM1",0,i);
+          pResult->cell(row,"SUM2") = pStatement->sum("SUM2",0,i);
+          threshold = true;
+        }
+        else {
+          pStatement->unloadRowByIndex(pResult->addRow());
+        }
+        p->srcAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_src_ip"));
+        p->dstAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_dst_ip"));
+        p->srcPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_src_port") : 0;
+        p->dstPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_dst_port") : 0;
+        p->proto_ = protocols_ ? (int16_t) pResult->cell(row,"st_ip_proto") : -1;
+        p->pktSize_ = pResult->cell(row,"SUM1");
+        p->dataSize_ = pResult->cell(row,"SUM2");
+      }
       cachedPacketSumHash_.insert(*p,false,false,&p);
       if( p == pktSum ){
         pktSum.ptr(NULL);
@@ -707,7 +720,6 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
         cachedPacketSumHitCount_++;
       }
       cachedPacketSumLRU_.insToHead(*p);
-      if( sum1 < minSignificantThreshold_ ) break;
     }
 //    pStatement->unloadByIndex(*pResult);
     pResult->sort("SUM1");

@@ -508,25 +508,66 @@ void PCAP::setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const
 void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet)
 {
 #if HAVE_PCAP_H
-  uint64_t bt, et;
-  setBounds(timestamp,bt,et);
-  if( groupingPeriod_ > pgpNone && bt != curPeriod_ ){
-    curPeriod_ = bt;
-    grouperSem_.post();
-  }
 #define SIZE_ETHERNET 14
-#define ETHERTYPE_IP 8
+#ifndef ETHERTYPE_IP
+#define ETHERTYPE_IP 0x0800
+#endif
+  if( capLen < SIZE_ETHERNET ){
+    if( stdErr.debugLevel(80) )
+      stdErr.debug(80,utf8::String::Stream() <<
+        "Device: " << iface_ << ", captured length less then ethernet frame header.\n"
+      );
+    return;
+  }
   const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
-  const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
-  uintptr_t sizeIp = 0;
-//  if( ethernet->type_ == ETHERTYPE_IP )
-  sizeIp = ip->hl() * 4;
-  if( sizeIp < 20 ){
+  if( be16toh(ethernet->type_) != ETHERTYPE_IP ){
     if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
         "Device: " << iface_ <<
         ", unsupported ethernet frame type: 0x" <<
         utf8::int2HexStr(ethernet->type_,4) <<
+	      ", from MAC: " <<
+        utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[1],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[2],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[3],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[4],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[5],2) << " to MAC: " <<
+        utf8::int2HexStr(ethernet->dstAddr_[0],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[1],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[2],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[3],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[4],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[5],2) << "\n"
+      );
+    return;
+  }
+  if( capLen < SIZE_ETHERNET + 20 ){
+    if( stdErr.debugLevel(80) )
+      stdErr.debug(80,utf8::String::Stream() <<
+        "Device: " << iface_ << ", captured length less then IP packet header, from MAC: " <<
+        utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[1],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[2],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[3],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[4],2) << ":" <<
+        utf8::int2HexStr(ethernet->srcAddr_[5],2) << " to MAC: " <<
+        utf8::int2HexStr(ethernet->dstAddr_[0],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[1],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[2],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[3],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[4],2) << ":" <<
+        utf8::int2HexStr(ethernet->dstAddr_[5],2) << "\n"
+      );
+    return;
+  }
+  const IPPacketHeader * ip = (const IPPacketHeader *)(packet + SIZE_ETHERNET);
+  uintptr_t sizeIp = 0;
+  sizeIp = ip->hl() * 4;
+  if( sizeIp < 20 ){
+    if( stdErr.debugLevel(80) )
+      stdErr.debug(80,utf8::String::Stream() <<
+        "Device: " << iface_ <<
         ", invalid IP header length: " <<
 	      sizeIp << " bytes, from MAC: " <<
         utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
@@ -540,60 +581,83 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
         utf8::int2HexStr(ethernet->dstAddr_[2],2) << ":" <<
         utf8::int2HexStr(ethernet->dstAddr_[3],2) << ":" <<
         utf8::int2HexStr(ethernet->dstAddr_[4],2) << ":" <<
-        utf8::int2HexStr(ethernet->dstAddr_[5],2) << ", " <<
-        __PRETTY_FUNCTION__ << "\n"
+        utf8::int2HexStr(ethernet->dstAddr_[5],2) << "\n"
       );
     return;
   }
   const TCPPacketHeader * tcp = (const TCPPacketHeader *)(packet + SIZE_ETHERNET + sizeIp);
   uintptr_t sizeTcp = 0;
-  if( ip->proto_ == IPPROTO_TCP ){
+  if( sizeIp >= 20 && ip->proto_ == IPPROTO_TCP ){
+    ksock::SockAddr src, dst;
+    src.addr4_.sin_addr = ip->src_;
+    src.addr4_.sin_port = 0;
+    dst.addr4_.sin_addr = ip->dst_;
+    dst.addr4_.sin_port = 0;
+    if( capLen < SIZE_ETHERNET + sizeIp + 20 ){
+      if( stdErr.debugLevel(80) )
+        stdErr.debug(80,utf8::String::Stream() <<
+          "Device: " << iface_ << ", captured length less then TCP packet header, from: " <<
+          src.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << " to: " <<
+          dst.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << "\n"
+        );
+      return;
+    }
     sizeTcp = tcp->off() * 4;
     if( sizeTcp < 20 ){
+      src.addr4_.sin_port = tcp->srcPort_;
+      dst.addr4_.sin_port = tcp->dstPort_;
       if( stdErr.debugLevel(80) ){
-        ksock::SockAddr src, dst;
-        src.addr4_.sin_addr = ip->src_;
-        src.addr4_.sin_port = tcp->srcPort_;
-        dst.addr4_.sin_addr = ip->dst_;
-        dst.addr4_.sin_port = tcp->dstPort_;
         stdErr.debug(80,utf8::String::Stream() <<
           "Device: " << iface_ << ", invalid TCP header length: " << sizeTcp << " bytes, from: " <<
           src.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << " to: " <<
-          dst.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) <<
-        __PRETTY_FUNCTION__ << "\n"
+          dst.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << "\n"
         );
       }
       return;
     }
   }
-  const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp;
-  if( packets_ == NULL || packets_->packets_ == packets_->count() ){
+  uint64_t bt, et;
+  setBounds(timestamp,bt,et);
+  if( packets_ == NULL ||
+      (packets_->packets_ == packets_->count() && packets_->packets_ > 0) ||
+      (groupingPeriod_ > pgpNone && bt != curPeriod_) ){
     if( packets_ != NULL ){
       AutoLock<InterlockedMutex> lock(packetsListMutex_);
       packetsList_.insToTail(*packets_.ptr(NULL));
       grouperSem_.post();
     }
-    packets_ = newObjectV1<Packets>(
+    curPeriod_ = bt;
+    packets_.ptr(newObjectV1<Packets>(
 #ifndef NDEBUG
       getpagesize() * 1u / sizeof(Packet)
 #else
       getpagesize() * 16 / sizeof(Packet)
 #endif
-    );
+    ));
     interlockedIncrement(
       memoryUsage_,
       uilock_t(packets_->count() * sizeof(Packet) + sizeof(Packets))
     );
     lazyWriterSem_.post();
   }
+  const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp;
   Packet & pkt = (*packets_.ptr())[packets_->packets_];
   pkt.timestamp_ = bt;
   pkt.pktSize_ = len;
   pkt.dataSize_ = len - (payload - packet);
+#ifndef NDEBUG
+  static const uint8_t bc[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+  if( memcmp(ethernet->dstAddr_,bc,6) == 0 || memcmp(ethernet->srcAddr_,bc,6) == 0 ){
+    len = len;
+  }
+  if( pkt.pktSize_ < pkt.dataSize_ ){
+    len = len;
+  }
+#endif
   memcpy(&pkt.srcAddr_,&ip->src_,sizeof(pkt.srcAddr_));
   memcpy(&pkt.dstAddr_,&ip->dst_,sizeof(pkt.dstAddr_));
-  pkt.srcPort_ = ip->proto_ == IPPROTO_TCP && ports_ ? tcp->srcPort_ : 0;
-  pkt.dstPort_ = ip->proto_ == IPPROTO_TCP && ports_ ? tcp->dstPort_ : 0;
+  pkt.srcPort_ = sizeTcp >= 20 && ip->proto_ == IPPROTO_TCP && ports_ ? tcp->srcPort_ : 0;
+  pkt.dstPort_ = sizeTcp >= 20 && ip->proto_ == IPPROTO_TCP && ports_ ? tcp->dstPort_ : 0;
   pkt.proto_ = protocols_ ? ip->proto_ : -1;
   for( intptr_t i = packets_->packets_ - 1, j = i - 5; i >= 0 && i >= j; i-- )
     if( pkt == (*packets_.ptr())[i] ){
