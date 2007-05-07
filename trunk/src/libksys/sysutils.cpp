@@ -115,6 +115,34 @@ Mutant getProcessPriority()
     default :
       m = GetPriorityClass(GetCurrentProcess());
   }
+#elif HAVE_GETPRIORITY
+  int32_t err;
+  switch( getpriority(PRIO_PROCESS,0) ){
+    case -1 :
+      err = errno;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      break;
+    case IDLE_PRIORITY_CLASS :
+      m = "IDLE_PRIORITY_CLASS";
+      break;
+    case BELOW_NORMAL_PRIORITY_CLASS :
+      m = "BELOW_NORMAL_PRIORITY_CLASS";
+      break;
+    case NORMAL_PRIORITY_CLASS :
+      m = "NORMAL_PRIORITY_CLASS";
+      break;
+    case ABOVE_NORMAL_PRIORITY_CLASS :
+      m = "ABOVE_NORMAL_PRIORITY_CLASS";
+      break;
+    case HIGH_PRIORITY_CLASS :
+      m = "HIGH_PRIORITY_CLASS";
+      break;
+    case REALTIME_PRIORITY_CLASS :
+      m = "REALTIME_PRIORITY_CLASS";
+      break;
+    default :
+      m = getpriority(PRIO_PROCESS,0);
+  }
 #endif
   return m;
 }
@@ -154,6 +182,41 @@ void setProcessPriority(const Mutant & m)
   }
   if( r == 0 && err != 0 )
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+#elif HAVE_SETPRIORITY
+  int32_t err = 0;
+  int r;
+  try {
+    r = setpriority(PRIO_PROCESS,0,m);
+    if( r != 0 ) err = errno;
+  }
+  catch( ExceptionSP & ){
+    r = -1;
+  }
+  if( r != 0 && err == 0 ){
+    utf8::String s(m);
+    if( s.strcasecmp("IDLE_PRIORITY_CLASS") == 0 )
+      r = setpriority(PRIO_PROCESS,0,IDLE_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
+      r = setpriority(PRIO_PROCESS,0,BELOW_NORMAL_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("NORMAL_PRIORITY_CLASS") == 0 )
+      r = setpriority(PRIO_PROCESS,0,NORMAL_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
+      r = setpriority(PRIO_PROCESS,0,ABOVE_NORMAL_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("HIGH_PRIORITY_CLASS") == 0 )
+      r = setpriority(PRIO_PROCESS,0,HIGH_PRIORITY_CLASS);
+    else
+    if( s.strcasecmp("REALTIME_PRIORITY_CLASS") == 0 )
+      r = setpriority(PRIO_PROCESS,0,REALTIME_PRIORITY_CLASS);
+    err = errno;
+  }
+  if( r != 0 && err != 0 )
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+#else
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------

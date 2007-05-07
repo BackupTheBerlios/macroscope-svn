@@ -611,8 +611,10 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   uintptr_t sizeUdp = 0;
   if( sizeIp >= 20 ){
     ksock::SockAddr src, dst;
+    src.addr4_.sin_family = AF_INET;
     src.addr4_.sin_addr = ip->src_;
     src.addr4_.sin_port = 0;
+    dst.addr4_.sin_family = AF_INET;
     dst.addr4_.sin_addr = ip->dst_;
     dst.addr4_.sin_port = 0;
     uintptr_t size = 0;
@@ -709,7 +711,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 #endif
 }
 //------------------------------------------------------------------------------
-bool PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintptr_t) throw()
+bool PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintptr_t,Thread *) throw()
 {
   return true;
 }
@@ -915,7 +917,8 @@ void PCAP::DatabaseInserter::threadExecute()
       group->header_.bt_,
       group->header_.et_,
       group->packets_,
-      group->header_.count_
+      group->header_.count_,
+      this
     );
     PacketGroup::SwapFileHeader header = group->header_;
     if( success ){
@@ -1071,6 +1074,8 @@ void PCAP::LazyWriter::threadExecute()
   priority(THREAD_PRIORITY_HIGHEST);
   AsyncFile tempFile(pcap_->tempFile_);
   tempFile.createIfNotExist(false).tryOpen();
+  lastSwapIn_ = 0;
+  lastSwapOut_ = gettimeofday() - pcap_->swapWatchTime_;
   for(;;){
     uilock_t memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
     bool swapin = memoryUsage < pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
@@ -1110,7 +1115,7 @@ void PCAP::LazyWriter::threadExecute()
       memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
       swapout = memoryUsage > pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
     }
-    while( swapin && gettimeofday() - lastSwapOut_ >= pcap_->swapWatchTime_ && tempFile.isOpen() ){
+    while( !terminated_ && swapin && gettimeofday() - lastSwapOut_ >= pcap_->swapWatchTime_ && tempFile.isOpen() ){
       swapIn(tempFile);
       lastSwapIn_ = gettimeofday();
       memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);

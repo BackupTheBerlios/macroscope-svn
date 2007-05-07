@@ -197,6 +197,10 @@
 #include <sys/time.h>
 #endif
 
+#if HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
+
 #if HAVE_TIME_H
 #include <time.h>
 #endif

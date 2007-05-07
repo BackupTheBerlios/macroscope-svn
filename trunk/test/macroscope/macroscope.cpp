@@ -188,6 +188,9 @@ void Logger::readConfig()
   stdErr.fileName(
     config_->value("log_file",stdErr.fileName())
   );
+  stdErr.bufferDataTTA(
+    (uint64_t) config_->value("debug_file_max_collection_time",60) * 1000000u
+  );
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   checkMachineBinding(config_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */

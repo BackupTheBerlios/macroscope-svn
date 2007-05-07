@@ -254,12 +254,12 @@ class String {
             Format(short n,const char * fmt = "%hd");
             Format(unsigned short n,const char * fmt = "%hd");
 #if !HAVE_INTPTR_T_AS_LONG
-            Format(long n,const char * fmt = "%ld");
-            Format(unsigned long n,const char * fmt = "%ld");
+            Format(long n,const char * fmt = "%d");
+            Format(unsigned long n,const char * fmt = "%u");
 #endif
 #if !HAVE_INTPTR_T_AS_INT
             Format(int n,const char * fmt = "%d");
-            Format(unsigned int n,const char * fmt = "%d");
+            Format(unsigned int n,const char * fmt = "%u");
 #endif
 #if !HAVE_INTPTR_T_AS_INTMAX_T
             Format(intmax_t n,const char * fmt = "%" PRIdMAX);
@@ -272,7 +272,7 @@ class String {
             Format(float a,const char * fmt = "%f");
             Format(double a,const char * fmt = "%f");
 #if HAVE_LONG_DOUBLE
-            Format(long double a,const char * fmt = "%lf");
+            Format(long double a,const char * fmt = "%" PRF_LDBL);
 #endif
           protected:
             union {

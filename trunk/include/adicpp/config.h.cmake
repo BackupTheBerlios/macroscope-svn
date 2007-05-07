@@ -27,6 +27,7 @@
 #cmakedefine HAVE_SYS_MMAN_H 1
 #cmakedefine HAVE_SYS_UUID_H 1
 #cmakedefine HAVE_SYS_TIME_H 1
+#cmakedefine HAVE_SYS_RESOURCE_H 1
 #cmakedefine HAVE_SYS_TIMEB_H 1
 #cmakedefine HAVE_SYS_STAT_H 1
 #cmakedefine HAVE_SYS_IOCTL_H 1
@@ -275,6 +276,8 @@
 #cmakedefine HAVE_UUID_FROM_STRING 1
 #cmakedefine HAVE_CLOCK_GETRES 1
 #cmakedefine HAVE_CLOCK_GETTIME 1
+#cmakedefine HAVE_SETPRIORITY 1
+#cmakedefine HAVE_GETPRIORITY 1
 #cmakedefine HAVE_NICE 1
 #cmakedefine HAVE_PTHREAD_CREATE 1
 #cmakedefine HAVE_PTHREAD_DETACH 1

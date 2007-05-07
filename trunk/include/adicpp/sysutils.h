@@ -32,6 +32,14 @@ namespace ksys {
 extern bool stackBackTrace;
 utf8::String getBackTrace(/*intptr_t flags = pdbutils::DbgFrameGetAll,*/intptr_t skipCount = 0,Thread * thread = NULL);
 //---------------------------------------------------------------------------
+#if !defined(IDLE_PRIORITY_CLASS) && HAVE_SETPRIORITY
+#define IDLE_PRIORITY_CLASS PRIO_MAX
+#define BELOW_NORMAL_PRIORITY_CLASS (PRIO_MAX / 2)
+#define NORMAL_PRIORITY_CLASS ((PRIO_MAX + PRIO_MIN) / 2)
+#define ABOVE_NORMAL_PRIORITY_CLASS (PRIO_MIN / 3)
+#define HIGH_PRIORITY_CLASS ((PRIO_MIN / 3) * 2)
+#define REALTIME_PRIORITY_CLASS PRIO_MIN
+#endif										
 Mutant getProcessPriority();
 void setProcessPriority(const Mutant & m);
 //---------------------------------------------------------------------------

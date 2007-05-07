@@ -38,7 +38,7 @@ Sniffer::Sniffer(Database * database) : database_(database)
 {
 }
 //------------------------------------------------------------------------------
-bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count) throw()
+bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count,Thread * caller) throw()
 {
   bool r = true;
   try {
@@ -53,7 +53,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         ")"
       )->prepare()->paramAsString(0/*"st_if"*/,ifName());
     database_->start();
-    while( count-- > 0 ){
+    while( !caller->terminated() && count-- > 0 ){
       Mutant m(bt);
       m.changeType(mtTime);
       statement_->
@@ -67,7 +67,8 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         paramAsMutant(8/*"st_data_bytes"*/, packets[count].dataSize_)->
         execute();
     }
-    database_->commit();
+    if( caller->terminated() ) database_->rollback(); else database_->commit();
+    r = !caller->terminated();
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
