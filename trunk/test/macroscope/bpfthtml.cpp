@@ -1398,10 +1398,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           )
         ;
     }
+    bool showFilter = logger_->config_->valueByPath(section_ + ".html_report.show_filter",false);
     f <<
       "Interface: " + sectionName_ + "<BR>\n" +
-      "Filter: <B>" + filter + "</B>, hash: " + filterHash_ + "<BR>\n" +
-      "FilterSQL: <B>" + filter_ + "</B><BR>\n" +
+      utf8::String(showFilter ?
+        "Filter: <B>" + filter + "</B>, hash: " + filterHash_ + "<BR>\n" +
+        "FilterSQL: <B>" + filter_ + "</B><BR>\n" :
+	utf8::String()
+      ) +
       "DNS cache size: " + utf8::int2Str((uintmax_t) logger_->dnsCache_.count()) + ", "
       "hit: " + utf8::int2Str(logger_->dnsCacheHitCount_) + ", " +
       "hit ratio: " + hitRatio + ", " +
