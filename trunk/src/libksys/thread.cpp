@@ -28,6 +28,26 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+int schedGetPriorityMin()
+{
+  int pri = sched_get_priority_min(sched_getscheduler(0));
+  if( pri == -1 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
+  }
+  return pri;
+}
+//---------------------------------------------------------------------------
+int schedGetPriorityMax()
+{
+  int pri = sched_get_priority_max(sched_getscheduler(0));
+  if( pri == -1 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
+  }
+  return pri;
+}
+//---------------------------------------------------------------------------
 uint8_t currentThreadPlaceHolder[sizeof(ThreadLocalVariable<Thread>)];
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

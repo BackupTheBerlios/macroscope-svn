@@ -231,7 +231,9 @@ void LogFile::rotate(AsyncFile & file)
 void LogFile::threadExecute()
 {
 //  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+#ifndef __FreeBSD__
   priority(THREAD_PRIORITY_LOWEST);
+#endif
   threadFile_.fileName(file_).createIfNotExist(true);
   AsyncFile lck;
   lck.fileName(threadFile_.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);

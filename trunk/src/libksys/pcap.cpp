@@ -261,6 +261,14 @@ PCAP::~PCAP()
 PCAP::PCAP() : handle_(NULL), fp_(NULL), groupingPeriod_(pgpNone),
   packetsAutoDrop_(packetsList_), groupTreeAutoDrop_(groupTree_),
   swapThreshold_(16u * 1024u * 1024u),
+  pregroupingBufferSize_(
+#ifndef NDEBUG
+    getpagesize() * 1u / sizeof(Packet)
+#else
+    getpagesize() * 16u / sizeof(Packet)
+#endif
+  ),
+  pregroupingWindowSize_(5),
   swapLowWatermark_(50),
   swapHighWatermark_(90),
   swapWatchTime_(5000000),
@@ -430,12 +438,12 @@ void PCAP::threadExecute()
     databaseInserter_->resume();
     lazyWriter_->resume();
 #ifdef __FreeBSD__
-    try {
-      priority(THREAD_PRIORITY_TIME_CRITICAL);
-    }
-    catch( ExceptionSP & e ){
-      e->writeStdError();
-    }
+//    try {
+//      priority(THREAD_PRIORITY_TIME_CRITICAL);
+//    }
+//    catch( ExceptionSP & e ){
+//      e->writeStdError();
+//    }
 #endif
     stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture started.\n");
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
@@ -666,13 +674,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
       grouperSem_.post();
     }
     curPeriod_ = bt;
-    packets_.ptr(newObjectV1<Packets>(
-#ifndef NDEBUG
-      getpagesize() * 1u / sizeof(Packet)
-#else
-      getpagesize() * 16 / sizeof(Packet)
-#endif
-    ));
+    packets_.ptr(newObjectV1<Packets>(pregroupingBufferSize_ / sizeof(Packet)));
     interlockedIncrement(
       memoryUsage_,
       uilock_t(packets_->count() * sizeof(Packet) + sizeof(Packets))
@@ -685,13 +687,13 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   pkt.pktSize_ = len;
   pkt.dataSize_ = len - (payload - packet);
 #ifndef NDEBUG
-  static const uint8_t bc[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-  if( memcmp(ethernet->dstAddr_,bc,6) == 0 || memcmp(ethernet->srcAddr_,bc,6) == 0 ){
-    len = len;
-  }
-  if( pkt.pktSize_ < pkt.dataSize_ ){
-    len = len;
-  }
+//  static const uint8_t bc[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+//  if( memcmp(ethernet->dstAddr_,bc,6) == 0 || memcmp(ethernet->srcAddr_,bc,6) == 0 ){
+//    len = len;
+//  }
+//  if( pkt.pktSize_ < pkt.dataSize_ ){
+//    len = len;
+//  }
 #endif
   memcpy(&pkt.srcAddr_,&ip->src_,sizeof(pkt.srcAddr_));
   memcpy(&pkt.dstAddr_,&ip->dst_,sizeof(pkt.dstAddr_));
@@ -708,7 +710,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     }
   }
   pkt.proto_ = protocols_ ? ip->proto_ : -1;
-  for( intptr_t i = packets_->packets_ - 1, j = i - 5; i >= 0 && i >= j; i-- )
+  for( intptr_t i = packets_->packets_ - 1, j = i - pregroupingWindowSize_; i >= 0 && i >= j; i-- )
     if( pkt == (*packets_.ptr())[i] ){
       Packet & pkt2 = (*packets_.ptr())[i];
       pkt2.pktSize_ += pkt.pktSize_;

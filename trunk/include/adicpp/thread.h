@@ -38,7 +38,7 @@ namespace ksys {
 #endif
 //---------------------------------------------------------------------------
 #if !defined(__WIN32__) && !defined(__WIN64__)
-#ifndef PTHREAD_DEFAULT_PRIORITY
+/*#ifndef PTHREAD_DEFAULT_PRIORITY
 #if __FreeBSD__
 #define PTHREAD_DEFAULT_PRIORITY 15
 #else
@@ -65,14 +65,17 @@ namespace ksys {
 #else
 #define PTHREAD_RT_PRIORITY 0
 #endif
-#endif
-#define THREAD_PRIORITY_ABOVE_NORMAL PTHREAD_DEFAULT_PRIORITY + 1
-#define THREAD_PRIORITY_BELOW_NORMAL PTHREAD_DEFAULT_PRIORITY - 1
-#define THREAD_PRIORITY_HIGHEST PTHREAD_MAX_PRIORITY
-#define THREAD_PRIORITY_IDLE PTHREAD_MIN_PRIORITY
-#define THREAD_PRIORITY_LOWEST PTHREAD_MIN_PRIORITY + 1
-#define THREAD_PRIORITY_NORMAL PTHREAD_DEFAULT_PRIORITY
-#define THREAD_PRIORITY_TIME_CRITICAL PTHREAD_RT_PRIORITY
+#endif*/
+int schedGetPriorityMin();
+int schedGetPriorityMax();
+#define THREAD_PRIORITY_QUANT ((schedGetPriorityMin() + schedGetPriorityMax() + 1) / 7.)
+#define THREAD_PRIORITY_IDLE schedGetPriorityMin()
+#define THREAD_PRIORITY_LOWEST (THREAD_PRIORITY_IDLE + int(THREAD_PRIORITY_QUANT))
+#define THREAD_PRIORITY_BELOW_NORMAL (THREAD_PRIORITY_IDLE + int(THREAD_PRIORITY_QUANT * 2))
+#define THREAD_PRIORITY_NORMAL ((schedGetPriorityMin() + schedGetPriorityMax() + 1) / 2)
+#define THREAD_PRIORITY_TIME_CRITICAL schedGetPriorityMax()
+#define THREAD_PRIORITY_ABOVE_NORMAL (THREAD_PRIORITY_TIME_CRITICAL - int(THREAD_PRIORITY_QUANT * 2))
+#define THREAD_PRIORITY_HIGHEST (THREAD_PRIORITY_TIME_CRITICAL - int(THREAD_PRIORITY_QUANT))
 #endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

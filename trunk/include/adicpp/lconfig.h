@@ -205,6 +205,10 @@
 #include <time.h>
 #endif
 
+#if HAVE_SCHED_H
+#include <sched.h>
+#endif
+
 #if HAVE_UTIME_H
 #include <utime.h>
 #endif

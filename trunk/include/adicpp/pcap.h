@@ -133,6 +133,10 @@ class PCAP : public Thread {
     PCAP & tempFile(const utf8::String & tempFile);
     const uintptr_t & swapThreshold() const;
     PCAP & swapThreshold(uintptr_t a);
+    const uintptr_t & pregroupingBufferSize() const;
+    PCAP & pregroupingBufferSize(uintptr_t a);
+    const uintptr_t & pregroupingWindowSize() const;
+    PCAP & pregroupingWindowSize(uintptr_t a);
     const ldouble & swapLowWatermark() const;
     PCAP & swapLowWatermark(ldouble a);
     const ldouble & swapHighWatermark() const;
@@ -358,6 +362,8 @@ class PCAP : public Thread {
     utf8::String filter_;
     utf8::String tempFile_;
     uintptr_t swapThreshold_;
+    uintptr_t pregroupingBufferSize_;
+    uintptr_t pregroupingWindowSize_;
     uilock_t memoryUsage_;
     ldouble swapLowWatermark_;
     ldouble swapHighWatermark_;
@@ -456,6 +462,30 @@ inline const uintptr_t & PCAP::swapThreshold() const
 inline PCAP & PCAP::swapThreshold(uintptr_t a)
 {
   swapThreshold_ = a;
+  if( swapThreshold_ < pregroupingBufferSize_ * 2 ) swapThreshold_ = pregroupingBufferSize_ * 2;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & PCAP::pregroupingBufferSize() const
+{
+  return pregroupingBufferSize_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::pregroupingBufferSize(uintptr_t a)
+{
+  pregroupingBufferSize_ = a;
+  if( swapThreshold_ < pregroupingBufferSize_ * 2 ) swapThreshold_ = pregroupingBufferSize_ * 2;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & PCAP::pregroupingWindowSize() const
+{
+  return pregroupingWindowSize_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::pregroupingWindowSize(uintptr_t a)
+{
+  pregroupingWindowSize_ = a;
   return *this;
 }
 //---------------------------------------------------------------------------

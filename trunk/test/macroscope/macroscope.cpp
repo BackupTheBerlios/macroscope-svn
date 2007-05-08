@@ -679,6 +679,8 @@ int32_t Logger::doWork(uintptr_t stage)
         sniffer->tempFile(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.temp_file",sniffer->tempFile()));
         sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
         sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_threshold",sniffer->swapThreshold()));
+        sniffer->pregroupingBufferSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_buffer_size",sniffer->pregroupingBufferSize()));
+        sniffer->pregroupingWindowSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_window_size",sniffer->pregroupingWindowSize()));
         sniffer->promisc(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.promiscuous",sniffer->promisc()));
         sniffer->ports(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.ports",sniffer->ports()));
         sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
