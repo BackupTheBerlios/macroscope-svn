@@ -409,7 +409,7 @@ int32_t Logger::main(bool sniffer,bool daemon)
     }
     verbose_ = false;
   }
-  else {
+  else try {
     statement2_ = database_->newAttachedStatement();
 
     database_->create();
@@ -561,6 +561,9 @@ int32_t Logger::main(bool sniffer,bool daemon)
       }
     }
     database_->detach();
+  }
+  catch( ExceptionSP & e ){
+    if( sniffer ) e->writeStdError(); else throw;
   }
 // parse log files
   int32_t err0 = doWork(0);

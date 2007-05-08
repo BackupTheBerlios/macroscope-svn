@@ -741,7 +741,6 @@ void PCAP::Grouper::threadExecute()
 #ifndef __FreeBSD__
   priority(THREAD_PRIORITY_ABOVE_NORMAL);
 #endif
-  uintptr_t count = 0;
   for(;;){
     bool term;
     AutoPtr<Packets> packets;
@@ -752,11 +751,6 @@ void PCAP::Grouper::threadExecute()
       term = terminated_;
     }
     if( packets == NULL || packets->packets_ == 0 ){
-      if( count > 0 ){
-        pcap_->databaseInserterSem_.post();
-        pcap_->lazyWriterSem_.post();
-        count = 0;
-      }
       if( term ) break;
       pcap_->grouperSem_.wait();
       continue;
@@ -825,7 +819,8 @@ void PCAP::Grouper::threadExecute()
       else {
         group.ptr(NULL);
       }
-      count++;
+      pcap_->databaseInserterSem_.post();
+      pcap_->lazyWriterSem_.post();
     }
     catch( ExceptionSP & ){
       AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
@@ -891,6 +886,7 @@ void PCAP::DatabaseInserter::threadExecute()
 #ifndef __FreeBSD__
   priority(THREAD_PRIORITY_HIGHEST);
 #endif
+  bool success = true;
   while( !terminated_ ){
     PacketGroup * pGroup;
     AutoPtr<PacketGroup> group;
@@ -911,6 +907,7 @@ void PCAP::DatabaseInserter::threadExecute()
       pcap_->databaseInserterSem_.wait();
       continue;
     }
+    if( !success ) pcap_->databaseInserterSem_.timedWait(1000000);
     if( stdErr.debugLevel(7) )
       stdErr.debug(7,utf8::String::Stream() <<
         "Device: " << pcap_->iface_ << ", start processing packets group: " <<
@@ -927,7 +924,7 @@ void PCAP::DatabaseInserter::threadExecute()
         ) << "\n"
       );
 
-    bool success = pcap_->insertPacketsInDatabase(
+    success = pcap_->insertPacketsInDatabase(
       group->header_.bt_,
       group->header_.et_,
       group->packets_,

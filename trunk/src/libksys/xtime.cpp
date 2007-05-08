@@ -227,7 +227,7 @@ struct tm time2tm(int64_t a)
     ULARGE_INTEGER sti;
   };
   SYSTEMTIME systemTime;
-  sti.QuadPart = a * 10u + UINT64_C(11644473600) * 10000000u;
+  sti.QuadPart = (a + UINT64_C(11644473600) * 1000000u) * 10u;
   if( FileTimeToSystemTime(&fileTime,&systemTime) == 0 ){
     int32_t err = GetLastError();
     newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
@@ -381,9 +381,8 @@ time_t timegm(struct tm * t)
     int32_t err = GetLastError();
     newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
-  sti.QuadPart -= UINT64_C(11644473600) * 10000000u;
-  return (time_t) sti.QuadPart / 10000000u;
-//  return mktime(t) - (getgmtoffset() / 1000000u);
+  sti.QuadPart /= 10000000u;
+  return (time_t) (sti.QuadPart - UINT64_C(11644473600));
 }
 #endif
 //---------------------------------------------------------------------------

@@ -127,7 +127,7 @@ Database & Database::create(const utf8::String & name)
   MYSQL * handle  = NULL;
   try {
     allocHandle(handle);
-    api.mysql_real_connect(handle, hostName.strlen() > 0 ? hostName.c_str() : NULL, dpb_.user().c_str(), dpb_.password().c_str(), NULL, (unsigned int) port, hostName.strlen() > 0 ? hostName.c_str() : NULL, CLIENT_COMPRESS);
+    api.mysql_real_connect(handle, hostName.strlen() > 0 ? hostName.c_str() : NULL, dpb_.user().c_str(), dpb_.password().c_str(), NULL, (unsigned int) port, hostName.strlen() > 0 ? hostName.c_str() : NULL,dpb_.compress() ? CLIENT_COMPRESS : 0);
     if( api.mysql_errno(handle) != 0 )
       exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle), api.mysql_error(handle)));
     dbName = "CREATE DATABASE " + dbName + " DEFAULT CHARACTER SET UTF8";
