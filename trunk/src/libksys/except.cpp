@@ -140,12 +140,11 @@ utf8::String Exception::stdError(utf8::String::Stream * s) const
     if( errors_[i].code_ == 0 ) continue;
     intmax_t a;
     utf8::String serr(strError(errors_[i].code_));
-    if( !utf8::tryStr2Int(serr,a) ){
-      if( errors_[i].code_ >= errorOffset ) *s << errors_[i].code_ - errorOffset; else *s << errors_[i].code_;
-      *s << " ";
-    }
-    if( serr.strlen() > 0 ) *s << serr << " ";
-    *s << errors_[i].what_ << "\n";
+    if( utf8::tryStr2Int(serr,a) ) serr.resize(0); else a = errors_[i].code_;
+    if( a >= errorOffset ) a -= errorOffset;
+    *s << a;
+    if( serr.strlen() > 0 ) *s << " " << serr;
+    *s << " " << errors_[i].what_ << "\n";
   }
   return s == &stream ? s->string() : utf8::String();
 }

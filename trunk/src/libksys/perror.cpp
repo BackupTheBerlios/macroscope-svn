@@ -114,10 +114,11 @@ utf8::String strError(int32_t err)
       serr.realloc(sel = (sel << 1) + (sel == 0));
 //      memset(serr,'@',sel);
 //      fprintf(stderr,"%s %d sel = %u\n",__FILE__,__LINE__,sel);
-      if( (er = strerror_r(err,serr,sel)) != 0 && er != ERANGE ){
-        newObjectV1C2<Exception>(er,__PRETTY_FUNCTION__)->throwSP();
+      if( (er = strerror_r(err,serr,sel)) != 0 && er != ERANGE && er != EINVAL ){
+        perror(NULL);
+	abort();
       }
-      if( er == 0 ) break;
+      if( er == 0 || er == EINVAL ) break;
     }
 #elif HAVE_STRERROR
     serr.realloc(::strlen(strerror(err)) + 1);
@@ -125,7 +126,7 @@ utf8::String strError(int32_t err)
 #endif
     if( strchr(serr.ptr(),'\r') != NULL ) *strchr(serr.ptr(),'\r') = '\0';
     if( strchr(serr.ptr(),'\n') != NULL ) *strchr(serr.ptr(),'\n') = '\0';
-    if( strlen(serr) > 0 && ::strcmp(serr,"Unknown error") != 0 ) return serr.ptr();
+    if( strlen(serr) > 0 && ::strncmp(serr,"Unknown error",13) != 0 ) return serr.ptr();
     return utf8::int2Str(err);
   }
   return utf8::String();

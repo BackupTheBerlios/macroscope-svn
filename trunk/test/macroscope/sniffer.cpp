@@ -74,6 +74,8 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     e->writeStdError();
     r = false;
   }
+// shutdown
+  if( packets == NULL ) database_->detach();
   return r;
 }
 //------------------------------------------------------------------------------
