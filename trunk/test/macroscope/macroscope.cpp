@@ -840,7 +840,10 @@ int main(int _argc,char * _argv[])
     macroscope::SnifferService * service = serviceAP.ptr(NULL);
     bool dispatch = true, sniffer = false, daemonize = false, svc = false;
     for( i = 1; i < argv().count(); i++ ){
-      if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
+      if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
+        changeCurrentDir(argv()[i + 1]);
+      }
+      else if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
         Config::defaultFileName(argv()[i + 1]);
       }
       else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
