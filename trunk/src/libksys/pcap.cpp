@@ -429,6 +429,14 @@ void PCAP::threadExecute()
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
+#ifdef __FreeBSD__
+    try {
+      priority(THREAD_PRIORITY_TIME_CRITICAL);
+    }
+    catch( ExceptionSP & e ){
+      e->writeStdError();
+    }
+#endif
     stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture started.\n");
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
@@ -1086,7 +1094,7 @@ void PCAP::LazyWriter::threadExecute()
     uilock_t memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
     bool swapin = memoryUsage < pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
     bool swapout = memoryUsage >= pcap_->swapThreshold() * pcap_->swapHighWatermark_ / 100;
-    while( swapout || terminated_ ){
+    while( (swapout && gettimeofday() - lastSwapIn_ >= pcap_->swapWatchTime_) || terminated_ ){
       AutoPtr<PacketGroup> group;
       bool term;
       {

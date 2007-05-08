@@ -260,7 +260,7 @@ l1:   int32_t err = errno;
     }
     param.sched_priority = pri;
     if( (errno = pthread_setschedparam(handle_,policy,&param)) != 0 ) goto l1;*/
-    if( pthread_setprio(handle_,int(pri)) != 0 ){
+    if( (errno = pthread_setprio(handle_,int(pri))) != 0 ){
       int32_t err = errno;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
