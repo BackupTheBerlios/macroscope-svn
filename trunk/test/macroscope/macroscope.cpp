@@ -196,7 +196,14 @@ void Logger::readConfig()
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   verbose_ = config_->valueByPath("macroscope.verbose",false);
-  setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()));
+#if !defined(__WIN32__) && !defined(__WIN64__)
+  try {
+    setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()));
+  }
+  catch( ExceptionSP & e ){
+    e->writeStdError();
+  }
+#endif
 }
 //------------------------------------------------------------------------------
 int32_t Logger::main(bool sniffer,bool daemon)
