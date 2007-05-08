@@ -757,6 +757,8 @@ utf8::String SockAddr::addressFamilyAsString(uintptr_t family)
 #define IPPROTO_CARP            112             /* CARP */
 #define IPPROTO_PGM             113             /* PGM */
 #define IPPROTO_PFSYNC          240             /* PFSYNC */
+#elif !defined IPPROTO_SCTP
+#define IPPROTO_SCTP            132             /* SCTP */
 #endif
 static const struct {
   const char * const name_;
