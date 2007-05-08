@@ -896,7 +896,7 @@ void PCAP::DatabaseInserter::threadExecute()
       uint64_t ct = gettimeofday();
       while( walker.next() ){
         pGroup = &walker.object();
-        if( pGroup->header_.et_ < ct ){
+        if( pGroup->header_.bt_ > ct || pGroup->header_.et_ < ct ){
           group.ptr(pGroup);
           pcap_->groupTree_.remove(*pGroup);
           break;
