@@ -438,7 +438,7 @@ int32_t Logger::main(bool sniffer,bool daemon)
       " ST_LAST_OFFSET        BIGINT NOT NULL"
       ")" <<
       "CREATE TABLE INET_BPFT_STAT ("
-      " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
+      " st_if            CHAR(16) CHARACTER SET ascii NOT NULL,"
       " st_start         DATETIME NOT NULL,"
       " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
       " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
