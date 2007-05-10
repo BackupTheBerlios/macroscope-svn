@@ -845,6 +845,7 @@ int main(int _argc,char * _argv[])
     services.add(serviceAP);
     macroscope::SnifferService * service = serviceAP.ptr(NULL);
     bool dispatch = true, sniffer = false, daemonize = false, svc = false;
+    utf8::String pidFileName;
     for( i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
         changeCurrentDir(argv()[i + 1]);
@@ -856,6 +857,7 @@ int main(int _argc,char * _argv[])
         stdErr.fileName(argv()[i + 1]);
       }
       else if( argv()[i].strcmp("--pid") == 0 && i + 1 < argv().count() ){
+        pidFileName = argv()[i + 1];
         AsyncFile pidFile(argv()[i + 1]);
 	pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
 	pidFile.resize(pidFile.size());
@@ -941,6 +943,11 @@ int main(int _argc,char * _argv[])
           newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
         }
 #endif
+        if( !pidFileName.isNull() ){
+          AsyncFile pidFile(pidFileName);
+  	  pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
+	  pidFile.resize(pidFile.size());
+        }
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
         errcode = logger.main(sniffer,daemonize);
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
