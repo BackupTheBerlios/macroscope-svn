@@ -539,21 +539,24 @@ int32_t Logger::main(bool sniffer,bool daemon)
       }
     }
 //#endif
-    database_->attach();
-    for( uintptr_t i = 0; i < metadata.count(); i++ ){
-      if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
-        if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
-          metadata[i] += " TYPE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
-      try {
-        statement_->execute(metadata[i]);
+    bool createDatabaseStructure = config_->valueByPath("macroscope.create_database_structure",true);
+    if( createDatabaseStructure ){
+      database_->attach();
+      for( uintptr_t i = 0; i < metadata.count(); i++ ){
+        if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
+          if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
+            metadata[i] += " TYPE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
+        try {
+          statement_->execute(metadata[i]);
+        }
+        catch( ExceptionSP & e ){
+          //if( e->searchCode(isc_keytoobig) ) throw;
+          if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,
+              ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
+        }
       }
-      catch( ExceptionSP & e ){
-        //if( e->searchCode(isc_keytoobig) ) throw;
-        if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,
-            ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
-      }
+      database_->detach();
     }
-    database_->detach();
   }
   catch( ExceptionSP & e ){
     if( sniffer ) e->writeStdError(); else throw;
