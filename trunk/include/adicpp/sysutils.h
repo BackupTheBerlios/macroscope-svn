@@ -41,7 +41,7 @@ utf8::String getBackTrace(/*intptr_t flags = pdbutils::DbgFrameGetAll,*/intptr_t
 #define REALTIME_PRIORITY_CLASS PRIO_MIN
 #endif										
 Mutant getProcessPriority();
-void setProcessPriority(const Mutant & m);
+void setProcessPriority(const Mutant & m,bool noThrow = false);
 //---------------------------------------------------------------------------
 utf8::String getEnv(const utf8::String & name);
 void setEnv(const utf8::String & name,const utf8::String & value,bool overwrite = true);

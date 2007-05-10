@@ -147,7 +147,7 @@ Mutant getProcessPriority()
   return m;
 }
 //---------------------------------------------------------------------------
-void setProcessPriority(const Mutant & m)
+void setProcessPriority(const Mutant & m,bool noThrow)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   int32_t err = 0;
@@ -180,7 +180,7 @@ void setProcessPriority(const Mutant & m)
       r = SetPriorityClass(GetCurrentProcess(),REALTIME_PRIORITY_CLASS);
     err = GetLastError();
   }
-  if( r == 0 && err != 0 )
+  if( r == 0 && err != 0 && !noThrow )
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
 #elif HAVE_SETPRIORITY
   int32_t err = 0;
@@ -213,10 +213,11 @@ void setProcessPriority(const Mutant & m)
       r = setpriority(PRIO_PROCESS,0,REALTIME_PRIORITY_CLASS);
     err = errno;
   }
-  if( r != 0 && err != 0 )
+  if( r != 0 && err != 0 && !noThrow )
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
 #else
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  if( !noThrow )
+    newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------

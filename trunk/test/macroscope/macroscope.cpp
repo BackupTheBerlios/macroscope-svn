@@ -196,14 +196,7 @@ void Logger::readConfig()
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   verbose_ = config_->valueByPath("macroscope.verbose",false);
-#if !defined(__WIN32__) && !defined(__WIN64__)
-  try {
-    setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()));
-  }
-  catch( ExceptionSP & e ){
-    e->writeStdError();
-  }
-#endif
+  setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()),true);
 }
 //------------------------------------------------------------------------------
 int32_t Logger::main(bool sniffer,bool daemon)
@@ -858,6 +851,11 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
         stdErr.fileName(argv()[i + 1]);
+      }
+      else if( argv()[i].strcmp("--pid") == 0 && i + 1 < argv().count() ){
+        AsyncFile pidFile(argv()[i + 1]);
+	pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
+	pidFile.resize(pidFile.size());
       }
     }
     for( i = 1; i < argv().count(); i++ ){
