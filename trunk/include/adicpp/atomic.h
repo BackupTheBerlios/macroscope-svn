@@ -60,6 +60,20 @@ namespace ksys {
 //  return a;
 //}
 
+#if !HAVE_ATOMIC_FETCHADD_INT_32
+static __inline uint32_t atomic_fetchadd_int_32(volatile uint32_t * p,uint32_t v)
+{
+    __asm __volatile (
+    "       lock ;                  "
+    "       xaddl   %0, %1 ;        "
+    "# atomic_fetchadd_int"
+    : "+r" (v),                     /* 0 (result) */
+      "=m" (*p)                     /* 1 */
+    : "m" (*p));                    /* 2 */
+    return (v);
+}
+#endif
+
 inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
@@ -78,9 +92,12 @@ inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
   //    : "ecx"
   );*/
 //  return interlockedIncrement(&v,a);
-#if HAVE_MACHINE_ATOMIC_H
-//  return atomic_fetchadd_32((volatile u_int *) &v,a);
-#endif
+//#if HAVE_ATOMIC_FETCHADD_32
+  return atomic_fetchadd_int_32((volatile uint32_t *) &v,a);
+//#else
+//  asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
+//  return a;
+//#endif
 }
 
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a);

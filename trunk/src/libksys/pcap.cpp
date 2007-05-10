@@ -428,6 +428,7 @@ void PCAP::threadExecute()
       fc_ = true;
       if( api.pcap_setfilter((pcap_t *) handle_,fp) != 0 ) goto errexit;
     }
+//    fprintf(stderr,"%s %d\n",__FILE__,__LINE__); fflush(stderr);
     //if( api.pcap_setmode((pcap_t *) handle_,MODE_MON) != 0 ) goto errexit;
     grouper_ = newObjectV1<Grouper>(this);
     databaseInserter_ = newObjectV1<DatabaseInserter>(this);
@@ -437,15 +438,9 @@ void PCAP::threadExecute()
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
-#ifdef __FreeBSD__
-//    try {
-//      priority(THREAD_PRIORITY_TIME_CRITICAL);
-//    }
-//    catch( ExceptionSP & e ){
-//      e->writeStdError();
-//    }
-#endif
-    stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture started.\n");
+    utf8::String::Stream stream;
+    stream << "Device: " << iface_ << ", capture started.\n";
+    stdErr.debug(1,stream);
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
   }

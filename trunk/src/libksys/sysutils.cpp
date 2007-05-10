@@ -2703,7 +2703,7 @@ utf8::String getMachineUniqueKey()
   struct ifreq ifr;
   struct if_msghdr * ifm, * ifm2 = NULL, * nextifm;
   struct ifa_msghdr * ifam;
-  struct sockaddr_dl * sdl, * sdl2 = NULL;
+  struct sockaddr_dl * sdl = NULL, * sdl2 = NULL;
   const uint8_t * next = buf, * lim = next + needed;
   while( next < lim ){
     ifm = (struct if_msghdr *) next;

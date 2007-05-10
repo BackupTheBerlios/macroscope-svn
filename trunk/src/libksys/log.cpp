@@ -131,7 +131,6 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
   if( debugLevel(level) ){
     struct timeval tv = time2Timeval(getlocaltimeofday());
     struct tm t = time2tm(timeval2Time(tv));
-    AutoPtr<char> buf;
     bool post = false;
     try {
       char buf[128], buf2[128 * sizeof(wchar_t)];
@@ -197,6 +196,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
     }
     catch( ExceptionSP & e ){
       exceptionStdErrorToSyslog(e);
+//      fprintf(stderr,"%s %d\n",__FILE__,__LINE__); fflush(stderr);
     }
     if( post ) bufferSemaphore_.post();
   }
