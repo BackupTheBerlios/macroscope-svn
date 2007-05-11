@@ -544,10 +544,10 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 #define ETHERTYPE_IP 0x0800
 #endif
   if( capLen < SIZE_ETHERNET ){
-    if( stdErr.debugLevel(80) )
+    /*if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
         "Device: " << iface_ << ", captured length less then ethernet frame header.\n"
-      );
+      );*/
     return;
   }
   const EthernetPacketHeader * ethernet = (const EthernetPacketHeader *)(packet);
@@ -557,7 +557,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
         "Device: " << iface_ <<
         ", unsupported ethernet frame type: 0x" <<
         utf8::int2HexStr(ethernet->type_,4) <<
-	      ", from MAC: " <<
+        ", from MAC: " <<
         utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[1],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[2],2) << ":" <<

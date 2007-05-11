@@ -267,7 +267,6 @@ class String {
 #endif
             Format(intptr_t n,const char * fmt = "%" PRIdPTR);
             Format(uintptr_t n,const char * fmt = "%" PRIuPTR);
-            Format(const char * p,const char * fmt = "%s");
             Format(const void * const p,const char * fmt = "%" PRIxPTR);
             Format(float a,const char * fmt = "%f");
             Format(double a,const char * fmt = "%f");
@@ -329,19 +328,20 @@ class String {
 #endif
         Stream & operator << (intptr_t n);
         Stream & operator << (uintptr_t n);
-        Stream & operator << (const char * p);
         Stream & operator << (const void * const p);
         Stream & operator << (float n);
         Stream & operator << (double n);
 #if HAVE_LONG_DOUBLE
         Stream & operator << (long double n);
 #endif
-        Stream & operator << (const utf8::String & s);
+        Stream & operator << (const char * s);
+        Stream & operator << (const wchar_t * s);
+        Stream & operator << (const String & s);
         Stream & operator << (const Format & a);
 
         const char * plane() const;
         const uintptr_t & count() const;
-        utf8::String string();
+        String string();
         Stream & clear();
       protected:
       private:
@@ -394,12 +394,12 @@ class String {
 #ifndef __BCPLUSPLUS__
 #undef strcmp
 #endif
-    bool operator == (const utf8::String & s) const { return strcmp(s) == 0; }
-    bool operator != (const utf8::String & s) const { return strcmp(s) != 0; }
-    bool operator >= (const utf8::String & s) const { return strcmp(s) >= 0; }
-    bool operator >  (const utf8::String & s) const { return strcmp(s) >  0; }
-    bool operator <= (const utf8::String & s) const { return strcmp(s) <= 0; }
-    bool operator <  (const utf8::String & s) const { return strcmp(s) <  0; }
+    bool operator == (const String & s) const { return strcmp(s) == 0; }
+    bool operator != (const String & s) const { return strcmp(s) != 0; }
+    bool operator >= (const String & s) const { return strcmp(s) >= 0; }
+    bool operator >  (const String & s) const { return strcmp(s) >  0; }
+    bool operator <= (const String & s) const { return strcmp(s) <= 0; }
+    bool operator <  (const String & s) const { return strcmp(s) <  0; }
     intptr_t            strcmp(const String & s) const;
     intptr_t            strncmp(const String & s, uintptr_t n) const;
     intptr_t            strcasecmp(const String & s) const;
@@ -440,7 +440,7 @@ class String {
     bool                isNull() const;
     bool                isEqu(const String & s) const;
 
-    bool                hashKeyEqu(const utf8::String & key, bool caseSensitive) const;
+    bool                hashKeyEqu(const String & key, bool caseSensitive) const;
     uintptr_t           hash(bool caseSensitive) const;
     uint64_t            hash_ll(bool caseSensitive) const;
 
@@ -983,11 +983,6 @@ inline String::Stream & String::Stream::operator << (uintptr_t n)
   return *this << Format(n);
 }
 //---------------------------------------------------------------------------
-inline String::Stream & String::Stream::operator << (const char * p)
-{
-  return *this << Format(p);
-}
-//---------------------------------------------------------------------------
 inline String::Stream & String::Stream::operator << (const void * const p)
 {
   return *this << Format(p);
@@ -1101,11 +1096,6 @@ inline String::Stream::Format::Format(intptr_t n,const char * fmt) : pi_(n), typ
 }
 //---------------------------------------------------------------------------
 inline String::Stream::Format::Format(uintptr_t n,const char * fmt) : pu_(n), type_(PU)
-{
-  strncpy0(fmt_,sizeof(fmt_),fmt);
-}
-//---------------------------------------------------------------------------
-inline String::Stream::Format::Format(const char * p,const char * fmt) : s_(p), type_(S)
 {
   strncpy0(fmt_,sizeof(fmt_),fmt);
 }

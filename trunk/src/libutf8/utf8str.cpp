@@ -77,7 +77,7 @@ String plane(const char * s,uintptr_t size)
     s += l;
     size -= l;
   }
-  if( s - a == 0 ) return utf8::String();
+  if( s - a == 0 ) return String();
   String::Container * container = String::Container::container(uintptr_t(s - a));
   memcpy(container->string_,a,s - a);
   container->string_[s - a] = '\0';
@@ -642,9 +642,9 @@ String & String::replace(const Iterator & d1,const Iterator & d2, const Iterator
   assert( container_ == d1.container_ );
   assert( d1.container_ == d2.container_ );
   assert( s1.container_ == s2.container_ );
-  if( container_.ptr() == &nullContainer() ) return *this = utf8::String(s1, s2);
+  if( container_.ptr() == &nullContainer() ) return *this = String(s1, s2);
   if( s1.container_ == d1.container_ ){
-    String a(utf8::String(s1,s2));
+    String a(String(s1,s2));
     return replace(d1,d2,String::Iterator(a),String::Iterator(a).last());
   }
   if( d1.cursor_ > d2.cursor_ ) return replace(d2, d1, s1, s2);
@@ -1474,10 +1474,10 @@ String elapsedTime2Str(int64_t t)
     mins = a / 60 - days * 24 * 60 - hours * 60,
     secs = a - days * 24 * 60 * 60 - hours * 60 * 60 - mins * 60,
     msecs = uint64_t(t) % 1000000u;
-  utf8::String s;
+  String s;
   s.resize(3 + 3 + 3 + 6);
   sprintf(s.c_str(), "%02d:%02d:%02d.%06d", int(hours), int(mins), int(secs), int(msecs));
-  utf8::String rs(int2Str(days));
+  String rs(int2Str(days));
   rs += ":";
   rs += s;
   return rs;
@@ -1735,7 +1735,7 @@ intptr_t String::Stream::Format::format(char * buffer) const
       for( int i = 0; i < size; i++ ) fprintf(stderr,"%c",p[i]);
       fprintf(stderr,"\\n\n");
     }*/
-    if( (size == -1 && errno != ERANGE) || (size >= 0 && size < size2) || buffer != NULL ) break;
+    if( (size == -1 && errno != ERANGE) || (size >= 0 && size + 1 < size2) || buffer != NULL ) break;
     p = b.realloc(size2 <<= 1);
   }
   if( size == -1 ){
@@ -1744,6 +1744,16 @@ l1: int32_t err = errno;
   }
 //  if( buffer != NULL ) memcpy(buffer,p,size);
   return size;
+}
+//---------------------------------------------------------------------------
+String::Stream & String::Stream::operator << (const char * s)
+{
+  return *this << String(s);
+}
+//---------------------------------------------------------------------------
+String::Stream & String::Stream::operator << (const wchar_t * s)
+{
+  return *this << String(s);
 }
 //---------------------------------------------------------------------------
 String::Stream & String::Stream::operator << (const utf8::String & s)
@@ -1767,7 +1777,7 @@ String::Stream & String::Stream::operator << (const Format & a)
 //---------------------------------------------------------------------------
 utf8::String String::Stream::string()
 {
-  if( stream_.ptr() == NULL ) return utf8::String();
+  if( stream_.ptr() == NULL ) return String();
   String::Container * container = newObjectV1V2<String::Container>(0,stream_.ptr());
   stream_.ptr(NULL);
   count_ = 0;
