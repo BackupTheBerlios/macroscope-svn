@@ -167,7 +167,7 @@ void API::open()
         else
 	      if( &func == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
       }
-      if( func == NULL && &func != &p_mysql_library_init && &func != &p_mysql_library_end ){
+      if( func == NULL ){
         err = GetLastError() + errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
