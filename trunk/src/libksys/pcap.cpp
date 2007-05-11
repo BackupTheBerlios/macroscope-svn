@@ -27,7 +27,7 @@
 #include <adicpp/ksys.h>
 #if HAVE_PCAP_H
 #include <pcap.h>
-#elif defined(__WIN32__) || defined(__WIN64__)
+#else
 #define HAVE_PCAP_H 1
 #include <adicpp/pcap/pcap.h>
 #endif
@@ -853,15 +853,15 @@ void PCAP::Grouper::threadExecute()
           ", ifdrop: " << ps->ps_ifdrop <<
           "\n"
         );
-        if( stdErr.debugLevel(6) )
-          stdErr.debug(6,utf8::String::Stream() <<
-            "Memory usage: " <<
-            formatByteLength(
-              interlockedIncrement(pcap_->memoryUsage_,0),
-              pcap_->swapThreshold()
-            ) << "\n"
-          );
       }
+      /*if( stdErr.debugLevel(6) )
+        stdErr.debug(6,utf8::String::Stream() <<
+          "Memory usage: " <<
+          formatByteLength(
+            interlockedIncrement(pcap_->memoryUsage_,0),
+            pcap_->swapThreshold()
+          ) << "\n"
+        );*/
     }
   }
 }
