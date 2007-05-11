@@ -230,7 +230,6 @@ void LogFile::rotate(AsyncFile & file)
 //---------------------------------------------------------------------------
 void LogFile::threadExecute()
 {
-//  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
 #ifndef __FreeBSD__
   priority(THREAD_PRIORITY_LOWEST);
 #endif
@@ -252,6 +251,7 @@ void LogFile::threadExecute()
       continue;
     }
     if( bufferPos > 0 && !terminated_ && ft >= 0 ){
+//      fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
       bufferSemaphore_.timedWait(ft);
     }
     {

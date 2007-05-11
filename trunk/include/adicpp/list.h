@@ -864,7 +864,7 @@ bool EmbeddedList< T,N,O>::nodeInserted(const T & object) const
 //-----------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T> class AutoListDrop {
+/*template <typename T> class AutoListDrop {
   public:
     ~AutoListDrop();
     AutoListDrop(T & list);
@@ -885,7 +885,7 @@ template <typename T> inline
 AutoListDrop<T>::AutoListDrop(T & list) : list_(&list)
 {
   assert( list_ != NULL );
-}
+}*/
 //---------------------------------------------------------------------------
 } // namespace ksys
 //-----------------------------------------------------------------------------

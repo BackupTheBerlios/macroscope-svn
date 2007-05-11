@@ -311,6 +311,7 @@ class PCAP : public Thread {
       private:
         PCAP * pcap_;
 	
+	Packets * get();
         void threadBeforeWait();
         void threadExecute();
     };

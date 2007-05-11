@@ -205,22 +205,36 @@ Semaphore & Semaphore::wait()
 //---------------------------------------------------------------------------
 bool Semaphore::timedWait(uint64_t timeout)
 {
+//  fprintf(stderr,"%s %d timeout = %"PRIu64"\n",__FILE__,__LINE__,timeout); fflush(stderr);
 #if HAVE_SEMAPHORE_H
 #if HAVE_SEM_TIMEDWAIT
   struct timespec t;
 #if HAVE_CLOCK_GETTIME
   clock_gettime(CLOCK_REALTIME,&t);
-//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec);
+//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec); fflush(stderr);
   timeout = (uint64_t(1000000u) * t.tv_sec + timeout) * 1000u + t.tv_nsec;
 #else
   timeout = (timeout + gettimeofday()) * 1000u;
 #endif
   t.tv_sec = timeout / (1000000u * 1000u);
   t.tv_nsec = timeout % (1000000u * 1000u);
-//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec);
+//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec); fflush(stderr);
   int r = sem_timedwait(pHandle_,&t);
+//  if( r > 0 ) errno = r;
+  /*if( r != 0 && errno == EINVAL ){
+    bool rr;
+    uint64_t t = gettimeofday();
+    for(;;){
+      rr = tryWait();
+      if( rr ) break;
+      if( gettimeofday() - t >= timeout ) break;
+      ksleep(1);
+    }
+    return rr;
+  }*/
   if( r != 0 && errno != ETIMEDOUT ){
     r = errno;
+    fprintf(stderr,"%s %d errno = %d\n",__FILE__,__LINE__,r); fflush(stderr);
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
   return r == 0;

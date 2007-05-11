@@ -441,6 +441,7 @@ void PCAP::threadExecute()
     lazyWriter_->resume();
     stream << "Device: " << iface_ << ", capture started.\n";
     stdErr.debug(1,stream);
+    fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
   }
@@ -538,6 +539,7 @@ void PCAP::setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const
 //------------------------------------------------------------------------------
 void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet)
 {
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
 #if HAVE_PCAP_H
 #define SIZE_ETHERNET 14
 #ifndef ETHERTYPE_IP
@@ -677,6 +679,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     lazyWriterSem_.post();
   }
   const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp + sizeUdp;
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
   Packet & pkt = (*packets_.ptr())[packets_->packets_];
   pkt.timestamp_ = bt;
   pkt.pktSize_ = len;
@@ -731,27 +734,34 @@ void PCAP::Grouper::threadBeforeWait()
   }
 }
 //------------------------------------------------------------------------------
+PCAP::Packets * PCAP::Grouper::get()
+{
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+  Packets * packets = NULL;
+  AutoLock<InterlockedMutex> lock(pcap_->packetsListMutex_);
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+  if( pcap_->packetsList_.count() > 0 )
+    packets = &pcap_->packetsList_.remove(*pcap_->packetsList_.first());
+  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+  return packets;
+}
+//------------------------------------------------------------------------------
 void PCAP::Grouper::threadExecute()
 {
 #ifndef __FreeBSD__
   priority(THREAD_PRIORITY_ABOVE_NORMAL);
 #endif
   for(;;){
-    bool term;
-    AutoPtr<Packets> packets;
-    {
-      AutoLock<InterlockedMutex> lock(pcap_->packetsListMutex_);
-      if( pcap_->packetsList_.count() > 0 )
-        packets.ptr(&pcap_->packetsList_.remove(*pcap_->packetsList_.first()));
-      term = terminated_;
-    }
+    AutoPtr<Packets> packets(get());
     if( packets == NULL || packets->packets_ == 0 ){
-      if( term ) break;
+      if( terminated_ ) break;
+      fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
       pcap_->grouperSem_.wait();
+      fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
       continue;
     }
-    PacketGroup * pGroup;
     PacketGroup::SwapFileHeader header;
+    PacketGroup * pGroup;
     AutoPtr<PacketGroup> group;
     try {
       for( intptr_t i = packets->packets_ - 1; i >= 0; i-- ){
@@ -854,15 +864,15 @@ void PCAP::Grouper::threadExecute()
           "\n"
         );
       }
-      /*if( stdErr.debugLevel(6) )
-        stdErr.debug(6,utf8::String::Stream() <<
-          "Memory usage: " <<
-          formatByteLength(
-            interlockedIncrement(pcap_->memoryUsage_,0),
-            pcap_->swapThreshold()
-          ) << "\n"
-        );*/
     }
+    if( stdErr.debugLevel(6) )
+      stdErr.debug(6,utf8::String::Stream() <<
+        "Memory usage: " <<
+        formatByteLength(
+          interlockedIncrement(pcap_->memoryUsage_,0),
+          pcap_->swapThreshold()
+        ) << "\n"
+      );
   }
 }
 //------------------------------------------------------------------------------
