@@ -416,6 +416,7 @@ void PCAP::threadExecute()
   bpf_u_int32 mask;              // The netmask of our sniffing device
   bpf_u_int32 net;               // The IP of our sniffing device
 //  stdErr.bufferDataTTA(0);
+  utf8::String::Stream stream;
   api.open();
   try {
     fp_ = kmalloc(sizeof(struct bpf_program));
@@ -438,7 +439,6 @@ void PCAP::threadExecute()
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
-    utf8::String::Stream stream;
     stream << "Device: " << iface_ << ", capture started.\n";
     stdErr.debug(1,stream);
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);

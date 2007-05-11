@@ -47,6 +47,14 @@ class API {
     {
       return ::mysql_thread_safe();
     }
+    int mysql_library_init(int argc, char **argv, char **groups)
+    {
+      return ::mysql_library_init(argc,argv,groups);
+    }
+    void mysql_library_end()
+    {
+      ::mysql_library_end();
+    }
     my_bool mysql_thread_init()
     {
       return ::mysql_thread_init();
@@ -184,6 +192,14 @@ class API {
             union {
                 unsigned int (STDCALL * mysql_thread_safe)();
                 void *  p_mysql_thread_safe;
+            };
+            union {
+                int (STDCALL * mysql_library_init)(int argc,char ** argv, char ** groups);
+                void *  p_mysql_library_init;
+            };
+            union {
+                void (STDCALL * mysql_library_end)();
+                void *  p_mysql_library_end;
             };
             union {
                 my_bool (STDCALL * mysql_thread_init)();

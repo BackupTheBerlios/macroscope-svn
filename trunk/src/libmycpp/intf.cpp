@@ -40,6 +40,8 @@ const char * const  API::symbols_[] = {
   "mysql_thread_safe",
   "mysql_thread_init",
   "mysql_thread_end",
+  "mysql_library_init",
+  "mysql_library_end",
   "my_init",
   "my_end",
   "mysql_init",
@@ -183,7 +185,8 @@ void API::open()
 #endif
     }
 #endif
-    if( my_init() ){
+    char * groups = NULL;
+    if( mysql_library_init(0,NULL,&groups) != 0 ){
 #if !MYSQL_STATIC_LIBRARY    
 #if defined(__WIN32__) || defined(__WIN64__)
       FreeLibrary(handle_);
@@ -193,12 +196,30 @@ void API::open()
       handle_ = NULL;
 #endif
       stdErr.debug(9,
-        utf8::String::Stream() << "my_init couldn't initialize environment\n"
+        utf8::String::Stream() << "mysql_library_init couldn't initialize environment\n"
       );
-      newObjectV1C2<Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
+      newObjectV1C2<Exception>(EINVAL, "mysql_library_init couldn't initialize environment")->throwSP();
     }
   }
-  if( count_ > 0 && (intptr_t) threadCount() == 0 ) mysql_thread_init();
+  if( count_ > 0 && (intptr_t) threadCount() == 0 ){
+    if( mysql_thread_init() != 0 ){
+#if !MYSQL_STATIC_LIBRARY
+      if( count_ == 0 ){
+        mysql_library_end();
+#if defined(__WIN32__) || defined(__WIN64__)
+        FreeLibrary(handle_);
+#elif HAVE_DLFCN_H
+        dlclose(handle_);
+#endif
+        handle_ = NULL;
+     }
+#endif
+      stdErr.debug(9,
+        utf8::String::Stream() << "mysql_thread_init couldn't initialize environment\n"
+      );
+      newObjectV1C2<Exception>(EINVAL, "mysql_thread_init couldn't initialize environment")->throwSP();
+    }
+  }
   threadCount() = (intptr_t) threadCount() + 1;
   count_++;
 }
@@ -211,8 +232,8 @@ void API::close()
   if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
   threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
-    my_end(0);
 #if !MYSQL_STATIC_LIBRARY    
+    mysql_library_end();
 #if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);
 #elif HAVE_DLFCN_H
