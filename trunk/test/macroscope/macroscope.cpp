@@ -176,6 +176,9 @@ void Logger::fallBackToNewLine(AsyncFile & f)
 void Logger::readConfig()
 {
   config_->parse().override();
+  stdErr.bufferDataTTA(
+    (uint64_t) config_->value("debug_file_max_collection_time",60) * 1000000u
+  );
   stdErr.rotationThreshold(
     config_->value("debug_file_rotate_threshold",1024 * 1024)
   );
@@ -187,9 +190,6 @@ void Logger::readConfig()
   );
   stdErr.fileName(
     config_->value("log_file",stdErr.fileName())
-  );
-  stdErr.bufferDataTTA(
-    (uint64_t) config_->value("debug_file_max_collection_time",60) * 1000000u
   );
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   checkMachineBinding(config_->value("machine_key"),true);

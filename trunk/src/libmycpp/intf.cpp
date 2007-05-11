@@ -165,7 +165,7 @@ void API::open()
       if( func == NULL ){
         if( &func == &p_mysql_library_init ) func = GetProcAddress(handle_,"mysql_server_init");
         else
-	if( &func == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
+	      if( &func == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
       }
       if( func == NULL && &func != &p_mysql_library_init && &func != &p_mysql_library_end ){
         err = GetLastError() + errorOffset;
@@ -182,7 +182,7 @@ void API::open()
       if( func == NULL ){
         if( &func == &p_mysql_library_init ) func = dlsym(handle_,"mysql_server_init");
         else
-	if( &func == &p_mysql_library_end ) func = dlsym(handle_,"mysql_server_end");
+        if( &func == &p_mysql_library_end ) func = dlsym(handle_,"mysql_server_end");
       }
       if( func == NULL ){
         err = errno;
