@@ -153,8 +153,6 @@ void Logger::SquidSendmailThread::writeUserTop(
     "                ST_TIMESTAMP <= :ET"
     "        GROUP BY ST_URL"
     "    ) AS A "
-    "WHERE"
-    "  A.SUM1 >= :threshold "
     "ORDER BY A.SUM1"
   );
   intptr_t i;
@@ -165,7 +163,6 @@ void Logger::SquidSendmailThread::writeUserTop(
   statement_->
     paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
     paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
-    paramAsMutant("threshold",threshold)->
     execute()->fetchAll();
   if( statement_->rowCount() > 0 ){
     AsyncFile f(file);
@@ -200,13 +197,10 @@ void Logger::SquidSendmailThread::writeUserTop(
       "  </TH>\n"
       "</TR>\n"
     ;
-    uint64_t at = 0;
+    uint64_t at = statement_->sum(1);
     for( i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
-      at += (uint64_t) statement_->valueAsMutant(1);
-    }
-    for( i = statement_->rowCount() - 1; i >= 0; i-- ){
-      statement_->selectRow(i);
+      if( (uint64_t) statement_->valueAsMutant(1) < threshold ) break;
       f <<
         "<TR>\n"
         "  <TH WITH=10 ALIGN=left BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttAll]) + "\" wrap>\n"
@@ -243,7 +237,23 @@ void Logger::SquidSendmailThread::writeUserTop(
         "</TR>\n"
       ;
     }
-    f << "</TABLE>\n<BR>\n<BR>\n";
+    f << 
+      "<TR>\n"
+      "  <TH COLSPAN=3 WITH=10 ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttAll]) + "\" wrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\" wrap>\n" +
+      "      Summary:\n"
+      "      </A>\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttWWW]) + "\" nowrap>\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+      formatTraf(at,at) +
+      "\n"
+      "    </FONT>\n"
+      "  </TH>\n"
+      "</TR>\n"
+      "</TABLE>\n<BR>\n<BR>\n"
+    ;
     writeHtmlTail(f,ellapsed_);
     f.resize(f.tell());
     if( logger_->verbose_ ) fprintf(stderr,"%s\n",(const char *) getNameFromPathName(f.fileName()).getOEMString());
