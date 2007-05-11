@@ -38,10 +38,10 @@ API api;
 #if !MYSQL_STATIC_LIBRARY
 const char * const  API::symbols_[] = {
   "mysql_thread_safe",
-  "mysql_thread_init",
-  "mysql_thread_end",
   "mysql_library_init",
   "mysql_library_end",
+  "mysql_thread_init",
+  "mysql_thread_end",
   "my_init",
   "my_end",
   "mysql_init",
@@ -163,11 +163,11 @@ void API::open()
 #if defined(__WIN32__) || defined(__WIN64__)
       func = GetProcAddress(handle_,symbols_[i]);
       if( func == NULL ){
-        if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_init ) func = GetProcAddress(handle_,"mysql_server_init");
+        if( &func == &p_mysql_library_init ) func = GetProcAddress(handle_,"mysql_server_init");
         else
-	if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
+	if( &func == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
       }
-      if( func == NULL ){
+      if( func == NULL && &func != &p_mysql_library_init && &func != &p_mysql_library_end ){
         err = GetLastError() + errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
@@ -180,9 +180,9 @@ void API::open()
 #elif HAVE_DLFCN_H
       func = dlsym(handle_,symbols_[i]);
       if( func == NULL ){
-        if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_init ) func = dlsym(handle_,"mysql_server_init");
+        if( &func == &p_mysql_library_init ) func = dlsym(handle_,"mysql_server_init");
         else
-	if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_end ) func = dlsym(handle_,"mysql_server_end");
+	if( &func == &p_mysql_library_end ) func = dlsym(handle_,"mysql_server_end");
       }
       if( func == NULL ){
         err = errno;
@@ -197,7 +197,7 @@ void API::open()
     }
 #endif
     char * groups = NULL;
-    if( mysql_library_init(0,NULL,&groups) != 0 ){
+    if( mysql_library_init != NULL && mysql_library_init(0,NULL,&groups) != 0 ){
 #if !MYSQL_STATIC_LIBRARY    
 #if defined(__WIN32__) || defined(__WIN64__)
       FreeLibrary(handle_);
@@ -212,11 +212,11 @@ void API::open()
       newObjectV1C2<Exception>(EINVAL, "mysql_library_init couldn't initialize environment")->throwSP();
     }
   }
-  if( count_ > 0 && (intptr_t) threadCount() == 0 ){
-    if( mysql_thread_init() != 0 ){
+  if( (intptr_t) threadCount() == 0 ){
+    if( (count_ > 0 || mysql_library_init == NULL) && mysql_thread_init() != 0 ){
 #if !MYSQL_STATIC_LIBRARY
       if( count_ == 0 ){
-        mysql_library_end();
+        if( mysql_library_end != NULL ) mysql_library_end();
 #if defined(__WIN32__) || defined(__WIN64__)
         FreeLibrary(handle_);
 #elif HAVE_DLFCN_H
@@ -244,7 +244,7 @@ void API::close()
   threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
 #if !MYSQL_STATIC_LIBRARY    
-    mysql_library_end();
+    if( mysql_library_end != NULL ) mysql_library_end();
 #if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);
 #elif HAVE_DLFCN_H
