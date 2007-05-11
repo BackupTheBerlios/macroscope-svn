@@ -159,9 +159,15 @@ void API::open()
       newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
+      void * & func = *(void **) (&p_mysql_thread_safe + i);
 #if defined(__WIN32__) || defined(__WIN64__)
-      (&p_mysql_thread_safe)[i] = GetProcAddress(handle_, symbols_[i]);
-      if( (&p_mysql_thread_safe)[i] == NULL ){
+      func = GetProcAddress(handle_,symbols_[i]);
+      if( func == NULL ){
+        if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_init ) func = GetProcAddress(handle_,"mysql_server_init");
+        else
+	if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
+      }
+      if( func == NULL ){
         err = GetLastError() + errorOffset;
         FreeLibrary(handle_);
         handle_ = NULL;
@@ -172,8 +178,13 @@ void API::open()
         newObjectV1C2<Exception>(err + errorOffset, __PRETTY_FUNCTION__)->throwSP();
       }
 #elif HAVE_DLFCN_H
-      (&p_mysql_thread_safe)[i] = dlsym(handle_, symbols_[i]);
-      if( (&p_mysql_thread_safe)[i] == NULL ){
+      func = dlsym(handle_,symbols_[i]);
+      if( func == NULL ){
+        if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_init ) func = dlsym(handle_,"mysql_server_init");
+        else
+	if( (void **) (&p_mysql_thread_safe + i) == &p_mysql_library_end ) func = dlsym(handle_,"mysql_server_end");
+      }
+      if( func == NULL ){
         err = errno;
         dlclose(handle_);
         handle_ = NULL;
