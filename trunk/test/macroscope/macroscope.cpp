@@ -204,8 +204,6 @@ int32_t Logger::main(bool sniffer,bool daemon)
   sniffer_ = sniffer;
   daemon_ = daemon;
 
-  readConfig();
-
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
 
@@ -932,6 +930,7 @@ int main(int _argc,char * _argv[])
     errcode = 0;
     if( dispatch || sniffer ){
       macroscope::Logger logger;
+      logger.readConfig();
       if( dispatch && svc && sniffer ){
         service->logger_ = &logger;
         services.startServiceCtrlDispatcher();

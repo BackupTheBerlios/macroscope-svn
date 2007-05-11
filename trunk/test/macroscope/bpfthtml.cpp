@@ -411,7 +411,7 @@ void Logger::BPFTThread::clearBPFTCache()
   }
   stBPFTCacheDel_->
     paramAsString("if",sectionName_)->
-    paramAsMutant("BTYear",time2tm(tm2Time(curTimeBTYear) - getgmtoffset()))->
+    paramAsMutant("BTYear",time2tm(tm2Time(cu3rTimeBTYear) - getgmtoffset()))->
     paramAsMutant("ETYear",time2tm(tm2Time(curTimeETYear) - getgmtoffset()))->
     paramAsMutant("BTMon",time2tm(tm2Time(curTimeBTMon) - getgmtoffset()))->
     paramAsMutant("ETMon",time2tm(tm2Time(curTimeETMon) - getgmtoffset()))->

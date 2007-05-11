@@ -78,7 +78,7 @@ Database & Database::allocHandle(MYSQL *& handle)
 {
   if( handle == NULL ) handle = api.mysql_init(NULL);
   if( handle == NULL )
-    exceptionHandler(newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__));
+    exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,__PRETTY_FUNCTION__));
   return *this;
 }
 //---------------------------------------------------------------------------

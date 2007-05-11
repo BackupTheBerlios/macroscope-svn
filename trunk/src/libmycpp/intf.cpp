@@ -183,7 +183,7 @@ void API::open()
 #endif
     }
 #endif
-/*    if( my_init() ){
+    if( my_init() ){
 #if !MYSQL_STATIC_LIBRARY    
 #if defined(__WIN32__) || defined(__WIN64__)
       FreeLibrary(handle_);
@@ -196,9 +196,9 @@ void API::open()
         utf8::String::Stream() << "my_init couldn't initialize environment\n"
       );
       newObjectV1C2<Exception>(EINVAL, "my_init couldn't initialize environment")->throwSP();
-    }*/
+    }
   }
-  if( (intptr_t) threadCount() == 0 ) mysql_thread_init();
+  if( count_ > 0 && (intptr_t) threadCount() == 0 ) mysql_thread_init();
   threadCount() = (intptr_t) threadCount() + 1;
   count_++;
 }
@@ -211,7 +211,7 @@ void API::close()
   if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
   threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
-//    my_end(0);
+    my_end(0);
 #if !MYSQL_STATIC_LIBRARY    
 #if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);
