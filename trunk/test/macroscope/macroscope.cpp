@@ -833,6 +833,8 @@ int main(int _argc,char * _argv[])
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
+  bool isDaemon = isDaemonCommandLineOption();
+  if( isDaemon ) daemonize();
   utf8::String::Stream stream;
   try {
     uintptr_t i;
@@ -842,7 +844,7 @@ int main(int _argc,char * _argv[])
     AutoPtr<macroscope::SnifferService> serviceAP(newObject<macroscope::SnifferService>());
     services.add(serviceAP);
     macroscope::SnifferService * service = serviceAP.ptr(NULL);
-    bool dispatch = true, sniffer = false, daemonize = false, svc = false;
+    bool dispatch = true, sniffer = false, svc = false;
     utf8::String pidFileName;
     for( i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
@@ -877,9 +879,6 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[i].strcmp("--service") == 0 ){
         svc = true;
-      }
-      else if( argv()[i].strcmp("--daemon") == 0 ){
-        daemonize = true;
       }
       else if( argv()[i].strcmp("--install") == 0 ){
         for( uintptr_t j = i + 1; j < argv().count(); j++ )
@@ -936,19 +935,13 @@ int main(int _argc,char * _argv[])
         services.startServiceCtrlDispatcher();
       }
       else if( dispatch ){
-#if HAVE_DAEMON
-        if( daemonize && daemon(1,1) != 0 ){
-          int32_t err = errno;
-          newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
-        }
-#endif
         if( !pidFileName.isNull() ){
           AsyncFile pidFile(pidFileName);
   	  pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
 	  pidFile.resize(pidFile.size());
         }
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
-        errcode = logger.main(sniffer,daemonize);
+        errcode = logger.main(sniffer,isDaemon);
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
       }
     }

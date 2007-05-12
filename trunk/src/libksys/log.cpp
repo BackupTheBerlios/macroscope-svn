@@ -129,7 +129,8 @@ static void exceptionStdErrorToSyslog(ExceptionSP & e)
 LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stream)
 {
   if( debugLevel(level) ){
-    struct timeval tv = time2Timeval(getlocaltimeofday());
+    uint64_t ct = getlocaltimeofday();
+    struct timeval tv = time2Timeval(ct);
     struct tm t = time2tm(timeval2Time(tv));
     bool post = false;
     try {

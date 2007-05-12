@@ -3020,6 +3020,50 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
 #endif
 }
 //---------------------------------------------------------------------------
+bool isDaemonCommandLineOption()
+{
+  utf8::String opt("--daemon");
+  for( uintptr_t i = 1; i < argv().count(); i++ )
+    if( argv()[i].strcmp(opt) == 0 ) return true;
+  return true;
+}
+//---------------------------------------------------------------------------
+void daemonize()
+{
+#if !defined(__WIN32__) && !defined(__WIN64__)
+  struct sigaction osa, sa;
+  pid_t newgrp;
+  int oerrno;
+  int osa_ok;
+// A SIGHUP may be thrown when the parent exits below.
+  sigemptyset(&sa.sa_mask);
+  sa.sa_handler = SIG_IGN;
+  sa.sa_flags = 0;
+  osa_ok = sigaction(SIGHUP,&sa,&osa);
+  if( osa_ok != 0 ){
+    perror(NULL);
+    abort();
+  }
+  switch( fork() ){
+    case -1 :
+      perror(NULL);
+      abort();
+    case 0 :
+      break;
+    default :
+      exit(0);
+  }																					
+  newgrp = setsid();
+  oerrno = errno;
+  sigaction(SIGHUP,&osa,NULL);
+  if( newgrp == -1 ){
+    errno = oerrno;
+    perror(NULL);
+    abort();
+  }
+#endif
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 // System initialization and finalization ///////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////

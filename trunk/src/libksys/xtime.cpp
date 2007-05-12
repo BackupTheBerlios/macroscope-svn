@@ -331,14 +331,14 @@ int64_t gettimeofday()
 int64_t getlocaltimeofday()
 {
   struct timeval tv;
+  struct timezone tz;
   uint64_t a = ~(~uint64_t(0) >> 1);
 #if defined(__WIN32__) || defined(__WIN64__)
-  struct timezone tz;
   gettimeofday(&tv,&tz);
   a = tv.tv_sec + (-tz.tz_minuteswest * int64_t(60) + tz.tz_dsttime * 60u * 60u);
   a = a * 1000000u + tv.tv_usec;
 #else
-  gettimeofday(&tv,NULL);
+  gettimeofday(&tv,&tz);
   a = tv.tv_sec * uint64_t(1000000) + getgmtoffset() + tv.tv_usec;
 #endif
   return a;

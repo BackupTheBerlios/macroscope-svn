@@ -416,7 +416,6 @@ void PCAP::threadExecute()
   bpf_u_int32 mask;              // The netmask of our sniffing device
   bpf_u_int32 net;               // The IP of our sniffing device
 //  stdErr.bufferDataTTA(0);
-  utf8::String::Stream stream;
   api.open();
   try {
     fp_ = kmalloc(sizeof(struct bpf_program));
@@ -439,9 +438,7 @@ void PCAP::threadExecute()
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
-    stream << "Device: " << iface_ << ", capture started.\n";
-    stdErr.debug(1,stream);
-    fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
+    stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture started.\n");
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
   }
@@ -534,12 +531,13 @@ void PCAP::setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const
       t.tm_mon = 11;
       et = tm2Time(t) + 999999;
       break;
+    default : 
+      assert( 0 );
   }
 }
 //------------------------------------------------------------------------------
 void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet)
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
 #if HAVE_PCAP_H
 #define SIZE_ETHERNET 14
 #ifndef ETHERTYPE_IP
@@ -679,7 +677,6 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     lazyWriterSem_.post();
   }
   const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp + sizeUdp;
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
   Packet & pkt = (*packets_.ptr())[packets_->packets_];
   pkt.timestamp_ = bt;
   pkt.pktSize_ = len;
@@ -736,13 +733,10 @@ void PCAP::Grouper::threadBeforeWait()
 //------------------------------------------------------------------------------
 PCAP::Packets * PCAP::Grouper::get()
 {
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
   Packets * packets = NULL;
   AutoLock<InterlockedMutex> lock(pcap_->packetsListMutex_);
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
   if( pcap_->packetsList_.count() > 0 )
     packets = &pcap_->packetsList_.remove(*pcap_->packetsList_.first());
-  fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
   return packets;
 }
 //------------------------------------------------------------------------------
@@ -755,9 +749,7 @@ void PCAP::Grouper::threadExecute()
     AutoPtr<Packets> packets(get());
     if( packets == NULL || packets->packets_ == 0 ){
       if( terminated_ ) break;
-      fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
       pcap_->grouperSem_.wait();
-      fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
       continue;
     }
     PacketGroup::SwapFileHeader header;
@@ -901,6 +893,8 @@ void PCAP::DatabaseInserter::threadExecute()
       uint64_t ct = gettimeofday();
       while( walker.next() ){
         pGroup = &walker.object();
+//        fprintf(stderr,"%s %d ct = %"PRIu64" bt = %"PRIu64" et = %"PRIu64"\n",__FILE__,__LINE__,ct,pGroup->header_.bt_,pGroup->header_.et_); fflush(stderr);
+//        fprintf(stderr,"%s %d ct = %s bt = %s et = %s\n",__FILE__,__LINE__,utf8::time2Str(ct).c_str(),utf8::time2Str(pGroup->header_.bt_).c_str(),utf8::time2Str(pGroup->header_.et_).c_str()); fflush(stderr);
         if( pGroup->header_.bt_ > ct || pGroup->header_.et_ < ct ){
           group.ptr(pGroup);
           pcap_->groupTree_.remove(*pGroup);
