@@ -670,6 +670,14 @@ int32_t Logger::doWork(uintptr_t stage)
   if( sniffer_ && !cgi_.isCGI() ){
     if( stage == 1 ){
       readConfig();
+#if HAVE_MLOCKALL
+      bool ml = config_->valueByPath("macroscope.bpft.mlockall",true);
+      if( ml && mlockall(MCL_FUTURE) != 0 ){
+        int32_t err = errno;
+        Exception e(err,"int mlockall(int flags) failed. ");
+	e.writeStdError();
+      }
+#endif
       ConfigSection dbParamsSection;
       dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){

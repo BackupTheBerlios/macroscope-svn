@@ -238,6 +238,10 @@
 #cmakedefine HAVE_AIO_ERROR 1
 #cmakedefine HAVE_MMAP 1
 #cmakedefine HAVE_MUNMAP 1
+#cmakedefine HAVE_MLOCK 1
+#cmakedefine HAVE_MUNLOCK 1
+#cmakedefine HAVE_MLOCKALL 1
+#cmakedefine HAVE_MUNLOCKALL 1
 #cmakedefine HAVE_SHM_OPEN 1
 #cmakedefine HAVE_SHM_UNLINK 1
 #cmakedefine HAVE_DAEMON 1
