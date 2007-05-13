@@ -462,8 +462,9 @@ inline const uintptr_t & PCAP::swapThreshold() const
 //---------------------------------------------------------------------------
 inline PCAP & PCAP::swapThreshold(uintptr_t a)
 {
+  if( a < (uintptr_t) getpagesize() ) a = getpagesize();
   swapThreshold_ = a;
-  if( swapThreshold_ < pregroupingBufferSize_ * 2 ) swapThreshold_ = pregroupingBufferSize_ * 2;
+  if( swapThreshold_ < pregroupingBufferSize_ * 4 ) swapThreshold_ = pregroupingBufferSize_ * 4;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -474,8 +475,9 @@ inline const uintptr_t & PCAP::pregroupingBufferSize() const
 //---------------------------------------------------------------------------
 inline PCAP & PCAP::pregroupingBufferSize(uintptr_t a)
 {
+  if( a < (uintptr_t) getpagesize() ) a = getpagesize();
   pregroupingBufferSize_ = a;
-  if( swapThreshold_ < pregroupingBufferSize_ * 2 ) swapThreshold_ = pregroupingBufferSize_ * 2;
+  if( swapThreshold_ < pregroupingBufferSize_ * 4 ) swapThreshold_ = pregroupingBufferSize_ * 4;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -508,6 +510,7 @@ inline const ldouble & PCAP::swapLowWatermark() const
 //---------------------------------------------------------------------------
 inline PCAP & PCAP::swapLowWatermark(ldouble a)
 {
+  if( a > 100 || a <= 0 ) a = 50;
   swapLowWatermark_ = a;
   return *this;
 }
@@ -519,6 +522,7 @@ inline const ldouble & PCAP::swapHighWatermark() const
 //---------------------------------------------------------------------------
 inline PCAP & PCAP::swapHighWatermark(ldouble a)
 {
+  if( a > 100 || a <= 0 ) a = 90;
   swapHighWatermark_ = a;
   return *this;
 }
