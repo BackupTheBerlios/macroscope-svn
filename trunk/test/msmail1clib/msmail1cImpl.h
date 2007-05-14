@@ -168,7 +168,7 @@ class ClientMailFiber : public BaseClientFiber {
       MessageControl::nodeObject
     > Messages;
     Messages messages_;
-    AutoListDrop<Messages> messagesAutoDrop_;
+    AutoDrop<Messages> messagesAutoDrop_;
     MessageControl * message_;
 
     void auth();

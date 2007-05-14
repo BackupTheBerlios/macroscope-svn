@@ -862,7 +862,7 @@ class MailQueueWalker : public ksock::ClientFiber {
       Message::Key::listNodeObject
     > Messages;
     Messages messages_;
-    AutoListDrop<Messages> messagesAutoDrop_;
+    AutoDrop<Messages> messagesAutoDrop_;
     FiberSemaphore semaphore_;
 
     void connectHost(bool & online,bool & mwt);

@@ -27,7 +27,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -96,7 +96,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -108,7 +108,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -177,7 +177,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -190,7 +190,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -258,7 +258,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 		<Configuration
@@ -271,7 +271,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -339,7 +339,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
+				CommandLine="cd ..\..\..\src\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.in&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
@@ -352,19 +352,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\..\test\macroscope\bpfthtml.cpp"
+				RelativePath="..\..\..\src\macroscope\bpfthtml.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\test\macroscope\htmlrep.cpp"
+				RelativePath="..\..\..\src\macroscope\htmlrep.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\test\macroscope\macroscope.cpp"
+				RelativePath="..\..\..\src\macroscope\macroscope.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\test\macroscope\sniffer.cpp"
+				RelativePath="..\..\..\src\macroscope\sniffer.cpp"
 				>
 			</File>
 		</Filter>
@@ -374,7 +374,7 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath="..\..\..\test\macroscope\macroscope.h"
+				RelativePath="..\..\..\src\macroscope\macroscope.h"
 				>
 			</File>
 		</Filter>
@@ -388,7 +388,7 @@
 			Name="Generated Files"
 			>
 			<File
-				RelativePath="..\..\..\test\macroscope\version.c"
+				RelativePath="..\..\..\src\macroscope\version.c"
 				>
 			</File>
 		</Filter>
