@@ -674,7 +674,7 @@ int32_t Logger::doWork(uintptr_t stage)
       bool ml = config_->valueByPath("macroscope.bpft.mlockall",true);
       if( ml && mlockall(MCL_FUTURE) != 0 ){
         int32_t err = errno;
-        Exception e(err,"int mlockall(int flags) failed. ");
+        Exception e(err,"mlockall failed.");
 	e.writeStdError();
       }
 #endif

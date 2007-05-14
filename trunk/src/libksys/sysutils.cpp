@@ -180,8 +180,10 @@ void setProcessPriority(const Mutant & m,bool noThrow)
       r = SetPriorityClass(GetCurrentProcess(),REALTIME_PRIORITY_CLASS);
     err = GetLastError();
   }
-  if( r == 0 && err != 0 && !noThrow )
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  if( r == 0 && err != 0 ){
+    AutoPtr<Exception> e(newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__));
+    if( noThrow ) e->writeStdError(); else e.ptr(NULL)->throwSP();
+  }
 #elif HAVE_SETPRIORITY
   int32_t err = 0;
   int r;
@@ -213,8 +215,10 @@ void setProcessPriority(const Mutant & m,bool noThrow)
       r = setpriority(PRIO_PROCESS,0,REALTIME_PRIORITY_CLASS);
     err = errno;
   }
-  if( r != 0 && err != 0 && !noThrow )
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 && err != 0 ){
+    AutoPtr<Exception> e(newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__));
+    if( noThrow ) e->writeStdError(); else e.ptr(NULL)->throwSP();
+  }
 #else
   if( !noThrow )
     newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
@@ -3025,7 +3029,7 @@ bool isDaemonCommandLineOption()
   utf8::String opt("--daemon");
   for( uintptr_t i = 1; i < argv().count(); i++ )
     if( argv()[i].strcmp(opt) == 0 ) return true;
-  return true;
+  return false;
 }
 //---------------------------------------------------------------------------
 void daemonize()
