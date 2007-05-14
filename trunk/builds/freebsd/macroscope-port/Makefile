@@ -8,7 +8,10 @@
 PORTNAME=		macroscope
 PORTVERSION=		1.0.1614
 CATEGORIES=		net-mgmt
-MASTER_SITES=		http://white-raven.pisem.net/
+MASTER_SITES=		ftp://ftp.berlios.de/pub/macroscope/:src0 \
+			http://white-raven.pisem.net/:src1
+DISTFILES=		macroscope-1.0.1614.tar.bz2:src0 \
+			macroscope-1.0.1614.tar.bz2:src1
 
 MAINTAINER=		white_raven@users.berlios.de
 COMMENT=		User and IP traffic management with Web interface
