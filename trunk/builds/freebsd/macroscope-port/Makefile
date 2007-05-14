@@ -11,12 +11,12 @@ CATEGORIES=		net-mgmt
 MASTER_SITES=		http://white-raven.pisem.net/
 
 MAINTAINER=		white_raven@users.berlios.de
-COMMENT=		Squid, sendmail, bpft log analizer, IP sniffer and HTML report generator
+COMMENT=		User and IP traffic management with Web interface
 
 BUILD_DEPENDS+=		cmake:${PORTSDIR}/devel/cmake
 LIB_DEPENDS+=		lzo2:${PORTSDIR}/archivers/lzo2
-LIB_DEPENDS+=		mysqlclient_r:${PORTSDIR}/databases/mysql[5]+-client
-LIB_DEPENDS+=		fbclient:${PORTSDIR}/databases/firebird+-client
+LIB_DEPENDS+=		mysqlclient_r:${PORTSDIR}/databases/mysql50-client
+LIB_DEPENDS+=		fbclient:${PORTSDIR}/databases/firebird-client
 LIB_DEPENDS+=		pcap:${PORTSDIR}/net/libpcap
 
 GNU_CONFIGURE=		no
