@@ -125,6 +125,8 @@ class PCAP : public Thread {
 
     enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear };
 
+    const utf8::String & ifName() const;
+    PCAP & ifName(const utf8::String & ifName);
     const utf8::String & iface() const;
     PCAP & iface(const utf8::String & iface);
     const utf8::String & filter() const;
@@ -359,6 +361,7 @@ class PCAP : public Thread {
     InterlockedMutex groupTreeMutex_;
     PacketGroupTree groupTree_;
     AutoDrop<PacketGroupTree> groupTreeAutoDrop_;
+    utf8::String ifName_;
     utf8::String iface_;
     utf8::String filter_;
     utf8::String tempFile_;
@@ -388,6 +391,18 @@ class PCAP : public Thread {
     static void cleanup();
 };
 //---------------------------------------------------------------------------
+inline const utf8::String & PCAP::ifName() const
+{
+  return ifName_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::ifName(const utf8::String & ifName)
+{
+  ifName_ = ifName;
+  tempFile_ = getTempPath() + base32Encode(ifName_.c_str(),ifName_.size()) + ".tmp";
+  return *this;
+}
+//---------------------------------------------------------------------------
 inline const utf8::String & PCAP::iface() const
 {
   return iface_;
@@ -396,7 +411,6 @@ inline const utf8::String & PCAP::iface() const
 inline PCAP & PCAP::iface(const utf8::String & iface)
 {
   iface_ = iface;
-  tempFile_ = getTempPath() + base32Encode(iface_.c_str(),iface_.size()) + ".tmp";
   return *this;
 }
 //---------------------------------------------------------------------------

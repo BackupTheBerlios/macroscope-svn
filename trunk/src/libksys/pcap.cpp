@@ -403,7 +403,7 @@ void PCAP::shutdown()
     api.pcap_close((pcap_t *) handle_);
     handle_ = NULL;
   }
-  stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture stopped.\n");
+  stdErr.debug(1,utf8::String::Stream() << "Device: " << ifName_ << ", capture stopped.\n");
 }
 //------------------------------------------------------------------------------
 void PCAP::threadExecute()
@@ -438,7 +438,7 @@ void PCAP::threadExecute()
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
-    stdErr.debug(1,utf8::String::Stream() << "Device: " << iface_ << ", capture started.\n");
+    stdErr.debug(1,utf8::String::Stream() << "Device: " << ifName_ << ", capture started.\n");
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
   }
@@ -452,7 +452,7 @@ errexit:
   shutdown();
   api.close();
   if( err != 0 )
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + errbuf + ", device: " + iface_)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + errbuf + ", device: " + ifName_)->throwSP();
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
@@ -546,7 +546,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   if( capLen < SIZE_ETHERNET ){
     /*if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
-        "Device: " << iface_ << ", captured length less then ethernet frame header.\n"
+        "Device: " << ifName_ << ", captured length less then ethernet frame header.\n"
       );*/
     return;
   }
@@ -554,7 +554,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   if( be16toh(ethernet->type_) != ETHERTYPE_IP ){
     if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
-        "Device: " << iface_ <<
+        "Device: " << ifName_ <<
         ", unsupported ethernet frame type: 0x" <<
         utf8::int2HexStr(ethernet->type_,4) <<
         ", from MAC: " <<
@@ -576,7 +576,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   if( capLen < SIZE_ETHERNET + 20 ){
     if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
-        "Device: " << iface_ << ", captured length less then IP packet header, from MAC: " <<
+        "Device: " << ifName_ << ", captured length less then IP packet header, from MAC: " <<
         utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[1],2) << ":" <<
         utf8::int2HexStr(ethernet->srcAddr_[2],2) << ":" <<
@@ -598,7 +598,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   if( sizeIp < 20 ){
     if( stdErr.debugLevel(80) )
       stdErr.debug(80,utf8::String::Stream() <<
-        "Device: " << iface_ <<
+        "Device: " << ifName_ <<
         ", invalid IP header length: " <<
 	      sizeIp << " bytes, from MAC: " <<
         utf8::int2HexStr(ethernet->srcAddr_[0],2) << ":" <<
@@ -634,7 +634,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     if( capLen < SIZE_ETHERNET + sizeIp + size ){
       if( stdErr.debugLevel(80) )
         stdErr.debug(80,utf8::String::Stream() <<
-          "Device: " << iface_ << ", captured length less then " <<
+          "Device: " << ifName_ << ", captured length less then " <<
 	  ksock::SockAddr::protoAsString(ip->proto_) <<
 	  " packet header, from: " <<
           src.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << " to: " <<
@@ -647,7 +647,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
         src.addr4_.sin_port = tcp->srcPort_;
         dst.addr4_.sin_port = tcp->dstPort_;
         stdErr.debug(80,utf8::String::Stream() <<
-          "Device: " << iface_ << ", invalid TCP header length: " << sizeTcp << " bytes, from: " <<
+          "Device: " << ifName_ << ", invalid TCP header length: " << sizeTcp << " bytes, from: " <<
           src.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << " to: " <<
           dst.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << "\n"
         );
@@ -849,7 +849,7 @@ void PCAP::Grouper::threadExecute()
       }
       if( ps != NULL ){
         stdErr.debug(4,utf8::String::Stream() <<
-          "Device: " << pcap_->iface_ <<
+          "Device: " << pcap_->ifName_ <<
           ", recv: " << ps->ps_recv <<
           ", drop: " << ps->ps_drop <<
           ", ifdrop: " << ps->ps_ifdrop <<
@@ -909,7 +909,7 @@ void PCAP::DatabaseInserter::threadExecute()
     if( !success ) pcap_->databaseInserterSem_.timedWait(1000000);
     if( stdErr.debugLevel(7) )
       stdErr.debug(7,utf8::String::Stream() <<
-        "Device: " << pcap_->iface_ << ", start processing packets group: " <<
+        "Device: " << pcap_->ifName_ << ", start processing packets group: " <<
         utf8::time2Str(group->header_.bt_) << " - " <<
         utf8::time2Str(group->header_.et_) << ", count: " <<
         group->header_.count_ << "\n"
@@ -954,7 +954,7 @@ void PCAP::DatabaseInserter::threadExecute()
     }
     if( stdErr.debugLevel(7) )
       stdErr.debug(7,utf8::String::Stream() <<
-        "Device: " << pcap_->iface_ << ", stop processing packets group: " <<
+        "Device: " << pcap_->ifName_ << ", stop processing packets group: " <<
         utf8::time2Str(header.bt_) << " - " <<
         utf8::time2Str(header.et_) << ", processed: " <<
         (success ? header.count_ : 0) << "\n"
@@ -1012,7 +1012,7 @@ void PCAP::LazyWriter::swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group
   }
   if( swapped && stdErr.debugLevel(5) )
     stdErr.debug(5,utf8::String::Stream() <<
-      "Device: " << pcap_->iface_ << ", swapout packets group: " <<
+      "Device: " << pcap_->ifName_ << ", swapout packets group: " <<
       utf8::time2Str(header.bt_) << " - " <<
       utf8::time2Str(header.et_) << ", count: " <<
       header.count_ << ", to: " <<
@@ -1058,7 +1058,7 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
     }
     if( stdErr.debugLevel(5) )
       stdErr.debug(5,utf8::String::Stream() <<
-        "Device: " << pcap_->iface_ << ", swapin packets group: " <<
+        "Device: " << pcap_->ifName_ << ", swapin packets group: " <<
         utf8::time2Str(header.bt_) << " - " <<
         utf8::time2Str(header.et_) << ", count: " <<
         header.count_ << ", from: " <<

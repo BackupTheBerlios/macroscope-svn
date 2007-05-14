@@ -38,10 +38,7 @@ class Sniffer : public PCAP {
   public:
     virtual ~Sniffer();
     Sniffer(Database * database = NULL);
-    const utf8::String & ifName() const;
-    Sniffer & ifName(const utf8::String & ifName);
   protected:
-    utf8::String ifName_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
 
@@ -52,17 +49,6 @@ class Sniffer : public PCAP {
     Sniffer(const Sniffer &);
     void operator = (const Sniffer &);
 };
-//------------------------------------------------------------------------------
-inline const utf8::String & Sniffer::ifName() const
-{
-  return ifName_;
-}
-//------------------------------------------------------------------------------
-inline Sniffer & Sniffer::ifName(const utf8::String & ifName)
-{
-  ifName_ = ifName;
-  return *this;
-}
 //------------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------
