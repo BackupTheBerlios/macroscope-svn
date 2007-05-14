@@ -1,0 +1,4 @@
+#!/bin/sh
+
+REPOS="http://developer.berlios.de/svnroot/repos/macroscope/branches/stable"
+svn export ${REPOS}
