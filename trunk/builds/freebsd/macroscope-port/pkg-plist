@@ -1,4 +1,9 @@
-etc/macroscope.conf
+etc/macroscope.conf.template
 sbin/macroscope
 share/macroscope/mysql-script
 share/macroscope/mysql-user
+share/macroscope/AUTHORS
+share/macroscope/README
+share/macroscope/INSTALL
+share/macroscope/NEWS
+@dirrm share/macroscope

@@ -9,14 +9,15 @@
 # KEYWORD: shutdown
 
 # -----------------------------------------------------------------------------
-# NAME_enable="NO"	# set to YES to enable macroscope
+# macroscope_enable="NO"	# set to YES to enable macroscope
 #
 # # optional:
-# NAME_flags=""				# additional command line arguments
+# macroscope_flags=""		# additional command line arguments
 #
 
 . %%RC_SUBR%%
 
+name="macroscope"
 rcvar=$(set_rcvar)
 
 prefix="%%PREFIX%%"
@@ -32,10 +33,12 @@ stop_postcmd()
 }
 
 # pidfile
-pidfile="/var/run/${name}.pid"
+eval pidfile=\$${name}_pidfile
+pidfile=${pidfile:-/var/run/${name}.pid}
+echo ${pidfile}
 
 # command and arguments
-command="%%PREFIX%%/sbin/openvpn"
+command="%%PREFIX%%/sbin/${name}"
 
 # run this first
 start_precmd="start_precmd"
