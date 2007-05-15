@@ -28,4 +28,4 @@ if DEFINED VS71COMNTOOLS (
   call "%VS71COMNTOOLS%..\..\VC\vcvarsall.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
 )
 rem del /s /f /q *.obj *.exe *.dll *.ilk *.upx 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
-cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -DBUILD_DOCUMENTATION=ON -DDOCUMENTATION_HTML_TARZ=ON -G "NMake Makefiles" . && nmake
+cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -DBUILD_DOCUMENTATION=ON -DDOCUMENTATION_HTML_TARZ=ON -G "NMake Makefiles" . && nmake /nologo
