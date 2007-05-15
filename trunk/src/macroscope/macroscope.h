@@ -44,10 +44,10 @@ class Logger {
   friend class SnifferService;
   public:
     ~Logger();
-    Logger();
+    Logger(bool sniffer,bool daemon);
 
     void readConfig();
-    int32_t main(bool sniffer,bool daemon);
+    int32_t main();
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
     enum { stSel, stIns, stUpd };

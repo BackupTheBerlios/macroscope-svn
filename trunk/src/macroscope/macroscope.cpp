@@ -38,12 +38,14 @@ Logger::~Logger()
 {
 }
 //------------------------------------------------------------------------------
-Logger::Logger() :
+Logger::Logger(bool sniffer,bool daemon) :
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   trafCacheAutoDrop_(trafCache_),
   trafCacheSize_(0),
   dnsCacheAutoDrop_(dnsCache_),
-  dnsCacheSize_(0)
+  dnsCacheSize_(0),
+  sniffer_(sniffer),
+  daemon_(daemon)
 {
 }
 //------------------------------------------------------------------------------
@@ -199,11 +201,8 @@ void Logger::readConfig()
   setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()),true);
 }
 //------------------------------------------------------------------------------
-int32_t Logger::main(bool sniffer,bool daemon)
+int32_t Logger::main()
 {
-  sniffer_ = sniffer;
-  daemon_ = daemon;
-
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
 
@@ -557,13 +556,13 @@ int32_t Logger::main(bool sniffer,bool daemon)
     }
   }
   catch( ExceptionSP & e ){
-    if( sniffer ) e->writeStdError(); else throw;
+    if( sniffer_ ) e->writeStdError(); else throw;
   }
 // parse log files
   int32_t err0 = doWork(0);
   int32_t err1 = waitThreads();
 // optimize database (optional)
-  if( !sniffer && !cgi_.isCGI() ){
+  if( !sniffer_ && !cgi_.isCGI() ){
     database_->attach();
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
       statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
@@ -659,7 +658,7 @@ int32_t Logger::main(bool sniffer,bool daemon)
   }
 // generate reports
   int32_t err2 = doWork(1);
-  if( sniffer ) Thread::waitForSignal();
+  if( sniffer_ ) Thread::waitForSignal();
   int32_t err3 = waitThreads();
   return err0 != 0 ? err0 : err1 != 0 ? err1 : err2 != 0 ? err2 : err3;
 }
@@ -838,6 +837,7 @@ const char * _malloc_options = "HR";
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
+//  Sleep(15000);
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
@@ -866,9 +866,6 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[i].strcmp("--pid") == 0 && i + 1 < argv().count() ){
         pidFileName = argv()[i + 1];
-        AsyncFile pidFile(argv()[i + 1]);
-	pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
-	pidFile.resize(pidFile.size());
       }
     }
     for( i = 1; i < argv().count(); i++ ){
@@ -936,8 +933,7 @@ int main(int _argc,char * _argv[])
 #endif
     errcode = 0;
     if( dispatch || sniffer ){
-      macroscope::Logger logger;
-      logger.readConfig();
+      macroscope::Logger logger(sniffer,isDaemon);
       if( dispatch && svc && sniffer ){
         service->logger_ = &logger;
         services.startServiceCtrlDispatcher();
@@ -945,11 +941,11 @@ int main(int _argc,char * _argv[])
       else if( dispatch ){
         if( !pidFileName.isNull() ){
           AsyncFile pidFile(pidFileName);
-  	  pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
-	  pidFile.resize(pidFile.size());
+  	      pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
+	        pidFile.resize(pidFile.size());
         }
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
-        errcode = logger.main(sniffer,isDaemon);
+        errcode = logger.main();
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
       }
     }

@@ -36,11 +36,12 @@ namespace ksys {
 //------------------------------------------------------------------------------
 // Module static functions
 //------------------------------------------------------------------------------
-static utf8::String formatByteLength(uintmax_t len,uintmax_t all)
+static utf8::String formatByteLength(uintmax_t len,uintmax_t all,bool suffixes = true)
 {
   uintmax_t q, b, c, t1, t2, t3;
   char * postfix;
 
+  if( !suffixes ) goto l1;
   q = len * 10000u / all;
   b = q / 100u;
   c = q % 100u;
@@ -62,7 +63,7 @@ static utf8::String formatByteLength(uintmax_t len,uintmax_t all)
     postfix = "K";
   }
   else {
-    return utf8::String::print(
+l1: return utf8::String::print(
       len > 0 ? "%"PRIuMAX"(%"PRIuMAX".%02"PRIuMAX"%%)" :  "-",
       len,
       b,
@@ -395,15 +396,15 @@ void PCAP::shutdown()
     if( fp != NULL ){
       if( fc_ ){
         api.pcap_freecode(fp);
-	fc_ = false;
+        fc_ = false;
       }
       kfree(fp);
       fp_ = NULL;
     }
     api.pcap_close((pcap_t *) handle_);
     handle_ = NULL;
+    stdErr.debug(1,utf8::String::Stream() << "Device: " << ifName_ << ", capture stopped.\n");
   }
-  stdErr.debug(1,utf8::String::Stream() << "Device: " << ifName_ << ", capture stopped.\n");
 }
 //------------------------------------------------------------------------------
 void PCAP::threadExecute()
@@ -851,8 +852,8 @@ void PCAP::Grouper::threadExecute()
         stdErr.debug(4,utf8::String::Stream() <<
           "Device: " << pcap_->ifName_ <<
           ", recv: " << ps->ps_recv <<
-          ", drop: " << ps->ps_drop <<
-          ", ifdrop: " << ps->ps_ifdrop <<
+          ", drop: " << formatByteLength(ps->ps_drop,ps->ps_recv,false) <<
+          ", ifdrop: " << formatByteLength(ps->ps_ifdrop,ps->ps_recv,false) <<
           "\n"
         );
       }
