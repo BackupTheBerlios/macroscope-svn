@@ -364,8 +364,8 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           continue;
         }
         if( (ctype & (C1_SPACE | C1_CNTRL)) != 0 || c == '\r' || c == '\n' ){
-	  prevChar = 0;
-          if( tt != ttUnknown ) break;
+	        prevChar = 0;
+          if( tt != ttUnknown && tt != ttQuotedString ) break;
           aheadi_.next();
           continue;
         }
