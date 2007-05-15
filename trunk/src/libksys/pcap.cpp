@@ -41,10 +41,10 @@ static utf8::String formatByteLength(uintmax_t len,uintmax_t all,bool suffixes =
   uintmax_t q, b, c, t1, t2, t3;
   char * postfix;
 
-  if( !suffixes ) goto l1;
   q = len * 10000u / all;
   b = q / 100u;
   c = q % 100u;
+  if( !suffixes ) goto l1;
   if( len >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
     t2 = 1024u;
     t2 *= 1024u * 1024u * 1024u;

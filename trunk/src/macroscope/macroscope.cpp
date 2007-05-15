@@ -40,12 +40,12 @@ Logger::~Logger()
 //------------------------------------------------------------------------------
 Logger::Logger(bool sniffer,bool daemon) :
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
+  sniffer_(sniffer),
+  daemon_(daemon),
   trafCacheAutoDrop_(trafCache_),
   trafCacheSize_(0),
   dnsCacheAutoDrop_(dnsCache_),
-  dnsCacheSize_(0),
-  sniffer_(sniffer),
-  daemon_(daemon)
+  dnsCacheSize_(0)
 {
 }
 //------------------------------------------------------------------------------
@@ -203,6 +203,8 @@ void Logger::readConfig()
 //------------------------------------------------------------------------------
 int32_t Logger::main()
 {
+  readConfig();
+  
   ConfigSection dbParamsSection;
   dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
 
@@ -668,7 +670,6 @@ int32_t Logger::doWork(uintptr_t stage)
   int32_t exitCode = 0;
   if( sniffer_ && !cgi_.isCGI() ){
     if( stage == 1 ){
-      readConfig();
 #if HAVE_MLOCKALL
       bool ml = config_->valueByPath("macroscope.bpft.mlockall",false);
       if( ml && mlockall(MCL_FUTURE) != 0 ){
@@ -791,12 +792,11 @@ SnifferService::SnifferService() : logger_(NULL)
 //------------------------------------------------------------------------------
 void SnifferService::install()
 {
-  Config config;
-  config.parse().override();
-  serviceName_ = config.textByPath("macroscope.service_name","macroscope");
-  displayName_ = config.textByPath("macroscope.service_display_name","Macroscope Packet Collection Service");
+  logger_->readConfig();
+  serviceName_ = logger_->config_->textByPath("macroscope.service_name","macroscope");
+  displayName_ = logger_->config_->textByPath("macroscope.service_display_name","Macroscope Packet Collection Service");
 #if defined(__WIN32__) || defined(__WIN64__)
-  utf8::String startType(config.textByPath("macroscope.service_start_type","auto"));
+  utf8::String startType(logger_->config_->textByPath("macroscope.service_start_type","auto"));
   if( startType.strcasecmp("auto") == 0 ){
     startType_ = SERVICE_AUTO_START;
   }
