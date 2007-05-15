@@ -670,7 +670,7 @@ int32_t Logger::doWork(uintptr_t stage)
     if( stage == 1 ){
       readConfig();
 #if HAVE_MLOCKALL
-      bool ml = config_->valueByPath("macroscope.bpft.mlockall",true);
+      bool ml = config_->valueByPath("macroscope.bpft.mlockall",false);
       if( ml && mlockall(MCL_FUTURE) != 0 ){
         int32_t err = errno;
         Exception e(err,"mlockall failed.");
