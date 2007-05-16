@@ -860,7 +860,7 @@ void PCAP::Grouper::threadExecute()
     }
     if( stdErr.debugLevel(6) )
       stdErr.debug(6,utf8::String::Stream() <<
-        "Interface: " << ifName_ << ", memory usage: " <<
+        "Interface: " << pcap_->ifName_ << ", memory usage: " <<
         formatByteLength(
           interlockedIncrement(pcap_->memoryUsage_,0),
           pcap_->swapThreshold()
@@ -917,7 +917,7 @@ void PCAP::DatabaseInserter::threadExecute()
       );
     if( stdErr.debugLevel(6) )
       stdErr.debug(6,utf8::String::Stream() <<
-        "Interface: " << ifName_ << ", memory usage: " <<
+        "Interface: " << pcap_->ifName_ << ", memory usage: " <<
         formatByteLength(
           interlockedIncrement(pcap_->memoryUsage_,0),
           pcap_->swapThreshold()
@@ -962,7 +962,7 @@ void PCAP::DatabaseInserter::threadExecute()
       );
     if( stdErr.debugLevel(6) )
       stdErr.debug(6,utf8::String::Stream() <<
-        "Interface: " << ifName_ << ", memory usage: " <<
+        "Interface: " << pcap_->ifName_ << ", memory usage: " <<
         formatByteLength(
           interlockedIncrement(pcap_->memoryUsage_,0),
           pcap_->swapThreshold()
@@ -1021,7 +1021,7 @@ void PCAP::LazyWriter::swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group
     );
   if( swapped && stdErr.debugLevel(6) )
     stdErr.debug(6,utf8::String::Stream() <<
-      "Interface: " << ifName_ << ", memory usage: " <<
+      "Interface: " << pcap_->ifName_ << ", memory usage: " <<
       formatByteLength(
         interlockedIncrement(pcap_->memoryUsage_,0),
         pcap_->swapThreshold()
@@ -1067,7 +1067,7 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
       );
     if( stdErr.debugLevel(6) )
       stdErr.debug(6,utf8::String::Stream() <<
-        "Interface: " << ifName_ << ", memory usage: " <<
+        "Interface: " << pcap_->ifName_ << ", memory usage: " <<
         formatByteLength(
           interlockedIncrement(pcap_->memoryUsage_,0),
           pcap_->swapThreshold()
