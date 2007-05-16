@@ -389,7 +389,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
 				AdditionalLibraryDirectories=""
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
@@ -470,7 +470,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				OutputFile="$(OutDir)\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
 				SubSystem="1"
