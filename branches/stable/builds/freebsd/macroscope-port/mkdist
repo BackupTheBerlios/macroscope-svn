@@ -1,0 +1,14 @@
+#!/bin/sh
+
+PORT="macroscope-1.0.1614"
+REPOS="http://svn.berlios.de/svnroot/repos/macroscope/branches/stable"
+FILES="builds/cmake include src utils AUTHORS README INSTALL NEWS CMakeLists.txt"
+for f in ${FILES}; do
+  svn export "${REPOS}/${f}" "${PORT}/${f}"
+done
+echo "#!/bin/sh" >> "${PORT}/configure"
+echo "cmake ." >> "${PORT}/configure"
+chmod u+x "${PORT}/configure"
+tar -c -f - ${PORT} | bzip2 --best - > ${PORT}.tar.bz2
+scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/groups/ftp/pub/macroscope
+ftp -Ru ftp://white_raven@ftp.pisem.net/${PORT}.tar.bz2 ${PORT}.tar.bz2
