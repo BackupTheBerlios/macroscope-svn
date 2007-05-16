@@ -283,7 +283,7 @@ class PCAP : public Thread {
         uintptr_t maxCount_;
         PacketsHash packetsHash_;
 	
-        PacketGroup & joinGroup(const PacketGroup & group,uilock_t & memoryUsage);
+        PacketGroup & joinGroup(const PacketGroup & group,volatile uilock_t & memoryUsage);
 
 	      bool isInBounds(uint64_t timestamp) const { return timestamp >= header_.bt_ && timestamp <= header_.et_; }
       

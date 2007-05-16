@@ -1141,7 +1141,7 @@ void PCAP::LazyWriter::threadExecute()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,uilock_t & memoryUsage)
+PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,volatile uilock_t & memoryUsage)
 {
   for( intptr_t i = group.header_.count_ - 1; i >= 0; i-- ){
     if( header_.count_ == maxCount_ ){
