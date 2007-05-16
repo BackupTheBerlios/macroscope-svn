@@ -45,7 +45,7 @@ class Initializer {
     static void initialize(int argc,char ** argv);
     static void cleanup();
   private:
-    static int32_t mutex_;
+    static volatile int32_t mutex_;
     static int32_t initCount_;
 };
 //---------------------------------------------------------------------------

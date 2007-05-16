@@ -60,7 +60,7 @@ template <typename T> class StringT {
     class Container {
       public:
         ksys::AutoPtr<T> string_;
-        int32_t refCount_;
+        volatile int32_t refCount_;
 
         ~Container(){}
 

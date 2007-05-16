@@ -33,7 +33,7 @@ namespace ksys {
 uint8_t giantPlaceHolder[sizeof(InterlockedMutex)];
 //---------------------------------------------------------------------------
 #if !defined(__GNUG__) && !defined(__i386__) && !defined(_MSC_VER) && !defined(__BCPLUSPLUS__)
-int32_t interlockedIncrement(int32_t & v,int32_t a)
+int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   giant().acquire();
   int32_t ov = v;
@@ -42,7 +42,7 @@ int32_t interlockedIncrement(int32_t & v,int32_t a)
   return ov;
 }
 
-int32_t interlockedCompareExchange(int32_t & v,int32_t exValue,int32_t cmpValue)
+int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
 {
   giant().acquire();
   int32_t ov;
@@ -60,7 +60,7 @@ int32_t interlockedCompareExchange(int32_t & v,int32_t exValue,int32_t cmpValue)
 //---------------------------------------------------------------------------
 #ifdef __BCPLUSPLUS__
 #pragma option push -w-8070 -O2 -6 -y- -r
-int32_t __fastcall __declspec(nothrow) interlockedIncrement(int32_t &,int32_t)
+int32_t __fastcall __declspec(nothrow) interlockedIncrement(volatile int32_t &,int32_t)
 {
   __asm {
     lock xadd       [eax],edx
@@ -68,7 +68,7 @@ int32_t __fastcall __declspec(nothrow) interlockedIncrement(int32_t &,int32_t)
   }
 }
 
-int32_t __fastcall __declspec(nothrow) interlockedCompareExchange(int32_t &,int32_t,int32_t)
+int32_t __fastcall __declspec(nothrow) interlockedCompareExchange(volatile int32_t &,int32_t,int32_t)
 {
   __asm {
     xchg            eax,ecx

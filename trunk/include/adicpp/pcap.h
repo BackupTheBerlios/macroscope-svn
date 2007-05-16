@@ -368,7 +368,7 @@ class PCAP : public Thread {
     uintptr_t swapThreshold_;
     uintptr_t pregroupingBufferSize_;
     uintptr_t pregroupingWindowSize_;
-    uilock_t memoryUsage_;
+    volatile uilock_t memoryUsage_;
     ldouble swapLowWatermark_;
     ldouble swapHighWatermark_;
     uint64_t swapWatchTime_;

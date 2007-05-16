@@ -45,7 +45,7 @@ class InterlockedMutex {
   protected:
   private:
 #if FAST_MUTEX
-    int32_t refCount_;
+    volatile int32_t refCount_;
 
     static void (* acquire_)(InterlockedMutex * mutex);
     static void singleAcquire(InterlockedMutex * mutex);

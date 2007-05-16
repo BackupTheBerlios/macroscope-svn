@@ -3102,7 +3102,7 @@ void waitForSignalsSemaphore()
 {
   signalsCountersSem().wait();
 }
-uilock_t signalsCounters[_SIG_MAXSIG];
+volatile uilock_t signalsCounters[_SIG_MAXSIG];
 static void sigHandler(int sig,siginfo_t * siginfo,ucontext_t * uap)
 {
   interlockedIncrement(signalsCounters[sig - 1],1);

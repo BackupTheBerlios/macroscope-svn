@@ -47,7 +47,7 @@ class EPB {
     uintptr_t         resultBufferLen_;
     ISC_LONG          eventId_;
     ISC_STATUS_ARRAY  vector_;
-    int32_t           eventFlag_;
+    volatile int32_t  eventFlag_;
     bool              firstEvent_;
 };
 //---------------------------------------------------------------------------

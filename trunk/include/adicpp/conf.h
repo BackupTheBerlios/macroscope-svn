@@ -336,7 +336,7 @@ class InterlockedConfig : public Config, public T {
     void remRef();
   protected:
   private:
-    int32_t refCount_;
+    volatile int32_t refCount_;
     InterlockedConfig(const InterlockedConfig<T> &){}
     void operator = (const InterlockedConfig<T> &){}
 };

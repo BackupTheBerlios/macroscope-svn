@@ -55,7 +55,7 @@ class MemoryStream {
         };
         uintptr_t count_;
         uintptr_t mcount_;
-        int32_t   refCount_;
+        volatile int32_t   refCount_;
     };
 
     mutable SPRC<Container> container_;

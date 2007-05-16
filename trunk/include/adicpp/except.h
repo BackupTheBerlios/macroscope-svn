@@ -88,7 +88,7 @@ class Exception : virtual public Object {
         utf8::String what_;
     };
     mutable Array<Error> errors_;
-    mutable int32_t refCount_;
+    mutable volatile int32_t refCount_;
     bool stackBackTrace_;
   private:
     Exception(const Exception &){}
