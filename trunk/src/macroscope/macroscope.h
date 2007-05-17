@@ -428,6 +428,7 @@ class Logger {
     static bool isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,const struct tm et);
     int32_t doWork(uintptr_t stage);
     int32_t waitThreads();
+    Logger & createDatabase();
   private:
 };
 //------------------------------------------------------------------------------

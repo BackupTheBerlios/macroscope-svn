@@ -44,6 +44,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
   try {
     if( !database_->attached() ) database_->attach();
     if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+    database_->start();
     if( !statement_->prepared() )
       statement_->text(
         "INSERT INTO INET_BPFT_STAT ("
@@ -52,7 +53,6 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
         ")"
       )->prepare()->paramAsString(0/*"st_if"*/,ifName());
-    database_->start();
     while( !caller->terminated() && count-- > 0 ){
       Mutant m(bt);
       m.changeType(mtTime);
