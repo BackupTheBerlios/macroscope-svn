@@ -47,10 +47,10 @@ class Fiber : virtual public Object {
     virtual ~Fiber();
     Fiber();
 
-    const bool & started() const;
-    const bool & terminated() const;
+    volatile const bool & started() const;
+    volatile const bool & terminated() const;
     Fiber & terminate();
-    const bool & finished() const;
+    volatile const bool & finished() const;
 
     void DECLSPEC_NOTHROW switchFiber(Fiber * fiber) GNUG_NOTHROW;
 
@@ -58,9 +58,9 @@ class Fiber : virtual public Object {
     BaseThread * const & thread() const;
     AsyncEvent event_;
   protected:
-    bool started_;
-    bool terminated_;
-    bool finished_;
+    volatile bool started_;
+    volatile bool terminated_;
+    volatile bool finished_;
 
     virtual void fiberExecute() = 0;
   private:
@@ -102,12 +102,12 @@ inline BaseThread * const & Fiber::thread() const
   return thread_;
 }
 //---------------------------------------------------------------------------
-inline const bool & Fiber::started() const
+inline volatile const bool & Fiber::started() const
 {
   return started_;
 }
 //---------------------------------------------------------------------------
-inline const bool & Fiber::terminated() const
+inline volatile const bool & Fiber::terminated() const
 {
   return terminated_;
 }
@@ -118,7 +118,7 @@ inline Fiber & Fiber::terminate()
   return *this;
 }
 //---------------------------------------------------------------------------
-inline const bool & Fiber::finished() const
+inline volatile const bool & Fiber::finished() const
 {
   return finished_;
 }

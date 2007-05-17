@@ -198,7 +198,10 @@ void Logger::readConfig()
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
   verbose_ = config_->valueByPath("macroscope.verbose",false);
+
   setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()),true);
+
+  connection_ = config_->textByPath("macroscope.connection","default_connection");
 }
 //------------------------------------------------------------------------------
 int32_t Logger::main()
@@ -206,7 +209,7 @@ int32_t Logger::main()
   readConfig();
   
   ConfigSection dbParamsSection;
-  dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
+  dbParamsSection.addSection(config_->sectionByPath(connection_));
 
   database_ = Database::newDatabase(&dbParamsSection);
   statement_ = database_->newAttachedStatement();
@@ -489,7 +492,7 @@ int32_t Logger::main()
 
 //#if !__FreeBSD__
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL &&
-        (bool) config_->valueByPath("libadicpp.default_connection.firebird.set_properties",false) ){
+        (bool) config_->valueByPath(connection_ + ".firebird.set_properties",false) ){
       utf8::String hostName, dbName;
       uintptr_t port;
       database_->separateDBName(database_->name(),hostName,dbName,port);
@@ -497,31 +500,31 @@ int32_t Logger::main()
       utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
       fbcpp::Service service;
       service.params().
-        add("user_name",config_->valueByPath("libadicpp.default_connection.firebird.user"));
+        add("user_name",config_->valueByPath(connection_ + ".firebird.user"));
       service.params().
-        add("password",config_->valueByPath("libadicpp.default_connection.firebird.password"));
+        add("password",config_->valueByPath(connection_ + ".firebird.password"));
       try {
         service.attach(serviceName);
         service.request().
           add("action_svc_properties").add("dbname",dbName).
-          add("prp_set_sql_dialect",config_->valueByPath("libadicpp.default_connection.firebird.dialect",3));
+          add("prp_set_sql_dialect",config_->valueByPath(connection_ + ".firebird.dialect",3));
         service.invoke();
         service.request().clear().
           add("action_svc_properties").add("dbname",dbName).
           add("prp_reserve_space",
-            (bool) config_->valueByPath("libadicpp.default_connection.firebird.reserve_space",false) ?
+            (bool) config_->valueByPath(connection_ + ".firebird.reserve_space",false) ?
               isc_spb_prp_res : isc_spb_prp_res_use_full
           );
         service.invoke();
         service.request().clear().add("action_svc_properties").add("dbname",dbName).
           add("prp_page_buffers",
-            config_->valueByPath("libadicpp.default_connection.firebird.page_buffers",2048u)
+            config_->valueByPath(connection_ + ".firebird.page_buffers",2048u)
           );
         service.invoke();
         service.request().clear().
           add("action_svc_properties").add("dbname", dbName).
           add("prp_write_mode",
-            (bool) config_->valueByPath("libadicpp.default_connection.firebird.async_write",0) ?
+            (bool) config_->valueByPath(connection_ + ".firebird.async_write",0) ?
               isc_spb_prp_wm_async : isc_spb_prp_wm_sync
           );
         service.invoke();
@@ -529,7 +532,7 @@ int32_t Logger::main()
         service.request().clear().
           add("action_svc_properties").add("dbname", dbName).
           add("prp_sweep_interval",
-            config_->valueByPath("libadicpp.default_connection.firebird.sweep_interval",10000u)
+            config_->valueByPath(connection_ + ".firebird.sweep_interval",10000u)
           );
         service.invoke();
       }
@@ -678,11 +681,12 @@ int32_t Logger::doWork(uintptr_t stage)
 	e.writeStdError();
       }
 #endif
-      ConfigSection dbParamsSection;
-      dbParamsSection.addSection(config_->sectionByPath("libadicpp.default_connection"));
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
         if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
+        ConfigSection dbParamsSection;
+        utf8::String connection(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.connection",connection_));
+        dbParamsSection.addSection(config_->sectionByPath(connection));
         AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
         AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database.ptr()));
         database.ptr(NULL);
@@ -848,6 +852,7 @@ int main(int _argc,char * _argv[])
     uintptr_t i;
     stdErr.fileName(SYSLOG_DIR("macroscope/") + "macroscope.log");
     Config::defaultFileName(SYSCONF_DIR("") + "macroscope.conf");
+    Config::defaultFileName(getEnv("MACROSCOPE_CONFIG").isNull() ? Config::defaultFileName() : getEnv("MACROSCOPE_CONFIG"));
     Services services(macroscope_version.gnu_);
     AutoPtr<macroscope::SnifferService> serviceAP(newObject<macroscope::SnifferService>());
     services.add(serviceAP);

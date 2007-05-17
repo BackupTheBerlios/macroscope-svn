@@ -103,10 +103,10 @@ class Thread : virtual public Object {
     const intptr_t & exitCode() const;
     bool active() const;
 
-    const bool & started() const;
+    volatile const bool & started() const;
     Thread & terminate();
-    const bool & terminated() const;
-    const bool & finished() const;
+    volatile const bool & terminated() const;
+    volatile const bool & finished() const;
 
     Thread & stackSize(uintptr_t newStackSize);
     const uintptr_t & stackSize() const;
@@ -146,9 +146,9 @@ class Thread : virtual public Object {
     //pthread_mutex_t mutex_;
 #endif
     intptr_t        exitCode_;
-    bool            started_;
-    bool            terminated_;
-    bool            finished_;
+    volatile bool   started_;
+    volatile bool   terminated_;
+    volatile bool   finished_;
   private:
     static uint8_t  beforeExecuteActions_[];
     static uint8_t  afterExecuteActions_[];
@@ -231,7 +231,7 @@ inline bool Thread::active() const
 #endif
 }
 //---------------------------------------------------------------------------
-inline const bool & Thread::started() const
+inline volatile const bool & Thread::started() const
 {
   return started_;
 }
@@ -242,12 +242,12 @@ inline Thread & Thread::terminate()
   return *this;
 }
 //---------------------------------------------------------------------------
-inline const bool & Thread::terminated() const
+inline volatile const bool & Thread::terminated() const
 {
   return terminated_;
 }
 //---------------------------------------------------------------------------
-inline const bool & Thread::finished() const
+inline volatile const bool & Thread::finished() const
 {
   return finished_;
 }

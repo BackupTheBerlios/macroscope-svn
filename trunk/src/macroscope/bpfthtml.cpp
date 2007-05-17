@@ -332,7 +332,7 @@ Logger::BPFTThread::BPFTThread(
   stage_(stage)
 {
   ConfigSection dbParamsSection;
-  dbParamsSection.addSection(logger_->config_->sectionByPath("libadicpp.default_connection"));
+  dbParamsSection.addSection(logger_->config_->sectionByPath(logger_->connection_));
   
   database_ = Database::newDatabase(&dbParamsSection);
 

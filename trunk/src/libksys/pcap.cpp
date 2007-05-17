@@ -36,50 +36,92 @@ namespace ksys {
 //------------------------------------------------------------------------------
 // Module static functions
 //------------------------------------------------------------------------------
-static utf8::String formatByteLength(uintmax_t len,uintmax_t all,bool suffixes = true)
+static utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fmt = "SP")
 {
+  if( len == 0 ) return "-";
   uintmax_t q, b, c, t1, t2, t3;
-  char * postfix;
-
-  q = len * 10000u / all;
-  b = q / 100u;
-  c = q % 100u;
-  if( !suffixes ) goto l1;
-  if( len >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
-    t2 = 1024u;
-    t2 *= 1024u * 1024u * 1024u;
-    postfix = "T";
+  char * suffix = "";
+  bool suffixes = false, percent = false;
+  while( *fmt != '\0' ) switch( *fmt++ ){
+    case 'S' : case 's' : suffixes = true; break;
+    case 'P' : case 'p' : percent = true; break;
   }
-  if( len >= 1024u * 1024u * 1024u ){
-    t2 = 1024u * 1024u * 1024u;
-    postfix = "G";
+  if( percent ){
+    q = len * 1000000u / (all != 0 ? all : 1);
+    b = q / 100u;
+    c = q % 100u;
   }
-  else if( len >= 1024u * 1024u ){
-    t2 = 1024u * 1024u;
-    postfix = "M";
-  }
-  else if( len >= 1024u ){
-    t2 = 1024u;
-    postfix = "K";
-  }
-  else {
-l1: return utf8::String::print(
-      len > 0 ? "%"PRIuMAX"(%"PRIuMAX".%02"PRIuMAX"%%)" :  "-",
-      len,
-      b,
-      c
-    );
+  t2 = 1;
+  if( suffixes ){
+    if( len >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
+      t2 = 1024u;
+      t2 *= 1024u * 1024u * 1024u;
+      suffix = "T";
+    }
+    if( len >= 1024u * 1024u * 1024u ){
+      t2 = 1024u * 1024u * 1024u;
+      suffix = "G";
+    }
+    else if( len >= 1024u * 1024u ){
+      t2 = 1024u * 1024u;
+      suffix = "M";
+    }
+    else if( len >= 1024u ){
+      t2 = 1024u;
+      suffix = "K";
+    }
+    else {
+      suffixes = false;
+    }
   }
   t1 = len / t2;
   t3 = len % t2;
+  if( suffixes )
+    return utf8::String::print(
+      percent ? "%"PRIuMAX".%04"PRIuMAX"%s(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX".%04"PRIuMAX"%s",
+      t1,
+      uintmax_t(t3 / (t2 / 1024u)),
+      suffix,
+      b,
+      c
+    );
   return utf8::String::print(
-    len > 0 ? "%"PRIuMAX".%04"PRIuMAX"%s(%"PRIuMAX".%02"PRIuMAX"%%)" :  "-",
+    percent ? "%"PRIuMAX"(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX,
     t1,
-    uintmax_t(t3 / (t2 / 1024u)),
-    postfix,
     b,
     c
   );
+}
+//------------------------------------------------------------------------------
+static utf8::String groupingPeriodToString(PCAP::PacketGroupingPeriod groupingPeriod)
+{
+  const char * s;
+  switch( groupingPeriod ){
+    case PCAP::pgpNone :
+      s = "none";
+      break;
+    case PCAP::pgpSec  :
+      s = "sec";
+      break;
+    case PCAP::pgpMin  :
+      s = "min";
+      break;
+    case PCAP::pgpHour :
+      s = "hour";
+      break;
+    case PCAP::pgpDay  :
+      s = "day";
+      break;
+    case PCAP::pgpMon  :
+      s = "mon";
+      break;
+    case PCAP::pgpYear :
+      s = "year";
+      break;
+    default : 
+      assert( 0 );
+  }
+  return s;
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -439,7 +481,14 @@ void PCAP::threadExecute()
     grouper_->resume();
     databaseInserter_->resume();
     lazyWriter_->resume();
-    stdErr.debug(1,utf8::String::Stream() << "Interface: " << ifName_ << ", capture started.\n");
+    stdErr.debug(1,utf8::String::Stream() <<
+      "Interface: " << ifName_ <<
+      " on device: " << iface_ <<
+      ", memory using swap threshold: " << formatByteLength(swapThreshold_,0,"S") <<
+      ", pregrouping buffer size: " << formatByteLength(pregroupingBufferSize_,0,"S") <<
+      ", grouping period: " << groupingPeriodToString(groupingPeriod_) <<
+      ", capture started.\n"
+    );
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
   }
@@ -852,8 +901,8 @@ void PCAP::Grouper::threadExecute()
         stdErr.debug(4,utf8::String::Stream() <<
           "Interface: " << pcap_->ifName_ <<
           ", recv: " << ps->ps_recv <<
-          ", drop: " << formatByteLength(ps->ps_drop,ps->ps_recv,false) <<
-          ", ifdrop: " << formatByteLength(ps->ps_ifdrop,ps->ps_recv,false) <<
+          ", drop: " << formatByteLength(ps->ps_drop,ps->ps_recv,"P") <<
+          ", ifdrop: " << formatByteLength(ps->ps_ifdrop,ps->ps_recv,"P") <<
           "\n"
         );
       }

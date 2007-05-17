@@ -54,6 +54,7 @@ class Logger {
 
     CGI cgi_;
     ConfigSPi config_;
+    utf8::String connection_;
     AutoPtr<Database> database_;
     AutoPtr<Statement> statement_;
     AutoPtr<Statement> statement2_;
