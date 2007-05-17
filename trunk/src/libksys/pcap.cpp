@@ -48,8 +48,11 @@ static utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fm
   }
   if( percent ){
     q = len * 1000000u / (all != 0 ? all : 1);
-    b = q / 100u;
-    c = q % 100u;
+    b = q / 10000u;
+    c = q % 10000u;
+  }
+  else {
+    b = c = 0;
   }
   t2 = 1;
   if( suffixes ){
@@ -76,15 +79,25 @@ static utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fm
   }
   t1 = len / t2;
   t3 = len % t2;
-  if( suffixes )
+  if( suffixes ){
+    t2 = t3 / (t2 / 1024u);
+    if( t2 == 0 )
+      return utf8::String::print(
+        percent ? "%"PRIuMAX"%s(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX"%s",
+        t1,
+        suffix,
+        b,
+        c
+      );
     return utf8::String::print(
       percent ? "%"PRIuMAX".%04"PRIuMAX"%s(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX".%04"PRIuMAX"%s",
       t1,
-      uintmax_t(t3 / (t2 / 1024u)),
+      t2,
       suffix,
       b,
       c
     );
+  }
   return utf8::String::print(
     percent ? "%"PRIuMAX"(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX,
     t1,
@@ -95,7 +108,7 @@ static utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fm
 //------------------------------------------------------------------------------
 static utf8::String groupingPeriodToString(PCAP::PacketGroupingPeriod groupingPeriod)
 {
-  const char * s;
+  const char * s = NULL;
   switch( groupingPeriod ){
     case PCAP::pgpNone :
       s = "none";
