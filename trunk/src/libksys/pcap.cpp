@@ -83,14 +83,14 @@ static utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fm
     t2 = t3 / (t2 / 1024u);
     if( t2 == 0 )
       return utf8::String::print(
-        percent ? "%"PRIuMAX"%s(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX"%s",
+        percent ? "%"PRIuMAX"%s(%"PRIuMAX".%04"PRIuMAX"%%)" : "%"PRIuMAX"%s",
         t1,
         suffix,
         b,
         c
       );
     return utf8::String::print(
-      percent ? "%"PRIuMAX".%04"PRIuMAX"%s(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX".%04"PRIuMAX"%s",
+      percent ? "%"PRIuMAX".%04"PRIuMAX"%s(%"PRIuMAX".%04"PRIuMAX"%%)" : "%"PRIuMAX".%04"PRIuMAX"%s",
       t1,
       t2,
       suffix,
@@ -99,7 +99,7 @@ static utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fm
     );
   }
   return utf8::String::print(
-    percent ? "%"PRIuMAX"(%"PRIuMAX".%02"PRIuMAX"%%)" : "%"PRIuMAX,
+    percent ? "%"PRIuMAX"(%"PRIuMAX".%04"PRIuMAX"%%)" : "%"PRIuMAX,
     t1,
     b,
     c

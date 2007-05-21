@@ -118,16 +118,160 @@ void kfree(void * p)
 // heap manager /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-struct HeapBlockDesc {
-  void ** block_;
-  uintptr_t freeChunk_;
+/*class HeapManager {
+  public:
+    void * malloc(uintptr_t size);
+    void * realloc(uintptr_t size);
+    void free(const void * ptr);
+  protected:
+    class Cluster {
+      public:
+        Cluster() : memory_(NULL), refCount_(0), locked_(false) {}
+	
+        static EmbeddedHashNode<Cluster,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t &){
+          return *reinterpret_cast<EmbeddedHashNode<Cluster,uintptr_t> *>(link);
+	}
+	static uintptr_t ehLTN(const EmbeddedHashNode<Cluster,uintptr_t> & node,uintptr_t &){
+	  return reinterpret_cast<uintptr_t>(&node);
+	}
+	static EmbeddedHashNode<Cluster,uintptr_t> & keyNode(const Cluster & object){
+	  return object.keyNode_;
+	}
+	static Cluster & keyNodeObject(const EmbeddedHashNode<Cluster,uintptr_t> & node,Cluster * p){
+	  return node.object(p->keyNode_);
+	}
+	static uintptr_t keyNodeHash(const Cluster & object){
+	  return HF::hash(&object.memory_);
+	}
+        static bool keyHashNodeEqu(const Cluster & object1,const Cluster & object2){
+	  return object1.memory_ == object2.memory_;
+        }
+        mutable EmbeddedHashNode<Cluster,uintptr_t> keyNode_;
+
+        static EmbeddedListNode<Cluster> & listNode(const Cluster & object){
+	  return object.listNode_;
+	}
+	static Cluster & listNodeObject(const EmbeddedListNode<Cluster> & node,Cluster * p = NULL){
+	  return node.object(p->listNode_);
+	} 
+	mutable EmbeddedListNode<Cluster> listNode_;
+	
+	void * memory_;
+	uintptr_t index_; // first in free list block index
+	ilock_t refCount_;
+	bool locked_;
+    };
+    class Clusters {
+      public:
+        EmbeddedList<Cluster,Cluster::listNode,Cluster::listNodeObject> clusters_;
+	uintptr_t size_;
+    };
+    EmbeddedList<Cluster,Cluster::listNode,Cluster::listNodeObject> clusters_;
+    uintptr_t clusterSize_;
+    uintptr_t usedMemory_;
+  private:
 };
 //---------------------------------------------------------------------------
-struct HeapBlockBySizeDesc {
-  uintptr_t  count_;
-  HeapBlockDesc * blocks_;
-  uintptr_t  freeBlock_;
-};
+HeapManager::~HeapManager()
+{
+}
+//---------------------------------------------------------------------------
+HeapManager::HeapManager()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  clusterSize_ = GetLargePageMinimum();
+  if( clusterSize_ < si.dwPageSize ) clusterSize_ = si.dwPageSize;
+#else
+  clusterSize_ = getpagesize();
+#endif
+}
+//---------------------------------------------------------------------------
+HeapManager & HeapManager::clear()
+{
+  deleteCluster(clusters_);
+  return *this;
+}
+//---------------------------------------------------------------------------
+Cluster * HeapManager::findClusterBySize(uintptr_t size)
+{
+  Cluster * cluster = *Cluster::listNodeObject(*clusters_.first());
+  uintptr_t fsize = 0, lsize = 0;
+  while( cluster != NULL ){
+    Clusters * clusters = *((Clusters *) cluster->memory_;
+    fsize = Cluster::listNodeObject(*clusters->clusters_.first())->size_;
+    lsize = Cluster::listNodeObject(*clusters->clusters_.last())->size_;
+    if( size < fsize || size <= lsize ) break;
+    cluster = &Cluster::listNode(cluster->next());
+  }
+  if( cluster == NULL || size < fsize ){
+    newCluster(clusters_);
+    for( intptr_t i = clusterSize_ - sizeof(Clusters) / sizeof(Clusters) - 1; i >= 0; i-- ){
+      Clusters * clusters = (Clusters *) clusters_.memory_ + i;
+      new (clusters) Clusters;
+      clusters_->size_ = i;
+    }
+  }
+}
+//---------------------------------------------------------------------------
+void * HeapManager::malloc(uintptr_t size)
+{
+  Cluster * cluster = findClusterBySize(size);
+}
+//---------------------------------------------------------------------------
+HeapManager & HeapManager::dropCluster(Cluster & cluster)
+{
+  if( cluster.memory_ != NULL ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    VirtualUnlock(cluster.memory_,clusterSize_);
+    VirtualFree(cluster.memory_,clusterSize_);
+#else
+    munlock(cluster.memory_,clusterSize_);
+    ::free(cluster.memory_);
+#endif
+    cluster.memory_ = NULL;
+    usedMemory_ -= clusterSize_;
+  }
+  return *this;
+}
+//---------------------------------------------------------------------------
+HeapManager & HeapManager::newCluster(Cluster & cluster)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  assert( cluster.memory_ == NULL );
+  cluster.memory_ = VirtualAlloc(NULL,clusterSize_,MEM_COMMIT | MEM_LARGE_PAGES,0);
+  if( cluster.memory_ == NULL ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<EOutOfMemory>(err,__PRETTY_FUNCTION__)->throwSP();    
+  }
+  if( VirtualLock(cluster.memory_,clusterSize_) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    Exception e(err,__PRETTY_FUNCTION__);
+    e.writeStdError();
+  }
+  else {
+    cluster.locked_ = true;
+  }
+  usedMemory_ += clusterSize_;
+#else
+  cluster.memory_ = ::malloc(clusterSize_);
+  if( cluster.memory_ == NULL ){
+    int32_t err = errno;
+    newObjectV1C2<EOutOfMemory>(err,__PRETTY_FUNCTION__)->throwSP();    
+  }
+  if( mlock(cluster.memory_,clusterSize_) != 0 ){  
+    int32_t err = errno;
+    Exception e(err,__PRETTY_FUNCTION__);
+    e.writeStdError();
+  }
+  else {
+    cluster.locked_ = true;
+  }
+#endif
+  assert( (cluster.memory_ & (clusterSize_ - 1)) == 0 );
+  return *this;
+}*/
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
