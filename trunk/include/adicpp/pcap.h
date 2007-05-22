@@ -158,6 +158,8 @@ class PCAP : public Thread {
     static void printAllDevices();
 
     void setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const;
+
+    PCAP & join(PCAP * pcap);
   protected:
     class Packet {
       public:
@@ -313,7 +315,7 @@ class PCAP : public Thread {
       private:
         PCAP * pcap_;
 	
-	Packets * get();
+	      Packets * get();
         void threadBeforeWait();
         void threadExecute();
     };
@@ -344,7 +346,17 @@ class PCAP : public Thread {
         void swapIn(AsyncFile & tempFile);
     };
     friend class LazyWriter;
-	        
+
+    static EmbeddedListNode<PCAP> & listNode(const PCAP & object){
+      return object.listNode_;
+    }
+    static PCAP & listObject(const EmbeddedListNode<PCAP> & node,PCAP * p = NULL){
+      return node.object(p->listNode_);
+    }
+  	mutable EmbeddedListNode<PCAP> listNode_;
+    EmbeddedList<PCAP,listNode,listObject> joined_;
+    PCAP * joinMaster_;
+
     void * handle_;
     void * fp_;
     PacketGroupingPeriod groupingPeriod_;
@@ -381,6 +393,7 @@ class PCAP : public Thread {
     void shutdown();
     void threadBeforeWait();
     void threadAfterWait();
+    void groupPackets();
     static void pcapCallback(void *,const void *,const void *);
     void capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8_t * packet);
 

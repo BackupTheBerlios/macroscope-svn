@@ -429,6 +429,7 @@ class Logger {
     int32_t doWork(uintptr_t stage);
     int32_t waitThreads();
     Logger & createDatabase();
+    Sniffer * getSnifferBySection(const utf8::String & sectionName);
   private:
 };
 //------------------------------------------------------------------------------

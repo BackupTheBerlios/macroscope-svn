@@ -312,10 +312,17 @@ void PCAP::cleanup()
 //------------------------------------------------------------------------------
 PCAP::~PCAP()
 {
+  EmbeddedListNode<PCAP> * node;
+  while( (node = joined_.last()) != NULL ) joined_.drop(*node);
 }
 //------------------------------------------------------------------------------
-PCAP::PCAP() : handle_(NULL), fp_(NULL), groupingPeriod_(pgpNone),
-  packetsAutoDrop_(packetsList_), groupTreeAutoDrop_(groupTree_),
+PCAP::PCAP() :
+  joinMaster_(NULL),
+  handle_(NULL),
+  fp_(NULL),
+  groupingPeriod_(pgpNone),
+  packetsAutoDrop_(packetsList_),
+  groupTreeAutoDrop_(groupTree_),
   swapThreshold_(16u * 1024u * 1024u),
   pregroupingBufferSize_(
 #ifndef NDEBUG
@@ -433,19 +440,35 @@ void PCAP::threadAfterWait()
   shutdown();
 }
 //------------------------------------------------------------------------------
-void PCAP::shutdown()
+void PCAP::groupPackets()
 {
   if( packets_ != NULL ){
-    AutoLock<InterlockedMutex> lock(packetsListMutex_);
-    packetsList_.insToTail(*packets_.ptr(NULL));
-    grouperSem_.post();
+    AutoLock<InterlockedMutex> lock(joinMaster_ == NULL ? packetsListMutex_ : joinMaster_->packetsListMutex_);
+    (joinMaster_ == NULL ? packetsList_ : joinMaster_->packetsList_).insToTail(*packets_.ptr(NULL));
+    (joinMaster_ == NULL ? grouperSem_ : joinMaster_->grouperSem_).post();
   }
-  if( databaseInserter_ != NULL ) databaseInserter_->wait();
-  if( grouper_ != NULL ) grouper_->wait();
-  if( lazyWriter_ != NULL ) lazyWriter_->wait();
-  grouper_ = NULL;
-  databaseInserter_ = NULL;
-  lazyWriter_ = NULL;
+}
+//------------------------------------------------------------------------------
+void PCAP::shutdown()
+{
+  EmbeddedListNode<PCAP> * node = joined_.first();
+  while( node != NULL ){
+    listObject(*node).shutdown();
+    node = node->next();
+  }
+  groupPackets();
+  if( databaseInserter_ != NULL ){
+    databaseInserter_->wait();
+    databaseInserter_ = NULL;
+  }
+  if( grouper_ != NULL ){
+    grouper_->wait();
+    grouper_ = NULL;
+  }
+  if( lazyWriter_ != NULL ){
+    lazyWriter_->wait();
+    lazyWriter_ = NULL;
+  }
   if( handle_ != NULL ){
     struct bpf_program * fp = (struct bpf_program *) fp_;
     if( fp != NULL ){
@@ -486,20 +509,28 @@ void PCAP::threadExecute()
     }
 //    fprintf(stderr,"%s %d\n",__FILE__,__LINE__); fflush(stderr);
     //if( api.pcap_setmode((pcap_t *) handle_,MODE_MON) != 0 ) goto errexit;
-    grouper_ = newObjectV1<Grouper>(this);
-    databaseInserter_ = newObjectV1<DatabaseInserter>(this);
-    lazyWriter_ = newObjectV1<LazyWriter>(this);
     memoryUsage_ = 0;
     curPeriod_ = 0;
-    grouper_->resume();
-    databaseInserter_->resume();
-    lazyWriter_->resume();
+    if( joinMaster_ == NULL ){
+      EmbeddedListNode<PCAP> * node = joined_.first();
+      while( node != NULL ){
+        listObject(*node).resume();
+        node = node->next();
+      }
+      grouper_ = newObjectV1<Grouper>(this);
+      databaseInserter_ = newObjectV1<DatabaseInserter>(this);
+      lazyWriter_ = newObjectV1<LazyWriter>(this);
+      grouper_->resume();
+      databaseInserter_->resume();
+      lazyWriter_->resume();
+    }
     stdErr.debug(1,utf8::String::Stream() <<
       "Interface: " << ifName_ <<
       " on device: " << iface_ <<
       ", memory using swap threshold: " << formatByteLength(swapThreshold_,0,"S") <<
       ", pregrouping buffer size: " << formatByteLength(pregroupingBufferSize_,0,"S") <<
       ", grouping period: " << groupingPeriodToString(groupingPeriod_) <<
+      (joinMaster_ == NULL ? utf8::String() : ", joined to " + joinMaster_->ifName_) <<
       ", capture started.\n"
     );
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
@@ -519,6 +550,13 @@ errexit:
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
+}
+//------------------------------------------------------------------------------
+PCAP & PCAP::join(PCAP * pcap)
+{
+  joined_.insToTail(*pcap);
+  pcap->joinMaster_ = this;
+  return *this;
 }
 //------------------------------------------------------------------------------
 void PCAP::pcapCallback(void * args,const void * header,const void * packet)
@@ -698,8 +736,8 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
       if( stdErr.debugLevel(80) )
         stdErr.debug(80,utf8::String::Stream() <<
           "Interface: " << ifName_ << ", captured length less then " <<
-	  ksock::SockAddr::protoAsString(ip->proto_) <<
-	  " packet header, from: " <<
+          ksock::SockAddr::protoAsString(ip->proto_) <<
+          " packet header, from: " <<
           src.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << " to: " <<
           dst.resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV) << "\n"
         );
@@ -726,11 +764,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   if( packets_ == NULL ||
       (packets_->packets_ == packets_->count() && packets_->packets_ > 0) ||
       (groupingPeriod_ > pgpNone && bt != curPeriod_) ){
-    if( packets_ != NULL ){
-      AutoLock<InterlockedMutex> lock(packetsListMutex_);
-      packetsList_.insToTail(*packets_.ptr(NULL));
-      grouperSem_.post();
-    }
+    groupPackets();
     curPeriod_ = bt;
     packets_.ptr(newObjectV1<Packets>(pregroupingBufferSize_ / sizeof(Packet)));
     interlockedIncrement(

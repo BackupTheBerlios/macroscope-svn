@@ -26,8 +26,8 @@
 //------------------------------------------------------------------------------
 #include <adicpp/adicpp.h>
 //------------------------------------------------------------------------------
-#include "macroscope.h"
 #include "sniffer.h"
+#include "macroscope.h"
 #ifndef NDEBUG
 #include <adicpp/lzw.h>
 #endif
@@ -668,6 +668,51 @@ int32_t Logger::main()
   return err0 != 0 ? err0 : err1 != 0 ? err1 : err2 != 0 ? err2 : err3;
 }
 //------------------------------------------------------------------------------
+Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
+{
+  ConfigSection dbParamsSection;
+  utf8::String connection(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.connection",connection_));
+  dbParamsSection.addSection(config_->sectionByPath(connection));
+  AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
+  AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database.ptr()));
+  database.ptr(NULL);
+  sniffer->ifName(sectionName);
+  sniffer->iface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
+  sniffer->tempFile(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.temp_file",sniffer->tempFile()));
+  sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
+  sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_threshold",sniffer->swapThreshold()));
+  sniffer->pregroupingBufferSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_buffer_size",sniffer->pregroupingBufferSize()));
+  sniffer->pregroupingWindowSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_window_size",sniffer->pregroupingWindowSize()));
+  sniffer->promisc(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.promiscuous",sniffer->promisc()));
+  sniffer->ports(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.ports",sniffer->ports()));
+  sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
+  sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));
+  sniffer->swapHighWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_high_watermark",sniffer->swapHighWatermark()));
+  sniffer->swapWatchTime(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_watch_time",sniffer->swapWatchTime()));
+  utf8::String groupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none"));
+  if( groupingPeriod.strcasecmp("None") == 0 ) sniffer->groupingPeriod(PCAP::pgpNone);
+  else
+  if( groupingPeriod.strcasecmp("Sec") == 0 ) sniffer->groupingPeriod(PCAP::pgpSec);
+  else
+  if( groupingPeriod.strcasecmp("Min") == 0 ) sniffer->groupingPeriod(PCAP::pgpMin);
+  else
+  if( groupingPeriod.strcasecmp("Hour") == 0 ) sniffer->groupingPeriod(PCAP::pgpHour);
+  else
+  if( groupingPeriod.strcasecmp("Day") == 0 ) sniffer->groupingPeriod(PCAP::pgpDay);
+  else
+  if( groupingPeriod.strcasecmp("Mon") == 0 ) sniffer->groupingPeriod(PCAP::pgpMon);
+  else
+  if( groupingPeriod.strcasecmp("Year") == 0 ) sniffer->groupingPeriod(PCAP::pgpYear);
+  else
+    sniffer->groupingPeriod(PCAP::pgpNone);
+  utf8::String joined(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
+  for( intptr_t i = 0, j = enumStringParts(joined); i < j; i++ ){
+    if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
+    sniffer->join(getSnifferBySection(stringPartByNo(joined,i)));
+  }
+  return sniffer.ptr(NULL);
+}
+//------------------------------------------------------------------------------
 int32_t Logger::doWork(uintptr_t stage)
 {
   int32_t exitCode = 0;
@@ -678,49 +723,29 @@ int32_t Logger::doWork(uintptr_t stage)
       if( ml && mlockall(MCL_FUTURE) != 0 ){
         int32_t err = errno;
         Exception e(err,"mlockall failed.");
-	e.writeStdError();
+	      e.writeStdError();
       }
 #endif
+      utf8::String joined;
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
         if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
-        ConfigSection dbParamsSection;
-        utf8::String connection(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.connection",connection_));
-        dbParamsSection.addSection(config_->sectionByPath(connection));
-        AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
-        AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database.ptr()));
-        database.ptr(NULL);
-        sniffer->ifName(sectionName);
-        sniffer->iface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
-        sniffer->tempFile(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.temp_file",sniffer->tempFile()));
-        sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
-        sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_threshold",sniffer->swapThreshold()));
-        sniffer->pregroupingBufferSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_buffer_size",sniffer->pregroupingBufferSize()));
-        sniffer->pregroupingWindowSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_window_size",sniffer->pregroupingWindowSize()));
-        sniffer->promisc(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.promiscuous",sniffer->promisc()));
-        sniffer->ports(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.ports",sniffer->ports()));
-        sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
-        sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));
-        sniffer->swapHighWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_high_watermark",sniffer->swapHighWatermark()));
-        sniffer->swapWatchTime(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_watch_time",sniffer->swapWatchTime()));
-        utf8::String groupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none"));
-        if( groupingPeriod.strcasecmp("None") == 0 ) sniffer->groupingPeriod(PCAP::pgpNone);
-        else
-        if( groupingPeriod.strcasecmp("Sec") == 0 ) sniffer->groupingPeriod(PCAP::pgpSec);
-        else
-        if( groupingPeriod.strcasecmp("Min") == 0 ) sniffer->groupingPeriod(PCAP::pgpMin);
-        else
-        if( groupingPeriod.strcasecmp("Hour") == 0 ) sniffer->groupingPeriod(PCAP::pgpHour);
-        else
-        if( groupingPeriod.strcasecmp("Day") == 0 ) sniffer->groupingPeriod(PCAP::pgpDay);
-        else
-        if( groupingPeriod.strcasecmp("Mon") == 0 ) sniffer->groupingPeriod(PCAP::pgpMon);
-        else
-        if( groupingPeriod.strcasecmp("Year") == 0 ) sniffer->groupingPeriod(PCAP::pgpYear);
-        else
-          sniffer->groupingPeriod(PCAP::pgpNone);
-        threads_.safeAdd(sniffer.ptr(NULL));
-        threads_[threads_.count() - 1].resume();
+        utf8::String join(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
+        if( !join.isNull() ){
+          if( !joined.isNull() ) joined += ",";
+          joined += join;
+          threads_.safeAdd(getSnifferBySection(sectionName));
+          threads_[threads_.count() - 1].resume();
+        }
+      }
+      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
+        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+        if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
+        utf8::String join(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
+        if( join.isNull() && findStringPart(joined,sectionName,false) < 0 ){
+          threads_.safeAdd(getSnifferBySection(sectionName));
+          threads_[threads_.count() - 1].resume();
+        }
       }
     }
   }

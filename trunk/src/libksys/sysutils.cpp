@@ -908,6 +908,20 @@ utf8::String stringPartByNo(const utf8::String & s,uintptr_t n,const char * deli
   return i.bof() || n > 0 ? utf8::String() : s;
 }
 //---------------------------------------------------------------------------
+intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool caseSensitive,const char * delim)
+{
+  intptr_t i;
+  for( i = enumStringParts(s) - 1; i >= 0; i-- ){
+    if( caseSensitive ){
+      if( stringPartByNo(s,i,delim).strcmp(part) == 0 ) break;
+    }
+    else {
+      if( stringPartByNo(s,i,delim).strcasecmp(part) == 0 ) break;
+    }
+  }
+  return i;
+}
+//---------------------------------------------------------------------------
 utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String & s1,const utf8::String & separator)
 {
   utf8::String::Iterator i(s.strcasestr(separator));
