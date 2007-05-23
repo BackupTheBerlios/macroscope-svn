@@ -1217,6 +1217,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
       }
       if( top10 ){
         int64_t urlHash = st_url.hash_ll(true);
+//        fprintf(stderr,"%s %d %"PRIu64"\n",__FILE__,__LINE__,lineNo);
         stMonUrlSel_->
           paramAsString("ST_USER", st_user)->
           paramAsMutant("ST_TIMESTAMP", timeStamp)->
