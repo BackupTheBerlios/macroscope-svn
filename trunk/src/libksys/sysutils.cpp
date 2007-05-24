@@ -115,7 +115,7 @@ Mutant getProcessPriority()
     default :
       m = GetPriorityClass(GetCurrentProcess());
   }
-#elif HAVE_GETPRIORITY
+#elif HAVE_GETPRIORITY || HAVE_RTPRIO
   int32_t err;
   switch( getpriority(PRIO_PROCESS,0) ){
     case -1 :
@@ -184,7 +184,7 @@ void setProcessPriority(const Mutant & m,bool noThrow)
     AutoPtr<Exception> e(newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__));
     if( noThrow ) e->writeStdError(); else e.ptr(NULL)->throwSP();
   }
-#elif HAVE_SETPRIORITY
+#elif HAVE_SETPRIORITY || HAVE_RTPRIO
   int32_t err = 0;
   int r;
   try {
@@ -196,8 +196,16 @@ void setProcessPriority(const Mutant & m,bool noThrow)
   }
   if( r != 0 && err == 0 ){
     utf8::String s(m);
-    if( s.strcasecmp("IDLE_PRIORITY_CLASS") == 0 )
+    if( s.strcasecmp("IDLE_PRIORITY_CLASS") == 0 ){
+#if HAVE_RTPRIO
+      struct rtprio rtp;
+      rtp.type = RTP_PRIO_IDLE;
+      rtp.prio = 0;
+      r = rtprio(RTP_SET,0,&rtp);
+#elif HAVE_SETPRIORITY
       r = setpriority(PRIO_PROCESS,0,IDLE_PRIORITY_CLASS);
+#endif
+    }
     else
     if( s.strcasecmp("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
       r = setpriority(PRIO_PROCESS,0,BELOW_NORMAL_PRIORITY_CLASS);
@@ -211,8 +219,16 @@ void setProcessPriority(const Mutant & m,bool noThrow)
     if( s.strcasecmp("HIGH_PRIORITY_CLASS") == 0 )
       r = setpriority(PRIO_PROCESS,0,HIGH_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("REALTIME_PRIORITY_CLASS") == 0 )
+    if( s.strcasecmp("REALTIME_PRIORITY_CLASS") == 0 ){
+#if HAVE_RTPRIO
+      struct rtprio rtp;
+      rtp.type = RTP_PRIO_REALTIME;
+      rtp.prio = RTP_PRIO_MAX;
+      r = rtprio(RTP_SET,0,&rtp);
+#elif HAVE_SETPRIORITY
       r = setpriority(PRIO_PROCESS,0,REALTIME_PRIORITY_CLASS);
+#endif
+    }
     err = errno;
   }
   if( r != 0 && err != 0 ){

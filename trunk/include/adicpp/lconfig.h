@@ -201,6 +201,10 @@
 #include <sys/resource.h>
 #endif
 
+#if HAVE_SYS_RTPRIO_H
+#include <sys/rtprio.h>
+#endif
+
 #if HAVE_TIME_H
 #include <time.h>
 #endif

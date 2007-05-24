@@ -489,7 +489,7 @@ void HeapManager::free(void * ptr)
     e.writeStdError();
     return;
   }
-  if( cp->count_ != 0 ){
+  if( cp->count_ > 0 ){
     if( cp->bsize_ == 1 ){
       *(uint8_t *) ptr = uint8_t(cp->index_);
     }

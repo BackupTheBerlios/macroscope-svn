@@ -33,6 +33,7 @@
 #cmakedefine HAVE_SYS_IOCTL_H 1
 #cmakedefine HAVE_SYS_SYSCTL_H 1
 #cmakedefine HAVE_SYS_EPOLL_H 1
+#cmakedefine HAVE_SYS_RTPRIO_H 1
 #cmakedefine HAVE_MACHINE_ATOMIC_H 1
 #cmakedefine HAVE_MACHINE_CPUFUNC_H 1
 #cmakedefine HAVE_MACHINE_SPECIALREG_H 1
@@ -313,6 +314,7 @@
 #cmakedefine HAVE_LZO1X_DECOMPRESS_ASM_FAST_SAFE 1
 #cmakedefine HAVE_DO_CPUID 1
 #cmakedefine HAVE_ATOMIC_FETCHADD_32 1
+#cmakedefine HAVE_RTPRIO 1
 
 #cmakedefine EMPTY_ARRAY_SIZE ${EMPTY_ARRAY_SIZE}
 
