@@ -778,21 +778,21 @@ template< typename T,EmbeddedListNode< T> & (*N) (const T &),
           T & (*O) (const EmbeddedListNode< T> &, T *) > inline
 EmbeddedList< T,N,O> & EmbeddedList< T,N,O>::insToTail(const T & object)
 {
-  return insTo(last_, NULL, object);
+  return insTo(last_,NULL,object);
 }
 //-----------------------------------------------------------------------------
 template< typename T,EmbeddedListNode< T> & (*N) (const T &),
           T & (*O) (const EmbeddedListNode< T> &, T *) > inline
 EmbeddedList< T,N,O> & EmbeddedList< T,N,O>::insBefore(const T & pos, const T & object)
 {
-  return insTo(N(pos).prev(), &pos, object);
+  return insTo(N(pos).prev(),&N(pos),object);
 }
 //-----------------------------------------------------------------------------
 template< typename T,EmbeddedListNode< T> & (*N) (const T &),
           T & (*O) (const EmbeddedListNode< T> &, T *) > inline
 EmbeddedList< T,N,O> & EmbeddedList< T,N,O>::insAfter(const T & pos, const T & object)
 {
-  return insTo(&pos, N(pos).next(), object);
+  return insTo(&N(pos),N(pos).next(),object);
 }
 //-----------------------------------------------------------------------------
 template <
