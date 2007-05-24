@@ -1,4 +1,4 @@
-/*-[21~
+/*-
  * Copyright 2007 Guram Dukashvili
  * All rights reserved.
  *
@@ -326,9 +326,9 @@ PCAP::PCAP() :
   swapThreshold_(16u * 1024u * 1024u),
   pregroupingBufferSize_(
 #ifndef NDEBUG
-    getpagesize() * 1u / sizeof(Packet)
+    getpagesize() * 1u
 #else
-    getpagesize() * 16u / sizeof(Packet)
+    getpagesize() * 16u
 #endif
   ),
   pregroupingWindowSize_(5),

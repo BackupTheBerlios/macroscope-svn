@@ -772,12 +772,82 @@ MK1100ClientFiber::~MK1100ClientFiber()
 {
 }
 //------------------------------------------------------------------------------
-MK1100ClientFiber::MK1100ClientFiber(Client & client) : client_(&client)
+MK1100ClientFiber::MK1100ClientFiber(Client * client,MK1100TCPServer * server) :
+  client_(client), server_(server)
 {
+}
+//------------------------------------------------------------------------------
+utf8::String MK1100ClientFiber::readString()
+{
+	int l;
+  readBuffer(&l,sizeof(l));
+  AutoPtr<wchar_t> s;
+  s.alloc((l + 1) * sizeof(wchar_t));
+  readBuffer(s,l * sizeof(wchar_t));
+  s[l] = L'\0';
+	return s.ptr();
+}
+//------------------------------------------------------------------------------
+MK1100ClientFiber & MK1100ClientFiber::writeString(const utf8::String & s)
+{
+  utf8::WideString ws(s.getUNICODEString());
+  int l = (int) wcslen(ws);
+  writeBuffer(&l,sizeof(l)).writeBuffer(ws,l * sizeof(wchar_t));
+	return *this;
+}
+//------------------------------------------------------------------------------
+void MK1100ClientFiber::mainHelper()
+{
+  AutoLock<FiberInterlockedMutex> lock(server_->fibersMutex_);
+  intptr_t i = server_->fibers_.bSearch(this);
+  server_->fibers_.remove(i);
 }
 //------------------------------------------------------------------------------
 void MK1100ClientFiber::main()
 {
+  {
+    AutoLock<FiberInterlockedMutex> lock(server_->fibersMutex_);
+    intptr_t c, i = server_->fibers_.bSearch(this,c);
+    server_->fibers_.insert(i + (c > 0),this);
+  }
+  try {
+    utf8::String barCode, barCodeType;
+    while( !terminated_ ){
+      barCode = readString();
+      barCodeType = readString();
+      client_->sendAsyncEvent(
+        client_->name_,
+        "MK1100GETBARCODEINFO_" + utf8::ptr2Str(this),
+        barCodeType + "_" + barCode
+      );
+      sem_.wait();
+      int l = 1;
+      writeBuffer(&l,sizeof(l));
+      writeString(stringPartByNo(data_,0));
+      writeString(stringPartByNo(data_,1));
+    }
+  }
+  catch( ExceptionSP & ){
+    mainHelper();
+    throw;
+  }
+  mainHelper();
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+MK1100TCPServer::~MK1100TCPServer()
+{
+}
+//------------------------------------------------------------------------------
+MK1100TCPServer::MK1100TCPServer(Client * client) :
+  client_(client_)
+{
+}
+//------------------------------------------------------------------------------
+Fiber * MK1100TCPServer::newFiber()
+{
+  return newObjectV1V2<MK1100ClientFiber>(client_,this);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -816,8 +886,6 @@ void Client::open()
   ftime_ = 0;
   if( asyncMessagesReceiving_ )
     attachFiber(newObjectV1<ClientFiber>(this));
-  if( mk1100Port_ != 0 )
-    attachFiber(newObjectR1<MK1100ClientFiber>(*this));
 }
 //------------------------------------------------------------------------------
 void Client::close()

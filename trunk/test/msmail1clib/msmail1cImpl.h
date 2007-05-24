@@ -45,6 +45,8 @@ using namespace ksys;
 #include <adicpp/adicpp.h>
 #include "../msmail/msmail.h"
 //------------------------------------------------------------------------------
+class Cmsmail1c;
+//------------------------------------------------------------------------------
 namespace msmail {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -202,15 +204,23 @@ class ClientDBGetterFiber : public ClientFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class MK1100TCPServer;
+//------------------------------------------------------------------------------
 class MK1100ClientFiber : public ksock::ClientFiber {
-  friend class Client;
+  friend class Cmsmail1c;
   public:
     virtual ~MK1100ClientFiber();
-    MK1100ClientFiber() {}
-    MK1100ClientFiber(Client & client);
+    MK1100ClientFiber(Client * client = NULL,MK1100TCPServer * server = NULL);
   protected:
     Client * client_;
+    MK1100TCPServer * server_;
+    FiberSemaphore sem_;
+    utf8::String data_;
+
+    void mainHelper();
     void main();
+    utf8::String readString();
+    MK1100ClientFiber & writeString(const utf8::String & s);
   private:
     MK1100ClientFiber(const MK1100ClientFiber & a);
     void operator = (const MK1100ClientFiber &);
@@ -218,7 +228,25 @@ class MK1100ClientFiber : public ksock::ClientFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class MK1100TCPServer : public ksock::Server {
+  friend class Cmsmail1c;
+  friend class MK1100ClientFiber;
+  public:
+    virtual ~MK1100TCPServer();
+    MK1100TCPServer(Client * client = NULL);
+  protected:
+    Client * client_;
+    FiberInterlockedMutex fibersMutex_;
+    Array<MK1100ClientFiber *> fibers_;
+
+    Fiber * newFiber();
+  private:
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 class Client : public ksock::Client {
+  friend class Cmsmail1c;
   friend class ClientFiber;
   friend class ClientMailFiber;
   friend class ClientDBGetterFiber;
@@ -244,6 +272,7 @@ class Client : public ksock::Client {
     bool connected_;
     bool asyncMessagesReceiving_;
     u_short mk1100Port_;
+    AutoPtr<MK1100TCPServer> mk1100TCPServer_;
 
     HRESULT sendAsyncEvent(const utf8::String & source,const utf8::String & event,const utf8::String & data);
 

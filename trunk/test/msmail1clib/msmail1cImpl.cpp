@@ -138,6 +138,10 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::Done()
 {
+  if( msmail1c_->client_.mk1100TCPServer_ != NULL ){
+    msmail1c_->client_.mk1100TCPServer_->close();
+    msmail1c_->client_.mk1100TCPServer_ = NULL;
+  }
 /*  if( oldBKENDGetProcAddress_ != NULL ){
     void * proc = findProcImportedEntryAddress("bkend.dll","KERNEL32.DLL","GetProcAddress");
     writeProtectedMemory(
@@ -827,7 +831,18 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
         hr = E_NOTIMPL;
         break;
       case 22 : // MK1100Port
-        hr = E_NOTIMPL;
+        if( V_VT(varPropVal) != VT_I4 ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4);
+        if( SUCCEEDED(hr) ){
+          msmail1c_->client_.mk1100Port_ = u_short(V_I4(varPropVal));
+          if( msmail1c_->client_.mk1100TCPServer_ != NULL ){
+            msmail1c_->client_.mk1100TCPServer_->close();
+            msmail1c_->client_.mk1100TCPServer_ = NULL;
+          }
+          if( msmail1c_->client_.mk1100Port_ != 0 ){
+            msmail1c_->client_.mk1100TCPServer_ = newObjectV1<msmail::MK1100TCPServer>(&msmail1c_->client_);
+            msmail1c_->client_.mk1100TCPServer_->open();
+          }
+        }
         break;
       case 23 : // AsyncMessagesReceiving
         if( V_VT(varPropVal) != VT_I4 ) hr = VariantChangeTypeEx(varPropVal,varPropVal,0,0,VT_I4);
@@ -1593,7 +1608,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;
         case 17 : // MK1100SendBarCodeInfo
-          if( !msmail1c_->active_ ) newObjectV1C2<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
+          if( msmail1c_->client_.mk1100TCPServer_ == NULL ) newObjectV1C2<Exception>(ERROR_SERVICE_NOT_ACTIVE,__PRETTY_FUNCTION__)->throwSP();
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
@@ -1605,8 +1620,14 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
-//                  if( SUCCEEDED(hr) )
-//                    hr = client_.value(V_BSTR(pv0),V_BSTR(pv1),pvarRetValue);
+                  if( SUCCEEDED(hr) ){
+                    msmail::MK1100ClientFiber * mk1100 = (msmail::MK1100ClientFiber *) utf8::str2Int(V_BSTR(pv0));
+                    AutoLock<FiberInterlockedMutex> lock(msmail1c_->client_.mk1100TCPServer_->fibersMutex_);
+                    intptr_t i = msmail1c_->client_.mk1100TCPServer_->fibers_.bSearch(mk1100);
+                    msmail1c_->client_.mk1100TCPServer_->fibers_.remove(i);
+                    mk1100->data_ = V_BSTR(pv1);
+                    mk1100->sem_.post();
+                  }
                 }
               }
             }
