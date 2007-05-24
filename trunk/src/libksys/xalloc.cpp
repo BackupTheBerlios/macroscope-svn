@@ -129,10 +129,19 @@ class HeapManager {
     void * realloc(void * ptr,uintptr_t size,bool lock);
     void free(void * ptr);
   protected:
+    class Clusters;
     class Cluster {
       public:
-        Cluster(void * memory = NULL) :
-          memory_((uint8_t *) memory), size_(0), bsize_(0), index_(~uintptr_t(0)), head_(NULL), next_(NULL), locked_(false) {}
+        Cluster(Clusters * cs = NULL,void * memory = NULL) :
+          cs_(cs),
+          memory_((uint8_t *) memory),
+          size_(0),
+          bsize_(0),
+          index_(~uintptr_t(0)),
+          count_(0),
+          head_(NULL),
+          next_(NULL),
+          locked_(false) {}
 	
         static RBTreeNode & treeO2N(const Cluster & object){
           return object.treeNode_;
@@ -158,46 +167,46 @@ class HeapManager {
           index_ = 0;
           uintptr_t i, j = size_ / bsize_;
           if( bsize_ == 1 ){
-            if( j > 255 ) j = 255;
+            if( j > 256 ) j = 256;
             for( i = 0; i < j; i++ )
               *(uint8_t *) (memory_ + i) = uint8_t(i + 1);
-            *(uint8_t *) (memory_ + i) = ~uint8_t(0);
           }
           else if( bsize_ == 2 ){
-            if( j > 65535 ) j = 65535;
+            if( j > 65536 ) j = 65536;
             for( i = 0; i < j; i++ )
               *(uint16_t *) (memory_ + i * 2) = uint16_t(i + 1);
-            *(uint16_t *) (memory_ + i * 2) = ~uint16_t(0);
           }
           else if( bsize_ == 3 ){
-            if( j > 65535 ) j = 16777215;
+            if( j > 16777216 ) j = 16777216;
             for( i = 0; i < j; i++ )
               *(uint32_t *) (memory_ + i * 3) = uint32_t(i + 1);
-            *(uint32_t *) (memory_ + i * 3) = ~uint32_t(0);
           }
           else if( bsize_ > ~uint32_t(0) - 1 ){
             for( i = 0; i < j; i++ )
               *(uintptr_t *) (memory_ + bsize_ * i) = i + 1;
-            *(uintptr_t *) (memory_ + bsize_ * i) = ~uintptr_t(0);
           }
           else {
             for( i = 0; i < j; i++ )
               *(uint32_t *) (memory_ + bsize_ * i) = uint32_t(i + 1);
-            *(uint32_t *) (memory_ + bsize_ * i) = ~uint32_t(0);
           }
+          count_ = j;
           return *this;
 	      }
-      	
+      	Clusters * cs_;
 	      uint8_t * memory_;
 	      uintptr_t size_; // size of allocated memory
 	      uintptr_t bsize_; // size of allocating memory block
 	      uintptr_t index_; // first in free list block index
+        uintptr_t count_; // count of allocated blocks
 	      Cluster * head_; // head of allocated memory for small blocks (with size < 4)
 	      Cluster * next_; // next memory for small blocks (with size < 4)
 	      bool locked_;
     };
+    class SizeDescriptor;
     class Clusters {
       public:
+        Clusters(SizeDescriptor * sd = NULL,uintptr_t size = 0) : sd_(sd), size_(size) {}
+
         static EmbeddedListNode<Clusters> & listNode(const Clusters & object){
 	        return object.listNode_;
 	      }
@@ -211,16 +220,24 @@ class HeapManager {
 
 	      uintptr_t count() const { return (size_ - sizeof(Clusters) + sizeof(Cluster)) / sizeof(Cluster); }
 
+        SizeDescriptor * sd_;
 	      uintptr_t size_; // size of allocated memory
+        bool locked_;
 	      Cluster clusters_[1];
     };
+    class SizeDescriptors;
     class SizeDescriptor {
       public:
+        SizeDescriptor(SizeDescriptors * sds = NULL,uintptr_t size = 0) : sds_(sds), size_(size) {}
+
+        SizeDescriptors * sds_;
 	      uintptr_t size_; // size of allocating memory block
         EmbeddedList<Clusters,Clusters::listNode,Clusters::listObject> clusters_;
     };
     class SizeDescriptors {
       public:
+        SizeDescriptors() {}
+
         static EmbeddedListNode<SizeDescriptors> & listNode(const SizeDescriptors & object){
 	        return object.listNode_;
 	      }
@@ -232,10 +249,11 @@ class HeapManager {
 	      uintptr_t count() const { return (size_ - sizeof(SizeDescriptors) + sizeof(SizeDescriptor)) / sizeof(SizeDescriptor); }
 	
 	      uintptr_t size_; // size of allocated memory
+        uintptr_t count_;
+        bool locked_;
 	      SizeDescriptor sizes_[1];
     };
     EmbeddedList<SizeDescriptors,SizeDescriptors::listNode,SizeDescriptors::listObject> sizes_;
-    EmbeddedList<Clusters,Clusters::listNode,Clusters::listObject> clusters_;
     typedef RBTree<
       Cluster,
       Cluster::treeO2N,
@@ -252,7 +270,7 @@ class HeapManager {
 #endif
 
     void * sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow);
-    HeapManager & sysfree(void * memory,uintptr_t size);
+    HeapManager & sysfree(void * memory,uintptr_t size,bool locked);
 
     EmbeddedListNode<SizeDescriptors> * findSDSNode(uintptr_t size,uintptr_t & fsize,uintptr_t & lsize);
     EmbeddedListNode<Clusters> * findCSNode(SizeDescriptor * sd,uintptr_t size);
@@ -307,7 +325,7 @@ EmbeddedListNode<HeapManager::Clusters> *
   EmbeddedListNode<Clusters> * csNode = sd->clusters_.first();
   while( csNode != NULL ){
     Clusters * cs = &Clusters::listObject(*csNode);
-    if( (cs->lru_.count() > 0 && Cluster::listObject(*cs->lru_.first()).index_ != ~uintptr_t(0)) ||
+    if( (cs->lru_.count() > 0 && Cluster::listObject(*cs->lru_.first()).count_ > 0) ||
         (size > 3 && cs->free_.count() > 0) ||
 	      (size == 3 && cs->free_.count() > (clusterSize_ / 0x1000000u) - (clusterSize_ % 0x1000000u == 0)) ||
 	      (size == 2 && cs->free_.count() > (clusterSize_ / 0x10000u) - (clusterSize_ % 0x10000u == 0)) ||
@@ -325,17 +343,17 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
   uintptr_t fsize, lsize;
   EmbeddedListNode<SizeDescriptors> * sdsNode = findSDSNode(size,fsize,lsize);
   SizeDescriptors * sds;
+  bool locked;
   if( sdsNode == NULL || size < fsize ){
-    bool locked;
     sds = (SizeDescriptors *) sysalloc(clusterSize_,lock,locked,true);
     if( sds == NULL ) return NULL;
     new (sds) SizeDescriptors;
     sds->size_ = clusterSize_;
+    sds->count_ = 0;
+    sds->locked_ = locked;
     uintptr_t k = sds->count(), j = (size / k) * k + 1; // zero size not used
-    for( intptr_t i = k - 1; i >= 0; i-- ){
-      new (sds->sizes_ + i) SizeDescriptor;
-      sds->sizes_[i].size_ = j + i;
-    }
+    for( intptr_t i = k - 1; i >= 0; i-- )
+      new (sds->sizes_ + i) SizeDescriptor(sds,j + i);
     if( sdsNode == NULL ) sizes_.insToTail(*sds); else sizes_.insBefore(SizeDescriptors::listObject(*sdsNode),*sds);
     sdsNode = &SizeDescriptors::listNode(*sds);
   }
@@ -344,13 +362,12 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
   EmbeddedListNode<Clusters> * csNode = findCSNode(sd,size);
   Clusters * cs;
   if( csNode == NULL ){
-    bool locked;
     cs = (Clusters *) sysalloc(clusterSize_,lock,locked,true);
     if( cs == NULL ) return NULL;
-    new (cs) Clusters;
-    cs->size_ = clusterSize_;
+    new (cs) Clusters(sd,clusterSize_);
+    cs->locked_ = locked;
     for( intptr_t i = cs->count() - 1; i >= 0; i-- ){
-      new (cs->clusters_ + i) Cluster;
+      new (cs->clusters_ + i) Cluster(cs);
       cs->free_.insToHead(cs->clusters_[i]);
     }
     sd->clusters_.insToTail(*cs);
@@ -378,7 +395,6 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
     c = &Cluster::listObject(*list.first());
     if( c->memory_ == NULL ){
       if( chead == NULL ){
-        bool locked;
         c->size_ = size > clusterSize_ ? size + (-intptr_t(size) & (clusterSize_ - 1)) : clusterSize_;
 	      c->bsize_ = size;
         c->memory_ = (uint8_t *) sysalloc(c->size_,lock,locked,true);
@@ -389,6 +405,7 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
         list.remove(*c);
       }
       else {
+        c->cs_ = chead->cs_;
         c->size_ = chead->size_;
         c->bsize_ = chead->bsize_;
         c->memory_ = chead->memory_ + i * bs;
@@ -408,28 +425,24 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
   }
   c = chead;
   void * p = c->memory_ + c->index_ * size;
-  uintptr_t next;
   if( size == 1 ){
-    next = *(uint8_t *) (c->memory_ + c->index_);
-    if( next == 0xFF ) next = ~uintptr_t(0);
+    c->index_ = *(uint8_t *) (c->memory_ + c->index_);
   }
   else if( size == 2 ){
-    next = *(uint16_t *) (c->memory_ + c->index_ * 2);
-    if( next == 0xFFFF ) next = ~uintptr_t(0);
+    c->index_ = *(uint16_t *) (c->memory_ + c->index_ * 2);
   }
   else if( size == 3 ){
-    next = *(uint32_t *) (c->memory_ + c->index_ * 3) & 0xFFFFFF;
-    if( next == 0xFFFFFF ) next = ~uintptr_t(0);
+    c->index_ = *(uint32_t *) (c->memory_ + c->index_ * 3) & 0xFFFFFF;
   }
   else if( size > ~uint32_t(0) - 1 ){
-    next = *(uintptr_t *) (c->memory_ + c->index_ * size);
+    c->index_ = *(uintptr_t *) (c->memory_ + c->index_ * size);
   }
   else {
-    next = *(uint32_t *) (c->memory_ + c->index_ * size);
-    if( next == 0xFFFFFFFF ) next = ~uintptr_t(0);
+    c->index_ = *(uint32_t *) (c->memory_ + c->index_ * size);
   }
-  c->index_ = next;
-  if( next == ~uintptr_t(0) ) cs->lru_.insToTail(*c); else cs->lru_.insToHead(*c);
+  c->count_--;
+  if( c->count_ == 0 ) cs->lru_.insToTail(*c); else cs->lru_.insToHead(*c);
+  sds->count_++;
   allocatedMemory_ += size;
   return p;
 }
@@ -441,7 +454,7 @@ void * HeapManager::realloc(void * ptr,uintptr_t size,bool lock)
     return NULL;
   }
   size += -intptr_t(size) & (align_ - 1);
-  Cluster c(ptr), * cp = clustersTree_.find(c);
+  Cluster c(NULL,ptr), * cp = clustersTree_.find(c);
   if( cp == NULL ){
 #if defined(__WIN32__) || defined(__WIN64__)
     SetLastError(ERROR_INVALID_DATA);
@@ -464,8 +477,8 @@ void * HeapManager::realloc(void * ptr,uintptr_t size,bool lock)
 //---------------------------------------------------------------------------
 void HeapManager::free(void * ptr)
 {
-  Cluster c(ptr), * cp = clustersTree_.find(c);
-  if( cp == NULL ){
+  Cluster c(NULL,ptr), * cp = clustersTree_.find(c);
+  if( cp == NULL || uintptr_t(ptr) % cp->bsize_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
     SetLastError(ERROR_INVALID_DATA);
 #else
@@ -476,21 +489,73 @@ void HeapManager::free(void * ptr)
     e.writeStdError();
     return;
   }
-  
+  if( cp->count_ != 0 ){
+    if( cp->bsize_ == 1 ){
+      *(uint8_t *) ptr = uint8_t(cp->index_);
+    }
+    else if( cp->bsize_ == 2 ){
+      *(uint16_t *) ptr = uint16_t(cp->index_);
+    }
+    else if( cp->bsize_ == 3 ){
+      *(uint16_t *) ptr = uint16_t(cp->index_);
+      *(uint8_t *) ptr = uint8_t(cp->index_ >> 16);
+    }
+    else if( cp->bsize_ > ~uint32_t(0) - 1 ){
+      *(uintptr_t *) ptr = cp->index_;
+    }
+    else {
+      *(uint32_t *) ptr = uint32_t(cp->index_);
+    }
+  }
+  cp->index_ = ((uint8_t *) ptr - cp->memory_) / cp->bsize_;
+  cp->count_++;
+  cp->cs_->sd_->sds_->count_--;
+  allocatedMemory_ += cp->bsize_;
+  cp->cs_->lru_.remove(*cp);
+  uintptr_t j = cp->size_ / cp->bsize_;
+  if( cp->bsize_ == 1 && j > 256 ){
+    j = 256;
+  }
+  else if( cp->bsize_ == 2 && j > 65536 ){
+    j = 65536;
+  }
+  else if( cp->bsize_ == 3 && j > 16777216 ){
+    j = 16777216;
+  }
+  if( cp->count_ == j ){
+    clustersTree_.remove(*cp);
+    if( cp->head_ == NULL ){
+      clustersTree_.remove(*cp);
+      sysfree(cp->memory_,cp->size_,cp->locked_);
+      cp->memory_ = NULL;
+      cp->cs_->free_.insToHead(*cp);
+      if( cp->cs_->free_.count() == cp->cs_->count() ){
+        SizeDescriptor * sd = cp->cs_->sd_;
+        sd->clusters_.remove(*cp->cs_);
+        sysfree(cp->cs_,cp->cs_->size_,cp->cs_->locked_);
+        if( sd->sds_->count_ == 0 ){
+          sizes_.remove(*sd->sds_);
+          sysfree(sd->sds_,sd->sds_->size_,sd->sds_->locked_);
+        }
+      }
+    }
+  }
+  else {
+    cp->cs_->lru_.insToHead(*cp);
+  }
 }
 //---------------------------------------------------------------------------
-HeapManager & HeapManager::sysfree(void * memory,uintptr_t size)
+HeapManager & HeapManager::sysfree(void * memory,uintptr_t size,bool locked)
 {
-  if( memory != NULL ){
+  assert( memory != NULL );
 #if defined(__WIN32__) || defined(__WIN64__)
-    VirtualUnlock(memory,size);
-    VirtualFree(memory,size,MEM_DECOMMIT);
+  if( locked ) VirtualUnlock(memory,size);
+  VirtualFree(memory,size,MEM_DECOMMIT);
 #else
-    munlock(memory,size);
-    ::free(memory,size);
+  if( locked ) munlock(memory,size);
+  ::free(memory);
 #endif
-    allocatedSystemMemory_ -= size;
-  }
+  allocatedSystemMemory_ -= size;
   return *this;
 }
 //---------------------------------------------------------------------------
