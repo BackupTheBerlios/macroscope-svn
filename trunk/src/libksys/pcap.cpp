@@ -509,6 +509,9 @@ void PCAP::threadExecute()
     }
 //    fprintf(stderr,"%s %d\n",__FILE__,__LINE__); fflush(stderr);
     //if( api.pcap_setmode((pcap_t *) handle_,MODE_MON) != 0 ) goto errexit;
+#if !defined(__WIN32__) && !defined(__WIN64__)
+    priority(THREAD_PRIORITY_TIME_CRITICAL);
+#endif
     memoryUsage_ = 0;
     curPeriod_ = 0;
     if( joinMaster_ == NULL ){
