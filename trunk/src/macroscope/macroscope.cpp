@@ -820,23 +820,23 @@ Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & e
     utf8::String(ifName.isNull() ? "" : " WHERE st_if = :if") +
     utf8::String((uint64_t) btt == 0 ? "" : " AND st_start >= :bt") +
     utf8::String((uint64_t) ett == 0 ? "" : " AND st_start <= :et") +
-    " AND st_src_port != 0 AND st_dst_port != 0 AND st_proto != -1"
+    " AND (st_src_port != 0 OR st_dst_port != 0 OR st_ip_proto != -1)"
   );
   statement_->text(
-    utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) == NULL ? "" : "INSERT INTO INET_BPFT_STAT ") +
-    "SELECT st_if, st_src_ip, st_dst_ip,"
-    " 0 as st_src_port, 0 as st_dst_port, -1 as st_proto,"
+    "INSERT INTO INET_BPFT_STAT "
+    "SELECT st_if, st_start, st_src_ip, st_dst_ip,"
+    " -1 as st_ip_proto, 0 as st_src_port, 0 as st_dst_port,"
     " sum(st_dgram_bytes) as st_dgram_bytes,"
     " sum(st_data_bytes) as st_data_bytes"
     " FROM INET_BPFT_STAT" +
     range +
-    " GROUP by st_if, st_src_ip, st_dst_ip"
+    " GROUP by st_if, st_start, st_src_ip, st_dst_ip"
   )->prepare();
-  if( !ifName.isNull() ) statement_->paramAsString(ifName);
-  if( !bt.isNull() ) statement_->paramAsMutant("bt",btt);
-  if( !et.isNull() ) statement_->paramAsMutant("et",ett);
+  if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
+  if( (uint64_t) btt != 0 ) statement_->paramAsMutant("bt",btt);
+  if( (uint64_t) ett != 0 ) statement_->paramAsMutant("et",ett);
   statement_->execute();
-  if( dynamic_cast<MYSQLDatabase *>(statement_->database()) == NULL ){
+/*
     statement_->fetchAll();
     statement2_->text(
       "INSERT INTO INET_BPFT_STAT ("
@@ -848,13 +848,14 @@ Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & e
     for( intptr_t row = statement_->rowCount() - 1; row >= 0; row-- ){
       statement_->selectRow(row);
       for( intptr_t field = statement_->fieldCount() - 1; field >= 0; field-- )
-        statement2_->paramAsMutant(statement_->fieldName(field),statement_->valueAsMutant(field))->execute();
+          statement2_->paramAsMutant(statement_->fieldName(field),statement_->valueAsMutant(field));
+      statement2_->execute();
     }
-  }
+*/
   statement_->text("DELETE FROM INET_BPFT_STAT" + range)->prepare();
-  if( !ifName.isNull() ) statement_->paramAsString(ifName);
-  if( !bt.isNull() ) statement_->paramAsMutant("bt",btt);
-  if( !et.isNull() ) statement_->paramAsMutant("et",ett);
+  if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
+  if( (uint64_t) btt != 0 ) statement_->paramAsMutant("bt",btt);
+  if( (uint64_t) ett != 0 ) statement_->paramAsMutant("et",ett);
   statement_->execute();
   database_->commit();
   return *this;
@@ -1041,8 +1042,8 @@ int main(int _argc,char * _argv[])
       }
       else if( rollout ){
         logger.rolloutBPFTByIPs(
-          stringPartByNo(rolloutParams,0),
-          stringPartByNo(rolloutParams,1),
+          stringPartByNo(rolloutParams,0).trim(),
+          stringPartByNo(rolloutParams,1).trim(),
           stringPartByNo(rolloutParams,2)
         );
       }
