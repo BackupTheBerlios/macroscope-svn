@@ -323,6 +323,7 @@ PCAP::PCAP() :
   groupingPeriod_(pgpNone),
   packetsAutoDrop_(packetsList_),
   groupTreeAutoDrop_(groupTree_),
+  pcapReadTimeout_(100),
   swapThreshold_(16u * 1024u * 1024u),
   pregroupingBufferSize_(
 #ifndef NDEBUG
@@ -500,7 +501,7 @@ void PCAP::threadExecute()
     fp_ = kmalloc(sizeof(struct bpf_program));
     fp = (struct bpf_program *) fp_;
     if( api.pcap_lookupnet(iface_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
-    handle_ = api.pcap_open_live(iface_.getANSIString(),INT_MAX,promisc_,0,errbuf);
+    handle_ = api.pcap_open_live(iface_.getANSIString(),INT_MAX,promisc_,int(pcapReadTimeout_),errbuf);
     if( handle_ == NULL ) goto errexit;
     if( !filter_.isNull() ){
       if( api.pcap_compile((pcap_t *) handle_,fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;

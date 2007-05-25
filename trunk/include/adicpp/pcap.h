@@ -133,6 +133,8 @@ class PCAP : public Thread {
     PCAP & filter(const utf8::String & filter);
     const utf8::String & tempFile() const;
     PCAP & tempFile(const utf8::String & tempFile);
+    const uintptr_t & pcapReadTimeout() const;
+    PCAP & pcapReadTimeout(uintptr_t a);
     const uintptr_t & swapThreshold() const;
     PCAP & swapThreshold(uintptr_t a);
     const uintptr_t & pregroupingBufferSize() const;
@@ -377,6 +379,7 @@ class PCAP : public Thread {
     utf8::String iface_;
     utf8::String filter_;
     utf8::String tempFile_;
+    uintptr_t pcapReadTimeout_;
     uintptr_t swapThreshold_;
     uintptr_t pregroupingBufferSize_;
     uintptr_t pregroupingWindowSize_;
@@ -479,6 +482,17 @@ inline const bool & PCAP::protocols() const
 inline PCAP & PCAP::protocols(bool a)
 {
   protocols_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & PCAP::pcapReadTimeout() const
+{
+  return pcapReadTimeout_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::pcapReadTimeout(uintptr_t a)
+{
+  pcapReadTimeout_ = a;
   return *this;
 }
 //---------------------------------------------------------------------------

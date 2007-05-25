@@ -680,6 +680,7 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
   sniffer->iface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
   sniffer->tempFile(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.temp_file",sniffer->tempFile()));
   sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
+  sniffer->pcapReadTimeout(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pcap_read_timeout",sniffer->pcapReadTimeout()));
   sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_threshold",sniffer->swapThreshold()));
   sniffer->pregroupingBufferSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_buffer_size",sniffer->pregroupingBufferSize()));
   sniffer->pregroupingWindowSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_window_size",sniffer->pregroupingWindowSize()));
