@@ -816,12 +816,18 @@ Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & e
   readConfig();
   AutoDatabaseDetach autoDatabaseDetach(database_);
   database_->start();
-  utf8::String range(
-    utf8::String(ifName.isNull() ? "" : " WHERE st_if = :if") +
-    utf8::String((uint64_t) btt == 0 ? "" : " AND st_start >= :bt") +
-    utf8::String((uint64_t) ett == 0 ? "" : " AND st_start <= :et") +
-    " AND (st_src_port != 0 OR st_dst_port != 0 OR st_ip_proto != -1)"
-  );
+  utf8::String range(" WHERE");
+  if( !ifName.isNull() ) range += " st_if = :if";
+  if( (uint64_t) btt != 0 ){
+    if( !range.isNull() ) range += " AND";
+    range += " st_start >= :bt";
+  }
+  if( (uint64_t) ett != 0 ){
+    if( !range.isNull() ) range += " AND";
+    range += " st_start <= :et";
+  }
+  if( !range.isNull() ) range += " AND";
+  range += " (st_src_port != 0 OR st_dst_port != 0 OR st_ip_proto != -1)";
   statement_->text(
     "INSERT INTO INET_BPFT_STAT "
     "SELECT st_if, st_start, st_src_ip, st_dst_ip,"
