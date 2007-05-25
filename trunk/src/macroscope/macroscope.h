@@ -48,6 +48,7 @@ class Logger {
 
     void readConfig();
     int32_t main();
+    Logger & rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName);
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
   protected:
     enum { stSel, stIns, stUpd };

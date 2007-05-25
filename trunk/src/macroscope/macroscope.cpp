@@ -806,6 +806,60 @@ int32_t Logger::waitThreads()
   return exitCode;
 }
 //------------------------------------------------------------------------------
+Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName)
+{
+  Mutant btt(0), ett(0);
+  if( !bt.isNull() ) btt = utf8::str2Time(bt) - getgmtoffset();
+  if( !et.isNull() ) ett = utf8::str2Time(et) - getgmtoffset();
+  btt.changeType(mtTime);
+  ett.changeType(mtTime);
+  readConfig();
+  AutoDatabaseDetach autoDatabaseDetach(database_);
+  database_->start();
+  utf8::String range(
+    utf8::String(ifName.isNull() ? "" : " WHERE st_if = :if") +
+    utf8::String((uint64_t) btt == 0 ? "" : " AND st_start >= :bt") +
+    utf8::String((uint64_t) ett == 0 ? "" : " AND st_start <= :et") +
+    " AND st_src_port != 0 AND st_dst_port != 0 AND st_proto != -1"
+  );
+  statement_->text(
+    utf8::String(dynamic_cast<MYSQLDatabase *>(statement_->database()) == NULL ? "" : "INSERT INTO INET_BPFT_STAT ") +
+    "SELECT st_if, st_src_ip, st_dst_ip,"
+    " 0 as st_src_port, 0 as st_dst_port, -1 as st_proto,"
+    " sum(st_dgram_bytes) as st_dgram_bytes,"
+    " sum(st_data_bytes) as st_data_bytes"
+    " FROM INET_BPFT_STAT" +
+    range +
+    " GROUP by st_if, st_src_ip, st_dst_ip"
+  )->prepare();
+  if( !ifName.isNull() ) statement_->paramAsString(ifName);
+  if( !bt.isNull() ) statement_->paramAsMutant("bt",btt);
+  if( !et.isNull() ) statement_->paramAsMutant("et",ett);
+  statement_->execute();
+  if( dynamic_cast<MYSQLDatabase *>(statement_->database()) == NULL ){
+    statement_->fetchAll();
+    statement2_->text(
+      "INSERT INTO INET_BPFT_STAT ("
+      "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+      ") VALUES ("
+      "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
+      ")"
+    )->prepare();
+    for( intptr_t row = statement_->rowCount() - 1; row >= 0; row-- ){
+      statement_->selectRow(row);
+      for( intptr_t field = statement_->fieldCount() - 1; field >= 0; field-- )
+        statement2_->paramAsMutant(statement_->fieldName(field),statement_->valueAsMutant(field))->execute();
+    }
+  }
+  statement_->text("DELETE FROM INET_BPFT_STAT" + range)->prepare();
+  if( !ifName.isNull() ) statement_->paramAsString(ifName);
+  if( !bt.isNull() ) statement_->paramAsMutant("bt",btt);
+  if( !et.isNull() ) statement_->paramAsMutant("et",ett);
+  statement_->execute();
+  database_->commit();
+  return *this;
+}
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 SnifferService::SnifferService() : logger_(NULL)
@@ -884,8 +938,8 @@ int main(int _argc,char * _argv[])
     AutoPtr<macroscope::SnifferService> serviceAP(newObject<macroscope::SnifferService>());
     services.add(serviceAP);
     macroscope::SnifferService * service = serviceAP.ptr(NULL);
-    bool dispatch = true, sniffer = false, svc = false;
-    utf8::String pidFileName;
+    bool dispatch = true, sniffer = false, svc = false, rollout = false;
+    utf8::String pidFileName, rolloutParams;
     for( i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
         changeCurrentDir(argv()[i + 1]);
@@ -912,6 +966,11 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[i].strcmp("--iflist") == 0 ){
         PCAP::printAllDevices();
+        dispatch = false;
+      }
+      else if( argv()[i].strncmp("--rollout-sniffer-db=",21) == 0 ){
+        rolloutParams = utf8::String(utf8::String::Iterator(argv()[i]) + 21);
+        rollout = true;
         dispatch = false;
       }
       else if( argv()[i].strcmp("--service") == 0 ){
@@ -964,7 +1023,7 @@ int main(int _argc,char * _argv[])
     //dText[0] = dText[0];
 #endif
     errcode = 0;
-    if( dispatch || sniffer ){
+    if( dispatch || sniffer || rollout ){
       macroscope::Logger logger(sniffer,isDaemon);
       if( dispatch && svc && sniffer ){
         service->logger_ = &logger;
@@ -979,6 +1038,13 @@ int main(int _argc,char * _argv[])
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
         errcode = logger.main();
         stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
+      }
+      else if( rollout ){
+        logger.rolloutBPFTByIPs(
+          stringPartByNo(rolloutParams,0),
+          stringPartByNo(rolloutParams,1),
+          stringPartByNo(rolloutParams,2)
+        );
       }
     }
   }
