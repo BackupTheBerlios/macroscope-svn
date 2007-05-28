@@ -66,6 +66,9 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         paramAsMutant(7/*"st_dgram_bytes"*/,packets[count].pktSize_)->
         paramAsMutant(8/*"st_data_bytes"*/, packets[count].dataSize_)->
         execute();
+#ifdef __FreeBSD__
+      ksleep(100);
+#endif
     }
     if( caller->terminated() ) database_->rollback(); else database_->commit();
     r = !caller->terminated();

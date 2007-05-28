@@ -533,6 +533,7 @@ void PCAP::threadExecute()
       " on device: " << iface_ <<
       ", memory using swap threshold: " << formatByteLength(swapThreshold_,0,"S") <<
       ", pregrouping buffer size: " << formatByteLength(pregroupingBufferSize_,0,"S") <<
+      ", pregrouping buffer max packet count: " << pregroupingBufferSize_ / sizeof(Packet) <<
       ", grouping period: " << groupingPeriodToString(groupingPeriod_) <<
       (joinMaster_ == NULL ? utf8::String() : ", joined to " + joinMaster_->ifName_) <<
       ", capture started.\n"
@@ -843,7 +844,9 @@ PCAP::Packets * PCAP::Grouper::get()
 //------------------------------------------------------------------------------
 void PCAP::Grouper::threadExecute()
 {
-#ifndef __FreeBSD__
+#ifdef __FreeBSD__
+  priority(THREAD_PRIORITY_IDLE);
+#else
   priority(THREAD_PRIORITY_ABOVE_NORMAL);
 #endif
   for(;;){
@@ -981,7 +984,9 @@ void PCAP::DatabaseInserter::threadBeforeWait()
 //------------------------------------------------------------------------------
 void PCAP::DatabaseInserter::threadExecute()
 {
-#ifndef __FreeBSD__
+#ifdef __FreeBSD__
+  priority(THREAD_PRIORITY_IDLE);
+#else
   priority(THREAD_PRIORITY_HIGHEST);
 #endif
   bool success = true;
@@ -1183,7 +1188,9 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
 //------------------------------------------------------------------------------
 void PCAP::LazyWriter::threadExecute()
 {
-#ifndef __FreeBSD__
+#ifdef __FreeBSD__
+  priority(THREAD_PRIORITY_IDLE);
+#else
   priority(THREAD_PRIORITY_HIGHEST);
 #endif
   AsyncFile tempFile(pcap_->tempFile_);
