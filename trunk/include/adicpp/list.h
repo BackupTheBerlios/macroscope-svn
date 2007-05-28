@@ -649,8 +649,8 @@ class EmbeddedList {
     EmbeddedList<T,N,O> & insBefore(const T & pos, const T & object);
     EmbeddedList<T,N,O> & insAfter(const T & pos, const T & object);
 
-    EmbeddedListNode<T> * const & first() const;
-    EmbeddedListNode<T> * const & last() const;
+    EmbeddedListNode<T> * first() const;
+    EmbeddedListNode<T> * last() const;
     const uintptr_t & count() const;
 
     bool nodeInserted(const EmbeddedListNode<T> & node) const;
@@ -680,14 +680,14 @@ template< typename T,EmbeddedListNode< T> & (*N) (const T &),
 //-----------------------------------------------------------------------------
 template< typename T,EmbeddedListNode< T> & (*N) (const T &),
           T & (*O) (const EmbeddedListNode< T> &, T *) > inline
-EmbeddedListNode< T> * const & EmbeddedList< T,N,O>::first() const
+EmbeddedListNode< T> * EmbeddedList< T,N,O>::first() const
 {
   return first_;
 }
 //-----------------------------------------------------------------------------
 template< typename T,EmbeddedListNode< T> & (*N) (const T &),
           T & (*O) (const EmbeddedListNode< T> &, T *) > inline
-EmbeddedListNode< T> * const & EmbeddedList< T,N,O>::last() const
+EmbeddedListNode< T> * EmbeddedList< T,N,O>::last() const
 {
   return last_;
 }

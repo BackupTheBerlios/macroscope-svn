@@ -125,8 +125,8 @@ class HeapManager {
 
     HeapManager & clear();
 
-    void * malloc(uintptr_t size,bool lock);
-    void * realloc(void * ptr,uintptr_t size,bool lock);
+    void * malloc(uintptr_t size,bool lock = false);
+    void * realloc(void * ptr,uintptr_t size,bool lock = false);
     void free(void * ptr);
   protected:
     class Clusters;
@@ -267,6 +267,7 @@ class HeapManager {
     uintptr_t allocatedMemory_;
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD flags_;
+    InterlockedMutex mutex_;
 #endif
 
     void * sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow);
@@ -287,11 +288,43 @@ HeapManager::HeapManager()
 #if defined(__WIN32__) || defined(__WIN64__)
   SYSTEM_INFO si;
   GetSystemInfo(&si);
-  clusterSize_ = GetLargePageMinimum();
-  flags_ = MEM_COMMIT | MEM_LARGE_PAGES;
+  HANDLE hToken;
+  clusterSize_ = 0;
+  BOOL r = OpenProcessToken(
+    GetCurrentProcess(),
+    TOKEN_ADJUST_PRIVILEGES,
+    &hToken
+  );
+  if( r != 0 ){
+    LUID luid;
+    r = LookupPrivilegeValue(
+      NULL,
+      "SeLockMemoryPrivilege",
+      &luid
+    );
+    if( r != 0 ){
+      TOKEN_PRIVILEGES tp;
+      tp.PrivilegeCount = 1;
+      tp.Privileges[0].Luid = luid;
+      tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+      r = AdjustTokenPrivileges(
+        hToken,
+        FALSE,
+        &tp,
+        sizeof(TOKEN_PRIVILEGES), 
+        (PTOKEN_PRIVILEGES)NULL, 
+        (PDWORD)NULL
+      );
+      if( r != 0 && GetLastError() != ERROR_NOT_ALL_ASSIGNED ){
+        clusterSize_ = GetLargePageMinimum();
+        flags_ = /*MEM_RESERVE |*/ MEM_COMMIT | MEM_LARGE_PAGES;
+      }
+    }
+    CloseHandle(hToken);
+  }
   if( clusterSize_ < si.dwPageSize ){
     clusterSize_ = si.dwPageSize;
-    flags_ = MEM_COMMIT;
+    flags_ = /*MEM_RESERVE |*/ MEM_COMMIT;
   }
 #else
   clusterSize_ = getpagesize();
@@ -301,6 +334,29 @@ HeapManager::HeapManager()
 //---------------------------------------------------------------------------
 HeapManager & HeapManager::clear()
 {
+  EmbeddedListNode<SizeDescriptors> * sdsNode = sizes_.first(), * sdsNode2;
+  while( sdsNode != NULL ){
+    SizeDescriptors * sds = &SizeDescriptors::listObject(*sdsNode);
+    for( intptr_t i = sds->count() - 1; i >= 0; i-- ){
+      SizeDescriptor * sd = sds->sizes_ + i;
+      EmbeddedListNode<Clusters> * csNode = sd->clusters_.first(), * csNode2;
+      while( csNode != NULL ){
+        Clusters * cs = &Clusters::listObject(*csNode);
+        EmbeddedListNode<Cluster> * cNode = cs->lru_.first();
+        while( cNode != NULL ){
+          Cluster * c = &Cluster::listObject(*cNode);
+          sysfree(c->memory_,c->size_,c->locked_);
+          cNode = cNode->next();
+        }
+        csNode2 = csNode->next();
+        sysfree(cs,cs->size_,cs->locked_);
+        csNode = csNode2;
+      }
+    }
+    sdsNode2 = sdsNode->next();
+    sysfree(sds,sds->size_,sds->locked_);
+    sdsNode = sdsNode2;
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -563,15 +619,30 @@ void * HeapManager::sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow
 {
   void * memory = NULL;
 #if defined(__WIN32__) || defined(__WIN64__)
-  memory = VirtualAlloc(NULL,size,flags_,0);
+  memory = VirtualAlloc(NULL,size,flags_,PAGE_READWRITE);
   if( memory == NULL ){
     int32_t err = GetLastError() + errorOffset;
     if( !noThrow ) newObjectV1C2<EOutOfMemory>(err,__PRETTY_FUNCTION__)->throwSP();    
   }
   else {
-    if( lock && !(locked = VirtualLock(memory,size) != 0) ){
-      int32_t err = GetLastError() + errorOffset;
-      Exception e(err,__PRETTY_FUNCTION__);
+l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
+      int32_t err = GetLastError();
+      if( err == ERROR_WORKING_SET_QUOTA ){
+        SIZE_T minimumWorkingSetSize, maximumWorkingSetSize;
+        BOOL r;
+        {
+          AutoLock<InterlockedMutex> lock(mutex_);
+          r = GetProcessWorkingSetSize(GetCurrentProcess(),&minimumWorkingSetSize,&maximumWorkingSetSize);
+          if( r != 0 ){
+            minimumWorkingSetSize += size * 2;
+            if( maximumWorkingSetSize < minimumWorkingSetSize ) maximumWorkingSetSize = minimumWorkingSetSize;
+            r = SetProcessWorkingSetSize(GetCurrentProcess(),minimumWorkingSetSize,maximumWorkingSetSize);
+          }
+        }
+        if( r != 0 ) goto l1;
+        err = GetLastError();
+      }
+      Exception e(err + errorOffset,__PRETTY_FUNCTION__);
       e.writeStdError();
     }
     allocatedSystemMemory_ += size;
@@ -593,6 +664,14 @@ void * HeapManager::sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow
 #endif
   assert( (uintptr_t(memory) & (clusterSize_ - 1)) == 0 ); // check address align
   return memory;
+}
+//---------------------------------------------------------------------------
+void heapBenchmark()
+{
+  AutoPtr<Randomizer> rnd(newObject<Randomizer>());
+  HeapManager hm;
+  uint64_t t = gettimeofday();
+  for( intptr_t i = 512; i >= 0; i-- ) hm.malloc(1,true);
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

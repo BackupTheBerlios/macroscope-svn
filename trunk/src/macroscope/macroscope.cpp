@@ -980,6 +980,12 @@ int main(int _argc,char * _argv[])
         rollout = true;
         dispatch = false;
       }
+      else if( argv()[i].strcmp("--benchmark") == 0 ){
+        heapBenchmark();
+        RBTreeBenchmarkTree tree;
+        tree.benchmark(10000000,3);
+        dispatch = false;
+      }
       else if( argv()[i].strcmp("--service") == 0 ){
         svc = true;
       }
