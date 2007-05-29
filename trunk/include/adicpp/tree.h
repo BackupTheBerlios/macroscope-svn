@@ -1291,7 +1291,7 @@ template <
 > inline
 OT * RBTree<OT,O2N,N2O,CO>::find(const OT & object) const
 {
-  RBTreeNode * current = root_;
+  RBTreeNode * current = root_->left_;
   for(;;){
     if( current == &sentinel_ ){ current = NULL; break; }
     intptr_t c = CO(object,N2O(*current));

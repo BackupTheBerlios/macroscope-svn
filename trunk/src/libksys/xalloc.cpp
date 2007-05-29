@@ -139,6 +139,7 @@ class HeapManager {
           cs_(cs),
           memory_((uint8_t *) memory),
           size_(0),
+          fsize_(0),
           bsize_(0),
           index_(~uintptr_t(0)),
           count_(0),
@@ -154,7 +155,7 @@ class HeapManager {
           return node.object<Cluster>(p->treeNode_);
         }
         static intptr_t treeCO(const Cluster & a0,const Cluster & a1){
-          return a0.memory_ < a1.memory_ ? -1 : a0.memory_ + a0.size_ >= a1.memory_ + a1.size_ ? 1 : 0;
+          return a0.memory_ < a1.memory_ ? -1 : a0.memory_ + a0.fsize_ >= a1.memory_ + a1.fsize_ ? 1 : 0;
         }
         mutable RBTreeNode treeNode_;
 																								
@@ -198,6 +199,7 @@ class HeapManager {
       	Clusters * cs_;
 	      uint8_t * memory_;
 	      uintptr_t size_; // size of allocated memory
+	      uintptr_t fsize_; // size of searching memory block
 	      uintptr_t bsize_; // size of allocating memory block
 	      uintptr_t index_; // first in free list block index
         uintptr_t count_; // count of allocated blocks
@@ -360,7 +362,7 @@ HeapManager & HeapManager::clear()
         EmbeddedListNode<Cluster> * cNode = cs->lru_.first();
         while( cNode != NULL ){
           Cluster * c = &Cluster::listObject(*cNode);
-	  if( c->head_ == NULL )
+          if( c->head_ == NULL )
             sysfree(c->memory_,c->size_,c->locked_);
           cNode = cNode->next();
         }
@@ -455,7 +457,7 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
   }
   cs = &Clusters::listObject(*csNode);
   EmbeddedList<Cluster,Cluster::listNode,Cluster::listObject> & list = ffc ? cs->lru_ : cs->free_;
-  uintptr_t cc = 1, bs = 0;
+  uintptr_t cc = 1, bs = clusterSize_;
   if( size >= 4 ){
   }
   else if( size == 3 && clusterSize_ > 0x1000000u ){
@@ -480,17 +482,20 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
     }
     if( chead == NULL ){
       c->size_ = size > clusterSize_ ? size + (-intptr_t(size) & (clusterSize_ - 1)) : clusterSize_;
+      c->fsize_ = bs;
       c->bsize_ = size;
       c->memory_ = (uint8_t *) sysalloc(c->size_,lock,locked,true);
       if( c->memory_ == NULL ) return NULL;
       c->locked_ = locked;
       c->initialize();
+      c->head_ = c;
       chead = c;
       list.remove(*c);
     }
     else {
       c->cs_ = chead->cs_;
       c->size_ = chead->size_;
+      c->fsize_ = chead->fsize_;
       c->bsize_ = chead->bsize_;
       c->memory_ = chead->memory_ + i * bs;
       c->head_ = chead;
@@ -557,7 +562,7 @@ void * HeapManager::realloc(void * ptr,uintptr_t size,bool lock)
 void HeapManager::free(void * ptr)
 {
   Cluster c(NULL,ptr), * cp = clustersTree_.find(c);
-  if( cp == NULL || uintptr_t(ptr) % cp->bsize_ != 0 ){
+  if( cp == NULL || (uintptr_t(ptr) - uintptr_t(cp->memory_)) % cp->bsize_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
     SetLastError(ERROR_INVALID_DATA);
 #else
@@ -565,6 +570,27 @@ void HeapManager::free(void * ptr)
 #endif
     int32_t err = oserror() + errorOffset;
     Exception e(err,__PRETTY_FUNCTION__);
+    e.writeStdError();
+    return;
+  }
+  uintptr_t j = cp->size_ / cp->bsize_;
+  if( cp->bsize_ == 1 && j > 256 ){
+    j = 256;
+  }
+  else if( cp->bsize_ == 2 && j > 65536 ){
+    j = 65536;
+  }
+  else if( cp->bsize_ == 3 && j > 16777216 ){
+    j = 16777216;
+  }
+  if( cp->count_ >= j ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    SetLastError(ERROR_INVALID_DATA);
+#else
+    errno = EINVAL;
+#endif
+    int32_t err = oserror() + errorOffset;
+    Exception e(err,utf8::String("chunk already free ") + __PRETTY_FUNCTION__);
     e.writeStdError();
     return;
   }
@@ -589,37 +615,48 @@ void HeapManager::free(void * ptr)
   cp->index_ = ((uint8_t *) ptr - cp->memory_) / cp->bsize_;
   cp->count_++;
   cp->cs_->sd_->sds_->count_--;
-  allocatedMemory_ += cp->bsize_;
-  cp->cs_->lru_.remove(*cp);
-  uintptr_t j = cp->size_ / cp->bsize_;
-  if( cp->bsize_ == 1 && j > 256 ){
-    j = 256;
-  }
-  else if( cp->bsize_ == 2 && j > 65536 ){
-    j = 65536;
-  }
-  else if( cp->bsize_ == 3 && j > 16777216 ){
-    j = 16777216;
-  }
+  allocatedMemory_ -= cp->bsize_;
   if( cp->count_ == j ){
-    clustersTree_.remove(*cp);
-    if( cp->head_ == NULL ){
-      clustersTree_.remove(*cp);
-      sysfree(cp->memory_,cp->size_,cp->locked_);
-      cp->memory_ = NULL;
-      cp->cs_->free_.insToHead(*cp);
-      if( cp->cs_->free_.count() == cp->cs_->count() ){
-        SizeDescriptor * sd = cp->cs_->sd_;
-        sd->clusters_.remove(*cp->cs_);
-        sysfree(cp->cs_,cp->cs_->size_,cp->cs_->locked_);
-        if( sd->sds_->count_ == 0 ){
-          sizes_.remove(*sd->sds_);
-          sysfree(sd->sds_,sd->sds_->size_,sd->sds_->locked_);
+    Cluster * c = cp->head_;
+    if( c != NULL ){
+      for(;;){
+        assert( c->count_ <= j );
+        if( c->count_ != j ) return;
+        c = c->next_;
+        if( c == NULL ) break;
+      }
+      c = cp->head_;
+      for(;;){
+        c->cs_->lru_.remove(*c);
+        if( c != c->head_ ){
+          clustersTree_.remove(*c);
+          c->memory_ = NULL;
+          c->cs_->free_.insToHead(*c);
         }
+        c = c->next_;
+        if( c == NULL ) break;
+      }
+      cp = cp->head_;
+    }
+    else {
+      cp->cs_->lru_.remove(*cp);
+    }
+    clustersTree_.remove(*cp);
+    sysfree(cp->memory_,cp->size_,cp->locked_);
+    cp->memory_ = NULL;
+    cp->cs_->free_.insToHead(*cp);
+    if( cp->cs_->free_.count() == cp->cs_->count() ){
+      SizeDescriptor * sd = cp->cs_->sd_;
+      sd->clusters_.remove(*cp->cs_);
+      sysfree(cp->cs_,cp->cs_->size_,cp->cs_->locked_);
+      if( sd->sds_->count_ == 0 ){
+        sizes_.remove(*sd->sds_);
+        sysfree(sd->sds_,sd->sds_->size_,sd->sds_->locked_);
       }
     }
   }
   else {
+    cp->cs_->lru_.remove(*cp);
     cp->cs_->lru_.insToHead(*cp);
   }
 }
@@ -649,13 +686,16 @@ void * HeapManager::sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow
     if( !noThrow ) newObjectV1C2<EOutOfMemory>(err,__PRETTY_FUNCTION__)->throwSP();    
   }
   else {
+#ifndef NDEBUG
+    memset(memory,0xCD,size);
+#endif
 l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
       int32_t err = GetLastError();
       if( err == ERROR_WORKING_SET_QUOTA ){
         SIZE_T minimumWorkingSetSize, maximumWorkingSetSize;
         BOOL r;
         {
-          AutoLock<InterlockedMutex> lock(mutex_);
+//          AutoLock<InterlockedMutex> lock(mutex_);
           r = GetProcessWorkingSetSize(GetCurrentProcess(),&minimumWorkingSetSize,&maximumWorkingSetSize);
           if( r != 0 ){
             minimumWorkingSetSize += size * 2;
@@ -698,16 +738,36 @@ l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
 void heapBenchmark()
 {
   AutoPtr<Randomizer> rnd(newObject<Randomizer>());
+  rnd->srand(1);
   HeapManager hm;
-  uintptr_t elCount = 1024 * 1024;
-  uint64_t seqMallocTime = 0;
-  uint64_t t = gettimeofday();
+  uintptr_t elCount = 4096 * 1024;
+  Array<uintptr_t> sizes;
+  Array<void *> ptrs;
+  sizes.resize(elCount);
+  ptrs.resize(elCount);
   for( uintptr_t i = 0; i < elCount; i++ ){
-    for( uintptr_t j = 1; j <= 16; j++ ){
-      hm.malloc(j,false);
-    }
+    sizes[i] = 1;//uintptr_t(rnd->random(32) + 1);
+    ptrs[i] = NULL;
+  }
+  uint64_t t, seqMallocTime = 0, seqFreeTime = 0, allocatedSystemMemory, allocatedMemory;
+  t = gettimeofday();
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    ptrs[i] = hm.malloc(sizes[i],false);
   }
   seqMallocTime += gettimeofday() - t;
+  allocatedSystemMemory = hm.allocatedSystemMemory();
+  allocatedMemory = hm.allocatedMemory();
+  t = gettimeofday();
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    hm.free(ptrs[i]);
+  }
+  seqFreeTime += gettimeofday() - t;
+  fprintf(stderr,"seq mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqMallocTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqMallocTime -
+    uint64_t(elCount) * 1000000u / seqMallocTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqMallocTime).getOEMString()
+  );
   fprintf(stderr,"seq mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
     uint64_t(elCount) * 1000000u / seqMallocTime,
     uint64_t(elCount) * 10000u * 1000000u / seqMallocTime -
@@ -717,8 +777,8 @@ void heapBenchmark()
   fprintf(stderr,
     "memory used area: %s\n",
     (const char *) formatByteLength(
-      hm.allocatedMemory(),
-      hm.allocatedSystemMemory(),
+      allocatedMemory,
+      allocatedSystemMemory,
       "P"
     ).getANSIString()
   );
