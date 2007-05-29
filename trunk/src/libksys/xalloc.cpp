@@ -360,7 +360,8 @@ HeapManager & HeapManager::clear()
         EmbeddedListNode<Cluster> * cNode = cs->lru_.first();
         while( cNode != NULL ){
           Cluster * c = &Cluster::listObject(*cNode);
-          sysfree(c->memory_,c->size_,c->locked_);
+	  if( c->head_ == NULL )
+            sysfree(c->memory_,c->size_,c->locked_);
           cNode = cNode->next();
         }
         csNode2 = csNode->next();
@@ -698,11 +699,13 @@ void heapBenchmark()
 {
   AutoPtr<Randomizer> rnd(newObject<Randomizer>());
   HeapManager hm;
-  uintptr_t elCount = 4096 * 1024;
+  uintptr_t elCount = 1024 * 1024;
   uint64_t seqMallocTime = 0;
   uint64_t t = gettimeofday();
   for( uintptr_t i = 0; i < elCount; i++ ){
-    hm.malloc(16,false);
+    for( uintptr_t j = 1; j <= 16; j++ ){
+      hm.malloc(j,false);
+    }
   }
   seqMallocTime += gettimeofday() - t;
   fprintf(stderr,"seq mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
