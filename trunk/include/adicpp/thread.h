@@ -110,7 +110,7 @@ class Thread : virtual public Object {
 
     Thread & stackSize(uintptr_t newStackSize);
     const uintptr_t & stackSize() const;
-    Thread & priority(uintptr_t pri);
+    Thread & priority(uintptr_t pri,bool noThrow = true);
     uintptr_t priority() const;
 
     class Action {

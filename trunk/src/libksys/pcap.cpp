@@ -504,15 +504,22 @@ void PCAP::threadExecute()
     handle_ = api.pcap_open_live(iface_.getANSIString(),INT_MAX,promisc_,int(pcapReadTimeout_),errbuf);
     if( handle_ == NULL ) goto errexit;
     if( !filter_.isNull() ){
-      if( api.pcap_compile((pcap_t *) handle_,fp,filter_.getANSIString(),0,net) != 0 ) goto errexit;
+      memset(fp,0,sizeof(struct bpf_program));
+      errbuf[0] = '\0';
+      api.pcap_compile((pcap_t *) handle_,fp,filter_.getANSIString(),1,net);
+      if( fp->bf_insns == NULL ){
+        if( oserror() == 0 ){
+	  oserror(EINVAL);
+	  strcpy(errbuf,"Invalid PCAP filter");
+	}
+        goto errexit;
+      }
       fc_ = true;
       if( api.pcap_setfilter((pcap_t *) handle_,fp) != 0 ) goto errexit;
     }
 //    fprintf(stderr,"%s %d\n",__FILE__,__LINE__); fflush(stderr);
     //if( api.pcap_setmode((pcap_t *) handle_,MODE_MON) != 0 ) goto errexit;
-#if !defined(__WIN32__) && !defined(__WIN64__)
     priority(THREAD_PRIORITY_TIME_CRITICAL);
-#endif
     memoryUsage_ = 0;
     curPeriod_ = 0;
     if( joinMaster_ == NULL ){
@@ -844,11 +851,7 @@ PCAP::Packets * PCAP::Grouper::get()
 //------------------------------------------------------------------------------
 void PCAP::Grouper::threadExecute()
 {
-#ifdef __FreeBSD__
   priority(THREAD_PRIORITY_IDLE);
-#else
-  priority(THREAD_PRIORITY_ABOVE_NORMAL);
-#endif
   for(;;){
     AutoPtr<Packets> packets(get());
     if( packets == NULL || packets->packets_ == 0 ){
@@ -985,11 +988,7 @@ void PCAP::DatabaseInserter::threadBeforeWait()
 //------------------------------------------------------------------------------
 void PCAP::DatabaseInserter::threadExecute()
 {
-#ifdef __FreeBSD__
   priority(THREAD_PRIORITY_IDLE);
-#else
-  priority(THREAD_PRIORITY_HIGHEST);
-#endif
   bool success = true;
   while( !terminated_ ){
     PacketGroup * pGroup;
@@ -1189,11 +1188,7 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
 //------------------------------------------------------------------------------
 void PCAP::LazyWriter::threadExecute()
 {
-#ifdef __FreeBSD__
   priority(THREAD_PRIORITY_IDLE);
-#else
-  priority(THREAD_PRIORITY_HIGHEST);
-#endif
   AsyncFile tempFile(pcap_->tempFile_);
   tempFile.createIfNotExist(false).tryOpen();
   lastSwapIn_ = 0;

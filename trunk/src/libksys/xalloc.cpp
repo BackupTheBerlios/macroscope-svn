@@ -670,7 +670,7 @@ void heapBenchmark()
 {
   AutoPtr<Randomizer> rnd(newObject<Randomizer>());
   HeapManager hm;
-  uint64_t t = gettimeofday();
+//  uint64_t t = gettimeofday();
   for( intptr_t i = 512; i >= 0; i-- ) hm.malloc(1,true);
 }
 //---------------------------------------------------------------------------

@@ -32,22 +32,30 @@ namespace ksys {
 //---------------------------------------------------------------------------
 int schedGetPriorityMin()
 {
+#ifdef __FreeBSD__
+  return 0;
+#else
   int pri = sched_get_priority_min(sched_getscheduler(0));
   if( pri == -1 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
   }
   return pri;
+#endif
 }
 //---------------------------------------------------------------------------
 int schedGetPriorityMax()
 {
+#ifdef __FreeBSD__
+  return 31;
+#else
   int pri = sched_get_priority_max(sched_getscheduler(0));
   if( pri == -1 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
   }
   return pri;
+#endif
 }
 //---------------------------------------------------------------------------
 #endif
@@ -269,29 +277,37 @@ Thread & Thread::wait()
   return *this;
 }
 //---------------------------------------------------------------------------
-Thread & Thread::priority(uintptr_t pri)
+Thread & Thread::priority(uintptr_t pri,bool noThrow)
 {
   if( started_ && !finished_ ){
-#if HAVE_PTHREAD_SETPRIO
-/*#if HAVE_SYSCONF
-    if( sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING) <= 0 ) return *this;
+#if HAVE_SYSCONF
+//    if( sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING) <= 0 ) return *this;
 #endif
+#if HAVE_PTHREAD_GETSCHEDPARAM && HAVE_PTHREAD_SETSCHEDPARAM
     int policy;
     struct sched_param param;
     if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
 l1:   int32_t err = errno;
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      AutoPtr<Exception> e(newObjectV1C2<Exception>(err,utf8::int2Str(pri) + " " + __PRETTY_FUNCTION__));
+      if( !noThrow ) e.ptr(NULL)->throwSP();
+      e->writeStdError();
+      return *this;
     }
     param.sched_priority = pri;
-    if( (errno = pthread_setschedparam(handle_,policy,&param)) != 0 ) goto l1;*/
+    if( (errno = pthread_setschedparam(handle_,policy,&param)) != 0 ) goto l1;
+#elif HAVE_PTHREAD_SETPRIO
     if( (errno = pthread_setprio(handle_,int(pri))) != 0 ){
       int32_t err = errno;
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      AutoPtr<Exception> e(newObjectV1C2<Exception>(err,utf8::int2Str(pri) + " " + __PRETTY_FUNCTION__));
+      if( !noThrow ) e.ptr(NULL)->throwSP();
+      e->writeStdError();
     }
 #elif defined(__WIN32__) || defined(__WIN64__)
     if( SetThreadPriority(handle_,(int) pri) == 0 ){
       int32_t err = GetLastError() + errorOffset;
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      AutoPtr<Exception> e(newObjectV1C2<Exception>(err,utf8::int2Str(pri) + " " + __PRETTY_FUNCTION__));
+      if( !noThrow ) e.ptr(NULL)->throwSP();
+      e->writeStdError();
     }
 #endif
   }
@@ -302,17 +318,18 @@ uintptr_t Thread::priority() const
 {
   uintptr_t pri = 0;
   if( started_ && !finished_ ){
-#if HAVE_PTHREAD_GETPRIO
-/*#if HAVE_SYSCONF
-    if( sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING) <= 0 ) return pri;
+#if HAVE_SYSCONF
+//    if( sysconf(_POSIX_THREAD_PRIORITY_SCHEDULING) <= 0 ) return pri;
 #endif
+#if HAVE_PTHREAD_GETSCHEDPARAM && HAVE_PTHREAD_SETSCHEDPARAM
     int policy;
     struct sched_param param;
     if( (errno = pthread_getschedparam(handle_,&policy,&param)) != 0 ){
       int32_t err = errno;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
-    pri = param.sched_priority;*/
+    pri = param.sched_priority;
+#elif HAVE_PTHREAD_GETPRIO
     int a = pthread_getprio(handle_);
     if( a == -1 ){
       int32_t err = errno;
