@@ -128,6 +128,9 @@ class HeapManager {
     void * malloc(uintptr_t size,bool lock = false);
     void * realloc(void * ptr,uintptr_t size,bool lock = false);
     void free(void * ptr);
+    const uintptr_t & clusterSize() const { return clusterSize_; }
+    const uintptr_t & allocatedSystemMemory() const { return allocatedSystemMemory_; }
+    const uintptr_t & allocatedMemory() const { return allocatedMemory_; }
   protected:
     class Clusters;
     class Cluster {
@@ -274,7 +277,7 @@ class HeapManager {
     HeapManager & sysfree(void * memory,uintptr_t size,bool locked);
 
     EmbeddedListNode<SizeDescriptors> * findSDSNode(uintptr_t size,uintptr_t & fsize,uintptr_t & lsize);
-    EmbeddedListNode<Clusters> * findCSNode(SizeDescriptor * sd,uintptr_t size);
+    EmbeddedListNode<Clusters> * findCSNode(SizeDescriptor * sd,uintptr_t size,bool & ffc);
   private:
 };
 //---------------------------------------------------------------------------
@@ -283,49 +286,61 @@ HeapManager::~HeapManager()
   clear();
 }
 //---------------------------------------------------------------------------
-HeapManager::HeapManager()
+HeapManager::HeapManager() :
+  clusterSize_(0), allocatedSystemMemory_(0), allocatedMemory_(0)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   SYSTEM_INFO si;
   GetSystemInfo(&si);
-  HANDLE hToken;
-  clusterSize_ = 0;
-  BOOL r = OpenProcessToken(
-    GetCurrentProcess(),
-    TOKEN_ADJUST_PRIVILEGES,
-    &hToken
-  );
-  if( r != 0 ){
-    LUID luid;
-    r = LookupPrivilegeValue(
-      NULL,
-      "SeLockMemoryPrivilege",
-      &luid
+  if( si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 || si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 ){
+    HANDLE hToken;
+    BOOL r = OpenProcessToken(
+      GetCurrentProcess(),
+      TOKEN_ADJUST_PRIVILEGES,
+      &hToken
     );
     if( r != 0 ){
-      TOKEN_PRIVILEGES tp;
-      tp.PrivilegeCount = 1;
-      tp.Privileges[0].Luid = luid;
-      tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-      r = AdjustTokenPrivileges(
-        hToken,
-        FALSE,
-        &tp,
-        sizeof(TOKEN_PRIVILEGES), 
-        (PTOKEN_PRIVILEGES)NULL, 
-        (PDWORD)NULL
+      LUID luid;
+      r = LookupPrivilegeValue(
+        NULL,
+        "SeLockMemoryPrivilege",
+        &luid
       );
-      if( r != 0 && GetLastError() != ERROR_NOT_ALL_ASSIGNED ){
-        clusterSize_ = GetLargePageMinimum();
-        flags_ = /*MEM_RESERVE |*/ MEM_COMMIT | MEM_LARGE_PAGES;
+      if( r != 0 ){
+        TOKEN_PRIVILEGES tp;
+        tp.PrivilegeCount = 1;
+        tp.Privileges[0].Luid = luid;
+        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+        r = AdjustTokenPrivileges(
+          hToken,
+          FALSE,
+          &tp,
+          sizeof(TOKEN_PRIVILEGES), 
+          (PTOKEN_PRIVILEGES)NULL, 
+          (PDWORD)NULL
+        );
+        if( r != 0 && GetLastError() != ERROR_NOT_ALL_ASSIGNED ){
+          if( GetLargePageMinimum() > si.dwPageSize ){
+            clusterSize_ = GetLargePageMinimum();
+            flags_ = /*MEM_RESERVE |*/ MEM_COMMIT | MEM_LARGE_PAGES;
+            bool locked;
+            void * memory = sysalloc(clusterSize_,true,locked,true);
+            if( memory == NULL ){
+              clusterSize_ = 0;
+            }
+            else {
+              sysfree(memory,clusterSize_,locked);
+            }
+          }
+        }
       }
+      CloseHandle(hToken);
     }
-    CloseHandle(hToken);
   }
   if( clusterSize_ < si.dwPageSize ){
     clusterSize_ = si.dwPageSize;
     flags_ = /*MEM_RESERVE |*/ MEM_COMMIT;
-  }
+  }  
 #else
   clusterSize_ = getpagesize();
 #endif
@@ -357,6 +372,10 @@ HeapManager & HeapManager::clear()
     sysfree(sds,sds->size_,sds->locked_);
     sdsNode = sdsNode2;
   }
+  sizes_.clear();
+  clustersTree_.clear();
+  allocatedSystemMemory_ = 0;
+  allocatedMemory_ = 0;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -376,18 +395,21 @@ EmbeddedListNode<HeapManager::SizeDescriptors> *
 }
 //---------------------------------------------------------------------------
 EmbeddedListNode<HeapManager::Clusters> *
-  HeapManager::findCSNode(SizeDescriptor * sd,uintptr_t size)
+  HeapManager::findCSNode(SizeDescriptor * sd,uintptr_t size,bool & ffc)
 {
   EmbeddedListNode<Clusters> * csNode = sd->clusters_.first();
-  while( csNode != NULL ){
+  if( csNode != NULL ){
     Clusters * cs = &Clusters::listObject(*csNode);
-    if( (cs->lru_.count() > 0 && Cluster::listObject(*cs->lru_.first()).count_ > 0) ||
-        (size > 3 && cs->free_.count() > 0) ||
-	      (size == 3 && cs->free_.count() > (clusterSize_ / 0x1000000u) - (clusterSize_ % 0x1000000u == 0)) ||
-	      (size == 2 && cs->free_.count() > (clusterSize_ / 0x10000u) - (clusterSize_ % 0x10000u == 0)) ||
-	      (size == 1 && cs->free_.count() > (clusterSize_ / 0x100u) - (clusterSize_ % 0x100u == 0))
-    ) break;
-    csNode = csNode->next();
+    ffc = cs->lru_.count() > 0 && Cluster::listObject(*cs->lru_.first()).count_ > 0;
+    if( !ffc ){
+      uintptr_t a = 1;
+      if( size == 3 ) a = clusterSize_ / 0x1000000u + (clusterSize_ < 0x1000000u);
+      else
+      if( size == 2 ) a = clusterSize_ / 0x10000u + (clusterSize_ < 0x10000u);
+      else
+      if( size == 1 ) a = clusterSize_ / 0x100u + (clusterSize_ < 0x100u);
+      if( cs->free_.count() < a ) csNode = NULL;
+    }
   }
   return csNode;
 }
@@ -415,7 +437,8 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
   }
   sds = &SizeDescriptors::listObject(*sdsNode);
   SizeDescriptor * sd = &sds->sizes_[(size - sds->sizes_[0].size_) / align_];
-  EmbeddedListNode<Clusters> * csNode = findCSNode(sd,size);
+  bool ffc = false;
+  EmbeddedListNode<Clusters> * csNode = findCSNode(sd,size,ffc);
   Clusters * cs;
   if( csNode == NULL ){
     cs = (Clusters *) sysalloc(clusterSize_,lock,locked,true);
@@ -426,58 +449,57 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
       new (cs->clusters_ + i) Cluster(cs);
       cs->free_.insToHead(cs->clusters_[i]);
     }
-    sd->clusters_.insToTail(*cs);
+    sd->clusters_.insToHead(*cs);
     csNode = &Clusters::listNode(*cs);
   }
   cs = &Clusters::listObject(*csNode);
-  EmbeddedList<Cluster,Cluster::listNode,Cluster::listObject> & list = cs->lru_.count() > 0 ? cs->lru_ : cs->free_;
+  EmbeddedList<Cluster,Cluster::listNode,Cluster::listObject> & list = ffc ? cs->lru_ : cs->free_;
   uintptr_t cc = 1, bs = 0;
   if( size >= 4 ){
   }
   else if( size == 3 && clusterSize_ > 0x1000000u ){
-    cc = clusterSize_ / 0x1000000u + (clusterSize_ % 0x1000000u == 0);
+    cc = clusterSize_ / 0x1000000u;
     bs = 0x1000000u;
   }
   else if( size == 2 && clusterSize_ > 0x10000u ){
-    cc = clusterSize_ / 0x10000u + (clusterSize_ % 0x10000u == 0);
+    cc = clusterSize_ / 0x10000u;
     bs = 0x10000u;
   }
   else if( size == 1 && clusterSize_ > 0x100u ){
-    cc = clusterSize_ / 0x100u + (clusterSize_ % 0x100u == 0);
+    cc = clusterSize_ / 0x100u;
     bs = 0x100u;
   }
   Cluster * c, * chead = NULL;
   for( uintptr_t i = 0; i < cc; i++ ){
     c = &Cluster::listObject(*list.first());
-    if( c->memory_ == NULL ){
-      if( chead == NULL ){
-        c->size_ = size > clusterSize_ ? size + (-intptr_t(size) & (clusterSize_ - 1)) : clusterSize_;
-	      c->bsize_ = size;
-        c->memory_ = (uint8_t *) sysalloc(c->size_,lock,locked,true);
-	      if( c->memory_ == NULL ) return NULL;
-        c->locked_ = locked;
-        c->initialize();
-        chead = c;
-        list.remove(*c);
-      }
-      else {
-        c->cs_ = chead->cs_;
-        c->size_ = chead->size_;
-        c->bsize_ = chead->bsize_;
-        c->memory_ = chead->memory_ + i * bs;
-	      c->head_ = chead;
-	      c->next_ = chead->next_;
-	      chead->next_ = c;
-        c->initialize();
-        cs->free_.remove(*c);
-	      cs->lru_.insToHead(*c);
-      }
-      clustersTree_.insert(*c);
+    if( c->memory_ != NULL ){
+      chead = c;
+      list.remove(*c);
+      break;
     }
-    else {
+    if( chead == NULL ){
+      c->size_ = size > clusterSize_ ? size + (-intptr_t(size) & (clusterSize_ - 1)) : clusterSize_;
+      c->bsize_ = size;
+      c->memory_ = (uint8_t *) sysalloc(c->size_,lock,locked,true);
+      if( c->memory_ == NULL ) return NULL;
+      c->locked_ = locked;
+      c->initialize();
       chead = c;
       list.remove(*c);
     }
+    else {
+      c->cs_ = chead->cs_;
+      c->size_ = chead->size_;
+      c->bsize_ = chead->bsize_;
+      c->memory_ = chead->memory_ + i * bs;
+      c->head_ = chead;
+      c->next_ = chead->next_;
+      chead->next_ = c;
+      c->initialize();
+      list.remove(*c);
+      cs->lru_.insToHead(*c);
+    }
+    clustersTree_.insert(*c);
   }
   c = chead;
   void * p = c->memory_ + c->index_ * size;
@@ -618,6 +640,7 @@ HeapManager & HeapManager::sysfree(void * memory,uintptr_t size,bool locked)
 void * HeapManager::sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow)
 {
   void * memory = NULL;
+  locked = false;
 #if defined(__WIN32__) || defined(__WIN64__)
   memory = VirtualAlloc(NULL,size,flags_,PAGE_READWRITE);
   if( memory == NULL ){
@@ -642,7 +665,12 @@ l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
         if( r != 0 ) goto l1;
         err = GetLastError();
       }
-      Exception e(err + errorOffset,__PRETTY_FUNCTION__);
+      else if( err == ERROR_INVALID_PARAMETER ){
+        VirtualFree(memory,size,MEM_DECOMMIT);
+        SetLastError(err);
+        return NULL;
+      }
+      Exception e(err + errorOffset,"VirtualLock(" + utf8::int2Str(size) + ") " + __PRETTY_FUNCTION__);
       e.writeStdError();
     }
     allocatedSystemMemory_ += size;
@@ -670,8 +698,27 @@ void heapBenchmark()
 {
   AutoPtr<Randomizer> rnd(newObject<Randomizer>());
   HeapManager hm;
-//  uint64_t t = gettimeofday();
-  for( intptr_t i = 512; i >= 0; i-- ) hm.malloc(1,true);
+  uintptr_t elCount = 4096 * 1024;
+  uint64_t seqMallocTime = 0;
+  uint64_t t = gettimeofday();
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    hm.malloc(16,false);
+  }
+  seqMallocTime += gettimeofday() - t;
+  fprintf(stderr,"seq mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqMallocTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqMallocTime -
+    uint64_t(elCount) * 1000000u / seqMallocTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqMallocTime).getOEMString()
+  );
+  fprintf(stderr,
+    "memory used area: %s\n",
+    (const char *) formatByteLength(
+      hm.allocatedMemory(),
+      hm.allocatedSystemMemory(),
+      "P"
+    ).getANSIString()
+  );
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

@@ -946,6 +946,76 @@ utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String &
   return s;
 }
 //---------------------------------------------------------------------------
+utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fmt)
+{
+  if( len == 0 ) return "-";
+  uintmax_t q, b, c, t1, t2, t3;
+  char * suffix = "";
+  bool suffixes = false, percent = false;
+  while( *fmt != '\0' ) switch( *fmt++ ){
+    case 'S' : case 's' : suffixes = true; break;
+    case 'P' : case 'p' : percent = true; break;
+  }
+  if( percent ){
+    q = len * 1000000u / (all != 0 ? all : 1);
+    b = q / 10000u;
+    c = q % 10000u;
+  }
+  else {
+    b = c = 0;
+  }
+  t2 = 1;
+  if( suffixes ){
+    if( len >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
+      t2 = 1024u;
+      t2 *= 1024u * 1024u * 1024u;
+      suffix = "T";
+    }
+    if( len >= 1024u * 1024u * 1024u ){
+      t2 = 1024u * 1024u * 1024u;
+      suffix = "G";
+    }
+    else if( len >= 1024u * 1024u ){
+      t2 = 1024u * 1024u;
+      suffix = "M";
+    }
+    else if( len >= 1024u ){
+      t2 = 1024u;
+      suffix = "K";
+    }
+    else {
+      suffixes = false;
+    }
+  }
+  t1 = len / t2;
+  t3 = len % t2;
+  if( suffixes ){
+    t2 = t3 / (t2 / 1024u);
+    if( t2 == 0 )
+      return utf8::String::print(
+        percent ? "%"PRIuMAX"%s(%"PRIuMAX".%04"PRIuMAX"%%)" : "%"PRIuMAX"%s",
+        t1,
+        suffix,
+        b,
+        c
+      );
+    return utf8::String::print(
+      percent ? "%"PRIuMAX".%04"PRIuMAX"%s(%"PRIuMAX".%04"PRIuMAX"%%)" : "%"PRIuMAX".%04"PRIuMAX"%s",
+      t1,
+      t2,
+      suffix,
+      b,
+      c
+    );
+  }
+  return utf8::String::print(
+    percent ? "%"PRIuMAX"(%"PRIuMAX".%04"PRIuMAX"%%)" : "%"PRIuMAX,
+    t1,
+    b,
+    c
+  );
+}
+//------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 HMODULE getModuleHandleByAddr(void * addr)
 {
