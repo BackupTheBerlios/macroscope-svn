@@ -742,6 +742,7 @@ utf8::String Logger::BPFTThread::genHRef(const in_addr & ip,uintptr_t port)
 void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
 {
   struct tm beginTime, beginTime2, endTime, endTime2;
+  memset(&beginTime,0,sizeof(beginTime));
   Mutant m0, m1, m2;
   AsyncFile f;
   intptr_t totalsLevel = 0;

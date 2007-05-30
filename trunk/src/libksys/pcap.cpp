@@ -796,6 +796,7 @@ void PCAP::Grouper::threadExecute()
       continue;
     }
     PacketGroup::SwapFileHeader header;
+    memset(&header,0,sizeof(header));
     PacketGroup * pGroup;
     AutoPtr<PacketGroup> group;
     try {
