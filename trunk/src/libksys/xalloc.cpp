@@ -847,6 +847,28 @@ void heapBenchmark()
     hm.free(ptrs[i]);
     ptrs[i] = NULL;
   }
+  rndTime = 0;
+  t = gettimeofday();
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    if( ptrs[indices[i]] == NULL ){
+      ptrs[indices[i]] = kmalloc(sizes[i]);
+    }
+    else {
+      kfree(ptrs[indices[i]]);
+      ptrs[indices[i]] = NULL;
+    }
+  }
+  rndTime += gettimeofday() - t;
+  fprintf(stderr,"rnd system mallocs - frees: %8"PRIu64".%04"PRIu64" mfps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / rndTime,
+    uint64_t(elCount) * 10000u * 1000000u / rndTime -
+    uint64_t(elCount) * 1000000u / rndTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(rndTime).getOEMString()
+  );
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    kfree(ptrs[i]);
+    ptrs[i] = NULL;
+  }
 }
 //---------------------------------------------------------------------------
 } // namespace ksys
