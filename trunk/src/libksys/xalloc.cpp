@@ -767,11 +767,11 @@ void heapBenchmark()
     uint64_t(elCount) * 1000000u / seqMallocTime * 10000u,
     (const char *) utf8::elapsedTime2Str(seqMallocTime).getOEMString()
   );
-  fprintf(stderr,"seq frees: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
-    uint64_t(elCount) * 1000000u / seqMallocTime,
-    uint64_t(elCount) * 10000u * 1000000u / seqMallocTime -
-    uint64_t(elCount) * 1000000u / seqMallocTime * 10000u,
-    (const char *) utf8::elapsedTime2Str(seqMallocTime).getOEMString()
+  fprintf(stderr,"seq frees: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqFreeTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqFreeTime -
+    uint64_t(elCount) * 1000000u / seqFreeTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqFreeTime).getOEMString()
   );
   fprintf(stderr,
     "memory used area: %s\n",
@@ -780,6 +780,31 @@ void heapBenchmark()
       allocatedSystemMemory,
       "P"
     ).getANSIString()
+  );
+  seqMallocTime = seqFreeTime = 0;
+  t = gettimeofday();
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    ptrs[i] = kmalloc(sizes[i]);
+  }
+  seqMallocTime += gettimeofday() - t;
+  allocatedSystemMemory = hm.allocatedSystemMemory();
+  allocatedMemory = hm.allocatedMemory();
+  t = gettimeofday();
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    kfree(ptrs[i]);
+  }
+  seqFreeTime += gettimeofday() - t;
+  fprintf(stderr,"seq system mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqMallocTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqMallocTime -
+    uint64_t(elCount) * 1000000u / seqMallocTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqMallocTime).getOEMString()
+  );
+  fprintf(stderr,"seq system frees: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / seqFreeTime,
+    uint64_t(elCount) * 10000u * 1000000u / seqFreeTime -
+    uint64_t(elCount) * 1000000u / seqFreeTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(seqFreeTime).getOEMString()
   );
 }
 //---------------------------------------------------------------------------
