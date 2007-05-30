@@ -686,9 +686,9 @@ void * HeapManager::sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow
     if( !noThrow ) newObjectV1C2<EOutOfMemory>(err,__PRETTY_FUNCTION__)->throwSP();    
   }
   else {
-#ifndef NDEBUG
-    memset(memory,0xCD,size);
-#endif
+//#ifndef NDEBUG
+//    memset(memory,0xCD,size);
+//#endif
 l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
       int32_t err = GetLastError();
       if( err == ERROR_WORKING_SET_QUOTA ){
@@ -746,7 +746,7 @@ void heapBenchmark()
   sizes.resize(elCount);
   ptrs.resize(elCount);
   for( uintptr_t i = 0; i < elCount; i++ ){
-    sizes[i] = 1;//uintptr_t(rnd->random(32) + 1);
+    sizes[i] = uintptr_t(rnd->random(32) + 1);
     ptrs[i] = NULL;
   }
   uint64_t t, seqMallocTime = 0, seqFreeTime = 0, allocatedSystemMemory, allocatedMemory;
@@ -768,7 +768,7 @@ void heapBenchmark()
     uint64_t(elCount) * 1000000u / seqMallocTime * 10000u,
     (const char *) utf8::elapsedTime2Str(seqMallocTime).getOEMString()
   );
-  fprintf(stderr,"seq mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
+  fprintf(stderr,"seq frees: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
     uint64_t(elCount) * 1000000u / seqMallocTime,
     uint64_t(elCount) * 10000u * 1000000u / seqMallocTime -
     uint64_t(elCount) * 1000000u / seqMallocTime * 10000u,
