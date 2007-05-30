@@ -125,7 +125,7 @@ void CGI::initalizeByMethodPOST()
   }
 }
 //------------------------------------------------------------------------------
-CGIMethod CGI::method()
+CGIMethod CGI::method() const
 {
   if( method_ == cgiInit ){
     if( getEnv("GATEWAY_INTERFACE").strlen() > 0 ){

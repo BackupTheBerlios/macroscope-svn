@@ -241,7 +241,7 @@ void setProcessPriority(const Mutant & m,bool noThrow)
 #endif
 }
 //---------------------------------------------------------------------------
-utf8::String getEnv(const utf8::String & name)
+utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   DWORD sz;
@@ -255,7 +255,9 @@ utf8::String getEnv(const utf8::String & name)
     }
     if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
       int32_t err = GetLastError() + errorOffset;
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      if( defValue.isNull() )
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      return defValue;
     }
     if( sz <= 1 ) return utf8::String();
     return b.ptr();
@@ -269,7 +271,9 @@ utf8::String getEnv(const utf8::String & name)
   }
   if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
     int32_t err = GetLastError() + errorOffset;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    if( defValue.isNull() )
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    return defValue;
   }
   if( sz <= 1 ) return utf8::String();
   return b.ptr();
@@ -277,7 +281,9 @@ utf8::String getEnv(const utf8::String & name)
   char * env = getenv(name.getANSIString());
   if( env == NULL && errno != 0 ){
     int32_t err = errno;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    if( defValue.isNull() )
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    return defValue;
   }
   return env == NULL ? utf8::String() : env;
 #endif
@@ -1014,6 +1020,24 @@ utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fmt)
     b,
     c
   );
+}
+//------------------------------------------------------------------------------
+utf8::String getHostName()
+{
+#if HAVE_UNAME
+  struct utsname un;
+  if( uname(&un) != 0 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#else
+  struct {
+    utf8::String nodename;
+  } un;
+  ksock::APIAutoInitializer ksockAPIAutoInitializer;
+  un.nodename = ksock::SockAddr::gethostname();
+#endif
+  return un.nodename;
 }
 //------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

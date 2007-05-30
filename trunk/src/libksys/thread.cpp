@@ -127,14 +127,8 @@ void * Thread::threadFunc(void * thread)
     e->writeStdError();
     reinterpret_cast<Thread *>(thread)->exitCode_ = e->code();
   }
-  catch( ... ){
-  }
-  try {
-    for( i = afterExecuteActions().count() - 1; i >= 0; i-- )
-      ((void (*)(void *)) afterExecuteActions()[i].handler())(afterExecuteActions()[i].data());
-  }
-  catch( ... ){
-  }
+  for( i = afterExecuteActions().count() - 1; i >= 0; i-- )
+    ((void (*)(void *)) afterExecuteActions()[i].handler())(afterExecuteActions()[i].data());
   reinterpret_cast<Thread *>(thread)->finished_ = true;
   currentThread() = NULL;
 #if defined(__WIN32__) || defined(__WIN64__)

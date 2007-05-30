@@ -439,9 +439,13 @@ void PCAP::threadExecute()
       api.pcap_compile((pcap_t *) handle_,fp,filter_.getANSIString(),1,net);
       if( fp->bf_insns == NULL ){
         if( oserror() == 0 ){
-	  oserror(EINVAL);
-	  strcpy(errbuf,"Invalid PCAP filter");
-	}
+          strcpy(errbuf,"Invalid PCAP filter");
+#if defined(__WIN32__) || defined(__WIN64__)
+          oserror(ERROR_INVALID_DATA);
+#else
+          oserror(EINVAL);
+#endif
+        }
         goto errexit;
       }
       fc_ = true;
@@ -488,7 +492,9 @@ errexit:
   shutdown();
   api.close();
   if( err != 0 )
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + errbuf + ", interface: " + ifName_)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,
+      utf8::String(errbuf) + ", interface: " + ifName_ + ", " + __PRETTY_FUNCTION__
+    )->throwSP();
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif

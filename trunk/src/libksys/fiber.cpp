@@ -194,8 +194,6 @@ void Fiber::start(Fiber * fiber)
   catch( ExceptionSP & e ){
     e->writeStdError();
   }
-  catch( ... ){
-  }
   fiber->finished_ = true;
   fiber->switchFiber(fiber->thread_);
   exit(ENOSYS);

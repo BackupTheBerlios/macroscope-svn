@@ -50,6 +50,7 @@ class Logger {
     int32_t main();
     Logger & rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName);
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
+    const CGI & cgi() const { return cgi_; }
   protected:
     enum { stSel, stIns, stUpd };
 
@@ -62,6 +63,7 @@ class Logger {
     bool verbose_;
     bool sniffer_;
     bool daemon_;
+    bool configReaded_;
 
     // html reporter
     enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
@@ -431,6 +433,7 @@ class Logger {
     int32_t waitThreads();
     Logger & createDatabase();
     Sniffer * getSnifferBySection(const utf8::String & sectionName);
+    Logger & writeCGIInterfaceAndTimeSelect(bool addUnionIf);
   private:
 };
 //------------------------------------------------------------------------------

@@ -40,7 +40,7 @@ class CGI {
     
     void initialize();
     CGI & print(const utf8::String & s){ out_ << s; return *this; }
-    CGIMethod method();
+    CGIMethod method() const;
     
     CGI & operator << (const utf8::String & s){ out_ << s; return *this; }
     
@@ -54,11 +54,11 @@ class CGI {
     
     static utf8::String uudecode(const utf8::String & string);
     
-    bool isCGI(){ return method() != cgiNone; }
+    bool isCGI() const { return method() != cgiNone; }
   protected:
     AsyncFile out_;
-    utf8::String queryString_;
-    CGIMethod method_;
+    mutable utf8::String queryString_;
+    mutable CGIMethod method_;
     
     class Param {
       friend class CGI;

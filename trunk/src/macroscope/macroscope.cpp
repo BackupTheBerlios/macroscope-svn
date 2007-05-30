@@ -42,11 +42,13 @@ Logger::Logger(bool sniffer,bool daemon) :
   config_(newObject<InterlockedConfig<InterlockedMutex> >()),
   sniffer_(sniffer),
   daemon_(daemon),
+  configReaded_(false),
   trafCacheAutoDrop_(trafCache_),
   trafCacheSize_(0),
   dnsCacheAutoDrop_(dnsCache_),
   dnsCacheSize_(0)
 {
+  cgi_.initialize();
 }
 //------------------------------------------------------------------------------
 Mutant Logger::timeStampRoundToMin(uint64_t ts)
@@ -177,6 +179,7 @@ void Logger::fallBackToNewLine(AsyncFile & f)
 //------------------------------------------------------------------------------
 void Logger::readConfig()
 {
+  if( configReaded_ ) return;
   config_->parse().override();
   stdErr.bufferDataTTA(
     (uint64_t) config_->value("debug_file_max_collection_time",60) * 1000000u
@@ -210,6 +213,7 @@ void Logger::readConfig()
     statement_ = database_->newAttachedStatement();
     statement2_ = database_->newAttachedStatement();
   }
+  configReaded_ = true;
 }
 //------------------------------------------------------------------------------
 Logger & Logger::createDatabase()
@@ -367,6 +371,90 @@ Logger & Logger::createDatabase()
   return *this;
 }
 //------------------------------------------------------------------------------
+Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
+{
+  cgi_ <<
+    "  <label for=\"if\">Interface</label>\n"
+    "  <select name=\"if\" id=\"if\">\n"
+  ;
+  database_->attach()->start();
+  statement_->text("select distinct st_if from INET_BPFT_STAT")->execute();
+  while( statement_->fetch() ){
+    utf8::String sectionName(statement_->valueAsString("st_if"));
+    cgi_ << "    <option value=\"" + sectionName + "\"";
+    if( statement_->rowIndex() == 0 && !addUnionIf ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + sectionName + "</option>\n";
+  }
+  if( addUnionIf )
+    cgi_ <<
+      "    <option value=\"All\" selected=\"selected\">All</option>\n"
+    ;
+  database_->commit()->detach();
+  cgi_ <<
+    "  </select>\n"
+    "  <BR>\n"
+    "  <label for=\"bday\">Begin time</label>\n"
+    "  <select name=\"bday\" id=\"bday\">\n"
+  ;
+  struct tm curTime = time2tm(getlocaltimeofday());
+  for( intptr_t i = 1; i <= 31; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <select name=\"bmon\" id=\"bmon\">\n"
+  ;
+  for( intptr_t i = 1; i <= 12; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <select name=\"byear\" id=\"byear\">\n"
+  ;
+  for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <BR>\n"
+    "  <label for=\"eday\">End time</label>\n"
+    "  <select name=\"eday\" id=\"eday\">\n"
+  ;
+  for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <select name=\"emon\" id=\"emon\">\n"
+  ;
+  for( intptr_t i = 1; i <= 12; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <select name=\"eyear\" id=\"eyear\">\n"
+  ;
+  for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+  ;
+  return *this;
+}
+//------------------------------------------------------------------------------
 int32_t Logger::main()
 {
   readConfig();
@@ -396,95 +484,23 @@ int32_t Logger::main()
   FreeEnvironmentStrings(pEnv);
   stdErr.flush(true);
 #endif*/
-  cgi_.initialize();
   if( cgi_.isCGI() ){
-    if( cgi_.paramCount() == 0 ){
+    if( cgi_.paramCount() == 0 || cgi_.paramIndex("admin") >= 0 ){
       cgi_ <<
         "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
         "<HTML>\n"
         "<HEAD>\n"
         "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
         "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
-        "<TITLE>Statistics query form</TITLE>\n"
+        "<TITLE>Macroscope webinterface</TITLE>\n"
         "</HEAD>\n"
 	      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
-        "<FORM ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"POST\" accept-charset=\"utf8\">\n"
-        "  <label for=\"if\">Interface</label>\n"
-        "  <select name=\"if\" id=\"if\">\n"
+        "<FORM name=\"report_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
+        "  <B>Traffic report generation form</B>\n"
+        "  <BR>\n"
       ;
-      database_->attach()->start();
-      statement_->text("select distinct st_if from INET_BPFT_STAT")->execute();
-      while( statement_->fetch() ){
-//      for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
-//        utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
-        utf8::String sectionName(statement_->valueAsString("st_if"));
-//        if( sectionName.strcasecmp("decoration") == 0 ) continue;
-        cgi_ << "    <option value=\"" + sectionName + "\"";
-        if( statement_->rowIndex() == 0 ) cgi_ << " selected=\"selected\"";
-        cgi_ << ">" + sectionName + "</option>\n";
-      }
-      database_->commit()->detach();
+      writeCGIInterfaceAndTimeSelect(false);
       cgi_ <<
-        "  </select>\n"
-	      "  <BR>\n"
-        "  <label for=\"bday\">Begin time</label>\n"
-	      "  <select name=\"bday\" id=\"bday\">\n"
-      ;
-      struct tm curTime = time2tm(gettimeofday());
-      for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
-        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
-        if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
-        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
-      }
-      cgi_ <<
-        "  </select>\n"
-	      "  <select name=\"bmon\" id=\"bmon\">\n"
-      ;
-      for( intptr_t i = 1; i <= 12; i++ ){
-        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
-        if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
-        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
-      }
-      cgi_ <<
-        "  </select>\n"
-	      "  <select name=\"byear\" id=\"byear\">\n"
-      ;
-      for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
-        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
-        if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
-        cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
-      }
-      cgi_ <<
-        "  </select>\n"
-	      "  <BR>\n"
-        "  <label for=\"eday\">End time</label>\n"
-	      "  <select name=\"eday\" id=\"eday\">\n"
-      ;
-      for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
-        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
-        if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
-        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
-      }
-      cgi_ <<
-        "  </select>\n"
-	      "  <select name=\"emon\" id=\"emon\">\n"
-      ;
-      for( intptr_t i = 1; i <= 12; i++ ){
-        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
-        if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
-        cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
-      }
-      cgi_ <<
-        "  </select>\n"
-	      "  <select name=\"eyear\" id=\"eyear\">\n"
-      ;
-      for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
-        cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
-        if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
-        cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
-      }
-      cgi_ <<
-        "  </select>\n"
         "  <BR>\n"
         "  <label for=\"totals\">Maximum totals</label>\n"
         "  <select name=\"totals\" id=\"totals\">\n"
@@ -551,8 +567,47 @@ int32_t Logger::main()
       cgi_ <<
         "  <BR>\n"
         "  <BR>\n"
-        "  <INPUT TYPE=\"SUBMIT\" VALUE=\"Start\">\n"
-        "</FORM>\n"
+        "  <input name=\"report\" type=\"SUBMIT\" value=\"Start\">\n"
+      ;
+      if( cgi_.paramIndex("admin") < 0 ){
+        cgi_ <<
+//          "</FORM>\n"
+//          "<FORM name=\"report_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
+          "  <input name=\"admin\" type=\"SUBMIT\" value=\"Admin\">\n"
+          "</FORM>\n"
+        ;
+      }
+      else {
+        cgi_ <<
+          "</FORM>\n"
+          "<HR>\n"
+          "<B>Administrative functions</B>\n"
+          "<FORM name=\"admin_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
+        ;
+        writeCGIInterfaceAndTimeSelect(true);
+        cgi_ <<
+          "  <BR>\n"
+          "  <label for=\"newIfName\">New interface name</label>\n"
+          "  <input type=\"text\" name=\"newIfName\" id=\"newIfName\">\n"
+          "  <BR>\n"
+          "  <input name=\"rolloutif\" type=\"SUBMIT\" value=\"Rollout\">\n"
+          "  <input name=\"renameif\" type=\"SUBMIT\" value=\"Rename\">\n"
+          "  <input name=\"copyif\" type=\"SUBMIT\" value=\"Copy\">\n"
+          "  <input name=\"dropif\" type=\"SUBMIT\" value=\"Drop\">\n"
+          "  <input name=\"dropdns\" type=\"SUBMIT\" value=\"Drop DNS cache\">\n"
+          "</FORM>\n"
+        ;
+      }
+      cgi_ <<
+        "<HR>\n"
+        "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+        "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n"
+        "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+        "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+        "  http://developer.berlios.de/projects/macroscope/\n"
+        "</A>\n"
+#endif
 	      "</BODY>\n"
 	      "</HTML>\n"
       ;
@@ -750,6 +805,183 @@ int32_t Logger::doWork(uintptr_t stage)
       }
     }
   }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("rolloutif") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    struct tm cgiBT, cgiET;
+    memset(&cgiBT,0,sizeof(cgiBT));
+    cgiBT.tm_year = (int) cgi_.paramAsMutant("byear") - 1900;
+    cgiBT.tm_mon = (int) cgi_.paramAsMutant("bmon") - 1;
+    cgiBT.tm_mday = (int) cgi_.paramAsMutant("bday");
+    memset(&cgiET,0,sizeof(cgiET));
+    cgiET.tm_year = (int) cgi_.paramAsMutant("eyear") - 1900;
+    cgiET.tm_mon = (int) cgi_.paramAsMutant("emon") - 1;
+    cgiET.tm_mday = (int) cgi_.paramAsMutant("eday");
+    cgiET.tm_hour = 23;
+    cgiET.tm_min = 59;
+    cgiET.tm_sec = 59;
+    if( tm2Time(cgiBT) > tm2Time(cgiET) ) ksys::xchg(cgiBT,cgiET);
+    rolloutBPFTByIPs(
+      utf8::time2Str(tm2Time(cgiBT)),
+      utf8::time2Str(tm2Time(cgiET) + 999999),
+      cgi_.paramAsString("if").strcasecmp("all") == 0 ? utf8::String() : cgi_.paramAsString("if")
+    );
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Rollout operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("renameif") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    AutoDatabaseDetach autoDatabaseDetach(database_);
+    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    statement_->
+      text("update INET_BPFT_STAT set st_if = :newif" + utf8::String(all ? "" : " where st_if = :if"))->
+      prepare()->
+      paramAsString("newif",cgi_.paramAsString("newIfName"));
+    if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+    statement_->execute();
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Rename operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("copyif") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    AutoDatabaseDetach autoDatabaseDetach(database_);
+    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    statement_->
+      text("insert into INET_BPFT_STAT"
+           "  select '" + cgi_.paramAsString("newIfName") + "' as st_if, st_start,"
+           "    st_src_ip,st_dst_ip,st_ip_proto,"
+           "    st_src_port,st_dst_port,"
+           "    st_dgram_bytes,st_data_bytes"
+           "  from INET_BPFT_STAT" + utf8::String(all ? "" : " where st_if = :if"))->
+      prepare();
+    if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+    statement_->execute();
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Copy operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropif") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    AutoDatabaseDetach autoDatabaseDetach(database_);
+    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    statement_->
+      text("delete from INET_BPFT_STAT" + utf8::String(all ? "" : " where st_if = :if"))->
+      prepare();
+    if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+    statement_->execute();
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Drop operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropdns") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    AutoDatabaseDetach autoDatabaseDetach(database_);
+    statement_->text("delete from INET_DNS_CACHE")->execute();
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Drop DNS cache operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
   else {
     utf8::String mtMode(config_->textByPath("macroscope.multithreaded_mode","BOTH"));
     if( !cgi_.isCGI() ){
@@ -770,7 +1002,7 @@ int32_t Logger::doWork(uintptr_t stage)
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount() || cgi_.isCGI(); i++ ){
       utf8::String sectionName(cgi_.isCGI() ? cgi_.paramAsString("if") : config_->sectionByPath("macroscope.bpft").section(i).name());
       if( sectionName.strcasecmp("decoration") == 0 ) continue;
-      if( cgi_.isCGI() && stage < 1 ) break;
+      if( cgi_.isCGI() && (stage < 1 || cgi_.paramIndex("report") < 0) ) break;
       threads_.safeAdd(
         newObjectR1C2C3C4<BPFTThread>(
           *this,"macroscope.bpft." + sectionName,sectionName,stage)
@@ -933,7 +1165,7 @@ int main(int _argc,char * _argv[])
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
-  bool isDaemon = isDaemonCommandLineOption();
+  bool isDaemon = isDaemonCommandLineOption(), isCGI = false;
   if( isDaemon ) daemonize();
   utf8::String::Stream stream;
   try {
@@ -1038,6 +1270,7 @@ int main(int _argc,char * _argv[])
     errcode = 0;
     if( dispatch || sniffer || rollout ){
       macroscope::Logger logger(sniffer,isDaemon);
+      isCGI = logger.cgi().isCGI();
       if( dispatch && svc && sniffer ){
         service->logger_ = &logger;
         services.startServiceCtrlDispatcher();
@@ -1062,6 +1295,32 @@ int main(int _argc,char * _argv[])
     }
   }
   catch( ExceptionSP & e ){
+    if( isCGI ){
+      fprintf(stdout,"%s%s\n%s%s\n%s",
+        "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+        "<HTML>\n"
+        "<HEAD>\n"
+        "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+        "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+        "<TITLE>Macroscope webinterface error report</TITLE>\n"
+        "</HEAD>\n"
+        "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n",
+        (const char *) e->stdError().getANSIString(),
+        macroscope_version.gnu_ ,
+        " terminated with error(s), see above.\n",
+        (const char *) utf8::String("<HR>\n"
+        "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+        "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n"
+        "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+        "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+        "  http://developer.berlios.de/projects/macroscope/\n"
+        "</A>\n"
+#endif
+        "</BODY>\n"
+        "</HTML>\n").getANSIString()
+      );
+    }
     e->writeStdError();
     stdErr.debug(0,stream << macroscope_version.gnu_ << " terminated with error(s), see above.\n");
     errcode = e->code() >= errorOffset ? e->code() - errorOffset : e->code();

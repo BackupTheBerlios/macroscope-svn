@@ -1462,23 +1462,13 @@ void Logger::writeHtmlHead(AsyncFile & f)
 //------------------------------------------------------------------------------
 void Logger::writeHtmlTail(AsyncFile & f,int64_t ellapsed)
 {
-#if HAVE_UNAME
-  struct utsname un;
-  uname(&un);
-#else
-  struct {
-    utf8::String nodename;
-  } un;
-  ksock::APIAutoInitializer ksockAPIAutoInitializer;
-  un.nodename = ksock::SockAddr::gethostname();
-#endif
   f <<
-    "Start time: " + utf8::time2Str(ellapsed) +
+    "Start time: " + utf8::time2Str(ellapsed) + " GMT: " + utf8::time2Str(ellapsed - getgmtoffset()) +
     "<BR>\n" +
-    "Finish time: " + utf8::time2Str(getlocaltimeofday()) +
+    "Finish time: " + utf8::time2Str(getlocaltimeofday()) + " GMT: " + utf8::time2Str(gettimeofday()) +
     "<BR>\n" +
     "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
-    "Generated on " + un.nodename + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+    "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
     "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
     "  http://developer.berlios.de/projects/macroscope/\n"

@@ -738,7 +738,6 @@ l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
 void heapBenchmark()
 {
   AutoPtr<Randomizer> rnd(newObject<Randomizer>());
-  rnd->srand(1);
   HeapManager hm;
   uintptr_t elCount = 4096 * 1024;
   Array<uintptr_t> sizes;

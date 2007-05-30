@@ -1405,7 +1405,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       utf8::String(showFilter ?
         "Filter: <B>" + filter + "</B>, hash: " + filterHash_ + "<BR>\n" +
         "FilterSQL: <B>" + filter_ + "</B><BR>\n" :
-	utf8::String()
+	      utf8::String()
       ) +
       "DNS cache size: " + utf8::int2Str((uintmax_t) logger_->dnsCache_.count()) + ", "
       "hit: " + utf8::int2Str(logger_->dnsCacheHitCount_) + ", " +
