@@ -294,37 +294,57 @@ HeapManager::HeapManager() :
 #if defined(__WIN32__) || defined(__WIN64__)
   SYSTEM_INFO si;
   GetSystemInfo(&si);
-  if( si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 || si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 ){
-    HANDLE hToken;
-    BOOL r = OpenProcessToken(
-      GetCurrentProcess(),
-      TOKEN_ADJUST_PRIVILEGES,
-      &hToken
+  HANDLE hToken;
+  BOOL r = OpenProcessToken(
+    GetCurrentProcess(),
+    TOKEN_ADJUST_PRIVILEGES,
+    &hToken
+  );
+  if( r != 0 ){
+    LUID luid;
+    TOKEN_PRIVILEGES tp;
+    /*r = LookupPrivilegeValue(
+      NULL,
+      SE_INC_BASE_PRIORITY_NAME,
+      &luid
     );
     if( r != 0 ){
-      LUID luid;
-      r = LookupPrivilegeValue(
-        NULL,
-        "SeLockMemoryPrivilege",
-        &luid
+      tp.PrivilegeCount = 1;
+      tp.Privileges[0].Luid = luid;
+      tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+      r = AdjustTokenPrivileges(
+        hToken,
+        FALSE,
+        &tp,
+        sizeof(TOKEN_PRIVILEGES), 
+        (PTOKEN_PRIVILEGES)NULL, 
+        (PDWORD)NULL
       );
-      if( r != 0 ){
-        TOKEN_PRIVILEGES tp;
-        tp.PrivilegeCount = 1;
-        tp.Privileges[0].Luid = luid;
-        tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-        r = AdjustTokenPrivileges(
-          hToken,
-          FALSE,
-          &tp,
-          sizeof(TOKEN_PRIVILEGES), 
-          (PTOKEN_PRIVILEGES)NULL, 
-          (PDWORD)NULL
-        );
-        if( r != 0 && GetLastError() != ERROR_NOT_ALL_ASSIGNED ){
-          if( GetLargePageMinimum() > si.dwPageSize ){
+    }*/
+    r = LookupPrivilegeValue(
+      NULL,
+      SE_LOCK_MEMORY_NAME,
+      &luid
+    );
+    if( r != 0 ){
+      tp.PrivilegeCount = 1;
+      tp.Privileges[0].Luid = luid;
+      tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+      r = AdjustTokenPrivileges(
+        hToken,
+        FALSE,
+        &tp,
+        sizeof(TOKEN_PRIVILEGES), 
+        (PTOKEN_PRIVILEGES)NULL, 
+        (PDWORD)NULL
+      );
+      if( r != 0 && GetLastError() != ERROR_NOT_ALL_ASSIGNED ){
+        if( (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 ||
+            si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA32_ON_WIN64) &&
+            !isWow64() ){
+          if( GetLargePageMinimum() > si.dwAllocationGranularity ){
             clusterSize_ = GetLargePageMinimum();
-            flags_ = /*MEM_RESERVE |*/ MEM_COMMIT | MEM_LARGE_PAGES;
+            flags_ = MEM_LARGE_PAGES;
             bool locked;
             void * memory = sysalloc(clusterSize_,true,locked,true);
             if( memory == NULL ){
@@ -336,12 +356,12 @@ HeapManager::HeapManager() :
           }
         }
       }
-      CloseHandle(hToken);
     }
+    CloseHandle(hToken);
   }
   if( clusterSize_ < si.dwPageSize ){
-    clusterSize_ = si.dwPageSize;
-    flags_ = /*MEM_RESERVE |*/ MEM_COMMIT;
+    clusterSize_ = si.dwAllocationGranularity;
+    flags_ = 0;
   }  
 #else
   clusterSize_ = getpagesize();
@@ -666,45 +686,74 @@ HeapManager & HeapManager::sysfree(void * memory,uintptr_t size,bool locked)
 {
   assert( memory != NULL );
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( locked ) VirtualUnlock(memory,size);
+#ifndef NDEBUG
+  BOOL r;
+#endif
+  if( locked ){
+#ifndef NDEBUG
+    r =
+#endif
+    VirtualUnlock(memory,size);
+#ifndef NDEBUG
+    assert( r != 0 );
+#endif
+  }
+#ifndef NDEBUG
+  r =
+#endif
   VirtualFree(memory,size,MEM_DECOMMIT);
+#ifndef NDEBUG
+  assert( r != 0 );
+#endif
 #else
-  if( locked ) munlock(memory,size);
+#ifndef NDEBUG
+  int r;
+#endif
+  if( locked ){
+    r =
+    munlock(memory,size);
+#ifndef NDEBUG
+    assert( r == 0 );
+#endif
+  }
+  errno = 0;
   ::free(memory);
+  assert( errno == 0 );
 #endif
   allocatedSystemMemory_ -= size;
   return *this;
 }
+//---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+static BOOL sysallocHelper(uintptr_t size)
+{
+  SIZE_T minimumWorkingSetSize, maximumWorkingSetSize;
+  BOOL r;
+  r = GetProcessWorkingSetSize(GetCurrentProcess(),&minimumWorkingSetSize,&maximumWorkingSetSize);
+  if( r != 0 ){
+    minimumWorkingSetSize += size;
+    if( maximumWorkingSetSize < minimumWorkingSetSize ) maximumWorkingSetSize = minimumWorkingSetSize;
+    r = SetProcessWorkingSetSize(GetCurrentProcess(),minimumWorkingSetSize,maximumWorkingSetSize);
+  }
+  return r;
+}
+#endif
 //---------------------------------------------------------------------------
 void * HeapManager::sysalloc(uintptr_t size,bool lock,bool & locked,bool noThrow)
 {
   void * memory = NULL;
   locked = false;
 #if defined(__WIN32__) || defined(__WIN64__)
-  memory = VirtualAlloc(NULL,size,flags_,PAGE_READWRITE);
+  memory = VirtualAlloc(NULL,size,flags_ | MEM_COMMIT,PAGE_READWRITE);
   if( memory == NULL ){
     int32_t err = GetLastError() + errorOffset;
     if( !noThrow ) newObjectV1C2<EOutOfMemory>(err,__PRETTY_FUNCTION__)->throwSP();    
   }
   else {
-//#ifndef NDEBUG
-//    memset(memory,0xCD,size);
-//#endif
 l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
       int32_t err = GetLastError();
       if( err == ERROR_WORKING_SET_QUOTA ){
-        SIZE_T minimumWorkingSetSize, maximumWorkingSetSize;
-        BOOL r;
-        {
-//          AutoLock<InterlockedMutex> lock(mutex_);
-          r = GetProcessWorkingSetSize(GetCurrentProcess(),&minimumWorkingSetSize,&maximumWorkingSetSize);
-          if( r != 0 ){
-            minimumWorkingSetSize += size * 2;
-            if( maximumWorkingSetSize < minimumWorkingSetSize ) maximumWorkingSetSize = minimumWorkingSetSize;
-            r = SetProcessWorkingSetSize(GetCurrentProcess(),minimumWorkingSetSize,maximumWorkingSetSize);
-          }
-        }
-        if( r != 0 ) goto l1;
+        if( sysallocHelper(size) != 0 ) goto l1;
         err = GetLastError();
       }
       else if( err == ERROR_INVALID_PARAMETER ){
@@ -781,7 +830,7 @@ void heapBenchmark()
       allocatedMemory,
       allocatedSystemMemory,
       "P"
-    ).getANSIString()
+    ).getOEMString()
   );
   seqMallocTime = seqFreeTime = 0;
   t = gettimeofday();
@@ -841,7 +890,7 @@ void heapBenchmark()
       allocatedMemory,
       allocatedSystemMemory,
       "P"
-    ).getANSIString()
+    ).getOEMString()
   );
   for( uintptr_t i = 0; i < elCount; i++ ){
     hm.free(ptrs[i]);
