@@ -426,9 +426,9 @@ EmbeddedListNode<HeapManager::Clusters> *
     ffc = cs->lru_.count() > 0 && Cluster::listObject(*cs->lru_.first()).count_ > 0;
     if( !ffc ){
       uintptr_t a = 1;
-      if( size == 3 ) a = clusterSize_ / 0x1000000u + (clusterSize_ < 0x1000000u);
+      if( size == 3 ) a = clusterSize_ / 0x3000000u + (clusterSize_ < 0x3000000u);
       else
-      if( size == 2 ) a = clusterSize_ / 0x10000u + (clusterSize_ < 0x10000u);
+      if( size == 2 ) a = clusterSize_ / 0x20000u + (clusterSize_ < 0x20000u);
       else
       if( size == 1 ) a = clusterSize_ / 0x100u + (clusterSize_ < 0x100u);
       if( cs->free_.count() < a ) csNode = NULL;
@@ -480,13 +480,13 @@ void * HeapManager::malloc(uintptr_t size,bool lock)
   uintptr_t cc = 1, bs = clusterSize_;
   if( size >= 4 ){
   }
-  else if( size == 3 && clusterSize_ > 0x1000000u ){
-    cc = clusterSize_ / 0x1000000u;
-    bs = 0x1000000u;
+  else if( size == 3 && clusterSize_ > 0x3000000u ){
+    cc = clusterSize_ / 0x3000000u;
+    bs = 0x3000000u;
   }
-  else if( size == 2 && clusterSize_ > 0x10000u ){
-    cc = clusterSize_ / 0x10000u;
-    bs = 0x10000u;
+  else if( size == 2 && clusterSize_ > 0x20000u ){
+    cc = clusterSize_ / 0x20000u;
+    bs = 0x20000u;
   }
   else if( size == 1 && clusterSize_ > 0x100u ){
     cc = clusterSize_ / 0x100u;
@@ -557,23 +557,30 @@ void * HeapManager::realloc(void * ptr,uintptr_t size,bool lock)
     if( ptr != NULL ) free(ptr);
     return NULL;
   }
-  size += -intptr_t(size) & (align_ - 1);
-  Cluster c(NULL,ptr), * cp = clustersTree_.find(c);
-  if( cp == NULL ){
+  Cluster * cp = NULL;
+  if( ptr != NULL ){
+    size += -intptr_t(size) & (align_ - 1);
+    Cluster c(NULL,ptr), * cp = clustersTree_.find(c);
+    if( cp == NULL || (uintptr_t(ptr) - uintptr_t(cp->memory_)) % cp->bsize_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
-    SetLastError(ERROR_INVALID_DATA);
+      SetLastError(ERROR_INVALID_DATA);
 #else
-    errno = EINVAL;
+      errno = EINVAL;
 #endif
-    int32_t err = oserror() + errorOffset;
-    Exception e(err,__PRETTY_FUNCTION__);
-    e.writeStdError();
-    return NULL;
+      int32_t err = oserror() + errorOffset;
+      Exception e(err,__PRETTY_FUNCTION__);
+      e.writeStdError();
+      return NULL;
+    }
+    if( cp->bsize_ >= size || size >= (cp->bsize_ & (align_ - 1)) ) return ptr;
   }
-  if( cp->bsize_ >= size ) return ptr;
   void * p = malloc(size,lock);
-  if( p != NULL ){
+  if( p != NULL && cp != NULL ){
+#if HAVE_BCOPY
+    bcopy(p,ptr,cp->bsize_);
+#else
     memcpy(p,ptr,cp->bsize_);
+#endif
     free(ptr);
   }
   return p;
@@ -791,13 +798,13 @@ void heapBenchmark()
 {
   AutoPtr<Randomizer> rnd(newObject<Randomizer>());
   HeapManager hm;
-  uintptr_t elCount = 4096 * 1024;
+  uintptr_t elCount = 4 * 1024 * 1024;
   Array<uintptr_t> sizes;
   Array<void *> ptrs;
   sizes.resize(elCount);
   ptrs.resize(elCount);
   for( uintptr_t i = 0; i < elCount; i++ ){
-    sizes[i] = uintptr_t(rnd->random(64) + 1);
+    sizes[i] = uintptr_t(rnd->random(128) + 1);
     ptrs[i] = NULL;
   }
   uint64_t t, seqMallocTime = 0, seqFreeTime = 0, rndTime, allocatedSystemMemory, allocatedMemory;

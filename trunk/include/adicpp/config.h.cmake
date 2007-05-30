@@ -180,6 +180,7 @@
 #cmakedefine HAVE_MEMMOVE 1
 #cmakedefine HAVE_MEMSET 1
 #cmakedefine HAVE_MEMCPY 1
+#cmakedefine HAVE_BCOPY 1
 #cmakedefine HAVE_STRCASECMP 1
 #cmakedefine HAVE_STRCHR 1
 #cmakedefine HAVE_STRNCASECMP 1
