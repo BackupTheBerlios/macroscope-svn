@@ -872,7 +872,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
-      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
       "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
@@ -910,7 +910,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
-      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
       "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
@@ -943,7 +943,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
-      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
       "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
@@ -971,7 +971,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
-      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
       "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
