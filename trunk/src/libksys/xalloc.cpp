@@ -359,12 +359,12 @@ HeapManager::HeapManager() :
     }
     CloseHandle(hToken);
   }
-  if( clusterSize_ < si.dwPageSize ){
+  if( clusterSize_ < si.dwAllocationGranularity ){
     clusterSize_ = si.dwAllocationGranularity;
     flags_ = 0;
   }  
 #else
-  clusterSize_ = 4 * 1024 * 1024;// getpagesize();
+  clusterSize_ = getpagesize() * 16;
 #endif
   align_ = 1;
 }
