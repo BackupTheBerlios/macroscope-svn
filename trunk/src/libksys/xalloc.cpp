@@ -561,6 +561,7 @@ void * HeapManager::realloc(void * ptr,uintptr_t size,bool lock)
 //---------------------------------------------------------------------------
 void HeapManager::free(void * ptr)
 {
+  if( ptr == NULL ) return;
   Cluster c(NULL,ptr), * cp = clustersTree_.find(c);
   if( cp == NULL || (uintptr_t(ptr) - uintptr_t(cp->memory_)) % cp->bsize_ != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -745,10 +746,10 @@ void heapBenchmark()
   sizes.resize(elCount);
   ptrs.resize(elCount);
   for( uintptr_t i = 0; i < elCount; i++ ){
-    sizes[i] = uintptr_t(rnd->random(32) + 1);
+    sizes[i] = uintptr_t(rnd->random(64) + 1);
     ptrs[i] = NULL;
   }
-  uint64_t t, seqMallocTime = 0, seqFreeTime = 0, allocatedSystemMemory, allocatedMemory;
+  uint64_t t, seqMallocTime = 0, seqFreeTime = 0, rndTime, allocatedSystemMemory, allocatedMemory;
   t = gettimeofday();
   for( uintptr_t i = 0; i < elCount; i++ ){
     ptrs[i] = hm.malloc(sizes[i],false);
@@ -759,6 +760,7 @@ void heapBenchmark()
   t = gettimeofday();
   for( uintptr_t i = 0; i < elCount; i++ ){
     hm.free(ptrs[i]);
+    ptrs[i] = NULL;
   }
   seqFreeTime += gettimeofday() - t;
   fprintf(stderr,"seq mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
@@ -792,6 +794,7 @@ void heapBenchmark()
   t = gettimeofday();
   for( uintptr_t i = 0; i < elCount; i++ ){
     kfree(ptrs[i]);
+    ptrs[i] = NULL;
   }
   seqFreeTime += gettimeofday() - t;
   fprintf(stderr,"seq system mallocs: %8"PRIu64".%04"PRIu64" mps, ellapsed %s\n",
@@ -806,6 +809,44 @@ void heapBenchmark()
     uint64_t(elCount) * 1000000u / seqFreeTime * 10000u,
     (const char *) utf8::elapsedTime2Str(seqFreeTime).getOEMString()
   );
+// random test
+  Array<uintptr_t> indices;
+  indices.resize(elCount);
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    indices[i] = uintptr_t(rnd->random(elCount));
+  }
+  rndTime = 0;
+  t = gettimeofday();
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    if( ptrs[indices[i]] == NULL ){
+      ptrs[indices[i]] = hm.malloc(sizes[i]);
+    }
+    else {
+      hm.free(ptrs[indices[i]]);
+      ptrs[indices[i]] = NULL;
+    }
+  }
+  rndTime += gettimeofday() - t;
+  fprintf(stderr,"rnd mallocs - frees: %8"PRIu64".%04"PRIu64" mfps, ellapsed %s\n",
+    uint64_t(elCount) * 1000000u / rndTime,
+    uint64_t(elCount) * 10000u * 1000000u / rndTime -
+    uint64_t(elCount) * 1000000u / rndTime * 10000u,
+    (const char *) utf8::elapsedTime2Str(rndTime).getOEMString()
+  );
+  allocatedSystemMemory = hm.allocatedSystemMemory();
+  allocatedMemory = hm.allocatedMemory();
+  fprintf(stderr,
+    "memory used area: %s\n",
+    (const char *) formatByteLength(
+      allocatedMemory,
+      allocatedSystemMemory,
+      "P"
+    ).getANSIString()
+  );
+  for( uintptr_t i = 0; i < elCount; i++ ){
+    hm.free(ptrs[i]);
+    ptrs[i] = NULL;
+  }
 }
 //---------------------------------------------------------------------------
 } // namespace ksys
