@@ -364,7 +364,7 @@ HeapManager::HeapManager() :
     flags_ = 0;
   }  
 #else
-  clusterSize_ = getpagesize();
+  clusterSize_ = 4 * 1024 * 1024;// getpagesize();
 #endif
   align_ = 1;
 }
@@ -710,7 +710,9 @@ HeapManager & HeapManager::sysfree(void * memory,uintptr_t size,bool locked)
   int r;
 #endif
   if( locked ){
+#ifndef NDEBUG
     r =
+#endif
     munlock(memory,size);
 #ifndef NDEBUG
     assert( r == 0 );
@@ -781,7 +783,7 @@ l1: if( lock && !(locked = VirtualLock(memory,size) != 0) ){
     allocatedSystemMemory_ += size;
   }
 #endif
-  assert( (uintptr_t(memory) & (clusterSize_ - 1)) == 0 ); // check address align
+  assert( (uintptr_t(memory) & (getpagesize() - 1)) == 0 ); // check address align
   return memory;
 }
 //---------------------------------------------------------------------------
