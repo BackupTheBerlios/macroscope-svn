@@ -94,10 +94,10 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
     c[3] = (i + 3).getLowerChar();
     c[4] = (i + 4).getLowerChar();
     c[5] = (i + 5).getLowerChar();
-    if( (prev == '\0' || prev == '(' || prev == ')' || (utf8::getC1Type(prev) & C1_SPACE) != 0) &&
+    if( (prev == '\0' || prev == '(' || prev == ')' || (utf8::getC1Type(prev) & C1_SPACE) != 0) && (
         (c[0] == 's' && c[1] == 'r' && c[2] == 'c' && (c[3] == '_' || utf8::getC1Type(c[3]) & C1_SPACE) != 0) ||
         (c[0] == 'd' && c[1] == 's' && c[2] == 't' && (c[3] == '_' || utf8::getC1Type(c[3]) & C1_SPACE) != 0) ||
-        (c[0] == 'p' && c[1] == 'r' && c[2] == 'o' && c[3] == 't' && c[4] == 'o' && (utf8::getC1Type(c[5]) & C1_SPACE) != 0) ){
+        (c[0] == 'p' && c[1] == 'r' && c[2] == 'o' && c[3] == 't' && c[4] == 'o' && (utf8::getC1Type(c[5]) & C1_SPACE) != 0)) ){
       utf8::String::Iterator shift(i);
       while( shift.next() && !shift.isSpace() );
       utf8::String sd(utf8::String(i,shift));
@@ -222,7 +222,7 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,c
 utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
 {
   uintmax_t q, b, c, t1, t2, t3;
-  char * postfix;
+  const char * postfix;
 
   q = traf * 10000u / allTraf;
   b = q / 100u;

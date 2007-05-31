@@ -151,7 +151,7 @@ String::String(const wchar_t * s, uintptr_t l) : container_(&nullContainer())
   uintptr_t       ul, ql, ll;
   const wchar_t * a;
   for( ul = 0, ll = l, a = s; ll > 0 && *a != L'\0'; a++, ll-- ){
-    ql = ucs2utf8seq("", 0, *a);
+    ql = ucs2utf8seq((char *) NULL, 0, *a);
     if( ql == 0 )
       newObjectV1C2<ksys::Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
     ul += ql;

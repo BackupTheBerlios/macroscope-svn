@@ -90,7 +90,7 @@ template< class T> class DirectAccess {
     {
     }
 
-    T * const operator ->() const
+    T * operator ->() const
     {
       return ptr_;
     }
@@ -113,7 +113,7 @@ template< typename T> class InterlockedAccess {
       ptr_->release();
     }
 
-    T * const operator ->() const
+    T * operator ->() const
     {
       return ptr_;
     }
@@ -203,7 +203,7 @@ template <class T> class SPRC {
     SPRC(T * ptr);
     SPRC(const SPRC< T> & ptr);
 
-    T * const operator ->() const;
+    T * operator ->() const;
     SPRC< T> & operator =(T * ptr);
     SPRC< T> & operator =(const SPRC< T> & ptr);
 
@@ -233,7 +233,7 @@ template <class T> inline SPRC<T>::~SPRC()
 }
 //-----------------------------------------------------------------------------
 template <class T> inline
-T * const SPRC<T>::operator -> () const
+T * SPRC<T>::operator -> () const
 {
   return ptr_;
 }
@@ -289,7 +289,7 @@ template <class T> class SPRCZS {
     SPRCZS(T * ptr);
     SPRCZS(const SPRCZS< T> & ptr);
 
-    T * const     operator ->() const;
+    T * operator ->() const;
     SPRCZS< T> &  operator =(T * ptr);
     SPRCZS< T> &  operator =(const SPRCZS< T> & ptr);
 
@@ -319,7 +319,7 @@ template< class T> inline SPRCZS< T>::~SPRCZS()
 }
 //-----------------------------------------------------------------------------
 template< class T> inline
-T * const SPRCZS<T>::operator ->() const
+T * SPRCZS<T>::operator ->() const
 {
   return ptr_;
 }
@@ -375,7 +375,7 @@ template<typename T,typename M> class LockedAction {
     LockedAction(T & object,M & mutex);
     LockedAction(const LockedAction<T,M> & a);
 
-    T * const operator -> () const;
+    T * operator -> () const;
   protected:
   private:
     void operator = (const LockedAction<T,M> &){}
@@ -405,7 +405,7 @@ LockedAction<T,M>::LockedAction(const LockedAction<T,M> & a) : object_(a.object_
 }*/
 //-----------------------------------------------------------------------------
 template <typename T,typename M> inline
-T * const LockedAction<T,M>::operator -> () const
+T * LockedAction<T,M>::operator -> () const
 {
   return &object_;
 }

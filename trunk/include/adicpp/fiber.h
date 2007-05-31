@@ -54,7 +54,7 @@ class Fiber : virtual public Object {
 
     void DECLSPEC_NOTHROW switchFiber(Fiber * fiber) GNUG_NOTHROW;
 
-    Fiber * const mainFiber() const;
+    Fiber * mainFiber() const;
     BaseThread * const & thread() const;
     AsyncEvent event_;
   protected:
@@ -513,7 +513,7 @@ inline Requester & BaseThread::requester()
   return *reinterpret_cast<Requester *>(requester_);
 }
 //------------------------------------------------------------------------------
-inline Fiber * const Fiber::mainFiber() const
+inline Fiber * Fiber::mainFiber() const
 {
   return thread_;
 }

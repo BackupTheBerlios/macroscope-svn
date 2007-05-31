@@ -516,6 +516,7 @@ void createGUID(guid_t & uuid)
 guid_t stringToGUID(const char * s)
 {
   guid_t uuid;
+  memset(&uuid,0,sizeof(uuid));
 #if defined(__WIN32__) || defined(__WIN64__)
   RPC_STATUS status = UuidFromString((RPC_CSTR) s,&uuid);
   if( status != RPC_S_OK ){
@@ -539,7 +540,8 @@ utf8::String createGUIDAsBase32String()
 //---------------------------------------------------------------------------
 utf8::String screenChar(const utf8::String::Iterator & ii)
 {
-  char * p, b[12];
+  char b[12];
+  const char * p;
   switch( ii.getChar() ){
     case '\a' :
       p = "\\a";
@@ -956,7 +958,7 @@ utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fmt)
 {
   if( len == 0 ) return "-";
   uintmax_t q, b, c, t1, t2, t3;
-  char * suffix = "";
+  const char * suffix = "";
   bool suffixes = false, percent = false;
   while( *fmt != '\0' ) switch( *fmt++ ){
     case 'S' : case 's' : suffixes = true; break;

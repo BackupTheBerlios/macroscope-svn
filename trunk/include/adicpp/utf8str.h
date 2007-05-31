@@ -49,7 +49,7 @@ template <typename T> class StringT {
     StringT<T> & operator = (const StringT<T> & string);
 
     operator T * ();
-    operator T * const () const;
+    operator T * () const;
     T & operator [] (intptr_t i);
     const T & operator [] (intptr_t i) const;
     T & operator [] (uintptr_t i);
@@ -101,7 +101,7 @@ template <typename T> StringT<T>::operator T *()
   return container_->string_;
 }
 //---------------------------------------------------------------------------
-template <typename T> StringT<T>::operator T * const () const
+template <typename T> StringT<T>::operator T * () const
 {
   return container_->string_;
 }
@@ -720,7 +720,7 @@ inline bool String::Iterator::isFirst() const
 //---------------------------------------------------------------------------
 inline bool String::Iterator::isLast() const
 {
-  return position_ < 0 || container_->string_[cursor_] != '\0' && container_->string_[cursor_ + utf8seqlen(container_->string_ + cursor_)] == '\0';
+  return position_ < 0 || (container_->string_[cursor_] != '\0' && container_->string_[cursor_ + utf8seqlen(container_->string_ + cursor_)] == '\0');
 }
 //---------------------------------------------------------------------------
 inline bool String::Iterator::bof() const

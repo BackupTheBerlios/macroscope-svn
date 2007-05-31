@@ -54,7 +54,7 @@ class DPB {
     DPB();
 
     const uintptr_t &     dpbLen() const;
-    char * const          dpb() const;
+    char *                dpb() const;
     DPB &                 clear();
     DPB &                 add(const utf8::String & name,const ksys::Mutant & value);
     const uintptr_t &     dialect();
@@ -114,7 +114,7 @@ inline const uintptr_t & DPB::timeout() const
   return timeout_;
 }
 //---------------------------------------------------------------------------
-inline char * const DPB::dpb() const
+inline char * DPB::dpb() const
 {
   return dpb_;
 }

@@ -1146,7 +1146,7 @@ void PCAP::LazyWriter::threadExecute()
         }
         term = terminated_;
       }
-      if( group == NULL ) if( term ) return; else break;
+      if( group == NULL ){ if( term ) return; else break; }
       swapOut(tempFile,group);
       if( group != NULL ){
         AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);

@@ -46,7 +46,7 @@ class XSQLDAHolder {
     XSQLDAHolder &        resize(long n);
     // properties
     XSQLDA *              sqlda();
-    const XSQLDA * const  sqlda() const;
+    const XSQLDA * sqlda() const;
     uintptr_t             count();
   protected:
   private:
@@ -58,7 +58,7 @@ inline XSQLDA * XSQLDAHolder::sqlda()
   return sqlda_;
 }
 //---------------------------------------------------------------------------
-inline const XSQLDA * const XSQLDAHolder::sqlda() const
+inline const XSQLDA * XSQLDAHolder::sqlda() const
 {
   return sqlda_;
 }

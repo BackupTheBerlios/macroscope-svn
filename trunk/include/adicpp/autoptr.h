@@ -41,7 +41,7 @@ template< class T> class AutoPtr {
     ~AutoPtr();
 
     T * operator -> ();
-    T * const operator -> () const;
+    T * operator -> () const;
 
 #if !HAVE_INTPTR_T_AS_INT
     T &             operator [] (int i);
@@ -109,7 +109,7 @@ T * AutoPtr<T>::operator ->()
 }
 //---------------------------------------------------------------------------
 template< class T> inline
-T * const AutoPtr<T>::operator ->() const
+T * AutoPtr<T>::operator ->() const
 {
   return ptr_;
 }
