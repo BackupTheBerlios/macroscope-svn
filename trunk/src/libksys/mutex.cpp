@@ -97,6 +97,14 @@ void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int3
   }
 }
 //---------------------------------------------------------------------------
+void interlockedCompareExchangeAcquire(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+{
+  for(;;){
+    if( interlockedCompareExchange(v,exValue,cmpValue) == 0 ) break;
+    ksleep1();
+  }
+}
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 void InterlockedMutex::initialize()

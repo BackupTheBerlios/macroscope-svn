@@ -45,8 +45,8 @@ class Initializer {
     static void initialize(int argc,char ** argv);
     static void cleanup();
   private:
-    static volatile int32_t mutex_;
-    static int32_t initCount_;
+    static volatile ksys::ilock_t mutex_;
+    static ksys::ilock_t initCount_;
 };
 //---------------------------------------------------------------------------
 inline void Initializer::acquire()
@@ -61,7 +61,7 @@ inline void Initializer::release()
 //---------------------------------------------------------------------------
 inline void Initializer::initialize(int argc,char ** argv)
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) NULL);
+  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
   if( initCount_ == 0 ){
     ksys::initialize(argc,argv);
 #if !DISABLE_FIREBIRD_INTERFACE
@@ -76,7 +76,7 @@ inline void Initializer::initialize(int argc,char ** argv)
 //---------------------------------------------------------------------------
 inline void Initializer::cleanup()
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) NULL);
+  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
   assert( initCount_ > 0 );
   if( initCount_ == 1 ){
 #if !DISABLE_MYSQL_INTERFACE

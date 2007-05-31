@@ -1477,7 +1477,7 @@ void chModOwn(
   }
   if( chmod(anyPathName2HostPathName(pathName).getANSIString(),(mode_t) m2) != 0 ){
     err = errno;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
+    newObjectV1C2<Exception>(err,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
   }
   const struct passwd * u = getpwnam(utf8::String(user).getANSIString());
   uid_t userID(u != NULL ? u->pw_uid : (uid_t) user);
@@ -1485,7 +1485,7 @@ void chModOwn(
   gid_t groupID(g != NULL ? g->gr_gid : (gid_t) group);
   if( chown(anyPathName2HostPathName(pathName).getANSIString(),userID,groupID) != 0 ){
     err = errno;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
+    newObjectV1C2<Exception>(err,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
   }
 }
 #else
@@ -3318,6 +3318,7 @@ void initialize(int argc,char ** argv)
   }
 //---------------------------------------------------------------------------
   InterlockedMutex::initialize();
+  MemoryManager::initialize();
   Thread::initialize();
   MemoryStream::initialize();
   Mutant::initialize();
@@ -3395,6 +3396,7 @@ void cleanup()
   Mutant::cleanup();
   MemoryStream::cleanup();
   Thread::cleanup();
+  MemoryManager::cleanup();
   InterlockedMutex::cleanup();
   Object::cleanup();
 #if defined(__WIN32__) || defined(__WIN64__)

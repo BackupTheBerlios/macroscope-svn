@@ -35,6 +35,7 @@ ADD_LIBRARY(ksys STATIC
   henum.cpp
   log.cpp
   lzo.cpp
+  memmgr.cpp
   mstream.cpp
   mutant.cpp
   mutex.cpp

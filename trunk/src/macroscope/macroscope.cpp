@@ -774,14 +774,17 @@ int32_t Logger::doWork(uintptr_t stage)
   int32_t exitCode = 0;
   if( sniffer_ && !cgi_.isCGI() ){
     if( stage == 1 ){
+      bool ml;
 #if HAVE_MLOCKALL
-      bool ml = config_->valueByPath("macroscope.bpft.mlockall",false);
+      ml = config_->valueByPath("macroscope.bpft.mlockall",false);
       if( ml && mlockall(MCL_FUTURE) != 0 ){
         int32_t err = errno;
         Exception e(err,"mlockall failed.");
 	      e.writeStdError();
       }
 #endif
+      ml = config_->valueByPath("macroscope.bpft.mlockall",true);
+      if( ml ) MemoryManager::globalMemoryManager().lock(true);
       utf8::String joined;
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
@@ -1201,7 +1204,7 @@ int main(int _argc,char * _argv[])
         continue;
       }
       if( argv()[i].strcmp("--sniffer") == 0 ){
-        sniffer = true;
+        sniffer = true;        
       }
       else if( argv()[i].strcmp("--iflist") == 0 ){
         PCAP::printAllDevices();

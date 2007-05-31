@@ -1101,7 +1101,7 @@ l1:
       }
       AutoPtr<char> s2;
       s2.alloc(sl + 1);
-      utf8::mbcs2utf8s(buffer->codePage_,s2,sl + 1,s,~uintptr_t(0) >> 1);
+      sl = utf8::mbcs2utf8s(buffer->codePage_,s2,sl + 1,s,~uintptr_t(0) >> 1);
       s2.xchg(s);
     }
     utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,s.ptr());

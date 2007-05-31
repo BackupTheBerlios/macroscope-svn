@@ -237,23 +237,30 @@ inline InterlockedMutex & giant()
 template <typename T> class AutoLock {
   public:
     ~AutoLock();
+    AutoLock();
     AutoLock(T & mutex);
+    AutoLock & setLocked(T & mutex){ mutex.acquire(); mutex_ = &mutex; return *this; }
+    AutoLock & unLock(){ if( mutex_ != NULL ) mutex_->release(); mutex_ = NULL; return *this; }
   protected:
   private:
-    T & mutex_;
+    T * mutex_;
 
-    AutoLock(const AutoLock<T> &){}
-    void operator =(const AutoLock<T> &){}
+    AutoLock(const AutoLock<T> &);
+    void operator =(const AutoLock<T> &);
 };
 //---------------------------------------------------------------------------
 template <typename T> inline AutoLock<T>::~AutoLock()
 {
-  mutex_.release();
+  if( mutex_ != NULL ) mutex_->release();
 }
 //---------------------------------------------------------------------------
-template <typename T> inline AutoLock<T>::AutoLock(T & mutex) : mutex_(mutex)
+template <typename T> inline AutoLock<T>::AutoLock() : mutex_(NULL)
 {
-  mutex_.acquire();
+}
+//---------------------------------------------------------------------------
+template <typename T> inline AutoLock<T>::AutoLock(T & mutex) : mutex_(&mutex)
+{
+  mutex_->acquire();
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
