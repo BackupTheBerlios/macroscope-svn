@@ -31,13 +31,14 @@
 
 #if HAVE_SQL_H
 #include <sql.h>
+#include <sqlext.h>
 #endif
 
-#include <adicpp/odbcppintf.h>
-#include <adicpp/odbcppdb.h>
-#include <adicpp/odbcppexcpt.h>
-#include <adicpp/odbcppst.h>
-#include <adicpp/odbcpptr.h>
+#include <adicpp/odbcintf.h>
+#include <adicpp/odbcexcpt.h>
+#include <adicpp/odbcst.h>
+#include <adicpp/odbctr.h>
+#include <adicpp/odbcdb.h>
 
 namespace odbcpp {
 

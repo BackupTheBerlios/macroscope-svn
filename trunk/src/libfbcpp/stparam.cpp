@@ -68,14 +68,14 @@ ksys::Mutant DSQLParam::getMutant()
         return v;
       }
       return (int) bigInt_;
-    case SQL_FLOAT       :
+    case SQL_FB_FLOAT       :
       return float_;
-    case SQL_DOUBLE      :
+    case SQL_FB_DOUBLE      :
     case SQL_D_FLOAT     :
       return double_;
-    case SQL_TYPE_TIME   :
-    case SQL_TYPE_DATE   :
-    case SQL_TIMESTAMP   :
+    case SQL_FB_TYPE_TIME   :
+    case SQL_FB_TYPE_DATE   :
+    case SQL_FB_TIMESTAMP   :
       return iscTimeStamp2Timeval(timeStamp_);
     case SQL_QUAD        :
     case SQL_INT64       :
@@ -118,16 +118,16 @@ DSQLParam & DSQLParam::setMutant(const ksys::Mutant & value)
         bigInt_ = value;
       }
       break;
-    case SQL_FLOAT       :
+    case SQL_FB_FLOAT       :
       float_ = value;
       break;
-    case SQL_DOUBLE      :
+    case SQL_FB_DOUBLE      :
     case SQL_D_FLOAT     :
       double_ = value;
       break;
-    case SQL_TYPE_TIME   :
-    case SQL_TYPE_DATE   :
-    case SQL_TIMESTAMP   :
+    case SQL_FB_TYPE_TIME   :
+    case SQL_FB_TYPE_DATE   :
+    case SQL_FB_TIMESTAMP   :
       timeStamp_ = timeval2IscTimeStamp(value);
       break;
     case SQL_BLOB        :
@@ -161,14 +161,14 @@ utf8::String DSQLParam::getString()
           return ksys::Mutant(v);
         }
         return utf8::int2Str(bigInt_);
-      case SQL_FLOAT       :
+      case SQL_FB_FLOAT       :
         return utf8::float2Str(float_);
-      case SQL_DOUBLE      :
+      case SQL_FB_DOUBLE      :
       case SQL_D_FLOAT     :
         return utf8::float2Str(double_);
-      case SQL_TYPE_TIME   :
-      case SQL_TYPE_DATE   :
-      case SQL_TIMESTAMP   :
+      case SQL_FB_TYPE_TIME   :
+      case SQL_FB_TYPE_DATE   :
+      case SQL_FB_TIMESTAMP   :
         return utf8::time2Str(iscTimeStamp2Time(timeStamp_));
       case SQL_BLOB        :
       case SQL_ARRAY       :
@@ -198,16 +198,16 @@ DSQLParam & DSQLParam::setString(const utf8::String & value)
         bigInt_ = (int64_t) v;
       }
       break;
-    case SQL_FLOAT       :
+    case SQL_FB_FLOAT       :
       float_ = (float) utf8::str2Float(value);
       break;
-    case SQL_DOUBLE      :
+    case SQL_FB_DOUBLE      :
     case SQL_D_FLOAT     :
       double_ = (double) utf8::str2Float(value);
       break;
-    case SQL_TYPE_TIME   :
-    case SQL_TYPE_DATE   :
-    case SQL_TIMESTAMP   :
+    case SQL_FB_TYPE_TIME   :
+    case SQL_FB_TYPE_DATE   :
+    case SQL_FB_TIMESTAMP   :
       timeStamp_ = time2IscTimeStamp(utf8::str2Time(value));
       break;
     case SQL_BLOB        :
@@ -463,18 +463,18 @@ DSQLParams & DSQLParams::bind()
       case SQL_LONG        :
         v.sqldata = (char *) &param->bigInt_;
         break;
-      case SQL_FLOAT       :
+      case SQL_FB_FLOAT       :
         v.sqldata = (char *) &param->float_;
         for( j = v.sqlscale; j < 0; j++ ) param->float_ *= 10;
         break;
-      case SQL_DOUBLE      :
+      case SQL_FB_DOUBLE      :
       case SQL_D_FLOAT     :
         v.sqldata = (char *) &param->double_;
         for( j = v.sqlscale; j < 0; j++ ) param->double_ *= 10;
         break;
-      case SQL_TYPE_TIME   :
-      case SQL_TYPE_DATE   :
-      case SQL_TIMESTAMP   :
+      case SQL_FB_TYPE_TIME   :
+      case SQL_FB_TYPE_DATE   :
+      case SQL_FB_TIMESTAMP   :
         v.sqldata = (char *) &param->timeStamp_;
         break;
       case SQL_QUAD        :

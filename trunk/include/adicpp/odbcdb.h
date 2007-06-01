@@ -29,20 +29,7 @@
 //---------------------------------------------------------------------------
 namespace odbcpp {
 //---------------------------------------------------------------------------
-class Transaction;
 class DSQLStatement;
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class Base : virtual ksys::Object {
-  friend class EClientServer;
-  public:
-    virtual ~Base() {}
-    Base() {}
-  protected:
-    virtual void exceptionHandler(ksys::Exception * e) = 0;
-  private:
-};
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -73,9 +60,9 @@ inline const utf8::String & DPB::password() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class EClientServer;
-//---------------------------------------------------------------------------
 class Database : virtual public Base {
+  friend class Transaction;
+  friend class DSQLStatement;
   public:
     virtual ~Database();
     Database();
@@ -104,7 +91,11 @@ class Database : virtual public Base {
     DPB dpb_;
     utf8::String name_;
     Transaction * transaction_;
-    ksys::EmbeddedHash<utf8::String,DSQLStatement> statements_;
+    ksys::EmbeddedList<
+      DSQLStatement,
+      DSQLStatement::listNode,
+      DSQLStatement::listObject      
+    > statements_;
 };
 //---------------------------------------------------------------------------
 inline bool Database::attached()

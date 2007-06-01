@@ -38,19 +38,19 @@ class API {
   friend void initialize();
   friend void cleanup();
   public:
-#if _MSC_VER
-#pragma warning(push,3)
-#endif
     SQLRETURN (SQL_API * SQLAllocHandle)(SQLSMALLINT HandleType,SQLHANDLE InputHandle,SQLHANDLE * OutputHandle);	
-    SQLRETURN (SQL_API * SQLSetEnvAttr)(SQLHENV EnvironmentHandle,SQLINTEGER Attribute, SQLPOINTER Value,SQLINTEGER StringLength);
+    SQLRETURN (SQL_API * SQLSetEnvAttr)(SQLHENV EnvironmentHandle,SQLINTEGER Attribute,SQLPOINTER Value,SQLINTEGER StringLength);
     SQLRETURN (SQL_API * SQLSetConnectAttr)(SQLHDBC ConnectionHandle,SQLINTEGER Attribute, SQLPOINTER Value,SQLINTEGER StringLength);
     SQLRETURN (SQL_API * SQLConnect)(SQLHDBC ConnectionHandle,SQLCHAR * ServerName,SQLSMALLINT NameLength1,SQLCHAR * UserName, SQLSMALLINT NameLength2,SQLCHAR * Authentication,SQLSMALLINT NameLength3);
     SQLRETURN (SQL_API * SQLDisconnect)(SQLHDBC ConnectionHandle);
     SQLRETURN (SQL_API * SQLFreeHandle)(SQLSMALLINT HandleType,SQLHANDLE Handle);
-#if _MSC_VER
-#pragma warning(pop)
-#endif
-#endif
+    SQLRETURN (SQL_API * SQLBindParam)(SQLHSTMT StatementHandle,SQLUSMALLINT ParameterNumber,SQLSMALLINT ValueType,SQLSMALLINT ParameterType,SQLULEN LengthPrecision,SQLSMALLINT ParameterScale, SQLPOINTER ParameterValue,SQLLEN * StrLen_or_Ind);
+    SQLRETURN (SQL_API * SQLEndTran)(SQLSMALLINT HandleType,SQLHANDLE Handle,SQLSMALLINT CompletionType);
+    SQLRETURN (SQL_API * SQLError)(SQLHENV EnvironmentHandle,SQLHDBC ConnectionHandle,SQLHSTMT StatementHandle,SQLCHAR * Sqlstate,SQLINTEGER * NativeError,SQLCHAR * MessageText, SQLSMALLINT BufferLength,SQLSMALLINT * TextLength);
+    SQLRETURN (SQL_API * SQLExecDirect)(SQLHSTMT StatementHandle,SQLCHAR *StatementText,SQLINTEGER TextLength);
+    SQLRETURN (SQL_API * SQLExecute)(SQLHSTMT StatementHandle);
+    SQLRETURN (SQL_API * SQLFetch)(SQLHSTMT StatementHandle);
+
     void open();
     void close();
     utf8::String clientLibrary();
@@ -60,23 +60,17 @@ class API {
     ksys::InterlockedMutex & mutex();
     utf8::String clientLibraryNL();
     uint8_t clientLibrary_[sizeof(utf8::String)];
-    intptr_t                 count_;
-    uint8_t threadCount_[sizeof(ksys::ThreadLocalVariable<intptr_t>)];
-    ksys::ThreadLocalVariable<intptr_t> & threadCount();
+    intptr_t count_;
 #if defined(__WIN32__) || defined(__WIN64__)
-    HINSTANCE                 handle_;
+    HINSTANCE handle_;
 #else
-    void *                    handle_;
+    void * handle_;
 #endif
-
-    utf8::String              tryOpen();
-
+    utf8::String tryOpen();
     static const char * const symbols_[];
   private:
-    static void                 afterThreadExecute(API * papi);
-	
-    void                        initialize();
-    void                        cleanup();
+    void initialize();
+    void cleanup();
 };
 //---------------------------------------------------------------------------
 extern API api;
@@ -103,12 +97,7 @@ inline void API::clientLibrary(const utf8::String & lib)
   *reinterpret_cast<utf8::String *>(clientLibrary_) = lib;
 }
 //---------------------------------------------------------------------------
-inline ksys::ThreadLocalVariable<intptr_t> & API::threadCount()
-{
-  return *reinterpret_cast<ksys::ThreadLocalVariable<intptr_t> *>(threadCount_);
-}
+} // namespace odbcpp
 //---------------------------------------------------------------------------
-} // namespace mycpp
-//---------------------------------------------------------------------------
-#endif /* _myintf_H_ */
+#endif /* _odbcintf_H_ */
 //---------------------------------------------------------------------------

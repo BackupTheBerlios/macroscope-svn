@@ -58,8 +58,8 @@ Transaction & Transaction::detach()
 //---------------------------------------------------------------------------
 Transaction & Transaction::start()
 {
-  if( !attached() )
-    newObjectV1C2<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+/*  if( !attached() )
+    newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
     utf8::String trSQL("SET SESSION TRANSACTION ISOLATION LEVEL ");
     if( isolation_.strcasecmp("REPEATABLE") == 0 )
@@ -79,13 +79,13 @@ Transaction & Transaction::start()
       database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
         api.mysql_errno(database_->handle_),api.mysql_error(database_->handle_)));
   }
-  startCount_++;
+  startCount_++;*/
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::commit()
 {
-  if( !active() )
+  /*if( !active() )
     newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
@@ -93,13 +93,13 @@ Transaction & Transaction::commit()
       exceptionHandler(newObjectV1C2<ETrCommit>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
-  startCount_--;
+  startCount_--;*/
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::rollback()
 {
-  if( !active() )
+  /*if( !active() )
     newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert(startCount_ > 0);
   if( startCount_ == 1 ){
@@ -107,7 +107,7 @@ Transaction & Transaction::rollback()
       exceptionHandler(newObjectV1C2<ETrRollback>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   }
-  startCount_--;
+  startCount_--;*/
   return *this;
 }
 //---------------------------------------------------------------------------

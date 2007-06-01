@@ -161,7 +161,7 @@ class MYSQLDatabase : public Database, public mycpp::Database, public mycpp::Tra
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class ODBCDatabase : public Database, public odbc::Database, public odbcpp::Transaction {
+class ODBCDatabase : public Database, public odbcpp::Database, public odbcpp::Transaction {
   public:
     virtual ~ODBCDatabase();
     ODBCDatabase();

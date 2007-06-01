@@ -28,33 +28,6 @@
 //---------------------------------------------------------------------------
 namespace odbcpp {
 //---------------------------------------------------------------------------
-utf8::String tm2Str(const struct tm & tv)
-{
-  utf8::String s;
-  s.resize(19);
-  sprintf(s.c_str(),"%04d-%02d-%02d %02d:%02d:%02d", tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday, tv.tm_hour, tv.tm_min, tv.tm_sec);
-  return s;
-}
-//---------------------------------------------------------------------------
-utf8::String time2Str(int64_t t)
-{
-  struct tm tv = ksys::time2tm(t);
-  utf8::String  s;
-  s.resize(19);
-  sprintf(s.c_str(), "%04d-%02d-%02d %02d:%02d:%02d", tv.tm_year + 1900, tv.tm_mon + 1, tv.tm_mday, tv.tm_hour, tv.tm_min, tv.tm_sec);
-  return s;
-}
-//---------------------------------------------------------------------------
-int64_t str2Time(const char * s)
-{
-  struct tm tv;
-  memset(&tv, 0, sizeof(tv));
-  sscanf(s, "%04d-%02d-%02d %02d:%02d:%02d", &tv.tm_year, &tv.tm_mon, &tv.tm_mday, &tv.tm_hour, &tv.tm_min, &tv.tm_sec);
-  tv.tm_year -= 1900;
-  tv.tm_mon--;
-  return ksys::tm2Time(tv);
-}
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 DSQLStatement::DSQLStatement()
@@ -63,16 +36,7 @@ DSQLStatement::DSQLStatement()
     sqlTextChanged_(false),
     prepared_(false),
     executed_(false),
-    storeResults_(false),
-#if _MSC_VER
-#pragma warning(disable:4355)
-#endif
-  params_(*this),
-    values_(*this)
-#if _MSC_VER
-#pragma warning(default:4355)
-#endif
-
+    storeResults_(false)
 {
 }
 //---------------------------------------------------------------------------
@@ -84,8 +48,8 @@ DSQLStatement::~DSQLStatement()
 DSQLStatement & DSQLStatement::attach(Database & database)
 {
   if( attached() )
-    newObjectV1C2<EDSQLStAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  database.dsqlStatements_.add(this, utf8::ptr2Str(this));
+    newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  database.statements_.insToTail(*this);
   database_ = &database;
   return *this;
 }
@@ -94,34 +58,8 @@ DSQLStatement & DSQLStatement::detach()
 {
   if( attached() ){
     free();
-    database_->dsqlStatements_.removeByObject(this);
+    database_->statements_.remove(*this);
     database_ = NULL;
-    prepared_ = false;
-  }
-  return *this;
-}
-//---------------------------------------------------------------------------
-DSQLStatement & DSQLStatement::allocate()
-{
-  if( !attached() )
-    newObjectV1C2<EDSQLStNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  if( !allocated() ){
-    handle_ = api.mysql_stmt_init(database_->handle_);
-    if( handle_ == NULL )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStAllocate>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
-  }
-  return *this;
-}
-//---------------------------------------------------------------------------
-DSQLStatement & DSQLStatement::free()
-{
-  values_.freeRes();
-  if( allocated() ){
-    if( api.mysql_stmt_close(handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStFree>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
-    handle_ = NULL;
     prepared_ = false;
   }
   return *this;
@@ -129,8 +67,6 @@ DSQLStatement & DSQLStatement::free()
 //---------------------------------------------------------------------------
 utf8::String DSQLStatement::compileSQLParameters()
 {
-  params_.params_.clear();
-  params_.indexToParam_.clear();
   utf8::String text(sqlText_.unique());
   utf8::String::Iterator i(text);
   while( !i.eof() ){
@@ -139,7 +75,7 @@ utf8::String DSQLStatement::compileSQLParameters()
       utf8::String::Iterator i2(i);
       while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
       if( i2 - i > 1 && !(i + 1).isDigit() ){
-        params_.indexToParam_.add(params_.add(utf8::String(i + 1,i2)));
+//        params_.indexToParam_.add(params_.add(utf8::String(i + 1,i2)));
         text.replace(i,i2,"?");
       }
     }
@@ -150,7 +86,7 @@ utf8::String DSQLStatement::compileSQLParameters()
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::prepare()
 {
-  allocate();
+/*  allocate();
   if( sqlTextChanged_ || !prepared_ ){
     utf8::String sql(compileSQLParameters());
     if( api.mysql_stmt_prepare(handle_, sql.c_str(), (unsigned long) sql.size()) != 0 ){
@@ -167,13 +103,13 @@ DSQLStatement & DSQLStatement::prepare()
   else if( executed_ ){
     values_.clear().valuesIndex_.clear();
     executed_ = false;
-  }
+  }*/
   return *this;
 }
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::execute()
 {
-  database_->transaction_->start();
+/*  database_->transaction_->start();
   values_.freeRes();
   prepare();
   if( params_.bind_.count() > 0 ){
@@ -205,14 +141,13 @@ DSQLStatement & DSQLStatement::execute()
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     values_.fields_ = api.mysql_fetch_fields(values_.res_);
   }
-  /* Now buffer all results to client */
   if( storeResults_ )
     if( api.mysql_stmt_store_result(handle_) != 0 )
       database_->exceptionHandler(newObjectV1C2<EDSQLStStoreResult>(
         api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
   if( database_->transaction_->startCount_ == 1 && values_.bind_.count() > 0 )
     values_.fetchAll();
-  database_->transaction_->commit();
+  database_->transaction_->commit();*/
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -228,6 +163,5 @@ DSQLStatement & DSQLStatement::sqlText(const utf8::String & sqlText)
   return *this;
 }
 //---------------------------------------------------------------------------
-} // namespace fbcpp
+} // namespace odbcpp
 //---------------------------------------------------------------------------
-

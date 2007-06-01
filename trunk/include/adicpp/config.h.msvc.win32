@@ -6,8 +6,10 @@
 /* #undef HAVE_DIRENT_H 1 */
 #define HAVE_ERROR_H 1
 /* #undef HAVE_IBASE_H 1 */
+/* #undef HAVE_PCAP_H 1 */
 /* #undef HAVE_MYSQL_H 1 */
 /* #undef HAVE_MYSQL_MYSQL_H 1 */
+#define HAVE_SQL_H 1
 /* #undef HAVE_LZO_LZO1X_H 1 */
 /* #undef HAVE_LZO1X_H 1 */
 /* #undef HAVE_LZO_LZO_ASM_H 1 */
@@ -26,10 +28,13 @@
 /* #undef HAVE_SYS_MMAN_H 1 */
 /* #undef HAVE_SYS_UUID_H 1 */
 /* #undef HAVE_SYS_TIME_H 1 */
+/* #undef HAVE_SYS_RESOURCE_H 1 */
 #define HAVE_SYS_TIMEB_H 1
 #define HAVE_SYS_STAT_H 1
 /* #undef HAVE_SYS_IOCTL_H 1 */
 /* #undef HAVE_SYS_SYSCTL_H 1 */
+/* #undef HAVE_SYS_EPOLL_H 1 */
+/* #undef HAVE_SYS_RTPRIO_H 1 */
 /* #undef HAVE_MACHINE_ATOMIC_H 1 */
 /* #undef HAVE_MACHINE_CPUFUNC_H 1 */
 /* #undef HAVE_MACHINE_SPECIALREG_H 1 */
@@ -37,6 +42,7 @@
 /* #undef HAVE_SYSLOG_H 1 */
 /* #undef HAVE_EXECINFO_H 1 */
 #define HAVE_TIME_H 1
+/* #undef HAVE_SCHED_H 1 */
 /* #undef HAVE_UUID_H 1 */
 /* #undef HAVE_AIO_H 1 */
 /* #undef HAVE_SHA256_H 1 */
@@ -68,6 +74,8 @@
 #define HAVE_WINSOCK_H 1
 #define HAVE_WINSOCK2_H 1
 #define HAVE_WINDOWS_H 1
+/* #undef HAVE_NTDLL_H 1 */
+#define HAVE_NTSTATUS_H 1
 #define HAVE_MSWSOCK_H 1
 #define HAVE_WBEMIDL_H 1
 #define HAVE_DBGHELP_H 1
@@ -137,11 +145,13 @@
 /* #undef SIZEOF_TIMEVAL  */
 /* #undef SIZEOF_TIMEZONE  */
 #define SIZEOF_SOCKADDR_IN6 28
+/* #undef SIZEOF_SOCKADDR_DL  */
 /* #undef SIZEOF_STRUCT_AIOCB  */
 /* #undef SIZEOF_STAT64  */
 #define SIZEOF__STAT64 56
 /* #undef SIZEOF_KEVENT  */
 #define SIZEOF_UTIMBUF 16
+/* #undef SIZEOF_UCONTEXT_T  */
 
 /* #undef HAVE_CHOWN 1 */
 /* #undef HAVE_OPENDIR 1 */
@@ -171,6 +181,7 @@
 #define HAVE_MEMMOVE 1
 #define HAVE_MEMSET 1
 #define HAVE_MEMCPY 1
+/* #undef HAVE_BCOPY 1 */
 /* #undef HAVE_STRCASECMP 1 */
 #define HAVE_STRCHR 1
 /* #undef HAVE_STRNCASECMP 1 */
@@ -230,6 +241,10 @@
 /* #undef HAVE_AIO_ERROR 1 */
 /* #undef HAVE_MMAP 1 */
 /* #undef HAVE_MUNMAP 1 */
+/* #undef HAVE_MLOCK 1 */
+/* #undef HAVE_MUNLOCK 1 */
+/* #undef HAVE_MLOCKALL 1 */
+/* #undef HAVE_MUNLOCKALL 1 */
 /* #undef HAVE_SHM_OPEN 1 */
 /* #undef HAVE_SHM_UNLINK 1 */
 /* #undef HAVE_DAEMON 1 */
@@ -269,6 +284,9 @@
 /* #undef HAVE_UUID_FROM_STRING 1 */
 /* #undef HAVE_CLOCK_GETRES 1 */
 /* #undef HAVE_CLOCK_GETTIME 1 */
+/* #undef HAVE_SETPRIORITY 1 */
+/* #undef HAVE_GETPRIORITY 1 */
+/* #undef HAVE_NICE 1 */
 /* #undef HAVE_PTHREAD_CREATE 1 */
 /* #undef HAVE_PTHREAD_DETACH 1 */
 /* #undef HAVE_PTHREAD_SELF 1 */
@@ -281,6 +299,8 @@
 /* #undef HAVE_PTHREAD_SETPRIO 1 */
 /* #undef HAVE_PTHREAD_ATTR_GETSHEDPARAM 1 */
 /* #undef HAVE_PTHREAD_ATTR_SETSHEDPARAM 1 */
+/* #undef HAVE_PTHREAD_GETSCHEDPARAM 1 */
+/* #undef HAVE_PTHREAD_SETSCHEDPARAM 1 */
 /* #undef HAVE_PTHREAD_RWLOCK_INIT 1 */
 /* #undef HAVE_PTHREAD_RWLOCK_DESTROY 1 */
 /* #undef HAVE_PTHREAD_RWLOCK_RDLOCK 1 */
@@ -297,6 +317,8 @@
 /* #undef HAVE_LZO1X_DECOMPRESS_ASM_FAST 1 */
 /* #undef HAVE_LZO1X_DECOMPRESS_ASM_FAST_SAFE 1 */
 /* #undef HAVE_DO_CPUID 1 */
+/* #undef HAVE_ATOMIC_FETCHADD_32 1 */
+/* #undef HAVE_RTPRIO 1 */
 
 #define EMPTY_ARRAY_SIZE  
 
@@ -350,3 +372,5 @@
 /* #undef HAVE_INTMAX_T_AS_INT64_T 0 */
 
 #define PRIVATE_RELEASE 1
+#define CMAKE_SYSTEM_NAME "Windows"
+#define CMAKE_SYSTEM_VERSION "5.2"

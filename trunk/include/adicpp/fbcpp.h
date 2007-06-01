@@ -39,6 +39,19 @@
 typedef char ISC_SCHAR;
 #endif
 
+#define SQL_FB_FLOAT 482
+#undef SQL_FLOAT
+#define SQL_FB_DOUBLE 480
+#undef SQL_DOUBLE
+#define SQL_FB_TYPE_DATE 570
+#undef SQL_TYPE_DATE
+#define SQL_FB_TYPE_TIME 560
+#undef SQL_TYPE_TIME
+#define SQL_FB_DATE 510
+#undef SQL_DATE
+#define SQL_FB_TIMESTAMP 510
+#undef SQL_TIMESTAMP
+
 #include <adicpp/fbintf.h>
 #include <adicpp/fbdb.h>
 #include <adicpp/fbexcpt.h>

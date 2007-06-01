@@ -31,6 +31,18 @@ namespace odbcpp {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+class Base : virtual ksys::Object {
+  friend class EClientServer;
+  public:
+    virtual ~Base() {}
+    Base() {}
+  protected:
+    virtual void exceptionHandler(ksys::Exception * e) = 0;
+  private:
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 class DSQLParam {
   friend class DSQLParams;
   friend class DSQLStatement;
@@ -46,9 +58,6 @@ class DSQLParam {
       int64_t     int_;
       double      float_;
     };
-    MYSQL_TIME timestamp_;
-    unsigned long length_;
-    my_bool isNull_;
     ksys::MutantType type_;
 
     ksys::Mutant  getMutant();
@@ -99,12 +108,6 @@ class DSQLParams {
   protected:
   private:
     DSQLStatement * statement_;
-    MYSQL_BIND_Holder                                                   bind_;
-    ksys::HashedObjectList< utf8::String,DSQLParam>                     params_;
-    ksys::Array< ksys::HashedObjectListItem< utf8::String,DSQLParam> *> indexToParam_;
-
-    DSQLParams &                                          bind();
-    ksys::HashedObjectListItem< utf8::String,DSQLParam> * add(const utf8::String & paramName);
     DSQLParams &                                          checkParamIndex(uintptr_t i);
     DSQLParam *                                           checkParamName(const utf8::String & paramName);
 };
@@ -115,15 +118,14 @@ inline DSQLParams::~DSQLParams()
 //---------------------------------------------------------------------------
 inline DSQLParams::DSQLParams(DSQLStatement & statement) : statement_(&statement)
 {
-  params_.caseSensitive(false);
 }
 //---------------------------------------------------------------------------
 inline uintptr_t DSQLParams::count()
 {
-  return params_.count();
+  return -1;
 }
 //---------------------------------------------------------------------------
-inline utf8::String DSQLParams::paramName(uintptr_t i)
+/*inline utf8::String DSQLParams::paramName(uintptr_t i)
 {
   return checkParamIndex(i).params_.keyOfIndex(i);
 }
@@ -131,30 +133,7 @@ inline utf8::String DSQLParams::paramName(uintptr_t i)
 inline intptr_t DSQLParams::paramIndex(const utf8::String & name)
 {
   return params_.indexOfKey(name);
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class DSQLRow {
-  friend class DSQLValues;
-  public:
-    ~DSQLRow();
-    DSQLRow();
-  protected:
-    ksys::AutoPtr<uint8_t> raw_;
-    ksys::Array<int32_t>   index_;
-    ksys::Array<my_bool>   isNulls_;
-    uint32_t               rowSize_;
-  private:
-};
-//---------------------------------------------------------------------------
-inline DSQLRow::DSQLRow() : rowSize_(0)
-{
-}
-//---------------------------------------------------------------------------
-inline DSQLRow::~DSQLRow()
-{
-}
+}*/
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -189,135 +168,18 @@ class DSQLValues {
     utf8::String        asString(uintptr_t i);
     utf8::String        asString(const utf8::String & name);
 
-    const MYSQL_FIELD & field(uintptr_t i);
   protected:
   private:
     DSQLStatement *                                 statement_;
-    MYSQL_BIND_Holder                               bind_;
-    MYSQL_RES *                                     res_;
-    MYSQL_FIELD *                                   fields_;
-    ksys::Array< unsigned long>                     lengths_;
-    ksys::Vector< DSQLRow>                          rows_;
-    intptr_t                                        row_;
-    ksys::HashedObjectList<utf8::String,int32_t>    valuesIndex_;
-
-    DSQLValues &  clear();
-    DSQLRow *     bind();
-    DSQLValues &  fillRow(DSQLRow * row);
-    struct fillRowVars {
-        union {
-            char *              pc;
-            int8_t *            pb;
-            int16_t *           ps;
-            uint16_t *          pus;
-            int32_t *           pl;
-            int64_t *           pll;
-            float *             pf;
-            double *            pd;
-            const MYSQL_TIME *  stamp;
-        };
-        intptr_t      i, j, k;
-        MYSQL_BIND *  rbind;
-        DSQLRow *     row;
-    };
-
-    DSQLValues &        fillRowHelper(struct fillRowVars & v, uintptr_t ds);
-    intptr_t            getValueIndex(const utf8::String & name);
-    DSQLValues &        freeRes();
 };
-//---------------------------------------------------------------------------
-inline DSQLValues::DSQLValues(DSQLStatement & statement)
-  : statement_(&statement), res_(NULL), row_(-1)
-{
-  valuesIndex_.caseSensitive(false);
-  valuesIndex_.ownsObjects(false);
-}
 //---------------------------------------------------------------------------
 inline DSQLValues::~DSQLValues()
 {
 }
 //---------------------------------------------------------------------------
-inline DSQLValues & DSQLValues::selectRow(uintptr_t row)
+inline DSQLValues::DSQLValues(DSQLStatement & statement)
+  : statement_(&statement)
 {
-  row_ = checkRowIndex(row);
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline intptr_t valueIndexComparator(const utf8::String & s1, const utf8::String & s2)
-{
-  return s1.strcasecmp(s2);
-}
-//---------------------------------------------------------------------------
-inline intptr_t DSQLValues::getValueIndex(const utf8::String & name)
-{
-  return valuesIndex_.indexOfKey(name);
-}
-//---------------------------------------------------------------------------
-inline DSQLValues & DSQLValues::clear()
-{
-  rows_.clear();
-  row_ = -1;
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline uintptr_t DSQLValues::rowCount()
-{
-  return rows_.count();
-}
-//---------------------------------------------------------------------------
-inline intptr_t DSQLValues::rowIndex()
-{
-  return row_;
-}
-//---------------------------------------------------------------------------
-inline DSQLValues & DSQLValues::selectFirst()
-{
-  return selectRow(0);
-}
-//---------------------------------------------------------------------------
-inline DSQLValues & DSQLValues::selectLast()
-{
-  return selectRow(rowCount() - 1);
-}
-//---------------------------------------------------------------------------
-inline uintptr_t DSQLValues::count()
-{
-  return bind_.count();
-}
-//---------------------------------------------------------------------------
-inline intptr_t DSQLValues::indexOfName(const utf8::String & name)
-{
-  return getValueIndex(name);
-}
-//---------------------------------------------------------------------------
-inline const utf8::String DSQLValues::nameOfIndex(uintptr_t i)
-{
-  return valuesIndex_.keyOfIndex(checkValueIndex(i));
-}
-//---------------------------------------------------------------------------
-inline bool DSQLValues::isNull(uintptr_t i)
-{
-  return rows_[checkRowIndex(row_)].index_[checkValueIndex(i)] < 0;
-}
-//---------------------------------------------------------------------------
-inline bool DSQLValues::isNull(const utf8::String & name)
-{
-  return rows_[checkRowIndex(row_)].index_[checkValueIndex(getValueIndex(name))] < 0;
-}
-//---------------------------------------------------------------------------
-inline ksys::Mutant DSQLValues::asMutant(const utf8::String & name)
-{
-  return asMutant(getValueIndex(name));
-}
-//---------------------------------------------------------------------------
-inline utf8::String DSQLValues::asString(const utf8::String & name)
-{
-  return asString(getValueIndex(name));
-}
-//---------------------------------------------------------------------------
-inline const MYSQL_FIELD & DSQLValues::field(uintptr_t i)
-{
-  return fields_[checkValueIndex(i)];
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -359,7 +221,6 @@ class DSQLStatement : virtual public ksys::Object {
     int64_t         insertId();
 
     // properties
-    MYSQL_STMT *    handle();
     bool            attached();
     bool            allocated();
     bool &          storeResults();
@@ -371,8 +232,16 @@ class DSQLStatement : virtual public ksys::Object {
     Database * database() const;
   protected:
   private:
-    MYSQL_STMT *  handle_;
+    static ksys::EmbeddedListNode<DSQLStatement> & listNode(const DSQLStatement & object){
+      return object.listNode_;
+    }
+    static DSQLStatement & listObject(const ksys::EmbeddedListNode<DSQLStatement> & node,DSQLStatement * p = NULL){
+      return node.object(p->listNode_);
+    }
+    mutable ksys::EmbeddedListNode<DSQLStatement> listNode_;
+
     Database *    database_;
+    SQLHANDLE * handle_;
     utf8::String  sqlText_;
     bool          sqlTextChanged_;
     bool          prepared_;
@@ -389,16 +258,6 @@ class DSQLStatement : virtual public ksys::Object {
 inline Database * DSQLStatement::database() const
 {
   return database_;
-}
-//---------------------------------------------------------------------------
-inline int64_t DSQLStatement::insertId()
-{
-  return api.mysql_insert_id(database_->handle_);
-}
-//---------------------------------------------------------------------------
-inline MYSQL_STMT * DSQLStatement::handle()
-{
-  return handle_;
 }
 //---------------------------------------------------------------------------
 inline bool DSQLStatement::attached()
@@ -447,7 +306,7 @@ inline const bool & DSQLStatement::prepared() const
   return prepared_;
 }
 //---------------------------------------------------------------------------
-inline ksys::Mutant DSQLStatement::paramAsMutant(uintptr_t i)
+/*inline ksys::Mutant DSQLStatement::paramAsMutant(uintptr_t i)
 {
   return params_.asMutant(i);
 }
@@ -509,7 +368,7 @@ inline utf8::String DSQLStatement::valueAsString(uintptr_t i)
 inline utf8::String DSQLStatement::valueAsString(const utf8::String & name)
 {
   return values_.asString(name);
-}
+} */
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

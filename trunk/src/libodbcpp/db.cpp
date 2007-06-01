@@ -73,13 +73,13 @@ bool Database::separateDBName(const utf8::String & name, utf8::String & hostName
     // unix socket or windows named pipe
     dbName = name;
   }
-  else{
+  else {
     intmax_t  prt;
     if( utf8::tryStr2Int(utf8::String(i1 + 1, i2), prt) && i2.eof() ){
       // dbName and port
       dbName = utf8::String(utf8::String::Iterator(name), i1);
     }
-    else{
+    else {
       utf8::tryStr2Int(utf8::String(i2 + 1, utf8::String::Iterator(name).last()), prt);
       hostName = utf8::String(utf8::String::Iterator(name), i1);
       dbName = utf8::String(i1 + 1, i2);
@@ -95,30 +95,31 @@ Database & Database::create(const utf8::String & name)
   uintptr_t     port;
   separateDBName(name.strlen() > 0 ? name : name_, hostName, dbName, port);
   api.open();
-  MYSQL * handle  = NULL;
   try {
-    allocHandle(handle);
-    api.mysql_real_connect(handle, hostName.strlen() > 0 ? hostName.c_str() : NULL, dpb_.user().c_str(), dpb_.password().c_str(), NULL, (unsigned int) port, hostName.strlen() > 0 ? hostName.c_str() : NULL,dpb_.compress() ? CLIENT_COMPRESS : 0);
-    if( api.mysql_errno(handle) != 0 )
-      exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle), api.mysql_error(handle)));
-    dbName = "CREATE DATABASE " + dbName + " DEFAULT CHARACTER SET UTF8";
-    if( api.mysql_query(handle, dbName.c_str()) != 0 )
-      if( api.mysql_errno(handle) != ER_DB_CREATE_EXISTS )
-        exceptionHandler(newObjectV1C2<EDBCreate>(api.mysql_errno(handle), api.mysql_error(handle)));
+    SQLRETURN r = api.SQLAllocHandle(SQL_HANDLE_ENV,SQL_NULL_HANDLE,&envHandle_);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
+      printf("Error AllocHandle\n");
+      exit(0);
+    }
+    r = api.SQLSetEnvAttr(&envHandle_,SQL_ATTR_ODBC_VERSION,(SQLPOINTER) SQL_OV_ODBC3,0);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
+      printf("Error SetEnv\n");
+      api.SQLFreeHandle(SQL_HANDLE_ENV,envHandle_);
+      exit(0);
+    }
+//    exceptionHandler(newObjectV1C2<EDBCreate>(api.mysql_errno(handle), api.mysql_error(handle)));
   }
   catch( ksys::ExceptionSP & ){
-    freeHandle(handle);
     api.close();
     throw;
   }
-  freeHandle(handle);
   api.close();
   return *this;
 }
 //---------------------------------------------------------------------------
 Database & Database::drop()
 {
-  if( !attached() )
+/*  if( !attached() )
     exceptionHandler(newObjectV1C2<EDBNotAttached>(EINVAL, __PRETTY_FUNCTION__));
   if( transaction_ != NULL )
     while( transaction_->active() ) transaction_->rollback();
@@ -126,7 +127,7 @@ Database & Database::drop()
     dsqlStatements_.objectOfIndex(i)->free();
   if( api.mysql_query(handle_, (utf8::String("DROP DATABASE ") + handle_->db).c_str()) != 0 )
     exceptionHandler(newObjectV1C2<EDBDrop>(api.mysql_errno(handle_), api.mysql_error(handle_)));
-  freeHandle(handle_);
+  freeHandle(handle_);*/
   api.close();
   return *this;
 }
@@ -142,15 +143,15 @@ Database & Database::attach(const utf8::String & name)
       SQLRETURN r = api.SQLAllocHandle(SQL_HANDLE_ENV,SQL_NULL_HANDLE,&envHandle_);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
         printf("Error AllocHandle\n");
-	exit(0);
+	      exit(0);
       }
-      r = api.SQLSetEnvAttr(envHandle_,SQL_ATTR_ODBC_VERSION,SQL_OV_ODBC3,0); 
+      r = api.SQLSetEnvAttr(&envHandle_,SQL_ATTR_ODBC_VERSION,(SQLPOINTER) SQL_OV_ODBC3,0);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
         printf("Error SetEnv\n");
-	api.SQLFreeHandle(SQL_HANDLE_ENV,envHandle_);
+	      api.SQLFreeHandle(SQL_HANDLE_ENV,envHandle_);
         exit(0);
       }
-      exceptionHandler(newObjectV1C2<EClientServer>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+//      exceptionHandler(newObjectV1C2<EClientServer>(api.mysql_errno(handle_), api.mysql_error(handle_)));
     }
     catch( ksys::ExceptionSP & ){
       api.close();
@@ -163,14 +164,14 @@ Database & Database::attach(const utf8::String & name)
 //---------------------------------------------------------------------------
 Database & Database::detach()
 {
-  if( attached() ){
+/*  if( attached() ){
     if( transaction_ != NULL )
       while( transaction_->active() ) transaction_->rollback();
     for( intptr_t i = dsqlStatements_.count() - 1; i >= 0; i-- )
       dsqlStatements_.objectOfIndex(i)->free();
     freeHandle(handle_);
     api.close();
-  }
+  }*/
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -209,5 +210,5 @@ Database & Database::name(const utf8::String & name)
   return *this;
 }
 //---------------------------------------------------------------------------
-} // namespace fbcpp
+} // namespace odbcpp
 //---------------------------------------------------------------------------

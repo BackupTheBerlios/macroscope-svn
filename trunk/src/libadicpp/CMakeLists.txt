@@ -3,5 +3,6 @@ ADD_LIBRARY(adicpp STATIC
   db.cpp
   fb.cpp
   my.cpp
+  odbc.cpp
   st.cpp
 )

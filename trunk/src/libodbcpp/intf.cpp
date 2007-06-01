@@ -35,73 +35,41 @@ API api;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-#if !MYSQL_STATIC_LIBRARY
-const char * const  API::symbols_[] = {
-  "mysql_thread_safe",
-  "mysql_library_init",
-  "mysql_library_end",
-  "mysql_thread_init",
-  "mysql_thread_end",
-  "my_init",
-  "my_end",
-  "mysql_init",
-  "mysql_real_connect",
-  "mysql_close",
-  "mysql_query",
-  "mysql_real_query",
-  "mysql_commit",
-  "mysql_rollback",
-  "mysql_autocommit",
-  "mysql_errno",
-  "mysql_error",
-  "mysql_stmt_init",
-  "mysql_stmt_close",
-  "mysql_stmt_prepare",
-  "mysql_stmt_bind_param",
-  "mysql_stmt_bind_result",
-  "mysql_stmt_param_count",
-  "mysql_stmt_field_count",
-  "mysql_stmt_execute",
-  "mysql_stmt_fetch",
-  "mysql_stmt_store_result",
-  "mysql_stmt_result_metadata",
-  "mysql_stmt_param_metadata",
-  "mysql_stmt_free_result",
-  "mysql_free_result",
-  "mysql_fetch_fields",
-  "mysql_insert_id",
-  "mysql_options",
-  "mysql_ping"
+const char * const API::symbols_[] = {
+  "SQLAllocHandle",
+  "SQLSetEnvAttr",
+  "SQLSetConnectAttr",
+  "SQLConnect",
+  "SQLDisconnect",
+  "SQLFreeHandle",
+  "SQLBindParam",
+  "SQLEndTran",
+  "SQLError",
+  "SQLExecDirect",
+  "SQLExecute",
+  "SQLFetch"
 };
-#endif
 //---------------------------------------------------------------------------
 void API::initialize()
 {
   new (mutex_) InterlockedMutex;
   new (clientLibrary_) utf8::String;
-  new (threadCount_) ThreadLocalVariable<intptr_t>;
-#if !MYSQL_STATIC_LIBRARY  
   count_ = 0;
-#endif
-  Thread::afterExecuteActions().add(Thread::Action((void *) afterThreadExecute,this));
 }
 //---------------------------------------------------------------------------
 void API::cleanup()
 {
-  Thread::afterExecuteActions().remove(Thread::afterExecuteActions().search(Thread::Action((void *) afterThreadExecute,this)));
-  threadCount().~ThreadLocalVariable<intptr_t>();
   using namespace utf8;
   reinterpret_cast<utf8::String *>(clientLibrary_)->~String();
   mutex().~InterlockedMutex();
 }
 //---------------------------------------------------------------------------
-#if !MYSQL_STATIC_LIBRARY
 utf8::String API::tryOpen()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  static const char libName[] = "libmysql.dll";
+  static const char libName[] = "odbc32.dll";
 #else
-  static const char libName[] = "libmysqlclient_r.so";
+  static const char libName[] = "libodbc.so";
 #endif
   utf8::String libFileName(clientLibraryNL());
   if( libFileName.isNull() ) libFileName = libName;
@@ -111,7 +79,7 @@ utf8::String API::tryOpen()
       if( isWin9x() ){
         handle_ = LoadLibraryExA(anyPathName2HostPathName(libFileName).getANSIString(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       }
-      else{
+      else {
         handle_ = LoadLibraryExW(anyPathName2HostPathName(libFileName).getUNICODEString(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
       }
 #elif HAVE_DLFCN_H
@@ -137,13 +105,11 @@ utf8::String API::tryOpen()
   }
   return libFileName;
 }
-#endif
 //---------------------------------------------------------------------------
 void API::open()
 {
   AutoLock<InterlockedMutex> lock(mutex());
   if( count_ == 0 ){
-#if !MYSQL_STATIC_LIBRARY
     int32_t       err;
     utf8::String  libFileName (tryOpen());
     if( handle_ == NULL ){
@@ -159,14 +125,9 @@ void API::open()
       newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
-      void * & func = *(void **) (&p_mysql_thread_safe + i);
+      void * & func = *((void **) &SQLAllocHandle + i);
 #if defined(__WIN32__) || defined(__WIN64__)
       func = GetProcAddress(handle_,symbols_[i]);
-      if( func == NULL ){
-        if( &func == &p_mysql_library_init ) func = GetProcAddress(handle_,"mysql_server_init");
-        else
-	      if( &func == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
-      }
       if( func == NULL ){
         err = GetLastError() + errorOffset;
         FreeLibrary(handle_);
@@ -180,58 +141,17 @@ void API::open()
 #elif HAVE_DLFCN_H
       func = dlsym(handle_,symbols_[i]);
       if( func == NULL ){
-        if( &func == &p_mysql_library_init ) func = dlsym(handle_,"mysql_server_init");
-        else
-        if( &func == &p_mysql_library_end ) func = dlsym(handle_,"mysql_server_end");
-      }
-      if( func == NULL ){
         err = errno;
         dlclose(handle_);
         handle_ = NULL;
         stdErr.debug(9,
-	  utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
-	);
+	        utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
+	      );
         newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #endif
     }
-#endif
-    char * groups = NULL;
-    if( mysql_library_init != NULL && mysql_library_init(0,NULL,&groups) != 0 ){
-#if !MYSQL_STATIC_LIBRARY    
-#if defined(__WIN32__) || defined(__WIN64__)
-      FreeLibrary(handle_);
-#elif HAVE_DLFCN_H
-      dlclose(handle_);
-#endif
-      handle_ = NULL;
-#endif
-      stdErr.debug(9,
-        utf8::String::Stream() << "mysql_library_init couldn't initialize environment\n"
-      );
-      newObjectV1C2<Exception>(EINVAL, "mysql_library_init couldn't initialize environment")->throwSP();
-    }
   }
-  if( (intptr_t) threadCount() == 0 ){
-    if( (count_ > 0 || mysql_library_init == NULL) && mysql_thread_init() != 0 ){
-#if !MYSQL_STATIC_LIBRARY
-      if( count_ == 0 ){
-        if( mysql_library_end != NULL ) mysql_library_end();
-#if defined(__WIN32__) || defined(__WIN64__)
-        FreeLibrary(handle_);
-#elif HAVE_DLFCN_H
-        dlclose(handle_);
-#endif
-        handle_ = NULL;
-     }
-#endif
-      stdErr.debug(9,
-        utf8::String::Stream() << "mysql_thread_init couldn't initialize environment\n"
-      );
-      newObjectV1C2<Exception>(EINVAL, "mysql_thread_init couldn't initialize environment")->throwSP();
-    }
-  }
-  threadCount() = (intptr_t) threadCount() + 1;
   count_++;
 }
 //---------------------------------------------------------------------------
@@ -239,27 +159,16 @@ void API::close()
 {
   AutoLock<InterlockedMutex> lock(mutex());
   assert( count_ > 0 );
-  assert( (intptr_t) threadCount() > 0 );
-  if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
-  threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
-#if !MYSQL_STATIC_LIBRARY    
-    if( mysql_library_end != NULL ) mysql_library_end();
 #if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);
 #elif HAVE_DLFCN_H
     dlclose(handle_);
 #endif
     handle_ = NULL;
-#endif
   }
   count_--;
 }
 //---------------------------------------------------------------------------
-void API::afterThreadExecute(API * papi)
-{
-  assert( (intptr_t) papi->threadCount() == 0 );
-}
-//---------------------------------------------------------------------------
-} // namespace mycpp
+} // namespace odbcpp
 //---------------------------------------------------------------------------

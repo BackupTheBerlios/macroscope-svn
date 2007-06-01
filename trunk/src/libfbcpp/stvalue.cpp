@@ -95,14 +95,14 @@ ksys::Mutant DSQLValueScalar::getMutant()
         return v;
       }
       return (int32_t) bigInt_;
-    case SQL_FLOAT       :
+    case SQL_FB_FLOAT       :
       return float_;
-    case SQL_DOUBLE      :
+    case SQL_FB_DOUBLE      :
     case SQL_D_FLOAT     :
       return double_;
-    case SQL_TYPE_TIME   :
-    case SQL_TYPE_DATE   :
-    case SQL_TIMESTAMP   :
+    case SQL_FB_TYPE_TIME   :
+    case SQL_FB_TYPE_DATE   :
+    case SQL_FB_TIMESTAMP   :
       return iscTimeStamp2Timeval(timeStamp_);
     case SQL_QUAD        :
     case SQL_INT64       :
@@ -132,14 +132,14 @@ utf8::String DSQLValueScalar::getString()
           return utf8::float2Str(v);
         }
         return utf8::int2Str(bigInt_);
-      case SQL_FLOAT       :
+      case SQL_FB_FLOAT       :
         return utf8::float2Str(float_);
-      case SQL_DOUBLE      :
+      case SQL_FB_DOUBLE      :
       case SQL_D_FLOAT     :
         return utf8::float2Str(double_);
-      case SQL_TYPE_TIME   :
-      case SQL_TYPE_DATE   :
-      case SQL_TIMESTAMP   :
+      case SQL_FB_TYPE_TIME   :
+      case SQL_FB_TYPE_DATE   :
+      case SQL_FB_TIMESTAMP   :
         return utf8::time2Str(iscTimeStamp2Time(timeStamp_));
       default              :
         newObjectV1C2<EDSQLStInvalidParamValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
@@ -377,12 +377,12 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
         break;
       case SQL_SHORT       :
       case SQL_LONG        :
-      case SQL_FLOAT       :
-      case SQL_DOUBLE      :
+      case SQL_FB_FLOAT       :
+      case SQL_FB_DOUBLE      :
       case SQL_D_FLOAT     :
-      case SQL_TYPE_TIME   :
-      case SQL_TYPE_DATE   :
-      case SQL_TIMESTAMP   :
+      case SQL_FB_TYPE_TIME   :
+      case SQL_FB_TYPE_DATE   :
+      case SQL_FB_TIMESTAMP   :
       case SQL_QUAD        :
       case SQL_INT64       :
         row->safeAdd(valueScalar = newObject<DSQLValueScalar>());
@@ -449,12 +449,12 @@ DSQLValues & DSQLValues::fillRow(ksys::Vector< DSQLValue> * row)
         break;
       case SQL_SHORT       :
       case SQL_LONG        :
-      case SQL_FLOAT       :
-      case SQL_DOUBLE      :
+      case SQL_FB_FLOAT       :
+      case SQL_FB_DOUBLE      :
       case SQL_D_FLOAT     :
-      case SQL_TYPE_TIME   :
-      case SQL_TYPE_DATE   :
-      case SQL_TIMESTAMP   :
+      case SQL_FB_TYPE_TIME   :
+      case SQL_FB_TYPE_DATE   :
+      case SQL_FB_TIMESTAMP   :
       case SQL_QUAD        :
       case SQL_INT64       :
         break;

@@ -28,22 +28,16 @@
 //---------------------------------------------------------------------------
 namespace odbcpp {
 //---------------------------------------------------------------------------
-extern const MYSQLErrorDesc mysqlErrors[] = {
-#if HAVE_MYSQL_MYSQL_H
-#include <mysql/mysqld_ername.h>
-#elif HAVE_MYSQL_H
-#include <mysqld_ername.h>
-#else
-#include <adicpp/myapi/mysqld_ername.h>
-#endif
+extern const ODBCErrorDesc mysqlErrors[] = {
+  { NULL, 0 }
 };
 //---------------------------------------------------------------------------
 utf8::String strErrorHandler(int32_t err)
 {
-  MYSQLErrorDesc bs;
+  ODBCErrorDesc bs;
   bs.code_ = err;
   intptr_t c = sizeof(mysqlErrors) / sizeof(mysqlErrors[0]);
-  uintptr_t i = ksys::bSearch<MYSQLErrorDesc>(mysqlErrors,bs,c);
+  uintptr_t i = ksys::bSearch<ODBCErrorDesc>(mysqlErrors,bs,c);
   if( c == 0 ) return mysqlErrors[i].error_ + 3;
   return utf8::String();
 }
@@ -61,9 +55,9 @@ EClientServer::EClientServer(int32_t code,const utf8::String what) : ksys::Excep
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const
 {
-  return searchCode(CR_SERVER_GONE_ERROR,CR_SERVER_LOST,ER_MASTER_NET_READ,ER_MASTER_NET_WRITE);
+  return searchCode(0/*CR_SERVER_GONE_ERROR,CR_SERVER_LOST,ER_MASTER_NET_READ,ER_MASTER_NET_WRITE*/);
 }
 //---------------------------------------------------------------------------
-} // namespace mycpp
+} // namespace odbcpp
 //---------------------------------------------------------------------------
 
