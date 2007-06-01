@@ -44,8 +44,8 @@ void * kmalloc(size_t size,bool noThrow)
 {
   void * p = NULL;
   if( size > 0 ){
-//    p = malloc(size);
-    p = MemoryManager::globalMemoryManager().malloc(size);
+    p = malloc(size);
+//    p = MemoryManager::globalMemoryManager().malloc(size);
     if( p == NULL && !noThrow ){
       newObjectV1C2<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -69,8 +69,8 @@ void * krealloc(void * p,size_t size,bool noThrow)
     a = NULL;
   }
   else {
-//    a = realloc(p,size);
-    a = MemoryManager::globalMemoryManager().realloc(p,size);
+    a = realloc(p,size);
+//    a = MemoryManager::globalMemoryManager().realloc(p,size);
     if( a == NULL && !noThrow )
       newObjectV1C2<EOutOfMemory>(
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -87,8 +87,8 @@ void * krealloc(void * p,size_t size,bool noThrow)
 void kfree(void * p)
 {
   if( p != NULL ){
-//    free(p);
-    MemoryManager::globalMemoryManager().free(p);
+    free(p);
+//    MemoryManager::globalMemoryManager().free(p);
   }
 }
 //---------------------------------------------------------------------------
