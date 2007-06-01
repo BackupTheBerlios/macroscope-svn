@@ -332,6 +332,66 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+class ODBCStatement : public Statement, public odbcpp::DSQLStatement {
+  public:
+    ~ODBCStatement();
+    ODBCStatement();
+
+    void beforeDestruction() { detach(); }
+
+    Database * database();
+
+    ODBCStatement *  attach(Database & database);
+    ODBCStatement *  detach();
+    bool              attached();
+
+    bool prepared();
+    ODBCStatement *  prepare();
+    ODBCStatement *  unprepare();
+    ODBCStatement *  execute();
+    ODBCStatement *  execute(const utf8::String & sqlTextImm);
+    ODBCStatement *  text(const utf8::String & sqlText);
+    utf8::String      text();
+
+    // query parameters methods
+    uintptr_t         paramCount();
+    utf8::String      paramName(uintptr_t i);
+    intptr_t          paramIndex(const utf8::String & name,bool noThrow = true);
+    ksys::Mutant      paramAsMutant(uintptr_t i);
+    ksys::Mutant      paramAsMutant(const utf8::String & name);
+    utf8::String      paramAsString(uintptr_t i);
+    utf8::String      paramAsString(const utf8::String & name);
+
+    ODBCStatement *  paramAsMutant(uintptr_t i, const ksys::Mutant & value);
+    ODBCStatement *  paramAsMutant(const utf8::String & name, const ksys::Mutant & value);
+    ODBCStatement *  paramAsString(uintptr_t i, const utf8::String & value);
+    ODBCStatement *  paramAsString(const utf8::String & name, const utf8::String & value);
+
+    // query result set access methods
+    bool              fetch();
+    ODBCStatement *  fetchAll();
+    ODBCStatement *  selectRow(uintptr_t i);
+    ODBCStatement *  selectFirstRow();
+    ODBCStatement *  selectLastRow();
+    uintptr_t         rowCount();
+    intptr_t          rowIndex();
+    ksys::Mutant      valueAsMutant(uintptr_t i);
+    ksys::Mutant      valueAsMutant(const utf8::String & name);
+    utf8::String      valueAsString(uintptr_t i);
+    utf8::String      valueAsString(const utf8::String & name);
+
+    bool              valueIsNull(uintptr_t i);
+    bool              valueIsNull(const utf8::String & name);
+
+    uintptr_t         fieldCount();
+    FieldType         fieldType(uintptr_t i);
+    FieldType         fieldType(const utf8::String & name);
+    intptr_t          fieldIndex(const utf8::String & name,bool noThrow = true);
+    utf8::String      fieldName(uintptr_t i);
+  protected:
+  private:
+};
+//---------------------------------------------------------------------------
 } // namespace adicpp
 //---------------------------------------------------------------------------
 #endif // adidbH

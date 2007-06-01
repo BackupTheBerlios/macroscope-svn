@@ -24,88 +24,46 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#ifndef adicppH
-#define adicppH
-//---------------------------------------------------------------------------
-#include <adicpp/fbcpp.h>
-#include <adicpp/mycpp.h>
 #include <adicpp/odbcpp.h>
+//---------------------------------------------------------------------------
+namespace odbcpp {
+//---------------------------------------------------------------------------
+extern const MYSQLErrorDesc mysqlErrors[] = {
+#if HAVE_MYSQL_MYSQL_H
+#include <mysql/mysqld_ername.h>
+#elif HAVE_MYSQL_H
+#include <mysqld_ername.h>
+#else
+#include <adicpp/myapi/mysqld_ername.h>
+#endif
+};
+//---------------------------------------------------------------------------
+utf8::String strErrorHandler(int32_t err)
+{
+  MYSQLErrorDesc bs;
+  bs.code_ = err;
+  intptr_t c = sizeof(mysqlErrors) / sizeof(mysqlErrors[0]);
+  uintptr_t i = ksys::bSearch<MYSQLErrorDesc>(mysqlErrors,bs,c);
+  if( c == 0 ) return mysqlErrors[i].error_ + 3;
+  return utf8::String();
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+EClientServer::~EClientServer()
+{
+}
+//---------------------------------------------------------------------------
+EClientServer::EClientServer(int32_t code,const utf8::String what) : ksys::Exception(code,what)
+{
+  if( errors_[0].what_.strlen() == 0 ) errors_[0].what_ += strErrorHandler(code);
+}
+//---------------------------------------------------------------------------
+bool EClientServer::isFatalError() const
+{
+  return searchCode(CR_SERVER_GONE_ERROR,CR_SERVER_LOST,ER_MASTER_NET_READ,ER_MASTER_NET_WRITE);
+}
+//---------------------------------------------------------------------------
+} // namespace mycpp
+//---------------------------------------------------------------------------
 
-#include <adicpp/adiexcpt.h>
-#include <adicpp/adidb.h>
-#include <adicpp/adist.h>
-//---------------------------------------------------------------------------
-namespace adicpp {
-//---------------------------------------------------------------------------
-class Initializer {
-  friend class AutoInitializer;
-  public:
-    static void acquire();
-    static void release();
-  protected:
-    static void initialize(int argc,char ** argv);
-    static void cleanup();
-  private:
-    static volatile ksys::ilock_t mutex_;
-    static ksys::ilock_t initCount_;
-};
-//---------------------------------------------------------------------------
-inline void Initializer::acquire()
-{
-  ksys::interlockedCompareExchangeAcquire(mutex_,-1,0);
-}
-//---------------------------------------------------------------------------
-inline void Initializer::release()
-{
-  ksys::interlockedIncrement(mutex_,1);
-}
-//---------------------------------------------------------------------------
-inline void Initializer::initialize(int argc,char ** argv)
-{
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
-  if( initCount_ == 0 ){
-    ksys::initialize(argc,argv);
-#if !DISABLE_FIREBIRD_INTERFACE
-    fbcpp::initialize();
-#endif
-#if !DISABLE_MYSQL_INTERFACE
-    mycpp::initialize();
-#endif
-#if !DISABLE_ODBC_INTERFACE
-    odbcpp::initialize();
-#endif
-  }
-  initCount_++;
-}
-//---------------------------------------------------------------------------
-inline void Initializer::cleanup()
-{
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
-  assert( initCount_ > 0 );
-  if( initCount_ == 1 ){
-#if !DISABLE_ODBC_INTERFACE
-    odbcpp::cleanup();
-#endif
-#if !DISABLE_MYSQL_INTERFACE
-    mycpp::cleanup();
-#endif
-#if !DISABLE_FIREBIRD_INTERFACE
-    fbcpp::cleanup();
-#endif
-    ksys::cleanup();
-  }
-  initCount_--;
-}
-//---------------------------------------------------------------------------
-class AutoInitializer {
-  public:
-    ~AutoInitializer(){ Initializer::cleanup(); }
-    AutoInitializer(int argc = 0,char ** argv = NULL){ Initializer::initialize(argc,argv); }
-  protected:
-  private:
-};
-//---------------------------------------------------------------------------
-}
-//---------------------------------------------------------------------------
-#endif /* adicppH */
-//---------------------------------------------------------------------------

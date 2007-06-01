@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,88 +24,65 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#ifndef adicppH
-#define adicppH
+#ifndef _odbctr_H_
+#define _odbctr_H_
 //---------------------------------------------------------------------------
-#include <adicpp/fbcpp.h>
-#include <adicpp/mycpp.h>
-#include <adicpp/odbcpp.h>
+namespace odbcpp {
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class Transaction : virtual public Base {
+  friend class Database;
+  public:
+    virtual ~Transaction();
+    Transaction();
 
-#include <adicpp/adiexcpt.h>
-#include <adicpp/adidb.h>
-#include <adicpp/adist.h>
-//---------------------------------------------------------------------------
-namespace adicpp {
-//---------------------------------------------------------------------------
-class Initializer {
-  friend class AutoInitializer;
-  public:
-    static void acquire();
-    static void release();
-  protected:
-    static void initialize(int argc,char ** argv);
-    static void cleanup();
+    void beforeDestruction() { detach(); }
+
+    Transaction &         attach(Database & database);
+    Transaction &         detach();
+
+    Transaction &         start();
+    Transaction &         commit();
+    Transaction &         rollback();
+
+    // properties
+    bool                  attached();
+    bool                  active();
+    Transaction &         isolation(const utf8::String & isolation);
+    const utf8::String &  isolation() const;
+    //  protected:
+    void                  processingException(ksys::Exception * e);
+    void                  staticExceptionHandler(ksys::Exception * e);
+    void                  exceptionHandler(ksys::Exception * e);
   private:
-    static volatile ksys::ilock_t mutex_;
-    static ksys::ilock_t initCount_;
+    Database *    database_;
+    uintptr_t     startCount_;
+    utf8::String  isolation_;
 };
 //---------------------------------------------------------------------------
-inline void Initializer::acquire()
+inline bool Transaction::active()
 {
-  ksys::interlockedCompareExchangeAcquire(mutex_,-1,0);
+  return startCount_ > 0;
 }
 //---------------------------------------------------------------------------
-inline void Initializer::release()
+inline bool Transaction::attached()
 {
-  ksys::interlockedIncrement(mutex_,1);
+  return database_ != NULL;
 }
 //---------------------------------------------------------------------------
-inline void Initializer::initialize(int argc,char ** argv)
+inline Transaction & Transaction::isolation(const utf8::String & isolation)
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
-  if( initCount_ == 0 ){
-    ksys::initialize(argc,argv);
-#if !DISABLE_FIREBIRD_INTERFACE
-    fbcpp::initialize();
-#endif
-#if !DISABLE_MYSQL_INTERFACE
-    mycpp::initialize();
-#endif
-#if !DISABLE_ODBC_INTERFACE
-    odbcpp::initialize();
-#endif
-  }
-  initCount_++;
+  isolation_ = isolation;
+  return *this;
 }
 //---------------------------------------------------------------------------
-inline void Initializer::cleanup()
+inline const utf8::String & Transaction::isolation() const
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
-  assert( initCount_ > 0 );
-  if( initCount_ == 1 ){
-#if !DISABLE_ODBC_INTERFACE
-    odbcpp::cleanup();
-#endif
-#if !DISABLE_MYSQL_INTERFACE
-    mycpp::cleanup();
-#endif
-#if !DISABLE_FIREBIRD_INTERFACE
-    fbcpp::cleanup();
-#endif
-    ksys::cleanup();
-  }
-  initCount_--;
+  return isolation_;
 }
 //---------------------------------------------------------------------------
-class AutoInitializer {
-  public:
-    ~AutoInitializer(){ Initializer::cleanup(); }
-    AutoInitializer(int argc = 0,char ** argv = NULL){ Initializer::initialize(argc,argv); }
-  protected:
-  private:
-};
+} // namespace odbcpp
 //---------------------------------------------------------------------------
-}
-//---------------------------------------------------------------------------
-#endif /* adicppH */
+#endif // _odbctr_H_
 //---------------------------------------------------------------------------

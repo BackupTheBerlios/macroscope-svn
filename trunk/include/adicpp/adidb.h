@@ -159,6 +159,42 @@ class MYSQLDatabase : public Database, public mycpp::Database, public mycpp::Tra
   private:
 };
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class ODBCDatabase : public Database, public odbc::Database, public odbcpp::Transaction {
+  public:
+    virtual ~ODBCDatabase();
+    ODBCDatabase();
+
+    void beforeDestruction() { detach(); }
+
+    Statement *     newStatement();
+    Statement *     newAttachedStatement();
+
+    ODBCDatabase *  create();
+    ODBCDatabase *  drop();
+    ODBCDatabase *  attach();
+    ODBCDatabase *  detach();
+    bool            attached();
+
+    ODBCDatabase *  isolation(const utf8::String & isolation);
+    utf8::String    isolation();
+    ODBCDatabase *  start();
+    ODBCDatabase *  rollback();
+    ODBCDatabase *  commit();
+    bool            active();
+
+    ODBCDatabase *  clearParams();
+    ODBCDatabase *  addParam(const utf8::String & name, const ksys::Mutant & value);
+
+    ODBCDatabase *  name(const utf8::String & name);
+    utf8::String    name();
+    bool            separateDBName(const utf8::String & name, utf8::String & hostName, utf8::String & dbName, uintptr_t & port);
+  protected:
+    void            exceptionHandler(ksys::Exception * e);
+  private:
+};
+//---------------------------------------------------------------------------
 } // namespace adicpp
 //---------------------------------------------------------------------------
 #endif // adidbH

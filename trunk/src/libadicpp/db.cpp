@@ -48,7 +48,7 @@ Database * Database::newDatabase(const ksys::ConfigSection * config)
     p->params().add("lc_messages",config->valueByPath(section + ".messages_charset","WIN1251"));
     return p.ptr(NULL);
   }
-  if( stype.strcmp("mysql") == 0 ){
+  else if( stype.strcmp("mysql") == 0 ){
     mycpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
     ksys::AutoPtr<MYSQLDatabase> p(newObject<MYSQLDatabase>());
     p->name(config->valueByPath(section + ".database"));
@@ -60,6 +60,14 @@ Database * Database::newDatabase(const ksys::ConfigSection * config)
     p->params().add("write_timeout",config->valueByPath(section + ".write_timeout",0));
     p->params().add("reconnect",config->valueByPath(section + ".reconnect",false));
     p->params().add("compress",config->valueByPath(section + ".compress",false));
+    return p.ptr(NULL);
+  }
+  else if( stype.strcmp("odbc") == 0 ){
+    odbcpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
+    ksys::AutoPtr<ODBCDatabase> p(newObject<ODBCDatabase>());
+    p->name(config->valueByPath(section + ".database"));
+    p->params().add("user_name",config->valueByPath(section + ".user","root"));
+    p->params().add("password",config->valueByPath(section + ".password"));
     return p.ptr(NULL);
   }
   newObjectV1C2<ksys::Exception>(EINVAL,"unknown or unsupported server type: " + stype0)->throwSP();

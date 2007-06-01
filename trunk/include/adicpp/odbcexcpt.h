@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,88 +24,42 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#ifndef adicppH
-#define adicppH
+#ifndef _odbcexcpt_H_
+#define _odbcexcpt_H_
 //---------------------------------------------------------------------------
-#include <adicpp/fbcpp.h>
-#include <adicpp/mycpp.h>
-#include <adicpp/odbcpp.h>
+namespace odbcpp {
+//---------------------------------------------------------------------------
+struct ODBCErrorDesc {
+  const char *  error_;
+  int32_t       code_;
 
-#include <adicpp/adiexcpt.h>
-#include <adicpp/adidb.h>
-#include <adicpp/adist.h>
-//---------------------------------------------------------------------------
-namespace adicpp {
-//---------------------------------------------------------------------------
-class Initializer {
-  friend class AutoInitializer;
-  public:
-    static void acquire();
-    static void release();
-  protected:
-    static void initialize(int argc,char ** argv);
-    static void cleanup();
-  private:
-    static volatile ksys::ilock_t mutex_;
-    static ksys::ilock_t initCount_;
+    bool operator > (const struct ODBCErrorDesc & desc) const 
+    {
+      return code_ > desc.code_;
+    }
+    bool operator < (const struct ODBCErrorDesc & desc) const
+    {
+      return code_ < desc.code_;
+    }
 };
+extern const ODBCErrorDesc mysqlErrors[];
 //---------------------------------------------------------------------------
-inline void Initializer::acquire()
-{
-  ksys::interlockedCompareExchangeAcquire(mutex_,-1,0);
-}
+/////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-inline void Initializer::release()
-{
-  ksys::interlockedIncrement(mutex_,1);
-}
-//---------------------------------------------------------------------------
-inline void Initializer::initialize(int argc,char ** argv)
-{
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
-  if( initCount_ == 0 ){
-    ksys::initialize(argc,argv);
-#if !DISABLE_FIREBIRD_INTERFACE
-    fbcpp::initialize();
-#endif
-#if !DISABLE_MYSQL_INTERFACE
-    mycpp::initialize();
-#endif
-#if !DISABLE_ODBC_INTERFACE
-    odbcpp::initialize();
-#endif
-  }
-  initCount_++;
-}
-//---------------------------------------------------------------------------
-inline void Initializer::cleanup()
-{
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
-  assert( initCount_ > 0 );
-  if( initCount_ == 1 ){
-#if !DISABLE_ODBC_INTERFACE
-    odbcpp::cleanup();
-#endif
-#if !DISABLE_MYSQL_INTERFACE
-    mycpp::cleanup();
-#endif
-#if !DISABLE_FIREBIRD_INTERFACE
-    fbcpp::cleanup();
-#endif
-    ksys::cleanup();
-  }
-  initCount_--;
-}
-//---------------------------------------------------------------------------
-class AutoInitializer {
+class EClientServer : public ksys::Exception {
   public:
-    ~AutoInitializer(){ Initializer::cleanup(); }
-    AutoInitializer(int argc = 0,char ** argv = NULL){ Initializer::initialize(argc,argv); }
+    virtual ~EClientServer();
+    EClientServer() {}
+    EClientServer(int32_t code, const utf8::String what);
+
+    bool    isFatalError() const;
   protected:
   private:
 };
 //---------------------------------------------------------------------------
-}
+extern utf8::String strErrorHandler(int32_t err);
 //---------------------------------------------------------------------------
-#endif /* adicppH */
+} // namespace odbcpp
+//---------------------------------------------------------------------------
+#endif /* _odbcexcpt_H_ */
 //---------------------------------------------------------------------------
