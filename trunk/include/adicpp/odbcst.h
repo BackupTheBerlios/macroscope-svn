@@ -48,22 +48,46 @@ class DSQLParam {
   friend class DSQLStatement;
   public:
     ~DSQLParam();
-    DSQLParam() {}
-    DSQLParam(DSQLStatement & statement);
+    DSQLParam(DSQLStatement * statement = NULL);
   protected:
-    DSQLStatement       * statement_;
-    utf8::String        string_;
-    ksys::MemoryStream  stream_;
+    DSQLStatement * statement_;
+    utf8::String name_;
+    ksys::AutoPtr<wchar_t> string_;
+    ksys::MemoryStream stream_;
     union {
-      int64_t     int_;
-      double      float_;
+      int64_t int_;
+      double float_;
+      TIMESTAMP_STRUCT time_;
     };
+    uintptr_t index_;
     ksys::MutantType type_;
 
-    ksys::Mutant  getMutant();
-    DSQLParam &   setMutant(const ksys::Mutant & value);
-    utf8::String  getString();
-    DSQLParam &   setString(const utf8::String & value);
+    SQLSMALLINT sqlType(SQLPOINTER & data,SQLINTEGER & len);
+
+    ksys::Mutant getMutant();
+    DSQLParam & setMutant(const ksys::Mutant & value);
+    utf8::String getString();
+    DSQLParam & setString(const utf8::String & value);
+
+    static ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t &){
+      return *reinterpret_cast<ksys::EmbeddedHashNode<DSQLParam,uintptr_t> *>(link);
+	  }
+	  static uintptr_t ehLTN(const ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & node,uintptr_t &){
+	    return reinterpret_cast<uintptr_t>(&node);
+	  }
+	  static ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & keyNode(const DSQLParam & object){
+	    return object.keyNode_;
+	  }
+	  static DSQLParam & keyNodeObject(const ksys::EmbeddedHashNode<DSQLParam,uintptr_t> & node,DSQLParam * p){
+      return node.object(p->keyNode_);
+	  }
+	  static uintptr_t keyNodeHash(const DSQLParam & object){
+      return object.name_.hash(false);
+    }
+    static bool keyHashNodeEqu(const DSQLParam & object1,const DSQLParam & object2){
+      return object1.name_.strcasecmp(object2.name_) == 0;
+    }
+    mutable ksys::EmbeddedHashNode<DSQLParam,uintptr_t> keyNode_;
   private:
     DSQLParam(const DSQLParam &){}
     void operator = (const DSQLParam &){}
@@ -73,9 +97,26 @@ inline DSQLParam::~DSQLParam()
 {
 }
 //---------------------------------------------------------------------------
-inline DSQLParam::DSQLParam(DSQLStatement & statement) :
-  statement_(&statement), type_(ksys::mtNull)
+inline DSQLParam::DSQLParam(DSQLStatement * statement) :
+  statement_(statement), index_(~uintptr_t(0)), type_(ksys::mtNull)
 {
+}
+//---------------------------------------------------------------------------
+inline SQLSMALLINT DSQLParam::sqlType(SQLPOINTER & data,SQLINTEGER & len)
+{
+  len = 0;
+  switch( type_ ){
+    case ksys::mtNull   : data = (SQLPOINTER) SQL_NULL_DATA; return SQL_C_DEFAULT;
+    case ksys::mtInt    : data = &int_; return SQL_C_SBIGINT;
+    case ksys::mtFloat  : data = &float_; return SQL_C_DOUBLE;
+    case ksys::mtTime   : data = &time_; return SQL_C_TYPE_TIMESTAMP;
+    case ksys::mtCStr   :
+    case ksys::mtWStr   :
+    case ksys::mtStr    :
+    case ksys::mtString : data = string_.ptr(); len = SQL_NTS; return SQL_C_WCHAR;
+    case ksys::mtBinary : data = stream_.raw(); len = (SQLINTEGER) stream_.count(); return SQL_C_BINARY;
+  }
+  return SQL_C_DEFAULT;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -84,56 +125,71 @@ class DSQLParams {
   friend class DSQLStatement;
   public:
     ~DSQLParams();
-    DSQLParams() {}
-    DSQLParams(DSQLStatement & statement);
+    DSQLParams();
 
     uintptr_t count();
     utf8::String paramName(uintptr_t i);
     intptr_t paramIndex(const utf8::String & name);
     // access methods
-    bool                                                  isNull(uintptr_t i);
-    DSQLParams &                                          setNull(uintptr_t i);
-    bool                                                  isNull(const utf8::String & paramName);
-    DSQLParams &                                          setNull(const utf8::String & paramName);
+    bool isNull(uintptr_t i);
+    DSQLParams & setNull(uintptr_t i);
+    bool isNull(const utf8::String & paramName);
+    DSQLParams & setNull(const utf8::String & paramName);
 
-    ksys::Mutant                                          asMutant(uintptr_t i);
-    DSQLParams &                                          asMutant(uintptr_t i, const ksys::Mutant & value);
-    utf8::String                                          asString(uintptr_t i);
-    DSQLParams &                                          asString(uintptr_t i, const utf8::String & value);
+    ksys::Mutant asMutant(uintptr_t i);
+    DSQLParams & asMutant(uintptr_t i, const ksys::Mutant & value);
+    utf8::String asString(uintptr_t i);
+    DSQLParams & asString(uintptr_t i, const utf8::String & value);
 
-    ksys::Mutant                                          asMutant(const utf8::String & paramName);
-    DSQLParams &                                          asMutant(const utf8::String & paramName, const ksys::Mutant & value);
-    utf8::String                                          asString(const utf8::String & paramName);
-    DSQLParams &                                          asString(const utf8::String & paramName, const utf8::String & value);
+    ksys::Mutant asMutant(const utf8::String & paramName);
+    DSQLParams & asMutant(const utf8::String & paramName, const ksys::Mutant & value);
+    utf8::String asString(const utf8::String & paramName);
+    DSQLParams & asString(const utf8::String & paramName, const utf8::String & value);
   protected:
   private:
-    DSQLStatement * statement_;
-    DSQLParams &                                          checkParamIndex(uintptr_t i);
-    DSQLParam *                                           checkParamName(const utf8::String & paramName);
+    typedef ksys::EmbeddedHash<
+      DSQLParam,
+      uintptr_t,
+      uintptr_t,
+      DSQLParam::ehNLT,
+      DSQLParam::ehLTN,
+      DSQLParam::keyNode,
+      DSQLParam::keyNodeObject,
+      DSQLParam::keyNodeHash,
+      DSQLParam::keyHashNodeEqu
+    > DSQLParamHash;
+    DSQLParamHash params_;
+    ksys::Array<DSQLParam *> indexToParam_;
+
+    DSQLParams & checkParamIndex(uintptr_t i);
+    DSQLParam * checkParamName(const utf8::String & paramName);
 };
 //---------------------------------------------------------------------------
 inline DSQLParams::~DSQLParams()
 {
 }
 //---------------------------------------------------------------------------
-inline DSQLParams::DSQLParams(DSQLStatement & statement) : statement_(&statement)
+inline DSQLParams::DSQLParams()
 {
 }
 //---------------------------------------------------------------------------
 inline uintptr_t DSQLParams::count()
 {
-  return -1;
+  return indexToParam_.count();
 }
 //---------------------------------------------------------------------------
-/*inline utf8::String DSQLParams::paramName(uintptr_t i)
+inline utf8::String DSQLParams::paramName(uintptr_t i)
 {
-  return checkParamIndex(i).params_.keyOfIndex(i);
+  return checkParamIndex(i).indexToParam_[i]->name_;
 }
 //---------------------------------------------------------------------------
 inline intptr_t DSQLParams::paramIndex(const utf8::String & name)
 {
-  return params_.indexOfKey(name);
-}*/
+  DSQLParam param, * p;
+  param.name_ = name;
+  p = params_.find(param,false,false);
+  return p == NULL ? -1 : p->index_;
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -218,17 +274,12 @@ class DSQLStatement : virtual public ksys::Object {
     utf8::String    valueAsString(uintptr_t i);
     utf8::String    valueAsString(const utf8::String & name);
 
-    int64_t         insertId();
-
-    // properties
-    bool            attached();
-    bool            allocated();
-    bool &          storeResults();
+    bool attached();
     const bool & prepared() const;
-    utf8::String    sqlText();
+    utf8::String sqlText();
     DSQLStatement & sqlText(const utf8::String & sqlText);
-    DSQLParams &    params();
-    DSQLValues &    values();
+    DSQLParams & params();
+    DSQLValues & values();
     Database * database() const;
   protected:
   private:
@@ -240,19 +291,18 @@ class DSQLStatement : virtual public ksys::Object {
     }
     mutable ksys::EmbeddedListNode<DSQLStatement> listNode_;
 
-    Database *    database_;
-    SQLHANDLE * handle_;
-    utf8::String  sqlText_;
-    bool          sqlTextChanged_;
-    bool          prepared_;
-    bool          executed_;
-    bool          storeResults_;
-    DSQLParams    params_;
-    DSQLValues    values_;
+    Database * database_;
+    SQLHANDLE handle_;
+    utf8::String sqlText_;
+    bool sqlTextChanged_;
+    bool prepared_;
+    bool executed_;
+    DSQLParams params_;
+    DSQLValues values_;
 
-    DSQLStatement & allocate();
-    DSQLStatement & free();
-    utf8::String    compileSQLParameters();
+    DSQLStatement & allocateHandle();
+    DSQLStatement & freeHandle();
+    utf8::String compileSQLParameters();
 };
 //---------------------------------------------------------------------------
 inline Database * DSQLStatement::database() const
@@ -263,16 +313,6 @@ inline Database * DSQLStatement::database() const
 inline bool DSQLStatement::attached()
 {
   return database_ != NULL;
-}
-//---------------------------------------------------------------------------
-inline bool DSQLStatement::allocated()
-{
-  return handle_ != NULL;
-}
-//---------------------------------------------------------------------------
-inline bool & DSQLStatement::storeResults()
-{
-  return storeResults_;
 }
 //---------------------------------------------------------------------------
 inline utf8::String DSQLStatement::sqlText()

@@ -32,6 +32,7 @@
 #if HAVE_SQL_H
 #include <sql.h>
 #include <sqlext.h>
+#include <sqlucode.h>
 #endif
 
 #include <adicpp/odbcintf.h>

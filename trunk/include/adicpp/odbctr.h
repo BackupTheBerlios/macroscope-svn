@@ -35,6 +35,7 @@ class Database;
 //---------------------------------------------------------------------------
 class Transaction : virtual public Base {
   friend class Database;
+  friend class DSQLStatement;
   public:
     virtual ~Transaction();
     Transaction();

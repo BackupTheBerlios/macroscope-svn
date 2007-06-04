@@ -29,34 +29,8 @@
 //---------------------------------------------------------------------------
 namespace odbcpp {
 //---------------------------------------------------------------------------
+class Database;
 class DSQLStatement;
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class DPB {
-  public:
-    ~DPB();
-    DPB();
-
-    DPB & clear();
-    DPB & add(const utf8::String & name,const ksys::Mutant & value);
-    const utf8::String & user() const;
-    const utf8::String & password() const;
-  protected:
-  private:
-    utf8::String user_;
-    utf8::String password_;
-};
-//---------------------------------------------------------------------------
-inline const utf8::String & DPB::user() const
-{
-  return user_;
-}
-//---------------------------------------------------------------------------
-inline const utf8::String & DPB::password() const
-{
-  return password_;
-}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -76,10 +50,8 @@ class Database : virtual public Base {
 
     // properties
     bool                  attached();
-    DPB &                 params();
-    Database &            name(const utf8::String & name);
-    const utf8::String &  name();
-    static bool           separateDBName(const utf8::String & name, utf8::String & hostName, utf8::String & dbName, uintptr_t & port);
+    Database &            connection(const utf8::String & name);
+    const utf8::String &  connection();
 
     //  protected:
     void                  processingException(ksys::Exception * e);
@@ -88,14 +60,16 @@ class Database : virtual public Base {
   private:
     SQLHENV envHandle_; // Handle ODBC environment
     SQLHDBC handle_;    // Handle connection
-    DPB dpb_;
-    utf8::String name_;
+    utf8::String connection_;
+    utf8::String database_;
     Transaction * transaction_;
     ksys::EmbeddedList<
       DSQLStatement,
       DSQLStatement::listNode,
       DSQLStatement::listObject      
     > statements_;
+    Database & freeHandle();
+    EClientServer * exception(SQLSMALLINT handleType,SQLHANDLE handle) const;
 };
 //---------------------------------------------------------------------------
 inline bool Database::attached()
@@ -103,14 +77,9 @@ inline bool Database::attached()
   return handle_ != NULL;
 }
 //---------------------------------------------------------------------------
-inline DPB & Database::params()
+inline const utf8::String & Database::connection()
 {
-  return dpb_;
-}
-//---------------------------------------------------------------------------
-inline const utf8::String & Database::name()
-{
-  return name_;
+  return connection_;
 }
 //---------------------------------------------------------------------------
 } // namespace odbcpp

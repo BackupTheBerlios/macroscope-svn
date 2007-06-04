@@ -146,6 +146,20 @@ String::String(const char * s,uintptr_t l) : container_(&nullContainer())
   container_ = container;
 }
 //---------------------------------------------------------------------------
+String::String(const unsigned char * s,uintptr_t l) : container_(&nullContainer())
+{
+  String::Container * container;
+  uintptr_t len = mbcs2utf8s(CP_ACP,NULL,0,(const char *) s,l);
+  if( len > 0 ){
+    container = Container::container(len);
+    mbcs2utf8s(CP_ACP,container->string_,len + 1,(const char *) s,l);
+  }
+  else {
+    container = &String::nullContainer();
+  }
+  container_ = container;
+}
+//---------------------------------------------------------------------------
 String::String(const wchar_t * s, uintptr_t l) : container_(&nullContainer())
 {
   uintptr_t       ul, ql, ll;

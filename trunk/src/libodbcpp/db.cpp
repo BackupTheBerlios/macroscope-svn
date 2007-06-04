@@ -28,28 +28,6 @@
 //---------------------------------------------------------------------------
 namespace odbcpp {
 //---------------------------------------------------------------------------
-DPB::~DPB()
-{
-}
-//---------------------------------------------------------------------------
-DPB::DPB()
-{
-}
-//---------------------------------------------------------------------------
-DPB & DPB::clear()
-{
-  user_.resize(0);
-  password_.resize(0);
-  return *this;
-}
-//---------------------------------------------------------------------------
-DPB & DPB::add(const utf8::String & name, const ksys::Mutant & value)
-{
-  if( name.strcasecmp("user_name") == 0 ) user_ = value;
-  else if( name.strcasecmp("password") == 0 ) password_ = value;
-  return *this;
-}
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 Database::~Database()
@@ -58,120 +36,119 @@ Database::~Database()
   detach();
 }
 //---------------------------------------------------------------------------
-Database::Database() : handle_(NULL),  transaction_(NULL)
+Database::Database() : envHandle_(NULL), handle_(NULL),  transaction_(NULL)
 {
 }
 //---------------------------------------------------------------------------
-bool Database::separateDBName(const utf8::String & name, utf8::String & hostName, utf8::String & dbName, uintptr_t & port)
+Database & Database::freeHandle()
 {
-  utf8::String::Iterator i1(name);
-  while( !i1.eof() && i1.getChar() != ':' ) i1.next();
-  utf8::String::Iterator  i2  (i1 + 1);
-  while( !i2.eof() && i2.getChar() != ':' ) i2.next();
-  port = 0;
-  if( i1.eof() && i2.eof() ){
-    // unix socket or windows named pipe
-    dbName = name;
+  if( handle_ != NULL ){
+    api.SQLFreeHandle(SQL_HANDLE_DBC,handle_);
+    handle_ = NULL;
   }
-  else {
-    intmax_t  prt;
-    if( utf8::tryStr2Int(utf8::String(i1 + 1, i2), prt) && i2.eof() ){
-      // dbName and port
-      dbName = utf8::String(utf8::String::Iterator(name), i1);
-    }
-    else {
-      utf8::tryStr2Int(utf8::String(i2 + 1, utf8::String::Iterator(name).last()), prt);
-      hostName = utf8::String(utf8::String::Iterator(name), i1);
-      dbName = utf8::String(i1 + 1, i2);
-    }
-    port = (uintptr_t) prt;
+  if( envHandle_ != NULL ){
+    api.SQLFreeHandle(SQL_HANDLE_ENV,envHandle_);
+    envHandle_ = NULL;
   }
-  return true;
+  return *this;
 }
 //---------------------------------------------------------------------------
-Database & Database::create(const utf8::String & name)
+EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle) const
 {
-  utf8::String  hostName, dbName;
-  uintptr_t     port;
-  separateDBName(name.strlen() > 0 ? name : name_, hostName, dbName, port);
-  api.open();
-  try {
-    SQLRETURN r = api.SQLAllocHandle(SQL_HANDLE_ENV,SQL_NULL_HANDLE,&envHandle_);
-    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
-      printf("Error AllocHandle\n");
-      exit(0);
+  SQLWCHAR sqlState[6], msg[SQL_MAX_MESSAGE_LENGTH];
+  SQLINTEGER nativeError;
+  SQLSMALLINT msgLen, recNumber;
+  SQLRETURN r = SQL_SUCCESS;
+  ksys::AutoPtr<EClientServer> e(newObject<EClientServer>());
+  for( recNumber = 1; r != SQL_NO_DATA; recNumber++ ){
+    r = api.SQLGetDiagRecW(
+      handleType,
+      handle,
+      recNumber,
+      sqlState,
+      &nativeError,
+      msg,
+      sizeof(msg),
+      &msgLen
+    );
+    if( r != SQL_NO_DATA ){
+      e->addError(nativeError == 0 ? EINVAL : nativeError,"ODBC state: " + utf8::String(sqlState) +
+        (nativeError != 0 ? ", native error code: " + utf8::int2Str(nativeError) : utf8::String()) +
+        (msgLen > 0 ? utf8::String(", ") + msg : utf8::String())
+      );
     }
-    r = api.SQLSetEnvAttr(&envHandle_,SQL_ATTR_ODBC_VERSION,(SQLPOINTER) SQL_OV_ODBC3,0);
-    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
-      printf("Error SetEnv\n");
-      api.SQLFreeHandle(SQL_HANDLE_ENV,envHandle_);
-      exit(0);
-    }
-//    exceptionHandler(newObjectV1C2<EDBCreate>(api.mysql_errno(handle), api.mysql_error(handle)));
   }
-  catch( ksys::ExceptionSP & ){
-    api.close();
-    throw;
-  }
-  api.close();
+  return e.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+Database & Database::create(const utf8::String &)
+{
   return *this;
 }
 //---------------------------------------------------------------------------
 Database & Database::drop()
 {
-/*  if( !attached() )
-    exceptionHandler(newObjectV1C2<EDBNotAttached>(EINVAL, __PRETTY_FUNCTION__));
-  if( transaction_ != NULL )
-    while( transaction_->active() ) transaction_->rollback();
-  for( intptr_t  i = dsqlStatements_.count() - 1; i >= 0; i-- )
-    dsqlStatements_.objectOfIndex(i)->free();
-  if( api.mysql_query(handle_, (utf8::String("DROP DATABASE ") + handle_->db).c_str()) != 0 )
-    exceptionHandler(newObjectV1C2<EDBDrop>(api.mysql_errno(handle_), api.mysql_error(handle_)));
-  freeHandle(handle_);*/
-  api.close();
   return *this;
 }
 //---------------------------------------------------------------------------
 Database & Database::attach(const utf8::String & name)
 {
-  utf8::String  hostName, dbName;
-  uintptr_t     port;
-  separateDBName(name.strlen() > 0 ? name : name_, hostName, dbName, port);
   if( !attached() ){
     api.open();
     try {
       SQLRETURN r = api.SQLAllocHandle(SQL_HANDLE_ENV,SQL_NULL_HANDLE,&envHandle_);
-      if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
-        printf("Error AllocHandle\n");
-	      exit(0);
+      if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+        exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,"ODBC SQLAllocHandle(SQL_HANDLE_ENV) failed " + utf8::String(__PRETTY_FUNCTION__)));
+      r = api.SQLSetEnvAttr(envHandle_,SQL_ATTR_ODBC_VERSION,(SQLPOINTER) SQL_OV_ODBC3,0);
+      if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+        exceptionHandler(exception(SQL_HANDLE_ENV,envHandle_));
+      r = SQLAllocHandle(SQL_HANDLE_DBC,envHandle_,&handle_);
+      if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+        exceptionHandler(exception(SQL_HANDLE_ENV,envHandle_));
+      r = SQLSetConnectAttr(handle_,SQL_LOGIN_TIMEOUT,(SQLPOINTER) 5,0);
+      if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+        exceptionHandler(exception(SQL_HANDLE_DBC,handle_));
+      ksys::AutoPtr<SQLWCHAR> connOut;
+      connOut.alloc(sizeof(SQLWCHAR) * SQLSMALLINT((1u << (sizeof(SQLSMALLINT) * 8 - 1)) - 1));
+      SQLSMALLINT cbConnStrOut = 0;
+      r = api.SQLBrowseConnectW(
+        handle_,
+        (name.isNull() ? connection_ : name).getUNICODEString(),
+        SQL_NTS,
+        connOut,
+        SQLSMALLINT((1u << (sizeof(SQLSMALLINT) * 8 - 1)) - 1),
+        &cbConnStrOut
+      );
+      if( r == SQL_NEED_DATA ){
+        exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,
+          utf8::String("ODBC SQLBrowseConnect failed, ") + connOut.ptr() + ", " + __PRETTY_FUNCTION__));
       }
-      r = api.SQLSetEnvAttr(&envHandle_,SQL_ATTR_ODBC_VERSION,(SQLPOINTER) SQL_OV_ODBC3,0);
-      if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
-        printf("Error SetEnv\n");
-	      api.SQLFreeHandle(SQL_HANDLE_ENV,envHandle_);
-        exit(0);
-      }
-//      exceptionHandler(newObjectV1C2<EClientServer>(api.mysql_errno(handle_), api.mysql_error(handle_)));
+      else if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+        exceptionHandler(exception(SQL_HANDLE_DBC,handle_));
     }
     catch( ksys::ExceptionSP & ){
+      freeHandle();
       api.close();
       throw;
     }
-    if( name.strlen() > 0 ) name_ = name;
+    if( !name.isNull() ) connection_ = name;
   }
   return *this;
 }
 //---------------------------------------------------------------------------
 Database & Database::detach()
 {
-/*  if( attached() ){
+  if( attached() ){
     if( transaction_ != NULL )
       while( transaction_->active() ) transaction_->rollback();
-    for( intptr_t i = dsqlStatements_.count() - 1; i >= 0; i-- )
-      dsqlStatements_.objectOfIndex(i)->free();
-    freeHandle(handle_);
+    ksys::EmbeddedListNode<DSQLStatement> * node = statements_.first();
+    while( node != NULL ){
+      DSQLStatement::listObject(*node).freeHandle();
+      node = node->next();
+    }
+    freeHandle();
     api.close();
-  }*/
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -201,11 +178,11 @@ void Database::exceptionHandler(ksys::Exception * e)
 // properties ///////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-Database & Database::name(const utf8::String & name)
+Database & Database::connection(const utf8::String & connection)
 {
-  if( name_.strcasecmp(name) != 0 ){
+  if( connection_.strcasecmp(connection) != 0 ){
     if( attached() ) detach();
-    name_ = name;
+    connection_ = connection;
   }
   return *this;
 }

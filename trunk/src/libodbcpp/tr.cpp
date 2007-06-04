@@ -58,56 +58,55 @@ Transaction & Transaction::detach()
 //---------------------------------------------------------------------------
 Transaction & Transaction::start()
 {
-/*  if( !attached() )
+  if( !attached() )
     newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
-    utf8::String trSQL("SET SESSION TRANSACTION ISOLATION LEVEL ");
+    SQLRETURN r = SQL_SUCCESS;
     if( isolation_.strcasecmp("REPEATABLE") == 0 )
-      trSQL += "REPEATABLE READ";
+      r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_REPEATABLE_READ,0);
+    else if( isolation_.strcasecmp("READ_UNCOMMITTED") == 0 )
+      r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_READ_UNCOMMITTED,0);
     else if( isolation_.strcasecmp("READ_COMMITTED") == 0 )
-      trSQL += "READ COMMITTED";
+      r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_READ_COMMITTED,0);
     else if( isolation_.strcasecmp("SERIALIZABLE") == 0 )
-      trSQL += "SERIALIZABLE";
-//    else if( isolation_.strcasecmp("SNAPSHOT") == 0 )
-//      trSQL += " WITH CONSISTENT SNAPSHOT";
+      r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_SERIALIZABLE,0);
     else
-      trSQL += "READ COMMITTED";
-    if( api.mysql_query(database_->handle_,trSQL.c_str()) != 0 )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
-        api.mysql_errno(database_->handle_),api.mysql_error(database_->handle_)));
-    if( api.mysql_query(database_->handle_,"START TRANSACTION") != 0 )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
-        api.mysql_errno(database_->handle_),api.mysql_error(database_->handle_)));
+      r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_READ_COMMITTED,0);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+      database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
+    r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_AUTOCOMMIT,(SQLPOINTER) SQL_AUTOCOMMIT_OFF,0);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+      database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
   }
-  startCount_++;*/
+  startCount_++;
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::commit()
 {
-  /*if( !active() )
-    newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  assert(startCount_ > 0);
+  if( !active() )
+    newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  assert( startCount_ > 0 );
   if( startCount_ == 1 ){
-    if( api.mysql_commit(database_->handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
-      exceptionHandler(newObjectV1C2<ETrCommit>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+    SQLRETURN r = api.SQLEndTran(SQL_HANDLE_DBC,database_->handle_,SQL_COMMIT);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+      database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
   }
-  startCount_--;*/
+  startCount_--;
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::rollback()
 {
-  /*if( !active() )
-    newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  assert(startCount_ > 0);
+  if( !active() )
+    newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+  assert( startCount_ > 0 );
   if( startCount_ == 1 ){
-    if( api.mysql_rollback(database_->handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
-      exceptionHandler(newObjectV1C2<ETrRollback>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+    SQLRETURN r = api.SQLEndTran(SQL_HANDLE_DBC,database_->handle_,SQL_ROLLBACK);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+      database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
   }
-  startCount_--;*/
+  startCount_--;
   return *this;
 }
 //---------------------------------------------------------------------------

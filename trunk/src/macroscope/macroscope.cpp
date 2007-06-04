@@ -307,7 +307,8 @@ Logger & Logger::createDatabase()
         catch( ExceptionSP & e ){
           //if( e->searchCode(isc_keytoobig) ) throw;
           if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,
-              ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
+                ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR,ER_DUP_ENTRY_WITH_KEY_NAME) &&
+              e->what().strcasestr("already exists").eof() ) throw;
         }
       }
       database_->detach();

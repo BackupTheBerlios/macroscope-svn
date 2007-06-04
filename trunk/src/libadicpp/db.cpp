@@ -65,9 +65,7 @@ Database * Database::newDatabase(const ksys::ConfigSection * config)
   else if( stype.strcmp("odbc") == 0 ){
     odbcpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
     ksys::AutoPtr<ODBCDatabase> p(newObject<ODBCDatabase>());
-    p->name(config->valueByPath(section + ".database"));
-    p->params().add("user_name",config->valueByPath(section + ".user","root"));
-    p->params().add("password",config->valueByPath(section + ".password"));
+    p->connection(config->valueByPath(section + ".connection"));
     return p.ptr(NULL);
   }
   newObjectV1C2<ksys::Exception>(EINVAL,"unknown or unsupported server type: " + stype0)->throwSP();

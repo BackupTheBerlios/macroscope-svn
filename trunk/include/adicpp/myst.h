@@ -149,9 +149,9 @@ class DSQLParams {
   protected:
   private:
     DSQLStatement * statement_;
-    MYSQL_BIND_Holder                                                   bind_;
-    ksys::HashedObjectList< utf8::String,DSQLParam>                     params_;
-    ksys::Array< ksys::HashedObjectListItem< utf8::String,DSQLParam> *> indexToParam_;
+    MYSQL_BIND_Holder bind_;
+    ksys::HashedObjectList<utf8::String,DSQLParam> params_;
+    ksys::Array<ksys::HashedObjectListItem<utf8::String,DSQLParam> *> indexToParam_;
 
     DSQLParams &                                          bind();
     ksys::HashedObjectListItem< utf8::String,DSQLParam> * add(const utf8::String & paramName);

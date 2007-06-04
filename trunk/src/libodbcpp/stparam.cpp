@@ -45,7 +45,7 @@ ksys::Mutant DSQLParam::getMutant()
     case ksys::mtWStr   :
     case ksys::mtStr    :
     case ksys::mtString :
-      return string_;
+      return utf8::String(string_);
     case ksys::mtBinary :
       return stream_;
   }
@@ -54,6 +54,7 @@ ksys::Mutant DSQLParam::getMutant()
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setMutant(const ksys::Mutant & value)
 {
+  struct tm t;
   switch( value.type() ){
     case ksys::mtNull   :
       break;
@@ -64,13 +65,20 @@ DSQLParam & DSQLParam::setMutant(const ksys::Mutant & value)
       float_ = value;
       break;
     case ksys::mtTime   :
-      int_ = value;
+      t = value;
+      time_.year = t.tm_year + 1900;
+      time_.month = t.tm_mon + 1;
+      time_.day = t.tm_mday;
+      time_.hour = t.tm_hour;
+      time_.minute = t.tm_min;
+      time_.second = t.tm_sec;
+      time_.fraction = SQLINTEGER((uint64_t(value) % 1000000u) * 1000u);
       break;
     case ksys::mtCStr   :
     case ksys::mtWStr   :
     case ksys::mtStr    :
     case ksys::mtString :
-      string_ = value;
+      string_ = utf8::String(value).getUNICODEString().ptr(NULL);
       break;
     case ksys::mtBinary :
       stream_ = value;
@@ -95,7 +103,7 @@ utf8::String DSQLParam::getString()
     case ksys::mtWStr   :
     case ksys::mtStr    :
     case ksys::mtString :
-      return string_;
+      return utf8::String(string_);
     case ksys::mtBinary :
       break;
   }
@@ -104,7 +112,7 @@ utf8::String DSQLParam::getString()
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setString(const utf8::String & value)
 {
-  string_ = value;
+  string_ = value.getUNICODEString().ptr(NULL);
   type_ = ksys::mtString;
   return *this;
 }

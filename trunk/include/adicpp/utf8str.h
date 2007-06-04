@@ -54,6 +54,8 @@ template <typename T> class StringT {
     const T & operator [] (intptr_t i) const;
     T & operator [] (uintptr_t i);
     const T & operator [] (uintptr_t i) const;
+    T * ptr() const { return container_->string_.ptr(); }
+    T * ptr(T * p){ return container_->string_.ptr(p); }
   protected:
   private:
     StringT(T * string);
@@ -363,6 +365,7 @@ class String {
     String();
     String(Container * container);
     String(const char * s, uintptr_t l = ~uintptr_t(0) >> 1);
+    String(const unsigned char * s, uintptr_t l = ~uintptr_t(0) >> 1);
     String(const wchar_t * s, uintptr_t l = ~uintptr_t(0) >> 1);
     String(const Iterator & i);
     String(const Iterator & i1, const Iterator & i2);

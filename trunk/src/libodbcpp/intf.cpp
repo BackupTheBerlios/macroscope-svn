@@ -39,15 +39,18 @@ const char * const API::symbols_[] = {
   "SQLAllocHandle",
   "SQLSetEnvAttr",
   "SQLSetConnectAttr",
-  "SQLConnect",
+  "SQLBrowseConnectW",
   "SQLDisconnect",
   "SQLFreeHandle",
-  "SQLBindParam",
+  "SQLBindParameter",
+  "SQLDescribeParam",
+  "SQLNumParams",
   "SQLEndTran",
-  "SQLError",
-  "SQLExecDirect",
+  "SQLExecDirectW",
   "SQLExecute",
-  "SQLFetch"
+  "SQLFetch",
+  "SQLGetDiagRecW",
+  "SQLPrepareW"
 };
 //---------------------------------------------------------------------------
 void API::initialize()

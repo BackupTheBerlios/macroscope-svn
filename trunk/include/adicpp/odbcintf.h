@@ -41,15 +41,36 @@ class API {
     SQLRETURN (SQL_API * SQLAllocHandle)(SQLSMALLINT HandleType,SQLHANDLE InputHandle,SQLHANDLE * OutputHandle);	
     SQLRETURN (SQL_API * SQLSetEnvAttr)(SQLHENV EnvironmentHandle,SQLINTEGER Attribute,SQLPOINTER Value,SQLINTEGER StringLength);
     SQLRETURN (SQL_API * SQLSetConnectAttr)(SQLHDBC ConnectionHandle,SQLINTEGER Attribute, SQLPOINTER Value,SQLINTEGER StringLength);
-    SQLRETURN (SQL_API * SQLConnect)(SQLHDBC ConnectionHandle,SQLCHAR * ServerName,SQLSMALLINT NameLength1,SQLCHAR * UserName, SQLSMALLINT NameLength2,SQLCHAR * Authentication,SQLSMALLINT NameLength3);
+    SQLRETURN (SQL_API * SQLBrowseConnectW)(SQLHDBC hdbc,SQLWCHAR * szConnStrIn,SQLSMALLINT cbConnStrIn,SQLWCHAR * szConnStrOut,SQLSMALLINT cbConnStrOutMax,SQLSMALLINT * pcbConnStrOut);
     SQLRETURN (SQL_API * SQLDisconnect)(SQLHDBC ConnectionHandle);
     SQLRETURN (SQL_API * SQLFreeHandle)(SQLSMALLINT HandleType,SQLHANDLE Handle);
-    SQLRETURN (SQL_API * SQLBindParam)(SQLHSTMT StatementHandle,SQLUSMALLINT ParameterNumber,SQLSMALLINT ValueType,SQLSMALLINT ParameterType,SQLULEN LengthPrecision,SQLSMALLINT ParameterScale, SQLPOINTER ParameterValue,SQLLEN * StrLen_or_Ind);
+    SQLRETURN (SQL_API * SQLBindParameter)(
+      SQLHSTMT hstmt,
+      SQLUSMALLINT ipar,
+      SQLSMALLINT fParamType,
+      SQLSMALLINT fCType,
+      SQLSMALLINT fSqlType,
+      SQLULEN cbColDef,
+      SQLSMALLINT ibScale,
+      SQLPOINTER rgbValue,
+      SQLLEN cbValueMax,
+      SQLLEN * pcbValue
+    );
+    SQLRETURN (SQL_API * SQLDescribeParam)(
+      SQLHSTMT hstmt,
+      SQLUSMALLINT ipar,
+      SQLSMALLINT * pfSqlType,
+      SQLULEN * pcbParamDef,
+      SQLSMALLINT * pibScale,
+      SQLSMALLINT * pfNullable
+    );
+    SQLRETURN (SQL_API * SQLNumParams)(SQLHSTMT hstmt,SQLSMALLINT * pcpar);
     SQLRETURN (SQL_API * SQLEndTran)(SQLSMALLINT HandleType,SQLHANDLE Handle,SQLSMALLINT CompletionType);
-    SQLRETURN (SQL_API * SQLError)(SQLHENV EnvironmentHandle,SQLHDBC ConnectionHandle,SQLHSTMT StatementHandle,SQLCHAR * Sqlstate,SQLINTEGER * NativeError,SQLCHAR * MessageText, SQLSMALLINT BufferLength,SQLSMALLINT * TextLength);
-    SQLRETURN (SQL_API * SQLExecDirect)(SQLHSTMT StatementHandle,SQLCHAR *StatementText,SQLINTEGER TextLength);
+    SQLRETURN (SQL_API * SQLExecDirectW)(SQLHSTMT StatementHandle,SQLWCHAR * StatementText,SQLINTEGER TextLength);
     SQLRETURN (SQL_API * SQLExecute)(SQLHSTMT StatementHandle);
     SQLRETURN (SQL_API * SQLFetch)(SQLHSTMT StatementHandle);
+    SQLRETURN (SQL_API * SQLGetDiagRecW)(SQLSMALLINT HandleType,SQLHANDLE Handle,SQLSMALLINT RecNumber,SQLWCHAR * Sqlstate,SQLINTEGER * NativeError,SQLWCHAR * MessageText,SQLSMALLINT BufferLength,SQLSMALLINT * TextLength);
+    SQLRETURN (SQL_API * SQLPrepareW)(SQLHSTMT StatementHandle,SQLWCHAR * StatementText,SQLINTEGER TextLength);
 
     void open();
     void close();
