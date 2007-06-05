@@ -102,6 +102,7 @@ utf8::String DSQLStatement::compileSQLParameters()
         params_.params_.insert(param,false,false,&p);
         p->index_ = params_.indexToParam_.count();
         params_.indexToParam_.add(p);
+        param.ptr(NULL);
         text.replace(i,i2,"?");
       }
     }
@@ -127,7 +128,7 @@ DSQLStatement & DSQLStatement::prepare()
     for( SQLUSMALLINT i = 0; i < params_.indexToParam_.count(); i++ ){
       SQLSMALLINT dataType, dataCType, decimalDigits, nullable;
       SQLUINTEGER paramSize;
-      r = api.SQLDescribeParam(handle_,i,&dataType,&paramSize,&decimalDigits,&nullable);
+      r = api.SQLDescribeParam(handle_,i + 1,&dataType,&paramSize,&decimalDigits,&nullable);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
         database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
       SQLPOINTER data;
