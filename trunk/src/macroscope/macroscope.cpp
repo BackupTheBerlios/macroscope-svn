@@ -24,6 +24,10 @@
  * SUCH DAMAGE.
  */
 //------------------------------------------------------------------------------
+#define ENABLE_PCAP_INTERFACE 1
+#define ENABLE_ODBC_INTERFACE 1
+#define ENABLE_MYSQL_INTERFACE 1
+#define ENABLE_FIREBIRD_INTERFACE 1
 #include <adicpp/adicpp.h>
 //------------------------------------------------------------------------------
 #include "sniffer.h"
@@ -308,7 +312,7 @@ Logger & Logger::createDatabase()
           //if( e->searchCode(isc_keytoobig) ) throw;
           if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,
                 ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR,ER_DUP_ENTRY_WITH_KEY_NAME) &&
-              e->what().strcasestr("already exists").eof() ) throw;
+              e->what().strcasestr("already exists").eos() ) throw;
         }
       }
       database_->detach();

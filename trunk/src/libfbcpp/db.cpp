@@ -280,18 +280,16 @@ Database::~Database()
 bool Database::separateDBName(const utf8::String & name, utf8::String & hostName, utf8::String & dbName, uintptr_t & port)
 {
   utf8::String::Iterator i1(name);
-  while( !i1.eof() && i1.getChar() != ':' )
-    i1.next();
-  utf8::String::Iterator  i2  (i1 + 1);
-  while( !i2.eof() && (i2.getChar() != ':' || (i2 + 1).getChar() == '\\') )
-    i2.next();
+  while( !i1.eos() && i1.getChar() != ':' ) i1.next();
+  utf8::String::Iterator i2(i1 + 1);
+  while( !i2.eos() && (i2.getChar() != ':' || (i2 + 1).getChar() == '\\') ) i2.next();
   port = 0;
-  if( i1.eof() && i2.eof() ){
+  if( i1.eos() && i2.eos() ){
     dbName = name;
   }
   else{
-    intmax_t  prt = port;
-    if( utf8::tryStr2Int(utf8::String(i1 + 1, i2), prt) && i2.eof() ){
+    intmax_t prt = port;
+    if( utf8::tryStr2Int(utf8::String(i1 + 1, i2), prt) && i2.eos() ){
       // dbName and port
       dbName = utf8::String(utf8::String::Iterator(name), i1);
     }

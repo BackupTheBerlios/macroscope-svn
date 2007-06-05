@@ -70,7 +70,7 @@ ConfigSection & ConfigSection::sectionByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eof() ) break;
+    if( e - b < 1 && e.eos() ) break;
     utf8::String sname(utf8::String(b,e));
     if( sname.strlen() == 0 ){
       if( sections.count() > 1 ) sections.resize(sections.count() - 1);
@@ -90,14 +90,14 @@ bool ConfigSection::isSectionByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eof() ) break;
+    if( e - b < 1 && e.eos() ) break;
     utf8::String sname(utf8::String(b,e));
     if( sname.strlen() == 0 ){
       if( sections.count() > 1 ) sections.resize(sections.count() - 1);
     }
     else {
       if( !sections[sections.count() - 1]->isSection(sname) ) break;
-      if( e.eof() ) return true;
+      if( e.eos() ) return true;
       sections.add(&sections[sections.count() - 1]->section(sname));
     }
     b = ++e;
@@ -112,9 +112,9 @@ bool ConfigSection::isValueByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eof() ) break;
+    if( e - b < 1 && e.eos() ) break;
     utf8::String sname(utf8::String(b,e));
-    if( e.eof() ){
+    if( e.eos() ){
       return sections[sections.count() - 1]->isValue(sname);
     }
     if( sname.strlen() == 0 ){
@@ -142,9 +142,9 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eof() ) break;
+    if( e - b < 1 && e.eos() ) break;
     utf8::String sname(utf8::String(b,e));
-    if( e.eof() ){
+    if( e.eos() ){
       return sections[sections.count() - 1]->valueRef(sname);
     }
     if( sname.strlen() == 0 ){
@@ -167,7 +167,7 @@ static void saveSectionHelper(
 {
   if( key.strlen() > 0 ){
     utf8::String::Iterator keyIt(key);
-    while( !keyIt.eof() ){
+    while( !keyIt.eos() ){
       if( keyIt.isBlank() || keyIt.isCntrl() || keyIt.getChar() == '\"' ){
         key = "\"" + screenString(key) + "\"";
         break;
@@ -176,7 +176,7 @@ static void saveSectionHelper(
     }
   }
   utf8::String::Iterator valueIt(value);
-  while( !valueIt.eof() ){
+  while( !valueIt.eos() ){
     if( valueIt.isBlank() || valueIt.isCntrl() || valueIt.getChar() == '\"' ){
       value = "\"" + screenString(value) + "\"";
       break;
@@ -325,7 +325,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   utf8::String token;
   t = tt = ttUnknown;
   for(;;){
-    if( aheadi_.eof() ){
+    if( aheadi_.eos() ){
       if( file_.gets(ahead_,buffer_) ){
         ahead_.resize(0);
         t = ttEof;
@@ -335,7 +335,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
       }
       aheadi_ = ahead_;
     }
-    if( !aheadi_.eof() ){
+    if( !aheadi_.eos() ){
       if( inQuoted ){
         if( screened ){
           screened = false;

@@ -254,7 +254,7 @@ AsyncFile & AsyncFile::open()
       utf8::String::Iterator i(fileName_);
       i += 3;
       while( i.isDigit() ) i.next();
-      seekable_ = i.getChar() != ':' || !(i + 1).eof();
+      seekable_ = i.getChar() != ':' || !(i + 1).eos();
     }
     if( nocache_ ){
       utf8::String s(getRootFromPathName(fileName_));

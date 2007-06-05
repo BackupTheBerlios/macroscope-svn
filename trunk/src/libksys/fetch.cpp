@@ -55,7 +55,7 @@ void Fetcher::parseUrl(
 {
   uintptr_t c = 0;
   utf8::String::Iterator i(url.strstr("://"));
-  if( i.eof() ){
+  if( i.eos() ){
     i = url;
   }
   else {
@@ -63,11 +63,11 @@ void Fetcher::parseUrl(
     i += 3;
   }
   utf8::String::Iterator portI(i), si(i);
-  while( !i.eof() && (c = i.getChar()) != '@' && c != '/' ){
+  while( !i.eos() && (c = i.getChar()) != '@' && c != '/' ){
     if( c == ':' ) portI = i;
     i.next();
   }
-  if( !i.eof() && c == '@' ){
+  if( !i.eos() && c == '@' ){
     utf8::String::Iterator j(i);
     do {
       j.prev();
@@ -76,28 +76,28 @@ void Fetcher::parseUrl(
         utf8::String::Iterator k(j);
         do {
           k.prev();
-          if( k.bof() || (c = k.getChar() == '/') ){
+          if( k.bos() || (c = k.getChar() == '/') ){
             user = utf8::String(k + (c == '/'),j);
             break;
           }
-        } while( !k.bof() );
+        } while( !k.bos() );
         break;
       }
-      else if( j.bof() || (c = j.getChar() == '/') ){
+      else if( j.bos() || (c = j.getChar() == '/') ){
         user = utf8::String(j + (c == '/'),i);
         break;
       }
-    } while( !j.bof() );
+    } while( !j.bos() );
     portI = i;
   }
   else {
     i = si;
   }
-  while( !portI.eof() && (c = portI.getChar()) != ':' && c != '/' ) portI.next();
+  while( !portI.eos() && (c = portI.getChar()) != ':' && c != '/' ) portI.next();
   host = utf8::String(i + (i.getChar() == '@'),portI);
   if( portI.getChar() == ':' ){
     utf8::String::Iterator j(portI + 1);
-    while( !j.eof() && j.getChar() != '/' ) j.next();
+    while( !j.eos() && j.getChar() != '/' ) j.next();
     port = utf8::String(portI + 1,j);
     i = j;
   }

@@ -327,13 +327,15 @@ void BaseServer::closeServer()
   EmbeddedListNode<Fiber> * bfp;
   BaseThread * thread;
   shutdown_ = true;
-  if( how & csTerminate ){
+  {
     AutoLock<InterlockedMutex> lock(mutex_);
     for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
       thread = &BaseThread::serverListNodeObject(*btp);
       AutoLock<InterlockedMutex> lock2(thread->mutex_);
-      for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() )
-        Fiber::nodeObject(*bfp).terminate();
+      for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() ){
+        if( how & csTerminate ) Fiber::nodeObject(*bfp).terminate();
+        Fiber::nodeObject(*bfp).fiberBreakExecution();
+      }
     }
   }
   for(;;){

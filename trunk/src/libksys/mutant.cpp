@@ -100,7 +100,7 @@ bool Mutant::isIntegerString(const utf8::String & string,intmax_t & value)
   utf8::String::Iterator i(string);
   while( i.isSpace() && i.next() );
   while( i.isDigit() && i.next() );
-  if( i.eof() ) return false;
+  if( i.eos() ) return false;
   switch( i.getUpperChar() ){
     case 'K' :
       value = utf8::str2Int(utf8::String(utf8::String::Iterator(string), i)) * 1024u;
@@ -120,7 +120,7 @@ bool Mutant::isIntegerString(const utf8::String & string,intmax_t & value)
       break;
   }
   while( i.isSpace() && i.next() );
-  return i.eof();
+  return i.eos();
 }
 //---------------------------------------------------------------------------
 bool Mutant::isIntegerString(const utf8::String & string, intmax_t * i)

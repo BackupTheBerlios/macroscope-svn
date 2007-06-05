@@ -87,7 +87,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
   utf8::String::Iterator i(text);
   uintptr_t c[6], prev = '\0';
   for(;;){
-    if( i.eof() ) break;
+    if( i.eos() ) break;
     c[0] = i.getLowerChar();
     c[1] = (i + 1).getLowerChar();
     c[2] = (i + 2).getLowerChar();
@@ -109,7 +109,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
           sd = "st_" + sd.lower() + "_ip";
           utf8::String::Iterator j(i), net(j);
           bool isNetwork = false;
-          while( !j.eof() && !j.isSpace() && j.getChar() != ')' ){
+          while( !j.eos() && !j.isSpace() && j.getChar() != ')' ){
             if( j.getChar() == '/' ){
               isNetwork = true;
   	          net = j;

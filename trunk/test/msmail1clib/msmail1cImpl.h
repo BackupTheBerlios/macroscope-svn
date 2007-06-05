@@ -206,7 +206,7 @@ class ClientDBGetterFiber : public ClientFiber {
 //------------------------------------------------------------------------------
 class MK1100TCPServer;
 //------------------------------------------------------------------------------
-class MK1100ClientFiber : public ksock::ClientFiber {
+class MK1100ClientFiber : public ksock::ServerFiber {
   friend class Cmsmail1c;
   public:
     virtual ~MK1100ClientFiber();
@@ -217,6 +217,7 @@ class MK1100ClientFiber : public ksock::ClientFiber {
     FiberSemaphore sem_;
     utf8::String data_;
 
+    void fiberBreakExecution();
     void mainHelper();
     void main();
     utf8::String readString();
@@ -234,6 +235,8 @@ class MK1100TCPServer : public ksock::Server {
   public:
     virtual ~MK1100TCPServer();
     MK1100TCPServer(Client * client = NULL);
+
+    void open();
   protected:
     Client * client_;
     FiberInterlockedMutex fibersMutex_;

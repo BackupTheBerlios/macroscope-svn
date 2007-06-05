@@ -212,8 +212,8 @@ class String {
         bool              isLast() const;
         bool              prev();
         bool              next();
-        bool              bof() const;
-        bool              eof() const;
+        bool              bos() const;
+        bool              eos() const;
 
         bool              isDigit() const;
         bool              isAlpha() const;
@@ -726,12 +726,12 @@ inline bool String::Iterator::isLast() const
   return position_ < 0 || (container_->string_[cursor_] != '\0' && container_->string_[cursor_ + utf8seqlen(container_->string_ + cursor_)] == '\0');
 }
 //---------------------------------------------------------------------------
-inline bool String::Iterator::bof() const
+inline bool String::Iterator::bos() const
 {
   return position_ <= 0;
 }
 //---------------------------------------------------------------------------
-inline bool String::Iterator::eof() const
+inline bool String::Iterator::eos() const
 {
   return position_ < 0 || container_->string_[cursor_] == 0;
 }

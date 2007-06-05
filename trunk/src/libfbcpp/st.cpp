@@ -213,7 +213,7 @@ utf8::String DSQLStatement::compileSQLParameters()
   params_.indexToParam_.clear();
   utf8::String text(sqlText_.unique());
   utf8::String::Iterator i(text);
-  while( !i.eof() ){
+  while( !i.eos() ){
     uintptr_t c = i.getChar();
     if( c == ':' ){
       utf8::String::Iterator i2(i);

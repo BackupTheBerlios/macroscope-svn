@@ -796,6 +796,11 @@ MK1100ClientFiber & MK1100ClientFiber::writeString(const utf8::String & s)
 	return *this;
 }
 //------------------------------------------------------------------------------
+void MK1100ClientFiber::fiberBreakExecution()
+{
+  sem_.post();
+}
+//------------------------------------------------------------------------------
 void MK1100ClientFiber::mainHelper()
 {
   AutoLock<FiberInterlockedMutex> lock(server_->fibersMutex_);
@@ -821,10 +826,12 @@ void MK1100ClientFiber::main()
         barCodeType + "_" + barCode
       );
       sem_.wait();
-      int l = 1;
+      int l = int(enumStringParts(data_));
       writeBuffer(&l,sizeof(l));
-      writeString(stringPartByNo(data_,0));
-      writeString(stringPartByNo(data_,1));
+      for( int i = 0; i < l; i += 2 ){
+        writeString(stringPartByNo(data_,i));
+        writeString(stringPartByNo(data_,i + 1));
+      }
     }
   }
   catch( ExceptionSP & ){
@@ -841,13 +848,21 @@ MK1100TCPServer::~MK1100TCPServer()
 }
 //------------------------------------------------------------------------------
 MK1100TCPServer::MK1100TCPServer(Client * client) :
-  client_(client_)
+  client_(client)
 {
 }
 //------------------------------------------------------------------------------
 Fiber * MK1100TCPServer::newFiber()
 {
   return newObjectV1V2<MK1100ClientFiber>(client_,this);
+}
+//------------------------------------------------------------------------------
+void MK1100TCPServer::open()
+{
+  Array<ksock::SockAddr> addrs;
+  ksock::SockAddr::resolveNameForBind("",addrs,client_->mk1100Port_);
+  for( uintptr_t i = 0; i < addrs.count(); i++ ) addBind(addrs[i]);
+  ksock::Server::open();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

@@ -66,7 +66,6 @@ int main(int _argc,char * _argv[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
-
   try {
 #ifndef NDEBUG
     /*EmbeddedTree<Key,Key::keyNode,Key::keyNodeObject,Key::keyNodeCompare> tree;

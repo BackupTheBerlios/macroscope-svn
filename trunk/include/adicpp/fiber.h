@@ -63,6 +63,7 @@ class Fiber : virtual public Object {
     volatile bool finished_;
 
     virtual void fiberExecute() = 0;
+    virtual void fiberBreakExecution() {}
   private:
 #if defined(__WIN32__) || defined(__WIN64__)
     static VOID WINAPI start(Fiber * fiber);

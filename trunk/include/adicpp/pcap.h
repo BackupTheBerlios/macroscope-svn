@@ -113,17 +113,15 @@ struct PACKED UDPPacketHeader {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-extern void initialize(int argc,char ** argv);
-extern void cleanup();
-//---------------------------------------------------------------------------
 class PCAP : public Thread {
-  friend void initialize(int argc,char ** argv);
-  friend void cleanup();
-  public:
+ public:
     virtual ~PCAP();
     PCAP();
 
     enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear };
+
+    static void initialize();
+    static void cleanup();
 
     const utf8::String & ifName() const;
     PCAP & ifName(const utf8::String & ifName);
@@ -402,9 +400,6 @@ class PCAP : public Thread {
 
     PCAP(const PCAP &);
     void operator = (const PCAP &);
-
-    static void initialize();
-    static void cleanup();
 };
 //---------------------------------------------------------------------------
 inline const utf8::String & PCAP::ifName() const

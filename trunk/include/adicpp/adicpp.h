@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -65,14 +65,17 @@ inline void Initializer::initialize(int argc,char ** argv)
   ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
   if( initCount_ == 0 ){
     ksys::initialize(argc,argv);
-#if !DISABLE_FIREBIRD_INTERFACE
+#if ENABLE_FIREBIRD_INTERFACE
     fbcpp::initialize();
 #endif
-#if !DISABLE_MYSQL_INTERFACE
+#if ENABLE_MYSQL_INTERFACE
     mycpp::initialize();
 #endif
-#if !DISABLE_ODBC_INTERFACE
+#if ENABLE_ODBC_INTERFACE
     odbcpp::initialize();
+#endif
+#if ENABLE_PCAP_INTERFACE
+    ksys::PCAP::initialize();
 #endif
   }
   initCount_++;
@@ -83,13 +86,16 @@ inline void Initializer::cleanup()
   ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
   assert( initCount_ > 0 );
   if( initCount_ == 1 ){
-#if !DISABLE_ODBC_INTERFACE
+#if ENABLE_PCAP_INTERFACE
+    ksys::PCAP::cleanup();
+#endif
+#if ENABLE_ODBC_INTERFACE
     odbcpp::cleanup();
 #endif
-#if !DISABLE_MYSQL_INTERFACE
+#if ENABLE_MYSQL_INTERFACE
     mycpp::cleanup();
 #endif
-#if !DISABLE_FIREBIRD_INTERFACE
+#if ENABLE_FIREBIRD_INTERFACE
     fbcpp::cleanup();
 #endif
     ksys::cleanup();

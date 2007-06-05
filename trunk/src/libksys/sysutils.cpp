@@ -746,24 +746,6 @@ l1:   s = utf8::String(ii,ii + 1);
   return s;
 }
 //---------------------------------------------------------------------------
-/*utf8::String unScreenString(const utf8::String & s)
-{
-  utf8::String a;
-  utf8::String::Iterator i(s);
-  while( !i.eof() ){
-    if( i.getChar() == '\\' && i.next() ){
-      uintptr_t screenLen;
-      a += unScreenChar(i,screenLen);
-      i += screenLen;
-    }
-    else {
-      a += utf8::String(i,i + 1);
-      i.next();
-    }
-  }
-  return a;
-}*/
-//---------------------------------------------------------------------------
 static inline void unScreenChar(uintptr_t c,const char * seq,uintptr_t & seql,char * b,uintptr_t & l)
 {
   uintptr_t i;
@@ -858,78 +840,59 @@ utf8::String unScreenString(const utf8::String & s)
   return container;
 }
 //---------------------------------------------------------------------------
-uintptr_t enumStringParts(const utf8::String & s,const char * delim)
+static intptr_t stringPartByNoHelper(const utf8::String & s,uintptr_t n,const char * delim,utf8::String * pRetValue)
 {
   bool inQuotationMarks = false;
-  uintptr_t l, k = 0;
-  utf8::String::Iterator i(s);
-  if( !i.eof() ) for(;;){
-    uintptr_t c = i.getChar();
-    if( c == '\\' ){
-      if( i.next() ){
-        uintptr_t screenLen;
-        unScreenChar(i,screenLen);
-        i += screenLen;
-      }
+  uintptr_t l, k = 0, c, prev = 0;
+  utf8::String v;
+  utf8::String::Iterator i(s), q(s);
+  if( !i.eos() ) for(;;){
+    c = i.getChar();
+    if( inQuotationMarks && c == '\"' && prev != '\\' ){
+      if( pRetValue != NULL ) v += unScreenString(utf8::String(q,i));
+      q = i + 1;
+      inQuotationMarks = false;
     }
-    else {
-      if( c == '\"' ){
-        inQuotationMarks = !inQuotationMarks;
-      }
-      else if( !inQuotationMarks ){
-        const char * d = delim;
-        for(;;){
-          if( utf8::utf82ucs(d,l) == c ){
-            k++;
-            break;
-          }
-          if( *d == '\0' ) break;
-          d += l;
+    else if( !inQuotationMarks && c == '\"' ){
+      q = i + 1;
+      inQuotationMarks = true;
+    }
+    else if( !inQuotationMarks ){
+      bool eos;
+      const char * d = delim;
+      for(;;){
+        if( (eos = utf8::utf82ucs(d,l) == c) ){
+          if( pRetValue != NULL ) v += utf8::String(q,i).trim();
+          q = i + 1;
+          break;
         }
+        if( *d == '\0' ) break;
+        d += l;
       }
-      i.next();
+      if( eos ){
+        if( k == n ) break;
+        k++;
+        v = utf8::String();
+      }
     }
-    if( c == 0 ) break;
+    prev = c;
+    if( i.eos() ) break;
+    i.next();
   }
+  if( pRetValue != NULL ) *pRetValue = v;
   return k;
+}
+//---------------------------------------------------------------------------
+uintptr_t enumStringParts(const utf8::String & s,const char * delim)
+{
+  return stringPartByNoHelper(s,~uintptr_t(0),delim,NULL);
 }
 //---------------------------------------------------------------------------
 utf8::String stringPartByNo(const utf8::String & s,uintptr_t n,const char * delim)
 {
-  bool inQuotationMarks = false;
-  uintptr_t l, k = 0;
-  utf8::String::Iterator i(s), q(s);
-  for(;;){
-    uintptr_t c = i.getChar();
-    if( c == '\\' ){
-      if( i.next() ){
-        uintptr_t screenLen;
-        unScreenChar(i,screenLen);
-        i += screenLen;
-      }
-    }
-    else {
-      if( c == '\"' ){
-        inQuotationMarks = !inQuotationMarks;
-      }
-      else if( !inQuotationMarks ){
-        const char * d = delim;
-        for(;;){
-          if( utf8::utf82ucs(d,l) == c ){
-            if( k == n ) return utf8::String(q,i);
-            q = i + 1;
-            k++;
-            break;
-          }
-          if( *d == '\0' ) break;
-          d += l;
-        }
-      }
-      i.next();
-    }
-    if( c == 0 ) break;
-  }
-  return i.bof() || n > 0 ? utf8::String() : s;
+  utf8::String v;
+  stringPartByNoHelper(s,n,delim,&v);
+  return v;
 }
 //---------------------------------------------------------------------------
 intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool caseSensitive,const char * delim)
@@ -949,7 +912,7 @@ intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool ca
 utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String & s1,const utf8::String & separator)
 {
   utf8::String::Iterator i(s.strcasestr(separator));
-  if( i.eof() ) s0 = s; else s0 = utf8::String(s,i);
+  if( i.eos() ) s0 = s; else s0 = utf8::String(s,i);
   s1 = i + separator.strlen();
   return s;
 }
@@ -1157,7 +1120,7 @@ utf8::String changeFileExt(const utf8::String & fileName,const utf8::String & ex
 {
   utf8::String::Iterator i(fileName);
   i.last();
-  while( !i.bof() ){
+  while( !i.bos() ){
     uintptr_t c = i.getChar();
     if( c == '\\' || c == '/' || c == ':' ) break;
     if( c == '.' ) return utf8::String(utf8::String::Iterator(fileName),i) + extension;
@@ -1170,7 +1133,7 @@ utf8::String getFileExt(const utf8::String & fileName)
 {
   utf8::String::Iterator i(fileName);
   i.last();
-  while( !i.bof() ){
+  while( !i.bos() ){
     uintptr_t c = i.getChar();
     if( c == '\\' || c == '/' || c == ':' ) break;
     if( c == '.' ) return utf8::String(i);
@@ -1195,7 +1158,7 @@ utf8::String getExecutablePath()
   utf8::String name(getExecutableName());
   utf8::String::Iterator i(name);
   i.last();
-  while( !i.bof() ){
+  while( !i.bos() ){
     uintptr_t c = i.getChar();
     if( c == '\\' || c == '/' ) break;
     i.prev();
@@ -1236,7 +1199,7 @@ bool isPathNameRelative(const utf8::String & pathName)
 {
   utf8::String::Iterator i(pathName);
   uintptr_t c = 0, c2, c3;
-  while( !i.eof() ){
+  while( !i.eos() ){
     if( !i.isSpace() ){
       switch( c2 = i.getChar() ){
         case '\\' : case '/' : return false;
@@ -1501,10 +1464,10 @@ utf8::String getRootFromPathName(const utf8::String & pathName)
   utf8::String s(utf8::String::Iterator(pathName) + offset);
   if( s.strncmp("\\\\",2) == 0 || s.strncmp("//",2) == 0 ){ // windows network path
     utf8::String::Iterator i(utf8::String::Iterator(s) + 2);
-    while( !i.bof() ){
+    while( !i.bos() ){
       uintptr_t c = i.getChar();
       if( c == '/' || c == '\\' ){ // windows network server name
-        while( !i.bof() ){
+        while( !i.bos() ){
           c = i.getChar();
           if( c == '/' || c == '\\' ) break; // windows network server resource name
           i.next();
@@ -1516,7 +1479,7 @@ utf8::String getRootFromPathName(const utf8::String & pathName)
     return utf8::String(s,i) + pathDelimiterStr;
   }
   utf8::String::Iterator i(s);
-  while( !i.bof() ){
+  while( !i.bos() ){
     uintptr_t c = i.getChar();
     if( c == '/' || c == '\\' ) break;
     if( c == ':' ){
@@ -1536,7 +1499,7 @@ utf8::String getPathFromPathName(const utf8::String & pathName)
   utf8::String::Iterator i(pathName);
   i.last();
   if( (i - 1).getChar() == ':' ) return utf8::String();
-  while( !i.bof() ){
+  while( !i.bos() ){
     switch( i.getChar() ){
       case ':' :
         return utf8::String(utf8::String::Iterator(pathName),i + 1);
@@ -1553,7 +1516,7 @@ utf8::String getNameFromPathName(const utf8::String & pathName)
 {
   utf8::String::Iterator i(pathName);
   i.last();
-  while( !i.bof() ){
+  while( !i.bos() ){
     switch( i.getChar() ){
       case '\\' : case '/' :
         return utf8::String(i + 1,utf8::String::Iterator(pathName).last());
@@ -1566,9 +1529,9 @@ utf8::String getNameFromPathName(const utf8::String & pathName)
 //---------------------------------------------------------------------------
 utf8::String anyPathName2HostPathName(const utf8::String & pathName)
 {
-  if( pathDelimiter == '\\' && !pathName.strstr("/").eof() )
+  if( pathDelimiter == '\\' && !pathName.strstr("/").eos() )
     return pathName.replaceAll("/",pathDelimiterStr);
-  if( pathDelimiter == '/' && !pathName.strstr("\\").eof() )
+  if( pathDelimiter == '/' && !pathName.strstr("\\").eos() )
     return pathName.replaceAll("\\",pathDelimiterStr);
   return pathName;
 }
@@ -1577,33 +1540,33 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
 {
   uintptr_t c;
   utf8::String::Iterator ni(name), mi(mask);
-  while( !ni.eof() && !mi.eof() ){
+  while( !ni.eos() && !mi.eos() ){
     if( (c = mi.getChar()) == '?' ){
       ni.next();
       mi.next();
     }
     else if( c == '*' ){
       mi.next();
-      if( mi.eof() ){ ni.last(); break; }
+      if( mi.eos() ){ ni.last(); break; }
 #if defined(__WIN32__) || defined(__WIN64__)
       while( ni.getUpperChar() != mi.getUpperChar() ){
         ni.next();
-        if( ni.eof() ) break;
+        if( ni.eos() ) break;
       }
       while( ni.getUpperChar() == (c = mi.getUpperChar()) && c != '*' && c != '?' && c != '[' ){
         ni.next();
         mi.next();
-        if( ni.eof() ) break;
+        if( ni.eos() ) break;
       }
 #else
-      while( !mi.eof() && !ni.eof() && ni.getChar() != mi.getChar() ){
+      while( !mi.eos() && !ni.eos() && ni.getChar() != mi.getChar() ){
         ni.next();
-        if( ni.eof() ) break;
+        if( ni.eos() ) break;
       }
       while( ni.getChar() == (c = mi.getChar()) && c != '*' && c != '?' && c != '[' ){
         ni.next();
         mi.next();
-        if( ni.eof() ) break;
+        if( ni.eos() ) break;
       }
 #endif
     }
@@ -1621,7 +1584,7 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
       mi.next();
     }
   }
-  return ni.eof() && mi.eof();
+  return ni.eos() && mi.eos();
 }
 //---------------------------------------------------------------------------
 bool rename(const utf8::String & oldPathName,const utf8::String & newPathName,bool createPathIfNotExist,bool noThrow)
@@ -2358,7 +2321,7 @@ uintptr_t base64Decode(const utf8::String & s,void * p,uintptr_t size)
   uintptr_t i = 0;
   utf8::String::Iterator sp(s);
   size <<= 3;
-  while( !sp.eof() ){
+  while( !sp.eos() ){
     uintptr_t c = sp.getChar();
     if( c < 1 || c >= 256 ) newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     c = base64DecodeTable[c];
@@ -2424,7 +2387,7 @@ uintptr_t base32Decode(const utf8::String & s,void * p,uintptr_t size)
   uintptr_t i = 0;
   utf8::String::Iterator sp(s);
   size <<= 3;
-  while( !sp.eof() ){
+  while( !sp.eos() ){
     uintptr_t c = sp.getChar();
     if( c < 1 || c >= 256 ) newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     c = base32DecodeTable[c];
@@ -3335,11 +3298,10 @@ void initialize(int argc,char ** argv)
   TProfiler::initialize();
 #endif
   ksock::api.initialize();
-  PCAP::initialize();
   try {
     utf8::String cwd(getCurrentDir());
     utf8::String::Iterator i(cwd);
-    while( !i.eof() ){
+    while( !i.eos() ){
       uintptr_t c = i.getChar();
       if( c == '\\' || c == '/' ){
         pathDelimiter = char(c);
@@ -3379,7 +3341,6 @@ void initialize(int argc,char ** argv)
 void cleanup()
 {
   stdErr.close();
-  PCAP::cleanup();
   machineUniqueCryptedKey().~String();
   ksock::api.cleanup();
 #ifdef NETMAIL_ENABLE_PROFILER

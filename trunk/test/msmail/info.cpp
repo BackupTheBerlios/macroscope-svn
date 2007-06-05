@@ -172,13 +172,13 @@ Message & Message::removeValueByLeft(const utf8::String & key)
 void Message::validateKey(const utf8::String & key)
 {
   bool invalid = false;
-  if( !key.strstr(": ").eof() ) invalid = true;
+  if( !key.strstr(": ").eos() ) invalid = true;
   else
-  if( !key.strstr(": index ").eof() ) invalid = true;
+  if( !key.strstr(": index ").eos() ) invalid = true;
   else
   if( key.strncmp("#",1) == 0 ){
     utf8::String::Iterator i(key);
-    while( i.eof() )
+    while( i.eos() )
       if( i.isSpace() ){
         invalid = true;
         break;
@@ -246,7 +246,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
     bool isNumberSign = str.strncmp(numberSign,1) == 0;
     utf8::String::Iterator i(str), ia(i);
     ia.last();
-    if( !(i = str.strstr(index)).eof() ){
+    if( !(i = str.strstr(index)).eos() ){
       if( isNumberSign ){
         key = utf8::String(str,i);
       }
@@ -260,7 +260,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
       q = s.tell() + pAttribute->size_ + 1;
       buffer.seek(q);
     }
-    else if( !(i = str.strstr(colon)).eof() ){
+    else if( !(i = str.strstr(colon)).eos() ){
       if( isNumberSign ){
         key = utf8::String(str,i);
         value = utf8::String(i + 2,ia);

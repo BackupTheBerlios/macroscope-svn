@@ -401,7 +401,7 @@ String::Iterator String::strstr(const String & str) const
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
   if( str.container_->string_[0] != '\0' ){
-    while( !i.eof() ){
+    while( !i.eos() ){
       const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
       for(;;){
         c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
@@ -424,7 +424,7 @@ String::Iterator String::strcasestr(const String & str) const
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
   if( str.container_->string_[0] != '\0' ){
-    while( !i.eof() ){
+    while( !i.eos() ){
       const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
       for(;;){
         c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
@@ -447,7 +447,7 @@ String::Iterator String::strrstr(const String & str) const
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
   if( str.container_->string_[0] != '\0' ){
-    while( !i.eof() ){
+    while( !i.eos() ){
       const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
       for(;;){
         c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
@@ -470,7 +470,7 @@ String::Iterator String::strrcasestr(const String & str) const
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
   if( str.container_->string_[0] != '\0' ){
-    while( !i.eof() ){
+    while( !i.eos() ){
       const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
       for(;;){
         c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
@@ -506,7 +506,7 @@ WideString String::getUNICODEString() const
   Iterator i(*this);
   for(;;){
     p[i.position()] = (wchar_t) i.getChar();
-    if( i.eof() ) break;
+    if( i.eos() ) break;
     i.next();
   }
   return p;
@@ -550,7 +550,7 @@ BSTR String::getOLEString() const
   if( p == NULL ) newObjectV1C2<ksys::EOutOfMemory>(
     ERROR_NOT_ENOUGH_MEMORY + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   Iterator i(*this);
-  while( !i.eof() ){
+  while( !i.eos() ){
     p[i.position()] = (wchar_t) i.getChar();
     i.next();
   }
@@ -561,9 +561,9 @@ BSTR String::getOLEString() const
 String String::trimLeft() const
 {
   Iterator sl(*this);
-  while( !sl.eof() && sl.isSpace() ) sl.next();
+  while( !sl.eos() && sl.isSpace() ) sl.next();
   Container * container;
-  if( sl.eof() ){
+  if( sl.eos() ){
     container = &nullContainer();
   }
   else if( sl.position() > 0 ){
@@ -582,7 +582,7 @@ String String::trimRight() const
   sr.last();
   while( sr.prev() && sr.isSpace() );
   Container * container;
-  if( sr.bof() ){
+  if( sr.bos() ){
     container = &nullContainer();
   }
   else if( sr.position() > 0 ){
@@ -600,12 +600,12 @@ String String::trimRight() const
 String String::trim() const
 {
   Iterator sl(*this);
-  while( !sl.eof() && sl.isSpace() ) sl.next();
+  while( !sl.eos() && sl.isSpace() ) sl.next();
   Iterator sr(sl);
   sr.last();
-  while( !sr.bof() && (sr.isSpace() || sr.eof()) ) sr.prev();
+  while( !sr.bos() && (sr.isSpace() || sr.eos()) ) sr.prev();
   Container * container;
-  if( sl.eof() && sr.bof() ){
+  if( sl.eos() && sr.bos() ){
     container = &nullContainer();
   }
   else if( sl.isFirst() && sr.isLast() ){
@@ -676,7 +676,7 @@ String String::replaceAll(const String & what,const String & onWhat) const
 {
   String s(unique());
   Iterator i(s.strstr(what));
-  while( !i.eof() ){
+  while( !i.eos() ){
     s = s.replace(i,i + what.strlen(),onWhat);
     i = s.strstr(what);
   }
@@ -845,78 +845,78 @@ uint64_t String::hash_ll(bool caseSensitive) const
 bool String::isDigit() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isDigit() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isDigit() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isAlpha() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isAlpha() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isAlpha() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isAlnum() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isAlnum() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isAlnum() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isPrint() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isPrint() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isPrint() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isSpace() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isSpace() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isSpace() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isPunct() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isPunct() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isPunct() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isCntrl() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isCntrl() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isCntrl() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isBlank() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isBlank() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isBlank() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isXdigit() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isXdigit() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isXdigit() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isUpper() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isUpper() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isUpper() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 bool String::isLower() const
 {
   Iterator i(*this);
-  while( !i.eof() && !i.isLower() ) i.next();
-  return !i.eof();
+  while( !i.eos() && !i.isLower() ) i.next();
+  return !i.eos();
 }
 //---------------------------------------------------------------------------
 String operator + (const char * s1,const String & s2)
@@ -1305,7 +1305,7 @@ bool tryStr2Int(const String & str, intmax_t & a, uintptr_t pow)
   m.m = 0;
   uintmax_t x = 0;
   String::Iterator i(str);
-  while( !i.eof() ){
+  while( !i.eos() ){
     if( i.isSpace() ){
       if( !m.digit )
         m.spaceBeforeDigit = true;
@@ -1343,11 +1343,11 @@ bool tryStr2Int(const String & str, intmax_t & a, uintptr_t pow)
       break;
     i.next();
   }
-  if( i.eof() ){
+  if( i.eos() ){
     if( m.minus ) x = -intmax_t(x);
     a = x;
   }
-  return i.eof();
+  return i.eos();
 }
 //---------------------------------------------------------------------------
 intmax_t str2Int(const String & str,uintptr_t pow)

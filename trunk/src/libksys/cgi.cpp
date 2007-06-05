@@ -91,11 +91,11 @@ utf8::String CGI::uudecode(const utf8::String & string)
 void CGI::initalizeByMethodGET()
 {
   utf8::String::Iterator i(queryString_);
-  while( !i.eof() ){
+  while( !i.eos() ){
     utf8::String::Iterator j(i);
-    while( !i.eof() && i.getChar() != '=' ) i.next();
+    while( !i.eos() && i.getChar() != '=' ) i.next();
     utf8::String::Iterator k(i + 1);
-    while( !k.eof() && k.getChar() != '&' ) k.next();
+    while( !k.eos() && k.getChar() != '&' ) k.next();
     utf8::String name(j,i);
     utf8::String value(i + 1,k);
     if( name.trim().strlen() == 0 )

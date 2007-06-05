@@ -304,7 +304,7 @@ LogFile & LogFile::setDebugLevels(const utf8::String & levels)
     catch( ExceptionSP & e ){
       if( dynamic_cast<utf8::EStr2Scalar *>(e.ptr()) == NULL ) throw;
     }
-    if( s.strstr(minus).eof() ){
+    if( s.strstr(minus).eos() ){
       debugLevel(level,1);
     }
     else {
