@@ -59,10 +59,10 @@ class DSQLParam {
       double float_;
       uint8_t time_[24];
     };
-    uintptr_t index_;
+    intptr_t index_;
     ksys::MutantType type_;
 
-    int16_t sqlType(void * & data,long & len);
+    int16_t sqlType(void * & data,SQL_INTEGER_T & len);
 
     ksys::Mutant getMutant();
     DSQLParam & setMutant(const ksys::Mutant & value);

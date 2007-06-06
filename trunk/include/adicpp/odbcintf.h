@@ -44,14 +44,21 @@ typedef wchar_t SQLWCHAR;
 #else
 typedef uint16_t SQLWCHAR;
 #endif
+#if SIZEOF_LONG > 4
+#define SQL_INTEGER_T int32_t
+#define SQL_UINTEGER_T uint32_t
+#else
+#define SQL_INTEGER_T long
+#define SQL_UINTEGER_T unsigned long
+#endif
 //---------------------------------------------------------------------------
 class API {
   friend void initialize();
   friend void cleanup();
   public:
     int16_t (SQL_API * SQLAllocHandle)(int16_t HandleType,void * InputHandle,void ** OutputHandle);
-    int16_t (SQL_API * SQLSetEnvAttr)(void * EnvironmentHandle,long Attribute,void * Value,long StringLength);
-    int16_t (SQL_API * SQLSetConnectAttr)(void * ConnectionHandle,long Attribute, void * Value,long StringLength);
+    int16_t (SQL_API * SQLSetEnvAttr)(void * EnvironmentHandle,SQL_INTEGER_T Attribute,void * Value,SQL_INTEGER_T StringLength);
+    int16_t (SQL_API * SQLSetConnectAttr)(void * ConnectionHandle,SQL_INTEGER_T Attribute, void * Value,SQL_INTEGER_T StringLength);
     int16_t (SQL_API * SQLBrowseConnectW)(void * hdbc,SQLWCHAR * szConnStrIn,int16_t cbConnStrIn,SQLWCHAR * szConnStrOut,int16_t cbConnStrOutMax,int16_t * pcbConnStrOut);
     int16_t (SQL_API * SQLDisconnect)(void * ConnectionHandle);
     int16_t (SQL_API * SQLFreeHandle)(int16_t HandleType,void * Handle);
@@ -71,19 +78,19 @@ class API {
       void * hstmt,
       uint16_t ipar,
       int16_t * pfSqlType,
-      unsigned long * pcbParamDef,
+      SQL_UINTEGER_T * pcbParamDef,
       int16_t * pibScale,
       int16_t * pfNullable
     );
     int16_t (SQL_API * SQLNumParams)(void * hstmt,int16_t * pcpar);
     int16_t (SQL_API * SQLNumResultCols)(void * StatementHandle,int16_t * ColumnCount);
     int16_t (SQL_API * SQLEndTran)(int16_t HandleType,void * Handle,int16_t CompletionType);
-    int16_t (SQL_API * SQLExecDirectW)(void * StatementHandle,SQLWCHAR * StatementText,long TextLength);
+    int16_t (SQL_API * SQLExecDirectW)(void * StatementHandle,SQLWCHAR * StatementText,SQL_INTEGER_T TextLength);
     int16_t (SQL_API * SQLExecute)(void * StatementHandle);
     int16_t (SQL_API * SQLFetch)(void * StatementHandle);
-    int16_t (SQL_API * SQLGetDiagRecW)(int16_t HandleType,void * Handle,int16_t RecNumber,SQLWCHAR * Sqlstate,long * NativeError,SQLWCHAR * MessageText,int16_t BufferLength,int16_t * TextLength);
-    int16_t (SQL_API * SQLPrepareW)(void * StatementHandle,SQLWCHAR * StatementText,long TextLength);
-    int16_t (SQL_API * SQLSetStmtAttr)(void * StatementHandle,long Attribute,void * Value,long StringLength);
+    int16_t (SQL_API * SQLGetDiagRecW)(int16_t HandleType,void * Handle,int16_t RecNumber,SQLWCHAR * Sqlstate,SQL_INTEGER_T * NativeError,SQLWCHAR * MessageText,int16_t BufferLength,int16_t * TextLength);
+    int16_t (SQL_API * SQLPrepareW)(void * StatementHandle,SQLWCHAR * StatementText,SQL_INTEGER_T TextLength);
+    int16_t (SQL_API * SQLSetStmtAttr)(void * StatementHandle,SQL_INTEGER_T Attribute,void * Value,SQL_INTEGER_T StringLength);
     int16_t (SQL_API * SQLGetInfo)(void * ConnectionHandle,uint16_t InfoType,void * InfoValue,int16_t BufferLength,int16_t * StringLength);
 
     void open();

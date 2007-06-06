@@ -41,12 +41,12 @@ DSQLStatement::~DSQLStatement()
   detach();
 }
 //---------------------------------------------------------------------------
-DSQLStatement::DSQLStatement()
-  : handle_(NULL),
-    database_(NULL),
-    sqlTextChanged_(false),
-    prepared_(false),
-    executed_(false)
+DSQLStatement::DSQLStatement() :
+  database_(NULL),
+  handle_(NULL),
+  sqlTextChanged_(false),
+  prepared_(false),
+  executed_(false)
 {
 }
 //---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ utf8::String DSQLStatement::compileSQLParameters()
   return text;
 }
 //---------------------------------------------------------------------------
-int16_t DSQLParam::sqlType(void * & data,long & len)
+int16_t DSQLParam::sqlType(void * & data,SQL_INTEGER_T & len)
 {
   len = 0;
   switch( type_ ){
@@ -153,7 +153,7 @@ DSQLStatement & DSQLStatement::prepare()
     SQLSMALLINT j = -1;
     r = api.SQLNumParams(handle_,&j);
       database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
-    if( j != params_.indexToParam_.count() )
+    if( (uintptr_t) j != params_.indexToParam_.count() )
       database_->exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,"ODBC SQLNumParams failed " + utf8::String(__PRETTY_FUNCTION__)));
     for( SQLUSMALLINT i = 0; i < params_.indexToParam_.count(); i++ ){
       SQLSMALLINT dataType, dataCType, decimalDigits, nullable;
