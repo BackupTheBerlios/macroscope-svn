@@ -8,9 +8,10 @@ ADD_EXECUTABLE (macroscope
  
 TARGET_LINK_LIBRARIES (macroscope
   adicpp
-  fbcpp
   ksys
+  fbcpp
   mycpp
+  odbcpp
   utf8
   ${LIBPDBUTILS}
 )

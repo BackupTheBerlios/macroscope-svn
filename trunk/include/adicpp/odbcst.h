@@ -292,7 +292,7 @@ class DSQLStatement : virtual public ksys::Object {
     mutable ksys::EmbeddedListNode<DSQLStatement> listNode_;
 
     Database * database_;
-    SQLHANDLE handle_;
+    SQLHSTMT handle_;
     utf8::String sqlText_;
     bool sqlTextChanged_;
     bool prepared_;

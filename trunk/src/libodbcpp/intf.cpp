@@ -45,12 +45,15 @@ const char * const API::symbols_[] = {
   "SQLBindParameter",
   "SQLDescribeParam",
   "SQLNumParams",
+  "SQLNumResultCols",
   "SQLEndTran",
   "SQLExecDirectW",
   "SQLExecute",
   "SQLFetch",
   "SQLGetDiagRecW",
-  "SQLPrepareW"
+  "SQLPrepareW",
+  "SQLSetStmtAttr",
+  "SQLGetInfo"
 };
 //---------------------------------------------------------------------------
 void API::initialize()

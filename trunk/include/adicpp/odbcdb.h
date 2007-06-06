@@ -69,7 +69,7 @@ class Database : virtual public Base {
       DSQLStatement::listObject      
     > statements_;
     Database & freeHandle();
-    EClientServer * exception(SQLSMALLINT handleType,SQLHANDLE handle) const;
+    EClientServer * exception(SQLSMALLINT handleType,SQLHANDLE handle,utf8::String * pSqlState = NULL) const;
 };
 //---------------------------------------------------------------------------
 inline bool Database::attached()

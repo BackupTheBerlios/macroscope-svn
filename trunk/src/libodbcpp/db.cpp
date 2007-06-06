@@ -53,7 +53,7 @@ Database & Database::freeHandle()
   return *this;
 }
 //---------------------------------------------------------------------------
-EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle) const
+EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle,utf8::String * pSqlState) const
 {
   SQLWCHAR sqlState[6], msg[SQL_MAX_MESSAGE_LENGTH];
   SQLINTEGER nativeError;
@@ -61,6 +61,7 @@ EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle) con
   SQLRETURN r = SQL_SUCCESS;
   ksys::AutoPtr<EClientServer> e(newObject<EClientServer>());
   for( recNumber = 1; r != SQL_NO_DATA; recNumber++ ){
+    sqlState[0] = L'\0';
     r = api.SQLGetDiagRecW(
       handleType,
       handle,
@@ -72,6 +73,7 @@ EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle) con
       &msgLen
     );
     if( r != SQL_NO_DATA ){
+      if( pSqlState != NULL ){ *pSqlState = sqlState; pSqlState = NULL; }
       e->addError(nativeError == 0 ? EINVAL : nativeError,"ODBC state: " + utf8::String(sqlState) +
         (nativeError != 0 ? ", native error code: " + utf8::int2Str(nativeError) : utf8::String()) +
         (msgLen > 0 ? utf8::String(", ") + msg : utf8::String())
@@ -102,12 +104,12 @@ Database & Database::attach(const utf8::String & name)
       r = api.SQLSetEnvAttr(envHandle_,SQL_ATTR_ODBC_VERSION,(SQLPOINTER) SQL_OV_ODBC3,0);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
         exceptionHandler(exception(SQL_HANDLE_ENV,envHandle_));
-      r = SQLAllocHandle(SQL_HANDLE_DBC,envHandle_,&handle_);
+      r = api.SQLAllocHandle(SQL_HANDLE_DBC,envHandle_,&handle_);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
         exceptionHandler(exception(SQL_HANDLE_ENV,envHandle_));
-      r = SQLSetConnectAttr(handle_,SQL_LOGIN_TIMEOUT,(SQLPOINTER) 5,0);
+      /*r = api.SQLSetConnectAttr(handle_,SQL_LOGIN_TIMEOUT,(SQLPOINTER) 5,0);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
-        exceptionHandler(exception(SQL_HANDLE_DBC,handle_));
+        exceptionHandler(exception(SQL_HANDLE_DBC,handle_));*/
       ksys::AutoPtr<SQLWCHAR> connOut;
       connOut.alloc(sizeof(SQLWCHAR) * SQLSMALLINT((1u << (sizeof(SQLSMALLINT) * 8 - 1)) - 1));
       SQLSMALLINT cbConnStrOut = 0;

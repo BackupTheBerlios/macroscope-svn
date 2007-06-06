@@ -71,6 +71,12 @@ DSQLStatement & DSQLStatement::allocateHandle()
     SQLRETURN r = api.SQLAllocHandle(SQL_HANDLE_STMT,database_->handle_,&handle_);
     if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
       database_->exceptionHandler(database_->exception(SQL_HANDLE_ENV,database_->handle_));
+    r = api.SQLSetStmtAttr(handle_,SQL_ATTR_ASYNC_ENABLE,(SQLPOINTER) SQL_ASYNC_ENABLE_OFF,0);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
+      utf8::String state;
+      ksys::AutoPtr<EClientServer> e(database_->exception(SQL_HANDLE_STMT,handle_,&state));
+      if( state.strcmp("HYC00") != 0 ) database_->exceptionHandler(e.ptr(NULL));
+    }
   }
   return *this;
 }
@@ -120,11 +126,13 @@ DSQLStatement & DSQLStatement::prepare()
     r = api.SQLPrepareW(handle_,sql.getUNICODEString(),SQL_NTS);
     if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
       database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
+/*    r = api.SQLNumResultCols(handle_,&j);
+      database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));*/
     SQLSMALLINT j = -1;
-/*    r = api.SQLNumParams(handle_,&j);
+    r = api.SQLNumParams(handle_,&j);
       database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
     if( j != params_.indexToParam_.count() )
-      database_->exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,"ODBC SQLNumParams failed " + utf8::String(__PRETTY_FUNCTION__)));*/
+      database_->exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,"ODBC SQLNumParams failed " + utf8::String(__PRETTY_FUNCTION__)));
     for( SQLUSMALLINT i = 0; i < params_.indexToParam_.count(); i++ ){
       SQLSMALLINT dataType, dataCType, decimalDigits, nullable;
       SQLUINTEGER paramSize;

@@ -65,12 +65,15 @@ class API {
       SQLSMALLINT * pfNullable
     );
     SQLRETURN (SQL_API * SQLNumParams)(SQLHSTMT hstmt,SQLSMALLINT * pcpar);
+    SQLRETURN (SQL_API * SQLNumResultCols)(SQLHSTMT StatementHandle,SQLSMALLINT * ColumnCount);
     SQLRETURN (SQL_API * SQLEndTran)(SQLSMALLINT HandleType,SQLHANDLE Handle,SQLSMALLINT CompletionType);
     SQLRETURN (SQL_API * SQLExecDirectW)(SQLHSTMT StatementHandle,SQLWCHAR * StatementText,SQLINTEGER TextLength);
     SQLRETURN (SQL_API * SQLExecute)(SQLHSTMT StatementHandle);
     SQLRETURN (SQL_API * SQLFetch)(SQLHSTMT StatementHandle);
     SQLRETURN (SQL_API * SQLGetDiagRecW)(SQLSMALLINT HandleType,SQLHANDLE Handle,SQLSMALLINT RecNumber,SQLWCHAR * Sqlstate,SQLINTEGER * NativeError,SQLWCHAR * MessageText,SQLSMALLINT BufferLength,SQLSMALLINT * TextLength);
     SQLRETURN (SQL_API * SQLPrepareW)(SQLHSTMT StatementHandle,SQLWCHAR * StatementText,SQLINTEGER TextLength);
+    SQLRETURN (SQL_API * SQLSetStmtAttr)(SQLHSTMT StatementHandle,SQLINTEGER Attribute,SQLPOINTER Value,SQLINTEGER StringLength);
+    SQLRETURN (SQL_API * SQLGetInfo)(SQLHDBC ConnectionHandle,SQLUSMALLINT InfoType,SQLPOINTER InfoValue,SQLSMALLINT BufferLength,SQLSMALLINT * StringLength);
 
     void open();
     void close();
