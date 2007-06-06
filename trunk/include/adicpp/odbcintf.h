@@ -34,46 +34,57 @@ namespace odbcpp {
 extern void initialize();
 extern void cleanup();
 //---------------------------------------------------------------------------
+#if defined(WIN32) && !defined(SQL_API)
+#define SQL_API  __stdcall
+#else
+#define SQL_API
+#endif
+#if defined(_WCHAR_T_DEFINED) || SIZEOF_WCHAR_T > 0
+typedef wchar_t SQLWCHAR;
+#else
+typedef uint16_t SQLWCHAR;
+#endif
+//---------------------------------------------------------------------------
 class API {
   friend void initialize();
   friend void cleanup();
   public:
-    SQLRETURN (SQL_API * SQLAllocHandle)(SQLSMALLINT HandleType,SQLHANDLE InputHandle,SQLHANDLE * OutputHandle);	
-    SQLRETURN (SQL_API * SQLSetEnvAttr)(SQLHENV EnvironmentHandle,SQLINTEGER Attribute,SQLPOINTER Value,SQLINTEGER StringLength);
-    SQLRETURN (SQL_API * SQLSetConnectAttr)(SQLHDBC ConnectionHandle,SQLINTEGER Attribute, SQLPOINTER Value,SQLINTEGER StringLength);
-    SQLRETURN (SQL_API * SQLBrowseConnectW)(SQLHDBC hdbc,SQLWCHAR * szConnStrIn,SQLSMALLINT cbConnStrIn,SQLWCHAR * szConnStrOut,SQLSMALLINT cbConnStrOutMax,SQLSMALLINT * pcbConnStrOut);
-    SQLRETURN (SQL_API * SQLDisconnect)(SQLHDBC ConnectionHandle);
-    SQLRETURN (SQL_API * SQLFreeHandle)(SQLSMALLINT HandleType,SQLHANDLE Handle);
-    SQLRETURN (SQL_API * SQLBindParameter)(
-      SQLHSTMT hstmt,
-      SQLUSMALLINT ipar,
-      SQLSMALLINT fParamType,
-      SQLSMALLINT fCType,
-      SQLSMALLINT fSqlType,
-      SQLULEN cbColDef,
-      SQLSMALLINT ibScale,
-      SQLPOINTER rgbValue,
-      SQLLEN cbValueMax,
-      SQLLEN * pcbValue
+    int16_t (SQL_API * SQLAllocHandle)(int16_t HandleType,void * InputHandle,void ** OutputHandle);
+    int16_t (SQL_API * SQLSetEnvAttr)(void * EnvironmentHandle,long Attribute,void * Value,long StringLength);
+    int16_t (SQL_API * SQLSetConnectAttr)(void * ConnectionHandle,long Attribute, void * Value,long StringLength);
+    int16_t (SQL_API * SQLBrowseConnectW)(void * hdbc,SQLWCHAR * szConnStrIn,int16_t cbConnStrIn,SQLWCHAR * szConnStrOut,int16_t cbConnStrOutMax,int16_t * pcbConnStrOut);
+    int16_t (SQL_API * SQLDisconnect)(void * ConnectionHandle);
+    int16_t (SQL_API * SQLFreeHandle)(int16_t HandleType,void * Handle);
+    int16_t (SQL_API * SQLBindParameter)(
+      void * hstmt,
+      uint16_t ipar,
+      int16_t fParamType,
+      int16_t fCType,
+      int16_t fSqlType,
+      uintptr_t cbColDef,
+      int16_t ibScale,
+      void * rgbValue,
+      intptr_t cbValueMax,
+      intptr_t * pcbValue
     );
-    SQLRETURN (SQL_API * SQLDescribeParam)(
-      SQLHSTMT hstmt,
-      SQLUSMALLINT ipar,
-      SQLSMALLINT * pfSqlType,
-      SQLULEN * pcbParamDef,
-      SQLSMALLINT * pibScale,
-      SQLSMALLINT * pfNullable
+    int16_t (SQL_API * SQLDescribeParam)(
+      void * hstmt,
+      uint16_t ipar,
+      int16_t * pfSqlType,
+      unsigned long * pcbParamDef,
+      int16_t * pibScale,
+      int16_t * pfNullable
     );
-    SQLRETURN (SQL_API * SQLNumParams)(SQLHSTMT hstmt,SQLSMALLINT * pcpar);
-    SQLRETURN (SQL_API * SQLNumResultCols)(SQLHSTMT StatementHandle,SQLSMALLINT * ColumnCount);
-    SQLRETURN (SQL_API * SQLEndTran)(SQLSMALLINT HandleType,SQLHANDLE Handle,SQLSMALLINT CompletionType);
-    SQLRETURN (SQL_API * SQLExecDirectW)(SQLHSTMT StatementHandle,SQLWCHAR * StatementText,SQLINTEGER TextLength);
-    SQLRETURN (SQL_API * SQLExecute)(SQLHSTMT StatementHandle);
-    SQLRETURN (SQL_API * SQLFetch)(SQLHSTMT StatementHandle);
-    SQLRETURN (SQL_API * SQLGetDiagRecW)(SQLSMALLINT HandleType,SQLHANDLE Handle,SQLSMALLINT RecNumber,SQLWCHAR * Sqlstate,SQLINTEGER * NativeError,SQLWCHAR * MessageText,SQLSMALLINT BufferLength,SQLSMALLINT * TextLength);
-    SQLRETURN (SQL_API * SQLPrepareW)(SQLHSTMT StatementHandle,SQLWCHAR * StatementText,SQLINTEGER TextLength);
-    SQLRETURN (SQL_API * SQLSetStmtAttr)(SQLHSTMT StatementHandle,SQLINTEGER Attribute,SQLPOINTER Value,SQLINTEGER StringLength);
-    SQLRETURN (SQL_API * SQLGetInfo)(SQLHDBC ConnectionHandle,SQLUSMALLINT InfoType,SQLPOINTER InfoValue,SQLSMALLINT BufferLength,SQLSMALLINT * StringLength);
+    int16_t (SQL_API * SQLNumParams)(void * hstmt,int16_t * pcpar);
+    int16_t (SQL_API * SQLNumResultCols)(void * StatementHandle,int16_t * ColumnCount);
+    int16_t (SQL_API * SQLEndTran)(int16_t HandleType,void * Handle,int16_t CompletionType);
+    int16_t (SQL_API * SQLExecDirectW)(void * StatementHandle,SQLWCHAR * StatementText,long TextLength);
+    int16_t (SQL_API * SQLExecute)(void * StatementHandle);
+    int16_t (SQL_API * SQLFetch)(void * StatementHandle);
+    int16_t (SQL_API * SQLGetDiagRecW)(int16_t HandleType,void * Handle,int16_t RecNumber,SQLWCHAR * Sqlstate,long * NativeError,SQLWCHAR * MessageText,int16_t BufferLength,int16_t * TextLength);
+    int16_t (SQL_API * SQLPrepareW)(void * StatementHandle,SQLWCHAR * StatementText,long TextLength);
+    int16_t (SQL_API * SQLSetStmtAttr)(void * StatementHandle,long Attribute,void * Value,long StringLength);
+    int16_t (SQL_API * SQLGetInfo)(void * ConnectionHandle,uint16_t InfoType,void * InfoValue,int16_t BufferLength,int16_t * StringLength);
 
     void open();
     void close();

@@ -25,6 +25,11 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/odbcpp.h>
+#if HAVE_SQL_H
+#include <sql.h>
+#include <sqlext.h>
+#include <sqlucode.h>
+#endif
 //---------------------------------------------------------------------------
 namespace odbcpp {
 //---------------------------------------------------------------------------
@@ -115,6 +120,23 @@ utf8::String DSQLStatement::compileSQLParameters()
     i.next();
   }
   return text;
+}
+//---------------------------------------------------------------------------
+int16_t DSQLParam::sqlType(void * & data,long & len)
+{
+  len = 0;
+  switch( type_ ){
+    case ksys::mtNull   : data = (void *) SQL_NULL_DATA; return SQL_C_DEFAULT;
+    case ksys::mtInt    : data = &int_; return SQL_C_SBIGINT;
+    case ksys::mtFloat  : data = &float_; return SQL_C_DOUBLE;
+    case ksys::mtTime   : data = &time_; return SQL_C_TYPE_TIMESTAMP;
+    case ksys::mtCStr   :
+    case ksys::mtWStr   :
+    case ksys::mtStr    :
+    case ksys::mtString : data = string_.ptr(); len = SQL_NTS; return SQL_C_WCHAR;
+    case ksys::mtBinary : data = stream_.raw(); len = (long) stream_.count(); return SQL_C_BINARY;
+  }
+  return SQL_C_DEFAULT;
 }
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::prepare()

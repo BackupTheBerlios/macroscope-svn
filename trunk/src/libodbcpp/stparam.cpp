@@ -25,6 +25,11 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/odbcpp.h>
+#if HAVE_SQL_H
+#include <sql.h>
+#include <sqlext.h>
+#include <sqlucode.h>
+#endif
 //---------------------------------------------------------------------------
 namespace odbcpp {
 //---------------------------------------------------------------------------
@@ -55,6 +60,7 @@ ksys::Mutant DSQLParam::getMutant()
 DSQLParam & DSQLParam::setMutant(const ksys::Mutant & value)
 {
   struct tm t;
+  TIMESTAMP_STRUCT * ts;
   switch( value.type() ){
     case ksys::mtNull   :
       break;
@@ -66,13 +72,14 @@ DSQLParam & DSQLParam::setMutant(const ksys::Mutant & value)
       break;
     case ksys::mtTime   :
       t = value;
-      time_.year = t.tm_year + 1900;
-      time_.month = t.tm_mon + 1;
-      time_.day = t.tm_mday;
-      time_.hour = t.tm_hour;
-      time_.minute = t.tm_min;
-      time_.second = t.tm_sec;
-      time_.fraction = SQLINTEGER((uint64_t(value) % 1000000u) * 1000u);
+      ts = (TIMESTAMP_STRUCT *) time_;
+      ts->year = t.tm_year + 1900;
+      ts->month = t.tm_mon + 1;
+      ts->day = t.tm_mday;
+      ts->hour = t.tm_hour;
+      ts->minute = t.tm_min;
+      ts->second = t.tm_sec;
+      ts->fraction = SQLINTEGER((uint64_t(value) % 1000000u) * 1000u);
       break;
     case ksys::mtCStr   :
     case ksys::mtWStr   :

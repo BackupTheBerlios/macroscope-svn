@@ -29,12 +29,6 @@
 
 #include <adicpp/ksys.h>
 
-#if HAVE_SQL_H
-#include <sql.h>
-#include <sqlext.h>
-#include <sqlucode.h>
-#endif
-
 #include <adicpp/odbcintf.h>
 #include <adicpp/odbcexcpt.h>
 #include <adicpp/odbcst.h>

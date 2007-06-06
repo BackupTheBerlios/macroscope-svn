@@ -57,12 +57,12 @@ class DSQLParam {
     union {
       int64_t int_;
       double float_;
-      TIMESTAMP_STRUCT time_;
+      uint8_t time_[24];
     };
     uintptr_t index_;
     ksys::MutantType type_;
 
-    SQLSMALLINT sqlType(SQLPOINTER & data,SQLINTEGER & len);
+    int16_t sqlType(void * & data,long & len);
 
     ksys::Mutant getMutant();
     DSQLParam & setMutant(const ksys::Mutant & value);
@@ -100,23 +100,6 @@ inline DSQLParam::~DSQLParam()
 inline DSQLParam::DSQLParam(DSQLStatement * statement) :
   statement_(statement), index_(~uintptr_t(0)), type_(ksys::mtNull)
 {
-}
-//---------------------------------------------------------------------------
-inline SQLSMALLINT DSQLParam::sqlType(SQLPOINTER & data,SQLINTEGER & len)
-{
-  len = 0;
-  switch( type_ ){
-    case ksys::mtNull   : data = (SQLPOINTER) SQL_NULL_DATA; return SQL_C_DEFAULT;
-    case ksys::mtInt    : data = &int_; return SQL_C_SBIGINT;
-    case ksys::mtFloat  : data = &float_; return SQL_C_DOUBLE;
-    case ksys::mtTime   : data = &time_; return SQL_C_TYPE_TIMESTAMP;
-    case ksys::mtCStr   :
-    case ksys::mtWStr   :
-    case ksys::mtStr    :
-    case ksys::mtString : data = string_.ptr(); len = SQL_NTS; return SQL_C_WCHAR;
-    case ksys::mtBinary : data = stream_.raw(); len = (SQLINTEGER) stream_.count(); return SQL_C_BINARY;
-  }
-  return SQL_C_DEFAULT;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -292,7 +275,7 @@ class DSQLStatement : virtual public ksys::Object {
     mutable ksys::EmbeddedListNode<DSQLStatement> listNode_;
 
     Database * database_;
-    SQLHSTMT handle_;
+    void * handle_;
     utf8::String sqlText_;
     bool sqlTextChanged_;
     bool prepared_;

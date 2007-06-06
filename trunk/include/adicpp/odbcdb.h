@@ -58,8 +58,8 @@ class Database : virtual public Base {
     void                  staticExceptionHandler(ksys::Exception * e);
     void                  exceptionHandler(ksys::Exception * e);
   private:
-    SQLHENV envHandle_; // Handle ODBC environment
-    SQLHDBC handle_;    // Handle connection
+    void * envHandle_; // Handle ODBC environment
+    void * handle_;    // Handle connection
     utf8::String connection_;
     utf8::String database_;
     Transaction * transaction_;
@@ -69,7 +69,7 @@ class Database : virtual public Base {
       DSQLStatement::listObject      
     > statements_;
     Database & freeHandle();
-    EClientServer * exception(SQLSMALLINT handleType,SQLHANDLE handle,utf8::String * pSqlState = NULL) const;
+    EClientServer * exception(int16_t handleType,void * handle,utf8::String * pSqlState = NULL) const;
 };
 //---------------------------------------------------------------------------
 inline bool Database::attached()

@@ -365,14 +365,14 @@ FieldType FirebirdStatement::fieldType(uintptr_t i)
       return ftShort;
     case SQL_LONG        :
       return ftInt;
-    case SQL_FLOAT       :
+    case SQL_FB_FLOAT       :
       return ftFloat;
-    case SQL_DOUBLE      :
+    case SQL_FB_DOUBLE      :
     case SQL_D_FLOAT     :
       return ftDouble;
-    case SQL_TYPE_TIME   :
-    case SQL_TYPE_DATE   :
-    case SQL_TIMESTAMP   :
+    case SQL_FB_TYPE_TIME   :
+    case SQL_FB_TYPE_DATE   :
+    case SQL_FB_TIMESTAMP   :
       return ftTime;
     case SQL_QUAD        :
     case SQL_INT64       :
