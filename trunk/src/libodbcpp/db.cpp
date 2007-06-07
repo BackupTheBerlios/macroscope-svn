@@ -130,12 +130,23 @@ Database & Database::attach(const utf8::String & name)
         exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,
           utf8::String("ODBC SQLBrowseConnect failed, ") + connOut.ptr() + ", " + __PRETTY_FUNCTION__));
       }
-      else if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
-        exceptionHandler(exception(SQL_HANDLE_DBC,handle_));
+      else if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
+        r = api.SQLDriverConnectW(
+          handle_,
+          NULL,
+          (name.isNull() ? connection_ : name).getUNICODEString(),
+          SQL_NTS,
+          connOut,
+          SQLSMALLINT((1u << (sizeof(SQLSMALLINT) * 8 - 1)) - 1),
+          &cbConnStrOut,
+          SQL_DRIVER_NOPROMPT
+        );
+        if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+          exceptionHandler(exception(SQL_HANDLE_DBC,handle_));
+      }
     }
     catch( ksys::ExceptionSP & ){
-      freeHandle();
-      api.close();
+      detach();
       throw;
     }
     if( !name.isNull() ) connection_ = name;

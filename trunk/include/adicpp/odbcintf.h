@@ -92,6 +92,16 @@ class API {
     int16_t (SQL_API * SQLPrepareW)(void * StatementHandle,SQLWCHAR * StatementText,SQL_INTEGER_T TextLength);
     int16_t (SQL_API * SQLSetStmtAttr)(void * StatementHandle,SQL_INTEGER_T Attribute,void * Value,SQL_INTEGER_T StringLength);
     int16_t (SQL_API * SQLGetInfo)(void * ConnectionHandle,uint16_t InfoType,void * InfoValue,int16_t BufferLength,int16_t * StringLength);
+    int16_t (SQL_API * SQLDriverConnectW)(
+      void * ConnectionHandle,
+      void * WindowHandle,
+      SQLWCHAR * InConnectionString,
+      int16_t StringLength1,
+      SQLWCHAR * OutConnectionString,
+      int16_t BufferLength,
+      int16_t * StringLength2Ptr,
+      uint16_t DriverCompletion
+    );
 
     void open();
     void close();

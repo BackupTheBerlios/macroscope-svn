@@ -237,22 +237,32 @@ Logger & Logger::createDatabase()
         "CREATE TABLE INET_USERS_TRAF ("
         " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
         " ST_TIMESTAMP          DATETIME NOT NULL,"
-        " ST_TRAF_WWW           INTEGER NOT NULL,"
-        " ST_TRAF_SMTP          INTEGER NOT NULL"
+        " ST_TRAF_WWW           BIGINT NOT NULL,"
+        " ST_TRAF_SMTP          BIGINT NOT NULL"
         ")" <<
         "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
         " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
         " ST_TIMESTAMP          DATETIME NOT NULL,"
         " ST_URL                VARCHAR(4096) NOT NULL,"
         " ST_URL_HASH           BIGINT NOT NULL,"
-        " ST_URL_TRAF           INTEGER NOT NULL,"
-        " ST_URL_COUNT          INTEGER NOT NULL"
+        " ST_URL_TRAF           BIGINT NOT NULL,"
+        " ST_URL_COUNT          BIGINT NOT NULL"
         ")" << 
         "CREATE TABLE INET_SENDMAIL_MESSAGES ("
+        " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
         " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
         " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
-        " ST_MSGSIZE            INTEGER NOT NULL"
+        " ST_MSGSIZE            BIGINT NOT NULL,"
+        " ST_NRCPTS             BIGINT NOT NULL"
         ")" <<
+        "CREATE TABLE INET_USERS_TOP_MAIL ("
+        " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
+        " ST_TIMESTAMP          DATETIME NOT NULL,"
+        " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
+        " ST_TO                 VARCHAR(240) CHARACTER SET ascii NOT NULL,"
+        " ST_MAIL_TRAF          BIGINT NOT NULL,"
+        " ST_MAIL_COUNT         BIGINT NOT NULL"
+        ")" << 
         "CREATE TABLE INET_LOG_FILE_STAT ("
         " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
         " ST_LAST_OFFSET        BIGINT NOT NULL"
@@ -288,16 +298,16 @@ Logger & Logger::createDatabase()
 //        "CREATE INDEX IBSC_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip,st_dst_ip)" <<
         "CREATE UNIQUE INDEX IUT_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
         "CREATE INDEX IUT_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
-        "CREATE INDEX IUT_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)"
+        "CREATE INDEX IUT_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)" <<
+        "CREATE INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)" <<
+        "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP,ST_FROM,ST_TO)"
       ;
       if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
         metadata << "CREATE DESC INDEX IBS_IDX5 ON INET_BPFT_STAT (st_if,st_start)";
         metadata << "CREATE DESC INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-        metadata << "CREATE DESC INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
       }
       else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
         metadata << "CREATE INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
-        metadata << "CREATE INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)";
       }
       database_->create();
       database_->attach();

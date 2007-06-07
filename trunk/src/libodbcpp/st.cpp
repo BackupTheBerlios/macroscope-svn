@@ -152,6 +152,7 @@ DSQLStatement & DSQLStatement::prepare()
       database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));*/
     SQLSMALLINT j = -1;
     r = api.SQLNumParams(handle_,&j);
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
       database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
     if( (uintptr_t) j != params_.indexToParam_.count() )
       database_->exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,"ODBC SQLNumParams failed " + utf8::String(__PRETTY_FUNCTION__)));

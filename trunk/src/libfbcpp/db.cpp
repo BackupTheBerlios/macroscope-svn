@@ -334,7 +334,10 @@ Database & Database::create(const utf8::String & name)
   ISC_STATUS_ARRAY status;
   if( api.isc_dsql_execute_immediate(status,&newdb,&trans,0,(char *) createSQL.c_str(),(short) dpb_.dialect(), NULL) != 0 ){
     ksys::AutoPtr<EDBCreate> e(newObjectV1C2<EDBCreate>(status,__PRETTY_FUNCTION__));
-    if( !e->searchCode(isc_db_or_file_exists) ) exceptionHandler(e.ptr(NULL));
+    if( !e->searchCode(isc_db_or_file_exists) ){
+      api.close();
+      e.ptr(NULL)->throwSP();
+    }
   }
   else {
     api.isc_detach_database(status,&newdb);
@@ -385,8 +388,10 @@ Database & Database::attach(const utf8::String & name)
     dpb_.injectCharset().injectTimeout();
     api.open();
     ISC_STATUS_ARRAY status;
-    if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 )
-      exceptionHandler(newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__));
+    if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 ){
+      api.close();
+      newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__)->throwSP();
+    }
     if( name.strlen() > 0 ) name_ = name;
   }
   return *this;

@@ -53,7 +53,8 @@ const char * const API::symbols_[] = {
   "SQLGetDiagRecW",
   "SQLPrepareW",
   "SQLSetStmtAttr",
-  "SQLGetInfo"
+  "SQLGetInfo",
+  "SQLDriverConnectW"
 };
 //---------------------------------------------------------------------------
 void API::initialize()

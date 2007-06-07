@@ -748,7 +748,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
   intptr_t totalsLevel = 0;
 
   if( level == rlYear ){
-    if( !logger_->cgi_.isCGI() && !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",true) ) return;
+    if( !logger_->cgi_.isCGI() && !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",false) ) return;
     if( logger_->verbose_ ) fprintf(stderr,"\n");
     ellapsed_ = getlocaltimeofday();
     minSignificantThreshold_ = logger_->config_->valueByPath(section_ + ".html_report.min_significant_threshold",0);
@@ -1430,7 +1430,7 @@ l1: database_->rollback();
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::parseBPFTLogFile()
 {
-  if( !(bool) logger_->config_->valueByPath(section_ + ".enabled",true) ) return;
+  if( !(bool) logger_->config_->valueByPath(section_ + ".enabled",false) ) return;
   AsyncFile flog(logger_->config_->valueByPath(section_ + ".log_file_name"));
 /*
   statement_->text("DELETE FROM INET_BPFT_STAT")->execute();

@@ -171,7 +171,7 @@ file_t AsyncFile::openHelper(bool async)
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,fileName_ + " " + __PRETTY_FUNCTION__)->throwSP();
   }
 #else
   utf8::AnsiString ansiFileName(anyPathName2HostPathName(fileName_).getANSIString());
@@ -213,14 +213,14 @@ file_t AsyncFile::openHelper(bool async)
       createDirectory(getPathFromPathName(fileName_));
       return openHelper(async);
     }
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+    newObjectV1C2<Exception>(err,fileName_ + " " + __PRETTY_FUNCTION__)->throwSP();
   }
   if( async ){
     int flags = fcntl(handle,F_GETFL,0);
     if( flags == -1 || fcntl(handle,F_SETFL,flags | O_NONBLOCK) == -1 ){
       err = errno;
       ::close(handle);
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+      newObjectV1C2<Exception>(err,fileName_ + " " + __PRETTY_FUNCTION__)->throwSP();
     }
   }
 #endif

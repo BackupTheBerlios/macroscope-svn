@@ -136,12 +136,10 @@ Database & Database::create(const utf8::String & name)
         exceptionHandler(newObjectV1C2<EDBCreate>(api.mysql_errno(handle), api.mysql_error(handle)));
   }
   catch( ksys::ExceptionSP & ){
-    freeHandle(handle);
-    api.close();
+    detach();
     throw;
   }
-  freeHandle(handle);
-  api.close();
+  detach();
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -210,8 +208,7 @@ Database & Database::attach(const utf8::String & name)
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
     }
     catch( ksys::ExceptionSP & ){
-      freeHandle(handle_);
-      api.close();
+      detach();
       throw;
     }
     if( name.strlen() > 0 ) name_ = name;
