@@ -72,6 +72,7 @@ DSQLStatement & DSQLStatement::detach()
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::allocateHandle()
 {
+#if HAVE_SQL_H
   if( attached() && handle_ == NULL ){
     SQLRETURN r = api.SQLAllocHandle(SQL_HANDLE_STMT,database_->handle_,&handle_);
     if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
@@ -83,15 +84,22 @@ DSQLStatement & DSQLStatement::allocateHandle()
       if( state.strcmp("HYC00") != 0 ) database_->exceptionHandler(e.ptr(NULL));
     }
   }
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::freeHandle()
 {
+#if HAVE_SQL_H
   if( handle_ != NULL ){
     api.SQLFreeHandle(SQL_HANDLE_STMT,handle_);
     handle_ = NULL;
   }
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -124,6 +132,7 @@ utf8::String DSQLStatement::compileSQLParameters()
 //---------------------------------------------------------------------------
 int16_t DSQLParam::sqlType(void * & data,SQL_INTEGER_T & len)
 {
+#if HAVE_SQL_H
   len = 0;
   switch( type_ ){
     case ksys::mtNull   : data = (void *) SQL_NULL_DATA; return SQL_C_DEFAULT;
@@ -137,10 +146,15 @@ int16_t DSQLParam::sqlType(void * & data,SQL_INTEGER_T & len)
     case ksys::mtBinary : data = stream_.raw(); len = (long) stream_.count(); return SQL_C_BINARY;
   }
   return SQL_C_DEFAULT;
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+  return 0;
+#endif
 }
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::prepare()
 {
+#if HAVE_SQL_H
   allocateHandle();
   if( sqlTextChanged_ || !prepared_ ){
     utf8::String sql(compileSQLParameters());
@@ -187,11 +201,15 @@ DSQLStatement & DSQLStatement::prepare()
 //    values_.clear().valuesIndex_.clear();
     executed_ = false;
   }
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 DSQLStatement & DSQLStatement::execute()
 {
+#if HAVE_SQL_H
   database_->transaction_->start();
   prepare();
   SQLRETURN r = api.SQLExecute(handle_);
@@ -201,6 +219,9 @@ DSQLStatement & DSQLStatement::execute()
 //  if( database_->transaction_->startCount_ == 1 )
 //    values_.fetchAll();
   database_->transaction_->commit();
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------

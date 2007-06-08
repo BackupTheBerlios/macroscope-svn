@@ -47,6 +47,7 @@ Database::Database() : envHandle_(NULL), handle_(NULL),  transaction_(NULL)
 //---------------------------------------------------------------------------
 Database & Database::freeHandle()
 {
+#if HAVE_SQL_H
   if( handle_ != NULL ){
     api.SQLFreeHandle(SQL_HANDLE_DBC,handle_);
     handle_ = NULL;
@@ -55,11 +56,15 @@ Database & Database::freeHandle()
     api.SQLFreeHandle(SQL_HANDLE_ENV,envHandle_);
     envHandle_ = NULL;
   }
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle,utf8::String * pSqlState) const
 {
+#if HAVE_SQL_H
   SQLWCHAR sqlState[6], msg[SQL_MAX_MESSAGE_LENGTH];
   SQLINTEGER nativeError;
   SQLSMALLINT msgLen, recNumber;
@@ -86,6 +91,10 @@ EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle,utf8
     }
   }
   return e.ptr(NULL);
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+  return NULL;
+#endif
 }
 //---------------------------------------------------------------------------
 Database & Database::create(const utf8::String &)
@@ -100,6 +109,7 @@ Database & Database::drop()
 //---------------------------------------------------------------------------
 Database & Database::attach(const utf8::String & name)
 {
+#if HAVE_SQL_H
   if( !attached() ){
     api.open();
     try {
@@ -151,11 +161,15 @@ Database & Database::attach(const utf8::String & name)
     }
     if( !name.isNull() ) connection_ = name;
   }
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 Database & Database::detach()
 {
+#if HAVE_SQL_H
   if( attached() ){
     if( transaction_ != NULL )
       while( transaction_->active() ) transaction_->rollback();
@@ -167,6 +181,9 @@ Database & Database::detach()
     freeHandle();
     api.close();
   }
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------

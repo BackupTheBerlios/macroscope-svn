@@ -63,6 +63,7 @@ Transaction & Transaction::detach()
 //---------------------------------------------------------------------------
 Transaction & Transaction::start()
 {
+#if HAVE_SQL_H
   if( !attached() )
     newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
@@ -84,11 +85,15 @@ Transaction & Transaction::start()
       database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
   }
   startCount_++;
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::commit()
 {
+#if HAVE_SQL_H
   if( !active() )
     newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert( startCount_ > 0 );
@@ -98,11 +103,15 @@ Transaction & Transaction::commit()
       database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
   }
   startCount_--;
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
 Transaction & Transaction::rollback()
 {
+#if HAVE_SQL_H
   if( !active() )
     newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert( startCount_ > 0 );
@@ -112,6 +121,9 @@ Transaction & Transaction::rollback()
       database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
   }
   startCount_--;
+#else
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+#endif
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -140,5 +152,5 @@ void Transaction::exceptionHandler(ksys::Exception * e)
   staticExceptionHandler(e);
 }
 //---------------------------------------------------------------------------
-} // namespace mycpp
+} // namespace odbcpp
 //---------------------------------------------------------------------------
