@@ -236,9 +236,10 @@ void Logger::SquidSendmailThread::writeUserTop(
           "      <A HREF=\"" + statement_->valueAsString("st_url") + "\">\n" +
           statement_->valueAsString("st_url") + "\n"
           "      </A>\n" :
-          statement_->valueAsString("st_from").strncmp(statement_->valueAsString("st_user"),statement_->valueAsString("st_user").strlen()) == 0 ?
-            statement_->valueAsString("st_user") + " --> " + statement_->valueAsString("st_to") :
-            statement_->valueAsString("st_from") + " --> " + statement_->valueAsString("st_user")
+          (statement_->valueAsString("st_from").strncmp(statement_->valueAsString("st_user"),statement_->valueAsString("st_user").strlen()) == 0 ?
+            statement_->valueAsString("st_user") + "<B> --> </B>" + statement_->valueAsString("st_to") :
+            statement_->valueAsString("st_from") + "<B> --> </B>" + statement_->valueAsString("st_user")
+          ) + "\n"
         ) +
         "    </FONT>\n"
         "  </TH>\n"
@@ -1506,7 +1507,9 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
               msgSize = stMsgsSel_->valueAsMutant("ST_MSGSIZE");
               nrcpt = stMsgsSel_->valueAsMutant("ST_NRCPTS");
             }
-            if( !st_user.isNull() && (fromAddr.strstr(domain).eos() || toAddr.strstr(domain).eos()) ){
+            if( !st_user.isNull() &&
+                (fromAddr.strstr(domain).eos() || toAddr.strstr(domain).eos()) &&
+                !fromAddr.strstr("@").eos() ){
 // time in database must be in GMT
               try {
                 stTrafIns_->prepare()->
@@ -1532,9 +1535,6 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
                   stMsgsDel2_->prepare()->
                     paramAsString("ST_MSGID",stMsgsSel_->paramAsString("ST_MSGID"))->execute();
                 }
-              }
-              if( fromAddr.isNull() || toAddr.isNull() ){
-                cid = cid;
               }
               stIUTMSel->prepare()->
                 paramAsString("ST_USER",st_user)->
