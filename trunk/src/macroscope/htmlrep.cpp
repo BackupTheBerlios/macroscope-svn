@@ -202,18 +202,18 @@ void Logger::SquidSendmailThread::writeUserTop(
       "<TABLE WIDTH=100 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
       "<TR>\n"
       "  <TH ALIGN=center BGCOLOR=\"" + utf8::String(trafTypeHeadDataColor_[ttAll]) + "\" wrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "URL\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+      (tt == ttWWW ? "URL\n" : "MAIL\n") +
       "    </FONT>\n"
       "  </TH>\n"
       "  <TH ALIGN=center BGCOLOR=\"" + trafTypeHeadDataColor_[ttSMTP] + "\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "HIT\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+      (tt == ttWWW ? "HIT\n" : "MESSAGES\n") +
       "    </FONT>\n"
       "  </TH>\n"
       "  <TH ALIGN=center BGCOLOR=\"" + trafTypeHeadDataColor_[ttSMTP] + "\" nowrap>\n"
-      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n"
-      "KB/HIT\n"
+      "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
+      (tt == ttWWW ? "KB/HIT\n" : "KB/MESSAGE\n") +
       "    </FONT>\n"
       "  </TH>\n"
       "  <TH ALIGN=center BGCOLOR=\"" + trafTypeHeadDataColor_[ttWWW] + "\" nowrap>\n"
@@ -226,13 +226,14 @@ void Logger::SquidSendmailThread::writeUserTop(
     uint64_t at = statement_->sum("sum1");
     for( i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
-      if( (uint64_t) statement_->valueAsMutant(1) < threshold ) break;
+      if( (uint64_t) statement_->valueAsMutant("sum1") < threshold ) break;
       f <<
         "<TR>\n"
-        "  <TH WITH=10 ALIGN=left BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttAll]) + "\" wrap>\n"
-        "    <FONT FACE=\"Arial\" SIZE=\"2\" wrap>\n" +
+        "  <TH WITH=10 ALIGN=left BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttAll]) + "\" " +
+        (tt == ttWWW ? "wrap>\n" : "nowrap>\n") +
+        "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         (tt == ttWWW ?
-          "      <A HREF=\"" + statement_->valueAsString("st_url") + "\" wrap>\n" +
+          "      <A HREF=\"" + statement_->valueAsString("st_url") + "\">\n" +
           statement_->valueAsString("st_url") + "\n"
           "      </A>\n" :
           statement_->valueAsString("st_from").strncmp(statement_->valueAsString("st_user"),statement_->valueAsString("st_user").strlen()) == 0 ?
@@ -1410,7 +1411,6 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           for( idl = id; *idl != ':'; idl++ );
         }
         else {
-          DebugBreak();
           id = strstr(cid,"id=") + 3;
           for( idl = id; *idl != ','; idl++ );
           to = strstr(cid,",addr=") + 2;
@@ -1532,6 +1532,9 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
                   stMsgsDel2_->prepare()->
                     paramAsString("ST_MSGID",stMsgsSel_->paramAsString("ST_MSGID"))->execute();
                 }
+              }
+              if( fromAddr.isNull() || toAddr.isNull() ){
+                cid = cid;
               }
               stIUTMSel->prepare()->
                 paramAsString("ST_USER",st_user)->
