@@ -110,8 +110,13 @@ MemoryManager::MemoryManager() :
         if( (si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64 ||
             si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA32_ON_WIN64) &&
             !isWow64() ){
-          if( GetLargePageMinimum() > si.dwAllocationGranularity ){
-            clusterSize_ = GetLargePageMinimum();
+          union {
+            SIZE_T (WINAPI * pGetLargePageMinimum)();
+            FARPROC ph;
+          };
+          ph = GetProcAddress(GetModuleHandleA("KERNEL32.DLL"),"GetLargePageMinimum");
+          if( pGetLargePageMinimum != NULL && pGetLargePageMinimum() > si.dwAllocationGranularity ){
+            clusterSize_ = pGetLargePageMinimum();
             flags_ = MEM_LARGE_PAGES;
             bool locked;
             void * memory = sysalloc(clusterSize_,true,locked,true);
