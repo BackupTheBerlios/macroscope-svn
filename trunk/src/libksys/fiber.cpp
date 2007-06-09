@@ -254,10 +254,10 @@ void BaseThread::sweepFiber(Fiber * fiber)
     fibers_.remove(*fiber);
   }
   deleteObject(fiber);
-#if defined(__WIN32__) || defined(__WIN64__)
+/*#if defined(__WIN32__) || defined(__WIN64__)
   if( (server_->howCloseServer_ & server_->csDWM) != 0 && fibers_.count() == 0 )
     while( PostThreadMessage(mainThreadId,fiberFinishMessage,NULL,NULL) == 0 ) Sleep(1);
-#endif
+#endif*/
 }
 //------------------------------------------------------------------------------
 void BaseThread::detectMaxFiberStackSize()
@@ -306,8 +306,8 @@ void BaseServer::sweepThreads()
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
     thread->mutex_.acquire();
     if( thread->fibers_.count() == 0 ){
-      thread->wait();
       assert( thread->Thread::finished() );
+      thread->wait();
       btp = btp->next();
       threads_.remove(*thread);
       deleteObject(thread);
@@ -354,7 +354,7 @@ void BaseServer::closeServer()
       if( btp == NULL ) break;
       sweepThreads();
       fbtmd = fbtm > fbtmd ? fbtmd : fbtm;
-      if( how & csWait ){
+      /*if( how & csWait ){
 #if defined(__WIN32__) || defined(__WIN64__)
         if( how & csDWM ){
           MSG msg;
@@ -377,7 +377,7 @@ void BaseServer::closeServer()
         else
 #endif
         ksleep(fbtmd);
-      }
+      }*/
     }
     if( btp == NULL ) break;
     if( how & csShutdown ){

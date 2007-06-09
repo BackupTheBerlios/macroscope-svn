@@ -850,6 +850,7 @@ MK1100TCPServer::~MK1100TCPServer()
 MK1100TCPServer::MK1100TCPServer(Client * client) :
   client_(client)
 {
+  howCloseServer(howCloseServer() & ~csWait);
 }
 //------------------------------------------------------------------------------
 Fiber * MK1100TCPServer::newFiber()
