@@ -176,8 +176,8 @@ DSQLStatement & DSQLStatement::prepare()
       r = api.SQLDescribeParam(handle_,i + 1,&dataType,&paramSize,&decimalDigits,&nullable);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
         database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
-      SQLPOINTER data;
-      SQLINTEGER len;
+      SQLPOINTER data = NULL;
+      SQLINTEGER len = 0;
       dataCType = params_.indexToParam_[uintptr_t(i)]->sqlType(data,len);
       r = api.SQLBindParameter(
         handle_,

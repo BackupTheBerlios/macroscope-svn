@@ -1471,9 +1471,9 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
         else if( cid != NULL && (stat = strstr(sb.c_str(),"success: ")) != NULL ){
         }
         else {
-          stat = "";
+          stat = NULL;
         }
-	      st_user = st_user.lower().replaceAll("\"","");
+	st_user = st_user.lower().replaceAll("\"","");
         if( fromAddr.strcmp(toAddr) == 0 ) from = to = NULL;
         if( from != NULL && cid == NULL && msgSize > 0 ){
           try {
