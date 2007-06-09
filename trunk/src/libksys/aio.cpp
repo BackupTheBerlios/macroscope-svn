@@ -593,10 +593,12 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
 	    iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
-#if __linux__
+#if HAVE_SIGVAL_SIVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
-#else
+#elif HAVE_SIGVAL_SIGVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
+#endif
+#ifdef SIGEV_KEVENT
             iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif
@@ -618,10 +620,12 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
             iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
-#if __linux__
-            iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
-#else
-            iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
+#if HAVE_SIGVAL_SIVAL_PTR
+	    iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
+#elif HAVE_SIGVAL_SIGVAL_PTR
+	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
+#endif
+#ifdef SIGEV_KEVENT
             iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif

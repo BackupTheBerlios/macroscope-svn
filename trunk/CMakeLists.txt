@@ -421,6 +421,12 @@ CHECK_TYPE_SIZE ("struct uuid" SIZEOF_UUID)
 CHECK_TYPE_SIZE ("struct kevent" SIZEOF_KEVENT)
 CHECK_TYPE_SIZE ("struct utimbuf" SIZEOF_UTIMBUF)
 
+# Checks for structures members.
+INCLUDE (builds/cmake/CheckStructMember.cmake)
+SET (CMAKE_EXTRA_INCLUDE_FILES signal.h)
+CHECK_STRUCT_MEMBER ("union sigval" sigval_ptr HAVE_SIGVAL_SIGVAL_PTR)
+CHECK_STRUCT_MEMBER ("union sigval" sival_ptr HAVE_SIGVAL_SIVAL_PTR)
+
 SET (CMAKE_EXTRA_INCLUDE_FILES windows.h guiddef.h)
 CHECK_TYPE_SIZE (GUID SIZEOF_GUID)
 
