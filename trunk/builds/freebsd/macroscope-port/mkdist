@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PORT="macroscope-1.0.1639"
+PORT="macroscope-1.0.2108"
 REPOS="http://svn.berlios.de/svnroot/repos/macroscope/branches/stable"
 FILES="builds/cmake include src utils AUTHORS README INSTALL NEWS CMakeLists.txt"
 for f in ${FILES}; do

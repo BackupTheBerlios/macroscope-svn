@@ -6,12 +6,12 @@
 #
 
 PORTNAME=		macroscope
-PORTVERSION=		1.0.1639
+PORTVERSION=		1.0.2108
 CATEGORIES=		net-mgmt
 MASTER_SITES=		ftp://ftp.berlios.de/pub/macroscope/:src0 \
 			http://white-raven.pisem.net/:src1
-DISTFILES=		macroscope-1.0.1639.tar.bz2:src0 \
-			macroscope-1.0.1639.tar.bz2:src1
+DISTFILES=		macroscope-1.0.2108.tar.bz2:src0 \
+			macroscope-1.0.2108.tar.bz2:src1
 
 MAINTAINER=		white_raven@users.berlios.de
 COMMENT=		User and IP traffic management with Web interface
@@ -20,6 +20,7 @@ BUILD_DEPENDS+=		cmake:${PORTSDIR}/devel/cmake
 LIB_DEPENDS+=		lzo2:${PORTSDIR}/archivers/lzo2
 LIB_DEPENDS+=		mysqlclient_r:${PORTSDIR}/databases/mysql50-client
 LIB_DEPENDS+=		fbclient:${PORTSDIR}/databases/firebird-client
+LIB_DEPENDS+=		odbc:${PORTSDIR}/databases/unixODBC
 LIB_DEPENDS+=		pcap:${PORTSDIR}/net/libpcap
 
 GNU_CONFIGURE=		no
