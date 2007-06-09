@@ -13,4 +13,4 @@ tar -c -f - ${PORT} | bzip2 --best - > ${PORT}.tar.bz2
 scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/groups/ftp/pub/macroscope
 ftp -Ru ftp://white_raven@ftp.pisem.net/${PORT}.tar.bz2 ${PORT}.tar.bz2
 make makesum
-shar `find . \! -regex ".*\.svn.*" \! -name "mkdist" \! -name "send-pr.port" \! -name "macroscope.shar"` > macroscope.shar
+shar `find . \! -regex ".*\.svn.*" \! -name "mkdist" \! -name "send-pr.port" \! -name "macroscope.shar" \! -regex ".*macroscope-.*"` > macroscope.shar
