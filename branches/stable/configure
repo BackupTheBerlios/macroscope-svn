@@ -1,5 +1,0 @@
-#!/bin/sh
-
-#--debug-trycompile
-#-DCMAKE_C_COMPILER=/usr/local/bin/gcc43 -DCMAKE_CXX_COMPILER=/usr/local/bin/g++43 
-cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Release -DBUILD_DOCUMENTATION=ON -DDOCUMENTATION_HTML_TARZ=ON . && make all
