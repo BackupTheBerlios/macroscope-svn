@@ -44,6 +44,6 @@ LIB_DEPENDS+=		pcap:${PORTSDIR}/net/libpcap
 
 do-configure:
 	@(cd ${WRKSRC}; \
-	${LOCALBASE}/bin/cmake ${CMAKE_ARGS})
+	${LOCALBASE}/bin/cmake ${CMAKE_ARGS} .)
 
 .include <bsd.port.post.mk>
