@@ -30,7 +30,7 @@ IF (WIN32 AND NOT UNIX)
 ELSE (WIN32 AND NOT UNIX)
   SET (INSTALL_BIN_DIR "/usr/local/sbin")
   SET (INSTALL_ETC_DIR "/usr/local/etc")
-  SET (INSTALL_DOC_DIR "/usr/local/share/macroscope")
+  SET (INSTALL_DOC_DIR "/usr/local/share/doc/macroscope")
 ENDIF (WIN32 AND NOT UNIX)
 
 INSTALL (FILES AUTHORS DESTINATION "${INSTALL_DOC_DIR}")

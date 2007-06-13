@@ -42,4 +42,8 @@ LIB_DEPENDS+=		lzo2:${PORTSDIR}/archivers/lzo2
 LIB_DEPENDS+=		odbc:${PORTSDIR}/databases/unixODBC
 LIB_DEPENDS+=		pcap:${PORTSDIR}/net/libpcap
 
+do-configure:
+	@(cd ${WRKSRC}; \
+	${LOCALBASE}/bin/cmake ${CMAKE_ARGS})
+
 .include <bsd.port.post.mk>
