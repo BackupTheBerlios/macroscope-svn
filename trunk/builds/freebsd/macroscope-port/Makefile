@@ -17,7 +17,7 @@ MAINTAINER=		white_raven@users.berlios.de
 COMMENT=		User and IP traffic management with Web interface
 
 OPTIONS=		MYSQL		"With MySQL support" on \
-			FIREBIRD	"With Firebird support" on
+			FIREBIRD	"With Firebird support" off
 
 GNU_CONFIGURE=		no
 USE_AUTOTOOLS=		no

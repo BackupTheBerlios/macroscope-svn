@@ -85,7 +85,7 @@ EClientServer * Database::exception(SQLSMALLINT handleType,SQLHANDLE handle,utf8
     if( r != SQL_NO_DATA ){
       if( pSqlState != NULL ){ *pSqlState = sqlState; pSqlState = NULL; }
       e->addError(nativeError == 0 ? EINVAL : nativeError,"ODBC state: " + utf8::String(sqlState) +
-        (nativeError != 0 ? ", native error code: " + utf8::int2Str(nativeError) : utf8::String()) +
+        (nativeError != 0 ? ", native error code: " + utf8::int2Str(intmax_t(nativeError)) : utf8::String()) +
         (msgLen > 0 ? utf8::String(", ") + msg : utf8::String())
       );
     }
