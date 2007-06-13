@@ -1,0 +1,3 @@
+#!/bin/sh
+
+mysql --user=root --database=mysql -p < mysql-script
