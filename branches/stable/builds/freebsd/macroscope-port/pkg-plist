@@ -1,8 +1,0 @@
-etc/macroscope.conf.template
-sbin/macroscope
-share/doc/macroscope/mysql-user
-share/doc/macroscope/AUTHORS
-share/doc/macroscope/README
-share/doc/macroscope/INSTALL
-share/doc/macroscope/NEWS
-@dirrm share/doc/macroscope
