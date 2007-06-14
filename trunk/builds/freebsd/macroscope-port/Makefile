@@ -26,9 +26,23 @@ USE_BZIP2=		yes
 USE_CMAKE=		yes
 USE_DOS2UNIX=		yes
 
+BUILD_DEPENDS+=		cmake:${PORTSDIR}/devel/cmake
+LIB_DEPENDS+=		lzo2:${PORTSDIR}/archivers/lzo2
+LIB_DEPENDS+=		odbc:${PORTSDIR}/databases/unixODBC
+LIB_DEPENDS+=		pcap:${PORTSDIR}/net/libpcap
+
+CMAKE_ARGS=		-DCMAKE_BUILD_TYPE:STRING=Release \
+			-DCMAKE_C_COMPILER:STRING="${CC}" \
+			-DCMAKE_C_FLAGS:STRING="${CFLAGS}" \
+			-DCMAKE_CXX_COMPILER:STRING="${CXX}" \
+			-DCMAKE_CXX_FLAGS:STRING="${CXXFLAGS}" \
+			-DCMAKE_INSTALL_PREFIX=${PREFIX}
+
 .include <bsd.port.pre.mk>
 
-BUILD_DEPENDS+=		cmake:${PORTSDIR}/devel/cmake
+.if defined(NOPORTDOCS)
+CMAKE_ARGS+=		-DCMAKE_NOT_INSTALL_DOC:BOOL=ON
+.endif
 
 .if !defined(WITHOUT_MYSQL)
 LIB_DEPENDS+=		mysqlclient_r:${PORTSDIR}/databases/mysql50-client
@@ -37,10 +51,6 @@ LIB_DEPENDS+=		mysqlclient_r:${PORTSDIR}/databases/mysql50-client
 .if !defined(WITHOUT_FIREBIRD)
 LIB_DEPENDS+=		fbclient:${PORTSDIR}/databases/firebird-client
 .endif
-
-LIB_DEPENDS+=		lzo2:${PORTSDIR}/archivers/lzo2
-LIB_DEPENDS+=		odbc:${PORTSDIR}/databases/unixODBC
-LIB_DEPENDS+=		pcap:${PORTSDIR}/net/libpcap
 
 do-configure:
 	@(cd ${WRKSRC}; \
