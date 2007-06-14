@@ -56,4 +56,15 @@ do-configure:
 	@(cd ${WRKSRC}; \
 	${LOCALBASE}/bin/cmake ${CMAKE_ARGS} .)
 
+.if !defined(NOPORTDOCS)
+post-install:
+	@${ECHO_CMD} share/doc/macroscope/mysql-user >> ${TMPPLIST}
+	@${ECHO_CMD} share/doc/macroscope/AUTHORS >> ${TMPPLIST}
+	@${ECHO_CMD} share/doc/macroscope/README >> ${TMPPLIST}
+	@${ECHO_CMD} share/doc/macroscope/INSTALL >> ${TMPPLIST}
+	@${ECHO_CMD} share/doc/macroscope/NEWS >> ${TMPPLIST}
+	@${ECHO_CMD} @dirrm share/doc/macroscope >> ${TMPPLIST}
+	@${STRIP_CMD} ${PREFIX}/sbin/macroscope
+.endif
+
 .include <bsd.port.post.mk>

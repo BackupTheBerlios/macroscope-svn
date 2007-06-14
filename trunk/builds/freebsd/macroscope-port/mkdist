@@ -22,4 +22,5 @@ make deinstall
 make reinstall
 make package
 
-shar `find . \! -regex ".*\.svn.*" \! -name "mkdist" \! -name "work" \! -name "send-pr.port" \! -name "macroscope.shar" \! -regex ".*macroscope-.*"` > macroscope.shar
+rm macroscope.shar
+shar `find . \! -regex ".*\.svn.*" \! -name "mkdist" \! -name "send-pr.port" \! -name "macroscope.shar" \! -regex ".*macroscope-.*" \! -regex ".*work.*"` > macroscope.shar
