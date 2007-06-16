@@ -26,10 +26,10 @@ USE_BZIP2=		yes
 USE_CMAKE=		yes
 USE_DOS2UNIX=		yes
 
-BUILD_DEPENDS+=		cmake:${PORTSDIR}/devel/cmake
-LIB_DEPENDS+=		lzo2:${PORTSDIR}/archivers/lzo2
-LIB_DEPENDS+=		odbc:${PORTSDIR}/databases/unixODBC
-LIB_DEPENDS+=		pcap:${PORTSDIR}/net/libpcap
+BUILD_DEPENDS=		cmake:${PORTSDIR}/devel/cmake
+LIB_DEPENDS=		lzo2:${PORTSDIR}/archivers/lzo2 \
+			odbc:${PORTSDIR}/databases/unixODBC \
+			pcap:${PORTSDIR}/net/libpcap
 
 CMAKE_ARGS=		-DCMAKE_BUILD_TYPE:STRING=Release \
 			-DCMAKE_C_COMPILER:STRING="${CC}" \
@@ -45,26 +45,31 @@ CMAKE_ARGS+=		-DCMAKE_NOT_INSTALL_DOC:BOOL=ON
 .endif
 
 .if !defined(WITHOUT_MYSQL)
-LIB_DEPENDS+=		mysqlclient_r:${PORTSDIR}/databases/mysql50-client
+WANT_MYSQL_VER=		50
+USE_MYSQL=		yes
 .endif
 
 .if !defined(WITHOUT_FIREBIRD)
-LIB_DEPENDS+=		fbclient:${PORTSDIR}/databases/firebird-client
+WITH_FIREBIRD_VER=	2
+USE_FIREBIRD=		yes
+#LIB_DEPENDS+=		fbclient:${PORTSDIR}/databases/firebird-client
 .endif
+
+.include "${PORTSDIR}/Mk/bsd.database.mk"
 
 do-configure:
 	@(cd ${WRKSRC}; \
 	${LOCALBASE}/bin/cmake ${CMAKE_ARGS} .)
 
-.if !defined(NOPORTDOCS)
-post-install:
-	@${ECHO_CMD} share/doc/macroscope/mysql-user >> ${TMPPLIST}
-	@${ECHO_CMD} share/doc/macroscope/AUTHORS >> ${TMPPLIST}
-	@${ECHO_CMD} share/doc/macroscope/README >> ${TMPPLIST}
-	@${ECHO_CMD} share/doc/macroscope/INSTALL >> ${TMPPLIST}
-	@${ECHO_CMD} share/doc/macroscope/NEWS >> ${TMPPLIST}
-	@${ECHO_CMD} @dirrm share/doc/macroscope >> ${TMPPLIST}
-	@${STRIP_CMD} ${PREFIX}/sbin/macroscope
-.endif
+#.if !defined(NOPORTDOCS)
+#post-install:
+#	@${ECHO_CMD} share/doc/macroscope/mysql-user >> ${TMPPLIST}
+#	@${ECHO_CMD} share/doc/macroscope/AUTHORS >> ${TMPPLIST}
+#	@${ECHO_CMD} share/doc/macroscope/README >> ${TMPPLIST}
+#	@${ECHO_CMD} share/doc/macroscope/INSTALL >> ${TMPPLIST}
+#	@${ECHO_CMD} share/doc/macroscope/NEWS >> ${TMPPLIST}
+#	@${ECHO_CMD} @dirrm share/doc/macroscope >> ${TMPPLIST}
+#	@${STRIP_CMD} ${PREFIX}/sbin/macroscope
+#.endif
 
 .include <bsd.port.post.mk>

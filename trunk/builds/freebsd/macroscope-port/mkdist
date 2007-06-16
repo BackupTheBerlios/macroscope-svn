@@ -13,14 +13,14 @@ done
 #scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/groups/ftp/pub/macroscope
 #ftp -Ru ftp://white_raven@ftp.pisem.net/${PORT}.tar.bz2 ${PORT}.tar.bz2
 
-make makesum
-make install
-make package
-make deinstall
+make -DNOPORTDOCS makesum
+make -DNOPORTDOCS install
+make -DNOPORTDOCS package
+make -DNOPORTDOCS deinstall
 pkg_add ${PORT}.tbz
-make deinstall
-make reinstall
-make package
+make -DNOPORTDOCS deinstall
+make -DNOPORTDOCS reinstall
+make -DNOPORTDOCS package
 
 rm macroscope.shar
 shar `find . \! -regex ".*\.svn.*" \! -name "mkdist" \! -name "send-pr.port" \! -name "macroscope.shar" \! -regex ".*macroscope-.*" \! -regex ".*work.*"` > macroscope.shar
