@@ -805,7 +805,7 @@ void MK1100ClientFiber::mainHelper()
 {
   AutoLock<FiberInterlockedMutex> lock(server_->fibersMutex_);
   intptr_t i = server_->fibers_.bSearch(this);
-  server_->fibers_.remove(i);
+  if( i >= 0 ) server_->fibers_.remove(i);
 }
 //------------------------------------------------------------------------------
 void MK1100ClientFiber::main()

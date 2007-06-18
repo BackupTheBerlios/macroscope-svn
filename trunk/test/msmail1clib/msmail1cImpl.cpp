@@ -1624,8 +1624,10 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                     msmail::MK1100ClientFiber * mk1100 = (msmail::MK1100ClientFiber *) utf8::str2Int(V_BSTR(pv0));
                     AutoLock<FiberInterlockedMutex> lock(msmail1c_->client_.mk1100TCPServer_->fibersMutex_);
                     intptr_t i = msmail1c_->client_.mk1100TCPServer_->fibers_.bSearch(mk1100);
-                    mk1100->data_ = V_BSTR(pv1);
-                    mk1100->sem_.post();
+                    if( i >= 0 ){
+                      mk1100->data_ = V_BSTR(pv1);
+                      mk1100->sem_.post();
+                    }
                   }
                 }
               }
