@@ -188,12 +188,14 @@ void Fiber::start(Fiber * fiber)
 #endif
 {
   fiber->started_ = true;
+  interlockedIncrement(fiber->thread_->server_->fibersCount_,1);
   try {
     fiber->fiberExecute();
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
   }
+  interlockedIncrement(fiber->thread_->server_->fibersCount_,-1);
   fiber->finished_ = true;
   fiber->switchFiber(fiber->thread_);
   exit(ENOSYS);
@@ -212,6 +214,7 @@ BaseThread::BaseThread() : server_(NULL)/*, maxStackSize_(0) */, mfpt_(~uintptr_
 //---------------------------------------------------------------------------
 void BaseThread::threadExecute()
 {
+  interlockedIncrement(server_->threadsCount_,1);
 #if defined(__WIN32__) || defined(__WIN64__)
   convertThreadToFiber();
   try {
@@ -219,10 +222,12 @@ void BaseThread::threadExecute()
     while( !Thread::terminated_ ) queue();
 #if defined(__WIN32__) || defined(__WIN64__)
   }
-  catch( ... ){
+  catch( ExceptionSP & ){
+    interlockedIncrement(server_->threadsCount_,-1);
     clearFiber();
     throw;
   }
+  interlockedIncrement(server_->threadsCount_,-1);
   clearFiber();
 #endif
 }
@@ -250,7 +255,7 @@ void BaseThread::queue()
 void BaseThread::sweepFiber(Fiber * fiber)
 {
   {
-    AutoLock<InterlockedMutex> lock(mutex_);
+    AutoLock<InterlockedMutex> lock(fibersMutex_);
     fibers_.remove(*fiber);
   }
   deleteObject(fiber);
@@ -267,14 +272,15 @@ void BaseThread::detectMaxFiberStackSize()
 void BaseThread::postEvent(AsyncEvent * event)
 {
   AutoLock<InterlockedMutex> lock(mutex_);
+  bool postSem = events_.count() == 0;
   events_.insToTail(*event);
-  if( events_.count() < 2 ) semaphore_.post();
+  if( postSem ) semaphore_.post();
 }
 //---------------------------------------------------------------------------
 void BaseThread::threadBeforeWait()
 {
   Thread::terminate();
-  semaphore_.post();
+  semaphore_.post().post();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -288,6 +294,8 @@ BaseServer::BaseServer() :
   shutdown_(false),
   mt_(numberOfProcessors() * 4),
   fiberStackSize_(PTHREAD_STACK_MIN),
+  threadsCount_(0),
+  fibersCount_(0),
   fiberTimeout_(10000000),
   howCloseServer_(HowCloseServer(csWait | csTerminate | csShutdown | csAbort))
 {
@@ -304,15 +312,14 @@ void BaseServer::sweepThreads()
   EmbeddedListNode<BaseThread> * btp = threads_.first();
   while( btp != NULL ){
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
-    thread->mutex_.acquire();
+    thread->fibersMutex_.acquire();
     if( thread->fibers_.count() == 0 ){
       thread->wait();
       btp = btp->next();
-      threads_.remove(*thread);
-      deleteObject(thread);
+      threads_.drop(*thread);
     }
     else {
-      thread->mutex_.release();
+      thread->fibersMutex_.release();
       btp = btp->next();
     }
   }
@@ -330,7 +337,7 @@ void BaseServer::closeServer()
     AutoLock<InterlockedMutex> lock(mutex_);
     for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
       thread = &BaseThread::serverListNodeObject(*btp);
-      AutoLock<InterlockedMutex> lock2(thread->mutex_);
+      AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
       for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() ){
         if( how & csTerminate ) Fiber::nodeObject(*bfp).terminate();
         Fiber::nodeObject(*bfp).fiberBreakExecution();
@@ -345,7 +352,7 @@ void BaseServer::closeServer()
         AutoLock<InterlockedMutex> lock(mutex_);
         for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
           thread = &BaseThread::serverListNodeObject(*btp);
-          AutoLock<InterlockedMutex> lock2(thread->mutex_);
+          AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
           if( thread->fibers_.count() > 0 ) break;
         }
       }
@@ -353,8 +360,8 @@ void BaseServer::closeServer()
       if( btp == NULL ) break;
       sweepThreads();
       fbtmd = fbtm > fbtmd ? fbtmd : fbtm;
-      /*if( how & csWait ){
-#if defined(__WIN32__) || defined(__WIN64__)
+      if( how & csWait ){
+/*#if defined(__WIN32__) || defined(__WIN64__)
         if( how & csDWM ){
           MSG msg;
           if( PeekMessage(&msg,NULL,0,0,PM_REMOVE) != 0 ){
@@ -374,9 +381,9 @@ void BaseServer::closeServer()
           }
         }
         else
-#endif
+#endif*/
         ksleep(fbtmd);
-      }*/
+      }
     }
     if( btp == NULL ) break;
     if( how & csShutdown ){
@@ -395,12 +402,21 @@ BaseThread * BaseServer::selectThread()
   uintptr_t msc = ~uintptr_t(0);
   if( threads_.count() >= mt_ ){
     EmbeddedListNode<BaseThread> * btp;
-    for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
+    for( btp = threads_.first(); btp != NULL; ){
       BaseThread * athread = &BaseThread::serverListNodeObject(*btp);
-      AutoLock<InterlockedMutex> lock2(athread->mutex_);
-      if( athread->fibers_.count() < athread->mfpt_ && athread->fibers_.count() < msc ){
-        msc = athread->fibers_.count();
-        thread = athread;
+      athread->fibersMutex_.acquire();
+      if( threads_.count() > mt_ && athread->fibers_.count() == 0 ){
+        thread->wait();
+        btp = btp->next();
+        threads_.drop(*thread);
+      }
+      else {
+        if( athread->fibers_.count() < athread->mfpt_ && athread->fibers_.count() < msc ){
+          msc = athread->fibers_.count();
+          thread = athread;
+        }
+        btp = btp->next();
+        athread->fibersMutex_.release();
       }
     }
   }
@@ -416,17 +432,24 @@ BaseThread * BaseServer::selectThread()
 //------------------------------------------------------------------------------
 void BaseServer::attachFiber(const AutoPtr<Fiber> & fiber)
 {
-  AutoLock<InterlockedMutex> lock(mutex_);
-  BaseThread * thread = selectThread();
-  fiber->allocateStack(fiberStackSize_,thread);
-  Fiber * fib = fiber;
   {
-    AutoLock<InterlockedMutex> lock2(thread->mutex_);
-    thread->fibers_.insToTail(*fiber.ptr(NULL));
-    fib->thread_ = thread;
+    AutoLock<InterlockedMutex> lock(mutex_);
+    BaseThread * thread = selectThread();
+    fiber->allocateStack(fiberStackSize_,thread);
+    Fiber * fib = fiber;
+    {
+      AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
+      thread->fibers_.insToTail(*fiber.ptr(NULL));
+      fib->thread_ = thread;
+    }
+    fib->event_.type_ = etDispatch;
+    thread->postEvent(&fib->event_);
   }
-  fib->event_.type_ = etDispatch;
-  thread->postEvent(&fib->event_);
+  if( stdErr.debugLevel(90) )
+    stdErr.debug(90,utf8::String::Stream() <<
+      "fibers: " << interlockedIncrement(fibersCount_,0) << ", "
+      "threads: " << interlockedIncrement(threadsCount_,0) << "\n"
+    );
 }
 //------------------------------------------------------------------------------
 void BaseServer::maintainFibers()
@@ -436,7 +459,7 @@ void BaseServer::maintainFibers()
   AutoLock<InterlockedMutex> lock(mutex_);
   for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
-    AutoLock<InterlockedMutex> lock2(thread->mutex_);
+    AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
     for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() )
       maintainFiber(&Fiber::nodeObject(*bfp));
   }

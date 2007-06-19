@@ -180,6 +180,9 @@ int main(int _argc,char * _argv[])
     }
     if( dispatch ){
       service->msmailConfig()->parse().override();
+      stdErr.bufferDataTTA(
+        (uint64_t) service->msmailConfig()->value("debug_file_max_collection_time",60) * 1000000u
+      );
       stdErr.rotationThreshold(
         service->msmailConfig()->value("debug_file_rotate_threshold",1024 * 1024)
       );
@@ -192,7 +195,7 @@ int main(int _argc,char * _argv[])
       stdErr.fileName(
         service->msmailConfig()->value("log_file",stdErr.fileName())
       );
-      stackBackTrace = service->msmailConfig()->value("stack_back_trace",true);
+      stackBackTrace = service->msmailConfig()->value("stack_back_trace",false);
       service->msmailConfig()->silent(false);
       services.startServiceCtrlDispatcher();
     }

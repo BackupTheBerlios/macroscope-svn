@@ -468,6 +468,7 @@ class BaseThread : public Thread, public Fiber {
       Fiber::node,
       Fiber::nodeObject
     > fibers_;
+    InterlockedMutex fibersMutex_;
 //    uintptr_t maxStackSize_;
     uintptr_t mfpt_;
 
@@ -583,6 +584,8 @@ class BaseServer {
     > threads_;
     uintptr_t mt_;
     uintptr_t fiberStackSize_;
+    uilock_t threadsCount_;
+    uilock_t fibersCount_;
     uint64_t fiberTimeout_;
     HowCloseServer howCloseServer_;
 

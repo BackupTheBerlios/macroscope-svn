@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,9 +60,6 @@ void AcceptFiber::fiberExecute()
     if( e->code() != EINTR && e->code() != ENOTSOCK ) throw;
 #endif
   }
-  catch( ... ){
-    server = server;
-  }
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +80,7 @@ void ServerFiber::fiberExecute()
     main();
     flush();
   }
-  catch( ... ){
+  catch( ksys::ExceptionSP & ){
     close();
     throw;
   }
@@ -103,7 +100,7 @@ void Server::open()
   acceptFiber->listen();
   acceptFiber->mutex_.acquire();
   attachFiber(fiber);
-  acceptFiber->thread()->maxFibersPerThread(1);
+//  acceptFiber->thread()->maxFibersPerThread(1);
   acceptFiber_ = acceptFiber;
 }
 //------------------------------------------------------------------------------

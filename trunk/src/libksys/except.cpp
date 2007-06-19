@@ -137,7 +137,7 @@ utf8::String Exception::stdError(utf8::String::Stream * s) const
   utf8::String::Stream stream;
   if( s == NULL ) s = &stream;
   for( uintptr_t i = 0; i < errors_.count(); i++ ){
-    if( errors_[i].code_ == 0 ) continue;
+    if( errors_[i].code_ == 0 || (errorOffset != 0 && errors_[i].code_ == errorOffset) ) continue;
     intmax_t a;
     utf8::String serr(strError(errors_[i].code_));
     if( utf8::tryStr2Int(serr,a) ) serr.resize(0); else a = errors_[i].code_;

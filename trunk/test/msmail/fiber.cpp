@@ -480,7 +480,8 @@ void ServerFiber::recvMail() // client receiving mail
         break;
       }
       if( wait ){
-        dcn_.monitor(userMailBox);
+        if( server_->findRecvMailFiber(*this) != this ) break;
+        dcn_.monitor(excludeTrailingPathDelimiter(userMailBox));
         stdErr.debug(9,utf8::String::Stream() <<
           "Processing mailbox " <<
           excludeTrailingPathDelimiter(userMailBox) <<
@@ -489,7 +490,7 @@ void ServerFiber::recvMail() // client receiving mail
       }
     }
   }
-  catch( ... ){
+  catch( ExceptionSP & ){
     server_->remRecvMailFiber(*this);
     throw;
   }
