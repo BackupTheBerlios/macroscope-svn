@@ -745,13 +745,13 @@ bool AsyncFile::tryWRLock(uint64_t pos,uint64_t size)
   return true;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
+AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size,uint64_t timeout)
 {
   if( isRunInFiber() ){
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
       Fiber * fiber = currentFiber();
-      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.timeout_ = timeout;
       fiber->event_.type_ = etLockFile;
       fiber->event_.lockType_ = AsyncEvent::rdLock;
       fiber->event_.position_ = pos;
@@ -797,8 +797,16 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
       );
       DWORD err;
       if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
-        status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
-        if( status != 0 ) SetLastError(ERROR_SUCCESS);
+        switch( WaitForSingleObject(eventObject_,timeout == ~uint64_t(0) ? INFINITE : DWORD(timeout / 1000u)) ){
+          case WAIT_ABANDONED :
+          case WAIT_OBJECT_0  :
+            status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
+            if( status != 0 ) SetLastError(ERROR_SUCCESS);
+            break;
+          case WAIT_TIMEOUT   :
+            CancelIo(descriptor_);
+            SetLastError(WAIT_TIMEOUT);
+        }
       }
       err = GetLastError();
       switch( err ){
@@ -822,13 +830,13 @@ AsyncFile & AsyncFile::rdLock(uint64_t pos,uint64_t size)
   return *this;
 }
 //---------------------------------------------------------------------------
-AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
+AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size,uint64_t timeout)
 {
   if( isRunInFiber() ){
     if( !exclusive_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
       Fiber * fiber = currentFiber();
-      fiber->event_.timeout_ = ~uint64_t(0);
+      fiber->event_.timeout_ = timeout;
       fiber->event_.type_ = etLockFile;
       fiber->event_.lockType_ = AsyncEvent::wrLock;
       fiber->event_.position_ = pos;
@@ -874,8 +882,16 @@ AsyncFile & AsyncFile::wrLock(uint64_t pos,uint64_t size)
       );
       DWORD err;
       if( status == 0 && GetLastError() == ERROR_IO_PENDING ){
-        status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
-        if( status != 0 ) SetLastError(ERROR_SUCCESS);
+        switch( WaitForSingleObject(eventObject_,timeout == ~uint64_t(0) ? INFINITE : DWORD(timeout / 1000u)) ){
+          case WAIT_ABANDONED :
+          case WAIT_OBJECT_0  :
+            status = ::GetOverlappedResult(descriptor_,&overlapped,&err,TRUE);
+            if( status != 0 ) SetLastError(ERROR_SUCCESS);
+            break;
+          case WAIT_TIMEOUT   :
+            CancelIo(descriptor_);
+            SetLastError(WAIT_TIMEOUT);
+        }
       }
       err = GetLastError();
       switch( err ){

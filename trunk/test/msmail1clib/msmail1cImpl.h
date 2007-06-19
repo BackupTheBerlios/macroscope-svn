@@ -388,8 +388,7 @@ public:
     // queue interface
       class LockedFile {
         public:
-          file_t handle_;
-          HANDLE hEvent_;
+          AsyncFile file_;
           utf8::String name_;
           DWORD lastError_;
           bool locked_;

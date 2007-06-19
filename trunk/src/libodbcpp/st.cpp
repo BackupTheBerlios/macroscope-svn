@@ -162,8 +162,6 @@ DSQLStatement & DSQLStatement::prepare()
     r = api.SQLPrepareW(handle_,sql.getUNICODEString(),SQL_NTS);
     if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
       database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
-/*    r = api.SQLNumResultCols(handle_,&j);
-      database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));*/
     SQLSMALLINT j = -1;
     r = api.SQLNumParams(handle_,&j);
     if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
@@ -216,6 +214,11 @@ DSQLStatement & DSQLStatement::execute()
   if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
     database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
   executed_ = true;
+  SQLSMALLINT j = -1;
+  r = api.SQLNumResultCols(handle_,&j);
+  if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+    database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
+
 //  if( database_->transaction_->startCount_ == 1 )
 //    values_.fetchAll();
   database_->transaction_->commit();

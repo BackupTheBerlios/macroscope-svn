@@ -798,7 +798,7 @@ MK1100ClientFiber & MK1100ClientFiber::writeString(const utf8::String & s)
 //------------------------------------------------------------------------------
 void MK1100ClientFiber::fiberBreakExecution()
 {
-  sem_.post();
+  sem_.post().post();
 }
 //------------------------------------------------------------------------------
 void MK1100ClientFiber::mainHelper()

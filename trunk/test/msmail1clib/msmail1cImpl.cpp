@@ -2043,42 +2043,23 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
 //------------------------------------------------------------------------------
 Cmsmail1c::msmail1c::LockedFile::~LockedFile()
 {
-  unlockFile();
-  if( handle_ != INVALID_HANDLE_VALUE ) CloseHandle(handle_);
-  if( hEvent_ != NULL ) CloseHandle(hEvent_);
 }
 //---------------------------------------------------------------------------
-Cmsmail1c::msmail1c::LockedFile::LockedFile() :
-  handle_(INVALID_HANDLE_VALUE), hEvent_(NULL), lastError_(0), locked_(false)
+Cmsmail1c::msmail1c::LockedFile::LockedFile() : lastError_(0), locked_(false)
 {
-}
-//---------------------------------------------------------------------------
-void Cmsmail1c::msmail1c::LockedFile::unlockFile()
-{
-  if( handle_ != INVALID_HANDLE_VALUE && locked_ ){
-    OVERLAPPED Overlapped;
-    memset(&Overlapped,0,sizeof(Overlapped));
-    if( UnlockFileEx(handle_,0,~DWORD(0),~DWORD(0),&Overlapped) == 0 ){
-      int32_t err = GetLastError() + errorOffset;
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-    }
-//      CloseHandle(file->handle_);
-//      file->handle_ = INVALID_HANDLE_VALUE;
-    locked_ = false;
-  }
 }
 //---------------------------------------------------------------------------
 Cmsmail1c::msmail1c::LockedFile * Cmsmail1c::msmail1c::findFileByName(const utf8::String & name)
 {
   for( intptr_t i = files_.count() - 1; i >= 0; i-- )
-    if( files_[i].name_.strcasecmp(name) == 0 ) return &files_[i];
+    if( files_[i].file_.fileName().strcasecmp(name) == 0 ) return &files_[i];
   return NULL;
 }
 //---------------------------------------------------------------------------
 Cmsmail1c::msmail1c::LockedFile * Cmsmail1c::msmail1c::addFile(const utf8::String & name)
 {
   LockedFile & p = files_.safeAdd(newObject<LockedFile>());
-  p.name_ = name;
+  p.file_.fileName(name).exclusive(false).createIfNotExist(true).removeAfterClose(true);
   return &p;
 }
 //---------------------------------------------------------------------------
@@ -2092,104 +2073,25 @@ STDMETHODIMP Cmsmail1c::lockFile(IN BSTR name,IN ULONG minSleepTime,IN ULONG max
     maxSleepTime = minSleepTime;
     minSleepTime = tm;
   }
-  OVERLAPPED Overlapped;
-  int32_t err;
   msmail1c::LockedFile * file = NULL;
   *pLastError = 0;
   try {
     checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
     file = msmail1c_->findFileByName(name);
     if( file == NULL ) file = msmail1c_->addFile(name);
-    file->lastError_ = 0;
-    if( file->handle_ == INVALID_HANDLE_VALUE ){
-      SetLastError(0);
-      file->handle_ = CreateFileW(
-          file->name_.getUNICODEString(),
-          GENERIC_READ | GENERIC_WRITE,
-          FILE_SHARE_READ | FILE_SHARE_WRITE,
-          NULL,
-          CREATE_ALWAYS,
-          FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
-          NULL
-      );
-      if( file->handle_ == INVALID_HANDLE_VALUE ){
-        err = GetLastError() + errorOffset;
-        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
-    }
-    SetLastError(0);
-    if( file->hEvent_ == NULL ){
-      if( (file->hEvent_ = CreateEvent(NULL,TRUE,FALSE,NULL)) == NULL ){
-        err = GetLastError() + errorOffset;
-        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
-    }
-    if( !file->locked_ ){
-      memset(&Overlapped,0,sizeof(Overlapped));
-      Overlapped.hEvent = file->hEvent_;
-      DWORD flags = LOCKFILE_EXCLUSIVE_LOCK, err;
-      /*if( maxSleepTime == 0 && minSleepTime == 0 ){
-        flags |= LOCKFILE_FAIL_IMMEDIATELY;
-      }
-      else {
-      }*/
-      SetLastError(0);
-      BOOL lk = LockFileEx(file->handle_,flags,0,~DWORD(0),~DWORD(0),&Overlapped);
-      err = GetLastError();
-      if( lk == 0 && err != ERROR_IO_PENDING && err != ERROR_LOCK_VIOLATION ){
-        err = GetLastError() + errorOffset;
-        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      }
-      if( err == ERROR_IO_PENDING ){
-        DWORD st = (DWORD) msmail1c_->rnd_.random(maxSleepTime - minSleepTime) + minSleepTime;
-        st = maxSleepTime == 0 && minSleepTime == 0 ? 0 : st;
-        DWORD state = WaitForSingleObject(file->hEvent_,st);
-        if( state == WAIT_TIMEOUT ){
-          CancelIo(file->handle_);
-          *pLastError = WAIT_TIMEOUT;
-        }
-        else if( state == WAIT_ABANDONED ){
-          CancelIo(file->handle_);
-          *pLastError = WAIT_TIMEOUT;
-        }
-        else {
-          DWORD NumberOfBytesTransferred;
-          GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesTransferred,FALSE);
-          file->locked_ = true;
-        }
-      }
-      else if( err == ERROR_LOCK_VIOLATION ){
-        *pLastError = WAIT_TIMEOUT;
-      }
-      else {
-      /*char pid[10 + 1];
-      memset(pid,'\0',sizeof(pid));
-      _snprintf(pid,sizeof(pid) / sizeof(pid[0]),"%d",ksys::getpid());
-      DWORD NumberOfBytesWritten = 0;
-      memset(&Overlapped,0,sizeof(Overlapped));
-      Overlapped.hEvent = file->hEvent_;
-      SetLastError(0);
-      lk = WriteFile(file->handle_,pid,DWORD(::strlen(pid) * sizeof(pid[0])),&NumberOfBytesWritten,&Overlapped);
-      if( lk == 0 && GetLastError() == ERROR_IO_PENDING ){
-        DWORD state = WaitForSingleObject(file->hEvent_,INFINITE);
-        if( state == WAIT_TIMEOUT ){
-          CancelIo(file->handle_);
-        }
-        else if( state == WAIT_ABANDONED ){
-        }
-        if( GetOverlappedResult(file->handle_,&Overlapped,&NumberOfBytesWritten,FALSE) == 0 ){
-        }
-      }
-      SetFilePointer(file->handle_,NumberOfBytesWritten,NULL,FILE_BEGIN);
-      SetEndOfFile(file->handle_);*/
-        file->locked_ = true;
-      }
+    if( !file->file_.isOpen() || !file->locked_ ){
+      file->lastError_ = 0;
+      file->file_.open();
+      file->file_.wrLock(0,0,(msmail1c_->rnd_.random(maxSleepTime - minSleepTime) + minSleepTime) * 1000u);
+      file->locked_ = true;
     }
   }
   catch( ExceptionSP & e ){
     *pLastError = e->code() > errorOffset ? e->code() - errorOffset : e->code();
-    if( file != NULL ) file->lastError_ = *pLastError;
-//    e->writeStdError();
+    if( file != NULL ){
+      file->lastError_ = *pLastError;
+      file->file_.close();
+    }
   }
   return S_OK;
 }
@@ -2201,7 +2103,11 @@ STDMETHODIMP Cmsmail1c::unlockFile(IN BSTR name,OUT LONG * pLastError)
   try {
     file = msmail1c_->findFileByName(name);
     if( file != NULL ){
-      file->unlockFile();
+      if( file->locked_ ){
+        file->file_.unLock(0,0);
+        file->locked_ = false;
+      }
+      file->file_.close();
     }
     else {
       *pLastError = ERROR_FILE_NOT_FOUND;

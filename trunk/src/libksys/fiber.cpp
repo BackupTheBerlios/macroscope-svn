@@ -306,7 +306,6 @@ void BaseServer::sweepThreads()
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
     thread->mutex_.acquire();
     if( thread->fibers_.count() == 0 ){
-      assert( thread->Thread::finished() );
       thread->wait();
       btp = btp->next();
       threads_.remove(*thread);
