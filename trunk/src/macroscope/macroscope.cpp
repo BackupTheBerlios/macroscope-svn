@@ -34,6 +34,7 @@
 #include "macroscope.h"
 #ifndef NDEBUG
 #include <adicpp/lzw.h>
+#include <adicpp/lzssk.h>
 #endif
 //------------------------------------------------------------------------------
 namespace macroscope {
@@ -1262,11 +1263,74 @@ int main(int _argc,char * _argv[])
 #endif
     }
 #ifndef NDEBUG
-//    static const uint8_t text[] = 
-//      "0123456789ABCDEF"
-//      "0123456789ABCDEF"
-//    ;
-//    uint8_t dText[sizeof(text)];
+    static const uint8_t text[] = 
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+    ;
+    uint8_t buf[1024];
+    uint8_t dText[sizeof(text)];
 //    AutoPtr<uint8_t> cText;
 //    LZWFilter lzw;
     
@@ -1284,6 +1348,15 @@ int main(int _argc,char * _argv[])
     //lzw.initialize();
     //lzw.decompress(cText,outSize,true);
     //dText[0] = dText[0];
+    LZSSKFilter filter;
+    filter.initializeCompression(256);
+    filter.compress(text,sizeof(text));
+    filter.finishCompression();
+    uintptr_t a;
+    memcpy(buf,filter.output(),a = filter.outputSize());
+    filter.initializeDecompression();
+    filter.decompress(buf,a);
+    memcpy(dText,filter.output(),filter.outputSize());
 #endif
     errcode = 0;
     if( dispatch || sniffer || rollout ){

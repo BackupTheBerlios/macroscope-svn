@@ -289,14 +289,14 @@ class PCAP : public Thread {
 
 	      bool isInBounds(uint64_t timestamp) const { return timestamp >= header_.bt_ && timestamp <= header_.et_; }
       
-        static RBTreeNode & treeO2N(const PacketGroup & object){
+        static RBTreeNode & treeO2N(const PacketGroup & object,uintptr_t *){
           return object.treeNode_;
 	      }
-	      static PacketGroup & treeN2O(const RBTreeNode & node){
+	      static PacketGroup & treeN2O(const RBTreeNode & node,uintptr_t *){
 	        PacketGroup * p = NULL;
 	        return node.object<PacketGroup>(p->treeNode_);
 	      }
-	      static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1){
+	      static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1,uintptr_t *){
 	        return a0.header_.bt_ > a1.header_.et_ ? 1 : a0.header_.et_ < a1.header_.bt_ ? -1 : 0;
 	      }
 	      mutable RBTreeNode treeNode_;
@@ -304,6 +304,7 @@ class PCAP : public Thread {
     typedef
       RBTree<
         PacketGroup,
+        uintptr_t,
         PacketGroup::treeO2N,
         PacketGroup::treeN2O,
         PacketGroup::treeCO

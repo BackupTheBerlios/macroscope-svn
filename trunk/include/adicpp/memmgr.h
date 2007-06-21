@@ -76,14 +76,14 @@ class MemoryManager {
           next_(NULL),
           locked_(false) {}
 	
-        static RBTreeNode & treeO2N(const Cluster & object){
+        static RBTreeNode & treeO2N(const Cluster & object,uintptr_t *){
           return object.treeNode_;
         }
-	      static Cluster & treeN2O(const RBTreeNode & node){
+	      static Cluster & treeN2O(const RBTreeNode & node,uintptr_t *){
           Cluster * p = NULL;
           return node.object<Cluster>(p->treeNode_);
         }
-        static intptr_t treeCO(const Cluster & a0,const Cluster & a1){
+        static intptr_t treeCO(const Cluster & a0,const Cluster & a1,uintptr_t *){
           return a0.memory_ < a1.memory_ ? -1 : a0.memory_ + a0.fsize_ >= a1.memory_ + a1.fsize_ ? 1 : 0;
         }
         mutable RBTreeNode treeNode_;
@@ -190,6 +190,7 @@ class MemoryManager {
     EmbeddedList<SizeDescriptors,SizeDescriptors::listNode,SizeDescriptors::listObject> sizes_;
     typedef RBTree<
       Cluster,
+      uintptr_t,
       Cluster::treeO2N,
       Cluster::treeN2O,
       Cluster::treeCO

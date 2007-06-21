@@ -738,7 +738,7 @@ class RBTreeNode { // base class for deriving
     RBTreeNode * left_;         /* left child */
     RBTreeNode * right_;        /* right child */
     RBTreeNode * parent_;       /* parent */
-    uint8_t color_;             /* node color (BLACK, RED) */
+    uintptr_t color_;             /* node color (BLACK, RED) */
     
     template <typename OT> inline
     OT & object(const RBTreeNode & node) const {
@@ -748,9 +748,10 @@ class RBTreeNode { // base class for deriving
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 >
 class RBTree {
   public:
@@ -758,12 +759,14 @@ class RBTree {
     RBTree();
 
     OT * find(const OT & object) const;
-    RBTree<OT,O2N,N2O,CO> & insert(const OT & object,bool throwIfExist = true,bool deleteIfExist = true,OT ** pObject = NULL);
-    RBTree<OT,O2N,N2O,CO> & remove(const OT & object);
-    RBTree<OT,O2N,N2O,CO> & drop(const OT & object);
+    RBTree<OT,PT,O2N,N2O,CO> & insert(const OT & object,bool throwIfExist = true,bool deleteIfExist = true,OT ** pObject = NULL);
+    RBTree<OT,PT,O2N,N2O,CO> & remove(const OT & object);
+    RBTree<OT,PT,O2N,N2O,CO> & drop(const OT & object);
 
-    RBTree<OT,O2N,N2O,CO> & clear();
-    RBTree<OT,O2N,N2O,CO> & drop();
+    RBTree<OT,PT,O2N,N2O,CO> & clear();
+    RBTree<OT,PT,O2N,N2O,CO> & drop();
+
+    RBTree<OT,PT,O2N,N2O,CO> & param(PT * param){ param_ = param; return *this; }
 
     void benchmark(uintptr_t elCount,uintptr_t cycles = 1);
     
@@ -796,13 +799,13 @@ class RBTree {
     }*/
     class Walker {
       public:
-        Walker(const RBTree<OT,O2N,N2O,CO> & tree) : tree_(tree), sp_(0) {
+        Walker(const RBTree<OT,PT,O2N,N2O,CO> & tree) : tree_(tree), sp_(0) {
           path_[0].node_ = tree_.root_;
           path_[0].left_ = tree_.root_->left_;
           path_[0].right_ = tree_.root_->right_;
           path_[0].pointer_ = -1;
         }
-        OT & object() const { return N2O(*path_[sp_].node_); }
+        OT & object() const { return N2O(*path_[sp_].node_,tree_.param_); }
         bool next(){
           for(;;){
             if( path_[sp_].pointer_ < 0 ){
@@ -843,7 +846,7 @@ class RBTree {
             RBTreeNode * right_;
             intptr_t pointer_;
         };
-        const RBTree<OT,O2N,N2O,CO> & tree_;
+        const RBTree<OT,PT,O2N,N2O,CO> & tree_;
         Node path_[sizeof(uintptr_t) * 8 + 2];
         intptr_t sp_;
     };
@@ -855,6 +858,7 @@ class RBTree {
     mutable RBTreeNode rootNode_;
     mutable RBTreeNode * root_;
     uintptr_t count_;
+    PT * param_;
 
     void rotateLeft(RBTreeNode * x);
     void rotateRight(RBTreeNode * x);
@@ -863,27 +867,29 @@ class RBTree {
     RBTreeNode * getSuccessorOf(RBTreeNode * x) const;
     RBTreeNode * treeInsertHelp(RBTreeNode * z);
   private:
-    RBTree(const RBTree<OT,O2N,N2O,CO> &);
-    void operator = (const RBTree<OT,O2N,N2O,CO> &);
+    RBTree(const RBTree<OT,PT,O2N,N2O,CO> &);
+    void operator = (const RBTree<OT,PT,O2N,N2O,CO> &);
 };
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTree<OT,O2N,N2O,CO>::~RBTree()
+RBTree<OT,PT,O2N,N2O,CO>::~RBTree()
 {
 }
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTree<OT,O2N,N2O,CO>::RBTree()
+RBTree<OT,PT,O2N,N2O,CO>::RBTree() : param_(NULL)
 {
   sentinel_.left_ = &sentinel_;
   sentinel_.right_ = &sentinel_;
@@ -894,11 +900,12 @@ RBTree<OT,O2N,N2O,CO>::RBTree()
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-void RBTree<OT,O2N,N2O,CO>::rotateLeft(RBTreeNode * x)
+void RBTree<OT,PT,O2N,N2O,CO>::rotateLeft(RBTreeNode * x)
 {
   RBTreeNode * y = x->right_;
   x->right_ = y->left_;
@@ -916,11 +923,12 @@ void RBTree<OT,O2N,N2O,CO>::rotateLeft(RBTreeNode * x)
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-void RBTree<OT,O2N,N2O,CO>::rotateRight(RBTreeNode * y)
+void RBTree<OT,PT,O2N,N2O,CO>::rotateRight(RBTreeNode * y)
 {
   RBTreeNode * x = y->left_;
   y->left_ = x->right_;
@@ -938,11 +946,12 @@ void RBTree<OT,O2N,N2O,CO>::rotateRight(RBTreeNode * y)
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-void RBTree<OT,O2N,N2O,CO>::insertFixup(RBTreeNode * x)
+void RBTree<OT,PT,O2N,N2O,CO>::insertFixup(RBTreeNode * x)
 {
 /* check Red-Black properties */
   while( x != root_ && x->parent_->color_ == RED ){
@@ -996,18 +1005,19 @@ void RBTree<OT,O2N,N2O,CO>::insertFixup(RBTreeNode * x)
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTreeNode * RBTree<OT,O2N,N2O,CO>::treeInsertHelp(RBTreeNode * z)
+RBTreeNode * RBTree<OT,PT,O2N,N2O,CO>::treeInsertHelp(RBTreeNode * z)
 {
   RBTreeNode * y = root_, * x = root_->left_;
   z->left_ = z->right_ = &sentinel_;
   intptr_t c = 0;
   while( x != &sentinel_ ){
     y = x;
-    c = CO(N2O(*x),N2O(*z));
+    c = CO(N2O(*x,param_),N2O(*z,param_),param_);
     if( c > 0 ){
       x = x->left_;
     }
@@ -1029,16 +1039,17 @@ RBTreeNode * RBTree<OT,O2N,N2O,CO>::treeInsertHelp(RBTreeNode * z)
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::insert(const OT & object,bool throwIfExist,bool deleteIfExist,OT ** pObject)
+RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::insert(const OT & object,bool throwIfExist,bool deleteIfExist,OT ** pObject)
 {
-  RBTreeNode * y, * x = &O2N(object);
+  RBTreeNode * y, * x = &O2N(object,param_);
   if( (y = treeInsertHelp(x)) != NULL ){
     if( deleteIfExist ) deleteObject(&object);
-    if( pObject != NULL ) *pObject = &N2O(*y);
+    if( pObject != NULL ) *pObject = &N2O(*y,param_);
     if( throwIfExist ) newObjectV1C2<Exception>(
 #if defined(__WIN32__) || defined(__WIN64__)
       ERROR_ALREADY_EXISTS + errorOffset
@@ -1096,11 +1107,12 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::insert(const OT & object,bool thr
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-void RBTree<OT,O2N,N2O,CO>::removeFixup(RBTreeNode * x)
+void RBTree<OT,PT,O2N,N2O,CO>::removeFixup(RBTreeNode * x)
 {
   RBTreeNode * w, * rootLeft = root_->left_;
 
@@ -1163,11 +1175,12 @@ void RBTree<OT,O2N,N2O,CO>::removeFixup(RBTreeNode * x)
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTreeNode * RBTree<OT,O2N,N2O,CO>::getSuccessorOf(RBTreeNode * x) const
+RBTreeNode * RBTree<OT,PT,O2N,N2O,CO>::getSuccessorOf(RBTreeNode * x) const
 {
   RBTreeNode * y;
 /* assignment to y is intentional */  
@@ -1188,13 +1201,14 @@ RBTreeNode * RBTree<OT,O2N,N2O,CO>::getSuccessorOf(RBTreeNode * x) const
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::remove(const OT & object)
+RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::remove(const OT & object)
 {
-  RBTreeNode * z = &O2N(object), * x, * y;
+  RBTreeNode * z = &O2N(object,param_), * x, * y;
   y = ((z->left_ == &sentinel_) || (z->right_ == &sentinel_)) ? z : getSuccessorOf(z);
   x = (y->left_ == &sentinel_) ? y->right_ : y->left_;
 /* x is y's only child */
@@ -1239,11 +1253,12 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::remove(const OT & object)
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::drop(const OT & object)
+RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::drop(const OT & object)
 {
   remove(object);
   deleteObject(&object);
@@ -1252,11 +1267,12 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::drop(const OT & object)
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::clear()
+RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::clear()
 {
   root_ = &rootNode_;
   rootNode_.left_ = &sentinel_;
@@ -1269,11 +1285,12 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::clear()
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::drop()
+RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::drop()
 {
   if( count_ > 0 ){
     Walker walker(*this);
@@ -1285,20 +1302,21 @@ RBTree<OT,O2N,N2O,CO> & RBTree<OT,O2N,N2O,CO>::drop()
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-OT * RBTree<OT,O2N,N2O,CO>::find(const OT & object) const
+OT * RBTree<OT,PT,O2N,N2O,CO>::find(const OT & object) const
 {
   RBTreeNode * current = root_->left_;
   for(;;){
     if( current == &sentinel_ ){ current = NULL; break; }
-    intptr_t c = CO(object,N2O(*current));
+    intptr_t c = CO(object,N2O(*current,param_),param_);
     if( c == 0 ) break;
     current = c < 0 ? current->left_ : current->right_;
   }
-  return current == NULL ? NULL : &N2O(*current);
+  return current == NULL ? NULL : &N2O(*current,param_);
 }
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
@@ -1307,13 +1325,13 @@ class RBTreeBenchmarkObject {
   public:
     intmax_t key_;
       
-    static RBTreeNode & treeO2N(const RBTreeBenchmarkObject & object){
+    static RBTreeNode & treeO2N(const RBTreeBenchmarkObject & object,uintptr_t *){
       return object.treeNode_;
     }
-    static RBTreeBenchmarkObject & treeN2O(const RBTreeNode & node){
+    static RBTreeBenchmarkObject & treeN2O(const RBTreeNode & node,uintptr_t *){
       return node.object<RBTreeBenchmarkObject>(reinterpret_cast<RBTreeBenchmarkObject *>(NULL)->treeNode_);
     }
-    static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1){
+    static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1,uintptr_t *){
       return a0.key_ > a1.key_ ? 1 : a0.key_ < a1.key_ ? -1 : 0;
     }
     mutable RBTreeNode treeNode_;
@@ -1321,6 +1339,7 @@ class RBTreeBenchmarkObject {
 typedef
   RBTree<
     RBTreeBenchmarkObject,
+    uintptr_t,
     RBTreeBenchmarkObject::treeO2N,
     RBTreeBenchmarkObject::treeN2O,
     RBTreeBenchmarkObject::treeCO
@@ -1328,11 +1347,12 @@ typedef
 //-----------------------------------------------------------------------------
 template <
   typename OT,
-  RBTreeNode & O2N(const OT &),
-  OT & N2O(const RBTreeNode &),
-  intptr_t CO(const OT &,const OT &)
+  typename PT,
+  RBTreeNode & O2N(const OT &,PT *),
+  OT & N2O(const RBTreeNode &,PT *),
+  intptr_t CO(const OT &,const OT &,PT *)
 > inline
-void RBTree<OT,O2N,N2O,CO>::benchmark(uintptr_t elCount,uintptr_t cycles)
+void RBTree<OT,PT,O2N,N2O,CO>::benchmark(uintptr_t elCount,uintptr_t cycles)
 {
   Array<RBTreeBenchmarkObject> nodes;
   nodes.resize(elCount);
