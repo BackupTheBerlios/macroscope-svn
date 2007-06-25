@@ -31,7 +31,41 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class LZSSKFilter {
+class HuffmanFilter {
+  public:
+    ~HuffmanFilter();
+    HuffmanFilter();
+    
+    HuffmanFilter & initializeCompression();
+    HuffmanFilter & compress(const void * buf,uintptr_t count);
+    HuffmanFilter & finishCompression();
+    HuffmanFilter & initializeDecompression();
+    HuffmanFilter & decompress(const void * buf,uintptr_t count);
+
+    HuffmanFilter & compressFile(const utf8::String & src,const utf8::String & dst);
+    HuffmanFilter & decompressFile(const utf8::String & src,const utf8::String & dst);
+
+    AutoPtr<uint8_t> & output(){ return output_; }
+    const uintptr_t & outputSize(){ return outputSize_; }
+
+    static void genStatisticTable(const Array<utf8::String> & fileNames);
+  protected:
+    AutoPtr<uint8_t> buffer_;
+    AutoPtr<uint8_t> output_;
+    uintptr_t outputBitPos_;
+    uintptr_t outputSize_;
+    uintptr_t outputMaxSize_;
+    uintptr_t abcFreq_[256];
+    uint8_t abc2Idx_[256];
+    uint8_t idx2abc_[256];
+
+    HuffmanFilter & updateABC(uintptr_t c);
+  private:
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class LZSSKFilter : protected HuffmanFilter {
   public:
     ~LZSSKFilter();
     LZSSKFilter();
@@ -42,16 +76,17 @@ class LZSSKFilter {
     LZSSKFilter & initializeDecompression();
     LZSSKFilter & decompress(const void * buf,uintptr_t count);
 
+    LZSSKFilter & compressFile(const utf8::String & src,const utf8::String & dst);
+    LZSSKFilter & decompressFile(const utf8::String & src,const utf8::String & dst);
+
     AutoPtr<uint8_t> & output(){ return output_; }
     const uintptr_t & outputSize(){ return outputSize_; }
     const bool & eos(){ return eos_; }
-
-    static void genStatisticTable(const Array<utf8::String> & fileNames);
   protected:
     class DictChar {
       public:
         ~DictChar() {}
-        DictChar() {}
+        DictChar() { treeNode_.parent_ = NULL; }
 
         static RBTreeNode & treeO2N(const DictChar & object,LZSSKFilter *){
           return object.treeNode_;
@@ -89,25 +124,20 @@ class LZSSKFilter {
     > DictTree;
     DictTree dictTree_;
     AutoPtr<uint8_t> buffer_;
-    AutoPtr<uint8_t> output_;
-    uintptr_t outputSize_;
     DictChar * dict_;
     uintptr_t dictSize_;
     uintptr_t dictSizeMask_;
     uintptr_t maxStrLen_;
     uintptr_t lastStrIndex_;
     uintptr_t lastStrLen_;
+    uintptr_t lastCodedLen_;
     uintptr_t dictPos_;
     uintptr_t aheadWindowSize_;
-    uintptr_t abcFreq_[256];
-    uint8_t abc2Idx_[256];
-    uint8_t idx2abc_[256];
+    bool initialized_;
     bool finalize_;
     bool eos_;
 
     enum CodeType { ct6Char = 0, ct2Seq = 1, ct3Seq = 2, ct8Char = 3 };
-
-    LZSSKFilter & updateABC(uintptr_t c);
   private:
 };
 //---------------------------------------------------------------------------

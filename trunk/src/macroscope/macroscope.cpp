@@ -1263,83 +1263,24 @@ int main(int _argc,char * _argv[])
 #endif
     }
 #ifndef NDEBUG
-    static const uint8_t text[] = 
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-      "0123456789ABCDEF"
-      "0123456789ABCDEF"
-      "FEDCBA9876543210"
-      "FEDCBA9876543210"
-    ;
-    uint8_t buf[1024];
-    uint8_t dText[sizeof(text)];
+    //static const uint8_t text[] = 
+    //  "0123456789ABCDEF"
+    //  "0123456789ABCDEF"
+    //  "FEDCBA9876543210"
+    //  "FEDCBA9876543210"
+    //;
+    //uint8_t buf[1024];
+    //uint8_t dText[sizeof(text)];
 //    AutoPtr<uint8_t> cText;
 //    LZWFilter lzw;
     
     //Vector<utf8::String> fileNamesVector;
     //getDirList(fileNamesVector,"c:/windows/system32/*.dll");
     //getDirList(fileNamesVector,"c:/windows/system32/*.exe");
+    //getDirList(fileNamesVector,getExecutableName());
     //getDirList(fileNamesVector,"G:/Library/Коллекция/*.txt");
     //Array<utf8::String> fileNames(fileNamesVector);
-    //lzw.genStatisticTable(fileNames << getExecutableName());
+    //lzw.genStatisticTable(fileNames);
     
 //    lzw.initialize();
     //lzw.compress(text,sizeof(text),true);
@@ -1348,15 +1289,8 @@ int main(int _argc,char * _argv[])
     //lzw.initialize();
     //lzw.decompress(cText,outSize,true);
     //dText[0] = dText[0];
-    LZSSKFilter filter;
-    filter.initializeCompression(256);
-    filter.compress(text,sizeof(text));
-    filter.finishCompression();
-    uintptr_t a;
-    memcpy(buf,filter.output(),a = filter.outputSize());
-    filter.initializeDecompression();
-    filter.decompress(buf,a);
-    memcpy(dText,filter.output(),filter.outputSize());
+    //HuffmanFilter filter;
+    //filter.compressFile("G:/Library/Коллекция/V_ANECD/V_ANECD.TXT",getExecutableName() + ".compressed");
 #endif
     errcode = 0;
     if( dispatch || sniffer || rollout ){
