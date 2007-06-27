@@ -35,6 +35,7 @@
 #ifndef NDEBUG
 #include <adicpp/lzw.h>
 #include <adicpp/lzssk.h>
+#include <adicpp/stmflt.h>
 #endif
 //------------------------------------------------------------------------------
 namespace macroscope {
@@ -1263,13 +1264,13 @@ int main(int _argc,char * _argv[])
 #endif
     }
 #ifndef NDEBUG
-    //static const uint8_t text[] = 
-    //  "0123456789ABCDEF"
-    //  "0123456789ABCDEF"
-    //  "FEDCBA9876543210"
-    //  "FEDCBA9876543210"
-    //;
-    //uint8_t buf[1024];
+    static const uint8_t text[] = 
+      "0123456789ABCDEF"
+      "0123456789ABCDEF"
+      "FEDCBA9876543210"
+      "FEDCBA9876543210"
+    ;
+    uint8_t buf[1024];
     //uint8_t dText[sizeof(text)];
 //    AutoPtr<uint8_t> cText;
 //    LZWFilter lzw;
@@ -1291,6 +1292,8 @@ int main(int _argc,char * _argv[])
     //dText[0] = dText[0];
     //HuffmanFilter filter;
     //filter.compressFile("G:/Library/Коллекция/V_ANECD/V_ANECD.TXT",getExecutableName() + ".compressed");
+    LZMAFilter filter;
+    filter.compress(text,sizeof(text));
 #endif
     errcode = 0;
     if( dispatch || sniffer || rollout ){

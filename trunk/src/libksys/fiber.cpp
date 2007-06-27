@@ -49,7 +49,8 @@ Fiber::~Fiber()
 #endif
 }
 //---------------------------------------------------------------------------
-Fiber::Fiber() : started_(false), terminated_(false), finished_(false),
+Fiber::Fiber() :
+  started_(false), terminated_(false), finished_(false), destroy_(true),
 #if !defined(__WIN32__) && !defined(__WIN64__)
   stackPointer_(NULL),
 #else
@@ -258,7 +259,7 @@ void BaseThread::sweepFiber(Fiber * fiber)
     AutoLock<InterlockedMutex> lock(fibersMutex_);
     fibers_.remove(*fiber);
   }
-  deleteObject(fiber);
+  if( fiber->destroy_ ) deleteObject(fiber);
 /*#if defined(__WIN32__) || defined(__WIN64__)
   if( (server_->howCloseServer_ & server_->csDWM) != 0 && fibers_.count() == 0 )
     while( PostThreadMessage(mainThreadId,fiberFinishMessage,NULL,NULL) == 0 ) Sleep(1);
@@ -428,6 +429,27 @@ BaseThread * BaseServer::selectThread()
   }
   assert( thread != NULL );
   return thread;
+}
+//------------------------------------------------------------------------------
+void BaseServer::attachFiber(Fiber & fiber)
+{
+ {
+    AutoLock<InterlockedMutex> lock(mutex_);
+    BaseThread * thread = selectThread();
+    fiber.allocateStack(fiberStackSize_,thread);
+    {
+      AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
+      thread->fibers_.insToTail(fiber);
+      fiber.thread_ = thread;
+    }
+    fiber.event_.type_ = etDispatch;
+    thread->postEvent(&fiber.event_);
+  }
+  if( stdErr.debugLevel(90) )
+    stdErr.debug(90,utf8::String::Stream() <<
+      "fibers: " << interlockedIncrement(fibersCount_,0) << ", "
+      "threads: " << interlockedIncrement(threadsCount_,0) << "\n"
+    );
 }
 //------------------------------------------------------------------------------
 void BaseServer::attachFiber(const AutoPtr<Fiber> & fiber)

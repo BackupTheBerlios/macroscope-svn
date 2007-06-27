@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,52 +51,6 @@ inline int32_t errNo()
   return errno;
 }
 #endif
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class StreamCompressor {
-  public:
-    virtual ~StreamCompressor();
-    StreamCompressor();
-  protected:
-    virtual int read() = 0;
-    virtual int write() = 0;
-    virtual int flush() = 0;
-  private:
-    StreamCompressor(const StreamCompressor &){}
-    void operator = (const StreamCompressor &){}
-};
-//---------------------------------------------------------------------------
-inline StreamCompressor::~StreamCompressor()
-{
-}
-//---------------------------------------------------------------------------
-inline StreamCompressor::StreamCompressor()
-{
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class StreamCryptor {
-  public:
-    virtual ~StreamCryptor();
-    StreamCryptor();
-  protected:
-    virtual int read() = 0;
-    virtual int write() = 0;
-    virtual int flush() = 0;
-  private:
-    StreamCryptor(const StreamCryptor &){}
-    void operator = (const StreamCryptor &){}
-};
-//---------------------------------------------------------------------------
-inline StreamCryptor::~StreamCryptor()
-{
-}
-//---------------------------------------------------------------------------
-inline StreamCryptor::StreamCryptor()
-{
-}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

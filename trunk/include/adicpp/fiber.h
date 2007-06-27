@@ -61,6 +61,7 @@ class Fiber : virtual public Object {
     volatile bool started_;
     volatile bool terminated_;
     volatile bool finished_;
+    volatile bool destroy_;
 
     virtual void fiberExecute() = 0;
     virtual void fiberBreakExecution() {}
@@ -566,6 +567,7 @@ class BaseServer {
     BaseServer & howCloseServer(uintptr_t how);
     void closeServer();
 
+    virtual void attachFiber(Fiber & fiber);
     virtual void attachFiber(const AutoPtr<Fiber> & fiber);
   protected:
     virtual BaseThread * newThread();
