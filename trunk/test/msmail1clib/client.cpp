@@ -1337,5 +1337,25 @@ int32_t Client::auth(ksock::AsyncSocket & socket)
   return socket.clientAuth(ap);
 }
 //------------------------------------------------------------------------------
+Client & Client::readConfig(const utf8::String & configFile,const utf8::String & logFile)
+{
+  configFile_ = configFile;
+  logFile_ = logFile;
+  stdErr.fileName(logFile_);
+  config_->fileName(configFile_).silent(true).parse();
+  stdErr.bufferDataTTA(
+    (uint64_t) config_->value("debug_file_max_collection_time",60) * 1000000u
+  );
+  stdErr.rotationThreshold(config_->value("debug_file_rotate_threshold",1024 * 1024));
+  stdErr.rotatedFileCount(config_->value("debug_file_rotate_count",10));
+  stdErr.setDebugLevels(config_->value("debug_levels","+0,+1,+2,+3"));
+  stdErr.fileName(
+    config_->value("log_file",stdErr.fileName())
+  );
+  stackBackTrace = config_->value("stack_back_trace",true);
+  config_->silent(false);
+  return *this;
+}
+//------------------------------------------------------------------------------
 } // namespace msmail
 //------------------------------------------------------------------------------

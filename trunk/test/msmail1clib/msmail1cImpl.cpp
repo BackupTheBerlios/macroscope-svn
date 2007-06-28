@@ -69,8 +69,8 @@ Cmsmail1c::msmail1c::msmail1c() :
 //------------------------------------------------------------------------------
 // IInitDone Methods
 //------------------------------------------------------------------------------
-/*void * Cmsmail1c::oldBKENDGetProcAddress_;
 void * Cmsmail1c::oldDBENG32LockFile_;
+/*void * Cmsmail1c::oldBKENDGetProcAddress_;
 void * Cmsmail1c::oldMSVCRTLockFile_;
 void * Cmsmail1c::oldMSVCR71LockFile_;
 void * Cmsmail1c::oldMFC42LockFile_;
@@ -150,7 +150,7 @@ HRESULT Cmsmail1c::Done()
       sizeof(uintptr_t)
     );
     oldBKENDGetProcAddress_ = NULL;
-  }
+  }*/
   if( oldDBENG32LockFile_ != NULL ){
     void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile");
     writeProtectedMemory(
@@ -160,7 +160,7 @@ HRESULT Cmsmail1c::Done()
     );
     oldDBENG32LockFile_ = NULL;
   }
-  if( oldMSVCRTLockFile_ != NULL ){
+/*  if( oldMSVCRTLockFile_ != NULL ){
     void * proc = findProcImportedEntryAddress("msvcrt.dll","KERNEL32.DLL","LockFile");
     writeProtectedMemory(
       proc,
@@ -712,18 +712,7 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               msmail1c_->client_.key_ = msmail1c_->key_;
               msmail1c_->client_.groups_ = msmail1c_->groups_;
               msmail1c_->client_.mailServer_ = msmail1c_->mailServer_;
-              msmail1c_->client_.configFile_ = msmail1c_->configFile_;
-              msmail1c_->client_.logFile_ = msmail1c_->logFile_;
-              stdErr.fileName(msmail1c_->logFile_);
-              msmail1c_->client_.config_->fileName(msmail1c_->configFile_).silent(true).parse();
-              stdErr.rotationThreshold(msmail1c_->client_.config_->value("debug_file_rotate_threshold",1024 * 1024));
-              stdErr.rotatedFileCount(msmail1c_->client_.config_->value("debug_file_rotate_count",10));
-              stdErr.setDebugLevels(msmail1c_->client_.config_->value("debug_levels","+0,+1,+2,+3"));
-              stdErr.fileName(
-                msmail1c_->client_.config_->value("log_file",stdErr.fileName())
-              );
-              stackBackTrace = msmail1c_->client_.config_->value("stack_back_trace",true);
-              msmail1c_->client_.config_->silent(false);
+              msmail1c_->client_.readConfig(msmail1c_->configFile_,msmail1c_->logFile_);
               msmail1c_->client_.open();
               msmail1c_->active_ = true;
             }
@@ -1905,22 +1894,27 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           }
           break;        
         case 31 : // ReceiveMessages
-          hr = SafeArrayLock(*paParams);
-          if( SUCCEEDED(hr) ){
-            lIndex = 0;
-            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+          if( !msmail1c_->client_.asyncMessagesReceiving_ ){
+            msmail1c_->client_.readConfig(msmail1c_->configFile_,msmail1c_->logFile_);
+            hr = SafeArrayLock(*paParams);
             if( SUCCEEDED(hr) ){
-              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              lIndex = 0;
+              hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
               if( SUCCEEDED(hr) ){
-                V_I4(pvarRetValue) = msmail1c_->client_.receiveMessages(V_I4(pv0) ? true : false) ? 1 : 0;
+                if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+                if( SUCCEEDED(hr) ){
+                  V_I4(pvarRetValue) = msmail1c_->client_.receiveMessages(V_I4(pv0) ? true : false) ? 1 : 0;
+                }
               }
+              SafeArrayUnlock(*paParams);
             }
-            SafeArrayUnlock(*paParams);
           }
           break;
         case 32 : // RepairLocking
+          msmail1c_->client_.readConfig(msmail1c_->configFile_,msmail1c_->logFile_);
+          checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
           {
-            //void * proc, * p;
+            void * proc, * p;
             /*proc = findProcImportedEntryAddress("bkend.dll","KERNEL32.DLL","GetProcAddress");
             readProtectedMemory(proc,&p,sizeof(void *));
             if( oldBKENDGetProcAddress_ == NULL && p != reparedGetProcAddress ){
@@ -1932,11 +1926,11 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             else {
               msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
             }
-            if( V_I4(pvarRetValue) ){
+            if( V_I4(pvarRetValue) ){*/
               proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile");
               readProtectedMemory(proc,&p,sizeof(void *));
-              if( oldDBENG32LockFile_ == NULL && p != reparedLockFile ){
-                void * a = reparedLockFile;
+              if( oldDBENG32LockFile_ == NULL && p != repairedLockFile ){
+                void * a = repairedLockFile;
                 writeProtectedMemory(proc,&a,sizeof(uintptr_t));
                 oldDBENG32LockFile_ = p;
               }
@@ -1944,7 +1938,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 V_I4(pvarRetValue) = 0;
                 msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
               }
-            }
+            /*}
             if( V_I4(pvarRetValue) ){
               proc = findProcImportedEntryAddress("msvcrt.dll","KERNEL32.DLL","LockFile");
               readProtectedMemory(proc,&p,sizeof(void *));
@@ -2000,17 +1994,16 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               }
             }*/
           }
-          checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
-          if( lockFileJmpCodeSafe_[0] == 0 ){
+          if( flushFileBuffersJmpCodeSafe_[0] == 0 ){
             uint8_t jmpCode[sizeof(lockFileJmpCodeSafe_)] = { 0xB8, 0, 0, 0, 0, 0xFF, 0xE0 };
 
-            readProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
+            /*readProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
             *(void **) (jmpCode + 1) = repairedLockFile;
             writeProtectedMemory(LockFile,jmpCode,sizeof(jmpCode));
 
             readProtectedMemory(UnlockFile,unLockFileJmpCodeSafe_,sizeof(unLockFileJmpCodeSafe_));
             *(void **) (jmpCode + 1) = repairedUnlockFile;
-            writeProtectedMemory(UnlockFile,jmpCode,sizeof(jmpCode));
+            writeProtectedMemory(UnlockFile,jmpCode,sizeof(jmpCode));*/
 
             readProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
             *(void **) (jmpCode + 1) = repairedFlushFileBuffers;
@@ -2201,23 +2194,25 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
   DWORD nNumberOfBytesToLockLow,
   DWORD nNumberOfBytesToLockHigh)
 {
-  utf8::String name(getFileNameByHandle(hFile));
+//  utf8::String name(getFileNameByHandle(hFile));
+//  utf8::String ext(getFileNameByHandle(hFile).right(4));
+//  DWORD flag = ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ? 0 : LOCKFILE_FAIL_IMMEDIATELY;
   OVERLAPPED overlapped;
   memset(&overlapped,0,sizeof(overlapped));
   overlapped.Offset = dwFileOffsetLow;
   overlapped.OffsetHigh = dwFileOffsetHigh;
-  overlapped.hEvent = NULL; //CreateEvent(NULL,TRUE,FALSE,NULL);
-//  if( overlapped.hEvent == NULL ) return FALSE;
+  overlapped.hEvent = NULL;//CreateEvent(NULL,TRUE,FALSE,NULL);
+  //if( overlapped.hEvent == NULL ) return FALSE;
   BOOL lk = LockFileEx(
     hFile,
-    LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+    LOCKFILE_EXCLUSIVE_LOCK,// | flag,
     0,
     nNumberOfBytesToLockLow,
     nNumberOfBytesToLockHigh,
     &overlapped
   );
   DWORD err = GetLastError();
-  if( lk == FALSE && err == ERROR_LOCK_VIOLATION ){
+  /*if( lk == FALSE && err == ERROR_LOCK_VIOLATION ){
     utf8::String ext(getFileNameByHandle(hFile).right(4));
     if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
       lk = LockFileEx(
@@ -2230,7 +2225,7 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
       );
       err = GetLastError();
     }
-  }
+  }*/
   if( lk == FALSE && err == ERROR_IO_PENDING ){
     err = WaitForSingleObject(overlapped.hEvent,1000);
     if( err == WAIT_TIMEOUT ){
@@ -2256,7 +2251,7 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
       err = ERROR_INVALID_DATA;
     }
   }
-  //CloseHandle(overlapped.hEvent);
+//  CloseHandle(overlapped.hEvent);
   SetLastError(err);
   return lk;
 }
@@ -2275,9 +2270,9 @@ BOOL WINAPI Cmsmail1c::repairedUnlockFile(
   return UnlockFileEx(hFile,0,nNumberOfBytesToUnlockLow,nNumberOfBytesToUnlockHigh,&overlapped);
 }
 //------------------------------------------------------------------------------
-BOOL WINAPI Cmsmail1c::repairedFlushFileBuffers(HANDLE hFile)
+BOOL WINAPI Cmsmail1c::repairedFlushFileBuffers(HANDLE /*hFile*/)
 {
-  utf8::String name(getFileNameByHandle(hFile));
+//  utf8::String name(getFileNameByHandle(hFile));
 //  utf8::String ext(getFileNameByHandle(hFile).right(4));
 //  if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
   return TRUE;

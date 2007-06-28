@@ -64,7 +64,7 @@ class LZMAFilter :
   public StreamCompressionFilter,
   protected Fiber,
   protected NCompress::NLZMA::CEncoder,
-  protected NCompress::NLZMA::CDeccoder,
+  protected NCompress::NLZMA::CDecoder,
   protected ISequentialInStream,
   protected ISequentialOutStream
 {

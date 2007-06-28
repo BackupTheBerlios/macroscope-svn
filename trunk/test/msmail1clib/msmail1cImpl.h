@@ -305,6 +305,8 @@ class Client : public ksock::Client {
 
     int32_t auth(ksock::AsyncSocket & socket);
 
+    Client & readConfig(const utf8::String & configFile,const utf8::String & logFile);
+
     InterlockedMutex workFiberWait_;
     int32_t workFiberLastError_;
   protected:
@@ -449,7 +451,7 @@ public:
   STDMETHOD(CallAsProc)( long lMethodNum, SAFEARRAY * * paParams);
   STDMETHOD(CallAsFunc)( long lMethodNum,  VARIANT * pvarRetValue, SAFEARRAY * * paParams);
 #endif
-/*  static void * oldBKENDGetProcAddress_;
+  static void * oldBKENDGetProcAddress_;
   static void * oldDBENG32LockFile_;
   static void * oldMSVCRTLockFile_;
   static void * oldMSVCR71LockFile_;
@@ -459,7 +461,7 @@ public:
     void * p_;
   };
   static ImportedEntry oldSEVENGetProcAddress_;
-  static FARPROC WINAPI reparedGetProcAddress(HMODULE hModule,LPCSTR lpProcName);*/
+  static FARPROC WINAPI reparedGetProcAddress(HMODULE hModule,LPCSTR lpProcName);
 
   uint8_t lockFileJmpCodeSafe_[7];
   uint8_t unLockFileJmpCodeSafe_[7];
