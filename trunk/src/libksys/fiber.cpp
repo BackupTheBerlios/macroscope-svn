@@ -189,6 +189,7 @@ void Fiber::start(Fiber * fiber)
 #endif
 {
   fiber->started_ = true;
+  fiber->terminated_ = false;
   interlockedIncrement(fiber->thread_->server_->fibersCount_,1);
   try {
     fiber->fiberExecute();

@@ -45,6 +45,7 @@ class StreamCompressionFilter {
   protected:
     virtual StreamCompressionFilter & readBuffer(void * buf,uintptr_t count) = 0;
     virtual StreamCompressionFilter & writeBuffer(const void * buf,uintptr_t count) = 0;
+    virtual StreamCompressionFilter & writeCompressedBuffer(const void * buf,uintptr_t count) = 0;
   private:
     StreamCompressionFilter(const StreamCompressionFilter &);
     void operator = (const StreamCompressionFilter &);
@@ -62,11 +63,12 @@ inline StreamCompressionFilter::StreamCompressionFilter()
 //---------------------------------------------------------------------------
 class LZMAFilter :
   public StreamCompressionFilter,
-  protected Fiber,
-  protected NCompress::NLZMA::CEncoder,
-  protected NCompress::NLZMA::CDecoder,
-  protected ISequentialInStream,
-  protected ISequentialOutStream
+  private BaseServer,
+  private Fiber,
+  private NCompress::NLZMA::CEncoder,
+  private NCompress::NLZMA::CDecoder,
+  private ISequentialInStream,
+  private ISequentialOutStream
 {
   public:
     virtual ~LZMAFilter();
@@ -78,8 +80,7 @@ class LZMAFilter :
   protected:
     StreamCompressionFilter & readBuffer(void * buf,uintptr_t count);
     StreamCompressionFilter & writeBuffer(const void * buf,uintptr_t count);
-    STDMETHOD(Read)(void * data,UInt32 size,UInt32 * processedSize);
-    STDMETHOD(Write)(const void *data,UInt32 size,UInt32 * processedSize);
+    StreamCompressionFilter & writeCompressedBuffer(const void * buf,uintptr_t count);
   private:
     LZMAFilter(const LZMAFilter &);
     void operator = (const LZMAFilter &);
@@ -93,8 +94,15 @@ class LZMAFilter :
     uintptr_t rCount_;
     void * wData_;
     uintptr_t wCount_;
+    bool flush_;
 
+    Semaphore threadSem_;
+
+    Fiber * newFiber() { return NULL; }
     void fiberExecute();
+
+    STDMETHOD(Read)(void * data,UInt32 size,UInt32 * processedSize);
+    STDMETHOD(Write)(const void *data,UInt32 size,UInt32 * processedSize);
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

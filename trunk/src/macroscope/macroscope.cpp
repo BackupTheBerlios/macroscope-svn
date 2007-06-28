@@ -1294,6 +1294,10 @@ int main(int _argc,char * _argv[])
     //filter.compressFile("G:/Library/Коллекция/V_ANECD/V_ANECD.TXT",getExecutableName() + ".compressed");
     LZMAFilter filter;
     filter.compress(text,sizeof(text));
+    filter.compress(text,sizeof(text));
+    filter.compress(text,sizeof(text));
+    filter.compress(text,sizeof(text));
+    filter.flush();
 #endif
     errcode = 0;
     if( dispatch || sniffer || rollout ){
