@@ -62,17 +62,18 @@ void MidFree(void *address) throw()
   ::VirtualFree(address, 0, MEM_RELEASE);
 }
 
-static SIZE_T g_LargePageSize = 
-    #ifdef _WIN64
+static SIZE_T g_LargePageSize = 0;
+    /*#ifdef _WIN64
     (1 << 21);
     #else
     (1 << 22);
-    #endif
+    #endif*/
 
 typedef SIZE_T (WINAPI *GetLargePageMinimumP)();
 
 bool SetLargePageSize()
 {
+  g_LargePageSize = 0;
   GetLargePageMinimumP largePageMinimum = (GetLargePageMinimumP)
         ::GetProcAddress(::GetModuleHandle(TEXT("kernel32.dll")), "GetLargePageMinimum");
   if (largePageMinimum == 0)
@@ -87,6 +88,7 @@ bool SetLargePageSize()
 
 void *BigAlloc(size_t size) throw()
 {
+  if( g_LargePageSize == 0 ) SetLargePageSize();
   if (size == 0)
     return 0;
   #ifdef _SZ_ALLOC_DEBUG
