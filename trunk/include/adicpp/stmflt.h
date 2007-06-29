@@ -99,6 +99,7 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
         Fiber * guest_;
         const void * data_;
         uintptr_t count_;
+        int32_t err_;
         bool flush_;
 
         void fiberExecute();
@@ -127,12 +128,16 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
         Fiber * guest_;
         const void * data_;
         uintptr_t count_;
+        int32_t err_;
         bool flush_;
 
         void fiberExecute();
     };
     friend class Decoder;
     AutoPtr<Decoder> decoder_;
+
+    LZMAFilter & dropEncoder();
+    LZMAFilter & dropDecoder();
   private:
     LZMAFilter(const LZMAFilter &);
     void operator = (const LZMAFilter &);
