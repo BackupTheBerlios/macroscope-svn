@@ -177,8 +177,10 @@ class CEncoder :
   public ICompressSetOutStream,
   public ICompressSetCoderProperties,
   public ICompressWriteCoderProperties,
-  public CBaseState,
-  public CMyUnknownImp
+  public CBaseState
+#ifndef NO_CMyUnknownImp
+  , public CMyUnknownImp
+#endif
 {
   COptimal _optimum[kNumOpts];
   CMyComPtr<IMatchFinder> _matchFinder; // test it
@@ -368,11 +370,13 @@ public:
 
   HRESULT Create();
 
+#ifndef NO_CMyUnknownImp
   MY_UNKNOWN_IMP3(
       ICompressSetOutStream,
       ICompressSetCoderProperties,
       ICompressWriteCoderProperties
       )
+#endif
     
   HRESULT Init();
   

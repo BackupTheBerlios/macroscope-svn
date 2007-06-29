@@ -48,6 +48,7 @@ ADD_LIBRARY(ksys STATIC
   sha.cpp
   shobjs.cpp
   stat.cpp
+  stmflt.cpp
   sysutils.cpp
   thread.cpp
   utime.cpp

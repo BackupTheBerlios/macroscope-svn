@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -57,7 +57,7 @@ int main(int ac,char * av[])
         continue;
       }
       utf8::String keyAdd;
-      if( gettimeofday() > timeFromTimeString("13.02.2007",false) ){
+      if( gettimeofday() > timeFromTimeString("13.06.2008",false) ){
         Randomizer rnd;
         keyAdd = utf8::int2Str(rnd.random());
       }

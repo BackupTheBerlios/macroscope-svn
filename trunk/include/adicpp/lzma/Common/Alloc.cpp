@@ -39,7 +39,7 @@ void MyFree(void *address) throw()
   ::free(address);
 }
 
-#ifdef _WIN32
+/*#ifdef _WIN32
 
 void *MidAlloc(size_t size) throw()
 {
@@ -62,22 +62,20 @@ void MidFree(void *address) throw()
   ::VirtualFree(address, 0, MEM_RELEASE);
 }
 
-static SIZE_T g_LargePageSize = 0;
-    /*#ifdef _WIN64
+static SIZE_T g_LargePageSize =
+    #ifdef _WIN64
     (1 << 21);
     #else
     (1 << 22);
-    #endif*/
+    #endif
 
 typedef SIZE_T (WINAPI *GetLargePageMinimumP)();
 
 bool SetLargePageSize()
 {
-  g_LargePageSize = 0;
   GetLargePageMinimumP largePageMinimum = (GetLargePageMinimumP)
         ::GetProcAddress(::GetModuleHandle(TEXT("kernel32.dll")), "GetLargePageMinimum");
-  if (largePageMinimum == 0)
-    return false;
+  if( largePageMinimum == 0 ) return false;
   SIZE_T size = largePageMinimum();
   if (size == 0 || (size & (size - 1)) != 0)
     return false;
@@ -85,17 +83,15 @@ bool SetLargePageSize()
   return true;
 }
 
-
-void *BigAlloc(size_t size) throw()
+void * BigAlloc(size_t size) throw()
 {
   if( g_LargePageSize == 0 ) SetLargePageSize();
-  if (size == 0)
-    return 0;
+  if( size == 0 ) return 0;
   #ifdef _SZ_ALLOC_DEBUG
   fprintf(stderr, "\nAlloc_Big %10d bytes;  count = %10d", size, g_allocCountBig++);
   #endif
   
-  if (size >= (1 << 18))
+  if( size >= (1 << 18) && g_LargePageSize > 0 )
   {
     void *res = ::VirtualAlloc(0, (size + g_LargePageSize - 1) & (~(g_LargePageSize - 1)), 
         MEM_COMMIT | MEM_LARGE_PAGES, PAGE_READWRITE);
@@ -117,4 +113,4 @@ void BigFree(void *address) throw()
   ::VirtualFree(address, 0, MEM_RELEASE);
 }
 
-#endif
+#endif*/

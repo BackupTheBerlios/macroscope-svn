@@ -145,13 +145,15 @@ public:
 class CDecoder: 
   public ICompressCoder,
   public ICompressSetDecoderProperties2,
-  public ICompressGetInStreamProcessedSize,
+  public ICompressGetInStreamProcessedSize
   #ifdef _ST_MODE
-  public ICompressSetInStream,
+  , public ICompressSetInStream,
   public ICompressSetOutStreamSize,
-  public ISequentialInStream,
+  public ISequentialInStream
   #endif
-  public CMyUnknownImp
+#ifndef NO_CMyUnknownImp
+  , public CMyUnknownImp
+#endif
 {
   CLZOutWindow _outWindowStream;
   NRangeCoder::CDecoder _rangeDecoder;
@@ -195,9 +197,11 @@ public:
       ICompressSetOutStreamSize, 
       ISequentialInStream)
   #else
+#ifndef NO_CMyUnknownImp
   MY_UNKNOWN_IMP2(
       ICompressSetDecoderProperties2,
       ICompressGetInStreamProcessedSize)
+#endif
   #endif
 
   void ReleaseStreams()

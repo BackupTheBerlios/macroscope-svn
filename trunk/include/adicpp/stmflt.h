@@ -27,8 +27,10 @@
 #ifndef stmfltH
 #define stmfltH
 //---------------------------------------------------------------------------
+#define _NO_EXCEPTIONS 1
 #include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.h>
 #include <adicpp/lzma/7zip/Compress/LZMA/LZMADecoder.h>
+#undef _NO_EXCEPTIONS
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
@@ -39,13 +41,15 @@ class StreamCompressionFilter {
     virtual ~StreamCompressionFilter();
     StreamCompressionFilter();
 
+    virtual StreamCompressionFilter & initializeCompression() = 0;
     virtual StreamCompressionFilter & compress(const void * buf,uintptr_t count) = 0;
+    virtual StreamCompressionFilter & finishCompression() = 0;
+    virtual StreamCompressionFilter & initializeDecompression() = 0;
     virtual StreamCompressionFilter & decompress(void * buf,uintptr_t count) = 0;
-    virtual StreamCompressionFilter & flush() = 0;
+    virtual StreamCompressionFilter & finishDecompression() = 0;
   protected:
-    virtual StreamCompressionFilter & readBuffer(void * buf,uintptr_t count) = 0;
-    virtual StreamCompressionFilter & writeBuffer(const void * buf,uintptr_t count) = 0;
     virtual StreamCompressionFilter & writeCompressedBuffer(const void * buf,uintptr_t count) = 0;
+    virtual StreamCompressionFilter & writeDecompressedBuffer(void * buf,uintptr_t count) = 0;
   private:
     StreamCompressionFilter(const StreamCompressionFilter &);
     void operator = (const StreamCompressionFilter &);
@@ -61,48 +65,94 @@ inline StreamCompressionFilter::StreamCompressionFilter()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class LZMAFilter :
-  public StreamCompressionFilter,
-  private BaseServer,
-  private Fiber,
-  private NCompress::NLZMA::CEncoder,
-  private NCompress::NLZMA::CDecoder,
-  private ISequentialInStream,
-  private ISequentialOutStream
+class LZMAFilter : public StreamCompressionFilter, private BaseServer
 {
   public:
     virtual ~LZMAFilter();
     LZMAFilter();
 
+    StreamCompressionFilter & initializeCompression();
     StreamCompressionFilter & compress(const void * buf,uintptr_t count);
+    StreamCompressionFilter & finishCompression();
+    StreamCompressionFilter & initializeDecompression();
     StreamCompressionFilter & decompress(void * buf,uintptr_t count);
-    StreamCompressionFilter & flush();
+    StreamCompressionFilter & finishDecompression();
   protected:
-    StreamCompressionFilter & readBuffer(void * buf,uintptr_t count);
-    StreamCompressionFilter & writeBuffer(const void * buf,uintptr_t count);
-    StreamCompressionFilter & writeCompressedBuffer(const void * buf,uintptr_t count);
+    class Encoder :
+      public Fiber,
+      public NCompress::NLZMA::CEncoder,
+      public ISequentialInStream,
+      public ISequentialOutStream
+    {
+      public:
+        Encoder() { destroy_ = false; }
+
+        STDMETHOD(QueryInterface)(REFIID,void **) { return E_FAIL; }
+        ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
+        ULONG STDMETHODCALLTYPE Release(void) { return 0; }
+
+        STDMETHOD(Read)(void * data,UInt32 size,UInt32 * processedSize);
+        STDMETHOD(Write)(const void *data,UInt32 size,UInt32 * processedSize);
+
+        Semaphore sem_;
+        LZMAFilter * filter_;
+        Fiber * guest_;
+        const void * data_;
+        uintptr_t count_;
+        bool flush_;
+
+        void fiberExecute();
+    };
+    friend class Encoder;
+    AutoPtr<Encoder> encoder_;
+
+    class Decoder :
+      public Fiber,
+      public NCompress::NLZMA::CDecoder,
+      public ISequentialInStream,
+      public ISequentialOutStream
+    {
+      public:
+        Decoder() { destroy_ = false; }
+
+        STDMETHOD(QueryInterface)(REFIID,void **) { return E_FAIL; }
+        ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
+        ULONG STDMETHODCALLTYPE Release(void) { return 0; }
+
+        STDMETHOD(Read)(void * data,UInt32 size,UInt32 * processedSize);
+        STDMETHOD(Write)(const void *data,UInt32 size,UInt32 * processedSize);
+
+        Semaphore sem_;
+        LZMAFilter * filter_;
+        Fiber * guest_;
+        const void * data_;
+        uintptr_t count_;
+        bool flush_;
+
+        void fiberExecute();
+    };
+    friend class Decoder;
+    AutoPtr<Decoder> decoder_;
   private:
     LZMAFilter(const LZMAFilter &);
     void operator = (const LZMAFilter &);
 
-    STDMETHOD(QueryInterface)(REFIID,void **) { return E_FAIL; }
-    ULONG STDMETHODCALLTYPE AddRef(void) { return 0; }
-    ULONG STDMETHODCALLTYPE Release(void) { return 0; }
-
-    Fiber * guest_;
-    const void * rData_;
-    uintptr_t rCount_;
-    void * wData_;
-    uintptr_t wCount_;
-    bool flush_;
-
-    Semaphore threadSem_;
-
     Fiber * newFiber() { return NULL; }
-    void fiberExecute();
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class LZMAFileFilter : public LZMAFilter {
+  public:
+    StreamCompressionFilter & compressFile(const utf8::String & srcFileName,const utf8::String & dstFileName);
+    StreamCompressionFilter & decompressFile(const utf8::String & srcFileName,const utf8::String & dstFileName);
+  protected:
+    AsyncFile srcFile_;
+    AsyncFile dstFile_;
 
-    STDMETHOD(Read)(void * data,UInt32 size,UInt32 * processedSize);
-    STDMETHOD(Write)(const void *data,UInt32 size,UInt32 * processedSize);
+    StreamCompressionFilter & writeCompressedBuffer(const void * buf,uintptr_t count);
+    StreamCompressionFilter & writeDecompressedBuffer(void * buf,uintptr_t count);
+  private:
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

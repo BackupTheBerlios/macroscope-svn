@@ -409,6 +409,29 @@ inline AutoFileRemove::AutoFileRemove(const utf8::String & name) : name_(name)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+class AutoFileClose {
+  public:
+    ~AutoFileClose();
+    AutoFileClose(AsyncFile & file);
+  protected:
+  private:
+    AsyncFile * file_;
+
+    AutoFileClose(const AutoFileClose &){}
+    void operator =(const AutoFileClose &){}
+};
+//---------------------------------------------------------------------------
+inline AutoFileClose::~AutoFileClose()
+{
+  if( file_ != NULL ) file_->close();
+}
+//---------------------------------------------------------------------------
+inline AutoFileClose::AutoFileClose(AsyncFile & file) : file_(&file)
+{
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
 class EFileEOF : public Exception {
   public:
     EFileEOF() {}

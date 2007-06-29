@@ -2747,6 +2747,21 @@ utf8::String getMachineUniqueKey()
   VariantClear(&vtDeviceId);
   VariantClear(&vtName);
   VariantClear(&vtMACAddress);
+  intptr_t size = s.size(), i;
+  union {
+    uint8_t * a;
+    uint16_t * b;
+    uint32_t * c;
+  };
+  a = (uint8_t *) s.c_str();
+  for( i = size - 1; i >= 0; i-- )
+    xchg(a[a[i] % size],a[a[size - i - 1] % size]);
+  b = (uint16_t *) s.c_str();
+  for( size /= 2, i = size - 1; i >= 0; i-- )
+    xchg(b[b[i] % size],b[b[size - i - 1] % size]);
+  c = (uint32_t *) s.c_str();
+  for( size /= 2, i = size - 1; i >= 0; i-- )
+    xchg(c[c[i] % size],c[c[size - i - 1] % size]);
   return s;
 #elif (HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H && HAVE_NET_IF_H && HAVE_NET_IF_TYPES_H) || HAVE_DO_CPUID
   utf8::String key;

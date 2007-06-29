@@ -1292,12 +1292,15 @@ int main(int _argc,char * _argv[])
     //dText[0] = dText[0];
     //HuffmanFilter filter;
     //filter.compressFile("G:/Library/Коллекция/V_ANECD/V_ANECD.TXT",getExecutableName() + ".compressed");
-    LZMAFilter filter;
-    filter.compress(text,sizeof(text));
-    filter.compress(text,sizeof(text));
-    filter.compress(text,sizeof(text));
-    filter.compress(text,sizeof(text));
-    filter.flush();
+    //LZMAFilter filter;
+    //filter.initializeCompression();
+    //filter.compress(text,sizeof(text));
+    //filter.finishCompression();
+    LZMAFileFilter fileFilter;
+    for( uintptr_t ii = 0; i < 1000; i++ ){
+      fileFilter.compressFile("G:/Library/Коллекция/V_ANECD/V_ANECD.TXT",getExecutablePath() + "V_ANECD.TXT.compressed");
+      fileFilter.decompressFile(getExecutablePath() + "V_ANECD.TXT.compressed",getExecutablePath() + "V_ANECD.TXT.decompressed");
+    }
 #endif
     errcode = 0;
     if( dispatch || sniffer || rollout ){
