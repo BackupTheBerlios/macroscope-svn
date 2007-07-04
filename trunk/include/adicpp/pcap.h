@@ -354,8 +354,8 @@ class PCAP : public Thread {
     static PCAP & listObject(const EmbeddedListNode<PCAP> & node,PCAP * p = NULL){
       return node.object(p->listNode_);
     }
-  	mutable EmbeddedListNode<PCAP> listNode_;
-    EmbeddedList<PCAP,listNode,listObject> joined_;
+    mutable EmbeddedListNode<PCAP> listNode_;
+    EmbeddedList<PCAP,PCAP::listNode,PCAP::listObject> joined_;
     PCAP * joinMaster_;
 
     void * handle_;
