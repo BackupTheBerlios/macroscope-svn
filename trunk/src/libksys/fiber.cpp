@@ -197,7 +197,7 @@ void Fiber::start(Fiber * fiber)
   catch( ExceptionSP & e ){
     e->writeStdError();
   }
-  interlockedIncrement(fiber->thread_->server_->fibersCount_,-1);
+  interlockedIncrement(fiber->thread_->server_->fibersCount_,uilock_t(ilock_t(-1)));
   fiber->finished_ = true;
   fiber->switchFiber(fiber->thread_);
   exit(ENOSYS);
