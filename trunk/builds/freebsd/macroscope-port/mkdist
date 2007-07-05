@@ -1,11 +1,12 @@
 #!/bin/sh
 
-PORT=`cat ../../../src/macroscope/version.in | awk '{ if( length($3) > 0 ) printf "%s-%s", $2, $3 }'`
 REPOS="http://svn.berlios.de/svnroot/repos/macroscope/branches/stable"
 FILES="builds/cmake include src utils AUTHORS README INSTALL NEWS CMakeLists.txt"
 for f in ${FILES}; do
-  svn export "${REPOS}/${f}" "${PORT}/${f}"
+  svn export "${REPOS}/${f}" "macroscope/${f}"
 done
+PORT=`cat macroscope/src/macroscope/version.in | awk '{ if( length($3) > 0 ) printf "%s-%s", $2, $3 }'`
+mv macroscope ${PORT}
 #echo "#!/bin/sh" >> "${PORT}/configure"
 #echo "cmake ." >> "${PORT}/configure"
 #chmod u+x "${PORT}/configure"
