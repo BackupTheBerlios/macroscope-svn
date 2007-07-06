@@ -1927,7 +1927,9 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
             }
             if( V_I4(pvarRetValue) ){*/
-              proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile");
+              proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile",true);
+              if( proc == NULL )
+                proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","LockFile");
               readProtectedMemory(proc,&p,sizeof(void *));
               if( oldDBENG32LockFile_ == NULL && p != repairedLockFile ){
                 void * a = repairedLockFile;

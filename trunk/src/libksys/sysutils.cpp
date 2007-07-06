@@ -3063,7 +3063,7 @@ void writeProtectedMemory(void * memory,const void * data,uintptr_t count)
 #endif
 }
 //---------------------------------------------------------------------------
-void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::String & importedDllName,const utf8::String & funcName)
+void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::String & importedDllName,const utf8::String & funcName,bool noThrow)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   union {
@@ -3077,20 +3077,24 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
     hModule = GetModuleHandleW(dllName.getUNICODEString());
   }
   if( hModule == NULL ){
+    if( noThrow ) return NULL;
     int32_t err = GetLastError();
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   ULONG size;
   PVOID importTableOffset = ImageDirectoryEntryToData(hModule,TRUE,IMAGE_DIRECTORY_ENTRY_IMPORT,&size);
   if( importTableOffset == NULL ){
+    if( noThrow ) return NULL;
     int32_t err = GetLastError();
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   uintptr_t rva = uintptr_t(importTableOffset) - basePointer;
   for(;;){
     uintptr_t dllNameOffset = *(uintptr_t *)(rva + 12 + basePointer);
-    if( dllNameOffset == 0 )
+    if( dllNameOffset == 0 ){
+      if( noThrow ) return NULL;
       newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    }
     if( utf8::String((const char *)(basePointer + dllNameOffset)).strcasecmp(importedDllName) != 0 ){
       rva += 20;
       continue;
@@ -3098,8 +3102,10 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
     uintptr_t funcNamesOffset = *(uintptr_t *)(rva + basePointer), nFuncName = 0;
     for(;;){
       uintptr_t funcNameOffset = *(uintptr_t *)(funcNamesOffset + basePointer);
-      if( funcNameOffset == 0 )
+      if( funcNameOffset == 0 ){
+        if( noThrow ) return NULL;
         newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+      }
       nFuncName++;
       utf8::String name((const char *)(basePointer + funcNameOffset) + 2);
       if( name.strcmp(funcName) != 0 ){
@@ -3110,8 +3116,10 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
       uintptr_t funcAddrsOffset = *(uintptr_t *)(rva + 16 + basePointer), nFuncAddr = 0;
       for(;;){
         uintptr_t funcAddrOffset = *(uintptr_t *)(funcAddrsOffset + basePointer);
-        if( funcAddrOffset == 0 )
+        if( funcAddrOffset == 0 ){
+          if( noThrow ) return NULL;
           newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+        }
         nFuncAddr++;
         if( nFuncAddr != nFuncName ){
           funcAddrsOffset += sizeof(uintptr_t);
