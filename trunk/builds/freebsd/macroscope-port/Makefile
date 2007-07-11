@@ -6,12 +6,11 @@
 #
 
 PORTNAME=		macroscope
-PORTVERSION=		1.0.2277
+PORTVERSION=		1.0.2278
 CATEGORIES=		net-mgmt
-MASTER_SITES=		ftp://ftp.berlios.de/pub/macroscope/:src0 \
-			http://white-raven.pisem.net/:src1
-DISTFILES=		${PORTNAME}-${PORTVERSION}.tar.bz2:src0 \
-			${PORTNAME}-${PORTVERSION}.tar.bz2:src1
+MASTER_SITES=		ftp://ftp.berlios.de/pub/macroscope/ \
+			http://white-raven.pisem.net/
+DISTNAME=		${PORTNAME}-${PORTVERSION}
 
 MAINTAINER=		white_raven@users.berlios.de
 COMMENT=		User and IP traffic management with Web interface
@@ -19,11 +18,9 @@ COMMENT=		User and IP traffic management with Web interface
 OPTIONS=		MYSQL		"With MySQL support" on \
 			FIREBIRD	"With Firebird support" off
 
-GNU_CONFIGURE=		no
-USE_AUTOTOOLS=		no
-USE_RC_SUBR=		macroscope
+HAS_CONFIGURE=		yes
+USE_RC_SUBR=		${PORTNAME}
 USE_BZIP2=		yes
-USE_CMAKE=		yes
 USE_DOS2UNIX=		yes
 
 BUILD_DEPENDS=		cmake:${PORTSDIR}/devel/cmake
