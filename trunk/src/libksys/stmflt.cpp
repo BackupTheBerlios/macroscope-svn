@@ -74,17 +74,14 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Read(void * data,UInt32 size,UInt
 {
   if( processedSize != NULL ) *processedSize = 0;
   for(;;){
-    UInt32 r = size > count_ ? UInt32(count_) : size;
+    UInt32 r = (UInt32) filter_->encoderRead(data,size);
     if( r > 0 ){
-      memcpy(data,data_,r);
       data = (uint8_t *) data + r;
-      data_ = (const uint8_t *) data_ + r;
-      count_ -= r;
       size -= r;
       if( processedSize != NULL ) *processedSize += r;
     }
     if( size == 0 || flush_ ) break;
-    if( count_ == 0 ){
+    if( r == 0 ){
       if( guest_ == NULL ){
         sem_.post();
       }
@@ -102,8 +99,12 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Write(const void *data,UInt32 siz
 {
   HRESULT hr = S_OK;
   try {
-    filter_->writeCompressedBuffer(data,size);
-    if( processedSize != NULL ) *processedSize = size;
+    if( processedSize != NULL ) *processedSize = 0;
+    while( size > 0 ){
+      UInt32 w = (UInt32) filter_->encoderWrite(data,size);
+      if( processedSize != NULL ) *processedSize += w;
+      size -= w;
+    }
   }
   catch( ExceptionSP & e ){
     hr = HRESULT_FROM_WIN32(e->code());
@@ -141,17 +142,14 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Read(void * data,UInt32 size,UInt
 {
   if( processedSize != NULL ) *processedSize = 0;
   for(;;){
-    UInt32 r = size > count_ ? UInt32(count_) : size;
+    UInt32 r = (UInt32) filter_->decoderRead(data,size);
     if( r > 0 ){
-      memcpy(data,data_,r);
       data = (uint8_t *) data + r;
-      data_ = (const uint8_t *) data_ + r;
-      count_ -= r;
       size -= r;
       if( processedSize != NULL ) *processedSize += r;
     }
     if( size == 0 || flush_ ) break;
-    if( count_ == 0 ){
+    if( r == 0 ){
       if( guest_ == NULL ){
         sem_.post();
       }
@@ -169,8 +167,12 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Write(const void *data,UInt32 siz
 {
   HRESULT hr = S_OK;
   try {
-    filter_->writeCompressedBuffer(data,size);
-    if( processedSize != NULL ) *processedSize = size;
+    if( processedSize != NULL ) *processedSize = 0;
+    while( size > 0 ){
+      UInt32 w = (UInt32) filter_->decoderWrite(data,size);
+      if( processedSize != NULL ) *processedSize += w;
+      size -= w;
+    }
   }
   catch( ExceptionSP & e ){
     hr = HRESULT_FROM_WIN32(e->code());
@@ -263,38 +265,32 @@ StreamCompressionFilter & LZMAFilter::initializeCompression()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::compress(const void * buf,uintptr_t count)
+StreamCompressionFilter & LZMAFilter::compress()
 {
-  if( count > 0 ){
-    encoder_->guest_ = currentFiber();
-    encoder_->data_ = buf;
-    encoder_->count_ = count;
-    encoder_->flush_ = false;
-    if( !encoder_->started() || encoder_->finished() ){
-      if( encoder_->guest_ != NULL )
-        encoder_->guest_->thread()->server()->attachFiber(encoder_);
-      else
-        attachFiber(encoder_);
-    }
-    else {
-      encoder_->event_.type_ = etDispatch;
-      encoder_->thread()->postEvent(&encoder_->event_);
-    }
-    if( encoder_->guest_ == NULL )
-      encoder_->sem_.wait();
+  encoder_->guest_ = currentFiber();
+  encoder_->flush_ = false;
+  if( !encoder_->started() || encoder_->finished() ){
+    if( encoder_->guest_ != NULL )
+      encoder_->guest_->thread()->server()->attachFiber(encoder_);
     else
-      encoder_->guest_->switchFiber(encoder_->guest_->mainFiber());
-    if( encoder_->err_ != 0 )
-      newObjectV1C2<Exception>(encoder_->err_,__PRETTY_FUNCTION__);
+      attachFiber(encoder_);
   }
+  else {
+    encoder_->event_.type_ = etDispatch;
+    encoder_->thread()->postEvent(&encoder_->event_);
+  }
+  if( encoder_->guest_ == NULL )
+    encoder_->sem_.wait();
+  else
+    encoder_->guest_->switchFiber(encoder_->guest_->mainFiber());
+  if( encoder_->err_ != 0 )
+    newObjectV1C2<Exception>(encoder_->err_,__PRETTY_FUNCTION__);
   return *this;
 }
 //---------------------------------------------------------------------------
 StreamCompressionFilter & LZMAFilter::finishCompression()
 {
   encoder_->guest_ = currentFiber();
-  encoder_->data_ = NULL;
-  encoder_->count_ = 0;
   encoder_->flush_ = true;
   if( !encoder_->started() || encoder_->finished() ){
     if( encoder_->guest_ != NULL )
@@ -324,38 +320,32 @@ StreamCompressionFilter & LZMAFilter::initializeDecompression()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::decompress(void * buf,uintptr_t count)
+StreamCompressionFilter & LZMAFilter::decompress()
 {
-  if( count > 0 ){
-    decoder_->guest_ = currentFiber();
-    decoder_->data_ = buf;
-    decoder_->count_ = count;
-    decoder_->flush_ = false;
-    if( !decoder_->started() || decoder_->finished() ){
-      if( decoder_->guest_ != NULL )
-        decoder_->guest_->thread()->server()->attachFiber(decoder_);
-      else
-        attachFiber(decoder_);
-    }
-    else {
-      decoder_->event_.type_ = etDispatch;
-      decoder_->thread()->postEvent(&decoder_->event_);
-    }
-    if( decoder_->guest_ == NULL )
-      decoder_->sem_.wait();
+  decoder_->guest_ = currentFiber();
+  decoder_->flush_ = false;
+  if( !decoder_->started() || decoder_->finished() ){
+    if( decoder_->guest_ != NULL )
+      decoder_->guest_->thread()->server()->attachFiber(decoder_);
     else
-      decoder_->guest_->switchFiber(decoder_->guest_->mainFiber());
-    if( decoder_->err_ != 0 )
-      newObjectV1C2<Exception>(encoder_->err_,__PRETTY_FUNCTION__);
+      attachFiber(decoder_);
   }
+  else {
+    decoder_->event_.type_ = etDispatch;
+    decoder_->thread()->postEvent(&decoder_->event_);
+  }
+  if( decoder_->guest_ == NULL )
+    decoder_->sem_.wait();
+  else
+    decoder_->guest_->switchFiber(decoder_->guest_->mainFiber());
+  if( decoder_->err_ != 0 )
+    newObjectV1C2<Exception>(encoder_->err_,__PRETTY_FUNCTION__);
   return *this;
 }
 //---------------------------------------------------------------------------
 StreamCompressionFilter & LZMAFilter::finishDecompression()
 {
   decoder_->guest_ = currentFiber();
-  decoder_->data_ = NULL;
-  decoder_->count_ = 0;
   decoder_->flush_ = true;
   if( !decoder_->started() || decoder_->finished() ){
     if( decoder_->guest_ != NULL )
@@ -386,14 +376,8 @@ StreamCompressionFilter & LZMAFileFilter::compressFile(const utf8::String & srcF
   dstFile_.fileName(dstFileName).createIfNotExist(true).open();
   AutoFileClose autoDstFileClose(dstFile_);
   dstFile_.resize(0);
-  AutoPtr<uint8_t> buf;
-  buf.alloc(getpagesize());
   initializeCompression();
-  for(;;){
-    int64_t r = srcFile_.read(buf,getpagesize());
-    if( r <= 0 ) break;
-    compress(buf,uintptr_t(r));
-  }
+  compress();
   finishCompression();
   return *this;
 }
@@ -405,28 +389,42 @@ StreamCompressionFilter & LZMAFileFilter::decompressFile(const utf8::String & sr
   dstFile_.fileName(dstFileName).createIfNotExist(true).open();
   AutoFileClose autoDstFileClose(dstFile_);
   dstFile_.resize(0);
-  AutoPtr<uint8_t> buf;
-  buf.alloc(getpagesize());
   initializeDecompression();
-  for(;;){
-    int64_t r = srcFile_.read(buf,getpagesize());
-    if( r <= 0 ) break;
-    decompress(buf,uintptr_t(r));
-  }
+  decompress();
   finishDecompression();
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFileFilter::writeCompressedBuffer(const void * buf,uintptr_t count)
+intptr_t LZMAFileFilter::encoderRead(void * buf,uintptr_t size)
 {
-  dstFile_.writeBuffer(buf,count);
-  return *this;
+  int64_t r = srcFile_.read(buf,size);
+  if( r < 0 ){
+    int32_t err = oserror() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
+  }
+  return intptr_t(r);
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFileFilter::writeDecompressedBuffer(void * buf,uintptr_t count)
+intptr_t LZMAFileFilter::encoderWrite(const void * buf,uintptr_t size)
 {
-  dstFile_.writeBuffer(buf,count);
-  return *this;
+  dstFile_.writeBuffer(buf,size);
+  return size;
+}
+//---------------------------------------------------------------------------
+intptr_t LZMAFileFilter::decoderRead(void * buf,uintptr_t size)
+{
+  int64_t r = srcFile_.read(buf,size);
+  if( r < 0 ){
+    int32_t err = oserror() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
+  }
+  return intptr_t(r);
+}
+//---------------------------------------------------------------------------
+intptr_t LZMAFileFilter::decoderWrite(const void * buf,uintptr_t size)
+{
+  dstFile_.writeBuffer(buf,size);
+  return size;
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

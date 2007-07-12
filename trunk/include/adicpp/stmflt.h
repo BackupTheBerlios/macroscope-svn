@@ -42,14 +42,12 @@ class StreamCompressionFilter {
     StreamCompressionFilter();
 
     virtual StreamCompressionFilter & initializeCompression() = 0;
-    virtual StreamCompressionFilter & compress(const void * buf,uintptr_t count) = 0;
+    virtual StreamCompressionFilter & compress() = 0;
     virtual StreamCompressionFilter & finishCompression() = 0;
     virtual StreamCompressionFilter & initializeDecompression() = 0;
-    virtual StreamCompressionFilter & decompress(void * buf,uintptr_t count) = 0;
+    virtual StreamCompressionFilter & decompress() = 0;
     virtual StreamCompressionFilter & finishDecompression() = 0;
   protected:
-    virtual StreamCompressionFilter & writeCompressedBuffer(const void * buf,uintptr_t count) = 0;
-    virtual StreamCompressionFilter & writeDecompressedBuffer(void * buf,uintptr_t count) = 0;
   private:
     StreamCompressionFilter(const StreamCompressionFilter &);
     void operator = (const StreamCompressionFilter &);
@@ -72,12 +70,14 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
     LZMAFilter();
 
     StreamCompressionFilter & initializeCompression();
-    StreamCompressionFilter & compress(const void * buf,uintptr_t count);
+    StreamCompressionFilter & compress();
     StreamCompressionFilter & finishCompression();
     StreamCompressionFilter & initializeDecompression();
-    StreamCompressionFilter & decompress(void * buf,uintptr_t count);
+    StreamCompressionFilter & decompress();
     StreamCompressionFilter & finishDecompression();
   protected:
+    virtual intptr_t encoderRead(void * buf,uintptr_t size) = 0;
+    virtual intptr_t encoderWrite(const void * buf,uintptr_t size) = 0;
     class Encoder :
       public Fiber,
       public NCompress::NLZMA::CEncoder,
@@ -97,8 +97,6 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
         Semaphore sem_;
         LZMAFilter * filter_;
         Fiber * guest_;
-        const void * data_;
-        uintptr_t count_;
         int32_t err_;
         bool flush_;
 
@@ -107,6 +105,8 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
     friend class Encoder;
     AutoPtr<Encoder> encoder_;
 
+    virtual intptr_t decoderRead(void * buf,uintptr_t size) = 0;
+    virtual intptr_t decoderWrite(const void * buf,uintptr_t size) = 0;
     class Decoder :
       public Fiber,
       public NCompress::NLZMA::CDecoder,
@@ -126,8 +126,6 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
         Semaphore sem_;
         LZMAFilter * filter_;
         Fiber * guest_;
-        const void * data_;
-        uintptr_t count_;
         int32_t err_;
         bool flush_;
 
@@ -155,8 +153,10 @@ class LZMAFileFilter : public LZMAFilter {
     AsyncFile srcFile_;
     AsyncFile dstFile_;
 
-    StreamCompressionFilter & writeCompressedBuffer(const void * buf,uintptr_t count);
-    StreamCompressionFilter & writeDecompressedBuffer(void * buf,uintptr_t count);
+    intptr_t encoderRead(void * buf,uintptr_t size);
+    intptr_t encoderWrite(const void * buf,uintptr_t size);
+    intptr_t decoderRead(void * buf,uintptr_t size);
+    intptr_t decoderWrite(const void * buf,uintptr_t size);
   private:
 };
 //---------------------------------------------------------------------------
