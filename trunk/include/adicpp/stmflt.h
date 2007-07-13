@@ -126,6 +126,7 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
         Semaphore sem_;
         LZMAFilter * filter_;
         Fiber * guest_;
+        uint8_t coderProperties_[5];
         int32_t err_;
         bool flush_;
 
@@ -152,6 +153,24 @@ class LZMAFileFilter : public LZMAFilter {
   protected:
     AsyncFile srcFile_;
     AsyncFile dstFile_;
+
+    intptr_t encoderRead(void * buf,uintptr_t size);
+    intptr_t encoderWrite(const void * buf,uintptr_t size);
+    intptr_t decoderRead(void * buf,uintptr_t size);
+    intptr_t decoderWrite(const void * buf,uintptr_t size);
+  private:
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class LZMADescriptorFilter : public LZMAFilter {
+  public:
+  protected:
+    AsyncDescriptor * descriptor_;
+    const void * encodeBuffer_;
+    uintptr_t encodeBytes_;
+    void * decodeBuffer_;
+    uintptr_t decodeBytes_;
 
     intptr_t encoderRead(void * buf,uintptr_t size);
     intptr_t encoderWrite(const void * buf,uintptr_t size);

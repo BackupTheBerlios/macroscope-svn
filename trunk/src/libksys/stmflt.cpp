@@ -53,11 +53,9 @@ extern "C" const char IID_ICompressSetDecoderProperties2[] = "";
 void LZMAFilter::Encoder::fiberExecute()
 {
   while( !terminated_ ){
-    HRESULT hr = WriteCoderProperties(this);
-    if( SUCCEEDED(hr) ){
-      hr = Code(this,this,NULL,NULL,NULL);
-      assert( flush_ );
-    }
+    err_ = 0;
+    HRESULT hr = Code(this,this,NULL,NULL,NULL);
+    assert( flush_ );
     err_ = HRESULT_CODE(hr);
     if( guest_ == NULL ){
       sem_.post();
@@ -66,33 +64,39 @@ void LZMAFilter::Encoder::fiberExecute()
       guest_->event_.type_ = etDispatch;
       guest_->thread()->postEvent(&guest_->event_);
     }
-    switchFiber(mainFiber());
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
   }
 }
 //---------------------------------------------------------------------------
 HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Read(void * data,UInt32 size,UInt32 * processedSize)
 {
-  if( processedSize != NULL ) *processedSize = 0;
-  for(;;){
-    UInt32 r = (UInt32) filter_->encoderRead(data,size);
-    if( r > 0 ){
-      data = (uint8_t *) data + r;
-      size -= r;
-      if( processedSize != NULL ) *processedSize += r;
-    }
-    if( size == 0 || flush_ ) break;
-    if( r == 0 ){
-      if( guest_ == NULL ){
-        sem_.post();
+  HRESULT hr = S_OK;
+  try {
+    if( processedSize != NULL ) *processedSize = 0;
+    for(;;){
+      UInt32 r = (UInt32) filter_->encoderRead(data,size);
+      if( r > 0 ){
+        data = (uint8_t *) data + r;
+        size -= r;
+        if( processedSize != NULL ) *processedSize += r;
       }
-      else {
-        guest_->event_.type_ = etDispatch;
-        guest_->thread()->postEvent(&guest_->event_);
+      if( size == 0 || flush_ ) break;
+      if( r == 0 ){
+        if( guest_ == NULL ){
+          sem_.post();
+        }
+        else {
+          guest_->event_.type_ = etDispatch;
+          guest_->thread()->postEvent(&guest_->event_);
+        }
+        currentFiber()->switchFiber(currentFiber()->mainFiber());
       }
-      switchFiber(mainFiber());
     }
   }
-  return S_OK;
+  catch( ExceptionSP & e ){
+    hr = HRESULT_FROM_WIN32(e->code());
+  }
+  return hr;
 }
 //---------------------------------------------------------------------------
 HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Write(const void *data,UInt32 size,UInt32 * processedSize)
@@ -117,15 +121,9 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Write(const void *data,UInt32 siz
 void LZMAFilter::Decoder::fiberExecute()
 {
   while( !terminated_ ){
-    uint8_t coderProperties[5];
-    HRESULT hr = Read(coderProperties,sizeof(coderProperties),NULL);
-    if( SUCCEEDED(hr) ){
-      hr = SetDecoderProperties2(coderProperties,sizeof(coderProperties));
-      if( SUCCEEDED(hr) ){
-        hr = Code(this,this,NULL,NULL,NULL);
-        assert( flush_ );
-      }
-    }
+    err_ = 0;
+    HRESULT hr = Code(this,this,NULL,NULL,NULL);
+    assert( flush_ );
     err_ = HRESULT_CODE(hr);
     if( guest_ == NULL ){
       sem_.post();
@@ -134,33 +132,39 @@ void LZMAFilter::Decoder::fiberExecute()
       guest_->event_.type_ = etDispatch;
       guest_->thread()->postEvent(&guest_->event_);
     }
-    switchFiber(mainFiber());
+    currentFiber()->switchFiber(currentFiber()->mainFiber());
   }
 }
 //------------------------------------------------------------------------------
 HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Read(void * data,UInt32 size,UInt32 * processedSize)
 {
-  if( processedSize != NULL ) *processedSize = 0;
-  for(;;){
-    UInt32 r = (UInt32) filter_->decoderRead(data,size);
-    if( r > 0 ){
-      data = (uint8_t *) data + r;
-      size -= r;
-      if( processedSize != NULL ) *processedSize += r;
-    }
-    if( size == 0 || flush_ ) break;
-    if( r == 0 ){
-      if( guest_ == NULL ){
-        sem_.post();
+  HRESULT hr = S_OK;
+  try {
+    if( processedSize != NULL ) *processedSize = 0;
+    for(;;){
+      UInt32 r = (UInt32) filter_->decoderRead(data,size);
+      if( r > 0 ){
+        data = (uint8_t *) data + r;
+        size -= r;
+        if( processedSize != NULL ) *processedSize += r;
       }
-      else {
-        guest_->event_.type_ = etDispatch;
-        guest_->thread()->postEvent(&guest_->event_);
+      if( size == 0 || flush_ ) break;
+      if( r == 0 ){
+        if( guest_ == NULL ){
+          sem_.post();
+        }
+        else {
+          guest_->event_.type_ = etDispatch;
+          guest_->thread()->postEvent(&guest_->event_);
+        }
+        currentFiber()->switchFiber(currentFiber()->mainFiber());
       }
-      switchFiber(mainFiber());
     }
   }
-  return S_OK;
+  catch( ExceptionSP & e ){
+    hr = HRESULT_FROM_WIN32(e->code());
+  }
+  return hr;
 }
 //---------------------------------------------------------------------------
 HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Write(const void *data,UInt32 size,UInt32 * processedSize)
@@ -260,8 +264,9 @@ StreamCompressionFilter & LZMAFilter::initializeCompression()
   V_UI4(properties + 4) = 64 * 1024;      // DictionarySize
   V_BOOL(properties + 8) = VARIANT_TRUE;    // EndMarker
 
-  if( FAILED(encoder_->SetCoderProperties(propIDs,properties,sizeof(propIDs) / sizeof(propIDs[0]))) )
-    newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__);
+  HRESULT hr = encoder_->SetCoderProperties(propIDs,properties,sizeof(propIDs) / sizeof(propIDs[0]));
+  if( SUCCEEDED(hr) ) hr = encoder_->WriteCoderProperties(encoder_);
+  if( FAILED(hr) ) newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -317,6 +322,10 @@ StreamCompressionFilter & LZMAFilter::initializeDecompression()
   dropDecoder();
   decoder_ = newObject<Decoder>();
   decoder_->filter_ = this;
+  HRESULT hr = decoder_->Read(decoder_->coderProperties_,sizeof(decoder_->coderProperties_),NULL);
+  if( SUCCEEDED(hr) )
+    hr = decoder_->SetDecoderProperties2(decoder_->coderProperties_,sizeof(decoder_->coderProperties_));
+  if( FAILED(hr) ) newObjectV1C2<Exception>(HRESULT_CODE(hr),__PRETTY_FUNCTION__);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -425,6 +434,78 @@ intptr_t LZMAFileFilter::decoderWrite(const void * buf,uintptr_t size)
 {
   dstFile_.writeBuffer(buf,size);
   return size;
+}
+//---------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+intptr_t LZMADescriptorFilter::encoderRead(void * buf,uintptr_t size)
+{
+  intptr_t r = 0;
+  while( size > 0 ){
+    uintptr_t a = encodeBytes_ > size ? size : encodeBytes_;
+    memcpy(buf,encodeBuffer_,a);
+    buf = (uint8_t *) buf + a;
+    encodeBuffer_ = (uint8_t *) encodeBuffer_ + a;
+    encodeBytes_ -= a;
+    size -= a;
+    r += a;
+    if( encodeBytes_ == 0 ){
+      if( encoder_->guest_ == NULL ){
+        encoder_->sem_.post();
+      }
+      else {
+        encoder_->guest_->event_.type_ = etDispatch;
+        encoder_->guest_->thread()->postEvent(&encoder_->guest_->event_);
+      }
+      currentFiber()->switchFiber(currentFiber()->mainFiber());
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+intptr_t LZMADescriptorFilter::encoderWrite(const void * buf,uintptr_t size)
+{
+  int64_t w = descriptor_->writeV(buf,size);
+  if( w < 0 ){
+    int32_t err = oserror() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
+  }
+  return intptr_t(w);
+}
+//---------------------------------------------------------------------------
+intptr_t LZMADescriptorFilter::decoderRead(void * buf,uintptr_t size)
+{
+  int64_t r = descriptor_->readV(buf,size);
+  if( r < 0 ){
+    int32_t err = oserror() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
+  }
+  return intptr_t(r);
+}
+//---------------------------------------------------------------------------
+intptr_t LZMADescriptorFilter::decoderWrite(const void * buf,uintptr_t size)
+{
+  intptr_t w = 0;
+  while( size > 0 ){
+    uintptr_t a = decodeBytes_ > size ? size : decodeBytes_;
+    memcpy(decodeBuffer_,buf,a);
+    buf = (uint8_t *) buf + a;
+    decodeBuffer_ = (uint8_t *) decodeBuffer_ + a;
+    decodeBytes_ -= a;
+    size -= a;
+    w += a;
+    if( decodeBytes_ == 0 ){
+      if( decoder_->guest_ == NULL ){
+        decoder_->sem_.post();
+      }
+      else {
+        decoder_->guest_->event_.type_ = etDispatch;
+        decoder_->guest_->thread()->postEvent(&decoder_->guest_->event_);
+      }
+      currentFiber()->switchFiber(currentFiber()->mainFiber());
+    }
+  }
+  return w;
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

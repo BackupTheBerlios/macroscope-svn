@@ -249,6 +249,9 @@ class AsyncDescriptor : public AsyncDescriptorKey {
 
     virtual bool isSocket() const;
 
+    virtual int64_t readV(void * buf,uint64_t size) = 0;
+    virtual int64_t writeV(const void * buf,uint64_t size) = 0;
+
 #if defined(__WIN32__) || defined(__WIN64__)
     virtual int WSAEnumNetworkEvents(WSAEVENT hEventObject, DWORD event) = 0;
     virtual BOOL AcceptEx(SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped) = 0;

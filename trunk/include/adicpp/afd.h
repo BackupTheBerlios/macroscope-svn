@@ -38,6 +38,9 @@ class AsyncFile : public AsyncDescriptor {
     virtual ~AsyncFile();
     AsyncFile(const utf8::String & fileName = utf8::String());
 
+    int64_t readV(void * buf,uint64_t size){ return read(buf,size); }
+    int64_t writeV(const void * buf,uint64_t size){ return write(buf,size); }
+
     bool isOpen() const;
     AsyncFile & open();
     file_t openHelper(bool async = false);
@@ -47,8 +50,8 @@ class AsyncFile : public AsyncDescriptor {
     uint64_t size() const;
     AsyncFile & resize(uint64_t nSize);
     uint64_t tell() const;
-    int64_t read(void * buf, uint64_t size);
-    int64_t write(const void * buf, uint64_t size);
+    int64_t read(void * buf,uint64_t size);
+    int64_t write(const void * buf,uint64_t size);
     int64_t read(uint64_t pos, void * buf, uint64_t size);
     int64_t write(uint64_t pos, const void * buf, uint64_t size);
     AsyncFile & readBuffer(void * buf, uint64_t size);

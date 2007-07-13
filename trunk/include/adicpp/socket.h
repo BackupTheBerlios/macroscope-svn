@@ -86,6 +86,9 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     AsyncSocket & getPeerAddr(SockAddr & addr) const;
 
     // high level methods
+    int64_t readV(void * buf,uint64_t size){ return sysRecv(buf,size); }
+    int64_t writeV(const void * buf,uint64_t size){ return sysSend(buf,size); }
+
     AsyncSocket &     read(void * buf, uint64_t len);
     AsyncSocket &     readBuffer(void * buf, uint64_t len);
     AsyncSocket &     write(const void * buf, uint64_t len);

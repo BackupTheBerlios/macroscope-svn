@@ -1297,7 +1297,7 @@ int main(int _argc,char * _argv[])
     //filter.compress(text,sizeof(text));
     //filter.finishCompression();
     LZMAFileFilter fileFilter;
-    for( uintptr_t ii = 0; i < 1000; i++ ){
+    for( uintptr_t ii = 0; ii < 1000; ii++ ){
       fileFilter.compressFile("G:/Library/Коллекция/V_ANECD/V_ANECD.TXT",getExecutablePath() + "V_ANECD.TXT.compressed");
       fileFilter.decompressFile(getExecutablePath() + "V_ANECD.TXT.compressed",getExecutablePath() + "V_ANECD.TXT.decompressed");
     }
