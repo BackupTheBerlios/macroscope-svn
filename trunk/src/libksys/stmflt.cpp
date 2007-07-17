@@ -25,7 +25,6 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
-#ifndef NDEBUG
 //---------------------------------------------------------------------------
 #include <adicpp/stmflt.h>
 #define _NO_EXCEPTIONS 1
@@ -50,7 +49,7 @@ extern "C" const char IID_ICompressSetDecoderProperties2[] = "";
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-void LZMAFilter::Encoder::fiberExecute()
+void LZMAStreamFilter::Encoder::fiberExecute()
 {
   while( !terminated_ ){
     err_ = 0;
@@ -68,13 +67,14 @@ void LZMAFilter::Encoder::fiberExecute()
   }
 }
 //---------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Read(void * data,UInt32 size,UInt32 * processedSize)
+HRESULT STDMETHODCALLTYPE LZMAStreamFilter::Encoder::Read(void * data,UInt32 size,UInt32 * processedSize)
 {
   HRESULT hr = S_OK;
   try {
     if( processedSize != NULL ) *processedSize = 0;
     for(;;){
       UInt32 r = (UInt32) filter_->encoderRead(data,size);
+      filter_->afterEncoderRead(data,size);
       if( r > 0 ){
         data = (uint8_t *) data + r;
         size -= r;
@@ -99,12 +99,13 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Read(void * data,UInt32 size,UInt
   return hr;
 }
 //---------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Write(const void *data,UInt32 size,UInt32 * processedSize)
+HRESULT STDMETHODCALLTYPE LZMAStreamFilter::Encoder::Write(const void *data,UInt32 size,UInt32 * processedSize)
 {
   HRESULT hr = S_OK;
   try {
     if( processedSize != NULL ) *processedSize = 0;
     while( size > 0 ){
+      filter_->beforeEncoderWrite(const_cast<void *>(data),size);
       UInt32 w = (UInt32) filter_->encoderWrite(data,size);
       if( processedSize != NULL ) *processedSize += w;
       size -= w;
@@ -118,7 +119,7 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Encoder::Write(const void *data,UInt32 siz
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-void LZMAFilter::Decoder::fiberExecute()
+void LZMAStreamFilter::Decoder::fiberExecute()
 {
   while( !terminated_ ){
     err_ = 0;
@@ -136,13 +137,14 @@ void LZMAFilter::Decoder::fiberExecute()
   }
 }
 //------------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Read(void * data,UInt32 size,UInt32 * processedSize)
+HRESULT STDMETHODCALLTYPE LZMAStreamFilter::Decoder::Read(void * data,UInt32 size,UInt32 * processedSize)
 {
   HRESULT hr = S_OK;
   try {
     if( processedSize != NULL ) *processedSize = 0;
     for(;;){
       UInt32 r = (UInt32) filter_->decoderRead(data,size);
+      filter_->afterDecoderRead(data,size);
       if( r > 0 ){
         data = (uint8_t *) data + r;
         size -= r;
@@ -167,12 +169,13 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Read(void * data,UInt32 size,UInt
   return hr;
 }
 //---------------------------------------------------------------------------
-HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Write(const void *data,UInt32 size,UInt32 * processedSize)
+HRESULT STDMETHODCALLTYPE LZMAStreamFilter::Decoder::Write(const void *data,UInt32 size,UInt32 * processedSize)
 {
   HRESULT hr = S_OK;
   try {
     if( processedSize != NULL ) *processedSize = 0;
     while( size > 0 ){
+      filter_->beforeDecoderWrite(const_cast<void *>(data),size);
       UInt32 w = (UInt32) filter_->decoderWrite(data,size);
       if( processedSize != NULL ) *processedSize += w;
       size -= w;
@@ -186,18 +189,18 @@ HRESULT STDMETHODCALLTYPE LZMAFilter::Decoder::Write(const void *data,UInt32 siz
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-LZMAFilter::~LZMAFilter()
+LZMAStreamFilter::~LZMAStreamFilter()
 {
   dropEncoder();
   dropDecoder();
 }
 //---------------------------------------------------------------------------
-LZMAFilter::LZMAFilter()
+LZMAStreamFilter::LZMAStreamFilter()
 {
   howCloseServer(HowCloseServer() & ~csWait);  
 }
 //---------------------------------------------------------------------------
-LZMAFilter & LZMAFilter::dropEncoder()
+LZMAStreamFilter & LZMAStreamFilter::dropEncoder()
 {
   if( encoder_ != NULL ){
     encoder_->terminate();
@@ -209,7 +212,7 @@ LZMAFilter & LZMAFilter::dropEncoder()
   return *this;
 }
 //---------------------------------------------------------------------------
-LZMAFilter & LZMAFilter::dropDecoder()
+LZMAStreamFilter & LZMAStreamFilter::dropDecoder()
 {
   if( decoder_ != NULL ){
     decoder_->terminate();
@@ -221,7 +224,7 @@ LZMAFilter & LZMAFilter::dropDecoder()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::initializeCompression()
+StreamCompressionFilter & LZMAStreamFilter::initializeCompression()
 {
   dropEncoder();
   encoder_ = newObject<Encoder>();
@@ -270,7 +273,7 @@ StreamCompressionFilter & LZMAFilter::initializeCompression()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::compress()
+StreamCompressionFilter & LZMAStreamFilter::compress(const void *,uintptr_t)
 {
   encoder_->guest_ = currentFiber();
   encoder_->flush_ = false;
@@ -293,7 +296,7 @@ StreamCompressionFilter & LZMAFilter::compress()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::finishCompression()
+StreamCompressionFilter & LZMAStreamFilter::finishCompression()
 {
   encoder_->guest_ = currentFiber();
   encoder_->flush_ = true;
@@ -317,7 +320,7 @@ StreamCompressionFilter & LZMAFilter::finishCompression()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::initializeDecompression()
+StreamCompressionFilter & LZMAStreamFilter::initializeDecompression()
 {
   dropDecoder();
   decoder_ = newObject<Decoder>();
@@ -329,7 +332,7 @@ StreamCompressionFilter & LZMAFilter::initializeDecompression()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::decompress()
+StreamCompressionFilter & LZMAStreamFilter::decompress(void *,uintptr_t)
 {
   decoder_->guest_ = currentFiber();
   decoder_->flush_ = false;
@@ -352,7 +355,7 @@ StreamCompressionFilter & LZMAFilter::decompress()
   return *this;
 }
 //---------------------------------------------------------------------------
-StreamCompressionFilter & LZMAFilter::finishDecompression()
+StreamCompressionFilter & LZMAStreamFilter::finishDecompression()
 {
   decoder_->guest_ = currentFiber();
   decoder_->flush_ = true;
@@ -438,6 +441,22 @@ intptr_t LZMAFileFilter::decoderWrite(const void * buf,uintptr_t size)
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+StreamCompressionFilter & LZMADescriptorFilter::compress(const void * buf,uintptr_t count)
+{
+  encodeBuffer_ = buf;
+  encodeBytes_ = count;
+  LZMAStreamFilter::compress();
+  return *this;
+}
+//------------------------------------------------------------------------------
+StreamCompressionFilter & LZMADescriptorFilter::decompress(void * buf,uintptr_t count)
+{
+  decodeBuffer_ = buf;
+  decodeBytes_ = count;
+  LZMAStreamFilter::decompress();
+  return *this;
+}
+//------------------------------------------------------------------------------
 intptr_t LZMADescriptorFilter::encoderRead(void * buf,uintptr_t size)
 {
   intptr_t r = 0;
@@ -471,6 +490,16 @@ intptr_t LZMADescriptorFilter::encoderWrite(const void * buf,uintptr_t size)
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__);
   }
   return intptr_t(w);
+}
+//---------------------------------------------------------------------------
+void LZMADescriptorFilter::afterEncoderRead(void * buf,uintptr_t size)
+{
+  encoderCryptor_->decrypt(buf,buf,size);
+}
+//---------------------------------------------------------------------------
+void LZMADescriptorFilter::beforeEncoderWrite(void * buf,uintptr_t size)
+{
+  encoderCryptor_->encrypt(buf,buf,size);
 }
 //---------------------------------------------------------------------------
 intptr_t LZMADescriptorFilter::decoderRead(void * buf,uintptr_t size)
@@ -508,7 +537,15 @@ intptr_t LZMADescriptorFilter::decoderWrite(const void * buf,uintptr_t size)
   return w;
 }
 //---------------------------------------------------------------------------
+void LZMADescriptorFilter::afterDecoderRead(void * buf,uintptr_t size)
+{
+  decoderCryptor_->decrypt(buf,buf,size);
+}
+//---------------------------------------------------------------------------
+void LZMADescriptorFilter::beforeDecoderWrite(void * buf,uintptr_t size)
+{
+  decoderCryptor_->encrypt(buf,buf,size);
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
-//------------------------------------------------------------------------------
-#endif
 //------------------------------------------------------------------------------

@@ -28,6 +28,10 @@
 //---------------------------------------------------------------------------
 #define _socket_H_
 //---------------------------------------------------------------------------
+#define STREAM_FILTER_ABSTRATION
+#include <adicpp/stmflt.h>
+#undef STREAM_FILTER_ABSTRATION
+//---------------------------------------------------------------------------
 namespace ksock {
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -145,6 +149,9 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
         ~AuthParams();
         AuthParams();
 
+        AuthParams & param(const utf8::String & name,const ksys::Mutant & value);
+        ksys::Mutant & param(const utf8::String & name) const;
+
         mutable utf8::String user_;
         mutable utf8::String password_;
         mutable utf8::String encryption_;
@@ -191,24 +198,27 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     ksys::AutoPtr<SockAddr> remoteAddress_; // client address which accept returns
   private:
     static const uint8_t authMagic_[16];
+    static const uint8_t authMagic2_[16];
     uintptr_t maxRecvSize_;
     uintptr_t maxSendSize_;
     uint64_t recvTimeout_;
     uint64_t sendTimeout_;
     uint64_t srb_, nrb_, ssb_, nsb_;
+    ksys::AutoPtr<ksys::StreamCryptFilter> cryptor_;
+    ksys::AutoPtr<ksys::StreamCompressionFilter> compressor_;
 
 #if defined(__WIN32__) || defined(__WIN64__)
     int WSAEnumNetworkEvents(WSAEVENT hEventObject,DWORD event);
 
     struct AcceptExBuffer {
-        union {
-            SockAddr  localAddress_;
-            uint8_t   pLocalAddr4_[sizeof(struct sockaddr_in) + 16];
-        };
-        union {
-            SockAddr  remoteAddress_;
-            uint8_t   pRemoteAddr4_[sizeof(struct sockaddr_in) + 16];
-        };
+      union {
+        SockAddr  localAddress_;
+        uint8_t   pLocalAddr4_[sizeof(struct sockaddr_in) + 16];
+      };
+      union {
+        SockAddr  remoteAddress_;
+        uint8_t   pRemoteAddr4_[sizeof(struct sockaddr_in) + 16];
+      };
     };
     ksys::AutoPtr<AcceptExBuffer> pAcceptExBuffer_;
 

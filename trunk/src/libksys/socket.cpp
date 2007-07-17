@@ -25,6 +25,7 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
+#include <adicpp/stmflt.h>
 //------------------------------------------------------------------------------
 namespace ksock {
 //------------------------------------------------------------------------------
@@ -582,6 +583,10 @@ const uint8_t AsyncSocket::authMagic_[16] = {
   0x39, 0x0A, 0x34, 0x9F, 0xED, 0xB9, 0x4F, 0x86,
   0xB0, 0xBC, 0x04, 0xC7, 0x19, 0xFC, 0x4A, 0x7E
 };
+const uint8_t AsyncSocket::authMagic2_[16] = {
+  0xB8, 0xDA, 0x85, 0xEF, 0xA8, 0x0D, 0x4A, 0xBE,
+  0x91, 0x06, 0xDD, 0x12, 0xAF, 0x76, 0xF2, 0xAC
+};
 //------------------------------------------------------------------------------
 enum rad { radRequired, radAllow, radDisabled };
 //------------------------------------------------------------------------------
@@ -602,7 +607,8 @@ static uint8_t authChannelHelper2(const utf8::String & s)
   if( s.strcasecmp("LZO1X_1_12") == 0 ) return ksys::LZO1X::LZO1X_1_12;
   if( s.strcasecmp("LZO1X_1_15") == 0 ) return ksys::LZO1X::LZO1X_1_15; // fastest
   if( s.strcasecmp("LZO1X_999") == 0 ) return ksys::LZO1X::LZO1X_999; // slowest, best compression
-  if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::LZO1X_1_15;
+  if( s.strcasecmp("LZMA") == 0 ) return ksys::LZO1X::LZO1X_999 + 1;
+  if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::LZO1X_999 + 1;
   newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
@@ -628,6 +634,18 @@ AsyncSocket::AuthParams::AuthParams() :
 {
 }
 //------------------------------------------------------------------------------
+/*AsyncSocket::AuthErrorType AsyncSocket::serverAuth2(const AuthParams & sp)
+{
+  AuthParams cp;
+  uf8::String name, value;
+  for(;;){
+    name = readString();
+    if( name.isNull() ) break;
+    value = readString();
+    cp.param(name,value);
+  }
+}*/
+//------------------------------------------------------------------------------
 AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
 {
   maxRecvSize_ = ap.maxRecvSize_;
@@ -639,6 +657,7 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
   if( !ap.noAuth_ ){
     uint8_t authMagic[sizeof(authMagic_)];
     read(authMagic,sizeof(authMagic));
+   // if( memcmp(authMagic,authMagic2_,sizeof(authMagic2_)) == 0 ) return serverAuth2(ap);
     if( memcmp(authMagic,authMagic_,sizeof(authMagic_)) != 0 ){
       *this << int32_t(aeMagic);
       return aeMagic;

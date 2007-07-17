@@ -27,12 +27,39 @@
 #ifndef stmfltH
 #define stmfltH
 //---------------------------------------------------------------------------
+#ifndef STREAM_FILTER_ABSTRATION
 #define _NO_EXCEPTIONS 1
 #include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.h>
 #include <adicpp/lzma/7zip/Compress/LZMA/LZMADecoder.h>
 #undef _NO_EXCEPTIONS
+#endif
 //---------------------------------------------------------------------------
 namespace ksys {
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class StreamCryptFilter {
+  public:
+    virtual ~StreamCryptFilter();
+    StreamCryptFilter();
+
+    virtual StreamCryptFilter & initializeCrypting() = 0;
+    virtual StreamCryptFilter & encrypt(void * dst,const void * src,uintptr_t size) = 0;
+    virtual StreamCryptFilter & initializeDecrypting() = 0;
+    virtual StreamCryptFilter & decrypt(void * dst,const void * src,uintptr_t size) = 0;
+  protected:
+  private:
+    StreamCryptFilter(const StreamCryptFilter &){}
+    void operator = (const StreamCryptFilter &){}
+};
+//---------------------------------------------------------------------------
+inline StreamCryptFilter::~StreamCryptFilter()
+{
+}
+//---------------------------------------------------------------------------
+inline StreamCryptFilter::StreamCryptFilter()
+{
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -42,11 +69,13 @@ class StreamCompressionFilter {
     StreamCompressionFilter();
 
     virtual StreamCompressionFilter & initializeCompression() = 0;
-    virtual StreamCompressionFilter & compress() = 0;
+    virtual StreamCompressionFilter & compress(const void * buf = NULL,uintptr_t count = 0) = 0;
     virtual StreamCompressionFilter & finishCompression() = 0;
     virtual StreamCompressionFilter & initializeDecompression() = 0;
-    virtual StreamCompressionFilter & decompress() = 0;
+    virtual StreamCompressionFilter & decompress(void * buf = NULL,uintptr_t count = 0) = 0;
     virtual StreamCompressionFilter & finishDecompression() = 0;
+    virtual StreamCompressionFilter & clearParameters() = 0;
+    virtual StreamCompressionFilter & setParameter(const utf8::String & name,const Mutant & value) = 0;
   protected:
   private:
     StreamCompressionFilter(const StreamCompressionFilter &);
@@ -61,23 +90,27 @@ inline StreamCompressionFilter::StreamCompressionFilter()
 {
 }
 //---------------------------------------------------------------------------
+#ifndef STREAM_FILTER_ABSTRATION
+//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class LZMAFilter : public StreamCompressionFilter, private BaseServer
+class LZMAStreamFilter : public StreamCompressionFilter, private BaseServer
 {
   public:
-    virtual ~LZMAFilter();
-    LZMAFilter();
+    virtual ~LZMAStreamFilter();
+    LZMAStreamFilter();
 
     StreamCompressionFilter & initializeCompression();
-    StreamCompressionFilter & compress();
+    StreamCompressionFilter & compress(const void * buf = NULL,uintptr_t count = 0);
     StreamCompressionFilter & finishCompression();
     StreamCompressionFilter & initializeDecompression();
-    StreamCompressionFilter & decompress();
+    StreamCompressionFilter & decompress(void * buf = NULL,uintptr_t count = 0);
     StreamCompressionFilter & finishDecompression();
   protected:
     virtual intptr_t encoderRead(void * buf,uintptr_t size) = 0;
+    virtual void afterEncoderRead(void * buf,uintptr_t size) {}
     virtual intptr_t encoderWrite(const void * buf,uintptr_t size) = 0;
+    virtual void beforeEncoderWrite(void * buf,uintptr_t size) {}
     class Encoder :
       public Fiber,
       public NCompress::NLZMA::CEncoder,
@@ -95,7 +128,7 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
         STDMETHOD(Write)(const void *data,UInt32 size,UInt32 * processedSize);
 
         Semaphore sem_;
-        LZMAFilter * filter_;
+        LZMAStreamFilter * filter_;
         Fiber * guest_;
         int32_t err_;
         bool flush_;
@@ -106,7 +139,9 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
     AutoPtr<Encoder> encoder_;
 
     virtual intptr_t decoderRead(void * buf,uintptr_t size) = 0;
+    virtual void afterDecoderRead(void * buf,uintptr_t size) {}
     virtual intptr_t decoderWrite(const void * buf,uintptr_t size) = 0;
+    virtual void beforeDecoderWrite(void * buf,uintptr_t size) {}
     class Decoder :
       public Fiber,
       public NCompress::NLZMA::CDecoder,
@@ -124,7 +159,7 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
         STDMETHOD(Write)(const void *data,UInt32 size,UInt32 * processedSize);
 
         Semaphore sem_;
-        LZMAFilter * filter_;
+        LZMAStreamFilter * filter_;
         Fiber * guest_;
         uint8_t coderProperties_[5];
         int32_t err_;
@@ -135,18 +170,18 @@ class LZMAFilter : public StreamCompressionFilter, private BaseServer
     friend class Decoder;
     AutoPtr<Decoder> decoder_;
 
-    LZMAFilter & dropEncoder();
-    LZMAFilter & dropDecoder();
+    LZMAStreamFilter & dropEncoder();
+    LZMAStreamFilter & dropDecoder();
   private:
-    LZMAFilter(const LZMAFilter &);
-    void operator = (const LZMAFilter &);
+    LZMAStreamFilter(const LZMAStreamFilter &);
+    void operator = (const LZMAStreamFilter &);
 
     Fiber * newFiber() { return NULL; }
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class LZMAFileFilter : public LZMAFilter {
+class LZMAFileFilter : public LZMAStreamFilter {
   public:
     StreamCompressionFilter & compressFile(const utf8::String & srcFileName,const utf8::String & dstFileName);
     StreamCompressionFilter & decompressFile(const utf8::String & srcFileName,const utf8::String & dstFileName);
@@ -163,8 +198,10 @@ class LZMAFileFilter : public LZMAFilter {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class LZMADescriptorFilter : public LZMAFilter {
+class LZMADescriptorFilter : public LZMAStreamFilter {
   public:
+    StreamCompressionFilter & compress(const void * buf,uintptr_t count);
+    StreamCompressionFilter & decompress(void * buf,uintptr_t count);
   protected:
     AsyncDescriptor * descriptor_;
     const void * encodeBuffer_;
@@ -176,31 +213,18 @@ class LZMADescriptorFilter : public LZMAFilter {
     intptr_t encoderWrite(const void * buf,uintptr_t size);
     intptr_t decoderRead(void * buf,uintptr_t size);
     intptr_t decoderWrite(const void * buf,uintptr_t size);
+
+    StreamCryptFilter * encoderCryptor_;
+    StreamCryptFilter * decoderCryptor_;
+
+    void afterEncoderRead(void * buf,uintptr_t size);
+    void beforeEncoderWrite(void * buf,uintptr_t size);
+    void afterDecoderRead(void * buf,uintptr_t size);
+    void beforeDecoderWrite(void * buf,uintptr_t size);
   private:
 };
 //---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-class StreamCryptor {
-  public:
-    virtual ~StreamCryptor();
-    StreamCryptor();
-  protected:
-    virtual int read() = 0;
-    virtual int write() = 0;
-    virtual int flush() = 0;
-  private:
-    StreamCryptor(const StreamCryptor &){}
-    void operator = (const StreamCryptor &){}
-};
-//---------------------------------------------------------------------------
-inline StreamCryptor::~StreamCryptor()
-{
-}
-//---------------------------------------------------------------------------
-inline StreamCryptor::StreamCryptor()
-{
-}
+#endif
 //---------------------------------------------------------------------------
 }
 //---------------------------------------------------------------------------
