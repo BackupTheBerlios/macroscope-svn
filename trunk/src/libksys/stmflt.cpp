@@ -49,7 +49,7 @@ extern "C" const char IID_ICompressSetDecoderProperties2[] = "";
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-void LZMAStreamFilter::Encoder::fiberExecute()
+/*void LZMAStreamFilter::Encoder::fiberExecute()
 {
   while( !terminated_ ){
     err_ = 0;
@@ -241,15 +241,15 @@ StreamCompressionFilter & LZMAStreamFilter::initializeCompression()
     NCoderPropID::kEndMarker
   };
   PROPVARIANT properties[sizeof(propIDs) / sizeof(propIDs[0])] = {
-    { VT_UI4, 0, 0, 0 /* 5 - 273 */ },
+    { VT_UI4, 0, 0, 0 }, // 5 - 273
     { VT_UI4, 0, 0, 0 },
     { VT_UI4, 0, 0, 0 },
-    { VT_BSTR, 0, 0, 0 /* BT2, BT3, BT4, HC4 */},
-    { VT_UI4, 0, 0, 0 /* 1 - 1 << 30 */},
-    { VT_UI4, 0, 0, 0 /* 0 - 4 */},
-    { VT_UI4, 0, 0, 0 /* 0 - 4 */},
-    { VT_UI4, 0, 0, 0 /* 0 - 8 */},
-    { VT_BOOL, 0, 0, 0 /* VARIANT_FALSE, VARIANT_TRUE */}
+    { VT_BSTR, 0, 0, 0 }, // BT2, BT3, BT4, HC4
+    { VT_UI4, 0, 0, 0 }, // 1 - 1 << 30
+    { VT_UI4, 0, 0, 0 }, // 0 - 4
+    { VT_UI4, 0, 0, 0 }, // 0 - 4
+    { VT_UI4, 0, 0, 0 }, // 0 - 8
+    { VT_BOOL, 0, 0, 0 } // VARIANT_FALSE, VARIANT_TRUE
   };
 // this is default values
   V_UI4(properties + 0) = 32;               // NumFastBytes
@@ -545,7 +545,7 @@ void LZMADescriptorFilter::afterDecoderRead(void * buf,uintptr_t size)
 void LZMADescriptorFilter::beforeDecoderWrite(void * buf,uintptr_t size)
 {
   decoderCryptor_->encrypt(buf,buf,size);
-}
+}*/
 //---------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------
