@@ -61,7 +61,7 @@ MACRO(CHECK_TYPE_SIZE TYPE VARIABLE)
       "${CHECK_TYPE_SIZE_ADD_INCLUDES}"
       OUTPUT_VARIABLE OUTPUT)
     IF(HAVE_${VARIABLE})
-      MESSAGE(STATUS "Check size of ${TYPE} - done")
+      MESSAGE(STATUS "Check size of ${TYPE} - done, size = ${${VARIABLE}}")
       FILE(APPEND ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeOutput.log 
         "Determining size of ${TYPE} passed with the following output:\n${OUTPUT}\n\n")
     ELSE(HAVE_${VARIABLE})

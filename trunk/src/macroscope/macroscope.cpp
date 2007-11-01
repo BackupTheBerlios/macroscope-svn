@@ -1192,7 +1192,7 @@ int main(int _argc,char * _argv[])
     AutoPtr<macroscope::SnifferService> serviceAP(newObject<macroscope::SnifferService>());
     services.add(serviceAP);
     macroscope::SnifferService * service = serviceAP.ptr(NULL);
-    bool dispatch = true, sniffer = false, svc = false, rollout = false;
+    bool dispatch = true, sniffer = false, svc = false, rollout = false, install = false, uninstall = false;
     utf8::String pidFileName, rolloutParams;
     for( i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
@@ -1242,11 +1242,11 @@ int main(int _argc,char * _argv[])
             service->args(service->args() + " \"" + argv()[j] + "\"");
           else
             service->args(service->args() + " " + argv()[j]);
-        services.install();
+        install = true;
         dispatch = false;
       }
       else if( argv()[i].strcmp("--uninstall") == 0 ){
-        services.uninstall();
+        uninstall = true;
         dispatch = false;
       }
 #if PRIVATE_RELEASE
@@ -1321,6 +1321,12 @@ int main(int _argc,char * _argv[])
           stringPartByNo(rolloutParams,1).trim(),
           stringPartByNo(rolloutParams,2)
         );
+      }
+      else if( install ){
+        services.install();
+      }
+      else if( uninstall ){
+        services.uninstall();
       }
     }
   }
