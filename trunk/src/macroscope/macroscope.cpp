@@ -1298,7 +1298,7 @@ int main(int _argc,char * _argv[])
     //}
 #endif
     errcode = 0;
-    if( dispatch || sniffer || rollout ){
+    if( dispatch || sniffer || rollout || install || uninstall ){
       macroscope::Logger logger(sniffer,isDaemon);
       isCGI = logger.cgi().isCGI();
       if( dispatch && svc && sniffer ){
@@ -1323,9 +1323,11 @@ int main(int _argc,char * _argv[])
         );
       }
       else if( install ){
+        service->logger_ = &logger;
         services.install();
       }
       else if( uninstall ){
+        service->logger_ = &logger;
         services.uninstall();
       }
     }
