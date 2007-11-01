@@ -99,7 +99,7 @@
 #include <machine/cpufunc.h>
 #endif
 
-#if HAVE_MACHINE_CPUFUNC_H
+#if HAVE_MACHINE_SPECIALREG_H
 #include <machine/specialreg.h>
 #endif
 
