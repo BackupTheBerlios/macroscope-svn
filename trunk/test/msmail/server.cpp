@@ -47,15 +47,20 @@ Server::Server(const ConfigSP config) :
 //------------------------------------------------------------------------------
 void Server::open()
 {
+  union {
+    intptr_t i;
+    uintptr_t u;
+  };
+  const ConfigSection & section = config_->section("reverse_dns_resolve_overrides");
+  for( u = 0; u < section.valueCount(); u++ ){
+    utf8::String key, value = section.value(u,&key);
+    ksock::SockAddr::reverseResolveOverrideAdd(ksock::SockAddr().resolveName(key),value);
+  }
   ksock::Server::open();
   spoolFibers_ = config_->valueByPath(utf8::String(serverConfSectionName[stStandalone]) + ".spool_fibers",8);
   mqueueCleanup();
   spoolCleanup();
   attachFiber(NodeClient::newClient(*this,stStandalone,utf8::String(),true));
-  union {
-    intptr_t i;
-    uintptr_t u;
-  };
   if( (bool) config_->valueByPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled",true) ){
     for( u = 1; u < spoolFibers_; u <<= 1 );
     spoolFibers_ = u;

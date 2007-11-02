@@ -210,6 +210,15 @@ void ServerFiber::registerDB()
 {
   utf8::String::Stream stream;
   utf8::String host(remoteAddress().resolveAddr(~uintptr_t(0))), server, service;
+#ifndef NDEBUG
+  utf8::String::Stream stream2;
+  stream2 <<
+    host << ", " <<
+    utf8::int2HexStr(remoteAddress().addr4_.sin_addr.S_un.S_addr,8) <<
+    ", " << __FILE__ << __LINE__
+  ;
+  stdErr.debug(9,stream2);
+#endif
   if( serverType_ != stNode ){
     terminate();
     stream << serverTypeName[serverType_] <<

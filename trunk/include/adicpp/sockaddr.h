@@ -35,16 +35,22 @@ namespace ksock {
 class InAddr {
   public:
     union {
-        struct in_addr  addr4_;
+      struct in_addr  addr4_;
 #if SIZEOF_SOCKADDR_IN6
-        struct in6_addr addr6_;
+      struct in6_addr addr6_;
 #endif
     };
   protected:
   private:
 };
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class ReverseResolveOverride;
+//---------------------------------------------------------------------------
 class SockAddr {
+  friend void ksys::initialize(int argc,char ** argv);
+  friend void ksys::cleanup();
   public:
     union {
       struct sockaddr_in  addr4_;
@@ -66,6 +72,8 @@ class SockAddr {
     operator struct sockaddr_in6 & () { return addr6_; }
     operator const struct sockaddr_in6 & () const { return addr6_; }
 #endif
+
+    bool operator == (const SockAddr & addr) const;
 
     SockAddr & resolveName(const utf8::String & addr,const ksys::Mutant & defPort = 0,intptr_t ai_flag = 0);
     static void resolveNameForBind(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
@@ -96,6 +104,10 @@ class SockAddr {
     utf8::String addressFamilyAsString() const { return addressFamilyAsString(addr4_.sin_family); }
     static utf8::String protoAsString(uintptr_t proto);
     static uintptr_t stringAsProto(const utf8::String & proto);
+
+    static void reverseResolveOverrideAdd(const SockAddr & addr,const utf8::String & name);
+    static void reverseResolveOverrideRemove(const SockAddr & addr);
+    static utf8::String reverseResolveGetOverride(const SockAddr & addr,const ksys::Mutant & defPort);
   protected:
 #if defined(__WIN32__) || defined(__WIN64__)
     union IpInfo {
@@ -111,6 +123,18 @@ class SockAddr {
       int ai_flag
     );
   private:
+    static uint8_t reverseResolveOverrideHolder_[];
+    static uint8_t reverseResolveOverrideMutexHolder_[];
+
+    static ksys::Array<ReverseResolveOverride> & reverseResolveOverride() {
+      return *reinterpret_cast<ksys::Array<ReverseResolveOverride> *>(reverseResolveOverrideHolder_);
+    }
+    static ksys::InterlockedMutex & reverseResolveOverrideMutex() {
+      return *reinterpret_cast<ksys::InterlockedMutex *>(reverseResolveOverrideMutexHolder_);
+    }
+
+    static void initialize();
+    static void cleanup();
 };
 //---------------------------------------------------------------------------
 inline socklen_t SockAddr::sockAddrSize() const
@@ -138,6 +162,29 @@ inline socklen_t SockAddr::addrSize() const
 #endif
   return l;
 }
+//---------------------------------------------------------------------------
+inline bool SockAddr::operator == (const SockAddr & addr) const
+{
+  return 
+    addr4_.sin_family == addr.addr4_.sin_family &&
+    addr4_.sin_port == addr.addr4_.sin_port &&
+    memcmp(&addr4_.sin_addr,&addr.addr4_.sin_addr,addrSize()) == 0
+  ;
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class ReverseResolveOverride {
+  public:
+    SockAddr addr_;
+    utf8::String name_;
+
+    ReverseResolveOverride() {}
+    ReverseResolveOverride(const SockAddr & addr,const utf8::String & name = utf8::String()) :
+      addr_(addr), name_(name) {}
+
+    bool operator == (const ReverseResolveOverride & ovr) const { return addr_ == ovr.addr_; }
+};
 //---------------------------------------------------------------------------
 } // namespace ksock
 //---------------------------------------------------------------------------

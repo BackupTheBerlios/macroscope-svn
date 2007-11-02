@@ -239,6 +239,65 @@ void SockAddr::resolveNameForBind(const utf8::String & bind,ksys::Array<SockAddr
   }
 }
 //------------------------------------------------------------------------------
+uint8_t SockAddr::reverseResolveOverrideHolder_[sizeof(ksys::Array<ReverseResolveOverride>)];
+uint8_t SockAddr::reverseResolveOverrideMutexHolder_[sizeof(ksys::InterlockedMutex)];
+//------------------------------------------------------------------------------
+void SockAddr::initialize()
+{
+  new (reverseResolveOverrideHolder_) ksys::Array<ReverseResolveOverride>;
+  new (reverseResolveOverrideMutexHolder_) ksys::InterlockedMutex;
+}
+//------------------------------------------------------------------------------
+void SockAddr::cleanup()
+{
+  using namespace ksys;
+  reverseResolveOverrideMutex().~InterlockedMutex();
+  reverseResolveOverride().~Array<ReverseResolveOverride>();
+}
+//------------------------------------------------------------------------------
+void SockAddr::reverseResolveOverrideAdd(const SockAddr & addr,const utf8::String & name)
+{
+  ksys::AutoLock<ksys::InterlockedMutex> lock(reverseResolveOverrideMutex());
+  ReverseResolveOverride ovr(addr,name);
+  ovr.addr_.addr4_.sin_port = 0;
+  intptr_t i = reverseResolveOverride().search(ovr);
+  if( i < 0 ) reverseResolveOverride().add(ovr);
+}
+//------------------------------------------------------------------------------
+void SockAddr::reverseResolveOverrideRemove(const SockAddr & addr)
+{
+  ksys::AutoLock<ksys::InterlockedMutex> lock(reverseResolveOverrideMutex());
+  ReverseResolveOverride ovr(addr);
+  ovr.addr_.addr4_.sin_port = 0;
+  intptr_t i = reverseResolveOverride().search(ovr);
+  if( i < 0 ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    int32_t err = ERROR_NOT_FOUND;
+#else
+    int32_t err = ENOENT;
+#endif
+    newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  }
+  reverseResolveOverride().remove(i);
+}
+//------------------------------------------------------------------------------
+utf8::String SockAddr::reverseResolveGetOverride(const SockAddr & addr,const ksys::Mutant & defPort)
+{
+  ksys::AutoLock<ksys::InterlockedMutex> lock(reverseResolveOverrideMutex());
+  ReverseResolveOverride ovr(addr);
+  ovr.addr_.addr4_.sin_port = 0;
+  intptr_t i = reverseResolveOverride().search(ovr);
+  utf8::String s;
+  if( i >= 0 ){
+    s = reverseResolveOverride()[i].name_;
+    if( addr.addr4_.sin_port != 0 )
+      s += ":" + utf8::int2Str(be16toh(reverseResolveOverride()[i].addr_.addr4_.sin_port));
+    else
+      s += ":" + utf8::int2Str((intmax_t) defPort);
+  }
+  return s;
+}
+//------------------------------------------------------------------------------
 utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag) const
 {
   ksys::Fiber * fiber = ksys::currentFiber();
@@ -257,7 +316,8 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
   }
   intmax_t serv;
   int32_t err = 0;
-  utf8::String s;
+  utf8::String s = reverseResolveGetOverride(*this,defPort);
+  if( !s.isNull() ) return s;
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
 #if defined(__WIN32__) || defined(__WIN64__)
   union {
@@ -268,7 +328,7 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
     char servInfo[NI_MAXSERV];
     wchar_t servInfoW[NI_MAXSERV];
   };
-  if( ksys::isWin9x() && api.getnameinfo != NULL ){
+  if( (ksys::isWin9x() || api.GetNameInfoW == NULL) && api.getnameinfo != NULL ){
     err = api.getnameinfo(
       (const sockaddr *) &addr4_,
       sockAddrSize(),

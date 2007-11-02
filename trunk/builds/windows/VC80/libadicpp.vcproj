@@ -1599,10 +1599,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libodbcpp\ecs.cpp"
 				>
 				<FileConfiguration
@@ -1717,6 +1713,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\event.cpp"
@@ -2209,10 +2209,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\stparam.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\stparam.cpp"
 				>
 				<FileConfiguration
@@ -2327,6 +2323,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\stparam.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libmycpp\stvalue.cpp"
