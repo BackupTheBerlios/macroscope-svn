@@ -210,15 +210,6 @@ void ServerFiber::registerDB()
 {
   utf8::String::Stream stream;
   utf8::String host(remoteAddress().resolveAddr(~uintptr_t(0))), server, service;
-#ifndef NDEBUG
-  utf8::String::Stream stream2;
-  stream2 <<
-    host << ", " <<
-    utf8::int2HexStr(remoteAddress().addr4_.sin_addr.S_un.S_addr,8) <<
-    ", " << __FILE__ << __LINE__
-  ;
-  stdErr.debug(9,stream2);
-#endif
   if( serverType_ != stNode ){
     terminate();
     stream << serverTypeName[serverType_] <<
@@ -1049,12 +1040,12 @@ void NodeClient::main()
         if( dataType_ == stStandalone ){
           server = server_->data(stStandalone).getNodeList();
           host = server_->data(stNode).getNodeList();
-          if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
+          if( !server.isNull() && !host.isNull() ) server += ",";
           server += host;
           host = server_->config_->parse().valueByPath(
             utf8::String(serverConfSectionName[stStandalone]) + ".node",""
           );
-          if( server.strlen() > 0 && host.strlen() > 0 ) server += ",";
+          if( !server.isNull() && !host.isNull() ) server += ",";
           server += host;
         }
         else {

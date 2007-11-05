@@ -155,7 +155,9 @@ class Mutant {
     Mutant              unique() const;
     Mutant &            clear();
     Mutant &            changeType(MutantType newType);
-    Mutant &            changeType(MutantType newType, const Mutant & m);
+    bool                tryChangeType(MutantType newType);
+    Mutant &            changeType(MutantType newType,const Mutant & m);
+    bool                tryChangeType(MutantType newType,const Mutant & m);
 
     void *              raw();
     char *              plane();

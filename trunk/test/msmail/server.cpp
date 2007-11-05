@@ -167,8 +167,8 @@ void Server::startNodesExchangeNL()
     utf8::String(serverConfSectionName[stNode]) + ".neighbors",
     ""
   );
-  if( hosts.strlen() > 0 ){
-    if( neighbors.strlen() > 0 ) neighbors += ",";
+  if( !hosts.isNull() ){
+    if( !neighbors.isNull() ) neighbors += ",";
     neighbors += hosts;
   }
   Array<utf8::String> nodes;

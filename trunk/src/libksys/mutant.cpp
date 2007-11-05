@@ -132,7 +132,31 @@ bool Mutant::isIntegerString(const utf8::String & string, intmax_t * i)
   return r;
 }
 //---------------------------------------------------------------------------
-Mutant & Mutant::changeType(MutantType newType, const Mutant & m)
+bool Mutant::tryChangeType(MutantType newType)
+{
+  bool r = true;
+  try {
+    changeType(newType);
+  }
+  catch( ExceptionSP & ){
+    r = false;
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+bool Mutant::tryChangeType(MutantType newType,const Mutant & m)
+{
+  bool r = true;
+  try {
+    changeType(newType,m);
+  }
+  catch( ExceptionSP & ){
+    r = false;
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+Mutant & Mutant::changeType(MutantType newType,const Mutant & m)
 {
   if( type_ != newType || this != &m ){
     union {

@@ -138,7 +138,7 @@ int main(int _argc,char * _argv[])
       }
 #endif
     }
-//    if( dispatch ){
+    if( dispatch ){
       service->msmailConfig()->parse().override();
       stdErr.bufferDataTTA(
         (uint64_t) service->msmailConfig()->value("debug_file_max_collection_time",60) * 1000000u
@@ -158,17 +158,8 @@ int main(int _argc,char * _argv[])
       stackBackTrace = service->msmailConfig()->value("stack_back_trace",false);
       service->msmailConfig()->silent(false);
 
-      const ConfigSection & section = service->msmailConfig()->section("reverse_dns_resolve_overrides");
-      for( u = 0; u < section.valueCount(); u++ ){
-        utf8::String key, value = section.value(u,&key);
-        ksock::SockAddr::reverseResolveOverrideAdd(ksock::SockAddr().resolveName(key),value);
-      }
-      ksock::SockAddr addr;
-      addr.resolveName("pleh");
-      utf8::String host(addr.resolveAddr(~uintptr_t(0)));
-
       services.startServiceCtrlDispatcher();
-  //  }
+    }
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
