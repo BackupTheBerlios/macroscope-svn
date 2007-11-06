@@ -347,7 +347,7 @@ void ServerFiber::sendMail() // client sending mail
     recvBytes() - rb + sendBytes() - sb << "\n"
   ;
   if( !message->isValue("#Recepient") || 
-      message->value("#Recepient").trim().strlen() == 0 ||
+      message->value("#Recepient").trim().isNull() ||
       !message->isValue(messageIdKey) ||
       id.strcmp(message->id()) != 0 ){
     putCode(eInvalidMessage);
@@ -599,48 +599,25 @@ void SpoolWalker::processQueue(bool & timeWait)
             stdErr.debug(1,stream);
           }
           else if( id_ >= 0 ){
+// robot response
+            server_->processRequestServerOnline(message,list[i]);
+/////////////////
             utf8::String::Stream stream;
             stream << "Message recepient " << message->value("#Recepient") <<
               " not found in database.\n"
             ;
             message = NULL;
-            rename(file.fileName(),server_->spoolDir(-1) + getNameFromPathName(file.fileName()));
+            rename(file.fileName(),server_->spoolDir(-1) + getNameFromPathName(file.fileName()),true,true);
             stdErr.debug(1,stream);
           }
-          else { // if collector
+          else { // if collector          
             timeWait = true;
           }
         }
         else if( deliverLocaly ){
 // robot response
-          bool process = true;
-          if( message->isValue("#request.user.online") && message->value("#request.user.online").strlen() == 0 ){
-            AutoLock<FiberInterlockedMutex> lock(server_->recvMailFibersMutex_);
-            ServerFiber sfib(*server_,suser,skey);
-            ServerFiber * fib = server_->findRecvMailFiberNL(sfib);
-            if( fib == NULL ){
-              server_->sendRobotMessage(
-                message->value("#Sender"),
-                message->value("#Recepient"),
-                message->value("#Sender.Sended"),
-                "#request.user.online","no"
-              );
-              if( (bool) Mutant(message->isValue("#request.user.remove.message.if.offline")) ){
-                utf8::String::Stream stream;
-                stream << "Message " << message->id() <<
-                  " received from " << message->value("#Sender") <<
-                  " to " << message->value("#Recepient") <<
-                  " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
-                ;
-                message = NULL;
-                remove(list[i]);
-                stdErr.debug(1,stream);
-                process = false;
-              }
-            }
-          }
+          if( !server_->processRequestUserOnline(message,list[i],suser,skey) ){
 ////////////////
-          if( process ){
             utf8::String userMailBox(includeTrailingPathDelimiter(server_->mailDir() + suser));
             utf8::String::Stream stream;
             stream << "Message " << message->id() <<
@@ -917,8 +894,25 @@ void MailQueueWalker::main()
           }
         }
       }
-      else if( mwt ){
-        break;
+      else {        
+// robot response
+        AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
+        for( EmbeddedListNode<Message::Key> * node = messages_.first(); node != NULL; node = node->next() ){
+          Message::Key * mId = &Message::Key::listNodeObject(*node);
+          AsyncFile file(server_->mqueueDir() + *mId + ".msg");
+          AutoPtr<Message> message(newObject<Message>());
+          try {
+            file.open();
+            file >> message;
+            file.close();
+            server_->processRequestServerOnline(message,file.fileName());
+          }
+          catch( ExceptionSP & e ){
+            e->writeStdError();
+          }
+        }
+/////////////////
+        if( mwt ) break;
       }
     }
   }

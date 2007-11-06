@@ -275,6 +275,58 @@ void Server::sendUserWatchdog(const utf8::String & user)
   watchdog.createIfNotExist(true).removeAfterClose(true).open();
 }
 //------------------------------------------------------------------------------
+void Server::processRequestServerOnline(AutoPtr<Message> & message,const utf8::String & name)
+{
+  if( message->isValue("#request.server.online") && message->value("#request.server.online").isNull() ){
+    sendRobotMessage(
+      message->value("#Sender"),
+      message->value("#Recepient"),
+      message->value("#Sender.Sended"),
+      "#request.server.online","no"
+    );
+    if( message->isValue("#request.server.remove.message.if.offline") && (bool) Mutant(message->value("#request.server.remove.message.if.offline")) ){
+      utf8::String::Stream stream;
+      stream << "Message " << message->id() <<
+        " received from " << message->value("#Sender") <<
+        " to " << message->value("#Recepient") <<
+        " removed, because '#request.server.online' == 'no' and '#request.server.remove.message.if.offline' == 'yes' \n"
+      ;
+      remove(name);
+      stdErr.debug(1,stream);
+    }
+  }
+}
+//------------------------------------------------------------------------------
+bool Server::processRequestUserOnline(AutoPtr<Message> & message,const utf8::String & name,const utf8::String & suser,const utf8::String & skey)
+{
+  bool process = false;
+  if( message->isValue("#request.user.online") && message->value("#request.user.online").isNull() ){
+    AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+    ServerFiber sfib(*this,suser,skey);
+    ServerFiber * fib = findRecvMailFiberNL(sfib);
+    if( fib == NULL ){
+      sendRobotMessage(
+        message->value("#Sender"),
+        message->value("#Recepient"),
+        message->value("#Sender.Sended"),
+        "#request.user.online","no"
+      );
+      if( message->isValue("#request.user.remove.message.if.offline") && (bool) Mutant(message->value("#request.user.remove.message.if.offline")) ){
+        utf8::String::Stream stream;
+        stream << "Message " << message->id() <<
+          " received from " << message->value("#Sender") <<
+          " to " << message->value("#Recepient") <<
+          " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
+        ;
+        remove(name);
+        stdErr.debug(1,stream);
+        process = true;
+      }
+    }
+  }
+  return process;
+}
+//------------------------------------------------------------------------------
 void Server::sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName)
 {
   MailQueueWalker * pWalker, * pWalker2;

@@ -1078,6 +1078,30 @@ class Server : public ksock::Server {
     void startNodeClient(ServerType dataType,const utf8::String & nodeHostName = utf8::String());
     void startNodesExchangeNL();
     void startNodesExchange();
+
+    void sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName);
+    void removeSender(MailQueueWalker & sender);
+    void closeSenders();
+    void spoolCleanup();
+    void mqueueCleanup();
+    void loadStaticDB();
+    void loadStaticRoutes();
+
+    void addRecvMailFiber(ServerFiber & fiber);
+    bool remRecvMailFiber(ServerFiber & fiber);
+    ServerFiber * findRecvMailFiberNL(const ServerFiber & fiber);
+    ServerFiber * findRecvMailFiber(const ServerFiber & fiber);
+    void sendRobotMessage(
+      const utf8::String & recepient,
+      const utf8::String & sender,
+      const utf8::String & sended,
+      const utf8::String & key,
+      const utf8::String & value,
+      Message * msg = NULL);
+    void sendUserWatchdog(const utf8::String & user);
+
+    void processRequestServerOnline(AutoPtr<Message> & message,const utf8::String & name);
+    bool processRequestUserOnline(AutoPtr<Message> & message,const utf8::String & name,const utf8::String & suser,const utf8::String & skey);
   private:
     ConfigSP config_;
 // база
@@ -1118,27 +1142,6 @@ class Server : public ksock::Server {
       MailQueueWalker::hostHashNodeHash,
       MailQueueWalker::hostHashNodeEqu
     > sendMailFibers_;
-
-    void sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName);
-    void removeSender(MailQueueWalker & sender);
-    void closeSenders();
-    void spoolCleanup();
-    void mqueueCleanup();
-    void loadStaticDB();
-    void loadStaticRoutes();
-
-    void addRecvMailFiber(ServerFiber & fiber);
-    bool remRecvMailFiber(ServerFiber & fiber);
-    ServerFiber * findRecvMailFiberNL(const ServerFiber & fiber);
-    ServerFiber * findRecvMailFiber(const ServerFiber & fiber);
-    void sendRobotMessage(
-      const utf8::String & recepient,
-      const utf8::String & sender,
-      const utf8::String & sended,
-      const utf8::String & key,
-      const utf8::String & value,
-      Message * msg = NULL);
-    void sendUserWatchdog(const utf8::String & user);
 };
 //------------------------------------------------------------------------------
 inline Server::Data & Server::data(ServerType type)
