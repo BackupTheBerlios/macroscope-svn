@@ -275,8 +275,9 @@ void Server::sendUserWatchdog(const utf8::String & user)
   watchdog.createIfNotExist(true).removeAfterClose(true).open();
 }
 //------------------------------------------------------------------------------
-void Server::processRequestServerOnline(AutoPtr<Message> & message,const utf8::String & name)
+bool Server::processRequestServerOnline(AutoPtr<Message> & message,const utf8::String & name)
 {
+  bool process = true;
   if( message->isValue("#request.server.online") && message->value("#request.server.online").isNull() ){
     sendRobotMessage(
       message->value("#Sender"),
@@ -293,13 +294,15 @@ void Server::processRequestServerOnline(AutoPtr<Message> & message,const utf8::S
       ;
       remove(name);
       stdErr.debug(1,stream);
+      process = false;
     }
   }
+  return process;
 }
 //------------------------------------------------------------------------------
 bool Server::processRequestUserOnline(AutoPtr<Message> & message,const utf8::String & name,const utf8::String & suser,const utf8::String & skey)
 {
-  bool process = false;
+  bool process = true;
   if( message->isValue("#request.user.online") && message->value("#request.user.online").isNull() ){
     AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
     ServerFiber sfib(*this,suser,skey);
@@ -318,9 +321,10 @@ bool Server::processRequestUserOnline(AutoPtr<Message> & message,const utf8::Str
           " to " << message->value("#Recepient") <<
           " removed, because '#request.user.online' == 'no' and '#request.user.remove.message.if.offline' == 'yes' \n"
         ;
+        message = NULL;
         remove(name);
         stdErr.debug(1,stream);
-        process = true;
+        process = false;
       }
     }
   }

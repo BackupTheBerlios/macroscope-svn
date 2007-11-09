@@ -600,15 +600,16 @@ void SpoolWalker::processQueue(bool & timeWait)
           }
           else if( id_ >= 0 ){
 // robot response
-            server_->processRequestServerOnline(message,list[i]);
+            if( server_->processRequestServerOnline(message,list[i]) ){
 /////////////////
-            utf8::String::Stream stream;
-            stream << "Message recepient " << message->value("#Recepient") <<
-              " not found in database.\n"
-            ;
-            message = NULL;
-            rename(file.fileName(),server_->spoolDir(-1) + getNameFromPathName(file.fileName()),true,true);
-            stdErr.debug(1,stream);
+              utf8::String::Stream stream;
+              stream << "Message recepient " << message->value("#Recepient") <<
+                " not found in database.\n"
+              ;
+              message = NULL;
+              rename(file.fileName(),server_->spoolDir(-1) + getNameFromPathName(file.fileName()),true,true);
+              stdErr.debug(1,stream);
+            }
           }
           else { // if collector          
             timeWait = true;
@@ -616,7 +617,7 @@ void SpoolWalker::processQueue(bool & timeWait)
         }
         else if( deliverLocaly ){
 // robot response
-          if( !server_->processRequestUserOnline(message,list[i],suser,skey) ){
+          if( server_->processRequestUserOnline(message,list[i],suser,skey) ){
 ////////////////
             utf8::String userMailBox(includeTrailingPathDelimiter(server_->mailDir() + suser));
             utf8::String::Stream stream;

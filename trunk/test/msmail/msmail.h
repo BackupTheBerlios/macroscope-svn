@@ -615,7 +615,7 @@ class User2KeyLink {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const User2KeyLink & object){
-      return (object.user_ + object.key_).hash(false);
+      return object.user_.hash(false,object.key_.hash(false));
     }
     static bool hashNodeEqu(const User2KeyLink & object1,const User2KeyLink & object2){
       return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
@@ -665,10 +665,7 @@ class Key2GroupLink {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const Key2GroupLink & object){
-      uintptr_t h[2];
-      h[0] = object.key_.hash(false);
-      h[1] = object.group_.hash(false);
-      return HF::hash(h,sizeof(h));
+      return object.key_.hash(false,object.group_.hash(false));
     }
     static bool hashNodeEqu(const Key2GroupLink & object1,const Key2GroupLink & object2){
       return object1.key_.strcasecmp(object2.key_) == 0 && object1.group_.strcasecmp(object2.group_) == 0;
@@ -770,10 +767,7 @@ class ServerFiber : public ksock::ServerFiber {
       return node.object(p->hashNode_);
     }
     static uintptr_t hashNodeHash(const ServerFiber & object){
-      uintptr_t h[2];
-      h[0] = object.user_.hash(false);
-      h[1] = object.key_.hash(false);
-      return HF::hash(h,sizeof(h));
+      return object.key_.hash(false,object.user_.hash(false));
     }
     static bool hashNodeEqu(const ServerFiber & object1,const ServerFiber & object2){
       return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
@@ -1100,7 +1094,7 @@ class Server : public ksock::Server {
       Message * msg = NULL);
     void sendUserWatchdog(const utf8::String & user);
 
-    void processRequestServerOnline(AutoPtr<Message> & message,const utf8::String & name);
+    bool processRequestServerOnline(AutoPtr<Message> & message,const utf8::String & name);
     bool processRequestUserOnline(AutoPtr<Message> & message,const utf8::String & name,const utf8::String & suser,const utf8::String & skey);
   private:
     ConfigSP config_;

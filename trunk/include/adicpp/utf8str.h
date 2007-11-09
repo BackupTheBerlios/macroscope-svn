@@ -444,8 +444,8 @@ class String {
     bool                isEqu(const String & s) const;
 
     bool                hashKeyEqu(const String & key, bool caseSensitive) const;
-    uintptr_t           hash(bool caseSensitive) const;
-    uint64_t            hash_ll(bool caseSensitive) const;
+    uintptr_t           hash(bool caseSensitive,uintptr_t h = 0) const;
+    uint64_t            hash_ll(bool caseSensitive,uint64_t h = 0) const;
 
     bool isDigit() const;
     bool isAlpha() const;

@@ -786,16 +786,14 @@ String String::print(const char * fmt, ...)
   return s;
 }
 //---------------------------------------------------------------------------
-uintptr_t String::hash(bool caseSensitive) const
+uintptr_t String::hash(bool caseSensitive,uintptr_t h) const
 {
-  uintptr_t h;
   if( caseSensitive ){
-    h = ksys::HF::hash(container_->string_);
+    h = ksys::HF::hash(container_->string_,h);
   }
   else {
     uintptr_t l;
     const char * s = container_->string_;
-    h = 0;
     for(;;){
       if( *s == '\0' ) break;
       h = ksys::HF::hash(uint32_t(utf8c2UpperUCS(s,l)),h);
@@ -814,16 +812,14 @@ uintptr_t String::hash(bool caseSensitive) const
   return h;
 }
 //---------------------------------------------------------------------------
-uint64_t String::hash_ll(bool caseSensitive) const
+uint64_t String::hash_ll(bool caseSensitive,uint64_t h) const
 {
-  uint64_t h;
   if( caseSensitive ){
-    h = ksys::HF::hash_ll(container_->string_);
+    h = ksys::HF::hash_ll(container_->string_,h);
   }
   else {
     uintptr_t l;
     const char * s = container_->string_;
-    h = 0;
     for(;;){
       if( *s == '\0' ) break;
       h = ksys::HF::hash_ll(uint32_t(utf8c2UpperUCS(s,l)),h);
