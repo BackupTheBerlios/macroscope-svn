@@ -225,12 +225,14 @@ void Server::addRecvMailFiber(ServerFiber & fiber)
 bool Server::remRecvMailFiber(ServerFiber & fiber)
 {
   AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
-  return &recvMailFibers_.remove(fiber,false,false) == &fiber;
+  ServerFiber * fib = findRecvMailFiberNL(fiber);
+  if( fib == &fiber ) recvMailFibers_.remove(fiber,false,false);
+  return fib == &fiber;
 }
 //------------------------------------------------------------------------------
 ServerFiber * Server::findRecvMailFiberNL(const ServerFiber & fiber)
 {
-  return recvMailFibers_.find(fiber);
+  return recvMailFibers_.find(fiber,false,false);
 }
 //------------------------------------------------------------------------------
 ServerFiber * Server::findRecvMailFiber(const ServerFiber & fiber)
