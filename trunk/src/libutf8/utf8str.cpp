@@ -1550,7 +1550,7 @@ char * strstr(const char * string,const char * str)
     c = utf82ucs(s1,l0) - utf82ucs(s2,l2);
     l1 = l0;
     for(;;){
-      if( *s2 == '\0' ) return (char *) s1;
+      if( *s2 == '\0' ) return (char *) string;
       if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
@@ -1570,7 +1570,7 @@ char * strcasestr(const char * string,const char * str)
     c = utf8c2UpperUCS(s1,l0) - utf8c2UpperUCS(s2,l2);
     l1 = l0;
     for(;;){
-      if( *s2 == '\0' ) return (char *) s1;
+      if( *s2 == '\0' ) return (char *) string;
       if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
@@ -1591,7 +1591,7 @@ char * strrstr(const char * string,const char * str)
     c = utf82ucs(s1,l0) - utf82ucs(s2,l2);
     l1 = l0;
     for(;;){
-      if( *s2 == '\0' ){ i = s1; break; }
+      if( *s2 == '\0' ){ i = string; break; }
       if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
@@ -1612,7 +1612,7 @@ char * strrcasestr(const char * string,const char * str)
     c = utf8c2UpperUCS(s1,l0) - utf8c2UpperUCS(s2,l2);
     l1 = l0;
     for(;;){
-      if( *s2 == '\0' ){ i = s1; break; }
+      if( *s2 == '\0' ){ i = string; break; }
       if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
