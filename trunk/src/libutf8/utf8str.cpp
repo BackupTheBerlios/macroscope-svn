@@ -1543,88 +1543,84 @@ ldouble str2Float(const String & str)
 //---------------------------------------------------------------------------
 char * strstr(const char * string,const char * str)
 {
-  intptr_t  c = 0;
-  uintptr_t l1, l2;
-  const char * i = string, * i2 = NULL;
-  while( *i != '\0' ){
-    const char * s1 = i, * s2 = str;
+  intptr_t c;
+  uintptr_t l0, l1, l2;
+  while( *string != '\0' ){
+    const char * s1 = string, * s2 = str;
+    c = utf82ucs(s1,l0) - utf82ucs(s2,l2);
+    l1 = l0;
     for(;;){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf82ucs(s1, l1) - utf82ucs(s2, l2);
-      if( c != 0 ) break;
+      if( *s2 == '\0' ) return (char *) s1;
+      if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
+      c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
     }
-    if( c == 0 ){
-      i2 = i;
-      break;
-    }
-    i += utf8seqlen(i);
+    string += l0;
   }
-  return (char *) i2;
+  return NULL;
 }
 //---------------------------------------------------------------------------
 char * strcasestr(const char * string,const char * str)
 {
-  intptr_t  c = 0;
-  uintptr_t l1, l2;
-  const char * i = string, * i2 = NULL;
-  while( *i != '\0' ){
-    const char * s1 = i, * s2 = str;
+  intptr_t c;
+  uintptr_t l0, l1, l2;
+  while( *string != '\0' ){
+    const char * s1 = string, * s2 = str;
+    c = utf8c2UpperUCS(s1,l0) - utf8c2UpperUCS(s2,l2);
+    l1 = l0;
     for(;;){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf8c2UpperUCS(s1, l1) - utf8c2UpperUCS(s2, l2);
-      if( c != 0 ) break;
+      if( *s2 == '\0' ) return (char *) s1;
+      if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
+      c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
     }
-    if( c == 0 ){
-      i2 = i;
-      break;
-    }
-    i += utf8seqlen(i);
+    string += l0;
   }
-  return (char *) i2;
+  return NULL;
 }
 //---------------------------------------------------------------------------
 char * strrstr(const char * string,const char * str)
 {
-  intptr_t  c = 0;
-  uintptr_t l1, l2;
-  const char * i = string, * i2 = NULL;
-  while( *i != '\0' ){
-    const char * s1 = i, * s2 = str;
+  intptr_t c;
+  const char * i = NULL;
+  uintptr_t l0, l1, l2;
+  while( *string != '\0' ){
+    const char * s1 = string, * s2 = str;
+    c = utf82ucs(s1,l0) - utf82ucs(s2,l2);
+    l1 = l0;
     for(;;){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf82ucs(s1, l1) - utf82ucs(s2, l2);
-      if( c != 0 ) break;
+      if( *s2 == '\0' ){ i = s1; break; }
+      if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
+      c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
     }
-    if( c == 0 ) i2 = i;
-    i += utf8seqlen(i);
+    string += l0;
   }
-  return (char *) i2;
+  return (char *) i;
 }
 //---------------------------------------------------------------------------
 char * strrcasestr(const char * string,const char * str)
 {
-  intptr_t  c = 0;
-  uintptr_t l1, l2;
-  const char * i = string, * i2 = NULL;
-  while( *i != '\0' ){
-    const char * s1 = i, * s2 = str;
+  intptr_t c;
+  const char * i = NULL;
+  uintptr_t l0, l1, l2;
+  while( *string != '\0' ){
+    const char * s1 = string, * s2 = str;
+    c = utf8c2UpperUCS(s1,l0) - utf8c2UpperUCS(s2,l2);
+    l1 = l0;
     for(;;){
-      if( *s1 == '\0' || *s2 == '\0' ) break;
-      c = utf8c2UpperUCS(s1, l1) - utf8c2UpperUCS(s2, l2);
-      if( c != 0 ) break;
+      if( *s2 == '\0' ){ i = s1; break; }
+      if( *s1 == '\0' || c != 0 ) break;
       s1 += l1;
       s2 += l2;
+      c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
     }
-    if( c == 0 ) i2 = i;
-    i += utf8seqlen(i);
+    string += l0;
   }
-  return (char *) i2;
+  return (char *) i;
 }
 //---------------------------------------------------------------------------
 void strncpy0(char * dst,size_t size,const char * src,size_t count)
