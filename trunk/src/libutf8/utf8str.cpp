@@ -446,20 +446,22 @@ String::Iterator String::strcasestr(const String & str) const
 String::Iterator String::strrstr(const String & str) const
 {
   intptr_t  c = 0;
-  uintptr_t l1, l2;
+  uintptr_t l0, l1, l2;
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
   if( str.container_->string_[0] != '\0' ){
     while( !i.eos() ){
       const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
+      c = utf82ucs(s1,l0) - utf82ucs(s2,l2);
+      l1 = l0;
       for(;;){
-        c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
         if( *s2 == '\0' ){ i2 = i; break; }
         if( *s1 == '\0' || c != 0 ) break;
         s1 += l1;
         s2 += l2;
+        c = utf82ucs(s1,l1) - utf82ucs(s2,l2);
       }
-      i.cursor_ += l1;
+      i.cursor_ += l0;
       i.position_++;
     }
   }
@@ -469,20 +471,22 @@ String::Iterator String::strrstr(const String & str) const
 String::Iterator String::strrcasestr(const String & str) const
 {
   intptr_t  c = 0;
-  uintptr_t l1, l2;
+  uintptr_t l0, l1, l2;
   Iterator i(*this), i2(i);
   i2.cursor_ = i2.position_ = -1;
   if( str.container_->string_[0] != '\0' ){
     while( !i.eos() ){
       const char * s1 = container_->string_ + i.cursor_, * s2 = str.container_->string_;
+      c = utf8c2UpperUCS(s1,l0) - utf8c2UpperUCS(s2,l2);
+      l1 = l0;
       for(;;){
-        c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
         if( *s2 == '\0' ){ i2 = i; break; }
         if( *s1 == '\0' || c != 0 ) break;
         s1 += l1;
         s2 += l2;
+        c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
       }
-      i.cursor_ += l1;
+      i.cursor_ += l0;
       i.position_++;
     }
   }
