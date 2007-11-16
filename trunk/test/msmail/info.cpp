@@ -72,9 +72,11 @@ Message & Message::id(const utf8::String & id)
   return *this;
 }
 //------------------------------------------------------------------------------
-bool Message::isValue(const utf8::String & key) const
+bool Message::isValue(const utf8::String & key,utf8::String * pValue) const
 {
-  return attributes_.find(key) != NULL;
+  Attribute * p = attributes_.find(key);
+  if( p != NULL && pValue != NULL ) *pValue = p->value_;
+  return p != NULL;
 }
 //------------------------------------------------------------------------------
 utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) const

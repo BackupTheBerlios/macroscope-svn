@@ -346,10 +346,11 @@ void ServerFiber::sendMail() // client sending mail
     ", traffic " <<
     recvBytes() - rb + sendBytes() - sb << "\n"
   ;
-  if( !message->isValue("#Recepient") || 
-      message->value("#Recepient").trim().isNull() ||
-      !message->isValue(messageIdKey) ||
-      id.strcmp(message->id()) != 0 ){
+  utf8::String recepient, mid;
+  if( !message->isValue("#Recepient",&recepient) || 
+      recepient.trim().isNull() ||
+      !message->isValue(messageIdKey,&mid) ||
+      id.strcmp(mid) != 0 ){
     putCode(eInvalidMessage);
     return;
   }

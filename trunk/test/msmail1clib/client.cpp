@@ -954,8 +954,9 @@ HRESULT Client::value(const utf8::String id,const utf8::String key,VARIANT * pva
   if( msg == NULL )
     newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   HRESULT hr = S_OK;
-  if( msg->isValue(key) ){
-    V_BSTR(pvarRetValue) = msg->value(key).getOLEString();
+  utf8::String value;
+  if( msg->isValue(key,&value) ){
+    V_BSTR(pvarRetValue) = value.getOLEString();
     V_VT(pvarRetValue) = VT_BSTR;
   }
   else {
@@ -970,7 +971,7 @@ utf8::String Client::value(const utf8::String id,const utf8::String key,const ut
   Message * msg = sendQueue_.find(id);
   if( msg == NULL ) newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   utf8::String oldValue;
-  if( msg->isValue(key) ) oldValue = msg->value(key);
+  msg->isValue(key,&oldValue);
   msg->value(key,value);
   return oldValue;
 }
@@ -1025,8 +1026,7 @@ bool Client::saveMessageAttachmentToFile(const utf8::String id,const utf8::Strin
       msg = recvQueue_.find(id);
       if( msg == NULL || !msg->isValue(key) )
         newObjectV1C2<Exception>(ERROR_NOT_FOUND + errorOffset,__PRETTY_FUNCTION__)->throwSP();
-      if( !msg->isValue(bkey) ) break;
-      v = msg->value(bkey);
+      if( !msg->isValue(bkey,&v) ) break;
     }
     uintptr_t l = base64Decode(v,NULL,0);
     b.realloc(l);

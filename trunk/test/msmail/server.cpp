@@ -280,14 +280,18 @@ void Server::sendUserWatchdog(const utf8::String & user)
 bool Server::processRequestServerOnline(AutoPtr<Message> & message,const utf8::String & name)
 {
   bool process = true;
-  if( message->isValue("#request.server.online") && message->value("#request.server.online").isNull() ){
+  utf8::String value;
+  if( message->isValue("#request.server.online",&value) && value.isNull() ){
+    static const char a[] = "#request.server.copy.user.attributes.if.offline";
+    bool v;
     sendRobotMessage(
       message->value("#Sender"),
       message->value("#Recepient"),
       message->value("#Sender.Sended"),
-      "#request.server.online","no"
+      "#request.server.online","no",
+      Mutant(message->value(a)).isBoolean(&v) && v ? message : NULL
     );
-    if( message->isValue("#request.server.remove.message.if.offline") && (bool) Mutant(message->value("#request.server.remove.message.if.offline")) ){
+    if( message->isValue("#request.server.remove.message.if.offline",&value) && Mutant(value).isBoolean(&v) && v ){
       utf8::String::Stream stream;
       stream << "Message " << message->id() <<
         " received from " << message->value("#Sender") <<
@@ -305,18 +309,22 @@ bool Server::processRequestServerOnline(AutoPtr<Message> & message,const utf8::S
 bool Server::processRequestUserOnline(AutoPtr<Message> & message,const utf8::String & name,const utf8::String & suser,const utf8::String & skey)
 {
   bool process = true;
-  if( message->isValue("#request.user.online") && message->value("#request.user.online").isNull() ){
+  utf8::String value;
+  if( message->isValue("#request.user.online",&value) && value.isNull() ){
     AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
     ServerFiber sfib(*this,suser,skey);
     ServerFiber * fib = findRecvMailFiberNL(sfib);
     if( fib == NULL ){
+      static const char a[] = "#request.user.copy.user.attributes.if.offline";
+      bool v;
       sendRobotMessage(
         message->value("#Sender"),
         message->value("#Recepient"),
         message->value("#Sender.Sended"),
-        "#request.user.online","no"
+        "#request.user.online","no",
+        Mutant(message->value(a)).isBoolean(&v) && v ? message : NULL
       );
-      if( message->isValue("#request.user.remove.message.if.offline") && (bool) Mutant(message->value("#request.user.remove.message.if.offline")) ){
+      if( message->isValue("#request.user.remove.message.if.offline",&value) && Mutant(value).isBoolean(&v) && v ){
         utf8::String::Stream stream;
         stream << "Message " << message->id() <<
           " received from " << message->value("#Sender") <<

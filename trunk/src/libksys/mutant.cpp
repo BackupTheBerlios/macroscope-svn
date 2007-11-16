@@ -299,38 +299,52 @@ Mutant & Mutant::changeType(MutantType newType,const Mutant & m)
   return *this;
 }
 //---------------------------------------------------------------------------
-Mutant::operator bool() const
+bool Mutant::isBoolean(bool * pv) const
 {
-  bool  v;
+  bool v, is;
+  intmax_t m;
   switch( type_ ){
     case mtNull   :
-      return false;
+      v = false;
+      is = true;
+      break;
     case mtInt    :
-      return int_ != 0;
+      v = int_ != 0;
+      is = true;
+      break;
     case mtFloat  :
-      return float_ != 0;
+      v = float_ != 0;
+      is = true;
+      break;
     case mtTime   :
-      return int_ != 0;
+      v = int_ != 0;
+      is = true;
+      break;
     case mtCStr   :
-      if( isBooleanString(cStr_, v) )
-        return v;
+      if( (is = isIntegerString(cStr_,m)) ) v = m != 0; else is = isBooleanString(cStr_,v);
       break;
     case mtWStr   :
-      if( isBooleanString(cStr_, v) )
-        return v;
+      if( (is = isIntegerString(wStr_,m)) ) v = m != 0; else is = isBooleanString(wStr_,v);
       break;
     case mtStr    :
-      if( isBooleanString(utf8::plane(str_), v) )
-        return v;
+      if( (is = isIntegerString(utf8::plane(str_),m)) ) v = m != 0;
+        else is = isBooleanString(utf8::plane(str_),v);
       break;
     case mtString :
-      if( isBooleanString(string(), v) )
-        return v;
+      if( (is = isIntegerString(string(),m)) ) v = m != 0; else is = isBooleanString(string(),v);
       break;
     case mtBinary :
     default       :
-      ;
+      is = false;
   }
+  if( pv != NULL ) *pv = v;
+  return is;
+}
+//---------------------------------------------------------------------------
+Mutant::operator bool() const
+{
+  bool v;
+  if( isBoolean(&v) ) return v;
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
@@ -348,20 +362,16 @@ Mutant::operator char() const
     case mtTime   :
       return (char) int_;
     case mtCStr   :
-      if( isIntegerString(cStr_, v) )
-        return (char) v;
+      if( isIntegerString(cStr_, v) ) return (char) v;
       return (char) utf8::str2Int(cStr_);
     case mtWStr   :
-      if( isIntegerString(wStr_, v) )
-        return (char) v;
+      if( isIntegerString(wStr_, v) ) return (char) v;
       return (char) utf8::str2Int(wStr_);
     case mtStr    :
-      if( isIntegerString(utf8::plane(str_), v) )
-        return (char) v;
+      if( isIntegerString(utf8::plane(str_), v) ) return (char) v;
       return (char) utf8::str2Int(utf8::plane(str_));
     case mtString :
-      if( isIntegerString(string(), v) )
-        return (char) v;
+      if( isIntegerString(string(), v) ) return (char) v;
       return (char) utf8::str2Int(string());
     case mtBinary :
     default       :

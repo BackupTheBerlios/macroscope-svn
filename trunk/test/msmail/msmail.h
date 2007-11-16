@@ -211,7 +211,7 @@ class Message {
     utf8::String id() const;
     Message & id(const utf8::String & id);
     utf8::String value(const utf8::String & key,Attribute ** pAttribute = NULL) const;
-    bool isValue(const utf8::String & key) const;
+    bool isValue(const utf8::String & key,utf8::String * pValue = NULL) const;
     Message & value(const utf8::String & key,const utf8::String & value,Attribute ** pAttribute = NULL);
     utf8::String removeValue(const utf8::String & key);
     Message & removeValueByLeft(const utf8::String & key);
