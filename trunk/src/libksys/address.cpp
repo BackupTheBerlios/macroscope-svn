@@ -78,10 +78,11 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   int r = 0;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( (ksys::isWin9x() || api.GetAddrInfoW == NULL) && api.getaddrinfo != NULL ){
-    utf8::AnsiString ap(!port.isNull() ? port.getANSIString() : ((utf8::String) defPort).getANSIString());
+    utf8::AnsiString hp(host.getANSIString());
+    utf8::AnsiString ap((port.isNull() ? (utf8::String) defPort : port).getANSIString());
     r = api.getaddrinfo(
-      !host.isNull() ? (const char *) host.getANSIString() : NULL,
-      port.isNull() && (uintptr_t) defPort == 0 ? NULL : (const char *) ap,
+      host.isNull() ? NULL : (const char *) hp,
+      port.isNull() ? NULL : (const char *) ap,
       &aiHints,
       &aiList
     );
@@ -118,18 +119,20 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   }
   else {
     utf8::WideString hp(host.getUNICODEString());
-    utf8::WideString ap(!port.isNull() ? port.getUNICODEString() : ((utf8::String) defPort).getUNICODEString());
+    utf8::WideString ap((port.isNull() ? (utf8::String) defPort : port).getUNICODEString());
     r = api.GetAddrInfoW(
-      !host.isNull() ? (const wchar_t *) hp : NULL,
-      port.isNull() && (uintptr_t) defPort == 0 ? NULL : (const wchar_t *) ap,
+      host.isNull() ? NULL : (const wchar_t *) hp,
+      port.isNull() ? NULL : (const wchar_t *) ap,
       &aiHintsW,
       &aiListW
     );
   }
 #else
+  utf8::AnsiString hp(host.getUNICODEString());
+  utf8::AnsiString ap((port.isNull() ? (utf8::String) defPort : port).getANSIString());
   r = api.getaddrinfo(
-    !host.isNull() ? (const char *) host.getANSIString() : NULL,
-    !port.isNull() && (uintptr_t) defPort != 0 ? (const char *) port.getANSIString() : NULL,
+    host.isNull() ? NULL : (const char *) hp,
+    port.isNull() ? NULL : (const char *) ap,
     &aiHints,
     &aiList
   );
