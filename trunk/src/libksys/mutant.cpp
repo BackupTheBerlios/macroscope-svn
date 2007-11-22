@@ -83,7 +83,7 @@ bool Mutant::isBooleanString(const utf8::String & string, bool & value)
       string.strcasecmp("DISABLED") == 0
   ;
   r = a1 || a2;
-  value = a1;
+  value = a1 ? true : a2 ? false : false;
   return r;
 }
 //---------------------------------------------------------------------------

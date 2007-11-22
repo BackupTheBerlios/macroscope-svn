@@ -363,7 +363,7 @@ Message & Message::copyUserAttributes(const Message & msg)
   msg.attributes_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
     if( utf8::String(list[i]->key_).strncmp(numberSign,1) != 0 )
-      value(msg.value(list[i]->key_));
+      value(list[i]->key_,list[i]->value_);
   return *this;
 }
 //------------------------------------------------------------------------------

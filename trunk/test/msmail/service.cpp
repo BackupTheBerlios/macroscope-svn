@@ -55,6 +55,7 @@ void Service::install()
   serviceName_ = msmailConfig_->text("service_name","msmail");
   displayName_ = msmailConfig_->text("service_display_name","Macroscope MAIL Service");
 #if defined(__WIN32__) || defined(__WIN64__)
+  loadOrderGroup_ = msmailConfig_->text("service_load_order_group",utf8::String());
   utf8::String startType(msmailConfig_->text("service_start_type","auto"));
   if( startType.strcasecmp("auto") == 0 ){
     startType_ = SERVICE_AUTO_START;
