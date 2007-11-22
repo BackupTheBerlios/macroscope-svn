@@ -259,7 +259,7 @@ MSUpdaterService::MSUpdaterService() :
   startType_ = SERVICE_AUTO_START;
   errorControl_ = SERVICE_ERROR_IGNORE;
   binaryPathName_ = getExecutableName();
-  serviceStatus_.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+  serviceStatus_.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
   serviceStatus_.dwWaitHint = 60000; // give me 60 seconds for start or stop 
 #endif
 }

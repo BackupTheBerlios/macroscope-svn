@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -115,7 +115,7 @@ Service & Service::serviceMain(uintptr_t n,DWORD dwArgc,LPWSTR * lpszArgv)
 //---------------------------------------------------------------------------
 Service & Service::handler(uintptr_t /*n*/,DWORD fdwControl)
 {
-  if( fdwControl == SERVICE_CONTROL_STOP ) semaphore_.post();
+  if( fdwControl == SERVICE_CONTROL_STOP || fdwControl == SERVICE_CONTROL_SHUTDOWN ) semaphore_.post();
   return *this;
 }
 //---------------------------------------------------------------------------
