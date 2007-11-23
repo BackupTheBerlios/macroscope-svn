@@ -38,10 +38,6 @@ int main(int _argc,char * _argv[])
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
   try {
-
-    ksock::SockAddr address;
-    address.resolveName("amber.lipetsk.etalon.local:2526",msmail::defaultPort);
-
     uintptr_t u;
     stdErr.fileName(SYSLOG_DIR("msmail/") + "msmail.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msmail.conf");
