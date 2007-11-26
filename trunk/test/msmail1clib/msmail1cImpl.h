@@ -56,7 +56,7 @@ class SerialPortFiber : public Fiber {
   public:
     virtual ~SerialPortFiber();
     SerialPortFiber() {}
-    SerialPortFiber(Client & client,uintptr_t serialPortNumber);
+    SerialPortFiber(Client * client,uintptr_t serialPortNumber);
   protected:
     Client * client_;
     uintptr_t serialPortNumber_;

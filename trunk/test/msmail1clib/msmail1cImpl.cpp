@@ -1818,6 +1818,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
               if( SUCCEEDED(hr) ){
                 V_I4(pvarRetValue) = msmail1c_->client_.installSerialPortScanner(V_I4(pv0));
+                msmail1c_->lastError_ = msmail1c_->client_.workFiberLastError_;
               }
             }
             SafeArrayUnlock(*paParams);
@@ -1832,6 +1833,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
               if( SUCCEEDED(hr) ){
                 V_I4(pvarRetValue) = msmail1c_->client_.removeSerialPortScanner(V_I4(pv0));
+                msmail1c_->lastError_ = msmail1c_->client_.workFiberLastError_;
               }
             }
             SafeArrayUnlock(*paParams);

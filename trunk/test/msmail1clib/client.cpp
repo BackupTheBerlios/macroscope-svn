@@ -35,8 +35,8 @@ SerialPortFiber::~SerialPortFiber()
 {
 }
 //------------------------------------------------------------------------------
-SerialPortFiber::SerialPortFiber(Client & client,uintptr_t serialPortNumber) :
-  client_(&client), serialPortNumber_(serialPortNumber), serial_(NULL)
+SerialPortFiber::SerialPortFiber(Client * client,uintptr_t serialPortNumber) :
+  client_(client), serialPortNumber_(serialPortNumber), serial_(NULL)
 {
 }
 //------------------------------------------------------------------------------
@@ -1233,7 +1233,7 @@ bool Client::installSerialPortScanner(uintptr_t serialPortNumber)
   if( !installed ){
     workFiberWait_.acquire();
     try {
-      attachFiber(newObjectV1V2<SerialPortFiber>(*this,serialPortNumber));
+      attachFiber(newObjectV1V2<SerialPortFiber>(this,serialPortNumber));
     }
     catch( ... ){
       workFiberWait_.release();
@@ -1251,14 +1251,14 @@ bool Client::removeSerialPortScanner(uintptr_t serialPortNumber)
     AutoLock<FiberInterlockedMutex> lock(queueMutex_);
     for( i = serialPortsFibers_.count() - 1; i >= 0; i-- )
       if( serialPortsFibers_[i]->serialPortNumber_ == serialPortNumber ){
+        workFiberLastError_ = 0;
+        workFiberWait_.acquire();
         serialPortsFibers_[i]->terminate();
         serialPortsFibers_[i]->serial_->close();
         break;
       }
   }
   if( i < 0 ) return false;
-  workFiberLastError_ = 0;
-  workFiberWait_.acquire();
   AutoLock<InterlockedMutex> lock(workFiberWait_);
   return workFiberLastError_ == 0;
 }
@@ -1271,13 +1271,13 @@ void Client::removeAllSerialPortScanners()
       AutoLock<FiberInterlockedMutex> lock(queueMutex_);
       i = serialPortsFibers_.count() - 1;
       if( i >= 0 ){
+        workFiberLastError_ = 0;
+        workFiberWait_.acquire();
         serialPortsFibers_[i]->terminate();
         serialPortsFibers_[i]->serial_->close();
       }
     }
     if( i < 0 ) break;
-    workFiberLastError_ = 0;
-    workFiberWait_.acquire();
     AutoLock<InterlockedMutex> lock(workFiberWait_);
   }
 }
