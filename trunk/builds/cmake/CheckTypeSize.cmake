@@ -34,7 +34,7 @@ MACRO(CHECK_TYPE_SIZE TYPE VARIABLE)
           "${MACRO_CHECK_TYPE_SIZE_FLAGS} -D${IF_PRAGMA}"
         )
       ENDIF (${${IF_PRAGMA}})
-      SET(CHECK_TYPE_SIZE_PREMAIN "${CHECK_TYPE_SIZE_PREMAIN}#if ${IF_PRAGMA}\n#include <${def}>\n#endif\n")
+      SET(CHECK_TYPE_SIZE_PREMAIN "${CHECK_TYPE_SIZE_PREMAIN}#ifdef ${IF_PRAGMA}\n#include <${def}>\n#endif\n")
     ENDFOREACH(def)
     CONFIGURE_FILE("${CMAKE_ROOT}/Modules/CheckTypeSize.c.in"
       "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckTypeSize.c" IMMEDIATE @ONLY)

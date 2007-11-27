@@ -174,7 +174,7 @@ __forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t ex
     lock cmpxchg8b qword ptr [esi]
   }
 }
-#elif _MSC_VER && _M_X64
+#elif (_MSC_VER && _M_X64) || defined(__BCPLUSPLUS__)
 __forceinline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   return InterlockedExchangeAdd((LONG *) &v,a);
@@ -194,29 +194,28 @@ __forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t ex
 {
   return InterlockedCompareExchange64((LONGLONG *) &v,exValue,cmpValue);
 }
-#elif defined(__BCPLUSPLUS__)
-int32_t __fastcall  __declspec(nothrow) interlockedIncrement(int32_t & v,int32_t a);
-int32_t __fastcall  __declspec(nothrow) interlockedCompareExchange(int32_t & v,int32_t exValue,int32_t cmpValue);
 #else
-int32_t interlockedIncrement(volatile int32_t & v, int32_t a);
-int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue);
+int32_t interlockedIncrement(volatile int32_t & v,int32_t a);
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
+int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue);
+int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue);
 #endif
 //---------------------------------------------------------------------------
 void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int32_t cmpValue);
 void interlockedCompareExchangeAcquire(volatile int64_t & v,int64_t exValue,int64_t cmpValue);
-inline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a){ return interlockedIncrement(*(int32_t *) &v,(int32_t) a); }
-inline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a){ return interlockedIncrement(*(int64_t *) &v,(int64_t) a); }
+inline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a){ return interlockedIncrement(*(volatile int32_t *) &v,(int32_t) a); }
+inline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a){ return interlockedIncrement(*(volatile int64_t *) &v,(int64_t) a); }
 #if SIZEOF_VOID_P <= 4
 #if !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INT32_T_AS_INTPTR_T
-inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(int32_t *) &v,(int32_t) a); }
-inline uintptr_t interlockedIncrement(volatile uintptr_t & v,uintptr_t a){ return interlockedIncrement(*(int32_t *) &v,(int32_t) a); }
+inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(volatile int32_t *) &v,(int32_t) a); }
+inline uintptr_t interlockedIncrement(volatile uintptr_t & v,uintptr_t a){ return interlockedIncrement(*(volatile int32_t *) &v,(int32_t) a); }
 #endif
 typedef int32_t ilock_t;
 typedef uint32_t uilock_t;
 #elif SIZEOF_VOID_P <= 8
 #if !HAVE_INTPTR_T_AS_INT64_T && !HAVE_INT64_T_AS_INTPTR_T
-inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(int64_t *) &v,(int64_t) a); }
-inline uintptr_t interlockedIncrement(volatile uintptr_t & v,uintptr_t a){ return interlockedIncrement(*(int64_t *) &v,(int64_t) a); }
+inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(volatile int64_t *) &v,(int64_t) a); }
+inline uintptr_t interlockedIncrement(volatile uintptr_t & v,uintptr_t a){ return interlockedIncrement(*(volatile int64_t *) &v,(int64_t) a); }
 #endif
 typedef int64_t ilock_t;
 typedef uint64_t uilock_t;

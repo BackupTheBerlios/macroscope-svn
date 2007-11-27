@@ -37,7 +37,7 @@ MACRO(CHECK_EMPTY_ARRAY_SIZE VARIABLE)
       )
       TRY_COMPILE(${VARIABLE}
         ${CMAKE_BINARY_DIR}
-        ${CMAKE_BINARY_DIR}/CheckEmptyArraySize.c
+        ${CMAKE_BINARY_DIR}/builds/cmake/CheckEmptyArraySize.c
         COMPILE_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS}
         CMAKE_FLAGS -DCOMPILE_DEFINITIONS:STRING=${MACRO_CHECK_EMPTY_ARRAY_SIZE_FLAGS}
         OUTPUT_VARIABLE OUTPUT)
@@ -47,7 +47,7 @@ MACRO(CHECK_EMPTY_ARRAY_SIZE VARIABLE)
         FILE(APPEND ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeOutput.log 
           "Determining size of ${TYPE} passed with the following output:\n${OUTPUT}\n\n")
       ELSE(${VARIABLE})
-        MESSAGE(STATUS "Check empty array size - failed")
+        MESSAGE(STATUS "Check empty array size - not supported")
         SET (${VARIABLE} -1 CACHE INTERNAL "Empty array size not supported")
         FILE(APPEND ${CMAKE_BINARY_DIR}/CMakeFiles/CMakeError.log 
           "Determining size of ${TYPE} failed with the following output:\n${OUTPUT}\nCheckEmptyArraySize.c:\n\n")

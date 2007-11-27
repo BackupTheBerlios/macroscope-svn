@@ -42,6 +42,16 @@ int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
   return ov;
 }
 
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
+{
+  giant().acquire();
+  int64_t ov = v;
+  v += a;
+  giant().release();
+  return ov;
+}
+
+
 int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
 {
   giant().acquire();
@@ -56,29 +66,24 @@ int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t 
   giant().release();
   return ov;
 }
-#endif
-//---------------------------------------------------------------------------
-#ifdef __BCPLUSPLUS__
-#pragma option push -w-8070 -O2 -6 -y- -r
-int32_t __fastcall __declspec(nothrow) interlockedIncrement(volatile int32_t &,int32_t)
-{
-  __asm {
-    lock xadd       [eax],edx
-    mov             eax,edx
-  }
-}
 
-int32_t __fastcall __declspec(nothrow) interlockedCompareExchange(volatile int32_t &,int32_t,int32_t)
+int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
 {
-  __asm {
-    xchg            eax,ecx
-    lock cmpxchg    [ecx],edx
+  giant().acquire();
+  int64_t ov;
+  if( v == cmpValue ){
+    ov = cmpValue;
+    v = exValue;
   }
+  else {
+    ov = exValue;
+  }
+  giant().release();
+  return ov;
 }
-#pragma option pop
 #endif
 //---------------------------------------------------------------------------
-#if (_M_IX86 || __i386__) && !__x86_64__ && !_M_X64
+#if (_M_IX86 || __i386__ || defined(BCPLUSPLUS)) && !__x86_64__ && !_M_X64
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
 {
   int64_t old;

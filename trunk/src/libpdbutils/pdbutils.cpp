@@ -15,6 +15,9 @@
 //#if defined(LOCAL_DEBUG)
 #include <iostream>
 //#endif
+
+#ifdef HAVE_DBGHELP_H
+
 namespace pdbutils {
 
 HANDLE _currentProcess = 0;
@@ -786,3 +789,5 @@ uninstallCrashDumpHook()
 }
 
 } // namespace pdbutils {
+
+#endif

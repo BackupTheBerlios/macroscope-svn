@@ -72,10 +72,26 @@ Message & Message::id(const utf8::String & id)
   return *this;
 }
 //------------------------------------------------------------------------------
+utf8::String Message::valueHelper(Attribute * p) const
+{
+  if( p->index_ == 0 ) return p->value_;
+  if( p->size_ == 0 ) return utf8::String();
+  file_.open();
+  AutoPtr<char> s;
+  s.alloc((uintptr_t) p->size_ + 1);
+  s[(uintptr_t) p->size_] = '\0';
+  file_.readBuffer(p->index_,s,p->size_);
+  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,s.ptr());
+  s.ptr(NULL);
+  utf8::String ss(container);
+  if( utf8::String(p->key_).c_str()[0] != '#' ) ss = unScreenString(ss);
+  return ss;
+}
+//------------------------------------------------------------------------------
 bool Message::isValue(const utf8::String & key,utf8::String * pValue) const
 {
   Attribute * p = attributes_.find(key);
-  if( p != NULL && pValue != NULL ) *pValue = p->value_;
+  if( p != NULL && pValue != NULL ) *pValue = valueHelper(p);
   return p != NULL;
 }
 //------------------------------------------------------------------------------
@@ -92,18 +108,7 @@ utf8::String Message::value(const utf8::String & key,Attribute ** pAttribute) co
       ,__PRETTY_FUNCTION__
     )->throwSP();
   if( pAttribute != NULL ) *pAttribute = p;
-  if( p->index_ == 0 ) return p->value_;
-  if( p->size_ == 0 ) return utf8::String();
-  file_.open();
-  AutoPtr<char> s;
-  s.alloc((uintptr_t) p->size_ + 1);
-  s[(uintptr_t) p->size_] = '\0';
-  file_.readBuffer(p->index_,s,p->size_);
-  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,s.ptr());
-  s.ptr(NULL);
-  utf8::String ss(container);
-  if( key.c_str()[0] != '#' ) ss = unScreenString(ss);
-  return ss;
+  return valueHelper(p);
 }
 //------------------------------------------------------------------------------
 Message & Message::value(const utf8::String & key,const utf8::String & value,Attribute ** pAttribute)

@@ -244,6 +244,8 @@ class Message {
     Message(const Message & a);
     Message & operator = (const Message & a);
 
+    utf8::String valueHelper(Attribute * p) const;
+
     mutable EmbeddedHashNode<Message,uintptr_t> idNode_;
     typedef EmbeddedHash<
       Attribute,

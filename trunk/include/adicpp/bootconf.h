@@ -27,7 +27,7 @@
 #ifndef _bootconf_H_
 #define _bootconf_H_
 
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include <adicpp/config.h>
 #elif (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && (defined(_WIN32) || defined(_WIN32_WINNT))
 #ifdef _WIN64
@@ -416,6 +416,7 @@ typedef int32_t gid_t;
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0502
 #endif
+#ifndef INT8_C
 #define INT8_C(c)               (c)
 #define UINT8_C(c)              (c)
 #define INT16_C(c)              (c)
@@ -427,8 +428,10 @@ typedef int32_t gid_t;
 #define INTMAX_C(c)             (c ## i64)
 #define UINTMAX_C(c)            (c ## ui64)
 #endif
+#endif
 
 #if defined(__WIN32__) && !defined(__WIN64__)
+#ifndef INT8_MIN
 #define INT8_MIN        (-0x7f-1)
 #define INT16_MIN       (-0x7fff-1)
 #define INT32_MIN       (-0x7fffffff-1)
@@ -455,6 +458,7 @@ typedef int32_t gid_t;
 #endif
 #define WINT_MIN        INT32_MIN
 #define WINT_MAX        INT32_MAX
+#endif
 
 #define PRId8           "d"     /* int8_t */
 #define PRId16          "d"     /* int16_t */

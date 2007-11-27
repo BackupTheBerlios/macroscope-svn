@@ -348,7 +348,7 @@
 #ifdef __GNUG__
 #define DECLSPEC_NOTHROW
 #define GNUG_NOTHROW __attribute__((nothrow))
-#if __x86_64__
+#ifdef __x86_64__
 #define GNUG_CDECL
 #define GNUG_NAKED
 #else
@@ -365,7 +365,9 @@
 #define GNUG_CDECL
 #define GNUG_CONSTRUCTOR
 #define GNUG_DESTRUCTOR
+#ifndef DECLSPEC_NORETURN
 #define DECLSPEC_NORETURN __declspec(noreturn)
+#endif
 #define GNUG_NORETURN
 #define GNUG_NAKED
 #endif

@@ -4,6 +4,8 @@
 #include <sstream>
 #include <iostream>
 
+#ifdef HAVE_DBGHELP_H
+
 namespace pdbutils {
 
 #define NL "\n"
@@ -156,7 +158,7 @@ DbgType::toString(DbgStream& ss, intptr_t printflags, const DbgString& indendent
       ss << "<void>";
       break;
     case Boolean:
-      ss << val.boolean;
+      ss << (unsigned) val.boolean;
       break;
     case Byte:
       if (typeName == "char")
@@ -240,7 +242,7 @@ DbgType::toString(DbgStream& ss, intptr_t printflags, const DbgString& indendent
       if (val.typevec != 0)
       {
         intptr_t j = 0;
-        for (j = 0; j < val.typevec->size(); ++j)
+        for (; j < val.typevec->size(); ++j)
         {
           if (type == Array)
           {
@@ -1011,3 +1013,4 @@ bool querySymbolValue(PSYMBOL_INFO pSym, DbgFrame& frame)
 }
 
 } // namespace pdbutils {
+#endif

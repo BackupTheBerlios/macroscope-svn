@@ -166,6 +166,7 @@ public:
       return true;
     if (_ptr == 0 || text == 0)
       return false;
+#undef strcmp
     return strcmp(_ptr, text) == 0;
   }
   bool operator==(const DbgString& other) const
