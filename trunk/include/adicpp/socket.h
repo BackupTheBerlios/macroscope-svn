@@ -298,7 +298,7 @@ inline bool AsyncSocket::compressionActive() const
 //------------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::operator <<(bool a)
 { // portable accross network
-  uint8_t v = a ? 1 : 0;
+  uint8_t v = uint8_t(a ? 1 : 0);
   return write(&v,sizeof(v));
 }
 //---------------------------------------------------------------------------

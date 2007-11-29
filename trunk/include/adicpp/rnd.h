@@ -130,8 +130,12 @@ inline
 void QTIsaac<ALPHA,T>::randinit(randctx * ctx, bool bUseSeed)
 {
   T a,b,c,d,e,f,g,h;
-
+#ifdef __BCPLUSPLUS__
+  static const uint8_t a0[sizeof(uint64_t)] = { 0x13, 0x7c, 0x4a, 0x7f, 0xb9, 0x79, 0x37, 0x9e };
+  a = b = c = d = e = f = g = h = *(T *) a0;
+#else
   a = b = c = d = e = f = g = h = UINT64_C(0x9e3779b97f4a7c13);
+#endif
 
   T * m = (ctx->randmem);
   T * r = (ctx->randrsl);

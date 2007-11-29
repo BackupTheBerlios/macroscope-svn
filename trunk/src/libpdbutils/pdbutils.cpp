@@ -38,7 +38,7 @@ namespace {
 
 }
 
-static intptr_t CurrentPointerRecursion = 0;
+//static intptr_t CurrentPointerRecursion = 0;
 
 static
 bool 
@@ -168,11 +168,11 @@ getProgramCounters(FrameAddress* frames, intptr_t pccount, CONTEXT& context)
   STACKFRAME sf;
   memset(&sf, 0, sizeof(sf));
   
-  HANDLE currentThread = GetCurrentThread();
+  //HANDLE currentThread = GetCurrentThread();
   //CONTEXT context;
   //context.ContextFlags = CONTEXT_FULL; 
   
- #ifdef _M_IX86
+#ifdef _M_IX86
     // Initialize the STACKFRAME structure for the first call.  This is only
     // necessary for Intel CPUs, and isn't mentioned in the documentation.
     sf.AddrPC.Offset       = context.Eip;
@@ -247,7 +247,7 @@ bool querySymbolValue(PSYMBOL_INFO pSym, DbgFrame& frame);
 
 static
 BOOL CALLBACK
-dbgutils_enumerateSymbolsCallback(PSYMBOL_INFO  pSymInfo, ULONG SymbolSize, PVOID  UserContext)
+dbgutils_enumerateSymbolsCallback(PSYMBOL_INFO  pSymInfo, ULONG /*SymbolSize*/, PVOID  UserContext)
 {
   //char szBuffer[2048];
   DbgFrame *dbframe = (DbgFrame*)UserContext;
@@ -510,7 +510,7 @@ getExceptionString( DWORD dwCode )
                    GetModuleHandle( "NTDLL.DLL"),
                    dwCode, 0, szBuffer, sizeof( szBuffer ), 0 );
 
-    return szBuffer;
+    return (DbgString) szBuffer;
 }
 
 void 

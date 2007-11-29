@@ -13,7 +13,7 @@
 
 using namespace pdbutils;
 
-bool get_core_vector_symbolInfo(DbgType& dbgType, bool& discarge)
+bool get_core_vector_symbolInfo(DbgType& dbgType, bool& /*discarge*/)
 {
   if (DBGSTRING_STARTSWITH(dbgType.typeName, "core_vector<") == false)
     return false;
@@ -50,7 +50,7 @@ bool get_core_vector_symbolInfo(DbgType& dbgType, bool& discarge)
   arrayType.name = DBGSTRING_CONSTSTR("data");
   arrayType.typeName = DBGSTRING_CONSTSTR("T");
   arrayType.type = DbgType::Array;
-  for (; itPtr < endPtr; itPtr += eltype.size)
+  for (; itPtr < endPtr; itPtr += (uintptr_t) eltype.size)
   {
     DbgType subType;
     if (querySymbolType(dbgType.modBase, begin.typeIndex, (intptr_t) &itPtr, eltype.size, subType, DbgFrameGetAll) == true)

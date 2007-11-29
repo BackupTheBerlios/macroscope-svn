@@ -26,9 +26,9 @@ int main(int ac, char*av[]){
   char versionString[256], target[256], upperTarget[256], upperOutName[256];
   unsigned int version, ver, rev, lev;
   if( sscanf(inpBuffer,"%s %s %u.%u.%u",versionString,target,&ver,&rev,&lev) != 5 ) return -1;
-  for( int i = sizeof(target) - 1; i >= 0; i-- ) upperTarget[i] = toupper(target[i]);
+  for( int i = sizeof(target) - 1; i >= 0; i-- ) upperTarget[i] = (char) toupper(target[i]);
   for( unsigned u = 0; u < sizeof(upperOutName); u++ ){
-    upperOutName[u] = toupper(av[2][u]);
+    upperOutName[u] = (char) toupper(av[2][u]);
     if( upperOutName[u] == '.' || isspace(upperOutName[u]) ) upperOutName[u] = '_';
     if( av[2][u] == '\0' ) break;
   }

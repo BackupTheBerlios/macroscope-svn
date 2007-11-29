@@ -175,6 +175,18 @@ __forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t ex
   }
 }
 #elif (_MSC_VER && _M_X64) || defined(__BCPLUSPLUS__)
+#ifdef __BCPLUSPLUS__
+#define __forceinline inline
+__forceinline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a)
+{
+  return InterlockedExchangeAdd((LONG *) &v,a);
+}
+
+__forceinline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a)
+{
+  return InterlockedExchangeAdd64((LONGLONG *) &v,a);
+}
+#endif
 __forceinline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   return InterlockedExchangeAdd((LONG *) &v,a);
@@ -203,8 +215,10 @@ int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t 
 //---------------------------------------------------------------------------
 void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int32_t cmpValue);
 void interlockedCompareExchangeAcquire(volatile int64_t & v,int64_t exValue,int64_t cmpValue);
+#ifndef __BCPLUSPLUS__
 inline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a){ return interlockedIncrement(*(volatile int32_t *) &v,(int32_t) a); }
 inline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a){ return interlockedIncrement(*(volatile int64_t *) &v,(int64_t) a); }
+#endif
 #if SIZEOF_VOID_P <= 4
 #if !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INT32_T_AS_INTPTR_T
 inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(volatile int32_t *) &v,(int32_t) a); }

@@ -13,7 +13,7 @@
 
 using namespace pdbutils;
 
-bool get_std_vector_symbolInfo(DbgType& dbgType, bool& discarge)
+bool get_std_vector_symbolInfo(DbgType& dbgType, bool& /*discarge*/)
 {
   if (DBGSTRING_STARTSWITH(dbgType.typeName, "std::vector<") == false)
     return false;
@@ -62,7 +62,7 @@ bool get_std_vector_symbolInfo(DbgType& dbgType, bool& discarge)
   arrayType.typeName = DBGSTRING_CONSTSTR("T");
   arrayType.type = DbgType::Array;
 
-  for (; eltype.size > 0 && itPtr < endPtr; itPtr += eltype.size)
+  for (; eltype.size > 0 && itPtr < endPtr; itPtr += (uintptr_t) eltype.size)
   {
     DbgType subType;
     if (querySymbolType(dbgType.modBase, begin.typeIndex, (intptr_t)&itPtr, eltype.size, subType, DbgFrameGetAll) == true)
@@ -84,7 +84,7 @@ bool get_std_vector_symbolInfo(DbgType& dbgType, bool& discarge)
 RegisterDebugPostTypeHandler _register_std_vectorHandler(get_std_vector_symbolInfo);
 
 
-bool get_std_string_symbolInfo(DbgType& dbgType, bool& discarge)
+bool get_std_string_symbolInfo(DbgType& dbgType, bool& /*discarge*/)
 {
    if (DBGSTRING_STARTSWITH(dbgType.typeName, "std::basic_string<char") == false)
     return false;

@@ -746,6 +746,26 @@ class RBTreeNode { // base class for deriving
     }
 };
 //-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
+class RBTreeBenchmarkObject {
+  public:
+    intmax_t key_;
+      
+    static RBTreeNode & treeO2N(const RBTreeBenchmarkObject & object,uintptr_t *){
+      return object.treeNode_;
+    }
+    static RBTreeBenchmarkObject & treeN2O(const RBTreeNode & node,uintptr_t *){
+      return node.object<RBTreeBenchmarkObject>(reinterpret_cast<RBTreeBenchmarkObject *>(NULL)->treeNode_);
+    }
+    static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1,uintptr_t *){
+      return a0.key_ > a1.key_ ? 1 : a0.key_ < a1.key_ ? -1 : 0;
+    }
+    mutable RBTreeNode treeNode_;
+};
+//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//-----------------------------------------------------------------------------
 template <
   typename OT,
   typename PT,
@@ -754,22 +774,166 @@ template <
   intptr_t CO(const OT &,const OT &,PT *)
 >
 class RBTree {
+  // member methods declared inside class for borland (bugland) compiler compatibility
   public:
-    ~RBTree();
-    RBTree();
+    ~RBTree() {}
+    RBTree() : param_(NULL)
+    {
+      sentinel_.left_ = &sentinel_;
+      sentinel_.right_ = &sentinel_;
+      sentinel_.parent_ = NULL;
+      sentinel_.color_ = BLACK;
+      clear();
+    }
 
-    OT * find(const OT & object) const;
-    RBTree<OT,PT,O2N,N2O,CO> & insert(const OT & object,bool throwIfExist = true,bool deleteIfExist = true,OT ** pObject = NULL);
-    RBTree<OT,PT,O2N,N2O,CO> & remove(const OT & object);
-    RBTree<OT,PT,O2N,N2O,CO> & drop(const OT & object);
+    OT * find(const OT & object) const
+    {
+      RBTreeNode * current = root_->left_;
+      for(;;){
+        if( current == &sentinel_ ){ current = NULL; break; }
+        intptr_t c = CO(object,N2O(*current,param_),param_);
+        if( c == 0 ) break;
+        current = c < 0 ? current->left_ : current->right_;
+      }
+      return current == NULL ? NULL : &N2O(*current,param_);
+    }
 
-    RBTree<OT,PT,O2N,N2O,CO> & clear();
-    RBTree<OT,PT,O2N,N2O,CO> & drop();
+    RBTree<OT,PT,O2N,N2O,CO> & insert(const OT & object,bool throwIfExist = true,bool deleteIfExist = true,OT ** pObject = NULL)
+    {
+      RBTreeNode * y, * x = &O2N(object,param_);
+      if( (y = treeInsertHelp(x)) != NULL ){
+        if( deleteIfExist ) deleteObject(&object);
+        if( pObject != NULL ) *pObject = &N2O(*y,param_);
+        if( throwIfExist ) newObjectV1C2<Exception>(
+#if defined(__WIN32__) || defined(__WIN64__)
+          ERROR_ALREADY_EXISTS + errorOffset
+#else
+          EEXIST
+#endif
+          ,__PRETTY_FUNCTION__
+        )->throwSP();
+        return *this;
+      }
+      if( pObject != NULL ) *pObject = const_cast<OT *>(&object);
+      x->color_ = RED;
+      while( x->parent_->color_ == RED ){
+        if( x->parent_ == x->parent_->parent_->left_ ){
+          y = x->parent_->parent_->right_;
+          if( y->color_ == RED ){
+    	      x->parent_->color_ = BLACK;
+	      y->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      x = x->parent_->parent_;
+          }
+          else {
+	      if( x == x->parent_->right_){
+	        x = x->parent_;
+	        rotateLeft(x);
+	      }
+	      x->parent_->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      rotateRight(x->parent_->parent_);
+          } 
+        }
+        else {
+          y = x->parent_->parent_->left_;
+          if( y->color_ == RED ){
+	      x->parent_->color_ = BLACK;
+	      y->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      x = x->parent_->parent_;
+          }
+          else {
+	      if( x == x->parent_->left_ ){
+	        x = x->parent_;
+	        rotateRight(x);
+	      }
+	      x->parent_->color_ = BLACK;
+	      x->parent_->parent_->color_ = RED;
+	      rotateLeft(x->parent_->parent_);
+          } 
+        }
+      }
+      root_->left_->color_ = BLACK;
+      count_++;
+      return *this;
+    }
+
+    RBTree<OT,PT,O2N,N2O,CO> & remove(const OT & object)
+    {
+      RBTreeNode * z = &O2N(object,param_), * x, * y;
+      y = ((z->left_ == &sentinel_) || (z->right_ == &sentinel_)) ? z : getSuccessorOf(z);
+      x = (y->left_ == &sentinel_) ? y->right_ : y->left_;
+/* x is y's only child */
+      if( y->left_ != &sentinel_ ) x = y->left_; else x = y->right_;
+/* assignment of y->p to x->p is intentional */  
+      if( root_ == (x->parent_ = y->parent_) ){
+        root_->left_ = x;
+      }
+      else {
+        if( y == y->parent_->left_ ){
+          y->parent_->left_ = x;
+        }
+        else {
+          y->parent_->right_ = x;
+        }
+      }
+      if( y != z ){
+        y->left_ = z->left_;
+        y->right_ = z->right_;
+        y->parent_ = z->parent_;
+        z->left_->parent_ = z->right_->parent_ = y;
+        if( z == z->parent_->left_ ){
+          z->parent_->left_ = y;
+        }
+        else {
+          z->parent_->right_ = y;
+        }
+        if( y->color_ != RED ){
+          y->color_ = z->color_;
+          removeFixup(x);
+        }
+        else {
+          y->color_ = z->color_;
+        }
+      }
+      else if( y->color_ != RED ){
+        removeFixup(x);
+      }
+      count_--;
+      return *this;
+    }
+
+    RBTree<OT,PT,O2N,N2O,CO> & drop(const OT & object)
+    {
+      remove(object);
+      deleteObject(&object);
+      return *this;
+    }
+
+    RBTree<OT,PT,O2N,N2O,CO> & clear()
+    {
+      root_ = &rootNode_;
+      rootNode_.left_ = &sentinel_;
+      rootNode_.right_ = &sentinel_;
+      rootNode_.parent_ = NULL;
+      rootNode_.color_ = BLACK;
+      count_ = 0;
+      return *this;
+    }
+
+    RBTree<OT,PT,O2N,N2O,CO> & drop()
+    {
+      if( count_ > 0 ){
+        Walker walker(*this);
+        while( walker.next() ) deleteObject(&walker.object());
+        clear();
+      }
+      return *this;
+    }
 
     RBTree<OT,PT,O2N,N2O,CO> & param(PT * param){ param_ = param; return *this; }
 
-    void benchmark(uintptr_t elCount,uintptr_t cycles = 1);
-    
 /*    template <typename KT> OT * find(const KT & key) const {
       RBTreeNode * current = root_;
       for(;;){
@@ -851,6 +1015,113 @@ class RBTree {
         intptr_t sp_;
     };
     friend class Walker;
+
+    void benchmark(uintptr_t elCount,uintptr_t cycles = 1)
+    {
+      Array<RBTreeBenchmarkObject> nodes;
+      nodes.resize(elCount);
+      Array<RBTreeBenchmarkObject *> pNodes;
+      pNodes.resize(elCount);
+      Randomizer rnd;
+
+//  assert( root_ == &rootNode_ );
+
+      uint64_t seqInsTime = 0, seqFindTime = 0, seqRemTime = 0;
+      uint64_t rndInsTime = 0, rndFindTime = 0, rndRemTime = 0;
+
+#if HAVE_NICE
+      nice(-20);
+#endif
+      for( intptr_t cycle = cycles - 1; cycle >= 0; cycle-- ){
+        uint64_t t = gettimeofday();
+        for( intptr_t i = elCount - 1; i >= 0; i-- ){
+          nodes[i].key_ = i + 1;
+          insert(nodes[i]);
+        }
+        seqInsTime += gettimeofday() - t;
+        t = gettimeofday();
+        for( intptr_t i = elCount - 1; i >= 0; i-- )
+          if( find(nodes[i]) == NULL ) fprintf(stderr,"seq find failed %"PRIdPTR"\n",i);
+        seqFindTime += gettimeofday() - t;
+        t = gettimeofday();
+        for( intptr_t i = elCount - 1; i >= 0; i-- ) remove(nodes[i]);
+        seqRemTime += gettimeofday() - t;
+
+//    assert( root_ == &rootNode_ );
+
+        rnd.srand(cycle);
+        for( intptr_t i = elCount - 1; i >= 0; i-- ) pNodes[i] = &nodes[i];
+        for( intptr_t i = elCount - 1; i >= 0; i-- ){
+          ksys::xchg(
+            pNodes[uintptr_t(rnd.random() % elCount)],
+            pNodes[uintptr_t(rnd.random() % elCount)]
+          );
+        }
+        t = gettimeofday();
+        for( intptr_t i = elCount - 1; i >= 0; i-- ) insert(*pNodes[i]);
+        rndInsTime += gettimeofday() - t;
+        t = gettimeofday();
+        for( intptr_t i = elCount - 1; i >= 0; i-- )
+          if( find(*pNodes[i]) == NULL ) fprintf(stderr,"rnd find failed %"PRIdPTR"\n",i);
+        rndFindTime += gettimeofday() - t;
+        t = gettimeofday();
+        for( intptr_t i = elCount - 1; i >= 0; i-- ) remove(*pNodes[i]);
+        rndRemTime += gettimeofday() - t;
+
+//    assert( root_ == &rootNode_ );
+      }
+
+      seqInsTime /= cycles;
+      seqFindTime /= cycles;
+      seqRemTime /= cycles;
+      rndInsTime /= cycles;
+      rndFindTime /= cycles;
+      rndRemTime /= cycles;
+  
+      fprintf(stderr,"seq inserts: %8"PRIu64".%04"PRIu64" ips, ellapsed %s\n",
+        uint64_t(elCount) * 1000000u / seqInsTime,
+        uint64_t(elCount) * 10000u * 1000000u / seqInsTime -
+        uint64_t(elCount) * 1000000u / seqInsTime * 10000u,
+        (const char *) utf8::elapsedTime2Str(seqInsTime).getOEMString()
+      );
+      fprintf(stderr,"  seq finds: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
+        uint64_t(elCount) * 1000000u / seqFindTime,
+        uint64_t(elCount) * 10000u * 1000000u / seqFindTime -
+        uint64_t(elCount) * 1000000u / seqFindTime * 10000u,
+        (const char *) utf8::elapsedTime2Str(seqFindTime).getOEMString()
+      );
+      fprintf(stderr,"seq removes: %8"PRIu64".%04"PRIu64" rps, ellapsed %s\n",
+        uint64_t(elCount) * 1000000u / seqRemTime,
+        uint64_t(elCount) * 10000u * 1000000u / seqRemTime -
+        uint64_t(elCount) * 1000000u / seqRemTime * 10000u,
+        (const char *) utf8::elapsedTime2Str(seqRemTime).getOEMString()
+      );
+
+      fprintf(stderr,"rnd inserts: %8"PRIu64".%04"PRIu64" ips, ellapsed %s\n",
+        uint64_t(elCount) * 1000000u / rndInsTime,
+        uint64_t(elCount) * 10000u * 1000000u / rndInsTime -
+        uint64_t(elCount) * 1000000u / rndInsTime * 10000u,
+        (const char *) utf8::elapsedTime2Str(rndInsTime).getOEMString()
+      );
+      fprintf(stderr,"  rnd finds: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
+        uint64_t(elCount) * 1000000u / rndFindTime,
+        uint64_t(elCount) * 10000u * 1000000u / rndFindTime -
+        uint64_t(elCount) * 1000000u / rndFindTime * 10000u,
+        (const char *) utf8::elapsedTime2Str(rndFindTime).getOEMString()
+      );
+      fprintf(stderr,"rnd removes: %8"PRIu64".%04"PRIu64" rps, ellapsed %s\n",
+        uint64_t(elCount) * 1000000u / rndRemTime,
+        uint64_t(elCount) * 10000u * 1000000u / rndRemTime -
+        uint64_t(elCount) * 1000000u / rndRemTime * 10000u,
+        (const char *) utf8::elapsedTime2Str(rndRemTime).getOEMString()
+      );
+
+      uint64_t index = uint64_t(elCount) * 10000u * 1000000u;
+      index /= (seqInsTime + seqFindTime + seqRemTime + rndInsTime + rndFindTime + rndRemTime) / 6;
+      index /= 100000u;
+
+      fprintf(stderr,"overall index: %"PRIu64".%04"PRIu64"\n",index / 10000u,index - (index / 10000u) * 10000u);
+    }
   protected:
     typedef enum { BLACK, RED } RBTreeNodeColor;
 
@@ -860,276 +1131,108 @@ class RBTree {
     uintptr_t count_;
     PT * param_;
 
-    void rotateLeft(RBTreeNode * x);
-    void rotateRight(RBTreeNode * x);
-    void insertFixup(RBTreeNode * x);
-    void removeFixup(RBTreeNode * x);
-    RBTreeNode * getSuccessorOf(RBTreeNode * x) const;
-    RBTreeNode * treeInsertHelp(RBTreeNode * z);
-  private:
-    RBTree(const RBTree<OT,PT,O2N,N2O,CO> &);
-    void operator = (const RBTree<OT,PT,O2N,N2O,CO> &);
-};
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTree<OT,PT,O2N,N2O,CO>::~RBTree()
-{
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTree<OT,PT,O2N,N2O,CO>::RBTree() : param_(NULL)
-{
-  sentinel_.left_ = &sentinel_;
-  sentinel_.right_ = &sentinel_;
-  sentinel_.parent_ = NULL;
-  sentinel_.color_ = BLACK;
-  clear();
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-void RBTree<OT,PT,O2N,N2O,CO>::rotateLeft(RBTreeNode * x)
-{
-  RBTreeNode * y = x->right_;
-  x->right_ = y->left_;
-  if( y->left_ != &sentinel_ ) y->left_->parent_ = x;
-  y->parent_ = x->parent_;
-  if( x == x->parent_->left_ ){
-    x->parent_->left_ = y;
-  }
-  else {
-    x->parent_->right_ = y;
-  }
-  y->left_ = x;
-  x->parent_ = y;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-void RBTree<OT,PT,O2N,N2O,CO>::rotateRight(RBTreeNode * y)
-{
-  RBTreeNode * x = y->left_;
-  y->left_ = x->right_;
-  if( x->right_ != &sentinel_ ) x->right_->parent_ = y;
-  x->parent_ = y->parent_;
-  if( y == y->parent_->left_ ){
-    y->parent_->left_ = x;
-  }
-  else {
-    y->parent_->right_ = x;
-  }
-  x->right_ = y;
-  y->parent_ = x;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-void RBTree<OT,PT,O2N,N2O,CO>::insertFixup(RBTreeNode * x)
-{
-/* check Red-Black properties */
-  while( x != root_ && x->parent_->color_ == RED ){
-/* we have a violation */
-    if( x->parent_ == x->parent_->parent_->left_ ){
-      RBTreeNode * y = x->parent_->parent_->right_;
-      if( y->color_ == RED ){
-/* uncle is RED */
-        x->parent_->color_ = BLACK;
-        y->color_ = BLACK;
-        x->parent_->parent_->color_ = RED;
-        x = x->parent_->parent_;
+    void rotateLeft(RBTreeNode * x)
+    {
+      RBTreeNode * y = x->right_;
+      x->right_ = y->left_;
+      if( y->left_ != &sentinel_ ) y->left_->parent_ = x;
+      y->parent_ = x->parent_;
+      if( x == x->parent_->left_ ){
+        x->parent_->left_ = y;
       }
       else {
-/* uncle is BLACK */
-        if( x == x->parent_->right_ ){
-/* make x a left child */
-          x = x->parent_;
-          rotateLeft(x);
-        }
-/* recolor and rotate */
-        x->parent_->color_ = BLACK;
-        x->parent_->parent_->color_ = RED;
-        rotateRight(x->parent_->parent_);
+        x->parent_->right_ = y;
       }
+      y->left_ = x;
+      x->parent_ = y;
     }
-    else {
-/* mirror image of above code */
-      RBTreeNode * y = x->parent_->parent_->left_;
-      if( y->color_ == RED ){
-/* uncle is RED */
-        x->parent_->color_ = BLACK;
-        y->color_ = BLACK;
-        x->parent_->parent_->color_ = RED;
-        x = x->parent_->parent_;
-      }
-      else {
-/* uncle is BLACK */
-        if( x == x->parent_->left_ ){
-          x = x->parent_;
-          rotateRight(x);
-        }
-        x->parent_->color_ = BLACK;
-        x->parent_->parent_->color_ = RED;
-        rotateLeft(x->parent_->parent_);
-      }
-    }
-  }
-  root_->color_ = BLACK;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTreeNode * RBTree<OT,PT,O2N,N2O,CO>::treeInsertHelp(RBTreeNode * z)
-{
-  RBTreeNode * y = root_, * x = root_->left_;
-  z->left_ = z->right_ = &sentinel_;
-  intptr_t c = 0;
-  while( x != &sentinel_ ){
-    y = x;
-    c = CO(N2O(*x,param_),N2O(*z,param_),param_);
-    if( c > 0 ){
-      x = x->left_;
-    }
-    else if( c < 0 ){
-      x = x->right_;
-    }
-    else
-      return x;
-  }
-  z->parent_ = y;
-  if( y == root_ || c > 0 ){ 
-    y->left_ = z;
-  }
-  else {
-    y->right_ = z;
-  }
-  return NULL;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::insert(const OT & object,bool throwIfExist,bool deleteIfExist,OT ** pObject)
-{
-  RBTreeNode * y, * x = &O2N(object,param_);
-  if( (y = treeInsertHelp(x)) != NULL ){
-    if( deleteIfExist ) deleteObject(&object);
-    if( pObject != NULL ) *pObject = &N2O(*y,param_);
-    if( throwIfExist ) newObjectV1C2<Exception>(
-#if defined(__WIN32__) || defined(__WIN64__)
-      ERROR_ALREADY_EXISTS + errorOffset
-#else
-      EEXIST
-#endif
-      ,__PRETTY_FUNCTION__
-    )->throwSP();
-    return *this;
-  }
-  if( pObject != NULL ) *pObject = const_cast<OT *>(&object);
-  x->color_ = RED;
-  while( x->parent_->color_ == RED ){
-    if( x->parent_ == x->parent_->parent_->left_ ){
-      y = x->parent_->parent_->right_;
-      if( y->color_ == RED ){
-	      x->parent_->color_ = BLACK;
-	      y->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      x = x->parent_->parent_;
-      }
-      else {
-	      if( x == x->parent_->right_){
-	        x = x->parent_;
-	        rotateLeft(x);
-	      }
-	      x->parent_->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      rotateRight(x->parent_->parent_);
-      } 
-    }
-    else {
-      y = x->parent_->parent_->left_;
-      if( y->color_ == RED ){
-	      x->parent_->color_ = BLACK;
-	      y->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      x = x->parent_->parent_;
-      }
-      else {
-	      if( x == x->parent_->left_ ){
-	        x = x->parent_;
-	        rotateRight(x);
-	      }
-	      x->parent_->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      rotateLeft(x->parent_->parent_);
-      } 
-    }
-  }
-  root_->left_->color_ = BLACK;
-  count_++;
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-void RBTree<OT,PT,O2N,N2O,CO>::removeFixup(RBTreeNode * x)
-{
-  RBTreeNode * w, * rootLeft = root_->left_;
 
-  while( x->color_ != RED && rootLeft != x ){
-    if( x == x->parent_->left_ ){
-      w = x->parent_->right_;
-      if( w->color_ == RED ){
+    void rotateRight(RBTreeNode * y)
+    {
+      RBTreeNode * x = y->left_;
+      y->left_ = x->right_;
+      if( x->right_ != &sentinel_ ) x->right_->parent_ = y;
+      x->parent_ = y->parent_;
+      if( y == y->parent_->left_ ){
+        y->parent_->left_ = x;
+      }
+      else {
+        y->parent_->right_ = x;
+      }
+      x->right_ = y;
+      y->parent_ = x;
+    }
+
+    void insertFixup(RBTreeNode * x)
+    {
+/* check Red-Black properties */
+      while( x != root_ && x->parent_->color_ == RED ){
+/* we have a violation */
+        if( x->parent_ == x->parent_->parent_->left_ ){
+          RBTreeNode * y = x->parent_->parent_->right_;
+          if( y->color_ == RED ){
+/* uncle is RED */
+            x->parent_->color_ = BLACK;
+            y->color_ = BLACK;
+            x->parent_->parent_->color_ = RED;
+            x = x->parent_->parent_;
+          }
+          else {
+/* uncle is BLACK */
+            if( x == x->parent_->right_ ){
+/* make x a left child */
+              x = x->parent_;
+              rotateLeft(x);
+            }
+/* recolor and rotate */
+            x->parent_->color_ = BLACK;
+            x->parent_->parent_->color_ = RED;
+            rotateRight(x->parent_->parent_);
+          }
+        }
+        else {
+/* mirror image of above code */
+          RBTreeNode * y = x->parent_->parent_->left_;
+          if( y->color_ == RED ){
+/* uncle is RED */
+            x->parent_->color_ = BLACK;
+            y->color_ = BLACK;
+            x->parent_->parent_->color_ = RED;
+            x = x->parent_->parent_;
+          }
+          else {
+/* uncle is BLACK */
+            if( x == x->parent_->left_ ){
+              x = x->parent_;
+              rotateRight(x);
+            }
+            x->parent_->color_ = BLACK;
+            x->parent_->parent_->color_ = RED;
+            rotateLeft(x->parent_->parent_);
+          }
+        }
+      }
+      root_->color_ = BLACK;
+    }
+
+    void removeFixup(RBTreeNode * x)
+    {
+      RBTreeNode * w, * rootLeft = root_->left_;
+
+      while( x->color_ != RED && rootLeft != x ){
+        if( x == x->parent_->left_ ){
+          w = x->parent_->right_;
+          if( w->color_ == RED ){
 	      w->color_ = BLACK;
 	      x->parent_->color_ = RED;
 	      rotateLeft(x->parent_);
 	      w = x->parent_->right_;
-      }
-      if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+          }
+          if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
 	      w->color_ = RED;
 	      x = x->parent_;
-      }
-      else {
+          }
+          else {
 	      if( w->right_->color_ != RED ){
 	        w->left_->color_ = BLACK;
 	        w->color_ = RED;
@@ -1141,21 +1244,21 @@ void RBTree<OT,PT,O2N,N2O,CO>::removeFixup(RBTreeNode * x)
 	      w->right_->color_ = BLACK;
 	      rotateLeft(x->parent_);
 	      x = rootLeft; /* this is to exit while loop */
-      }
-    }
-    else { /* the code below is has left and right switched from above */
-      w = x->parent_->left_;
-      if( w->color_ == RED ){
+          }
+        }
+        else { /* the code below is has left and right switched from above */
+          w = x->parent_->left_;
+          if( w->color_ == RED ){
 	      w->color_ = BLACK;
 	      x->parent_->color_ = RED;
 	      rotateRight(x->parent_);
 	      w = x->parent_->left_;
-      }
-      if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+          }
+          if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
 	      w->color_ = RED;
 	      x = x->parent_;
-      }
-      else {
+          }
+          else {
 	      if( w->left_->color_ != RED ){
 	        w->right_->color_ = BLACK;
 	        w->color_ = RED;
@@ -1167,175 +1270,62 @@ void RBTree<OT,PT,O2N,N2O,CO>::removeFixup(RBTreeNode * x)
 	      w->left_->color_ = BLACK;
 	      rotateRight(x->parent_);
 	      x = rootLeft; /* this is to exit while loop */
+          }
+        }
       }
+      x->color_ = BLACK;
     }
-  }
-  x->color_ = BLACK;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTreeNode * RBTree<OT,PT,O2N,N2O,CO>::getSuccessorOf(RBTreeNode * x) const
-{
-  RBTreeNode * y;
+
+    RBTreeNode * getSuccessorOf(RBTreeNode * x) const
+    {
+      RBTreeNode * y;
 /* assignment to y is intentional */  
-  if( (y = x->right_) != &sentinel_ ){
+      if( (y = x->right_) != &sentinel_ ){
 /* returns the minium of the right subtree of x */  
-    while( y->left_ != &sentinel_ ) y = y->left_;
-    return y;
-  }
-  y = x->parent_;
+        while( y->left_ != &sentinel_ ) y = y->left_;
+        return y;
+      }
+      y = x->parent_;
 /* sentinel used instead of checking for nil */    
-  while( x == y->right_ ){
-    x = y;
-    y = y->parent_;
-  }
-  if( y == root_ ) return &sentinel_;
-  return y;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::remove(const OT & object)
-{
-  RBTreeNode * z = &O2N(object,param_), * x, * y;
-  y = ((z->left_ == &sentinel_) || (z->right_ == &sentinel_)) ? z : getSuccessorOf(z);
-  x = (y->left_ == &sentinel_) ? y->right_ : y->left_;
-/* x is y's only child */
-  if( y->left_ != &sentinel_ ) x = y->left_; else x = y->right_;
-/* assignment of y->p to x->p is intentional */  
-  if( root_ == (x->parent_ = y->parent_) ){
-    root_->left_ = x;
-  }
-  else {
-    if( y == y->parent_->left_ ){
-      y->parent_->left_ = x;
+      while( x == y->right_ ){
+        x = y;
+        y = y->parent_;
+      }
+      if( y == root_ ) return &sentinel_;
+      return y;
     }
-    else {
-      y->parent_->right_ = x;
+
+    RBTreeNode * treeInsertHelp(RBTreeNode * z)
+    {
+      RBTreeNode * y = root_, * x = root_->left_;
+      z->left_ = z->right_ = &sentinel_;
+      intptr_t c = 0;
+      while( x != &sentinel_ ){
+        y = x;
+        c = CO(N2O(*x,param_),N2O(*z,param_),param_);
+        if( c > 0 ){
+          x = x->left_;
+        }
+        else if( c < 0 ){
+          x = x->right_;
+        }
+        else
+          return x;
+      }
+      z->parent_ = y;
+      if( y == root_ || c > 0 ){ 
+        y->left_ = z;
+      }
+      else {
+        y->right_ = z;
+      }
+      return NULL;
     }
-  }
-  if( y != z ){
-    y->left_ = z->left_;
-    y->right_ = z->right_;
-    y->parent_ = z->parent_;
-    z->left_->parent_ = z->right_->parent_ = y;
-    if( z == z->parent_->left_ ){
-      z->parent_->left_ = y;
-    }
-    else {
-      z->parent_->right_ = y;
-    }
-    if( y->color_ != RED ){
-      y->color_ = z->color_;
-      removeFixup(x);
-    }
-    else {
-      y->color_ = z->color_;
-    }
-  }
-  else if( y->color_ != RED ){
-    removeFixup(x);
-  }
-  count_--;
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::drop(const OT & object)
-{
-  remove(object);
-  deleteObject(&object);
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::clear()
-{
-  root_ = &rootNode_;
-  rootNode_.left_ = &sentinel_;
-  rootNode_.right_ = &sentinel_;
-  rootNode_.parent_ = NULL;
-  rootNode_.color_ = BLACK;
-  count_ = 0;
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-RBTree<OT,PT,O2N,N2O,CO> & RBTree<OT,PT,O2N,N2O,CO>::drop()
-{
-  if( count_ > 0 ){
-    Walker walker(*this);
-    while( walker.next() ) deleteObject(&walker.object());
-    clear();
-  }
-  return *this;
-}
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-OT * RBTree<OT,PT,O2N,N2O,CO>::find(const OT & object) const
-{
-  RBTreeNode * current = root_->left_;
-  for(;;){
-    if( current == &sentinel_ ){ current = NULL; break; }
-    intptr_t c = CO(object,N2O(*current,param_),param_);
-    if( c == 0 ) break;
-    current = c < 0 ? current->left_ : current->right_;
-  }
-  return current == NULL ? NULL : &N2O(*current,param_);
-}
-//-----------------------------------------------------------------------------
-///////////////////////////////////////////////////////////////////////////////
-//-----------------------------------------------------------------------------
-class RBTreeBenchmarkObject {
-  public:
-    intmax_t key_;
-      
-    static RBTreeNode & treeO2N(const RBTreeBenchmarkObject & object,uintptr_t *){
-      return object.treeNode_;
-    }
-    static RBTreeBenchmarkObject & treeN2O(const RBTreeNode & node,uintptr_t *){
-      return node.object<RBTreeBenchmarkObject>(reinterpret_cast<RBTreeBenchmarkObject *>(NULL)->treeNode_);
-    }
-    static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1,uintptr_t *){
-      return a0.key_ > a1.key_ ? 1 : a0.key_ < a1.key_ ? -1 : 0;
-    }
-    mutable RBTreeNode treeNode_;
+  private:
+    RBTree(const RBTree<OT,PT,O2N,N2O,CO> &);
+    void operator = (const RBTree<OT,PT,O2N,N2O,CO> &);
 };
+//-----------------------------------------------------------------------------
 typedef
   RBTree<
     RBTreeBenchmarkObject,
@@ -1344,120 +1334,6 @@ typedef
     RBTreeBenchmarkObject::treeN2O,
     RBTreeBenchmarkObject::treeCO
 > RBTreeBenchmarkTree;
-//-----------------------------------------------------------------------------
-template <
-  typename OT,
-  typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
-> inline
-void RBTree<OT,PT,O2N,N2O,CO>::benchmark(uintptr_t elCount,uintptr_t cycles)
-{
-  Array<RBTreeBenchmarkObject> nodes;
-  nodes.resize(elCount);
-  Array<RBTreeBenchmarkObject *> pNodes;
-  pNodes.resize(elCount);
-  Randomizer rnd;
-
-//  assert( root_ == &rootNode_ );
-
-  uint64_t seqInsTime = 0, seqFindTime = 0, seqRemTime = 0;
-  uint64_t rndInsTime = 0, rndFindTime = 0, rndRemTime = 0;
-
-#if HAVE_NICE
-  nice(-20);
-#endif
-  for( intptr_t cycle = cycles - 1; cycle >= 0; cycle-- ){
-    uint64_t t = gettimeofday();
-    for( intptr_t i = elCount - 1; i >= 0; i-- ){
-      nodes[i].key_ = i + 1;
-      insert(nodes[i]);
-    }
-    seqInsTime += gettimeofday() - t;
-    t = gettimeofday();
-    for( intptr_t i = elCount - 1; i >= 0; i-- )
-      if( find(nodes[i]) == NULL ) fprintf(stderr,"seq find failed %"PRIdPTR"\n",i);
-    seqFindTime += gettimeofday() - t;
-    t = gettimeofday();
-    for( intptr_t i = elCount - 1; i >= 0; i-- ) remove(nodes[i]);
-    seqRemTime += gettimeofday() - t;
-
-//    assert( root_ == &rootNode_ );
-
-    rnd.srand(cycle);
-    for( intptr_t i = elCount - 1; i >= 0; i-- ) pNodes[i] = &nodes[i];
-    for( intptr_t i = elCount - 1; i >= 0; i-- ){
-      ksys::xchg(
-        pNodes[uintptr_t(rnd.random() % elCount)],
-        pNodes[uintptr_t(rnd.random() % elCount)]
-      );
-    }
-    t = gettimeofday();
-    for( intptr_t i = elCount - 1; i >= 0; i-- ) insert(*pNodes[i]);
-    rndInsTime += gettimeofday() - t;
-    t = gettimeofday();
-    for( intptr_t i = elCount - 1; i >= 0; i-- )
-      if( find(*pNodes[i]) == NULL ) fprintf(stderr,"rnd find failed %"PRIdPTR"\n",i);
-    rndFindTime += gettimeofday() - t;
-    t = gettimeofday();
-    for( intptr_t i = elCount - 1; i >= 0; i-- ) remove(*pNodes[i]);
-    rndRemTime += gettimeofday() - t;
-
-//    assert( root_ == &rootNode_ );
-  }
-
-  seqInsTime /= cycles;
-  seqFindTime /= cycles;
-  seqRemTime /= cycles;
-  rndInsTime /= cycles;
-  rndFindTime /= cycles;
-  rndRemTime /= cycles;
-  
-  fprintf(stderr,"seq inserts: %8"PRIu64".%04"PRIu64" ips, ellapsed %s\n",
-    uint64_t(elCount) * 1000000u / seqInsTime,
-    uint64_t(elCount) * 10000u * 1000000u / seqInsTime -
-    uint64_t(elCount) * 1000000u / seqInsTime * 10000u,
-    (const char *) utf8::elapsedTime2Str(seqInsTime).getOEMString()
-  );
-  fprintf(stderr,"  seq finds: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
-    uint64_t(elCount) * 1000000u / seqFindTime,
-    uint64_t(elCount) * 10000u * 1000000u / seqFindTime -
-    uint64_t(elCount) * 1000000u / seqFindTime * 10000u,
-    (const char *) utf8::elapsedTime2Str(seqFindTime).getOEMString()
-  );
-  fprintf(stderr,"seq removes: %8"PRIu64".%04"PRIu64" rps, ellapsed %s\n",
-    uint64_t(elCount) * 1000000u / seqRemTime,
-    uint64_t(elCount) * 10000u * 1000000u / seqRemTime -
-    uint64_t(elCount) * 1000000u / seqRemTime * 10000u,
-    (const char *) utf8::elapsedTime2Str(seqRemTime).getOEMString()
-  );
-
-  fprintf(stderr,"rnd inserts: %8"PRIu64".%04"PRIu64" ips, ellapsed %s\n",
-    uint64_t(elCount) * 1000000u / rndInsTime,
-    uint64_t(elCount) * 10000u * 1000000u / rndInsTime -
-    uint64_t(elCount) * 1000000u / rndInsTime * 10000u,
-    (const char *) utf8::elapsedTime2Str(rndInsTime).getOEMString()
-  );
-  fprintf(stderr,"  rnd finds: %8"PRIu64".%04"PRIu64" fps, ellapsed %s\n",
-    uint64_t(elCount) * 1000000u / rndFindTime,
-    uint64_t(elCount) * 10000u * 1000000u / rndFindTime -
-    uint64_t(elCount) * 1000000u / rndFindTime * 10000u,
-    (const char *) utf8::elapsedTime2Str(rndFindTime).getOEMString()
-  );
-  fprintf(stderr,"rnd removes: %8"PRIu64".%04"PRIu64" rps, ellapsed %s\n",
-    uint64_t(elCount) * 1000000u / rndRemTime,
-    uint64_t(elCount) * 10000u * 1000000u / rndRemTime -
-    uint64_t(elCount) * 1000000u / rndRemTime * 10000u,
-    (const char *) utf8::elapsedTime2Str(rndRemTime).getOEMString()
-  );
-
-  uint64_t index = uint64_t(elCount) * 10000u * 1000000u;
-  index /= (seqInsTime + seqFindTime + seqRemTime + rndInsTime + rndFindTime + rndRemTime) / 6;
-  index /= 100000u;
-
-  fprintf(stderr,"overall index: %"PRIu64".%04"PRIu64"\n",index / 10000u,index - (index / 10000u) * 10000u);
-}
 //-----------------------------------------------------------------------------
 } // namespace ksys
 //-----------------------------------------------------------------------------

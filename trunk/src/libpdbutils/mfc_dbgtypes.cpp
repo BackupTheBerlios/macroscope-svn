@@ -84,7 +84,7 @@ bool get_mfc_Array_symbolInfo(DbgType& dbgType, bool& discarge)
 RegisterDebugPostTypeHandler _register_std_vectorHandler(get_std_vector_symbolInfo);
 */
 
-bool get_mfc_string_symbolInfo(DbgType& dbgType, bool& discarge)
+bool get_mfc_string_symbolInfo(DbgType& dbgType, bool& /*discarge*/)
 {
   if (DBGSTRING_STARTSWITH(dbgType.typeName, "CString") == false)
     return false;

@@ -531,7 +531,7 @@ queryArrayType(DWORD64 modBase, uintptr_t dwTypeIndex, DWORD_PTR address, DbgTyp
   )
 
   
-  DbgType::BasicType basicType = queryBasicType(dwTypeIndex, modBase);
+  //DbgType::BasicType basicType = queryBasicType(dwTypeIndex, modBase);
 
   ULONG64 length;
   HANDLE_FALSE_CALL(
@@ -691,6 +691,8 @@ querySymbolType(__int64 modBase, uintptr_t dwTypeIndex, DWORD_PTR offset, int64_
   intptr_t mb2 = (intptr_t) (modBase >> 32);
   DOUTNL("querySymbolType: << modbase: " << mb1 << ":"<< mb2 << "; dwTypeIndex: " << dwTypeIndex
          << "; offset: " << offset << "; size=" << size);
+  dbgType.size = mb1;
+  dbgType.size = mb2;
   dbgType.size = size;
   dbgType.typeIndex = dwTypeIndex;
   dbgType.modBase = modBase;
@@ -830,7 +832,7 @@ retry:
       DWORD typeId = 0;
       if (SymGetTypeInfo( _currentProcess, modBase, children.ChildId[i], TI_GET_TYPEID, &typeId ) == FALSE)
         continue;
-      DbgType::BasicType basicType = queryBasicType(typeId, modBase);
+      //DbgType::BasicType basicType = queryBasicType(typeId, modBase);
       
       continue;
     }
@@ -923,8 +925,6 @@ retry:
       }
       break;
     }
-    
-      break;
     case DbgType::SymTagTypedef:
     case DbgType::SymTagFunctionType:
     case DbgType::SymTagFunction:

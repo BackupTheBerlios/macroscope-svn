@@ -37,13 +37,15 @@ extern "C" {
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 void be16enc(void * pp,uint16_t u)
 {
-  unsigned char *p = (unsigned char *)pp;
+  uint8_t *p = (uint8_t *)pp;
 
-  p[0] = (u >> 8) & 0xff;
-  p[1] = u & 0xff;
+  p[0] = (uint8_t) ((u >> 8) & 0xff);
+  p[1] = (uint8_t) (u & 0xff);
 }
 //---------------------------------------------------------------------------
 #endif
@@ -54,15 +56,17 @@ void be16enc(void * pp,uint16_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 void be32enc(void * pp,uint32_t u)
 {
   uint8_t * p = (uint8_t *) pp;
 
-  p[0] = (u >> 24) & 0xff;
-  p[1] = (u >> 16) & 0xff;
-  p[2] = (u >> 8) & 0xff;
-  p[3] = u & 0xff;
+  p[0] = (uint8_t) ((u >> 24) & 0xff);
+  p[1] = (uint8_t) ((u >> 16) & 0xff);
+  p[2] = (uint8_t) ((u >> 8) & 0xff);
+  p[3] = (uint8_t) (u & 0xff);
 }
 //---------------------------------------------------------------------------
 #endif
@@ -73,10 +77,12 @@ void be32enc(void * pp,uint32_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 void be64enc(void *pp, uint64_t u)
 {
-  unsigned char *p = (unsigned char *)pp;
+  uint8_t *p = (uint8_t *)pp;
 
   be32enc(p,(uint32_t) (u >> 32));
   be32enc(p + 4,(uint32_t) (u & 0xffffffff));
@@ -90,10 +96,12 @@ void be64enc(void *pp, uint64_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint16_t htobe16(uint16_t u)
 {
-  return (u >> 8) | ((u & 0xff) << 8);
+  return (uint16_t) ((u >> 8) | ((u & 0xff) << 8));
 }
 //---------------------------------------------------------------------------
 #endif
@@ -104,10 +112,12 @@ uint16_t htobe16(uint16_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint32_t htobe32(uint32_t u)
 {
-  return (u >> 24) | ((u >> 8) & 0xff00) | ((u << 8) & 0xff0000) | (u << 24);
+  return (uint32_t) ((u >> 24) | ((u >> 8) & 0xff00) | ((u << 8) & 0xff0000) | (u << 24));
 }
 //---------------------------------------------------------------------------
 #endif
@@ -118,6 +128,8 @@ uint32_t htobe32(uint32_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint64_t htobe64(uint64_t u)
 {
@@ -132,6 +144,8 @@ uint64_t htobe64(uint64_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 void le16enc(void *pp, uint16_t u)
 {
@@ -146,6 +160,8 @@ void le16enc(void *pp, uint16_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 void le32enc(void *pp, uint32_t u)
 {
@@ -160,6 +176,8 @@ void le32enc(void *pp, uint32_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 void le64enc(void *pp, uint64_t u)
 {
@@ -174,6 +192,8 @@ void le64enc(void *pp, uint64_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint16_t le16toh(uint16_t u)
 {
@@ -188,6 +208,8 @@ uint16_t le16toh(uint16_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint32_t le32toh(uint32_t u)
 {
@@ -202,6 +224,8 @@ uint32_t le32toh(uint32_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint64_t le64toh(uint64_t u)
 {
@@ -216,12 +240,14 @@ uint64_t le64toh(uint64_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint16_t be16dec(const void * pp)
 {
-  unsigned char const *p = (unsigned char const *)pp;
+  uint8_t const *p = (uint8_t const *)pp;
  
-  return ((p[0] << 8) | p[1]);
+  return (uint16_t) (((p[0] << 8) | p[1]));
 }
 
 //---------------------------------------------------------------------------
@@ -233,6 +259,8 @@ uint16_t be16dec(const void * pp)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint32_t be32dec(const void * pp)
 {
@@ -249,10 +277,12 @@ uint32_t be32dec(const void * pp)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint64_t be64dec(const void *pp)
 {
-  unsigned char const *p = (unsigned char const *)pp;
+  uint8_t const *p = (uint8_t const *)pp;
 
   return (((uint64_t)be32dec(p) << 32) | be32dec(p + 4));
 }
@@ -265,10 +295,12 @@ uint64_t be64dec(const void *pp)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint16_t be16toh(uint16_t u)
 {
-  return (u >> 8) | (u & 0xff) << 8;
+  return (uint16_t) (((u >> 8) | (u & 0xff)) << 8);
 }
 
 //---------------------------------------------------------------------------
@@ -280,6 +312,8 @@ uint16_t be16toh(uint16_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint32_t be32toh(uint32_t u)
 {
@@ -294,6 +328,8 @@ uint32_t be32toh(uint32_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint64_t be64toh(uint64_t u)
 {
@@ -308,6 +344,8 @@ uint64_t be64toh(uint64_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint16_t le16dec(const void *pp)
 {
@@ -322,6 +360,8 @@ uint16_t le16dec(const void *pp)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint32_t le32dec(const void *pp)
 {
@@ -336,6 +376,8 @@ uint32_t le32dec(const void *pp)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint64_t le64dec(const void *pp)
 {
@@ -350,6 +392,8 @@ uint64_t le64dec(const void *pp)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint16_t htole16(uint16_t u)
 {
@@ -364,6 +408,8 @@ uint16_t htole16(uint16_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint32_t htole32(uint32_t u)
 {
@@ -378,6 +424,8 @@ uint32_t htole32(uint32_t u)
 static __inline__
 #elif _MSC_VER
 __forceinline
+#else
+inline
 #endif
 uint64_t htole64(uint64_t u)
 {
