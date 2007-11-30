@@ -672,7 +672,7 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
       return aeUser;
     }
     *this << int32_t(aeOK);
-    utf8::String password(getUserPassword(user));
+    utf8::String password(getUserPassword(user,&ap));
     memset(passwordSHA256,0,sizeof(passwordSHA256));
     ksys::SHA256 SHA256;
     if( password.strncasecmp("sha256:",7) == 0 ){

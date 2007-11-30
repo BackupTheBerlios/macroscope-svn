@@ -63,9 +63,28 @@ bool ServerFiber::isValidUser(const utf8::String & user)
   return server_->config_->section("users").isSection(user);
 }
 //------------------------------------------------------------------------------
-utf8::String ServerFiber::getUserPassword(const utf8::String & user)
+utf8::String ServerFiber::getUserPassword(const utf8::String & user,const AuthParams * ap)
 {
-  return server_->config_->section("users").section(user).text("password");
+  if( server_->config_->section("users").isSection(user) ){
+    if( ap != NULL ){
+      ap->maxRecvSize_ = server_->config_->valueByPath("users." + user + ".max_recv_size",ap->maxRecvSize_);
+      ap->maxSendSize_ = server_->config_->valueByPath("users." + user + ".max_send_size",ap->maxSendSize_);
+      ap->recvTimeout_ = server_->config_->valueByPath("users." + user + ".recv_timeout",ap->recvTimeout_);
+      if( ap->recvTimeout_ != ~uint64_t(0) ) ap->recvTimeout_ *= 1000000u;
+      ap->sendTimeout_ = server_->config_->valueByPath("users." + user + ".send_timeout",ap->sendTimeout_);
+      if( ap->sendTimeout_ != ~uint64_t(0) ) ap->sendTimeout_ *= 1000000u;
+      ap->encryption_ = server_->config_->textByPath("users." + user + ".encryption.",ap->encryption_);
+      ap->threshold_ = server_->config_->valueByPath("users." + user + ".encryption.threshold",ap->threshold_);
+      ap->compression_ = server_->config_->textByPath("users." + user + ".compression.",ap->compression_);
+      ap->compressionType_ = server_->config_->textByPath("users." + user + ".compression.type",ap->compressionType_);
+      ap->crc_ = server_->config_->textByPath("users." + user + ".compression.crc",ap->crc_);
+      ap->level_ = server_->config_->valueByPath("users." + user + ".compression.max_level",ap->level_);
+      ap->optimize_ = server_->config_->valueByPath("users." + user + ".compression.optimize",ap->optimize_);
+      ap->bufferSize_ = server_->config_->valueByPath("users." + user + ".compression.buffer_size",ap->bufferSize_);
+    }
+    return server_->config_->section("users").section(user).text("password");
+  }
+  return utf8::String();
 }
 //------------------------------------------------------------------------------
 void ServerFiber::auth()
@@ -86,8 +105,23 @@ void ServerFiber::auth()
   ap.optimize_ = server_->config_->section("compression").value("optimize",true);
   ap.bufferSize_ = server_->config_->section("compression").value("buffer_size",getpagesize() * 16);
   ap.noAuth_ = false;
-  if( server_->config_->isSection("users") )
-    ap.noAuth_ = server_->config_->section("users").value("noauth",ap.noAuth_);
+  if( server_->config_->isSection("users") ){
+    ap.maxRecvSize_ = server_->config_->valueByPath("users.max_recv_size",ap.maxRecvSize_);
+    ap.maxSendSize_ = server_->config_->valueByPath("users.max_send_size",ap.maxSendSize_);
+    ap.recvTimeout_ = server_->config_->valueByPath("users.recv_timeout",ap.recvTimeout_);
+    if( ap.recvTimeout_ != ~uint64_t(0) ) ap.recvTimeout_ *= 1000000u;
+    ap.sendTimeout_ = server_->config_->valueByPath("users.send_timeout",ap.sendTimeout_);
+    if( ap.sendTimeout_ != ~uint64_t(0) ) ap.sendTimeout_ *= 1000000u;
+    ap.noAuth_ = server_->config_->valueByPath("users.noauth",ap.noAuth_);
+    ap.encryption_ = server_->config_->textByPath("encryption.",ap.encryption_);
+    ap.threshold_ = server_->config_->valueByPath("encryption.threshold",ap.threshold_);
+    ap.compression_ = server_->config_->textByPath("compression.",ap.compression_);
+    ap.compressionType_ = server_->config_->textByPath("compression.type",ap.compressionType_);
+    ap.crc_ = server_->config_->textByPath("compression.crc",ap.crc_);
+    ap.level_ = server_->config_->valueByPath("compression.max_level",ap.level_);
+    ap.optimize_ = server_->config_->valueByPath("compression.optimize",ap.optimize_);
+    ap.bufferSize_ = server_->config_->valueByPath("compression.buffer_size",ap.bufferSize_);
+  }
   Error e = (Error) serverAuth(ap);
   if( e != eOK ){
     utf8::String::Stream stream;

@@ -51,7 +51,7 @@ class MSFTPServerFiber : public ksock::ServerFiber {
     int8_t cmd_;
 
     bool isValidUser(const utf8::String & user);
-    utf8::String getUserPassword(const utf8::String & user);
+    utf8::String getUserPassword(const utf8::String & user,const AuthParams * ap = NULL);
 
     MSFTPServerFiber & putCode(int32_t code);
     MSFTPServerFiber & auth();
@@ -118,7 +118,7 @@ bool MSFTPServerFiber::isValidUser(const utf8::String & user)
   return msftp_->msftpConfig_->parse().override().section("users").isSection(user);
 }
 //------------------------------------------------------------------------------
-utf8::String MSFTPServerFiber::getUserPassword(const utf8::String & user)
+utf8::String MSFTPServerFiber::getUserPassword(const utf8::String & user,const AuthParams *)
 {
   return msftp_->msftpConfig_->section("users").section(user).text("password");
 }

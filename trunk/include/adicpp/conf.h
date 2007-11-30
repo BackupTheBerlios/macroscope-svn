@@ -89,6 +89,7 @@ class ConfigSection {
     utf8::String name_;
     mutable HashedObjectList<utf8::String,ConfigSection> subSections_;
     mutable HashedObjectList<utf8::String,Mutant> values_;
+    mutable Mutant nullValueRef_;
 };
 //---------------------------------------------------------------------------
 inline ConfigSection::~ConfigSection()
@@ -160,8 +161,7 @@ inline const ConfigSection & ConfigSection::section(uintptr_t i) const
 inline Mutant & ConfigSection::valueRef(const utf8::String & key) const
 {
   HashedObjectListItem< utf8::String,Mutant> *  item;
-  if( (item = values_.itemOfKey(key)) == NULL )
-    values_.add(newObject<Mutant>(),key,&item);
+  if( (item = values_.itemOfKey(key)) == NULL ) return nullValueRef_;
   return *item->object();
 }
 //---------------------------------------------------------------------------

@@ -746,7 +746,7 @@ class ServerFiber : public ksock::ServerFiber {
     ServerFiber(Server & server,utf8::String user = utf8::String(),utf8::String key = utf8::String());
   protected:
     bool isValidUser(const utf8::String & user);
-    utf8::String getUserPassword(const utf8::String & user);
+    utf8::String getUserPassword(const utf8::String & user,const AuthParams * ap);
     void main();
   private:
     Server * server_;

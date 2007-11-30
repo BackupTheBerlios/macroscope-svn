@@ -70,9 +70,9 @@ ConfigSection & ConfigSection::sectionByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eos() ) break;
+    if( e - b < 1 && e.eos() && (e - 1).getChar() != '.' ) break;
     utf8::String sname(utf8::String(b,e));
-    if( sname.strlen() == 0 ){
+    if( sname.isNull() ){
       if( sections.count() > 1 ) sections.resize(sections.count() - 1);
     }
     else {
@@ -90,9 +90,9 @@ bool ConfigSection::isSectionByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eos() ) break;
+    if( e - b < 1 && e.eos() && (e - 1).getChar() != '.' ) break;
     utf8::String sname(utf8::String(b,e));
-    if( sname.strlen() == 0 ){
+    if( sname.isNull() ){
       if( sections.count() > 1 ) sections.resize(sections.count() - 1);
     }
     else {
@@ -112,12 +112,12 @@ bool ConfigSection::isValueByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eos() ) break;
+    if( e - b < 1 && e.eos() && (e - 1).getChar() != '.' ) break;
     utf8::String sname(utf8::String(b,e));
     if( e.eos() ){
       return sections[sections.count() - 1]->isValue(sname);
     }
-    if( sname.strlen() == 0 ){
+    if( sname.isNull() ){
       if( sections.count() > 1 ) sections.resize(sections.count() - 1);
     }
     else {
@@ -142,12 +142,12 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
   sections.add(this);
   for(;;){
     while( e.getChar() != '.' && e.next() );
-    if( e - b < 1 && e.eos() ) break;
+    if( e - b < 1 && e.eos() && (e - 1).getChar() != '.' ) break;
     utf8::String sname(utf8::String(b,e));
     if( e.eos() ){
       return sections[sections.count() - 1]->valueRef(sname);
     }
-    if( sname.strlen() == 0 ){
+    if( sname.isNull() ){
       if( sections.count() > 1 ) sections.resize(sections.count() - 1);
     }
     else {
@@ -165,7 +165,7 @@ static void saveSectionHelper(
   utf8::String value,
   uintptr_t level)
 {
-  if( key.strlen() > 0 ){
+  if( !key.isNull() ){
     utf8::String::Iterator keyIt(key);
     while( !keyIt.eos() ){
       if( keyIt.isBlank() || keyIt.isCntrl() || keyIt.getChar() == '\"' ){
@@ -183,12 +183,12 @@ static void saveSectionHelper(
     }
     valueIt.next();
   }
-  if( key.strlen() > 0 ){
+  if( !key.isNull() ){
     for( uintptr_t j = 0; j < level; j++ ) stream << "  ";
     stream << key << " = ";
   }
   stream << value;
-  if( key.strlen() > 0 ) stream << ";\n";
+  if( !key.isNull() ) stream << ";\n";
 }
 //---------------------------------------------------------------------------
 ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,bool recursive,uintptr_t level)
@@ -199,7 +199,7 @@ ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,b
   }
   uintptr_t i;
   utf8::String::Stream stream;
-  if( name_.strlen() > 0 ){
+  if( !name_.isNull() ){
     for( i = 0; i < level - 1; i++ ) stream << "  ";
     stream << name_ << " ";
     Mutant * m = values_.objectOfKey(utf8::String());
@@ -209,11 +209,11 @@ ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,b
   for( i = 0; i < values_.count(); i++ ){
     HashedObjectListItem<utf8::String,Mutant> * item = values_.itemOfIndex(i);
     utf8::String key(item->key());
-    if( key.strlen() == 0 ) continue;
+    if( key.isNull() ) continue;
     utf8::String value(*item->object());
     saveSectionHelper(stream,key,value,level);
   }
-  if( name_.strlen() > 0 ){
+  if( !name_.isNull() ){
     for( i = 0; i < level - 1; i++ ) stream << "  ";
     stream << "}\n";
   }
@@ -265,7 +265,7 @@ ConfigSection & ConfigSection::addSection(const ConfigSection & section)
   }  
   for( i = section.values_.count() - 1; i >= 0; i-- ){
     HashedObjectListItem<utf8::String,Mutant> * item = section.values_.itemOfIndex(i);
-    if( item->key().strlen() > 0 ) setValue(item->key(),*item->object());
+    if( !item->key().isNull() ) setValue(item->key(),*item->object());
   }  
   return *this;
 }
@@ -374,7 +374,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           aheadi_.last();
           t = tt = ttUnknown;
           prevChar = 0;
-          if( token.strlen() > 0 ) break; else continue;
+          if( !token.isNull() ) break; else continue;
         }
         else if( prevChar == '/' && c == '*' ){
           t = tt = ttUnknown;
@@ -478,7 +478,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     if( tt == ttLeftBrace ) break;
     if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
       newObjectV1C2<EConfig>(this, "invalid section param")->throwSP();
-    if( param.strlen() > 0 ) param += ",";
+    if( !param.isNull() ) param += ",";
     if( tt == ttQuotedString ){
       param += unScreenString(token);
     }
@@ -490,7 +490,7 @@ Config & Config::parseSectionHeader(ConfigSection & root)
     if( tt != ttColon )
       newObjectV1C2<EConfig>(this, "unexpected token '" + token + "', expecting colon")->throwSP();
   }
-  if( param.strlen() > 0 ) root.setValue(utf8::String(),param);
+  if( !param.isNull() ) root.setValue(utf8::String(),param);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -509,7 +509,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         newObjectV1C2<EConfig>(this, "unexpected token '" + token + "'")->throwSP();
       break;
     }
-    if( (tt != ttString && tt != ttQuotedString && tt != ttNumeric) || token.strlen() == 0 )
+    if( (tt != ttString && tt != ttQuotedString && tt != ttNumeric) || token.isNull() )
       newObjectV1C2<EConfig>(this, "invalid section or key name")->throwSP();
     utf8::String key(token);
     token = getToken(tt);
@@ -545,7 +545,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         if( tt == ttSemicolon ) break;
         if( tt != ttString && tt != ttQuotedString && tt != ttNumeric )
           newObjectV1C2<EConfig>(this, "invalid section key value")->throwSP();
-        if( value.strlen() > 0 ) value += ",";
+        if( !value.isNull() ) value += ",";
         /*if( tt == ttQuotedString ){
           value += unScreenString(token);
         }
@@ -566,8 +566,8 @@ Config & Config::parseSectionBody(ConfigSection & root)
 Config & Config::parse()
 {
   utf8::String fileName;
-  if( file_.fileName().strlen() == 0 ){
-    if( defaultFileName().strlen() == 0 ){
+  if( file_.fileName().isNull() ){
+    if( defaultFileName().isNull() ){
       file_.fileName(changeFileExt(getExecutableName(),".conf"));
     }
     else{

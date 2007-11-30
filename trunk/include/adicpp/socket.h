@@ -194,7 +194,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     const SockAddr & remoteAddress() const;
   protected:
     virtual bool isValidUser(const utf8::String & /*user*/){ return false; }
-    virtual utf8::String getUserPassword(const utf8::String & /*user*/){ return utf8::String(); }
+    virtual utf8::String getUserPassword(const utf8::String & /*user*/,const AuthParams * /*ap*/){ return utf8::String(); }
     ksys::AutoPtr<SockAddr> remoteAddress_; // client address which accept returns
   private:
     static const uint8_t authMagic_[16];
