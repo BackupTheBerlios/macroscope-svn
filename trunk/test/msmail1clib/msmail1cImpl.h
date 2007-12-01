@@ -413,6 +413,30 @@ public:
 
       LockedFile * findFileByName(const utf8::String & name);
       LockedFile * addFile(const utf8::String & name);
+      // Решение проблемы Сервер занят
+      class ServerBusyThread : public Thread {
+        public:
+          virtual ~ServerBusyThread() {}
+          ServerBusyThread(msmail1c * parent = NULL) : parent_(parent) {}
+        protected:
+        private:
+          msmail1c * parent_;
+          Semaphore sem_;
+          Array<uint8_t> text_;
+          Array<HWND> windows_;
+          uintptr_t count_;
+          union {
+            const char * textToFindA_;
+            const wchar_t * textToFindW_;
+          };
+          static BOOL CALLBACK enumWindowsProc(HWND hwnd,LPARAM lParam);
+          void threadBeforeWait();
+          void threadExecute();
+
+          ServerBusyThread(const ServerBusyThread &);
+          void operator = (const ServerBusyThread &);
+      };
+      AutoPtr<ServerBusyThread> serverBusyThread_;
   };
 
   AutoPtr<msmail1c> msmail1c_;

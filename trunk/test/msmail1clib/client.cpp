@@ -191,17 +191,21 @@ void BaseClientFiber::getCode(int32_t noThrowCode)
 //------------------------------------------------------------------------------
 void BaseClientFiber::main()
 {
+  uintptr_t count = 0;
   bool online = false;
   while( !terminated_ ){
     cycleStage0();
+    if( count > 0 ) ksleep(1000000);
     connectHost(online);
     if( cycleStage1() ) break;
     try {
       if( online ){
+        count = 0;
         onlineStage0();
         onlineStage1();
       }
       else {
+        count++;
         offlineStage0();
       }
     }

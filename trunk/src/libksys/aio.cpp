@@ -283,7 +283,7 @@ void AsyncIoSlave::threadExecute()
     AutoLock<InterlockedMutex> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
-      openAPI(object);
+      //openAPI(object);
       assert( sp < MAXIMUM_WAIT_OBJECTS - 1 );
       sp++;
       eReqs_[sp] = object;
@@ -401,7 +401,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         if( (object->length_ >>= 1) > 0 ) goto l1;
       if( rw == 0 && GetLastError() != ERROR_IO_PENDING && GetLastError() != WSAEWOULDBLOCK ){
         DWORD err = GetLastError();
-        closeAPI(object);
+        //closeAPI(object);
 
         safeEvents_[ssp++] = events[sp];
         events[sp] = NULL;
@@ -503,7 +503,7 @@ l2:       object = eReqs_[wm];
             if( object->timeout_ == ~uint64_t(0) ) continue;
             object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
             if( object->timeout_ == 0 ){
-              closeAPI(object);
+              //closeAPI(object);
 #ifndef NDEBUG
               BOOL cir =
 #endif
@@ -538,7 +538,7 @@ l2:       object = eReqs_[wm];
       }
       if( node != NULL ){
         object->errno_ = GetLastError();
-        closeAPI(object);
+        //closeAPI(object);
 
         safeEvents_[ssp++] = events[wm];
         events[wm] = events[sp];
@@ -576,7 +576,7 @@ void AsyncIoSlave::threadExecute()
     AutoLock<InterlockedMutex> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
-      openAPI(object);
+      //openAPI(object);
       errno = 0;
       switch( object->type_ ){
         case etDirectoryChangeNotification :
@@ -687,7 +687,7 @@ void AsyncIoSlave::threadExecute()
       }
       else if( errno != EINPROGRESS ){
         error = errno;
-        closeAPI(object);
+        //closeAPI(object);
         newRequests_.remove(*object);
         object->errno_ = error;
         object->count_ = ~(uint64_t) 0;
@@ -793,7 +793,7 @@ void AsyncIoSlave::threadExecute()
           default        :
             assert( 0 );
         }
-	closeAPI(object);
+	      //closeAPI(object);
         requests_.remove(*object);
         object->ioSlave_ = NULL;
         object->errno_ = error;

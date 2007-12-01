@@ -44,6 +44,95 @@ Cmsmail1c::Cmsmail1c()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+void Cmsmail1c::msmail1c::ServerBusyThread::threadBeforeWait()
+{
+  terminate();
+  sem_.post();
+}
+//------------------------------------------------------------------------------
+BOOL CALLBACK Cmsmail1c::msmail1c::ServerBusyThread::enumWindowsProc(HWND hwnd,LPARAM lParam)
+{
+  ServerBusyThread * thread = (ServerBusyThread *) lParam;
+  try {
+    bool match = false;
+    int i, l;
+    thread->text_ = uint8_t(0);
+    if( isWin9x() ){
+      l = GetWindowTextLength(hwnd);
+      if( uintptr_t(l + 1) > thread->text_.count() ) thread->text_.resize(l + 1);
+      SetLastError(ERROR_SUCCESS);
+      l = GetWindowTextA(hwnd,(LPSTR) thread->text_.ptr(),l + 1);
+      if( l > 0 ){
+        const char * text = (const char *) thread->text_.ptr();
+        for( i = 0; i <= l && text[i] == thread->textToFindA_[i]; i++ );
+        match = text[i] == '\0';
+      }
+    }
+    else {
+      l = GetWindowTextLength(hwnd);
+      if( (l + 1) * sizeof(WCHAR) > thread->text_.count() ) thread->text_.resize((l + 1) * sizeof(WCHAR));
+      SetLastError(ERROR_SUCCESS);
+      l = GetWindowTextW(hwnd,(LPWSTR) thread->text_.ptr(),(l + 1) * sizeof(WCHAR));
+      if( l > 0 ){
+        const wchar_t * text = (const wchar_t *) thread->text_.ptr();
+        for( i = 0; i <= l && text[i] == thread->textToFindW_[i]; i++ );
+        match = text[i] == L'\0';
+      }
+    }
+    if( match ){
+      if( thread->count_ == thread->windows_.count() )
+        thread->windows_.add(hwnd); else thread->windows_[thread->count_] = hwnd;
+      thread->count_++;
+    }
+  }
+  catch( ... ){}
+  return TRUE;
+}
+//------------------------------------------------------------------------------
+void Cmsmail1c::msmail1c::ServerBusyThread::threadExecute()
+{
+  for(;;){
+    sem_.timedWait(3u * 1000000u);
+    if( terminated_ ) break;
+    count_ = 0;
+    if( isWin9x() )
+      textToFindA_ = "Сервер занят";
+    else
+      textToFindW_ = L"Сервер занят";
+    if( EnumWindows((WNDENUMPROC) enumWindowsProc,(LPARAM) this) != FALSE ){
+      try {
+        Array<HWND> windows(windows_);
+        for( intptr_t i = count_ - 1; i >= 0; i-- ){
+          if( isWin9x() )
+            textToFindA_ = "По&вторить";
+          else
+            textToFindW_ = L"По&вторить";
+          count_ = 0;
+          if( EnumChildWindows(windows[i],(WNDENUMPROC) enumWindowsProc,(LPARAM) this) == FALSE ) continue;
+          if( count_ == 0 ) continue;
+          if( isWin9x() ){
+            PostMessageA(windows_[0],WM_SYSKEYDOWN,'в',1 | (1 << 29));
+            PostMessageA(windows_[0],WM_SYSCHAR,'в',1 | (1 << 29));
+            PostMessageA(windows_[0],WM_SYSKEYUP,'в',1 | (1 << 29));
+          }
+          else {
+            PostMessageW(windows_[0],WM_SYSKEYDOWN,L'в',1 | (1 << 29));
+            PostMessageW(windows_[0],WM_SYSCHAR,L'в',1 | (1 << 29));
+            PostMessageW(windows_[0],WM_SYSKEYUP,L'в',1 | (1 << 29));
+          }
+          //PostMessage(windows_[0],WM_SETFOCUS,NULL,NULL);
+          //PostMessage(windows_[0],WM_KEYDOWN,VK_RETURN,1);
+          //PostMessage(windows_[0],WM_CHAR,VK_RETURN,1);
+          //PostMessage(windows_[0],WM_KEYUP,VK_RETURN,1);
+        }
+      }
+      catch( ... ){}
+    }
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 Cmsmail1c::msmail1c::~msmail1c()
 {
   client_.close();
@@ -114,7 +203,8 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"AttachFileToMessage", L"ПрикрепитьФайлКСообщению",
       L"SaveMessageAttachmentToFile", L"СохранитьПрикреплениеСообщенияВФайл",
       L"ReceiveMessages", L"ПолучитьСообщения",
-      L"RepairLocking", L"ПочинитьБлокировки"
+      L"RepairLocking", L"ПочинитьБлокировки",
+      L"RepairServerBusy", L"ПочинитьСерверЗанят"
     };
     msmail1c_->functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
@@ -912,7 +1002,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 31;
+  *plMethods = 32;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -1190,6 +1280,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"ПочинитьБлокировки")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 33 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RepairServerBusy")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ПочинитьСерверЗанят")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1230,6 +1328,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 30 : *plParams = 3; break;
     case 31 : *plParams = 1; break;
     case 32 : *plParams = 0; break;
+    case 33 : *plParams = 0; break;
     default :
       *plParams = -1;
       return E_NOTIMPL;
@@ -2018,6 +2117,11 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           else {
             msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
           }
+          break;
+        case 33 : // RepairServerBusy
+          msmail1c_->serverBusyThread_ = newObject<msmail1c::ServerBusyThread>();
+          msmail1c_->serverBusyThread_->resume();
+          V_I4(pvarRetValue) = 1;
           break;
         default :
           hr = E_NOTIMPL;
