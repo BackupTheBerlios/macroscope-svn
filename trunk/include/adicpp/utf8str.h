@@ -256,8 +256,8 @@ class String {
             Format(short n,const char * fmt = "%hd");
             Format(unsigned short n,const char * fmt = "%hd");
 #if !HAVE_INTPTR_T_AS_LONG
-            Format(long n,const char * fmt = "%d");
-            Format(unsigned long n,const char * fmt = "%u");
+            Format(long n,const char * fmt = "%ld");
+            Format(unsigned long n,const char * fmt = "%lu");
 #endif
 #if !HAVE_INTPTR_T_AS_INT
             Format(int n,const char * fmt = "%d");

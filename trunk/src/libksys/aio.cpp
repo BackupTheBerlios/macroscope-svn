@@ -66,16 +66,6 @@ void AsyncDescriptor::close2()
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
-void AsyncDescriptor::openAPI()
-{
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-}
-//------------------------------------------------------------------------------
-void AsyncDescriptor::closeAPI()
-{
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-}
-//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 void BaseThread::initialize()
@@ -96,6 +86,18 @@ void BaseThread::initialize()
 void BaseThread::cleanup()
 {
   requester().~Requester();
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+AsyncIoSlave::SocketInitializer::~SocketInitializer()
+{
+  ksock::api.close();
+}
+//------------------------------------------------------------------------------
+AsyncIoSlave::SocketInitializer::SocketInitializer()
+{
+  ksock::api.open();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -230,40 +232,6 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 #undef MAX_REQS
 #endif
   return r;
-}
-//---------------------------------------------------------------------------
-void AsyncIoSlave::openAPI(AsyncEvent * object)
-{
-  switch( object->type_ ){
-    case etRead :
-    case etWrite :
-    case etAccept :
-    case etConnect :
-      object->descriptor_->openAPI();
-      break;
-    default :
-      if( object->type_ >= etCount ){
-        assert( 0 );
-        exit(EINVAL);
-      }
-  }
-}
-//---------------------------------------------------------------------------
-void AsyncIoSlave::closeAPI(AsyncEvent * object)
-{
-  switch( object->type_ ){
-    case etRead :
-    case etWrite :
-    case etAccept :
-    case etConnect :
-      object->descriptor_->closeAPI();
-      break;
-    default :
-      if( object->type_ >= etCount ){
-        assert( 0 );
-        exit(EINVAL);
-      }
-  }
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

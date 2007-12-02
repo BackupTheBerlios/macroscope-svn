@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1206,14 +1206,6 @@ void AsyncFile::flush2()
 }
 //------------------------------------------------------------------------------
 void AsyncFile::close2()
-{
-}
-//------------------------------------------------------------------------------
-void AsyncFile::openAPI()
-{
-}
-//------------------------------------------------------------------------------
-void AsyncFile::closeAPI()
 {
 }
 //------------------------------------------------------------------------------

@@ -177,8 +177,6 @@ class AsyncFile : public AsyncDescriptor {
     void shutdown2();
     void flush2();
     void close2();
-    void openAPI();
-    void closeAPI();
     bool redirectByName();
     void redirectToStdin();
     void redirectToStdout();

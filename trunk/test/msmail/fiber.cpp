@@ -434,8 +434,6 @@ void ServerFiber::processMailbox(
   utf8::String myHost(server_->bindAddrs()[0].resolveAddr(defaultPort));
   Vector<utf8::String> list;
   getDirList(list,userMailBox + "*.msg",utf8::String(),false);
-  Message::Keys ids;
-  AutoDrop<Message::Keys> idsAutoDrop(ids);
   for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
     utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
     bool isNewMessage = ids_.find(id) == NULL;
@@ -486,7 +484,7 @@ void ServerFiber::processMailbox(
             putCode(i > 0 ? eOK : eLastMessage);
           }
           if( messageAccepted ){
-            ids.insert(*newObjectC1<Message::Key>(id));
+            ids_.insert(*newObjectC1<Message::Key>(id),false);
           }
           if( wait && !messageAccepted ) wait = false;
         }
@@ -495,7 +493,6 @@ void ServerFiber::processMailbox(
     list.remove(i);
   }
   flush();
-  ids_.xchg(ids);
 }
 //------------------------------------------------------------------------------
 void ServerFiber::recvMail() // client receiving mail

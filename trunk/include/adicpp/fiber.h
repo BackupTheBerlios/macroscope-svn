@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2007 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -221,6 +221,13 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
     AsyncIoSlave(const AsyncIoSlave &){}
     void operator = (const AsyncIoSlave &){}
 
+    class SocketInitializer {
+      public:
+        ~SocketInitializer();
+        SocketInitializer();
+    };
+    SocketInitializer socketInitializer_;
+
     Events requests_;
     Events newRequests_;
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -235,8 +242,6 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
     AutoPtr<fd_set> wfds_;
     bool connect_;
 #endif
-    void openAPI(AsyncEvent * object);
-    void closeAPI(AsyncEvent * object);
     void threadExecute();
 };
 //---------------------------------------------------------------------------

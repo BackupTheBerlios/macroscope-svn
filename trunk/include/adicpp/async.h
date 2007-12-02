@@ -270,8 +270,6 @@ class AsyncDescriptor : public AsyncDescriptorKey {
     virtual void shutdown2();
     virtual void flush2();
     virtual void close2();
-    virtual void openAPI();
-    virtual void closeAPI();
   private:
     mutable EmbeddedListNode<AsyncDescriptor> listNode_;
     static EmbeddedListNode<AsyncDescriptor> & listNode(const AsyncDescriptor & object){

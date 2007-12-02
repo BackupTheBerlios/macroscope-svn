@@ -237,8 +237,6 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     void shutdown2();
     void flush2();
     void close2();
-    void openAPI();
-    void closeAPI();
 };
 //---------------------------------------------------------------------------
 inline AsyncSocket & AsyncSocket::readBuffer(void * buf,uint64_t len)

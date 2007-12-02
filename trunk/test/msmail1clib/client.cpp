@@ -435,6 +435,15 @@ void ClientFiber::onlineStage1()
       Message * msg = client_->recvQueue_.find(msgId);
       if( msg != NULL ) client_->recvQueue_.drop(*msg);
     }
+    /*else {
+      stdErr.debug(9,utf8::String::Stream() <<
+        "sendAsyncEvent(" <<
+        client_->name_ <<
+        ",Message," <<
+        msgId <<
+        ")\n"
+      );
+    }*/
   }
   *this << messageAccepted;
   getCode2(eLastMessage);

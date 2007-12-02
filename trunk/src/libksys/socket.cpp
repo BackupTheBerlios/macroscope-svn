@@ -219,7 +219,8 @@ AsyncSocket & AsyncSocket::bind(const SockAddr & sockAddr)
 AsyncSocket & AsyncSocket::listen()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  pAcceptExBuffer_.realloc(sizeof(AcceptExBuffer));
+  if( pAcceptExBuffer_ == NULL )
+    pAcceptExBuffer_.realloc(sizeof(AcceptExBuffer));
 #endif
   if( api.listen(socket_,SOMAXCONN) != 0 ){
     int32_t err = errNo();
@@ -926,20 +927,9 @@ void AsyncSocket::close2()
   close();
 }
 //------------------------------------------------------------------------------
-void AsyncSocket::openAPI()
-{
-  api.open();
-}
-//------------------------------------------------------------------------------
-void AsyncSocket::closeAPI()
-{
-  api.close();
-}
-//------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::getSockAddr(SockAddr & addr) const
 {
   int32_t err = -1;
-  api.open();
   socklen_t len;
 #if HAVE_STRUCT_SOCKADDR_IN6
   len = sizeof(addr.addr6_);
@@ -950,7 +940,6 @@ AsyncSocket & AsyncSocket::getSockAddr(SockAddr & addr) const
     err = api.getsockname(socket_,(sockaddr *) &addr.addr4_,&len);
   }
   if( err != 0 ) err = errNo();
-  api.close();
   if( err != 0 )
     newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   return *const_cast<AsyncSocket *>(this);
@@ -959,7 +948,6 @@ AsyncSocket & AsyncSocket::getSockAddr(SockAddr & addr) const
 AsyncSocket & AsyncSocket::getPeerAddr(SockAddr & addr) const
 {
   int32_t err = -1;
-  api.open();
   socklen_t len;
 #if HAVE_STRUCT_SOCKADDR_IN6
   len = sizeof(addr.addr6_);
@@ -970,7 +958,6 @@ AsyncSocket & AsyncSocket::getPeerAddr(SockAddr & addr) const
     err = api.getpeername(socket_,(sockaddr *) &addr.addr4_,&len);
   }
   if( err != 0 ) err = errNo();
-  api.close();
   if( err != 0 )
     newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
   return *const_cast<AsyncSocket *>(this);

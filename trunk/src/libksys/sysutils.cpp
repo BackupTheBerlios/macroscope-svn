@@ -3313,6 +3313,8 @@ void initialize(int argc,char ** argv)
   initializeArguments(argc,argv);
   strErrorInitialize();
   Fiber::initialize();
+  ksock::api.initialize();
+  ksock::SockAddr::initialize();
   BaseThread::initialize();
   AsyncFile::initialize();
   LogFile::initialize();
@@ -3320,8 +3322,6 @@ void initialize(int argc,char ** argv)
 #ifdef NETMAIL_ENABLE_PROFILER
   TProfiler::initialize();
 #endif
-  ksock::api.initialize();
-  ksock::SockAddr::initialize();
   try {
     utf8::String cwd(getCurrentDir());
     utf8::String::Iterator i(cwd);
@@ -3366,8 +3366,6 @@ void cleanup()
 {
   stdErr.close();
   machineUniqueCryptedKey().~String();
-  ksock::SockAddr::cleanup();
-  ksock::api.cleanup();
 #ifdef NETMAIL_ENABLE_PROFILER
   TProfiler::cleanup();
 #endif
@@ -3375,6 +3373,8 @@ void cleanup()
   LogFile::cleanup();
   AsyncFile::cleanup();
   BaseThread::cleanup();
+  ksock::SockAddr::cleanup();
+  ksock::api.cleanup();
   Fiber::cleanup();
   strErrorCleanup();
   argv().~Array<utf8::String>();

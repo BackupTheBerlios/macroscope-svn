@@ -95,15 +95,18 @@ class EmbeddedHash {
 
     EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & xchg(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & a) const
     {
-      ksys::xchg(hash_,a.hash_);
-      if( a.hash_ == staticHash_ ) a.hash_ = a.staticHash_;
-      if( hash_ == a.staticHash_ ) hash_ = staticHash_;
+      LT * hash = hash_;
+      if( a.hash_ != a.staticHash_ )
+        hash_ = a.hash_; else hash_ = staticHash_;
+      if( hash != staticHash_ )
+        a.hash_ = hash; else a.hash_ = a.staticHash_;
       xchgStaticHash(a);
       ksys::xchg(size_,a.size_);
       ksys::xchg(count_,a.count_);
       ksys::xchg(estimatedChainLength_,a.estimatedChainLength_);
       ksys::xchg(thresholdNumerator_,a.thresholdNumerator_);
       ksys::xchg(thresholdDenominator_,a.thresholdDenominator_);
+      ksys::xchg(param_,a.param_);
       return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
     }
 
