@@ -138,6 +138,8 @@ int main(int _argc,char * _argv[])
       }
 #endif
     }
+    //ksock::SockAddr addr;
+    //addr.resolveName("amber.lipetsk.etalon.local:2526",msmail::defaultPort);
     if( dispatch ){
       service->msmailConfig()->parse().override();
       stdErr.bufferDataTTA(

@@ -882,6 +882,7 @@ class NodeClient : public ksock::ClientFiber {
     int32_t getCode(int32_t noThrowCode1,int32_t noThrowCode2);
     void auth();
     void sweepHelper(ServerType serverType);
+    void sweepClients();
     void main();
   private:
     Server * server_;

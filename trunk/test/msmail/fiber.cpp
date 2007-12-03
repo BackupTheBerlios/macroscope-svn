@@ -1037,6 +1037,20 @@ void NodeClient::sweepHelper(ServerType serverType)
     stdErr.debug(5,stream);
 }
 //------------------------------------------------------------------------------
+void NodeClient::sweepClients()
+{
+  /*Array<ServerFiber *> list;
+  server_->recvMailFibers_.list(list);
+  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+    sendRobotMessage(
+      list[i]->user_ + "@" + list[i]->user_,
+      ""
+      "",
+      "#request.client.online",""
+    );
+  }*/
+}
+//------------------------------------------------------------------------------
 void NodeClient::main()
 {
   server_->data(stStandalone).registerServer(
@@ -1221,6 +1235,7 @@ void NodeClient::main()
       if( periodicaly_ ){
         sweepHelper(stStandalone);
         sweepHelper(stNode);
+        sweepClients();
         uint64_t timeout = server_->config_->
           valueByPath(
             utf8::String(serverConfSectionName[stStandalone]) + ".exchange_interval",

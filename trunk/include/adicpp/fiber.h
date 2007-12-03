@@ -259,6 +259,13 @@ class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMu
     AsyncOpenFileSlave(const AsyncOpenFileSlave &){}
     void operator = (const AsyncOpenFileSlave &){}
 
+    class SocketInitializer {
+      public:
+        ~SocketInitializer();
+        SocketInitializer();
+    };
+    SocketInitializer socketInitializer_;
+
     Events requests_;
 
     void threadExecute();

@@ -1371,6 +1371,7 @@ HRESULT Cmsmail1c::CallAsProc(long lMethodNum,SAFEARRAY ** paParams)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY ** paParams)
 {
+  assert( msmail1c_ != NULL );
   HRESULT hr;
   VARIANT * pv0, * pv1, * pv2/*, v0, v1, v2*/;
 //  VariantInit(&v0);
@@ -2132,6 +2133,9 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
       hr = HRESULT_FROM_WIN32(msmail1c_->lastError_);
       if( lIndex >= 0 ) SafeArrayUnlock(*paParams);
       e->writeStdError();
+    }
+    catch( ... ){
+      hr = S_OK;
     }
   }
 //  VariantClear(&v2);

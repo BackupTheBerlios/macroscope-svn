@@ -154,7 +154,7 @@ const Exception & Exception::writeStdError(LogFile * log) const
   if( stdErr.debugLevel(9) ){
     utf8::String::Stream s;
     stdError(&s);
-    (log != NULL ? log : &stdErr)->debug(9,s);
+    if( s.count() > 0 ) (log != NULL ? log : &stdErr)->debug(9,s);
   }
   return *this;
 }
