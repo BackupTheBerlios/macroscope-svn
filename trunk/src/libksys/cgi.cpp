@@ -98,9 +98,9 @@ void CGI::initalizeByMethodGET()
     while( !k.eos() && k.getChar() != '&' ) k.next();
     utf8::String name(j,i);
     utf8::String value(i + 1,k);
-    if( name.trim().strlen() == 0 )
+    if( name.trim().isNull() )
       newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
-    paramsHash_.insert(params_[params_.add(Param(uudecode(name),uudecode(value))).count() - 1]);
+    paramsHash_.insert(params_[params_.add(Param(uudecode(name),uudecode(value))).count() - 1],true,false);
     i = k + 1;
   }
 }

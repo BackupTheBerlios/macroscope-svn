@@ -210,6 +210,14 @@ class API {
                 void *  p_mysql_thread_end;
             };
             union {
+                my_bool (STDCALL * my_thread_init)();
+                void *  p_my_thread_init;
+            };
+            union {
+                void (STDCALL * my_thread_end)();
+                void *  p_my_thread_end;
+            };
+            union {
                 my_bool (* my_init)();
                 void *  p_my_init;
             };

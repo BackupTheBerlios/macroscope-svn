@@ -471,31 +471,6 @@ int32_t Logger::main()
 {
   readConfig();
 // print query form if is CGI and no CGI parameters
-  /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
-  setEnv("REQUEST_METHOD","GET");
-  setEnv("QUERY_STRING",
-    "if=win_test&"
-    "bday=01&bmon=5&byear=2007&"
-    "eday=07&emon=5&eyear=2007&"
-    "resolve=on&"
-    "bidirectional=on&"
-    "protocols=on&"
-    "ports=on&"
-    "threshold=4M&"
-    "threshold2=&"
-    "totals=Day&"
-    "filter="
-//    "filter=(src+amber+or+dst+amber)+and+(src_port+8010+or+dst_port+8010)+and+proto+tcp"
-  );*/
-/*#if !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
-  LPWSTR pEnv = (LPWSTR) GetEnvironmentStringsW();
-  while( wcslen(pEnv) > 0 ){
-    stdErr.debug(9,utf8::String::Stream() << utf8::String(pEnv) << "\n");
-	  pEnv += wcslen(pEnv) + 1;
-  }
-  FreeEnvironmentStrings(pEnv);
-  stdErr.flush(true);
-#endif*/
   if( cgi_.isCGI() ){
     if( cgi_.paramCount() == 0 || cgi_.paramIndex("admin") >= 0 ){
       cgi_ <<
@@ -1299,6 +1274,25 @@ int main(int _argc,char * _argv[])
 #endif
     errcode = 0;
     if( dispatch || sniffer || rollout || install || uninstall ){
+#ifndef NDEBUG
+      /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
+      setEnv("REQUEST_METHOD","GET");
+      setEnv("QUERY_STRING",
+        "if=pleh&bday=7&bmon=12&byear=2007&eday=7&emon=12&eyear=2007&totals=Day&bidirectional=on&protocols=on&ports=on&threshold=1M&threshold2=&filter=src+87.242.73.67+or+dst+87.242.73.67%0D%0A&report=Start"*/
+        /*"if=win_test&"
+        "bday=01&bmon=5&byear=2007&"
+        "eday=07&emon=5&eyear=2007&"
+        "resolve=on&"
+        "bidirectional=on&"
+        "protocols=on&"
+        "ports=on&"
+        "threshold=4M&"
+        "threshold2=&"
+        "totals=Day&"
+        "filter="
+        "filter=(src+amber+or+dst+amber)+and+(src_port+8010+or+dst_port+8010)+and+proto+tcp"*/
+      //);
+#endif
       macroscope::Logger logger(sniffer,isDaemon);
       isCGI = logger.cgi().isCGI();
       if( dispatch && svc && sniffer ){

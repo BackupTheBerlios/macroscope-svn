@@ -42,6 +42,8 @@ const char * const  API::symbols_[] = {
   "mysql_library_end",
   "mysql_thread_init",
   "mysql_thread_end",
+  "my_thread_init",
+  "my_thread_end",
   "my_init",
   "my_end",
   "mysql_init",
@@ -166,6 +168,10 @@ void API::open()
         if( &func == &p_mysql_library_init ) func = GetProcAddress(handle_,"mysql_server_init");
         else
 	      if( &func == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
+        else
+        if( &func == &p_my_thread_init ) continue; //func = p_mysql_thread_init;
+        else
+        if( &func == &p_my_thread_end ) continue; //func = p_mysql_thread_end;
       }
       if( func == NULL ){
         err = GetLastError() + errorOffset;
@@ -189,8 +195,8 @@ void API::open()
         dlclose(handle_);
         handle_ = NULL;
         stdErr.debug(9,
-	  utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
-	);
+	        utf8::String::Stream() << "dlsym(\"" << symbols_[i] << "\")\n"
+	      );
         newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
 #endif
@@ -213,24 +219,27 @@ void API::open()
     }
   }
   if( (intptr_t) threadCount() == 0 ){
-    if( (count_ > 0 || mysql_library_init == NULL) && mysql_thread_init() != 0 ){
+    //if( count_ > 0 ){
+      my_bool r = my_thread_init != NULL ? r = my_thread_init() : r = mysql_thread_init();
+      if( r != 0 ){
 #if !MYSQL_STATIC_LIBRARY
-      if( count_ == 0 ){
-        if( mysql_library_end != NULL ) mysql_library_end();
+        if( count_ == 0 ){
+          if( mysql_library_end != NULL ) mysql_library_end();
 #if defined(__WIN32__) || defined(__WIN64__)
-        FreeLibrary(handle_);
+          FreeLibrary(handle_);
 #elif HAVE_DLFCN_H
-        dlclose(handle_);
+          dlclose(handle_);
 #endif
-        handle_ = NULL;
-     }
+          handle_ = NULL;
+       }
 #endif
-      stdErr.debug(9,
-        utf8::String::Stream() << "mysql_thread_init couldn't initialize environment\n"
-      );
-      newObjectV1C2<Exception>(EINVAL, "mysql_thread_init couldn't initialize environment")->throwSP();
-    }
-  }
+        stdErr.debug(9,
+          utf8::String::Stream() << "mysql_thread_init couldn't initialize environment\n"
+        );
+        newObjectV1C2<Exception>(EINVAL, "mysql_thread_init couldn't initialize environment")->throwSP();
+      }
+    //}
+  }  
   threadCount() = (intptr_t) threadCount() + 1;
   count_++;
 }
@@ -240,7 +249,9 @@ void API::close()
   AutoLock<InterlockedMutex> lock(mutex());
   assert( count_ > 0 );
   assert( (intptr_t) threadCount() > 0 );
-  if( (intptr_t) threadCount() == 1 ) mysql_thread_end();
+  if( (intptr_t) threadCount() == 1 ){
+    if( my_thread_init != NULL ) my_thread_end(); else mysql_thread_end();
+  }
   threadCount() = (intptr_t) threadCount() - 1;
   if( count_ == 1 ){
 #if !MYSQL_STATIC_LIBRARY    
