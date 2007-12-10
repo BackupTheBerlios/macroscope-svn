@@ -530,8 +530,7 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
         "SELECT table_name,table_schema "
         "FROM INFORMATION_SCHEMA.TABLES "
         "WHERE upper(table_schema) = :schema"
-        )->
-        prepare()->
+      )->prepare()->
         paramAsString("schema",dbName.upper())->
         execute()->fetchAll()->unloadByIndex(tables);
       //Table<Mutant> indices;

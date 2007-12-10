@@ -803,6 +803,9 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
               msmail1c_->client_.groups_ = msmail1c_->groups_;
               msmail1c_->client_.mailServer_ = msmail1c_->mailServer_;
               msmail1c_->client_.readConfig(msmail1c_->configFile_,msmail1c_->logFile_);
+              msmail1c_->key_ = msmail1c_->client_.config_->value("key",msmail1c_->client_.key_);
+              msmail1c_->groups_ = msmail1c_->client_.config_->value("groups",msmail1c_->client_.groups_);
+              msmail1c_->mailServer_ = msmail1c_->client_.config_->value("server",msmail1c_->client_.mailServer_);
               msmail1c_->client_.open();
               msmail1c_->active_ = true;
             }
