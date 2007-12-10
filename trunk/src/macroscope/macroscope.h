@@ -435,6 +435,7 @@ class Logger {
     Logger & createDatabase();
     Sniffer * getSnifferBySection(const utf8::String & sectionName);
     Logger & writeCGIInterfaceAndTimeSelect(bool addUnionIf);
+    void reactivateIndices(bool reactivate,bool setStat);
   private:
 };
 //------------------------------------------------------------------------------

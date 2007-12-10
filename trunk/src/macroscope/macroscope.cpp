@@ -467,6 +467,102 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
   return *this;
 }
 //------------------------------------------------------------------------------
+void Logger::reactivateIndices(bool reactivate,bool setStat)
+{
+  database_->attach();
+  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+    statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
+    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+      statement_->selectRow(i);
+      if( statement_->valueAsString("RDB$RELATION_NAME").strncasecmp("RDB$",4) == 0 ) continue;
+      utf8::String indexName(statement_->valueAsString("RDB$INDEX_NAME").trimRight());
+      int64_t ellapsed;
+      try {
+        if( reactivate ){
+          if( verbose_ ) fprintf(stderr,"Deactivate index %s",
+            (const char *) indexName.getOEMString()
+          );
+          ellapsed = gettimeofday();
+          statement2_->text("ALTER INDEX " + indexName + " INACTIVE")->execute();
+          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+          );
+          if( verbose_ ) fprintf(stderr,"Activate index %s",
+            (const char *) indexName.getOEMString()
+          );
+          ellapsed = gettimeofday();
+          statement2_->text("ALTER INDEX " + indexName + " ACTIVE")->execute();
+          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+          );
+        }
+        if( setStat ){
+          if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
+            (const char *) indexName.getOEMString()
+          );
+          ellapsed = gettimeofday();
+          statement2_->text("SET STATISTICS INDEX " + indexName)->execute();
+          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+          );
+        }
+      }
+      catch( ExceptionSP & e ){
+        if( !e->searchCode(isc_integ_fail,isc_integ_deactivate_primary,isc_lock_conflict,isc_update_conflict) ) throw;
+        if( verbose_ ){
+          if( e->searchCode(isc_integ_deactivate_primary) )
+            fprintf(stderr," failed. Cannot deactivate index used by a PRIMARY/UNIQUE constraint.\n");
+          else if( e->searchCode(isc_lock_conflict) )
+            fprintf(stderr," failed. Lock conflict on no wait transaction.\n");
+          else if( e->searchCode(isc_update_conflict) )
+            fprintf(stderr," failed. Update conflicts with concurrent update.\n");
+        }
+      }
+    }
+  }
+  else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
+    if( reactivate ){
+      Table<utf8::String> tables;
+      utf8::String hostName, dbName;
+      uintptr_t port;
+      database_->separateDBName(database_->name(),hostName,dbName,port);
+      statement_->text(
+        "SELECT table_name,table_schema "
+        "FROM INFORMATION_SCHEMA.TABLES "
+        "WHERE upper(table_schema) = :schema"
+        )->
+        prepare()->
+        paramAsString("schema",dbName.upper())->
+        execute()->fetchAll()->unloadByIndex(tables);
+      //Table<Mutant> indices;
+      utf8::String engine(config_->textByPath("macroscope.mysql_table_type","INNODB"));
+      uint64_t ellapsed;
+      for( intptr_t i = tables.rowCount() - 1; i >= 0; i-- ){
+        /*statement_->text("SHOW INDEX FROM " + tables(i,0))->execute();
+        while( statement_->fetch() )
+    if( (intmax_t) statement_->valueAsMutant("Seq_in_index") == 1 )
+      statement_->unloadRowByIndex(indices);*/
+        if( verbose_ ) fprintf(stderr,"Alter table %s",(const char *) tables(i,0).getOEMString());
+        ellapsed = gettimeofday();
+        statement_->text("ALTER TABLE " + tables(i,0) + " ENGINE=" + engine)->execute();
+        if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+          (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+        );
+      }
+    }
+    /*for( intptr_t i = indices.rowCount() - 1; i >= 0; i-- ){
+      utf8::String name(indices(i,"Key_name"));
+      if( verbose_ ) fprintf(stderr,"Drop index %s",(const char *) name.getOEMString());
+      int64_t ellapsed = gettimeofday();
+      statement_->text("DROP INDEX " + name + " ON " + indices(i,"Table"))->execute();
+      if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
+        (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
+      );
+    }*/
+  }
+  database_->detach();
+}
+//------------------------------------------------------------------------------
 int32_t Logger::main()
 {
   readConfig();
@@ -582,6 +678,8 @@ int32_t Logger::main()
           "  <input name=\"copyif\" type=\"SUBMIT\" value=\"Copy\">\n"
           "  <input name=\"dropif\" type=\"SUBMIT\" value=\"Drop\">\n"
           "  <input name=\"dropdns\" type=\"SUBMIT\" value=\"Drop DNS cache\">\n"
+          "  <input name=\"reactivate_indices\" type=\"SUBMIT\" value=\"Reactivate indices\">\n"
+          "  <input name=\"set_indices_statistics\" type=\"SUBMIT\" value=\"Set indices statistics\">\n"
           "</FORM>\n"
         ;
       }
@@ -609,99 +707,10 @@ int32_t Logger::main()
   int32_t err0 = doWork(0);
   int32_t err1 = waitThreads();
 // optimize database (optional)
-  if( !cgi_.isCGI() ){
-    database_->attach();
-    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-      statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
-      for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
-        statement_->selectRow(i);
-        if( statement_->valueAsString("RDB$RELATION_NAME").strncasecmp("RDB$",4) == 0 ) continue;
-        utf8::String indexName(statement_->valueAsString("RDB$INDEX_NAME").trimRight());
-        int64_t ellapsed;
-        try {
-          if( (bool) config_->section("macroscope").value("reactivate_indices",true) ){
-            if( verbose_ ) fprintf(stderr,"Deactivate index %s",
-              (const char *) indexName.getOEMString()
-            );
-            ellapsed = gettimeofday();
-            statement2_->text("ALTER INDEX " + indexName + " INACTIVE")->execute();
-            if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
-              (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
-            );
-            if( verbose_ ) fprintf(stderr,"Activate index %s",
-              (const char *) indexName.getOEMString()
-            );
-            ellapsed = gettimeofday();
-            statement2_->text("ALTER INDEX " + indexName + " ACTIVE")->execute();
-            if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
-              (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
-            );
-          }
-          if( (bool) config_->section("macroscope").value("set_indices_statistics",true) ){
-            if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
-              (const char *) indexName.getOEMString()
-            );
-            ellapsed = gettimeofday();
-            statement2_->text("SET STATISTICS INDEX " + indexName)->execute();
-            if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
-              (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
-            );
-          }
-        }
-        catch( ExceptionSP & e ){
-          if( !e->searchCode(isc_integ_fail,isc_integ_deactivate_primary,isc_lock_conflict,isc_update_conflict) ) throw;
-          if( verbose_ ){
-            if( e->searchCode(isc_integ_deactivate_primary) )
-              fprintf(stderr," failed. Cannot deactivate index used by a PRIMARY/UNIQUE constraint.\n");
-            else if( e->searchCode(isc_lock_conflict) )
-              fprintf(stderr," failed. Lock conflict on no wait transaction.\n");
-            else if( e->searchCode(isc_update_conflict) )
-              fprintf(stderr," failed. Update conflicts with concurrent update.\n");
-          }
-        }
-      }
-    }
-    else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
-      if( (bool) config_->section("macroscope").value("reactivate_indices",true) ){
-        Table<utf8::String> tables;
-        utf8::String hostName, dbName;
-        uintptr_t port;
-        database_->separateDBName(database_->name(),hostName,dbName,port);
-        statement_->text(
-          "SELECT table_name,table_schema "
-          "FROM INFORMATION_SCHEMA.TABLES "
-          "WHERE upper(table_schema) = :schema"
-          )->
-          prepare()->
-          paramAsString("schema",dbName.upper())->
-          execute()->fetchAll()->unloadByIndex(tables);
-        //Table<Mutant> indices;
-        utf8::String engine(config_->textByPath("macroscope.mysql_table_type","INNODB"));
-        uint64_t ellapsed;
-        for( intptr_t i = tables.rowCount() - 1; i >= 0; i-- ){
-          /*statement_->text("SHOW INDEX FROM " + tables(i,0))->execute();
-          while( statement_->fetch() )
-	    if( (intmax_t) statement_->valueAsMutant("Seq_in_index") == 1 )
-	      statement_->unloadRowByIndex(indices);*/
-          if( verbose_ ) fprintf(stderr,"Alter table %s",(const char *) tables(i,0).getOEMString());
-          ellapsed = gettimeofday();
-	        statement_->text("ALTER TABLE " + tables(i,0) + " ENGINE=" + engine)->execute();
-          if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
-            (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
-          );
-        }
-      }
-      /*for( intptr_t i = indices.rowCount() - 1; i >= 0; i-- ){
-        utf8::String name(indices(i,"Key_name"));
-        if( verbose_ ) fprintf(stderr,"Drop index %s",(const char *) name.getOEMString());
-        int64_t ellapsed = gettimeofday();
-        statement_->text("DROP INDEX " + name + " ON " + indices(i,"Table"))->execute();
-        if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
-          (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
-        );
-      }*/
-    }
-    database_->detach();
+  if( !sniffer_ && !cgi_.isCGI() ){
+    bool v0 = config_->section("macroscope").value("reactivate_indices",true);
+    bool v1 = config_->section("macroscope").value("set_indices_statistics",true);
+    reactivateIndices(v0,v1);
   }
 // generate reports
   int32_t err2 = doWork(1);
@@ -966,6 +975,60 @@ int32_t Logger::doWork(uintptr_t stage)
       "</HEAD>\n"
       "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
       "<B>Drop DNS cache operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("reactivate_indices") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    reactivateIndices(true,false);
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Reactivate indices operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("set_indices_statistics") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    reactivateIndices(false,true);
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Set indices statistics operation completed successfuly.</B>\n"
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
