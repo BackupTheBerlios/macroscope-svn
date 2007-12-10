@@ -128,7 +128,7 @@ void CGI::initalizeByMethodPOST()
 CGIMethod CGI::method() const
 {
   if( method_ == cgiInit ){
-    if( getEnv("GATEWAY_INTERFACE").strlen() > 0 ){
+    if( !getEnv("GATEWAY_INTERFACE").isNull() ){
       utf8::String requestMethod(getEnv("REQUEST_METHOD"));
       queryString_ = getEnv("QUERY_STRING");
       if( requestMethod.strcasecmp("POST") == 0 ){

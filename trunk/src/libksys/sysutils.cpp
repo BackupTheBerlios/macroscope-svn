@@ -253,12 +253,10 @@ utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
       b.alloc(sz);
       sz = GetEnvironmentVariableA(s,b,sz) + 1;
     }
-    if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
-      int32_t err = GetLastError() + errorOffset;
-      if( defValue.isNull() )
-        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-      return defValue;
-    }
+    int32_t err = GetLastError();
+    if( sz == 0 || err == ERROR_ENVVAR_NOT_FOUND ) return defValue;
+    if( err != ERROR_SUCCESS )
+      newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     if( sz <= 1 ) return utf8::String();
     return b.ptr();
   }
@@ -269,23 +267,19 @@ utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
     b.alloc(sz * sizeof(wchar_t));
     sz = GetEnvironmentVariableW(s,b,sz) + 1;
   }
-  if( sz == 0 && GetLastError() != ERROR_ENVVAR_NOT_FOUND ){
-    int32_t err = GetLastError() + errorOffset;
-    if( defValue.isNull() )
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-    return defValue;
-  }
+  int32_t err = GetLastError();
+  if( sz == 0 || err == ERROR_ENVVAR_NOT_FOUND ) return defValue;
+  if( err != ERROR_SUCCESS )
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
   if( sz <= 1 ) return utf8::String();
   return b.ptr();
 #else
   char * env = getenv(name.getANSIString());
   if( env == NULL && errno != 0 ){
     int32_t err = errno;
-    if( defValue.isNull() )
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-    return defValue;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
-  return env == NULL ? utf8::String() : env;
+  return env == NULL ? defValue : env;
 #endif
 }
 //---------------------------------------------------------------------------

@@ -86,14 +86,7 @@ AsyncFile & AsyncFile::close()
       closed = true;
     }
   }
-  if( closed ){
-    if( removeAfterClose_ ){
-      try {
-        remove(fileName_);
-      }
-      catch( ... ){}
-    }
-  }
+  if( closed && removeAfterClose_ ) remove(fileName_,true);
   return *this;
 }
 //---------------------------------------------------------------------------

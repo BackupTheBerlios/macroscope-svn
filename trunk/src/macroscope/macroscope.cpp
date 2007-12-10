@@ -392,7 +392,7 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
   database_->attach()->start();
   statement_->text("select distinct st_if from INET_BPFT_STAT")->execute();
   while( statement_->fetch() ){
-    utf8::String sectionName(statement_->valueAsString("st_if"));
+    utf8::String sectionName(statement_->valueAsString("st_if").trimRight());
     cgi_ << "    <option value=\"" + sectionName + "\"";
     if( statement_->rowIndex() == 0 && !addUnionIf ) cgi_ << " selected=\"selected\"";
     cgi_ << ">" + sectionName + "</option>\n";
@@ -609,7 +609,7 @@ int32_t Logger::main()
   int32_t err0 = doWork(0);
   int32_t err1 = waitThreads();
 // optimize database (optional)
-  if( !sniffer_ && !cgi_.isCGI() ){
+  if( !cgi_.isCGI() ){
     database_->attach();
     if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
       statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
@@ -843,12 +843,14 @@ int32_t Logger::doWork(uintptr_t stage)
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    database_->start();
     statement_->
       text("update INET_BPFT_STAT set st_if = :newif" + utf8::String(all ? "" : " where st_if = :if"))->
       prepare()->
       paramAsString("newif",cgi_.paramAsString("newIfName"));
     if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
     statement_->execute();
+    database_->commit();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -877,6 +879,7 @@ int32_t Logger::doWork(uintptr_t stage)
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    database_->start();
     statement_->
       text("insert into INET_BPFT_STAT"
            "  select '" + cgi_.paramAsString("newIfName") + "' as st_if, st_start,"
@@ -887,6 +890,7 @@ int32_t Logger::doWork(uintptr_t stage)
       prepare();
     if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
     statement_->execute();
+    database_->commit();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -915,11 +919,13 @@ int32_t Logger::doWork(uintptr_t stage)
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    database_->start();
     statement_->
       text("delete from INET_BPFT_STAT" + utf8::String(all ? "" : " where st_if = :if"))->
       prepare();
     if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
     statement_->execute();
+    database_->commit();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -947,7 +953,9 @@ int32_t Logger::doWork(uintptr_t stage)
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropdns") >= 0 ){
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
+    database_->start();
     statement_->text("delete from INET_DNS_CACHE")->execute();
+    database_->commit();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -1277,21 +1285,22 @@ int main(int _argc,char * _argv[])
 #ifndef NDEBUG
       /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
       setEnv("REQUEST_METHOD","GET");
-      setEnv("QUERY_STRING",
-        "if=pleh&bday=7&bmon=12&byear=2007&eday=7&emon=12&eyear=2007&totals=Day&bidirectional=on&protocols=on&ports=on&threshold=1M&threshold2=&filter=src+87.242.73.67+or+dst+87.242.73.67%0D%0A&report=Start"*/
+      setEnv("QUERY_STRING",""
+        //"if=pleh&bday=7&bmon=12&byear=2007&eday=7&emon=12&eyear=2007&totals=Day&bidirectional=on&protocols=on&ports=on&threshold=1M&threshold2=&filter=src+87.242.73.67+or+dst+87.242.73.67%0D%0A&report=Start"*/
         /*"if=win_test&"
-        "bday=01&bmon=5&byear=2007&"
-        "eday=07&emon=5&eyear=2007&"
-        "resolve=on&"
+        "bday=01&bmon=12&byear=2007&"
+        "eday=31&emon=12&eyear=2007&"
+        "resolve=off&"
         "bidirectional=on&"
-        "protocols=on&"
-        "ports=on&"
+        "protocols=off&"
+        "ports=off&"
         "threshold=4M&"
         "threshold2=&"
         "totals=Day&"
-        "filter="
-        "filter=(src+amber+or+dst+amber)+and+(src_port+8010+or+dst_port+8010)+and+proto+tcp"*/
-      //);
+        "filter=&"
+        //"filter=(src+amber+or+dst+amber)+and+(src_port+8010+or+dst_port+8010)+and+proto+tcp&"
+        "report=Start"
+      );*/
 #endif
       macroscope::Logger logger(sniffer,isDaemon);
       isCGI = logger.cgi().isCGI();
