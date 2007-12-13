@@ -409,14 +409,14 @@ UserInfo & UserInfo::operator = (const UserInfo & a)
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,UserInfo & a)
 {
   s >> a.name_;
-  a.sendedTo_.get(s);
+//  a.sendedTo_.get(s);
   return s;
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a)
 {
   s << a.name_;
-  return a.sendedTo_.put(s);
+  return s;//a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const UserInfo & a)
@@ -463,13 +463,13 @@ KeyInfo & KeyInfo::operator = (const KeyInfo & a)
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,KeyInfo & a)
 {
   s >> a.name_ >> a.atime_;
-  return a.sendedTo_.get(s);
+  return s;//a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a)
 {
   s << a.name_ << a.atime_;
-  return a.sendedTo_.put(s);
+  return s;//a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const KeyInfo & a)
@@ -516,13 +516,13 @@ GroupInfo & GroupInfo::operator = (const GroupInfo & a)
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,GroupInfo & a)
 {
   s >> a.name_ >> a.atime_;
-  return a.sendedTo_.get(s);
+  return s;//a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a)
 {
   s << a.name_ << a.atime_;
-  return a.sendedTo_.put(s);
+  return s;//a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const GroupInfo & a)
@@ -580,7 +580,7 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 {
   uint8_t v;
   s >> a.name_ >> a.atime_ >> v;
-  a.sendedTo_.get(s);
+  //a.sendedTo_.get(s);
   a.type_ = ServerType(v);
   return s;
 }
@@ -588,7 +588,7 @@ ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,ServerInfo & a)
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a)
 {
   s << a.name_ << a.atime_ << (uint8_t) a.type_;
-  return a.sendedTo_.put(s);
+  return s;//a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a)
@@ -636,13 +636,13 @@ User2KeyLink & User2KeyLink::operator = (const User2KeyLink & a)
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,User2KeyLink & a)
 {
   s >> a.user_ >> a.key_ >> a.atime_;
-  return a.sendedTo_.get(s);
+  return s;//a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a)
 {
   s << a.user_ << a.key_ << a.atime_;
-  return a.sendedTo_.put(s);
+  return s;//a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const User2KeyLink & a)
@@ -690,13 +690,13 @@ Key2GroupLink & Key2GroupLink::operator = (const Key2GroupLink & a)
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2GroupLink & a)
 {
   s >> a.key_ >> a.group_ >> a.atime_;
-  return a.sendedTo_.get(s);
+  return s;//a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a)
 {
   s << a.key_ << a.group_ << a.atime_;
-  return a.sendedTo_.put(s);
+  return s;//a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2GroupLink & a)
@@ -744,13 +744,13 @@ Key2ServerLink & Key2ServerLink::operator = (const Key2ServerLink & a)
 ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,Key2ServerLink & a)
 {
   s >> a.key_ >> a.server_ >> a.atime_;
-  return a.sendedTo_.get(s);
+  return s;//a.sendedTo_.get(s);
 }
 //------------------------------------------------------------------------------
 ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & a)
 {
   s << a.key_ << a.server_ << a.atime_;
-  return a.sendedTo_.put(s);
+  return s;//a.sendedTo_.put(s);
 }
 //------------------------------------------------------------------------------
 utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2ServerLink & a)
