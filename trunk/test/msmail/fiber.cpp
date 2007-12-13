@@ -808,10 +808,13 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
   mwt = false;
   if( !online ){
     close();
-    ksock::SockAddr address;
+    ksock::SockAddr address, bAddr(server_->bindAddrs()[0]);
     try {
       address.resolveName(host_,defaultPort);
       try {
+        open();
+        bAddr.addr4_.sin_port = 0;
+        bind(bAddr);
         connect(address);
         try {
           auth();
@@ -1128,6 +1131,10 @@ void NodeClient::main()
             }
             if( (uint64_t) gettimeofday() >= cec + lastFailedConnectTime ){
               tryConnect = true;
+              open();
+              ksock::SockAddr bAddr(server_->bindAddrs()[0]);
+              bAddr.addr4_.sin_port = 0;
+              bind(bAddr);
               connect(remoteAddress);
               try {
                 auth();
