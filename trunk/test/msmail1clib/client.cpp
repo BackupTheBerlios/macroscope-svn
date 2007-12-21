@@ -423,7 +423,7 @@ void ClientFiber::onlineStage1()
     }
   }
   bool messageAccepted = true;
-  if( msg == NULL ){
+  if( msg == NULL && client_->asyncMessagesReceiving_ ){
     HRESULT hr = client_->sendAsyncEvent(
       client_->name_,
       "Message",

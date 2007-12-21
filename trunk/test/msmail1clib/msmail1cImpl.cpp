@@ -204,7 +204,8 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"SaveMessageAttachmentToFile", L"СохранитьПрикреплениеСообщенияВФайл",
       L"ReceiveMessages", L"ПолучитьСообщения",
       L"RepairLocking", L"ПочинитьБлокировки",
-      L"RepairServerBusy", L"ПочинитьСерверЗанят"
+      L"RepairServerBusy", L"ПочинитьСерверЗанят",
+      L"GetCommandLineParameter", L"ПолучитьПараметрКомманднойСтроки"
     };
     msmail1c_->functions_.estimatedChainLength(1);
 //    functions_.thresholdNumerator(5);
@@ -421,7 +422,7 @@ HRESULT Cmsmail1c::FindProp(BSTR bstrPropName,long * plPropNum)
   if( _wcsicoll(bstrPropName,L"AsyncMessagesReceiving") == 0 ) *plPropNum = 23;
   else
   if( _wcsicoll(bstrPropName,L"АсинхронноеПолучениеСообщений") == 0 ) *plPropNum = 23;
-  else 
+  else
     return DISP_E_MEMBERNOTFOUND;
   return S_OK;
 }
@@ -1005,7 +1006,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 32;
+  *plMethods = 33;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -1291,6 +1292,14 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
           return (*pbstrMethodName = SysAllocString(L"ПочинитьСерверЗанят")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
+    case 34 :
+      switch( lMethodAlias ){
+        case 0 :
+          return (*pbstrMethodName = SysAllocString(L"GetCommandLineParameter")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ПолучитьПараметрКомманднойСтроки")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
   }
   return E_NOTIMPL;
 }
@@ -1332,6 +1341,7 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 31 : *plParams = 1; break;
     case 32 : *plParams = 0; break;
     case 33 : *plParams = 0; break;
+    case 34 : *plParams = 1; break;
     default :
       *plParams = -1;
       return E_NOTIMPL;
@@ -1351,7 +1361,7 @@ HRESULT Cmsmail1c::GetParamDefValue(long lMethodNum,long lParamNum,VARIANT * pva
       }
       break;
     case 31 :
-      if( lParamNum == 1 ){
+      if( lParamNum == 0 ){
         if( V_VT(pvarParamDefValue) != VT_I4 )
           hr = VariantChangeType(pvarParamDefValue,pvarParamDefValue,0,VT_I4);
         if( SUCCEEDED(hr) ) V_I4(pvarParamDefValue) = 1;
@@ -2000,7 +2010,6 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           break;        
         case 31 : // ReceiveMessages
           if( !msmail1c_->client_.asyncMessagesReceiving_ ){
-            msmail1c_->client_.readConfig(msmail1c_->configFile_,msmail1c_->logFile_);
             hr = SafeArrayLock(*paParams);
             if( SUCCEEDED(hr) ){
               lIndex = 0;
@@ -2126,6 +2135,26 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           msmail1c_->serverBusyThread_ = newObject<msmail1c::ServerBusyThread>();
           msmail1c_->serverBusyThread_->resume();
           V_I4(pvarRetValue) = 1;
+          break;
+        case 34 : // GetCommandLineParameter
+          hr = SafeArrayLock(*paParams);
+          if( SUCCEEDED(hr) ){
+            lIndex = 0;
+            hr = SafeArrayPtrOfIndex(*paParams,&lIndex,(void **) &pv0);
+            if( SUCCEEDED(hr) ){
+              if( V_VT(pv0) != VT_I4 ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_I4);
+              if( SUCCEEDED(hr) ){
+                if( (uintptr_t) V_I4(pv0) >= ksys::argv().count() ){
+                  hr = VariantChangeTypeEx(pvarRetValue,pvarRetValue,0,0,VT_EMPTY);
+                }
+                else {
+                  V_BSTR(pvarRetValue) = ksys::argv()[uintptr_t(V_I4(pv0))].getOLEString();
+                  V_VT(pvarRetValue) = VT_BSTR;
+                }
+              }
+            }
+            SafeArrayUnlock(*paParams);
+          }
           break;
         default :
           hr = E_NOTIMPL;

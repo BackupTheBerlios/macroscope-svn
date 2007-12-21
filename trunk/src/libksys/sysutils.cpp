@@ -3180,8 +3180,28 @@ void daemonize()
 //---------------------------------------------------------------------------
 void initializeArguments(int argc,char ** argv)
 {
-  ksys::argv().resize(argc);
-  while( --argc >= 0 ) ksys::argv()[argc] = argv[argc];
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( isWin9x() ){
+#endif
+    ksys::argv().resize(argc);
+    while( --argc >= 0 ) ksys::argv()[argc] = argv[argc];
+#if defined(__WIN32__) || defined(__WIN64__)
+  }
+  else {
+    LPWSTR * wStr = CommandLineToArgvW(GetCommandLineW(),&argc);
+    try {
+      ksys::argv().resize(argc);
+      if( wStr == NULL ){
+        while( --argc >= 0 ) ksys::argv()[argc] = argv[argc];
+      }
+      else {
+        while( --argc >= 0 ) ksys::argv()[argc] = wStr[argc];
+        LocalFree(wStr);
+      }
+    }
+    catch( ... ){}
+  }
+#endif
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
