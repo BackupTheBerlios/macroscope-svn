@@ -159,6 +159,7 @@ Cmsmail1c::msmail1c::msmail1c() :
 // IInitDone Methods
 //------------------------------------------------------------------------------
 void * Cmsmail1c::oldDBENG32LockFile_;
+void * Cmsmail1c::oldDBENG32FlushFileBuffers_;
 /*void * Cmsmail1c::oldBKENDGetProcAddress_;
 void * Cmsmail1c::oldMSVCRTLockFile_;
 void * Cmsmail1c::oldMSVCR71LockFile_;
@@ -2049,13 +2050,30 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 void * a = repairedLockFile;
                 writeProtectedMemory(proc,&a,sizeof(uintptr_t));
                 oldDBENG32LockFile_ = p;
+                V_I4(pvarRetValue) = 1;
               }
               else {
                 V_I4(pvarRetValue) = 0;
                 msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
               }
-            /*}
+            //}
             if( V_I4(pvarRetValue) ){
+              proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","FlushFileBuffers",true);
+              if( proc == NULL )
+                proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers");
+              readProtectedMemory(proc,&p,sizeof(void *));
+              if( oldDBENG32FlushFileBuffers_ == NULL && p != repairedFlushFileBuffers ){
+                void * a = repairedFlushFileBuffers;
+                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                oldDBENG32FlushFileBuffers_ = p;
+                V_I4(pvarRetValue) = 1;
+              }
+              else {
+                V_I4(pvarRetValue) = 0;
+                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              }
+            }
+            /*if( V_I4(pvarRetValue) ){
               proc = findProcImportedEntryAddress("msvcrt.dll","KERNEL32.DLL","LockFile");
               readProtectedMemory(proc,&p,sizeof(void *));
               if( oldMSVCRTLockFile_ == NULL && p != reparedLockFile ){
@@ -2110,8 +2128,8 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
               }
             }*/
           }
-          if( flushFileBuffersJmpCodeSafe_[0] == 0 ){
-            uint8_t jmpCode[sizeof(lockFileJmpCodeSafe_)] = { 0xB8, 0, 0, 0, 0, 0xFF, 0xE0 };
+          //if( flushFileBuffersJmpCodeSafe_[0] == 0 ){
+            //uint8_t jmpCode[sizeof(lockFileJmpCodeSafe_)] = { 0xB8, 0, 0, 0, 0, 0xFF, 0xE0 };
 
             /*readProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
             *(void **) (jmpCode + 1) = repairedLockFile;
@@ -2121,15 +2139,15 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             *(void **) (jmpCode + 1) = repairedUnlockFile;
             writeProtectedMemory(UnlockFile,jmpCode,sizeof(jmpCode));*/
 
-            readProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
-            *(void **) (jmpCode + 1) = repairedFlushFileBuffers;
-            writeProtectedMemory(FlushFileBuffers,jmpCode,sizeof(jmpCode));
+            //readProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
+            //*(void **) (jmpCode + 1) = repairedFlushFileBuffers;
+            //writeProtectedMemory(FlushFileBuffers,jmpCode,sizeof(jmpCode));
 
-            V_I4(pvarRetValue) = 1;
-          }
-          else {
-            msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
-          }
+            //V_I4(pvarRetValue) = 1;
+          //}
+          //else {
+            //msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+          //}
           break;
         case 33 : // RepairServerBusy
           msmail1c_->serverBusyThread_ = newObject<msmail1c::ServerBusyThread>();
@@ -2331,6 +2349,8 @@ err:
   ;
 }*/
 //---------------------------------------------------------------------------
+uint64_t Cmsmail1c::lastLockFileCallTime_;
+//---------------------------------------------------------------------------
 BOOL WINAPI Cmsmail1c::repairedLockFile(
   HANDLE hFile,
   DWORD dwFileOffsetLow,
@@ -2338,66 +2358,76 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
   DWORD nNumberOfBytesToLockLow,
   DWORD nNumberOfBytesToLockHigh)
 {
+  uint64_t t = gettimeofday();
+  typedef BOOL (WINAPI * FLockFile)(HANDLE,DWORD,DWORD,DWORD,DWORD);
+  BOOL lk = ((FLockFile) oldDBENG32LockFile_)(hFile,dwFileOffsetLow,dwFileOffsetHigh,nNumberOfBytesToLockLow,nNumberOfBytesToLockHigh);
+  DWORD err = GetLastError();
+  lastLockFileCallTime_ = t;
+  if( lk == FALSE && err == ERROR_LOCK_VIOLATION ){
+    if( t - lastLockFileCallTime_ < 10000 ) ksleep(10000 - (t - lastLockFileCallTime_));
+    SetLastError(err);
+  }
+  return lk;
 //  utf8::String name(getFileNameByHandle(hFile));
 //  utf8::String ext(getFileNameByHandle(hFile).right(4));
 //  DWORD flag = ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ? 0 : LOCKFILE_FAIL_IMMEDIATELY;
-  OVERLAPPED overlapped;
-  memset(&overlapped,0,sizeof(overlapped));
-  overlapped.Offset = dwFileOffsetLow;
-  overlapped.OffsetHigh = dwFileOffsetHigh;
-  overlapped.hEvent = NULL;//CreateEvent(NULL,TRUE,FALSE,NULL);
+  //OVERLAPPED overlapped;
+  //memset(&overlapped,0,sizeof(overlapped));
+  //overlapped.Offset = dwFileOffsetLow;
+  //overlapped.OffsetHigh = dwFileOffsetHigh;
+  //overlapped.hEvent = NULL;//CreateEvent(NULL,TRUE,FALSE,NULL);
   //if( overlapped.hEvent == NULL ) return FALSE;
-  BOOL lk = LockFileEx(
-    hFile,
-    LOCKFILE_EXCLUSIVE_LOCK,// | flag,
-    0,
-    nNumberOfBytesToLockLow,
-    nNumberOfBytesToLockHigh,
-    &overlapped
-  );
-  DWORD err = GetLastError();
-  /*if( lk == FALSE && err == ERROR_LOCK_VIOLATION ){
-    utf8::String ext(getFileNameByHandle(hFile).right(4));
-    if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
-      lk = LockFileEx(
-        hFile,
-        LOCKFILE_EXCLUSIVE_LOCK,
-        0,
-        nNumberOfBytesToLockLow,
-        nNumberOfBytesToLockHigh,
-        &overlapped
-      );
-      err = GetLastError();
-    }
-  }*/
-  if( lk == FALSE && err == ERROR_IO_PENDING ){
-    err = WaitForSingleObject(overlapped.hEvent,1000);
-    if( err == WAIT_TIMEOUT ){
-      CancelIo(hFile);
-      err = WAIT_TIMEOUT;
-    }
-    else if( err == WAIT_ABANDONED ){
-      CancelIo(hFile);
-      err = WAIT_TIMEOUT;
-    }
-    else if( err == WAIT_OBJECT_0 ){
-      DWORD NumberOfBytesTransferred;
-      GetOverlappedResult(hFile,&overlapped,&NumberOfBytesTransferred,FALSE);
-      SetLastError(ERROR_SUCCESS);
-      lk = TRUE;
-    }
-    else if( err == WAIT_FAILED ){
-      err = GetLastError();
-      CancelIo(hFile);
-    }
-    else {
-      CancelIo(hFile);
-      err = ERROR_INVALID_DATA;
-    }
-  }
+  //BOOL lk = LockFileEx(
+  //  hFile,
+  //  LOCKFILE_EXCLUSIVE_LOCK,// | flag,
+  //  0,
+  //  nNumberOfBytesToLockLow,
+  //  nNumberOfBytesToLockHigh,
+  //  &overlapped
+  //);
+  //DWORD err = GetLastError();
+  //if( lk == FALSE && err == ERROR_LOCK_VIOLATION ){
+  //  utf8::String ext(getFileNameByHandle(hFile).right(4));
+  //  if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
+  //    lk = LockFileEx(
+  //      hFile,
+  //      LOCKFILE_EXCLUSIVE_LOCK,
+  //      0,
+  //      nNumberOfBytesToLockLow,
+  //      nNumberOfBytesToLockHigh,
+  //      &overlapped
+  //    );
+  //    err = GetLastError();
+  //  }
+  //}
+  //if( lk == FALSE && err == ERROR_IO_PENDING ){
+  //  err = WaitForSingleObject(overlapped.hEvent,1000);
+  //  if( err == WAIT_TIMEOUT ){
+  //    CancelIo(hFile);
+  //    err = WAIT_TIMEOUT;
+  //  }
+  //  else if( err == WAIT_ABANDONED ){
+  //    CancelIo(hFile);
+  //    err = WAIT_TIMEOUT;
+  //  }
+  //  else if( err == WAIT_OBJECT_0 ){
+  //    DWORD NumberOfBytesTransferred;
+  //    GetOverlappedResult(hFile,&overlapped,&NumberOfBytesTransferred,FALSE);
+  //    SetLastError(ERROR_SUCCESS);
+  //    lk = TRUE;
+  //  }
+  //  else if( err == WAIT_FAILED ){
+  //    err = GetLastError();
+  //    CancelIo(hFile);
+  //  }
+  //  else {
+  //    CancelIo(hFile);
+  //    err = ERROR_INVALID_DATA;
+  //  }
+  //}
 //  CloseHandle(overlapped.hEvent);
-  SetLastError(err);
-  return lk;
+  //SetLastError(err);
+  //return lk;
 }
 //------------------------------------------------------------------------------
 BOOL WINAPI Cmsmail1c::repairedUnlockFile(
@@ -2414,11 +2444,11 @@ BOOL WINAPI Cmsmail1c::repairedUnlockFile(
   return UnlockFileEx(hFile,0,nNumberOfBytesToUnlockLow,nNumberOfBytesToUnlockHigh,&overlapped);
 }
 //------------------------------------------------------------------------------
-BOOL WINAPI Cmsmail1c::repairedFlushFileBuffers(HANDLE /*hFile*/)
+BOOL WINAPI Cmsmail1c::repairedFlushFileBuffers(HANDLE hFile)
 {
-//  utf8::String name(getFileNameByHandle(hFile));
-//  utf8::String ext(getFileNameByHandle(hFile).right(4));
-//  if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
+  typedef BOOL (WINAPI * FFlushFileBuffers)(HANDLE);
+  if( GetFileType(hFile) != FILE_TYPE_DISK )
+    return ((FFlushFileBuffers) oldDBENG32FlushFileBuffers_)(hFile);
   return TRUE;
 }
 //------------------------------------------------------------------------------

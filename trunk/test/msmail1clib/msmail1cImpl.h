@@ -477,9 +477,11 @@ public:
 #endif
   static void * oldBKENDGetProcAddress_;
   static void * oldDBENG32LockFile_;
+  static void * oldDBENG32FlushFileBuffers_;
   static void * oldMSVCRTLockFile_;
   static void * oldMSVCR71LockFile_;
   static void * oldMFC42LockFile_;
+  static uint64_t lastLockFileCallTime_;
   union ImportedEntry {
     FARPROC (WINAPI * f_)(HMODULE,LPCSTR);
     void * p_;
