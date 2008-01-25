@@ -274,6 +274,11 @@ void ClientFiber::connectHost(bool & online)
       try {
         remoteAddress_.resolveName(stringPartByNo(server,i),defaultPort);
         utf8::String fqdn(remoteAddress_.resolveAddr());
+        Array<ksock::SockAddr> addrs;
+        ksock::SockAddr::resolveNameForBind(client_->config_->text("bind"),addrs,defaultPort);
+        addrs[0].addr4_.sin_port = 0;
+        open();
+        bind(addrs[0]);
         try {
           connect(remoteAddress_);
           try {
@@ -507,6 +512,11 @@ void ClientMailFiber::connectHost(bool & online)
       try {
         remoteAddress.resolveName(stringPartByNo(server,i),defaultPort);
         utf8::String fqdn(remoteAddress.resolveAddr());
+        Array<ksock::SockAddr> addrs;
+        ksock::SockAddr::resolveNameForBind(client_->config_->text("bind"),addrs,defaultPort);
+        addrs[0].addr4_.sin_port = 0;
+        open();
+        bind(addrs[0]);
         try {
           connect(remoteAddress);
           try {
@@ -742,6 +752,11 @@ void ClientDBGetterFiber::main()
       ksock::SockAddr remoteAddress;
       try {
         remoteAddress.resolveName(stringPartByNo(server,i),defaultPort);
+        Array<ksock::SockAddr> addrs;
+        ksock::SockAddr::resolveNameForBind(client_->config_->text("bind"),addrs,defaultPort);
+        addrs[0].addr4_.sin_port = 0;
+        open();
+        bind(addrs[0]);
         connect(remoteAddress);
         auth();
         i = -1;
