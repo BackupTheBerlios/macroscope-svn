@@ -205,6 +205,7 @@ HRESULT Cmsmail1c::Init(LPDISPATCH pBackConnection)
       L"SaveMessageAttachmentToFile", L"—охранитьѕрикрепление—ообщени€¬‘айл",
       L"ReceiveMessages", L"ѕолучить—ообщени€",
       L"RepairLocking", L"ѕочинитьЅлокировки",
+      L"RepairFlushFileBuffers", L"ѕочинить—брос‘айловыхЅуфферов",
       L"RepairServerBusy", L"ѕочинить—ервер«ан€т",
       L"GetCommandLineParameter", L"ѕолучитьѕараметр оммандной—троки"
     };
@@ -245,11 +246,38 @@ HRESULT Cmsmail1c::Done()
   }*/
   if( oldDBENG32LockFile_ != NULL ){
     void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile");
-    writeProtectedMemory(
-      proc,
-      &oldDBENG32LockFile_,
-      sizeof(uintptr_t)
-    );
+    if( proc != NULL ){
+      writeProtectedMemory(
+        proc,
+        &oldDBENG32LockFile_,
+        sizeof(uintptr_t)
+      );
+    }
+    else if( (proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","LockFile")) != NULL ){
+      writeProtectedMemory(
+        proc,
+        &oldDBENG32LockFile_,
+        sizeof(uintptr_t)
+      );
+    }
+    oldDBENG32LockFile_ = NULL;
+  }
+  if( oldDBENG32FlushFileBuffers_ != NULL ){
+    void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","FlushFileBuffers");
+    if( proc != NULL ){
+      writeProtectedMemory(
+        proc,
+        &oldDBENG32FlushFileBuffers_,
+        sizeof(uintptr_t)
+      );
+    }
+    else if( (proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers")) != NULL ){
+      writeProtectedMemory(
+        proc,
+        &oldDBENG32FlushFileBuffers_,
+        sizeof(uintptr_t)
+      );
+    }
     oldDBENG32LockFile_ = NULL;
   }
 /*  if( oldMSVCRTLockFile_ != NULL ){
@@ -288,7 +316,7 @@ HRESULT Cmsmail1c::Done()
     );
     oldSEVENGetProcAddress_.p_ = NULL;
   }*/
-  if( lockFileJmpCodeSafe_[0] != 0 ){
+  /*if( lockFileJmpCodeSafe_[0] != 0 ){
     writeProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
     memset(lockFileJmpCodeSafe_,0,sizeof(lockFileJmpCodeSafe_));
   }
@@ -299,7 +327,7 @@ HRESULT Cmsmail1c::Done()
   if( flushFileBuffersJmpCodeSafe_[0] != 0 ){
     writeProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
     memset(flushFileBuffersJmpCodeSafe_,0,sizeof(flushFileBuffersJmpCodeSafe_));
-  }
+  }*/
   msmail1c_ = NULL;
   return S_OK;
 }
@@ -1007,7 +1035,7 @@ HRESULT Cmsmail1c::IsPropWritable(long lPropNum,BOOL * pboolPropWrite)
 //------------------------------------------------------------------------------
 HRESULT Cmsmail1c::GetNMethods(long * plMethods)
 {
-  *plMethods = 33;
+  *plMethods = 34;
   return S_OK;
 }
 //------------------------------------------------------------------------------
@@ -1288,12 +1316,20 @@ HRESULT Cmsmail1c::GetMethodName(long lMethodNum,long lMethodAlias,BSTR * pbstrM
     case 33 :
       switch( lMethodAlias ){
         case 0 :
+          return (*pbstrMethodName = SysAllocString(L"RepairFlushFileBuffers")) != NULL ? S_OK : E_OUTOFMEMORY;
+        case 1 :
+          return (*pbstrMethodName = SysAllocString(L"ѕочинить—брос‘айловыхЅуфферов")) != NULL ? S_OK : E_OUTOFMEMORY;
+      }
+      break;
+    case 34 :
+      switch( lMethodAlias ){
+        case 0 :
           return (*pbstrMethodName = SysAllocString(L"RepairServerBusy")) != NULL ? S_OK : E_OUTOFMEMORY;
         case 1 :
           return (*pbstrMethodName = SysAllocString(L"ѕочинить—ервер«ан€т")) != NULL ? S_OK : E_OUTOFMEMORY;
       }
       break;
-    case 34 :
+    case 35 :
       switch( lMethodAlias ){
         case 0 :
           return (*pbstrMethodName = SysAllocString(L"GetCommandLineParameter")) != NULL ? S_OK : E_OUTOFMEMORY;
@@ -1342,7 +1378,8 @@ HRESULT Cmsmail1c::GetNParams(long lMethodNum,long * plParams)
     case 31 : *plParams = 1; break;
     case 32 : *plParams = 0; break;
     case 33 : *plParams = 0; break;
-    case 34 : *plParams = 1; break;
+    case 34 : *plParams = 0; break;
+    case 35 : *plParams = 1; break;
     default :
       *plParams = -1;
       return E_NOTIMPL;
@@ -2057,22 +2094,6 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
               }
             //}
-            if( V_I4(pvarRetValue) ){
-              proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","FlushFileBuffers",true);
-              if( proc == NULL )
-                proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers");
-              readProtectedMemory(proc,&p,sizeof(void *));
-              if( oldDBENG32FlushFileBuffers_ == NULL && p != repairedFlushFileBuffers ){
-                void * a = repairedFlushFileBuffers;
-                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
-                oldDBENG32FlushFileBuffers_ = p;
-                V_I4(pvarRetValue) = 1;
-              }
-              else {
-                V_I4(pvarRetValue) = 0;
-                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
-              }
-            }
             /*if( V_I4(pvarRetValue) ){
               proc = findProcImportedEntryAddress("msvcrt.dll","KERNEL32.DLL","LockFile");
               readProtectedMemory(proc,&p,sizeof(void *));
@@ -2149,12 +2170,33 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             //msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
           //}
           break;
-        case 33 : // RepairServerBusy
+        case 33 : // RepairFlushFileBuffers
+          msmail1c_->client_.readConfig(msmail1c_->configFile_,msmail1c_->logFile_);
+          checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
+          {
+            void * proc, * p;
+            proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","FlushFileBuffers",true);
+            if( proc == NULL )
+              proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers");
+            readProtectedMemory(proc,&p,sizeof(void *));
+            if( oldDBENG32FlushFileBuffers_ == NULL && p != repairedFlushFileBuffers ){
+              void * a = repairedFlushFileBuffers;
+              writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+              oldDBENG32FlushFileBuffers_ = p;
+              V_I4(pvarRetValue) = 1;
+            }
+            else {
+              V_I4(pvarRetValue) = 0;
+              msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+            }
+          }
+          break;
+        case 34 : // RepairServerBusy
           msmail1c_->serverBusyThread_ = newObject<msmail1c::ServerBusyThread>();
           msmail1c_->serverBusyThread_->resume();
           V_I4(pvarRetValue) = 1;
           break;
-        case 34 : // GetCommandLineParameter
+        case 35 : // GetCommandLineParameter
           hr = SafeArrayLock(*paParams);
           if( SUCCEEDED(hr) ){
             lIndex = 0;
