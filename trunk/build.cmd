@@ -21,6 +21,9 @@ goto exit
 :exit
 
 
+if DEFINED VS90COMNTOOLS (
+  call "%VS90COMNTOOLS%..\..\VC\vcvarsall.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
+)
 if DEFINED VS80COMNTOOLS (
   call "%VS80COMNTOOLS%..\..\VC\vcvarsall.bat" 1>%TEMP%\stdout.log 2>%TEMP%\stderr.log
 )
