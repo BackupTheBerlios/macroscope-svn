@@ -245,39 +245,31 @@ HRESULT Cmsmail1c::Done()
     oldBKENDGetProcAddress_ = NULL;
   }*/
   if( oldDBENG32LockFile_ != NULL ){
-    void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile");
-    if( proc != NULL ){
+    void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile",true);
+    if( proc == NULL ){
+      proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","LockFile",true);
+      if( proc == NULL ) proc = findProcImportedEntryAddress("core81.dll","KERNEL32.DLL","LockFile",true);
+    }
+    if( proc != NULL )
       writeProtectedMemory(
         proc,
         &oldDBENG32LockFile_,
         sizeof(uintptr_t)
       );
-    }
-    else if( (proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","LockFile")) != NULL ){
-      writeProtectedMemory(
-        proc,
-        &oldDBENG32LockFile_,
-        sizeof(uintptr_t)
-      );
-    }
     oldDBENG32LockFile_ = NULL;
   }
   if( oldDBENG32FlushFileBuffers_ != NULL ){
-    void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","FlushFileBuffers");
-    if( proc != NULL ){
+    void * proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","FlushFileBuffers",true);
+    if( proc == NULL ){
+      proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers",true);
+      if( proc == NULL ) proc = findProcImportedEntryAddress("core81.dll","KERNEL32.DLL","FlushFileBuffers",true);
+    }
+    if( proc != NULL )
       writeProtectedMemory(
         proc,
         &oldDBENG32FlushFileBuffers_,
         sizeof(uintptr_t)
       );
-    }
-    else if( (proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers")) != NULL ){
-      writeProtectedMemory(
-        proc,
-        &oldDBENG32FlushFileBuffers_,
-        sizeof(uintptr_t)
-      );
-    }
     oldDBENG32LockFile_ = NULL;
   }
 /*  if( oldMSVCRTLockFile_ != NULL ){
@@ -2080,18 +2072,25 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             }
             if( V_I4(pvarRetValue) ){*/
               proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","LockFile",true);
-              if( proc == NULL )
-                proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","LockFile");
-              readProtectedMemory(proc,&p,sizeof(void *));
-              if( oldDBENG32LockFile_ == NULL && p != repairedLockFile ){
-                void * a = repairedLockFile;
-                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
-                oldDBENG32LockFile_ = p;
-                V_I4(pvarRetValue) = 1;
+              if( proc == NULL ){
+                proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","LockFile",true);
+                if( proc == NULL ) proc = findProcImportedEntryAddress("core81.dll","KERNEL32.DLL","LockFile",true);
+              }
+              if( proc != NULL ){
+                readProtectedMemory(proc,&p,sizeof(void *));
+                if( oldDBENG32LockFile_ == NULL && p != repairedLockFile ){
+                  void * a = repairedLockFile;
+                  writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                  oldDBENG32LockFile_ = p;
+                  V_I4(pvarRetValue) = 1;
+                }
+                else {
+                  V_I4(pvarRetValue) = 0;
+                  msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+                }
               }
               else {
-                V_I4(pvarRetValue) = 0;
-                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+                msmail1c_->lastError_ = oserror();
               }
             //}
             /*if( V_I4(pvarRetValue) ){
@@ -2174,20 +2173,29 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           msmail1c_->client_.readConfig(msmail1c_->configFile_,msmail1c_->logFile_);
           checkMachineBinding(msmail1c_->client_.config_->value("machine_key"));
           {
+            //static const char * modules[] = {
+              //"dbeng32.dll", "dbeng8.dll", "core81.dll", "msvcr71.dll", "ext.dll"
+            //};
             void * proc, * p;
             proc = findProcImportedEntryAddress("dbeng32.dll","KERNEL32.DLL","FlushFileBuffers",true);
-            if( proc == NULL )
-              proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers");
-            readProtectedMemory(proc,&p,sizeof(void *));
-            if( oldDBENG32FlushFileBuffers_ == NULL && p != repairedFlushFileBuffers ){
-              void * a = repairedFlushFileBuffers;
-              writeProtectedMemory(proc,&a,sizeof(uintptr_t));
-              oldDBENG32FlushFileBuffers_ = p;
-              V_I4(pvarRetValue) = 1;
+            if( proc == NULL ){
+              proc = findProcImportedEntryAddress("dbeng8.dll","KERNEL32.DLL","FlushFileBuffers",true);
+              if( proc == NULL ) proc = findProcImportedEntryAddress("core81.dll","KERNEL32.DLL","FlushFileBuffers",true);
+            }
+            if( proc != NULL ){
+              readProtectedMemory(proc,&p,sizeof(void *));
+              if( oldDBENG32FlushFileBuffers_ == NULL && p != repairedFlushFileBuffers ){
+                void * a = repairedFlushFileBuffers;
+                writeProtectedMemory(proc,&a,sizeof(uintptr_t));
+                oldDBENG32FlushFileBuffers_ = p;
+                V_I4(pvarRetValue) = 1;
+              }
+              else {
+                msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              }
             }
             else {
-              V_I4(pvarRetValue) = 0;
-              msmail1c_->lastError_ = ERROR_ALREADY_ASSIGNED;
+              msmail1c_->lastError_ = oserror();
             }
           }
           break;
