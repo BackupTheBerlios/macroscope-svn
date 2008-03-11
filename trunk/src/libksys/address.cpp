@@ -481,7 +481,11 @@ utf8::String SockAddr::gethostname()
       if( pAddress->PhysicalAddressLength == 0 ) continue;
       PIP_ADAPTER_UNICAST_ADDRESS unicast = pAddress->FirstUnicastAddress;
       while( unicast != NULL ){
+#ifdef IP_ADAPTER_ADDRESS_PRIMARY
         if( unicast->Flags & (IP_ADAPTER_ADDRESS_DNS_ELIGIBLE | IP_ADAPTER_ADDRESS_PRIMARY) ){
+#else
+        if( unicast->Flags & IP_ADAPTER_ADDRESS_DNS_ELIGIBLE ){
+#endif
           addr.clear();
             //ksys::reverseByteArray(
           memcpy(

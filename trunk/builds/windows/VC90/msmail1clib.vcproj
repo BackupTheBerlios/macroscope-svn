@@ -66,7 +66,6 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -163,7 +162,6 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -262,7 +260,6 @@
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;_USRDLL;_MERGE_PROXYSTUB;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;_CRT_SECURE_NO_DEPRECATE;CMAKE_BUILD_TYPE=2"
 				StringPooling="true"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -359,7 +356,6 @@
 				PreprocessorDefinitions="WIN32;_WINDOWS;NDEBUG;_USRDLL;_MERGE_PROXYSTUB;DISABLE_FIREBIRD_INTERFACE;DISABLE_MYSQL_INTERFACE;_CRT_SECURE_NO_DEPRECATE;CMAKE_BUILD_TYPE=2"
 				StringPooling="true"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -456,7 +452,6 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -553,7 +548,6 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				WarningLevel="3"
-				Detect64BitPortabilityProblems="true"
 				DebugInformationFormat="3"
 			/>
 			<Tool
