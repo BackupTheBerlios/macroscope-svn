@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -2933,7 +2933,7 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::St
 bool checkMachineBinding(const utf8::String & key,bool abortProgram)
 {
   struct tm lt = time2tm(getlocaltimeofday());
-  if( lt.tm_year < 2008 - 1900 || (lt.tm_year == 2008 - 1900 && lt.tm_mon < 7) ) return false;
+  if( lt.tm_year < 2009 - 1900 || (lt.tm_year == 2009 - 1900 && lt.tm_mon < 7) ) return false;
   bool pirate = true, mkey = true, expire = true;
   try {
     SHA256Cryptor decryptor;

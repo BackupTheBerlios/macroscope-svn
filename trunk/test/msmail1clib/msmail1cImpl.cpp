@@ -1,5 +1,5 @@
 /*-
- * Copyright (C) 2005-2007 Guram Dukashvili. All rights reserved.
+ * Copyright (C) 2005-2008 Guram Dukashvili. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -2151,13 +2151,13 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
           //if( flushFileBuffersJmpCodeSafe_[0] == 0 ){
             //uint8_t jmpCode[sizeof(lockFileJmpCodeSafe_)] = { 0xB8, 0, 0, 0, 0, 0xFF, 0xE0 };
 
-            /*readProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
-            *(void **) (jmpCode + 1) = repairedLockFile;
-            writeProtectedMemory(LockFile,jmpCode,sizeof(jmpCode));
+            //readProtectedMemory(LockFile,lockFileJmpCodeSafe_,sizeof(lockFileJmpCodeSafe_));
+            //*(void **) (jmpCode + 1) = repairedLockFile;
+            //writeProtectedMemory(LockFile,jmpCode,sizeof(jmpCode));
 
-            readProtectedMemory(UnlockFile,unLockFileJmpCodeSafe_,sizeof(unLockFileJmpCodeSafe_));
-            *(void **) (jmpCode + 1) = repairedUnlockFile;
-            writeProtectedMemory(UnlockFile,jmpCode,sizeof(jmpCode));*/
+            //readProtectedMemory(UnlockFile,unLockFileJmpCodeSafe_,sizeof(unLockFileJmpCodeSafe_));
+            //*(void **) (jmpCode + 1) = repairedUnlockFile;
+            //writeProtectedMemory(UnlockFile,jmpCode,sizeof(jmpCode));
 
             //readProtectedMemory(FlushFileBuffers,flushFileBuffersJmpCodeSafe_,sizeof(flushFileBuffersJmpCodeSafe_));
             //*(void **) (jmpCode + 1) = repairedFlushFileBuffers;
