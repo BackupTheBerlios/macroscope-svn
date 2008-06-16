@@ -1084,7 +1084,7 @@ void changeCurrentDir(const utf8::String & name)
   if( chdir((const char *) anyPathName2HostPathName(name).getANSIString()) != 0 ) err = errno;
 #endif
   if( err != 0 )
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,name + " " + __PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
 utf8::String getTempPath()
@@ -3195,7 +3195,7 @@ void initializeArguments(int argc,char ** argv)
         while( --argc >= 0 ) ksys::argv()[argc] = argv[argc];
       }
       else {
-        while( --argc >= 0 ) ksys::argv()[argc] = wStr[argc];
+        for( int i = 0; i < argc; i++ ) ksys::argv()[i] = wStr[i];
         LocalFree(wStr);
       }
     }

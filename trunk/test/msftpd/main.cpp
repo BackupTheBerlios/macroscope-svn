@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -85,13 +85,17 @@ class MSFTPService : public Service {
   public:
     MSFTPService();
     const ConfigSP & msftpConfig() const { return msftpConfig_; }
+
+    void start();
+    void stop();
+    void wait() {
+      msftp_->howCloseServer(msftp_->howCloseServer() & ~(ksys::BaseServer::csTerminate | ksys::BaseServer::csShutdown | ksys::BaseServer::csAbort));
+    }
   protected:
   private:
     ConfigSP msftpConfig_;
     AutoPtr<MSFTPServer> msftp_;
 
-    void start();
-    void stop();
     bool active();
 };
 //------------------------------------------------------------------------------
@@ -346,7 +350,7 @@ MSFTPServerFiber & MSFTPServerFiber::getFileHash()
 //------------------------------------------------------------------------------
 void MSFTPServerFiber::main()
 {
-  msftp_->msftpConfig_->parse().override();
+  msftp_->msftpConfig_->silent(false).parse().override();
   stdErr.rotationThreshold(
     msftp_->msftpConfig_->value("debug_file_rotate_threshold",1024 * 1024)
   );
@@ -415,7 +419,7 @@ MSFTPService::MSFTPService() :
   msftpConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >()),
   msftp_(newObject<MSFTPServer>())
 {
-  msftpConfig_->parse().override();
+  msftpConfig_->silent(true).parse().override();
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   checkMachineBinding(msftpConfig_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
@@ -433,7 +437,7 @@ MSFTPService::MSFTPService() :
 //------------------------------------------------------------------------------
 void MSFTPService::start()
 {
-  msftpConfig_->parse().override();
+  msftpConfig_->silent(true).parse().override();
   serviceName_ = msftpConfig_->value("service_name","msftp");
   displayName_ = msftpConfig_->value("service_display_name","Macroscope FTP Service");
   Array<ksock::SockAddr> addrs;
@@ -467,6 +471,8 @@ int main(int _argc,char * _argv[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
+  bool isDaemon = isDaemonCommandLineOption();
+  if( isDaemon ) daemonize();
   try {
     uintptr_t u;
     stdErr.fileName(SYSLOG_DIR("msftpd/") + "msftpd.log");
@@ -549,9 +555,21 @@ int main(int _argc,char * _argv[])
       }
     }
     if( dispatch ){
-      bool daemon = service->msftpConfig()->parse().override().value("daemon",false);
+      bool daemon = service->msftpConfig()->parse().override().value("daemon",isDaemon);
+      if( daemon != isDaemon ) daemon = isDaemon;
       service->msftpConfig()->silent(false);
-      services.startServiceCtrlDispatcher(daemon);
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( daemon ){
+        services.startServiceCtrlDispatcher();
+      }
+      else {
+#endif
+        service->start();
+        service->wait();
+        service->stop();
+#if defined(__WIN32__) || defined(__WIN64__)
+      }
+#endif
     }
   }
   catch( ExceptionSP & e ){
