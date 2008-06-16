@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -960,37 +960,8 @@ void KFTPShell::open()
   }
 }
 //------------------------------------------------------------------------------
-struct rv {
-  void * a0;
-  void * a1;
-  void * a2;
-};
-struct rv dummy(
-  void * param1,
-  void * param2,
-  void * param3,
-  void * param4,
-  void * param5,
-  void * param6,
-  void * param7,
-  void * param8,
-  void * param9,
-  void * param10,
-  void * param11,
-  void * param12)
-{
-  return rv();
-}
-//------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  struct rv a;
-  a = dummy(
-    (void *) 0x1, (void *) 0x2, (void *) 0x3, (void *) 0x4,
-    (void *) 0x5, (void *) 0x6, (void *) 0x7, (void *) 0x8,
-    (void *) 0x9,(void *) 0x10,(void *) 0x11,(void *) 0x12
-  );
-  
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
