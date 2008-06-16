@@ -317,7 +317,7 @@ Config::Config() :
 //---------------------------------------------------------------------------
 utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
 {
-  TokenType t, ttBeforeComment;
+  TokenType t, tBeforeComment, ttBeforeComment;
   bool inQuoted = false, screened = false;
   uintptr_t commentLevel = 0, prevChar = 0;
   uintptr_t maxTokenLen = 0;
@@ -360,7 +360,11 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           t = tt = ttUnknown;
           if( prevChar == '*' && c == '/' ){
             commentLevel--;
-            if( commentLevel == 0 ) t = ttBeforeComment;
+            if( commentLevel == 0 ){
+              t = tBeforeComment;
+              tt = ttBeforeComment;
+              if( token.isNull() ) t = tt = ttUnknown;
+            }
           }
 	        prevChar = c;
           aheadi_.next();
@@ -380,7 +384,10 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
           if( !token.isNull() ) break; else continue;
         }
         else if( prevChar == '/' && c == '*' ){
-          if( commentLevel == 0 ) ttBeforeComment = t;
+          if( commentLevel == 0 ){
+            tBeforeComment = t;
+            ttBeforeComment = tt;
+          }
           t = tt = ttUnknown;
           prevChar = c;
           commentLevel++;
