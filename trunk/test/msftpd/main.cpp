@@ -555,8 +555,8 @@ int main(int _argc,char * _argv[])
       }
     }
     if( dispatch ){
-      bool daemon = service->msftpConfig()->parse().override().value("daemon",isDaemon);
-      if( daemon != isDaemon ) daemon = isDaemon;
+      bool daemon = service->msftpConfig()->parse().override().value("daemon",true);
+      if( !daemon && isDaemon ) daemon = true;
       service->msftpConfig()->silent(false);
 #if defined(__WIN32__) || defined(__WIN64__)
       if( daemon ){
