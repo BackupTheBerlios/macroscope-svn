@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -188,7 +188,7 @@ inline uint32_t LZO1X::wBufShift() const
 //---------------------------------------------------------------------------
 inline LZO1X & LZO1X::wBufSize(uintptr_t wBufSize)
 {
-  wBufSize_ = (uint32_t) (wBufSize > 256u * 1024u ? wBufSize_ : wBufSize);
+  wBufSize_ = (uint32_t) (wBufSize > 1024u * 1024u * 1024u ? wBufSize_ : wBufSize);
   return *this;
 }
 //---------------------------------------------------------------------------
