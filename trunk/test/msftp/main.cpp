@@ -975,17 +975,22 @@ int main(int _argc,char * _argv[])
 #endif
     bool dispatch = true;
     for( u = 1; u < argv().count(); u++ ){
+      if( argv()[u].strcmp("--chdir") == 0 && u + 1 < argv().count() ){
+        changeCurrentDir(argv()[u + 1]);
+      }
+      else if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+        Config::defaultFileName(argv()[u + 1]);
+      }
+      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+        stdErr.fileName(argv()[u + 1]);
+      }
+    }
+    for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].strcmp("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msftp_version.tex_ << "\n");
         fprintf(stdout,"%s\n",msftp_version.tex_);
         dispatch = false;
         continue;
-      }
-      if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
-        Config::defaultFileName(argv()[u + 1]);
-      }
-      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
-        stdErr.fileName(argv()[u + 1]);
       }
       else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
         SHA256 passwordSHA256;
