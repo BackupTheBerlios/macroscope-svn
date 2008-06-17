@@ -1169,7 +1169,7 @@ SnifferService::SnifferService() : logger_(NULL)
   errorControl_ = SERVICE_ERROR_IGNORE;
   binaryPathName_ = getExecutableName();
   serviceStatus_.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
-  serviceStatus_.dwWaitHint = 600000; // give me 600 seconds for start or stop 
+  serviceStatus_.dwWaitHint = 60000; // give me 600 seconds for start or stop 
 #endif
 }
 //------------------------------------------------------------------------------

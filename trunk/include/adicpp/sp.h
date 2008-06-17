@@ -553,7 +553,7 @@ T * const & SPEIA<T,M>::ptr() const
 template<typename T> class SPIARC : public SPRC<T> {
   public:
     ~SPIARC();
-    SPIARC(T * ptr);
+    SPIARC(T * ptr = NULL);
     SPIARC(const SPIARC<T> & ptr);
 
     //SPIARC<T> & operator = (T * ptr);

@@ -83,9 +83,11 @@ class MSFTPService : public Service {
   friend class MSFTPServerFiber;
   friend class MSFTPServer;
   public:
-    MSFTPService();
+    MSFTPService() {}
+    MSFTPService(int);
     const ConfigSP & msftpConfig() const { return msftpConfig_; }
 
+    void initialize();
     void start();
     void stop();
     void wait() {
@@ -415,9 +417,13 @@ Fiber * MSFTPServer::newFiber()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-MSFTPService::MSFTPService() :
-  msftpConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >()),
-  msftp_(newObject<MSFTPServer>())
+MSFTPService::MSFTPService(int) :
+  msftpConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >())  
+{
+  msftp_ = newObjectR1<MSFTPServer>(*this);
+}
+//------------------------------------------------------------------------------
+void MSFTPService::initialize()
 {
   msftpConfig_->silent(true).parse().override();
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -468,6 +474,7 @@ bool MSFTPService::active()
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
+//  Sleep(15000);
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
@@ -479,7 +486,7 @@ int main(int _argc,char * _argv[])
     Config::defaultFileName(SYSCONF_DIR("") + "msftpd.conf");
     Services services(msftpd_version.gnu_);
     MSFTPService * service;
-    services.add(service = newObject<MSFTPService>());
+    services.add(service = newObjectV1<MSFTPService>(0));
 #if defined(__WIN32__) || defined(__WIN64__)
     bool dispatch = true;
 #else
@@ -498,6 +505,7 @@ int main(int _argc,char * _argv[])
         stdErr.fileName(argv()[u + 1]);
       }
     }
+    service->initialize();
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].strcmp("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msftpd_version.tex_ << "\n");

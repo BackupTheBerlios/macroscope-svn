@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -354,13 +354,13 @@ InterlockedConfig<T>::InterlockedConfig() : refCount_(0)
 template <typename T> inline
 void InterlockedConfig<T>::addRef()
 {
-  interlockedIncrement(refCount_,1);
+  if( this != NULL ) interlockedIncrement(refCount_,1);
 }
 //---------------------------------------------------------------------------
 template <typename T> inline
 void InterlockedConfig<T>::remRef()
 {
-  if( interlockedIncrement(refCount_, -1) == 1 ) deleteObject(this);
+  if( this != NULL && interlockedIncrement(refCount_,-1) == 1 ) deleteObject(this);
 }
 //---------------------------------------------------------------------------
 typedef SPIARC<InterlockedConfig<InterlockedMutex> > ConfigSPi;
