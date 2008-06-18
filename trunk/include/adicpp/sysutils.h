@@ -259,6 +259,9 @@ inline guid_t stringToGUID(const utf8::String & s){ return stringToGUID(s.c_str(
 void copyStrToClipboard(const utf8::String & s);
 int64_t getProcessStartTime(bool toLocalTime = false);
 intptr_t strToMonth(const utf8::String & month);
+utf8::String printTraffic(intmax_t traf,bool zero = false);
+utf8::String printTraffic(uintmax_t traf,bool zero = false);
+utf8::String printTraffic(uintmax_t traf,uintmax_t allTraf,bool html = true);
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time);
 pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env = NULL,bool wait = false);
 pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env = NULL,bool wait = false);

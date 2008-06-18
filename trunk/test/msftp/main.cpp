@@ -252,11 +252,8 @@ void KFTPClient::put()
         utf8::String::Stream stream;
         stream <<
           section_ << " " << host_ << " elapsed: " << utf8::elapsedTime2Str(ttime) <<
-          ", avg speed " << (l * 1000000u / ttime) / 1024u << "." <<
-          utf8::String::Stream::Format(unsigned((l * 1000000u / ttime) % 1024u) * 100u / 1024u,"%02") <<
-          " kbps, " << l / 1024u << "." <<
-          utf8::String::Stream::Format(unsigned((l % 1024u) * 100u / 1024u),"%02") <<
-          " kb transfered\n  " << list[i] << " to " << rfile << "\n"
+          ", avg speed " << printTraffic(l * 1000000u / ttime,true) << "bps, " <<
+          printTraffic(l,true) << " transfered\n  " << list[i] << " to " << rfile << "\n"
         ;
         log_->debug(l > 0 ? 1 : 2,stream);
         if( log_ != &stdErr ) stdErr.debug(l > 0 ? 1 : 2,stream);
@@ -298,25 +295,16 @@ void KFTPClient::put()
   utf8::String::Stream stream;
   stream <<
     section_ << " " << host_ << " operation put complete.\n" <<
-    "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
-    (all * 1000000u / atime) / 1024u << "." << 
-    utf8::String::Stream::Format(unsigned((all * 1000000u / atime) % 1024u) * 100u / 1024u,"%02") <<
-    " kbps, " << all / 1024u << "." <<
-    utf8::String::Stream::Format((all % 1024u) * 100u / 1024u,"%02") << " kb transfered\n" <<
+    "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " <<
+    printTraffic(all * 1000000u / atime,true) << "bps, " << printTraffic(all,true) << " transfered\n" <<
     "  compression:\n" <<
-    "    receive  difference: " << rcDifference() / 1024u << "." <<
-    utf8::String::Stream::Format(unsigned(abs(int(rcDifference() % 1024u)) * 100u / 1024u),"%02") <<
-    " kb, ratio: " << 
+    "    receive  difference: " << printTraffic(rcDifference(),true) << ", ratio: " << 
     utf8::String::Stream::Format(rcRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(rcRatio() % 100u,"%02") << "%\n" <<
-    "    transmit difference: " << scDifference() / 1024u << "." <<
-    utf8::String::Stream::Format(unsigned(abs(int(scDifference() % 1024u)) * 100u / 1024u),"%02") <<
-    " kb, ratio: " << 
+    "    transmit difference: " << printTraffic(scDifference(),true) << ", ratio: " << 
     utf8::String::Stream::Format(scRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(scRatio() % 100u,"%02") << "%\n" <<
-    "    overall  difference: " << rscDifference() / 1024u << "." <<
-    utf8::String::Stream::Format(unsigned(abs(int(rscDifference() % 1024u)) * 100u / 1024u),"%02") <<
-    " kb, ratio: " << 
+    "    overall  difference: " << printTraffic(rscDifference(),true)<< ", ratio: " << 
     utf8::String::Stream::Format(rscRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(rscRatio() % 100u,"%02") << "%\n"
   ;
@@ -326,6 +314,7 @@ void KFTPClient::put()
 //------------------------------------------------------------------------------
 void KFTPClient::get()
 {
+  clearStatistic();
   if( !shell_->config_->section(section_).isSection("get") ) return;
   utf8::String localPath(
     includeTrailingPathDelimiter(
@@ -433,11 +422,8 @@ void KFTPClient::get()
       log_->debug(l > 0 ? 1 : 2,
         utf8::String::Stream() <<
         section_ << " " << host_ << " elapsed: " << utf8::elapsedTime2Str(ttime) <<
-        ", avg speed " << (l * 1000000u / ttime) / 1024u << "." <<
-        utf8::String::Stream::Format(unsigned((l * 1000000u / ttime) % 1024u) * 100u / 1024u,"%02") <<
-        " kbps, " << l / 1024u << "." <<
-        utf8::String::Stream::Format(unsigned((l % 1024u) * 100u / 1024u),"%02") <<
-        " kb transfered\n  " << list[i] << " to " << file.fileName() << "\n"
+        ", avg speed " << printTraffic(l * 1000000u / ttime,true) << "bps, " <<
+        printTraffic(l,true) << " transfered\n  " << list[i] << " to " << file.fileName() << "\n"
       );
       all += l;
     }
@@ -475,24 +461,16 @@ void KFTPClient::get()
     utf8::String::Stream() <<
     section_ << " " << host_ << " operation get complete.\n" <<
     "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
-    (all * 1000000u / atime) / 1024u << "." << 
-    utf8::String::Stream::Format(unsigned((all * 1000000u / atime) % 1024u) * 100u / 1024u,"%02") <<
-    " kbps, " << all / 1024u << "." <<
-    utf8::String::Stream::Format((all % 1024u) * 100u / 1024u,"%02") << " kb transfered\n" <<
+    printTraffic(all * 1000000u / atime,true) << "bps, " <<
+    printTraffic(all,true) << " transfered\n" <<
     "  compression:\n" <<
-    "    receive  difference: " << rcDifference() / 1024u << "." <<
-    utf8::String::Stream::Format(unsigned(abs(int(rcDifference() % 1024u)) * 100u / 1024u),"%02") <<
-    " kb, ratio: " << 
+    "    receive  difference: " << printTraffic(rcDifference(),true) << ", ratio: " << 
     utf8::String::Stream::Format(rcRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(rcRatio() % 100u,"%02") << "%\n" <<
-    "    transmit difference: " << scDifference() / 1024u << "." <<
-    utf8::String::Stream::Format(unsigned(abs(int(scDifference() % 1024u)) * 100u / 1024u),"%02") <<
-    " kb, ratio: " << 
+    "    transmit difference: " << printTraffic(scDifference(),true) << ", ratio: " << 
     utf8::String::Stream::Format(scRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(scRatio() % 100u,"%02") << "%\n" <<
-    "    overall  difference: " << rscDifference() / 1024u << "." <<
-    utf8::String::Stream::Format(unsigned(abs(int(rscDifference() % 1024u)) * 100u / 1024u),"%02") <<
-    " kb, ratio: " << 
+    "    overall  difference: " << printTraffic(rscDifference(),true) << "." << ", ratio: " << 
     utf8::String::Stream::Format(rscRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(rscRatio() % 100u,"%02") << "%\n"
   );

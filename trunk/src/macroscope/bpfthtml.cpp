@@ -221,46 +221,7 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,c
 //------------------------------------------------------------------------------
 utf8::String Logger::formatTraf(uintmax_t traf,uintmax_t allTraf)
 {
-  uintmax_t q, b, c, t1, t2, t3;
-  const char * postfix;
-
-  q = traf * 10000u / allTraf;
-  b = q / 100u;
-  c = q % 100u;
-  if( traf >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
-    t2 = uintmax_t(1024u) * 1024u * 1024u * 1024u;
-    postfix = "T";
-  }
-  else if( traf >= 1024u * 1024u * 1024u ){
-    t2 = 1024u * 1024u * 1024u;
-    postfix = "G";
-  }
-  else if( traf >= 1024u * 1024u ){
-    t2 = 1024u * 1024u;
-    postfix = "M";
-  }
-  else if( traf >= 1024u ){
-    t2 = 1024u;
-    postfix = "K";
-  }
-  else {
-    return utf8::String::print(
-      traf > 0 ? "%"PRIuMAX"<FONT SIZE=0>(%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" :  "-",
-      traf,
-      b,
-      c
-    );
-  }
-  t1 = traf / t2;
-  t3 = traf % t2;
-  return utf8::String::print(
-    traf > 0 ? "%"PRIuMAX".%04"PRIuMAX"%s<FONT SIZE=0>(%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" :  "-",
-    t1,
-    uintmax_t(t3 / (t2 / 1024u)),
-    postfix,
-    b,
-    c
-  );
+  return printTraffic(traf,allTraf);
 }
 //------------------------------------------------------------------------------
 utf8::String Logger::getDecor(const utf8::String & dname,const utf8::String & section)

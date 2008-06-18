@@ -2187,6 +2187,72 @@ intptr_t strToMonth(const utf8::String & month)
   return -1;
 }
 //------------------------------------------------------------------------------
+utf8::String printTraffic(intmax_t traf,bool zero)
+{
+  uintmax_t t = traf >= 0 ? traf : -traf, t3;
+  intmax_t t1, t2;
+  const char * postfix;
+
+  if( t >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
+    t2 = uintmax_t(1024u) * 1024u * 1024u * 1024u;
+    postfix = "T";
+  }
+  else if( t >= 1024u * 1024u * 1024u ){
+    t2 = 1024u * 1024u * 1024u;
+    postfix = "G";
+  }
+  else if( t >= 1024u * 1024u ){
+    t2 = 1024u * 1024u;
+    postfix = "M";
+  }
+  else if( t >= 1024u ){
+    t2 = 1024u;
+    postfix = "K";
+  }
+  else {
+    return utf8::String::print(traf != 0 || zero ? "%"PRIdMAX : "-",traf);
+  }
+  t1 = traf / t2;
+  t3 = t % t2;
+  return utf8::String::print(traf != 0 || zero ? "%"PRIdMAX".%04"PRIuMAX"%s" : "-",t1,uintmax_t(t3 / (t2 / 1024u)),postfix);
+}
+//------------------------------------------------------------------------------
+utf8::String printTraffic(uintmax_t traf,bool zero)
+{
+  uintmax_t t1, t2, t3;
+  const char * postfix;
+
+  if( traf >= uintmax_t(1024u) * 1024u * 1024u * 1024u ){
+    t2 = uintmax_t(1024u) * 1024u * 1024u * 1024u;
+    postfix = "T";
+  }
+  else if( traf >= 1024u * 1024u * 1024u ){
+    t2 = 1024u * 1024u * 1024u;
+    postfix = "G";
+  }
+  else if( traf >= 1024u * 1024u ){
+    t2 = 1024u * 1024u;
+    postfix = "M";
+  }
+  else if( traf >= 1024u ){
+    t2 = 1024u;
+    postfix = "K";
+  }
+  else {
+    return utf8::String::print(traf != 0 || zero ? "%"PRIuMAX : "-",traf);
+  }
+  t1 = traf / t2;
+  t3 = traf % t2;
+  return utf8::String::print(traf != 0 || zero ? "%"PRIuMAX".%04"PRIuMAX"%s" : "-",t1,uintmax_t(t3 / (t2 / 1024u)),postfix);
+}
+//------------------------------------------------------------------------------
+utf8::String printTraffic(uintmax_t traf,uintmax_t allTraf,bool html)
+{
+  uintmax_t q = traf * 10000u / allTraf, b = q / 100u, c = q % 100u;
+  if( traf == 0 ) return printTraffic(traf);
+  return printTraffic(traf) + utf8::String::print(html ? "<FONT SIZE=0>(%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" : "(%"PRIuMAX".%02"PRIuMAX"%%)",b,c);
+}
+//------------------------------------------------------------------------------
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time)
 {
   utf8::String::Iterator i(date);
