@@ -1378,9 +1378,9 @@ int main(int _argc,char * _argv[])
   	      pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
 	        pidFile.resize(pidFile.size());
         }
-        stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started\n");
+        stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " started" << (isCGI ? " (CGI)" : "") << "\n");
         errcode = logger.main();
-        stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stoped\n");
+        stdErr.debug(0,utf8::String::Stream() << macroscope_version.gnu_ << " stopped" << (isCGI ? " (CGI)" : "") << "\n");
       }
       else if( rollout ){
         logger.rolloutBPFTByIPs(
