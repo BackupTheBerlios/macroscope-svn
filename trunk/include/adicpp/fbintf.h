@@ -474,7 +474,7 @@ class API {
                 void *  p_isc_decode_timestamp;
             };
             union {
-                ISC_LONG (ISC_EXPORT * fb_interpret)(ISC_SCHAR * p1,int p2,const ISC_STATUS ** p3);
+                ISC_LONG (ISC_EXPORT * fb_interpret)(ISC_SCHAR * p1,unsigned int p2,const ISC_STATUS ** p3);
                 void *  p_fb_interpret;
             };
         };

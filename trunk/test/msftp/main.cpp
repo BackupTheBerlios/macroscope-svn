@@ -153,6 +153,7 @@ void KFTPClient::put()
   if( shell_->config_->section(section_).section("put").isValue("log_file") ){
     logFile_.codePage(shell_->config_->section(section_).section("put").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
     logFile_.fileName(shell_->config_->section(section_).section("put").text("log_file"));
+    logFile_.rotatedFileCount(0).rotationThreshold(0);
     log_ = &logFile_;
   }
 
@@ -338,6 +339,7 @@ void KFTPClient::get()
   if( shell_->config_->section(section_).section("get").isValue("log_file") ){
     logFile_.codePage(shell_->config_->section(section_).section("get").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
     logFile_.fileName(shell_->config_->section(section_).section("get").text("log_file"));
+    logFile_.rotatedFileCount(0).rotationThreshold(0);
     log_ = &logFile_;
   }
 
@@ -872,6 +874,7 @@ void KFTPClient::main()
     if( shell_->config_->section(section_).isValue("log_file") ){
       logFile_.codePage(shell_->config_->section(section_).value("log_file_codepage",utf8::getCodePage(CP_ACP)));
       logFile_.fileName(shell_->config_->section(section_).text("log_file"));
+      logFile_.rotatedFileCount(0).rotationThreshold(0);
       log_ = &logFile_;
     }
     remoteAddress_.resolveName(host_,MSFTPDefaultPort);

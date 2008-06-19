@@ -183,6 +183,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         int32_t err = errno;
         newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
+      if( codePage_ == CP_UNICODE ) a *= sizeof(wchar_t);
       AutoLock<FiberInterlockedMutex> lock(mutex_);
       resume();
       AutoLock<InterlockedMutex> lock2(threadMutex_);

@@ -285,7 +285,7 @@ intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool ca
 utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String & s1,const utf8::String & separator);
 utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fmt = "SP");
 //---------------------------------------------------------------------------
-utf8::String getHostName();
+utf8::String getHostName(bool noThrow = false,const utf8::String & def = utf8::String());
 #if defined(__WIN32__) || defined(__WIN64__)
 HMODULE       getModuleHandleByAddr(void * addr = NULL);
 utf8::String  getModuleFileNameByHandle(HMODULE h);

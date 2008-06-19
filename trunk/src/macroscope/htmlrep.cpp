@@ -1615,7 +1615,7 @@ void Logger::writeHtmlTail(AsyncFile & f,int64_t ellapsed)
     "Finish time: " + utf8::time2Str(getlocaltimeofday()) + " GMT: " + utf8::time2Str(gettimeofday()) +
     "<BR>\n" +
     "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
-    "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+    "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
     "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
     "  http://developer.berlios.de/projects/macroscope/\n"

@@ -981,11 +981,12 @@ utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fmt)
   );
 }
 //------------------------------------------------------------------------------
-utf8::String getHostName()
+utf8::String getHostName(bool noThrow,const utf8::String & def)
 {
 #if HAVE_UNAME
   struct utsname un;
   if( uname(&un) != 0 ){
+    if( noThrow ) return def;
     int32_t err = errno;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
@@ -994,7 +995,7 @@ utf8::String getHostName()
     utf8::String nodename;
   } un;
   ksock::APIAutoInitializer ksockAPIAutoInitializer;
-  un.nodename = ksock::SockAddr::gethostname();
+  un.nodename = ksock::SockAddr::gethostname(noThrow,def);
 #endif
   return un.nodename;
 }

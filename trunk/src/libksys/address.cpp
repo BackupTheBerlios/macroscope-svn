@@ -139,7 +139,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
 #endif
   if( r != 0 ){
     int32_t err = errNo();
-    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(err,
+    ksys::AutoPtr<EAsyncSocket> sp(newObjectV1C2<EAsyncSocket>(err,
       __PRETTY_FUNCTION__ + utf8::String(" ") + host + (!port.isNull() ? ":" + port : utf8::String())
     ));
 #ifdef EAI_SYSTEM
@@ -148,7 +148,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
       sp->code(0) = EINVAL;
     }
 #endif
-    sp->throwSP();
+    sp.ptr(NULL)->throwSP();
   }
 #if defined(__WIN32__) || defined(__WIN64__)
   if( (ksys::isWin9x() || api.GetAddrInfoW == NULL) && api.freeaddrinfo != NULL ){
@@ -407,14 +407,14 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
 #endif
   if( err != 0 ){
     int32_t er = errNo();
-    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
+    ksys::AutoPtr<EAsyncSocket> sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
 #ifdef EAI_SYSTEM
     if( err != EAI_SYSTEM ){
       sp->addError(EINVAL,"EAI " + utf8::int2Str(err));
       sp->code(0) = EINVAL;
     }
 #endif
-    sp->throwSP();
+    sp.ptr(NULL)->throwSP();
   }
   return s;
 }
@@ -464,7 +464,7 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
 }
 #endif	
 //------------------------------------------------------------------------------
-utf8::String SockAddr::gethostname()
+utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
 {
   SockAddr addr;
   int32_t err = 0;
@@ -559,15 +559,20 @@ utf8::String SockAddr::gethostname()
 #endif
   }
   if( err != 0 ){
-    int32_t er = errNo();
-    ksys::ExceptionSP sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
-#ifdef EAI_SYSTEM
-    if( err != EAI_SYSTEM ){
-      sp->addError(EINVAL,"EAI " + utf8::int2Str(err));
-      sp->code(0) = EINVAL;
+    if( noThrow ){
+      s = def;
     }
+    else {
+      int32_t er = errNo();
+      ksys::AutoPtr<EAsyncSocket> sp(newObjectV1C2<EAsyncSocket>(er,__PRETTY_FUNCTION__));
+#ifdef EAI_SYSTEM
+      if( err != EAI_SYSTEM ){
+        sp->addError(EINVAL,"EAI " + utf8::int2Str(err));
+        sp->code(0) = EINVAL;
+      }
 #endif
-    sp->throwSP();
+      sp.ptr(NULL)->throwSP();
+    }
   }
   return s;
 }

@@ -79,7 +79,7 @@ class SockAddr {
     static void resolveNameForBind(const utf8::String & bind,ksys::Array<SockAddr> & addrs,const ksys::Mutant & defPort = 0);
     utf8::String resolveAddr(const ksys::Mutant & defPort = 0,intptr_t aiFlag = NI_NUMERICSERV) const;
 
-    static utf8::String gethostname();
+    static utf8::String gethostname(bool noThrow = false,const utf8::String & def = utf8::String());
 
     socklen_t sockAddrSize() const;
     socklen_t addrSize() const;

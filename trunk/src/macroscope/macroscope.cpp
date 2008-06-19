@@ -686,7 +686,7 @@ int32_t Logger::main()
         "<HR>\n"
         "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
         "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n"
-        "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+        "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
         "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
         "  http://developer.berlios.de/projects/macroscope/\n"
@@ -837,7 +837,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
       "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(getlocaltimeofday() - ellapsed)) + "\n<BR>\n" +
-      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
       "  http://developer.berlios.de/projects/macroscope/\n"
@@ -873,7 +873,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
       "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
-      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
       "  http://developer.berlios.de/projects/macroscope/\n"
@@ -913,7 +913,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
       "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
-      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
       "  http://developer.berlios.de/projects/macroscope/\n"
@@ -948,7 +948,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
       "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
-      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
       "  http://developer.berlios.de/projects/macroscope/\n"
@@ -978,7 +978,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
       "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
-      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
       "  http://developer.berlios.de/projects/macroscope/\n"
@@ -1005,7 +1005,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
       "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
-      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
       "  http://developer.berlios.de/projects/macroscope/\n"
@@ -1032,7 +1032,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
       "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
-      "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
       "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
       "  http://developer.berlios.de/projects/macroscope/\n"
@@ -1221,10 +1221,12 @@ const char * _malloc_options = "HR";
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-//  Sleep(15000);
+  Sleep(15000);
+
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
+
   bool isDaemon = isDaemonCommandLineOption(), isCGI = false;
   if( isDaemon ) daemonize();
   utf8::String::Stream stream;
@@ -1414,7 +1416,7 @@ int main(int _argc,char * _argv[])
         (const char *) utf8::String("<HR>\n"
         "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
         "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n"
-        "Generated on " + getHostName() + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+        "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
 #ifndef PRIVATE_RELEASE
         "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
         "  http://developer.berlios.de/projects/macroscope/\n"

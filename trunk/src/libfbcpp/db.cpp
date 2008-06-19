@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -389,8 +389,9 @@ Database & Database::attach(const utf8::String & name)
     api.open();
     ISC_STATUS_ARRAY status;
     if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 ){
+      ksys::AutoPtr<EDBAttach> p(newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__));
       api.close();
-      newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__)->throwSP();
+      p.ptr(NULL)->throwSP();
     }
     if( name.strlen() > 0 ) name_ = name;
   }
