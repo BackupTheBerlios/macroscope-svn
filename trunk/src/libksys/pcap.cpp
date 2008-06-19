@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -933,12 +933,13 @@ void PCAP::DatabaseInserter::threadExecute()
     {
       AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
       PacketGroupTree::Walker walker(pcap_->groupTree_);
-      uint64_t ct = gettimeofday();
+      uint64_t ct = gettimeofday(), bt, et;
+      pcap_->setBounds(ct,bt,et);
       while( walker.next() ){
         pGroup = &walker.object();
 //        fprintf(stderr,"%s %d ct = %"PRIu64" bt = %"PRIu64" et = %"PRIu64"\n",__FILE__,__LINE__,ct,pGroup->header_.bt_,pGroup->header_.et_); fflush(stderr);
 //        fprintf(stderr,"%s %d ct = %s bt = %s et = %s\n",__FILE__,__LINE__,utf8::time2Str(ct).c_str(),utf8::time2Str(pGroup->header_.bt_).c_str(),utf8::time2Str(pGroup->header_.et_).c_str()); fflush(stderr);
-        if( pGroup->header_.bt_ > ct || pGroup->header_.et_ < ct ){
+        if( pGroup->header_.bt_ > ct || pGroup->header_.et_ < ct || pGroup->header_.bt_ != bt || pGroup->header_.et_ != et ){
           group.ptr(pGroup);
           pcap_->groupTree_.remove(*pGroup);
           break;
