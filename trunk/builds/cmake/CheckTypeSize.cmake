@@ -36,7 +36,7 @@ MACRO(CHECK_TYPE_SIZE TYPE VARIABLE)
       ENDIF (${${IF_PRAGMA}})
       SET(CHECK_TYPE_SIZE_PREMAIN "${CHECK_TYPE_SIZE_PREMAIN}#ifdef ${IF_PRAGMA}\n#include <${def}>\n#endif\n")
     ENDFOREACH(def)
-    CONFIGURE_FILE("${CMAKE_ROOT}/Modules/CheckTypeSize.c.in"
+    CONFIGURE_FILE("${CMAKE_BINARY_DIR}/builds/cmake/CheckTypeSize.c.in"
       "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckTypeSize.c" IMMEDIATE @ONLY)
     FILE(READ "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckTypeSize.c"
       CHECK_TYPE_SIZE_FILE_CONTENT)
@@ -61,7 +61,7 @@ MACRO(CHECK_TYPE_SIZE TYPE VARIABLE)
       "${CHECK_TYPE_SIZE_ADD_INCLUDES}"
       OUTPUT_VARIABLE OUTPUT)
     IF(NOT HAVE_${VARIABLE})
-      CONFIGURE_FILE("${CMAKE_ROOT}/Modules/CheckTypeSize.c.in"
+      CONFIGURE_FILE("${CMAKE_BINARY_DIR}/builds/cmake/CheckTypeSize.c.in"
         "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp/CheckTypeSize.cxx" IMMEDIATE @ONLY)
       TRY_RUN(${VARIABLE} HAVE_${VARIABLE}
         ${CMAKE_BINARY_DIR}
