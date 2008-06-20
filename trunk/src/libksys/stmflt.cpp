@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,16 +28,16 @@
 //---------------------------------------------------------------------------
 #include <adicpp/stmflt.h>
 #define _NO_EXCEPTIONS 1
-#include <adicpp/lzma/Common/Alloc.cpp>
-#include <adicpp/lzma/Common/CRC.cpp>
-#include <adicpp/lzma/7zip/Common/InBuffer.cpp>
-#include <adicpp/lzma/7zip/Common/OutBuffer.cpp>
-#include <adicpp/lzma/7zip/Common/StreamUtils.cpp>
-#include <adicpp/lzma/7zip/Compress/RangeCoder/RangeCoderBit.cpp>
-#include <adicpp/lzma/7zip/Compress/LZ/LZInWindow.cpp>
-#include <adicpp/lzma/7zip/Compress/LZ/LZOutWindow.cpp>
-#include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.cpp>
-#include <adicpp/lzma/7zip/Compress/LZMA/LZMADecoder.cpp>
+//#include <adicpp/lzma/Common/Alloc.cpp>
+//#include <adicpp/lzma/Common/CRC.cpp>
+//#include <adicpp/lzma/7zip/Common/InBuffer.cpp>
+//#include <adicpp/lzma/7zip/Common/OutBuffer.cpp>
+//#include <adicpp/lzma/7zip/Common/StreamUtils.cpp>
+//#include <adicpp/lzma/7zip/Compress/RangeCoder/RangeCoderBit.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZ/LZInWindow.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZ/LZOutWindow.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZMA/LZMADecoder.cpp>
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------

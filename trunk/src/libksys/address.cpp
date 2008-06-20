@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -128,7 +128,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
     );
   }
 #else
-  utf8::AnsiString hp(host.getUNICODEString());
+  utf8::AnsiString hp(host.getANSIString());
   utf8::AnsiString ap((port.isNull() ? (utf8::String) defPort : port).getANSIString());
   r = api.getaddrinfo(
     host.isNull() ? NULL : (const char *) hp,

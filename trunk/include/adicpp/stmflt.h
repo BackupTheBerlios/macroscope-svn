@@ -29,8 +29,8 @@
 //---------------------------------------------------------------------------
 #ifndef STREAM_FILTER_ABSTRATION
 #define _NO_EXCEPTIONS 1
-#include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.h>
-#include <adicpp/lzma/7zip/Compress/LZMA/LZMADecoder.h>
+//#include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.h>
+//#include <adicpp/lzma/7zip/Compress/LZMA/LZMADecoder.h>
 #undef _NO_EXCEPTIONS
 #endif
 //---------------------------------------------------------------------------
