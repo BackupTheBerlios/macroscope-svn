@@ -120,8 +120,10 @@ inline
 Statement * Statement::unloadColumns(Table & table,bool clearTable)
 {
   if( clearTable ) table.clear();
-  for( uintptr_t j = fieldCount(), i = 0; i < j; i++ )
-    if( table.columnIndex(fieldName(i)) != 0 ) table.addColumn(fieldName(i));
+  for( uintptr_t j = fieldCount(), i = 0; i < j; i++ ){
+    utf8::String name(fieldName(i));
+    if( table.columnIndex(name) < 0 ) table.addColumn(name);
+  }
   return this;
 }
 //---------------------------------------------------------------------------

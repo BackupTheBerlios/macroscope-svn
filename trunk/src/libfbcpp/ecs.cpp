@@ -845,9 +845,7 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
       }
     }
   }
-  else {
-    addError(EINVAL,what);
-  }
+  if( !what.isNull() ) addError(EINVAL,what);
 }
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const

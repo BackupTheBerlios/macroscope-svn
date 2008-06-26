@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -507,7 +507,7 @@ DSQLParam * DSQLParams::checkParamName(const utf8::String & paramName)
   DSQLParam fp(NULL,paramName);
   DSQLParam * param = params_.find(fp);
   if( param == NULL )
-    newObjectV1C2<EDSQLStInvalidParamName>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EDSQLStInvalidParamName>((const ISC_STATUS *) NULL, paramName + " " + __PRETTY_FUNCTION__)->throwSP();
   return param;
 }
 //---------------------------------------------------------------------------

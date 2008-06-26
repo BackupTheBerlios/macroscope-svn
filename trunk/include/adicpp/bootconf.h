@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
 #ifdef HAVE_CONFIG_H
 #include <adicpp/config.h>
 #elif (defined(_MSC_VER) || defined(__INTEL_COMPILER)) && (defined(_WIN32) || defined(_WIN32_WINNT))
-#ifdef _WIN64
+#if defined(_WIN64) || defined(_M_X64)
 #include <adicpp/config.h.msvc.win64>
 #else
 #include <adicpp/config.h.msvc.win32>
@@ -225,12 +225,12 @@ typedef short wchar_t;
 #endif
 
 #if SIZEOF_INT8_T == 0
-#if SIZEOF__INT8 == 1
+#if SIZEOF_CHAR == 1
+typedef signed char int8_t;
+typedef unsigned char uint8_t;
+#elif SIZEOF__INT8 == 1
 typedef __int8 int8_t;
 typedef unsigned __int8 uint8_t;
-#elif SIZEOF_CHAR == 1
-typedef char int8_t;
-typedef unsigned char uint8_t;
 #endif
 #undef SIZEOF_INT8_T
 #define SIZEOF_INT8_T 1
@@ -308,8 +308,13 @@ typedef uint64_t uintmax_t;
 #define HAVE_MAXPTR_T_AS_INTPTR_T 1
 #endif
 #if SIZEOF_INTPTR_T == 8
+#ifndef HAVE_INTPTR_T_AS_INT64_T
 #define HAVE_INTPTR_T_AS_INT64_T 1
+#endif
+#ifndef HAVE_INT64_T_AS_INTPTR_T
 #define HAVE_INT64_T_AS_INTPTR_T 1
+#endif
+#define HAVE_INTMAX_T_AS_INTPTR_T 1
 #endif
 #endif
 

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,9 @@ template <typename T,class RT = Array<T> > class Table {
   public:
     ~Table();
     Table();
+    Table(const Table<T,RT> & table){ operator = (table); }
+
+    Table<T,RT> & operator = (const Table<T,RT> & table);
 
     Table<T,RT> & clear();
     Table<T,RT> & resize(uintptr_t rows, uintptr_t columns);
@@ -42,6 +45,7 @@ template <typename T,class RT = Array<T> > class Table {
     Table<T,RT> & addRow();
     Table<T,RT> & insertRow(uintptr_t row);
     Table<T,RT> & removeRow(uintptr_t row);
+    Table<T,RT> & removeRows(uintptr_t bRow,uintptr_t eRow);
     Table<T,RT> & addColumn(const utf8::String & columnName = utf8::String());
     Table<T,RT> & insertColumn(uintptr_t column, const utf8::String & columnName = utf8::String());
     Table<T,RT> & removeColumn(uintptr_t column);
@@ -69,7 +73,9 @@ template <typename T,class RT = Array<T> > class Table {
     const T & operator ()(uintptr_t row,const utf8::String & columnName) const;
     
     Mutant sum(uintptr_t column) const;
+    Mutant sum(uintptr_t column,uintptr_t bRow,uintptr_t eRow) const;
     Mutant sum(const utf8::String & columnName) const;
+    Mutant sum(const utf8::String & columnName,uintptr_t bRow,uintptr_t eRow) const;
   protected:
     template <typename TT,typename P> class SortParam {
       public:
@@ -119,13 +125,13 @@ template <typename T,class RT = Array<T> > class Table {
       param.resize(enumStringParts(sortOrder));
       for( uintptr_t i = 0; i < param.count(); i++ ){
         utf8::String order(stringPartByNo(sortOrder,i));
-	utf8::String::Iterator it(order);
+	      utf8::String::Iterator it(order);
         param[i].descending_ = false;
-	if( it.getChar() == '+' ){ it++; }
-	else
-	if( it.getChar() == '-' ){ it++; param[i].descending_ = true; }
-	param[i].column_ = columnIndex(it);
-	param[i].table_ = this;
+	      if( it.getChar() == '+' ){ it++; }
+	      else
+	      if( it.getChar() == '-' ){ it++; param[i].descending_ = true; }
+	      param[i].column_ = columnIndex(it);
+	      param[i].table_ = this;
       }
       return sort(defaultSortFunction<Array<DSP> >,param);
     }
@@ -140,7 +146,7 @@ template <typename T,class RT = Array<T> > class Table {
       protected:
       private:
     };
-    Array<Name2Index>    name2Index_;
+    Vector<Name2Index>   name2Index_;
     Array<Name2Index *>  index2Name_;
     Vector<RT>           rows_;
   private:
@@ -197,6 +203,18 @@ template <typename T,class RT> inline
 Table<T,RT> & Table<T,RT>::removeRow(uintptr_t row)
 {
   rows_.remove(row);
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::removeRows(uintptr_t bRow,uintptr_t eRow)
+{
+  if( bRow > eRow ) ksys::xchg(bRow,eRow);
+  while( bRow <= eRow ){
+    rows_.remove(bRow);
+    if( bRow == eRow ) break;
+    eRow--;
+  }
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -445,18 +463,27 @@ const T & Table<T,RT>::operator ()(uintptr_t row, const utf8::String & columnNam
 template <typename T,class RT> inline
 Mutant Table<T,RT>::sum(uintptr_t column) const
 {
+  return sum(column,0,rows_.count() - 1);
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Mutant Table<T,RT>::sum(uintptr_t column,uintptr_t bRow,uintptr_t eRow) const
+{
   assert( column < name2Index_.count() );
+  if( bRow > eRow ) ksys::xchg(bRow,eRow);
+  if( bRow >= rows_.count() ) bRow = rows_.count() - 1;
+  if( eRow >= rows_.count() ) bRow = rows_.count() - 1;
   Mutant summa = 0;
-  for( intptr_t row = rows_.count() - 1; row >= 0; row-- ){
-    Mutant a = rows_[row][column];
-    if( summa.type() == mtFloat || a.type() == mtFloat ) 
-#if HAVE_LONG_DOUBLE    
-      summa = (long double) summa + (long double) a;
-#else
-      summa = (double) summa + (double) a;
-#endif
-    else
-      summa = intmax_t(summa) + intmax_t(a);
+  if( rows_.count() > 0 ){
+    while( bRow <= eRow ){
+      Mutant a = rows_[bRow][column];
+      if( summa.type() == mtFloat || a.type() == mtFloat ) 
+        summa = (ldouble) summa + (ldouble) a;
+      else
+        summa = intmax_t(summa) + intmax_t(a);
+      if( bRow == eRow ) break;
+      bRow++;
+    }
   }
   return summa;
 }
@@ -465,6 +492,26 @@ template <typename T,class RT> inline
 Mutant Table<T,RT>::sum(const utf8::String & columnName) const
 {
   return sum(columnIndex(columnName));
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Mutant Table<T,RT>::sum(const utf8::String & columnName,uintptr_t bRow,uintptr_t eRow) const
+{
+  return sum(columnIndex(columnName),bRow,eRow);
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT> inline
+Table<T,RT> & Table<T,RT>::operator = (const Table<T,RT> & table)
+{
+  clear();
+  for( uintptr_t i = 0; i < table.columnCount(); i++ )
+    addColumn(table.columnName(i));
+  for( uintptr_t i = 0; i < table.rowCount(); i++ ){
+    addRow();
+    for( uintptr_t j = 0; j < table.columnCount(); j++ )
+      cell(i,j) = table.cell(i,j);
+  }
+  return *this;
 }
 //-----------------------------------------------------------------------------
 } // namespace ksys

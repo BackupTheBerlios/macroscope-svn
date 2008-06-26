@@ -159,7 +159,7 @@ HuffmanFilter & HuffmanFilter::compressFile(const utf8::String & src,const utf8:
     r = srcFile.read(buf,getpagesize() * 16);
     if( r < 0 ) break;
     compress(buf,uintptr_t(r));
-    if( r < getpagesize() * 16 ){
+    if( r < int64_t(getpagesize() * 16) ){
       finishCompression();
       break;
     }
@@ -482,7 +482,7 @@ LZSSKFilter & LZSSKFilter::compressFile(const utf8::String & src,const utf8::Str
     r = srcFile.read(buf,getpagesize() * 16);
     if( r < 0 ) break;
     compress(buf,uintptr_t(r));
-    if( r < getpagesize() * 16 ){
+    if( r < int64_t(getpagesize() * 16) ){
       finishCompression();
       break;
     }

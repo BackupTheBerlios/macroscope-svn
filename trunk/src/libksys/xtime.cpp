@@ -377,6 +377,7 @@ time_t timegm(struct tm * t)
   systemTime.wMinute = t->tm_min;
   systemTime.wSecond = t->tm_sec;
   systemTime.wMilliseconds = 0;
+  systemTime.wDayOfWeek = 0;
   if( SystemTimeToFileTime(&systemTime,&fileTime) == 0 ){
     int32_t err = GetLastError();
     newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();

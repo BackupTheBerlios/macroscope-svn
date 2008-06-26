@@ -34,39 +34,6 @@
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------
-// Module static functions
-//------------------------------------------------------------------------------
-static utf8::String groupingPeriodToString(PCAP::PacketGroupingPeriod groupingPeriod)
-{
-  const char * s = NULL;
-  switch( groupingPeriod ){
-    case PCAP::pgpNone :
-      s = "none";
-      break;
-    case PCAP::pgpSec  :
-      s = "sec";
-      break;
-    case PCAP::pgpMin  :
-      s = "min";
-      break;
-    case PCAP::pgpHour :
-      s = "hour";
-      break;
-    case PCAP::pgpDay  :
-      s = "day";
-      break;
-    case PCAP::pgpMon  :
-      s = "mon";
-      break;
-    case PCAP::pgpYear :
-      s = "year";
-      break;
-    default : 
-      assert( 0 );
-  }
-  return s;
-}
-//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 const uint16_t IPPacketHeader::RF = 0x8000;
@@ -272,6 +239,49 @@ PCAP::PCAP() :
   fc_(false)
 {
 //  tempFile_ = getTempPath() + createGUIDAsBase32String() + ".tmp";
+}
+//------------------------------------------------------------------------------
+PCAP::PacketGroupingPeriod PCAP::stringToGroupingPeriod(const utf8::String & gp)
+{
+  if( gp.strcasecmp("none") == 0 ) return pgpNone;
+  if( gp.strcasecmp("sec") == 0 ) return pgpSec;
+  if( gp.strcasecmp("min") == 0 ) return pgpMin;
+  if( gp.strcasecmp("hour") == 0 ) return pgpHour;
+  if( gp.strcasecmp("day") == 0 ) return pgpDay;
+  if( gp.strcasecmp("mon") == 0 ) return pgpMon;
+  if( gp.strcasecmp("year") == 0 ) return pgpYear;
+  return pgpDay;
+}
+//------------------------------------------------------------------------------
+utf8::String PCAP::groupingPeriodToString(PacketGroupingPeriod groupingPeriod)
+{
+  const char * s = NULL;
+  switch( groupingPeriod ){
+    case PCAP::pgpNone :
+      s = "none";
+      break;
+    case PCAP::pgpSec  :
+      s = "sec";
+      break;
+    case PCAP::pgpMin  :
+      s = "min";
+      break;
+    case PCAP::pgpHour :
+      s = "hour";
+      break;
+    case PCAP::pgpDay  :
+      s = "day";
+      break;
+    case PCAP::pgpMon  :
+      s = "mon";
+      break;
+    case PCAP::pgpYear :
+      s = "year";
+      break;
+    default : 
+      assert( 0 );
+  }
+  return s;
 }
 //------------------------------------------------------------------------------
 void PCAP::printAllDevices()
@@ -519,10 +529,10 @@ void PCAP::pcapCallback(void * args,const void * header,const void * packet)
 #endif
 }
 //------------------------------------------------------------------------------
-void PCAP::setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const
+void PCAP::setBounds(PacketGroupingPeriod period,uint64_t timestamp,uint64_t & bt,uint64_t & et)
 {
   struct tm t = time2tm(timestamp);
-  switch( groupingPeriod_ ){
+  switch( period ){
     case pgpNone :
       bt = et = timestamp;
       break;
@@ -708,7 +718,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     }
   }
   uint64_t bt, et;
-  setBounds(timestamp,bt,et);
+  setBounds(groupingPeriod_,timestamp,bt,et);
   if( packets_ == NULL ||
       (packets_->packets_ == packets_->count() && packets_->packets_ > 0) ||
       (groupingPeriod_ > pgpNone && bt != curPeriod_) ){
@@ -1074,7 +1084,7 @@ void PCAP::LazyWriter::swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group
 //------------------------------------------------------------------------------
 void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
 {
-  if( tempFile.size() > 0 ){
+  if( tempFile.isOpen() && tempFile.size() > 0 ){
     uint64_t pos = tempFile.size() - sizeof(PacketGroup::SwapFileHeader);
     PacketGroup::SwapFileHeader header;
     tempFile.readBuffer(pos,&header,sizeof(header));
@@ -1118,7 +1128,7 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
       );
     pcap_->databaseInserterSem_.post();
   }
-  if( tempFile.size() == 0 ){
+  if( tempFile.isOpen() && tempFile.size() == 0 ){
     tempFile.close();
     remove(tempFile.fileName(),true);
   }
@@ -1149,6 +1159,7 @@ void PCAP::LazyWriter::threadExecute()
       }
       if( group == NULL ){ if( term ) return; else break; }
       swapOut(tempFile,group);
+      if( !tempFile.isOpen() ) break;
       if( group != NULL ){
         AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
         PacketGroup * pGroup;
@@ -1176,7 +1187,7 @@ void PCAP::LazyWriter::threadExecute()
       memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
       swapin = memoryUsage < pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
     }
-    pcap_->lazyWriterSem_.wait();
+    if( !terminated_ ) pcap_->lazyWriterSem_.wait();
   }
 }
 //------------------------------------------------------------------------------

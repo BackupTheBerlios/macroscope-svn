@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,7 +81,7 @@ static inline bool isMCLinkLocal(uint32_t ip)
       && (((ip >> 8) & 0xFF) == 0);
 }
 //------------------------------------------------------------------------------
-utf8::String Logger::getIPFilter(const utf8::String & text)
+utf8::String Logger::getIPFilter(const utf8::String & text,const utf8::String & tableName)
 {
   utf8::String filter;
   utf8::String::Iterator i(text);
@@ -106,7 +106,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
       if( (i - 1).isSpace() ){
         ksock::SockAddr addr;
         if( sd.strcasecmp("src") == 0 || sd.strcasecmp("dst") == 0 ){
-          sd = "st_" + sd.lower() + "_ip";
+          sd = tableName + sd.lower() + "_ip";
           utf8::String::Iterator j(i), net(j);
           bool isNetwork = false;
           while( !j.eos() && !j.isSpace() && j.getChar() != ')' ){
@@ -142,7 +142,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
           i = j;
 	      }
         else if( sd.strcasecmp("src_port") == 0 || sd.strcasecmp("dst_port") == 0 ){
-          sd = "st_" + sd.lower();
+          sd = tableName + sd.lower();
           utf8::String::Iterator j(i);
           while( j.next() && !j.isSpace() && j.getChar() != ')' );
           filter += sd + " = " +
@@ -151,7 +151,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text)
           i = j;
 	      }
         else if( sd.strcasecmp("proto") == 0 ){
-          sd = "st_ip_proto";
+          sd = tableName + "ip_proto";
           utf8::String::Iterator j(i);
           while( j.next() && !j.isSpace() && j.getChar() != ')' );
           filter += sd + " = " + utf8::int2Str(ksock::SockAddr::stringAsProto(utf8::String(i,j)));
@@ -299,8 +299,6 @@ Logger::BPFTThread::BPFTThread(
   database_ = Database::newDatabase(&dbParamsSection);
 
   statement_ = database_->newAttachedStatement();
-  stBPFTSel_ = database_->newAttachedStatement();
-  stBPFTHostSel_ = database_->newAttachedStatement();
   stBPFTIns_ = database_->newAttachedStatement();
   stBPFTIns2_ = database_->newAttachedStatement();
   stBPFTCacheSel_ = database_->newAttachedStatement();
@@ -398,69 +396,69 @@ void Logger::BPFTThread::clearBPFTCache()
   );*/
 }
 //------------------------------------------------------------------------------
-bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
-{
-  bool updateCache = true;
-  if( pStatement == stBPFTSel_ ){
-    if( !stBPFTCacheSel_->prepared() ){
-      struct in_addr baddr;
-      baddr.s_addr = INADDR_BROADCAST;
-      stBPFTCacheSel_->text(
-        "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-        " * FROM ("
-        "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-        "    st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-        "  FROM INET_BPFT_STAT_CACHE "
-        "  WHERE"
-        "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold AND"
-        "    st_src_ip <> '@' AND st_dst_ip <> '@'" +
-        "  ORDER BY SUM1, st_src_ip, st_dst_ip "
-        ") AS A "
-        "WHERE (A.st_src_ip = '" + ksock::SockAddr::addr2Index(baddr) +
-        "' AND A.st_dst_ip = '" + ksock::SockAddr::addr2Index(baddr) + "') OR A.SUM1 >= :threshold"
-      )->prepare();
-      stBPFTCacheSel_->paramAsString("if",sectionName_)->
-        paramAsString("hash",filterHash_)->
-        paramAsMutant("threshold",minSignificantThreshold_);
-    }
-    stBPFTCacheSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
-      paramAsMutant("ET",pStatement->paramAsMutant("ET"));
-    if( stBPFTCacheSel_->execute()->fetch() ){
-      stBPFTCacheSel_->fetchAll();
-      pStatement = stBPFTCacheSel_;
-      updateCache = false;
-    }
-  }
-  else if( pStatement == stBPFTHostSel_ ){
-    if( !stBPFTCacheHostSel_->prepared() ){
-      stBPFTCacheHostSel_->text(
-        "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheHostSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-        "  st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
-        "FROM INET_BPFT_STAT_CACHE "
-        "WHERE"
-        "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
-        "  st_filter_hash = :hash AND st_threshold = :threshold AND " +
-        "  st_src_ip = :src AND st_dst_ip = :dst"
-      )->prepare();
-      stBPFTCacheHostSel_->paramAsString("if",sectionName_)->
-        paramAsString("hash",filterHash_)->
-        paramAsMutant("threshold",minSignificantThreshold_);
-    }
-    stBPFTCacheHostSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
-      paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
-      paramAsString("src",pStatement->paramAsString("src"))->
-      paramAsString("dst",pStatement->paramAsString("dst"));
-    if( stBPFTCacheHostSel_->execute()->fetch() ){
-      stBPFTCacheHostSel_->fetchAll();
-      pStatement = stBPFTCacheHostSel_;
-      updateCache = false;
-    }
-  }
-  else {
-    assert( 0 );
-  }
-  return updateCache;
-}
+//bool Logger::BPFTThread::getBPFTCachedHelper(Statement * & pStatement)
+//{
+//  bool updateCache = true;
+//  if( pStatement == stBPFTSel_ ){
+//    if( !stBPFTCacheSel_->prepared() ){
+//      struct in_addr baddr;
+//      baddr.s_addr = INADDR_BROADCAST;
+//      stBPFTCacheSel_->text(
+//        "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+//        " * FROM ("
+//        "  SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+//        "    st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+//        "  FROM INET_BPFT_STAT_CACHE "
+//        "  WHERE"
+//        "    st_if = :if AND st_bt = :BT AND st_et = :ET AND st_filter_hash = :hash AND st_threshold = :threshold AND"
+//        "    st_src_ip <> '@' AND st_dst_ip <> '@'" +
+//        "  ORDER BY SUM1, st_src_ip, st_dst_ip "
+//        ") AS A "
+//        "WHERE (A.st_src_ip = '" + ksock::SockAddr::addr2Index(baddr) +
+//        "' AND A.st_dst_ip = '" + ksock::SockAddr::addr2Index(baddr) + "') OR A.SUM1 >= :threshold"
+//      )->prepare();
+//      stBPFTCacheSel_->paramAsString("if",sectionName_)->
+//        paramAsString("hash",filterHash_)->
+//        paramAsMutant("threshold",minSignificantThreshold_);
+//    }
+//    stBPFTCacheSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
+//      paramAsMutant("ET",pStatement->paramAsMutant("ET"));
+//    if( stBPFTCacheSel_->execute()->fetch() ){
+//      stBPFTCacheSel_->fetchAll();
+//      pStatement = stBPFTCacheSel_;
+//      updateCache = false;
+//    }
+//  }
+//  else if( pStatement == stBPFTHostSel_ ){
+//    if( !stBPFTCacheHostSel_->prepared() ){
+//      stBPFTCacheHostSel_->text(
+//        "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stBPFTCacheHostSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+//        "  st_src_ip, st_dst_ip, st_dgram_bytes as SUM1, st_data_bytes as SUM2 "
+//        "FROM INET_BPFT_STAT_CACHE "
+//        "WHERE"
+//        "  st_if = :if AND st_bt = :BT AND st_et = :ET AND"
+//        "  st_filter_hash = :hash AND st_threshold = :threshold AND " +
+//        "  st_src_ip = :src AND st_dst_ip = :dst"
+//      )->prepare();
+//      stBPFTCacheHostSel_->paramAsString("if",sectionName_)->
+//        paramAsString("hash",filterHash_)->
+//        paramAsMutant("threshold",minSignificantThreshold_);
+//    }
+//    stBPFTCacheHostSel_->paramAsMutant("BT",pStatement->paramAsMutant("BT"))->
+//      paramAsMutant("ET",pStatement->paramAsMutant("ET"))->
+//      paramAsString("src",pStatement->paramAsString("src"))->
+//      paramAsString("dst",pStatement->paramAsString("dst"));
+//    if( stBPFTCacheHostSel_->execute()->fetch() ){
+//      stBPFTCacheHostSel_->fetchAll();
+//      pStatement = stBPFTCacheHostSel_;
+//      updateCache = false;
+//    }
+//  }
+//  else {
+//    assert( 0 );
+//  }
+//  return updateCache;
+//}
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
 {
@@ -594,12 +592,12 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       return;
     }
   }*/
-  CachedPacketSum * p;
-  AutoPtr<CachedPacketSum> pktSum;
+  CachedPacketSum * p, * p2;
+  AutoPtr<CachedPacketSum> pktSum, pktSum2;
   if( pResult == NULL ){
     pktSum = p = newObject<CachedPacketSum>();
-    p->bt_ = pStatement->paramAsMutant("BT");
-    p->et_ = pStatement->paramAsMutant("ET");
+    p->bt_ = pStatement->paramAsMutant("BTT");
+    p->et_ = pStatement->paramAsMutant("ETT");
     p->srcAddr_ = ksock::SockAddr::indexToAddr4(pStatement->paramAsString("src"));
     p->dstAddr_ = ksock::SockAddr::indexToAddr4(pStatement->paramAsString("dst"));
     p->srcPort_ = ports_ ? (uint16_t) pStatement->paramAsMutant("src_port") : 0;
@@ -624,67 +622,91 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     *pDataBytes = p->dataSize_;
   }
   else {
-    bool threshold = false;
-    pStatement->execute()->fetchAll()->unloadColumns(*pResult);
-    for( intptr_t i = pStatement->rowCount() - 1; i >= 0; i-- ){
-      pStatement->selectRow(i);
-      uintptr_t row = pResult->rowCount();
-      uintmax_t sum1 = pStatement->valueAsMutant("SUM1");
-      pktSum = p = newObject<CachedPacketSum>();
-      p->bt_ = pStatement->paramAsMutant("BT");
-      p->et_ = pStatement->paramAsMutant("ET");
-      if( threshold ){
-        p->srcAddr_ = ksock::SockAddr::indexToAddr4(pStatement->valueAsMutant("st_src_ip"));
-        p->dstAddr_ = ksock::SockAddr::indexToAddr4(pStatement->valueAsMutant("st_dst_ip"));
-        p->srcPort_ = ports_ ? (uint16_t) pStatement->valueAsMutant("st_src_port") : 0;
-        p->dstPort_ = ports_ ? (uint16_t) pStatement->valueAsMutant("st_dst_port") : 0;
-        p->proto_ = protocols_ ? (int16_t) pStatement->valueAsMutant("st_ip_proto") : -1;
-        p->pktSize_ = pStatement->valueAsMutant("SUM1");
-        p->dataSize_ = pStatement->valueAsMutant("SUM2");
-      }
-      else {
-        if( sum1 < minSignificantThreshold_ ){
-          struct in_addr baddr;
-          baddr.s_addr = INADDR_BROADCAST;
-          pResult->addRow();
-          pResult->cell(row,"st_src_ip") = ksock::SockAddr::addr2Index(baddr);
-          pResult->cell(row,"st_dst_ip") = ksock::SockAddr::addr2Index(baddr);
-          if( ports_ ){
-            pResult->cell(row,"st_src_port") = 0;
-            pResult->cell(row,"st_src_port") = 0;
-          }
-          if( protocols_ )
-            pResult->cell(row,"st_ip_proto") = -1;
-          pResult->cell(row,"SUM1") = pStatement->sum("SUM1",0,i);
-          pResult->cell(row,"SUM2") = pStatement->sum("SUM2",0,i);
-          threshold = true;
+    pktSum2 = p2 = newObject<CachedPacketSum>();
+    p2->bt_ = pStatement->paramAsMutant("BTT");
+    p2->et_ = pStatement->paramAsMutant("ETT");
+    struct tm t1 = time2tm(p2->bt_), t2 = time2tm(p2->et_);
+    p2->isTable_ = true;
+
+    cachedPacketSumHash_.insert(*p2,false,false,&p2);
+    if( p2 == pktSum2 ){
+      intptr_t threshold = -1, row, i;
+      p2->table_ = newObject<Table<Mutant> >();
+      pStatement->execute()->fetchAll()->unloadColumns(*p2->table_.ptr());
+      for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
+        pStatement->selectRow(i);
+        uintmax_t sum1 = pStatement->valueAsMutant("SUM1");
+
+        row = p2->table_->rowCount();
+        pStatement->unloadRowByIndex(p2->table_->addRow());
+
+hash:
+        pktSum = p = newObject<CachedPacketSum>();
+        p->bt_ = pStatement->paramAsMutant("BTT");
+        p->et_ = pStatement->paramAsMutant("ETT");
+        p->srcAddr_ = ksock::SockAddr::indexToAddr4(p2->table_->cell(row,"src_ip"));
+        p->dstAddr_ = ksock::SockAddr::indexToAddr4(p2->table_->cell(row,"dst_ip"));
+        p->srcPort_ = ports_ ? (uint16_t) p2->table_->cell(row,"src_port") : 0;
+        p->dstPort_ = ports_ ? (uint16_t) p2->table_->cell(row,"dst_port") : 0;
+        p->proto_ = protocols_ ? (int16_t) p2->table_->cell(row,"ip_proto") : -1;
+        p->pktSize_ = p2->table_->cell(row,"SUM1");
+        p->dataSize_ = p2->table_->cell(row,"SUM2");
+
+        cachedPacketSumHash_.insert(*p,false,false,&p);
+        if( p == pktSum ){
+          pktSum.ptr(NULL);
+          if( cachedPacketSumSize_ > 0 && cachedPacketSumLRU_.count() * sizeof(CachedPacketSum) > cachedPacketSumSize_ )
+            cachedPacketSumLRU_.drop(*cachedPacketSumLRU_.last());
+          cachedPacketSumMissCount_++;
         }
         else {
-          pStatement->unloadRowByIndex(pResult->addRow());
+          cachedPacketSumLRU_.remove(*p);
+          cachedPacketSumHitCount_++;
         }
-        p->srcAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_src_ip"));
-        p->dstAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"st_dst_ip"));
-        p->srcPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_src_port") : 0;
-        p->dstPort_ = ports_ ? (uint16_t) pResult->cell(row,"st_dst_port") : 0;
-        p->proto_ = protocols_ ? (int16_t) pResult->cell(row,"st_ip_proto") : -1;
-        p->pktSize_ = pResult->cell(row,"SUM1");
-        p->dataSize_ = pResult->cell(row,"SUM2");
+        cachedPacketSumLRU_.insToHead(*p);
       }
-      cachedPacketSumHash_.insert(*p,false,false,&p);
-      if( p == pktSum ){
-        pktSum.ptr(NULL);
-        if( cachedPacketSumSize_ > 0 && cachedPacketSumLRU_.count() * sizeof(CachedPacketSum) > cachedPacketSumSize_ )
-          cachedPacketSumLRU_.drop(*cachedPacketSumLRU_.last());
-        cachedPacketSumMissCount_++;
+      p2->table_->sort("SUM1");
+      if( threshold < 0 ){
+        for( intptr_t k = p2->table_->rowCount() - 1; k >= 0; k-- )
+          if( (uintmax_t) p2->table_->cell(k,"SUM1") < minSignificantThreshold_ ){
+            threshold = k;
+            break;
+          }
       }
-      else {
-        cachedPacketSumLRU_.remove(*p);
-        cachedPacketSumHitCount_++;
+      if( threshold >= 0 && i == -1 ){
+        struct in_addr baddr;
+        baddr.s_addr = INADDR_BROADCAST;
+        p2->table_->insertRow(threshold + 1);
+        p2->table_->cell(threshold + 1,"src_ip") = ksock::SockAddr::addr2Index(baddr);
+        p2->table_->cell(threshold + 1,"dst_ip") = ksock::SockAddr::addr2Index(baddr);
+        if( ports_ ){
+          p2->table_->cell(threshold + 1,"src_port") = 0;
+          p2->table_->cell(threshold + 1,"src_port") = 0;
+        }
+        if( protocols_ )
+          p2->table_->cell(threshold + 1,"ip_proto") = -1;
+        p2->table_->cell(threshold + 1,"SUM1") = p2->table_->sum("SUM1",0,threshold);
+        p2->table_->cell(threshold + 1,"SUM2") = p2->table_->sum("SUM2",0,threshold);
+        p2->table_->removeRows(0,threshold);
+        //for( intptr_t k = pResult->rowCount() - 1; k >= 0; k-- ){
+        //  const char * p = utf8::String(pResult->cell(k,"st_src_ip")).c_str();
+        //  uintmax_t b = pResult->cell(k,"SUM1");
+        //  p = p;
+        //}
+        row = 0;
+        goto hash;
       }
-      cachedPacketSumLRU_.insToHead(*p);
+      pktSum2.ptr(NULL);
+      if( cachedPacketSumSize_ > 0 && cachedPacketSumLRU_.count() * sizeof(CachedPacketSum) > cachedPacketSumSize_ )
+        cachedPacketSumLRU_.drop(*cachedPacketSumLRU_.last());
+      cachedPacketSumMissCount_++;
     }
-//    pStatement->unloadByIndex(*pResult);
-    pResult->sort("SUM1");
+    else {
+      cachedPacketSumLRU_.remove(*p2);
+      cachedPacketSumHitCount_++;
+    }
+    cachedPacketSumLRU_.insToHead(*p2);
+    *pResult = *p2->table_.ptr();
   }
 }
 //------------------------------------------------------------------------------
@@ -700,13 +722,26 @@ utf8::String Logger::BPFTThread::genHRef(const in_addr & ip,uintptr_t port)
   ;
 }
 //------------------------------------------------------------------------------
+PCAP::PacketGroupingPeriod Logger::BPFTThread::rl2pgp(intptr_t rl)
+{ 
+  switch( rl ){
+    case rlYear : return PCAP::pgpYear;
+    case rlMon  : return PCAP::pgpMon;
+    case rlDay  : return PCAP::pgpDay;
+    case rlHour : return PCAP::pgpHour;
+    case rlMin  : return PCAP::pgpMin;
+    case rlSec  : return PCAP::pgpSec;
+    case rlNone : return PCAP::pgpNone;
+  }
+  return PCAP::pgpNone;
+}
+//------------------------------------------------------------------------------
 void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
 {
   struct tm beginTime, beginTime2, endTime, endTime2;
   memset(&beginTime,0,sizeof(beginTime));
   Mutant m0, m1, m2;
   AsyncFile f;
-  intptr_t totalsLevel = 0;
 
   if( level == rlYear ){
     if( !logger_->cgi_.isCGI() && !(bool) logger_->config_->valueByPath(section_ + ".html_report.enabled",false) ) return;
@@ -722,7 +757,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     filter_ = logger_->config_->textByPath(section_ + ".html_report.filter");
     if( logger_->cgi_.isCGI() )
       filter_ = logger_->cgi_.paramAsString("filter");
-    filter_ = getIPFilter(filter_.trim());
+    filter_ = getIPFilter(filter_.trim(),"a.");
     filterHash_ = SHA256().sha256AsBase64String(filter_,false);
     curTime_ = time2tm(ellapsed_);
     resolveDNSNames_ = logger_->config_->valueByPath(section_ + ".html_report.resolve_dns_names",true);
@@ -738,165 +773,245 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     if( logger_->cgi_.isCGI() )
       ports_ = logger_->cgi_.paramAsMutant("ports");
     if( !bidirectional_ ) protocols_ = ports_ = false;
+    groupingPeriod_ = PCAP::stringToGroupingPeriod(logger_->config_->valueByPath(section_ + ".sniffer.grouping_period","day"));
+    totalsPeriod_ = PCAP::stringToGroupingPeriod(logger_->config_->valueByPath(section_ + ".sniffer.totals_period","day"));
+    //totalsPeriod_ = (groupingPeriod_ >= totalsPeriod_ ? PCAP::PacketGroupingPeriod(groupingPeriod_ + 1) : totalsPeriod_);
+    //if( totalsPeriod_ > PCAP::pgpYear )
+    //  newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     database_->start();
 //    clearBPFTCache();
-    if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-      statement_->text(
-        "SELECT FIRST 1 st_start AS BT FROM INET_BPFT_STAT "
-        "WHERE st_if = :st_if ORDER BY st_if, st_start"
-      )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
-      if( statement_->fieldIndex("BT") < 0 || statement_->rowCount() == 0 ) goto l1;
-      beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
-      statement_->text(
-        "SELECT FIRST 1 st_start AS ET FROM INET_BPFT_STAT "
-        "WHERE st_if = :st_if ORDER BY st_if desc, st_start desc"
-      )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
-      if( statement_->fieldIndex("ET") < 0 || statement_->rowCount() == 0 ) goto l1;
-      endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
-    }
-    else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
-      statement_->text(
-        "SELECT MIN(st_start) AS BT, MAX(st_start) AS ET FROM INET_BPFT_STAT WHERE st_if = :st_if"
-      )->prepare()->paramAsString("st_if",sectionName_)->execute()->fetchAll();
-      if( statement_->fieldIndex("BT") < 0 || statement_->fieldIndex("ET") < 0 ||
-          statement_->rowCount() == 0 ||
-          (statement_->valueAsMutant("BT") == Mutant(0) &&
-           statement_->valueAsMutant("ET") == Mutant(0)) ) goto l1;
-      beginTime = time2tm((uint64_t) statement_->valueAsMutant("BT") + getgmtoffset());
-      endTime = time2tm((uint64_t) statement_->valueAsMutant("ET") + getgmtoffset());
-    }
-    else {
-      assert( 0 );
-    }
+    Sniffer::getTrafficPeriod(statement_,sectionName_,beginTime,endTime);
 //    stdErr.debug(9,utf8::String::Stream() << __FILE__ << ", " << __LINE__ << "\n").flush();
     if( bidirectional_ ){
-      stBPFTSel_->text(
-        "  SELECT " +
-        utf8::String(ports_ ? "st_src_ip, st_src_port, st_dst_ip, st_dst_port," : "st_src_ip, st_dst_ip,") +
-        utf8::String(protocols_ ? " st_ip_proto," : "") +
-        "    SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-        "  FROM"
-        "    INET_BPFT_STAT"
-        "  WHERE "
-        "    st_if = :st_if AND"
-        "    st_start >= :BT AND st_start <= :ET " +
-        (filter_.isNull() ? utf8::String() : " AND " + filter_) +
-        "  GROUP BY " +
-        (ports_ ? "st_src_ip, st_src_port, st_dst_ip, st_dst_port " : "st_src_ip, st_dst_ip ") +
-        (protocols_ ? ", st_ip_proto " : "") +
-        "  ORDER BY SUM1"
-        /* +
-        utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ?
-          "  PLAN (INET_BPFT_STAT INDEX (IBS_IDX4))" : "") +*/
-      );
-      stBPFTHostSel_->text(
-        "SELECT"
-        "  SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2 "
-        "FROM"
-        "  INET_BPFT_STAT "
-        "WHERE"
-        "  st_if = :st_if AND"
-        "  st_start >= :BT AND st_start <= :ET AND"
-        "  st_src_ip = :src AND st_dst_ip = :dst" +
-        utf8::String(ports_ ? 
-          " AND st_src_port = :src_port AND st_dst_port = :dst_port" : ""
-        ) +
-        utf8::String(protocols_ ? 
-          " AND st_ip_proto = :proto " : ""
-        )
-        /* +
-        utf8::String(dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ?
-          " PLAN (INET_BPFT_STAT INDEX (IBS_IDX4))" : "")*/
-      );
+      //utf8::String templ(
+      //  "SELECT"
+      //  "  * "
+      //  "FROM ("
+      //  "  SELECT"
+      //  "    a.st_src_ip, a.st_dst_ip," +
+      //  utf8::String(ports_ ? "a.st_src_port, a.st_dst_port," : "") +
+      //  utf8::String(protocols_ ? " a.st_ip_proto," : "") +
+      //  "    CASE"
+      //  "      WHEN (b.sum1 IS NULL) THEN a.sum1"
+      //  "      ELSE a.sum1 - b.sum1"
+      //  "    END AS SUM1,"
+      //  "    CASE"
+      //  "      WHEN (b.sum2 IS NULL) THEN a.sum2"
+      //  "      ELSE a.sum2 - b.sum2"
+      //  "    END AS SUM2 "
+      //  "  FROM"
+      //  "    (SELECT"
+      //  "        a.st_src_ip," +
+      //  utf8::String(ports_ ? " a.st_src_port," : "") +
+      //  "        a.st_dst_ip," +
+      //  utf8::String(ports_ ? " a.st_dst_port," : "") +
+      //  utf8::String(protocols_ ? " a.st_ip_proto," : "") +
+      //  "        SUM(a.st_dgram_bytes) AS SUM1,"
+      //  "        SUM(a.st_data_bytes)  AS SUM2"
+      //  "    FROM"
+      //  "        INET_BPFT_STAT_TOTALS a"
+      //  "    WHERE"
+      //  "        a.st_if = :if AND"
+      //  "        a.st_start >= :BTT AND a.st_start < :ETT @@0001@@"
+      //  "    GROUP BY"
+      //  "        a.st_src_ip," +
+      //  utf8::String(ports_ ? " a.st_src_port," : "") +
+      //  "        a.st_dst_ip" +
+      //  utf8::String(ports_ ? ", a.st_dst_port" : "") +
+      //  utf8::String(protocols_ ? ", a.st_ip_proto" : "") +
+      //  "    ) AS a"
+      //  "    LEFT JOIN"
+      //  "    (SELECT"
+      //  "        a.st_src_ip," +
+      //  utf8::String(ports_ ? " a.st_src_port," : "") +
+      //  "        a.st_dst_ip," +
+      //  utf8::String(ports_ ? " a.st_dst_port," : "") +
+      //  utf8::String(protocols_ ? " a.st_ip_proto," : "") +
+      //  "        SUM(a.st_dgram_bytes) AS SUM1,"
+      //  "        SUM(a.st_data_bytes)  AS SUM2"
+      //  "    FROM"
+      //  "        INET_BPFT_STAT a"
+      //  "    WHERE"
+      //  "        a.st_if = :if AND"
+      //  "        ((a.st_start >= :BTT AND a.st_start < :BT) OR (a.st_start > :ET AND a.st_start < :ETT)) @@0001@@"
+      //  "    GROUP BY"
+      //  "        a.st_src_ip," +
+      //  utf8::String(ports_ ? " a.st_src_port," : "") +
+      //  "        a.st_dst_ip" +
+      //  utf8::String(ports_ ? ", a.st_dst_port" : "") +
+      //  utf8::String(protocols_ ? " ,a.st_ip_proto" : "") +
+      //  "    ) AS b ON ("
+      //  "        a.st_src_ip = b.st_src_ip AND" +
+      //  utf8::String(ports_ ? " a.st_src_port = b.st_src_port AND" : "") +
+      //  "        a.st_dst_ip = b.st_dst_ip" +
+      //  utf8::String(ports_ ? " AND a.st_dst_port = b.st_dst_port" : "") +
+      //  utf8::String(protocols_ ? " AND a.st_ip_proto = b.st_ip_proto" : "") +
+      //  "    )"
+      //  "  ) AS a "
+      //  "WHERE"
+      //  "  a.sum1 > 0 "
+      //  "ORDER BY"
+      //  "  a.sum1"
+      //);
+      for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+        if( stBPFTSel_[i] == NULL ) stBPFTSel_[i] = database_->newAttachedStatement();
+        utf8::String templ1 =
+          "  SELECT"
+          "    a.src_ip, a.dst_ip," +
+          utf8::String(ports_ ? "a.src_port, a.dst_port," : "") +
+          utf8::String(protocols_ ? " a.ip_proto," : "") +
+          "    SUM(a.dgram) AS sum1,"
+          "    SUM(a.data) AS sum2"
+          "  FROM"
+          "      INET_SNIFFER_STAT_@@0002@@ a"
+          "  WHERE"
+          "      a.iface = :if"
+          "      @@0001@@"
+          "  GROUP BY"
+          "        a.src_ip," +
+          utf8::String(ports_ ? " a.src_port," : "") +
+          "        a.dst_ip" +
+          utf8::String(ports_ ? ", a.dst_port" : "") +
+          utf8::String(protocols_ ? " ,a.ip_proto" : "")
+        ;
+        stBPFTSel_[i]->text(templ1.replaceAll("@@0001@@"," AND a.ts >= :BTT AND a.ts < :ETT" +
+          (filter_.isNull() ? utf8::String() : " AND " + filter_)).replaceAll("@@0002@@",Sniffer::pgpNames[i])
+        )->prepare()->paramAsString("if",sectionName_);
+
+        utf8::String templ2(
+          "  AND a.src_ip = :src" +
+          utf8::String(ports_ ? " AND a.src_port = :src_port" : "") +
+          "  AND a.dst_ip = :dst" +
+          utf8::String(ports_ ? " AND a.dst_port = :dst_port" : "") +
+          utf8::String(protocols_ ? " AND a.ip_proto = :proto " : "")
+        );
+
+        if( stBPFTHostSel_[i] == NULL ) stBPFTHostSel_[i] = database_->newAttachedStatement();
+        stBPFTHostSel_[i]->text(templ1.replaceAll("@@0001@@",
+          " AND a.ts >= :BTT AND a.ts < :ETT" + templ2).replaceAll("@@0002@@",Sniffer::pgpNames[i])
+        )->prepare()->paramAsString("if",sectionName_);
+      }
     }
-    else {
-      stBPFTSel_->text(
-        "SELECT"
-        "  *"
-        "FROM ("
-        "  SELECT"
-        "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
-        "  FROM ("
-        "      SELECT"
-        "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-        "      FROM"
-        "        INET_BPFT_STAT"
-        "      WHERE "
-        "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET "
-        "      GROUP BY st_dst_ip"
-        "    UNION ALL"
-        "      SELECT"
-        "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-        "      FROM"
-        "        INET_BPFT_STAT"
-        "      WHERE "
-        "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET "
-        "      GROUP BY st_src_ip"
-        "  ) AS B "
-        "  GROUP BY B.st_ip"
-        ") AS A " +
-        (filter_.isNull() ? utf8::String() : "WHERE "  + filter_) +
-        "ORDER BY SUM1"
-      );
-      stBPFTHostSel_->text(// переписать через вложеный 
-        "SELECT"
-        "  SUM(A.SUM1) AS SUM1, SUM(A.SUM2) AS SUM2 "
-        "FROM ("
-        "      SELECT"
-        "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
-        "      FROM"
-        "        INET_BPFT_STAT"
-        "      WHERE "
-        "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET AND"
-        "        st_dst_ip = :dst"
-        "      GROUP BY st_dst_ip"
-        "    UNION ALL"
-        "      SELECT"
-        "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
-        "      FROM"
-        "        INET_BPFT_STAT"
-        "      WHERE "
-        "        st_if = :st_if AND"
-        "        st_start >= :BT AND st_start <= :ET AND"
-        "        st_src_ip = :src"
-        "      GROUP BY st_src_ip"
-        "  ) AS A "
-        "GROUP BY A.COLIDX"
-      );
-    }
-    stBPFTSel_->prepare()->paramAsString("st_if",sectionName_);
-    stBPFTHostSel_->prepare()->paramAsString("st_if",sectionName_);
+    //else {
+    //  stBPFTSel_->text(
+    //    "SELECT"
+    //    "  *"
+    //    "FROM ("
+    //    "  SELECT"
+    //    "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
+    //    "  FROM ("
+    //    "      SELECT"
+    //    "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+    //    "      FROM"
+    //    "        INET_BPFT_STAT"
+    //    "      WHERE "
+    //    "        st_if = :if AND"
+    //    "        st_start >= :BT AND st_start <= :ET "
+    //    "      GROUP BY st_dst_ip"
+    //    "    UNION ALL"
+    //    "      SELECT"
+    //    "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
+    //    "      FROM"
+    //    "        INET_BPFT_STAT"
+    //    "      WHERE "
+    //    "        st_if = :if AND"
+    //    "        st_start >= :BT AND st_start <= :ET "
+    //    "      GROUP BY st_src_ip"
+    //    "  ) AS B "
+    //    "  GROUP BY B.st_ip"
+    //    ") AS A " +
+    //    (filter_.isNull() ? utf8::String() : "WHERE "  + filter_) +
+    //    "ORDER BY SUM1"
+    //  );
+    //  stBPFTHostSel_->text(// переписать через вложеный 
+    //    "SELECT"
+    //    "  SUM(A.SUM1) AS SUM1, SUM(A.SUM2) AS SUM2 "
+    //    "FROM ("
+    //    "      SELECT"
+    //    "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
+    //    "      FROM"
+    //    "        INET_BPFT_STAT"
+    //    "      WHERE "
+    //    "        st_if = :if AND"
+    //    "        st_start >= :BT AND st_start <= :ET AND"
+    //    "        st_dst_ip = :dst"
+    //    "      GROUP BY st_dst_ip"
+    //    "    UNION ALL"
+    //    "      SELECT"
+    //    "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
+    //    "      FROM"
+    //    "        INET_BPFT_STAT"
+    //    "      WHERE "
+    //    "        st_if = :if AND"
+    //    "        st_start >= :BT AND st_start <= :ET AND"
+    //    "        st_src_ip = :src"
+    //    "      GROUP BY st_src_ip"
+    //    "  ) AS A "
+    //    "GROUP BY A.COLIDX"
+    //  );
+    //}
+    //stBPFTSel_->prepare()->paramAsString("if",sectionName_);
+    //stBPFTSel2_->prepare()->paramAsString("if",sectionName_);
+    //stBPFTHostSel_->prepare()->paramAsString("if",sectionName_);
+    //stBPFTHostSel2_->prepare()->paramAsString("if",sectionName_);
     htmlDir_ = excludeTrailingPathDelimiter(logger_->config_->valueByPath(section_ + ".html_report.directory"));
     if( logger_->cgi_.isCGI() ){
       memset(&cgiBT_,0,sizeof(cgiBT_));
       cgiBT_.tm_year = (int) logger_->cgi_.paramAsMutant("byear") - 1900;
       cgiBT_.tm_mon = (int) logger_->cgi_.paramAsMutant("bmon") - 1;
       cgiBT_.tm_mday = (int) logger_->cgi_.paramAsMutant("bday");
+      if( cgiBT_.tm_mday < 1 || cgiBT_.tm_mday > (int) monthDays(cgiBT_.tm_year + 1900,cgiBT_.tm_mon) )
+        cgiBT_.tm_mday = monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon);
+      cgiBT_.tm_hour = (int) logger_->cgi_.paramAsMutant("bhour");
+      cgiBT_.tm_min = (int) logger_->cgi_.paramAsMutant("bmin");
+      cgiBT_.tm_sec = 0;
       memset(&cgiET_,0,sizeof(cgiET_));
       cgiET_.tm_year = (int) logger_->cgi_.paramAsMutant("eyear") - 1900;
       cgiET_.tm_mon = (int) logger_->cgi_.paramAsMutant("emon") - 1;
       cgiET_.tm_mday = (int) logger_->cgi_.paramAsMutant("eday");
-      cgiET_.tm_hour = 23;
-      cgiET_.tm_min = 59;
+      if( cgiET_.tm_mday < 1 || cgiET_.tm_mday > (int) monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon) )
+        cgiET_.tm_mday = monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon);
+      cgiET_.tm_hour = (int) logger_->cgi_.paramAsMutant("ehour");
+      cgiET_.tm_min = (int) logger_->cgi_.paramAsMutant("emin");
       cgiET_.tm_sec = 59;
       if( tm2Time(cgiBT_) > tm2Time(cgiET_) ) ksys::xchg(cgiBT_,cgiET_);
       if( tm2Time(cgiBT_) < tm2Time(beginTime) ) cgiBT_ = beginTime;
       if( tm2Time(cgiET_) > tm2Time(endTime) ) cgiET_ = endTime;
-      cgiBT_.tm_hour = 0;
-      cgiBT_.tm_min = 0;
-      cgiBT_.tm_sec = 0;
-      cgiET_.tm_hour = 23;
-      cgiET_.tm_min = 59;
-      cgiET_.tm_sec = 59;
+      beginTime = cgiBT_;
+      endTime = cgiET_;
+
+      utf8::String maxTotals(logger_->cgi_.paramAsString("max_totals"));
+      utf8::String minTotals(logger_->cgi_.paramAsString("min_totals"));
+
+      if( maxTotals.strcasecmp("Min") == 0 ) maxTotalsLevel_ = rlMin;
+      else
+      if( maxTotals.strcasecmp("Hour") == 0 ) maxTotalsLevel_ = rlHour;
+      else
+      if( maxTotals.strcasecmp("Day") == 0 ) maxTotalsLevel_ = rlDay;
+      else
+      if( maxTotals.strcasecmp("Mon") == 0 ) maxTotalsLevel_ = rlMon;
+      else
+      if( maxTotals.strcasecmp("Year") == 0 ) maxTotalsLevel_ = rlYear;
+
+      if( minTotals.strcasecmp("Min") == 0 ) minTotalsLevel_ = rlMin;
+      else
+      if( minTotals.strcasecmp("Hour") == 0 ) minTotalsLevel_ = rlHour;
+      else
+      if( minTotals.strcasecmp("Day") == 0 ) minTotalsLevel_ = rlDay;
+      else
+      if( minTotals.strcasecmp("Mon") == 0 ) minTotalsLevel_ = rlMon;
+      else
+      if( minTotals.strcasecmp("Year") == 0 ) minTotalsLevel_ = rlYear;
+
+      if( minTotalsLevel_ < maxTotalsLevel_ ) ksys::xchg(minTotalsLevel_,maxTotalsLevel_);
+      level = maxTotalsLevel_;
     }
   }
   else {
     assert( rt != NULL );
     beginTime = endTime = *rt;
   }
+  if( logger_->cgi_.isCGI() && level < minTotalsLevel_ ) return;
   int * pi, sv, av, fv;
   switch( level ){
     case rlYear :
@@ -957,21 +1072,47 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         utf8::String::print("-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1)
       );
       break;
+    case rlHour :
+      beginTime.tm_hour = 0;
+      beginTime.tm_min = 0;
+      beginTime.tm_sec = 0;
+      endTime.tm_hour = 23;
+      endTime.tm_min = 59;
+      endTime.tm_sec = 59;
+      pi = &endTime.tm_min;
+      sv = 0;
+      av = 1;
+      f.fileName(
+        includeTrailingPathDelimiter(htmlDir_) + 
+        "bpft-" + sectionName_ +
+        utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday,endTime.tm_hour)
+      );
+      break;
+    case rlMin :
+      beginTime.tm_min = 0;
+      beginTime.tm_sec = 0;
+      endTime.tm_min = 59;
+      endTime.tm_sec = 59;
+      pi = &endTime.tm_sec;
+      sv = 0;
+      av = 1;
+      f.fileName(
+        includeTrailingPathDelimiter(htmlDir_) + 
+        "bpft-" + sectionName_ +
+        utf8::String::print("-traf-by-%04d%02d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday,endTime.tm_hour,endTime.tm_min)
+      );
+      break;
+    case rlSec :
+    case rlNone :
     case rlCount :
       return;
     default :
       pi = NULL;
       sv = av = fv = 0;
   }
-  if( logger_->cgi_.isCGI() ){
+  if( logger_->cgi_.isCGI() ){    
     f.fileName("stdout").open();
     if( level == rlYear ) logger_->writeHtmlHead(f);
-    utf8::String totals(logger_->cgi_.paramAsString("totals"));
-    if( totals.strcasecmp("Day") == 0 ) totalsLevel = rlDay;
-    else
-    if( totals.strcasecmp("Mon") == 0 ) totalsLevel = rlMon;
-    else
-    if( totals.strcasecmp("Year") == 0 ) totalsLevel = rlYear;
   }
   else {
     f.createIfNotExist(true).open().resize(0);
@@ -985,6 +1126,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     chModOwn(f.fileName(),m0,m1,m2);
     logger_->writeHtmlHead(f);
   }
+  Vector<Table<Mutant> > table;
   while( tm2Time(endTime) >= tm2Time(beginTime) ){
     beginTime2 = beginTime;
     endTime2 = endTime;
@@ -998,18 +1140,30 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       case rlDay :
         beginTime.tm_mday = endTime.tm_mday;
         break;
+      case rlHour :
+        beginTime.tm_hour = endTime.tm_hour;
+        break;
+      case rlMin :
+        beginTime.tm_min = endTime.tm_min;
+        break;
+      case rlSec :
+        beginTime.tm_sec = endTime.tm_sec;
+        break;
       default    :
         assert( 0 );
     }
-    Vector<Table<Mutant> > table;
     if( logger_->cgi_.isCGI() &&
         (tm2Time(cgiET_) < tm2Time(beginTime) || tm2Time(cgiBT_) > tm2Time(endTime) ||
-         level < totalsLevel) ){
+         level < maxTotalsLevel_ || level > minTotalsLevel_) ){
     }
     else {
-      stBPFTSel_->
-        paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-        paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
+      table.clear();
+      struct tm btt = beginTime, bta, ett = endTime, eta;
+      btt = time2tm(tm2Time(btt) - (level >= rlHour ? getgmtoffset() : 0));
+      ett = time2tm(tm2Time(ett) - (level >= rlHour ? getgmtoffset() : 0));
+      Sniffer::setTotalsBounds(rl2pgp(level),btt,ett,bta,eta);
+      stBPFTSel_[rl2pgp(level)]->
+        paramAsMutant("BTT",bta)->paramAsMutant("ETT",eta);
       switch( level ){
         case rlYear :
           table.resize(13);
@@ -1020,10 +1174,16 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         case rlDay :
           table.resize(25);
           break;
+        case rlHour :
+          table.resize(61);
+          break;
+        case rlMin :
+          table.resize(61);
+          break;
         default    :
           assert( 0 );
       }
-      getBPFTCached(stBPFTSel_,&table[0]);
+      getBPFTCached(stBPFTSel_[rl2pgp(level)],&table[0]);
       if( (uintmax_t) table[0].sum("SUM1") > 0 ){
         if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
           (const char *) utf8::tm2Str(beginTime).getOEMString(),
@@ -1042,13 +1202,21 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             case rlDay :
               beginTime.tm_hour = endTime.tm_hour;
               break;
+            case rlHour :
+              beginTime.tm_min = endTime.tm_min;
+              break;
+            case rlMin :
+              beginTime.tm_sec = endTime.tm_sec;
+              break;
             default    :
               assert( 0 );
           }
-          stBPFTSel_->
-            paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-            paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()));
-          getBPFTCached(stBPFTSel_,&table[*pi + av]);
+          btt = time2tm(tm2Time(beginTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
+          ett = time2tm(tm2Time(endTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
+          Sniffer::setTotalsBounds(rl2pgp(level + 1),btt,ett,bta,eta);
+          stBPFTSel_[rl2pgp(level + 1)]->
+            paramAsMutant("BTT",bta)->paramAsMutant("ETT",eta);
+          getBPFTCached(stBPFTSel_[rl2pgp(level + 1)],&table[*pi + av]);
           colCount += (uintmax_t) table[*pi + av].sum("SUM1") > 0;
           (*pi)--;
         }
@@ -1062,6 +1230,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             break;
           case rlDay :
             endTime.tm_hour = 23;
+            break;
+          case rlHour :
+            endTime.tm_min = 59;
+            break;
+          case rlMin :
+            endTime.tm_sec = 59;
             break;
           default    :
             assert( 0 );
@@ -1100,6 +1274,26 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
                 utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) + "\">"
 	            ) +
               utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
+	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+            ;
+            break;
+          case rlHour :
+            f <<
+	            (logger_->cgi_.isCGI() ? utf8::String() :
+                "    <A HREF=\"bpft-" + sectionName_ +
+                utf8::String::print("-traf-by-%04d%02d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday,endTime.tm_hour) + "\">"
+	            ) +
+              utf8::String::print("%02d %02d.%02d.%04d",endTime.tm_hour,endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
+	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
+            ;
+            break;
+          case rlMin :
+            f <<
+	            (logger_->cgi_.isCGI() ? utf8::String() :
+                "    <A HREF=\"bpft-" + sectionName_ +
+                utf8::String::print("-traf-by-%04d%02d%02d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday,endTime.tm_hour,endTime.tm_min) + "\">"
+	            ) +
+              utf8::String::print("%02d:%02d %02d.%02d.%04d",endTime.tm_hour,endTime.tm_min,endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
 	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
             ;
             break;
@@ -1143,16 +1337,22 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           case rlDay :
             endTime.tm_hour = 23;
             break;
+          case rlHour :
+            endTime.tm_min = 59;
+            break;
+          case rlMin :
+            endTime.tm_sec = 59;
+            break;
           default    :
             assert( 0 );
         }
         for( intptr_t i = table[0].rowCount() - 1; i >= 0; i-- ){
-          struct in_addr ip41 = ksock::SockAddr::indexToAddr4(table[0](i,"st_src_ip"));
-          intptr_t ip41Port = ports_ ? ksock::api.ntohs(table[0](i,"st_src_port")) : 0;
-          struct in_addr ip42 = ksock::SockAddr::indexToAddr4(table[0](i,"st_dst_ip"));
-          intptr_t ip42Port = ports_ ? ksock::api.ntohs(table[0](i,"st_dst_port")) : 0;
-          intptr_t ipProto = protocols_ ? (int16_t) table[0](i,"st_ip_proto") : -1;
-	        utf8::String row(
+          struct in_addr ip41 = ksock::SockAddr::indexToAddr4(table[0](i,"src_ip"));
+          intptr_t ip41Port = ports_ ? ksock::api.ntohs(table[0](i,"src_port")) : 0;
+          struct in_addr ip42 = ksock::SockAddr::indexToAddr4(table[0](i,"dst_ip"));
+          intptr_t ip42Port = ports_ ? ksock::api.ntohs(table[0](i,"dst_port")) : 0;
+          intptr_t ipProto = protocols_ ? (int16_t) table[0](i,"ip_proto") : -1;
+	        f <<
             "<TR>\n"
             "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
 	          genHRef(ip41,ip41Port) +
@@ -1168,7 +1368,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.dgram",section_) + "\" nowrap>\n" +
             formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
             "  </TH>\n"
-          );
+          ;
           while( *pi >= sv ){
             switch( level ){
               case rlYear :
@@ -1181,24 +1381,34 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               case rlDay :
                 beginTime.tm_hour = endTime.tm_hour;
                 break;
+              case rlHour :
+                beginTime.tm_min = endTime.tm_min;
+                break;
+              case rlMin :
+                beginTime.tm_sec = endTime.tm_sec;
+                break;
               default    :
                 assert( 0 );
             }
             if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
-              stBPFTHostSel_->
-	              paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
-                paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
-                paramAsMutant("src",table[0](i,"st_src_ip"))->
-                paramAsMutant("dst",table[0](i,"st_dst_ip"));
-              if( ports_ )
-                stBPFTHostSel_->
-                  paramAsMutant("src_port",table[0](i,"st_src_port"))->
-                  paramAsMutant("dst_port",table[0](i,"st_dst_port"));
-              if( protocols_ )
-                stBPFTHostSel_->paramAsMutant("proto",ipProto);
+              btt = time2tm(tm2Time(beginTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
+              ett = time2tm(tm2Time(endTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
+              Sniffer::setTotalsBounds(rl2pgp(level + 1),btt,ett,bta,eta);
+              stBPFTHostSel_[rl2pgp(level + 1)]->
+                paramAsMutant("BTT",bta)->paramAsMutant("ETT",eta)->
+                paramAsMutant("src",table[0](i,"src_ip"))->
+                paramAsMutant("dst",table[0](i,"dst_ip"));
+              if( ports_ ){
+                stBPFTHostSel_[rl2pgp(level + 1)]->
+                  paramAsMutant("src_port",table[0](i,"src_port"))->
+                  paramAsMutant("dst_port",table[0](i,"dst_port"));
+              }
+              if( protocols_ ){
+                stBPFTHostSel_[rl2pgp(level + 1)]->paramAsMutant("proto",ipProto);
+              }
               uintmax_t sum1, sum2;
-              getBPFTCached(stBPFTHostSel_,NULL,&sum1,&sum2);
-              row +=
+              getBPFTCached(stBPFTHostSel_[rl2pgp(level + 1)],NULL,&sum1,&sum2);
+              f <<
                 "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.data",section_) + "\" nowrap>\n" +
                 formatTraf(sum2,table[*pi + av].sum("SUM1")) + "\n"
                 "  </TH>\n"
@@ -1209,7 +1419,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
 	          }
 	          (*pi)--;
           }
-	        f << row + "</TR>\n";
+	        f << "</TR>\n";
           switch( level ){
             case rlYear :
               endTime.tm_mon = 11;
@@ -1220,6 +1430,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               break;
             case rlDay :
               endTime.tm_hour = 23;
+              break;
+            case rlHour :
+              endTime.tm_min = 59;
+              break;
+            case rlMin :
+              endTime.tm_sec = 59;
               break;
             default    :
               assert( 0 );
@@ -1270,8 +1486,19 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         endTime.tm_hour = 23;
         nextLevel = nextLevel || endTime.tm_mday == curTime_.tm_mday;
         break;
-      default    :
-        assert( 0 );
+      case rlHour :
+        endTime.tm_min = 59;
+        nextLevel = nextLevel || endTime.tm_hour == curTime_.tm_hour;
+        break;
+      case rlMin :
+        endTime.tm_sec = 59;
+        nextLevel = nextLevel || endTime.tm_min == curTime_.tm_min;
+        break;
+      case rlSec :
+        nextLevel = nextLevel || endTime.tm_sec == curTime_.tm_sec;
+        break;
+      case rlNone :
+      default    :;
     }
     if( nextLevel ){
       table.clear();
@@ -1307,12 +1534,87 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           endTime.tm_mday--;
         }
         break;
+      case rlHour :
+        if( endTime.tm_hour == 0 ){
+          if( endTime.tm_mday == 1 ){
+            if( endTime.tm_mon == 0 ){
+              endTime.tm_mon = 11;
+              endTime.tm_year--;
+            }
+            else {
+              endTime.tm_mon--;
+            }
+            endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+          }
+          else {
+            endTime.tm_mday--;
+          }
+        }
+        else {
+          endTime.tm_hour--;
+        }
+        break;
+      case rlMin :
+        if( endTime.tm_min == 0 ){
+          if( endTime.tm_hour == 0 ){
+            if( endTime.tm_mday == 1 ){
+              if( endTime.tm_mon == 0 ){
+                endTime.tm_mon = 11;
+                endTime.tm_year--;
+              }
+              else {
+                endTime.tm_mon--;
+              }
+              endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+            }
+            else {
+              endTime.tm_mday--;
+            }
+          }
+          else {
+            endTime.tm_hour--;
+          }
+        }
+        else {
+          endTime.tm_min--;
+        }
+        break;
+      case rlSec :
+        if( endTime.tm_sec == 0 ){
+          if( endTime.tm_min == 0 ){
+            if( endTime.tm_hour == 0 ){
+              if( endTime.tm_mday == 1 ){
+                if( endTime.tm_mon == 0 ){
+                  endTime.tm_mon = 11;
+                  endTime.tm_year--;
+                }
+                else {
+                  endTime.tm_mon--;
+                }
+                endTime.tm_mday = (int) monthDays(endTime.tm_year + 1900,endTime.tm_mon);
+              }
+              else {
+                endTime.tm_mday--;
+              }
+            }
+            else {
+              endTime.tm_hour--;
+            }
+          }
+          else {
+            endTime.tm_min--;
+          }
+        }
+        else {
+          endTime.tm_sec--;
+        }
+        break;
       default    :
         assert( 0 );
     }
     beginTime = beginTime2;
   }
-  if( !logger_->cgi_.isCGI() || level == rlYear ){
+  if( !logger_->cgi_.isCGI() || level == maxTotalsLevel_ ){
     utf8::String filter(logger_->config_->textByPath(section_ + ".html_report.filter"));
     if( logger_->cgi_.isCGI() )
       filter = logger_->cgi_.paramAsString("filter");
@@ -1384,9 +1686,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     ;
     logger_->writeHtmlTail(f,ellapsed_);
   }
-  if( level == rlYear ){
-l1: database_->rollback();
-  }
+  if( level == rlYear || (logger_->cgi_.isCGI() && level == maxTotalsLevel_) )
+    database_->commit();
 }
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::parseBPFTLogFile()

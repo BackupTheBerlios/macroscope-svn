@@ -158,7 +158,7 @@ DbgType::toString(DbgStream& ss, intptr_t printflags, const DbgString& indendent
       ss << "<void>";
       break;
     case Boolean:
-      ss << (unsigned) val.boolean;
+      ss << (uintptr_t) val.boolean;
       break;
     case Byte:
       if (typeName == "char")

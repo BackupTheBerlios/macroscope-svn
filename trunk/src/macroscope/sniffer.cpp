@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,12 +30,323 @@
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------
+const char * const Sniffer::pgpNames[pgpCount] = { "NSEC", "SEC", "MIN", "HOUR", "DAY", "MON", "YEAR"  };
+//------------------------------------------------------------------------------
 Sniffer::~Sniffer()
 {
 }
 //------------------------------------------------------------------------------
-Sniffer::Sniffer(Database * database) : database_(database)
+Sniffer::Sniffer(Database * database) : database_(database), totalsPeriod_(pgpDay)
 {
+}
+//------------------------------------------------------------------------------
+Sniffer & Sniffer::totalsPeriod(PacketGroupingPeriod period)
+{
+  totalsPeriod_ = period;
+  //totalsPeriod_ = period < pgpMin ? pgpMin : period;
+  //totalsPeriod_ = (groupingPeriod() >= totalsPeriod_ ? PacketGroupingPeriod(groupingPeriod() + 1) : totalsPeriod_);
+  //if( totalsPeriod_ > pgpYear )
+  //  newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  return *this;
+}
+//------------------------------------------------------------------------------
+//PacketGroupingPeriod Sniffer::detectPeriod(Statement * statement)
+//{
+//  if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+//    statement_->text(
+//      "SELECT FIRST 1 st_start AS BT FROM INET_BPFT_STAT_TOTALS ORDER BY st_start"
+//    )->execute()->fetchAll();
+//  }
+//  else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
+//    statement_->text(
+//      "SELECT MIN(st_start) FROM INET_BPFT_STAT_TOTALS"
+//    )->execute()->fetchAll();
+//  }
+//  if( statement_->rowCount() == 0 ) return pgpDay;
+//  struct tm t = statement->valueAsMutant(0);
+//  if( 
+//}
+//------------------------------------------------------------------------------
+void Sniffer::shiftPeriod(PacketGroupingPeriod tp,struct tm & t,intptr_t v)
+{
+  while( v < -1 ){ shiftPeriod(tp,t,-1); v++; }
+  while( v > +1 ){ shiftPeriod(tp,t,+1); v--; }
+  switch( tp ){
+    case pgpNone :
+      assert( 0 );
+      break;
+    case pgpSec  :
+      if( (t.tm_sec += v) < 0 ){ t.tm_sec = 59; goto min; } else if( t.tm_sec > 59 ){ t.tm_sec = 0; goto min; }
+      break;
+    case pgpMin  :
+min:  if( (t.tm_min += v) < 0 ){ t.tm_min = 59; goto hour; } else if( t.tm_min > 59 ){ t.tm_min = 0; goto hour; }
+      break;
+    case pgpHour :
+hour: if( (t.tm_hour += v ) < 0 ){ t.tm_hour = 23; goto day; } else if( t.tm_hour > 23 ){ t.tm_hour = 0; goto day; }
+      break;
+    case pgpDay  :
+day:  if( (t.tm_mday += v) < 1 ){ goto mon; } else if( t.tm_mday > (int) monthDays(t.tm_year + 1900,t.tm_mon) ){ t.tm_mday = 1; goto mon; }
+      break;
+    case pgpMon  :
+mon:  if( (t.tm_mon += v) < 0 || t.tm_mon > 11 ){ t.tm_mon = 0; goto year; }
+      break;
+    case pgpYear :
+year: t.tm_year += v;
+      break;
+    default : 
+      assert( 0 );
+  }
+  if( t.tm_mday < 1 ) t.tm_mday = (int) monthDays(t.tm_year + 1900,t.tm_mon);
+}
+//------------------------------------------------------------------------------
+void Sniffer::setTotalsBounds(PacketGroupingPeriod tp,struct tm & bt,struct tm & et,struct tm & btt,struct tm & ett)
+{
+  btt = bt;
+  ett = et;
+  switch( tp ){
+    case pgpNone :
+    case pgpSec  :
+      break;
+    case pgpMin  :
+      btt.tm_sec = ett.tm_sec = 0;
+      break;
+    case pgpHour :
+      btt.tm_sec = btt.tm_min = ett.tm_sec = ett.tm_min = 0;
+      break;
+    case pgpDay  :
+      btt.tm_sec = btt.tm_min = btt.tm_hour = ett.tm_sec = ett.tm_min = ett.tm_hour = 0;
+      break;
+    case pgpMon  :
+      btt.tm_sec = btt.tm_min = btt.tm_hour = ett.tm_sec = ett.tm_min = ett.tm_hour = 0;
+      btt.tm_mday = ett.tm_mday = 1;
+      break;
+    case pgpYear :
+      btt.tm_sec = btt.tm_min = btt.tm_hour = btt.tm_mon = ett.tm_sec = ett.tm_min = ett.tm_hour = ett.tm_mon = 0;
+      btt.tm_mday = ett.tm_mday = 1;
+      break;
+    default : 
+      assert( 0 );
+  }
+  shiftPeriod(tp,ett,+1);
+  //uint64_t bta = tm2Time(bt), eta = tm2Time(et);
+  //assert( bta <= eta );
+  //uint64_t btta = tm2Time(btt), etta = tm2Time(ett);
+  //assert( btta <= etta );
+  //while( btta <= bta ){ shiftPeriod(tp,btt,+1); btta = tm2Time(btt); }
+  //while( etta >= eta ){ shiftPeriod(tp,ett,-1); etta = tm2Time(ett); }
+}
+//------------------------------------------------------------------------------
+void Sniffer::updateTotals(
+  const Mutant & m,
+  const in_addr & srcAddr,
+  uintptr_t srcPort,
+  const in_addr & dstAddr,
+  uintptr_t dstPort,
+  intptr_t proto,
+  uintmax_t dgram,
+  uintmax_t data)
+{
+  if( stTotals_[stSel] == NULL ) stTotals_[stSel] = database_->newAttachedStatement();
+  if( stTotals_[stIns] == NULL ) stTotals_[stIns] = database_->newAttachedStatement();
+  if( stTotals_[stUpd] == NULL ) stTotals_[stUpd] = database_->newAttachedStatement();
+  if( !stTotals_[stSel]->prepared() )
+    stTotals_[stSel]->text(
+      "SELECT"
+      "  *"
+      "FROM"
+      "  INET_BPFT_STAT "
+      "WHERE"
+      "  st_if = :if AND"
+      "  st_start = :tm AND"
+      "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
+      "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
+      "  st_ip_proto = :proto "
+      "FOR UPDATE\n"
+    )->prepare()->paramAsString("if",ifName());
+  if( !stTotals_[stIns]->prepared() )
+    stTotals_[stIns]->text(
+      "INSERT INTO INET_BPFT_STAT_TOTALS ("
+      "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+      ") VALUES ("
+      "  :if,:tm,:src_ip,:dst_ip,:proto,:src_port,:dst_port,:dgram_bytes,:data_bytes"
+      ")"
+    )->prepare()->paramAsString("if",ifName());
+  if( !stTotals_[stUpd]->prepared() )
+    stTotals_[stUpd]->text(
+      "UPDATE INET_BPFT_STAT_TOTALS SET"
+      "  st_dgram_bytes = st_dgram_bytes + :dgram_bytes, st_data_bytes = st_data_bytes + :data_bytes "
+      "WHERE "
+      "  st_if = :if AND"
+      "  st_start = :tm AND"
+      "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
+      "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
+      "  st_ip_proto = :proto"
+    )->prepare()->paramAsString("if",ifName());
+  stTotals_[stSel]->
+    paramAsMutant("tm",         m)->
+    paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
+    paramAsMutant("src_port",   srcPort)->
+    paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
+    paramAsMutant("dst_port",   dstPort)->
+    paramAsMutant("proto",      proto)->
+    execute()->fetchAll();
+  Statement * statement = stTotals_[stSel]->rowCount() == 0 ? stTotals_[stIns] : stTotals_[stUpd];
+  statement->
+    paramAsMutant("tm",         m)->
+    paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
+    paramAsMutant("src_port",   srcPort)->
+    paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
+    paramAsMutant("dst_port",   dstPort)->
+    paramAsMutant("proto",      proto)->
+    paramAsMutant("dgram_bytes",dgram)->
+    paramAsMutant("data_bytes", data)->
+    execute();
+}
+//------------------------------------------------------------------------------
+void Sniffer::getTrafficPeriod(Statement * statement,const utf8::String & sectionName,struct tm & beginTime,struct tm & endTime,bool gmt)
+{
+  memset(&beginTime,0,sizeof(beginTime));
+  endTime = beginTime;
+  if( dynamic_cast<FirebirdDatabase *>(statement->database()) != NULL ){
+    statement->text(
+      "SELECT MIN(BT) AS BT FROM ("
+      "SELECT * FROM (SELECT FIRST 1 ts AS BT FROM INET_SNIFFER_STAT_YEAR WHERE iface = :if ORDER BY ts) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS BT FROM INET_SNIFFER_STAT_MON WHERE iface = :if ORDER BY ts) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS BT FROM INET_SNIFFER_STAT_DAY WHERE iface = :if ORDER BY ts) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS BT FROM INET_SNIFFER_STAT_HOUR WHERE iface = :if ORDER BY ts) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS BT FROM INET_SNIFFER_STAT_MIN WHERE iface = :if ORDER BY ts) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS BT FROM INET_SNIFFER_STAT_SEC WHERE iface = :if ORDER BY ts) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS BT FROM INET_SNIFFER_STAT_NSEC WHERE iface = :if ORDER BY ts)"
+      ")"
+    )->prepare()->paramAsString("if",sectionName)->execute()->fetchAll();
+    if( statement->fieldIndex("BT") < 0 || statement->rowCount() == 0 ) return;
+    beginTime = time2tm((uint64_t) statement->valueAsMutant("BT") + (gmt ? 0 : getgmtoffset()));
+    statement->text(
+      "SELECT MAX(ET) AS ET FROM ("
+      "SELECT * FROM (SELECT FIRST 1 ts AS ET FROM INET_SNIFFER_STAT_YEAR WHERE iface = :if ORDER BY ts DESC) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS ET FROM INET_SNIFFER_STAT_MON WHERE iface = :if ORDER BY ts DESC) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS ET FROM INET_SNIFFER_STAT_DAY WHERE iface = :if ORDER BY ts DESC) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS ET FROM INET_SNIFFER_STAT_HOUR WHERE iface = :if ORDER BY ts DESC) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS ET FROM INET_SNIFFER_STAT_MIN WHERE iface = :if ORDER BY ts DESC) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS ET FROM INET_SNIFFER_STAT_SEC WHERE iface = :if ORDER BY ts DESC) "
+      "UNION ALL "
+      "SELECT * FROM (SELECT FIRST 1 ts AS ET FROM INET_SNIFFER_STAT_NSEC WHERE iface = :if ORDER BY ts DESC)"
+      ")"
+    )->prepare()->paramAsString("if",sectionName)->execute()->fetchAll();
+    if( statement->fieldIndex("ET") < 0 || statement->rowCount() == 0 ) return;
+    endTime = time2tm((uint64_t) statement->valueAsMutant("ET") + (gmt ? 0 : getgmtoffset()) + 1000000u);
+  }
+  else if( dynamic_cast<MYSQLDatabase *>(statement->database()) != NULL ){
+    statement->text(
+      "SELECT MIN(a.BT) AS BT, MAX(a.ET) AS ET FROM ("
+      "SELECT MIN(ts) AS BT, MAX(ts) AS ET FROM INET_SNIFFER_STAT_YEAR WHERE iface = :if "
+      "UNION ALL "
+      "SELECT MIN(ts) AS BT, MAX(ts) AS ET FROM INET_SNIFFER_STAT_MON WHERE iface = :if  "
+      "UNION ALL "
+      "SELECT MIN(ts) AS BT, MAX(ts) AS ET FROM INET_SNIFFER_STAT_DAY WHERE iface = :if  "
+      "UNION ALL "
+      "SELECT MIN(ts) AS BT, MAX(ts) AS ET FROM INET_SNIFFER_STAT_HOUR WHERE iface = :if  "
+      "UNION ALL "
+      "SELECT MIN(ts) AS BT, MAX(ts) AS ET FROM INET_SNIFFER_STAT_MIN WHERE iface = :if  "
+      "UNION ALL "
+      "SELECT MIN(ts) AS BT, MAX(ts) AS ET FROM INET_SNIFFER_STAT_SEC WHERE iface = :if  "
+      "UNION ALL "
+      "SELECT MIN(ts) AS BT, MAX(ts) AS ET FROM INET_SNIFFER_STAT_NSEC WHERE iface = :if "
+      ") AS a"
+    )->prepare()->paramAsString("if",sectionName)->execute()->fetchAll();
+    if( statement->fieldIndex("BT") < 0 || statement->fieldIndex("ET") < 0 ||
+        statement->rowCount() == 0 ||
+        (statement->valueAsMutant("BT") == Mutant(0) &&
+         statement->valueAsMutant("ET") == Mutant(0)) ) return;
+    beginTime = time2tm((uint64_t) statement->valueAsMutant("BT") + (gmt ? 0 : getgmtoffset()));
+    endTime = time2tm((uint64_t) statement->valueAsMutant("ET") + (gmt ? 0 : getgmtoffset()) + 1000000u);
+  }
+  else {
+    assert( 0 );
+  }
+}
+//------------------------------------------------------------------------------
+void Sniffer::recalcTotals()
+{
+  database_->attach()->start();
+  if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+  struct tm bt, et, et2;
+  getTrafficPeriod(statement_,ifName(),bt,et,true);
+  setTotalsBounds(totalsPeriod_,bt,et,bt,et);
+  if( statement2_ == NULL ) statement2_ = database_->newAttachedStatement();
+  statement2_->text("DELETE FROM INET_BPFT_STAT_TOTALS a WHERE a.st_if = :if")->
+    prepare()->paramAsString("if",ifName())->execute();
+  statement_->text(
+    "SELECT"
+    "  st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,"
+    "  SUM(st_dgram_bytes) AS st_dgram_bytes,SUM(st_data_bytes) AS st_data_bytes "
+    "FROM"
+    "  INET_BPFT_STAT "
+    "WHERE"
+    "  st_if = :if AND st_start >= :BT AND st_start < :ET "
+    "GROUP BY st_src_ip,st_src_port,st_dst_ip,st_dst_port,st_ip_proto"
+  )->prepare()->paramAsString("if",ifName());
+  while( tm2Time(bt) < tm2Time(et) ){
+    shiftPeriod(totalsPeriod_,et2 = bt,+1);
+    statement_->paramAsMutant("BT",bt)->paramAsMutant("ET",et2)->execute();
+    statement_->fetchAll();
+    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+      statement_->selectRow(i);
+      updateTotals(
+        bt,
+        ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
+        statement_->valueAsMutant("st_src_port"),
+        ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
+        statement_->valueAsMutant("st_dst_port"),
+        statement_->valueAsMutant("st_ip_proto"),
+        statement_->valueAsMutant("st_dgram_bytes"),
+        statement_->valueAsMutant("st_data_bytes")
+      );
+      //updateTotals(
+      //  bt,
+      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
+      //  0,
+      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
+      //  0,
+      //  statement_->valueAsMutant("st_ip_proto"),
+      //  statement_->valueAsMutant("st_dgram_bytes"),
+      //  statement_->valueAsMutant("st_data_bytes")
+      //);
+      //updateTotals(
+      //  bt,
+      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
+      //  statement_->valueAsMutant("st_src_port"),
+      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
+      //  statement_->valueAsMutant("st_dst_port"),
+      //  -1,
+      //  statement_->valueAsMutant("st_dgram_bytes"),
+      //  statement_->valueAsMutant("st_data_bytes")
+      //);
+      //updateTotals(
+      //  bt,
+      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
+      //  0,
+      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
+      //  0,
+      //  -1,
+      //  statement_->valueAsMutant("st_dgram_bytes"),
+      //  statement_->valueAsMutant("st_data_bytes")
+      //);
+    }
+    shiftPeriod(totalsPeriod_,bt,+1);
+  }
+  database_->commit()->detach();
 }
 //------------------------------------------------------------------------------
 bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count,Thread * caller) throw()
@@ -43,29 +354,109 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
   bool r = true;
   try {
     if( !database_->attached() ) database_->attach();
-    if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+    //if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
     database_->start();
-    if( !statement_->prepared() )
-      statement_->text(
-        "INSERT INTO INET_BPFT_STAT ("
-        "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-        ") VALUES ("
-        "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
-        ")"
-      )->prepare()->paramAsString(0/*"st_if"*/,ifName());
+    //if( !statement_->prepared() )
+    //  statement_->text(
+    //    "INSERT INTO INET_BPFT_STAT ("
+    //    "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+    //    ") VALUES ("
+    //    "  :if,:tm,:src_ip,:dst_ip,:proto,:src_port,:dst_port,:dgram_bytes,:data_bytes"
+    //    ")"
+    //  )->prepare()->paramAsString("if",ifName());
+    if( ifaces_ == NULL ) ifaces_ = database_->newAttachedStatement();
+    if( !ifaces_->prepared() )
+      ifaces_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->prepare()->paramAsString("if",ifName());
+    try {
+      ifaces_->execute();
+    }
+    catch( ExceptionSP & e ){
+      if( !e->searchCode(isc_unique_key_violation,isc_primary_key_exists,ER_DUP_ENTRY) ) throw;
+    }
+    for( intptr_t i = pgpCount - 1; i >= 0; i-- ){
+      if( totals_[stSel][i] == NULL ) totals_[stSel][i] = database_->newAttachedStatement();
+      if( !totals_[stSel][i]->prepared() )
+        totals_[stSel][i]->text(utf8::String(
+          "SELECT iface,ts,src_ip,src_port,dst_port,dst_ip,ip_proto,dgram,data "
+          "FROM INET_SNIFFER_STAT_@0001@ WHERE"
+          " iface = :if AND ts = :ts AND src_ip = :src_ip AND src_port = :src_port AND dst_ip = :dst_ip AND dst_port = :dst_port AND ip_proto = :proto "
+          "FOR UPDATE"
+          ).replaceAll("@0001@",pgpNames[i])
+        )->prepare()->paramAsString("if",ifName());
+      if( totals_[stIns][i] == NULL ) totals_[stIns][i] = database_->newAttachedStatement();
+      if( !totals_[stIns][i]->prepared() )
+        totals_[stIns][i]->text(utf8::String(
+          "INSERT INTO INET_SNIFFER_STAT_@0001@ ("
+          "  iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,dgram,data"
+          ") VALUES ("
+          "  :if,:ts,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data"
+          ")").replaceAll("@0001@",pgpNames[i])
+        )->prepare()->paramAsString("if",ifName());
+      if( totals_[stUpd][i] == NULL ) totals_[stUpd][i] = database_->newAttachedStatement();
+      if( !totals_[stUpd][i]->prepared() )
+        totals_[stUpd][i]->text(utf8::String(
+          "UPDATE INET_SNIFFER_STAT_@0001@ SET "
+          "  dgram = dgram + :dgram, data = data + :data "
+          "WHERE"
+          "  iface = :if AND ts = :ts AND src_ip = :src_ip AND src_port = :src_port AND dst_ip = :dst_ip AND dst_port = :dst_port AND ip_proto = :proto"
+          ).replaceAll("@0001@",pgpNames[i])
+        )->prepare()->paramAsString("if",ifName());
+    }
     while( !caller->terminated() && count-- > 0 ){
+      const HashedPacket & packet = packets[count];
       Mutant m(bt);
       m.changeType(mtTime);
-      statement_->
-        paramAsMutant(1/*"st_start"*/,      m)->
-        paramAsMutant(2/*"st_src_ip"*/,     ksock::SockAddr::addr2Index(packets[count].srcAddr_))->
-        paramAsMutant(3/*"st_dst_ip"*/,     ksock::SockAddr::addr2Index(packets[count].dstAddr_))->
-        paramAsMutant(4/*"st_ip_proto"*/,   packets[count].proto_)->
-        paramAsMutant(5/*"st_src_port"*/,   packets[count].srcPort_)->
-        paramAsMutant(6/*"st_dst_port"*/,   packets[count].dstPort_)->
-        paramAsMutant(7/*"st_dgram_bytes"*/,packets[count].pktSize_)->
-        paramAsMutant(8/*"st_data_bytes"*/, packets[count].dataSize_)->
-        execute();
+      uint64_t mbt, met;
+      for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
+        setBounds(PacketGroupingPeriod(i),m,mbt,met);
+        totals_[stSel][i]->
+          paramAsMutant("ts",       Mutant(mbt).changeType(mtTime))->
+          paramAsMutant("src_ip",   ksock::SockAddr::addr2Index(packet.srcAddr_))->
+          paramAsMutant("src_port", packet.srcPort_)->
+          paramAsMutant("dst_ip",   ksock::SockAddr::addr2Index(packet.dstAddr_))->
+          paramAsMutant("dst_port", packet.dstPort_)->
+          paramAsMutant("proto",    packet.proto_)->
+          execute()->fetchAll();
+        if( totals_[stSel][i]->rowCount() == 0 )
+          totals_[stIns][i]->
+            paramAsMutant("ts",       Mutant(mbt).changeType(mtTime))->
+            paramAsMutant("src_ip",   ksock::SockAddr::addr2Index(packet.srcAddr_))->
+            paramAsMutant("src_port", packet.srcPort_)->
+            paramAsMutant("dst_ip",   ksock::SockAddr::addr2Index(packet.dstAddr_))->
+            paramAsMutant("dst_port", packet.dstPort_)->
+            paramAsMutant("proto",    packet.proto_)->
+            paramAsMutant("dgram",    packet.pktSize_)->
+            paramAsMutant("data",     packet.dataSize_)->
+            execute();
+        else
+          totals_[stUpd][i]->
+            paramAsMutant("ts",       Mutant(mbt).changeType(mtTime))->
+            paramAsMutant("src_ip",   ksock::SockAddr::addr2Index(packet.srcAddr_))->
+            paramAsMutant("src_port", packet.srcPort_)->
+            paramAsMutant("dst_ip",   ksock::SockAddr::addr2Index(packet.dstAddr_))->
+            paramAsMutant("dst_port", packet.dstPort_)->
+            paramAsMutant("proto",    packet.proto_)->
+            paramAsMutant("dgram",    packet.pktSize_)->
+            paramAsMutant("data",     packet.dataSize_)->
+            execute();
+      }
+      //setBounds(totalsPeriod_,m,mbt,met);
+// update totals
+      //updateTotals(mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
+      //updateTotals(mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
+      //updateTotals(mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
+      //updateTotals(mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
+// insert line
+      //statement_->
+      //  paramAsMutant("tm",         m)->
+      //  paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(packet.srcAddr_))->
+      //  paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(packet.dstAddr_))->
+      //  paramAsMutant("proto",      packet.proto_)->
+      //  paramAsMutant("src_port",   packet.srcPort_)->
+      //  paramAsMutant("dst_port",   packet.dstPort_)->
+      //  paramAsMutant("dgram_bytes",packet.pktSize_)->
+      //  paramAsMutant("data_bytes", packet.dataSize_)->
+      //  execute();
     }
     if( caller->terminated() ) database_->rollback(); else database_->commit();
     r = !caller->terminated();

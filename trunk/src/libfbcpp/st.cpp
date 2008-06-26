@@ -247,7 +247,7 @@ DSQLStatement & DSQLStatement::prepare()
       if( api.isc_dsql_prepare(status, &transaction_->handle_,&handle_,0,compileSQLParameters().c_str(),(short) database_->dpb_.dialect(),values_.sqlda_.sqlda()) == 0 )
         break;
       if( !findISCCode(status, isc_dsql_open_cursor_request) )
-        database_->exceptionHandler(newObjectV1C2<EDSQLStPrepare>(status, __PRETTY_FUNCTION__));
+        database_->exceptionHandler(newObjectV1C2<EDSQLStPrepare>(status,sqlText_ + " " + __PRETTY_FUNCTION__));
       dropCursor();
     }
     info();

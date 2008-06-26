@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -203,7 +203,10 @@ void Logger::readConfig()
 
   verbose_ = config_->valueByPath("macroscope.verbose",false);
 
-  setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()),true);
+  if( cgi_.isCGI() )
+    setProcessPriority(config_->valueByPath("macroscope.cgi_process_priority","IDLE_PRIORITY_CLASS"),true);
+  else
+    setProcessPriority(config_->valueByPath("macroscope.process_priority",getProcessPriority()),true);
 
   connection_ = config_->textByPath("macroscope.connection","default_connection");
   if( database_ == NULL ){
@@ -264,6 +267,17 @@ Logger & Logger::createDatabase()
         " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
         " ST_LAST_OFFSET        BIGINT NOT NULL"
         ")" <<
+        "CREATE TABLE INET_BPFT_STAT_TOTALS ("
+        " st_if            CHAR(16) CHARACTER SET ascii NOT NULL,"
+        " st_start         DATETIME NOT NULL,"
+        " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+        " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+        " st_ip_proto      SMALLINT NOT NULL,"
+        " st_src_port      INTEGER NOT NULL,"
+        " st_dst_port      INTEGER NOT NULL,"
+        " st_dgram_bytes   BIGINT NOT NULL,"
+        " st_data_bytes    BIGINT NOT NULL"
+        ")" <<
         "CREATE TABLE INET_BPFT_STAT ("
         " st_if            CHAR(16) CHARACTER SET ascii NOT NULL,"
         " st_start         DATETIME NOT NULL,"
@@ -275,6 +289,38 @@ Logger & Logger::createDatabase()
         " st_dgram_bytes   BIGINT NOT NULL,"
         " st_data_bytes    BIGINT NOT NULL"
         ")" <<
+        "CREATE TABLE INET_IFACES ("
+        " iface            CHAR(16) CHARACTER SET ascii NOT NULL PRIMARY KEY"
+        ")"
+      ;
+      utf8::String templ(
+        "CREATE TABLE INET_SNIFFER_STAT_@0001@ ("
+        " iface         CHAR(16) CHARACTER SET ascii NOT NULL,"
+        " ts            DATETIME NOT NULL,"
+        " src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+        " src_port      INTEGER NOT NULL,"
+        " dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+        " dst_port      INTEGER NOT NULL,"
+        " ip_proto      SMALLINT NOT NULL,"
+        " dgram         BIGINT NOT NULL,"
+        " data          BIGINT NOT NULL"
+        ")"
+      );
+      for( uintptr_t i = 0; i < PCAP::pgpCount; i++ ){
+        metadata << templ.replaceAll("@0001@",Sniffer::pgpNames[i]);
+      }
+      for( uintptr_t i = 0; i < PCAP::pgpCount; i++ ){
+        metadata <<
+          utf8::String("CREATE INDEX ISS_@0001@_01 ON INET_SNIFFER_STAT_@0001@ (iface)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          utf8::String("CREATE INDEX ISS_@0001@_02 ON INET_SNIFFER_STAT_@0001@ (ts)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          utf8::String("CREATE INDEX ISS_@0001@_03 ON INET_SNIFFER_STAT_@0001@ (src_ip)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          utf8::String("CREATE INDEX ISS_@0001@_04 ON INET_SNIFFER_STAT_@0001@ (src_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          utf8::String("CREATE INDEX ISS_@0001@_05 ON INET_SNIFFER_STAT_@0001@ (dst_ip)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          utf8::String("CREATE INDEX ISS_@0001@_06 ON INET_SNIFFER_STAT_@0001@ (dst_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          utf8::String("CREATE INDEX ISS_@0001@_07 ON INET_SNIFFER_STAT_@0001@ (ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i])
+        ;
+      }
+      metadata <<
         /*"CREATE TABLE INET_BPFT_STAT_CACHE ("
         " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
         " st_bt            DATETIME NOT NULL,"
@@ -290,9 +336,23 @@ Logger & Logger::createDatabase()
         " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
         " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
         ")" <<
-        "CREATE INDEX IBS_IDX3 ON INET_BPFT_STAT (st_if,st_start,st_src_ip,st_dst_ip,st_src_port,st_dst_port,st_ip_proto)" <<
-        "CREATE INDEX IBS_IDX4 ON INET_BPFT_STAT (st_if,st_start,st_src_ip,st_src_port,st_dst_ip,st_dst_port,st_ip_proto)" <<
-//        "CREATE INDEX IBSC_IDX1 ON INET_BPFT_STAT_CACHE (st_if,st_bt,st_et,st_filter_hash,st_threshold,st_src_ip,st_dst_ip)" <<
+        "DROP INDEX IBS_IDX3" <<
+        "DROP INDEX IBS_IDX4" <<
+
+        "CREATE INDEX IBS_IDX_01 ON INET_BPFT_STAT (st_if,st_start)" <<
+        "CREATE INDEX IBS_IDX_02 ON INET_BPFT_STAT (st_src_ip)" <<
+        "CREATE INDEX IBS_IDX_03 ON INET_BPFT_STAT (st_src_port)" <<
+        "CREATE INDEX IBS_IDX_04 ON INET_BPFT_STAT (st_dst_ip)" <<
+        "CREATE INDEX IBS_IDX_05 ON INET_BPFT_STAT (st_dst_port)" <<
+        "CREATE INDEX IBS_IDX_06 ON INET_BPFT_STAT (st_ip_proto)" <<
+
+        "CREATE INDEX IBST_IDX_01 ON INET_BPFT_STAT_TOTALS (st_if,st_start)" <<
+        "CREATE INDEX IBST_IDX_02 ON INET_BPFT_STAT_TOTALS (st_src_ip)" <<
+        "CREATE INDEX IBST_IDX_03 ON INET_BPFT_STAT_TOTALS (st_src_port)" <<
+        "CREATE INDEX IBST_IDX_04 ON INET_BPFT_STAT_TOTALS (st_dst_ip)" <<
+        "CREATE INDEX IBST_IDX_05 ON INET_BPFT_STAT_TOTALS (st_dst_port)" <<
+        "CREATE INDEX IBST_IDX_06 ON INET_BPFT_STAT_TOTALS (st_ip_proto)" <<
+
         "CREATE UNIQUE INDEX IUT_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
         "CREATE INDEX IUT_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
         "CREATE INDEX IUT_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)" <<
@@ -300,7 +360,8 @@ Logger & Logger::createDatabase()
         "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP,ST_FROM,ST_TO)"
       ;
       if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-        metadata << "CREATE DESC INDEX IBS_IDX5 ON INET_BPFT_STAT (st_if,st_start)";
+        metadata << "DROP INDEX IBS_IDX5";
+        metadata << "CREATE DESC INDEX IBS_IDX_07 ON INET_BPFT_STAT (st_if,st_start)";
         metadata << "CREATE DESC INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
       }
       else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
@@ -383,6 +444,12 @@ Logger & Logger::createDatabase()
   return *this;
 }
 //------------------------------------------------------------------------------
+void Logger::enumInterfaces(Statement * statement,Array<utf8::String> & ifaces)
+{
+  statement->text("select iface from INET_IFACES")->execute();
+  while( statement->fetch() ) ifaces.add(statement->valueAsString(0).trimRight());
+}
+//------------------------------------------------------------------------------
 Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
 {
   cgi_ <<
@@ -390,12 +457,12 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
     "  <select name=\"if\" id=\"if\">\n"
   ;
   database_->attach()->start();
-  statement_->text("select distinct st_if from INET_BPFT_STAT")->execute();
-  while( statement_->fetch() ){
-    utf8::String sectionName(statement_->valueAsString("st_if").trimRight());
-    cgi_ << "    <option value=\"" + sectionName + "\"";
-    if( statement_->rowIndex() == 0 && !addUnionIf ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + sectionName + "</option>\n";
+  Array<utf8::String> ifaces;
+  enumInterfaces(statement_,ifaces);
+  for( uintptr_t i = 0; i < ifaces.count(); i++ ){
+    cgi_ << "    <option value=\"" + ifaces[i] + "\"";
+    if( i == 0 && !addUnionIf ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + ifaces[i] + "</option>\n";
   }
   if( addUnionIf )
     cgi_ <<
@@ -405,10 +472,31 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
   cgi_ <<
     "  </select>\n"
     "  <BR>\n"
-    "  <label for=\"bday\">Begin time</label>\n"
-    "  <select name=\"bday\" id=\"bday\">\n"
+    "  <label for=\"bhour\">Begin time</label>\n"
   ;
   struct tm curTime = time2tm(getlocaltimeofday());
+  cgi_ <<
+    "  <select name=\"bhour\" id=\"bhour\">\n"
+  ;
+  for( intptr_t i = 0; i <= 23; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_hour ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <select name=\"bmin\" id=\"bmin\">\n"
+  ;
+  for( intptr_t i = 0; i <= 59; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_min ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <label for=\"bday\">date</label>\n"
+    "  <select name=\"bday\" id=\"bday\">\n"
+  ;
   for( intptr_t i = 1; i <= 31; i++ ){
     cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
     if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
@@ -435,7 +523,29 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
   cgi_ <<
     "  </select>\n"
     "  <BR>\n"
-    "  <label for=\"eday\">End time</label>\n"
+  ;
+
+  cgi_ <<
+    "  <label for=\"ehour\">End time</label>\n"
+    "  <select name=\"ehour\" id=\"ehour\">\n"
+  ;
+  for( intptr_t i = 0; i <= 23; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_hour ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <select name=\"emin\" id=\"emin\">\n"
+  ;
+  for( intptr_t i = 0; i <= 59; i++ ){
+    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    if( i == curTime.tm_min ) cgi_ << " selected=\"selected\"";
+    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+  }
+  cgi_ <<
+    "  </select>\n"
+    "  <label for=\"eday\">date</label>\n"
     "  <select name=\"eday\" id=\"eday\">\n"
   ;
   for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
@@ -584,8 +694,32 @@ int32_t Logger::main()
       writeCGIInterfaceAndTimeSelect(false);
       cgi_ <<
         "  <BR>\n"
-        "  <label for=\"totals\">Maximum totals</label>\n"
-        "  <select name=\"totals\" id=\"totals\">\n"
+        "  <label for=\"max_totals\">Maximum totals</label>\n"
+        "  <select name=\"max_totals\" id=\"max_totals\">\n"
+        "    <option value=\"Min\">\n"
+	      "      Min\n"
+	      "    </option>\n"
+        "    <option value=\"Hour\">\n"
+	      "      Hour\n"
+	      "    </option>\n"
+        "    <option value=\"Day\" selected=\"selected\">\n"
+	      "      Day\n"
+	      "    </option>\n"
+        "    <option value=\"Mon\">\n"
+	      "      Mon\n"
+	      "    </option>\n"
+        "    <option value=\"Year\">\n"
+	      "      Year\n"
+	      "    </option>\n"
+        "  </select>\n"
+        "  <label for=\"min_totals\">Minimum totals</label>\n"
+        "  <select name=\"min_totals\" id=\"min_totals\">\n"
+        "    <option value=\"Min\">\n"
+	      "      Min\n"
+	      "    </option>\n"
+        "    <option value=\"Hour\">\n"
+	      "      Hour\n"
+	      "    </option>\n"
         "    <option value=\"Day\" selected=\"selected\">\n"
 	      "      Day\n"
 	      "    </option>\n"
@@ -677,6 +811,7 @@ int32_t Logger::main()
           "  <input name=\"copyif\" type=\"SUBMIT\" value=\"Copy\">\n"
           "  <input name=\"dropif\" type=\"SUBMIT\" value=\"Drop\">\n"
           "  <input name=\"dropdns\" type=\"SUBMIT\" value=\"Drop DNS cache\">\n"
+          "  <input name=\"recalc_totals\" type=\"SUBMIT\" value=\"Recalculate totals\">\n"
           "  <input name=\"reactivate_indices\" type=\"SUBMIT\" value=\"Reactivate indices\">\n"
           "  <input name=\"set_indices_statistics\" type=\"SUBMIT\" value=\"Set indices statistics\">\n"
           "</FORM>\n"
@@ -740,22 +875,8 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
   sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));
   sniffer->swapHighWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_high_watermark",sniffer->swapHighWatermark()));
   sniffer->swapWatchTime(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_watch_time",sniffer->swapWatchTime()));
-  utf8::String groupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none"));
-  if( groupingPeriod.strcasecmp("None") == 0 ) sniffer->groupingPeriod(PCAP::pgpNone);
-  else
-  if( groupingPeriod.strcasecmp("Sec") == 0 ) sniffer->groupingPeriod(PCAP::pgpSec);
-  else
-  if( groupingPeriod.strcasecmp("Min") == 0 ) sniffer->groupingPeriod(PCAP::pgpMin);
-  else
-  if( groupingPeriod.strcasecmp("Hour") == 0 ) sniffer->groupingPeriod(PCAP::pgpHour);
-  else
-  if( groupingPeriod.strcasecmp("Day") == 0 ) sniffer->groupingPeriod(PCAP::pgpDay);
-  else
-  if( groupingPeriod.strcasecmp("Mon") == 0 ) sniffer->groupingPeriod(PCAP::pgpMon);
-  else
-  if( groupingPeriod.strcasecmp("Year") == 0 ) sniffer->groupingPeriod(PCAP::pgpYear);
-  else
-    sniffer->groupingPeriod(PCAP::pgpNone);
+  sniffer->groupingPeriod(PCAP::stringToGroupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none")));
+  sniffer->totalsPeriod(PCAP::stringToGroupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.totals_period","day")));
   utf8::String joined(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
   for( intptr_t i = 0, j = enumStringParts(joined); i < j; i++ ){
     if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
@@ -783,6 +904,7 @@ int32_t Logger::doWork(uintptr_t stage)
       utf8::String joined;
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+        if( sectionName.strcasecmp("decoration") == 0 ) continue;
         if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
         utf8::String join(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
         if( !join.isNull() ){
@@ -794,6 +916,7 @@ int32_t Logger::doWork(uintptr_t stage)
       }
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
+        if( sectionName.strcasecmp("decoration") == 0 ) continue;
         if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
         utf8::String join(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
         if( join.isNull() && findStringPart(joined,sectionName,false) < 0 ){
@@ -988,6 +1111,46 @@ int32_t Logger::doWork(uintptr_t stage)
       "</HTML>\n"
     ;
   }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("recalc_totals") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    Array<utf8::String> ifaces;
+    if( all ){
+      database_->attach()->start();
+      enumInterfaces(statement_,ifaces);
+      database_->commit()->detach();
+    }
+    else {
+      ifaces.add(cgi_.paramAsString("if"));
+    }
+    for( uintptr_t i = 0; i < ifaces.count(); i++ ){
+      AutoPtr<Sniffer> sniffer(getSnifferBySection(ifaces[i]));
+      sniffer->recalcTotals();
+    }
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Recalculation totals operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("reactivate_indices") >= 0 ){
     uint64_t ellapsed = gettimeofday();
     reactivateIndices(true,false);
@@ -1133,7 +1296,7 @@ Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & e
   if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
   if( (uint64_t) btt != 0 ) statement_->paramAsMutant("bt",btt);
   if( (uint64_t) ett != 0 ) statement_->paramAsMutant("et",ett);
-  statement_->execute();
+  statement_->execute()->text(statement_->text().replaceAll("INET_BPFT_STAT","INET_BPFT_STAT_TOTALS"))->execute();
 /*
     statement_->fetchAll();
     statement2_->text(
@@ -1154,7 +1317,7 @@ Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & e
   if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
   if( (uint64_t) btt != 0 ) statement_->paramAsMutant("bt",btt);
   if( (uint64_t) ett != 0 ) statement_->paramAsMutant("et",ett);
-  statement_->execute();
+  statement_->execute()->text(statement_->text().replaceAll("INET_BPFT_STAT","INET_BPFT_STAT_TOTALS"))->execute();
   database_->commit();
   return *this;
 }
@@ -1253,6 +1416,11 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[i].strcmp("--pid") == 0 && i + 1 < argv().count() ){
         pidFileName = argv()[i + 1];
+      }
+      else if( argv()[i].strcmp("--query") == 0 && i + 1 < argv().count() ){
+        setEnv("GATEWAY_INTERFACE","CGI/1.1");
+        setEnv("REQUEST_METHOD","GET");
+        setEnv("QUERY_STRING",argv()[i + 1]);
       }
     }
     for( i = 1; i < argv().count(); i++ ){

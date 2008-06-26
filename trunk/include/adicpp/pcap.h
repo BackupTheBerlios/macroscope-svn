@@ -118,7 +118,9 @@ class PCAP : public Thread {
     virtual ~PCAP();
     PCAP();
 
-    enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear };
+    enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear, pgpCount };
+    static utf8::String groupingPeriodToString(PacketGroupingPeriod groupingPeriod);
+    static PacketGroupingPeriod stringToGroupingPeriod(const utf8::String & gp);
 
     static void initialize();
     static void cleanup();
@@ -157,7 +159,8 @@ class PCAP : public Thread {
 
     static void printAllDevices();
 
-    void setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const;
+    static void setBounds(PacketGroupingPeriod period,uint64_t timestamp,uint64_t & bt,uint64_t & et);
+    void setBounds(uint64_t timestamp,uint64_t & bt,uint64_t & et) const { setBounds(groupingPeriod_,timestamp,bt,et); }
 
     PCAP & join(PCAP * pcap);
   protected:

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -285,6 +285,8 @@ class Logger {
       protected:
         class CachedPacketSum {
           public:
+            CachedPacketSum() : isTable_(false) {}
+
             static EmbeddedHashNode<CachedPacketSum,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t &){
 	            return *reinterpret_cast<EmbeddedHashNode<CachedPacketSum,uintptr_t> *>(link);
 	          }
@@ -311,16 +313,21 @@ class Logger {
               if( c ){
                 c = object1.et_ == object2.et_;
                 if( c ){
-                  c = memcmp(&object1.srcAddr_,&object2.srcAddr_,sizeof(&object1.srcAddr_)) == 0;
-	                if( c ){
-	                  c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_)) == 0;
+                  c = object1.isTable_ == object2.isTable_;
+                  if( c && !object1.isTable_ ){
+                    c = memcmp(&object1.srcAddr_,&object2.srcAddr_,sizeof(&object1.srcAddr_)) == 0;
 	                  if( c ){
-                      c = object1.srcPort_ == object2.srcPort_;
-                      if( c ){
-                        c = object1.dstPort_ == object2.dstPort_;
-                        if( c ) c = object1.proto_ == object2.proto_;
-                      }
-	                  }
+	                    c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_)) == 0;
+	                    if( c ){
+                        c = object1.srcPort_ == object2.srcPort_;
+                        if( c ){
+                          c = object1.dstPort_ == object2.dstPort_;
+                          if( c ){
+                            c = object1.proto_ == object2.proto_;
+                          }
+                        }
+	                    }
+                    }
                   }
                 }
 	            }
@@ -336,6 +343,7 @@ class Logger {
             }
             mutable EmbeddedListNode<CachedPacketSum> listNode_;
 
+            AutoPtr<Table<Mutant> > table_;
     	      uint64_t bt_;
     	      uint64_t et_;
             uintmax_t pktSize_;
@@ -345,6 +353,7 @@ class Logger {
             uint16_t srcPort_;
             uint16_t dstPort_;
             int16_t proto_;
+            bool isTable_;
         };
         typedef EmbeddedHash<
           CachedPacketSum,
@@ -389,8 +398,8 @@ class Logger {
         AutoPtr<Database> database_;
         AutoPtr<Statement> statement_;
         AutoPtr<Statement> stFileStat_[3];
-        AutoPtr<Statement> stBPFTSel_;
-        AutoPtr<Statement> stBPFTHostSel_;
+        AutoPtr<Statement> stBPFTSel_[PCAP::pgpCount];
+        AutoPtr<Statement> stBPFTHostSel_[PCAP::pgpCount];
         AutoPtr<Statement> stBPFTIns_;
         AutoPtr<Statement> stBPFTIns2_;
         AutoPtr<Statement> stBPFTCacheSel_;
@@ -404,8 +413,16 @@ class Logger {
 	      AutoPtr<Statement> stBPFTCacheUpd_;
         AutoPtr<Statement> stDNSCache_[3];
 
+        PCAP::PacketGroupingPeriod groupingPeriod_;
+        PCAP::PacketGroupingPeriod totalsPeriod_;
+        intptr_t maxTotalsLevel_, minTotalsLevel_;
+
         void parseBPFTLogFile();
-        enum { rlYear, rlMon, rlDay, rlCount };
+
+        enum { rlYear, rlMon, rlDay, rlHour, rlMin, rlSec, rlNone, rlCount };
+
+        static PCAP::PacketGroupingPeriod rl2pgp(intptr_t rl);
+
         void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
 	      bool getBPFTCachedHelper(Statement * & pStatement);
         void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
@@ -428,12 +445,13 @@ class Logger {
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
     utf8::String resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,const struct in_addr & ip4,bool numeric = false);
     utf8::String getDecor(const utf8::String & dname,const utf8::String & section);
-    static utf8::String getIPFilter(const utf8::String & text);
+    static utf8::String getIPFilter(const utf8::String & text,const utf8::String & tableName);
     static bool isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,const struct tm et);
     int32_t doWork(uintptr_t stage);
     int32_t waitThreads();
     Logger & createDatabase();
     Sniffer * getSnifferBySection(const utf8::String & sectionName);
+    static void enumInterfaces(Statement * statement,Array<utf8::String> & ifaces);
     Logger & writeCGIInterfaceAndTimeSelect(bool addUnionIf);
     void reactivateIndices(bool reactivate,bool setStat);
   private:

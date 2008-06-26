@@ -235,14 +235,14 @@ Transaction & Transaction::start()
         if( isolation_.strcasecmp("REPEATABLE") == 0 ){
           tpb->add("version3");
           tpb->add("concurrency");
-          tpb->add("read");
+          //tpb->add("read");
           tpb->add("write");
           tpb->add("nowait");
         }
         else if( isolation_.strcasecmp("SERIALIZABLE") == 0 ){
           tpb->add("version3");
           tpb->add("consistency");
-          tpb->add("read");
+          //tpb->add("read");
           tpb->add("write");
           tpb->add("wait");
         }
