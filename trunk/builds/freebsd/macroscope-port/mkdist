@@ -3,7 +3,7 @@
 REPOS="http://svn.berlios.de/svnroot/repos/macroscope/branches/stable"
 FILES="builds/cmake include src utils AUTHORS README INSTALL NEWS CMakeLists.txt"
 for f in ${FILES}; do
-  svn export "${REPOS}/${f}" "macroscope/${f}"
+#  svn export "${REPOS}/${f}" "macroscope/${f}"
 done
 PORT=`cat macroscope/src/macroscope/version.in | awk '{ if( length($3) > 0 ) printf "%s-%s", $2, $3 }'`
 mv macroscope ${PORT}
@@ -15,13 +15,13 @@ scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/g
 ftp -Ru ftp://white_raven@ftp.pisem.net/${PORT}.tar.bz2 ${PORT}.tar.bz2
 
 make -DNOPORTDOCS makesum
-make -DNOPORTDOCS install
-make -DNOPORTDOCS package
-make -DNOPORTDOCS deinstall
-pkg_add ${PORT}.tbz
-make -DNOPORTDOCS deinstall
-make -DNOPORTDOCS reinstall
-make -DNOPORTDOCS package
+#make -DNOPORTDOCS install
+#make -DNOPORTDOCS package
+#make -DNOPORTDOCS deinstall
+#pkg_add ${PORT}.tbz
+#make -DNOPORTDOCS deinstall
+#make -DNOPORTDOCS reinstall
+#make -DNOPORTDOCS package
 
 rm -f macroscope.shar
 shar `find . \! -regex ".*\.svn.*" \! -name "mkdist" \! -name "send-pr.port" \! -name "macroscope.shar" \! -regex ".*macroscope-.*" \! -regex ".*work.*"` > macroscope.shar
