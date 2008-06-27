@@ -36,12 +36,12 @@ template <typename T> inline void xchg(T & v1, T & v2)
   v2 = v;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline const T & min(const T & v1, const T & v2)
+template <typename T> inline const T & tmin(const T & v1, const T & v2)
 {
   return v1 < v2 ? v1 : v2;
 }
 //---------------------------------------------------------------------------
-template <typename T> inline const T & max(const T & v1, const T & v2)
+template <typename T> inline const T & tmax(const T & v1, const T & v2)
 {
   return v1 > v2 ? v1 : v2;
 }

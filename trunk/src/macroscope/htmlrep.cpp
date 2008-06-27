@@ -1492,7 +1492,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
             stMsgsIns_->prepare()->
               paramAsString("ST_USER",st_user)->
               paramAsString("ST_FROM",fromAddr)->
-              paramAsString("ST_MSGID",utf8::plane(id,ksys::min(idl - id,14)))->
+              paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(idl - id,14)))->
               paramAsMutant("ST_MSGSIZE",msgSize)->
               paramAsMutant("ST_NRCPTS",nrcpts)->
               execute();
@@ -1500,7 +1500,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           catch( ExceptionSP & e ){
             if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
             stMsgsUpd_->prepare()->
-              paramAsString("ST_MSGID",utf8::plane(id,ksys::min(idl - id,14)))->
+              paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(idl - id,14)))->
               paramAsMutant("ST_NRCPTS",1)->
               execute();
           }
@@ -1509,7 +1509,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
         else if( to != NULL && stat != NULL && (strncmp(stat,"Sent",4) == 0 || strncmp(stat,"success",7) == 0) && (cid == NULL || msgSize > 0) ){
 l3:       if( cid == NULL ){
             stMsgsSel_->prepare()->
-              paramAsString("ST_MSGID",utf8::plane(id,ksys::min(idl - id,14)))->
+              paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(idl - id,14)))->
               execute()->fetchAll();
           }
           if( stMsgsSel_->rowCount() > 0 || cid != NULL ){
@@ -1540,7 +1540,7 @@ l3:       if( cid == NULL ){
               if( cid == NULL ){
                 if( nrcpt > 1 ){
                   stMsgsUpd_->prepare()->
-                    paramAsString("ST_MSGID",utf8::plane(id,ksys::min(idl - id,14)))->
+                    paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(idl - id,14)))->
                     paramAsMutant("ST_NRCPTS",-1)->
                     execute();
                 }
