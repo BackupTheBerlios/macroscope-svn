@@ -1390,9 +1390,18 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
     if( size > 0 && sb.c_str()[size - 1] == '\n' ){
       char * a, * id, * cid = NULL, * idl, * prefix, * prefixl, * from, * to, * stat; //* relay;
       from = strstr(sb.c_str(),"from=");
+      if( from == NULL ) from = strstr(sb.c_str(),"from <");
       to = strstr(sb.c_str()," to=");
+      if( to == NULL ){
+        to = strstr(sb.c_str(),"> for ");
+        if( to != NULL ){
+          to += 1;
+          memcpy(to," to=<",5);
+        }
+      }
       if( (from != NULL || to != NULL) &&
           ((id = strstr(sb.c_str(),"sm-mta[")) != NULL ||
+           (id = strstr(sb.c_str(),"exim[")) != NULL ||
            (cid = strstr(sb.c_str(),"courieresmtp: ")) != NULL ||
            (cid = strstr(sb.c_str(),"courierlocal: ")) != NULL) ){
 // get time
@@ -1409,7 +1418,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           while( *id != ']' ) id++;
           while( *++id == ':' );
           while( *++id == ' ' );
-          for( idl = id; *idl != ':'; idl++ );
+          for( idl = id; *idl != ':' && *idl != ' '; idl++ );
         }
         else {
           id = strstr(cid,"id=") + 3;
@@ -1439,14 +1448,14 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           if( to[4] == '<' ){
             to += 5;
             a = to;
-            while( *a != '@' && *a != '>' && *a != ',' ){
+            while( *a != '@' && *a != '>' && *a != ',' && *a != '\r' && *a != '\n' && *a != '\0' ){
               if( *a == ':' ) to = a + 1;
               a++;
             }
             if( *a == '@' ){
               if( utf8::plane(a + 1,domain.strlen()).strcasecmp(domain) == 0 )
                 st_user = utf8::plane(to,a - to).lower();
-              while( *a != '>' && *a != ',' ) a++;
+              while( *a != '>' && *a != ',' && *a != '\r' && *a != '\n' && *a != '\0' ) a++;
               toAddr = utf8::plane(to,a - to).lower().replaceAll("\"","");
             }
           }
@@ -1455,6 +1464,9 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
         uint64_t msgSize = 0;
         if( (a = strstr(sb.c_str(),"size=")) != NULL ){
           sscanf(a + 5,"%"PRIu64,&msgSize);
+        }
+        else if( (a = strstr(sb.c_str()," S=")) != NULL ){
+          sscanf(a + 3,"%"PRIu64,&msgSize);
         }
 // get nrcpts
         uintptr_t nrcpts = 1, nrcpt = 0;
@@ -1473,14 +1485,14 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
         else {
           stat = NULL;
         }
-	st_user = st_user.lower().replaceAll("\"","");
+	      st_user = st_user.lower().replaceAll("\"","");
         if( fromAddr.strcmp(toAddr) == 0 ) from = to = NULL;
         if( from != NULL && cid == NULL && msgSize > 0 ){
           try {
             stMsgsIns_->prepare()->
               paramAsString("ST_USER",st_user)->
               paramAsString("ST_FROM",fromAddr)->
-              paramAsString("ST_MSGID",utf8::plane(id, idl - id))->
+              paramAsString("ST_MSGID",utf8::plane(id,min(idl - id,14)))->
               paramAsMutant("ST_MSGSIZE",msgSize)->
               paramAsMutant("ST_NRCPTS",nrcpts)->
               execute();
@@ -1488,15 +1500,16 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           catch( ExceptionSP & e ){
             if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
             stMsgsUpd_->prepare()->
-              paramAsString("ST_MSGID",utf8::plane(id, idl - id))->
+              paramAsString("ST_MSGID",utf8::plane(id,min(idl - id,14)))->
               paramAsMutant("ST_NRCPTS",1)->
               execute();
           }
+          if( to != NULL && cid == NULL ) goto l3;
         }
         else if( to != NULL && stat != NULL && (strncmp(stat,"Sent",4) == 0 || strncmp(stat,"success",7) == 0) && (cid == NULL || msgSize > 0) ){
-          if( cid == NULL ){
+l3:       if( cid == NULL ){
             stMsgsSel_->prepare()->
-              paramAsString("ST_MSGID",utf8::plane(id,idl - id))->
+              paramAsString("ST_MSGID",utf8::plane(id,min(idl - id,14)))->
               execute()->fetchAll();
           }
           if( stMsgsSel_->rowCount() > 0 || cid != NULL ){
@@ -1527,7 +1540,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
               if( cid == NULL ){
                 if( nrcpt > 1 ){
                   stMsgsUpd_->prepare()->
-                    paramAsString("ST_MSGID",utf8::plane(id, idl - id))->
+                    paramAsString("ST_MSGID",utf8::plane(id,min(idl - id,14)))->
                     paramAsMutant("ST_NRCPTS",-1)->
                     execute();
                 }

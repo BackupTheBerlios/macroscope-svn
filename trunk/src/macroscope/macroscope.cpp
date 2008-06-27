@@ -319,6 +319,9 @@ Logger & Logger::createDatabase()
           utf8::String("CREATE INDEX ISS_@0001@_06 ON INET_SNIFFER_STAT_@0001@ (dst_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
           utf8::String("CREATE INDEX ISS_@0001@_07 ON INET_SNIFFER_STAT_@0001@ (ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i])
         ;
+        //if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+        //  metadata <<
+        //    utf8::String("CREATE DESC INDEX ISS_@0001@_08 ON INET_SNIFFER_STAT_@0001@ (ts)").replaceAll("@0001@",Sniffer::pgpNames[i]);
       }
       metadata <<
         /*"CREATE TABLE INET_BPFT_STAT_CACHE ("
@@ -336,22 +339,6 @@ Logger & Logger::createDatabase()
         " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
         " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
         ")" <<
-        "DROP INDEX IBS_IDX3" <<
-        "DROP INDEX IBS_IDX4" <<
-
-        "CREATE INDEX IBS_IDX_01 ON INET_BPFT_STAT (st_if,st_start)" <<
-        "CREATE INDEX IBS_IDX_02 ON INET_BPFT_STAT (st_src_ip)" <<
-        "CREATE INDEX IBS_IDX_03 ON INET_BPFT_STAT (st_src_port)" <<
-        "CREATE INDEX IBS_IDX_04 ON INET_BPFT_STAT (st_dst_ip)" <<
-        "CREATE INDEX IBS_IDX_05 ON INET_BPFT_STAT (st_dst_port)" <<
-        "CREATE INDEX IBS_IDX_06 ON INET_BPFT_STAT (st_ip_proto)" <<
-
-        "CREATE INDEX IBST_IDX_01 ON INET_BPFT_STAT_TOTALS (st_if,st_start)" <<
-        "CREATE INDEX IBST_IDX_02 ON INET_BPFT_STAT_TOTALS (st_src_ip)" <<
-        "CREATE INDEX IBST_IDX_03 ON INET_BPFT_STAT_TOTALS (st_src_port)" <<
-        "CREATE INDEX IBST_IDX_04 ON INET_BPFT_STAT_TOTALS (st_dst_ip)" <<
-        "CREATE INDEX IBST_IDX_05 ON INET_BPFT_STAT_TOTALS (st_dst_port)" <<
-        "CREATE INDEX IBST_IDX_06 ON INET_BPFT_STAT_TOTALS (st_ip_proto)" <<
 
         "CREATE UNIQUE INDEX IUT_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
         "CREATE INDEX IUT_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
@@ -360,8 +347,6 @@ Logger & Logger::createDatabase()
         "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP,ST_FROM,ST_TO)"
       ;
       if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-        metadata << "DROP INDEX IBS_IDX5";
-        metadata << "CREATE DESC INDEX IBS_IDX_07 ON INET_BPFT_STAT (st_if,st_start)";
         metadata << "CREATE DESC INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
       }
       else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
@@ -811,7 +796,7 @@ int32_t Logger::main()
           "  <input name=\"copyif\" type=\"SUBMIT\" value=\"Copy\">\n"
           "  <input name=\"dropif\" type=\"SUBMIT\" value=\"Drop\">\n"
           "  <input name=\"dropdns\" type=\"SUBMIT\" value=\"Drop DNS cache\">\n"
-          "  <input name=\"recalc_totals\" type=\"SUBMIT\" value=\"Recalculate totals\">\n"
+          //"  <input name=\"recalc_totals\" type=\"SUBMIT\" value=\"Recalculate totals\">\n"
           "  <input name=\"reactivate_indices\" type=\"SUBMIT\" value=\"Reactivate indices\">\n"
           "  <input name=\"set_indices_statistics\" type=\"SUBMIT\" value=\"Set indices statistics\">\n"
           "</FORM>\n"
@@ -975,12 +960,18 @@ int32_t Logger::doWork(uintptr_t stage)
     AutoDatabaseDetach autoDatabaseDetach(database_);
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
     database_->start();
-    statement_->
-      text("update INET_BPFT_STAT set st_if = :newif" + utf8::String(all ? "" : " where st_if = :if"))->
-      prepare()->
-      paramAsString("newif",cgi_.paramAsString("newIfName"));
-    if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+    statement_->text("DELETE FROM INET_IFACES" + utf8::String(all ? "" : " WHERE iface = :if"));
+    if( !all ) statement_->prepare()->paramAsString("if",cgi_.paramAsString("if"));
     statement_->execute();
+    statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
+      prepare()->paramAsString("newif",cgi_.paramAsString("newIfName"))->execute();
+    for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+      statement_->text("UPDATE INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+        " SET iface = :newif" + utf8::String(all ? "" : " WHERE iface = :if"))->
+        prepare()->paramAsString("newif",cgi_.paramAsString("newIfName"));
+      if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+      statement_->execute();
+    }
     database_->commit();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
@@ -1011,16 +1002,21 @@ int32_t Logger::doWork(uintptr_t stage)
     AutoDatabaseDetach autoDatabaseDetach(database_);
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
     database_->start();
-    statement_->
-      text("insert into INET_BPFT_STAT"
-           "  select '" + cgi_.paramAsString("newIfName") + "' as st_if, st_start,"
-           "    st_src_ip,st_dst_ip,st_ip_proto,"
-           "    st_src_port,st_dst_port,"
-           "    st_dgram_bytes,st_data_bytes"
-           "  from INET_BPFT_STAT" + utf8::String(all ? "" : " where st_if = :if"))->
-      prepare();
-    if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
-    statement_->execute();
+    statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
+      prepare()->paramAsString("newif",cgi_.paramAsString("newIfName"))->execute();
+    for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+      statement_->
+        text("INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+             "  SELECT '" + cgi_.paramAsString("newIfName") + "' as iface, ts,"
+             "    src_ip,dst_ip,ip_proto,"
+             "    src_port,dst_port,"
+             "    dgram,data"
+             "  FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+             utf8::String(all ? "" : " WHERE iface = :if"))->
+        prepare();
+      if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+      statement_->execute();
+    }
     database_->commit();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
@@ -1051,10 +1047,14 @@ int32_t Logger::doWork(uintptr_t stage)
     AutoDatabaseDetach autoDatabaseDetach(database_);
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
     database_->start();
-    statement_->
-      text("delete from INET_BPFT_STAT" + utf8::String(all ? "" : " where st_if = :if"))->
-      prepare();
-    if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+    for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+      statement_->text("DELETE FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+        utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
+      if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+      statement_->execute();
+    }
+    statement_->text("DELETE FROM INET_IFACES" + utf8::String(all ? "" : " WHERE iface = :if"));
+    if( !all ) statement_->prepare()->paramAsString("if",cgi_.paramAsString("if"));
     statement_->execute();
     database_->commit();
     cgi_ <<
@@ -1272,52 +1272,24 @@ Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & e
   AutoDatabaseDetach autoDatabaseDetach(database_);
   database_->start();
   utf8::String range;
-  if( !ifName.isNull() ) range += " st_if = :if";
+  if( !ifName.isNull() ) range += " iface = :if";
   if( (uint64_t) btt != 0 ){
     if( !ifName.isNull() ) range += " AND";
-    range += " st_start >= :bt";
+    range += " ts >= :bt";
   }
   if( (uint64_t) ett != 0 ){
     if( (uint64_t) btt != 0 ) range += " AND";
-    range += " st_start <= :et";
+    range += " ts <= :et";
   }
   if( !range.isNull() ) range += " AND";
-  range = " WHERE" + range + " (st_src_port != 0 OR st_dst_port != 0 OR st_ip_proto != -1)";
-  statement_->text(
-    "INSERT INTO INET_BPFT_STAT "
-    "SELECT st_if, st_start, st_src_ip, st_dst_ip,"
-    " -1 as st_ip_proto, 0 as st_src_port, 0 as st_dst_port,"
-    " sum(st_dgram_bytes) as st_dgram_bytes,"
-    " sum(st_data_bytes) as st_data_bytes"
-    " FROM INET_BPFT_STAT" +
-    range +
-    " GROUP by st_if, st_start, st_src_ip, st_dst_ip"
-  )->prepare();
-  if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
-  if( (uint64_t) btt != 0 ) statement_->paramAsMutant("bt",btt);
-  if( (uint64_t) ett != 0 ) statement_->paramAsMutant("et",ett);
-  statement_->execute()->text(statement_->text().replaceAll("INET_BPFT_STAT","INET_BPFT_STAT_TOTALS"))->execute();
-/*
-    statement_->fetchAll();
-    statement2_->text(
-      "INSERT INTO INET_BPFT_STAT ("
-      "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-      ") VALUES ("
-      "  :st_if,:st_start,:st_src_ip,:st_dst_ip,:st_ip_proto,:st_src_port,:st_dst_port,:st_dgram_bytes,:st_data_bytes"
-      ")"
-    )->prepare();
-    for( intptr_t row = statement_->rowCount() - 1; row >= 0; row-- ){
-      statement_->selectRow(row);
-      for( intptr_t field = statement_->fieldCount() - 1; field >= 0; field-- )
-          statement2_->paramAsMutant(statement_->fieldName(field),statement_->valueAsMutant(field));
-      statement2_->execute();
-    }
-*/
-  statement_->text("DELETE FROM INET_BPFT_STAT" + range)->prepare();
-  if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
-  if( (uint64_t) btt != 0 ) statement_->paramAsMutant("bt",btt);
-  if( (uint64_t) ett != 0 ) statement_->paramAsMutant("et",ett);
-  statement_->execute()->text(statement_->text().replaceAll("INET_BPFT_STAT","INET_BPFT_STAT_TOTALS"))->execute();
+  range = " WHERE" + range + " (src_port <> 0 OR dst_port <> 0 OR ip_proto <> -1)";
+  for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+    statement_->text("DELETE FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) + range)->prepare();
+    if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
+    if( (uint64_t) btt != 0 ) statement_->paramAsMutant("bt",btt);
+    if( (uint64_t) ett != 0 ) statement_->paramAsMutant("et",ett);
+    statement_->execute();
+  }
   database_->commit();
   return *this;
 }

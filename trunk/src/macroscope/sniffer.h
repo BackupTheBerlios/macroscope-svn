@@ -61,7 +61,7 @@ class Sniffer : public PCAP {
 
     enum { stSel, stIns, stUpd };
 
-    void updateTotals(const Mutant & m,const in_addr & srcAddr,uintptr_t srcPort,const in_addr & dstAddr,uintptr_t dstPort,intptr_t proto,uintmax_t dgram,uintmax_t data);    
+    void updateTotals(uintptr_t i,const Mutant & m,const in_addr & srcAddr,uintptr_t srcPort,const in_addr & dstAddr,uintptr_t dstPort,intptr_t proto,uintmax_t dgram,uintmax_t data);    
     bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count,Thread * caller) throw();
   private:
     void threadExecute();

@@ -370,8 +370,8 @@ Service & Service::detach()
 Service & Service::invoke()
 {
   if( attached() ){
-    ISC_LONG          ret;
-    ISC_STATUS_ARRAY  status;
+    ISC_STATUS ret;
+    ISC_STATUS_ARRAY status;
     switch( request_.requestAction_ ){
       case isc_action_svc_backup         :
       case isc_action_svc_restore        :

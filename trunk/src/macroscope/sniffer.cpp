@@ -137,6 +137,7 @@ void Sniffer::setTotalsBounds(PacketGroupingPeriod tp,struct tm & bt,struct tm &
 }
 //------------------------------------------------------------------------------
 void Sniffer::updateTotals(
+  uintptr_t i,
   const Mutant & m,
   const in_addr & srcAddr,
   uintptr_t srcPort,
@@ -146,60 +147,83 @@ void Sniffer::updateTotals(
   uintmax_t dgram,
   uintmax_t data)
 {
-  if( stTotals_[stSel] == NULL ) stTotals_[stSel] = database_->newAttachedStatement();
-  if( stTotals_[stIns] == NULL ) stTotals_[stIns] = database_->newAttachedStatement();
-  if( stTotals_[stUpd] == NULL ) stTotals_[stUpd] = database_->newAttachedStatement();
-  if( !stTotals_[stSel]->prepared() )
-    stTotals_[stSel]->text(
-      "SELECT"
-      "  *"
-      "FROM"
-      "  INET_BPFT_STAT "
-      "WHERE"
-      "  st_if = :if AND"
-      "  st_start = :tm AND"
-      "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
-      "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
-      "  st_ip_proto = :proto "
-      "FOR UPDATE\n"
-    )->prepare()->paramAsString("if",ifName());
-  if( !stTotals_[stIns]->prepared() )
-    stTotals_[stIns]->text(
-      "INSERT INTO INET_BPFT_STAT_TOTALS ("
-      "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-      ") VALUES ("
-      "  :if,:tm,:src_ip,:dst_ip,:proto,:src_port,:dst_port,:dgram_bytes,:data_bytes"
-      ")"
-    )->prepare()->paramAsString("if",ifName());
-  if( !stTotals_[stUpd]->prepared() )
-    stTotals_[stUpd]->text(
-      "UPDATE INET_BPFT_STAT_TOTALS SET"
-      "  st_dgram_bytes = st_dgram_bytes + :dgram_bytes, st_data_bytes = st_data_bytes + :data_bytes "
-      "WHERE "
-      "  st_if = :if AND"
-      "  st_start = :tm AND"
-      "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
-      "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
-      "  st_ip_proto = :proto"
-    )->prepare()->paramAsString("if",ifName());
-  stTotals_[stSel]->
-    paramAsMutant("tm",         m)->
-    paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
-    paramAsMutant("src_port",   srcPort)->
-    paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
-    paramAsMutant("dst_port",   dstPort)->
-    paramAsMutant("proto",      proto)->
+  //if( stTotals_[stSel] == NULL ) stTotals_[stSel] = database_->newAttachedStatement();
+  //if( stTotals_[stIns] == NULL ) stTotals_[stIns] = database_->newAttachedStatement();
+  //if( stTotals_[stUpd] == NULL ) stTotals_[stUpd] = database_->newAttachedStatement();
+  //if( !stTotals_[stSel]->prepared() )
+  //  stTotals_[stSel]->text(
+  //    "SELECT"
+  //    "  *"
+  //    "FROM"
+  //    "  INET_BPFT_STAT "
+  //    "WHERE"
+  //    "  st_if = :if AND"
+  //    "  st_start = :tm AND"
+  //    "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
+  //    "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
+  //    "  st_ip_proto = :proto "
+  //    "FOR UPDATE\n"
+  //  )->prepare()->paramAsString("if",ifName());
+  //if( !stTotals_[stIns]->prepared() )
+  //  stTotals_[stIns]->text(
+  //    "INSERT INTO INET_BPFT_STAT_TOTALS ("
+  //    "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
+  //    ") VALUES ("
+  //    "  :if,:tm,:src_ip,:dst_ip,:proto,:src_port,:dst_port,:dgram_bytes,:data_bytes"
+  //    ")"
+  //  )->prepare()->paramAsString("if",ifName());
+  //if( !stTotals_[stUpd]->prepared() )
+  //  stTotals_[stUpd]->text(
+  //    "UPDATE INET_BPFT_STAT_TOTALS SET"
+  //    "  st_dgram_bytes = st_dgram_bytes + :dgram_bytes, st_data_bytes = st_data_bytes + :data_bytes "
+  //    "WHERE "
+  //    "  st_if = :if AND"
+  //    "  st_start = :tm AND"
+  //    "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
+  //    "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
+  //    "  st_ip_proto = :proto"
+  //  )->prepare()->paramAsString("if",ifName());
+  //stTotals_[stSel]->
+  //  paramAsMutant("tm",         m)->
+  //  paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
+  //  paramAsMutant("src_port",   srcPort)->
+  //  paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
+  //  paramAsMutant("dst_port",   dstPort)->
+  //  paramAsMutant("proto",      proto)->
+  //  execute()->fetchAll();
+  //Statement * statement = stTotals_[stSel]->rowCount() == 0 ? stTotals_[stIns] : stTotals_[stUpd];
+  //statement->
+  //  paramAsMutant("tm",         m)->
+  //  paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
+  //  paramAsMutant("src_port",   srcPort)->
+  //  paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
+  //  paramAsMutant("dst_port",   dstPort)->
+  //  paramAsMutant("proto",      proto)->
+  //  paramAsMutant("dgram_bytes",dgram)->
+  //  paramAsMutant("data_bytes", data)->
+  //  execute();
+  Statement * st = totals_[stSel][i];
+  if( !st->prepared() ) 
+    st->prepare()->paramAsString("if",ifName());
+  st->
+    paramAsMutant("ts",       Mutant(m).changeType(mtTime))->
+    paramAsString("src_ip",   ksock::SockAddr::addr2Index(srcAddr))->
+    paramAsString("dst_ip",   ksock::SockAddr::addr2Index(dstAddr))->
+    paramAsMutant("src_port", srcPort)->
+    paramAsMutant("dst_port", dstPort)->
+    paramAsMutant("proto",    proto)->
     execute()->fetchAll();
-  Statement * statement = stTotals_[stSel]->rowCount() == 0 ? stTotals_[stIns] : stTotals_[stUpd];
-  statement->
-    paramAsMutant("tm",         m)->
-    paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
-    paramAsMutant("src_port",   srcPort)->
-    paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
-    paramAsMutant("dst_port",   dstPort)->
-    paramAsMutant("proto",      proto)->
-    paramAsMutant("dgram_bytes",dgram)->
-    paramAsMutant("data_bytes", data)->
+  st = totals_[st->rowCount() == 0 ? stIns : stUpd][i];
+  if( !st->prepared() ) st->prepare()->paramAsString("if",ifName());
+  st->
+    paramAsMutant("ts",       Mutant(m).changeType(mtTime))->
+    paramAsString("src_ip",   ksock::SockAddr::addr2Index(srcAddr))->
+    paramAsString("dst_ip",   ksock::SockAddr::addr2Index(dstAddr))->
+    paramAsMutant("dgram",    dgram)->
+    paramAsMutant("data",     data)->
+    paramAsMutant("src_port", srcPort)->
+    paramAsMutant("dst_port", dstPort)->
+    paramAsMutant("proto",    proto)->
     execute();
 }
 //------------------------------------------------------------------------------
@@ -303,43 +327,13 @@ void Sniffer::recalcTotals()
     statement_->fetchAll();
     for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
-      updateTotals(
-        bt,
-        ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
-        statement_->valueAsMutant("st_src_port"),
-        ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
-        statement_->valueAsMutant("st_dst_port"),
-        statement_->valueAsMutant("st_ip_proto"),
-        statement_->valueAsMutant("st_dgram_bytes"),
-        statement_->valueAsMutant("st_data_bytes")
-      );
       //updateTotals(
       //  bt,
-      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
-      //  0,
-      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
-      //  0,
-      //  statement_->valueAsMutant("st_ip_proto"),
-      //  statement_->valueAsMutant("st_dgram_bytes"),
-      //  statement_->valueAsMutant("st_data_bytes")
-      //);
-      //updateTotals(
-      //  bt,
-      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
+      //  ksock::SockAddr::indexToAddr4(statement_->valueAsString("st_src_ip")),
       //  statement_->valueAsMutant("st_src_port"),
-      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
+      //  ksock::SockAddr::indexToAddr4(statement_->valueString("st_dst_ip")),
       //  statement_->valueAsMutant("st_dst_port"),
-      //  -1,
-      //  statement_->valueAsMutant("st_dgram_bytes"),
-      //  statement_->valueAsMutant("st_data_bytes")
-      //);
-      //updateTotals(
-      //  bt,
-      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_src_ip")),
-      //  0,
-      //  ksock::SockAddr::indexToAddr4(statement_->valueAsMutant("st_dst_ip")),
-      //  0,
-      //  -1,
+      //  statement_->valueAsMutant("st_ip_proto"),
       //  statement_->valueAsMutant("st_dgram_bytes"),
       //  statement_->valueAsMutant("st_data_bytes")
       //);
@@ -382,7 +376,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
           " iface = :if AND ts = :ts AND src_ip = :src_ip AND src_port = :src_port AND dst_ip = :dst_ip AND dst_port = :dst_port AND ip_proto = :proto "
           "FOR UPDATE"
           ).replaceAll("@0001@",pgpNames[i])
-        )->prepare()->paramAsString("if",ifName());
+        );
       if( totals_[stIns][i] == NULL ) totals_[stIns][i] = database_->newAttachedStatement();
       if( !totals_[stIns][i]->prepared() )
         totals_[stIns][i]->text(utf8::String(
@@ -391,7 +385,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
           ") VALUES ("
           "  :if,:ts,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data"
           ")").replaceAll("@0001@",pgpNames[i])
-        )->prepare()->paramAsString("if",ifName());
+        );
       if( totals_[stUpd][i] == NULL ) totals_[stUpd][i] = database_->newAttachedStatement();
       if( !totals_[stUpd][i]->prepared() )
         totals_[stUpd][i]->text(utf8::String(
@@ -400,7 +394,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
           "WHERE"
           "  iface = :if AND ts = :ts AND src_ip = :src_ip AND src_port = :src_port AND dst_ip = :dst_ip AND dst_port = :dst_port AND ip_proto = :proto"
           ).replaceAll("@0001@",pgpNames[i])
-        )->prepare()->paramAsString("if",ifName());
+        );
     }
     while( !caller->terminated() && count-- > 0 ){
       const HashedPacket & packet = packets[count];
@@ -409,36 +403,13 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
       uint64_t mbt, met;
       for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
         setBounds(PacketGroupingPeriod(i),m,mbt,met);
-        totals_[stSel][i]->
-          paramAsMutant("ts",       Mutant(mbt).changeType(mtTime))->
-          paramAsMutant("src_ip",   ksock::SockAddr::addr2Index(packet.srcAddr_))->
-          paramAsMutant("src_port", packet.srcPort_)->
-          paramAsMutant("dst_ip",   ksock::SockAddr::addr2Index(packet.dstAddr_))->
-          paramAsMutant("dst_port", packet.dstPort_)->
-          paramAsMutant("proto",    packet.proto_)->
-          execute()->fetchAll();
-        if( totals_[stSel][i]->rowCount() == 0 )
-          totals_[stIns][i]->
-            paramAsMutant("ts",       Mutant(mbt).changeType(mtTime))->
-            paramAsMutant("src_ip",   ksock::SockAddr::addr2Index(packet.srcAddr_))->
-            paramAsMutant("src_port", packet.srcPort_)->
-            paramAsMutant("dst_ip",   ksock::SockAddr::addr2Index(packet.dstAddr_))->
-            paramAsMutant("dst_port", packet.dstPort_)->
-            paramAsMutant("proto",    packet.proto_)->
-            paramAsMutant("dgram",    packet.pktSize_)->
-            paramAsMutant("data",     packet.dataSize_)->
-            execute();
-        else
-          totals_[stUpd][i]->
-            paramAsMutant("ts",       Mutant(mbt).changeType(mtTime))->
-            paramAsMutant("src_ip",   ksock::SockAddr::addr2Index(packet.srcAddr_))->
-            paramAsMutant("src_port", packet.srcPort_)->
-            paramAsMutant("dst_ip",   ksock::SockAddr::addr2Index(packet.dstAddr_))->
-            paramAsMutant("dst_port", packet.dstPort_)->
-            paramAsMutant("proto",    packet.proto_)->
-            paramAsMutant("dgram",    packet.pktSize_)->
-            paramAsMutant("data",     packet.dataSize_)->
-            execute();
+        updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
+        if( ports() && protocols() ){
+          updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
+          updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
+        }
+        if( ports() || protocols() )
+          updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
       }
       //setBounds(totalsPeriod_,m,mbt,met);
 // update totals

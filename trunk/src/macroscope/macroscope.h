@@ -285,8 +285,6 @@ class Logger {
       protected:
         class CachedPacketSum {
           public:
-            CachedPacketSum() : isTable_(false) {}
-
             static EmbeddedHashNode<CachedPacketSum,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t &){
 	            return *reinterpret_cast<EmbeddedHashNode<CachedPacketSum,uintptr_t> *>(link);
 	          }
@@ -313,20 +311,17 @@ class Logger {
               if( c ){
                 c = object1.et_ == object2.et_;
                 if( c ){
-                  c = object1.isTable_ == object2.isTable_;
-                  if( c && !object1.isTable_ ){
-                    c = memcmp(&object1.srcAddr_,&object2.srcAddr_,sizeof(&object1.srcAddr_)) == 0;
-	                  if( c ){
-	                    c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_)) == 0;
-	                    if( c ){
-                        c = object1.srcPort_ == object2.srcPort_;
+                  c = memcmp(&object1.srcAddr_,&object2.srcAddr_,sizeof(&object1.srcAddr_)) == 0;
+                  if( c ){
+                    c = memcmp(&object1.dstAddr_,&object2.dstAddr_,sizeof(&object1.dstAddr_)) == 0;
+                    if( c ){
+                      c = object1.srcPort_ == object2.srcPort_;
+                      if( c ){
+                        c = object1.dstPort_ == object2.dstPort_;
                         if( c ){
-                          c = object1.dstPort_ == object2.dstPort_;
-                          if( c ){
-                            c = object1.proto_ == object2.proto_;
-                          }
+                          c = object1.proto_ == object2.proto_;
                         }
-	                    }
+                      }
                     }
                   }
                 }
@@ -353,7 +348,6 @@ class Logger {
             uint16_t srcPort_;
             uint16_t dstPort_;
             int16_t proto_;
-            bool isTable_;
         };
         typedef EmbeddedHash<
           CachedPacketSum,
@@ -394,6 +388,7 @@ class Logger {
         bool bidirectional_;
         bool protocols_;
         bool ports_;
+        bool refreshOnlyCurrent_;
 
         AutoPtr<Database> database_;
         AutoPtr<Statement> statement_;
@@ -416,6 +411,7 @@ class Logger {
         PCAP::PacketGroupingPeriod groupingPeriod_;
         PCAP::PacketGroupingPeriod totalsPeriod_;
         intptr_t maxTotalsLevel_, minTotalsLevel_;
+        Vector<Table<Mutant> > table_;
 
         void parseBPFTLogFile();
 

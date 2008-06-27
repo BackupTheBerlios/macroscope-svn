@@ -399,7 +399,7 @@ uintptr_t utf8c2LowerUCS(const char * utf8s)
           break;
         }
       }
-      lowerBuffer[k] = c;
+      lowerBuffer[k] = (uint16_t) c;
     }
     c = lowerBuffer[k];
   }
@@ -426,7 +426,7 @@ uintptr_t utf8c2LowerUCS(const char * utf8s, uintptr_t & l)
           break;
         }
       }
-      lowerBuffer[k] = c;
+      lowerBuffer[k] = (uint16_t) c;
     }
     c = lowerBuffer[k];
   }
@@ -455,7 +455,7 @@ uintptr_t utf8c2UpperUCS(const char * utf8s)
           break;
         }
       }
-      upperBuffer[k] = c;
+      upperBuffer[k] = (uint16_t) c;
     }
     c = upperBuffer[k];
   }
@@ -482,7 +482,7 @@ uintptr_t utf8c2UpperUCS(const char * utf8s, uintptr_t & l)
           break;
         }
       }
-      upperBuffer[k] = c;
+      upperBuffer[k] = (uint16_t) c;
     }
     c = upperBuffer[k];
   }
