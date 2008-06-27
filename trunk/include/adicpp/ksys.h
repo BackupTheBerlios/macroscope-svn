@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,16 @@ template <typename T> inline void xchg(T & v1, T & v2)
   T v(v1);
   v1 = v2;
   v2 = v;
+}
+//---------------------------------------------------------------------------
+template <typename T> inline const T & min(const T & v1, const T & v2)
+{
+  return v1 < v2 ? v1 : v2;
+}
+//---------------------------------------------------------------------------
+template <typename T> inline const T & max(const T & v1, const T & v2)
+{
+  return v1 > v2 ? v1 : v2;
 }
 //---------------------------------------------------------------------------
 }

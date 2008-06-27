@@ -317,7 +317,7 @@ Config::Config() :
 //---------------------------------------------------------------------------
 utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
 {
-  TokenType t, tBeforeComment, ttBeforeComment;
+  TokenType t, tBeforeComment = ttUnknown, ttBeforeComment = ttUnknown;
   bool inQuoted = false, screened = false;
   uintptr_t commentLevel = 0, prevChar = 0;
   uintptr_t maxTokenLen = 0;

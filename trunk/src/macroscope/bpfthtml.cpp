@@ -626,7 +626,6 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     pStatement->execute()->fetchAll()->unloadColumns(*pResult);
     for( i = pStatement->rowCount() - 1; i >= 0; i-- ){
       pStatement->selectRow(i);
-      uintmax_t sum1 = pStatement->valueAsMutant("SUM1");
 
       row = pResult->rowCount();
       pStatement->unloadRowByIndex(pResult->addRow());
