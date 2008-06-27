@@ -1348,7 +1348,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           struct in_addr ip42 = ksock::SockAddr::indexToAddr4(table[0](i,"dst_ip"));
           intptr_t ip42Port = ports_ ? ksock::api.ntohs(table[0](i,"dst_port")) : 0;
           intptr_t ipProto = protocols_ ? (int16_t) table[0](i,"ip_proto") : -1;
-	        f <<
+          utf8::String row(
             "<TR>\n"
             "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
 	          genHRef(ip41,ip41Port) +
@@ -1364,7 +1364,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.dgram",section_) + "\" nowrap>\n" +
             formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
             "  </TH>\n"
-          ;
+          );
           while( *pi >= sv ){
             switch( level ){
               case rlYear :
@@ -1406,7 +1406,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               }
               uintmax_t sum1, sum2;
               getBPFTCached(stBPFTHostSel_[rl2pgp(level + 1)],NULL,&sum1,&sum2);
-              f <<
+              row +=
                 "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.data",section_) + "\" nowrap>\n" +
                 formatTraf(sum2,table[*pi + av].sum("SUM1")) + "\n"
                 "  </TH>\n"
@@ -1417,7 +1417,8 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
 	          }
 	          (*pi)--;
           }
-	        f << "</TR>\n";
+	        row += "</TR>\n";
+          f << row;
           switch( level ){
             case rlYear :
               endTime.tm_mon = 11;

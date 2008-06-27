@@ -431,7 +431,7 @@ Logger & Logger::createDatabase()
 //------------------------------------------------------------------------------
 void Logger::enumInterfaces(Statement * statement,Array<utf8::String> & ifaces)
 {
-  statement->text("select iface from INET_IFACES")->execute();
+  statement->text("SELECT iface FROM INET_IFACES ORDER BY iface")->execute();
   while( statement->fetch() ) ifaces.add(statement->valueAsString(0).trimRight());
 }
 //------------------------------------------------------------------------------
