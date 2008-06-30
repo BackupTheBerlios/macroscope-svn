@@ -317,7 +317,7 @@ Logger & Logger::createDatabase()
           utf8::String("CREATE INDEX ISS_@0001@_04 ON INET_SNIFFER_STAT_@0001@ (src_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
           utf8::String("CREATE INDEX ISS_@0001@_05 ON INET_SNIFFER_STAT_@0001@ (dst_ip)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
           utf8::String("CREATE INDEX ISS_@0001@_06 ON INET_SNIFFER_STAT_@0001@ (dst_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
-          utf8::String("CREATE INDEX ISS_@0001@_07 ON INET_SNIFFER_STAT_@0001@ (ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i])
+          utf8::String("CREATE INDEX ISS_@0001@_07 ON INET_SNIFFER_STAT_@0001@ (ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
           utf8::String("CREATE INDEX ISS_@0001@_08 ON INET_SNIFFER_STAT_@0001@ (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i])
         ;
         //if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
