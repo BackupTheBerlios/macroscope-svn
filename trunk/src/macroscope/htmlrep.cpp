@@ -1500,7 +1500,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           catch( ExceptionSP & e ){
             if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
             stMsgsUpd_->prepare()->
-              paramAsString("ST_MSGID",utf8::plane(id,uintptr_t(idl - id),uintptr_t(14)))->
+              paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(uintptr_t(idl - id),uintptr_t(14))))->
               paramAsMutant("ST_NRCPTS",1)->
               execute();
           }
@@ -1509,7 +1509,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
         else if( to != NULL && stat != NULL && (strncmp(stat,"Sent",4) == 0 || strncmp(stat,"success",7) == 0) && (cid == NULL || msgSize > 0) ){
 l3:       if( cid == NULL ){
             stMsgsSel_->prepare()->
-              paramAsString("ST_MSGID",utf8::plane(id,uintptr_t(idl - id),uintptr_t(14)))->
+              paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(uintptr_t(idl - id),uintptr_t(14))))->
               execute()->fetchAll();
           }
           if( stMsgsSel_->rowCount() > 0 || cid != NULL ){
@@ -1540,7 +1540,7 @@ l3:       if( cid == NULL ){
               if( cid == NULL ){
                 if( nrcpt > 1 ){
                   stMsgsUpd_->prepare()->
-                    paramAsString("ST_MSGID",utf8::plane(id,uintptr_t(idl - id),uintptr_t(14)))->
+                    paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(uintptr_t(idl - id),uintptr_t(14))))->
                     paramAsMutant("ST_NRCPTS",-1)->
                     execute();
                 }
