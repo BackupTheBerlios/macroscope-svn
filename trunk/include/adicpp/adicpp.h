@@ -62,7 +62,7 @@ inline void Initializer::release()
 //---------------------------------------------------------------------------
 inline void Initializer::initialize(int argc,char ** argv)
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
+  ksys::AutoLock<Initializer> lock(*(Initializer *) ~uintptr_t(NULL));
   if( initCount_ == 0 ){
     ksys::initialize(argc,argv);
 #if ENABLE_FIREBIRD_INTERFACE
@@ -83,7 +83,7 @@ inline void Initializer::initialize(int argc,char ** argv)
 //---------------------------------------------------------------------------
 inline void Initializer::cleanup()
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~NULL);
+  ksys::AutoLock<Initializer> lock(*(Initializer *) ~uintptr_t(NULL));
   assert( initCount_ > 0 );
   if( initCount_ == 1 ){
 #if ENABLE_PCAP_INTERFACE
