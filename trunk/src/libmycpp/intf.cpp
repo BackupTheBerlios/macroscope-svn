@@ -220,7 +220,7 @@ void API::open()
   }
   if( (intptr_t) threadCount() == 0 ){
     //if( count_ > 0 ){
-      my_bool r = my_thread_init != NULL ? r = my_thread_init() : r = mysql_thread_init();
+      my_bool r = my_thread_init != NULL ? my_thread_init() : mysql_thread_init();
       if( r != 0 ){
 #if !MYSQL_STATIC_LIBRARY
         if( count_ == 0 ){
