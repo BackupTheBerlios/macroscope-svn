@@ -147,63 +147,8 @@ void Sniffer::updateTotals(
   uintmax_t dgram,
   uintmax_t data)
 {
-  //if( stTotals_[stSel] == NULL ) stTotals_[stSel] = database_->newAttachedStatement();
-  //if( stTotals_[stIns] == NULL ) stTotals_[stIns] = database_->newAttachedStatement();
-  //if( stTotals_[stUpd] == NULL ) stTotals_[stUpd] = database_->newAttachedStatement();
-  //if( !stTotals_[stSel]->prepared() )
-  //  stTotals_[stSel]->text(
-  //    "SELECT"
-  //    "  *"
-  //    "FROM"
-  //    "  INET_BPFT_STAT "
-  //    "WHERE"
-  //    "  st_if = :if AND"
-  //    "  st_start = :tm AND"
-  //    "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
-  //    "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
-  //    "  st_ip_proto = :proto "
-  //    "FOR UPDATE\n"
-  //  )->prepare()->paramAsString("if",ifName());
-  //if( !stTotals_[stIns]->prepared() )
-  //  stTotals_[stIns]->text(
-  //    "INSERT INTO INET_BPFT_STAT_TOTALS ("
-  //    "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-  //    ") VALUES ("
-  //    "  :if,:tm,:src_ip,:dst_ip,:proto,:src_port,:dst_port,:dgram_bytes,:data_bytes"
-  //    ")"
-  //  )->prepare()->paramAsString("if",ifName());
-  //if( !stTotals_[stUpd]->prepared() )
-  //  stTotals_[stUpd]->text(
-  //    "UPDATE INET_BPFT_STAT_TOTALS SET"
-  //    "  st_dgram_bytes = st_dgram_bytes + :dgram_bytes, st_data_bytes = st_data_bytes + :data_bytes "
-  //    "WHERE "
-  //    "  st_if = :if AND"
-  //    "  st_start = :tm AND"
-  //    "  st_src_ip = :src_ip AND st_src_port = :src_port AND"
-  //    "  st_dst_ip = :dst_ip AND st_dst_port = :dst_port AND"
-  //    "  st_ip_proto = :proto"
-  //  )->prepare()->paramAsString("if",ifName());
-  //stTotals_[stSel]->
-  //  paramAsMutant("tm",         m)->
-  //  paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
-  //  paramAsMutant("src_port",   srcPort)->
-  //  paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
-  //  paramAsMutant("dst_port",   dstPort)->
-  //  paramAsMutant("proto",      proto)->
-  //  execute()->fetchAll();
-  //Statement * statement = stTotals_[stSel]->rowCount() == 0 ? stTotals_[stIns] : stTotals_[stUpd];
-  //statement->
-  //  paramAsMutant("tm",         m)->
-  //  paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(srcAddr))->
-  //  paramAsMutant("src_port",   srcPort)->
-  //  paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(dstAddr))->
-  //  paramAsMutant("dst_port",   dstPort)->
-  //  paramAsMutant("proto",      proto)->
-  //  paramAsMutant("dgram_bytes",dgram)->
-  //  paramAsMutant("data_bytes", data)->
-  //  execute();
   Statement * st = totals_[stSel][i];
-  if( !st->prepared() ) 
+  if( !st->prepared() )
     st->prepare()->paramAsString("if",ifName());
   st->
     paramAsMutant("ts",       Mutant(m).changeType(mtTime))->
@@ -387,7 +332,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
           ).replaceAll("@0001@",pgpNames[i])
         );
     }
-    while( !caller->terminated() && terminated_ && count-- > 0 ){
+    while( !caller->terminated() && !terminated_ && count-- > 0 ){
       const HashedPacket & packet = packets[count];
       Mutant m(bt);
       m.changeType(mtTime);
