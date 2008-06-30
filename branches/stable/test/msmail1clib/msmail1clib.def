@@ -1,9 +1,0 @@
-; msmail1clib.def : Declares the module parameters.
-
-LIBRARY      "msmail1clib.DLL"
-
-EXPORTS
-	DllCanUnloadNow		PRIVATE
-	DllGetClassObject	PRIVATE
-	DllRegisterServer	PRIVATE
-	DllUnregisterServer	PRIVATE
