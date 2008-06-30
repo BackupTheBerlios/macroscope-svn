@@ -233,6 +233,7 @@ PCAP::PCAP() :
   swapLowWatermark_(50),
   swapHighWatermark_(90),
   swapWatchTime_(5000000),
+  startupMutex_(0),
   promisc_(false),
   ports_(true),
   protocols_(true),
@@ -428,6 +429,7 @@ void PCAP::shutdown()
 //------------------------------------------------------------------------------
 void PCAP::threadExecute()
 {
+  bool startupLocked = false;
 //  for( uintptr_t len = 65536; len <= swapThreshold_; len += 65536 )
 //    fprintf(stderr,"%s\n",formatByteLength(len,swapThreshold_).c_str());
 #if HAVE_PCAP_H
@@ -444,9 +446,12 @@ void PCAP::threadExecute()
     handle_ = api.pcap_open_live(iface_.getANSIString(),INT_MAX,promisc_,int(pcapReadTimeout_),errbuf);
     if( handle_ == NULL ) goto errexit;
     if( !filter_.isNull() ){
+      interlockedCompareExchangeAcquire(startupMutex_,-1,0);
+      startupLocked = true;
       memset(fp,0,sizeof(struct bpf_program));
       errbuf[0] = '\0';
-      api.pcap_compile((pcap_t *) handle_,fp,filter_.getANSIString(),1,net);
+      utf8::AnsiString s(filter_.getANSIString());
+      api.pcap_compile((pcap_t *) handle_,fp,s,1,net);
       if( fp->bf_insns == NULL ){
         if( oserror() == 0 ){
           strcpy(errbuf,"Invalid PCAP filter");
@@ -460,6 +465,8 @@ void PCAP::threadExecute()
       }
       fc_ = true;
       if( api.pcap_setfilter((pcap_t *) handle_,fp) != 0 ) goto errexit;
+      interlockedIncrement(startupMutex_,1);
+      startupLocked = false;
     }
 //    fprintf(stderr,"%s %d\n",__FILE__,__LINE__); fflush(stderr);
     //if( api.pcap_setmode((pcap_t *) handle_,MODE_MON) != 0 ) goto errexit;
@@ -499,6 +506,7 @@ void PCAP::threadExecute()
   }
 errexit:
   int32_t err = oserror();
+  if( startupLocked ) interlockedIncrement(startupMutex_,1);
   shutdown();
   api.close();
   if( err != 0 )

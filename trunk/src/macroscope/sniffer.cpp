@@ -348,16 +348,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
   bool r = true;
   try {
     if( !database_->attached() ) database_->attach();
-    //if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
     database_->start();
-    //if( !statement_->prepared() )
-    //  statement_->text(
-    //    "INSERT INTO INET_BPFT_STAT ("
-    //    "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"
-    //    ") VALUES ("
-    //    "  :if,:tm,:src_ip,:dst_ip,:proto,:src_port,:dst_port,:dgram_bytes,:data_bytes"
-    //    ")"
-    //  )->prepare()->paramAsString("if",ifName());
     if( ifaces_ == NULL ) ifaces_ = database_->newAttachedStatement();
     if( !ifaces_->prepared() )
       ifaces_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->prepare()->paramAsString("if",ifName());
@@ -396,41 +387,34 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
           ).replaceAll("@0001@",pgpNames[i])
         );
     }
-    while( !caller->terminated() && count-- > 0 ){
+    while( !caller->terminated() && terminated_ && count-- > 0 ){
       const HashedPacket & packet = packets[count];
       Mutant m(bt);
       m.changeType(mtTime);
       uint64_t mbt, met;
       for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
+        if( caller->terminated() || terminated_ ) break;
         setBounds(PacketGroupingPeriod(i),m,mbt,met);
         updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
+        if( caller->terminated() || terminated_ ) break;
         if( ports() && protocols() ){
           updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
+          if( caller->terminated() || terminated_ ) break;
           updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
+          if( caller->terminated() || terminated_ ) break;
         }
         if( ports() || protocols() )
           updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
       }
-      //setBounds(totalsPeriod_,m,mbt,met);
-// update totals
-      //updateTotals(mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
-      //updateTotals(mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
-      //updateTotals(mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
-      //updateTotals(mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
-// insert line
-      //statement_->
-      //  paramAsMutant("tm",         m)->
-      //  paramAsMutant("src_ip",     ksock::SockAddr::addr2Index(packet.srcAddr_))->
-      //  paramAsMutant("dst_ip",     ksock::SockAddr::addr2Index(packet.dstAddr_))->
-      //  paramAsMutant("proto",      packet.proto_)->
-      //  paramAsMutant("src_port",   packet.srcPort_)->
-      //  paramAsMutant("dst_port",   packet.dstPort_)->
-      //  paramAsMutant("dgram_bytes",packet.pktSize_)->
-      //  paramAsMutant("data_bytes", packet.dataSize_)->
-      //  execute();
     }
-    if( caller->terminated() ) database_->rollback(); else database_->commit();
-    r = !caller->terminated();
+    if( caller->terminated() || terminated_ ){
+      database_->rollback();
+      r = false;
+    }
+    else {
+      database_->commit();
+      r = true;
+    }
   }
   catch( ExceptionSP & e ){
     e->writeStdError();
