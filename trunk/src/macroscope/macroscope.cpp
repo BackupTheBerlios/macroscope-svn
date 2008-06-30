@@ -1360,7 +1360,7 @@ const char * _malloc_options = "HR";
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  //Sleep(15000);
+  Sleep(15000);
 
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);

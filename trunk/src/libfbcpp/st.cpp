@@ -281,19 +281,24 @@ DSQLStatement & DSQLStatement::prepare()
 DSQLStatement & DSQLStatement::execute()
 {
   transaction_->start();
-  prepare();
-  for(;;){
-    dropCursor();
-    ISC_STATUS_ARRAY status;
-    if( api.isc_dsql_execute(status, &transaction_->handle_, &handle_, (short) database_->dpb_.dialect(), params_.sqlda_.sqlda()) == 0 )
-      break;
-    //if( !findISCCode(status, isc_dsql_cursor_open_err) )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(status, __PRETTY_FUNCTION__));
-    //dropCursor();
+  try {
+    prepare();
+    for(;;){
+      dropCursor();
+      ISC_STATUS_ARRAY status;
+      if( api.isc_dsql_execute(status, &transaction_->handle_, &handle_, (short) database_->dpb_.dialect(), params_.sqlda_.sqlda()) == 0 )
+        break;
+      ksys::AutoPtr<EDSQLStExecute> e(newObjectV1C2<EDSQLStExecute>(status, __PRETTY_FUNCTION__));
+      database_->exceptionHandler(e.ptr(NULL));
+    }
+    values_.clear();
+    if( transaction_->startCount_ == 1 && values_.sqlda_.count() > 0 )
+      values_.fetchAll();
   }
-  values_.clear();
-  if( transaction_->startCount_ == 1 && values_.sqlda_.count() > 0 )
-    values_.fetchAll();
+  catch( ksys::ExceptionSP & e ){
+    if( transaction_->active() ) transaction_->rollbackRetaining();
+    throw e;
+  }
   transaction_->commitRetaining();
   executed_ = true;
   return *this;

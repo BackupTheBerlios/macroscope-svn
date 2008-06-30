@@ -174,44 +174,50 @@ DSQLStatement & DSQLStatement::prepare()
 DSQLStatement & DSQLStatement::execute()
 {
   database_->transaction_->start();
-  values_.freeRes();
-  prepare();
-  if( params_.bind_.count() > 0 ){
-    params_.bind();
-    if( api.mysql_stmt_bind_param(handle_,params_.bind_.bind()) != 0 ){
-      database_->exceptionHandler(newObjectV1C2<EDSQLStBindParam>(
-        api.mysql_errno(database_->handle_),
-	api.mysql_error(database_->handle_)
-      ));
+  try {
+    values_.freeRes();
+    prepare();
+    if( params_.bind_.count() > 0 ){
+      params_.bind();
+      if( api.mysql_stmt_bind_param(handle_,params_.bind_.bind()) != 0 ){
+        database_->exceptionHandler(newObjectV1C2<EDSQLStBindParam>(
+          api.mysql_errno(database_->handle_),
+	  api.mysql_error(database_->handle_)
+        ));
+      }
     }
-  }
-  if( params_.bind_.count() == 0 && values_.bind_.count() == 0 ){
-    if( api.mysql_query(database_->handle_, compileSQLParameters().c_str()) != 0 )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
-  }
-  else{
-    if( api.mysql_stmt_execute(handle_) != 0 ){
-      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+    if( params_.bind_.count() == 0 && values_.bind_.count() == 0 ){
+      if( api.mysql_query(database_->handle_, compileSQLParameters().c_str()) != 0 )
+        database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
+          api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     }
+    else {
+      if( api.mysql_stmt_execute(handle_) != 0 ){
+        database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
+          api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+      }
+    }
+    executed_ = true;
+    if( values_.bind_.count() > 0 ){
+      values_.lengths_.resize(values_.bind_.count());
+      values_.res_ = api.mysql_stmt_result_metadata(handle_);
+      if( api.mysql_errno(database_->handle_) != 0 )
+        database_->exceptionHandler(newObjectV1C2<EDSQLStResultMetadata>(
+          api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+      values_.fields_ = api.mysql_fetch_fields(values_.res_);
+    }
+    /* Now buffer all results to client */
+    if( storeResults_ )
+      if( api.mysql_stmt_store_result(handle_) != 0 )
+        database_->exceptionHandler(newObjectV1C2<EDSQLStStoreResult>(
+          api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+    if( database_->transaction_->startCount_ == 1 && values_.bind_.count() > 0 )
+      values_.fetchAll();
   }
-  executed_ = true;
-  if( values_.bind_.count() > 0 ){
-    values_.lengths_.resize(values_.bind_.count());
-    values_.res_ = api.mysql_stmt_result_metadata(handle_);
-    if( api.mysql_errno(database_->handle_) != 0 )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStResultMetadata>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
-    values_.fields_ = api.mysql_fetch_fields(values_.res_);
+  catch( ksys::ExceptionSP & e ){
+    if( database_->transaction_->active() ) database_->transaction_->rollback();
+    throw e;
   }
-  /* Now buffer all results to client */
-  if( storeResults_ )
-    if( api.mysql_stmt_store_result(handle_) != 0 )
-      database_->exceptionHandler(newObjectV1C2<EDSQLStStoreResult>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
-  if( database_->transaction_->startCount_ == 1 && values_.bind_.count() > 0 )
-    values_.fetchAll();
   database_->transaction_->commit();
   return *this;
 }
