@@ -1,7 +1,0 @@
-REGEDIT4
-
-[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters]
-"KeepAliveInterval"=dword:000003e8
-"KeepAliveTime"=dword:0000ea60
-"TCPMaxDataRetransmission"=dword:00000003
-
