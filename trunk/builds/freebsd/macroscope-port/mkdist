@@ -6,14 +6,15 @@ for f in ${FILES}; do
   svn export "${REPOS}/${f}" "/tmp/macroscope/${f}"
 done
 PORT=`cat /tmp/macroscope/src/macroscope/version.in | awk '{ if( length($3) > 0 ) printf "%s-%s", $2, $3 }'`
-mv /tmp/macroscope /tmp/${PORT}
+cp -Rf /tmp/macroscope /tmp/${PORT}
 #echo "#!/bin/sh" >> "${PORT}/configure"
 #echo "cmake ." >> "${PORT}/configure"
 #chmod u+x "${PORT}/configure"
 CW=`pwd`
 tar -c -C /tmp -f - ${PORT} | bzip2 --best - > ${PW}/${PORT}.tar.bz2
-rm -Rf /tmp/${PORT}
-scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/groups/ftp/pub/macroscope
+#rm -Rf /tmp/${PORT}
+exit
+scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/groups/ftp/pub/macroscope/${PORT}.tar.bz2
 ftp -ARu ftp://white_raven@ftp.pisem.net/${PORT}.tar.bz2 ${PORT}.tar.bz2
 
 make -DNOPORTDOCS makesum
