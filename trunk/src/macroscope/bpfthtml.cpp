@@ -1119,27 +1119,24 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     beginTime2 = beginTime;
     endTime2 = endTime;
     switch( level ){
-      case rlYear :
-        beginTime.tm_year = endTime.tm_year;
-        break;
-      case rlMon :
-        beginTime.tm_mon = endTime.tm_mon;
-        break;
-      case rlDay :
-        beginTime.tm_mday = endTime.tm_mday;
-        break;
-      case rlHour :
-        beginTime.tm_hour = endTime.tm_hour;
-        break;
-      case rlMin :
-        beginTime.tm_min = endTime.tm_min;
-        break;
       case rlSec :
         beginTime.tm_sec = endTime.tm_sec;
+      case rlMin :
+        beginTime.tm_min = endTime.tm_min;
+      case rlHour :
+        beginTime.tm_hour = endTime.tm_hour;
+      case rlDay :
+        beginTime.tm_mday = endTime.tm_mday;
+      case rlMon :
+        beginTime.tm_mon = endTime.tm_mon;
+      case rlYear :
+        beginTime.tm_year = endTime.tm_year;
         break;
       default    :
         assert( 0 );
     }
+    if( beginTime.tm_mday < 1 || beginTime.tm_mday > (int) monthDays(beginTime.tm_year + 1900,beginTime.tm_mon) )
+      beginTime.tm_mday = monthDays(beginTime.tm_year + 1900,beginTime.tm_mon);
     if( logger_->cgi_.isCGI() &&
         (tm2Time(cgiET_) < tm2Time(beginTime) || tm2Time(cgiBT_) > tm2Time(endTime) ||
          level < maxTotalsLevel_ || level > minTotalsLevel_) ){

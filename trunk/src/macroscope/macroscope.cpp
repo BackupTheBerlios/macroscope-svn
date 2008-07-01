@@ -677,6 +677,7 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
         if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
           (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
         );
+        if( cgi_.isCGI() ) cgi_ << " done, ellapsed time: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "<BR>\n";
       }
     }
     /*for( intptr_t i = indices.rowCount() - 1; i >= 0; i-- ){
