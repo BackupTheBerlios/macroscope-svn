@@ -575,7 +575,7 @@ typedef int32_t gid_t;
 #if HAVE_LONG_DOUBLE
 #define PRF_LDBL "L"
 #else
-#define PRF_LDBL "l"
+#define PRF_LDBL PRF_DBL
 #endif
 #endif
 

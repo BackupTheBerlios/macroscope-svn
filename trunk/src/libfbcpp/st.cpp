@@ -255,10 +255,13 @@ DSQLStatement & DSQLStatement::prepare()
     if( stmtType == stmtSelect || stmtType == stmtSelectForUpd || stmtType == stmtExecProcedure ){
       describe(values_.sqlda_);
       if( values_.sqlda_.count() != (uintptr_t) values_.sqlda_.sqlda()->sqld ){
-        bool  nd  = values_.sqlda_.count() < (uintptr_t) values_.sqlda_.sqlda()->sqld;
+        bool nd  = values_.sqlda_.count() < (uintptr_t) values_.sqlda_.sqlda()->sqld;
         values_.sqlda_.resize(values_.sqlda_.sqlda()->sqld);
         if( nd ) describe(values_.sqlda_);
       }
+    }
+    else {
+      values_.sqlda_.resize(0);
     }
     // bind input parameters
     describeBind(params_.sqlda_);

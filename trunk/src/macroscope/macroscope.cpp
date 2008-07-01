@@ -267,17 +267,17 @@ Logger & Logger::createDatabase()
         " ST_LOG_FILE_NAME      VARCHAR(4096) NOT NULL,"
         " ST_LAST_OFFSET        BIGINT NOT NULL"
         ")" <<
-        "CREATE TABLE INET_BPFT_STAT_TOTALS ("
-        " st_if            CHAR(16) CHARACTER SET ascii NOT NULL,"
-        " st_start         DATETIME NOT NULL,"
-        " st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-        " st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
-        " st_ip_proto      SMALLINT NOT NULL,"
-        " st_src_port      INTEGER NOT NULL,"
-        " st_dst_port      INTEGER NOT NULL,"
-        " st_dgram_bytes   BIGINT NOT NULL,"
-        " st_data_bytes    BIGINT NOT NULL"
-        ")" <<
+        //"CREATE TABLE INET_BPFT_STAT_TOTALS ("
+        //" st_if            CHAR(16) CHARACTER SET ascii NOT NULL,"
+        //" st_start         DATETIME NOT NULL,"
+        //" st_src_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+        //" st_dst_ip        CHAR(8) CHARACTER SET ascii NOT NULL,"
+        //" st_ip_proto      SMALLINT NOT NULL,"
+        //" st_src_port      INTEGER NOT NULL,"
+        //" st_dst_port      INTEGER NOT NULL,"
+        //" st_dgram_bytes   BIGINT NOT NULL,"
+        //" st_data_bytes    BIGINT NOT NULL"
+        //")" <<
         "CREATE TABLE INET_BPFT_STAT ("
         " st_if            CHAR(16) CHARACTER SET ascii NOT NULL,"
         " st_start         DATETIME NOT NULL,"
@@ -568,10 +568,18 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
 {
   database_->attach();
   if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-    statement_->text("SELECT * FROM RDB$INDICES")->execute()->fetchAll();
+    statement_->text(
+      "SELECT"
+      "  * "
+      "FROM"
+      "  RDB$INDICES "
+      "WHERE"
+      "  NOT RDB$RELATION_NAME LIKE 'RDB$%' "
+      "ORDER BY RDB$RELATION_NAME DESC, RDB$INDEX_NAME DESC")->execute()->fetchAll();
     for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
       if( statement_->valueAsString("RDB$RELATION_NAME").strncasecmp("RDB$",4) == 0 ) continue;
+      utf8::String tableName(statement_->valueAsString("RDB$RELATION_NAME").trimRight());
       utf8::String indexName(statement_->valueAsString("RDB$INDEX_NAME").trimRight());
       int64_t ellapsed;
       try {
@@ -579,40 +587,64 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
           if( verbose_ ) fprintf(stderr,"Deactivate index %s",
             (const char *) indexName.getOEMString()
           );
+          if( cgi_.isCGI() ) cgi_ << "Deactivate index " << indexName;
           ellapsed = gettimeofday();
           statement2_->text("ALTER INDEX " + indexName + " INACTIVE")->execute();
           if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
             (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
           );
+          if( cgi_.isCGI() )
+            cgi_ << " done, ellapsed time: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "<BR>\n";
           if( verbose_ ) fprintf(stderr,"Activate index %s",
             (const char *) indexName.getOEMString()
           );
+          if( cgi_.isCGI() ) cgi_ << "Activate index " << indexName;
           ellapsed = gettimeofday();
           statement2_->text("ALTER INDEX " + indexName + " ACTIVE")->execute();
           if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
             (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
           );
+          if( cgi_.isCGI() )
+            cgi_ << " done, ellapsed time: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "<BR>\n";
         }
         if( setStat ){
           if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
             (const char *) indexName.getOEMString()
           );
+          if( cgi_.isCGI() )
+            cgi_ << "Set statistics on table " << tableName << " index " << indexName <<
+            " S(" << utf8::String::print("%-.*"PRF_LDBL"f",19,(ldouble) statement_->valueAsMutant("rdb$statistics")) << ")";
           ellapsed = gettimeofday();
           statement2_->text("SET STATISTICS INDEX " + indexName)->execute();
+          statement2_->text("SELECT rdb$statistics FROM RDB$INDICES WHERE RDB$INDEX_NAME = :index")->prepare()->
+            paramAsString("index",indexName)->execute()->fetchAll();
+
           if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
             (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
           );
+          if( cgi_.isCGI() )
+            cgi_ << " done S(" << utf8::String::print("%-.*"PRF_LDBL"f",19,(ldouble) statement2_->valueAsMutant(0)) <<
+            "), ellapsed time: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "<BR>\n";
         }
       }
       catch( ExceptionSP & e ){
         if( !e->searchCode(isc_integ_fail,isc_integ_deactivate_primary,isc_lock_conflict,isc_update_conflict) ) throw;
         if( verbose_ ){
-          if( e->searchCode(isc_integ_deactivate_primary) )
+          if( e->searchCode(isc_integ_deactivate_primary) ){
             fprintf(stderr," failed. Cannot deactivate index used by a PRIMARY/UNIQUE constraint.\n");
-          else if( e->searchCode(isc_lock_conflict) )
+            if( cgi_.isCGI() )
+              cgi_ << " failed. Cannot deactivate index used by a PRIMARY/UNIQUE constraint." << "<BR>\n";
+          }
+          else if( e->searchCode(isc_lock_conflict) ){
             fprintf(stderr," failed. Lock conflict on no wait transaction.\n");
-          else if( e->searchCode(isc_update_conflict) )
+            if( cgi_.isCGI() )
+              cgi_ << " failed. Lock conflict on no wait transaction." << "<BR>\n";
+          }
+          else if( e->searchCode(isc_update_conflict) ){
             fprintf(stderr," failed. Update conflicts with concurrent update.\n");
+            if( cgi_.isCGI() )
+              cgi_ << " failed. Update conflicts with concurrent update." << "<BR>\n";
+          }
         }
       }
     }
@@ -639,6 +671,7 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
     if( (intmax_t) statement_->valueAsMutant("Seq_in_index") == 1 )
       statement_->unloadRowByIndex(indices);*/
         if( verbose_ ) fprintf(stderr,"Alter table %s",(const char *) tables(i,0).getOEMString());
+        if( cgi_.isCGI() ) cgi_ << "Alter table " << tables(i,0);
         ellapsed = gettimeofday();
         statement_->text("ALTER TABLE " + tables(i,0) + " ENGINE=" + engine)->execute();
         if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
@@ -968,7 +1001,7 @@ int32_t Logger::doWork(uintptr_t stage)
     if( !all ) statement_->prepare()->paramAsString("if",cgi_.paramAsString("if"));
     statement_->execute();
     statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
-      prepare()->paramAsString("newif",cgi_.paramAsString("newIfName"))->execute();
+      prepare()->paramAsString("if",cgi_.paramAsString("newIfName"))->execute();
     for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
       statement_->text("UPDATE INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
         " SET iface = :newif" + utf8::String(all ? "" : " WHERE iface = :if"))->
@@ -1007,19 +1040,50 @@ int32_t Logger::doWork(uintptr_t stage)
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
     database_->start();
     statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
-      prepare()->paramAsString("newif",cgi_.paramAsString("newIfName"))->execute();
+      prepare()->paramAsString("if",cgi_.paramAsString("newIfName"))->execute();
     for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
-      statement_->
-        text("INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
-             "  SELECT '" + cgi_.paramAsString("newIfName") + "' as iface, ts,"
-             "    src_ip,dst_ip,ip_proto,"
-             "    src_port,dst_port,"
-             "    dgram,data"
-             "  FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
-             utf8::String(all ? "" : " WHERE iface = :if"))->
-        prepare();
+      statement_->text(
+        "INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+        "  SELECT '" + cgi_.paramAsString("newIfName") + "' as iface, ts,"
+        "    src_ip,dst_ip,ip_proto,"
+        "    src_port,dst_port,"
+        "    dgram,data"
+        "  FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+        utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
       if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
-      statement_->execute();
+      try {
+        statement_->execute();
+      }
+      catch( ksys::ExceptionSP & e ){
+        if( !e->searchCode(isc_convert_error) ) throw;
+        statement_->text(
+          "  SELECT ts,"
+          "    src_ip,dst_ip,ip_proto,"
+          "    src_port,dst_port,"
+          "    dgram,data"
+          "  FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+          utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
+        if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+        statement_->execute()->fetchAll();
+        statement2_->text(
+          "INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+          "(iface,ts,src_ip,dst_ip,ip_proto,src_port,dst_port,dgram,data) VALUES "
+          "(:if,:ts,:src_ip,:dst_ip,:ip_proto,:src_port,:dst_port,:dgram,:data)"
+        )->prepare()->paramAsString("if",cgi_.paramAsString("newIfName"));
+        for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+          statement_->selectRow(i);
+          statement2_->
+            paramAsMutant("ts",statement_->valueAsMutant("ts"))->
+            paramAsMutant("src_ip",statement_->valueAsMutant("src_ip"))->
+            paramAsMutant("src_port",statement_->valueAsMutant("src_port"))->
+            paramAsMutant("dst_ip",statement_->valueAsMutant("dst_ip"))->
+            paramAsMutant("dst_port",statement_->valueAsMutant("dst_port"))->
+            paramAsMutant("ip_proto",statement_->valueAsMutant("ip_proto"))->
+            paramAsMutant("dgram",statement_->valueAsMutant("dgram"))->
+            paramAsMutant("data",statement_->valueAsMutant("data"))->
+            execute();
+        }
+      }
     }
     database_->commit();
     cgi_ <<

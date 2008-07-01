@@ -362,6 +362,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     }
   }
   catch( ExceptionSP & e ){
+    if( database_->active() ) database_->rollback();
     e->writeStdError();
     r = false;
   }

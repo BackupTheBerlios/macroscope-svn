@@ -1383,6 +1383,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
   int64_t   cl      = getlocaltimeofday();
   AsyncFile::LineGetBuffer lgb(flog);
   lgb.codePage_ = logger_->config_->valueByPath(section_ + ".sendmail.log_file_codepage",CP_ACP);
+  bool calculateInterdomainTraffic = logger_->config_->valueByPath(section_ + ".calculate_interdomain_traffic",false);
   for(;;){
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
@@ -1486,7 +1487,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           stat = NULL;
         }
 	      st_user = st_user.lower().replaceAll("\"","");
-        if( fromAddr.strcmp(toAddr) == 0 ) from = to = NULL;
+        if( !calculateInterdomainTraffic && fromAddr.strcmp(toAddr) == 0 ) from = to = NULL;
         if( from != NULL && cid == NULL && msgSize > 0 ){
           try {
             stMsgsIns_->prepare()->

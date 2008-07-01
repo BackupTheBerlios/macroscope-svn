@@ -220,6 +220,17 @@ file_t AsyncFile::openHelper(bool async)
   return handle;
 }
 //---------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
+AsyncFile & AsyncFile::flush()
+{
+  if( FlushFileBuffers(descriptor_) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+  }
+  return *this;
+}
+#endif
+//---------------------------------------------------------------------------
 AsyncFile & AsyncFile::open()
 {
   if( !isOpen() && !redirectByName() ){

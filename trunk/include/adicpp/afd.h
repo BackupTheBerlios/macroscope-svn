@@ -58,6 +58,11 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & writeBuffer(const void * buf, uint64_t size);
     AsyncFile & readBuffer(uint64_t pos, void * buf, uint64_t size);
     AsyncFile & writeBuffer(uint64_t pos, const void * buf, uint64_t size);
+#if defined(__WIN32__) || defined(__WIN64__)
+    AsyncFile & flush();
+#else
+    AsyncFile & flush() { return *this; }
+#endif
 
     bool tryRDLock(uint64_t pos, uint64_t size);
     bool tryWRLock(uint64_t pos, uint64_t size);

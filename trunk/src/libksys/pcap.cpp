@@ -985,6 +985,7 @@ void PCAP::DatabaseInserter::threadExecute()
         ) << "\n"
       );
 
+    int64_t ellapsed = gettimeofday();
     success = pcap_->insertPacketsInDatabase(
       group->header_.bt_,
       group->header_.et_,
@@ -992,6 +993,8 @@ void PCAP::DatabaseInserter::threadExecute()
       group->header_.count_,
       this
     );
+    ellapsed = gettimeofday() - ellapsed;
+    
     PacketGroup::SwapFileHeader header = group->header_;
     if( success ){
       interlockedIncrement(
@@ -1019,7 +1022,8 @@ void PCAP::DatabaseInserter::threadExecute()
         "Interface: " << pcap_->ifName_ << ", stop processing packets group: " <<
         utf8::time2Str(header.bt_) << " - " <<
         utf8::time2Str(header.et_) << ", processed: " <<
-        (success ? header.count_ : 0) << "\n"
+        (success ? header.count_ : 0) <<
+        ", ellapsed: " << utf8::elapsedTime2Str(ellapsed) << "\n"
       );
     if( stdErr.debugLevel(6) )
       stdErr.debug(6,utf8::String::Stream() <<
