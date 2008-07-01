@@ -17,6 +17,8 @@ tar -c -C /tmp -f - ${PORT} | bzip2 --best - > ${CW}/${PORT}.tar.bz2
 cp -f ${CW}/${PORT}.tar.bz2 /usr/ports/distfiles/${PORT}.tar.bz2
 rm -Rf /tmp/${PORT}
 scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/groups/ftp/pub/macroscope/${PORT}.tar.bz2
+export FTP_PROXY=
+export HTTP_PROXY=
 ftp -ARu ftp://white_raven@ftp.pisem.net/${PORT}.tar.bz2 ${PORT}.tar.bz2
 
 make -DNOPORTDOCS makesum
