@@ -116,10 +116,7 @@ void Transaction::processingException(ksys::Exception * e)
   EClientServer * p = dynamic_cast< EClientServer *>(e);
   if( p != NULL ){
     if( p->isFatalError() ){
-      startCount_ = 0;
-    }
-    else {
-      if( active() ) rollback();
+      while( active() ) rollback();
     }
   }
 }
