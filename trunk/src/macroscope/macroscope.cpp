@@ -611,9 +611,10 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
           if( verbose_ ) fprintf(stderr,"Set statistics on index %s",
             (const char *) indexName.getOEMString()
           );
+          ldouble statOld = (ldouble) statement_->valueAsMutant("rdb$statistics");
           if( cgi_.isCGI() )
             cgi_ << "Set statistics on table " << tableName << " index " << indexName <<
-            " S(" << utf8::String::print("%-.*"PRF_LDBL"f",19,(ldouble) statement_->valueAsMutant("rdb$statistics")) << ")";
+            " S(" << utf8::String::print("%-.*"PRF_LDBL"f",19,statOld) << ")";
           ellapsed = gettimeofday();
           statement2_->text("SET STATISTICS INDEX " + indexName)->execute();
           statement2_->text("SELECT rdb$statistics FROM RDB$INDICES WHERE RDB$INDEX_NAME = :index")->prepare()->
@@ -622,8 +623,12 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
           if( verbose_ ) fprintf(stderr," done, ellapsed time: %s\n",
             (const char *) utf8::elapsedTime2Str(gettimeofday() - ellapsed).getOEMString()
           );
+          ldouble statNew = statement2_->valueAsMutant(0);
           if( cgi_.isCGI() )
-            cgi_ << " done S(" << utf8::String::print("%-.*"PRF_LDBL"f",19,(ldouble) statement2_->valueAsMutant(0)) <<
+            cgi_ << " done S(" <<
+            (statOld != statNew ? "<FONT COLOR=\"#FF0000\">" : "") <<
+            utf8::String::print("%-.*"PRF_LDBL"f",19,statNew) <<
+            (statOld != statNew ? "</FONT>" : "") <<
             "), ellapsed time: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "<BR>\n";
         }
       }
