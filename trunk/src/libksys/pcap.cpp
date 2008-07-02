@@ -233,7 +233,6 @@ PCAP::PCAP() :
   swapLowWatermark_(50),
   swapHighWatermark_(90),
   swapWatchTime_(5000000),
-  startupMutex_(0),
   promisc_(false),
   ports_(true),
   protocols_(true),
@@ -241,6 +240,8 @@ PCAP::PCAP() :
 {
 //  tempFile_ = getTempPath() + createGUIDAsBase32String() + ".tmp";
 }
+//------------------------------------------------------------------------------
+ilock_t PCAP::startupMutex_ = 0;
 //------------------------------------------------------------------------------
 PCAP::PacketGroupingPeriod PCAP::stringToGroupingPeriod(const utf8::String & gp)
 {

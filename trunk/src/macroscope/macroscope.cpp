@@ -938,7 +938,7 @@ int32_t Logger::doWork(uintptr_t stage)
           joined += join;
           threads_.safeAdd(getSnifferBySection(sectionName));
           threads_[threads_.count() - 1].resume();
-          if( threads_.count() > 0 ) ksys::ksleep(2000000);
+          //if( threads_.count() > 0 ) ksys::ksleep(2000000);
         }
       }
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
@@ -949,7 +949,7 @@ int32_t Logger::doWork(uintptr_t stage)
         if( join.isNull() && findStringPart(joined,sectionName,false) < 0 ){
           threads_.safeAdd(getSnifferBySection(sectionName));
           threads_[threads_.count() - 1].resume();
-          if( threads_.count() > 0 ) ksys::ksleep(2000000);
+          //if( threads_.count() > 0 ) ksys::ksleep(2000000);
         }
       }
     }
