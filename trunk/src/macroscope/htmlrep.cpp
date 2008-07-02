@@ -1383,7 +1383,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
   int64_t   cl      = getlocaltimeofday();
   AsyncFile::LineGetBuffer lgb(flog);
   lgb.codePage_ = logger_->config_->valueByPath(section_ + ".sendmail.log_file_codepage",CP_ACP);
-  bool calculateInterdomainTraffic = logger_->config_->valueByPath(section_ + ".calculate_interdomain_traffic",false);
+  bool calculateInterdomainTraffic = logger_->config_->valueByPath(section_ + ".sendmail.calculate_interdomain_traffic",false);
   for(;;){
     utf8::String sb;
     if( flog.gets(sb,&lgb) ) break;
@@ -1521,9 +1521,8 @@ l3:       if( cid == NULL ){
               msgSize = stMsgsSel_->valueAsMutant("ST_MSGSIZE");
               nrcpt = stMsgsSel_->valueAsMutant("ST_NRCPTS");
             }
-            if( !st_user.isNull() &&
-                (fromAddr.strstr(domain).eos() || toAddr.strstr(domain).eos()) &&
-                !fromAddr.strstr("@").eos() ){
+            if( !st_user.isNull() && !fromAddr.isNull() && !toAddr.isNull() &&
+                (fromAddr.strstr(domain).eos() || toAddr.strstr(domain).eos() || calculateInterdomainTraffic) ){
 // time in database must be in GMT
               try {
                 stTrafIns_->prepare()->
