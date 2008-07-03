@@ -102,15 +102,15 @@ MYSQLDatabase * MYSQLDatabase::start()
   return this;
 }
 //---------------------------------------------------------------------------
-MYSQLDatabase * MYSQLDatabase::rollback()
+MYSQLDatabase * MYSQLDatabase::rollback(bool noThrow)
 {
-  static_cast<mycpp::Transaction *>(this)->rollback();
+  static_cast<mycpp::Transaction *>(this)->rollback(noThrow);
   return this;
 }
 //---------------------------------------------------------------------------
-MYSQLDatabase * MYSQLDatabase::commit()
+MYSQLDatabase * MYSQLDatabase::commit(bool noThrow)
 {
-  static_cast<mycpp::Transaction *>(this)->commit();
+  static_cast<mycpp::Transaction *>(this)->commit(noThrow);
   return this;
 }
 //---------------------------------------------------------------------------

@@ -299,7 +299,7 @@ DSQLStatement & DSQLStatement::execute()
       values_.fetchAll();
   }
   catch( ksys::ExceptionSP & e ){
-    if( transaction_->active() ) transaction_->rollbackRetaining();
+    transaction_->rollbackRetaining();
     throw e;
   }
   transaction_->commitRetaining();

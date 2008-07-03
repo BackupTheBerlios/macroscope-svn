@@ -54,8 +54,8 @@ class Database : virtual public ksys::Object {
     virtual Database *    isolation(const utf8::String & isolation) = 0;
     virtual utf8::String  isolation() = 0;
     virtual Database *    start() = 0;
-    virtual Database *    rollback() = 0;
-    virtual Database *    commit() = 0;
+    virtual Database *    rollback(bool noThrow = false) = 0;
+    virtual Database *    commit(bool noThrow = false) = 0;
     virtual bool          active() = 0;
 
     virtual Database *    clearParams() = 0;
@@ -108,8 +108,8 @@ class FirebirdDatabase : public Database, public fbcpp::Database, public fbcpp::
     FirebirdDatabase *  isolation(const utf8::String & isolation);
     utf8::String        isolation();
     FirebirdDatabase *  start();
-    FirebirdDatabase *  rollback();
-    FirebirdDatabase *  commit();
+    FirebirdDatabase *  rollback(bool noThrow);
+    FirebirdDatabase *  commit(bool noThrow);
     bool                active();
 
     FirebirdDatabase *  clearParams();
@@ -144,8 +144,8 @@ class MYSQLDatabase : public Database, public mycpp::Database, public mycpp::Tra
     MYSQLDatabase * isolation(const utf8::String & isolation);
     utf8::String    isolation();
     MYSQLDatabase * start();
-    MYSQLDatabase * rollback();
-    MYSQLDatabase * commit();
+    MYSQLDatabase * rollback(bool noThrow);
+    MYSQLDatabase * commit(bool noThrow);
     bool            active();
 
     MYSQLDatabase * clearParams();
@@ -180,8 +180,8 @@ class ODBCDatabase : public Database, public odbcpp::Database, public odbcpp::Tr
     ODBCDatabase *  isolation(const utf8::String & isolation);
     utf8::String    isolation();
     ODBCDatabase *  start();
-    ODBCDatabase *  rollback();
-    ODBCDatabase *  commit();
+    ODBCDatabase *  rollback(bool noThrow);
+    ODBCDatabase *  commit(bool noThrow);
     bool            active();
 
     ODBCDatabase *  clearParams();

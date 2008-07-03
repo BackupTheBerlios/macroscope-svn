@@ -360,8 +360,7 @@ Database & Database::detachHelper()
   }
   while( transactions_.count() > 0 ){
     Transaction * transaction = transactions_.objectOfIndex(0);
-    while( transaction->active() )
-      transaction->rollback();
+    while( transaction->active() ) transaction->rollback(true);
 #if __GNUG__
 #else
     transaction->databases_.removeByObject(this);
@@ -407,14 +406,11 @@ Database & Database::detach()
     dsqlStatements_.objectOfIndex(i)->free();
   for( i = transactions_.count() - 1; i >= 0; i-- ){
     Transaction * transaction = transactions_.objectOfIndex(0);
-    while( transaction->active() )
-      transaction->rollback();
+    while( transaction->active() ) transaction->rollback(true);
   }
   if( attached() ){
     ISC_STATUS_ARRAY status;
     api.isc_detach_database(status,&handle_);
-//    if( api.isc_detach_database(status, &handle_) != 0 )
-//      exceptionHandler(newObjectV1C2<EDBDetach>(status, __PRETTY_FUNCTION__));
     api.close();
   }
   return *this;
@@ -422,11 +418,9 @@ Database & Database::detach()
 //---------------------------------------------------------------------------
 void Database::processingException(ksys::Exception * e)
 {
-  // handle fatal errors
+// handle fatal errors
   EClientServer * p = dynamic_cast<EClientServer *>(e);
-  if( p != NULL ){
-    if( p->isFatalError() ) detach();
-  }
+  if( p != NULL && p->isFatalError() ) detach();
 }
 //---------------------------------------------------------------------------
 void Database::staticExceptionHandler(ksys::Exception * e)

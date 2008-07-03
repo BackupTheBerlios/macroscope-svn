@@ -215,7 +215,7 @@ DSQLStatement & DSQLStatement::execute()
       values_.fetchAll();
   }
   catch( ksys::ExceptionSP & e ){
-    if( database_->transaction_->active() ) database_->transaction_->rollback();
+    database_->transaction_->rollback();
     throw e;
   }
   database_->transaction_->commit();

@@ -219,8 +219,7 @@ Database & Database::attach(const utf8::String & name)
 Database & Database::detach()
 {
   if( attached() ){
-    if( transaction_ != NULL )
-      while( transaction_->active() ) transaction_->rollback();
+    if( transaction_ != NULL ) while( transaction_->active() ) transaction_->rollback(true);
     for( intptr_t i = dsqlStatements_.count() - 1; i >= 0; i-- )
       dsqlStatements_.objectOfIndex(i)->free();
     freeHandle(handle_);
@@ -232,11 +231,7 @@ Database & Database::detach()
 void Database::processingException(ksys::Exception * e)
 {
   EClientServer * p = dynamic_cast<EClientServer *>(e);
-  if( p != NULL ){
-    if( p->isFatalError() ){
-      detach();
-    }
-  }
+  if( p != NULL && p->isFatalError() ) detach();
 }
 //---------------------------------------------------------------------------
 void Database::staticExceptionHandler(ksys::Exception * e)

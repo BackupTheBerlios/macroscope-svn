@@ -50,7 +50,7 @@ Transaction & Transaction::attach(Database & database)
 //---------------------------------------------------------------------------
 Transaction & Transaction::detach()
 {
-  while( active() ) rollback();
+  while( active() ) rollback(true);
   if( database_ != NULL ) database_->transaction_ = NULL;
   database_ = NULL;
   return *this;
@@ -83,42 +83,54 @@ Transaction & Transaction::start()
   return *this;
 }
 //---------------------------------------------------------------------------
-Transaction & Transaction::commit()
+Transaction & Transaction::commit(bool noThrow)
 {
-  if( !active() )
+  if( !active() && !noThrow )
     newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  assert(startCount_ > 0);
   if( startCount_ == 1 ){
-    if( api.mysql_commit(database_->handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
-      exceptionHandler(newObjectV1C2<ETrCommit>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+    if( api.mysql_commit(database_->handle_) != 0 && !noThrow ){
+      ksys::AutoPtr<ETrCommit> e(newObjectV1C2<ETrCommit>(
+        api.mysql_errno(database_->handle_),
+        api.mysql_error(database_->handle_)
+      ));
+      exceptionHandler(e.ptr(NULL));
+    }
+    startCount_--;
   }
-  startCount_--;
+  else if( startCount_ == 0 ){
+  }
+  else {
+    startCount_--;
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
-Transaction & Transaction::rollback()
+Transaction & Transaction::rollback(bool noThrow)
 {
-  if( !active() )
-    newObjectV1C2<ETrNotActive>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  assert(startCount_ > 0);
+  if( !active() && !noThrow )
+    newObjectV1C2<ETrNotActive>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 1 ){
-    if( api.mysql_rollback(database_->handle_) != 0 && api.mysql_errno(database_->handle_) != CR_SERVER_GONE_ERROR )
-      exceptionHandler(newObjectV1C2<ETrRollback>(
-        api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+    if( api.mysql_rollback(database_->handle_) != 0 && !noThrow ){
+      ksys::AutoPtr<ETrRollback> e(newObjectV1C2<ETrRollback>(
+        api.mysql_errno(database_->handle_),
+        api.mysql_error(database_->handle_)
+      ));
+      exceptionHandler(e.ptr(NULL));
+    }
+    startCount_--;
   }
-  startCount_--;
+  else if( startCount_ == 0 ){
+  }
+  else {
+    startCount_--;
+  }
   return *this;
 }
 //---------------------------------------------------------------------------
 void Transaction::processingException(ksys::Exception * e)
 {
-  EClientServer * p = dynamic_cast< EClientServer *>(e);
-  if( p != NULL ){
-    if( p->isFatalError() ){
-      while( active() ) rollback();
-    }
-  }
+  EClientServer * p = dynamic_cast<EClientServer *>(e);
+  if( p != NULL && p->isFatalError() ) while( active() ) rollback(true);
 }
 //---------------------------------------------------------------------------
 void Transaction::staticExceptionHandler(ksys::Exception * e)

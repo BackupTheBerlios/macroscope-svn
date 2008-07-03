@@ -102,15 +102,15 @@ FirebirdDatabase * FirebirdDatabase::start()
   return this;
 }
 //---------------------------------------------------------------------------
-FirebirdDatabase * FirebirdDatabase::rollback()
+FirebirdDatabase * FirebirdDatabase::rollback(bool noThrow)
 {
-  static_cast<fbcpp::Transaction *>(this)->rollback();
+  static_cast<fbcpp::Transaction *>(this)->rollback(noThrow);
   return this;
 }
 //---------------------------------------------------------------------------
-FirebirdDatabase * FirebirdDatabase::commit()
+FirebirdDatabase * FirebirdDatabase::commit(bool noThrow)
 {
-  static_cast<fbcpp::Transaction *>(this)->commit();
+  static_cast<fbcpp::Transaction *>(this)->commit(noThrow);
   return this;
 }
 //---------------------------------------------------------------------------

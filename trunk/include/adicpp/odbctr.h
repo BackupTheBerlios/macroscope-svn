@@ -46,8 +46,8 @@ class Transaction : virtual public Base {
     Transaction &         detach();
 
     Transaction &         start();
-    Transaction &         commit();
-    Transaction &         rollback();
+    Transaction &         commit(bool noThrow = false);
+    Transaction &         rollback(bool noThrow = false);
 
     // properties
     bool                  attached();

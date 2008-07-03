@@ -55,7 +55,7 @@ Transaction & Transaction::attach(Database & database)
 //---------------------------------------------------------------------------
 Transaction & Transaction::detach()
 {
-  while( active() ) rollback();
+  while( active() ) rollback(true);
   if( database_ != NULL ) database_->transaction_ = NULL;
   database_ = NULL;
   return *this;
@@ -91,36 +91,45 @@ Transaction & Transaction::start()
   return *this;
 }
 //---------------------------------------------------------------------------
-Transaction & Transaction::commit()
+Transaction & Transaction::commit(bool noThrow)
 {
 #if HAVE_SQL_H
-  if( !active() )
+  if( !active() && !noThrow )
     newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
-  assert( startCount_ > 0 );
   if( startCount_ == 1 ){
     SQLRETURN r = api.SQLEndTran(SQL_HANDLE_DBC,database_->handle_,SQL_COMMIT);
-    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO && !noThrow )
       database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
+    startCount_--;
   }
-  startCount_--;
+  else if( startCount_ == 0 ){
+  }
+  else {
+    startCount_--;
+  }
 #else
   newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
 #endif
   return *this;
 }
 //---------------------------------------------------------------------------
-Transaction & Transaction::rollback()
+Transaction & Transaction::rollback(bool noThrow)
 {
 #if HAVE_SQL_H
-  if( !active() )
+  if( !active() && !noThrow )
     newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   assert( startCount_ > 0 );
   if( startCount_ == 1 ){
     SQLRETURN r = api.SQLEndTran(SQL_HANDLE_DBC,database_->handle_,SQL_ROLLBACK);
-    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
+    if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO && !noThrow )
       database_->exceptionHandler(database_->exception(SQL_HANDLE_DBC,database_->handle_));
+    startCount_--;
   }
-  startCount_--;
+  else if( startCount_ == 0 ){
+  }
+  else {
+    startCount_--;
+  }
 #else
   newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
 #endif
@@ -129,15 +138,8 @@ Transaction & Transaction::rollback()
 //---------------------------------------------------------------------------
 void Transaction::processingException(ksys::Exception * e)
 {
-  EClientServer * p = dynamic_cast< EClientServer *>(e);
-  if( p != NULL ){
-    if( p->isFatalError() ){
-      startCount_ = 0;
-    }
-    else {
-      if( active() ) rollback();
-    }
-  }
+  EClientServer * p = dynamic_cast<EClientServer *>(e);
+  if( p != NULL && p->isFatalError() ) while( active() ) rollback(true);
 }
 //---------------------------------------------------------------------------
 void Transaction::staticExceptionHandler(ksys::Exception * e)

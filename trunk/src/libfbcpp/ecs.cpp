@@ -854,7 +854,9 @@ bool EClientServer::isFatalError() const
     isc_network_error,
     isc_net_read_err,
     isc_net_write_err,
-    isc_lost_db_connection
+    isc_lost_db_connection,
+    isc_bad_trans_handle,
+    isc_bad_db_handle
   );
 }
 //---------------------------------------------------------------------------

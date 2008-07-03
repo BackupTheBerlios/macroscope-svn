@@ -66,6 +66,8 @@ int main(int ac, char*av[]){
       "amd64"
 #elif __x86_64__
       "x86_64"
+#elif _M_X64
+      "x86_64"
 #elif (_M_IX86 >= 300 && _M_IX86 < 400) || __i386__
       "i386"
 #elif (_M_IX86 >= 400 && _M_IX86 < 500) || __i486__
@@ -76,8 +78,6 @@ int main(int ac, char*av[]){
       "i686"
 #elif _M_IX86
       "x86"
-#elif _M_X64
-      "x86_64"
 #endif
 #if __MMX__ || __pentium_mmx__
       "+MMX"
@@ -94,6 +94,8 @@ int main(int ac, char*av[]){
       "+SSE2"
 #elif _M_IX86_FP == 3 || __SSE3__
       "+SSE3"
+#elif _M_IX86_FP == 4 || __SSE4__
+      "+SSE4"
 #endif
 #ifdef CMAKE_BUILD_TYPE_UPPER
       " " CMAKE_BUILD_TYPE_UPPER

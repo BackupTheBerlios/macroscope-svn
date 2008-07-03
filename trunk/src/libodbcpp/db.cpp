@@ -172,7 +172,7 @@ Database & Database::detach()
 #if HAVE_SQL_H
   if( attached() ){
     if( transaction_ != NULL )
-      while( transaction_->active() ) transaction_->rollback();
+      while( transaction_->active() ) transaction_->rollback(true);
     ksys::EmbeddedListNode<DSQLStatement> * node = statements_.first();
     while( node != NULL ){
       DSQLStatement::listObject(*node).freeHandle();
@@ -190,11 +190,7 @@ Database & Database::detach()
 void Database::processingException(ksys::Exception * e)
 {
   EClientServer * p = dynamic_cast<EClientServer *>(e);
-  if( p != NULL ){
-    if( p->isFatalError() ){
-      detach();
-    }
-  }
+  if( p != NULL && p->isFatalError() ) detach();
 }
 //---------------------------------------------------------------------------
 void Database::staticExceptionHandler(ksys::Exception * e)

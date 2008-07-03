@@ -108,10 +108,10 @@ class Transaction : virtual public Base {
 
     Transaction &   start();
     Transaction &   prepare();
-    Transaction &   commit();
-    Transaction &   commitRetaining();
-    Transaction &   rollback();
-    Transaction &   rollbackRetaining();
+    Transaction &   commit(bool noThrow = false);
+    Transaction &   commitRetaining(bool noThrow = false);
+    Transaction &   rollback(bool noThrow = false);
+    Transaction &   rollbackRetaining(bool noThrow = false);
 
     // properties
     isc_tr_handle & handle();
@@ -133,7 +133,7 @@ class Transaction : virtual public Base {
     ksys::HashedObjectList< utf8::String,DSQLStatement> dsqlStatements_;
 
     enum { lrtNone, lrtCommit, lrtRollback } lastRetainingTransaction_;
-    Transaction & retainingHelper();
+    Transaction & retainingHelper(bool noThrow = false);
 };
 //---------------------------------------------------------------------------
 inline const utf8::String & Transaction::isolation() const

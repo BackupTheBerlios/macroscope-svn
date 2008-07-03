@@ -102,15 +102,15 @@ ODBCDatabase * ODBCDatabase::start()
   return this;
 }
 //---------------------------------------------------------------------------
-ODBCDatabase * ODBCDatabase::rollback()
+ODBCDatabase * ODBCDatabase::rollback(bool noThrow)
 {
-  static_cast<odbcpp::Transaction *>(this)->rollback();
+  static_cast<odbcpp::Transaction *>(this)->rollback(noThrow);
   return this;
 }
 //---------------------------------------------------------------------------
-ODBCDatabase * ODBCDatabase::commit()
+ODBCDatabase * ODBCDatabase::commit(bool noThrow)
 {
-  static_cast<odbcpp::Transaction *>(this)->commit();
+  static_cast<odbcpp::Transaction *>(this)->commit(noThrow);
   return this;
 }
 //---------------------------------------------------------------------------
