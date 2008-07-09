@@ -48,7 +48,7 @@ class Logger {
 
     void readConfig();
     int32_t main();
-    Logger & rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName);
+    Logger & rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName,const utf8::String & filter);
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
     const CGI & cgi() const { return cgi_; }
   protected:
@@ -441,7 +441,7 @@ class Logger {
     static void writeTraf(AsyncFile & f,uint64_t qi,uint64_t qj);
     utf8::String resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,const struct in_addr & ip4,bool numeric = false);
     utf8::String getDecor(const utf8::String & dname,const utf8::String & section);
-    static utf8::String getIPFilter(const utf8::String & text,const utf8::String & tableName);
+    static utf8::String getIPFilter(const utf8::String & text,const utf8::String & tableName = utf8::String());
     static bool isCurrentTimeInterval(const struct tm & curTime,const struct tm bt,const struct tm et);
     int32_t doWork(uintptr_t stage);
     int32_t waitThreads();

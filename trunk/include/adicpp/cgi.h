@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,9 @@ class CGI {
     intptr_t paramIndex(const utf8::String & name,bool noThrow = true);
     utf8::String paramName(uintptr_t i);
     uintptr_t paramCount();
+
+    utf8::String contentType() const { return contentType_; }
+    CGI & contentType(const utf8::String & type){ contentType_ = type; return *this; }
     
     static utf8::String uudecode(const utf8::String & string);
     
@@ -64,8 +67,8 @@ class CGI {
       friend class CGI;
       public:
         ~Param() {}
-	Param(const utf8::String & name = utf8::String(),const utf8::String & value = utf8::String()) :
-	  name_(name), value_(value) {}
+	      Param(const utf8::String & name = utf8::String(),const utf8::String & value = utf8::String()) :
+	        name_(name), value_(value) {}
       protected:
         static EmbeddedHashNode<Param,uintptr_t> & ehNLT(const uintptr_t & link,Array<Param> * & param){
           return keyNode((*param)[link - 1]);
@@ -76,7 +79,7 @@ class CGI {
         static EmbeddedHashNode<Param,uintptr_t> & keyNode(const Param & object){
           return object.keyNode_;
         }
-	static Param & keyNodeObject(const EmbeddedHashNode<Param,uintptr_t> & node,Param * p){
+      	static Param & keyNodeObject(const EmbeddedHashNode<Param,uintptr_t> & node,Param * p){
           return node.object(p->keyNode_);
         }
         static uintptr_t keyNodeHash(const Param & object){
@@ -87,8 +90,8 @@ class CGI {
         }
         mutable EmbeddedHashNode<Param,uintptr_t> keyNode_;
 	
-	utf8::String name_;
-	utf8::String value_;
+	      utf8::String name_;
+	      utf8::String value_;
       private:
     };
     typedef EmbeddedHash<
@@ -104,7 +107,8 @@ class CGI {
     > Params;
     Params paramsHash_;
     Array<Param> params_;
-    
+    utf8::String contentType_;
+
     void initalizeByMethodPOST();
     void initalizeByMethodGET();
   private:

@@ -232,7 +232,7 @@ PCAP::PCAP() :
   pregroupingWindowSize_(5),
   swapLowWatermark_(50),
   swapHighWatermark_(90),
-  swapWatchTime_(5000000),
+  swapWatchTime_(60000000),
   promisc_(false),
   ports_(true),
   protocols_(true),
@@ -780,7 +780,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
 #endif
 }
 //------------------------------------------------------------------------------
-bool PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintptr_t,Thread *) throw()
+bool PCAP::insertPacketsInDatabase(uint64_t,uint64_t,const HashedPacket *,uintptr_t &,Thread *) throw()
 {
   return true;
 }
@@ -944,6 +944,7 @@ void PCAP::DatabaseInserter::threadBeforeWait()
 //------------------------------------------------------------------------------
 void PCAP::DatabaseInserter::threadExecute()
 {
+  uintptr_t pCount;
   priority(THREAD_PRIORITY_IDLE);
   bool success = true;
   while( !terminated_ ){
@@ -987,17 +988,19 @@ void PCAP::DatabaseInserter::threadExecute()
       );
 
     int64_t ellapsed = gettimeofday();
+    pCount = group->header_.count_;
     success = pcap_->insertPacketsInDatabase(
       group->header_.bt_,
       group->header_.et_,
       group->packets_,
-      group->header_.count_,
+      pCount,
       this
     );
     ellapsed = gettimeofday() - ellapsed;
     
     PacketGroup::SwapFileHeader header = group->header_;
-    if( success ){
+    group->header_.count_ = pCount;
+    if( success && pCount == 0 ){
       interlockedIncrement(
         pcap_->memoryUsage_,
         -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
@@ -1023,7 +1026,7 @@ void PCAP::DatabaseInserter::threadExecute()
         "Interface: " << pcap_->ifName_ << ", stop processing packets group: " <<
         utf8::time2Str(header.bt_) << " - " <<
         utf8::time2Str(header.et_) << ", processed: " <<
-        (success ? header.count_ : 0) <<
+        header.count_ - pCount <<
         ", ellapsed: " << utf8::elapsedTime2Str(ellapsed) << "\n"
       );
     if( stdErr.debugLevel(6) )
@@ -1035,7 +1038,8 @@ void PCAP::DatabaseInserter::threadExecute()
         ) << "\n"
       );
   }
-  pcap_->insertPacketsInDatabase(0,0,NULL,0,this);
+  pCount = 0;
+  pcap_->insertPacketsInDatabase(0,0,NULL,pCount,this);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -1097,7 +1101,7 @@ void PCAP::LazyWriter::swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group
 //------------------------------------------------------------------------------
 void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
 {
-  if( tempFile.isOpen() && tempFile.size() > 0 ){
+  if( tempFile.createIfNotExist(false).tryOpen() && tempFile.size() > 0 ){
     uint64_t pos = tempFile.size() - sizeof(PacketGroup::SwapFileHeader);
     PacketGroup::SwapFileHeader header;
     tempFile.readBuffer(pos,&header,sizeof(header));
@@ -1194,13 +1198,14 @@ void PCAP::LazyWriter::threadExecute()
       memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
       swapout = memoryUsage > pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
     }
-    while( !terminated_ && swapin && gettimeofday() - lastSwapOut_ >= pcap_->swapWatchTime_ && tempFile.isOpen() ){
+    while( !terminated_ && swapin && gettimeofday() - lastSwapOut_ >= pcap_->swapWatchTime_ ){
       swapIn(tempFile);
       lastSwapIn_ = gettimeofday();
       memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
       swapin = memoryUsage < pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
     }
-    if( !terminated_ ) pcap_->lazyWriterSem_.wait();
+    if( !terminated_ )
+      pcap_->lazyWriterSem_.timedWait(pcap_->swapWatchTime_);
   }
 }
 //------------------------------------------------------------------------------

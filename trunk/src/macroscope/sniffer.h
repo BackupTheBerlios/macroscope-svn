@@ -41,6 +41,8 @@ class Sniffer : public PCAP {
 
     PacketGroupingPeriod totalsPeriod() const { return totalsPeriod_; }
     Sniffer & totalsPeriod(PacketGroupingPeriod period);
+    const uintptr_t & packetsInTransaction() const { return packetsInTransaction_; }
+    Sniffer & packetsInTransaction(uintptr_t a) { packetsInTransaction_ = a; return *this; }
 
     void recalcTotals();
     static void getTrafficPeriod(Statement * statement,const utf8::String & sectionName,struct tm & beginTime,struct tm & endTime,bool gmt = false);
@@ -58,11 +60,12 @@ class Sniffer : public PCAP {
     AutoPtr<Statement> ifaces_;
 
     PacketGroupingPeriod totalsPeriod_;
+    uintptr_t packetsInTransaction_;
 
     enum { stSel, stIns, stUpd };
 
     void updateTotals(uintptr_t i,const Mutant & m,const in_addr & srcAddr,uintptr_t srcPort,const in_addr & dstAddr,uintptr_t dstPort,intptr_t proto,uintmax_t dgram,uintmax_t data);    
-    bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count,Thread * caller) throw();
+    bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t & pCount,Thread * caller) throw();
   private:
     void threadExecute();
 

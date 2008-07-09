@@ -36,7 +36,7 @@ Sniffer::~Sniffer()
 {
 }
 //------------------------------------------------------------------------------
-Sniffer::Sniffer(Database * database) : database_(database), totalsPeriod_(pgpDay)
+Sniffer::Sniffer(Database * database) : database_(database), totalsPeriod_(pgpDay), packetsInTransaction_(0)
 {
 }
 //------------------------------------------------------------------------------
@@ -311,9 +311,10 @@ void Sniffer::recalcTotals()
   database_->commit()->detach();
 }
 //------------------------------------------------------------------------------
-bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t count,Thread * caller) throw()
+bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t & pCount,Thread * caller) throw()
 {
   bool r = true;
+  uintptr_t count = pCount;
   try {
     if( !database_->attached() ) database_->attach();
     database_->start();
@@ -355,8 +356,8 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     //      ).replaceAll("@0001@",pgpNames[i])
     //    );
     //}
-    while( !caller->terminated() && !terminated_ && count-- > 0 ){
-      const HashedPacket & packet = packets[count];
+    while( !caller->terminated() && !terminated_ && count > 0 && (packetsInTransaction_ == 0 || pCount - count < packetsInTransaction_) ){
+      const HashedPacket & packet = packets[count - 1];
       Mutant m(bt);
       m.changeType(mtTime);
       uint64_t mbt, met;
@@ -374,6 +375,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         if( ports() || protocols() )
           updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
       }
+      count--;
     }
     if( caller->terminated() || terminated_ ){
       database_->rollback();
@@ -389,6 +391,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     e->writeStdError();
     r = false;
   }
+  pCount = count;
 // shutdown
   if( packets == NULL ) database_->detach();
   return r;

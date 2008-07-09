@@ -151,7 +151,7 @@ void Logger::updateLogFileLastOffset(AutoPtr<Statement> st[3],const utf8::String
     st[stUpd]->paramAsString("ST_LOG_FILE_NAME",logFileName)->
       paramAsMutant("ST_LAST_OFFSET",offset)->execute();
   }
-  else{
+  else {
     if( !st[stIns]->prepared() ){
       st[stIns]->text(
         "INSERT INTO INET_LOG_FILE_STAT" 
@@ -713,116 +713,110 @@ int32_t Logger::main()
         "<TITLE>Macroscope webinterface</TITLE>\n"
         "</HEAD>\n"
 	      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
-        "<FORM name=\"report_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
-        "  <B>Traffic report generation form</B>\n"
-        "  <BR>\n"
-      ;
-      writeCGIInterfaceAndTimeSelect(false);
-      cgi_ <<
-        "  <BR>\n"
-        "  <label for=\"max_totals\">Maximum totals</label>\n"
-        "  <select name=\"max_totals\" id=\"max_totals\">\n"
-        "    <option value=\"Min\">\n"
-	      "      Min\n"
-	      "    </option>\n"
-        "    <option value=\"Hour\">\n"
-	      "      Hour\n"
-	      "    </option>\n"
-        "    <option value=\"Day\" selected=\"selected\">\n"
-	      "      Day\n"
-	      "    </option>\n"
-        "    <option value=\"Mon\">\n"
-	      "      Mon\n"
-	      "    </option>\n"
-        "    <option value=\"Year\">\n"
-	      "      Year\n"
-	      "    </option>\n"
-        "  </select>\n"
-        "  <label for=\"min_totals\">Minimum totals</label>\n"
-        "  <select name=\"min_totals\" id=\"min_totals\">\n"
-        "    <option value=\"Min\">\n"
-	      "      Min\n"
-	      "    </option>\n"
-        "    <option value=\"Hour\">\n"
-	      "      Hour\n"
-	      "    </option>\n"
-        "    <option value=\"Day\" selected=\"selected\">\n"
-	      "      Day\n"
-	      "    </option>\n"
-        "    <option value=\"Mon\">\n"
-	      "      Mon\n"
-	      "    </option>\n"
-        "    <option value=\"Year\">\n"
-	      "      Year\n"
-	      "    </option>\n"
-        "  </select>\n"
-        "  <BR>\n"
-        "  <input type=\"checkbox\" name=\"bidirectional\" id=\"bidirectional\" checked=\"checked\">\n"
-        "  <label for=\"bidirectional\">Bidirectional</label>\n"
-        "  <BR>\n"
-        "  <input type=\"checkbox\" name=\"protocols\" id=\"protocols\" checked=\"checked\">\n"
-        "  <label for=\"protocols\">Protocols</label>\n"
-        "  <BR>\n"
-        "  <input type=\"checkbox\" name=\"ports\" id=\"ports\" checked=\"checked\">\n"
-        "  <label for=\"ports\">Ports</label>\n"
-        "  <BR>\n"
-        "  <input type=\"checkbox\" name=\"resolve\" id=\"resolve\" checked=\"checked\">\n"
-        "  <label for=\"resolve\">Resolve addresses by DNS</label>\n"
-        "  <BR>\n"
-        "  <label for=\"threshold\">Minimal significant threshold</label>\n"
-        "  <select name=\"threshold\" id=\"threshold\">\n"
-        "    <option value=\"64K\">\n"
-	      "      64K\n"
-	      "    </option>\n"
-        "    <option value=\"128K\">\n"
-	      "      128K\n"
-	      "    </option>\n"
-        "    <option value=\"256K\">\n"
-	      "      256K\n"
-	      "    </option>\n"
-        "    <option value=\"512K\">\n"
-	      "      512K\n"
-	      "    </option>\n"
-        "    <option value=\"1M\">\n"
-	      "      1M\n"
-	      "    </option>\n"
-        "    <option value=\"2M\">\n"
-	      "      2M\n"
-	      "    </option>\n"
-        "    <option value=\"4M\" selected=\"selected\">\n"
-	      "      4M\n"
-	      "    </option>\n"
-        "    <option value=\"8M\">\n"
-	      "      8M\n"
-	      "    </option>\n"
-        "    <option value=\"16M\">\n"
-	      "      16M\n"
-	      "    </option>\n"
-        "  </select>\n"
-        "  <label for=\"threshold2\">or type you custom value in bytes</label>\n"
-        "  <input type=\"text\" name=\"threshold2\" id=\"threshold2\">\n"
-        "  <BR>\n"
-	      "  <P>Please type address filter or leave empty</P>\n"
-        "  <P>Example: src (amber or dst amber) and (src_port 80 or dst_port www) and proto tcp</P>\n"
-	      "  <textarea name=\"filter\" rows=\"4\" cols=\"80\"></textarea>\n"
-      ;
-      cgi_ <<
-        "  <BR>\n"
-        "  <BR>\n"
-        "  <input name=\"report\" type=\"SUBMIT\" value=\"Start\">\n"
       ;
       if( cgi_.paramIndex("admin") < 0 ){
         cgi_ <<
-//          "</FORM>\n"
-//          "<FORM name=\"report_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
+          "<FORM name=\"report_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
+          "  <B>Traffic report generation form</B>\n"
+          "  <BR>\n"
+        ;
+        writeCGIInterfaceAndTimeSelect(false);
+        cgi_ <<
+          "  <BR>\n"
+          "  <label for=\"max_totals\">Maximum totals</label>\n"
+          "  <select name=\"max_totals\" id=\"max_totals\">\n"
+          "    <option value=\"Min\">\n"
+	        "      Min\n"
+	        "    </option>\n"
+          "    <option value=\"Hour\">\n"
+	        "      Hour\n"
+	        "    </option>\n"
+          "    <option value=\"Day\" selected=\"selected\">\n"
+	        "      Day\n"
+	        "    </option>\n"
+          "    <option value=\"Mon\">\n"
+	        "      Mon\n"
+	        "    </option>\n"
+          "    <option value=\"Year\">\n"
+	        "      Year\n"
+	        "    </option>\n"
+          "  </select>\n"
+          "  <label for=\"min_totals\">Minimum totals</label>\n"
+          "  <select name=\"min_totals\" id=\"min_totals\">\n"
+          "    <option value=\"Min\">\n"
+	        "      Min\n"
+	        "    </option>\n"
+          "    <option value=\"Hour\">\n"
+	        "      Hour\n"
+	        "    </option>\n"
+          "    <option value=\"Day\" selected=\"selected\">\n"
+	        "      Day\n"
+	        "    </option>\n"
+          "    <option value=\"Mon\">\n"
+	        "      Mon\n"
+	        "    </option>\n"
+          "    <option value=\"Year\">\n"
+	        "      Year\n"
+	        "    </option>\n"
+          "  </select>\n"
+          "  <BR>\n"
+          "  <input type=\"checkbox\" name=\"bidirectional\" id=\"bidirectional\" checked=\"checked\">\n"
+          "  <label for=\"bidirectional\">Bidirectional</label>\n"
+          "  <BR>\n"
+          "  <input type=\"checkbox\" name=\"protocols\" id=\"protocols\" checked=\"checked\">\n"
+          "  <label for=\"protocols\">Protocols</label>\n"
+          "  <BR>\n"
+          "  <input type=\"checkbox\" name=\"ports\" id=\"ports\" checked=\"checked\">\n"
+          "  <label for=\"ports\">Ports</label>\n"
+          "  <BR>\n"
+          "  <input type=\"checkbox\" name=\"resolve\" id=\"resolve\" checked=\"checked\">\n"
+          "  <label for=\"resolve\">Resolve addresses by DNS</label>\n"
+          "  <BR>\n"
+          "  <label for=\"threshold\">Minimal significant threshold</label>\n"
+          "  <select name=\"threshold\" id=\"threshold\">\n"
+          "    <option value=\"64K\">\n"
+	        "      64K\n"
+	        "    </option>\n"
+          "    <option value=\"128K\">\n"
+	        "      128K\n"
+	        "    </option>\n"
+          "    <option value=\"256K\">\n"
+	        "      256K\n"
+	        "    </option>\n"
+          "    <option value=\"512K\">\n"
+	        "      512K\n"
+	        "    </option>\n"
+          "    <option value=\"1M\">\n"
+	        "      1M\n"
+	        "    </option>\n"
+          "    <option value=\"2M\">\n"
+	        "      2M\n"
+	        "    </option>\n"
+          "    <option value=\"4M\" selected=\"selected\">\n"
+	        "      4M\n"
+	        "    </option>\n"
+          "    <option value=\"8M\">\n"
+	        "      8M\n"
+	        "    </option>\n"
+          "    <option value=\"16M\">\n"
+	        "      16M\n"
+	        "    </option>\n"
+          "  </select>\n"
+          "  <label for=\"threshold2\">or type you custom value in bytes</label>\n"
+          "  <input type=\"text\" name=\"threshold2\" id=\"threshold2\">\n"
+          "  <BR>\n"
+	        "  <P>Please type address filter or leave empty</P>\n"
+          "  <P>Example: src (amber or dst amber) and (src_port 80 or dst_port www) and proto tcp</P>\n"
+	        "  <textarea name=\"filter\" rows=\"4\" cols=\"80\"></textarea>\n"
+          "  <BR>\n"
+          "  <BR>\n"
+          "  <input name=\"report\" type=\"SUBMIT\" value=\"Start\">\n"
           "  <input name=\"admin\" type=\"SUBMIT\" value=\"Admin\">\n"
           "</FORM>\n"
         ;
       }
       else {
         cgi_ <<
-          "</FORM>\n"
-          "<HR>\n"
           "<B>Administrative functions</B>\n"
           "<FORM name=\"admin_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
         ;
@@ -831,6 +825,9 @@ int32_t Logger::main()
           "  <BR>\n"
           "  <label for=\"newIfName\">New interface name</label>\n"
           "  <input type=\"text\" name=\"newIfName\" id=\"newIfName\">\n"
+          "  <BR>\n"
+          "  <label for=\"filter\">Filter</label>\n"
+          "  <input type=\"text\" name=\"filter\" id=\"filter\">\n"
           "  <BR>\n"
           "  <input name=\"rolloutif\" type=\"SUBMIT\" value=\"Rollout\">\n"
           "  <input name=\"renameif\" type=\"SUBMIT\" value=\"Rename\">\n"
@@ -900,9 +897,10 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
   sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
   sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));
   sniffer->swapHighWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_high_watermark",sniffer->swapHighWatermark()));
-  sniffer->swapWatchTime(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_watch_time",sniffer->swapWatchTime()));
+  sniffer->swapWatchTime((uint64_t) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_watch_time",sniffer->swapWatchTime()) * 1000000u);
   sniffer->groupingPeriod(PCAP::stringToGroupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none")));
   sniffer->totalsPeriod(PCAP::stringToGroupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.totals_period","day")));
+  sniffer->packetsInTransaction(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.packets_in_transaction",0));
   utf8::String joined(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
   for( intptr_t i = 0, j = enumStringParts(joined); i < j; i++ ){
     if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
@@ -972,7 +970,8 @@ int32_t Logger::doWork(uintptr_t stage)
     rolloutBPFTByIPs(
       utf8::time2Str(tm2Time(cgiBT)),
       utf8::time2Str(tm2Time(cgiET) + 999999),
-      cgi_.paramAsString("if").strcasecmp("all") == 0 ? utf8::String() : cgi_.paramAsString("if")
+      cgi_.paramAsString("if").strcasecmp("all") == 0 ? utf8::String() : cgi_.paramAsString("if"),
+      cgi_.paramAsString("filter")
     );
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
@@ -1119,17 +1118,20 @@ int32_t Logger::doWork(uintptr_t stage)
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropif") >= 0 ){
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
+    utf8::String filter(cgi_.paramAsString("filter"));
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
     database_->start();
     for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
       statement_->text("DELETE FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
-        utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
+        utf8::String(all ? filter.isNull() ? utf8::String() : " WHERE " + getIPFilter(filter) : filter.isNull() ? " WHERE iface = :if" : " WHERE iface = :if AND " + getIPFilter(filter)))->prepare();
       if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
       statement_->execute();
     }
-    statement_->text("DELETE FROM INET_IFACES" + utf8::String(all ? "" : " WHERE iface = :if"));
-    if( !all ) statement_->prepare()->paramAsString("if",cgi_.paramAsString("if"));
-    statement_->execute();
+    if( filter.isNull() ){
+      statement_->text("DELETE FROM INET_IFACES" + utf8::String(all ? "" : " WHERE iface = :if"));
+      if( !all ) statement_->prepare()->paramAsString("if",cgi_.paramAsString("if"));
+      statement_->execute();
+    }
     database_->commit();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
@@ -1335,7 +1337,7 @@ int32_t Logger::waitThreads()
   return exitCode;
 }
 //------------------------------------------------------------------------------
-Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName)
+Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName,const utf8::String & filter)
 {
   Mutant btt(0), ett(0);
   if( !bt.isNull() ) btt = utf8::str2Time(bt) - getgmtoffset();
@@ -1357,6 +1359,7 @@ Logger & Logger::rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & e
   }
   if( !range.isNull() ) range += " AND";
   range = " WHERE" + range + " (src_port <> 0 OR dst_port <> 0 OR ip_proto <> -1)";
+  range += filter.isNull() ? utf8::String() : " AND " + getIPFilter(filter);
   for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
     statement_->text("DELETE FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) + range)->prepare();
     if( !ifName.isNull() ) statement_->paramAsString("if",ifName);
@@ -1600,7 +1603,8 @@ int main(int _argc,char * _argv[])
         logger.rolloutBPFTByIPs(
           stringPartByNo(rolloutParams,0).trim(),
           stringPartByNo(rolloutParams,1).trim(),
-          stringPartByNo(rolloutParams,2)
+          stringPartByNo(rolloutParams,2),
+          utf8::String()
         );
       }
       else if( install ){

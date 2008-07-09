@@ -238,7 +238,7 @@ class PCAP : public Thread {
         uint16_t dstPort_;
         int16_t proto_;
     };
-    virtual bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t count,Thread * caller) throw();
+    virtual bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t & count,Thread * caller) throw();
     void threadExecute();
   private:
     class Packets : public Array<Packet> {
