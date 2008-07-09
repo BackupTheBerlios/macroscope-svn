@@ -1203,6 +1203,7 @@ void PCAP::LazyWriter::threadExecute()
       lastSwapIn_ = gettimeofday();
       memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
       swapin = memoryUsage < pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
+      if( !tempFile.isOpen() ) break;
     }
     if( !terminated_ )
       pcap_->lazyWriterSem_.timedWait(pcap_->swapWatchTime_);
