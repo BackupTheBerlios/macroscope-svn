@@ -354,13 +354,32 @@ Logger & Logger::createDatabase()
       }
       else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
         metadata << "CREATE INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+        // partitioning
+        metadata <<
+          "alter table inet_sniffer_stat_nsec partition by hash(microsecond(ts)) partitions " <<
+          "alter table inet_sniffer_stat_sec partition by hash(second(ts)) partitions " <<
+          "alter table inet_sniffer_stat_min partition by hash(minute(ts)) partitions " <<
+          "alter table inet_sniffer_stat_hour partition by hash(hour(ts)) partitions " <<
+          "alter table inet_sniffer_stat_day partition by hash(day(ts)) partitions " <<
+          "alter table inet_sniffer_stat_mon partition by hash(month(ts)) partitions " <<
+          "alter table inet_sniffer_stat_year partition by hash(year(ts)) partitions " <<
+          "alter table inet_users_traf partition by hash(month(ST_TIMESTAMP)) partitions " <<
+          "alter table INET_USERS_MONTHLY_TOP_URL partition by hash(month(ST_TIMESTAMP)) partitions " <<
+          "alter table INET_USERS_TOP_MAIL partition by hash(month(ST_TIMESTAMP)) partitions "
+        ;
       }
       database_->create();
       database_->attach();
       for( uintptr_t i = 0; i < metadata.count(); i++ ){
         if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
-          if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 )
-            metadata[i] += " TYPE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
+          if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 ){
+            metadata[i] += " ENGINE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
+          }
+          else if( metadata[i].strncasecmp("ALTER TABLE",11) == 0 && !metadata[i].strcasestr(" partitions ").eos() ){
+            Mutant m(config_->valueByPath("macroscope.mysql_table_partitions",8));
+            if( (uintmax_t) m == 0 ) continue;
+            metadata[i] += (utf8::String) m;
+          }
         try {
           statement_->execute(metadata[i]);
         }
@@ -830,6 +849,9 @@ int32_t Logger::main()
           "  <label for=\"filter\">Filter</label>\n"
           "  <input type=\"text\" name=\"filter\" id=\"filter\">\n"
           "  <BR>\n"
+          "  <label for=\"filter\">Connection</label>\n"
+          "  <input type=\"text\" name=\"connection\" id=\"connection\">\n"
+          "  <BR>\n"
           "  <input name=\"rolloutif\" type=\"SUBMIT\" value=\"Rollout\">\n"
           "  <input name=\"renameif\" type=\"SUBMIT\" value=\"Rename\">\n"
           "  <input name=\"copyif\" type=\"SUBMIT\" value=\"Copy\">\n"
@@ -1043,25 +1065,70 @@ int32_t Logger::doWork(uintptr_t stage)
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("copyif") >= 0 ){
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
+
+    ConfigSection dbParamsSection;
+    utf8::String connection(cgi_.paramAsString("connection"));
+    dbParamsSection.addSection(config_->sectionByPath(connection));
+    AutoPtr<Database> database2(Database::newDatabase(&dbParamsSection));
+    
+    if( !connection.isNull() ) database2->attach();
+
     bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
     database_->start();
-    statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
-      prepare()->paramAsString("if",cgi_.paramAsString("newIfName"))->execute();
-    for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
-      statement_->text(
-        "INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
-        "  SELECT '" + cgi_.paramAsString("newIfName") + "' as iface, ts,"
-        "    src_ip,dst_ip,ip_proto,"
-        "    src_port,dst_port,"
-        "    dgram,data"
-        "  FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
-        utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
-      if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
-      try {
-        statement_->execute();
+    if( connection.isNull() ){
+      statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
+        prepare()->paramAsString("if",cgi_.paramAsString("newIfName"))->execute();
+      for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+        statement_->text(
+          "INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+          "  SELECT '" + cgi_.paramAsString("newIfName") + "' as iface, ts,"
+          "    src_ip,dst_ip,ip_proto,"
+          "    src_port,dst_port,"
+          "    dgram,data"
+          "  FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+          utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
+        if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+        try {
+          statement_->execute();
+        }
+        catch( ksys::ExceptionSP & e ){
+          if( !e->searchCode(isc_convert_error) ) throw;
+          statement_->text(
+            "  SELECT ts,"
+            "    src_ip,dst_ip,ip_proto,"
+            "    src_port,dst_port,"
+            "    dgram,data"
+            "  FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+            utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
+          if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+          statement_->execute()->fetchAll();
+          statement2_->text(
+            "INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
+            "(iface,ts,src_ip,dst_ip,ip_proto,src_port,dst_port,dgram,data) VALUES "
+            "(:if,:ts,:src_ip,:dst_ip,:ip_proto,:src_port,:dst_port,:dgram,:data)"
+          )->prepare()->paramAsString("if",cgi_.paramAsString("newIfName"));
+          for( intptr_t j = statement_->rowCount() - 1; j >= 0; j-- ){
+            statement_->selectRow(j);
+            statement2_->
+              paramAsMutant("ts",statement_->valueAsMutant("ts"))->
+              paramAsMutant("src_ip",statement_->valueAsMutant("src_ip"))->
+              paramAsMutant("src_port",statement_->valueAsMutant("src_port"))->
+              paramAsMutant("dst_ip",statement_->valueAsMutant("dst_ip"))->
+              paramAsMutant("dst_port",statement_->valueAsMutant("dst_port"))->
+              paramAsMutant("ip_proto",statement_->valueAsMutant("ip_proto"))->
+              paramAsMutant("dgram",statement_->valueAsMutant("dgram"))->
+              paramAsMutant("data",statement_->valueAsMutant("data"))->
+              execute();
+          }
+        }
       }
-      catch( ksys::ExceptionSP & e ){
-        if( !e->searchCode(isc_convert_error) ) throw;
+    }
+    else {
+      AutoPtr<Statement> stdb2_(database2->newAttachedStatement());
+      database2->start();
+      stdb2_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
+        prepare()->paramAsString("if",cgi_.paramAsString("newIfName"))->execute();
+      for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
         statement_->text(
           "  SELECT ts,"
           "    src_ip,dst_ip,ip_proto,"
@@ -1071,14 +1138,14 @@ int32_t Logger::doWork(uintptr_t stage)
           utf8::String(all ? "" : " WHERE iface = :if"))->prepare();
         if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
         statement_->execute()->fetchAll();
-        statement2_->text(
+        stdb2_->text(
           "INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
           "(iface,ts,src_ip,dst_ip,ip_proto,src_port,dst_port,dgram,data) VALUES "
           "(:if,:ts,:src_ip,:dst_ip,:ip_proto,:src_port,:dst_port,:dgram,:data)"
         )->prepare()->paramAsString("if",cgi_.paramAsString("newIfName"));
-        for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
-          statement_->selectRow(i);
-          statement2_->
+        for( intptr_t j = statement_->rowCount() - 1; j >= 0; j-- ){
+          statement_->selectRow(j);
+          stdb2_->
             paramAsMutant("ts",statement_->valueAsMutant("ts"))->
             paramAsMutant("src_ip",statement_->valueAsMutant("src_ip"))->
             paramAsMutant("src_port",statement_->valueAsMutant("src_port"))->
@@ -1090,6 +1157,7 @@ int32_t Logger::doWork(uintptr_t stage)
             execute();
         }
       }
+      database2->commit();
     }
     database_->commit();
     cgi_ <<
@@ -1446,8 +1514,12 @@ int main(int _argc,char * _argv[])
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
 
-  GDChart chart;
-  chart.create(100,100);
+  //"Content-Type: image/png"
+  //GDChart chart;
+  //chart.createChart(800,400);
+  //AsyncFile s("stdout");
+  //s.open().writeBuffer(chart.png(),chart.pngSize());
+  //return 0;
 
   bool isDaemon = isDaemonCommandLineOption(), isCGI = false;
   if( isDaemon ) daemonize();

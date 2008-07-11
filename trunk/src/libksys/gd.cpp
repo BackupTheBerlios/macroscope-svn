@@ -53,7 +53,7 @@ class GD_API {
     GD_API() {}
 
 #if defined(__WIN32__) || defined(__WIN64__)
-#define PROTOF(x) (__cdecl * x)
+#define PROTOF(x) (__stdcall * x)
 #else
 #define PROTOF(x) (* x)
 #endif
@@ -86,6 +86,8 @@ class GD_API {
     gdFontPtr gdFontMediumBold;
     gdFontPtr gdFontLarge;
     gdFontPtr gdFontGiant;
+    void * PROTOF(gdImagePngPtrEx)(gdImagePtr im, int *size, int level);
+    void PROTOF(gdFree)(void *m);
 
     GD_API & open();
     GD_API & close();
@@ -136,11 +138,13 @@ GD_API & GD_API::open()
     "gdFontSmall",
     "gdFontMediumBold",
     "gdFontLarge",
-    "gdFontGiant"
+    "gdFontGiant",
+    "gdImagePngPtrEx",
+    "gdFree"
   };
   AutoLock<InterlockedMutex> lock(api.mutex());
 #if defined(__WIN32__) || defined(__WIN64__)
-#define LIB_NAME "wgd.dll"
+#define LIB_NAME "bgd.dll"
     api.handle_ = LoadLibraryExA(LIB_NAME,NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
 #elif HAVE_DLFCN_H
 #define LIB_NAME "libgd.so"
@@ -165,6 +169,23 @@ GD_API & GD_API::open()
 #if defined(__WIN32__) || defined(__WIN64__)
 #define FUNC_NAME "GetProcAddress"
     ((void **) &api.gdImageCreate)[i] = GetProcAddress(handle_,symbols[i]);
+    char sym[128];
+    if( ((void **) &api.gdImageCreate)[i] == NULL ){
+      strcpy(sym,"_");
+      strcat(sym,symbols[i]);
+      ((void **) &api.gdImageCreate)[i] = GetProcAddress(handle_,sym);
+      if( ((void **) &api.gdImageCreate)[i] == NULL ){
+        for( uintptr_t j = 4; j < 128; j += 4 ){
+          strcpy(sym,"_");
+          strcat(sym,symbols[i]);
+          char b[5];
+          sprintf(b,"@%"PRIuPTR,j);
+          strcat(sym,b);
+          ((void **) &api.gdImageCreate)[i] = GetProcAddress(handle_,sym);
+          if( ((void **) &api.gdImageCreate)[i] != NULL ) break;
+        }
+      }
+    }
 #elif HAVE_DLFCN_H
 #define FUNC_NAME "dlsym"
     ((void **) &api.gdImageCreate)[i] = dlsym(handle_,symbols[i]);
@@ -220,14 +241,20 @@ void GD::cleanup()
 //------------------------------------------------------------------------------
 GD::~GD()
 {
+  clear();
 }
 //------------------------------------------------------------------------------
-GD::GD() : image_(NULL)
+GD::GD() : image_(NULL), png_(NULL), pngSize_(0)
 {
 }
 //------------------------------------------------------------------------------
 GD & GD::clear()
 {
+  if( png_ != NULL ){
+    png_ = NULL;
+    pngSize_ = 0;
+    api.gdFree(png_);
+  }
   if( image_ != NULL ){
     api.gdImageDestroy((gdImagePtr) image_);
     api.close();
@@ -373,19 +400,19 @@ GD & GD::colorDeallocate(intptr_t color)
   return *this;
 }
 //------------------------------------------------------------------------------
-GD & GD::WBMP(int fg, FILE * out)
+GD & GD::wbmp(int fg, FILE * out)
 {
   api.gdImageWBMP((gdImagePtr) image_,fg,out);
   return *this;
 }
 //------------------------------------------------------------------------------
-GD & GD::Gif(FILE * out)
+GD & GD::gif(FILE * out)
 {
   api.gdImageGif((gdImagePtr) image_,out);
   return *this;
 }
 //------------------------------------------------------------------------------
-GD & GD::Png(FILE * out)
+GD & GD::png(FILE * out)
 {
   api.gdImagePng((gdImagePtr) image_,out);
   return *this;
@@ -414,6 +441,17 @@ void * GD::fontLarge() const
 void * GD::fontGiant() const
 {
   return api.gdFontGiant;
+}
+//------------------------------------------------------------------------------
+void * GD::pngPtrEx(intptr_t * size, intptr_t level)
+{
+  return api.gdImagePngPtrEx((gdImagePtr) image_,size,level);
+}
+//------------------------------------------------------------------------------
+GD & GD::gdFree(void *m)
+{
+  api.gdFree(m);
+  return *this;
 }
 //------------------------------------------------------------------------------
 } // namespace ksys

@@ -636,13 +636,11 @@ out_err( int			IMGWIDTH,
 		 char			*err_str )
 {
 
-	gdImagePtr	im;
 	int			lineclr;
 	int			bgclr;
 
 
   if( image_ == NULL ) create(IMGWIDTH,IMGHEIGHT);
-  im = (gdImagePtr) image_;
 	bgclr    = colorAllocate(l2gdcal(BGColor) );
 	lineclr  = colorAllocate(l2gdcal(LineColor) );
 
@@ -662,10 +660,10 @@ out_err( int			IMGWIDTH,
 #ifdef HAVE_JPEG
 			case GDC_JPEG:	gdImageJpeg( im, fptr, GDC_jpeg_quality );	break;
 #endif
-			case GDC_WBMP:	WBMP(lineclr, fptr );			break;
-			case GDC_GIF:	Gif(fptr);						break;
+			case GDC_WBMP:	wbmp(lineclr, fptr );			break;
+			case GDC_GIF:	gif(fptr);						break;
 			case GDC_PNG:
-			default:		Png(fptr );
+			default:		png(fptr );
 			}
 		}
 }
@@ -929,8 +927,9 @@ void GDChart::do_interpolations( int		num_points,
 /* watch out for # params and array sizes==num_points */
 /* ------------------------------------------------------------------------- */
 /* original var arg interface */
-int GDChart::out_graph( short		IMGWIDTH,		/* no check for a image that's too small to fit */
-		   short		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
+int GDChart::out_graph(
+       int		IMGWIDTH,		/* no check for a image that's too small to fit */
+		   int		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
 		   FILE			*img_fptr,		/* open file pointer (img out) */
 		   int      type1,
 		   int			num_points,     /* points along x axis (even iterval) */
@@ -994,8 +993,9 @@ int GDChart::out_graph( short		IMGWIDTH,		/* no check for a image that's too sma
 
 /* ------------------------------------------------------------------------- */
 /* multi array interface */
-int GDChart::GDC_out_graph( short		IMGWIDTH,		/* no check for a img that's too small to fit */
-			   short		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
+int GDChart::GDC_out_graph(
+         int		IMGWIDTH,		/* no check for a img that's too small to fit */
+			   int		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
 			   FILE			*img_fptr,		/* open file pointer (img out) */
 			   int      type1,
 			   int			num_points,     /* points along x axis (even iterval) */
@@ -1149,6 +1149,7 @@ int GDChart::GDC_out_graph( short		IMGWIDTH,		/* no check for a img that's too s
 		return 1;
 		}
 
+	if( image_ == NULL ) create( IMGWIDTH, IMGHEIGHT );
 	load_font_conversions();
 	if( GDC_thumbnail ){
     GDC_grid = GDC_TICK_NONE;
@@ -1540,9 +1541,6 @@ int GDChart::GDC_out_graph( short		IMGWIDTH,		/* no check for a img that's too s
 
 
 	/* ----- OK start the graphic ----- */
-	if( image_ == NULL ) create( IMGWIDTH, IMGHEIGHT );
-
-
 	BGColor        = colorAllocate( l2gdcal(GDC_BGColor) );
 	LineColor      = clrallocate( GDC_LineColor );
 	PlotColor      = clrallocate( GDC_PlotColor );
@@ -2796,10 +2794,10 @@ int GDChart::GDC_out_graph( short		IMGWIDTH,		/* no check for a img that's too s
 #ifdef HAVE_JPEG
 			case GDC_JPEG:	gdImageJpeg( im, img_fptr, GDC_jpeg_quality );	break;
 #endif
-			case GDC_WBMP:	WBMP(PlotColor, img_fptr );			break;
-			case GDC_GIF:	Gif(img_fptr);						break;
+			case GDC_WBMP:	wbmp(PlotColor, img_fptr );			break;
+			case GDC_GIF:	gif(img_fptr);						break;
 			case GDC_PNG:
-			default:		Png(img_fptr );
+			default:		png(img_fptr );
 			}
 		}
 
@@ -2829,7 +2827,7 @@ GDChart::GDChart() :
   GDC_stack_type(GDC_STACK_DEPTH),
   GDC_ylabel_fmt(NULL),
   GDC_xaxis_angle(90.0),
-  GDC_generate_img(TRUE),
+  GDC_generate_img(FALSE),
   GDC_BGColor(0x000000L),
   GDC_LineColor(GDC_DFLTCOLOR),
   GDC_hold_img(GDC_DESTROY_IMAGE),
@@ -2847,11 +2845,15 @@ GDChart::GDChart() :
   GDC_requested_ymin(GDC_NOVALUE),
   GDC_requested_ymax(GDC_NOVALUE),
   GDC_requested_yinterval(GDC_NOVALUE),
+  GDC_title(NULL),
   GDC_title_size(GDC_MEDBOLD),
   GDC_ytitle_size(GDC_MEDBOLD),
   GDC_xtitle_size(GDC_MEDBOLD),
   GDC_yaxisfont_size(GDC_SMALL),
   GDC_xaxisfont_size(GDC_SMALL),
+  GDC_ytitle(NULL),
+  GDC_xtitle(NULL),
+  GDC_ytitle2(NULL),
   GDC_3d_angle(45),
   GDC_annotation((GDC_ANNOTATION_T*) NULL),
   GDC_annotation_font_size(GDC_SMALL),
@@ -2891,18 +2893,34 @@ GDChart::GDChart() :
 GDChart & GDChart::createChart(uintptr_t sx,uintptr_t sy)
 {
   data_.resize(6);
+  data_[0] = 1;
+  data_[1] = 2;
+  data_[2] = 3;
+  data_[3] = 4;
+  data_[4] = 5;
+  data_[5] = 6;
   GDC_image_type = GDC_PNG;
+  char    *t[6] = { "Chicago", "New York", "L.A.", "Atlanta", "Paris, MD\n(USA) ", "London" };
+  /* ----- data set colors (RGB) ----- */
+  //unsigned long   sc[2]    = { 0xFF8080, 0x8080FF };
+
+  //GDC_BGColor   = 0xFFFFFFL;                  /* backgound color (white) */
+  //GDC_LineColor = 0x000000L;                  /* line color      (black) */
+  //GDC_SetColor  = &(sc[0]);                   /* assign set colors */
+
   GDC_out_graph(
     sx & (((unsigned int) ~int(0)) >> 1),
     sy & (((unsigned int) ~int(0)) >> 1),
     NULL,
-    GDC_3DBAR,     /* GDC_CHART_T chart type */
+    GDC_LINE,     /* GDC_CHART_T chart type */
     6,             /* int         number of points per data set */
-    NULL,          /* char*[]     array of X labels */
+    t,             /* char*[]     array of X labels */
     1,             /* int         number of data sets */
     data_,
     NULL
   );             /* double[]     data set 1 */
+  gdFree(png_);
+  png_ = pngPtrEx(&pngSize_,9);
   return *this;
 }
 //------------------------------------------------------------------------------

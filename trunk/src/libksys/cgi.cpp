@@ -50,7 +50,8 @@ void CGI::initialize()
       initalizeByMethodPOST();
     case cgiGET  :
       initalizeByMethodGET();
-      out_ << contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
+      if( !contentType_.isNull() )
+        out_ << contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
     case cgiHEAD  :
       ;
   }

@@ -64,16 +64,24 @@ class GD  {
     GD & arc(intptr_t cx, intptr_t cy, intptr_t w, intptr_t h, intptr_t s, intptr_t e, intptr_t color);
     GD & fillToBorder(intptr_t x, intptr_t y, intptr_t border, intptr_t color);
     GD & colorDeallocate(intptr_t color);
-    GD & WBMP(int fg, FILE * out);
-    GD & Gif(FILE * out);
-    GD & Png(FILE * out);
+
+    const void * png() const { return png_; }
+    uintptr_t pngSize() const { return pngSize_; }
+  protected:
+    void * image_;
+    void * png_;
+    intptr_t pngSize_;
+
+    GD & wbmp(int fg, FILE * out);
+    GD & gif(FILE * out);
+    GD & png(FILE * out);
     void * fontTiny() const;
     void * fontSmall() const;
     void * fontMediumBold() const;
     void * fontLarge() const;
     void * fontGiant() const;
-  protected:
-    void * image_;
+    void * pngPtrEx(intptr_t * size, intptr_t level);
+    GD & gdFree(void * m);
   private:
     GD(const GD &);
     void operator = (const GD &);
@@ -313,8 +321,8 @@ class GDChart : public GD {
     void do_interpolations(int		num_points,
 				       int		interp_point,
 				       double	vals[] );
-    int out_graph( short		IMGWIDTH,		/* no check for a image that's too small to fit */
-		   short		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
+    int out_graph( int		IMGWIDTH,		/* no check for a image that's too small to fit */
+		   int		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
 		   FILE			*img_fptr,		/* open file pointer (img out) */
 		   int	    type1,
 		   int			num_points,     /* points along x axis (even iterval) */
@@ -322,8 +330,8 @@ class GDChart : public GD {
 		   char			*xlbl[],		/* array of xlabels */
 		   int			num_sets,
 						... );
-    int GDC_out_graph( short		IMGWIDTH,		/* no check for a img that's too small to fit */
-			       short		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
+    int GDC_out_graph( int		IMGWIDTH,		/* no check for a img that's too small to fit */
+			       int		IMGHEIGHT,		/* needed info (labels, etc), could core dump */
 			       FILE			*img_fptr,		/* open file pointer (img out) */
 			       int    	type1,
 			       int			num_points,     /* points along x axis (even iterval) */

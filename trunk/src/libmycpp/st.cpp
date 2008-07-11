@@ -179,10 +179,10 @@ DSQLStatement & DSQLStatement::execute()
     prepare();
     if( params_.bind_.count() > 0 ){
       params_.bind();
-      if( api.mysql_stmt_bind_param(handle_,params_.bind_.bind()) != 0 ){
+      if( api.mysql_stmt_bind_param(handle_,params_.bind_.bind()) != 0/* && api.mysql_errno(database_->handle_) != 0*/ ){
         database_->exceptionHandler(newObjectV1C2<EDSQLStBindParam>(
           api.mysql_errno(database_->handle_),
-	  api.mysql_error(database_->handle_)
+	        api.mysql_error(database_->handle_)
         ));
       }
     }
@@ -192,9 +192,11 @@ DSQLStatement & DSQLStatement::execute()
           api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
     }
     else {
-      if( api.mysql_stmt_execute(handle_) != 0 ){
+      if( api.mysql_stmt_execute(handle_) != 0 /*&& api.mysql_errno(database_->handle_) != 0*/ ){
         database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(
-          api.mysql_errno(database_->handle_), api.mysql_error(database_->handle_)));
+          api.mysql_errno(database_->handle_),
+          api.mysql_error(database_->handle_))
+        );
       }
     }
     executed_ = true;
