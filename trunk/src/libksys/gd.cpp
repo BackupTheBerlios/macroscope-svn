@@ -88,6 +88,9 @@ class GD_API {
     gdFontPtr gdFontGiant;
     void * PROTOF(gdImagePngPtrEx)(gdImagePtr im, int *size, int level);
     void PROTOF(gdFree)(void *m);
+    void PROTOF(gdImageFill)(gdImagePtr im, int x, int y, int color);
+    void PROTOF(gdImageEllipse)(gdImagePtr im, int cx, int cy, int w, int h, int color);
+    void PROTOF(gdImageFilledRectangle)(gdImagePtr im, int x1, int y1, int x2, int y2, int color);
 
     GD_API & open();
     GD_API & close();
@@ -140,7 +143,10 @@ GD_API & GD_API::open()
     "gdFontLarge",
     "gdFontGiant",
     "gdImagePngPtrEx",
-    "gdFree"
+    "gdFree",
+    "gdImageFill",
+    "gdImageFilledEllipse",
+    "gdImageFilledRectangle"
   };
   AutoLock<InterlockedMutex> lock(api.mutex());
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -451,6 +457,108 @@ void * GD::pngPtrEx(intptr_t * size, intptr_t level)
 GD & GD::gdFree(void *m)
 {
   api.gdFree(m);
+  return *this;
+}
+//------------------------------------------------------------------------------
+GD & GD::fill(intptr_t x, intptr_t y, intptr_t color)
+{
+  api.gdImageFill((gdImagePtr) image_,(int) x, (int) y, (int) color);
+  return *this;
+}
+//------------------------------------------------------------------------------
+GD & GD::ellipse(intptr_t cx, intptr_t cy, intptr_t w, intptr_t h, intptr_t color)
+{
+  api.gdImageEllipse((gdImagePtr) image_,(int) cx, (int) cy, (int) w, (int) h, (int) color);
+  return *this;
+}
+//------------------------------------------------------------------------------
+GD & GD::filledRectangle(intptr_t x1, intptr_t y1, intptr_t x2, intptr_t y2, intptr_t color)
+{
+  api.gdImageFilledRectangle((gdImagePtr) image_,(int) x1, (int) y1, (int) x2, (int) y2, (int) color);
+  return *this;
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+GDChart & GDChart::createChart(uintptr_t sx,uintptr_t sy)
+{
+  //GDC_image_type = GDC_PNG;
+  //char    *t[6] = { "Chicago", "New York", "L.A.", "Atlanta", "Paris, MD\n(USA) ", "London" };
+  ///* ----- data set colors (RGB) ----- */
+  ////unsigned long   sc[2]    = { 0xFF8080, 0x8080FF };
+
+  ////GDC_BGColor   = 0xFFFFFFL;                  /* backgound color (white) */
+  ////GDC_LineColor = 0x000000L;                  /* line color      (black) */
+  ////GDC_SetColor  = &(sc[0]);                   /* assign set colors */
+
+  //GDC_out_graph(
+  //  sx & (((unsigned int) ~int(0)) >> 1),
+  //  sy & (((unsigned int) ~int(0)) >> 1),
+  //  NULL,
+  //  GDC_LINE,     /* GDC_CHART_T chart type */
+  //  6,             /* int         number of points per data set */
+  //  t,             /* char*[]     array of X labels */
+  //  1,             /* int         number of data sets */
+  //  data_,
+  //  NULL
+  //);             /* double[]     data set 1 */
+
+  sx = tmax(sx,100u);
+  sy = tmax(sy,100u);
+  data_.resize(1)[0].resize(10);
+  data_[0][0] = -1.4;
+  data_[0][1] = -2.7;
+  data_[0][2] = 3.143;
+  data_[0][3] = 4.45645;
+  data_[0][4] = 4.963453;
+  data_[0][5] = 6.3;
+  data_[0][6] = 7.3453645;
+  data_[0][7] = 7.78978;
+  data_[0][8] = 8.4556;
+  data_[0][9] = 10.3;
+
+  create(sx,sy);
+
+  intptr_t i, j, xCount = 0, x, y, x0, y0, borderSize = 8;
+  // calc min max
+  ldouble minValue = DBL_MAX, maxValue = -DBL_MAX;
+  for( i = data_.count() - 1; i >= 0; i-- ){
+    j = data_[i].count();
+    xCount = tmax(xCount,j);
+    const Array<ldouble> & data = data_[i];
+    for( j = data.count() - 1; j >= 0; j-- ){
+      minValue = tmin(minValue,data[j]);
+      maxValue = tmax(maxValue,data[j]);
+    }
+  }
+  ldouble yAxis = (maxValue - minValue) / (sy - borderSize * 2u);
+  // draw lines
+  fill(0,0,colorAllocate(255,255,255));
+  for( i = 0; uintptr_t(i) < data_.count(); i++ ){
+    const Array<ldouble> & data = data_[i];
+    for( j = 0; uintptr_t(j) < data.count(); j++ ){
+      x = (sx - borderSize * 2u) * j / (xCount - 1) + borderSize;
+      y = intptr_t(sy - borderSize * 2u - 1 - (data[j] - minValue) / yAxis) + borderSize;
+      if( j > 0 ) line(x0,y0,x,y,colorAllocate(0,0,0));
+      x0 = x;
+      y0 = y;
+    }
+  }
+  // draw bars
+  intptr_t xBarSize = 4, yBarSize = 4;
+  for( i = 0; uintptr_t(i) < data_.count(); i++ ){
+    const Array<ldouble> & data = data_[i];
+    for( j = 0; uintptr_t(j) < data.count(); j++ ){
+      x = (sx - borderSize * 2u) * j / (xCount - 1) + borderSize;
+      y = intptr_t(sy - borderSize * 2u - 1 - (data[j] - minValue) / yAxis) + borderSize;
+      filledRectangle(x - xBarSize,y - yBarSize,x + xBarSize,y + yBarSize,colorAllocate(255,0,0));
+      x0 = x;
+      y0 = y;
+    }
+  }
+  
+  gdFree(png_);
+  png_ = pngPtrEx(&pngSize_,9);
   return *this;
 }
 //------------------------------------------------------------------------------

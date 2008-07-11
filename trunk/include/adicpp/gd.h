@@ -64,6 +64,9 @@ class GD  {
     GD & arc(intptr_t cx, intptr_t cy, intptr_t w, intptr_t h, intptr_t s, intptr_t e, intptr_t color);
     GD & fillToBorder(intptr_t x, intptr_t y, intptr_t border, intptr_t color);
     GD & colorDeallocate(intptr_t color);
+    GD & fill(intptr_t x, intptr_t y, intptr_t color);
+    GD & ellipse(intptr_t cx, intptr_t cy, intptr_t w, intptr_t h, intptr_t color);
+    GD & filledRectangle(intptr_t x1, intptr_t y1, intptr_t x2, intptr_t y2, intptr_t color);
 
     const void * png() const { return png_; }
     uintptr_t pngSize() const { return pngSize_; }
@@ -277,8 +280,6 @@ class GDChart : public GD {
     short GDC_xlabel_spacing;
     char GDC_ylabel_density;
 
-    Array<double> data_;
-
     void out_err( int			IMGWIDTH,
 		 int			IMGHEIGHT,
 		 FILE			*fptr,
@@ -368,6 +369,8 @@ class GDChart : public GD {
 			      int	*demoninator,
 			      int	*decimal,
 			      char	*fltfmt );			/* printf fmt'ing str */
+//-------------------------------------------------------------
+    Vector<Array<ldouble> > data_;
   private:
     GDChart(const GDChart &);
     void operator = (const GDChart &);

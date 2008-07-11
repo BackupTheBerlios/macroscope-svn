@@ -2890,39 +2890,5 @@ GDChart::GDChart() :
 {
 }
 //------------------------------------------------------------------------------
-GDChart & GDChart::createChart(uintptr_t sx,uintptr_t sy)
-{
-  data_.resize(6);
-  data_[0] = 1;
-  data_[1] = 2;
-  data_[2] = 3;
-  data_[3] = 4;
-  data_[4] = 5;
-  data_[5] = 6;
-  GDC_image_type = GDC_PNG;
-  char    *t[6] = { "Chicago", "New York", "L.A.", "Atlanta", "Paris, MD\n(USA) ", "London" };
-  /* ----- data set colors (RGB) ----- */
-  //unsigned long   sc[2]    = { 0xFF8080, 0x8080FF };
-
-  //GDC_BGColor   = 0xFFFFFFL;                  /* backgound color (white) */
-  //GDC_LineColor = 0x000000L;                  /* line color      (black) */
-  //GDC_SetColor  = &(sc[0]);                   /* assign set colors */
-
-  GDC_out_graph(
-    sx & (((unsigned int) ~int(0)) >> 1),
-    sy & (((unsigned int) ~int(0)) >> 1),
-    NULL,
-    GDC_LINE,     /* GDC_CHART_T chart type */
-    6,             /* int         number of points per data set */
-    t,             /* char*[]     array of X labels */
-    1,             /* int         number of data sets */
-    data_,
-    NULL
-  );             /* double[]     data set 1 */
-  gdFree(png_);
-  png_ = pngPtrEx(&pngSize_,9);
-  return *this;
-}
-//------------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------

@@ -1515,11 +1515,11 @@ int main(int _argc,char * _argv[])
   autoInitializer = autoInitializer;
 
   //"Content-Type: image/png"
-  //GDChart chart;
-  //chart.createChart(800,400);
-  //AsyncFile s("stdout");
-  //s.open().writeBuffer(chart.png(),chart.pngSize());
-  //return 0;
+  GDChart chart;
+  chart.createChart(1024,768);
+  AsyncFile s("C:/Korvin/trunk/binaries/1.png");
+  s.createIfNotExist(true).open().resize(0).writeBuffer(chart.png(),chart.pngSize());
+  return 0;
 
   bool isDaemon = isDaemonCommandLineOption(), isCGI = false;
   if( isDaemon ) daemonize();
