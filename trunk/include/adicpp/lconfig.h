@@ -250,7 +250,14 @@
 #endif
 
 #if HAVE_MATH_H
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES 1
+#endif
 #include <math.h>
+#endif
+
+#if HAVE_FLOAT_H
+#include <float.h>
 #endif
 
 #if HAVE_UCONTEXT_H

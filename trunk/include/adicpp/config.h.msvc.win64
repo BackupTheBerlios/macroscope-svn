@@ -2,6 +2,7 @@
 #define HAVE_STDLIB_H 1
 #define HAVE_MALLOC_H 1
 #define HAVE_MEMORY_H 1
+#define HAVE_FLOAT_H 1
 /* #undef HAVE_SYS_MOUNT_H */
 /* #undef HAVE_DIRENT_H */
 #define HAVE_ERROR_H 1

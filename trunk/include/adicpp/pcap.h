@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -114,16 +114,16 @@ struct PACKED UDPPacketHeader {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class PCAP : public Thread {
- public:
+  public:
     virtual ~PCAP();
     PCAP();
+
+    static void initialize();
+    static void cleanup();
 
     enum PacketGroupingPeriod { pgpNone, pgpSec, pgpMin, pgpHour, pgpDay, pgpMon, pgpYear, pgpCount };
     static utf8::String groupingPeriodToString(PacketGroupingPeriod groupingPeriod);
     static PacketGroupingPeriod stringToGroupingPeriod(const utf8::String & gp);
-
-    static void initialize();
-    static void cleanup();
 
     const utf8::String & ifName() const;
     PCAP & ifName(const utf8::String & ifName);

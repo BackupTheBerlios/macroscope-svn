@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@ CGI::~CGI()
 {
 }
 //------------------------------------------------------------------------------
-CGI::CGI() : method_(cgiInit), contentType_("Content-Type:text/html")
+CGI::CGI() : method_(cgiInit), contentType_("Content-Type: text/plain")
 {
   paramsHash_.param() = &params_;
   out_.fileName("stdout").open();
@@ -50,7 +50,7 @@ void CGI::initialize()
       initalizeByMethodPOST();
     case cgiGET  :
       initalizeByMethodGET();
-      out_ << contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10);
+      out_ << contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
     case cgiHEAD  :
       ;
   }

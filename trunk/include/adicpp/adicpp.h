@@ -77,6 +77,9 @@ inline void Initializer::initialize(int argc,char ** argv)
 #if ENABLE_PCAP_INTERFACE
     ksys::PCAP::initialize();
 #endif
+#if ENABLE_GD_INTERFACE
+    ksys::GD::initialize();
+#endif
   }
   initCount_++;
 }
@@ -86,6 +89,9 @@ inline void Initializer::cleanup()
   ksys::AutoLock<Initializer> lock(*(Initializer *) ~uintptr_t(NULL));
   assert( initCount_ > 0 );
   if( initCount_ == 1 ){
+#if ENABLE_GD_INTERFACE
+    ksys::GD::cleanup();
+#endif
 #if ENABLE_PCAP_INTERFACE
     ksys::PCAP::cleanup();
 #endif

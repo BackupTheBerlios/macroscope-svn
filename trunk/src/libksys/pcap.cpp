@@ -194,17 +194,13 @@ PCAP_API & PCAP_API::close()
 //------------------------------------------------------------------------------
 void PCAP::initialize()
 {
-#if defined(__WIN32__) || defined(__WIN64__)
   new (api.mutex_) InterlockedMutex;
   api.count_ = 0;
-#endif
 }
 //------------------------------------------------------------------------------
 void PCAP::cleanup()
 {
-#if defined(__WIN32__) || defined(__WIN64__)
   api.mutex().~InterlockedMutex();
-#endif
 }
 //------------------------------------------------------------------------------
 PCAP::~PCAP()
@@ -947,6 +943,7 @@ void PCAP::DatabaseInserter::threadExecute()
   uintptr_t pCount;
   priority(THREAD_PRIORITY_IDLE);
   bool success = true;
+  uintmax_t fib = 0;
   while( !terminated_ ){
     PacketGroup * pGroup;
     AutoPtr<PacketGroup> group;
@@ -970,7 +967,7 @@ void PCAP::DatabaseInserter::threadExecute()
       pcap_->databaseInserterSem_.wait();
       continue;
     }
-    if( !success ) pcap_->databaseInserterSem_.timedWait(1000000);
+    if( success ) fib = 0; else pcap_->databaseInserterSem_.timedWait(1000000u * fibonacci(fib > 16 ? 16 : ++fib));
     if( stdErr.debugLevel(7) )
       stdErr.debug(7,utf8::String::Stream() <<
         "Interface: " << pcap_->ifName_ << ", start processing packets group: " <<

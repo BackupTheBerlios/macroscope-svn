@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  */
 //------------------------------------------------------------------------------
+#define ENABLE_GD_INTERFACE 1
 #define ENABLE_PCAP_INTERFACE 1
 #define ENABLE_ODBC_INTERFACE 1
 #define ENABLE_MYSQL_INTERFACE 1
@@ -1229,7 +1230,6 @@ int32_t Logger::doWork(uintptr_t stage)
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("reactivate_indices") >= 0 ){
     uint64_t ellapsed = gettimeofday();
-    reactivateIndices(true,false);
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -1239,6 +1239,10 @@ int32_t Logger::doWork(uintptr_t stage)
       "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
       "</HEAD>\n"
       "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+    ;
+    reactivateIndices(true,false);
+    cgi_ <<
+      "<BR>\n"
       "<B>Reactivate indices operation completed successfuly.</B>\n"
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
@@ -1256,7 +1260,6 @@ int32_t Logger::doWork(uintptr_t stage)
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("set_indices_statistics") >= 0 ){
     uint64_t ellapsed = gettimeofday();
-    reactivateIndices(false,true);
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -1266,6 +1269,10 @@ int32_t Logger::doWork(uintptr_t stage)
       "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
       "</HEAD>\n"
       "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+    ;
+    reactivateIndices(false,true);
+    cgi_ <<
+      "<BR>\n"
       "<B>Set indices statistics operation completed successfuly.</B>\n"
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
@@ -1438,6 +1445,9 @@ int main(int _argc,char * _argv[])
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
+
+  GDChart chart;
+  chart.create(100,100);
 
   bool isDaemon = isDaemonCommandLineOption(), isCGI = false;
   if( isDaemon ) daemonize();

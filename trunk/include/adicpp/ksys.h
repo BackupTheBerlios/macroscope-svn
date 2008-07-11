@@ -104,6 +104,7 @@ template <typename T> inline T tabs(const T & v)
 #if defined(__WIN32__) || defined(__WIN64__)
 #include "pdbutils/pdbutils.h"
 #endif
+#include "gd.h"
 //---------------------------------------------------------------------------
 #endif /* ksysH */
 //---------------------------------------------------------------------------
