@@ -316,7 +316,14 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
   bool r = true;
   uintptr_t count = pCount;
   try {
-    if( !database_->attached() ) database_->attach();
+    if( !database_->attached() ){
+      database_->attach();
+      if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
+        if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+        statement_->execute("set max_sp_recursion_depth = 3");
+        statement_ = NULL;
+      }
+    }
     database_->start();
     if( ifaces_ == NULL ) ifaces_ = database_->newAttachedStatement();
     if( !ifaces_->prepared() )
@@ -358,23 +365,46 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     //}
     while( !caller->terminated() && !terminated_ && count > 0 && (packetsInTransaction_ == 0 || pCount - count < packetsInTransaction_) ){
       const HashedPacket & packet = packets[count - 1];
-      Mutant m(bt);
-      m.changeType(mtTime);
+      //Mutant m(bt);
+      //m.changeType(mtTime);
       uint64_t mbt, met;
+      if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+      if( !statement_->prepared() )
+        statement_->text(
+          "CALL INET_UPDATE_SNIFFER_STAT_YEAR(:iface,:ts0,:ts1,:ts2,:ts3,:ts4,:ts5,:ts6,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data,:ports,:protocols,:mt)"
+        )->prepare()->
+          paramAsMutant("iface",ifName())->
+          paramAsMutant("ports",ports())->
+          paramAsMutant("protocols",protocols())->
+          paramAsMutant("mt",totalsPeriod_);
       for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
-        if( caller->terminated() || terminated_ ) break;
-        setBounds(PacketGroupingPeriod(i),m,mbt,met);
-        updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
-        if( caller->terminated() || terminated_ ) break;
-        if( ports() && protocols() ){
-          updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
-          if( caller->terminated() || terminated_ ) break;
-          updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
-          if( caller->terminated() || terminated_ ) break;
-        }
-        if( ports() || protocols() )
-          updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
+        setBounds(PacketGroupingPeriod(i),bt,mbt,met);
+        statement_->paramAsMutant("ts" + utf8::int2Str(i),Mutant(mbt).changeType(mtTime));
       }
+      statement_->
+        paramAsString("src_ip",ksock::SockAddr::addr2Index(packet.srcAddr_))->
+        paramAsMutant("src_port",packet.srcPort_)->
+        paramAsString("dst_ip",ksock::SockAddr::addr2Index(packet.dstAddr_))->
+        paramAsMutant("dst_port",packet.dstPort_)->
+        paramAsMutant("proto",packet.proto_)->
+        paramAsMutant("dgram",packet.pktSize_)->
+        paramAsMutant("data",packet.dataSize_)->
+        execute();
+
+      //for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
+      //  if( caller->terminated() || terminated_ ) break;
+      //  setBounds(PacketGroupingPeriod(i),m,mbt,met);
+      //  updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
+      //  if( caller->terminated() || terminated_ ) break;
+      //  if( ports() && protocols() ){
+      //    updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
+      //    if( caller->terminated() || terminated_ ) break;
+      //    updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
+      //    if( caller->terminated() || terminated_ ) break;
+      //  }
+      //  if( ports() || protocols() )
+      //    updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
+      //}
       count--;
     }
     if( caller->terminated() || terminated_ ){

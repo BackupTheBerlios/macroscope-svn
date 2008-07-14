@@ -153,6 +153,8 @@ class PCAP : public Thread {
     PCAP & ports(bool a);
     const bool & protocols() const;
     PCAP & protocols(bool a);
+    const bool & gmtInLog() const;
+    PCAP & gmtInLog(bool a);
 
     const PacketGroupingPeriod & groupingPeriod() const;
     PCAP & groupingPeriod(PacketGroupingPeriod groupingPeriod);
@@ -395,6 +397,7 @@ class PCAP : public Thread {
     bool ports_;
     bool protocols_;
     bool fc_;
+    bool gmtInLog_;
     
     void shutdown();
     void threadBeforeWait();
@@ -482,6 +485,17 @@ inline const bool & PCAP::protocols() const
 inline PCAP & PCAP::protocols(bool a)
 {
   protocols_ = a;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const bool & PCAP::gmtInLog() const
+{
+  return gmtInLog_;
+}
+//---------------------------------------------------------------------------
+inline PCAP & PCAP::gmtInLog(bool a)
+{
+  gmtInLog_ = a;
   return *this;
 }
 //---------------------------------------------------------------------------

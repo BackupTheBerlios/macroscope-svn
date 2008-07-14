@@ -232,7 +232,8 @@ PCAP::PCAP() :
   promisc_(false),
   ports_(true),
   protocols_(true),
-  fc_(false)
+  fc_(false),
+  gmtInLog_(false)
 {
 //  tempFile_ = getTempPath() + createGUIDAsBase32String() + ".tmp";
 }
@@ -971,8 +972,8 @@ void PCAP::DatabaseInserter::threadExecute()
     if( stdErr.debugLevel(7) )
       stdErr.debug(7,utf8::String::Stream() <<
         "Interface: " << pcap_->ifName_ << ", start processing packets group: " <<
-        utf8::time2Str(group->header_.bt_) << " - " <<
-        utf8::time2Str(group->header_.et_) << ", count: " <<
+        utf8::time2Str(group->header_.bt_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << " - " <<
+        utf8::time2Str(group->header_.et_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << ", count: " <<
         group->header_.count_ << "\n"
       );
     if( stdErr.debugLevel(6) )
@@ -1021,8 +1022,8 @@ void PCAP::DatabaseInserter::threadExecute()
     if( stdErr.debugLevel(7) )
       stdErr.debug(7,utf8::String::Stream() <<
         "Interface: " << pcap_->ifName_ << ", stop processing packets group: " <<
-        utf8::time2Str(header.bt_) << " - " <<
-        utf8::time2Str(header.et_) << ", processed: " <<
+        utf8::time2Str(header.bt_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << " - " <<
+        utf8::time2Str(header.et_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << ", processed: " <<
         header.count_ - pCount <<
         ", ellapsed: " << utf8::elapsedTime2Str(ellapsed) << "\n"
       );
@@ -1081,8 +1082,8 @@ void PCAP::LazyWriter::swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group
   if( swapped && stdErr.debugLevel(5) )
     stdErr.debug(5,utf8::String::Stream() <<
       "Interface: " << pcap_->ifName_ << ", swapout packets group: " <<
-      utf8::time2Str(header.bt_) << " - " <<
-      utf8::time2Str(header.et_) << ", count: " <<
+      utf8::time2Str(header.bt_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << " - " <<
+      utf8::time2Str(header.et_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << ", count: " <<
       header.count_ << ", to: " <<
       tempFile.fileName() << "\n"
     );
@@ -1127,8 +1128,8 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
     if( stdErr.debugLevel(5) )
       stdErr.debug(5,utf8::String::Stream() <<
         "Interface: " << pcap_->ifName_ << ", swapin packets group: " <<
-        utf8::time2Str(header.bt_) << " - " <<
-        utf8::time2Str(header.et_) << ", count: " <<
+        utf8::time2Str(header.bt_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << " - " <<
+        utf8::time2Str(header.et_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << ", count: " <<
         header.count_ << ", from: " <<
         tempFile.fileName() << "\n"
       );

@@ -367,6 +367,80 @@ Logger & Logger::createDatabase()
           "alter table INET_USERS_MONTHLY_TOP_URL partition by hash(month(ST_TIMESTAMP)) partitions " <<
           "alter table INET_USERS_TOP_MAIL partition by hash(month(ST_TIMESTAMP)) partitions "
         ;
+        utf8::String templ(
+          "CREATE PROCEDURE INET_UPDATE_SNIFFER_STAT_@0001@ (\n"
+          "  IN ifaceP     CHAR(16) CHARACTER SET ascii,\n"
+          "  IN ts0P        DATETIME,\n"
+          "  IN ts1P        DATETIME,\n"
+          "  IN ts2P        DATETIME,\n"
+          "  IN ts3P        DATETIME,\n"
+          "  IN ts4P        DATETIME,\n"
+          "  IN ts5P        DATETIME,\n"
+          "  IN ts6P        DATETIME,\n"
+          "  IN src_ipP    CHAR(16) CHARACTER SET ascii,\n"
+          "  IN src_portP  INTEGER,\n"
+          "  IN dst_ipP    CHAR(16) CHARACTER SET ascii,\n"
+          "  IN dst_portP  INTEGER,\n"
+          "  IN protoP     SMALLINT,\n"
+          "  IN dgramP     BIGINT,\n"
+          "  IN dataP      BIGINT,\n"
+          "  IN portsP     INTEGER,\n"
+          "  IN protocolsP INTEGER,\n"
+          "  IN mtP        INTEGER\n"
+          ")\n"
+          "BEGIN\n"
+          "  DECLARE fetched    INTEGER DEFAULT 1;\n"
+          "  DECLARE dgram0     BIGINT;\n"
+          "  DECLARE data0      BIGINT;\n"
+          "  DECLARE cur@0001@ CURSOR FOR\n"
+          "    SELECT\n"
+          "      dgram,data\n"
+          "    FROM INET_SNIFFER_STAT_@0001@\n"
+          "    WHERE\n"
+          "      iface = ifaceP AND ts = ts@0003@P AND\n"
+          "      src_ip = src_ipP AND src_port = src_portP AND\n"
+          "      dst_ip = dst_ipP AND dst_port = dst_portP AND\n"
+          "      ip_proto = protoP;\n"
+          "  DECLARE CONTINUE HANDLER FOR NOT FOUND SET fetched = 0;\n"
+          "\n"
+          "  OPEN cur@0001@;\n"
+          "  FETCH cur@0001@ INTO dgram0,data0;\n"
+          "  IF fetched THEN\n"
+          "    UPDATE INET_SNIFFER_STAT_@0001@ SET\n"
+          "      dgram = dgram + dgramP, data = data + dataP\n"
+          "    WHERE\n"
+          "      iface = ifaceP AND ts = ts@0003@P AND\n"
+          "      src_ip = src_ipP AND src_port = src_portP AND\n"
+          "      dst_ip = dst_ipP AND dst_port = dst_portP AND\n"
+          "      ip_proto = protoP;\n"
+          "  ELSE\n"
+          "    INSERT INTO INET_SNIFFER_STAT_@0001@\n"
+          "    (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,dgram,data) VALUES\n"
+          "    (ifaceP,ts@0003@P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,dgramP,dataP);\n"
+          "  END IF;\n"
+          "  CLOSE cur@0001@\n;"
+          "  IF portsP AND protocolsP THEN\n"
+          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,protoP,dgramP,dataP,0,0,mtP);\n"
+          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,-1,dgramP,dataP,0,0,mtP);\n"
+          "  END IF;\n"
+          "  IF portsP OR protocolsP THEN\n"
+          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,-1,dgramP,dataP,0,0,mtP);\n"
+          "  END IF;\n"
+          "  @0002@\n"
+          "END\n"
+        );
+        utf8::String templ2;
+        for( intptr_t i = Sniffer::pgpCount - 2; i >= 0; i-- ){
+          templ2 += utf8::String(
+            "  IF mtP <= " + utf8::int2Str(i) + " THEN\n"
+            "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,dgramP,dataP,portsP,protocolsP,mtP);\n"
+            "  END IF;\n"
+          ).replaceAll("@0001@",Sniffer::pgpNames[i]);
+        }
+        for( intptr_t i = Sniffer::pgpCount - 1; i >= 0; i-- ){
+          metadata << templ.replaceAll("@0001@",Sniffer::pgpNames[i]).replaceAll("@0002@",templ2).replaceAll("@0003@",utf8::int2Str(i));
+          templ2.resize(0);
+        }
       }
       database_->create();
       database_->attach();
@@ -901,32 +975,34 @@ int32_t Logger::main()
 //------------------------------------------------------------------------------
 Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
 {
+  utf8::String name("macroscope.bpft." + sectionName + ".sniffer.");
   ConfigSection dbParamsSection;
-  utf8::String connection(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.connection",connection_));
+  utf8::String connection(config_->valueByPath(name + "connection",connection_));
   dbParamsSection.addSection(config_->sectionByPath(connection));
   AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
   AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database.ptr()));
   database.ptr(NULL);
   sniffer->ifName(sectionName);
-  sniffer->iface(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.interface"));
-  sniffer->tempFile(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.temp_file",sniffer->tempFile()));
-  sniffer->filter(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.filter"));
-  sniffer->pcapReadTimeout(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pcap_read_timeout",sniffer->pcapReadTimeout()));
-  sniffer->swapThreshold(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_threshold",sniffer->swapThreshold()));
-  sniffer->pregroupingBufferSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_buffer_size",sniffer->pregroupingBufferSize()));
-  sniffer->pregroupingWindowSize(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.pregrouping_window_size",sniffer->pregroupingWindowSize()));
-  sniffer->promisc(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.promiscuous",sniffer->promisc()));
-  sniffer->ports(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.ports",sniffer->ports()));
-  sniffer->protocols(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.protocols",sniffer->protocols()));
-  sniffer->swapLowWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_low_watermark",sniffer->swapLowWatermark()));
-  sniffer->swapHighWatermark(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_high_watermark",sniffer->swapHighWatermark()));
-  sniffer->swapWatchTime((uint64_t) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.swap_watch_time",sniffer->swapWatchTime()) * 1000000u);
-  sniffer->groupingPeriod(PCAP::stringToGroupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.grouping_period","none")));
-  sniffer->totalsPeriod(PCAP::stringToGroupingPeriod(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.totals_period","day")));
-  sniffer->packetsInTransaction(config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.packets_in_transaction",0));
-  utf8::String joined(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
+  sniffer->iface(config_->textByPath(name + "interface"));
+  sniffer->tempFile(config_->textByPath(name + "temp_file",sniffer->tempFile()));
+  sniffer->filter(config_->textByPath(name + "filter"));
+  sniffer->pcapReadTimeout(config_->valueByPath(name + "pcap_read_timeout",sniffer->pcapReadTimeout()));
+  sniffer->swapThreshold(config_->valueByPath(name + "swap_threshold",sniffer->swapThreshold()));
+  sniffer->pregroupingBufferSize(config_->valueByPath(name + "pregrouping_buffer_size",sniffer->pregroupingBufferSize()));
+  sniffer->pregroupingWindowSize(config_->valueByPath(name + "pregrouping_window_size",sniffer->pregroupingWindowSize()));
+  sniffer->promisc(config_->valueByPath(name + "promiscuous",sniffer->promisc()));
+  sniffer->ports(config_->valueByPath(name + "ports",sniffer->ports()));
+  sniffer->protocols(config_->valueByPath(name + "protocols",sniffer->protocols()));
+  sniffer->gmtInLog(config_->valueByPath(name + "greenwich_mean_time_in_log",sniffer->gmtInLog()));
+  sniffer->swapLowWatermark(config_->valueByPath(name + "swap_low_watermark",sniffer->swapLowWatermark()));
+  sniffer->swapHighWatermark(config_->valueByPath(name + "swap_high_watermark",sniffer->swapHighWatermark()));
+  sniffer->swapWatchTime((uint64_t) config_->valueByPath(name + "swap_watch_time",sniffer->swapWatchTime()) * 1000000u);
+  sniffer->groupingPeriod(PCAP::stringToGroupingPeriod(config_->textByPath(name + "grouping_period","none")));
+  sniffer->totalsPeriod(PCAP::stringToGroupingPeriod(config_->textByPath(name + "totals_period","day")));
+  sniffer->packetsInTransaction(config_->valueByPath(name + "packets_in_transaction",0));
+  utf8::String joined(config_->textByPath(name + "join"));
   for( intptr_t i = 0, j = enumStringParts(joined); i < j; i++ ){
-    if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
+    if( !(bool) config_->valueByPath(name + "enabled",false) ) continue;
     sniffer->join(getSnifferBySection(stringPartByNo(joined,i)));
   }
   return sniffer.ptr(NULL);
@@ -1515,11 +1591,11 @@ int main(int _argc,char * _argv[])
   autoInitializer = autoInitializer;
 
   //"Content-Type: image/png"
-  GDChart chart;
-  chart.createChart(1024,768);
-  AsyncFile s("C:/Korvin/trunk/binaries/1.png");
-  s.createIfNotExist(true).open().resize(0).writeBuffer(chart.png(),chart.pngSize());
-  return 0;
+  //GDChart chart;
+  //chart.createChart(1024,768);
+  //AsyncFile s("C:/Korvin/trunk/binaries/1.png");
+  //s.createIfNotExist(true).open().resize(0).writeBuffer(chart.png(),chart.pngSize());
+  //return 0;
 
   bool isDaemon = isDaemonCommandLineOption(), isCGI = false;
   if( isDaemon ) daemonize();
