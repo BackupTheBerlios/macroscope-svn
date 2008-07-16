@@ -334,76 +334,53 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     catch( ExceptionSP & e ){
       if( !e->searchCode(isc_unique_key_violation,isc_primary_key_exists,ER_DUP_ENTRY) ) throw;
     }
-    //for( intptr_t i = pgpCount - 1; i >= 0; i-- ){
-    //  if( totals_[stSel][i] == NULL ) totals_[stSel][i] = database_->newAttachedStatement();
-    //  if( !totals_[stSel][i]->prepared() )
-    //    totals_[stSel][i]->text(utf8::String(
-    //      "SELECT iface,ts,src_ip,src_port,dst_port,dst_ip,ip_proto,dgram,data "
-    //      "FROM INET_SNIFFER_STAT_@0001@ WHERE"
-    //      " iface = :if AND ts = :ts AND src_ip = :src_ip AND src_port = :src_port AND dst_ip = :dst_ip AND dst_port = :dst_port AND ip_proto = :proto "
-    //      "FOR UPDATE"
-    //      ).replaceAll("@0001@",pgpNames[i])
-    //    );
-    //  if( totals_[stIns][i] == NULL ) totals_[stIns][i] = database_->newAttachedStatement();
-    //  if( !totals_[stIns][i]->prepared() )
-    //    totals_[stIns][i]->text(utf8::String(
-    //      "INSERT INTO INET_SNIFFER_STAT_@0001@ ("
-    //      "  iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,dgram,data"
-    //      ") VALUES ("
-    //      "  :if,:ts,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data"
-    //      ")").replaceAll("@0001@",pgpNames[i])
-    //    );
-    //  if( totals_[stUpd][i] == NULL ) totals_[stUpd][i] = database_->newAttachedStatement();
-    //  if( !totals_[stUpd][i]->prepared() )
-    //    totals_[stUpd][i]->text(utf8::String(
-    //      "UPDATE INET_SNIFFER_STAT_@0001@ SET "
-    //      "  dgram = dgram + :dgram, data = data + :data "
-    //      "WHERE"
-    //      "  iface = :if AND ts = :ts AND src_ip = :src_ip AND src_port = :src_port AND dst_ip = :dst_ip AND dst_port = :dst_port AND ip_proto = :proto"
-    //      ).replaceAll("@0001@",pgpNames[i])
-    //    );
-    //}
     while( !caller->terminated() && !terminated_ && count > 0 && (packetsInTransaction_ == 0 || pCount - count < packetsInTransaction_) ){
       const HashedPacket & packet = packets[count - 1];
-      //Mutant m(bt);
-      //m.changeType(mtTime);
       uint64_t mbt, met;
-      if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
-      if( !statement_->prepared() )
-        statement_->text(
-          "CALL INET_UPDATE_SNIFFER_STAT_YEAR(:iface,:ts0,:ts1,:ts2,:ts3,:ts4,:ts5,:ts6,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data,:ports,:protocols,:mt)"
-        )->prepare()->
-          paramAsMutant("iface",ifName())->
-          paramAsMutant("ports",ports())->
-          paramAsMutant("protocols",protocols())->
-          paramAsMutant("mt",totalsPeriod_);
-      for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
-        setBounds(PacketGroupingPeriod(i),bt,mbt,met);
-        statement_->paramAsMutant("ts" + utf8::int2Str(i),Mutant(mbt).changeType(mtTime));
-      }
-      statement_->
-        paramAsString("src_ip",ksock::SockAddr::addr2Index(packet.srcAddr_))->
-        paramAsMutant("src_port",packet.srcPort_)->
-        paramAsString("dst_ip",ksock::SockAddr::addr2Index(packet.dstAddr_))->
-        paramAsMutant("dst_port",packet.dstPort_)->
-        paramAsMutant("proto",packet.proto_)->
-        paramAsMutant("dgram",packet.pktSize_)->
-        paramAsMutant("data",packet.dataSize_)->
-        execute();
-
-      //for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
-      //  if( caller->terminated() || terminated_ ) break;
-      //  setBounds(PacketGroupingPeriod(i),m,mbt,met);
-      //  updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
-      //  if( caller->terminated() || terminated_ ) break;
-      //  if( ports() && protocols() ){
-      //    updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
+      //if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
+        if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+        if( !statement_->prepared() ){
+          utf8::String exec;
+          if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ) exec = "CALL";
+          else
+          if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ) exec = "EXECUTE PROCEDURE";
+          statement_->text(
+            exec + " INET_UPDATE_SNIFFER_STAT_YEAR(:iface,:ts0,:ts1,:ts2,:ts3,:ts4,:ts5,:ts6,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data,:ports,:protocols,:mt)"
+          )->prepare()->
+            paramAsMutant("iface",ifName())->
+            paramAsMutant("ports",ports())->
+            paramAsMutant("protocols",protocols())->
+            paramAsMutant("mt",totalsPeriod_);
+        }
+        for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
+          setBounds(PacketGroupingPeriod(i),bt,mbt,met);
+          statement_->paramAsMutant("ts" + utf8::int2Str(i),Mutant(mbt).changeType(mtTime));
+        }
+        statement_->
+          paramAsString("src_ip",ksock::SockAddr::addr2Index(packet.srcAddr_))->
+          paramAsMutant("src_port",packet.srcPort_)->
+          paramAsString("dst_ip",ksock::SockAddr::addr2Index(packet.dstAddr_))->
+          paramAsMutant("dst_port",packet.dstPort_)->
+          paramAsMutant("proto",packet.proto_)->
+          paramAsMutant("dgram",packet.pktSize_)->
+          paramAsMutant("data",packet.dataSize_)->
+          execute();
+      //}
+      //else {
+      //  for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
       //    if( caller->terminated() || terminated_ ) break;
-      //    updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
+      //    setBounds(PacketGroupingPeriod(i),bt,mbt,met);
+      //    updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
       //    if( caller->terminated() || terminated_ ) break;
+      //    if( ports() && protocols() ){
+      //      updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
+      //      if( caller->terminated() || terminated_ ) break;
+      //      updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
+      //      if( caller->terminated() || terminated_ ) break;
+      //    }
+      //    if( ports() || protocols() )
+      //      updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
       //  }
-      //  if( ports() || protocols() )
-      //    updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
       //}
       count--;
     }

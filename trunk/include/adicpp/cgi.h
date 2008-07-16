@@ -43,6 +43,7 @@ class CGI {
     CGIMethod method() const;
     
     CGI & operator << (const utf8::String & s){ out_ << s; return *this; }
+    CGI & writeBuffer(const void * buf,uint64_t size){ out_.writeBuffer(buf,size); return *this; }
     
     utf8::String paramAsString(const utf8::String & name,const utf8::String & defValue = utf8::String());
     utf8::String paramAsString(uintptr_t i,const utf8::String & defValue = utf8::String());
@@ -55,6 +56,7 @@ class CGI {
     utf8::String contentType() const { return contentType_; }
     CGI & contentType(const utf8::String & type){ contentType_ = type; return *this; }
     
+    static utf8::String uuencode(const utf8::String & string);
     static utf8::String uudecode(const utf8::String & string);
     
     bool isCGI() const { return method() != cgiNone; }

@@ -43,6 +43,7 @@ utf8::String getBackTrace(/*intptr_t flags = pdbutils::DbgFrameGetAll,*/intptr_t
 Mutant getProcessPriority();
 void setProcessPriority(const Mutant & m,bool noThrow = false);
 //---------------------------------------------------------------------------
+bool isEnv(const utf8::String & name);
 utf8::String getEnv(const utf8::String & name,const utf8::String & defValue = utf8::String());
 void setEnv(const utf8::String & name,const utf8::String & value,bool overwrite = true);
 void putEnv(const utf8::String & string);

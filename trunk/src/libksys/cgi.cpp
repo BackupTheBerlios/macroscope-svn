@@ -50,11 +50,23 @@ void CGI::initialize()
       initalizeByMethodPOST();
     case cgiGET  :
       initalizeByMethodGET();
+      if( isEnv("CONTENT_TYPE") ) contentType_ = getEnv("CONTENT_TYPE");
       if( !contentType_.isNull() )
         out_ << contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
     case cgiHEAD  :
       ;
   }
+}
+//------------------------------------------------------------------------------
+utf8::String CGI::uuencode(const utf8::String & string)
+{
+  utf8::String s;
+  utf8::String::Iterator i(string);
+
+  while( !i.eos() ){
+    i.next();
+  }
+  return s;
 }
 //------------------------------------------------------------------------------
 utf8::String CGI::uudecode(const utf8::String & string)

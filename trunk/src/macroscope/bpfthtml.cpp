@@ -1465,6 +1465,20 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "</TR>\n"
           "</TABLE>\n<BR>\n<BR>\n"
         ;
+        if( logger_->cgi_.isCGI() ){
+          utf8::String src(/*"http://" + getEnv("HTTP_HOST") + */getEnv("SCRIPT_NAME") + "?chart=&width=1024&height=768"), v;
+          v += "&rc=2";
+          v += "&r0cc=" + utf8::int2Str(table.count() - 1);
+          v += "&r1cc=" + utf8::int2Str(table.count() - 1);
+          for( uintptr_t i = 1; i < table.count(); i++ ){
+            uintmax_t s1 = table[i].sum("SUM1"), s2 = table[i].sum("SUM2");
+            if( s1 != 0 ) v += "&r0c" + utf8::int2Str(i) + "=" + utf8::int2Str(s1);
+            if( s2 != 0 ) v += "&r1c" + utf8::int2Str(i) + "=" + utf8::int2Str(s2);
+          }
+          if( level <= rlDay ) v += "&xlvs=1";
+          //f << "<IMG SRC=\"" + src + v + "\" WIDTH=\"1024\" HEIGHT=\"768\" BORDER=\"0\">\n<BR>\n";
+          f << "<A HREF=\"" + src + v + "\">Show me chart</A>\n<BR>\n<BR>\n";
+        }
       }
     }
     bool nextLevel = refreshOnlyCurrent_ || logger_->cgi_.isCGI();

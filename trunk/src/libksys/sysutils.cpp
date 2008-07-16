@@ -241,6 +241,32 @@ void setProcessPriority(const Mutant & m,bool noThrow)
 #endif
 }
 //---------------------------------------------------------------------------
+bool isEnv(const utf8::String & name)
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  DWORD sz;
+  if( isWin9x() ){
+    utf8::AnsiString s(name.getANSIString());
+    sz = GetEnvironmentVariableA(s,NULL,0);
+    int32_t err = GetLastError();
+    if( err == ERROR_ENVVAR_NOT_FOUND ) return false;
+    if( err != ERROR_SUCCESS )
+      newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+    return true;
+  }
+  AutoPtr<wchar_t> b;
+  utf8::WideString s(name.getUNICODEString());
+  sz = GetEnvironmentVariableW(s,NULL,0);
+  int32_t err = GetLastError();
+  if( err == ERROR_ENVVAR_NOT_FOUND ) return false;
+  if( err != ERROR_SUCCESS )
+    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+  return true;
+#else
+  return getenv(name.getANSIString()) != NULL;
+#endif
+}
+//---------------------------------------------------------------------------
 utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
 {
 #if defined(__WIN32__) || defined(__WIN64__)

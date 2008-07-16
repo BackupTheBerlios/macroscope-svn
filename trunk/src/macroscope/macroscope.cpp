@@ -312,13 +312,13 @@ Logger & Logger::createDatabase()
       }
       for( uintptr_t i = 0; i < PCAP::pgpCount; i++ ){
         metadata <<
-          utf8::String("CREATE INDEX ISS_@0001@_01 ON INET_SNIFFER_STAT_@0001@ (iface)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
-          utf8::String("CREATE INDEX ISS_@0001@_02 ON INET_SNIFFER_STAT_@0001@ (ts)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
-          utf8::String("CREATE INDEX ISS_@0001@_03 ON INET_SNIFFER_STAT_@0001@ (src_ip)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
-          utf8::String("CREATE INDEX ISS_@0001@_04 ON INET_SNIFFER_STAT_@0001@ (src_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
-          utf8::String("CREATE INDEX ISS_@0001@_05 ON INET_SNIFFER_STAT_@0001@ (dst_ip)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
-          utf8::String("CREATE INDEX ISS_@0001@_06 ON INET_SNIFFER_STAT_@0001@ (dst_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
-          utf8::String("CREATE INDEX ISS_@0001@_07 ON INET_SNIFFER_STAT_@0001@ (ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          //utf8::String("CREATE INDEX ISS_@0001@_01 ON INET_SNIFFER_STAT_@0001@ (iface)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          //utf8::String("CREATE INDEX ISS_@0001@_02 ON INET_SNIFFER_STAT_@0001@ (ts)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          //utf8::String("CREATE INDEX ISS_@0001@_03 ON INET_SNIFFER_STAT_@0001@ (src_ip)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          //utf8::String("CREATE INDEX ISS_@0001@_04 ON INET_SNIFFER_STAT_@0001@ (src_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          //utf8::String("CREATE INDEX ISS_@0001@_05 ON INET_SNIFFER_STAT_@0001@ (dst_ip)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          //utf8::String("CREATE INDEX ISS_@0001@_06 ON INET_SNIFFER_STAT_@0001@ (dst_port)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
+          //utf8::String("CREATE INDEX ISS_@0001@_07 ON INET_SNIFFER_STAT_@0001@ (ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i]) <<
           utf8::String("CREATE INDEX ISS_@0001@_08 ON INET_SNIFFER_STAT_@0001@ (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto)").replaceAll("@0001@",Sniffer::pgpNames[i])
         ;
         //if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
@@ -349,8 +349,76 @@ Logger & Logger::createDatabase()
         "CREATE INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)" <<
         "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP,ST_FROM,ST_TO)"
       ;
+      utf8::String templ2;
       if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
         metadata << "CREATE DESC INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
+        templ =
+          "CREATE PROCEDURE INET_UPDATE_SNIFFER_STAT_@0001@ (\n"
+          "  ifaceP     CHAR(16) CHARACTER SET ascii,\n"
+          "  ts0P       DATETIME,\n"
+          "  ts1P       DATETIME,\n"
+          "  ts2P       DATETIME,\n"
+          "  ts3P       DATETIME,\n"
+          "  ts4P       DATETIME,\n"
+          "  ts5P       DATETIME,\n"
+          "  ts6P       DATETIME,\n"
+          "  src_ipP    CHAR(16) CHARACTER SET ascii,\n"
+          "  src_portP  INTEGER,\n"
+          "  dst_ipP    CHAR(16) CHARACTER SET ascii,\n"
+          "  dst_portP  INTEGER,\n"
+          "  protoP     SMALLINT,\n"
+          "  dgramP     BIGINT,\n"
+          "  dataP      BIGINT,\n"
+          "  portsP     INTEGER,\n"
+          "  protocolsP INTEGER,\n"
+          "  mtP        INTEGER\n"
+          ")\n"
+          "AS\n"
+          "  DECLARE dgram0    BIGINT;\n"
+          "  DECLARE data0     BIGINT;\n"
+          "  DECLARE cur@0001@ CURSOR FOR (\n"
+          "    SELECT\n"
+          "      dgram,data\n"
+          "    FROM INET_SNIFFER_STAT_@0001@\n"
+          "    WHERE\n"
+          "      iface = :ifaceP AND ts = :ts@0003@P AND\n"
+          "      src_ip = :src_ipP AND src_port = :src_portP AND\n"
+          "      dst_ip = :dst_ipP AND dst_port = :dst_portP AND\n"
+          "      ip_proto = :protoP\n"
+          "    FOR UPDATE\n"
+          "  );\n"
+          "BEGIN\n"
+          "  OPEN cur@0001@;\n"
+          "  FETCH cur@0001@ INTO :dgram0,:data0;\n"
+          "  IF (ROW_COUNT <> 0) THEN\n"
+          "    UPDATE INET_SNIFFER_STAT_@0001@ SET\n"
+          "      dgram = dgram + :dgramP, data = data + :dataP\n"
+          "    WHERE\n"
+          "      iface = :ifaceP AND ts = :ts@0003@P AND\n"
+          "      src_ip = :src_ipP AND src_port = :src_portP AND\n"
+          "      dst_ip = :dst_ipP AND dst_port = :dst_portP AND\n"
+          "      ip_proto = :protoP;\n"
+          "  ELSE\n"
+          "    INSERT INTO INET_SNIFFER_STAT_@0001@\n"
+          "      (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,dgram,data) VALUES\n"
+          "      (:ifaceP,:ts@0003@P,:src_ipP,:src_portP,:dst_ipP,:dst_portP,:protoP,:dgramP,:dataP);\n"
+          "  CLOSE cur@0001@;\n"
+          "  IF (portsP <> 0 AND protocolsP <> 0) THEN\n"
+          "  BEGIN\n"
+          "    EXECUTE PROCEDURE INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,protoP,dgramP,dataP,0,0,6);\n"
+          "    EXECUTE PROCEDURE INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,-1,dgramP,dataP,0,0,6);\n"
+          "  END\n"
+          "  IF (portsP <> 0 OR protocolsP <> 0) THEN\n"
+          "    EXECUTE PROCEDURE INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,-1,dgramP,dataP,0,0,6);\n"
+          "@0002@"
+          "END;\n"
+        ;
+        for( intptr_t i = Sniffer::pgpCount - 2; i >= 0; i-- ){
+          templ2 += utf8::String(
+            "  IF (mtP <= " + utf8::int2Str(i) + ") THEN\n"
+            "    EXECUTE PROCEDURE INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,dgramP,dataP,portsP,protocolsP,6);\n"
+          ).replaceAll("@0001@",Sniffer::pgpNames[i]);
+        }
       }
       else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
         metadata << "CREATE INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
@@ -367,16 +435,16 @@ Logger & Logger::createDatabase()
           "alter table INET_USERS_MONTHLY_TOP_URL partition by hash(month(ST_TIMESTAMP)) partitions " <<
           "alter table INET_USERS_TOP_MAIL partition by hash(month(ST_TIMESTAMP)) partitions "
         ;
-        utf8::String templ(
+        templ =
           "CREATE PROCEDURE INET_UPDATE_SNIFFER_STAT_@0001@ (\n"
           "  IN ifaceP     CHAR(16) CHARACTER SET ascii,\n"
-          "  IN ts0P        DATETIME,\n"
-          "  IN ts1P        DATETIME,\n"
-          "  IN ts2P        DATETIME,\n"
-          "  IN ts3P        DATETIME,\n"
-          "  IN ts4P        DATETIME,\n"
-          "  IN ts5P        DATETIME,\n"
-          "  IN ts6P        DATETIME,\n"
+          "  IN ts0P       DATETIME,\n"
+          "  IN ts1P       DATETIME,\n"
+          "  IN ts2P       DATETIME,\n"
+          "  IN ts3P       DATETIME,\n"
+          "  IN ts4P       DATETIME,\n"
+          "  IN ts5P       DATETIME,\n"
+          "  IN ts6P       DATETIME,\n"
           "  IN src_ipP    CHAR(16) CHARACTER SET ascii,\n"
           "  IN src_portP  INTEGER,\n"
           "  IN dst_ipP    CHAR(16) CHARACTER SET ascii,\n"
@@ -389,9 +457,9 @@ Logger & Logger::createDatabase()
           "  IN mtP        INTEGER\n"
           ")\n"
           "BEGIN\n"
-          "  DECLARE fetched    INTEGER DEFAULT 1;\n"
-          "  DECLARE dgram0     BIGINT;\n"
-          "  DECLARE data0      BIGINT;\n"
+          "  DECLARE fetched   INTEGER DEFAULT 1;\n"
+          "  DECLARE dgram0    BIGINT;\n"
+          "  DECLARE data0     BIGINT;\n"
           "  DECLARE cur@0001@ CURSOR FOR\n"
           "    SELECT\n"
           "      dgram,data\n"
@@ -400,7 +468,8 @@ Logger & Logger::createDatabase()
           "      iface = ifaceP AND ts = ts@0003@P AND\n"
           "      src_ip = src_ipP AND src_port = src_portP AND\n"
           "      dst_ip = dst_ipP AND dst_port = dst_portP AND\n"
-          "      ip_proto = protoP;\n"
+          "      ip_proto = protoP\n"
+          "    FOR UPDATE;\n"
           "  DECLARE CONTINUE HANDLER FOR NOT FOUND SET fetched = 0;\n"
           "\n"
           "  OPEN cur@0001@;\n"
@@ -418,29 +487,29 @@ Logger & Logger::createDatabase()
           "    (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,dgram,data) VALUES\n"
           "    (ifaceP,ts@0003@P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,dgramP,dataP);\n"
           "  END IF;\n"
-          "  CLOSE cur@0001@\n;"
+          "  CLOSE cur@0001@;\n"
           "  IF portsP AND protocolsP THEN\n"
-          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,protoP,dgramP,dataP,0,0,mtP);\n"
-          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,-1,dgramP,dataP,0,0,mtP);\n"
+          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,protoP,dgramP,dataP,0,0,6);\n"
+          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,-1,dgramP,dataP,0,0,6);\n"
           "  END IF;\n"
           "  IF portsP OR protocolsP THEN\n"
-          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,-1,dgramP,dataP,0,0,mtP);\n"
+          "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,0,dst_ipP,0,-1,dgramP,dataP,0,0,6);\n"
           "  END IF;\n"
-          "  @0002@\n"
+          "@0002@"
           "END\n"
-        );
-        utf8::String templ2;
+        ;
         for( intptr_t i = Sniffer::pgpCount - 2; i >= 0; i-- ){
           templ2 += utf8::String(
             "  IF mtP <= " + utf8::int2Str(i) + " THEN\n"
-            "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,dgramP,dataP,portsP,protocolsP,mtP);\n"
+            "    CALL INET_UPDATE_SNIFFER_STAT_@0001@(ifaceP,ts0P,ts1P,ts2P,ts3P,ts4P,ts5P,ts6P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,dgramP,dataP,portsP,protocolsP,6);\n"
             "  END IF;\n"
           ).replaceAll("@0001@",Sniffer::pgpNames[i]);
         }
-        for( intptr_t i = Sniffer::pgpCount - 1; i >= 0; i-- ){
-          metadata << templ.replaceAll("@0001@",Sniffer::pgpNames[i]).replaceAll("@0002@",templ2).replaceAll("@0003@",utf8::int2Str(i));
-          templ2.resize(0);
-        }
+      }
+      uintptr_t pos = metadata.count();
+      for( intptr_t i = Sniffer::pgpCount - 1; i >= 0; i-- ){
+        metadata.insert(pos,templ.replaceAll("@0001@",Sniffer::pgpNames[i]).replaceAll("@0002@",templ2).replaceAll("@0003@",utf8::int2Str(i)));
+        templ2.resize(0);
       }
       database_->create();
       database_->attach();
@@ -459,6 +528,7 @@ Logger & Logger::createDatabase()
         }
         catch( ExceptionSP & e ){
           //if( e->searchCode(isc_keytoobig) ) throw;
+          if( e->searchCode(isc_dsql_error) ) throw;
           if( !e->searchCode(isc_no_meta_update,isc_random,ER_TABLE_EXISTS_ERROR,
                 ER_DUP_KEYNAME,ER_BAD_TABLE_ERROR,ER_DUP_ENTRY_WITH_KEY_NAME) &&
               e->what().strcasestr("already exists").eos() ) throw;
@@ -1202,11 +1272,20 @@ int32_t Logger::doWork(uintptr_t stage)
     else {
       AutoPtr<Statement> stdb2_(database2->newAttachedStatement());
       database2->start();
-      stdb2_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
-        prepare()->paramAsString("if",cgi_.paramAsString("newIfName"))->execute();
+      stdb2_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->prepare();
+      if( all ){
+        statement_->execute("SELECT iface FROM INET_IFACES")->fetchAll();
+        for( intptr_t j = statement_->rowCount() - 1; j >= 0; j-- ){
+          statement_->selectRow(j);
+          stdb2_->paramAsString("if",statement_->valueAsString(0))->execute();
+        }
+      }
+      else {
+        stdb2_->paramAsString("if",cgi_.paramAsString("newIfName"))->execute();
+      }
       for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
         statement_->text(
-          "  SELECT ts,"
+          "  SELECT iface, ts,"
           "    src_ip,dst_ip,ip_proto,"
           "    src_port,dst_port,"
           "    dgram,data"
@@ -1218,14 +1297,15 @@ int32_t Logger::doWork(uintptr_t stage)
           "INSERT INTO INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
           "(iface,ts,src_ip,dst_ip,ip_proto,src_port,dst_port,dgram,data) VALUES "
           "(:if,:ts,:src_ip,:dst_ip,:ip_proto,:src_port,:dst_port,:dgram,:data)"
-        )->prepare()->paramAsString("if",cgi_.paramAsString("newIfName"));
+        )->prepare();
         for( intptr_t j = statement_->rowCount() - 1; j >= 0; j-- ){
           statement_->selectRow(j);
+          stdb2_->paramAsString("if",all ? statement_->valueAsString("iface") : cgi_.paramAsString("newIfName"));
           stdb2_->
             paramAsMutant("ts",statement_->valueAsMutant("ts"))->
-            paramAsMutant("src_ip",statement_->valueAsMutant("src_ip"))->
+            paramAsMutant("src_ip",statement_->valueAsString("src_ip"))->
             paramAsMutant("src_port",statement_->valueAsMutant("src_port"))->
-            paramAsMutant("dst_ip",statement_->valueAsMutant("dst_ip"))->
+            paramAsMutant("dst_ip",statement_->valueAsString("dst_ip"))->
             paramAsMutant("dst_port",statement_->valueAsMutant("dst_port"))->
             paramAsMutant("ip_proto",statement_->valueAsMutant("ip_proto"))->
             paramAsMutant("dgram",statement_->valueAsMutant("dgram"))->
@@ -1432,6 +1512,24 @@ int32_t Logger::doWork(uintptr_t stage)
       "</HTML>\n"
     ;
   }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("chart") >= 0 ){
+    cgi_.contentType("Content-Type: image/png");
+    GDChart chart;
+    intptr_t row = cgi_.paramAsMutant("rc",0);
+    for( --row; row >= 0; row-- ){
+      intptr_t col = cgi_.paramAsMutant("r" + utf8::int2Str(row) + "cc",0);
+      for( --col; col >= 0; col-- ){
+        if( chart.data().count() <= (uintptr_t) row ) chart.data().resize(row + 1);
+        if( chart.data()[row].count() <= (uintptr_t) col ) chart.data()[row].resize(col + 1);
+        chart.data()[row][col] = cgi_.paramAsMutant("r" + utf8::int2Str(row) + "c" + utf8::int2Str(col),0);
+      }
+    }
+    chart.xlvs(cgi_.paramAsMutant("xlvs",0));
+    chart.width(cgi_.paramAsMutant("width",640));
+    chart.height(cgi_.paramAsMutant("height",480));
+    chart.createChart();
+    cgi_.writeBuffer(chart.png(),chart.pngSize());
+  }
   else {
     utf8::String mtMode(config_->textByPath("macroscope.multithreaded_mode","BOTH"));
     if( !cgi_.isCGI() ){
@@ -1590,13 +1688,6 @@ int main(int _argc,char * _argv[])
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
 
-  //"Content-Type: image/png"
-  //GDChart chart;
-  //chart.createChart(1024,768);
-  //AsyncFile s("C:/Korvin/trunk/binaries/1.png");
-  //s.createIfNotExist(true).open().resize(0).writeBuffer(chart.png(),chart.pngSize());
-  //return 0;
-
   bool isDaemon = isDaemonCommandLineOption(), isCGI = false;
   if( isDaemon ) daemonize();
   utf8::String::Stream stream;
@@ -1628,6 +1719,7 @@ int main(int _argc,char * _argv[])
         setEnv("GATEWAY_INTERFACE","CGI/1.1");
         setEnv("REQUEST_METHOD","GET");
         setEnv("QUERY_STRING",argv()[i + 1]);
+        setEnv("CONTENT_TYPE","");
       }
     }
     for( i = 1; i < argv().count(); i++ ){

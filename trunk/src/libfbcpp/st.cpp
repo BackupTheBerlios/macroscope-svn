@@ -211,6 +211,8 @@ utf8::String DSQLStatement::compileSQLParameters()
 {
   params_.params_.drop();
   params_.indexToParam_.clear();
+  if( sqlText_.strncasecmp("CREATE PROCEDURE ",17) == 0 || sqlText_.strncasecmp("ALTER PROCEDURE ",16) == 0 )
+    return sqlText_;
   utf8::String text(sqlText_.unique());
   utf8::String::Iterator i(text);
   while( !i.eos() ){
@@ -228,7 +230,7 @@ utf8::String DSQLStatement::compileSQLParameters()
           p->next_ = param->next_;
           param->next_ = p;
         }
-	p->index_ = params_.indexToParam_.count();
+	      p->index_ = params_.indexToParam_.count();
         params_.indexToParam_.add(p.ptr(NULL));
         text.replace(i,i2,"?");
       }
