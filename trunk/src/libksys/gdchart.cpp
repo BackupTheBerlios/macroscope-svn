@@ -127,7 +127,7 @@ GDChart & GDChart::createChart()
     uintptr_t sz = label.size();
     x = leftBorder_ - sz * fontWidth(font_);
     string(GD::font(font_),x,y,label.c_str(),yLabelColor);
-    if( x < 0 && x < leftBorderDelta ) leftBorderDelta = -x;
+    if( x < 0 && -x < leftBorderDelta ) leftBorderDelta = -x;
   }
   // draw data lines
   for( i = 0; uintptr_t(i) < data_.count(); i++ ){
