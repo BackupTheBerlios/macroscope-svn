@@ -262,6 +262,7 @@ class DSQLStatement : virtual public ksys::Object {
 
     bool attached();
     const bool & prepared() const;
+    utf8::String plan();
     utf8::String sqlText();
     DSQLStatement & sqlText(const utf8::String & sqlText);
     DSQLParams & params();

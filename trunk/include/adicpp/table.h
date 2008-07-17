@@ -179,7 +179,8 @@ inline
 Table<T,RT> & Table<T,RT>::resize(uintptr_t rows, uintptr_t columns)
 {
   assert(rows >= 0 && columns >= 0);
-  if( rows != rows_.count() ) rows_.resize(rows);
+  while( rows > rows_.count() ) addRow();
+  if( rows < rows_.count() ) rows_.resize(rows);
   while( columns < name2Index_.count() ) removeColumn(name2Index_.count() - 1);
   while( columns > name2Index_.count() ) addColumn();
   return *this;
@@ -188,14 +189,14 @@ Table<T,RT> & Table<T,RT>::resize(uintptr_t rows, uintptr_t columns)
 template <typename T,class RT> inline
 Table<T,RT> & Table<T,RT>::addRow()
 {
-  rows_.add(RT().resize(name2Index_.count()));
+  rows_.add().resize(name2Index_.count());
   return *this;
 }
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline
 Table<T,RT> & Table<T,RT>::insertRow(uintptr_t row)
 {
-  rows_.insert(row, RT().resize(name2Index_.count()));
+  rows_.insert(row).resize(name2Index_.count());
   return *this;
 }
 //-----------------------------------------------------------------------------
@@ -279,9 +280,9 @@ inline
 #endif
 Table<T,RT> & Table<T,RT>::removeColumn(uintptr_t column)
 {
-  uintptr_t i;
+  intptr_t i;
   for( i = rows_.count() - 1; i >= 0; i-- ) rows_[i].remove(column);
-  name2Index_.remove(index2Name_[column]);
+  name2Index_.remove(name2Index(index2Name_[column]->name_));
   index2Name_.remove(column);
   return *this;
 }

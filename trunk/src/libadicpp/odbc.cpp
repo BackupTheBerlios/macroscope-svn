@@ -223,6 +223,11 @@ utf8::String ODBCStatement::text()
   return static_cast<odbcpp::DSQLStatement *>(this)->sqlText();
 }
 //---------------------------------------------------------------------------
+utf8::String ODBCStatement::plan()
+{
+  return static_cast<odbcpp::DSQLStatement *>(this)->plan();
+}
+//---------------------------------------------------------------------------
 uintptr_t ODBCStatement::paramCount()
 {
   return static_cast<odbcpp::DSQLStatement *>(this)->params().count();

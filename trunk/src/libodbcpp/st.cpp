@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -226,6 +226,12 @@ DSQLStatement & DSQLStatement::execute()
   newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
 #endif
   return *this;
+}
+//---------------------------------------------------------------------------
+utf8::String DSQLStatement::plan()
+{
+  newObjectV1C2<EClientServer>(ENOSYS, __PRETTY_FUNCTION__)->throwSP();
+  return utf8::String();
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

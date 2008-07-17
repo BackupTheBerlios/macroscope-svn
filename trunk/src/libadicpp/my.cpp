@@ -222,6 +222,11 @@ utf8::String MYSQLStatement::text()
   return static_cast<mycpp::DSQLStatement *>(this)->sqlText();
 }
 //---------------------------------------------------------------------------
+utf8::String MYSQLStatement::plan()
+{
+  return static_cast<mycpp::DSQLStatement *>(this)->plan();
+}
+//---------------------------------------------------------------------------
 uintptr_t MYSQLStatement::paramCount()
 {
   return static_cast<mycpp::DSQLStatement *>(this)->params().count();

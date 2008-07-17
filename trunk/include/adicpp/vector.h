@@ -68,6 +68,7 @@ template <class T> class Vector {
     T &               add(const T & val);
     T &               add(T * val);
     T &               safeAdd(T * val);
+    T &               insert(uintptr_t i);
     T &               insert(uintptr_t i, const T & val);
     T &               insert(uintptr_t i, T * val);
     T &               safeInsert(uintptr_t i, T * val);
@@ -278,7 +279,26 @@ T & Vector<T>::safeAdd(T * val)
 //-----------------------------------------------------------------------------
 template <class T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
+#endif
+T & Vector<T>::insert(uintptr_t i)
+{
+  assert(i <= count_);
+  uintptr_t amax  = max_;
+  while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
+  if( amax != max_ ){
+    xrealloc(ptr_, sizeof(T *) * amax);
+    max_ = amax;
+  }
+  memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
+  ptr_[i] = newObject<T>();
+  count_++;
+  return *ptr_[i];
+}
+//-----------------------------------------------------------------------------
+template <class T>
+#ifndef __BCPLUSPLUS__
+inline
 #endif
 T & Vector<T>::insert(uintptr_t i, const T & val)
 {

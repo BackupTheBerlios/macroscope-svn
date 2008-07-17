@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@ const char * const  API::symbols_[] = {
   "isc_vax_integer",
   "isc_interprete",
   "isc_dsql_execute_immediate",
-  "isc_dsql_allocate_statement",
+  "isc_dsql_alloc_statement2",
   "isc_dsql_free_statement",
   "isc_dsql_describe",
   "isc_dsql_describe_bind",
@@ -64,6 +64,8 @@ const char * const  API::symbols_[] = {
   "isc_dsql_set_cursor_name",
   "isc_dsql_fetch",
   "isc_dsql_sql_info",
+  "isc_database_info",
+  "isc_transaction_info",
   "isc_array_lookup_bounds",
   "isc_blob_lookup_desc",
   "isc_array_put_slice",

@@ -1513,7 +1513,7 @@ int32_t Logger::doWork(uintptr_t stage)
     ;
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("chart") >= 0 ){
-    cgi_.contentType("Content-Type: image/png");
+    if( !cgi_.contentType().isNull() ) cgi_.contentType("Content-Type: image/png");
     GDChart chart;
     intptr_t row = cgi_.paramAsMutant("rc",0);
     for( --row; row >= 0; row-- ){

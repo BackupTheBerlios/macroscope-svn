@@ -1030,6 +1030,7 @@ class DSQLStatement : virtual public ksys::Object {
     bool              allocated();
     const bool & prepared() const;
     utf8::String      sqlText();
+    utf8::String      plan();
     DSQLStatement &   sqlText(const utf8::String & sqlText);
     DSQLParams &      params();
     DSQLValues &      values();
@@ -1043,6 +1044,7 @@ class DSQLStatement : virtual public ksys::Object {
     bool            sqlTextChanged_;
     bool            prepared_;
     bool            executed_;
+    bool            plan_;
     DSQLParams      params_;
     DSQLValues      values_;
     Stmt            stmtType;
@@ -1062,6 +1064,7 @@ class DSQLStatement : virtual public ksys::Object {
     DSQLStatement &   cancelBlob(isc_blob_handle & blobHandle);
     DSQLStatement &   blobLookupDesc(char * tableName, char * columnName, ISC_BLOB_DESC & desc, char * globalColumnName);
     utf8::String      compileSQLParameters();
+    utf8::String      getPreparedSqlText();
 };
 //---------------------------------------------------------------------------
 inline Database * DSQLStatement::database() const

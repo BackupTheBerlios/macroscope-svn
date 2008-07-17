@@ -222,6 +222,11 @@ utf8::String FirebirdStatement::text()
   return static_cast<fbcpp::DSQLStatement *>(this)->sqlText();
 }
 //---------------------------------------------------------------------------
+utf8::String FirebirdStatement::plan()
+{
+  return static_cast<fbcpp::DSQLStatement *>(this)->plan();
+}
+//---------------------------------------------------------------------------
 uintptr_t FirebirdStatement::paramCount()
 {
   return static_cast<fbcpp::DSQLStatement *>(this)->params().count();

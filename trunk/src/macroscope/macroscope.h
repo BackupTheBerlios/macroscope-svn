@@ -419,6 +419,18 @@ class Logger {
 
         static PCAP::PacketGroupingPeriod rl2pgp(intptr_t rl);
 
+        void writeBPFTHtmlReportHelper1(
+          intptr_t i,
+          intptr_t level,
+          struct tm & beginTime,
+          struct tm & endTime,
+          struct tm & btt,
+          struct tm & ett,
+          struct tm & bta,
+          struct tm & eta,
+          uintmax_t & sum1,
+          uintmax_t & sum2
+        );
         void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
 	      bool getBPFTCachedHelper(Statement * & pStatement);
         void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);

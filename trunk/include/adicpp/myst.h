@@ -414,6 +414,7 @@ class DSQLStatement : virtual public ksys::Object {
     bool            allocated();
     bool &          storeResults();
     const bool & prepared() const;
+    utf8::String    plan();
     utf8::String    sqlText();
     DSQLStatement & sqlText(const utf8::String & sqlText);
     DSQLParams &    params();

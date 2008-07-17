@@ -103,9 +103,9 @@ class API {
     {
       return ::isc_dsql_execute_immediate(p1, p2, p3, p4, p5, p6, p7);
     }
-    ISC_STATUS isc_dsql_allocate_statement(ISC_STATUS * p1, isc_db_handle * p2, isc_stmt_handle * p3)
+    ISC_STATUS isc_dsql_alloc_statement2(ISC_STATUS * p1, isc_db_handle * p2, isc_stmt_handle * p3)
     {
-      return ::isc_dsql_allocate_statement(p1, p2, p3);
+      return ::isc_dsql_alloc_statement2(p1, p2, p3);
     }
     ISC_STATUS isc_dsql_free_statement(ISC_STATUS * p1, isc_stmt_handle * p2, unsigned short p3)
     {
@@ -138,6 +138,14 @@ class API {
     ISC_STATUS isc_dsql_sql_info(ISC_STATUS * p1, isc_stmt_handle * p2, short p3, const char * p4, short p5, char * p6)
     {
       return ::isc_dsql_sql_info(p1, p2, p3, p4, p5, p6);
+    }
+    ISC_STATUS isc_database_info(ISC_STATUS * p1, isc_db_handle * p2, short p3, const char * p4, short p5, char * p6)
+    {
+      return ::isc_database_info(p1, p2, p3, p4, p5, p6);
+    }
+    ISC_STATUS isc_transaction_info(ISC_STATUS * p1, isc_tr_handle * p2, short p3, const char * p4, short p5, char * p6)
+    {
+      return ::isc_transaction_info(p1, p2, p3, p4, p5, p6);
     }
     ISC_STATUS isc_array_lookup_bounds(ISC_STATUS * p1, isc_db_handle * p2, isc_tr_handle * p3, char * p4, char * p5, ISC_ARRAY_DESC * p6)
     {
@@ -300,9 +308,9 @@ class API {
                 void * p_isc_dsql_execute_immediate;
             };
             union {
-                ISC_STATUS (ISC_EXPORT * isc_dsql_allocate_statement)(
+                ISC_STATUS (ISC_EXPORT * isc_dsql_alloc_statement2)(
                 ISC_STATUS *, isc_db_handle *, isc_stmt_handle *);
-                void *  p_isc_dsql_allocate_statement;
+                void *  p_isc_dsql_alloc_statement2;
             };
             union {
                 ISC_STATUS (ISC_EXPORT * isc_dsql_free_statement)(
@@ -358,6 +366,24 @@ class API {
                                                             const char *,
                                                             short, char *);
                 void *  p_isc_dsql_sql_info;
+            };
+            union {
+                ISC_STATUS (ISC_EXPORT * isc_database_info)(ISC_STATUS*,
+										isc_db_handle*,
+										short,
+										const ISC_SCHAR*,
+										short,
+										ISC_SCHAR*);
+                void *  p_isc_database_info;
+            };
+            union {
+                ISC_STATUS (ISC_EXPORT * isc_transaction_info)(ISC_STATUS*,
+										   isc_tr_handle*,
+										   short,
+										   const ISC_SCHAR*,
+										   short,
+										   ISC_SCHAR*);
+                void *  p_isc_transaction_info;
             };
             union {
                 ISC_STATUS (ISC_EXPORT * isc_array_lookup_bounds)(

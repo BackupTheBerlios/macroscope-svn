@@ -715,6 +715,39 @@ PCAP::PacketGroupingPeriod Logger::BPFTThread::rl2pgp(intptr_t rl)
   return PCAP::pgpNone;
 }
 //------------------------------------------------------------------------------
+void Logger::BPFTThread::writeBPFTHtmlReportHelper1(
+  intptr_t i,
+  intptr_t level,
+  struct tm & beginTime,
+  struct tm & endTime,
+  struct tm & btt,
+  struct tm & ett,
+  struct tm & bta,
+  struct tm & eta,
+  uintmax_t & sum1,
+  uintmax_t & sum2)
+{
+  Vector<Table<Mutant> > & table = table_;
+  btt = time2tm(tm2Time(beginTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
+  ett = time2tm(tm2Time(endTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
+  Sniffer::setTotalsBounds(rl2pgp(level + 1),btt,ett,bta,eta);
+  if( !stBPFTHostSel_[rl2pgp(level + 1)]->prepared() )
+    stBPFTHostSel_[rl2pgp(level + 1)]->prepare()->paramAsString("if",sectionName_);
+  stBPFTHostSel_[rl2pgp(level + 1)]->
+    paramAsMutant("BTT",bta)->paramAsMutant("ETT",eta)->
+    paramAsMutant("src",table[0](i,"src_ip"))->
+    paramAsMutant("dst",table[0](i,"dst_ip"));
+  if( ports_ ){
+    stBPFTHostSel_[rl2pgp(level + 1)]->
+      paramAsMutant("src_port",table[0](i,"src_port"))->
+      paramAsMutant("dst_port",table[0](i,"dst_port"));
+  }
+  if( protocols_ ){
+    stBPFTHostSel_[rl2pgp(level + 1)]->paramAsMutant("proto",table[0](i,"ip_proto"));
+  }
+  getBPFTCached(stBPFTHostSel_[rl2pgp(level + 1)],NULL,&sum1,&sum2);
+}
+//------------------------------------------------------------------------------
 void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
 {
   struct tm beginTime, beginTime2, endTime, endTime2;
@@ -751,190 +784,108 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     ports_ = logger_->config_->valueByPath(section_ + ".html_report.ports",false);
     if( logger_->cgi_.isCGI() )
       ports_ = logger_->cgi_.paramAsMutant("ports");
-    if( !bidirectional_ ) protocols_ = ports_ = false;
+    //if( !bidirectional_ ) protocols_ = ports_ = false;
     groupingPeriod_ = PCAP::stringToGroupingPeriod(logger_->config_->valueByPath(section_ + ".sniffer.grouping_period","day"));
     totalsPeriod_ = PCAP::stringToGroupingPeriod(logger_->config_->valueByPath(section_ + ".sniffer.totals_period","day"));
-    //totalsPeriod_ = (groupingPeriod_ >= totalsPeriod_ ? PCAP::PacketGroupingPeriod(groupingPeriod_ + 1) : totalsPeriod_);
-    //if( totalsPeriod_ > PCAP::pgpYear )
-    //  newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     database_->start();
-//    clearBPFTCache();
     if( !logger_->cgi_.isCGI() ) Sniffer::getTrafficPeriod(statement_,sectionName_,beginTime,endTime);
-//    stdErr.debug(9,utf8::String::Stream() << __FILE__ << ", " << __LINE__ << "\n").flush();
     if( bidirectional_ ){
-      //utf8::String templ(
-      //  "SELECT"
-      //  "  * "
-      //  "FROM ("
-      //  "  SELECT"
-      //  "    a.st_src_ip, a.st_dst_ip," +
-      //  utf8::String(ports_ ? "a.st_src_port, a.st_dst_port," : "") +
-      //  utf8::String(protocols_ ? " a.st_ip_proto," : "") +
-      //  "    CASE"
-      //  "      WHEN (b.sum1 IS NULL) THEN a.sum1"
-      //  "      ELSE a.sum1 - b.sum1"
-      //  "    END AS SUM1,"
-      //  "    CASE"
-      //  "      WHEN (b.sum2 IS NULL) THEN a.sum2"
-      //  "      ELSE a.sum2 - b.sum2"
-      //  "    END AS SUM2 "
-      //  "  FROM"
-      //  "    (SELECT"
-      //  "        a.st_src_ip," +
-      //  utf8::String(ports_ ? " a.st_src_port," : "") +
-      //  "        a.st_dst_ip," +
-      //  utf8::String(ports_ ? " a.st_dst_port," : "") +
-      //  utf8::String(protocols_ ? " a.st_ip_proto," : "") +
-      //  "        SUM(a.st_dgram_bytes) AS SUM1,"
-      //  "        SUM(a.st_data_bytes)  AS SUM2"
-      //  "    FROM"
-      //  "        INET_BPFT_STAT_TOTALS a"
-      //  "    WHERE"
-      //  "        a.st_if = :if AND"
-      //  "        a.st_start >= :BTT AND a.st_start < :ETT @@0001@@"
-      //  "    GROUP BY"
-      //  "        a.st_src_ip," +
-      //  utf8::String(ports_ ? " a.st_src_port," : "") +
-      //  "        a.st_dst_ip" +
-      //  utf8::String(ports_ ? ", a.st_dst_port" : "") +
-      //  utf8::String(protocols_ ? ", a.st_ip_proto" : "") +
-      //  "    ) AS a"
-      //  "    LEFT JOIN"
-      //  "    (SELECT"
-      //  "        a.st_src_ip," +
-      //  utf8::String(ports_ ? " a.st_src_port," : "") +
-      //  "        a.st_dst_ip," +
-      //  utf8::String(ports_ ? " a.st_dst_port," : "") +
-      //  utf8::String(protocols_ ? " a.st_ip_proto," : "") +
-      //  "        SUM(a.st_dgram_bytes) AS SUM1,"
-      //  "        SUM(a.st_data_bytes)  AS SUM2"
-      //  "    FROM"
-      //  "        INET_BPFT_STAT a"
-      //  "    WHERE"
-      //  "        a.st_if = :if AND"
-      //  "        ((a.st_start >= :BTT AND a.st_start < :BT) OR (a.st_start > :ET AND a.st_start < :ETT)) @@0001@@"
-      //  "    GROUP BY"
-      //  "        a.st_src_ip," +
-      //  utf8::String(ports_ ? " a.st_src_port," : "") +
-      //  "        a.st_dst_ip" +
-      //  utf8::String(ports_ ? ", a.st_dst_port" : "") +
-      //  utf8::String(protocols_ ? " ,a.st_ip_proto" : "") +
-      //  "    ) AS b ON ("
-      //  "        a.st_src_ip = b.st_src_ip AND" +
-      //  utf8::String(ports_ ? " a.st_src_port = b.st_src_port AND" : "") +
-      //  "        a.st_dst_ip = b.st_dst_ip" +
-      //  utf8::String(ports_ ? " AND a.st_dst_port = b.st_dst_port" : "") +
-      //  utf8::String(protocols_ ? " AND a.st_ip_proto = b.st_ip_proto" : "") +
-      //  "    )"
-      //  "  ) AS a "
-      //  "WHERE"
-      //  "  a.sum1 > 0 "
-      //  "ORDER BY"
-      //  "  a.sum1"
-      //);
       utf8::String templ1 =
-        "  SELECT"
-        "    a.src_ip, a.dst_ip," +
-        utf8::String(ports_ ? "a.src_port, a.dst_port," : "") +
-        utf8::String(protocols_ ? " a.ip_proto," : "") +
-        "    a.dgram AS sum1,"
-        "    a.data AS sum2"
-        "  FROM"
-        "      INET_SNIFFER_STAT_@@0002@@ a"
-        "  WHERE"
-        "      a.iface = :if"
-        "      @@0001@@"
-        //"  GROUP BY"
-        //"        a.src_ip," +
-        //utf8::String(ports_ ? " a.src_port," : "") +
-        //"        a.dst_ip" +
-        //utf8::String(ports_ ? ", a.dst_port" : "") +
-        //utf8::String(protocols_ ? " ,a.ip_proto" : "")
+        "  SELECT\n"
+        "    a.src_ip, a.dst_ip,\n" +
+        utf8::String(ports_ ? "a.src_port, a.dst_port,\n" : "") +
+        utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "    a.dgram AS sum1,\n"
+        "    a.data AS sum2\n"
+        "  FROM\n"
+        "      INET_SNIFFER_STAT_@@0002@@ a\n"
+        "  WHERE\n"
+        "      a.iface = :if\n"
+        "      @@0001@@\n"
       ;
       utf8::String templ2(
-        "  AND a.src_ip = :src" +
-        utf8::String(ports_ ? " AND a.src_port = :src_port" : "") +
-        "  AND a.dst_ip = :dst" +
-        utf8::String(ports_ ? " AND a.dst_port = :dst_port" : "") +
-        utf8::String(protocols_ ? " AND a.ip_proto = :proto " : "")
+        "  AND a.src_ip = :src\n" +
+        utf8::String(ports_ ? " AND a.src_port = :src_port\n" : "") +
+        "  AND a.dst_ip = :dst\n" +
+        utf8::String(ports_ ? " AND a.dst_port = :dst_port\n" : "") +
+        utf8::String(protocols_ ? " AND a.ip_proto = :proto \n" : "")
       );
       for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
         if( stBPFTSel_[i] == NULL ) stBPFTSel_[i] = database_->newAttachedStatement();
-        stBPFTSel_[i]->text(templ1.replaceAll("@@0001@@"," AND a.ts >= :BTT AND a.ts < :ETT" +
+        stBPFTSel_[i]->text(templ1.replaceAll("@@0001@@"," AND a.ts >= :BTT AND a.ts < :ETT\n" +
           (filter_.isNull() ? utf8::String() : " AND " + filter_)).replaceAll("@@0002@@",Sniffer::pgpNames[i]) +
-          utf8::String(ports_ ? " AND a.src_port <> 0" : " AND a.src_port = 0") +
-          utf8::String(ports_ ? " AND a.dst_port <> 0" : " AND a.src_port = 0") +
-          utf8::String(protocols_ ? " AND a.ip_proto >= 0" : " AND a.ip_proto < 0")
+          utf8::String(ports_ ? " AND a.src_port <> 0\n" : " AND a.src_port = 0\n") +
+          utf8::String(ports_ ? " AND a.dst_port <> 0\n" : " AND a.src_port = 0\n") +
+          utf8::String(protocols_ ? " AND a.ip_proto >= 0\n" : " AND a.ip_proto < 0\n")
         );
 
         if( stBPFTHostSel_[i] == NULL ) stBPFTHostSel_[i] = database_->newAttachedStatement();
         stBPFTHostSel_[i]->text(templ1.replaceAll("@@0001@@",
-          " AND a.ts >= :BTT AND a.ts < :ETT" + templ2).replaceAll("@@0002@@",Sniffer::pgpNames[i])
+          " AND a.ts >= :BTT AND a.ts < :ETT\n" + templ2).replaceAll("@@0002@@",Sniffer::pgpNames[i])
         );
       }
     }
-    //else {
-    //  stBPFTSel_->text(
-    //    "SELECT"
-    //    "  *"
-    //    "FROM ("
-    //    "  SELECT"
-    //    "    B.st_ip AS st_src_ip, B.st_ip AS st_dst_ip, SUM(B.SUM1) AS SUM1, SUM(B.SUM2) AS SUM2"
-    //    "  FROM ("
-    //    "      SELECT"
-    //    "        st_dst_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-    //    "      FROM"
-    //    "        INET_BPFT_STAT"
-    //    "      WHERE "
-    //    "        st_if = :if AND"
-    //    "        st_start >= :BT AND st_start <= :ET "
-    //    "      GROUP BY st_dst_ip"
-    //    "    UNION ALL"
-    //    "      SELECT"
-    //    "        st_src_ip AS st_ip, SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2"
-    //    "      FROM"
-    //    "        INET_BPFT_STAT"
-    //    "      WHERE "
-    //    "        st_if = :if AND"
-    //    "        st_start >= :BT AND st_start <= :ET "
-    //    "      GROUP BY st_src_ip"
-    //    "  ) AS B "
-    //    "  GROUP BY B.st_ip"
-    //    ") AS A " +
-    //    (filter_.isNull() ? utf8::String() : "WHERE "  + filter_) +
-    //    "ORDER BY SUM1"
-    //  );
-    //  stBPFTHostSel_->text(// переписать через вложеный 
-    //    "SELECT"
-    //    "  SUM(A.SUM1) AS SUM1, SUM(A.SUM2) AS SUM2 "
-    //    "FROM ("
-    //    "      SELECT"
-    //    "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
-    //    "      FROM"
-    //    "        INET_BPFT_STAT"
-    //    "      WHERE "
-    //    "        st_if = :if AND"
-    //    "        st_start >= :BT AND st_start <= :ET AND"
-    //    "        st_dst_ip = :dst"
-    //    "      GROUP BY st_dst_ip"
-    //    "    UNION ALL"
-    //    "      SELECT"
-    //    "        SUM(st_dgram_bytes) AS SUM1, SUM(st_data_bytes) AS SUM2, 0 AS COLIDX"
-    //    "      FROM"
-    //    "        INET_BPFT_STAT"
-    //    "      WHERE "
-    //    "        st_if = :if AND"
-    //    "        st_start >= :BT AND st_start <= :ET AND"
-    //    "        st_src_ip = :src"
-    //    "      GROUP BY st_src_ip"
-    //    "  ) AS A "
-    //    "GROUP BY A.COLIDX"
-    //  );
-    //}
-    //stBPFTSel_->prepare()->paramAsString("if",sectionName_);
-    //stBPFTSel2_->prepare()->paramAsString("if",sectionName_);
-    //stBPFTHostSel_->prepare()->paramAsString("if",sectionName_);
-    //stBPFTHostSel2_->prepare()->paramAsString("if",sectionName_);
+    else {
+      utf8::String templ1 =
+        "SELECT\n"
+        "  a.src_ip, a.dst_ip,\n" +
+        utf8::String(ports_ ? "a.src_port, a.dst_port,\n" : "") +
+        utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "  sum(a.dgram) AS sum1,\n"
+        "  sum(a.data) AS sum2\n"
+        "FROM (\n"
+        "  SELECT\n"
+        "    a.src_ip AS src_ip, a.src_ip AS dst_ip,\n" +
+        utf8::String(ports_ ? "a.src_port AS src_port, a.src_port AS dst_port,\n" : "") +
+        utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "    a.dgram,\n"
+        "    a.data\n"
+        "  FROM\n"
+        "      INET_SNIFFER_STAT_@@0002@@ a\n"
+        "  WHERE\n"
+        "      a.iface = :if\n"
+        "      @@0001@@\n"
+        "  UNION ALL\n"
+        "  SELECT\n"
+        "    a.dst_ip AS src_ip, a.dst_ip AS dst_ip,\n" +
+        utf8::String(ports_ ? "a.dst_port AS src_port, a.dst_port AS dst_port,\n" : "") +
+        utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "    a.dgram,\n"
+        "    a.data\n"
+        "  FROM\n"
+        "      INET_SNIFFER_STAT_@@0002@@ a\n"
+        "  WHERE\n"
+        "      a.iface = :if\n"
+        "      @@0001@@\n"
+        ") a\n"
+        "GROUP BY\n"
+        "  a.src_ip, a.dst_ip\n" +
+        utf8::String(ports_ ? ", a.src_port, a.dst_port\n" : "") +
+        utf8::String(protocols_ ? ", a.ip_proto\n" : "")
+      ;
+      utf8::String templ2(
+        "  AND a.src_ip = :src\n" +
+        utf8::String(ports_ ? " AND a.src_port = :src_port\n" : "") +
+        "  AND a.dst_ip = :dst\n" +
+        utf8::String(ports_ ? " AND a.dst_port = :dst_port\n" : "") +
+        utf8::String(protocols_ ? " AND a.ip_proto = :proto\n" : "")
+      );
+      for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+        if( stBPFTSel_[i] == NULL ) stBPFTSel_[i] = database_->newAttachedStatement();
+        stBPFTSel_[i]->text(templ1.replaceAll("@@0001@@"," AND a.ts >= :BTT AND a.ts < :ETT\n" +
+          (filter_.isNull() ? utf8::String() : " AND " + filter_) +
+          utf8::String(ports_ ? " AND a.src_port <> 0\n" : " AND a.src_port = 0\n") +
+          utf8::String(ports_ ? " AND a.dst_port <> 0\n" : " AND a.src_port = 0\n") +
+          utf8::String(protocols_ ? " AND a.ip_proto >= 0\n" : " AND a.ip_proto < 0\n")
+          ).replaceAll("@@0002@@",Sniffer::pgpNames[i])
+        );
+
+        if( stBPFTHostSel_[i] == NULL ) stBPFTHostSel_[i] = database_->newAttachedStatement();
+        stBPFTHostSel_[i]->text(templ1.replaceAll("@@0001@@",
+          " AND a.ts >= :BTT AND a.ts < :ETT\n" + templ2).replaceAll("@@0002@@",Sniffer::pgpNames[i])
+        );
+      }
+    }
     htmlDir_ = excludeTrailingPathDelimiter(logger_->config_->valueByPath(section_ + ".html_report.directory"));
     if( logger_->cgi_.isCGI() ){
       memset(&cgiBT_,0,sizeof(cgiBT_));
@@ -1170,8 +1121,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         default    :
           assert( 0 );
       }
+      Array<uintmax_t> sums;
+      sums.resize(table.count());
       getBPFTCached(stBPFTSel_[rl2pgp(level)],&table[0]);
-      if( (uintmax_t) table[0].sum("SUM1") > 0 ){
+      if( (sums[0] = table[0].sum("SUM1")) > 0 ){
         if( logger_->verbose_ ) fprintf(stderr,"%s %s\n",
           (const char *) utf8::tm2Str(beginTime).getOEMString(),
           (const char *) utf8::tm2Str(endTime).getOEMString()
@@ -1206,7 +1159,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           stBPFTSel_[rl2pgp(level + 1)]->
             paramAsMutant("BTT",bta)->paramAsMutant("ETT",eta);
           getBPFTCached(stBPFTSel_[rl2pgp(level + 1)],&table[*pi + av]);
-          colCount += (uintmax_t) table[*pi + av].sum("SUM1") > 0;
+          if( (sums[*pi + av] = table[*pi + av].sum("SUM1")) > 0 ) colCount++;
           (*pi)--;
         }
         switch( level ){
@@ -1312,7 +1265,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "  </TH>\n"
         ;
         while( *pi >= sv ){
-          if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
+          if( sums[*pi + av] > 0 )
             f <<
               "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
               "    " + utf8::int2Str(*pi + (level == rlYear)) + "\n"
@@ -1353,13 +1306,15 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               " <B>--></B> " + genHRef(ip42,ip42Port) :
               utf8::String()
             ) +
-            (ipProto >= 0 ? " " + ksock::SockAddr::protoAsString(ipProto) : "") +
+            (ipProto >= 0 ? " " + ksock::SockAddr::protoAsString(ipProto) : "")
+          );
+          utf8::String row2(
             "  </TH>\n"
             "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.data",section_) + "\" nowrap>\n" +
-            formatTraf(table[0](i,"SUM2"),table[0].sum("SUM1")) + "\n"
+            formatTraf(table[0](i,"SUM2"),sums[0]) + "\n"
             "  </TH>\n"
             "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.dgram",section_) + "\" nowrap>\n" +
-            formatTraf(table[0](i,"SUM1"),table[0].sum("SUM1")) + "\n"
+            formatTraf(table[0](i,"SUM1"),sums[0]) + "\n"
             "  </TH>\n"
           );
           while( *pi >= sv ){
@@ -1383,39 +1338,44 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               default    :
                 assert( 0 );
             }
-            if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 ){
-              btt = time2tm(tm2Time(beginTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
-              ett = time2tm(tm2Time(endTime) - (level + 1 >= rlHour ? getgmtoffset() : 0));
-              Sniffer::setTotalsBounds(rl2pgp(level + 1),btt,ett,bta,eta);
-              if( !stBPFTHostSel_[rl2pgp(level + 1)]->prepared() )
-                stBPFTHostSel_[rl2pgp(level + 1)]->prepare()->paramAsString("if",sectionName_);
-              stBPFTHostSel_[rl2pgp(level + 1)]->
-                paramAsMutant("BTT",bta)->paramAsMutant("ETT",eta)->
-                paramAsMutant("src",table[0](i,"src_ip"))->
-                paramAsMutant("dst",table[0](i,"dst_ip"));
-              if( ports_ ){
-                stBPFTHostSel_[rl2pgp(level + 1)]->
-                  paramAsMutant("src_port",table[0](i,"src_port"))->
-                  paramAsMutant("dst_port",table[0](i,"dst_port"));
-              }
-              if( protocols_ ){
-                stBPFTHostSel_[rl2pgp(level + 1)]->paramAsMutant("proto",ipProto);
-              }
+            if( sums[*pi + av] > 0 ){
               uintmax_t sum1, sum2;
-              getBPFTCached(stBPFTHostSel_[rl2pgp(level + 1)],NULL,&sum1,&sum2);
-              row +=
+              writeBPFTHtmlReportHelper1(i,level,beginTime,endTime,btt,ett,bta,eta,sum1,sum2);
+              row2 +=
                 "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.data",section_) + "\" nowrap>\n" +
-                formatTraf(sum2,table[*pi + av].sum("SUM1")) + "\n"
+                formatTraf(sum2,sums[*pi + av]) + "\n"
                 "  </TH>\n"
                 "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.dgram",section_) + "\" nowrap>\n" +
-                formatTraf(sum1,table[*pi + av].sum("SUM1")) + "\n"
+                formatTraf(sum1,sums[*pi + av]) + "\n"
                 "  </TH>\n"
               ;
+              if( uintptr_t(i) >= table[*pi + av].rowCount() )
+                table[*pi + av].resize(i + 1,table[*pi + av].columnCount());
+              table[*pi + av](i,"SUM1") = sum1;
+              table[*pi + av](i,"SUM2") = sum2;
 	          }
 	          (*pi)--;
           }
-	        row += "</TR>\n";
-          f << row;
+          if( logger_->cgi_.isCGI() ){
+            utf8::String src(/*"http://" + getEnv("HTTP_HOST") + */getEnv("SCRIPT_NAME") + "?chart=&width=1024&height=768"), v;
+            v += "&rc=2";
+            v += "&r0cc=" + utf8::int2Str(table.count() - 1);
+            v += "&r1cc=" + utf8::int2Str(table.count() - 1);
+            for( uintptr_t j = 1; j < table.count(); j++ ){
+              if( sums[j] > 0 ){
+                uintmax_t s1 = table[j](i,"SUM1");
+                if( s1 > 0 ){
+                  uintmax_t s2 = table[j](i,"SUM2");
+                  v += "&r0c" + utf8::int2Str(j - 1) + "=" + utf8::int2Str(s1);
+                  v += "&r1c" + utf8::int2Str(j - 1) + "=" + utf8::int2Str(s2);
+                }
+              }
+            }
+            if( level < rlDay ) v += "&xlvs=1";
+            //f << "<IMG SRC=\"" + src + v + "\" WIDTH=\"1024\" HEIGHT=\"768\" BORDER=\"0\">\n<BR>\n";
+            row += "<A HREF=\"" + src + v + "\"><BIG><B> -C- </B></BIG></A>";
+          }
+          f << row + row2 + "</TR>\n";
           switch( level ){
             case rlYear :
               endTime.tm_mon = 11;
@@ -1443,20 +1403,20 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "    Summary:\n"
           "  </TH>\n"
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.data",section_) + "\" nowrap>\n" +
-          formatTraf(table[0].sum("SUM2"),table[0].sum("SUM1")) + "\n"
+          formatTraf(table[0].sum("SUM2"),sums[0]) + "\n"
           "  </TH>\n"
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.dgram",section_) + "\" nowrap>\n" +
-          formatTraf(table[0].sum("SUM1"),table[0].sum("SUM1")) + "\n"
+          formatTraf(sums[0],sums[0]) + "\n"
           "  </TH>\n"
         ;
         while( *pi >= sv ){
-          if( (uintmax_t) table[*pi + av].sum("SUM1") > 0 )
+          if( sums[*pi + av] > 0 )
             f <<
               "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.data",section_) + "\" nowrap>\n" +
-              formatTraf(table[*pi + av].sum("SUM2"),table[0].sum("SUM1")) + "\n"
+              formatTraf(table[*pi + av].sum("SUM2"),sums[0]) + "\n"
               "  </TH>\n"
               "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.dgram",section_) + "\" nowrap>\n" +
-              formatTraf(table[*pi + av].sum("SUM1"),table[0].sum("SUM1")) + "\n"
+              formatTraf(sums[*pi + av],sums[0]) + "\n"
               "  </TH>\n"
             ;
           (*pi)--;
@@ -1471,11 +1431,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           v += "&r0cc=" + utf8::int2Str(table.count() - 1);
           v += "&r1cc=" + utf8::int2Str(table.count() - 1);
           for( uintptr_t i = 1; i < table.count(); i++ ){
-            uintmax_t s1 = table[i].sum("SUM1"), s2 = table[i].sum("SUM2");
-            if( s1 != 0 ) v += "&r0c" + utf8::int2Str(i) + "=" + utf8::int2Str(s1);
-            if( s2 != 0 ) v += "&r1c" + utf8::int2Str(i) + "=" + utf8::int2Str(s2);
+            uintmax_t s1 = sums[i];
+            if( s1 != 0 ){
+              uintmax_t s2 = table[i].sum("SUM2");
+              v += "&r0c" + utf8::int2Str(i - 1) + "=" + utf8::int2Str(s1);
+              v += "&r1c" + utf8::int2Str(i - 1) + "=" + utf8::int2Str(s2);
+            }
           }
-          if( level <= rlDay ) v += "&xlvs=1";
+          if( level < rlDay ) v += "&xlvs=1";
           //f << "<IMG SRC=\"" + src + v + "\" WIDTH=\"1024\" HEIGHT=\"768\" BORDER=\"0\">\n<BR>\n";
           f << "<A HREF=\"" + src + v + "\">Show me chart</A>\n<BR>\n<BR>\n";
         }

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -135,6 +135,7 @@ DSQLStatement::DSQLStatement()
     sqlTextChanged_(false),
     prepared_(false),
     executed_(false),
+    plan_(true),
     stmtType(stmtUnknown)
 {
   params_.statement_ = this;
@@ -185,7 +186,7 @@ DSQLStatement & DSQLStatement::allocate()
     newObjectV1C2<EDSQLStNotAttached>((ISC_STATUS *) NULL,__PRETTY_FUNCTION__)->throwSP();
   if( !allocated() ){
     ISC_STATUS_ARRAY  status;
-    if( api.isc_dsql_allocate_statement(status, &database_->handle_, &handle_) != 0 )
+    if( api.isc_dsql_alloc_statement2(status, &database_->handle_, &handle_) != 0 )
       database_->exceptionHandler(newObjectV1C2<EDSQLStAllocate>(status,__PRETTY_FUNCTION__));
   }
   return *this;
@@ -205,6 +206,22 @@ DSQLStatement & DSQLStatement::describeBind(XSQLDAHolder & sqlda)
   if( api.isc_dsql_describe_bind(status, &handle_, (short) database_->dpb_.dialect(), sqlda.sqlda()) != 0 )
     database_->exceptionHandler(newObjectV1C2<EDSQLStDescribeBind>(status, __PRETTY_FUNCTION__));
   return *this;
+}
+//---------------------------------------------------------------------------
+utf8::String DSQLStatement::getPreparedSqlText()
+{
+  utf8::String text(sqlText_.unique());
+  utf8::String::Iterator i(text);
+  while( !i.eos() ){
+    uintptr_t c = i.getChar();
+    if( c == ':' ){
+      utf8::String::Iterator i2(i);
+      while( i2.next() && ((c = i2.getChar()) == '_' || (utf8::getC1Type(c) & (C1_ALPHA | C1_DIGIT)) != 0) );
+      if( i2 - i > 1 && !(i + 1).isDigit() ) text.replace(i,i2,"?");
+    }
+    i.next();
+  }
+  return text;
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLStatement::compileSQLParameters()
@@ -299,6 +316,13 @@ DSQLStatement & DSQLStatement::execute()
     values_.clear();
     if( transaction_->startCount_ == 1 && values_.sqlda_.count() > 0 )
       values_.fetchAll();
+    if( plan_ && ksys::stdErr.debugLevel(160) )
+      ksys::stdErr.debug(160,utf8::String::Stream() <<
+        "Plan for statement:\n" <<
+        sqlText_ << "\n" <<
+        "Plan:\n" <<
+        plan() << "\n"
+      );
   }
   catch( ksys::ExceptionSP & e ){
     transaction_->rollbackRetaining();
@@ -426,6 +450,159 @@ DSQLStatement & DSQLStatement::free()
     prepared_ = false;
   }
   return *this;
+}
+//---------------------------------------------------------------------------
+static char * findToken(char * mBuffer,char token)
+{
+  char * p = mBuffer;
+  while( *p != isc_info_end ){
+    int len;
+    if( *p == token ) return p;
+    len = api.isc_vax_integer(p + 1,2);
+    p += (len + 3);
+  }
+  return 0;
+}
+//---------------------------------------------------------------------------
+static char * findToken(char * mBuffer,char token,char subToken)
+{
+  if( subToken == -1 ) return findToken(mBuffer,token);
+
+  char * p = mBuffer;
+	while( *p != isc_info_end ){
+		int len;
+		if( *p == token ){
+			// Found token, now find subtoken
+			int inlen = api.isc_vax_integer(p + 1,2);
+			p = p + 3;
+			while( inlen > 0 ){
+				if( *p == subToken ) return p;
+				len = api.isc_vax_integer(p + 1,2);
+				p = p + len + 3;
+				inlen = inlen - len - 3;
+			}
+			return NULL;
+		}
+		len = api.isc_vax_integer(p + 1,2);
+		p = p + len + 3;
+	}
+	return NULL;
+}
+//---------------------------------------------------------------------------
+static utf8::String getTokenString(char * mBuffer,char token,char subToken = -1)
+{
+  int len;
+  char * p = findToken(mBuffer,token,subToken);
+  if( p != NULL ){
+    len = api.isc_vax_integer(p + 1,2);
+    if( p[3] == '\n' ){
+      p += 4;
+      len--;
+    }
+    else {
+      p += 3;
+    }
+    return utf8::plane(p,len);
+  }
+  return utf8::String();
+}
+//---------------------------------------------------------------------------
+static int getTokenValue(char * mBuffer,char token,char subToken = -1)
+{
+  int value = 0, len;
+  char * p = findToken(mBuffer,token,subToken);
+  if( p != NULL ){
+    len = api.isc_vax_integer(p + 1,2);
+    while( len > 0 ){
+  		value += api.isc_vax_integer(p + 2,4);
+	  	p += 6;
+		  len -= 6;
+    }
+  }
+  return value;
+}
+//---------------------------------------------------------------------------
+utf8::String DSQLStatement::plan()
+{
+  utf8::String info;
+  if( plan_ ){
+    utf8::String infoBuffer;
+    infoBuffer.resize(32767);
+    static char stmtInfo[] = { isc_info_sql_get_plan/*, isc_info_sql_records*/ };
+    ISC_STATUS_ARRAY status;
+    if( api.isc_dsql_sql_info(status, &handle_, sizeof(stmtInfo), stmtInfo, 32767, infoBuffer.c_str()) != 0 )
+      database_->exceptionHandler(newObjectV1C2<EDSQLStInfo>(status, __PRETTY_FUNCTION__));
+    info = getTokenString(infoBuffer.c_str(),isc_info_sql_get_plan);
+    //static char stmtInfo2[] = { isc_info_sql_records };
+    //if( !info.isNull() ) info += "\n";
+    //info += "Statement info:\n";
+    //info += "inserted: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_sql_records,isc_info_req_insert_count));
+    //info += ", updated: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_sql_records,isc_info_req_update_count));
+    //info += ", deleted: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_sql_records,isc_info_req_delete_count));
+    //info += ", selected: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_sql_records,isc_info_req_select_count));
+    
+    DSQLStatement st;
+    st.plan_ = false;
+    st.attach(*database_,*transaction_);
+    st.sqlText(
+      "SELECT\n"
+      " io.MON$PAGE_READS,\n"
+      " io.MON$PAGE_WRITES,\n"
+      " io.MON$PAGE_FETCHES,\n"
+      " io.MON$PAGE_MARKS,\n"
+      " st.MON$SQL_TEXT\n"
+      "FROM\n"
+      " MON$TRANSACTIONS tr\n"
+      " LEFT JOIN MON$STATEMENTS st\n"
+      "   ON st.MON$TRANSACTION_ID = tr.MON$TRANSACTION_ID\n"
+      " LEFT JOIN MON$IO_STATS io\n"
+      "   ON io.MON$STAT_ID = st.MON$STAT_ID\n"
+      "WHERE tr.MON$TRANSACTION_ID = CURRENT_TRANSACTION\n"
+    ).execute().values_.fetchAll();
+    utf8::String text(getPreparedSqlText());
+    for( intptr_t i = st.values_.rowCount() - 1; i >= 0; i-- ){
+      st.values_.selectRow(i);
+      if( st.valueAsString("MON$SQL_TEXT").strcmp(text) == 0 ){
+        if( !info.isNull() ) info += "\n";
+        info += "page reads: " + st.valueAsString("MON$PAGE_READS");
+        info += ", page writes: " + st.valueAsString("MON$PAGE_WRITES");
+        info += ", page fetches: " + st.valueAsString("MON$PAGE_FETCHES");
+        info += ", page marks: " + st.valueAsString("MON$PAGE_MARKS");
+        break;
+      }
+    }
+    //static char trId[] = { isc_info_tra_id };
+    //if( api.isc_transaction_info(status, &transaction_->handle_, sizeof(trId), trId, 32767, infoBuffer.c_str()) != 0 )
+    //  database_->exceptionHandler(newObjectV1C2<EDSQLStInfo>(status, __PRETTY_FUNCTION__));
+    //int tid = getTokenValue(infoBuffer.c_str(),isc_info_tra_id);
+
+    //static char items[] = {
+    //  isc_info_read_seq_count,
+    //  isc_info_read_idx_count,
+    //  isc_info_insert_count,
+    //  isc_info_update_count,
+    //  isc_info_delete_count,
+    //  isc_info_fetches,
+		  //isc_info_marks,
+		  //isc_info_reads,
+		  //isc_info_writes,
+		  //isc_info_end
+    //};
+    //if( api.isc_database_info(status, &database_->handle_, sizeof(items), items, 32767, infoBuffer.c_str()) != 0 )
+    //  database_->exceptionHandler(newObjectV1C2<EDSQLStInfo>(status, __PRETTY_FUNCTION__));
+    //if( !info.isNull() ) info += "\n";
+    //info += "Database info:\n";
+    //info += "read_seq: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_read_seq_count));
+    //info += ", read_idx: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_read_idx_count));
+    //info += ", inserted: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_insert_count));
+    //info += ", updated: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_update_count));
+    //info += ", deleted: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_delete_count));
+    //info += ", fetches: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_fetches));
+    //info += ", marks: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_marks));
+    //info += ", reads: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_reads));
+    //info += ", writes: " + utf8::int2Str(getTokenValue(infoBuffer.c_str(),isc_info_writes));
+  }
+  return info;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,6 +64,7 @@ class Statement : virtual public ksys::Object {
     virtual Statement *                 execute(const utf8::String & sqlTextImm) = 0;
     virtual Statement *                 text(const utf8::String & sqlText) = 0;
     virtual utf8::String                text() = 0;
+    virtual utf8::String                plan() = 0;
 
     // query parameters methods
     virtual uintptr_t                   paramCount() = 0;
@@ -230,6 +231,7 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
     FirebirdStatement * execute(const utf8::String & sqlTextImm);
     FirebirdStatement * text(const utf8::String & sqlText);
     utf8::String        text();
+    utf8::String        plan();
 
     // query parameters methods
     uintptr_t           paramCount();
@@ -292,6 +294,7 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
     MYSQLStatement *  execute(const utf8::String & sqlTextImm);
     MYSQLStatement *  text(const utf8::String & sqlText);
     utf8::String      text();
+    utf8::String      plan();
 
     // query parameters methods
     uintptr_t         paramCount();
@@ -353,7 +356,8 @@ class ODBCStatement : public Statement, public odbcpp::DSQLStatement {
     ODBCStatement *  execute();
     ODBCStatement *  execute(const utf8::String & sqlTextImm);
     ODBCStatement *  text(const utf8::String & sqlText);
-    utf8::String      text();
+    utf8::String     text();
+    utf8::String     plan();
 
     // query parameters methods
     uintptr_t         paramCount();
