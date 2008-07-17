@@ -1427,7 +1427,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         ;
         if( logger_->cgi_.isCGI() ){
           utf8::String src(/*"http://" + getEnv("HTTP_HOST") + */getEnv("SCRIPT_NAME") + "?chart=&width=1024&height=768"), v;
-          v += "&rc=2";
+          v = "&rc=2";
           v += "&r0cc=" + utf8::int2Str(table.count() - 1);
           v += "&r1cc=" + utf8::int2Str(table.count() - 1);
           for( uintptr_t i = 1; i < table.count(); i++ ){
@@ -1440,7 +1440,21 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           }
           if( level < rlDay ) v += "&xlvs=1";
           //f << "<IMG SRC=\"" + src + v + "\" WIDTH=\"1024\" HEIGHT=\"768\" BORDER=\"0\">\n<BR>\n";
-          f << "<A HREF=\"" + src + v + "\">Show me chart</A>\n<BR>\n<BR>\n";
+          f << "<A HREF=\"" + src + v + "\">Summary chart</A>\n<BR>\n<BR>\n";
+
+          v = "&rc=" + utf8::int2Str(table[0].rowCount());
+          for( uintptr_t j = 0; j < table[0].rowCount(); j++ ){
+            v += "&r" + utf8::int2Str(j) + "cc=" + utf8::int2Str(table.count() - 1);
+            for( uintptr_t i = 1; i < table.count(); i++ ){
+              if( sums[i] > 0 ){
+                uintmax_t s1 = table[i](j,"SUM1");
+                if( s1 != 0 )
+                  v += "&r" + utf8::int2Str(j) + "c" + utf8::int2Str(i - 1) + "=" + utf8::int2Str(s1);
+              }
+            }
+          }
+          if( level < rlDay ) v += "&xlvs=1";
+          f << "<A HREF=\"" + src + v + "\">Detailed chart</A>\n<BR>\n<BR>\n";
         }
       }
     }
