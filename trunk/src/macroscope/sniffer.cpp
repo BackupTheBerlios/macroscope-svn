@@ -317,7 +317,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
   uintptr_t count = pCount;
   try {
     if( !database_->attached() ){
-      database_->attach();
+      database_->attach()->isolation("SERIALIZABLE");
       if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
         if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
         statement_->execute("set max_sp_recursion_depth = 3");

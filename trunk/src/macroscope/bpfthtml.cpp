@@ -787,7 +787,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     //if( !bidirectional_ ) protocols_ = ports_ = false;
     groupingPeriod_ = PCAP::stringToGroupingPeriod(logger_->config_->valueByPath(section_ + ".sniffer.grouping_period","day"));
     totalsPeriod_ = PCAP::stringToGroupingPeriod(logger_->config_->valueByPath(section_ + ".sniffer.totals_period","day"));
-    database_->start();
+    database_->isolation("SERIALIZABLE")->start();
     if( !logger_->cgi_.isCGI() ) Sniffer::getTrafficPeriod(statement_,sectionName_,beginTime,endTime);
     if( bidirectional_ ){
       utf8::String templ1 =
