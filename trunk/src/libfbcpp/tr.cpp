@@ -234,17 +234,17 @@ Transaction & Transaction::start()
       if( tpb->tpbLen_ == 0 ){
         if( isolation_.strcasecmp("REPEATABLE") == 0 ){
           tpb->add("version3");
-          tpb->add("concurrency");
+          tpb->add("consistency");
           //tpb->add("read");
           tpb->add("write");
           tpb->add("nowait");
         }
         else if( isolation_.strcasecmp("SERIALIZABLE") == 0 ){
           tpb->add("version3");
-          tpb->add("consistency");
+          tpb->add("concurrency");
           //tpb->add("read");
           tpb->add("write");
-          tpb->add("wait");
+          tpb->add("nowait");
         }
         else if( isolation_.strcasecmp("READ_COMMITTED") == 0 ){
 l1:       tpb->add("version3");

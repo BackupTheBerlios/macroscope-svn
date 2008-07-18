@@ -61,6 +61,9 @@ class Sniffer : public PCAP {
 
     PacketGroupingPeriod totalsPeriod_;
     uintptr_t packetsInTransaction_;
+    uintmax_t updates_;
+    uint64_t updatesTime_;
+    uint64_t lastSweep_;
 
     enum { stSel, stIns, stUpd };
 

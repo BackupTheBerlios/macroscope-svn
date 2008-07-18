@@ -36,7 +36,13 @@ Sniffer::~Sniffer()
 {
 }
 //------------------------------------------------------------------------------
-Sniffer::Sniffer(Database * database) : database_(database), totalsPeriod_(pgpDay), packetsInTransaction_(0)
+Sniffer::Sniffer(Database * database) :
+  database_(database),
+  totalsPeriod_(pgpDay),
+  packetsInTransaction_(0),
+  updates_(0),
+  updatesTime_(0),
+  lastSweep_(0)
 {
 }
 //------------------------------------------------------------------------------
@@ -313,7 +319,7 @@ void Sniffer::recalcTotals()
 //------------------------------------------------------------------------------
 bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t & pCount,Thread * caller) throw()
 {
-  bool r = true;
+  bool r = false;
   uintptr_t count = pCount;
   try {
     if( !database_->attached() ){
@@ -323,7 +329,10 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         statement_->execute("set max_sp_recursion_depth = 3");
         statement_ = NULL;
       }
+      updates_ = 0;
+      updatesTime_ = 0;
     }
+    uint64_t ellapsed = gettimeofday();
     database_->start();
     if( ifaces_ == NULL ) ifaces_ = database_->newAttachedStatement();
     if( !ifaces_->prepared() )
@@ -332,7 +341,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
       ifaces_->execute();
     }
     catch( ExceptionSP & e ){
-      if( !e->searchCode(isc_unique_key_violation,isc_primary_key_exists,ER_DUP_ENTRY) ) throw;
+      if( !e->searchCode(isc_no_dup,isc_unique_key_violation,isc_primary_key_exists,ER_DUP_ENTRY) ) throw;
     }
     while( !caller->terminated() && !terminated_ && count > 0 && (packetsInTransaction_ == 0 || pCount - count < packetsInTransaction_) ){
       const HashedPacket & packet = packets[count - 1];
@@ -387,16 +396,79 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     if( caller->terminated() || terminated_ ){
       database_->rollback();
       r = false;
+      count = pCount;
     }
     else {
       database_->commit();
       r = true;
+      ellapsed = gettimeofday() - ellapsed;
+      updatesTime_ += ellapsed;
+      updates_ += pCount - count;
+      uintmax_t a = updates_ > 0 ? updatesTime_ / updates_ : 0;
+      if( stdErr.debugLevel(77) )
+        stdErr.debug(77,utf8::String::Stream() <<
+          "Interface: " << ifName() << ", average database update time per record " << utf8::elapsedTime2Str(a) << "\n"
+        );
+      if( ((a >= 1000000 && gettimeofday() - lastSweep_ > uint64_t(3600) * 1000000) ||
+           gettimeofday() - lastSweep_ >= uint64_t(86400) * 1000000) &&
+          dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+        ellapsed = gettimeofday();
+        if( stdErr.debugLevel(7) )
+          stdErr.debug(7,utf8::String::Stream() <<
+            "Interface: " << ifName() << ", database sweep begin...\n"
+          );
+        if( statement2_ == NULL ) statement2_ = database_->newAttachedStatement();
+        statement2_->execute(
+          "SELECT\n"
+          " RDB$RELATION_NAME\n"
+          "FROM\n"
+          " RDB$RELATIONS\n"
+          "WHERE\n"
+          " NOT (RDB$RELATION_NAME LIKE 'RDB$%' OR RDB$RELATION_NAME LIKE 'MON$%')\n"
+        )->fetchAll();
+        Array<utf8::String> tables;
+        for( intptr_t i = statement2_->rowCount() - 1; i >= 0; i-- ){
+          statement2_->selectRow(i);
+          tables.add(statement2_->valueAsString(0).trimRight());
+        }
+        for( intptr_t i = tables.count() - 1; i >= 0; i-- )
+          statement2_->execute("SELECT COUNT(*) FROM " + tables[i]);
+        if( stdErr.debugLevel(7) )
+          stdErr.debug(7,utf8::String::Stream() <<
+            "Interface: " << ifName() << ", database sweep end, ellapsed: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "\n"
+          );
+        ellapsed = gettimeofday();
+        if( stdErr.debugLevel(7) )
+          stdErr.debug(7,utf8::String::Stream() <<
+            "Interface: " << ifName() << ", set indices statistics begin...\n"
+          );
+        statement2_->text(
+          "SELECT\n"
+          "  RDB$INDEX_NAME\n"
+          "FROM\n"
+          "  RDB$INDICES\n"
+          "WHERE\n"
+          " NOT (RDB$RELATION_NAME LIKE 'RDB$%' OR RDB$RELATION_NAME LIKE 'MON$%')\n"
+        )->execute()->fetchAll();
+        Array<utf8::String> indices;
+        for( intptr_t i = statement2_->rowCount() - 1; i >= 0; i-- ){
+          statement2_->selectRow(i);
+          indices.add(statement2_->valueAsString(0).trimRight());
+        }
+        for( intptr_t i = tables.count() - 1; i >= 0; i-- )
+          statement2_->execute("SET STATISTICS INDEX " + indices[i]);
+        if( stdErr.debugLevel(7) )
+          stdErr.debug(7,utf8::String::Stream() <<
+            "Interface: " << ifName() << ", set indices statistics end, ellapsed: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "\n"
+          );
+        statement2_ = NULL;
+        lastSweep_ = gettimeofday();
+      }
     }
   }
   catch( ExceptionSP & e ){
     database_->rollback(true);
     e->writeStdError();
-    r = false;
   }
   pCount = count;
 // shutdown
