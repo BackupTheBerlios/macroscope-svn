@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,19 +62,19 @@ SPB::SPBParam SPB::params[] = {
   {                   "lic_key",                            isc_spb_lic_key },
   {                    "lic_id",                             isc_spb_lic_id },
   {                  "lic_desc",                           isc_spb_lic_desc },
-  {                  "bkp_file",                  isc_spb_bkp_file | 0x8000 },
-  {                "bkp_factor",                isc_spb_bkp_factor | 0x8000 },
-  {                "bkp_length",                isc_spb_bkp_length | 0x8000 },
+  {                  "bkp_file",                 isc_spb_bkp_file | 0x10000 },
+  {                "bkp_factor",               isc_spb_bkp_factor | 0x10000 },
+  {                "bkp_length",               isc_spb_bkp_length | 0x10000 },
   {                "bkp_expand",                         isc_spb_bkp_expand },
-  {          "prp_page_buffers",          isc_spb_prp_page_buffers | 0x4000 },
-  {        "prp_sweep_interval",        isc_spb_prp_sweep_interval | 0x4000 },
-  {           "prp_shutdown_db",           isc_spb_prp_shutdown_db | 0x4000 },
-  {  "prp_deny_new_attachments",  isc_spb_prp_deny_new_attachments | 0x4000 },
-  { "prp_deny_new_transactions", isc_spb_prp_deny_new_transactions | 0x4000 },
-  {         "prp_reserve_space",         isc_spb_prp_reserve_space | 0x4000 },
-  {            "prp_write_mode",            isc_spb_prp_write_mode | 0x4000 },
-  {           "prp_access_mode",           isc_spb_prp_access_mode | 0x4000 },
-  {       "prp_set_sql_dialect",       isc_spb_prp_set_sql_dialect | 0x4000 },
+  {          "prp_page_buffers",          isc_spb_prp_page_buffers | 0x8000 },
+  {        "prp_sweep_interval",        isc_spb_prp_sweep_interval | 0x8000 },
+  {           "prp_shutdown_db",           isc_spb_prp_shutdown_db | 0x8000 },
+  {  "prp_deny_new_attachments",  isc_spb_prp_deny_new_attachments | 0x8000 },
+  { "prp_deny_new_transactions", isc_spb_prp_deny_new_transactions | 0x8000 },
+  {         "prp_reserve_space",         isc_spb_prp_reserve_space | 0x8000 },
+  {            "prp_write_mode",            isc_spb_prp_write_mode | 0x8000 },
+  {           "prp_access_mode",           isc_spb_prp_access_mode | 0x8000 },
+  {       "prp_set_sql_dialect",       isc_spb_prp_set_sql_dialect | 0x8000 },
   {          "rpr_commit_trans",                   isc_spb_rpr_commit_trans },
   {        "rpr_rollback_trans",                 isc_spb_rpr_rollback_trans },
   {     "rpr_recover_two_phase",              isc_spb_rpr_recover_two_phase },
@@ -94,16 +94,19 @@ SPB::SPBParam SPB::params[] = {
   {         "tra_advise_commit",                  isc_spb_tra_advise_commit },
   {       "tra_advise_rollback",                isc_spb_tra_advise_rollback },
   {        "tra_advise_unknown",                 isc_spb_tra_advise_unknown },
-  {               "res_buffers",               isc_spb_res_buffers | 0x8000 },
-  {             "res_page_size",             isc_spb_res_page_size | 0x8000 },
-  {                "res_length",                isc_spb_res_length | 0x8000 },
-  {           "res_access_mode",           isc_spb_res_access_mode | 0x8000 },
+  {               "res_buffers",              isc_spb_res_buffers | 0x10000 },
+  {             "res_page_size",            isc_spb_res_page_size | 0x10000 },
+  {                "res_length",               isc_spb_res_length | 0x10000 },
+  {           "res_access_mode",          isc_spb_res_access_mode | 0x10000 },
   {           "res_am_readonly",                    isc_spb_res_am_readonly },
   {          "res_am_readwrite",                   isc_spb_res_am_readwrite },
   {                   "num_att",                            isc_spb_num_att },
   {                    "num_db",                             isc_spb_num_db },
-  {       "sts_record_versions",                isc_spb_sts_record_versions },
-  {         "isc_spb_sts_table",                          isc_spb_sts_table }
+  {       "sts_record_versions",      isc_spb_sts_record_versions | 0x20000 },
+  {                 "sts_table",                isc_spb_sts_table | 0x20000 },
+  {            "sts_data_pages",           isc_spb_sts_data_pages | 0x20000 },
+  {             "sts_idx_pages",            isc_spb_sts_idx_pages | 0x20000 },
+  {             "sts_hdr_pages",            isc_spb_sts_hdr_pages | 0x20000 }
 };
 //---------------------------------------------------------------------------
 SPB::SPB() : spb_(NULL), spbLen_(0)
@@ -146,7 +149,7 @@ intptr_t SPB::writeISCCode(const utf8::String & name)
   for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
     if( name.strcasecmp(params[i].name_) == 0 ){
       ksys::xrealloc(spb_, spbLen_ + 1);
-      spb_[spbLen_++] = char(params[i].number & ~0xC000);
+      spb_[spbLen_++] = char(params[i].number & ~0xFFFF8000);
       return params[i].number;
     }
   }
@@ -163,24 +166,17 @@ SPB & SPB::writeBuffer(const void * buf, uintptr_t size)
 //---------------------------------------------------------------------------
 SPB & SPB::add(const utf8::String & name, const ksys::Mutant & value)
 {
-  utf8::String  sValue;
+  utf8::String sValue;
   switch( writeISCCode(name) ){
     case isc_spb_user_name :
     case isc_spb_sys_user_name :
     case isc_spb_sys_user_name_enc :
     case isc_spb_password :
     case isc_spb_password_enc :
-      //    case isc_spb_command_line :
-      //    case isc_spb_dbname :
-      //    case isc_spb_options :
-      //    case isc_spb_connect_timeout :
-      //    case isc_spb_dummy_packet_interval :
     case isc_spb_sql_role_name :
       sValue = value;
       writeChar(sValue.size()).writeBuffer(sValue.c_str(), sValue.size());
       break;
-      //    case isc_spb_verbose :
-      //      break;
   }
   return *this;
 }
@@ -242,25 +238,42 @@ ServiceRequest & ServiceRequest::writeLong(uintptr_t a)
   return *this;
 }
 //---------------------------------------------------------------------------
+intptr_t ServiceRequest::getISCCode(const utf8::String & name)
+{
+  intptr_t i = -1;
+  for( i = sizeof(SPB::params) / sizeof(SPB::params[0]) - 1; i >= 0; i-- )
+    if( name.strcasecmp(SPB::params[i].name_) == 0 ) return SPB::params[i].number;
+  if( i < 0 )
+    for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
+      if( name.strcasecmp(params[i].name_) == 0 ) return params[i].number;
+    }
+  return i;
+}
+//---------------------------------------------------------------------------
 intptr_t ServiceRequest::writeISCCode(const utf8::String & name)
 {
-  intptr_t  i;
-  for( i = sizeof(SPB::params) / sizeof(SPB::params[0]) - 1; i >= 0; i-- ){
-    if( name.strcasecmp(SPB::params[i].name_) == 0 ){
-      ksys::xrealloc(request_, requestLen_ + 1);
-      request_[requestLen_++] = char(SPB::params[i].number & ~0xC000);
-      return SPB::params[i].number;
-    }
+  intptr_t i = getISCCode(name);
+  if( i >= 0 ){
+    ksys::xrealloc(request_, requestLen_ + 1);
+    request_[requestLen_++] = char(i & ~0xFFFF8000);
+    return i;
   }
-  if( i < 0 ){
-    for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
-      if( name.strcasecmp(params[i].name_) == 0 ){
-        ksys::xrealloc(request_, requestLen_ + 1);
-        request_[requestLen_++] = params[i].number;
-        return params[i].number;
-      }
-    }
-  }
+  //for( i = sizeof(SPB::params) / sizeof(SPB::params[0]) - 1; i >= 0; i-- ){
+  //  if( name.strcasecmp(SPB::params[i].name_) == 0 ){
+  //    ksys::xrealloc(request_, requestLen_ + 1);
+  //    request_[requestLen_++] = char(SPB::params[i].number & ~0xFFFF8000);
+  //    return SPB::params[i].number;
+  //  }
+  //}
+  //if( i < 0 ){
+  //  for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
+  //    if( name.strcasecmp(params[i].name_) == 0 ){
+  //      ksys::xrealloc(request_, requestLen_ + 1);
+  //      request_[requestLen_++] = params[i].number;
+  //      return params[i].number;
+  //    }
+  //  }
+  //}
   return i;
 }
 //---------------------------------------------------------------------------
@@ -274,8 +287,8 @@ ServiceRequest & ServiceRequest::writeBuffer(const void * buf, uintptr_t size)
 //---------------------------------------------------------------------------
 ServiceRequest & ServiceRequest::add(const utf8::String & name, const ksys::Mutant & value)
 {
-  intptr_t      a;
-  utf8::String  sValue;
+  intptr_t a;
+  utf8::String sValue;
   switch( (a = writeISCCode(name)) ){
     case isc_action_svc_backup                      :
     case isc_action_svc_restore                     :
@@ -296,30 +309,36 @@ ServiceRequest & ServiceRequest::add(const utf8::String & name, const ksys::Muta
     case isc_spb_rpr_rollback_trans                 :
     case isc_spb_rpr_recover_two_phase              :
       break;
+    case isc_spb_options                            :
+      sValue = value;
+      a = 0;
+      for( intptr_t i = ksys::enumStringParts(sValue) - 1; i >= 0; i-- )
+        a |= getISCCode(ksys::stringPartByNo(sValue,i)) & ~0xFFFF8000;
+      writeLong(a);
+      break;
     case isc_spb_dbname                             :
-    case isc_spb_bkp_file | 0x8000                  :
-    case isc_spb_bkp_length | 0x8000                :
+    case isc_spb_bkp_file | 0x10000                 :
+    case isc_spb_bkp_length | 0x10000               :
       sValue = value;
       writeShort((short) sValue.size()).writeBuffer(sValue.c_str(),sValue.size());
       break;
-    case isc_spb_bkp_factor | 0x8000                :
-    case isc_spb_options                            :
-    case isc_spb_res_length | 0x8000                :
-    case isc_spb_res_buffers | 0x8000               :
-    case isc_spb_res_page_size | 0x8000             :
-    case isc_spb_prp_page_buffers | 0x4000          :
-    case isc_spb_prp_sweep_interval | 0x4000        :
-    case isc_spb_prp_shutdown_db | 0x4000           :
-    case isc_spb_prp_deny_new_transactions | 0x4000 :
-    case isc_spb_prp_deny_new_attachments  | 0x4000 :
-    case isc_spb_prp_set_sql_dialect | 0x4000       :
+    case isc_spb_bkp_factor | 0x10000               :
+    case isc_spb_res_length | 0x10000               :
+    case isc_spb_res_buffers | 0x10000              :
+    case isc_spb_res_page_size | 0x10000            :
+    case isc_spb_prp_page_buffers | 0x8000          :
+    case isc_spb_prp_sweep_interval | 0x8000        :
+    case isc_spb_prp_shutdown_db | 0x8000           :
+    case isc_spb_prp_deny_new_transactions | 0x8000 :
+    case isc_spb_prp_deny_new_attachments  | 0x8000 :
+    case isc_spb_prp_set_sql_dialect | 0x8000       :
     case isc_spb_tra_id                             :
       writeLong(value);
       break;
-    case isc_spb_res_access_mode | 0x8000           :
-    case isc_spb_prp_reserve_space | 0x4000         :
-    case isc_spb_prp_write_mode | 0x4000            :
-    case isc_spb_prp_access_mode | 0x4000           :
+    case isc_spb_res_access_mode | 0x10000          :
+    case isc_spb_prp_reserve_space | 0x8000         :
+    case isc_spb_prp_write_mode | 0x8000            :
+    case isc_spb_prp_access_mode | 0x8000           :
       writeChar(value);
       break;
   }
@@ -388,19 +407,39 @@ Service & Service::invoke()
           if( ret == 0 ) break;
           if( status[1] != isc_svc_in_use )
             exceptionHandler(newObjectV1C2<EServiceStart>(status, __PRETTY_FUNCTION__));
+          detach().attach(name_);
           ksys::ksleep1();
         }
         break;
       case isc_action_svc_db_stats       :
       case isc_action_svc_get_ib_log     :
+        for(;;){
+          ret = api.isc_service_start(status,&handle_,NULL,(unsigned short) request_.requestLen_, request_.request_);
+          if( ret == 0 ) break;
+          if( status[1] != isc_svc_in_use )
+            exceptionHandler(newObjectV1C2<EServiceStart>(status, __PRETTY_FUNCTION__));
+          detach().attach(name_);
+          ksys::ksleep1();
+        }
         ksys::xrealloc(queryResponse_, getpagesize());
         queryResponseLen_ = getpagesize();
-        for( ; ; ){
-          if( api.isc_service_query(status, &handle_, NULL, (short) spb_.spbLen_, spb_.spb_, (short) queryResponseLen_, queryResponse_, (short) request_.requestLen_, request_.request_) != 0 )
-            exceptionHandler(newObjectV1C2<EServiceQuery>(status,__PRETTY_FUNCTION__));
-          if( *queryResponse_ != isc_info_truncated ) break;
-          ksys::xrealloc(queryResponse_, queryResponseLen_ << 1);
-          queryResponseLen_ <<= 1;
+        response_.clear();
+        for(;;){
+          for(;;){
+            static char reqLine[] = { isc_info_svc_line };
+#ifndef NDEBUG
+            memset(queryResponse_, 0, queryResponseLen_);
+#endif
+            ret = api.isc_service_query(status, &handle_, NULL, 0, NULL, sizeof(reqLine), reqLine, (unsigned short) queryResponseLen_, queryResponse_);
+            if( ret != 0 )
+              exceptionHandler(newObjectV1C2<EServiceQuery>(status,__PRETTY_FUNCTION__));
+            if( *queryResponse_ != isc_info_truncated ) break;
+            ksys::xrealloc(queryResponse_, queryResponseLen_ << 1);
+            queryResponseLen_ <<= 1;
+          }
+          utf8::String s(getTokenString(queryResponse_,isc_info_svc_line));
+          if( s.isNull() ) break;
+          response_.add(s);
         }
         break;
     }

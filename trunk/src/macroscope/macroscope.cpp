@@ -552,7 +552,8 @@ Logger & Logger::createDatabase()
         add("password",config_->valueByPath(connection_ + ".firebird.password"));
       try {
         service.attach(serviceName);
-        service.request().
+
+        service.request().clear().
           add("action_svc_properties").add("dbname",dbName).
           add("prp_set_sql_dialect",config_->valueByPath(connection_ + ".firebird.dialect",3));
         service.invoke();
@@ -585,6 +586,9 @@ Logger & Logger::createDatabase()
       }
       catch( ExceptionSP & e ){
         if( !e->searchCode(isc_network_error) ) throw;
+#ifndef NDEBUG
+        e->writeStdError();
+#endif
       }
     }
 //#endif
@@ -1062,8 +1066,10 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
   utf8::String connection(config_->valueByPath(name + "connection",connection_));
   dbParamsSection.addSection(config_->sectionByPath(connection));
   AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
-  AutoPtr<Sniffer> sniffer(newObjectV1<Sniffer>(database.ptr()));
+  AutoPtr<Database> database2(Database::newDatabase(&dbParamsSection));
+  AutoPtr<Sniffer> sniffer(newObjectV1V2<Sniffer>(database.ptr(),database2.ptr()));
   database.ptr(NULL);
+  database2.ptr(NULL);
   sniffer->ifName(sectionName);
   sniffer->iface(config_->textByPath(name + "interface"));
   sniffer->tempFile(config_->textByPath(name + "temp_file",sniffer->tempFile()));
@@ -1082,6 +1088,11 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
   sniffer->groupingPeriod(PCAP::stringToGroupingPeriod(config_->textByPath(name + "grouping_period","none")));
   sniffer->totalsPeriod(PCAP::stringToGroupingPeriod(config_->textByPath(name + "totals_period","day")));
   sniffer->packetsInTransaction(config_->valueByPath(name + "packets_in_transaction",0));
+  sniffer->maintenance((uint64_t) config_->valueByPath(name + "maintenance",86400) * 1000000u);
+  sniffer->maintenanceThreshold(config_->valueByPath(name + "maintenance_threshold",0.1));
+  sniffer->user(dbParamsSection.textByPath(dbParamsSection.text("server_type","MYSQL").lower() + ".user"));
+  sniffer->password(dbParamsSection.textByPath(dbParamsSection.text("server_type","MYSQL").lower() + ".password"));
+
   utf8::String joined(config_->textByPath(name + "join"));
   for( intptr_t i = 0, j = enumStringParts(joined); i < j; i++ ){
     if( !(bool) config_->valueByPath(name + "enabled",false) ) continue;
@@ -1530,9 +1541,9 @@ int32_t Logger::doWork(uintptr_t stage)
     intptr_t row = cgi_.paramAsMutant("rc",0);
     for( --row; row >= 0; row-- ){
       intptr_t col = cgi_.paramAsMutant("r" + utf8::int2Str(row) + "cc",0);
+      if( chart.data().count() <= (uintptr_t) row ) chart.data().resize(row + 1);
       for( --col; col >= 0; col-- ){
-        if( chart.data().count() <= (uintptr_t) row ) chart.data().resize(row + 1);
-        if( chart.data()[row].count() <= (uintptr_t) col ) chart.data()[row].resize(col + 1);
+        while( chart.data()[row].count() <= (uintptr_t) col ) chart.data()[row].add(0);
         chart.data()[row][col] = cgi_.paramAsMutant("r" + utf8::int2Str(row) + "c" + utf8::int2Str(col),0);
       }
     }

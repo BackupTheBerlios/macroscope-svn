@@ -452,7 +452,7 @@ DSQLStatement & DSQLStatement::free()
   return *this;
 }
 //---------------------------------------------------------------------------
-static char * findToken(char * mBuffer,char token)
+char * findToken(char * mBuffer,char token)
 {
   char * p = mBuffer;
   while( *p != isc_info_end ){
@@ -489,7 +489,7 @@ static char * findToken(char * mBuffer,char token,char subToken)
 	return NULL;
 }
 //---------------------------------------------------------------------------
-static utf8::String getTokenString(char * mBuffer,char token,char subToken = -1)
+utf8::String getTokenString(char * mBuffer,char token,char subToken)
 {
   int len;
   char * p = findToken(mBuffer,token,subToken);
@@ -507,7 +507,7 @@ static utf8::String getTokenString(char * mBuffer,char token,char subToken = -1)
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-static int getTokenValue(char * mBuffer,char token,char subToken = -1)
+int getTokenValue(char * mBuffer,char token,char subToken)
 {
   int value = 0, len;
   char * p = findToken(mBuffer,token,subToken);

@@ -470,15 +470,16 @@ class API {
                 void *  p_isc_service_detach;
             };
             union {
-                ISC_STATUS (ISC_EXPORT * isc_service_query)(ISC_STATUS *,
-                                                            isc_svc_handle *,
-                                                            isc_resv_handle *,
-                                                            unsigned short,
-                                                            char *,
-                                                            unsigned short,
-                                                            char *,
-                                                            unsigned short,
-                                                            char *);
+                ISC_STATUS (ISC_EXPORT * isc_service_query)(
+                                    ISC_STATUS*,
+										                isc_svc_handle*,
+										                isc_resv_handle*,
+										                unsigned short,
+										                const ISC_SCHAR*,
+										                unsigned short,
+										                const ISC_SCHAR*,
+										                unsigned short,
+										                ISC_SCHAR*);
                 void *  p_isc_service_query;
             };
             union {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,10 @@ struct tm       iscTimeStamp2tm(const ISC_TIMESTAMP & stamp);
 ISC_TIMESTAMP   time2IscTimeStamp(int64_t stamp);
 ISC_TIMESTAMP   timeval2IscTimeStamp(const struct timeval & stamp);
 ISC_TIMESTAMP   tm2IscTimeStamp(struct tm stamp);
+char *          findToken(char * mBuffer,char token);
+char *          findToken(char * mBuffer,char token,char subToken);
+utf8::String    getTokenString(char * mBuffer,char token,char subToken = -1);
+int             getTokenValue(char * mBuffer,char token,char subToken = -1);
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

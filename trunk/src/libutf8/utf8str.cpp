@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1645,6 +1645,11 @@ void strncat0(char * dst,size_t size,const char * src,size_t count)
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+String::Stream::Stream(const utf8::String & s) : count_(0)
+{
+  operator << (s);
+}
 //---------------------------------------------------------------------------
 void String::Stream::Format::checkFormat2(const char * v0,const char * v1) const
 {

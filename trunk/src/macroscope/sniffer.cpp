@@ -36,13 +36,16 @@ Sniffer::~Sniffer()
 {
 }
 //------------------------------------------------------------------------------
-Sniffer::Sniffer(Database * database) :
+Sniffer::Sniffer(Database * database,Database * database2) :
   database_(database),
+  database2_(database2),
   totalsPeriod_(pgpDay),
   packetsInTransaction_(0),
   updates_(0),
   updatesTime_(0),
-  lastSweep_(0)
+  lastSweep_(gettimeofday()),
+  maintenance_(86400),
+  maintenanceThreshold_(0.1)
 {
 }
 //------------------------------------------------------------------------------
@@ -404,66 +407,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
       ellapsed = gettimeofday() - ellapsed;
       updatesTime_ += ellapsed;
       updates_ += pCount - count;
-      uintmax_t a = updates_ > 0 ? updatesTime_ / updates_ : 0;
-      if( stdErr.debugLevel(77) )
-        stdErr.debug(77,utf8::String::Stream() <<
-          "Interface: " << ifName() << ", average database update time per record " << utf8::elapsedTime2Str(a) << "\n"
-        );
-      if( ((a >= 1000000 && gettimeofday() - lastSweep_ > uint64_t(3600) * 1000000) ||
-           gettimeofday() - lastSweep_ >= uint64_t(86400) * 1000000) &&
-          dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
-        ellapsed = gettimeofday();
-        if( stdErr.debugLevel(7) )
-          stdErr.debug(7,utf8::String::Stream() <<
-            "Interface: " << ifName() << ", database sweep begin...\n"
-          );
-        if( statement2_ == NULL ) statement2_ = database_->newAttachedStatement();
-        statement2_->execute(
-          "SELECT\n"
-          " RDB$RELATION_NAME\n"
-          "FROM\n"
-          " RDB$RELATIONS\n"
-          "WHERE\n"
-          " NOT (RDB$RELATION_NAME LIKE 'RDB$%' OR RDB$RELATION_NAME LIKE 'MON$%')\n"
-        )->fetchAll();
-        Array<utf8::String> tables;
-        for( intptr_t i = statement2_->rowCount() - 1; i >= 0; i-- ){
-          statement2_->selectRow(i);
-          tables.add(statement2_->valueAsString(0).trimRight());
-        }
-        for( intptr_t i = tables.count() - 1; i >= 0; i-- )
-          statement2_->execute("SELECT COUNT(*) FROM " + tables[i]);
-        if( stdErr.debugLevel(7) )
-          stdErr.debug(7,utf8::String::Stream() <<
-            "Interface: " << ifName() << ", database sweep end, ellapsed: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "\n"
-          );
-        ellapsed = gettimeofday();
-        if( stdErr.debugLevel(7) )
-          stdErr.debug(7,utf8::String::Stream() <<
-            "Interface: " << ifName() << ", set indices statistics begin...\n"
-          );
-        statement2_->text(
-          "SELECT\n"
-          "  RDB$INDEX_NAME\n"
-          "FROM\n"
-          "  RDB$INDICES\n"
-          "WHERE\n"
-          " NOT (RDB$RELATION_NAME LIKE 'RDB$%' OR RDB$RELATION_NAME LIKE 'MON$%')\n"
-        )->execute()->fetchAll();
-        Array<utf8::String> indices;
-        for( intptr_t i = statement2_->rowCount() - 1; i >= 0; i-- ){
-          statement2_->selectRow(i);
-          indices.add(statement2_->valueAsString(0).trimRight());
-        }
-        for( intptr_t i = tables.count() - 1; i >= 0; i-- )
-          statement2_->execute("SET STATISTICS INDEX " + indices[i]);
-        if( stdErr.debugLevel(7) )
-          stdErr.debug(7,utf8::String::Stream() <<
-            "Interface: " << ifName() << ", set indices statistics end, ellapsed: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "\n"
-          );
-        statement2_ = NULL;
-        lastSweep_ = gettimeofday();
-      }
+      maintenanceInternal();
     }
   }
   catch( ExceptionSP & e ){
@@ -486,6 +430,159 @@ void Sniffer::threadExecute()
     throw;
   }
   database_->detach();
+}
+//------------------------------------------------------------------------------
+void Sniffer::maintenanceInternal()
+{
+  uintmax_t a = updates_ > 0 ? updatesTime_ / updates_ : 0;
+  if( stdErr.debugLevel(77) )
+    stdErr.debug(77,utf8::String::Stream() <<
+      "Interface: " << ifName() << ", average database update time per record " << utf8::elapsedTime2Str(a) << "\n"
+    );
+  //if( ((a >= 1000000 && gettimeofday() - lastSweep_ > uint64_t(3600) * 1000000) ||
+  //     gettimeofday() - lastSweep_ >= uint64_t(86400) * 1000000) &&
+  //    dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+  if( maintenance_ > 0 && gettimeofday() - lastSweep_ > maintenance_ && dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ){
+    if( maintenanceThread_ == NULL || maintenanceThread_->finished() ){
+      maintenanceThread_ = newObjectV1<MaintenanceThread>(this);
+      maintenanceThread_->resume();
+    }
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+void Sniffer::MaintenanceThread::threadExecute()
+{
+  uint64_t ellapsed = gettimeofday(), ellapsed2;
+  if( stdErr.debugLevel(7) )
+    stdErr.debug(7,utf8::String::Stream() <<
+      "Interface: " << sniffer_->ifName() << ", database sweep helper begin ...\n"
+    );
+
+  utf8::String hostName, dbName;
+  uintptr_t port;
+  sniffer_->database2_->separateDBName(sniffer_->database2_->name(),hostName,dbName,port);
+  utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
+  fbcpp::Service service;
+  service.params().
+    add("user_name",sniffer_->user_).
+    add("password",sniffer_->password_);
+  service.attach(serviceName).
+    request().
+      add("action_svc_db_stats").
+      add("dbname",dbName).
+      add("options","sts_record_versions");
+  service.invoke().detach();
+
+  Vector<utf8::String> tables;
+  utf8::String relationName, tr("total records: "), tv("total versions: ");
+  uintmax_t totalRelationRecords, totalRelationVersions, * vp;
+  for( uintptr_t i = 0; i < service.response().count(); i++ ){
+    utf8::String s(service.response()[i].trim().replaceAll("\r","").replaceAll("\n",""));
+    utf8::String::Iterator it(s.strstr(" ("));
+    vp = NULL;
+    if( it.eos() ){
+      it = s.strcasestr(tr);
+      if( it.eos() ){
+        it = s.strcasestr(tv);
+        if( it.eos() ) continue;
+        it += 16;
+        vp = &totalRelationVersions;
+      }
+      else {
+        it += 15;
+        vp = &totalRelationRecords;
+      }
+      sscanf(it.c_str(),"%"PRIuMAX,vp);
+    }
+    else {
+      relationName = utf8::String(s,it);
+      totalRelationRecords = totalRelationVersions = 0;
+      continue;
+    }
+    if( !relationName.isNull() && vp == &totalRelationVersions ){
+      ldouble q = totalRelationRecords > 0 ? totalRelationVersions * 100. / totalRelationRecords : 0;
+      if( stdErr.debugLevel(7) )
+        stdErr.debug(7,utf8::String::Stream() <<
+          "Relation " <<
+          relationName <<
+          " statistics: records " << totalRelationRecords << ", versions " << totalRelationVersions <<
+          ", ratio " <<
+          utf8::String::print("%.4"PRF_LDBL"f",q) <<
+          "\n"
+        );
+      if( q >= sniffer_->maintenanceThreshold_ ) tables.add(relationName);
+      relationName.resize(0);
+    }
+  }
+
+  AutoDatabaseDetach autoDatabaseDetach(sniffer_->database2_);
+  if( statement_ == NULL ) statement_ = sniffer_->database2_->newAttachedStatement();
+  //statement2_->execute(
+  //  "SELECT\n"
+  //  " RDB$RELATION_NAME\n"
+  //  "FROM\n"
+  //  " RDB$RELATIONS\n"
+  //  "WHERE\n"
+  //  " NOT (RDB$RELATION_NAME LIKE 'RDB$%' OR RDB$RELATION_NAME LIKE 'MON$%')\n"
+  //)->fetchAll();
+  //for( intptr_t i = statement2_->rowCount() - 1; i >= 0; i-- ){
+  //  statement2_->selectRow(i);
+  //  tables.add(statement2_->valueAsString(0).trimRight());
+  //}
+  for( intptr_t i = tables.count() - 1; i >= 0; i-- ){
+    ellapsed2 = gettimeofday();
+    statement_->execute("SELECT COUNT(*) FROM " + tables[i]);
+    if( stdErr.debugLevel(7) )
+      stdErr.debug(7,utf8::String::Stream() <<
+        "Interface: " << sniffer_->ifName() <<
+        ", 'SELECT COUNT(*) FROM " << tables[i] <<
+        "' done, ellapsed: " <<
+        utf8::elapsedTime2Str(gettimeofday() - ellapsed2) << "\n"
+      );
+  }
+  if( stdErr.debugLevel(7) )
+    stdErr.debug(7,utf8::String::Stream() <<
+      "Interface: " << sniffer_->ifName() << ", database sweep helper end, ellapsed: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "\n"
+    );
+
+  ellapsed = gettimeofday();
+  if( stdErr.debugLevel(7) )
+    stdErr.debug(7,utf8::String::Stream() <<
+      "Interface: " << sniffer_->ifName() << ", set indices statistics begin ...\n"
+    );
+  statement_->text(
+    "SELECT\n"
+    "  RDB$INDEX_NAME\n"
+    "FROM\n"
+    "  RDB$INDICES\n"
+    "WHERE\n"
+    " NOT (RDB$RELATION_NAME LIKE 'RDB$%' OR RDB$RELATION_NAME LIKE 'MON$%')\n"
+  )->execute()->fetchAll();
+  Array<utf8::String> indices;
+  for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+    statement_->selectRow(i);
+    indices.add(statement_->valueAsString(0).trimRight());
+  }
+  for( intptr_t i = indices.count() - 1; i >= 0; i-- ){
+    ellapsed2 = gettimeofday();
+    statement_->execute("SET STATISTICS INDEX " + indices[i]);
+    if( stdErr.debugLevel(7) )
+      stdErr.debug(7,utf8::String::Stream() <<
+        "Interface: " << sniffer_->ifName() <<
+        ", 'SET STATISTICS INDEX " << indices[i] <<
+        "' done, ellapsed: " <<
+        utf8::elapsedTime2Str(gettimeofday() - ellapsed2) << "\n"
+      );
+  }
+  if( stdErr.debugLevel(7) )
+    stdErr.debug(7,utf8::String::Stream() <<
+      "Interface: " << sniffer_->ifName() << ", set indices statistics end, ellapsed: " << utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "\n"
+    );
+
+  statement_ = NULL;
+  sniffer_->lastSweep_ = gettimeofday();
 }
 //------------------------------------------------------------------------------
 } // namespace ksys

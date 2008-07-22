@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -311,6 +311,7 @@ class String {
 
         ~Stream();
         Stream();
+        Stream(const utf8::String & s);
 
         Stream & operator << (char n);
         Stream & operator << (unsigned char n);

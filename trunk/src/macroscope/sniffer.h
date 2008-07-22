@@ -37,12 +37,20 @@ namespace ksys {
 class Sniffer : public PCAP {
   public:
     virtual ~Sniffer();
-    Sniffer(Database * database = NULL);
+    Sniffer(Database * database = NULL,Database * database2 = NULL);
 
     PacketGroupingPeriod totalsPeriod() const { return totalsPeriod_; }
     Sniffer & totalsPeriod(PacketGroupingPeriod period);
     const uintptr_t & packetsInTransaction() const { return packetsInTransaction_; }
     Sniffer & packetsInTransaction(uintptr_t a) { packetsInTransaction_ = a; return *this; }
+    const uint64_t & maintenance() const { return maintenance_; }
+    Sniffer & maintenance(uint64_t a) { maintenance_ = a; return *this; }
+    const ldouble & maintenanceThreshold() const { return maintenanceThreshold_; }
+    Sniffer & maintenanceThreshold(ldouble a) { maintenanceThreshold_ = a; return *this; }
+    const utf8::String & user() const { return user_; }
+    Sniffer & user(const utf8::String & a) { user_ = a; return *this; }
+    const utf8::String & password() const { return password_; }
+    Sniffer & password(const utf8::String & a) { password_ = a; return *this; }
 
     void recalcTotals();
     static void getTrafficPeriod(Statement * statement,const utf8::String & sectionName,struct tm & beginTime,struct tm & endTime,bool gmt = false);
@@ -53,6 +61,7 @@ class Sniffer : public PCAP {
     static const char * const pgpNames[pgpCount];
   protected:
     AutoPtr<Database> database_;
+    AutoPtr<Database> database2_;
     AutoPtr<Statement> statement_;
     AutoPtr<Statement> statement2_;
     AutoPtr<Statement> stTotals_[3];
@@ -64,13 +73,35 @@ class Sniffer : public PCAP {
     uintmax_t updates_;
     uint64_t updatesTime_;
     uint64_t lastSweep_;
+    uint64_t maintenance_;
+    ldouble maintenanceThreshold_;
+    utf8::String user_;
+    utf8::String password_;
 
     enum { stSel, stIns, stUpd };
 
     void updateTotals(uintptr_t i,const Mutant & m,const in_addr & srcAddr,uintptr_t srcPort,const in_addr & dstAddr,uintptr_t dstPort,intptr_t proto,uintmax_t dgram,uintmax_t data);    
     bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t & pCount,Thread * caller) throw();
   private:
+    class MaintenanceThread : public Thread {
+      public:
+        virtual ~MaintenanceThread() {}
+        MaintenanceThread(Sniffer * sniffer = NULL) : sniffer_(sniffer) {}
+      protected:
+      private:
+        Sniffer * sniffer_;
+        AutoPtr<Statement> statement_;
+
+        void threadExecute();
+
+        MaintenanceThread(const MaintenanceThread &);
+        void operator = (const MaintenanceThread &);
+    };
+    friend class MaintenanceThread;
+    AutoPtr<MaintenanceThread> maintenanceThread_;
+
     void threadExecute();
+    void maintenanceInternal();
 
     Sniffer(const Sniffer &);
     void operator = (const Sniffer &);

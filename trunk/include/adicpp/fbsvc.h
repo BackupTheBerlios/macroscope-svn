@@ -43,7 +43,7 @@ class SPB {
 #endif
     struct PACKED SPBParam {
         const char *  name_;
-        short         number;
+        uintptr_t     number;
     };
 #ifdef _MSC_VER
 #pragma pack(pop)
@@ -103,6 +103,7 @@ class ServiceRequest {
     ServiceRequest &  writeChar(uintptr_t code);
     ServiceRequest &  writeShort(short a);
     ServiceRequest &  writeLong(uintptr_t a);
+    intptr_t          getISCCode(const utf8::String & name);
     intptr_t          writeISCCode(const utf8::String & name);
     ServiceRequest &  writeBuffer(const void * buf, uintptr_t size);
 };
@@ -120,6 +121,9 @@ class Service : virtual public Base {
     Service &             detach();
     Service &             invoke();
 
+    const ksys::Vector<utf8::String> & response() const { return response_; }
+
+
     // properties
     SPB &                 params();
     ServiceRequest &      request();
@@ -136,6 +140,7 @@ class Service : virtual public Base {
     utf8::String    name_;
     char *          queryResponse_;
     uintptr_t       queryResponseLen_;
+    ksys::Vector<utf8::String> response_;
 };
 //---------------------------------------------------------------------------
 inline SPB & Service::params()
