@@ -464,7 +464,7 @@ char * findToken(char * mBuffer,char token)
   return 0;
 }
 //---------------------------------------------------------------------------
-static char * findToken(char * mBuffer,char token,char subToken)
+char * findToken(char * mBuffer,char token,char subToken)
 {
   if( subToken == -1 ) return findToken(mBuffer,token);
 

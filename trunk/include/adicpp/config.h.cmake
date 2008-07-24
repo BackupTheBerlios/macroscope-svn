@@ -11,6 +11,7 @@
 #cmakedefine HAVE_MYSQL_H 1
 #cmakedefine HAVE_MYSQL_MYSQL_H 1
 #cmakedefine HAVE_SQL_H 1
+#cmakedefine HAVE_GD_H 1
 #cmakedefine HAVE_LZO_LZO1X_H 1
 #cmakedefine HAVE_LZO1X_H 1
 #cmakedefine HAVE_LZO_LZO_ASM_H 1
