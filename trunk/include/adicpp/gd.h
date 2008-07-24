@@ -109,6 +109,8 @@ class GDChart : public GD {
 
     GDChart & createChart();
 
+    intptr_t makeColor(ldouble r,ldouble g,ldouble b);
+
     Vector<Array<ldouble> > & data() const { return data_; }
 
     const uintptr_t & width() const { return width_; }

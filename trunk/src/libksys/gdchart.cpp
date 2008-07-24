@@ -76,6 +76,15 @@ GDChart & GDChart::operator = (const GDChart & v)
   return *this;
 }
 //------------------------------------------------------------------------------
+intptr_t GDChart::makeColor(ldouble r,ldouble g,ldouble b)
+{
+  //static const ldouble pi = M_PI / 2;
+  ldouble r0 = sin(r);
+  ldouble g0 = cos(g);
+  ldouble b0 = tan(b);
+  return colorAllocate(intptr_t(r0 * 220),intptr_t(g0 * 220),intptr_t(b0 * 220));
+}
+//------------------------------------------------------------------------------
 GDChart & GDChart::createChart()
 {
   create(width_,height_);
@@ -107,11 +116,7 @@ GDChart & GDChart::createChart()
     x = (width_ - leftBorder_ - rightBorder_) * j / (xCount - 1) + leftBorder_;
     line(x,topBorder_,x,height_ - bottomBorder_,lineColor);
   }
-  intptr_t yLabelColor = colorAllocate(
-    intptr_t(cos(yAxis + i) * 200),
-    intptr_t(sin(yAxis + i) * 200),
-    intptr_t(sqrt(cos(yAxis + i) * sin(yAxis + i)) * 200)
-  );
+  intptr_t yLabelColor = makeColor(j,j,j);
   for( y = topBorder_; uintptr_t(y) <= height_ - bottomBorder_; y += fontHeight(font_) * 2 ){
     ldouble v = maxValue - (y - topBorder_) * yAxis;
     // draw horiz grid line
@@ -131,12 +136,7 @@ GDChart & GDChart::createChart()
   }
   // draw data lines
   for( i = 0; uintptr_t(i) < data_.count(); i++ ){
-    ldouble k = yAxis + i;
-    intptr_t color = colorAllocate(
-      intptr_t(cos(k) * 200),
-      intptr_t(sin(k) * 200),
-      intptr_t(sqrt(cos(k) * sin(k)) * 200)
-    );
+    intptr_t color = makeColor(i + 1,i + 1,i + 1);
     const Array<ldouble> & data = data_[i];
     for( j = 0; uintptr_t(j) < data.count(); j++ ){
       x = (width_ - leftBorder_ - rightBorder_) * j / (xCount - 1) + leftBorder_;
@@ -148,11 +148,7 @@ GDChart & GDChart::createChart()
   }
   intptr_t xBarSize = 2, yBarSize = 2;
   intptr_t barColor = colorAllocate(255,0,0);
-  intptr_t xLabelColor = colorAllocate(
-    intptr_t(cos(yAxis + i + 1) * 200),
-    intptr_t(sin(yAxis + i + 1) * 200),
-    intptr_t(sqrt(cos(yAxis + i + 1) * sin(yAxis + i + 1)) * 200)
-  );
+  intptr_t xLabelColor = makeColor(i + 1,i + 1,i + 1);
   for( i = 0; uintptr_t(i) < data_.count(); i++ ){
     const Array<ldouble> & data = data_[i];
     for( j = 0; uintptr_t(j) < data.count(); j++ ){

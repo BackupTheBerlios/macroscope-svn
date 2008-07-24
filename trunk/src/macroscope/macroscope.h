@@ -432,9 +432,7 @@ class Logger {
           uintmax_t & sum2
         );
         void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
-	      bool getBPFTCachedHelper(Statement * & pStatement);
         void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
-        void clearBPFTCache();
         utf8::String genHRef(const in_addr & ip,uintptr_t port);
       private:
     };
