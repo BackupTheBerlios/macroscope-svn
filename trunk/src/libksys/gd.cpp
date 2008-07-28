@@ -451,7 +451,10 @@ void * GD::fontGiant() const
 //------------------------------------------------------------------------------
 void * GD::pngPtrEx(intptr_t * size, intptr_t level)
 {
-  return api.gdImagePngPtrEx((gdImagePtr) image_,size,level);
+  int size0;
+  void * p = api.gdImagePngPtrEx((gdImagePtr) image_,&size0,int(level));
+  *size = size0;
+  return p;
 }
 //------------------------------------------------------------------------------
 GD & GD::gdFree(void *m)
