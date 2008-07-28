@@ -1699,9 +1699,9 @@ bool SnifferService::active()
 //------------------------------------------------------------------------------
 } // namespace macroscope
 //------------------------------------------------------------------------------
-#if HAVE__MALLOC_OPTIONS
-const char * _malloc_options = "HR";
-#endif
+//#if HAVE__MALLOC_OPTIONS
+//const char * _malloc_options = "HR";
+//#endif
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
