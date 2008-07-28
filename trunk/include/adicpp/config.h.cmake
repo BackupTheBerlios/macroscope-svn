@@ -120,6 +120,7 @@
 #cmakedefine SIZEOF_GUID ${SIZEOF_GUID}
 #cmakedefine SIZEOF_VOID_P ${SIZEOF_VOID_P}
 #cmakedefine SIZEOF_BOOL ${SIZEOF_BOOL}
+#cmakedefine SIZEOF_ULONG ${SIZEOF_ULONG}
 #cmakedefine SIZEOF_CHAR ${SIZEOF_CHAR}
 #cmakedefine SIZEOF_WCHAR_T ${SIZEOF_WCHAR_T}
 #cmakedefine SIZEOF_SHORT ${SIZEOF_SHORT}

@@ -134,6 +134,12 @@
 #include <errno.h>
 #endif
 
+#if SIZEOF_ULONG == 0
+typedef unsigned long ulong;
+#undef SIZEOF_ULONG
+#define SIZEOF_ULONG sizeof(ulong)
+#endif
+
 #ifndef SIZEOF_WCHAR_T
 #define SIZEOF_WCHAR_T 0
 #endif
