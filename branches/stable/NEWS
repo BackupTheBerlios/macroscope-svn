@@ -1,6 +1,0 @@
-30.06.2008
-  Tables and indexes structure redesigned for reports speedup.
-  String function strcasecmp perfomance optimization.
-  Fix build problems under FreeBSD and Visual Studio 9 for Win64.  
-  Minor bug fixes.
-
