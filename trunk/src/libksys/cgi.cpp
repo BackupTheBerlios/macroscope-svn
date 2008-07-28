@@ -34,10 +34,9 @@ CGI::~CGI()
 {
 }
 //------------------------------------------------------------------------------
-CGI::CGI() : method_(cgiInit), contentType_("Content-Type: text/plain")
+CGI::CGI() : method_(cgiInit), contentType_("Content-Type: text/plain"), contentTypePrinted_(false)
 {
   paramsHash_.param() = &params_;
-  out_.fileName("stdout").open();
 }
 //------------------------------------------------------------------------------
 void CGI::initialize()
@@ -51,8 +50,7 @@ void CGI::initialize()
     case cgiGET  :
       initalizeByMethodGET();
       if( isEnv("CONTENT_TYPE") ) contentType_ = getEnv("CONTENT_TYPE");
-      if( !contentType_.isNull() )
-        out_ << contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
+      out_.fileName("stdout").open();
     case cgiHEAD  :
       ;
   }
@@ -213,6 +211,16 @@ utf8::String CGI::paramName(uintptr_t i)
 uintptr_t CGI::paramCount()
 {
   return params_.count();
+}
+//------------------------------------------------------------------------------
+CGI & CGI::print(const utf8::String & s)
+{
+  if( !contentType_.isNull() && !contentTypePrinted_ ){
+    out_ << "Content-Type: " + contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
+    contentTypePrinted_ = true;
+  }
+  out_ << s;
+  return *this;
 }
 //------------------------------------------------------------------------------
 } // namespace ksys

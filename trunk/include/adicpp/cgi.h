@@ -39,7 +39,7 @@ class CGI {
     CGI();
     
     void initialize();
-    CGI & print(const utf8::String & s){ out_ << s; return *this; }
+    CGI & print(const utf8::String & s);
     CGIMethod method() const;
     
     CGI & operator << (const utf8::String & s){ out_ << s; return *this; }
@@ -110,6 +110,7 @@ class CGI {
     Params paramsHash_;
     Array<Param> params_;
     utf8::String contentType_;
+    bool contentTypePrinted_;
 
     void initalizeByMethodPOST();
     void initalizeByMethodGET();

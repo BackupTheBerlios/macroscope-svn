@@ -50,7 +50,7 @@ Logger::Logger(bool sniffer,bool daemon) :
   dnsCacheAutoDrop_(dnsCache_),
   dnsCacheSize_(0)
 {
-  cgi_.initialize();
+  cgi_.contentType("text/plain").initialize();
 }
 //------------------------------------------------------------------------------
 Mutant Logger::timeStampRoundToMin(uint64_t ts)
@@ -1536,7 +1536,7 @@ int32_t Logger::doWork(uintptr_t stage)
     ;
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("chart") >= 0 ){
-    if( !cgi_.contentType().isNull() ) cgi_.contentType("Content-Type: image/png");
+    cgi_.contentType("image/png");
     GDChart chart;
     intptr_t row = cgi_.paramAsMutant("rc",0);
     for( --row; row >= 0; row-- ){
