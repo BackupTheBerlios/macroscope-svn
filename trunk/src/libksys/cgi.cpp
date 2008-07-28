@@ -215,11 +215,21 @@ uintptr_t CGI::paramCount()
 //------------------------------------------------------------------------------
 CGI & CGI::print(const utf8::String & s)
 {
+  return writeBuffer(s.c_str(),s.size());
+}
+//------------------------------------------------------------------------------
+CGI & CGI::operator << (const utf8::String & s)
+{
+  return writeBuffer(s.c_str(),s.size());
+}
+//------------------------------------------------------------------------------
+CGI & CGI::writeBuffer(const void * buf,uint64_t size)
+{
   if( !contentType_.isNull() && !contentTypePrinted_ ){
     out_ << "Content-Type: " + contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
     contentTypePrinted_ = true;
   }
-  out_ << s;
+  out_.writeBuffer(buf,size);
   return *this;
 }
 //------------------------------------------------------------------------------

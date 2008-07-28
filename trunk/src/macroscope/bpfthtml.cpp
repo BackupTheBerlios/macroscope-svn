@@ -794,11 +794,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       pi = NULL;
       sv = av = fv = 0;
   }
-  if( logger_->cgi_.isCGI() ){
-    if( level == maxTotalsLevel_ ){
-      f.fileName("stdout").open();
-      logger_->writeHtmlHead(f);
-    }
+  if( logger_->cgi_.isCGI() && level == maxTotalsLevel_ ){
+    logger_->cgi_ << utf8::String(); // write content type
+    f.fileName("stdout").open();
+    logger_->writeHtmlHead(f);
   }
   else {
     f.createIfNotExist(true).open().resize(0);

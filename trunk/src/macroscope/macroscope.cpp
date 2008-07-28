@@ -50,7 +50,7 @@ Logger::Logger(bool sniffer,bool daemon) :
   dnsCacheAutoDrop_(dnsCache_),
   dnsCacheSize_(0)
 {
-  cgi_.contentType("text/plain").initialize();
+  cgi_.contentType("text/html").initialize();
 }
 //------------------------------------------------------------------------------
 Mutant Logger::timeStampRoundToMin(uint64_t ts)
@@ -1742,7 +1742,7 @@ int main(int _argc,char * _argv[])
         setEnv("GATEWAY_INTERFACE","CGI/1.1");
         setEnv("REQUEST_METHOD","GET");
         setEnv("QUERY_STRING",argv()[i + 1]);
-        setEnv("CONTENT_TYPE","");
+        //setEnv("CONTENT_TYPE","");
       }
     }
     for( i = 1; i < argv().count(); i++ ){

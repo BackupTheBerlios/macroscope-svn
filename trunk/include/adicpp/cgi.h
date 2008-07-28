@@ -42,8 +42,8 @@ class CGI {
     CGI & print(const utf8::String & s);
     CGIMethod method() const;
     
-    CGI & operator << (const utf8::String & s){ out_ << s; return *this; }
-    CGI & writeBuffer(const void * buf,uint64_t size){ out_.writeBuffer(buf,size); return *this; }
+    CGI & operator << (const utf8::String & s);
+    CGI & writeBuffer(const void * buf,uint64_t size);
     
     utf8::String paramAsString(const utf8::String & name,const utf8::String & defValue = utf8::String());
     utf8::String paramAsString(uintptr_t i,const utf8::String & defValue = utf8::String());
