@@ -201,7 +201,7 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,c
         st[stIns]->execute();
       }
       catch( ExceptionSP & e ){
-        if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY) ) throw;
+        if( !e->searchCode(isc_no_dup,ER_DUP_KEY,ER_DUP_ENTRY) ) throw;
       }
       dnsCacheMissCount_++;
     }

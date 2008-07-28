@@ -1258,7 +1258,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
         stTrafIns_->execute();
       }
       catch( ExceptionSP & e ){
-        if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
+        if( !e->searchCode(isc_no_dup,ER_DUP_KEY,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
         stTrafUpd_->paramAsString("ST_USER",st_user);
         stTrafUpd_->paramAsMutant("ST_TIMESTAMP",timeStamp);
         stTrafUpd_->paramAsMutant("ST_TRAF_WWW",traf);
@@ -1499,7 +1499,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
               execute();
           }
           catch( ExceptionSP & e ){
-            if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
+            if( !e->searchCode(isc_no_dup,ER_DUP_KEY,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
             stMsgsUpd_->prepare()->
               paramAsString("ST_MSGID",utf8::plane(id,ksys::tmin(uintptr_t(idl - id),uintptr_t(14))))->
               paramAsMutant("ST_NRCPTS",1)->
@@ -1531,7 +1531,7 @@ l3:       if( cid == NULL ){
                   paramAsMutant("ST_TRAF_SMTP",msgSize)->execute();
               }
               catch( ExceptionSP & e ){
-                if( !e->searchCode(isc_no_dup,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
+                if( !e->searchCode(isc_no_dup,ER_DUP_KEY,ER_DUP_ENTRY,ER_DUP_ENTRY_WITH_KEY_NAME) ) throw;
                 stTrafUpd_->prepare()->
                   paramAsString("ST_USER",st_user)->
                   paramAsMutant("ST_TIMESTAMP",timeStampRoundToMin(tm2Time(lt) - getgmtoffset()))->
