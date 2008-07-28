@@ -4,7 +4,7 @@ mysql_script="\
 DROP USER 'macroscope'@'localhost'\g\n
 CREATE USER 'macroscope'@'localhost'\g\n
 SET PASSWORD FOR 'macroscope'@'localhost' = PASSWORD('mkey')\g\n
-GRANT SELECT, INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, INDEX ON macroscope.\052 TO 'macroscope'@'localhost'\g\n
+GRANT ALL ON macroscope.\052 TO 'macroscope'@'localhost'\g\n
 FLUSH PRIVILEGES\g\n
 SHOW GRANTS FOR 'macroscope'@'localhost'\g\n"
 
