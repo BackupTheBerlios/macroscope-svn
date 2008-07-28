@@ -424,14 +424,14 @@ Logger & Logger::createDatabase()
         metadata << "CREATE INDEX IUT_IDX2 ON INET_USERS_TRAF (ST_TIMESTAMP)";
         // partitioning
         metadata <<
-          "alter table inet_sniffer_stat_nsec partition by hash(microsecond(ts)) partitions " <<
-          "alter table inet_sniffer_stat_sec partition by hash(second(ts)) partitions " <<
-          "alter table inet_sniffer_stat_min partition by hash(minute(ts)) partitions " <<
-          "alter table inet_sniffer_stat_hour partition by hash(hour(ts)) partitions " <<
-          "alter table inet_sniffer_stat_day partition by hash(day(ts)) partitions " <<
-          "alter table inet_sniffer_stat_mon partition by hash(month(ts)) partitions " <<
-          "alter table inet_sniffer_stat_year partition by hash(year(ts)) partitions " <<
-          "alter table inet_users_traf partition by hash(month(ST_TIMESTAMP)) partitions " <<
+          "alter table INET_SNIFFER_STAT_NSEC partition by hash(microsecond(ts)) partitions " <<
+          "alter table INET_SNIFFER_STAT_SEC partition by hash(second(ts)) partitions " <<
+          "alter table INET_SNIFFER_STAT_MIN partition by hash(minute(ts)) partitions " <<
+          "alter table INET_SNIFFER_STAT_HOUR partition by hash(hour(ts)) partitions " <<
+          "alter table INET_SNIFFER_STAT_DAY partition by hash(day(ts)) partitions " <<
+          "alter table INET_SNIFFER_STAT_MON partition by hash(month(ts)) partitions " <<
+          "alter table INET_SNIFFER_STAT_YEAR partition by hash(year(ts)) partitions " <<
+          "alter table INET_USERS_TRAF partition by hash(month(ST_TIMESTAMP)) partitions " <<
           "alter table INET_USERS_MONTHLY_TOP_URL partition by hash(month(ST_TIMESTAMP)) partitions " <<
           "alter table INET_USERS_TOP_MAIL partition by hash(month(ST_TIMESTAMP)) partitions "
         ;
