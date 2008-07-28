@@ -1502,33 +1502,23 @@ String elapsedTime2Str(int64_t t)
 //---------------------------------------------------------------------------
 String float2Str(ldouble a)
 {
-#if HAVE_LONG_DOUBLE
-  static const char fmt[] = "%Lg";
-#else
-  static const char fmt[] = "%lg";
-#endif
 #if HAVE_SNPRINTF
-  int l = snprintf(NULL, 0, fmt, a);
+  int l = snprintf(NULL, 0, "%"PRF_LDBL"g", a);
 #elif HAVE__SNPRINTF
-  int l = _snprintf(NULL, 0, fmt, a);
+  int l = _snprintf(NULL, 0, "%"PRF_LDBL"g", a);
 #else
 #error Not implemented
 #endif
   if( l <= 0 ) l = 24;
   String::Container * container = String::Container::container(l);
-  sprintf(container->string_, fmt, a);
+  sprintf(container->string_, "%"PRF_LDBL"g", a);
   return container;
 }
 //---------------------------------------------------------------------------
 bool tryStr2Float(const String & str, ldouble & a)
 {
-#if HAVE_LONG_DOUBLE
-  static const char fmt[] = "%Lg";
-#else
-  static const char fmt[] = "%lg";
-#endif
   ldouble x;
-  bool r = sscanf(str.c_str(), fmt, &x) == 1;
+  bool r = sscanf(str.c_str(),"%"PRF_LDBL"g",&x) == 1;
   if( r ) a = x;
   return r;
 }
@@ -1537,7 +1527,7 @@ ldouble str2Float(const String & str)
 {
   ldouble a = 0;
   if( !tryStr2Float(str, a) )
-    newObjectV1C2<EStr2Scalar>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
+    newObjectV1C2<EStr2Scalar>(EINVAL, str + " " + __PRETTY_FUNCTION__)->throwSP();
   return a;
 }
 //---------------------------------------------------------------------------
