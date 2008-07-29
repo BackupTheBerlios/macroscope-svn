@@ -306,12 +306,12 @@ DSQLStatement & DSQLStatement::execute()
   try {
     prepare();
     for(;;){
-      dropCursor();
       ISC_STATUS_ARRAY status;
       if( api.isc_dsql_execute(status, &transaction_->handle_, &handle_, (short) database_->dpb_.dialect(), params_.sqlda_.sqlda()) == 0 )
         break;
-      ksys::AutoPtr<EDSQLStExecute> e(newObjectV1C2<EDSQLStExecute>(status, __PRETTY_FUNCTION__));
-      database_->exceptionHandler(e.ptr(NULL));
+      if( !findISCCode(status, isc_dsql_open_cursor_request) )
+        database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(status,sqlText_ + " " + __PRETTY_FUNCTION__));
+      dropCursor();
     }
     values_.clear();
     if( transaction_->startCount_ == 1 && values_.sqlda_.count() > 0 )
