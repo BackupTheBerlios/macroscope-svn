@@ -232,8 +232,8 @@ Logger & Logger::createDatabase()
     bool createDatabaseStructure = config_->valueByPath("macroscope.create_database_structure",true);
     if( createDatabaseStructure ){
       Vector<utf8::String> metadata;
-      if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
-        metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
+      //if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
+      //  metadata << "CREATE DOMAIN DATETIME AS TIMESTAMP";
       metadata <<
         "CREATE TABLE INET_USERS_TRAF ("
         " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
@@ -515,7 +515,7 @@ Logger & Logger::createDatabase()
       database_->create();
       database_->attach();
       for( uintptr_t i = 0; i < metadata.count(); i++ ){
-        if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
+        if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
           if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 ){
             metadata[i] += " ENGINE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
           }
@@ -524,6 +524,10 @@ Logger & Logger::createDatabase()
             if( (uintmax_t) m == 0 ) continue;
             metadata[i] += (utf8::String) m;
           }
+        }
+        else if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+          metadata[i] = metadata[i].replaceAll("DATETIME","TIMESTAMP");
+        }
         try {
           statement_->execute(metadata[i]);
         }
@@ -1743,7 +1747,7 @@ int main(int _argc,char * _argv[])
         setEnv("GATEWAY_INTERFACE","CGI/1.1");
         setEnv("REQUEST_METHOD","GET");
         setEnv("QUERY_STRING",argv()[i + 1]);
-        //setEnv("CONTENT_TYPE","");
+        setEnv("CONTENT_TYPE","");
       }
     }
     for( i = 1; i < argv().count(); i++ ){
