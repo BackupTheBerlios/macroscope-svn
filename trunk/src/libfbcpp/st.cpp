@@ -261,14 +261,10 @@ DSQLStatement & DSQLStatement::prepare()
 {
   allocate();
   if( sqlTextChanged_ || !prepared_ ){
+    dropCursor();
     ISC_STATUS_ARRAY status;
-    for(;;){
-      if( api.isc_dsql_prepare(status, &transaction_->handle_,&handle_,0,compileSQLParameters().c_str(),(short) database_->dpb_.dialect(),values_.sqlda_.sqlda()) == 0 )
-        break;
-      if( !findISCCode(status, isc_dsql_open_cursor_request) )
-        database_->exceptionHandler(newObjectV1C2<EDSQLStPrepare>(status,sqlText_ + " " + __PRETTY_FUNCTION__));
-      dropCursor();
-    }
+    if( api.isc_dsql_prepare(status, &transaction_->handle_,&handle_,0,compileSQLParameters().c_str(),(short) database_->dpb_.dialect(),values_.sqlda_.sqlda()) != 0 )
+      database_->exceptionHandler(newObjectV1C2<EDSQLStPrepare>(status,sqlText_ + " " + __PRETTY_FUNCTION__));
     info();
     values_.clear().valuesIndex_.clear();
     if( stmtType == stmtSelect || stmtType == stmtSelectForUpd || stmtType == stmtExecProcedure ){
@@ -305,14 +301,10 @@ DSQLStatement & DSQLStatement::execute()
   transaction_->start();
   try {
     prepare();
-    for(;;){
-      ISC_STATUS_ARRAY status;
-      if( api.isc_dsql_execute(status, &transaction_->handle_, &handle_, (short) database_->dpb_.dialect(), params_.sqlda_.sqlda()) == 0 )
-        break;
-      if( !findISCCode(status, isc_dsql_open_cursor_request) )
-        database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(status,sqlText_ + " " + __PRETTY_FUNCTION__));
-      dropCursor();
-    }
+    dropCursor();
+    ISC_STATUS_ARRAY status;
+    if( api.isc_dsql_execute(status, &transaction_->handle_, &handle_, (short) database_->dpb_.dialect(), params_.sqlda_.sqlda()) != 0 )
+      database_->exceptionHandler(newObjectV1C2<EDSQLStExecute>(status,sqlText_ + " " + __PRETTY_FUNCTION__));
     values_.clear();
     if( transaction_->startCount_ == 1 && values_.sqlda_.count() > 0 )
       values_.fetchAll();
@@ -351,10 +343,10 @@ DSQLStatement & DSQLStatement::dropCursor()
 //---------------------------------------------------------------------------
 ISC_STATUS DSQLStatement::fetch(ISC_STATUS_ARRAY status)
 {
-  ISC_STATUS  code;
+  ISC_STATUS code;
   code = api.isc_dsql_fetch(status, &handle_, (short) database_->dpb_.dialect(), values_.sqlda_.sqlda());
   if( code != 100 && code != isc_req_sync && code != 0 )
-    database_->exceptionHandler(newObjectV1C2<EDSQLStFetch>(status, __PRETTY_FUNCTION__));
+    database_->exceptionHandler(newObjectV1C2<EDSQLStFetch>(status,sqlText_ + " " + __PRETTY_FUNCTION__));
   return code;
 }
 //---------------------------------------------------------------------------

@@ -242,13 +242,17 @@ Logger & Logger::createDatabase()
         " ST_TRAF_SMTP          BIGINT NOT NULL"
         ")" <<
         "CREATE TABLE INET_USERS_MONTHLY_TOP_URL ("
+        " URL_ID                CHAR(26) CHARACTER SET ascii NOT NULL,"
         " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
         " ST_TIMESTAMP          DATETIME NOT NULL,"
-        " ST_URL                VARCHAR(4096) NOT NULL,"
-        " ST_URL_HASH           BIGINT NOT NULL,"
         " ST_URL_TRAF           BIGINT NOT NULL,"
         " ST_URL_COUNT          BIGINT NOT NULL"
         ")" << 
+        "CREATE TABLE INET_UMTU_INDEX ("
+        " URL_ID                CHAR(26) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+        " URL_HASH              BIGINT NOT NULL,"
+        " URL                   VARCHAR(4096) NOT NULL"
+        ")" <<
         "CREATE TABLE INET_SENDMAIL_MESSAGES ("
         " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
         " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
@@ -347,8 +351,10 @@ Logger & Logger::createDatabase()
         "CREATE UNIQUE INDEX IUT_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
         "CREATE INDEX IUT_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
         "CREATE INDEX IUT_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)" <<
-        "CREATE INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,ST_URL_HASH)" <<
-        "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP,ST_FROM,ST_TO)"
+        "CREATE INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,URL_ID)" <<
+        "CREATE INDEX IUMTUI_IDX1 ON INET_UMTU_INDEX (URL_HASH)" <<
+        "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP)"
+        //"CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP,ST_FROM,ST_TO)"
       ;
       utf8::String templ2;
       if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
@@ -1222,6 +1228,46 @@ int32_t Logger::doWork(uintptr_t stage)
       "</HEAD>\n"
       "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
       "<B>Rename operation completed successfuly.</B>\n"
+      "<HR>\n"
+      "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
+      "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +
+      "Ellapsed time: " + utf8::elapsedTime2Str(uintmax_t(gettimeofday() - ellapsed)) + "\n<BR>\n" +
+      "Generated on " + getHostName(true,"Unknown") + ", by " + macroscope_version.gnu_ + "\n<BR>\n"
+#ifndef PRIVATE_RELEASE
+      "<A HREF=\"http://developer.berlios.de/projects/macroscope/\">\n"
+      "  http://developer.berlios.de/projects/macroscope/\n"
+      "</A>\n"
+#endif
+      "</BODY>\n"
+      "</HTML>\n"
+    ;
+  }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("copydb") >= 0 ){
+    uint64_t ellapsed = gettimeofday();
+    AutoDatabaseDetach autoDatabaseDetach(database_);
+
+    ConfigSection dbParamsSection;
+    utf8::String connection(cgi_.paramAsString("connection"));
+    dbParamsSection.addSection(config_->sectionByPath(connection));
+    AutoPtr<Database> database2(Database::newDatabase(&dbParamsSection));
+    
+    database2->attach();
+
+    database_->start();
+    database2->start();
+
+    database2->commit();
+    database_->commit();
+    cgi_ <<
+      "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
+      "<HTML>\n"
+      "<HEAD>\n"
+      "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\">\n"
+      "<meta http-equiv=\"Content-Language\" content=\"en\">\n"
+      "<TITLE>Macroscope webinterface administrative function status report</TITLE>\n"
+      "</HEAD>\n"
+      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
+      "<B>Copy database operation completed successfuly.</B>\n"
       "<HR>\n"
       "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
       "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n" +

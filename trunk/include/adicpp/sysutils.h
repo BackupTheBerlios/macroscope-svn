@@ -253,7 +253,7 @@ inline guid_t base64ToGUID(const utf8::String & s)
 //---------------------------------------------------------------------------
 uintmax_t fibonacci(uintmax_t n);
 void createGUID(guid_t & uuid);
-utf8::String createGUIDAsBase32String();
+utf8::String createGUIDAsBase32String(bool reverse = false);
 inline guid_t createGUID(){ guid_t uuid; createGUID(uuid); return uuid; }
 guid_t stringToGUID(const char * s);
 inline guid_t stringToGUID(const utf8::String & s){ return stringToGUID(s.c_str()); }

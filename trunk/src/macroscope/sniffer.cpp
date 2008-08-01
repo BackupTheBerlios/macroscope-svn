@@ -349,51 +349,33 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     while( !caller->terminated() && !terminated_ && count > 0 && (packetsInTransaction_ == 0 || pCount - count < packetsInTransaction_) ){
       const HashedPacket & packet = packets[count - 1];
       uint64_t mbt, met;
-      //if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ){
-        if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
-        if( !statement_->prepared() ){
-          utf8::String exec;
-          if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ) exec = "CALL";
-          else
-          if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ) exec = "EXECUTE PROCEDURE";
-          statement_->text(
-            exec + " INET_UPDATE_SNIFFER_STAT_YEAR(:iface,:ts0,:ts1,:ts2,:ts3,:ts4,:ts5,:ts6,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data,:ports,:protocols,:mt)"
-          )->prepare()->
-            paramAsMutant("iface",ifName())->
-            paramAsMutant("ports",ports())->
-            paramAsMutant("protocols",protocols())->
-            paramAsMutant("mt",totalsPeriod_);
-        }
-        for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
-          setBounds(PacketGroupingPeriod(i),bt,mbt,met);
-          statement_->paramAsMutant("ts" + utf8::int2Str(i),Mutant(mbt).changeType(mtTime));
-        }
-        statement_->
-          paramAsString("src_ip",ksock::SockAddr::addr2Index(packet.srcAddr_))->
-          paramAsMutant("src_port",packet.srcPort_)->
-          paramAsString("dst_ip",ksock::SockAddr::addr2Index(packet.dstAddr_))->
-          paramAsMutant("dst_port",packet.dstPort_)->
-          paramAsMutant("proto",packet.proto_)->
-          paramAsMutant("dgram",packet.pktSize_)->
-          paramAsMutant("data",packet.dataSize_)->
-          execute();
-      //}
-      //else {
-      //  for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
-      //    if( caller->terminated() || terminated_ ) break;
-      //    setBounds(PacketGroupingPeriod(i),bt,mbt,met);
-      //    updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,packet.proto_,packet.pktSize_,packet.dataSize_);
-      //    if( caller->terminated() || terminated_ ) break;
-      //    if( ports() && protocols() ){
-      //      updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,packet.proto_,packet.pktSize_,packet.dataSize_);
-      //      if( caller->terminated() || terminated_ ) break;
-      //      updateTotals(i,mbt,packet.srcAddr_,packet.srcPort_,packet.dstAddr_,packet.dstPort_,-1,packet.pktSize_,packet.dataSize_);
-      //      if( caller->terminated() || terminated_ ) break;
-      //    }
-      //    if( ports() || protocols() )
-      //      updateTotals(i,mbt,packet.srcAddr_,0,packet.dstAddr_,0,-1,packet.pktSize_,packet.dataSize_);
-      //  }
-      //}
+      if( statement_ == NULL ) statement_ = database_->newAttachedStatement();
+      if( !statement_->prepared() ){
+        utf8::String exec;
+        if( dynamic_cast<MYSQLDatabase *>(database_.ptr()) != NULL ) exec = "CALL";
+        else
+        if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ) exec = "EXECUTE PROCEDURE";
+        statement_->text(
+          exec + " INET_UPDATE_SNIFFER_STAT_YEAR(:iface,:ts0,:ts1,:ts2,:ts3,:ts4,:ts5,:ts6,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data,:ports,:protocols,:mt)"
+        )->prepare()->
+          paramAsMutant("iface",ifName())->
+          paramAsMutant("ports",ports())->
+          paramAsMutant("protocols",protocols())->
+          paramAsMutant("mt",totalsPeriod_);
+      }
+      for( intptr_t i = pgpCount - 1; i >= totalsPeriod_; i-- ){
+        setBounds(PacketGroupingPeriod(i),bt,mbt,met);
+        statement_->paramAsMutant("ts" + utf8::int2Str(i),Mutant(mbt).changeType(mtTime));
+      }
+      statement_->
+        paramAsString("src_ip",ksock::SockAddr::addr2Index(packet.srcAddr_))->
+        paramAsMutant("src_port",packet.srcPort_)->
+        paramAsString("dst_ip",ksock::SockAddr::addr2Index(packet.dstAddr_))->
+        paramAsMutant("dst_port",packet.dstPort_)->
+        paramAsMutant("proto",packet.proto_)->
+        paramAsMutant("dgram",packet.pktSize_)->
+        paramAsMutant("data",packet.dataSize_)->
+        execute();
       count--;
     }
     if( caller->terminated() || terminated_ ){

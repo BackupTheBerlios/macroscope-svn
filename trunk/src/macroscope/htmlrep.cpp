@@ -144,38 +144,34 @@ void Logger::SquidSendmailThread::writeUserTop(
   utf8::String users(genUserFilter(user,isGroup));
   if( tt == ttWWW ){
     statement_->text(
-      "SELECT"
-      "    A.*"
-      "FROM"
-      "    ("
-      "        SELECT"
-      "          ST_URL, SUM(ST_URL_TRAF) AS SUM1, SUM(ST_URL_COUNT) AS SUM2"
-      "        FROM"
-      "            INET_USERS_MONTHLY_TOP_URL"
-      "        WHERE " + users +
-      "                ST_TIMESTAMP >= :BT AND"
-      "                ST_TIMESTAMP <= :ET"
-      "        GROUP BY ST_URL"
-      "    ) AS A "
-      "ORDER BY A.SUM1"
+      "SELECT\n"
+      "  a.url, u.SUM1, u.SUM2\n"
+      "FROM (\n"
+      "  SELECT\n"
+      "    URL_ID, SUM(ST_URL_TRAF) AS SUM1, SUM(ST_URL_COUNT) AS SUM2\n"
+      "  FROM\n"
+      "    INET_USERS_MONTHLY_TOP_URL\n"
+      "  WHERE " + users +
+      "    ST_TIMESTAMP >= :BT AND\n"
+      "    ST_TIMESTAMP <= :ET AND\n"
+      "    ST_URL_TRAF >= :threshold\n"
+      "  GROUP BY URL_ID\n"
+      ") AS u\n"
+      "LEFT JOIN\n"
+      "  INET_UMTU_INDEX a ON\n"
+      "  a.url_id = u.url_id"
     );
   }
   else if( tt == ttSMTP ){
     statement_->text(
-      "SELECT"
-      "  A.*"
-      "FROM"
-      "  ("
-      "    SELECT"
-      "      st_user, st_from, st_to,"
-      "      sum(st_mail_traf) as SUM1, sum(st_mail_count) as SUM2"
-      "    FROM"
-      "      INET_USERS_TOP_MAIL"
-      "    WHERE " + users +
-      "      ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
-      "    GROUP BY st_user, st_from, st_to"
-      "  ) AS A "
-      "ORDER BY A.SUM1"
+      "SELECT\n"
+      "  st_user, st_from, st_to,\n"
+      "  sum(st_mail_traf) as SUM1, sum(st_mail_count) as SUM2\n"
+      "FROM\n"
+      "  INET_USERS_TOP_MAIL\n"
+      "WHERE " + users +
+      "  ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET AND st_mail_traf >= :threshold\n"
+      "GROUP BY st_user, st_from, st_to\n"
     );
   }
   else {
@@ -189,8 +185,12 @@ void Logger::SquidSendmailThread::writeUserTop(
   statement_->
     paramAsMutant("BT",time2tm(tm2Time(beginTime) - getgmtoffset()))->
     paramAsMutant("ET",time2tm(tm2Time(endTime) - getgmtoffset()))->
+    paramAsMutant("threshold",threshold)->
     execute()->fetchAll();
-  if( statement_->rowCount() > 0 ){
+  Table<Mutant> result;
+  statement_->unload(result);
+  if( result.rowCount() > 0 ){
+    result.sort("SUM1");
     AsyncFile f(file);
     f.createIfNotExist(true).open().resize(0);
     Mutant m0(logger_->config_->valueByPath(section_ + ".html_report.file_mode",0644));
@@ -223,39 +223,38 @@ void Logger::SquidSendmailThread::writeUserTop(
       "  </TH>\n"
       "</TR>\n"
     ;
-    uint64_t at = statement_->sum("sum1");
-    for( i = statement_->rowCount() - 1; i >= 0; i-- ){
-      statement_->selectRow(i);
-      if( (uint64_t) statement_->valueAsMutant("sum1") < threshold ) break;
+    uint64_t at = result.sum("SUM1");
+    for( i = result.rowCount() - 1; i >= 0; i-- ){
+      if( (uint64_t) result(i,"SUM1") < threshold ) break;
       f <<
         "<TR>\n"
         "  <TH WITH=10 ALIGN=left BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttAll]) + "\" " +
         (tt == ttWWW ? "wrap>\n" : "nowrap>\n") +
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         (tt == ttWWW ?
-          "      <A HREF=\"" + statement_->valueAsString("st_url") + "\">\n" +
-          statement_->valueAsString("st_url") + "\n"
+        "      <A HREF=\"" + utf8::String(result(i,"url")) + "\">\n" +
+          result(i,"url") + "\n"
           "      </A>\n" :
-          (statement_->valueAsString("st_from").strncmp(statement_->valueAsString("st_user"),statement_->valueAsString("st_user").strlen()) == 0 ?
-            statement_->valueAsString("st_user") + "<B> --> </B>" + statement_->valueAsString("st_to") :
-            statement_->valueAsString("st_from") + "<B> --> </B>" + statement_->valueAsString("st_user")
+          (utf8::String(result(i,"st_from")).strncmp(result(i,"st_user"),utf8::String(result(i,"st_user")).strlen()) == 0 ?
+            utf8::String(result(i,"st_user")) + "<B> --> </B>" + utf8::String(result(i,"st_to")) :
+            utf8::String(result(i,"st_from")) + "<B> --> </B>" + utf8::String(result(i,"st_user"))
           ) + "\n"
         ) +
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" + trafTypeBodyDataColor_[tt] + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-        statement_->valueAsMutant("sum2") + "\n"
+        result(i,"SUM2") + "\n"
         "    </FONT>\n"
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" + trafTypeBodyDataColor_[tt] + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
         utf8::int2Str(
           (
-           (uint64_t) statement_->valueAsMutant("sum1") / 
+           (uint64_t) result(i,"SUM1") / 
             (
-              (uint64_t) statement_->valueAsMutant("sum2") > 0 ? 
-              (uint64_t) statement_->valueAsMutant("sum2") : 1u
+              (uint64_t) result(i,"SUM2") > 0 ? 
+              (uint64_t) result(i,"SUM2") : 1u
             )
           ) / 1024u
         ) + "\n"
@@ -263,7 +262,7 @@ void Logger::SquidSendmailThread::writeUserTop(
         "  </TH>\n"
         "  <TH ALIGN=right BGCOLOR=\"" + utf8::String(trafTypeBodyDataColor_[ttWWW]) + "\" nowrap>\n"
         "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
-        formatTraf(statement_->valueAsMutant("sum1"),at) +
+        formatTraf(result(i,"SUM1"),at) +
         "\n"
         "    </FONT>\n"
         "  </TH>\n"
@@ -710,7 +709,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
   decoration();
   struct tm beginTime, endTime;
   curTime_ = time2tm(getlocaltimeofday());
-  database_->isolation("REPEATABLE")->start();
+  database_->isolation("SERIALIZABLE")->start();
   statement_->text("SELECT ");
   if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
     statement_->text(statement_->text() + "FIRST 1 ");
@@ -1152,24 +1151,35 @@ utf8::String Logger::SquidSendmailThread::shortUrl(const utf8::String & url)
 //------------------------------------------------------------------------------
 void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFileName, bool top10, const utf8::String & skipUrl)
 {
+  AutoPtr<Statement> stIdxSel_(stMonUrlSel_->database()->newAttachedStatement());
+  stIdxSel_->text(
+    "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMonUrlSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
+    " URL_ID FROM INET_UMTU_INDEX " 
+    "WHERE URL_HASH = :HASH AND URL = :URL"
+  );
+  AutoPtr<Statement> stIdxIns_(stMonUrlSel_->database()->newAttachedStatement());
+  stIdxIns_->text(
+    "INSERT INTO INET_UMTU_INDEX " 
+    "(URL_ID, URL_HASH, URL) VALUES" 
+    "(:ID, :HASH, :URL)"
+  );
+
   stMonUrlSel_->text(
     "SELECT" + utf8::String(dynamic_cast<MYSQLDatabase *>(stMonUrlSel_->database()) != NULL ? " SQL_NO_CACHE" : "") +
-    " ST_URL FROM INET_USERS_MONTHLY_TOP_URL " 
-    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
-    "ST_URL = :ST_URL"
+    " URL_ID FROM INET_USERS_MONTHLY_TOP_URL " 
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND URL_ID = :URL_ID"
   );
   stMonUrlIns_->text(
     "INSERT INTO INET_USERS_MONTHLY_TOP_URL " 
-    "(ST_USER, ST_TIMESTAMP, ST_URL, ST_URL_HASH, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
-    "(:ST_USER, :ST_TIMESTAMP, :ST_URL, :ST_URL_HASH, :ST_URL_TRAF, 1)"
+    "(ST_USER, ST_TIMESTAMP, URL_ID, ST_URL_TRAF, ST_URL_COUNT) VALUES" 
+    "(:ST_USER, :ST_TIMESTAMP, :URL_ID, :ST_URL_TRAF, 1)"
   );
   stMonUrlUpd_->text(
     "UPDATE INET_USERS_MONTHLY_TOP_URL "
     "SET "
     "ST_URL_TRAF = ST_URL_TRAF + :ST_URL_TRAF,"
     "ST_URL_COUNT = ST_URL_COUNT + 1 "
-    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND ST_URL_HASH = :ST_URL_HASH AND "
-    "ST_URL = :ST_URL"
+    "WHERE ST_USER = :ST_USER AND ST_TIMESTAMP = :ST_TIMESTAMP AND URL_ID = :URL_ID"
   );
   stTrafIns_->text(
     "INSERT INTO INET_USERS_TRAF"
@@ -1202,6 +1212,8 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
   lgb.codePage_ = logger_->config_->valueByPath(section_ + ".squid.log_file_codepage",CP_ACP);
   stTrafIns_->prepare();
   stTrafUpd_->prepare();
+  stIdxSel_->prepare();
+  stIdxIns_->prepare();
   stMonUrlSel_->prepare();
   stMonUrlUpd_->prepare();
   stMonUrlIns_->prepare();
@@ -1266,27 +1278,36 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
       }
       if( top10 ){
         int64_t urlHash = st_url.hash_ll(true);
-//        fprintf(stderr,"%s %d %"PRIu64"\n",__FILE__,__LINE__,lineNo);
+        utf8::String urlId;
+        stIdxSel_->paramAsMutant("HASH",urlHash)->paramAsString("URL",st_url)->execute()->fetchAll();
+        if( stIdxSel_->rowCount() == 0 ){
+          urlId = createGUIDAsBase32String(true);
+          stIdxIns_->
+            paramAsString("ID",urlId)->
+            paramAsMutant("HASH",urlHash)->
+            paramAsString("URL",st_url)->
+            execute();
+        }
+        else {
+          urlId = stIdxSel_->valueAsString("URL_ID");
+        }
         stMonUrlSel_->
           paramAsString("ST_USER", st_user)->
           paramAsMutant("ST_TIMESTAMP", timeStamp)->
-          paramAsMutant("ST_URL", st_url)->
-          paramAsMutant("ST_URL_HASH",urlHash)->
+          paramAsMutant("URL_ID",urlId)->
           execute()->fetchAll();
         if( stMonUrlSel_->rowCount() > 0 ){
           stMonUrlUpd_->
             paramAsString("ST_USER", st_user)->
             paramAsMutant("ST_TIMESTAMP", timeStamp)->
-            paramAsMutant("ST_URL", st_url)->
-            paramAsMutant("ST_URL_HASH",urlHash)->
+            paramAsMutant("URL_ID", urlId)->
             paramAsMutant("ST_URL_TRAF", traf)->execute();
         }
         else {
           stMonUrlIns_->
             paramAsString("ST_USER", st_user)->
             paramAsMutant("ST_TIMESTAMP", timeStamp)->
-            paramAsMutant("ST_URL", st_url)->
-            paramAsMutant("ST_URL_HASH",urlHash)->
+            paramAsMutant("URL_ID", urlId)->
             paramAsMutant("ST_URL_TRAF", traf)->execute();
         }
       }
@@ -1439,7 +1460,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
             if( *a == '@' ){
               if( utf8::plane(a + 1,domain.strlen()).strcasecmp(domain) == 0 )
                 st_user = utf8::plane(from,a - from).lower();
-              while( *a != '>' && *a != ',' ) a++;
+              while( *a != '>' && *a != ',' && !isspace(*a) ) a++;
               fromAddr = utf8::plane(from,a - from).lower().replaceAll("\"","");
             }
           }
@@ -1456,7 +1477,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
             if( *a == '@' ){
               if( utf8::plane(a + 1,domain.strlen()).strcasecmp(domain) == 0 )
                 st_user = utf8::plane(to,a - to).lower();
-              while( *a != '>' && *a != ',' && *a != '\r' && *a != '\n' && *a != '\0' ) a++;
+              while( *a != '>' && *a != ',' && *a != '\r' && *a != '\n' && *a != '\0' && !isspace(*a) ) a++;
               toAddr = utf8::plane(to,a - to).lower().replaceAll("\"","");
             }
           }

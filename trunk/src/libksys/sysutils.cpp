@@ -551,10 +551,18 @@ guid_t stringToGUID(const char * s)
   return uuid;
 }
 //---------------------------------------------------------------------------
-utf8::String createGUIDAsBase32String()
+utf8::String createGUIDAsBase32String(bool reverse)
 {
   guid_t uuid;
   createGUID(uuid);
+  if( reverse ){
+    uint8_t * p1 = (uint8_t *) &uuid, * p2 = p1 + sizeof(uuid) - 1;
+    while( p1 < p2 ){
+      xchg(*p1,*p2);
+      p1++;
+      p2--;
+    }
+  }
   return base32Encode(&uuid,sizeof(uuid));
 }
 //---------------------------------------------------------------------------
