@@ -90,7 +90,7 @@ GDChart & GDChart::createChart()
   create(width_,height_);
 
   bool isIntergerOnlyValues = true;
-  intptr_t i, j, xCount = 0, x, y, x0, y0;
+  intptr_t i, j, xCount = 0, x, y, x0 = 0, y0 = 0;
   // calc min max
   ldouble minValue = DBL_MAX, maxValue = -DBL_MAX;
   for( i = data_.count() - 1; i >= 0; i-- ){
