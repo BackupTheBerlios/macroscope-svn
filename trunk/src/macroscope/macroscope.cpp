@@ -439,6 +439,7 @@ Logger & Logger::createDatabase()
           "alter table INET_SNIFFER_STAT_MON partition by hash(month(ts)) partitions " <<
           "alter table INET_SNIFFER_STAT_YEAR partition by hash(year(ts)) partitions " <<
           "alter table INET_USERS_TRAF partition by hash(month(ST_TIMESTAMP)) partitions " <<
+          //"alter table INET_UMTU_INDEX partition by hash(url_hash) partitions " <<
           "alter table INET_USERS_MONTHLY_TOP_URL partition by hash(month(ST_TIMESTAMP)) partitions " <<
           "alter table INET_USERS_TOP_MAIL partition by hash(month(ST_TIMESTAMP)) partitions "
         ;
