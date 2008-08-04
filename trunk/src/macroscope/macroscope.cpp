@@ -249,14 +249,14 @@ Logger & Logger::createDatabase()
         " ST_URL_COUNT          BIGINT NOT NULL"
         ")" << 
         "CREATE TABLE INET_UMTU_INDEX ("
-        " URL_ID                CHAR(26) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+        " URL_ID                CHAR(26) CHARACTER SET ascii NOT NULL,"
         " URL_HASH              BIGINT NOT NULL,"
         " URL                   VARCHAR(4096) NOT NULL"
         ")" <<
         "CREATE TABLE INET_SENDMAIL_MESSAGES ("
         " ST_USER               VARCHAR(80) CHARACTER SET ascii NOT NULL,"
         " ST_FROM               VARCHAR(240) CHARACTER SET ascii NOT NULL,"
-        " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+        " ST_MSGID              VARCHAR(14) CHARACTER SET ascii NOT NULL,"
         " ST_MSGSIZE            BIGINT NOT NULL,"
         " ST_NRCPTS             BIGINT NOT NULL"
         ")" <<
@@ -295,7 +295,7 @@ Logger & Logger::createDatabase()
         " st_data_bytes    BIGINT NOT NULL"
         ")" <<
         "CREATE TABLE INET_IFACES ("
-        " iface            CHAR(16) CHARACTER SET ascii NOT NULL PRIMARY KEY"
+        " iface            CHAR(16) CHARACTER SET ascii NOT NULL"
         ")"
       ;
       utf8::String templ(
@@ -344,7 +344,7 @@ Logger & Logger::createDatabase()
         " st_data_bytes    BIGINT NOT NULL"
         ")" <<*/
         "CREATE TABLE INET_DNS_CACHE ("
-        " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL PRIMARY KEY,"
+        " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL,"
         " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
         ")" <<
 
@@ -353,8 +353,11 @@ Logger & Logger::createDatabase()
         "CREATE INDEX IUT_IDX3 ON INET_USERS_TRAF (ST_TRAF_SMTP,ST_TIMESTAMP)" <<
         "CREATE INDEX IUMTU_IDX1 ON INET_USERS_MONTHLY_TOP_URL (ST_USER,ST_TIMESTAMP,URL_ID)" <<
         "CREATE INDEX IUMTUI_IDX1 ON INET_UMTU_INDEX (URL_HASH)" <<
-        "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP)"
-        //"CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP,ST_FROM,ST_TO)"
+        "CREATE UNIQUE INDEX IUMTUI_IDX1 ON INET_UMTU_INDEX (URL_ID)" <<
+        "CREATE INDEX IUTM_IDX1 ON INET_USERS_TOP_MAIL (ST_USER,ST_TIMESTAMP)" <<
+        "CREATE INDEX ISM_IDX1 ON INET_SENDMAIL_MESSAGES (ST_MSGID)" <<
+        "CREATE UNIQUE INDEX II_IDX1 ON INET_IFACES (iface)" <<
+        "CREATE UNIQUE INDEX IDC_IDX1 ON INET_DNS_CACHE (st_ip)"
       ;
       utf8::String templ2;
       if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
