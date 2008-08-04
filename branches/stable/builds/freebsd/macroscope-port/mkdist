@@ -1,0 +1,41 @@
+#!/bin/sh
+
+REPOS="http://svn.berlios.de/svnroot/repos/macroscope/branches/stable"
+FILES="builds/cmake include src utils AUTHORS README INSTALL NEWS CMakeLists.txt"
+rm -Rf /tmp/macroscope
+for f in ${FILES}; do
+  svn export "${REPOS}/${f}" "/tmp/macroscope/${f}"
+  if [ $(expr $?) -ne 0 ]; then
+    echo "svn failed: exit code " $(expr $?)
+    exit
+  fi
+done
+PORT=`cat /tmp/macroscope/src/macroscope/version.in | awk '{ if( length($3) > 0 ) printf "%s-%s", $2, $3 }'`
+rm -Rf /tmp/${PORT}
+cp -Rf /tmp/macroscope /tmp/${PORT}
+#echo "#!/bin/sh" >> "${PORT}/configure"
+#echo "cmake ." >> "${PORT}/configure"
+#chmod u+x "${PORT}/configure"
+CW=`pwd`
+tar -c -C /tmp -f - ${PORT} | bzip2 --best - > ${CW}/${PORT}.tar.bz2
+cp -f ${CW}/${PORT}.tar.bz2 /usr/ports/distfiles/${PORT}.tar.bz2
+rm -Rf /tmp/${PORT}
+scp -vCi ~/.ssh/berlios_dsa ${PORT}.tar.bz2 white_raven@shell.berlios.de:/home/groups/ftp/pub/macroscope/${PORT}.tar.bz2
+export FTP_PROXY=
+export HTTP_PROXY=
+ftp -ARu ftp://white_raven@ftp.pisem.net/${PORT}.tar.bz2 ${PORT}.tar.bz2
+
+make -DNOPORTDOCS makesum
+make -DNOPORTDOCS install
+make -DNOPORTDOCS package
+make -DNOPORTDOCS deinstall
+pkg_add ${PORT}.tbz
+make -DNOPORTDOCS deinstall
+make -DNOPORTDOCS reinstall
+make -DNOPORTDOCS package
+
+make -DNOPORTDOCS deinstall
+make -DNOPORTDOCS clean
+
+rm -f macroscope.shar
+shar `find . \! -regex ".*\.svn.*" \! -name "mkdist" \! -name "send-pr.port" \! -name "macroscope.shar" \! -regex ".*macroscope-.*" \! -regex ".*work.*"` > macroscope.shar

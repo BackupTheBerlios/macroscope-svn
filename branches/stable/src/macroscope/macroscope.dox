@@ -1,0 +1,29 @@
+/*!
+ * \page macroscope_page macroscope
+ * \anchor macroscope_doc
+ * \if english
+ * \section macroscope_intro What is macroscope
+ * This is a programm.
+ * \endif
+ *
+ * \if russian
+ * \section macroscope_intro Что такое macroscope
+ * Программа для обработки лог-файлов программ squid, sendmail, bpft и вывода HTML отчётов по ним.\n
+ * \section macroscope_install Установка macroscope
+ * Установка осуществляется с помощью автоматической программы установщика.\n
+ * Запустите исполняемый файл и следуйте инструкциям установки.\n
+ * \section macroscope_files Файлы macroscope
+ * Перед запуском необходимо создать конфигурационный файл macroscope - по умолчанию используется
+ * macroscope.conf из того же каталога где находится исполняемый файл.\n
+ * Можно осуществить это скопировав или переименовав файл macroscope.conf.template входящий в инсталяционный пакет.\n
+ * Задать имя и расположение файла можно с помощью параметра командной строки -c\n
+ * По умолчанию сообщения и ошибки выводятся в файл macroscope.log в каталоге программы\n
+ * Задать имя и расположение файла вывода сообщений и ошибок можно с помощью параметра командной строки -log\n\n
+ * Так же для работы программы необходим установленный и запущеный сервер SQL.
+ * Поддерживаются <A HREF="http://www.firebirdsql.org">firebird</A>, <A HREF="http://www.mysql.org">mysql</A>.\n
+ * \subsection macroscope_install_windows Установка сервера SQL mysql под Windows
+ * Under constraction\n\n
+ * \subsection macroscope_install_bsd Установка сервера SQL mysql под *BSD
+ * Under constraction\n\n
+ * \endif
+ */
