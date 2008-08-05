@@ -1,0 +1,47 @@
+#include <adicpp/adicpp.h>
+#include "SymbolTable.h"
+#include "CodeGenerator.h"
+
+COMPILER kvm
+
+  ksys::AutoPtr<SymbolTable> tab;
+  ksys::AutoPtr<CodeGenerator> gen;
+
+CHARACTERS
+  letter    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" .
+  digit     = "0123456789" .
+  hexdigit  = digit + "ABCDEF" .
+  cr        = '\r' .
+  lf        = '\n' .
+  tab       = '\t' .
+
+TOKENS
+  symbol     = '_' | letter {'_' | letter | digit} .
+  number     = digit {digit} .
+  eol        = cr | lf .
+  lb         = '{' .
+  rb         = '}' . 
+  class      = "class" .
+  semicolon  = ';' .
+
+COMMENTS FROM "/*" TO "*/" NESTED
+COMMENTS FROM "//" TO cr lf
+
+IGNORE cr + lf + tab
+
+PRODUCTIONS
+
+kvm =
+  (.
+    utf8::String className;
+    gen = newObject<CodeGenerator>();
+    tab = newObject<SymbolTable>();
+  .)
+  { classDecl<className> } .
+
+classDecl<utf8::String & name> = (. utf8::String memberName; .)
+  class symbol (. name = t->val; .) lb { classMemberDecl<memberName> } rb .
+
+classMemberDecl<utf8::String & name> = symbol (. name = t->val; .) semicolon .
+
+END kvm.
