@@ -27,10 +27,13 @@ int main(int ac, char*av[]){
   unsigned int version, ver, rev, lev;
   if( sscanf(inpBuffer,"%s %s %u.%u.%u",versionString,target,&ver,&rev,&lev) != 5 ) return -1;
   for( int i = sizeof(target) - 1; i >= 0; i-- ) upperTarget[i] = (char) toupper(target[i]);
-  for( unsigned u = 0; u < sizeof(upperOutName); u++ ){
+  for( int u = strlen(av[2]); u >= 0; u-- ){
     upperOutName[u] = (char) toupper(av[2][u]);
     if( upperOutName[u] == '.' || isspace(upperOutName[u]) ) upperOutName[u] = '_';
-    if( av[2][u] == '\0' ) break;
+    if( upperOutName[u] == '\\' || upperOutName[u] == '/' ){
+      strcpy(upperOutName,upperOutName + u + 1);
+      break;
+    }
   }
   version = (ver << 22) + (rev << 12) + lev;
   version++;
@@ -140,6 +143,7 @@ int main(int ac, char*av[]){
       "  const char * web_;\n"
       "  const char * sccs_;\n"
       "  const char * rcs_;\n"
+      "  const char * tag_;\n"
       "} %s_version_t;\n\n"
       "extern %s_version_t %s_version;\n\n"
       "#ifdef __cplusplus\n"
@@ -164,7 +168,8 @@ int main(int ac, char*av[]){
       "  \"%s %u.%u.%u %s (%s-%s-%s %s)\",\n"
       "  \"%s/%u.%u.%u %s\",\n"
       "  \"@(#)%s %u.%u.%u %s (%s-%s-%s %s)\",\n"
-      "  \"$Id: %s %u.%u.%u %s (%s-%s-%s %s) $\"\n"
+      "  \"$Id: %s %u.%u.%u %s (%s-%s-%s %s) $\",\n"
+      "  \"%s\"\n"
       "};\n\n"
       "#ifdef __cplusplus\n"
       "} // extern \"C\"\n"
@@ -219,6 +224,7 @@ int main(int ac, char*av[]){
       ts + 4,
       ts + 20,
       ts + 11,
+      target,
       upperOutName
     ) == -1 ) return errno;
   }

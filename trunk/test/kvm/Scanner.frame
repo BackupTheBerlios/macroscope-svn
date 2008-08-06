@@ -266,8 +266,8 @@ private:
 public:
 	Buffer *buffer;   // scanner buffer
 	
-	Scanner(const unsigned char* buf, int len);
-	Scanner(const wchar_t* fileName);
+	Scanner(const unsigned char * buf, int len);
+	Scanner(const wchar_t * fileName = NULL);
 	Scanner(FILE* s);
 	~Scanner();
 	Token* Scan();
@@ -456,7 +456,8 @@ int coco_string_hash(const wchar_t *data) {
 	int h = 0;
 	if (!data) { return 0; }
 	while (*data != 0) {
-		h = (h * 7) ^ *data;
+		//h = (h * 7) ^ *data;
+		h = ((h << 2) | (h << 1) | h) ^ *data;
 		++data;
 	}
 	if (h < 0) { h = -h; }
@@ -689,15 +690,18 @@ Scanner::Scanner(const unsigned char* buf, int len) {
 }
 
 Scanner::Scanner(const wchar_t* fileName) {
-	FILE* stream;
-	char *chFileName = coco_string_create_char(fileName);
-	if ((stream = fopen(chFileName, "rb")) == NULL) {
+        buffer = NULL;
+        if( fileName != NULL ){
+  	  FILE* stream;
+	  char *chFileName = coco_string_create_char(fileName);
+	  if ((stream = fopen(chFileName, "rb")) == NULL) {
 		wprintf(L"--- Cannot open file %ls\n", fileName);
 		exit(1);
-	}
-	coco_string_delete(chFileName);
-	buffer = new Buffer(stream, false);
-	Init();
+	  }
+	  coco_string_delete(chFileName);
+	  buffer = new Buffer(stream, false);
+  	  Init();
+        }
 }
 
 Scanner::Scanner(FILE* s) {
@@ -706,15 +710,17 @@ Scanner::Scanner(FILE* s) {
 }
 
 Scanner::~Scanner() {
-	char* cur = (char*) firstHeap;
+        if( buffer != NULL ){
+	  char* cur = (char*) firstHeap;
 
-	while(cur != NULL) {
+	  while(cur != NULL) {
 		cur = *(char**) (cur + HEAP_BLOCK_SIZE);
 		free(firstHeap);
 		firstHeap = cur;
-	}
-	delete [] tval;
-	delete buffer;
+	  }
+	  delete [] tval;
+	  delete buffer;
+        }
 }
 
 void Scanner::Init() {

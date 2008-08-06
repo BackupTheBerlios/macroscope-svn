@@ -44,16 +44,13 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
-				OmitFramePointers="true"
+				Optimization="1"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -68,6 +65,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\version.exe"
 				LinkIncremental="1"
+				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -123,16 +121,13 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				InlineFunctionExpansion="2"
-				EnableIntrinsicFunctions="true"
-				FavorSizeOrSpeed="1"
-				OmitFramePointers="true"
+				Optimization="1"
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -147,6 +142,7 @@
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\version.exe"
 				LinkIncremental="1"
+				GenerateDebugInformation="true"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

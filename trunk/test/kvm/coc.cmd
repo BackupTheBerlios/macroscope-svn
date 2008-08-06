@@ -1,4 +1,4 @@
 @echo off
 
-coco64 -namespace "kvm" kvm.atg
+coco64 -namespace "ksys:kvm" kvm.atg
 del *.old

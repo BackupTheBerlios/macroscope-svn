@@ -1,47 +1,145 @@
-#include <adicpp/adicpp.h>
-#include "SymbolTable.h"
+﻿#include <adicpp/adicpp.h>
 #include "CodeGenerator.h"
+#include "SymbolTable.h"
+
+using namespace ksys;
 
 COMPILER kvm
 
-  ksys::AutoPtr<SymbolTable> tab;
-  ksys::AutoPtr<CodeGenerator> gen;
+  AutoPtr<CodeGenerator> gen;
+  AutoPtr<SymbolTable> tab;
 
 CHARACTERS
-  letter    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" .
-  digit     = "0123456789" .
-  hexdigit  = digit + "ABCDEF" .
+  letter    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + '\u0080' .. '\ufdcf' + '\ufdf0' .. '\ufffd'.
+  special   = "_@$" .
+  ctrl      = '\u0000' .. '\u001f' .
   cr        = '\r' .
   lf        = '\n' .
   tab       = '\t' .
+  space     = ' ' .
+
+  zero          = '0' .
+  zeroToThree   = zero + "123" .
+  octalDigit    = zero + "1234567" . 
+  nonZeroDigit  = "123456789" .
+  digit         = '0' + nonZeroDigit .
+  hexDigit      = digit + "ABCDEFabcdef" .
+
+  char          = ANY - "'" - '\\' - ctrl .
+  stringChar    = ANY - "\"" - '\\' - ctrl .
 
 TOKENS
-  symbol     = '_' | letter {'_' | letter | digit} .
-  number     = digit {digit} .
-  eol        = cr | lf .
-  lb         = '{' .
-  rb         = '}' . 
-  class      = "class" .
-  semicolon  = ';' .
+  symbol    = special | letter { special | letter | digit } .
+  number    = digit { digit } .
+/*
+  intLit    =
+    (  zero | nonZeroDigit { digit }
+    | ( "0x" | "0X" ) hexDigit { hexDigit }
+    | '0' octalDigit { octalDigit }
+    ) [ "l" | "L" ] .
+
+  floatLit  =
+    "." digit {digit} 
+    [("e" | "E") ["+" | "-"] digit {digit}] 
+    [ "F" | "f" | "D" | "d" ]
+    | digit {digit} 
+    ( "." {digit} 
+      [("e" | "E" ) ["+" | "-"] digit {digit} ] 
+      [ "F" | "f" | "D" | "d" ]
+      | ("e" | "E") ["+" | "-"] digit {digit}
+      [ "F" | "f" | "D" | "d" ]
+      | "F" | "f" | "D" | "d"
+    ) .
+*/    
+  charLit = 
+    "'" ( char
+        | "\\" ( "b" | "t" | "n" | "f" | "r" | "\"" | "\'" | "\\"
+               | "u" { "u" } hexDigit hexDigit hexDigit hexDigit
+               | zeroToThree [ octalDigit ] [ octalDigit ]
+               | octalDigit [ octalDigit ]
+               )
+        ) 
+    "'" .
+  stringLit = 
+    "\"" { stringChar
+         | "\\" ( "b" | "t" | "n" | "f" | "r" | "\"" | "\'" | "\\"
+                | "u" { "u" } hexDigit hexDigit hexDigit hexDigit
+                | zeroToThree [ octalDigit ] [ octalDigit ]
+                | octalDigit [ octalDigit ]
+                )
+         } 
+    "\"" .
+
+  semicolon = ";".
+  colon     = ":".
+  comma     = ",".
+  dec       = "--".
+  dot       = ".".
+  inc       = "++".
+  lbrace    = "{".
+  lbrack    = "[".
+  lpar      = "(".
+  minus     = "-".
+  not       = "!".
+  plus      = "+".
+  rbrace    = "}".
+  rbrack    = "]".
+  rpar      = ")".
+  tilde     = "~".
 
 COMMENTS FROM "/*" TO "*/" NESTED
-COMMENTS FROM "//" TO cr lf
+COMMENTS FROM "//" TO lf
 
-IGNORE cr + lf + tab
+IGNORE cr + lf + tab + ctrl
 
 PRODUCTIONS
 
 kvm =
-  (.
-    utf8::String className;
-    gen = newObject<CodeGenerator>();
-    tab = newObject<SymbolTable>();
-  .)
-  { classDecl<className> } .
+  { classDecl<NULL> | pseudonymDecl<NULL> } .
 
-classDecl<utf8::String & name> = (. utf8::String memberName; .)
-  class symbol (. name = t->val; .) lb { classMemberDecl<memberName> } rb .
+classDecl<CodeObject * context> =
+  ("class" | "класс") symbol (.
+      Class * codeObject = newObject<Class>();
+      tab->newSymbol(context,t->val,codeObject); .)
+    lbrace
+       { classDecl<codeObject> | classMemberDecl<codeObject> | pseudonymDecl<codeObject> }
+    rbrace .
 
-classMemberDecl<utf8::String & name> = symbol (. name = t->val; .) semicolon .
+classMemberFuncParamDecl<ClassMemberFunc * context> =
+  symbol (.
+      ClassMemberFuncParam * codeObject = newObject<ClassMemberFuncParam>();
+      tab->newSymbol(context,t->val,codeObject); .)
+    .
+
+classMemberDecl<CodeObject * context> =
+  symbol (.
+      ClassMember * codeObject = newObject<ClassMember>();
+      tab->newSymbol(context,t->val,codeObject); .)
+    {
+      lpar (.
+        ClassMemberFunc * func = newObject<ClassMemberFunc>();
+        tab->replaceSymbolObject(context,t->val,codeObject = func); .)
+      { classMemberFuncParamDecl<func> { comma classMemberFuncParamDecl<func> } }
+      rpar
+    }
+    { comma classMemberDecl<context> }
+    semicolon .
+
+namespaceSymbol<CodeObject * & context> =
+  symbol
+    (.
+      Symbol * symbol = tab->findSymbol(context,t->val);
+      context = symbol->object(); .)
+    { dot namespaceSymbol<context> } .
+
+pseudonymDecl<CodeObject * context> =
+  ("pseudonym" | "псевдоним") (.
+    CodeObject * localContext = context; .)
+    namespaceSymbol<localContext> symbol (.
+      tab->newSymbol(localContext->parent(),t->val,localContext,true); .)
+    { symbol (.
+      tab->newSymbol(localContext->parent(),t->val,localContext,true); .)
+    }
+    semicolon .
 
 END kvm.

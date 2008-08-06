@@ -28,11 +28,13 @@
 #include "version.c"
 #undef _VERSION_C_AS_HEADER_
 #include <adicpp/adicpp.h>
+#include "Parser.h"
+#include "Scanner.h"
+#include "CodeGenerator.h"
+#include "SymbolTable.h"
 //------------------------------------------------------------------------------
-namespace kvm {
-//------------------------------------------------------------------------------
-//------------------------------------------------------------------------------
-} // namespace kvm
+using namespace ksys;
+using namespace ksys::kvm;
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
@@ -43,17 +45,35 @@ int main(int _argc,char * _argv[])
   autoInitializer = autoInitializer;
 
   try {
-    for( uintptr_t i = 1; i < ksys::argv().count(); i++ ){
-      if( ksys::argv()[i].strcmp("--version") == 0 ){
-        ksys::stdErr.debug(9,utf8::String::Stream() << kvm_version.tex_ << "\n");
+    stdErr.fileName(SYSLOG_DIR(kvm_version.tag_) + pathDelimiterStr + kvm_version.tag_ + ".log");
+    for( uintptr_t i = 1; i < argv().count(); i++ ){
+      if( argv()[i].strcmp("--version") == 0 ){
+        stdErr.debug(9,utf8::String::Stream() << kvm_version.tex_ << "\n");
         fprintf(stdout,"%s\n",kvm_version.tex_);
-        continue;
+        break;
+      }
+      else if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
+        changeCurrentDir(argv()[++i]);
+      }
+      else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
+        stdErr.fileName(argv()[++i]);
+      }
+      else {
+        AutoPtr<wchar_t> fileName(coco_string_create(argv()[i].getUNICODEString()));
+        AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));
+        AutoPtr<Parser> parser(newObjectV1<Parser>(scanner.ptr()));
+        parser->gen = newObject<CodeGenerator>();
+        parser->tab = newObjectV1<SymbolTable>(parser->gen.ptr());
+		    parser->Parse();
+		    if( parser->errors->count > 0 ){
+          exit(EINVAL);
+		    }
       }
     }
   }
-  catch( ksys::ExceptionSP & e ){
+  catch( ExceptionSP & e ){
     e->writeStdError();
-    errcode = e->code() >= ksys::errorOffset ? e->code() - ksys::errorOffset : e->code();
+    errcode = e->code() >= errorOffset ? e->code() - errorOffset : e->code();
   }
   catch( ... ){
   }

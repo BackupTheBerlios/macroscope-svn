@@ -83,6 +83,7 @@ template <class T> class Vector {
     intptr_t          bSearchCase(const T & element) const;
     uintptr_t         bSearchCase(const T & element, intptr_t & c) const;
     Vector<T> & xchg(uintptr_t e1,uintptr_t e2);
+    Vector<T> & xchg(Vector<T> & v);
 };
 //---------------------------------------------------------------------------
 template <class T> inline Vector<T>::Vector() : ptr_(NULL), count_(0), max_(0)
@@ -533,6 +534,15 @@ Vector<T> & Vector<T>::xchg(uintptr_t e1,uintptr_t e2)
   T * p = ptr_[e1];
   ptr_[e1] = ptr_[e2];
   ptr_[e2] = p;
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <class T> inline
+Vector<T> & Vector<T>::xchg(Vector<T> & v)
+{
+  ksys::xchg(ptr_,v.ptr_);
+  ksys::xchg(count_,v.count_);
+  ksys::xchg(max_,v.max_);
   return *this;
 }
 //-----------------------------------------------------------------------------

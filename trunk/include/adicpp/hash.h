@@ -39,6 +39,8 @@ template <class T> class HashFuncContainer {
     static uint64_t hash_rev_ll(const void * key, uintptr_t len, uint64_t h = 0);
     static uintptr_t hash(const char * s, uintptr_t h = 0);
     static uint64_t hash_ll(const char * s, uint64_t h = 0);
+    static uintptr_t hash(const wchar_t * s, uintptr_t h = 0);
+    static uint64_t hash_ll(const wchar_t * s, uint64_t h = 0);
     //    static uintptr_t hash(const void * key,uintptr_t h);
 #if !HAVE_INT32_T_AS_INTPTR_T
     static uintptr_t hash(int32_t key,uintptr_t h = 0);
@@ -151,6 +153,25 @@ template <class T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
+uintptr_t HashFuncContainer<T>::hash(const wchar_t * s,uintptr_t h)
+{
+  for(;;){
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
+  }
+  return h;
+}
+//---------------------------------------------------------------------------
+template <class T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 uint64_t HashFuncContainer<T>::hash_ll(const char * s,uint64_t h)
 {
   for(;;){
@@ -162,6 +183,25 @@ uint64_t HashFuncContainer<T>::hash_ll(const char * s,uint64_t h)
     HASH4(h,s,1);
     if( *s == '\0' ) break;
     HASH4(h,s,1);
+  }
+  return h;
+}
+//---------------------------------------------------------------------------
+template <class T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+uint64_t HashFuncContainer<T>::hash_ll(const wchar_t * s,uint64_t h)
+{
+  for(;;){
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
+    if( *s == L'\0' ) break;
+    h = ((h << 2) | (h << 1) | h) ^ *s++;
   }
   return h;
 }

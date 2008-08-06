@@ -27,14 +27,82 @@
 #ifndef _SymbolTableH_
 #define _SymbolTableH_
 //------------------------------------------------------------------------------
+namespace ksys {
+//------------------------------------------------------------------------------
 namespace kvm {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class SymbolTable : public ksys::Object {
+class Symbol {
+  friend class CodeObject;
+  friend class SymbolTable;
+  public:
+    ~Symbol();
+    Symbol(Symbol * parent = NULL,
+           wchar_t * symbol = NULL,
+           CodeObject * object = NULL);
+
+    wchar_t * id() const;
+    CodeObject * object() const { return object_; }
+
+    static EmbeddedHashNode<Symbol,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
+      return *reinterpret_cast<EmbeddedHashNode<Symbol,uintptr_t> *>(link);
+    }
+    static uintptr_t ehLTN(const EmbeddedHashNode<Symbol,uintptr_t> & node,uintptr_t * &){
+      return reinterpret_cast<uintptr_t>(&node);
+    }			    
+    static EmbeddedHashNode<Symbol,uintptr_t> & keyNode(const Symbol & object){
+      return object.keyNode_;
+    }
+    static Symbol & keyNodeObject(const EmbeddedHashNode<Symbol,uintptr_t> & node,Symbol * p){
+      return node.object(p->keyNode_);
+    }
+    static uintptr_t keyNodeHash(const Symbol & object);
+    static bool keyHashNodeEqu(const Symbol & object1,const Symbol & object2);
+    
+  protected:
+    Symbol * parent_;
+    wchar_t * symbol_;
+    CodeObject * object_;
+
+    mutable EmbeddedHashNode<Symbol,uintptr_t> keyNode_;
+  private:
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class CodeGenerator;
+//------------------------------------------------------------------------------
+class SymbolTable : public Object {
+  public:
+    virtual ~SymbolTable();
+    SymbolTable(CodeGenerator * codeGenerator = NULL);
+
+    Symbol * newSymbol(CodeObject * parent,const wchar_t * symbol,CodeObject * object,bool pseudonym = false);
+    Symbol * replaceSymbolObject(CodeObject * parent,const wchar_t * symbol,CodeObject * object);
+    Symbol * findSymbol(CodeObject * parent,const wchar_t * symbol,bool noThrow = false);
+  protected:
+    CodeGenerator * codeGenerator_;
+    typedef EmbeddedHash<
+      Symbol,
+      uintptr_t,
+      uintptr_t *,
+      Symbol::ehNLT,
+      Symbol::ehLTN,
+      Symbol::keyNode,
+      Symbol::keyNodeObject,
+      Symbol::keyNodeHash,
+      Symbol::keyHashNodeEqu
+    > Symbols;
+    Symbols symbols_;
+  private:
+    SymbolTable(const SymbolTable &);
+    void operator = (const SymbolTable &);
 };
 //------------------------------------------------------------------------------
 } // namespace kvm
+//------------------------------------------------------------------------------
+} // namespace ksys
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------

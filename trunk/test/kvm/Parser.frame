@@ -73,7 +73,7 @@ public:
 
 -->declarations
 
-	Parser(Scanner *scanner);
+	Parser(Scanner *scanner = NULL);
 	~Parser();
 	void SemErr(const wchar_t* msg);
 
