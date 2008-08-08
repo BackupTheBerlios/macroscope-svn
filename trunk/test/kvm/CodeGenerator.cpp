@@ -34,9 +34,9 @@ namespace kvm {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-CodeObject * CodeObject::parent() const
+CodeObjectOwner * CodeObject::parent() const
 {
-  return symbols_[0].parent_->object_;
+  return dynamic_cast<CodeObjectOwner *>(symbols_[0].parent_->object_);
 }
 //------------------------------------------------------------------------------
 wchar_t * CodeObject::symbol() const
@@ -52,6 +52,35 @@ CodeGenerator::~CodeGenerator()
 //------------------------------------------------------------------------------
 CodeGenerator::CodeGenerator()
 {
+}
+//------------------------------------------------------------------------------
+CodeGenerator & CodeGenerator::generate(const utf8::String & fileName)
+{
+  AsyncFile file(fileName);
+
+  file.createIfNotExist(true).open();
+
+  return *this;
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+Expression::~Expression()
+{
+}
+//------------------------------------------------------------------------------
+Expression::Expression() : count_(0), max_(0)
+{
+}
+//------------------------------------------------------------------------------
+Expression & Expression::add(CodeObject * object)
+{
+  if( count_ >= max_ ){
+    expression_.reallocT((max_ << 1) + ((max_ == 0) << 5));
+    max_ = (max_ << 1) + ((max_ == 0) << 5);
+  }
+  expression_[count_++] = object;
+  return *this;
 }
 //------------------------------------------------------------------------------
 } // namespace kvm

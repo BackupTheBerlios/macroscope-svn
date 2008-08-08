@@ -32,20 +32,21 @@ namespace ksys {
 namespace kvm {
 //------------------------------------------------------------------------------
 class Symbol;
+class CodeObjectOwner;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class CodeObject : public Object { // base class
+class CodeObject : public Object { // base class only
   friend class SymbolTable;
   public:
     virtual ~CodeObject() {}
     CodeObject() {}
 
-    CodeObject * parent() const;
+    CodeObjectOwner * parent() const;
     wchar_t * symbol() const;
   protected:
     Vector<Symbol> symbols_;
-    Vector<CodeObject> childs_;
+    mutable EmbeddedListNode<CodeObject> listNode_;
 
     static EmbeddedListNode<CodeObject> & listNode(const CodeObject & object){
       return object.listNode_;
@@ -53,6 +54,18 @@ class CodeObject : public Object { // base class
     static CodeObject & listNodeObject(const EmbeddedListNode<CodeObject> & node,CodeObject * p = NULL){
       return node.object(p->listNode_);
     }
+  private:
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class CodeObjectOwner : virtual public CodeObject { // base class only
+  friend class SymbolTable;
+  public:
+    virtual ~CodeObjectOwner() {}
+    CodeObjectOwner() {}
+  protected:
+    Vector<CodeObject> childs_;
 
     class TypedList :
       public EmbeddedList<
@@ -70,45 +83,38 @@ class CodeObject : public Object { // base class
 
     Vector<TypedList> childsByType_;
   private:
-    mutable EmbeddedListNode<CodeObject> listNode_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class Class : public CodeObject {
+class Class : public CodeObjectOwner {
   public:
     virtual ~Class() {}
     Class() {}
 
-    class Member : public CodeObject {
+    class Member : virtual public CodeObject {
       public:
         virtual ~Member() {}
         Member() {}
     };
 
-    class MemberFunc : public Member {
+    class MemberFunc : public Member, public CodeObjectOwner {
       public:
         virtual ~MemberFunc() {}
         MemberFunc() {}
 
-        class FuncObject : public CodeObject { // base class only
-          protected:
-            virtual ~FuncObject() {}
-            FuncObject() {}
-        };
-
-        class Param : public FuncObject {
+        class Param : public CodeObject {
           public:
             virtual ~Param() {}
             Param() {}
         };
 
-        class CodeBlock : public FuncObject {
+        class CodeBlock : public CodeObjectOwner {
           public:
             virtual ~CodeBlock() {}
             CodeBlock() {}
 
-            class Variable : public FuncObject {
+            class Variable : public CodeObject {
               public:
                 virtual ~Variable() {}
                 Variable() {}
@@ -119,40 +125,47 @@ class Class : public CodeObject {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class Expression : public CodeObject {
+class Expression : public CodeObjectOwner {
   public:
-    virtual ~Expression() {}
-    Expression() {}
+    virtual ~Expression();
+    Expression();
 
     class Operator : public CodeObject { // base class only
-      protected:
+      public:
         virtual ~Operator() {}
         Operator() {}
     };
 
     class Plus : public Operator {
-      protected:
+      public:
         virtual ~Plus() {}
         Plus() {}
     };
 
     class Minus : public Operator {
-      protected:
+      public:
         virtual ~Minus() {}
         Minus() {}
     };
 
     class Mul : public Operator {
-      protected:
+      public:
         virtual ~Mul() {}
         Mul() {}
     };
 
     class Div : public Operator {
-      protected:
+      public:
         virtual ~Div() {}
         Div() {}
     };
+
+    Expression & add(CodeObject * object);
+  protected:
+    AutoPtr<CodeObject *> expression_;
+    uintptr_t count_;
+    uintptr_t max_;
+  private:
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -162,8 +175,10 @@ class CodeGenerator : public Object {
   public:
     virtual ~CodeGenerator();
     CodeGenerator();
+
+    CodeGenerator & generate(const utf8::String & fileName);
   protected:
-    CodeObject root_;
+    Class root_;
   private:
     CodeGenerator(const CodeGenerator &);
     void operator = (const CodeGenerator &);

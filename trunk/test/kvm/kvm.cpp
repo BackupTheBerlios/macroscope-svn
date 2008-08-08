@@ -68,6 +68,7 @@ int main(int _argc,char * _argv[])
 		    if( parser->errors->count > 0 ){
           exit(EINVAL);
 		    }
+        parser->gen->generate("test.cpp");
       }
     }
     errcode = 0;

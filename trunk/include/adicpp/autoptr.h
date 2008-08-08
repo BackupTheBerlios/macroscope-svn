@@ -72,6 +72,7 @@ template< class T> class AutoPtr {
 
     AutoPtr< T> &   alloc(size_t size);
     AutoPtr< T> &   realloc(size_t size);
+    AutoPtr<T> &    reallocT(uintptr_t count){ return realloc(count * sizeof(T)); }
     T * realloc(size_t size,int);
     AutoPtr< T> &   free();
 

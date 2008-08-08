@@ -11,6 +11,7 @@ COMPILER kvm
 
   bool IsFunc() const { return t->kind == _symbol && la->kind == _lpar; }
   bool IsFuncBody() const { return t->kind == _rpar && la->kind == _lbrace; }
+  bool IsPrefixOp() const { return la->kind == _plus || la->kind == _minus; }
 
 CHARACTERS
   letter    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + '\u0080' .. '\ufdcf' + '\ufdf0' .. '\ufffd'.
@@ -90,8 +91,8 @@ TOKENS
   equ       = "=" .
   plus      = "+" .
   minus     = "-" .
-  mul		= "*" .
-  div		= "/" .
+  mul       = "*" .
+  div       = "/" .
   remainder = "%" .
 
 COMMENTS FROM "/*" TO "*/" NESTED
@@ -104,12 +105,46 @@ PRODUCTIONS
 kvm =
   { classDecl<NULL> | pseudonymDecl<NULL> } .
 
-expression<CodeObject * context> =
+expression<CodeObjectOwner * context,Expression * parentExpr,Expression * & expr> =
   (.
-    Expression * expr = newObject<Expression>(); .)
-  [ namespaceSymbol<context> ] (plus | minus | mul | div | remainder) namespaceSymbol<context> .
+    union {
+      CodeObject * lSym;
+      Expression * lExpr;
+    };
+    union {
+      CodeObject * rSym;
+      Expression * rExpr;
+    };
+    if( expr == NULL ){
+      expr = newObject<Expression>();
+      tab->newSymbol(parentExpr != NULL ? parentExpr : context,NULL,expr);
+    }
+    Expression::Operator * op; .)
+  [
+    plus  (.
+      expr->add(NULL);
+      tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>()); .) |
+    minus (.
+      expr->add(NULL);
+      tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .)
+  ]
+  (
+    (lpar expression<context,expr,lExpr> (. expr->add(lExpr); .) rpar) |
+    namespaceSymbol<context,lSym>        (. expr->add(lSym);  .)
+  )
+    (
+      plus  (. tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>());  .) |
+      minus (. tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .) |
+      mul   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Mul>());   .) |
+      div   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Div>());   .)
+    )
+    (. expr->add(op); .)
+  (
+    (lpar expression<context,expr,rExpr> (. expr->add(rExpr); .) rpar) |
+    namespaceSymbol<context,rSym>        (. expr->add(rSym);  .)
+  ) .
 
-classDecl<CodeObject * context> =
+classDecl<CodeObjectOwner * context> =
   ("class" | "класс") symbol (.
       Class * codeObject = newObject<Class>();
       tab->newSymbol(context,t->val,codeObject); .)
@@ -124,7 +159,8 @@ classMemberFuncCodeBlockDecl<Class::MemberFunc * func,Class::MemberFunc::CodeBlo
       tab->newSymbol(func,NULL,context);
     else
       tab->newSymbol(parentCodeBlock,NULL,context); .)
-  { expression<context> | (lbrace classMemberFuncCodeBlockDecl<func,context>) }
+  { (. Expression * expr = NULL; .)
+     ( { expression<context,NULL,expr> } semicolon) | (lbrace classMemberFuncCodeBlockDecl<func,context>) }
   rbrace .
 
 classMemberFuncParamDecl<Class::MemberFunc * context> =
@@ -133,7 +169,7 @@ classMemberFuncParamDecl<Class::MemberFunc * context> =
       tab->newSymbol(context,t->val,codeObject); .)
     .
 
-classMemberDecl<CodeObject * context> =
+classMemberDecl<CodeObjectOwner * context> =
   symbol (.
       Class::Member * codeObject = newObject<Class::Member>();
       tab->newSymbol(context,t->val,codeObject); .)
@@ -149,20 +185,33 @@ classMemberDecl<CodeObject * context> =
     { comma classMemberDecl<context> }
     semicolon .
 
-namespaceSymbol<CodeObject * & context> =
+namespaceSymbol<CodeObjectOwner * context,CodeObject * & object> =
   symbol
     (.
-      Symbol * symbol = tab->findSymbol(context,t->val);
-      context = symbol->object(); .)
+      Symbol * symbol = tab->findSymbol(context,t->val,true);
+      if( symbol == NULL ) for(;;){
+        context = context->parent();
+        if( context == NULL ) break;
+        if( dynamic_cast<Class::MemberFunc *>(context) != NULL ){
+          symbol = tab->findSymbol(context,t->val,true);
+          if( symbol != NULL ) break;
+	      }
+	      else if( dynamic_cast<Class::MemberFunc::CodeBlock *>(context) != NULL ){
+		      symbol = tab->findSymbol(context,t->val,true);
+		      if( symbol != NULL ) break;
+	      }
+      }
+      if( symbol == NULL ) symbol = tab->findSymbol(context,t->val);
+      object = symbol->object(); .)
     { dot symbol (.
-	  symbol = tab->findSymbol(context,t->val);
-      context = symbol->object(); .)
+	    symbol = tab->findSymbol(dynamic_cast<CodeObjectOwner *>(object),t->val);
+      object = symbol->object(); .)
     } .
 
-pseudonymDecl<CodeObject * context> =
+pseudonymDecl<CodeObjectOwner * context> =
   ("pseudonym" | "псевдоним") (.
-    CodeObject * localContext = context; .)
-    namespaceSymbol<localContext> symbol (.
+    CodeObject * localContext; .)
+    namespaceSymbol<context,localContext> symbol (.
       tab->newSymbol(localContext->parent(),t->val,localContext,true); .)
     { symbol (.
       tab->newSymbol(localContext->parent(),t->val,localContext,true); .)

@@ -78,9 +78,9 @@ class SymbolTable : public Object {
     virtual ~SymbolTable();
     SymbolTable(CodeGenerator * codeGenerator = NULL);
 
-    Symbol * newSymbol(CodeObject * parent,const wchar_t * symbol,CodeObject * object,bool pseudonym = false);
-    Symbol * replaceSymbolObject(CodeObject * parent,const wchar_t * symbol,CodeObject * object);
-    Symbol * findSymbol(CodeObject * parent,const wchar_t * symbol,bool noThrow = false);
+    Symbol * newSymbol(CodeObjectOwner * parent,const wchar_t * symbol,CodeObject * object,bool pseudonym = false);
+    Symbol * replaceSymbolObject(CodeObjectOwner * parent,const wchar_t * symbol,CodeObject * object);
+    Symbol * findSymbol(CodeObjectOwner * parent,const wchar_t * symbol,bool noThrow = false);
   protected:
     CodeGenerator * codeGenerator_;
     typedef EmbeddedHash<

@@ -44,7 +44,7 @@ SymbolTable::SymbolTable(CodeGenerator * codeGenerator) : codeGenerator_(codeGen
   if( codeGenerator_ != NULL ) newSymbol(NULL,L"",&codeGenerator_->root_,true);
 }
 //------------------------------------------------------------------------------
-Symbol * SymbolTable::newSymbol(CodeObject * parent,const wchar_t * symbol,CodeObject * object,bool pseudonym)
+Symbol * SymbolTable::newSymbol(CodeObjectOwner * parent,const wchar_t * symbol,CodeObject * object,bool pseudonym)
 {
   AutoPtr<CodeObject> safe(pseudonym ? NULL : object);
   if( parent == NULL ) parent = &codeGenerator_->root_;
@@ -56,9 +56,9 @@ Symbol * SymbolTable::newSymbol(CodeObject * parent,const wchar_t * symbol,CodeO
   symSafe.ptr(NULL);
   if( !pseudonym ){
     parent->childs_.add(object);
-    AutoPtr<CodeObject::TypedList> list(newObjectV1<CodeObject::TypedList>(parent));
-    CodeObject::TypedList * lp = list;
-    intptr_t c, i = parent->childsByType_.bSearch(*lp,c,CodeObject::compareByType);
+    AutoPtr<CodeObjectOwner::TypedList> list(newObjectV1<CodeObjectOwner::TypedList>(parent));
+    CodeObjectOwner::TypedList * lp = list;
+    intptr_t c, i = parent->childsByType_.bSearch(*lp,c,CodeObjectOwner::compareByType);
     if( c != 0 ){
       parent->childsByType_.insert(i + (c > 0),lp);
       list.ptr(NULL);
@@ -73,7 +73,7 @@ Symbol * SymbolTable::newSymbol(CodeObject * parent,const wchar_t * symbol,CodeO
   return sym.ptr(NULL);
 }
 //------------------------------------------------------------------------------
-Symbol * SymbolTable::replaceSymbolObject(CodeObject * parent,const wchar_t * symbol,CodeObject * object)
+Symbol * SymbolTable::replaceSymbolObject(CodeObjectOwner * parent,const wchar_t * symbol,CodeObject * object)
 {
   AutoPtr<CodeObject> safe(object);
   Symbol * sym = findSymbol(parent,symbol);
@@ -85,7 +85,7 @@ Symbol * SymbolTable::replaceSymbolObject(CodeObject * parent,const wchar_t * sy
   return sym;
 }
 //------------------------------------------------------------------------------
-Symbol * SymbolTable::findSymbol(CodeObject * parent,const wchar_t * symbol,bool noThrow)
+Symbol * SymbolTable::findSymbol(CodeObjectOwner * parent,const wchar_t * symbol,bool noThrow)
 {
   if( parent == NULL ) parent = &codeGenerator_->root_;
   uint8_t b[sizeof(Symbol)];
