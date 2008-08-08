@@ -67,7 +67,7 @@ template< class T> class AutoPtr {
     bool            operator !=(const AutoPtr< T> & ptr) const;
 
     T * ptr(T * ptr) const;
-    T * const & ptr() const;
+    T * & ptr() const;
     AutoPtr<T> & xchg(AutoPtr<T> & ptr);
 
     AutoPtr< T> &   alloc(size_t size);
@@ -228,7 +228,7 @@ T * AutoPtr<T>::ptr(T * ptr) const
 }
 //---------------------------------------------------------------------------
 template< class T> inline
-T * const & AutoPtr< T>::ptr() const
+T * & AutoPtr< T>::ptr() const
 {
   return ptr_;
 }

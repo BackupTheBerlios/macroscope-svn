@@ -82,6 +82,25 @@ template <class T> class Vector {
     intptr_t          searchCase(const T & element) const;
     intptr_t          bSearchCase(const T & element) const;
     uintptr_t         bSearchCase(const T & element, intptr_t & c) const;
+
+    uintptr_t bSearch(const T & element, intptr_t & c, intptr_t (* f)(const T & e1,const T & e2)) const {
+      intptr_t low = 0, high = count_ - 1, pos = -1;
+      c = 1;
+      while( low <= high ){
+        pos = (low + high) / 2;
+        c = f(*ptr_[pos],element);
+        if( c < 0 ){
+          low = pos + 1;
+        }
+        else if( c > 0 ){
+          high = pos - 1;
+        }
+        else
+          break;
+      }
+      return pos;
+    }
+
     Vector<T> & xchg(uintptr_t e1,uintptr_t e2);
     Vector<T> & xchg(Vector<T> & v);
 };

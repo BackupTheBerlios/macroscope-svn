@@ -49,8 +49,24 @@ Symbol * SymbolTable::newSymbol(CodeObject * parent,const wchar_t * symbol,CodeO
   AutoPtr<CodeObject> safe(pseudonym ? NULL : object);
   if( parent == NULL ) parent = &codeGenerator_->root_;
   Symbol * parentSymbol = parent->symbols_.count() > 0 ? &parent->symbols_[0] : NULL;
-  ksys::AutoPtr<Symbol> sym(newObjectV1V2V3<Symbol>(parentSymbol,coco_string_create(symbol),object));
-  if( !pseudonym ) parent->childs_.add(object);
+  char b[sizeof(object) * 2 + 1];
+  if( symbol == NULL ) sprintf(b,"%"PRIxPTR,object);
+  AutoPtr<wchar_t> symSafe(symbol != NULL ? coco_string_create(symbol) : coco_string_create(b));
+  ksys::AutoPtr<Symbol> sym(newObjectV1V2V3<Symbol>(parentSymbol,symSafe.ptr(),object));
+  symSafe.ptr(NULL);
+  if( !pseudonym ){
+    parent->childs_.add(object);
+    AutoPtr<CodeObject::TypedList> list(newObjectV1<CodeObject::TypedList>(parent));
+    CodeObject::TypedList * lp = list;
+    intptr_t c, i = parent->childsByType_.bSearch(*lp,c,CodeObject::compareByType);
+    if( c != 0 ){
+      parent->childsByType_.insert(i + (c > 0),lp);
+      list.ptr(NULL);
+    }
+    else
+      lp = &parent->childsByType_[i];
+    lp->insToTail(*object);
+  }
   safe.ptr(NULL);
   symbols_.insert(sym,true,false);
   object->symbols_.add(sym.ptr());
@@ -63,7 +79,8 @@ Symbol * SymbolTable::replaceSymbolObject(CodeObject * parent,const wchar_t * sy
   Symbol * sym = findSymbol(parent,symbol);
   AutoPtr<CodeObject> oldObject(sym->object_);
   object->symbols_.xchg(oldObject->symbols_);
-  sym->object_ = object;
+  for( intptr_t i = object->symbols_.count() - 1; i >= 0; i-- )
+    object->symbols_[i].object_ = object;
   safe.ptr(NULL);
   return sym;
 }
@@ -71,7 +88,9 @@ Symbol * SymbolTable::replaceSymbolObject(CodeObject * parent,const wchar_t * sy
 Symbol * SymbolTable::findSymbol(CodeObject * parent,const wchar_t * symbol,bool noThrow)
 {
   if( parent == NULL ) parent = &codeGenerator_->root_;
-  Symbol sym(&parent->symbols_[0],coco_string_create(symbol)), * p = symbols_.find(sym);
+  uint8_t b[sizeof(Symbol)];
+  new (b) Symbol(&parent->symbols_[0],const_cast<wchar_t *>(symbol));
+  Symbol * p = symbols_.find(*(Symbol *) b);
   if( p == NULL && !noThrow )
     newObjectV1C2<Exception>(ENOENT,utf8::String(symbol) + " " + __PRETTY_FUNCTION__)->throwSP();
   return p;
@@ -123,15 +142,14 @@ uintptr_t Symbol::keyNodeHash(const Symbol & object)
 //------------------------------------------------------------------------------
 bool Symbol::keyHashNodeEqu(const Symbol & object1,const Symbol & object2)
 {
-  Symbol * p1 = object1.parent_;
-  Symbol * p2 = object2.parent_;
+  Symbol * p1 = object1.parent_, * p2 = object2.parent_;
   for(;;){
     if( p1 == NULL && p2 == NULL ) break;
-    if( p1 == NULL || p2 == NULL || !coco_string_equal(p1->symbol_,p2->symbol_) != 0 ) return false;
+    if( p1 == NULL || p2 == NULL || !coco_string_equal(p1->symbol_,p2->symbol_) ) return false;
     p1 = p1->parent_;
     p2 = p2->parent_;
   }
-  return coco_string_equal(object1.symbol_,object2.symbol_) == 0;
+  return coco_string_equal(object1.symbol_,object2.symbol_);
 }
 //------------------------------------------------------------------------------
 } // namespace kvm

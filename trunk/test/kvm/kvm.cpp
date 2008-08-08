@@ -70,6 +70,7 @@ int main(int _argc,char * _argv[])
 		    }
       }
     }
+    errcode = 0;
   }
   catch( ExceptionSP & e ){
     e->writeStdError();

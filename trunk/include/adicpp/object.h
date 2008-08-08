@@ -33,6 +33,8 @@ class String;
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+class guid_t;
+//---------------------------------------------------------------------------
 void initialize(int,char **);
 void cleanup();
 class ObjectFabric;
@@ -54,10 +56,11 @@ class Object {
 // methods
     virtual Object * createObject() { return NULL; }
     virtual Object * cloneObject() { return NULL; }
-    virtual utf8::String className() const;
-    virtual utf8::String classId() const;
+    static const char * getClassName(const void * thisObject);
+    virtual const char * className() const;
+    virtual guid_t classId() const;
     virtual utf8::String objectName() const;
-    virtual utf8::String objectId() const;
+    virtual guid_t objectId() const;
 
     static ObjectFabric & fabric();
   protected:
@@ -151,8 +154,7 @@ class ObjectFabric : public Object {
     ObjectFabric() {}
     
 // methods
-    utf8::String className() const;
-    utf8::String classId() const;
+    guid_t classId() const;
 
     void registerClass(Object * object);
     void unregisterClass(const utf8::String & className);

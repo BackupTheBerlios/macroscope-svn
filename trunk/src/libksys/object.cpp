@@ -42,14 +42,19 @@ void Object::cleanup()
   fabric().~ObjectFabric();
 }
 //---------------------------------------------------------------------------
-utf8::String Object::className() const
+const char * Object::getClassName(const void * thisObject)
 {
-  return typeid(*this).name();
+  return typeid(*(Object *) thisObject).raw_name();
 }
 //---------------------------------------------------------------------------
-utf8::String Object::classId() const
+const char * Object::className() const
 {
-  return guidToBase32(stringToGUID("44F611AD-FE5F-413D-BF12-46BF74AAB7A9"));
+  return NULL;
+}
+//---------------------------------------------------------------------------
+guid_t Object::classId() const
+{
+  return stringToGUID("44F611AD-FE5F-413D-BF12-46BF74AAB7A9");
 }
 //---------------------------------------------------------------------------
 utf8::String Object::objectName() const
@@ -57,21 +62,18 @@ utf8::String Object::objectName() const
   return utf8::ptr2Str(this);
 }
 //---------------------------------------------------------------------------
-utf8::String Object::objectId() const
+guid_t Object::objectId() const
 {
-  return utf8::ptr2Str(this);
+  guid_t g;
+  memset(&g,0,sizeof(g));
+  return g;
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-utf8::String ObjectFabric::className() const
+guid_t ObjectFabric::classId() const
 {
-  return typeid(*this).name();
-}
-//---------------------------------------------------------------------------
-utf8::String ObjectFabric::classId() const
-{
-  return guidToBase32(stringToGUID("3AA709B7-813A-47EF-B91C-74B6ED2C433B"));
+  return stringToGUID("3AA709B7-813A-47EF-B91C-74B6ED2C433B");
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

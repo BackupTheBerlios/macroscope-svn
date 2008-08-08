@@ -87,8 +87,8 @@ class EmbeddedHash {
       size_(staticHashCount()),
       count_(0),
       estimatedChainLength_(16),
-      thresholdNumerator_(5),
-      thresholdDenominator_(8)
+      thresholdNumerator_(10),
+      thresholdDenominator_(18)
     {
       clearStaticHash();
     }

@@ -9,6 +9,9 @@ COMPILER kvm
   AutoPtr<CodeGenerator> gen;
   AutoPtr<SymbolTable> tab;
 
+  bool IsFunc() const { return t->kind == _symbol && la->kind == _lpar; }
+  bool IsFuncBody() const { return t->kind == _rpar && la->kind == _lbrace; }
+
 CHARACTERS
   letter    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + '\u0080' .. '\ufdcf' + '\ufdf0' .. '\ufffd'.
   special   = "_@$" .
@@ -70,22 +73,26 @@ TOKENS
          } 
     "\"" .
 
-  semicolon = ";".
-  colon     = ":".
-  comma     = ",".
-  dec       = "--".
-  dot       = ".".
-  inc       = "++".
-  lbrace    = "{".
-  lbrack    = "[".
-  lpar      = "(".
-  minus     = "-".
-  not       = "!".
-  plus      = "+".
-  rbrace    = "}".
-  rbrack    = "]".
-  rpar      = ")".
-  tilde     = "~".
+  semicolon = ";" .
+  colon     = ":" .
+  comma     = "," .
+  dec       = "--" .
+  dot       = "." .
+  inc       = "++" .
+  lbrace    = "{" .
+  lbrack    = "[" .
+  lpar      = "(" .
+  not       = "!" .
+  rbrace    = "}" .
+  rbrack    = "]" .
+  rpar      = ")" .
+  tilde     = "~" .
+  equ       = "=" .
+  plus      = "+" .
+  minus     = "-" .
+  mul		= "*" .
+  div		= "/" .
+  remainder = "%" .
 
 COMMENTS FROM "/*" TO "*/" NESTED
 COMMENTS FROM "//" TO lf
@@ -97,6 +104,11 @@ PRODUCTIONS
 kvm =
   { classDecl<NULL> | pseudonymDecl<NULL> } .
 
+expression<CodeObject * context> =
+  (.
+    Expression * expr = newObject<Expression>(); .)
+  [ namespaceSymbol<context> ] (plus | minus | mul | div | remainder) namespaceSymbol<context> .
+
 classDecl<CodeObject * context> =
   ("class" | "класс") symbol (.
       Class * codeObject = newObject<Class>();
@@ -105,23 +117,35 @@ classDecl<CodeObject * context> =
        { classDecl<codeObject> | classMemberDecl<codeObject> | pseudonymDecl<codeObject> }
     rbrace .
 
-classMemberFuncParamDecl<ClassMemberFunc * context> =
+classMemberFuncCodeBlockDecl<Class::MemberFunc * func,Class::MemberFunc::CodeBlock * parentCodeBlock> =
+  (.
+    Class::MemberFunc::CodeBlock * context = newObject<Class::MemberFunc::CodeBlock>();
+    if( parentCodeBlock == NULL )
+      tab->newSymbol(func,NULL,context);
+    else
+      tab->newSymbol(parentCodeBlock,NULL,context); .)
+  { expression<context> | (lbrace classMemberFuncCodeBlockDecl<func,context>) }
+  rbrace .
+
+classMemberFuncParamDecl<Class::MemberFunc * context> =
   symbol (.
-      ClassMemberFuncParam * codeObject = newObject<ClassMemberFuncParam>();
+      Class::MemberFunc::Param * codeObject = newObject<Class::MemberFunc::Param>();
       tab->newSymbol(context,t->val,codeObject); .)
     .
 
 classMemberDecl<CodeObject * context> =
   symbol (.
-      ClassMember * codeObject = newObject<ClassMember>();
+      Class::Member * codeObject = newObject<Class::Member>();
       tab->newSymbol(context,t->val,codeObject); .)
-    {
+    [
       lpar (.
-        ClassMemberFunc * func = newObject<ClassMemberFunc>();
-        tab->replaceSymbolObject(context,t->val,codeObject = func); .)
+        Class::MemberFunc * func = newObject<Class::MemberFunc>();
+        tab->replaceSymbolObject(context,codeObject->symbol(),func);
+        codeObject = func; .)
       { classMemberFuncParamDecl<func> { comma classMemberFuncParamDecl<func> } }
       rpar
-    }
+      [ lbrace classMemberFuncCodeBlockDecl<func,NULL> ]
+    ]
     { comma classMemberDecl<context> }
     semicolon .
 
@@ -130,7 +154,10 @@ namespaceSymbol<CodeObject * & context> =
     (.
       Symbol * symbol = tab->findSymbol(context,t->val);
       context = symbol->object(); .)
-    { dot namespaceSymbol<context> } .
+    { dot symbol (.
+	  symbol = tab->findSymbol(context,t->val);
+      context = symbol->object(); .)
+    } .
 
 pseudonymDecl<CodeObject * context> =
   ("pseudonym" | "псевдоним") (.

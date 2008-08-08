@@ -35,17 +35,42 @@ class Symbol;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class CodeObject : public Object {
+class CodeObject : public Object { // base class
   friend class SymbolTable;
   public:
     virtual ~CodeObject() {}
     CodeObject() {}
 
     CodeObject * parent() const;
+    wchar_t * symbol() const;
   protected:
     Vector<Symbol> symbols_;
     Vector<CodeObject> childs_;
+
+    static EmbeddedListNode<CodeObject> & listNode(const CodeObject & object){
+      return object.listNode_;
+    }
+    static CodeObject & listNodeObject(const EmbeddedListNode<CodeObject> & node,CodeObject * p = NULL){
+      return node.object(p->listNode_);
+    }
+
+    class TypedList :
+      public EmbeddedList<
+        CodeObject,
+        listNode,
+        listNodeObject> {
+      public:
+        TypedList(CodeObject * object = NULL) : object_(object) {}
+        CodeObject * object_;
+    };
+
+    static intptr_t compareByType(const TypedList & p1,const TypedList & p2){
+      return strcmp(Object::getClassName(p1.object_),Object::getClassName(p2.object_));
+    }
+
+    Vector<TypedList> childsByType_;
   private:
+    mutable EmbeddedListNode<CodeObject> listNode_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,38 +79,80 @@ class Class : public CodeObject {
   public:
     virtual ~Class() {}
     Class() {}
-  protected:
-  private:
+
+    class Member : public CodeObject {
+      public:
+        virtual ~Member() {}
+        Member() {}
+    };
+
+    class MemberFunc : public Member {
+      public:
+        virtual ~MemberFunc() {}
+        MemberFunc() {}
+
+        class FuncObject : public CodeObject { // base class only
+          protected:
+            virtual ~FuncObject() {}
+            FuncObject() {}
+        };
+
+        class Param : public FuncObject {
+          public:
+            virtual ~Param() {}
+            Param() {}
+        };
+
+        class CodeBlock : public FuncObject {
+          public:
+            virtual ~CodeBlock() {}
+            CodeBlock() {}
+
+            class Variable : public FuncObject {
+              public:
+                virtual ~Variable() {}
+                Variable() {}
+            };
+        };
+    };
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class ClassMember : public CodeObject {
+class Expression : public CodeObject {
   public:
-    virtual ~ClassMember() {}
-    ClassMember() {}
-  protected:
-  private:
-};
-//------------------------------------------------------------------------------
-////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
-class ClassMemberFunc : public ClassMember {
-  public:
-    virtual ~ClassMemberFunc() {}
-    ClassMemberFunc() {}
-  protected:
-  private:
-};
-//------------------------------------------------------------------------------
-////////////////////////////////////////////////////////////////////////////////
-//------------------------------------------------------------------------------
-class ClassMemberFuncParam : public CodeObject {
-  public:
-    virtual ~ClassMemberFuncParam() {}
-    ClassMemberFuncParam() {}
-  protected:
-  private:
+    virtual ~Expression() {}
+    Expression() {}
+
+    class Operator : public CodeObject { // base class only
+      protected:
+        virtual ~Operator() {}
+        Operator() {}
+    };
+
+    class Plus : public Operator {
+      protected:
+        virtual ~Plus() {}
+        Plus() {}
+    };
+
+    class Minus : public Operator {
+      protected:
+        virtual ~Minus() {}
+        Minus() {}
+    };
+
+    class Mul : public Operator {
+      protected:
+        virtual ~Mul() {}
+        Mul() {}
+    };
+
+    class Div : public Operator {
+      protected:
+        virtual ~Div() {}
+        Div() {}
+    };
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
