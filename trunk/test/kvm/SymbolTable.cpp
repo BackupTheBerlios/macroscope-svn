@@ -56,7 +56,7 @@ Symbol * SymbolTable::newSymbol(CodeObjectOwner * parent,const wchar_t * symbol,
   symSafe.ptr(NULL);
   if( !pseudonym ){
     parent->childs_.add(object);
-    AutoPtr<CodeObjectOwner::TypedList> list(newObjectV1<CodeObjectOwner::TypedList>(parent));
+    AutoPtr<CodeObjectOwner::TypedList> list(newObjectV1<CodeObjectOwner::TypedList>(CodeObject::getClassName(object)));
     CodeObjectOwner::TypedList * lp = list;
     intptr_t c, i = parent->childsByType_.bSearch(*lp,c,CodeObjectOwner::compareByType);
     if( c != 0 ){
@@ -83,6 +83,27 @@ Symbol * SymbolTable::replaceSymbolObject(CodeObjectOwner * parent,const wchar_t
     object->symbols_[i].object_ = object;
   safe.ptr(NULL);
   return sym;
+}
+//------------------------------------------------------------------------------
+SymbolTable & SymbolTable::replaceObject(CodeObject * oldObject,CodeObject * object)
+{
+  AutoPtr<CodeObjectOwner::TypedList> list(newObjectV1<CodeObjectOwner::TypedList>(CodeObject::getClassName(object)));
+  CodeObjectOwner::TypedList * lp = list;
+  intptr_t c, i = oldObject->parent()->childsByType_.bSearch(*lp,c,CodeObjectOwner::compareByType);
+  assert( c == 0 );
+  oldObject->parent()->childsByType_[i].remove(*oldObject);
+  oldObject->parent()->childsByType_[i].insToTail(*object);
+
+  object->symbols_.xchg(oldObject->symbols_);
+  for( intptr_t i = object->symbols_.count() - 1; i >= 0; i-- )
+    object->symbols_[i].object_ = object;
+  CodeObjectOwner * owner = dynamic_cast<CodeObjectOwner *>(oldObject);
+  if( owner != NULL ){
+    CodeObjectOwner * owner2 = dynamic_cast<CodeObjectOwner *>(object);
+    if( owner2 != NULL ) owner2->childs_.xchg(owner->childs_);
+  }
+  deleteObject(oldObject);
+  return *this;
 }
 //------------------------------------------------------------------------------
 Symbol * SymbolTable::findSymbol(CodeObjectOwner * parent,const wchar_t * symbol,bool noThrow)

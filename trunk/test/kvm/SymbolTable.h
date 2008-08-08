@@ -80,6 +80,7 @@ class SymbolTable : public Object {
 
     Symbol * newSymbol(CodeObjectOwner * parent,const wchar_t * symbol,CodeObject * object,bool pseudonym = false);
     Symbol * replaceSymbolObject(CodeObjectOwner * parent,const wchar_t * symbol,CodeObject * object);
+    SymbolTable & replaceObject(CodeObject * oldObject,CodeObject * object);
     Symbol * findSymbol(CodeObjectOwner * parent,const wchar_t * symbol,bool noThrow = false);
   protected:
     CodeGenerator * codeGenerator_;

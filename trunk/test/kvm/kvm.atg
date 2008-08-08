@@ -176,7 +176,7 @@ classMemberDecl<CodeObjectOwner * context> =
     [
       lpar (.
         Class::MemberFunc * func = newObject<Class::MemberFunc>();
-        tab->replaceSymbolObject(context,codeObject->symbol(),func);
+        tab->replaceObject(codeObject,func);
         codeObject = func; .)
       { classMemberFuncParamDecl<func> { comma classMemberFuncParamDecl<func> } }
       rpar

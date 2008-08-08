@@ -73,12 +73,12 @@ class CodeObjectOwner : virtual public CodeObject { // base class only
         listNode,
         listNodeObject> {
       public:
-        TypedList(CodeObject * object = NULL) : object_(object) {}
-        CodeObject * object_;
+        TypedList(const char * type = NULL) : type_(type) {}
+        const char * type_;
     };
 
     static intptr_t compareByType(const TypedList & p1,const TypedList & p2){
-      return strcmp(Object::getClassName(p1.object_),Object::getClassName(p2.object_));
+      return strcmp(p1.type_,p2.type_);
     }
 
     Vector<TypedList> childsByType_;
