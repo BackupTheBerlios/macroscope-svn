@@ -472,14 +472,16 @@ l2:       object = eReqs_[wm];
             object->timeout_ -= object->timeout_ < timeout ? object->timeout_ : timeout;
             if( object->timeout_ == 0 ){
               //closeAPI(object);
+              if( object->descriptor_ != NULL ){
 #ifndef NDEBUG
-              BOOL cir =
+                BOOL cir =
 #endif
-              CancelIo(object->descriptor_->descriptor_);
+                CancelIo(object->descriptor_->descriptor_);
 #ifndef NDEBUG
-              wm0 = GetLastError();
-              assert( cir != NULL );
+                wm0 = GetLastError();
+                assert( cir != NULL );
 #endif
+              }
               safeEvents_[ssp++] = events[i];
               events[i] = events[sp];
               events[sp] = NULL;

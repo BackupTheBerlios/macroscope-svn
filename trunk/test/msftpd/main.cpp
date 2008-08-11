@@ -37,11 +37,24 @@ class MSFTPService;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+class MSFTPWatchdog : public Fiber {
+  public:
+    virtual ~MSFTPWatchdog() {}
+    MSFTPWatchdog(MSFTPService * msftp = NULL,const utf8::String & section = utf8::String()) :
+      msftp_(msftp), section_(section) {}
+  protected:
+    void fiberExecute();
+  private:
+    MSFTPService * msftp_;
+    utf8::String section_;
+};
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 class MSFTPServerFiber : public ksock::ServerFiber {
   public:
     virtual ~MSFTPServerFiber();
-    MSFTPServerFiber() {}
-    MSFTPServerFiber(MSFTPService & msftp);
+    MSFTPServerFiber(MSFTPService * msftp = NULL);
   protected:
     void main();
   private:
@@ -69,8 +82,7 @@ class MSFTPServerFiber : public ksock::ServerFiber {
 class MSFTPServer : public ksock::Server {
   public:
     virtual ~MSFTPServer();
-    MSFTPServer() {}
-    MSFTPServer(MSFTPService & msftp);
+    MSFTPServer(MSFTPService * msftp = NULL);
   protected:
     MSFTPService * msftp_;
     Fiber * newFiber();
@@ -80,6 +92,7 @@ class MSFTPServer : public ksock::Server {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class MSFTPService : public Service {
+  friend class MSFTPWatchdog;
   friend class MSFTPServerFiber;
   friend class MSFTPServer;
   public:
@@ -107,8 +120,8 @@ MSFTPServerFiber::~MSFTPServerFiber()
 {
 }
 //------------------------------------------------------------------------------
-MSFTPServerFiber::MSFTPServerFiber(MSFTPService & msftp) :
-  msftp_(&msftp),
+MSFTPServerFiber::MSFTPServerFiber(MSFTPService * msftp) :
+  msftp_(msftp),
   workDir_(includeTrailingPathDelimiter(getCurrentDir()))
 {
 }
@@ -165,8 +178,13 @@ MSFTPServerFiber & MSFTPServerFiber::stat()
 MSFTPServerFiber & MSFTPServerFiber::setTimes()
 {
   utf8::String file(absolutePathNameFromWorkDir(workDir_,readString()));
-  MSFTPStat mst;
+  MSFTPStat mst, lmst;
   read(&mst,sizeof(mst));
+  if( (cmd_ == cmSetATime || cmd_ == cmSetMTime) && lmst.stat(file) ){
+    if( cmd_ == cmSetATime ) mst.st_mtime_ = lmst.st_mtime_;
+    else
+    if( cmd_ == cmSetMTime ) mst.st_atime_ = lmst.st_atime_;
+  }
   return putCode(utime(file,mst.st_atime_,mst.st_mtime_) ? eOK : eSetTimes);
 }
 //------------------------------------------------------------------------------
@@ -379,7 +397,7 @@ void MSFTPServerFiber::main()
     else if( cmd_ == cmStat ){
       stat();
     }
-    else if( cmd_ == cmSetTimes ){
+    else if( cmd_ == cmSetTimes || cmd_ == cmSetATime || cmd_ == cmSetMTime ){
       setTimes();
     }
     else if( cmd_ == cmResize ){
@@ -406,13 +424,43 @@ MSFTPServer::~MSFTPServer()
 {
 }
 //------------------------------------------------------------------------------
-MSFTPServer::MSFTPServer(MSFTPService & msftp) : msftp_(&msftp)
+MSFTPServer::MSFTPServer(MSFTPService * msftp) : msftp_(msftp)
 {
 }
 //------------------------------------------------------------------------------
 Fiber * MSFTPServer::newFiber()
 {
-  return newObjectR1<MSFTPServerFiber>(*msftp_);
+  return newObjectV1<MSFTPServerFiber>(msftp_);
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+void MSFTPWatchdog::fiberExecute()
+{
+  utf8::String dir(excludeTrailingPathDelimiter(msftp_->msftpConfig_->textByPath(section_ + ".directory")));
+  utf8::String exec(msftp_->msftpConfig_->textByPath(section_ + ".exec"));
+  utf8::String cmdLine(msftp_->msftpConfig_->textByPath(section_ + ".command_line"));
+  uint64_t timeout = msftp_->msftpConfig_->valueByPath(section_ + ".timeout",0);
+  DirectoryChangeNotification dcn;
+  dcn.createPath(false);
+  while( !terminated_ ){
+    try {
+      try {
+        dcn.monitor(dir,timeout == 0 ? ~uint64_t(0) : timeout * 1000000u);
+      }
+      catch( ExceptionSP & e ){
+        e->writeStdError();
+#if defined(__WIN32__) || defined(__WIN64__)
+        if( !e->searchCode(WAIT_TIMEOUT + errorOffset) ) throw;
+#endif
+      }
+      execute(exec,cmdLine);
+    }
+    catch( ExceptionSP & e ){
+      e->writeStdError();
+      ksleep(1000000);
+    }
+  }
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -420,12 +468,24 @@ Fiber * MSFTPServer::newFiber()
 MSFTPService::MSFTPService(int) :
   msftpConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >())  
 {
-  msftp_ = newObjectR1<MSFTPServer>(*this);
+  msftp_ = newObjectR1<MSFTPServer>(this);
 }
 //------------------------------------------------------------------------------
 void MSFTPService::initialize()
 {
   msftpConfig_->silent(true).parse().override();
+  stdErr.rotationThreshold(
+    msftpConfig_->value("debug_file_rotate_threshold",1024 * 1024)
+  );
+  stdErr.rotatedFileCount(
+    msftpConfig_->value("debug_file_rotate_count",10)
+  );
+  stdErr.setDebugLevels(
+    msftpConfig_->value("debug_levels","+0,+1,+2,+3")
+  );
+  stdErr.fileName(
+    msftpConfig_->value("log_file",stdErr.fileName())
+  );
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   checkMachineBinding(msftpConfig_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
@@ -452,11 +512,18 @@ void MSFTPService::start()
     addrs,
     MSFTPDefaultPort
   );
-  for( intptr_t i = addrs.count() - 1; i >= 0; i-- ) msftp_->addBind(addrs[i]);
+  intptr_t i;
+  for( i = addrs.count() - 1; i >= 0; i-- ) msftp_->addBind(addrs[i]);
   msftp_->open();
   stdErr.debug(0,
     utf8::String::Stream() << msftpd_version.gnu_ << " started (" << serviceName_ << ")\n"
   );
+  for( i = msftpConfig_->sectionCount() - 1; i >= 0; i-- ){
+    utf8::String sectionName(msftpConfig_->section(i).name());
+    if( sectionName.strncasecmp("watchdog",8) == 0 )
+      msftp_->attachFiber(newObjectV1C2<MSFTPWatchdog>(this,sectionName));
+  }
+
 }
 //------------------------------------------------------------------------------
 void MSFTPService::stop()
@@ -474,7 +541,8 @@ bool MSFTPService::active()
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-//  Sleep(15000);
+  //Sleep(15000);
+
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;

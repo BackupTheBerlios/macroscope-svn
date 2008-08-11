@@ -383,7 +383,7 @@ DirectoryChangeNotification::DirectoryChangeNotification() :
 #endif
 }
 //---------------------------------------------------------------------------
-void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t timeout)
+void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t timeout,bool noThrow)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   assert( 
@@ -403,12 +403,15 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
           createDirectory(pathName);
           return monitor(pathName,timeout);
         }
+        if( noThrow ) return;
         newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
     }
     else if( FindNextChangeNotification(hFFCNotification_) == 0 ){
       int32_t err = GetLastError() + errorOffset;
       stop();
+      SetLastError(err);
+      if( noThrow ) return;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
   }
@@ -434,6 +437,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
           createDirectory(pathName);
           return monitor(pathName,timeout);
         }
+        if( noThrow ) return;
         newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
       }
     }
@@ -450,8 +454,10 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   assert( fiber->event_.type_ == etDirectoryChangeNotification );
   if( fiber->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
   if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
+    if( noThrow ) return;
     newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
   }
+  SetLastError(fiber->event_.errno_);
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
@@ -1570,7 +1576,11 @@ bool nameFitMask(const utf8::String & name,const utf8::String & mask)
   uintptr_t c;
   utf8::String::Iterator ni(name), mi(mask);
   while( !ni.eos() && !mi.eos() ){
+#if defined(__WIN32__) || defined(__WIN64__)
+    if( (c = mi.getUpperChar()) == '?' ){
+#else
     if( (c = mi.getChar()) == '?' ){
+#endif
       ni.next();
       mi.next();
     }
@@ -2064,7 +2074,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
     }
     sui.cb = sizeof(sui);
     r = CreateProcessA(
-      name.getANSIString(),
+      anyPathName2HostPathName(name).getANSIString(),
       s.getANSIString(),
       NULL,
       NULL,

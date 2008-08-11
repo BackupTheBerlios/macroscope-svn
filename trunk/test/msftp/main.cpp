@@ -246,6 +246,9 @@ void KFTPClient::put()
         }
         if( cmd == cmPutFilePartial && ll > 0 ) *this << uint64_t(0) << uint64_t(0);
         getCode();
+        //*this << int8_t(cmSetMTime) << rfile;
+        //writeBuffer(&lmst,sizeof(lmst));
+        //getCode();
         ttime = getlocaltimeofday() - ttime;
         atime += ttime;
         if( ttime == 0 ) ttime = 1;

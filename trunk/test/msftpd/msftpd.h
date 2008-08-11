@@ -36,6 +36,8 @@ enum MSFTPCmdType {
   cmList,
   cmStat,
   cmSetTimes,
+  cmSetATime,
+  cmSetMTime,
   cmResize,
   cmPutFile,
   cmPutFilePartial,

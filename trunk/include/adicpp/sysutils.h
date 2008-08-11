@@ -71,8 +71,11 @@ class DirectoryChangeNotification {
     FILE_NOTIFY_INFORMATION * const buffer() const;
     const uintptr_t & bufferSize() const; 
 #endif
-    void monitor(const utf8::String & pathName,uint64_t timeout = ~uint64_t(0));
+    void monitor(const utf8::String & pathName,uint64_t timeout = ~uint64_t(0),bool noThrow = false);
     void stop();
+
+    bool createPath() const { return createPath_; }
+    DirectoryChangeNotification & createPath(bool v){ createPath_ = v; return *this; }
   protected:
   private:
 #if defined(__WIN32__) || defined(__WIN64__)
