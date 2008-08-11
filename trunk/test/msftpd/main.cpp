@@ -441,6 +441,7 @@ void MSFTPWatchdog::fiberExecute()
   utf8::String exec(msftp_->msftpConfig_->textByPath(section_ + ".exec"));
   utf8::String cmdLine(msftp_->msftpConfig_->textByPath(section_ + ".command_line"));
   uint64_t timeout = msftp_->msftpConfig_->valueByPath(section_ + ".timeout",0);
+  uint64_t delay = msftp_->msftpConfig_->valueByPath(section_ + ".delay",30);
   DirectoryChangeNotification dcn;
   dcn.createPath(false);
   while( !terminated_ ){
@@ -454,6 +455,7 @@ void MSFTPWatchdog::fiberExecute()
         if( !e->searchCode(WAIT_TIMEOUT + errorOffset) ) throw;
 #endif
       }
+      if( delay > 0 ) ksleep(delay * 1000000u);
       execute(exec,cmdLine);
     }
     catch( ExceptionSP & e ){
