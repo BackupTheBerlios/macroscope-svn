@@ -2034,19 +2034,20 @@ pid_t execute(const utf8::String & name,const utf8::String & args,const Array<ut
 //---------------------------------------------------------------------------
 pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env,bool wait)
 {
-  if( currentFiber() != NULL ){
-    currentFiber()->event_.timeout_ = ~uint64_t(0);
-    currentFiber()->event_.args_ = &args;
-    currentFiber()->event_.env_ = env;
-    currentFiber()->event_.string0_ = name;
-    currentFiber()->event_.wait_ = wait;
-    currentFiber()->event_.type_ = etExec;
-    currentFiber()->thread()->postRequest();
-    currentFiber()->switchFiber(currentFiber()->mainFiber());
-    assert( currentFiber()->event_.type_ == etExec );
-    if( currentFiber()->event_.errno_ != 0 )
-      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
-    return (pid_t) currentFiber()->event_.data_;
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.args_ = &args;
+    fiber->event_.env_ = env;
+    fiber->event_.string0_ = name;
+    fiber->event_.wait_ = wait;
+    fiber->event_.type_ = etExec;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == etExec );
+    if( fiber->event_.errno_ != 0 )
+      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+    return (pid_t) fiber->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
   BOOL r;
@@ -2079,7 +2080,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
       NULL,
       NULL,
       FALSE,
-      0,
+      DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_SUSPENDED,
       env != NULL ? e.raw() : NULL,
       NULL,
       &sui,
@@ -2101,7 +2102,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
       NULL,
       NULL,
       FALSE,
-      0,
+      DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
       env != NULL ? e.raw() : NULL,
       NULL,
       &suiW,
@@ -2113,10 +2114,11 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
     err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
+  if( ResumeThread(pi.hThread) == DWORD(-1) ) goto err;
   if( wait ){
     DWORD r = WaitForSingleObject(pi.hProcess,INFINITE);
     if( r == WAIT_FAILED ){
-      err = GetLastError() + errorOffset;
+err:  err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
@@ -2146,20 +2148,21 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
 //---------------------------------------------------------------------------
 int32_t waitForProcess(pid_t pid)
 {
-  if( currentFiber() != NULL ){
-    currentFiber()->event_.timeout_ = ~uint64_t(0);
-    currentFiber()->event_.pid_ = pid;
-    currentFiber()->event_.type_ = etWaitForProcess;
-    currentFiber()->thread()->postRequest();
-    currentFiber()->switchFiber(currentFiber()->mainFiber());
-    assert( currentFiber()->event_.type_ == etWaitForProcess );
-    if( currentFiber()->event_.errno_ != 0 )
-      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
-    return (int32_t) currentFiber()->event_.data_;
+  Fiber * fiber = currentFiber();
+  if( fiber != NULL ){
+    fiber->event_.timeout_ = ~uint64_t(0);
+    fiber->event_.pid_ = pid;
+    fiber->event_.type_ = etWaitForProcess;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == etWaitForProcess );
+    if( fiber->event_.errno_ != 0 )
+      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+    return (int32_t) fiber->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
   int32_t err;
-  HANDLE hProcess = OpenProcess(NULL,FALSE,pid);
+  HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | SYNCHRONIZE,FALSE,pid);
   if( hProcess == NULL ){
     err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();

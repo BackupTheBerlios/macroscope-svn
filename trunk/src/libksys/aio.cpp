@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -817,7 +817,7 @@ AsyncOpenFileSlave::~AsyncOpenFileSlave()
 {
 }
 //------------------------------------------------------------------------------
-AsyncOpenFileSlave::AsyncOpenFileSlave()
+AsyncOpenFileSlave::AsyncOpenFileSlave() : maxRequests_(64)
 {
 }
 //------------------------------------------------------------------------------
@@ -832,7 +832,7 @@ bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
   bool r = false;
   if( !terminated_ ){
     AutoLock<InterlockedMutex> lock(*this);
-    if( requests_.count() < 64 ){
+    if( requests_.count() < maxRequests_ ){
       requests_.insToTail(request);
       if( requests_.count() < 2 ) post();
       r = true;
@@ -845,11 +845,13 @@ void AsyncOpenFileSlave::threadExecute()
 {
 //  priority(THREAD_PRIORITY_HIGHEST);
 //  priority(THREAD_PRIORITY_LOWEST);
-  AsyncEvent * request;
-  for(;;){
-    request = NULL;
+  AsyncEvent * request = NULL;
+  for(;;){    
     acquire();
-    if( requests_.count() > 0 ) request = &requests_.remove(*requests_.first());
+    if( request != NULL ) requests_.remove(*request);
+    request = NULL;
+    if( requests_.count() > 0 )
+      request = &AsyncEvent::nodeObject(*requests_.first());
     release();
     if( request == NULL ){
       if( terminated_ ) break;
@@ -1015,6 +1017,9 @@ void AsyncOpenFileSlave::threadExecute()
         request->errno_ = err;
         assert( request->fiber_ != NULL );
         request->fiber_->thread()->postEvent(request);
+      }
+      else {
+        assert( 0 );
       }
     }
   }
@@ -1647,9 +1652,10 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
 void Requester::postRequest(AsyncDescriptor * descriptor)
 {
   intptr_t i;
-  assert( currentFiber() != NULL );
-  currentFiber()->event_.descriptor_ = descriptor;
-  switch( currentFiber()->event_.type_ ){
+  Fiber * fiber = currentFiber();
+  assert( fiber != NULL );
+  fiber->event_.descriptor_ = descriptor;
+  switch( fiber->event_.type_ ){
     case etNone :
     case etError : 
       break;
@@ -1676,14 +1682,16 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           ofSlavesSweepTime_ = gettimeofday();
         }
         for( i = ofSlaves_.count() - 1; i >= 0; i-- )
-          if( ofSlaves_[i].transplant(currentFiber()->event_) ) break;
+          if( ofSlaves_[i].transplant(fiber->event_) ) break;
         if( i < 0 ){
           AsyncOpenFileSlave * p = newObject<AsyncOpenFileSlave>();
           AutoPtr<AsyncOpenFileSlave> slave(p);
-          if( ofSlaves_.count() >= numberOfProcessors() ) p->terminate();
+          if( fiber->event_.type_ == etExec || fiber->event_.type_ == etWaitForProcess ) p->maxRequests(1);
           p->resume();
-          ofSlaves_.add(slave.ptr(NULL));
-          p->transplant(currentFiber()->event_);
+          ofSlaves_.add(slave.ptr());
+          slave.ptr(NULL);
+          p->transplant(fiber->event_);
+          if( ofSlaves_.count() >= numberOfProcessors() ) p->terminate();
         }
       }
       return;
@@ -1700,14 +1708,15 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           wdcnSlavesSweepTime_ = gettimeofday();
         }
         for( i = wdcnSlaves_.count() - 1; i >= 0; i-- )
-          if( wdcnSlaves_[i].transplant(currentFiber()->event_) ) break;
+          if( wdcnSlaves_[i].transplant(fiber->event_) ) break;
         if( i < 0 ){
           AsyncWin9xDirectoryChangeNotificationSlave * p = newObject<AsyncWin9xDirectoryChangeNotificationSlave>();
           AutoPtr<AsyncWin9xDirectoryChangeNotificationSlave> slave(p);
-          if( wdcnSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
-          wdcnSlaves_.add(slave.ptr(NULL));
-          p->transplant(currentFiber()->event_);
+          wdcnSlaves_.add(slave.ptr());
+          slave.ptr(NULL);
+          p->transplant(fiber->event_);
+          if( wdcnSlaves_.count() >= numberOfProcessors() ) p->terminate();
         }
         return;
       }
@@ -1732,14 +1741,15 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           ioSlavesSweepTime_ = gettimeofday();
         }
         for( i = ioSlaves_.count() - 1; i >= 0; i-- )
-          if( ioSlaves_[i].transplant(currentFiber()->event_) ) break;
+          if( ioSlaves_[i].transplant(fiber->event_) ) break;
         if( i < 0 ){
           AsyncIoSlave * p = newObject<AsyncIoSlave>();
           AutoPtr<AsyncIoSlave> slave(p);
-          if( ioSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
-          ioSlaves_.add(slave.ptr(NULL));
-          p->transplant(currentFiber()->event_);
+          ioSlaves_.add(slave.ptr());
+          slave.ptr(NULL);
+          p->transplant(fiber->event_);
+          if( ioSlaves_.count() >= numberOfProcessors() ) p->terminate();
         }
       }
       return;
@@ -1756,14 +1766,15 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           connectSlavesSweepTime_ = gettimeofday();
         }
         for( i = connectSlaves_.count() - 1; i >= 0; i-- )
-          if( connectSlaves_[i].transplant(currentFiber()->event_) ) break;
+          if( connectSlaves_[i].transplant(fiber->event_) ) break;
         if( i < 0 ){
           AsyncIoSlave * p = newObjectV1<AsyncIoSlave>(true);
           AutoPtr<AsyncIoSlave> slave(p);
-          if( connectSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
-          connectSlaves_.add(slave.ptr(NULL));
-          p->transplant(currentFiber()->event_);
+          connectSlaves_.add(slave.ptr());
+          slave.ptr(NULL);
+          p->transplant(fiber->event_);
+          if( connectSlaves_.count() >= numberOfProcessors() ) p->terminate();
         }
       }
       return;
@@ -1780,7 +1791,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           slave->resume();
           timerSlave_ = slave.ptr(NULL);
         }
-        timerSlave_->transplant(currentFiber()->event_);
+        timerSlave_->transplant(fiber->event_);
       }
       return;
     case etAcquireMutex :
@@ -1796,14 +1807,15 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           acquireSlavesSweepTime_ = gettimeofday();
         }
         for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
-          if( acquireSlaves_[i].transplant(currentFiber()->event_) ) break;
+          if( acquireSlaves_[i].transplant(fiber->event_) ) break;
         if( i < 0 ){
           AsyncAcquireSlave * p = newObject<AsyncAcquireSlave>();
           AutoPtr<AsyncAcquireSlave> slave(p);
-          if( acquireSlaves_.count() >= numberOfProcessors() ) p->terminate();
           p->resume();
-          acquireSlaves_.add(slave.ptr(NULL));
-          p->transplant(currentFiber()->event_);
+          acquireSlaves_.add(slave.ptr());
+          slave.ptr(NULL);
+          p->transplant(fiber->event_);
+          if( acquireSlaves_.count() >= numberOfProcessors() ) p->terminate();
         }
       }
       return;
@@ -1817,7 +1829,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           p->resume();
           asyncStackBackTraceSlave_.xchg(p);
         }
-        asyncStackBackTraceSlave_->transplant(currentFiber()->event_);
+        asyncStackBackTraceSlave_->transplant(fiber->event_);
       }
       return;
 #endif

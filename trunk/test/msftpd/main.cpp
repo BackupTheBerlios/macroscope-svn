@@ -202,7 +202,7 @@ MSFTPServerFiber & MSFTPServerFiber::resize()
 MSFTPServerFiber & MSFTPServerFiber::put()
 {
   AsyncFile file(absolutePathNameFromWorkDir(workDir_,readString()));
-  file.createIfNotExist(true);
+  file.createIfNotExist(true).exclusive(true);
   uint64_t l, lp, ll, pos, r;
   int64_t mtime;
   uint64_t bs;
@@ -442,12 +442,17 @@ void MSFTPWatchdog::fiberExecute()
   utf8::String cmdLine(msftp_->msftpConfig_->textByPath(section_ + ".command_line"));
   uint64_t timeout = msftp_->msftpConfig_->valueByPath(section_ + ".timeout",0);
   uint64_t delay = msftp_->msftpConfig_->valueByPath(section_ + ".delay",30);
+  bool execDaemonStartup = msftp_->msftpConfig_->valueByPath(section_ + ".exec_daemon_startup",true);
+  bool repeatIfExitCodeNonzero = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_if_exit_code_nonzero",true);
+  uint64_t repeatDelay = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_delay",10);
   DirectoryChangeNotification dcn;
   dcn.createPath(false);
+  intptr_t exitCode = 0;
   while( !terminated_ ){
     try {
       try {
-        dcn.monitor(dir,timeout == 0 ? ~uint64_t(0) : timeout * 1000000u);
+        if( !execDaemonStartup ) dcn.monitor(dir,timeout == 0 ? ~uint64_t(0) : timeout * 1000000u);
+        if( delay > 0 && !execDaemonStartup ) ksleep(delay * 1000000u);
       }
       catch( ExceptionSP & e ){
         e->writeStdError();
@@ -455,13 +460,17 @@ void MSFTPWatchdog::fiberExecute()
         if( !e->searchCode(WAIT_TIMEOUT + errorOffset) ) throw;
 #endif
       }
-      if( delay > 0 ) ksleep(delay * 1000000u);
-      execute(exec,cmdLine);
+      for(;;){
+        exitCode = execute(exec,cmdLine,NULL,true);
+        if( exitCode == 0 || !repeatIfExitCodeNonzero ) break;
+        if( repeatDelay > 0 ) ksleep(repeatDelay * 1000000u);
+      }
     }
     catch( ExceptionSP & e ){
       e->writeStdError();
       ksleep(1000000);
     }
+    execDaemonStartup = false;
   }
 }
 //------------------------------------------------------------------------------
@@ -470,7 +479,7 @@ void MSFTPWatchdog::fiberExecute()
 MSFTPService::MSFTPService(int) :
   msftpConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >())  
 {
-  msftp_ = newObjectR1<MSFTPServer>(this);
+  msftp_ = newObjectV1<MSFTPServer>(this);
 }
 //------------------------------------------------------------------------------
 void MSFTPService::initialize()
@@ -543,7 +552,7 @@ bool MSFTPService::active()
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  //Sleep(15000);
+  Sleep(15000);
 
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);

@@ -265,6 +265,7 @@ void KFTPClient::put()
       }
     }
     catch( ExceptionSP & e ){
+      shell_->errorCode_ = e->code() == 0 ? EPERM : e->code();
       switch( e->code() ){
         case 0 :
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -433,6 +434,7 @@ void KFTPClient::get()
       all += l;
     }
     catch( ExceptionSP & e ){
+      shell_->errorCode_ = e->code() == 0 ? EPERM : e->code();
       switch( e->code() ){
         case 0 :
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -890,13 +892,13 @@ void KFTPClient::main()
     getCode();
   }
   catch( ExceptionSP & e ){
+    shell_->errorCode_ = e->code() == 0 ? EPERM : e->code();
     log_->debug(8,utf8::String::Stream() << section_ << " " << host_ << " incomplete.\n");
-    if( shell_->errorCode_ == 0 ) shell_->errorCode_ = e->code();
     log_->close();
     throw;
   }
   catch( ... ){
-    if( shell_->errorCode_ == 0 ) shell_->errorCode_ = -1;
+    shell_->errorCode_ = oserror() == 0 ? EPERM : oserror();
     log_->close();
     throw;
   }
@@ -988,8 +990,8 @@ int main(int _argc,char * _argv[])
     }
   }
   catch( ExceptionSP & e ){
+    errcode = e->code() == 0 ? EPERM : e->code();
     e->writeStdError();
-    errcode = e->code();
   }
   return errcode;
 }

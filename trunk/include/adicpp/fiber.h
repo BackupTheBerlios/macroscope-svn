@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -253,6 +253,8 @@ class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMu
     AsyncOpenFileSlave();
 
     bool transplant(AsyncEvent & requests);
+    const uintptr_t & maxRequests() const { return maxRequests_; }
+    AsyncOpenFileSlave & maxRequests(uintptr_t v){ maxRequests_ = v; return *this; }
   protected:
     void threadBeforeWait();
   private:
@@ -267,6 +269,7 @@ class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMu
     SocketInitializer socketInitializer_;
 
     Events requests_;
+    uintptr_t maxRequests_;
 
     void threadExecute();
 };
