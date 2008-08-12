@@ -1691,7 +1691,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           ofSlaves_.add(slave.ptr());
           slave.ptr(NULL);
           p->transplant(fiber->event_);
-          if( ofSlaves_.count() >= numberOfProcessors() ) p->terminate();
+          if( ofSlaves_.count() > numberOfProcessors() * 4 ) p->terminate();
         }
       }
       return;
@@ -1716,7 +1716,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           wdcnSlaves_.add(slave.ptr());
           slave.ptr(NULL);
           p->transplant(fiber->event_);
-          if( wdcnSlaves_.count() >= numberOfProcessors() ) p->terminate();
+          if( wdcnSlaves_.count() > numberOfProcessors() * 4 ) p->terminate();
         }
         return;
       }
@@ -1749,7 +1749,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           ioSlaves_.add(slave.ptr());
           slave.ptr(NULL);
           p->transplant(fiber->event_);
-          if( ioSlaves_.count() >= numberOfProcessors() ) p->terminate();
+          if( ioSlaves_.count() > numberOfProcessors() * 4 ) p->terminate();
         }
       }
       return;
@@ -1774,7 +1774,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           connectSlaves_.add(slave.ptr());
           slave.ptr(NULL);
           p->transplant(fiber->event_);
-          if( connectSlaves_.count() >= numberOfProcessors() ) p->terminate();
+          if( connectSlaves_.count() > numberOfProcessors() * 4 ) p->terminate();
         }
       }
       return;
@@ -1815,7 +1815,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
           acquireSlaves_.add(slave.ptr());
           slave.ptr(NULL);
           p->transplant(fiber->event_);
-          if( acquireSlaves_.count() >= numberOfProcessors() ) p->terminate();
+          if( acquireSlaves_.count() > numberOfProcessors() * 4 ) p->terminate();
         }
       }
       return;

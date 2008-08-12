@@ -116,7 +116,7 @@ GDChart & GDChart::createChart()
     x = (width_ - leftBorder_ - rightBorder_) * j / (xCount - 1) + leftBorder_;
     line(x,topBorder_,x,height_ - bottomBorder_,lineColor);
   }
-  intptr_t yLabelColor = makeColor(j,j,j);
+  intptr_t yLabelColor = makeColor(ldouble(j),ldouble(j),ldouble(j));
   for( y = topBorder_; uintptr_t(y) <= height_ - bottomBorder_; y += fontHeight(font_) * 2 ){
     ldouble v = maxValue - (y - topBorder_) * yAxis;
     // draw horiz grid line
@@ -136,7 +136,7 @@ GDChart & GDChart::createChart()
   }
   // draw data lines
   for( i = 0; uintptr_t(i) < data_.count(); i++ ){
-    intptr_t color = makeColor(i + 1,i + 1,i + 1);
+    intptr_t color = makeColor(ldouble(i + 1),ldouble(i + 1),ldouble(i + 1));
     const Array<ldouble> & data = data_[i];
     for( j = 0; uintptr_t(j) < data.count(); j++ ){
       x = (width_ - leftBorder_ - rightBorder_) * j / (xCount - 1) + leftBorder_;
@@ -148,7 +148,7 @@ GDChart & GDChart::createChart()
   }
   intptr_t xBarSize = 2, yBarSize = 2;
   intptr_t barColor = colorAllocate(255,0,0);
-  intptr_t xLabelColor = makeColor(i + 1,i + 1,i + 1);
+  intptr_t xLabelColor = makeColor(ldouble(i + 1),ldouble(i + 1),ldouble(i + 1));
   for( i = 0; uintptr_t(i) < data_.count(); i++ ){
     const Array<ldouble> & data = data_[i];
     for( j = 0; uintptr_t(j) < data.count(); j++ ){
