@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,7 +78,8 @@ const char * const  API::symbols_[]   = {
   "getnameinfo",
   "GetAddrInfoW",
   "FreeAddrInfoW",
-  "GetNameInfoW"
+  "GetNameInfoW",
+  "WSAIoctl"
 };
 
 HINSTANCE API::handle_;
@@ -241,6 +242,7 @@ void API::open()
         newObjectV1C2<ksys::Exception>(err, __PRETTY_FUNCTION__)->throwSP();
       }
     }
+
     /*if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
       for( i = 0; i < sizeof(wship6api.symbols_) / sizeof(wship6api.symbols_[0]); i++ ){
         ((void **) &wship6api.p_getaddrinfo)[i] = GetProcAddress(wship6api.handle_,wship6api.symbols_[i]);

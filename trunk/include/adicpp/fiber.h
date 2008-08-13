@@ -215,6 +215,8 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
     void cancelEvent(const AsyncEvent & request);
 #endif
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
+    const uintptr_t & maxRequests() const { return maxRequests_; }
+    AsyncIoSlave & maxRequests(uintptr_t v){ maxRequests_ = v > MAXIMUM_WAIT_OBJECTS - 1 ? MAXIMUM_WAIT_OBJECTS - 1 : v; return *this; }
   protected:
     void threadBeforeWait();
   private:
@@ -242,24 +244,25 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
     AutoPtr<fd_set> wfds_;
     bool connect_;
 #endif
+    uintptr_t maxRequests_;
     void threadExecute();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncMiscSlave : public Thread, public Semaphore, public InterlockedMutex {
   public:
-    virtual ~AsyncOpenFileSlave();
-    AsyncOpenFileSlave();
+    virtual ~AsyncMiscSlave();
+    AsyncMiscSlave();
 
     bool transplant(AsyncEvent & requests);
     const uintptr_t & maxRequests() const { return maxRequests_; }
-    AsyncOpenFileSlave & maxRequests(uintptr_t v){ maxRequests_ = v; return *this; }
+    AsyncMiscSlave & maxRequests(uintptr_t v){ maxRequests_ = v; return *this; }
   protected:
     void threadBeforeWait();
   private:
-    AsyncOpenFileSlave(const AsyncOpenFileSlave &){}
-    void operator = (const AsyncOpenFileSlave &){}
+    AsyncMiscSlave(const AsyncMiscSlave &){}
+    void operator = (const AsyncMiscSlave &){}
 
     class SocketInitializer {
       public:
@@ -267,6 +270,28 @@ class AsyncOpenFileSlave : public Thread, public Semaphore, public InterlockedMu
         SocketInitializer();
     };
     SocketInitializer socketInitializer_;
+
+    Events requests_;
+    uintptr_t maxRequests_;
+
+    void threadExecute();
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class AsyncProcessSlave : public Thread, public Semaphore, public InterlockedMutex {
+  public:
+    virtual ~AsyncProcessSlave();
+    AsyncProcessSlave();
+
+    bool transplant(AsyncEvent & requests);
+    const uintptr_t & maxRequests() const { return maxRequests_; }
+    AsyncProcessSlave & maxRequests(uintptr_t v){ maxRequests_ = v; return *this; }
+  protected:
+    void threadBeforeWait();
+  private:
+    AsyncProcessSlave(const AsyncProcessSlave &){}
+    void operator = (const AsyncProcessSlave &){}
 
     Events requests_;
     uintptr_t maxRequests_;
@@ -404,8 +429,12 @@ class Requester {
 #endif
 
     InterlockedMutex ofRequestsMutex_;
-    Vector<AsyncOpenFileSlave> ofSlaves_;
+    Vector<AsyncMiscSlave> ofSlaves_;
     int64_t ofSlavesSweepTime_;
+
+    InterlockedMutex prRequestsMutex_;
+    Vector<AsyncProcessSlave> prSlaves_;
+    int64_t prSlavesSweepTime_;
 
     InterlockedMutex timerRequestsMutex_;
     AutoPtr<AsyncTimerSlave> timerSlave_;

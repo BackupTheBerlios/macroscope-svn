@@ -117,9 +117,9 @@ AsyncIoSlave::~AsyncIoSlave()
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-AsyncIoSlave::AsyncIoSlave()
+AsyncIoSlave::AsyncIoSlave() : maxRequests_(MAXIMUM_WAIT_OBJECTS - 1)
 #else
-AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect)
+AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect), maxRequests_(64)
 #endif
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -191,7 +191,7 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 #if defined(__WIN32__) || defined(__WIN64__)
   if( !terminated_ ){
     AutoLock<InterlockedMutex> lock(*this);
-    if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 1 ){
+    if( requests_.count() + newRequests_.count() < maxRequests_ ){
       newRequests_.insToTail(request);
       BOOL es = SetEvent(safeEvents_[MAXIMUM_WAIT_OBJECTS - 1]);
       assert( es != 0 );
@@ -801,33 +801,33 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-AsyncOpenFileSlave::SocketInitializer::~SocketInitializer()
+AsyncMiscSlave::SocketInitializer::~SocketInitializer()
 {
   ksock::api.close();
 }
 //------------------------------------------------------------------------------
-AsyncOpenFileSlave::SocketInitializer::SocketInitializer()
+AsyncMiscSlave::SocketInitializer::SocketInitializer()
 {
   ksock::api.open();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-AsyncOpenFileSlave::~AsyncOpenFileSlave()
+AsyncMiscSlave::~AsyncMiscSlave()
 {
 }
 //------------------------------------------------------------------------------
-AsyncOpenFileSlave::AsyncOpenFileSlave() : maxRequests_(64)
+AsyncMiscSlave::AsyncMiscSlave() : maxRequests_(64)
 {
 }
 //------------------------------------------------------------------------------
-void AsyncOpenFileSlave::threadBeforeWait()
+void AsyncMiscSlave::threadBeforeWait()
 {
   terminate();
   post();
 }
 //---------------------------------------------------------------------------
-bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
+bool AsyncMiscSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
   if( !terminated_ ){
@@ -841,17 +841,14 @@ bool AsyncOpenFileSlave::transplant(AsyncEvent & request)
   return r;
 }
 //------------------------------------------------------------------------------
-void AsyncOpenFileSlave::threadExecute()
+void AsyncMiscSlave::threadExecute()
 {
 //  priority(THREAD_PRIORITY_HIGHEST);
 //  priority(THREAD_PRIORITY_LOWEST);
-  AsyncEvent * request = NULL;
+  AsyncEvent * request;
   for(;;){    
     acquire();
-    if( request != NULL ) requests_.remove(*request);
-    request = NULL;
-    if( requests_.count() > 0 )
-      request = &AsyncEvent::nodeObject(*requests_.first());
+    request = requests_.count() > 0 ? request = &requests_.remove(*requests_.first()) : NULL;
     release();
     if( request == NULL ){
       if( terminated_ ) break;
@@ -994,7 +991,58 @@ void AsyncOpenFileSlave::threadExecute()
         assert( request->fiber_ != NULL );
         request->fiber_->thread()->postEvent(request);
       }
-      else if( request->type_ == etExec ){
+      else {
+        assert( 0 );
+      }
+    }
+  }
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+AsyncProcessSlave::~AsyncProcessSlave()
+{
+}
+//------------------------------------------------------------------------------
+AsyncProcessSlave::AsyncProcessSlave() : maxRequests_(1)
+{
+}
+//------------------------------------------------------------------------------
+void AsyncProcessSlave::threadBeforeWait()
+{
+  terminate();
+  post();
+}
+//---------------------------------------------------------------------------
+bool AsyncProcessSlave::transplant(AsyncEvent & request)
+{
+  bool r = false;
+  if( !terminated_ ){
+    AutoLock<InterlockedMutex> lock(*this);
+    if( requests_.count() < maxRequests_ ){
+      requests_.insToTail(request);
+      post();
+      r = true;
+    }
+  }
+  return r;
+}
+//------------------------------------------------------------------------------
+void AsyncProcessSlave::threadExecute()
+{
+//  priority(THREAD_PRIORITY_HIGHEST);
+//  priority(THREAD_PRIORITY_LOWEST);
+  AsyncEvent * request;
+  for(;;){    
+    acquire();
+    request = requests_.count() > 0 ? request = &requests_.remove(*requests_.first()) : NULL;
+    release();
+    if( request == NULL ){
+      if( terminated_ ) break;
+      Semaphore::wait();
+    }
+    else {
+      if( request->type_ == etExec ){
         int32_t err = 0;
         try {
           request->data_ = execute(request->string0_,*request->args_,request->env_,request->wait_);
@@ -1600,6 +1648,7 @@ Requester::Requester() :
   connectSlavesSweepTime_(0),
 #endif
   ofSlavesSweepTime_(0),
+  prSlavesSweepTime_(0),
   acquireSlavesSweepTime_(0)
 #if defined(__WIN32__) || defined(__WIN64__)
   , wdcnSlavesSweepTime_(0)
@@ -1666,8 +1715,6 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etRemoveFile :
     case etRename :
     case etCopy :
-    case etExec :
-    case etWaitForProcess :
     case etResolveName :
     case etResolveAddress :
     case etStat :
@@ -1675,23 +1722,41 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         AutoLock<InterlockedMutex> lock(ofRequestsMutex_);
         if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
           for( i = ofSlaves_.count() - 1; i >= 0; i-- )
-            if( ofSlaves_[i].finished() ){
-//	            ofSlaves_[i].Thread::wait();
-              ofSlaves_.remove(i);
-            }
+            if( ofSlaves_[i].finished() ) ofSlaves_.remove(i);
           ofSlavesSweepTime_ = gettimeofday();
         }
         for( i = ofSlaves_.count() - 1; i >= 0; i-- )
           if( ofSlaves_[i].transplant(fiber->event_) ) break;
         if( i < 0 ){
-          AsyncOpenFileSlave * p = newObject<AsyncOpenFileSlave>();
-          AutoPtr<AsyncOpenFileSlave> slave(p);
-          if( fiber->event_.type_ == etExec || fiber->event_.type_ == etWaitForProcess ) p->maxRequests(1);
+          AsyncMiscSlave * p = newObject<AsyncMiscSlave>();
+          AutoPtr<AsyncMiscSlave> slave(p);
           p->resume();
           ofSlaves_.add(slave.ptr());
           slave.ptr(NULL);
           p->transplant(fiber->event_);
           if( ofSlaves_.count() > numberOfProcessors() * 4 ) p->terminate();
+        }
+      }
+      return;
+    case etExec :
+    case etWaitForProcess :
+      {
+        AutoLock<InterlockedMutex> lock(prRequestsMutex_);
+        if( gettimeofday() - prSlavesSweepTime_ >= 10000000 ){
+          for( i = prSlaves_.count() - 1; i >= 0; i-- )
+            if( prSlaves_[i].finished() ) prSlaves_.remove(i);
+          prSlavesSweepTime_ = gettimeofday();
+        }
+        for( i = prSlaves_.count() - 1; i >= 0; i-- )
+          if( prSlaves_[i].transplant(fiber->event_) ) break;
+        if( i < 0 ){
+          AsyncProcessSlave * p = newObject<AsyncProcessSlave>();
+          AutoPtr<AsyncProcessSlave> slave(p);
+          p->resume();
+          prSlaves_.add(slave.ptr());
+          slave.ptr(NULL);
+          p->transplant(fiber->event_);
+          if( prSlaves_.count() > numberOfProcessors() * 4 ) p->terminate();
         }
       }
       return;
@@ -1701,10 +1766,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         AutoLock<InterlockedMutex> lock(wdcnRequestsMutex_);
         if( gettimeofday() - wdcnSlavesSweepTime_ >= 10000000 ){
           for( i = wdcnSlaves_.count() - 1; i >= 0; i-- )
-            if( wdcnSlaves_[i].finished() ){
-//	            wdcnSlaves_[i].Thread::wait();
-              wdcnSlaves_.remove(i);
-            }
+            if( wdcnSlaves_[i].finished() ) wdcnSlaves_.remove(i);
           wdcnSlavesSweepTime_ = gettimeofday();
         }
         for( i = wdcnSlaves_.count() - 1; i >= 0; i-- )
@@ -1734,10 +1796,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
         if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
           for( i = ioSlaves_.count() - 1; i >= 0; i-- )
-            if( ioSlaves_[i].finished() ){
-//              ioSlaves_[i].Thread::wait();
-              ioSlaves_.remove(i);
-            }
+            if( ioSlaves_[i].finished() ) ioSlaves_.remove(i);
           ioSlavesSweepTime_ = gettimeofday();
         }
         for( i = ioSlaves_.count() - 1; i >= 0; i-- )
@@ -1759,10 +1818,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         AutoLock<InterlockedMutex> lock(connectRequestsMutex_);
         if( gettimeofday() - connectSlavesSweepTime_ >= 10000000 ){
           for( i = connectSlaves_.count() - 1; i >= 0; i-- )
-            if( connectSlaves_[i].finished() ){
-//              connectSlaves_[i].Thread::wait();
-              connectSlaves_.remove(i);
-            }
+            if( connectSlaves_[i].finished() ) connectSlaves_.remove(i);
           connectSlavesSweepTime_ = gettimeofday();
         }
         for( i = connectSlaves_.count() - 1; i >= 0; i-- )
@@ -1800,10 +1856,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         AutoLock<InterlockedMutex> lock(acquireRequestsMutex_);
         if( gettimeofday() - acquireSlavesSweepTime_ >= 10000000 ){
           for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
-            if( acquireSlaves_[i].finished() ){
-//              acquireSlaves_[i].Thread::wait();
-              acquireSlaves_.remove(i);
-            }
+            if( acquireSlaves_[i].finished() ) acquireSlaves_.remove(i);
           acquireSlavesSweepTime_ = gettimeofday();
         }
         for( i = acquireSlaves_.count() - 1; i >= 0; i-- )

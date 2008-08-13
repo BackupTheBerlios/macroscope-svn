@@ -261,7 +261,22 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   }
   LPSOCKADDR plsa, prsa;
   INT lsaLen, rsaLen;
-  apiEx.GetAcceptExSockaddrs(
+//----------------------------------------
+  // Load the GetAcceptExSockaddrs function into memory using WSAIoctl.
+  LPFN_GETACCEPTEXSOCKADDRS lpfnGetAcceptExSockaddrs = NULL;
+  GUID GuidGetAcceptExSockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
+  DWORD dwBytes;
+  api.WSAIoctl(socket_,
+    SIO_GET_EXTENSION_FUNCTION_POINTER, 
+    &GuidGetAcceptExSockaddrs,
+    sizeof(GuidGetAcceptExSockaddrs),
+    &lpfnGetAcceptExSockaddrs,
+    sizeof(lpfnGetAcceptExSockaddrs),
+    &dwBytes,
+    NULL,
+    NULL
+  );
+  lpfnGetAcceptExSockaddrs(
     pAcceptExBuffer_,
     0,
     sizeof(pAcceptExBuffer_->pLocalAddr4_),
@@ -831,7 +846,28 @@ BOOL AsyncSocket::AcceptEx(
     dwLocalAddressLength = sizeof(pAcceptExBuffer_->pLocalAddr4_);
     dwRemoteAddressLength = sizeof(pAcceptExBuffer_->pRemoteAddr4_);
   }
-  return apiEx.AcceptEx(socket_,sAcceptSocket,lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,lpdwBytesReceived,lpOverlapped);
+//----------------------------------------
+  // Load the AcceptEx function into memory using WSAIoctl.
+  // The WSAIoctl function is an extension of the ioctlsocket()
+  // function that can use overlapped I/O. The function's 3rd
+  // through 6th parameters are input and output buffers where
+  // we pass the pointer to our AcceptEx function. This is used
+  // so that we can call the AcceptEx function directly, rather
+  // than refer to the Mswsock.lib library.
+  LPFN_ACCEPTEX lpfnAcceptEx = NULL;
+  GUID GuidAcceptEx = WSAID_ACCEPTEX;
+  DWORD dwBytes;
+  api.WSAIoctl(socket_,
+    SIO_GET_EXTENSION_FUNCTION_POINTER, 
+    &GuidAcceptEx,
+    sizeof(GuidAcceptEx),
+    &lpfnAcceptEx,
+    sizeof(lpfnAcceptEx),
+    &dwBytes,
+    NULL,
+    NULL
+  );
+  return lpfnAcceptEx(socket_,sAcceptSocket,lpOutputBuffer,dwReceiveDataLength,dwLocalAddressLength,dwRemoteAddressLength,lpdwBytesReceived,lpOverlapped);
 }
 //---------------------------------------------------------------------------
 BOOL AsyncSocket::Connect(HANDLE event,ksys::AsyncEvent * request)

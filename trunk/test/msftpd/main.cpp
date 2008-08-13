@@ -455,7 +455,7 @@ void MSFTPWatchdog::fiberExecute()
         if( delay > 0 && !execDaemonStartup ) ksleep(delay * 1000000u);
       }
       catch( ExceptionSP & e ){
-        e->writeStdError();
+//        e->writeStdError();
 #if defined(__WIN32__) || defined(__WIN64__)
         if( !e->searchCode(WAIT_TIMEOUT + errorOffset) ) throw;
 #endif
@@ -552,7 +552,7 @@ bool MSFTPService::active()
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  Sleep(15000);
+  //Sleep(15000);
 
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);

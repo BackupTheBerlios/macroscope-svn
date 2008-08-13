@@ -206,6 +206,19 @@ class API {
     {
       return ::getpeername(s,name,namelen);
     }
+    int WSAIoctl(
+      SOCKET s,
+      DWORD dwIoControlCode,
+      LPVOID lpvInBuffer,
+      DWORD cbInBuffer,
+      LPVOID lpvOutBuffer,
+      DWORD cbOutBuffer,
+      LPDWORD lpcbBytesReturned,
+      LPWSAOVERLAPPED lpOverlapped,
+      LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine){
+        return ::WSAIoctl(s,dwIoControlCode,lpvInBuffer,cbInBuffer,lpvOutBuffer,lpcbBytesReturned,lpOverlapped,lpCompletionRoutine);
+    }
+  };
 #else
 #if _MSC_VER
 #pragma warning(push,3)
@@ -447,6 +460,19 @@ class API {
         );
         void * p_GetNameInfoW;
       };
+      union {
+        int (WSAAPI * WSAIoctl)(
+          SOCKET s,
+          DWORD dwIoControlCode,
+          LPVOID lpvInBuffer,
+          DWORD cbInBuffer,
+          LPVOID lpvOutBuffer,
+          DWORD cbOutBuffer,
+          LPDWORD lpcbBytesReturned,
+          LPWSAOVERLAPPED lpOverlapped,
+          LPWSAOVERLAPPED_COMPLETION_ROUTINE lpCompletionRoutine);
+        void *  p_WSAIoctl;
+      };
     };
 #if _MSC_VER
 #pragma warning(pop)
@@ -633,32 +659,35 @@ class APIEx {
 #if _MSC_VER
 #pragma warning(push,3)
 #endif
+    typedef BOOL (WSAAPI * AcceptExPtr)(
+      SOCKET sListenSocket,
+      SOCKET sAcceptSocket,
+      PVOID lpOutputBuffer,
+      DWORD dwReceiveDataLength,
+      DWORD dwLocalAddressLength,
+      DWORD dwRemoteAddressLength,
+      LPDWORD lpdwBytesReceived,
+      LPOVERLAPPED lpOverlapped
+    );
     union {
-        struct {
-            union {
-                BOOL (WSAAPI * AcceptEx)(SOCKET sListenSocket,
-                                         SOCKET sAcceptSocket,
-                                         PVOID lpOutputBuffer,
-                                         DWORD dwReceiveDataLength,
-                                         DWORD dwLocalAddressLength,
-                                         DWORD dwRemoteAddressLength,
-                                         LPDWORD lpdwBytesReceived,
-                                         LPOVERLAPPED lpOverlapped);
-                void *  p_AcceptEx;
-            };
-            union {
-                VOID (WSAAPI * GetAcceptExSockaddrs)(
-                PVOID lpOutputBuffer,
-                DWORD dwReceiveDataLength,
-                DWORD dwLocalAddressLength,
-                DWORD dwRemoteAddressLength,
-                LPSOCKADDR *
-                LocalSockaddr,
-                LPINT LocalSockaddrLength,
-                LPSOCKADDR * RemoteSockaddr, LPINT RemoteSockaddrLength);
-                void *  p_GetAcceptExSockaddrs;
-            };
+      struct {
+        union {
+          AcceptExPtr AcceptEx;
+          void * p_AcceptEx;
         };
+        union {
+          VOID (WSAAPI * GetAcceptExSockaddrs)(
+            PVOID lpOutputBuffer,
+            DWORD dwReceiveDataLength,
+            DWORD dwLocalAddressLength,
+            DWORD dwRemoteAddressLength,
+            LPSOCKADDR *
+            LocalSockaddr,
+            LPINT LocalSockaddrLength,
+            LPSOCKADDR * RemoteSockaddr, LPINT RemoteSockaddrLength);
+          void *  p_GetAcceptExSockaddrs;
+        };
+      };
     };
 #if _MSC_VER
 #pragma warning(pop)
