@@ -182,7 +182,7 @@
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -260,7 +260,7 @@
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -306,8 +306,6 @@
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
 				LinkIncremental="1"
 				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="17"
 			/>
 			<Tool

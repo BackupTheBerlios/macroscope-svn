@@ -44,7 +44,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_ALL_CP;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -64,7 +64,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
+				AdditionalDependencies="Dbghelp.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
 			/>
 			<Tool
@@ -109,7 +109,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;_DEBUG;_LIB;EMBED_ALL_CP;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -129,7 +129,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
+				AdditionalDependencies="Dbghelp.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).lib"
 			/>
 			<Tool
@@ -153,7 +153,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="4"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -178,7 +178,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_ALL_CP;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -194,7 +194,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
+				AdditionalDependencies="Dbghelp.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).lib"
 			/>
 			<Tool
@@ -218,7 +218,7 @@
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="4"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -244,7 +244,7 @@
 				FavorSizeOrSpeed="1"
 				OmitFramePointers="true"
 				AdditionalIncludeDirectories="../../../include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_CP1251_SUPPORT;EMBED_CP866_SUPPORT;EMBED_CP20866_SUPPORT;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;EMBED_ALL_CP;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -260,7 +260,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalDependencies="WS2_32.Lib MsWSock.Lib iphlpapi.lib dbghelp.lib Rpcrt4.lib"
+				AdditionalDependencies="Dbghelp.lib"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).lib"
 			/>
 			<Tool
@@ -1281,10 +1281,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libfbcpp\db.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libmycpp\db.cpp"
 				>
 				<FileConfiguration
@@ -1459,6 +1455,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\libfbcpp\db.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\libpdbutils\DbgString.cpp"
 				>
 			</File>
@@ -1468,10 +1468,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\libadicpp\dllmain.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
 				>
 			</File>
 			<File
@@ -1589,6 +1585,10 @@
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libfbcpp\ecs.cpp"
+				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\libfbcpp\event.cpp"
@@ -2089,64 +2089,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\libodbcpp\stparam.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="RelWithDebInfo|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="RelWithDebInfo|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						ObjectFile="$(IntDir)\$(InputName)2.obj"
-						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\..\src\libfbcpp\stparam.cpp"
 				>
 			</File>
@@ -2205,6 +2147,64 @@
 						Name="VCCLCompilerTool"
 						ObjectFile="$(IntDir)\$(InputName)1.obj"
 						XMLDocumentationFileName="$(IntDir)\$(InputName)1.xdc"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\libodbcpp\stparam.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="RelWithDebInfo|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="RelWithDebInfo|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						ObjectFile="$(IntDir)\$(InputName)2.obj"
+						XMLDocumentationFileName="$(IntDir)\$(InputName)2.xdc"
 					/>
 				</FileConfiguration>
 			</File>

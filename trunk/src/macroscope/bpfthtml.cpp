@@ -640,7 +640,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       cgiBT_.tm_mon = (int) logger_->cgi_.paramAsMutant("bmon") - 1;
       cgiBT_.tm_mday = (int) logger_->cgi_.paramAsMutant("bday");
       if( cgiBT_.tm_mday < 1 || cgiBT_.tm_mday > (int) monthDays(cgiBT_.tm_year + 1900,cgiBT_.tm_mon) )
-        cgiBT_.tm_mday = monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon);
+        cgiBT_.tm_mday = (int) monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon);
       cgiBT_.tm_hour = (int) logger_->cgi_.paramAsMutant("bhour");
       cgiBT_.tm_min = (int) logger_->cgi_.paramAsMutant("bmin");
       cgiBT_.tm_sec = 0;
@@ -649,7 +649,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       cgiET_.tm_mon = (int) logger_->cgi_.paramAsMutant("emon") - 1;
       cgiET_.tm_mday = (int) logger_->cgi_.paramAsMutant("eday");
       if( cgiET_.tm_mday < 1 || cgiET_.tm_mday > (int) monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon) )
-        cgiET_.tm_mday = monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon);
+        cgiET_.tm_mday = (int) monthDays(cgiET_.tm_year + 1900,cgiET_.tm_mon);
       cgiET_.tm_hour = (int) logger_->cgi_.paramAsMutant("ehour");
       cgiET_.tm_min = (int) logger_->cgi_.paramAsMutant("emin");
       cgiET_.tm_sec = 59;
@@ -833,7 +833,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         assert( 0 );
     }
     if( beginTime.tm_mday < 1 || beginTime.tm_mday > (int) monthDays(beginTime.tm_year + 1900,beginTime.tm_mon) )
-      beginTime.tm_mday = monthDays(beginTime.tm_year + 1900,beginTime.tm_mon);
+      beginTime.tm_mday = (int) monthDays(beginTime.tm_year + 1900,beginTime.tm_mon);
     if( logger_->cgi_.isCGI() &&
         (tm2Time(cgiET_) < tm2Time(beginTime) || tm2Time(cgiBT_) > tm2Time(endTime) ||
          level < maxTotalsLevel_ || level > minTotalsLevel_) ){

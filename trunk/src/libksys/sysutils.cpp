@@ -513,10 +513,18 @@ uintmax_t fibonacci(uintmax_t n)
 void createGUID(guid_t & uuid)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  RPC_STATUS status = UuidCreate((UUID *) &uuid);
+  typedef RPC_STATUS (RPC_ENTRY * FpUuidCreate)(UUID __RPC_FAR * Uuid);
+  static FpUuidCreate pUuidCreate = NULL;
+  if( pUuidCreate == NULL ){
+    HMODULE handle = LoadLibraryA("Rpcrt4.dll");
+    if( handle == NULL ) goto er;
+    pUuidCreate = (FpUuidCreate) GetProcAddress(handle,"UuidCreate");
+    if( pUuidCreate == NULL ) goto er;
+  }
+  RPC_STATUS status = pUuidCreate((UUID *) &uuid);
   if( status != RPC_S_OK ){
 //  if( FAILED(CoCreateGuid(&uuid)) ){
-    int32_t err = GetLastError() + errorOffset;
+er: int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_UUIDGEN
@@ -544,9 +552,20 @@ guid_t stringToGUID(const char * s)
   guid_t uuid;
   memset(&uuid,0,sizeof(uuid));
 #if defined(__WIN32__) || defined(__WIN64__)
-  RPC_STATUS status = UuidFromString((RPC_CSTR) s,&uuid);
+  typedef RPC_STATUS (RPC_ENTRY * FpUuidFromString)(
+    unsigned char __RPC_FAR* StringUuid,
+    UUID __RPC_FAR* Uuid
+  );
+  static FpUuidFromString pUuidFromString = NULL;
+  if( pUuidFromString == NULL ){
+    HMODULE handle = LoadLibraryA("Rpcrt4.dll");
+    if( handle == NULL ) goto er;
+    pUuidFromString = (FpUuidFromString) GetProcAddress(handle,"UuidFromString");
+    if( pUuidFromString == NULL ) goto er;
+  }
+  RPC_STATUS status = pUuidFromString((RPC_CSTR) s,&uuid);
   if( status != RPC_S_OK ){
-    int32_t err = GetLastError() + errorOffset;
+er: int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif HAVE_UUID_FROM_STRING
@@ -1238,7 +1257,7 @@ bool isPathNameRelative(const utf8::String & pathName)
     if( !i.isSpace() ){
       switch( c2 = i.getChar() ){
         case '\\' : case '/' : return false;
-	default: ;
+	      default: ;
       }
       if( c != 0 && c2 == ':' ) return false;
       if( c == 0 && ((c3 = i.getUpperChar()) < 'A' || c3 > 'Z') ) break;

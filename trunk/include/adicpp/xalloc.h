@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -75,14 +75,24 @@ inline void operator delete[](void * ptr)
   ksys::kfree(ptr);
 }
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+#define DISABLE_OBJECT_ACTIONS 1
+//---------------------------------------------------------------------------
 template <typename T> inline void deleteObject(T * object)
 {
   if( object != NULL ){
     ksys::ObjectActions::beforeDestruction(object);
+#if !DISABLE_OBJECT_ACTIONS
     ksys::ObjectActions::beforeDestructor(object);
+#endif
+#if DISABLE_OBJECT_ACTIONS
+    delete object;
+#else
     object->~T();
     ksys::ObjectActions::afterDestructor(object);
     ksys::kfree(object);
+#endif
   }
 }
 //---------------------------------------------------------------------------
@@ -90,10 +100,16 @@ template <typename T> inline void deleteObject(const T * object)
 {
   if( object != NULL ){
     ksys::ObjectActions::beforeDestruction(const_cast<T *>(object));
+#if !DISABLE_OBJECT_ACTIONS
     ksys::ObjectActions::beforeDestructor(const_cast<T *>(object));
+#endif
+#if DISABLE_OBJECT_ACTIONS
+    delete object;
+#else
     const_cast<T *>(object)->~T();
     ksys::ObjectActions::afterDestructor(const_cast<T *>(object));
     ksys::kfree(const_cast<T *>(object));
+#endif
   }
 }
 //---------------------------------------------------------------------------
@@ -117,6 +133,7 @@ class XAutoPtr {
 template <typename T> inline T * newObject()
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -124,9 +141,12 @@ template <typename T> inline T * newObject()
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T;
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -138,6 +158,7 @@ template <
 T * newObjectV1(Param1 p1)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -145,9 +166,12 @@ T * newObjectV1(Param1 p1)
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -159,6 +183,7 @@ template <
 T * newObjectR1(Param1 & p1)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -166,9 +191,12 @@ T * newObjectR1(Param1 & p1)
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -180,6 +208,7 @@ template <
 T * newObjectC1(const Param1 & p1)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -187,9 +216,12 @@ T * newObjectC1(const Param1 & p1)
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -201,6 +233,7 @@ template <
 > inline T * newObjectV1V2(Param1 p1,Param2 p2)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -208,9 +241,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -222,6 +258,7 @@ template <
 > inline T * newObjectR1V2(Param1 & p1,Param2 p2)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -229,9 +266,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -243,6 +283,7 @@ template <
 > inline T * newObjectR1R2(Param1 & p1,Param2 & p2)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -250,9 +291,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -264,6 +308,7 @@ template <
 > inline T * newObjectV1C2(Param1 p1,const Param2 & p2)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -271,9 +316,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -285,6 +333,7 @@ template <
 > inline T * newObjectR1C2(Param1 & p1,const Param2 & p2)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -292,9 +341,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -306,6 +358,7 @@ template <
 > inline T * newObjectC1R2(const Param1 & p1,Param2 & p2)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -313,9 +366,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -331,6 +387,7 @@ template <
 > inline T * newObjectC1C2(const Param1 & p1,const Param2 & p2)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -338,9 +395,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -356,6 +416,7 @@ template <
 > inline T * newObjectR1R2R3(Param1 & p1,Param2 & p2,Param3 & p3)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -363,9 +424,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -378,6 +442,7 @@ template <
 > inline T * newObjectC1C2C3(const Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -385,9 +450,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -400,6 +468,7 @@ template <
 > inline T * newObjectC1V2V3(const Param1 & p1,Param2 p2,Param3 p3)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -407,9 +476,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -422,6 +494,7 @@ template <
 > inline T * newObjectR1C2C3(Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -429,9 +502,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -444,6 +520,7 @@ template <
 > inline T * newObjectC1C2R3(const Param1 & p1,const Param2 & p2,Param3 & p3)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -451,9 +528,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -466,6 +546,7 @@ template <
 > inline T * newObjectV1V2V3(Param1 p1,Param2 p2,Param3 p3)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -473,9 +554,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -488,6 +572,7 @@ template <
 > inline T * newObjectV1C2V3(Param1 p1,const Param2 & p2,Param3 p3)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -495,9 +580,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -511,6 +599,7 @@ template <
 > inline T * newObjectR1R2R3R4(Param1 & p1,Param2 & p2,Param3 & p3,Param4 & p4)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -518,9 +607,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3,p4);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -534,6 +626,7 @@ template <
 > inline T * newObjectV1C2C3C4(Param1 p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -541,9 +634,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3,p4);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -557,6 +653,7 @@ template <
 > inline T * newObjectR1C2C3C4(Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -564,9 +661,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3,p4);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -580,6 +680,7 @@ template <
 > inline T * newObjectC1C2C3C4(const Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -587,9 +688,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3,p4);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -603,6 +707,7 @@ template <
 > inline T * newObjectC1C2C3V4(const Param1 & p1,const Param2 & p2,const Param3 & p3,Param4 p4)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -610,9 +715,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3,p4);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }
@@ -626,6 +734,7 @@ template <
 > inline T * newObjectV1V2V3V4(Param1 p1,Param2 p2,Param3 p3,Param4 p4)
 {
   XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
   if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
@@ -633,9 +742,12 @@ template <
   memcpy(safe.ptr(),&st,sizeof(T));
 #endif
   ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
   new (safe.ptr()) T(p1,p2,p3,p4);
   XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
   ksys::ObjectActions::afterConstruction(safe2.ptr());
   return safe2.ptr(NULL);
 }

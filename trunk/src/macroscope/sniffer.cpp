@@ -85,22 +85,22 @@ void Sniffer::shiftPeriod(PacketGroupingPeriod tp,struct tm & t,intptr_t v)
       assert( 0 );
       break;
     case pgpSec  :
-      if( (t.tm_sec += v) < 0 ){ t.tm_sec = 59; goto min; } else if( t.tm_sec > 59 ){ t.tm_sec = 0; goto min; }
+      if( (t.tm_sec += int(v)) < 0 ){ t.tm_sec = 59; goto min; } else if( t.tm_sec > 59 ){ t.tm_sec = 0; goto min; }
       break;
     case pgpMin  :
-min:  if( (t.tm_min += v) < 0 ){ t.tm_min = 59; goto hour; } else if( t.tm_min > 59 ){ t.tm_min = 0; goto hour; }
+min:  if( (t.tm_min += int(v)) < 0 ){ t.tm_min = 59; goto hour; } else if( t.tm_min > 59 ){ t.tm_min = 0; goto hour; }
       break;
     case pgpHour :
-hour: if( (t.tm_hour += v ) < 0 ){ t.tm_hour = 23; goto day; } else if( t.tm_hour > 23 ){ t.tm_hour = 0; goto day; }
+hour: if( (t.tm_hour += int(v) ) < 0 ){ t.tm_hour = 23; goto day; } else if( t.tm_hour > 23 ){ t.tm_hour = 0; goto day; }
       break;
     case pgpDay  :
-day:  if( (t.tm_mday += v) < 1 ){ goto mon; } else if( t.tm_mday > (int) monthDays(t.tm_year + 1900,t.tm_mon) ){ t.tm_mday = 1; goto mon; }
+day:  if( (t.tm_mday += int(v)) < 1 ){ goto mon; } else if( t.tm_mday > (int) monthDays(t.tm_year + 1900,t.tm_mon) ){ t.tm_mday = 1; goto mon; }
       break;
     case pgpMon  :
-mon:  if( (t.tm_mon += v) < 0 || t.tm_mon > 11 ){ t.tm_mon = 0; goto year; }
+mon:  if( (t.tm_mon += int(v)) < 0 || t.tm_mon > 11 ){ t.tm_mon = 0; goto year; }
       break;
     case pgpYear :
-year: t.tm_year += v;
+year: t.tm_year += int(v);
       break;
     default : 
       assert( 0 );

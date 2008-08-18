@@ -30,16 +30,16 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-uint8_t Object::fabric_[sizeof(ObjectFabric)];
+//uint8_t Object::fabric_[sizeof(ObjectFabric)];
 //---------------------------------------------------------------------------
 void Object::initialize()
 {
-  new (fabric_) ObjectFabric;
+  //new (fabric_) ObjectFabric;
 }
 //---------------------------------------------------------------------------
 void Object::cleanup()
 {
-  fabric().~ObjectFabric();
+  //fabric().~ObjectFabric();
 }
 //---------------------------------------------------------------------------
 const char * Object::getClassName(const void * thisObject)

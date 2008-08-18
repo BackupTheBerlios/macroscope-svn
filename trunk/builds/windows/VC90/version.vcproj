@@ -25,7 +25,7 @@
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -50,7 +50,6 @@
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -98,10 +97,10 @@
 		<Configuration
 			Name="Release|x64"
 			OutputDirectory="$(SolutionDir)$(PlatformName)\$(ConfigurationName)"
-			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -127,7 +126,6 @@
 				StringPooling="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

@@ -49,7 +49,7 @@
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
@@ -66,7 +66,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
-				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
 				SubSystem="1"
@@ -127,7 +126,7 @@
 				StringPooling="true"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
+				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -144,7 +143,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
-				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
 				SubSystem="1"
@@ -180,7 +178,7 @@
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -208,7 +206,6 @@
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
-				RuntimeLibrary="2"
 				BufferSecurityCheck="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -226,6 +223,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
+				LinkIncremental="1"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
@@ -261,7 +259,7 @@
 			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)_$(ProjectName)"
 			ConfigurationType="1"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -290,7 +288,6 @@
 				AdditionalIncludeDirectories="../../../include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE"
 				StringPooling="true"
-				RuntimeLibrary="2"
 				BufferSecurityCheck="false"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -308,6 +305,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
+				LinkIncremental="1"
 				SubSystem="1"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"

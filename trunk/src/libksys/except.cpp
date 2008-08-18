@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,12 +32,12 @@ namespace ksys {
 //---------------------------------------------------------------------------
 void Exception::afterConstruction()
 {
-  if( !object_.heap_ )
-    newObjectV1C2<Exception>(
-      EINVAL,
-      __PRETTY_FUNCTION__ + utf8::String(" ") +
-      "Exception must be allocated dynamicaly only via newObject function(s)."
-    )->throwSP();
+  //if( !object_.heap_ )
+  //  newObjectV1C2<Exception>(
+  //    EINVAL,
+  //    __PRETTY_FUNCTION__ + utf8::String(" ") +
+  //    "Exception must be allocated dynamicaly only via newObject function(s)."
+  //  )->throwSP();
 }
 //---------------------------------------------------------------------------
 Exception::~Exception()

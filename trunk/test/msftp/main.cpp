@@ -319,7 +319,7 @@ void KFTPClient::put()
 //------------------------------------------------------------------------------
 void KFTPClient::get()
 {
-  clearStatistic();
+  //clearStatistic();
   if( !shell_->config_->section(section_).isSection("get") ) return;
   utf8::String localPath(
     includeTrailingPathDelimiter(

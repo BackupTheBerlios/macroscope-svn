@@ -1,3 +1,4 @@
+#cmakedefine HAVE__FSEEKI64 1
 #cmakedefine HAVE_FLOAT_H 1
 #cmakedefine HAVE_STDIO_H 1
 #cmakedefine HAVE_STDLIB_H 1

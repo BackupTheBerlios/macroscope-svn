@@ -55,6 +55,7 @@ Symbol * SymbolTable::newSymbol(CodeObjectOwner * parent,const wchar_t * symbol,
   ksys::AutoPtr<Symbol> sym(newObjectV1V2V3<Symbol>(parentSymbol,symSafe.ptr(),object));
   symSafe.ptr(NULL);
   if( !pseudonym ){
+    object->childIndex_ = parent->childs_.count();
     parent->childs_.add(object);
     AutoPtr<CodeObjectOwner::TypedList> list(newObjectV1<CodeObjectOwner::TypedList>(CodeObject::getClassName(object)));
     CodeObjectOwner::TypedList * lp = list;
@@ -87,12 +88,21 @@ Symbol * SymbolTable::replaceSymbolObject(CodeObjectOwner * parent,const wchar_t
 //------------------------------------------------------------------------------
 SymbolTable & SymbolTable::replaceObject(CodeObject * oldObject,CodeObject * object)
 {
-  AutoPtr<CodeObjectOwner::TypedList> list(newObjectV1<CodeObjectOwner::TypedList>(CodeObject::getClassName(object)));
+  CodeObjectOwner * parent = oldObject->parent();
+  AutoPtr<CodeObjectOwner::TypedList> list(newObjectV1<CodeObjectOwner::TypedList>(CodeObject::getClassName(oldObject)));
   CodeObjectOwner::TypedList * lp = list;
-  intptr_t c, i = oldObject->parent()->childsByType_.bSearch(*lp,c,CodeObjectOwner::compareByType);
+  intptr_t c, i = parent->childsByType_.bSearch(*lp,c,CodeObjectOwner::compareByType);
   assert( c == 0 );
-  oldObject->parent()->childsByType_[i].remove(*oldObject);
-  oldObject->parent()->childsByType_[i].insToTail(*object);
+  parent->childsByType_[i].remove(*oldObject);
+  list = lp = newObjectV1<CodeObjectOwner::TypedList>(CodeObject::getClassName(object));
+  i = parent->childsByType_.bSearch(*lp,c,CodeObjectOwner::compareByType);
+  if( c != 0 ){
+    parent->childsByType_.insert(i + (c > 0),lp);
+    list.ptr(NULL);
+  }
+  else
+    lp = &parent->childsByType_[i];
+  lp->insToTail(*object);
 
   object->symbols_.xchg(oldObject->symbols_);
   for( intptr_t i = object->symbols_.count() - 1; i >= 0; i-- )
@@ -102,7 +112,7 @@ SymbolTable & SymbolTable::replaceObject(CodeObject * oldObject,CodeObject * obj
     CodeObjectOwner * owner2 = dynamic_cast<CodeObjectOwner *>(object);
     if( owner2 != NULL ) owner2->childs_.xchg(owner->childs_);
   }
-  deleteObject(oldObject);
+  parent->childs_.replace(oldObject->childIndex_,object);
   return *this;
 }
 //------------------------------------------------------------------------------

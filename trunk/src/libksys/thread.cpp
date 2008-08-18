@@ -66,12 +66,12 @@ uint8_t currentThreadPlaceHolder[sizeof(ThreadLocalVariable<Thread>)];
 //---------------------------------------------------------------------------
 void Thread::afterConstruction()
 {
-  if( !object_.heap_ )
-    newObjectV1C2<Exception>(
-      EINVAL,
-      __PRETTY_FUNCTION__ + utf8::String(" ") +
-      "Thread must be allocated dynamicaly only via newObject function(s)."
-    )->throwSP();
+  //if( !object_.heap_ )
+  //  newObjectV1C2<Exception>(
+  //    EINVAL,
+  //    __PRETTY_FUNCTION__ + utf8::String(" ") +
+  //    "Thread must be allocated dynamicaly only via newObject function(s)."
+  //  )->throwSP();
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

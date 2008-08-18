@@ -220,7 +220,7 @@
 			UseOfATL="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -317,7 +317,7 @@
 			UseOfATL="1"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
-			WholeProgramOptimization="0"
+			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"

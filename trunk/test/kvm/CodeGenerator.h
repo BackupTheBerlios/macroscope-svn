@@ -36,17 +36,17 @@ class CodeObjectOwner;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class CodeObject : public Object { // base class only
+class CodeObject : virtual public Object { // base class only
+  friend class CodeGenerator;
   friend class SymbolTable;
   public:
-    virtual ~CodeObject() {}
-    CodeObject() {}
+    virtual ~CodeObject();
+    CodeObject();
 
     CodeObjectOwner * parent() const;
     wchar_t * symbol() const;
-  protected:
-    Vector<Symbol> symbols_;
-    mutable EmbeddedListNode<CodeObject> listNode_;
+
+    virtual void generateCode(CodeGenerator &,AsyncFile &,const utf8::String & margin) {}
 
     static EmbeddedListNode<CodeObject> & listNode(const CodeObject & object){
       return object.listNode_;
@@ -54,16 +54,25 @@ class CodeObject : public Object { // base class only
     static CodeObject & listNodeObject(const EmbeddedListNode<CodeObject> & node,CodeObject * p = NULL){
       return node.object(p->listNode_);
     }
+
+    utf8::String getCxxSymbol() const;
+    utf8::String getCxxSymbols(const utf8::String & delimiter = ", ") const;
+    utf8::String getMangledCxxSymbol() const;
+  protected:
+    Vector<Symbol> symbols_;
+    mutable EmbeddedListNode<CodeObject> listNode_;
+    intptr_t childIndex_;
   private:
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class CodeObjectOwner : virtual public CodeObject { // base class only
+  friend class CodeGenerator;
   friend class SymbolTable;
   public:
-    virtual ~CodeObjectOwner() {}
-    CodeObjectOwner() {}
+    virtual ~CodeObjectOwner();
+    CodeObjectOwner();
   protected:
     Vector<CodeObject> childs_;
 
@@ -81,7 +90,9 @@ class CodeObjectOwner : virtual public CodeObject { // base class only
       return strcmp(p1.type_,p2.type_);
     }
 
-    Vector<TypedList> childsByType_;
+    TypedList * getChildsByType(const char * type) const;
+
+    mutable Vector<TypedList> childsByType_;
   private:
 };
 //------------------------------------------------------------------------------
@@ -89,19 +100,25 @@ class CodeObjectOwner : virtual public CodeObject { // base class only
 //------------------------------------------------------------------------------
 class Class : public CodeObjectOwner {
   public:
-    virtual ~Class() {}
-    Class() {}
+    virtual ~Class();
+    Class();
+
+    void generateCode(CodeGenerator & codeGenerator,AsyncFile & file,const utf8::String & margin);
 
     class Member : virtual public CodeObject {
       public:
-        virtual ~Member() {}
-        Member() {}
+        virtual ~Member();
+        Member();
+
+        void generateCode(CodeGenerator & codeGenerator,AsyncFile & file,const utf8::String & margin);
     };
 
-    class MemberFunc : public Member, public CodeObjectOwner {
+    class MemberFunc : public CodeObjectOwner, public Member {
       public:
-        virtual ~MemberFunc() {}
-        MemberFunc() {}
+        virtual ~MemberFunc();
+        MemberFunc();
+
+        void generateCode(CodeGenerator & codeGenerator,AsyncFile & file,const utf8::String & margin);
 
         class Param : public CodeObject {
           public:
@@ -177,6 +194,7 @@ class CodeGenerator : public Object {
     CodeGenerator();
 
     CodeGenerator & generate(const utf8::String & fileName);
+    const CodeObject * const root() const { return &root_; }
   protected:
     Class root_;
   private:
