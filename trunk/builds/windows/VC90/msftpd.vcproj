@@ -53,7 +53,7 @@
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="4"
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -67,11 +67,10 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
 				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -146,11 +145,10 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName)_$(ConfigurationName).exe"
+				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
 				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
 				TargetMachine="17"
 			/>
 			<Tool
@@ -227,8 +225,8 @@
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
 				LinkIncremental="1"
 				SubSystem="1"
-				RandomizedBaseAddress="1"
-				DataExecutionPrevention="0"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -306,6 +304,8 @@
 				OutputFile="$(OutDir)\..\..\..\..\..\binaries\$(ProjectName)_ms_$(PlatformName).exe"
 				LinkIncremental="1"
 				SubSystem="1"
+				OptimizeReferences="2"
+				EnableCOMDATFolding="2"
 				TargetMachine="17"
 			/>
 			<Tool

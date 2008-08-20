@@ -32,7 +32,24 @@ namespace ksys {
 namespace kvm {
 //------------------------------------------------------------------------------
 class Symbol;
+class CodeObject;
 class CodeObjectOwner;
+class CodeGenerator;
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+class CodeGeneratorParameters {
+  public:
+    CodeGeneratorParameters(const CodeGeneratorParameters & copy,const utf8::String & margin) :
+      codeGenerator_(copy.codeGenerator_), file_(copy.file_), margin_(margin), caller_(NULL) {}
+    CodeGeneratorParameters(CodeGenerator & codeGenerator,AsyncFile & file,const utf8::String & margin) :
+      codeGenerator_(codeGenerator), file_(file), margin_(margin), caller_(NULL) {}
+
+    CodeGenerator & codeGenerator_;
+    AsyncFile & file_;
+    utf8::String margin_;
+    CodeObject * caller_;
+};
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -46,7 +63,7 @@ class CodeObject : virtual public Object { // base class only
     CodeObjectOwner * parent() const;
     wchar_t * symbol() const;
 
-    virtual void generateCode(CodeGenerator &,AsyncFile &,const utf8::String & margin) {}
+    virtual void generateCode(const CodeGeneratorParameters &) {}
 
     static EmbeddedListNode<CodeObject> & listNode(const CodeObject & object){
       return object.listNode_;
@@ -56,7 +73,7 @@ class CodeObject : virtual public Object { // base class only
     }
 
     utf8::String getCxxSymbol() const;
-    utf8::String getCxxSymbols(const utf8::String & delimiter = ", ") const;
+    utf8::String getCxxSymbols(uintptr_t startFrom = 0,const utf8::String & delimiter = ", ") const;
     utf8::String getMangledCxxSymbol() const;
   protected:
     Vector<Symbol> symbols_;
@@ -103,14 +120,14 @@ class Class : public CodeObjectOwner {
     virtual ~Class();
     Class();
 
-    void generateCode(CodeGenerator & codeGenerator,AsyncFile & file,const utf8::String & margin);
+    void generateCode(const CodeGeneratorParameters & p);
 
     class Member : virtual public CodeObject {
       public:
         virtual ~Member();
         Member();
 
-        void generateCode(CodeGenerator & codeGenerator,AsyncFile & file,const utf8::String & margin);
+        void generateCode(const CodeGeneratorParameters & p);
     };
 
     class MemberFunc : public CodeObjectOwner, public Member {
@@ -118,19 +135,23 @@ class Class : public CodeObjectOwner {
         virtual ~MemberFunc();
         MemberFunc();
 
-        void generateCode(CodeGenerator & codeGenerator,AsyncFile & file,const utf8::String & margin);
+        void generateCode(const CodeGeneratorParameters & p);
 
         class Param : public CodeObject {
           public:
-            virtual ~Param() {}
-            Param() {}
+            virtual ~Param();
+            Param();
+
+            void generateCode(const CodeGeneratorParameters & p);
         };
 
         class CodeBlock : public CodeObjectOwner {
           public:
-            virtual ~CodeBlock() {}
-            CodeBlock() {}
+            virtual ~CodeBlock();
+            CodeBlock();
 
+            void generateCode(const CodeGeneratorParameters & p);
+    
             class Variable : public CodeObject {
               public:
                 virtual ~Variable() {}
@@ -147,34 +168,60 @@ class Expression : public CodeObjectOwner {
     virtual ~Expression();
     Expression();
 
+    void generateCode(const CodeGeneratorParameters & p);
+
     class Operator : public CodeObject { // base class only
       public:
         virtual ~Operator() {}
         Operator() {}
     };
 
+    class Return : public CodeObject {
+      public:
+        virtual ~Return();
+        Return();
+
+        void generateCode(const CodeGeneratorParameters & p);
+    };
+
+    class Equ : public Operator {
+      public:
+        virtual ~Equ();
+        Equ();
+
+        void generateCode(const CodeGeneratorParameters & p);
+    };
+
     class Plus : public Operator {
       public:
-        virtual ~Plus() {}
-        Plus() {}
+        virtual ~Plus();
+        Plus();
+
+        void generateCode(const CodeGeneratorParameters & p);
     };
 
     class Minus : public Operator {
       public:
-        virtual ~Minus() {}
-        Minus() {}
+        virtual ~Minus();
+        Minus();
+
+        void generateCode(const CodeGeneratorParameters & p);
     };
 
     class Mul : public Operator {
       public:
-        virtual ~Mul() {}
-        Mul() {}
+        virtual ~Mul();
+        Mul();
+
+        void generateCode(const CodeGeneratorParameters & p);
     };
 
     class Div : public Operator {
       public:
-        virtual ~Div() {}
-        Div() {}
+        virtual ~Div();
+        Div();
+
+        void generateCode(const CodeGeneratorParameters & p);
     };
 
     Expression & add(CodeObject * object);

@@ -9,8 +9,9 @@
     y(x,z);
   }
 
-  y(x,z){
-    x + z;
+  y(x,z,q){
+    q = x + z;
+    return q;
   }
 }
 

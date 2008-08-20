@@ -120,25 +120,29 @@ expression<CodeObjectOwner * context,Expression * parentExpr,Expression * & expr
       tab->newSymbol(parentExpr != NULL ? parentExpr : context,NULL,expr);
     }
     Expression::Operator * op; .)
-  [
-    plus  (.
-      expr->add(NULL);
-      tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>()); .) |
-    minus (.
-      expr->add(NULL);
-      tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .)
+  [ 
+    (
+      plus  (.
+        //expr->add(NULL);
+        tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>()); .) |
+      minus (.
+        //expr->add(NULL);
+        tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .)
+    )
+    (. expr->add(op); .)
   ]
   (
     (lpar expression<context,expr,lExpr> (. expr->add(lExpr); .) rpar) |
     namespaceSymbol<context,lSym>        (. expr->add(lSym);  .)
   )
-    (
-      plus  (. tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>());  .) |
-      minus (. tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .) |
-      mul   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Mul>());   .) |
-      div   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Div>());   .)
-    )
-    (. expr->add(op); .)
+  (
+    equ   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Equ>());   .) |
+    plus  (. tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>());  .) |
+    minus (. tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .) |
+    mul   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Mul>());   .) |
+    div   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Div>());   .)
+  )
+  (. expr->add(op); .)
   (
     (lpar expression<context,expr,rExpr> (. expr->add(rExpr); .) rpar) |
     namespaceSymbol<context,rSym>        (. expr->add(rSym);  .)
@@ -163,8 +167,23 @@ classMemberFuncCodeBlockDecl<Class::MemberFunc * func,Class::MemberFunc::CodeBlo
       tab->newSymbol(func,NULL,context);
     else
       tab->newSymbol(parentCodeBlock,NULL,context); .)
-  { (. Expression * expr = NULL; .)
-     ( { expression<context,NULL,expr> } semicolon) | (lbrace classMemberFuncCodeBlockDecl<func,context>) }
+  { 
+    (. Expression * expr = NULL; .)
+    (
+      [
+        "return" | "вернуть"
+        (.
+          expr = newObject<Expression>();
+          tab->newSymbol(NULL,NULL,expr);
+          Expression::Return * ret = newObject<Expression::Return>();
+          tab->newSymbol(expr,NULL,ret);
+          expr->add(ret); .)
+      ]
+      { expression<context,NULL,expr> } semicolon
+    )
+    |
+    (lbrace classMemberFuncCodeBlockDecl<func,context>)
+  }
   rbrace .
 
 classMemberFuncParamDecl<Class::MemberFunc * context> =

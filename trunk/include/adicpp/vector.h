@@ -88,11 +88,11 @@ template <class T> class Vector {
       c = 1;
       while( low <= high ){
         pos = (low + high) / 2;
-        c = f(*ptr_[pos],element);
-        if( c < 0 ){
+        c = f(element,*ptr_[pos]);
+        if( c > 0 ){
           low = pos + 1;
         }
-        else if( c > 0 ){
+        else if( c < 0 ){
           high = pos - 1;
         }
         else
