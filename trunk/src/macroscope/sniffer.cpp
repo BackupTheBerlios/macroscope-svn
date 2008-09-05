@@ -449,7 +449,9 @@ void Sniffer::MaintenanceThread::threadExecute()
     if( statement_ == NULL ) statement_ = sniffer_->database2_->newAttachedStatement();
     if( stdErr.debugLevel(7) )
       stdErr.debug(7,utf8::String::Stream() <<
-        "Interface: " << sniffer_->ifName() << ", deleting out-of-date statistics begin ...\n"
+        "Interface: " << sniffer_->ifName() <<
+        ", deleting out-of-date statistics begin, checkpoint: " <<
+        utf8::time2Str(ellapsed - sniffer_->storagePeriodOfStatistics_ - getgmtoffset()) << "\n"
       );
     statement_->database()->start();
     for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
