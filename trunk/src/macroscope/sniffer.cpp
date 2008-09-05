@@ -45,6 +45,7 @@ Sniffer::Sniffer(Database * database,Database * database2) :
   updatesTime_(0),
   lastSweep_(gettimeofday()),
   maintenance_(86400),
+  storagePeriodOfStatistics_(0),
   maintenanceThreshold_(0.1)
 {
 }
@@ -430,6 +431,12 @@ void Sniffer::maintenanceInternal()
       maintenanceThread_->resume();
     }
   }
+  if( storagePeriodOfStatistics_ > 0 ){
+    if( storagePeriodOfStatisticsThread_ == NULL || storagePeriodOfStatisticsThread_->finished() ){
+      storagePeriodOfStatisticsThread_ = newObjectV1<MaintenanceThread>(this);
+      storagePeriodOfStatisticsThread_->resume();
+    }
+  }
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -437,6 +444,31 @@ void Sniffer::maintenanceInternal()
 void Sniffer::MaintenanceThread::threadExecute()
 {
   uint64_t ellapsed = gettimeofday(), ellapsed2;
+  if( this == sniffer_->storagePeriodOfStatisticsThread_ ){
+    AutoDatabaseDetach autoDatabaseDetach(sniffer_->database2_);
+    if( statement_ == NULL ) statement_ = sniffer_->database2_->newAttachedStatement();
+    if( stdErr.debugLevel(7) )
+      stdErr.debug(7,utf8::String::Stream() <<
+        "Interface: " << sniffer_->ifName() << ", deleting out-of-date statistics begin ...\n"
+      );
+    statement_->database()->start();
+    for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
+      statement_->text(
+        "DELETE FROM INET_SNIFFER_STAT_" + utf8::String(pgpNames[i]) + " WHERE iface = :if AND ts < :ts"
+      )->
+        prepare()->
+        paramAsString("if",sniffer_->ifName())->
+        paramAsMutant("ts",ellapsed - sniffer_->storagePeriodOfStatistics_)->
+        execute();
+    }
+    statement_->database()->commit();
+    if( stdErr.debugLevel(7) )
+      stdErr.debug(7,utf8::String::Stream() <<
+        "Interface: " << sniffer_->ifName() << ", deleting out-of-date statistics end, ellapsed: " <<
+        utf8::elapsedTime2Str(gettimeofday() - ellapsed) << "\n"
+      );
+    return;
+  }
   if( stdErr.debugLevel(7) )
     stdErr.debug(7,utf8::String::Stream() <<
       "Interface: " << sniffer_->ifName() << ", database sweep helper begin ...\n"

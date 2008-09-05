@@ -51,6 +51,8 @@ class Sniffer : public PCAP {
     Sniffer & user(const utf8::String & a) { user_ = a; return *this; }
     const utf8::String & password() const { return password_; }
     Sniffer & password(const utf8::String & a) { password_ = a; return *this; }
+    const uint64_t & storagePeriodOfStatistics() const { return storagePeriodOfStatistics_; }
+    Sniffer & storagePeriodOfStatistics(uint64_t a) { storagePeriodOfStatistics_ = a; return *this; }
 
     void recalcTotals();
     static void getTrafficPeriod(Statement * statement,const utf8::String & sectionName,struct tm & beginTime,struct tm & endTime,bool gmt = false);
@@ -74,6 +76,7 @@ class Sniffer : public PCAP {
     uint64_t updatesTime_;
     uint64_t lastSweep_;
     uint64_t maintenance_;
+    uint64_t storagePeriodOfStatistics_;
     ldouble maintenanceThreshold_;
     utf8::String user_;
     utf8::String password_;
@@ -99,6 +102,7 @@ class Sniffer : public PCAP {
     };
     friend class MaintenanceThread;
     AutoPtr<MaintenanceThread> maintenanceThread_;
+    AutoPtr<MaintenanceThread> storagePeriodOfStatisticsThread_;
 
     void threadExecute();
     void maintenanceInternal();

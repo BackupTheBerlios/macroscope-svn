@@ -1104,6 +1104,7 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
   sniffer->totalsPeriod(PCAP::stringToGroupingPeriod(config_->textByPath(name + "totals_period","day")));
   sniffer->packetsInTransaction(config_->valueByPath(name + "packets_in_transaction",0));
   sniffer->maintenance((uint64_t) config_->valueByPath(name + "maintenance",86400) * 1000000u);
+  sniffer->storagePeriodOfStatistics((uint64_t) config_->valueByPath(name + "storage_period_of_statistics",0) * 1000000u);
   sniffer->maintenanceThreshold(config_->valueByPath(name + "maintenance_threshold",0.1));
   sniffer->user(dbParamsSection.textByPath(dbParamsSection.text("server_type","MYSQL").lower() + ".user"));
   sniffer->password(dbParamsSection.textByPath(dbParamsSection.text("server_type","MYSQL").lower() + ".password"));
