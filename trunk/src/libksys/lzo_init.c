@@ -2,6 +2,9 @@
 
    This file is part of the LZO real-time data compression library.
 
+   Copyright (C) 2008 Markus Franz Xaver Johannes Oberhumer
+   Copyright (C) 2007 Markus Franz Xaver Johannes Oberhumer
+   Copyright (C) 2006 Markus Franz Xaver Johannes Oberhumer
    Copyright (C) 2005 Markus Franz Xaver Johannes Oberhumer
    Copyright (C) 2004 Markus Franz Xaver Johannes Oberhumer
    Copyright (C) 2003 Markus Franz Xaver Johannes Oberhumer
@@ -15,8 +18,9 @@
    All Rights Reserved.
 
    The LZO library is free software; you can redistribute it and/or
-   modify it under the terms of the GNU General Public License,
-   version 2, as published by the Free Software Foundation.
+   modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation; either version 2 of
+   the License, or (at your option) any later version.
 
    The LZO library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,7 +38,7 @@
  */
 
 
-#include "adicpp/lzo/lzo_conf.h"
+#include <adicpp/lzo/lzo_conf.h>
 
 
 /***********************************************************************
@@ -54,7 +58,7 @@
 
 #define ACC_WANT_ACC_CHK_CH 1
 #undef ACCCHK_ASSERT
-#include "adicpp/lzo/miniacc.h"
+#include <adicpp/lzo/miniacc.h>
 
     ACCCHK_ASSERT_IS_SIGNED_T(lzo_int)
     ACCCHK_ASSERT_IS_UNSIGNED_T(lzo_uint)
@@ -87,6 +91,7 @@ _lzo_config_check(void)
 {
     lzo_bool r = 1;
     union { unsigned char c[2*sizeof(lzo_xint)]; lzo_xint l[2]; } u;
+    lzo_uintptr_t p;
 
 #if !defined(LZO_CFG_NO_CONFIG_CHECK)
 #if defined(LZO_ABI_BIG_ENDIAN)
@@ -98,16 +103,18 @@ _lzo_config_check(void)
     r &= (u.l[0] == 128);
 #endif
 #if defined(LZO_UNALIGNED_OK_2)
+    p = (lzo_uintptr_t) (const lzo_voidp) &u.c[0];
     u.l[0] = u.l[1] = 0;
-    r &= ((* (const lzo_ushortp) (const lzo_voidp) &u.c[1]) == 0);
+    r &= ((* (const lzo_ushortp) (p+1)) == 0);
 #endif
 #if defined(LZO_UNALIGNED_OK_4)
+    p = (lzo_uintptr_t) (const lzo_voidp) &u.c[0];
     u.l[0] = u.l[1] = 0;
-    r &= ((* (const lzo_uint32p) (const lzo_voidp) &u.c[1]) == 0);
+    r &= ((* (const lzo_uint32p) (p+1)) == 0);
 #endif
 #endif
 
-    LZO_UNUSED(u);
+    LZO_UNUSED(u); LZO_UNUSED(p);
     return r == 1 ? LZO_E_OK : LZO_E_ERROR;
 }
 
@@ -130,7 +137,7 @@ __lzo_init_v2(unsigned v, int s1, int s2, int s3, int s4, int s5,
 #define ACC_WANT_ACC_CHK_CH 1
 #undef ACCCHK_ASSERT
 #define ACCCHK_ASSERT(expr)  LZO_COMPILE_TIME_ASSERT(expr)
-#include "adicpp/lzo/miniacc.h"
+#include <adicpp/lzo/miniacc.h>
 #endif
 #undef ACCCHK_ASSERT
 
@@ -160,7 +167,7 @@ __lzo_init_v2(unsigned v, int s1, int s2, int s3, int s4, int s5,
 
 
 #if !defined(__LZO_IN_MINILZO)
-#include "adicpp/lzo/lzo_dll.ch"
+#include <adicpp/lzo/lzo_dll.ch>
 #endif
 
 
