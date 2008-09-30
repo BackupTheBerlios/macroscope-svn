@@ -848,7 +848,7 @@ void AsyncMiscSlave::threadExecute()
   AsyncEvent * request;
   for(;;){    
     acquire();
-    request = requests_.count() > 0 ? request = &requests_.remove(*requests_.first()) : NULL;
+    request = requests_.count() > 0 ? &requests_.remove(*requests_.first()) : NULL;
     release();
     if( request == NULL ){
       if( terminated_ ) break;
@@ -1035,7 +1035,7 @@ void AsyncProcessSlave::threadExecute()
   AsyncEvent * request;
   for(;;){    
     acquire();
-    request = requests_.count() > 0 ? request = &requests_.remove(*requests_.first()) : NULL;
+    request = requests_.count() > 0 ? &requests_.remove(*requests_.first()) : NULL;
     release();
     if( request == NULL ){
       if( terminated_ ) break;

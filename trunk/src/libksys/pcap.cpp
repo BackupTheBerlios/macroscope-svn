@@ -813,7 +813,7 @@ void PCAP::Grouper::threadExecute()
     }
     PacketGroup::SwapFileHeader header;
     memset(&header,0,sizeof(header));
-    PacketGroup * pGroup;
+    PacketGroup * pGroup = NULL;
     AutoPtr<PacketGroup> group;
     try {
       for( intptr_t i = packets->packets_ - 1; i >= 0; i-- ){

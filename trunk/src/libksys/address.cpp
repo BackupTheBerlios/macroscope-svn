@@ -694,19 +694,41 @@ utf8::String SockAddr::addressFamilyAsString(uintptr_t family)
     case AF_UNSPEC      : s = "UNSPEC"; break;
     case AF_LOCAL       : s = "LOCAL"; break;
     case AF_INET        : s = "INET"; break;
+#ifdef AF_IMPLINK
     case AF_IMPLINK     : s = "IMPLINK"; break;
+#endif
+#ifdef AF_PUP
     case AF_PUP         : s = "PUP"; break;
+#endif
+#ifdef AF_CHAOS
     case AF_CHAOS       : s = "CHAOS"; break;
+#endif
+#ifdef AF_NETBIOS
     case AF_NETBIOS     : s = "NETBIOS"; break;
+#endif
+#ifdef AF_ISO
     case AF_ISO         : s = "ISO"; break;
+#endif
+#ifdef AF_ECMA
     case AF_ECMA        : s = "ECMA"; break;
+#endif
+#ifdef AF_DATAKIT
     case AF_DATAKIT     : s = "DATAKIT"; break;
+#endif
+#ifdef AF_CCITT
     case AF_CCITT       : s = "CCITT"; break;
+#endif
     case AF_SNA         : s = "SNA"; break;
     case AF_DECnet      : s = "DECnet"; break;
+#ifdef AF_DLI
     case AF_DLI         : s = "DLI"; break;
+#endif
+#ifdef AF_LAT
     case AF_LAT         : s = "LAT"; break;
+#endif
+#ifdef AF_HYLINK
     case AF_HYLINK      : s = "HYLINK"; break;
+#endif
     case AF_APPLETALK   : s = "APPLETALK"; break;
 #if !defined(__WIN32__) && !defined(__WIN64__)
     case AF_ROUTE       : s = "ROUTE"; break;
@@ -719,7 +741,9 @@ utf8::String SockAddr::addressFamilyAsString(uintptr_t family)
     case AF_ISDN        : s = "ISDN"; break;
     case AF_INET6       : s = "INET6"; break;
     case AF_NATM        : s = "ATM"; break;
+#ifdef AF_ATM
     case AF_ATM         : s = "ATM"; break;
+#endif
     case AF_NETGRAPH    : s = "NETGRAPH"; break;
     case AF_SLOW        : s = "SLOW"; break;
     case AF_SCLUSTER    : s = "SCLUSTER"; break;

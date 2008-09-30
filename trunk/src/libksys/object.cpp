@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,11 @@ void Object::cleanup()
 //---------------------------------------------------------------------------
 const char * Object::getClassName(const void * thisObject)
 {
+#ifdef _MSC_VER
   return typeid(*(Object *) thisObject).raw_name();
+#else
+  return typeid(*(Object *) thisObject).name();
+#endif
 }
 //---------------------------------------------------------------------------
 const char * Object::className() const

@@ -216,7 +216,16 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #endif
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
     const uintptr_t & maxRequests() const { return maxRequests_; }
-    AsyncIoSlave & maxRequests(uintptr_t v){ maxRequests_ = v > MAXIMUM_WAIT_OBJECTS - 1 ? MAXIMUM_WAIT_OBJECTS - 1 : v; return *this; }
+    AsyncIoSlave & maxRequests(uintptr_t v){
+#if defined(__WIN32__) || defined(__WIN64__)
+      maxRequests_ = v > MAXIMUM_WAIT_OBJECTS - 1 ? MAXIMUM_WAIT_OBJECTS - 1 : v;
+#elif HAVE_KQUEUE
+      maxRequests_ = 128;
+#else
+      maxRequests_ = 1;
+#endif
+      return *this;
+    }
   protected:
     void threadBeforeWait();
   private:

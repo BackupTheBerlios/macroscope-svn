@@ -47,7 +47,7 @@
 
 /* internal Autoconf configuration file - only used when building LZO */
 #if defined(LZO_HAVE_CONFIG_H)
-#  include <config.h>
+#  include <adicpp/config.h>
 #endif
 #include <limits.h>
 #include <stddef.h>

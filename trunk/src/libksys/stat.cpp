@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -170,7 +170,7 @@ done:
   if( err != 0 && err != ERROR_PATH_NOT_FOUND && err != ERROR_FILE_NOT_FOUND && err != ERROR_INVALID_NAME )
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
 #else
-  if( stat(anyPathName2HostPathName(pathName).getANSIString(), &st) != 0 ){
+  if( stat((const char *) anyPathName2HostPathName(pathName).getANSIString(), &st) != 0 ){
     err = errno;
     if( err != ENOENT )
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();

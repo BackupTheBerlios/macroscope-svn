@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -151,6 +151,9 @@
 
 #if HAVE_SIGNAL_H
 #include <signal.h>
+#ifndef _SIG_MAXSIG
+#define _SIG_MAXSIG _NSIG
+#endif
 #endif
 
 #if HAVE_FCNTL_H
