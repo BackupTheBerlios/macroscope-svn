@@ -160,30 +160,29 @@ classDecl<CodeObjectOwner * context> =
        }
     rbrace .
 
-classMemberFuncCodeBlockDecl<Class::MemberFunc * func,Class::MemberFunc::CodeBlock * parentCodeBlock> =
+classMemberFuncCodeBlockDecl<Class::MemberFunc * func,Class::MemberFunc::CodeBlock * parentCodeBlock,Class::MemberFunc::CodeBlock * context> =
   (.
-    Class::MemberFunc::CodeBlock * context = newObject<Class::MemberFunc::CodeBlock>();
+    if( context == NULL ) context = newObject<Class::MemberFunc::CodeBlock>();
     if( parentCodeBlock == NULL )
       tab->newSymbol(func,NULL,context);
     else
       tab->newSymbol(parentCodeBlock,NULL,context); .)
-  { 
-    (. Expression * expr = NULL; .)
-    (
-      [
-        "return" | "вернуть"
-        (.
-          expr = newObject<Expression>();
-          tab->newSymbol(NULL,NULL,expr);
-          Expression::Return * ret = newObject<Expression::Return>();
-          tab->newSymbol(expr,NULL,ret);
-          expr->add(ret); .)
-      ]
-      { expression<context,NULL,expr> } semicolon
-    )
-    |
-    (lbrace classMemberFuncCodeBlockDecl<func,context>)
-  }
+  (
+    (.
+      Expression * expr = NULL; .)
+    [
+      "return" | "вернуть"
+      (.
+        expr = newObject<Expression>();
+        tab->newSymbol(NULL,NULL,expr);
+        Expression::Return * ret = newObject<Expression::Return>();
+        tab->newSymbol(expr,NULL,ret);
+        expr->add(ret); .)
+    ]
+    { expression<context,NULL,expr> } semicolon
+  )
+  |
+  (lbrace classMemberFuncCodeBlockDecl<func,context,NULL>)
   rbrace .
 
 classMemberFuncParamDecl<Class::MemberFunc * context> =
@@ -203,7 +202,7 @@ classMemberDecl<CodeObjectOwner * context> =
         codeObject = func; .)
       { classMemberFuncParamDecl<func> { comma classMemberFuncParamDecl<func> } }
       rpar
-      [ lbrace classMemberFuncCodeBlockDecl<func,NULL> ]
+      [ lbrace classMemberFuncCodeBlockDecl<func,NULL,NULL> ]
     ])
     |
     (

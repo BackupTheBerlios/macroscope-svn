@@ -90,25 +90,23 @@ main (void)
   int j;
   size_t t;
   int n = 0;
-  size_t max_size = 0;
   double s, first, last_h;
   void **m;
   minmax maldata, raldata, freedata;
 
   free_mem = init_memory_pool (POOL_SIZE, pool);
-  printf ("Total free memory = %d, used = %d\n",
-	  free_mem, (int) get_used_size (pool));
+  printf ("Total free memory = %d\n", free_mem);
   init (&maldata);
   init (&raldata);
   init (&freedata);
-  m = (void **) rtl_malloc (NUM_MALLOC * sizeof (void *));
+  m = (void **) tlsf_malloc (NUM_MALLOC * sizeof (void *));
   for (i = 0; i < NUM_MALLOC; i++) {
     m[i] = NULL;
   }
   first = last_h = getcurtime ();
   for (i = 0; i < NUM_MALLOC; i++) {
     t = (size_t) (1 + drand48 () * SIZE_MALLOC);
-    m[i] = rtl_calloc (t, 1);
+    m[i] = tlsf_calloc (t, 1);
     if (((unsigned long) m[i] & (sizeof(void *) * 2 - 1)) != 0) {
       fprintf(stderr,"Alignment error %p\n", m[i]);
     }
@@ -121,7 +119,7 @@ main (void)
       if (m[i]) {
 	t = (size_t) (1 + drand48 () * SIZE_MALLOC);
         s = getcurtime ();
-	m[i] = rtl_realloc (m[i], t);
+	m[i] = tlsf_realloc (m[i], t);
         update (0, "realloc", s, getcurtime (), &raldata);
 	if (((unsigned long) m[i] & (sizeof(void *) * 2 - 1)) != 0) {
 	  fprintf(stderr,"Alignment error %p\n", m[i]);
@@ -132,12 +130,12 @@ main (void)
       }
       if (m[i]) {
 	s = getcurtime ();
-	rtl_free (m[i]);
+	tlsf_free (m[i]);
 	update (0, "free   ", s, getcurtime (), &freedata);
       }
       t = (size_t) (1 + drand48 () * SIZE_MALLOC);
       s = getcurtime ();
-      m[i] = rtl_malloc (t);
+      m[i] = tlsf_malloc (t);
       update (0, "malloc ", s, getcurtime (), &maldata);
       if (((unsigned long) m[i] & (sizeof(void *) * 2 - 1)) != 0) {
         fprintf(stderr,"Alignment error %p\n", m[i]);
@@ -146,25 +144,20 @@ main (void)
       memset (m[i], -1, t);
 #endif
     }
-    if (get_used_size (pool) > max_size) {
-      max_size = get_used_size (pool);
-    }
     n++;
     s = getcurtime ();
     if ((s - last_h) > 10) {
       last_h = s;
-      printf ("Count = %d %f, max memory %d\n",
-	      n * NUM_MALLOC, last_h - first, (int) get_used_size (pool));
+      printf ("Count = %d %f\n",
+	      n * NUM_MALLOC, last_h - first);
       update (1, NULL, 0.0, getcurtime (), &maldata);
       update (1, NULL, 0.0, getcurtime (), &raldata);
       update (1, NULL, 0.0, getcurtime (), &freedata);
     }
   }
   for (i = 0; i < NUM_MALLOC; i++) {
-    rtl_free (m[i]);
+    tlsf_free (m[i]);
   }
-  rtl_free (m);
-  printf ("Total used memory = %d, max memory %d\n",
-          (int) get_used_size (pool), (int) max_size);
+  tlsf_free (m);
   return 0;
 }

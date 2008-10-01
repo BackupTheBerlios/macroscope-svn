@@ -1,4 +1,4 @@
-all: test test1 test2
+all: test test1 test2 test3 test4
 
 TLSF_PATH=../src
 
@@ -23,5 +23,15 @@ test2: test2.o $(TLSF_PATH)/tlsf.h
 
 test2.o: test2.c $(TLSF_PATH)/tlsf.h
 
+test3: test3.o $(TLSF_PATH)/tlsf.h
+	$(CC) $(CFLAGS) -o test3 test3.o $(TLSF_PATH)/tlsf.o -lm
+
+test3.o: test3.c $(TLSF_PATH)/tlsf.h
+
+test4: test4.o $(TLSF_PATH)/tlsf.h
+	$(CC) $(CFLAGS) -o test4 test4.o $(TLSF_PATH)/tlsf.o -lm
+
+test4.o: test4.c $(TLSF_PATH)/tlsf.h
+
 clean:
-	$(RM) -rf *.o test test1 test2 *~ *.c.gcov *.gcda *.gcno
+	$(RM) -rf *.o test test?  *~ *.c.gcov *.gcda *.gcno

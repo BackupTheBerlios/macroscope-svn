@@ -1,6 +1,39 @@
   Version History
   ---------------
-  
+
+  -v2.4.3 (July 30 2008) 
+	* Minor fixes to compile with the greenhills compiler. 
+	  Reported by "Kaya, Sinan SEA" <sinan.kaya@siemens.com>
+	* Small change in the license in order to include TLSF in the RTEMS 
+	  project.
+	
+  -v2.4.2 (May 16 2008) (Herman ten Brugge)
+	* Memory usage statistics added again, with cleaner and more compacted
+	  code. 
+	
+  -v2.4.1 (April 30 2008)
+	* Fixed a bug in the tlsf_realloc function: init the pool automatically
+	  on the first call. 
+	  Reported by: Alejandro Mery <amery@geeks.cl>
+	
+  -v2.4  (Feb 19 2008) 
+	* "rtl_*" functions renamed to "tlsf_*".
+	* Added the add_new_area function to insert new memory areas to an
+  	  existing memory pool.
+	* A single TLSF pool can manage non-contiguous memory areas.
+	* Support for mmap and sbrk added.
+	* The init_memory_pool is not longer needed when used on a system
+	  with mmap or sbrk.
+	* Removed the get_used_size counting.The same functionality can be
+	implemented outside the TLSF code.
+	
+  -v2.3.2 (Sep 27 2007) 
+  	* Minor cosmetic code improvements.
+
+  -v2.3.1 (Jul 30 2007)
+        * Fixed some minor bugs in the version 2.3. Herman ten Brugge
+	     <hermantenbrugge@home.nl>
+	
   -v2.3 (Jul 28 2007) Released a new version with all the contributions 
         received from Herman ten Brugge <hermantenbrugge@home.nl> 
         (This is his summary of changes in the TLSF's code):

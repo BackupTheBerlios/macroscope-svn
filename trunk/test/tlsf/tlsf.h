@@ -2,7 +2,7 @@
 #define INCLUDED_tlsf
 
 /*
-** Two Level Segregated Fit memory allocator, version 1.8.
+** Two Level Segregated Fit memory allocator, version 1.9.
 ** Written by Matthew Conte, and placed in the Public Domain.
 **	http://tlsf.baisoku.org
 **
@@ -36,6 +36,8 @@ void tlsf_free(tlsf_pool pool, void* ptr);
 /* Debugging. */
 typedef void (*tlsf_walker)(void* ptr, size_t size, int used, void* user);
 void tlsf_walk_heap(tlsf_pool pool, tlsf_walker walker, void* user);
+/* Returns nonzero if heap check fails. */
+int tlsf_check_heap(tlsf_pool pool);
 
 /* Returns internal block size, not original request size */
 size_t tlsf_block_size(void* ptr);

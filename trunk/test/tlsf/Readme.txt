@@ -39,6 +39,12 @@ to the implementation. Contact me if you are interested.
 
 History
 -------
+2008/04/04 - v1.9
+   * Add tlsf_heap_check, a heap integrity check
+   * Support a predefined tlsf_assert macro
+   * Fix realloc case where block should shrink; if adjacent block is
+     in use, execution would go down the slow path
+
 2007/02/08 - v1.8
    * Fix for unnecessary reallocation in tlsf_realloc
 
