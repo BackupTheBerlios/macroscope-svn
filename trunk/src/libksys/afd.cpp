@@ -56,7 +56,8 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   random_(false),
   direct_(false),
   nocache_(false),
-  createPath_(true)
+  createPath_(true),
+  codePage_(CP_UTF8)
 {
   Requester::requester().attachDescriptor(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1147,6 +1148,25 @@ AsyncFile::LineGetBuffer & AsyncFile::LineGetBuffer::seek(uint64_t pos)
   else {
     file_->seek(pos);
     pos_ = uintptr_t(pos - bufferFilePos_);
+  }
+  return *this;
+}
+//---------------------------------------------------------------------------
+AsyncFile & AsyncFile::operator << (const utf8::String & s)
+{
+  if( codePage_ == CP_UTF8 ){
+    writeBuffer(s.c_str(),s.size());
+  }
+  else {
+    intptr_t l = utf8::utf8s2mbcs(codePage_,NULL,0,s.c_str(),~uintptr_t(0) >> 1);
+    if( l < 0 ){
+      int32_t err = errno;
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    }
+    if( codePage_ == CP_UNICODE ) l *= sizeof(wchar_t);
+    AutoPtr<uint8_t> buf((uint8_t *) kmalloc(l));
+    utf8::utf8s2mbcs(codePage_,(char *) buf.ptr(),l,s.c_str(),~uintptr_t(0) >> 1);
+    writeBuffer(buf,l);
   }
   return *this;
 }

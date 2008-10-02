@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -112,6 +112,10 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & nocache(bool v);
     bool createPath() const;
     AsyncFile & createPath(bool v);
+
+    const uintptr_t & codePage() const { return codePage_; }
+    AsyncFile & codePage(uintptr_t v) { codePage_ = v; return *this; }
+
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD waitCommEvent();
     const DWORD & alignment() const;
@@ -124,7 +128,7 @@ class AsyncFile : public AsyncDescriptor {
     bool atty() const;
 
     AsyncFile & operator << (const char * s){ writeBuffer(s,::strlen(s)); return *this; }
-    AsyncFile & operator << (const utf8::String & s){ writeBuffer(s.c_str(),s.size()); return *this; }
+    AsyncFile & operator << (const utf8::String & s);
   protected:
   private:
     static uint8_t mutex_[];
@@ -167,6 +171,7 @@ class AsyncFile : public AsyncDescriptor {
 #if _MSC_VER
 #pragma warning(pop)
 #endif
+    uintptr_t codePage_;
 
 #if defined(__WIN32__) || defined(__WIN64__)
     int WSAEnumNetworkEvents(WSAEVENT hEventObject, DWORD event);

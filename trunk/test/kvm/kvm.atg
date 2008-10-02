@@ -105,12 +105,8 @@ PRODUCTIONS
 kvm =
   { classDecl<NULL> | pseudonymDecl<NULL> } .
 
-expression<CodeObjectOwner * context,Expression * parentExpr,Expression * & expr> =
+expression2<CodeObjectOwner * context,Expression * parentExpr,Expression * & expr> =
   (.
-    union {
-      CodeObject * lSym;
-      Expression * lExpr;
-    };
     union {
       CodeObject * rSym;
       Expression * rExpr;
@@ -119,22 +115,7 @@ expression<CodeObjectOwner * context,Expression * parentExpr,Expression * & expr
       expr = newObject<Expression>();
       tab->newSymbol(parentExpr != NULL ? parentExpr : context,NULL,expr);
     }
-    Expression::Operator * op; .)
-  [ 
-    (
-      plus  (.
-        //expr->add(NULL);
-        tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>()); .) |
-      minus (.
-        //expr->add(NULL);
-        tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .)
-    )
-    (. expr->add(op); .)
-  ]
-  (
-    (lpar expression<context,expr,lExpr> (. expr->add(lExpr); .) rpar) |
-    namespaceSymbol<context,lSym>        (. expr->add(lSym);  .)
-  )
+    Expression::Operator * op = NULL; .)
   (
     equ   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Equ>());   .) |
     plus  (. tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>());  .) |
@@ -143,6 +124,29 @@ expression<CodeObjectOwner * context,Expression * parentExpr,Expression * & expr
     div   (. tab->newSymbol(expr,NULL,op = newObject<Expression::Div>());   .)
   )
   (. expr->add(op); .)
+  (
+    (lpar expression<context,expr,rExpr> (. expr->add(rExpr); .) rpar) |
+    namespaceSymbol<context,rSym>        (. expr->add(rSym);  .)
+  ) .
+
+expression<CodeObjectOwner * context,Expression * parentExpr,Expression * & expr> =
+  (.
+    union {
+      CodeObject * rSym;
+      Expression * rExpr;
+    };
+    if( expr == NULL ){
+      expr = newObject<Expression>();
+      tab->newSymbol(parentExpr != NULL ? parentExpr : context,NULL,expr);
+    }
+    Expression::Operator * op = NULL; .)
+  [ 
+    (
+      plus  (. tab->newSymbol(expr,NULL,op = newObject<Expression::Plus>());  .) |
+      minus (. tab->newSymbol(expr,NULL,op = newObject<Expression::Minus>()); .)
+    )
+    (. expr->add(op); .)
+  ]
   (
     (lpar expression<context,expr,rExpr> (. expr->add(rExpr); .) rpar) |
     namespaceSymbol<context,rSym>        (. expr->add(rSym);  .)
@@ -167,22 +171,24 @@ classMemberFuncCodeBlockDecl<Class::MemberFunc * func,Class::MemberFunc::CodeBlo
       tab->newSymbol(func,NULL,context);
     else
       tab->newSymbol(parentCodeBlock,NULL,context); .)
-  (
-    (.
-      Expression * expr = NULL; .)
-    [
-      "return" | "вернуть"
+  {
+    (
       (.
-        expr = newObject<Expression>();
-        tab->newSymbol(NULL,NULL,expr);
-        Expression::Return * ret = newObject<Expression::Return>();
-        tab->newSymbol(expr,NULL,ret);
-        expr->add(ret); .)
-    ]
-    { expression<context,NULL,expr> } semicolon
-  )
-  |
-  (lbrace classMemberFuncCodeBlockDecl<func,context,NULL>)
+        Expression * expr = NULL; .)
+      [
+        ("return" | "вернуть")
+        (.
+          expr = newObject<Expression>();
+          tab->newSymbol(context,NULL,expr);
+          Expression::Return * ret = newObject<Expression::Return>();
+          tab->newSymbol(expr,NULL,ret);
+          expr->add(ret); .)
+      ]
+      expression<context,NULL,expr> { expression2<context,NULL,expr> } semicolon
+    )
+    |
+    (lbrace classMemberFuncCodeBlockDecl<func,context,NULL>)
+  }
   rbrace .
 
 classMemberFuncParamDecl<Class::MemberFunc * context> =
@@ -195,7 +201,7 @@ classMemberDecl<CodeObjectOwner * context> =
   symbol (.
       Class::Member * codeObject = newObject<Class::Member>();
       tab->newSymbol(context,t->val,codeObject); .)
-    ([
+    [
       lpar (.
         Class::MemberFunc * func = newObject<Class::MemberFunc>();
         tab->replaceObject(codeObject,func);
@@ -203,7 +209,7 @@ classMemberDecl<CodeObjectOwner * context> =
       { classMemberFuncParamDecl<func> { comma classMemberFuncParamDecl<func> } }
       rpar
       [ lbrace classMemberFuncCodeBlockDecl<func,NULL,NULL> ]
-    ])
+    ]
     |
     (
       { comma classMemberDecl<context> } semicolon

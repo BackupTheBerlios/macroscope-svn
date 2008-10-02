@@ -391,6 +391,9 @@ CodeGenerator & CodeGenerator::generate(const utf8::String & fileName)
 {
   AsyncFile file(fileName);
   file.createIfNotExist(true).open().resize(0);
+#ifndef NDEBUG
+  file.codePage(CP_OEMCP);
+#endif
   root_.generateCode(CodeGeneratorParameters(*this,file,utf8::String()));
   return *this;
 }
