@@ -220,8 +220,8 @@ void LogFile::rotate(AsyncFile & file)
       rename(
         changeFileExt(file.fileName(),"." + utf8::int2Str(i - 1)) + fileExt,
         changeFileExt(file.fileName(),"." + utf8::int2Str(i)) + fileExt,
-	true,
-	true
+	      true,
+	      true
       );
     }
     i--;

@@ -68,7 +68,7 @@ int main(int _argc,char * _argv[])
 		    if( parser->errors->count > 0 ){
           exit(EINVAL);
 		    }
-        parser->gen->generate("test.cpp");
+        parser->gen->generate(changeFileExt(argv()[i],".cpp"));
       }
     }
     errcode = 0;
