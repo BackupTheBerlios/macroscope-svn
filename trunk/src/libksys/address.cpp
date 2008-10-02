@@ -864,109 +864,277 @@ static const struct {
   {          "", IPPROTO_IP        },
   {      "ICMP", IPPROTO_ICMP      },
   {      "IGMP", IPPROTO_IGMP      },
+#ifdef IPPROTO_GGP
   {       "GGP", IPPROTO_GGP       },
+#endif
+#ifdef IPPROTO_IPV4
   {      "IPV4", IPPROTO_IPV4      },
+#endif
   {       "TCP", IPPROTO_TCP       },
+#ifdef IPPROTO_ST
   {        "ST", IPPROTO_ST        },
+#endif
   {       "EGP", IPPROTO_EGP       },
+#ifdef IPPROTO_PPPIGP
   {      "PIGP", IPPROTO_PIGP      },
+#endif
+#ifdef IPPROTO_RCCMON
   {    "RCCMON", IPPROTO_RCCMON    },
+#endif
+#ifdef IPPROTO_NVPII
   {     "NVPII", IPPROTO_NVPII     },
+#endif
   {       "PUP", IPPROTO_PUP       },
+#ifdef IPPROTO_ARGUS
   {     "ARGUS", IPPROTO_ARGUS     },
+#endif
+#ifdef IPPROTO_EMCON
   {     "EMCON", IPPROTO_EMCON     },
+#endif
+#ifdef IPPROTO_XNET
   {      "XNET", IPPROTO_XNET      },
+#endif
+#ifdef IPPROTO_CHAOS
   {     "CHAOS", IPPROTO_CHAOS     },
+#endif
   {       "UDP", IPPROTO_UDP       },
+#ifdef IPPROTO_MUX
   {       "MUX", IPPROTO_MUX       },
+#endif
+#ifdef IPPROTO_MEAS
   {      "MEAS", IPPROTO_MEAS      },
+#endif
+#ifdef IPPROTO_HMP
   {       "HMP", IPPROTO_HMP       },
+#endif
+#ifdef IPPROTO_PRM
   {       "PRM", IPPROTO_PRM       },
+#endif
   {       "IDP", IPPROTO_IDP       },
+#ifdef IPPROTO_TRUNK1
   {    "TRUNK1", IPPROTO_TRUNK1    },
+#endif
+#ifdef IPPROTO_TRUNK2
   {    "TRUNK2", IPPROTO_TRUNK2    },
+#endif
+#ifdef IPPROTO_LEAF1
   {     "LEAF1", IPPROTO_LEAF1     },
+#endif
+#ifdef IPPROTO_LEAF2
   {     "LEAF2", IPPROTO_LEAF2     },
+#endif
+#ifdef IPPROTO_RDP
   {       "RDP", IPPROTO_RDP       },
+#endif
+#ifdef IPPROTO_IRTP
   {      "IRTP", IPPROTO_IRTP      },
+#endif
   {        "TP", IPPROTO_TP        },
+#ifdef IPPROTO_BLT
   {       "BLT", IPPROTO_BLT       },
+#endif
+#ifdef IPPROTO_NSP
   {       "NSP", IPPROTO_NSP       },
+#endif
+#ifdef IPPROTO_INP
   {       "INP", IPPROTO_INP       },
+#endif
+#ifdef IPPROTO_SEP
   {       "SEP", IPPROTO_SEP       },
+#endif
+#ifdef IPPROTO_3PC
   {       "3PC", IPPROTO_3PC       },
+#endif
+#ifdef IPPROTO_IDPR
   {      "IDPR", IPPROTO_IDPR      },
+#endif
+#ifdef IPPROTO_XTP
   {       "XTP", IPPROTO_XTP       },
+#endif
+#ifdef IPPROTO_DDP
   {       "DDP", IPPROTO_DDP       },
+#endif
+#ifdef IPPROTO_CMTP
   {      "CMTP", IPPROTO_CMTP      },
+#endif
+#ifdef IPPROTO_TPXX
   {      "TPXX", IPPROTO_TPXX      },
+#endif
+#ifdef IPPROTO_IL
   {        "IL", IPPROTO_IL        },
+#endif
   {      "IPV6", IPPROTO_IPV6      },
+#ifdef IPPROTO_XTP
   {      "SDRP", IPPROTO_SDRP      },
+#endif
   {   "ROUTING", IPPROTO_ROUTING   },
   {  "FRAGMENT", IPPROTO_FRAGMENT  },
+#ifdef IPPROTO_XTP
   {      "IDRP", IPPROTO_IDRP      },
+#endif
   {      "RSVP", IPPROTO_RSVP      },
   {       "GRE", IPPROTO_GRE       },
+#ifdef IPPROTO_MHRP
   {      "MHRP", IPPROTO_MHRP      },
+#endif
+#ifdef IPPROTO_BHA
   {       "BHA", IPPROTO_BHA       },
+#endif
   {       "ESP", IPPROTO_ESP       },
   {        "AH", IPPROTO_AH        },
+#ifdef IPPROTO_INLSP
   {     "INLSP", IPPROTO_INLSP     },
+#endif
+#ifdef IPPROTO_SWIPE
   {     "SWIPE", IPPROTO_SWIPE     },
+#endif
+#ifdef IPPROTO_NHRP
   {      "NHRP", IPPROTO_NHRP      },
+#endif
+#ifdef IPPROTO_MOBILE
   {    "MOBILE", IPPROTO_MOBILE    },
+#endif
+#ifdef IPPROTO_TLSP
   {      "TLSP", IPPROTO_TLSP      },
+#endif
+#ifdef IPPROTO_SKIP
   {      "SKIP", IPPROTO_SKIP      },
+#endif
   {    "ICMPV6", IPPROTO_ICMPV6    },
   {      "NONE", IPPROTO_NONE      },
   {   "DSTOPTS", IPPROTO_DSTOPTS   },
+#ifdef IPPROTO_AHIP
   {      "AHIP", IPPROTO_AHIP      },
+#endif
+#ifdef IPPROTO_CFTP
   {      "CFTP", IPPROTO_CFTP      },
+#endif
+#ifdef IPPROTO_HELLO
   {     "HELLO", IPPROTO_HELLO     },
-  {   "SATEPAK", IPPROTO_SATEXPAK  },
+#endif
+#ifdef IPPROTO_SATEXPAK
+  {   "SATEXPAK", IPPROTO_SATEXPAK  },
+#endif
+#ifdef IPPROTO_KRYPROLAN
   { "KRYPTOLAN", IPPROTO_KRYPTOLAN },
+#endif
+#ifdef IPPROTO_RVD
   {       "RVD", IPPROTO_RVD       },
+#endif
+#ifdef IPPROTO_IPPC
   {      "IPPC", IPPROTO_IPPC      },
+#endif
+#ifdef IPPROTO_ADFS
   {      "ADFS", IPPROTO_ADFS      },
+#endif
+#ifdef IPPROTO_SATMON
   {    "SATMON", IPPROTO_SATMON    },
+#endif
+#ifdef IPPROTO_VISA
   {      "VISA", IPPROTO_VISA      },
+#endif
+#ifdef IPPROTO_IPCV
   {      "IPCV", IPPROTO_IPCV      },
+#endif
+#ifdef IPPROTO_CPHX
   {      "CPNX", IPPROTO_CPNX      },
+#endif
+#ifdef IPPROTO_CPHB
   {      "CPHB", IPPROTO_CPHB      },
+#endif
+#ifdef IPPROTO_WSN
   {       "WSN", IPPROTO_WSN       },
+#endif
+#ifdef IPPROTO_PVP
   {       "PVP", IPPROTO_PVP       },
+#endif
+#ifdef IPPROTO_BRSATMON
   {  "BRSATMON", IPPROTO_BRSATMON  },
+#endif
+#ifdef IPPROTO_ND
   {        "ND", IPPROTO_ND        },
+#endif
+#ifdef IPPROTO_WBMON
   {     "WBMON", IPPROTO_WBMON     },
+#endif
+#ifdef IPPROTO_WBEXPAK
   {   "WBEXPAK", IPPROTO_WBEXPAK   },
+#endif
+#ifdef IPPROTO_EON
   {       "EON", IPPROTO_EON       },
+#endif
+#ifdef IPPROTO_VMTP
   {      "VMTP", IPPROTO_VMTP      },
+#endif
+#ifdef IPPROTO_SVMTP
   {     "SVMTP", IPPROTO_SVMTP     },
+#endif
+#ifdef IPPROTO_VINES
   {     "VINES", IPPROTO_VINES     },
+#endif
+#ifdef IPPROTO_TTP
   {       "TTP", IPPROTO_TTP       },
+#endif
+#ifdef IPPROTO_IGP
   {       "IGP", IPPROTO_IGP       },
+#endif
+#ifdef IPPROTO_DGP
   {       "DGP", IPPROTO_DGP       },
+#endif
+#ifdef IPPROTO_TCF
   {       "TCF", IPPROTO_TCF       },
+#endif
+#ifdef IPPROTO_IGRP
   {      "IGRP", IPPROTO_IGRP      },
+#endif
+#ifdef IPPROTO_OSPFIGF
   {   "OSPFIGP", IPPROTO_OSPFIGP   },
+#endif
+#ifdef IPPROTO_SRPC
   {      "SRPC", IPPROTO_SRPC      },
+#endif
+#ifdef IPPROTO_LARP
   {      "LARP", IPPROTO_LARP      },
+#endif
+#ifdef IPPROTO_MTP
   {       "MTP", IPPROTO_MTP       },
+#endif
+#ifdef IPPROTO_AX25
   {      "AX25", IPPROTO_AX25      },
+#endif
+#ifdef IPPROTO_IPEIP
   {     "IPEIP", IPPROTO_IPEIP     },
+#endif
+#ifdef IPPROTO_MICP
   {      "MICP", IPPROTO_MICP      },
+#endif
+#ifdef IPPROTO_SCCSP
   {     "SCCSP", IPPROTO_SCCSP     },
+#endif
+#ifdef IPPROTO_ETHERIP
   {   "ETHERIP", IPPROTO_ETHERIP   },
+#endif
   {     "ENCAP", IPPROTO_ENCAP     },
+#ifdef IPPROTO_APES
   {      "APES", IPPROTO_APES      },
+#endif
+#ifdef IPPROTO_GMTP
   {      "GMTP", IPPROTO_GMTP      },
+#endif
+#ifdef IPPROTO_IPCOMP
   {    "IPCOMP", IPPROTO_IPCOMP    },
+#endif
   {      "SCTP", IPPROTO_SCTP      },
   {       "PIM", IPPROTO_PIM       },
+#ifdef IPPROTO_CARP
   {      "CARP", IPPROTO_CARP      },
+#endif
+#ifdef IPPROTO_PGM
   {       "PGM", IPPROTO_PGM       },
+#endif
+#ifdef IPPROTO_PFSYNC
   {    "PFSYNC", IPPROTO_PFSYNC    }
+#endif
 };
 utf8::String SockAddr::protoAsString(uintptr_t proto)
 {

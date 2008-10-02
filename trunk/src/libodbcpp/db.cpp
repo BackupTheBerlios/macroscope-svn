@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,9 @@
 #include <sql.h>
 #include <sqlext.h>
 #include <sqlucode.h>
+#else
+typedef int16_t SQLSMALLINT;
+typedef void * SQLHANDLE;
 #endif
 //---------------------------------------------------------------------------
 namespace odbcpp {
