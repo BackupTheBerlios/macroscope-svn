@@ -434,6 +434,7 @@ class String {
     String & replace(const Iterator & i1, const Iterator & i2, const String & str);
     String & replace(const Iterator & d1, const Iterator & d2, const Iterator & s1, const Iterator & s2);
     String replaceAll(const String & what,const String & onWhat) const;
+    String replaceCaseAll(const String & what,const String & onWhat) const;
     String left(uintptr_t symbols) const;
     String right(uintptr_t symbols) const;
     String middle(uintptr_t pos, uintptr_t symbols) const;

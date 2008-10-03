@@ -690,6 +690,17 @@ String String::replaceAll(const String & what,const String & onWhat) const
   return s;
 }
 //---------------------------------------------------------------------------
+String String::replaceCaseAll(const String & what,const String & onWhat) const
+{
+  String s(unique());
+  Iterator i(s.strcasestr(what));
+  while( !i.eos() ){
+    s = s.replace(i,i + what.strlen(),onWhat);
+    i = s.strstr(what);
+  }
+  return s;
+}
+//---------------------------------------------------------------------------
 String String::left(uintptr_t symbols) const
 {
   return String(Iterator(*this), Iterator(*this) + symbols);

@@ -267,8 +267,8 @@ utf8::String printTraffic(intmax_t traf,bool zero = false);
 utf8::String printTraffic(uintmax_t traf,bool zero = false);
 utf8::String printTraffic(uintmax_t traf,uintmax_t allTraf,bool html = true);
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time);
-pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env = NULL,bool wait = false);
-pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env = NULL,bool wait = false);
+pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env = NULL,bool wait = false,bool usePathEnv = true,bool noThrow = false);
+pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env = NULL,bool wait = false,bool usePathEnv = true,bool noThrow = false);
 int32_t waitForProcess(pid_t pid);
 //---------------------------------------------------------------------------
 inline uintptr_t strlen(const char * s)
@@ -283,9 +283,9 @@ utf8::String  screenChar(const utf8::String::Iterator & ii);
 utf8::String  screenString(const utf8::String & s);
 utf8::String  unScreenChar(const utf8::String::Iterator & ii, uintptr_t & screenLen);
 utf8::String  unScreenString(const utf8::String & s);
-uintptr_t     enumStringParts(const utf8::String & s, const char * delim = ",;");
-utf8::String  stringPartByNo(const utf8::String & s, uintptr_t n, const char * delim = ",;");
-intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool caseSensitive = true,const char * delim = ",;");
+uintptr_t     enumStringParts(const utf8::String & s, const char * delim = ",;",bool unscreen = true);
+utf8::String  stringPartByNo(const utf8::String & s, uintptr_t n, const char * delim = ",;",bool unscreen = true);
+intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool caseSensitive = true,const char * delim = ",;",bool unscreen = true);
 utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String & s1,const utf8::String & separator);
 utf8::String formatByteLength(uintmax_t len,uintmax_t all,const char * fmt = "SP");
 //---------------------------------------------------------------------------
@@ -296,6 +296,7 @@ utf8::String  getModuleFileNameByHandle(HMODULE h);
 #endif
 utf8::String  getCurrentDir();
 void          changeCurrentDir(const utf8::String & name);
+utf8::String  getTempFileName(const utf8::String & ext = "tmp");
 utf8::String  getTempPath();
 utf8::String  changeFileExt(const utf8::String & fileName, const utf8::String & extension);
 utf8::String  getFileExt(const utf8::String & fileName);

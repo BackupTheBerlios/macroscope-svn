@@ -274,9 +274,11 @@ utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
   if( isWin9x() ){
     AutoPtr<char> b;
     utf8::AnsiString s(name.getANSIString());
+    SetLastError(ERROR_SUCCESS);
     sz = GetEnvironmentVariableA(s,b,0);
     if( sz != 0 ){
       b.alloc(sz);
+      SetLastError(ERROR_SUCCESS);
       sz = GetEnvironmentVariableA(s,b,sz) + 1;
     }
     int32_t err = GetLastError();
@@ -288,9 +290,11 @@ utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
   }
   AutoPtr<wchar_t> b;
   utf8::WideString s(name.getUNICODEString());
+  SetLastError(ERROR_SUCCESS);
   sz = GetEnvironmentVariableW(s,b,0);
   if( sz != 0 ){
     b.alloc(sz * sizeof(wchar_t));
+    SetLastError(ERROR_SUCCESS);
     sz = GetEnvironmentVariableW(s,b,sz) + 1;
   }
   int32_t err = GetLastError();
@@ -893,7 +897,7 @@ utf8::String unScreenString(const utf8::String & s)
   return container;
 }
 //---------------------------------------------------------------------------
-static intptr_t stringPartByNoHelper(const utf8::String & s,uintptr_t n,const char * delim,utf8::String * pRetValue)
+static intptr_t stringPartByNoHelper(const utf8::String & s,uintptr_t n,const char * delim,utf8::String * pRetValue,bool unscreen)
 {
   bool inQuotationMarks = false;
   uintptr_t l, k = 0, c, prev = 0;
@@ -902,7 +906,7 @@ static intptr_t stringPartByNoHelper(const utf8::String & s,uintptr_t n,const ch
   if( !i.eos() ) for(;;){
     c = i.getChar();
     if( inQuotationMarks && c == '\"' && prev != '\\' ){
-      if( pRetValue != NULL ) v += unScreenString(utf8::String(q,i));
+      if( pRetValue != NULL ) v += unscreen ? unScreenString(utf8::String(q,i)) : utf8::String(q,i);
       q = i + 1;
       inQuotationMarks = false;
     }
@@ -936,27 +940,27 @@ static intptr_t stringPartByNoHelper(const utf8::String & s,uintptr_t n,const ch
   return k;
 }
 //---------------------------------------------------------------------------
-uintptr_t enumStringParts(const utf8::String & s,const char * delim)
+uintptr_t enumStringParts(const utf8::String & s,const char * delim,bool unscreen)
 {
-  return stringPartByNoHelper(s,~uintptr_t(0),delim,NULL);
+  return stringPartByNoHelper(s,~uintptr_t(0),delim,NULL,unscreen);
 }
 //---------------------------------------------------------------------------
-utf8::String stringPartByNo(const utf8::String & s,uintptr_t n,const char * delim)
+utf8::String stringPartByNo(const utf8::String & s,uintptr_t n,const char * delim,bool unscreen)
 {
   utf8::String v;
-  stringPartByNoHelper(s,n,delim,&v);
+  stringPartByNoHelper(s,n,delim,&v,unscreen);
   return v;
 }
 //---------------------------------------------------------------------------
-intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool caseSensitive,const char * delim)
+intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool caseSensitive,const char * delim,bool unscreen)
 {
   intptr_t i;
   for( i = enumStringParts(s) - 1; i >= 0; i-- ){
     if( caseSensitive ){
-      if( stringPartByNo(s,i,delim).strcmp(part) == 0 ) break;
+      if( stringPartByNo(s,i,delim,unscreen).strcmp(part) == 0 ) break;
     }
     else {
-      if( stringPartByNo(s,i,delim).strcasecmp(part) == 0 ) break;
+      if( stringPartByNo(s,i,delim,unscreen).strcasecmp(part) == 0 ) break;
     }
   }
   return i;
@@ -1145,6 +1149,11 @@ void changeCurrentDir(const utf8::String & name)
 #endif
   if( err != 0 )
     newObjectV1C2<Exception>(err + errorOffset,name + " " + __PRETTY_FUNCTION__)->throwSP();
+}
+//---------------------------------------------------------------------------
+utf8::String getTempFileName(const utf8::String & ext)
+{
+  return createGUIDAsBase32String() + (ext.isNull() ? utf8::String() : "." + ext);
 }
 //---------------------------------------------------------------------------
 utf8::String getTempPath()
@@ -1715,7 +1724,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
       newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + srcPathName)->throwSP();
   }
   else {
-    if( bufferSize == 0 ) bufferSize = getpagesize();
+    if( bufferSize == 0 ) bufferSize = getpagesize() * 4u;
 #if defined(__WIN32__) || defined(__WIN64__)
     BOOL r;
     if( isWin9x() ){
@@ -2043,39 +2052,41 @@ void copyStrToClipboard(const utf8::String & s)
 #endif
 }
 //---------------------------------------------------------------------------
-pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env,bool wait)
+pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env,bool wait,bool usePathEnv,bool noThrow)
 {
-  Array<utf8::String> a;
-  uintptr_t i, j = enumStringParts(args," \t");
-  for( i = 0; i < j; i++ ) a.add(stringPartByNo(args,i," \t"));
-  return execute(name,a,env,wait);
+  utf8::String s;
+  for( uintptr_t i = 0; i < args.count(); i++ ){
+    if( i > 0 ) s += " ";
+    s += args[i];
+  }
+  return execute(name,s,env,wait,usePathEnv,noThrow);
 }
 //---------------------------------------------------------------------------
-pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env,bool wait)
+pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env,bool wait,bool usePathEnv,bool noThrow)
 {
   Fiber * fiber = currentFiber();
   if( fiber != NULL ){
     fiber->event_.timeout_ = ~uint64_t(0);
-    fiber->event_.args_ = &args;
     fiber->event_.env_ = env;
     fiber->event_.string0_ = name;
+    fiber->event_.string1_ = args;
     fiber->event_.wait_ = wait;
+    fiber->event_.usePathEnv_ = usePathEnv;
     fiber->event_.type_ = etExec;
     fiber->thread()->postRequest();
     fiber->switchFiber(fiber->mainFiber());
     assert( fiber->event_.type_ == etExec );
-    if( fiber->event_.errno_ != 0 )
-      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+    if( fiber->event_.errno_ != 0 ){
+      if( !noThrow )
+        newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      oserror(fiber->event_.errno_);
+      return -1;
+    }
     return (pid_t) fiber->event_.data_;
   }
 #if defined(__WIN32__) || defined(__WIN64__)
   BOOL r;
   uintptr_t i;
-  utf8::String s;
-  for( i = 0; i < args.count(); i++ ){
-    if( i > 0 ) s += " ";
-    s += args[i];
-  }
   MemoryStream e;
   union {
     STARTUPINFOA sui;
@@ -2084,9 +2095,14 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
   memset(&suiW,0,sizeof(suiW));
   PROCESS_INFORMATION pi;
   memset(&pi,0,sizeof(pi));
+  Array<utf8::String> path;
   if( isWin9x() ){
     if( env != NULL ){
       for( i = 0; i < env->count(); i++ ){
+        if( usePathEnv && (*env)[i].strncasecmp("PATH=",5) == 0 ){
+          utf8::String a(utf8::String::Iterator((*env)[i]) + 5);
+          for( intptr_t k = enumStringParts(a,";") - 1; k >= 0; k-- ) path.add(stringPartByNo(a,k,";"));
+        }
         utf8::AnsiString a((*env)[i].getANSIString());
         e.writeBuffer(a,strlen(a) + 1);
       }
@@ -2095,7 +2111,7 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
     sui.cb = sizeof(sui);
     r = CreateProcessA(
       anyPathName2HostPathName(name).getANSIString(),
-      s.getANSIString(),
+      args.getANSIString(),
       NULL,
       NULL,
       FALSE,
@@ -2109,6 +2125,10 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
   else {
     if( env != NULL ){
       for( i = 0; i < env->count(); i++ ){
+        if( usePathEnv && (*env)[i].strncasecmp("PATH=",5) == 0 ){
+          utf8::String a(utf8::String::Iterator((*env)[i]) + 5);
+          for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
+        }
         utf8::WideString a((*env)[i].getUNICODEString());
         e.writeBuffer(a,(wcslen(a) + 1) * sizeof(wchar_t));
       }
@@ -2116,8 +2136,8 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
     }
     suiW.cb = sizeof(suiW);
     r = CreateProcessW(
-      name.getUNICODEString(),
-      s.getUNICODEString(),
+      anyPathName2HostPathName(name).getUNICODEString(),
+      args.isNull() ? NULL : args.getUNICODEString().ptr(),
       NULL,
       NULL,
       FALSE,
@@ -2130,8 +2150,22 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
   }
   int32_t err;
   if( r == 0 ){
-    err = GetLastError() + errorOffset;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    err = GetLastError();
+    if( usePathEnv && (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND || err == ERROR_INVALID_NAME) ){
+      utf8::String a(getEnv("PATH"));
+      for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
+      for( i = 0; i < path.count(); i++ ){
+        utf8::String name2(includeTrailingPathDelimiter(path[i]) + name);
+        pid_t exitCode = execute(name2,args,env,wait,false,true);
+        if( exitCode >= 0 ) return exitCode;
+        exitCode = execute(name2 + ".exe",args,env,wait,false,true);
+        if( exitCode >= 0 ) return exitCode;
+        err = GetLastError();
+      }
+    }
+    if( !noThrow ) newObjectV1C2<Exception>(err + errorOffset,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+    SetLastError(err);
+    return -1;
   }
   if( ResumeThread(pi.hThread) == DWORD(-1) ) goto err;
   if( wait ){

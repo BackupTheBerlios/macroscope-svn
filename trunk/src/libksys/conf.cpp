@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -340,7 +340,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
         if( screened ){
           screened = false;
           uintptr_t screenLen;
-          utf8::String sc = unScreenChar(aheadi_,screenLen);
+          utf8::String sc(unScreenChar(aheadi_ + 1,screenLen));
           ahead_.replace(aheadi_,aheadi_ + screenLen + 1,sc);
         }
         else if( aheadi_.getChar() == '\"' ){

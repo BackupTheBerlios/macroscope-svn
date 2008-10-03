@@ -27,6 +27,7 @@
 #include <adicpp/adicpp.h>
 #include "CodeGenerator.h"
 #include "SymbolTable.h"
+#include "compiler.h"
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------
@@ -387,7 +388,7 @@ CodeGenerator::CodeGenerator()
 {
 }
 //------------------------------------------------------------------------------
-CodeGenerator & CodeGenerator::generate(const utf8::String & fileName)
+CodeGenerator & CodeGenerator::generate(Compiler & compiler,const utf8::String & fileName)
 {
   AsyncFile file(fileName);
   file.createIfNotExist(true).open().resize(0);

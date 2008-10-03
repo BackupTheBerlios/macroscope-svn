@@ -561,8 +561,8 @@ int main(int _argc,char * _argv[])
   if( isDaemon ) daemonize();
   try {
     uintptr_t u;
-    stdErr.fileName(SYSLOG_DIR("msftpd/") + "msftpd.log");
-    Config::defaultFileName(SYSCONF_DIR("") + "msftpd.conf");
+    stdErr.fileName(SYSLOG_DIR(utf8::String(msftpd_version.tag_) + pathDelimiterStr) + msftpd_version.tag_ + ".log");
+    Config::defaultFileName(SYSCONF_DIR("") + msftpd_version.tag_ + ".conf");
     Services services(msftpd_version.gnu_);
     MSFTPService * service;
     services.add(service = newObjectV1<MSFTPService>(0));

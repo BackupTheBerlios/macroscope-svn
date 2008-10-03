@@ -35,6 +35,7 @@ class Symbol;
 class CodeObject;
 class CodeObjectOwner;
 class CodeGenerator;
+class Compiler;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -240,7 +241,7 @@ class CodeGenerator : public Object {
     virtual ~CodeGenerator();
     CodeGenerator();
 
-    CodeGenerator & generate(const utf8::String & fileName);
+    CodeGenerator & generate(Compiler & compiler,const utf8::String & fileName);
     const CodeObject * const root() const { return &root_; }
   protected:
     Class root_;

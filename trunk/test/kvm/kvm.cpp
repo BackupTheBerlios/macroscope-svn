@@ -32,6 +32,7 @@
 #include "Scanner.h"
 #include "CodeGenerator.h"
 #include "SymbolTable.h"
+#include "Compiler.h"
 //------------------------------------------------------------------------------
 using namespace ksys;
 using namespace ksys::kvm;
@@ -45,7 +46,10 @@ int main(int _argc,char * _argv[])
   autoInitializer = autoInitializer;
 
   try {
-    stdErr.fileName(SYSLOG_DIR(kvm_version.tag_) + pathDelimiterStr + kvm_version.tag_ + ".log");
+    stdErr.fileName(includeTrailingPathDelimiter(SYSLOG_DIR(kvm_version.tag_)) + kvm_version.tag_ + ".log");
+    Config::defaultFileName(SYSCONF_DIR("") + kvm_version.tag_ + ".conf");
+    ConfigSP config(newObject<InterlockedConfig<FiberInterlockedMutex> >());
+    Array<utf8::String> sources;
     for( uintptr_t i = 1; i < argv().count(); i++ ){
       if( argv()[i].strcmp("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << kvm_version.tex_ << "\n");
@@ -58,19 +62,49 @@ int main(int _argc,char * _argv[])
       else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
         stdErr.fileName(argv()[++i]);
       }
+      else if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
+        Config::defaultFileName(argv()[i + 1]);
+        config->fileName(argv()[++i]);
+      }
       else {
-        AutoPtr<wchar_t> fileName(coco_string_create(argv()[i].getUNICODEString()));
-        AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));
-        AutoPtr<Parser> parser(newObjectV1<Parser>(scanner.ptr()));
-        parser->gen = newObject<CodeGenerator>();
-        parser->tab = newObjectV1<SymbolTable>(parser->gen.ptr());
-		    parser->Parse();
-		    if( parser->errors->count > 0 ){
-          exit(EINVAL);
-		    }
-        parser->gen->generate(changeFileExt(argv()[i],".cpp"));
+        sources.add(argv()[i]);
       }
     }
+    config->silent(true).parse().override();
+    stdErr.rotationThreshold(
+      config->value("debug_file_rotate_threshold",1024 * 1024)
+    );
+    stdErr.rotatedFileCount(
+      config->value("debug_file_rotate_count",10)
+    );
+    stdErr.setDebugLevels(
+      config->value("debug_levels","+0,+1,+2,+3")
+    );
+    stdErr.fileName(
+      config->value("log_file",stdErr.fileName())
+    );
+    stdErr.debug(0,
+      utf8::String::Stream() << kvm_version.gnu_ << " started\n"
+    );
+    config->silent(false);
+    for( uintptr_t i = 0; i < sources.count(); i++ ){
+      AutoPtr<wchar_t> fileName(coco_string_create(sources[i].getUNICODEString()));
+      AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));
+      AutoPtr<Parser> parser(newObjectV1<Parser>(scanner.ptr()));
+      parser->gen = newObject<CodeGenerator>();
+      parser->tab = newObjectV1<SymbolTable>(parser->gen.ptr());
+	    parser->Parse();
+	    if( parser->errors->count > 0 ){
+        exit(EINVAL);
+	    }
+      Compiler compiler;
+      compiler.detect(config);
+      compiler.test(includeTrailingPathDelimiter(getPathFromPathName(sources[i])) + "config.h");
+      parser->gen->generate(compiler,changeFileExt(sources[i],".cxx"));
+    }
+    stdErr.debug(0,
+      utf8::String::Stream() << kvm_version.gnu_ << " stopped\n"
+    );
     errcode = 0;
   }
   catch( ExceptionSP & e ){

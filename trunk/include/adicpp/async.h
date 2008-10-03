@@ -136,7 +136,10 @@ class AsyncEvent {
             bool includeDirs_;
             bool exMaskAsList_;
             bool abort_;
-            bool rval_;
+            union {
+              bool rval_;
+              bool usePathEnv_;
+            };
             bool wait_;
           };
         };
