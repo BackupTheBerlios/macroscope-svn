@@ -72,16 +72,6 @@ class AsyncFile;
 class FiberInterlockedMutex;
 class FiberSemaphore;
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
-typedef HANDLE file_t;
-typedef SOCKET sock_t;
-#else
-typedef int sock_t;
-typedef int file_t;
-#define INVALID_HANDLE_VALUE -1
-#define INVALID_SOCKET -1
-#endif
-//---------------------------------------------------------------------------
 class AsyncEvent {
   public:
     ~AsyncEvent();
@@ -127,6 +117,7 @@ class AsyncEvent {
           FiberInterlockedMutex * mutex_;
           FiberSemaphore * semaphore_;
           DirectoryChangeNotification * directoryChangeNotification_;
+          const ExecuteProcessParameters * executeParameters_;
           struct Stat * stat_;
           struct {
             bool readOnly_;
@@ -136,11 +127,7 @@ class AsyncEvent {
             bool includeDirs_;
             bool exMaskAsList_;
             bool abort_;
-            union {
-              bool rval_;
-              bool usePathEnv_;
-            };
-            bool wait_;
+            bool rval_;
           };
         };
         union {
@@ -151,7 +138,6 @@ class AsyncEvent {
           pid_t pid_;
           uintptr_t tid_;
           Vector<utf8::String> * dirList_;
-          const Array<utf8::String> * args_;
 #if defined(__WIN32__) || defined(__WIN64__)
           DWORD evtMask_;
 #endif
@@ -209,8 +195,8 @@ class AsyncDescriptorKey {
     AsyncDescriptorKey(file_t descriptor);
     file_t descriptor() const;
   protected:
+    AsyncDescriptorKey(const AsyncDescriptorKey & descr) : descriptor_(descr.descriptor_) {}
   private:
-    AsyncDescriptorKey(const AsyncDescriptorKey &){}
     void operator = (const AsyncDescriptorKey &){}
 };
 //---------------------------------------------------------------------------

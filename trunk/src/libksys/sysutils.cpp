@@ -2064,21 +2064,29 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
 //---------------------------------------------------------------------------
 pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env,bool wait,bool usePathEnv,bool noThrow)
 {
+  ExecuteProcessParameters params;
+  params.name_ = name;
+  params.args_ = args;
+  params.env_ = *env;
+  params.wait_ = wait;
+  params.usePathEnv_ = usePathEnv;
+  params.noThrow_ = noThrow;
+  return execute(params);
+}
+//---------------------------------------------------------------------------
+pid_t execute(const ExecuteProcessParameters & params)
+{
   Fiber * fiber = currentFiber();
   if( fiber != NULL ){
     fiber->event_.timeout_ = ~uint64_t(0);
-    fiber->event_.env_ = env;
-    fiber->event_.string0_ = name;
-    fiber->event_.string1_ = args;
-    fiber->event_.wait_ = wait;
-    fiber->event_.usePathEnv_ = usePathEnv;
+    fiber->event_.executeParameters_ = &params;
     fiber->event_.type_ = etExec;
     fiber->thread()->postRequest();
     fiber->switchFiber(fiber->mainFiber());
     assert( fiber->event_.type_ == etExec );
     if( fiber->event_.errno_ != 0 ){
-      if( !noThrow )
-        newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      if( !params.noThrow_ )
+        newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + params.name_)->throwSP();
       oserror(fiber->event_.errno_);
       return -1;
     }
@@ -2092,83 +2100,129 @@ pid_t execute(const utf8::String & name,const utf8::String & args,const Array<ut
     STARTUPINFOA sui;
     STARTUPINFOW suiW;
   };
+  //SECURITY_ATTRIBUTES sa;
+  //sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+  //sa.bInheritHandle = TRUE;
+  //sa.lpSecurityDescriptor = NULL;
   memset(&suiW,0,sizeof(suiW));
   PROCESS_INFORMATION pi;
   memset(&pi,0,sizeof(pi));
   Array<utf8::String> path;
+  int32_t err;
   if( isWin9x() ){
-    if( env != NULL ){
-      for( i = 0; i < env->count(); i++ ){
-        if( usePathEnv && (*env)[i].strncasecmp("PATH=",5) == 0 ){
-          utf8::String a(utf8::String::Iterator((*env)[i]) + 5);
+    if( params.env_.count() > 0 ){
+      for( i = 0; i < params.env_.count(); i++ ){
+        if( params.usePathEnv_ && params.env_[i].strncasecmp("PATH=",5) == 0 ){
+          utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
           for( intptr_t k = enumStringParts(a,";") - 1; k >= 0; k-- ) path.add(stringPartByNo(a,k,";"));
         }
-        utf8::AnsiString a((*env)[i].getANSIString());
+        utf8::AnsiString a(params.env_[i].getANSIString());
         e.writeBuffer(a,strlen(a) + 1);
       }
       e.writeBuffer("",1);
     }
     sui.cb = sizeof(sui);
+    sui.hStdInput = params.stdio_;
+    sui.hStdOutput = params.stdout_;
+    sui.hStdError = params.stderr_;
+    if( sui.hStdInput != INVALID_HANDLE_VALUE || sui.hStdOutput != INVALID_HANDLE_VALUE || sui.hStdError != INVALID_HANDLE_VALUE ){
+      sui.dwFlags |= STARTF_USESTDHANDLES;
+      if( sui.hStdInput != INVALID_HANDLE_VALUE && SetHandleInformation(sui.hStdInput,HANDLE_FLAG_INHERIT,1) == 0 ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+      if( sui.hStdOutput != INVALID_HANDLE_VALUE && SetHandleInformation(sui.hStdOutput,HANDLE_FLAG_INHERIT,1) == 0 ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+      if( sui.hStdError != INVALID_HANDLE_VALUE && SetHandleInformation(sui.hStdError,HANDLE_FLAG_INHERIT,1) == 0 ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+    }
+    utf8::AnsiString name((anyPathName2HostPathName("\"" + params.name_ + "\" ") + params.args_).getANSIString());
     r = CreateProcessA(
-      anyPathName2HostPathName(name).getANSIString(),
-      args.getANSIString(),
+      NULL,
+      name,
       NULL,
       NULL,
-      FALSE,
-      DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_SUSPENDED,
-      env != NULL ? e.raw() : NULL,
+      sui.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE,
+      /*DETACHED_PROCESS | CREATE_NO_WINDOW |*/ CREATE_SUSPENDED,
+      params.env_.count() > 0 ? e.raw() : NULL,
       NULL,
       &sui,
       &pi
     );
   }
   else {
-    if( env != NULL ){
-      for( i = 0; i < env->count(); i++ ){
-        if( usePathEnv && (*env)[i].strncasecmp("PATH=",5) == 0 ){
-          utf8::String a(utf8::String::Iterator((*env)[i]) + 5);
+    if( params.env_.count() > 0 ){
+      for( i = 0; i < params.env_.count(); i++ ){
+        if( params.usePathEnv_ && params.env_[i].strncasecmp("PATH=",5) == 0 ){
+          utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
           for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
         }
-        utf8::WideString a((*env)[i].getUNICODEString());
+        utf8::WideString a(params.env_[i].getUNICODEString());
         e.writeBuffer(a,(wcslen(a) + 1) * sizeof(wchar_t));
       }
       e.writeBuffer(L"",sizeof(wchar_t));
     }
     suiW.cb = sizeof(suiW);
+    suiW.hStdInput = params.stdio_;
+    suiW.hStdOutput = params.stdout_;
+    suiW.hStdError = params.stderr_;
+    if( suiW.hStdInput != INVALID_HANDLE_VALUE || suiW.hStdOutput != INVALID_HANDLE_VALUE || suiW.hStdError != INVALID_HANDLE_VALUE ){
+      suiW.dwFlags |= STARTF_USESTDHANDLES;
+      if( suiW.hStdInput != INVALID_HANDLE_VALUE && SetHandleInformation(suiW.hStdInput,HANDLE_FLAG_INHERIT,HANDLE_FLAG_INHERIT) == 0 ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+      if( suiW.hStdOutput != INVALID_HANDLE_VALUE && SetHandleInformation(suiW.hStdOutput,HANDLE_FLAG_INHERIT,HANDLE_FLAG_INHERIT) == 0 ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+      if( suiW.hStdError != INVALID_HANDLE_VALUE && SetHandleInformation(suiW.hStdError,HANDLE_FLAG_INHERIT,HANDLE_FLAG_INHERIT) == 0 ){
+        err = GetLastError() + errorOffset;
+        newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      }
+    }
+
+    utf8::WideString name((anyPathName2HostPathName("\"" + params.name_ + "\" ") + params.args_).getUNICODEString());
     r = CreateProcessW(
-      anyPathName2HostPathName(name).getUNICODEString(),
-      args.isNull() ? NULL : args.getUNICODEString().ptr(),
+      NULL,
+      name,
       NULL,
       NULL,
-      FALSE,
-      DETACHED_PROCESS | CREATE_NO_WINDOW | CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
-      env != NULL ? e.raw() : NULL,
+      suiW.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE,
+      /*DETACHED_PROCESS | CREATE_NO_WINDOW |*/ CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
+      params.env_.count() > 0 ? e.raw() : NULL,
       NULL,
       &suiW,
       &pi
     );
   }
-  int32_t err;
   if( r == 0 ){
     err = GetLastError();
-    if( usePathEnv && (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND || err == ERROR_INVALID_NAME) ){
+    if( params.usePathEnv_ && (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND || err == ERROR_INVALID_NAME) ){
       utf8::String a(getEnv("PATH"));
       for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
       for( i = 0; i < path.count(); i++ ){
-        utf8::String name2(includeTrailingPathDelimiter(path[i]) + name);
-        pid_t exitCode = execute(name2,args,env,wait,false,true);
+        ExecuteProcessParameters params2(params);
+        params2.name_ = includeTrailingPathDelimiter(path[i]) + params.name_;
+        params2.usePathEnv_ = false;
+        pid_t exitCode = execute(params2);
         if( exitCode >= 0 ) return exitCode;
-        exitCode = execute(name2 + ".exe",args,env,wait,false,true);
+        params2.name_ += ".exe";
+        exitCode = execute(params2);
         if( exitCode >= 0 ) return exitCode;
         err = GetLastError();
       }
     }
-    if( !noThrow ) newObjectV1C2<Exception>(err + errorOffset,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+    if( !params.noThrow_ ) newObjectV1C2<Exception>(err + errorOffset,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     SetLastError(err);
     return -1;
   }
   if( ResumeThread(pi.hThread) == DWORD(-1) ) goto err;
-  if( wait ){
+  if( params.wait_ ){
     DWORD r = WaitForSingleObject(pi.hProcess,INFINITE);
     if( r == WAIT_FAILED ){
 err:  err = GetLastError() + errorOffset;

@@ -1045,7 +1045,7 @@ void AsyncProcessSlave::threadExecute()
       if( request->type_ == etExec ){
         int32_t err = 0;
         try {
-          request->data_ = execute(request->string0_,request->string1_,request->env_,request->wait_,request->usePathEnv_);
+          request->data_ = execute(*request->executeParameters_);
         }
         catch( ExceptionSP & e ){
           err = e->code();

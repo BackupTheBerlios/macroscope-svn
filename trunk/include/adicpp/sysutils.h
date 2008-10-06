@@ -267,8 +267,47 @@ utf8::String printTraffic(intmax_t traf,bool zero = false);
 utf8::String printTraffic(uintmax_t traf,bool zero = false);
 utf8::String printTraffic(uintmax_t traf,uintmax_t allTraf,bool html = true);
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time);
+//---------------------------------------------------------------------------
+class ExecuteProcessParameters {
+  public:
+    ExecuteProcessParameters() :
+      stdio_(INVALID_HANDLE_VALUE),
+      stdout_(INVALID_HANDLE_VALUE),
+      stderr_(INVALID_HANDLE_VALUE),
+      wait_(false), usePathEnv_(true), noThrow_(false) {}
+
+    ExecuteProcessParameters(const ExecuteProcessParameters & params) { operator = (params); }
+
+    ExecuteProcessParameters & operator = (const ExecuteProcessParameters & params)
+    {
+      name_ = params.name_;
+      args_ = params.args_;
+      env_ = params.env_;
+      stdio_ = params.stdio_;
+      stdout_ = params.stdout_;
+      stderr_ = params.stderr_;
+      wait_ = params.wait_;
+      usePathEnv_ = params.usePathEnv_;
+      noThrow_ = params.noThrow_;
+      return *this;
+    }
+
+    utf8::String name_;
+    utf8::String args_;
+    Array<utf8::String> env_;
+    file_t stdio_;
+    file_t stdout_;
+    file_t stderr_;
+    bool wait_;
+    bool usePathEnv_;
+    bool noThrow_;
+
+  private:
+};
+
 pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env = NULL,bool wait = false,bool usePathEnv = true,bool noThrow = false);
 pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env = NULL,bool wait = false,bool usePathEnv = true,bool noThrow = false);
+pid_t execute(const ExecuteProcessParameters & params);
 int32_t waitForProcess(pid_t pid);
 //---------------------------------------------------------------------------
 inline uintptr_t strlen(const char * s)

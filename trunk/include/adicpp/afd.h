@@ -69,6 +69,7 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & rdLock(uint64_t pos,uint64_t size,uint64_t timeout = ~uint64_t(0));
     AsyncFile & wrLock(uint64_t pos,uint64_t size,uint64_t timeout = ~uint64_t(0));
     AsyncFile & unLock(uint64_t pos,uint64_t size);
+    file_t dup() const;
 
     uintptr_t gets(AutoPtr<char> & p,bool * eof = NULL);
 

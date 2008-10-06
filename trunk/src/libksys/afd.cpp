@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -231,6 +231,24 @@ AsyncFile & AsyncFile::flush()
   return *this;
 }
 #endif
+//---------------------------------------------------------------------------
+file_t AsyncFile::dup() const
+{
+  file_t handle;
+#if defined(__WIN32__) || defined(__WIN64__)
+  if( DuplicateHandle(GetCurrentProcess(),descriptor_,GetCurrentProcess(),&handle,0,TRUE,DUPLICATE_SAME_ACCESS) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+  }
+#else
+  handle = dup(descriptor_);
+  if( handle == -1 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
+  }
+#endif
+  return handle;
+}
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::open()
 {
