@@ -179,27 +179,89 @@ intptr_t Compiler::testRunCxx(const utf8::String & config,const utf8::String & t
   return -1;
 }
 //------------------------------------------------------------------------------
-intptr_t Compiler::testCxxType(const utf8::String & config,const utf8::String & type,const utf8::String & tmpCxx)
+utf8::String Compiler::testCxxHeaderHelper(const utf8::String & config,const utf8::String & header,const utf8::String & tmpCxx,const utf8::String & headers)
+{
+  bool r = testCxx(config,headers + "#include <" + header + ">\n",tmpCxx);
+  return "#define HAVE_" + header.replaceAll(".","_").replaceAll("/","_").upper() + (r ? " 1" : " 0") + "\n";
+}
+//------------------------------------------------------------------------------
+intptr_t Compiler::testCxxCode(
+  const utf8::String & config,
+  const utf8::String & tmpCxx,
+  const utf8::String & header,
+  const utf8::String & body)
 {
   intptr_t size = testRunCxx(
     config,
-    "#if HAVE_STDINT_H\n"
-    "#include <stdint.h>\n"
-    "#endif\n"
-    "#if HAVE_INTTYPES_H\n"
-    "#include <inttypes.h>\n"
-    "#endif\n"
-    "#if HAVE_SYS_TYPES_H\n"
-    "#include <sys/types.h>\n"
-    "#endif\n"
-    "\n"
-    "int main(int /*argc*/,char * /*argv*/[])\n"
-    "{\n"
-    "  return (int) sizeof(" + type + ");\n"
-    "}\n",
+    header + body,
     tmpCxx
   );
   return size >= 0 ? size : 0;
+}
+//------------------------------------------------------------------------------
+utf8::String Compiler::testCxxTypeHelper(
+  const utf8::String & config,
+  const utf8::String & type,
+  const utf8::String & member,
+  const utf8::String & tmpCxx,
+  const utf8::String & header,
+  const utf8::String & body)
+{
+  utf8::String s((type + (member.isNull() ? utf8::String() : " " + member)).
+    replaceAll(" ","_").replaceAll("::","_").replaceAll("*","P").upper()
+  );
+  s += s.right(2).strcasecmp("_T") == 0 || s.right(2).strcasecmp("_P") == 0 ? " " : "_T ";
+  return 
+    "#define SIZEOF_" + s +
+    utf8::int2Str(testCxxCode(config,tmpCxx,header,body)) + "\n"
+    //+ "#define HAVE_" + s + " (SIZEOF_" + s + " > 0)\n"
+  ;
+}
+//------------------------------------------------------------------------------
+utf8::String Compiler::testCxxTypeEqualCheck(
+  const utf8::String & config,
+  const utf8::String & type1,
+  const utf8::String & type2,
+  const utf8::String & tmpCxx,
+  const utf8::String & header)
+{
+  utf8::String t1(type1.replaceAll(" ","_").replaceAll("::","_").replaceAll("*","P").upper());
+  t1 += t1.right(2).strcasecmp("_T") == 0 || t1.right(2).strcasecmp("_P") == 0 ? "" : "_T";
+  utf8::String t2(type2.replaceAll(" ","_").replaceAll("::","_").replaceAll("*","P").upper());
+  t2 += t2.right(2).strcasecmp("_T") == 0 || t1.right(2).strcasecmp("_P") == 0 ? "" : "_T";
+  return 
+    "#define HAVE_" + t1 + "_AS_" + t2 +
+    (testCxx(config,header +
+    "\n"
+    "class Test {\n"
+    "  public:\n"
+    "#if SIZEOF_" + t1 + " > 0\n"
+    "    void testType1(" + type1 + " &);\n"
+    "#endif\n"
+    "#if SIZEOF_" + t2 + " > 0\n"
+    "    void testType2(" + type2 + " &);\n"
+    "#endif\n"
+    "};\n"
+    "\n"
+    "int main(int /*argc*/,char * /*argv*/[])\n"
+    "{\n"
+    "  Test t;\n"
+    "#if SIZEOF_" + t1 + " > 0\n"
+    "  " + type1 + " v1;\n"
+    "#endif\n"
+    "#if SIZEOF_" + t2 + " > 0\n"
+    "  " + type2 + " v2;\n"
+    "#endif\n"
+    "#if SIZEOF_" + t1 + " > 0\n"
+    "  t.testType1(v1);\n"
+    "#endif\n"
+    "#if SIZEOF_" + t2 + " > 0\n"
+    "  t.testType2(v2);\n"
+    "#endif\n"
+    "  return 0;\n"
+    "}\n",
+    tmpCxx) ? " 0" : " 1") + "\n"
+  ;
 }
 //------------------------------------------------------------------------------
 Compiler & Compiler::test(const utf8::String & config)
@@ -208,85 +270,593 @@ Compiler & Compiler::test(const utf8::String & config)
     AsyncFile out(config);
     out.createIfNotExist(true);
     utf8::String tmpCxx(anyPathName2HostPathName(getTempPath() + getTempFileName("cxx")));
-    out.open();
+    out.open().resize(0);
     // detect includes
     out << "// includes\n";
-    out << "#define HAVE_STDDEF_H " << (testCxx(config,"#include <stddef.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_STDINT_H " << (testCxx(config,"#include <stdint.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_INTTYPES_H " << (testCxx(config,"#include <inttypes.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_TYPES_H " << (testCxx(config,"#include <sys/types.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_PARAM_H " << (testCxx(config,"#include <sys/param.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_IPC_H " << (testCxx(config,"#include <sys/ipc.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_SEM_H " << (testCxx(config,"#include <sys/sem.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_STAT_H " << (testCxx(config,"#include <sys/stat.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_UTSNAME_H " << (testCxx(config,"#include <sys/utsname.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_SOCKET_H " << (testCxx(config,"#include <sys/socket.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_UIO_H " << (testCxx(config,"#include <sys/uio.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_MMAN_H " << (testCxx(config,"#include <sys/mman.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_EVENT_H " << (testCxx(config,"#include <sys/event.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_ENDIAN_H " << (testCxx(config,"#include <sys/endian.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_TIME_H " << (testCxx(config,"#include <sys/time.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_TIMEB_H " << (testCxx(config,"#include <sys/timeb.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_UTIME_H " << (testCxx(config,"#include <sys/utime.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_RESOURCE_H " << (testCxx(config,"#include <sys/resource.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_RTPRIO_H " << (testCxx(config,"#include <sys/rtprio.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_UUID_H " << (testCxx(config,"#include <sys/uuid.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_EVENT_H " << (testCxx(config,"#include <sys/event.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_IOCTL_H " << (testCxx(config,"#include <sys/ioctl.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_SYSCTL_H " << (testCxx(config,"#include <sys/sysctl.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYS_EPOLL_H " << (testCxx(config,"#include <sys/epoll.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_MACHINE_ATOMIC_H " << (testCxx(config,"#include <machine/atomic.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_MACHINE_CPUFUNC_H " << (testCxx(config,"#include <machine/cpufunc.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_MACHINE_SPECIALREG_H " << (testCxx(config,"#include <machine/specialreg.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_ARPA_INET_H " << (testCxx(config,"#include <arpa/inet.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NET_IF_H " << (testCxx(config,"#include <net/if.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NET_IF_DL_H " << (testCxx(config,"#include <net/if_dl.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NET_IF_TYPES_H " << (testCxx(config,"#include <net/if_types.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NET_ROUTE_H " << (testCxx(config,"#include <net/route.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NET_ETHERNET_H " << (testCxx(config,"#include <net/ethernet.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NETINET_IN_H " << (testCxx(config,"#include <netinet/in.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NETINET_IN_SYSTM_H " << (testCxx(config,"#include <netinet/in_systm.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NETINET_IP_H " << (testCxx(config,"#include <netinet/ip.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NETINET_TCP_H " << (testCxx(config,"#include <netinet/tcp.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_AIO_H " << (testCxx(config,"#include <sys/aio.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_NETDB_H " << (testCxx(config,"#include <netdb.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_MEMORY_H " << (testCxx(config,"#include <memory.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_STDIO_H " << (testCxx(config,"#include <stdio.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_STDLIB_H " << (testCxx(config,"#include <stdlib.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_ASSERT_H " << (testCxx(config,"#include <assert.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_STRING_H " << (testCxx(config,"#include <string.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_ERR_H " << (testCxx(config,"#include <err.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_ERRNO_H " << (testCxx(config,"#include <errno.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYSLOG_H " << (testCxx(config,"#include <syslog.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_EXECINFO_H " << (testCxx(config,"#include <execinfo.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_STDARG_H " << (testCxx(config,"#include <stdarg.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SYSEXITS_H " << (testCxx(config,"#include <sysexits.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SHA256_H " << (testCxx(config,"#include <sha256.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_PROCESS_H " << (testCxx(config,"#include <process.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_DLFCN_H " << (testCxx(config,"#include <dlfcn.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_PTHREAD_H " << (testCxx(config,"#include <pthread.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SIGNAL_H " << (testCxx(config,"#include <signal.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_FCNTL_H " << (testCxx(config,"#include <fcntl.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_UNISTD_H " << (testCxx(config,"#include <unistd.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SEMAPHORE_H " << (testCxx(config,"#include <semaphore.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_CTYPE_H " << (testCxx(config,"#include <ctype.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_PWD_H " << (testCxx(config,"#include <pwd.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_GRP_H " << (testCxx(config,"#include <grp.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_IO_H " << (testCxx(config,"#include <io.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_PATHS_H " << (testCxx(config,"#include <paths.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_TIME_H " << (testCxx(config,"#include <time.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_SCHED_H " << (testCxx(config,"#include <sched.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_UTIME_H " << (testCxx(config,"#include <utime.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_UUID_H " << (testCxx(config,"#include <uuid.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_MATH_H " << (testCxx(config,"#include <math.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_FLOAT_H " << (testCxx(config,"#include <float.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_UCONTEXT_H " << (testCxx(config,"#include <ucontext.h>\n",tmpCxx) ? "1" : "0") << "\n";
-    out << "#define HAVE_DIRENT_H " << (testCxx(config,"#include <dirent.h>\n",tmpCxx) ? "1" : "0") << "\n";
+    static const char header[] = {
+      "#if HAVE_STDINT_H\n"
+      "#include <stdint.h>\n"
+      "#endif\n"
+      "#if HAVE_INTTYPES_H\n"
+      "#include <inttypes.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_TIME_H\n"
+      "#include <sys/time.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_UUID_H\n"
+      "#include <sys/uuid.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_EVENT_H\n"
+      "#include <sys/event.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_UTIME_H\n"
+      "#include <sys/utime.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_ENDIAN_H\n"
+      "#include <sys/endian.h>\n"
+      "#endif\n"
+      "#if HAVE_UCONTEXT_H\n"
+      "#include <ucontext.h>\n"
+      "#endif\n"
+      "#if HAVE_UTIME_H\n"
+      "#include <utime.h>\n"
+      "#endif\n"
+      "#if HAVE_UUID_H\n"
+      "#include <uuid.h>\n"
+      "#endif\n"
+      "#if HAVE_AIO_H\n"
+      "#include <aio.h>\n"
+      "#endif\n"
+      "#if HAVE_STDDEF_H\n"
+      "#include <stddef.h>\n"
+      "#endif\n"
+      "#if HAVE_SIGNAL_H\n"
+      "#include <signal.h>\n"
+      "#endif\n"
+    };
+    static const char * const headers[] = {
+      "stddef.h",
+      "stdint.h",
+      "inttypes.h",
+      "sys/types.h",
+      "sys/param.h",
+      "sys/ipc.h",
+      "sys/sem.h",
+      "sys/stat.h",
+      "sys/utsname.h",
+      "sys/socket.h",
+      "sys/uio.h",
+      "sys/mman.h",
+      "sys/endian.h",
+      "sys/time.h",
+      "sys/utime.h",
+      "sys/resource.h",
+      "sys/ioctl.h",
+      "sys/epoll.h",
+      "arpa/inet.h",
+      "netinet/in.h",
+      "aio.h",
+      "netdb.h",
+      "memory.h",
+      "stdio.h",
+      "stdlib.h",
+      "assert.h",
+      "string.h",
+      "err.h",
+      "errno.h",
+      "syslog.h",
+      "execinfo.h",
+      "stdarg.h",
+      "sysexits.h",
+      "sha256.h",
+      "process.h",
+      "dlfcn.h",
+      "pthread.h",
+      "signal.h",
+      "fcntl.h",
+      "unistd.h",
+      "semaphore.h",
+      "ctype.h",
+      "pwd.h",
+      "grp.h",
+      "io.h",
+      "paths.h",
+      "time.h",
+      "sched.h",
+      "utime.h",
+      "uuid.h",
+      "math.h",
+      "float.h",
+      "ucontext.h",
+      "dirent.h",
+      "windows.h",
+      "winsock.h",
+      "winsock2.h",
+      "mswsock.h",
+      "winternl.h",
+      "ntstatus.h",
+      "ntdll.h"
+    };
+    for( uintptr_t i = 0; i < sizeof(headers) / sizeof(headers[0]); i++ )
+      out << testCxxHeaderHelper(config,headers[i],tmpCxx);
+    out << testCxxHeaderHelper(config,"sys/timeb.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"sys/event.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"sys/uuid.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"machine/atomic.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"machine/cpufunc.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"machine/specialreg.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"machine/specialreg.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"sys/sysctl.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"sys/rtprio.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"netinet/in_systm.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"netinet/ip.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"netinet/tcp.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"net/if.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"net/if_types.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"net/route.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"net/ethernet.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+    out << testCxxHeaderHelper(config,"net/if_dl.h",tmpCxx,
+      "#if HAVE_SYS_TYPES_H\n"
+      "#include <sys/types.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_SYSTM_H\n"
+      "#include <netinet/in_systm.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IP_H\n"
+      "#include <netinet/ip.h>\n"
+      "#endif\n"
+    );      
+      
+    out << testCxxHeaderHelper(config,"guiddef.h",tmpCxx,
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"ws2tcpip.h",tmpCxx,
+      "#if HAVE_WINSOCK2_H\n"
+      "#include <winsock2.h>\n"
+      "#elif HAVE_WINSOCK_H\n"
+      "#include <winsock.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"tlhelp32.h",tmpCxx,
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"iphlpapi.h",tmpCxx,
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"wbemidl.h",tmpCxx,
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"dbghelp.h",tmpCxx,
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"sql.h",tmpCxx,
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+    );
+
     // detect type exists & sizes
     out << "\n// types\n";
-    out << "#define SIZEOF_CHAR_T " << utf8::int2Str(testCxxType(config,"char",tmpCxx)) << "\n" <<
-           "#define HAVE_CHAR_T (SIZEOF_CHAR_T > 0)\n";
+    static const char * const types[] = {
+      "char",
+      "bool",
+      "void *",
+      "ulong",
+      "wchar_t",
+      "short",
+      "int",
+      "long",
+      "__int8",
+      "__int16",
+      "__int32",
+      "__int64",
+      "long long",
+      "long int",
+      "long double",
+      "ptrdiff_t",
+      "intptr_t",
+      "intmax_t",
+      "pid_t",
+      "uid_t",
+      "gid_t",
+      "uuid_t",
+      "int8_t",
+      "int16_t",
+      "int32_t",
+      "int64_t",
+      "intmax_t",
+      "ucontext_t",
+      "struct timeval",
+      "struct timezone",
+      "struct aiocb",
+      "struct uuid",
+      "struct kevent",
+      "struct utimbuf"
+    };
+    for( uintptr_t i = 0; i < sizeof(types) / sizeof(types[0]); i++ )
+      out << testCxxTypeHelper(config,types[i],utf8::String(),tmpCxx,header,
+        "\n"
+        "int main(int /*argc*/,char * /*argv*/[])\n"
+        "{\n"
+        "  return (int) sizeof(" + utf8::String(types[i]) + ");\n"
+        "}\n"
+      );
+    out << testCxxTypeHelper(config,"struct stat64",utf8::String(),tmpCxx,
+      utf8::String(header) +
+      "#if HAVE_SYS_STAT_H\n"
+      "#include <sys/stat.h>\n"
+      "#endif\n"
+      ,
+      "\n"
+      "int main(int /*argc*/,char * /*argv*/[])\n"
+      "{\n"
+      "  return (int) sizeof(struct stat64);\n"
+      "}\n"
+    );
+    out << testCxxTypeHelper(config,"struct _stat64",utf8::String(),tmpCxx,
+      utf8::String(header) +
+      "#if HAVE_SYS_STAT_H\n"
+      "#include <sys/stat.h>\n"
+      "#endif\n"
+      ,
+      "\n"
+      "int main(int /*argc*/,char * /*argv*/[])\n"
+      "{\n"
+      "  return (int) sizeof(struct _stat64);\n"
+      "}\n"
+    );
+    out << testCxxTypeHelper(config,"GUID",utf8::String(),tmpCxx,
+      utf8::String(header) +
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+      "#if HAVE_GUIDDEF_H\n"
+      "#include <guiddef.h>\n"
+      "#endif\n"
+      ,
+      "\n"
+      "int main(int /*argc*/,char * /*argv*/[])\n"
+      "{\n"
+      "  return (int) sizeof(GUID);\n"
+      "}\n"
+    );
+    out << testCxxTypeHelper(config,"struct sockaddr_in6",utf8::String(),tmpCxx,
+      utf8::String(header) +
+      "#if HAVE_WINSOCK2_H\n"
+      "#include <winsock2.h>\n"
+      "#elif HAVE_WINSOCK_H\n"
+      "#include <winsock.h>\n"
+      "#endif\n"
+      "#if HAVE_WS2TCPIP_H\n"
+      "#include <ws2tcpip.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_ARPA_INET_H\n"
+      "#include <arpa/inet.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NET_IF_DL_H\n"
+      "#include <net/if_dl.h>\n"
+      "#endif\n"
+      ,
+      "\n"
+      "int main(int /*argc*/,char * /*argv*/[])\n"
+      "{\n"
+      "  return (int) sizeof(struct sockaddr_in6);\n"
+      "}\n"
+    );
+    out << testCxxTypeHelper(config,"struct sockaddr_dl",utf8::String(),tmpCxx,
+      utf8::String(header) +
+      "#if HAVE_WINSOCK2_H\n"
+      "#include <winsock2.h>\n"
+      "#elif HAVE_WINSOCK_H\n"
+      "#include <winsock.h>\n"
+      "#endif\n"
+      "#if HAVE_WS2TCPIP_H\n"
+      "#include <ws2tcpip.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_ARPA_INET_H\n"
+      "#include <arpa/inet.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NET_IF_DL_H\n"
+      "#include <net/if_dl.h>\n"
+      "#endif\n"
+      ,
+      "\n"
+      "int main(int /*argc*/,char * /*argv*/[])\n"
+      "{\n"
+      "  return (int) sizeof(struct sockaddr_dl);\n"
+      "}\n"
+    );
+    out << testCxxTypeHelper(config,"socklen_t",utf8::String(),tmpCxx,
+      utf8::String(header) +
+      "#if HAVE_WINSOCK2_H\n"
+      "#include <winsock2.h>\n"
+      "#elif HAVE_WINSOCK_H\n"
+      "#include <winsock.h>\n"
+      "#endif\n"
+      "#if HAVE_WS2TCPIP_H\n"
+      "#include <ws2tcpip.h>\n"
+      "#endif\n"
+      "#if HAVE_NETINET_IN_H\n"
+      "#include <netinet/in.h>\n"
+      "#endif\n"
+      "#if HAVE_ARPA_INET_H\n"
+      "#include <arpa/inet.h>\n"
+      "#endif\n"
+      "#if HAVE_SYS_SOCKET_H\n"
+      "#include <sys/socket.h>\n"
+      "#endif\n"
+      "#if HAVE_NET_IF_DL_H\n"
+      "#include <net/if_dl.h>\n"
+      "#endif\n"
+      ,
+      "\n"
+      "int main(int /*argc*/,char * /*argv*/[])\n"
+      "{\n"
+      "  return (int) sizeof(socklen_t);\n"
+      "}\n"
+    );
 
+    static struct {
+      const char * const type_;
+      const char * const member_;
+    } typesMembers[] = {
+      { "union sigval", "sigval_ptr" },
+      { "union sigval", "sival_ptr" }
+    };
+    for( uintptr_t i = 0; i < sizeof(typesMembers) / sizeof(typesMembers[0]); i++ )
+      out << testCxxTypeHelper(config,typesMembers[i].type_,typesMembers[i].member_,tmpCxx,header,
+        "\n"
+        "int main(int /*argc*/,char * /*argv*/[])\n"
+        "{\n"
+        "  " + utf8::String(typesMembers[i].type_) + " v;\n"
+        "\n"
+        "  return (int) sizeof(v." + typesMembers[i].member_ + ");\n"
+        "}\n"
+      );
+
+    // detect type1 equals type2
+    out << "\n// type equivalents\n";
+    static struct {
+      const char * const type1_;
+      const char * const type2_;
+    } types2Equ[] = {
+      { "int","intptr_t" },
+      { "int","int32_t" },
+      { "int","int64_t" },
+      { "int","intmax_t" },
+      { "int","long int" },
+      { "int","long long" },
+
+      { "long","intptr_t" },
+      { "long","int32_t" },
+      { "long","int64_t" },
+      { "long","intmax_t" },
+      { "long","long int" },
+      { "long","long long" },
+
+      { "long int","intptr_t" },
+      { "long int","int32_t" },
+      { "long int","int64_t" },
+      { "long int","intmax_t" },
+
+      { "long long","intptr_t" },
+      { "long long","int32_t" },
+      { "long long","int64_t" },
+      { "long long","intmax_t" },
+
+      { "intptr_t","int" },
+      { "intptr_t","long" },
+      { "intptr_t","long int" },
+      { "intptr_t","long long" },
+      { "intptr_t","int32_t" },
+      { "intptr_t","int64_t" },
+      { "intptr_t","intmax_t" },
+
+      { "int32_t","int" },
+      { "int32_t","long" },
+      { "int32_t","long int" },
+      { "int32_t","long long" },
+      { "int32_t","intptr_t" },
+      { "int32_t","int64_t" },
+      { "int32_t","intmax_t" },
+
+      { "int64_t","int" },
+      { "int64_t","long" },
+      { "int64_t","long int" },
+      { "int64_t","long long" },
+      { "int64_t","intptr_t" },
+      { "int64_t","int32_t" },
+      { "int64_t","intmax_t" },
+
+      { "intmax_t","int" },
+      { "intmax_t","long" },
+      { "intmax_t","long int" },
+      { "intmax_t","long long" },
+      { "intmax_t","intptr_t" },
+      { "intmax_t","int32_t" },
+      { "intmax_t","int64_t" },
+    };
+    for( uintptr_t i = 0; i < sizeof(types2Equ) / sizeof(types2Equ[0]); i++ )
+      out << testCxxTypeEqualCheck(config,types2Equ[i].type1_,types2Equ[i].type2_,tmpCxx,header);
   }
   return *this;
 }

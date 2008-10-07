@@ -2095,7 +2095,6 @@ pid_t execute(const ExecuteProcessParameters & params)
 #if defined(__WIN32__) || defined(__WIN64__)
   BOOL r;
   uintptr_t i;
-  MemoryStream e;
   union {
     STARTUPINFOA sui;
     STARTUPINFOW suiW;
@@ -2110,16 +2109,21 @@ pid_t execute(const ExecuteProcessParameters & params)
   Array<utf8::String> path;
   int32_t err;
   if( isWin9x() ){
+    AutoPtr<char> e;
+    uintptr_t eCount = 0;
     if( params.env_.count() > 0 ){
       for( i = 0; i < params.env_.count(); i++ ){
         if( params.usePathEnv_ && params.env_[i].strncasecmp("PATH=",5) == 0 ){
           utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
           for( intptr_t k = enumStringParts(a,";") - 1; k >= 0; k-- ) path.add(stringPartByNo(a,k,";"));
         }
-        utf8::AnsiString a(params.env_[i].getANSIString());
-        e.writeBuffer(a,strlen(a) + 1);
+        utf8::AnsiString s(params.env_[i].getANSIString());
+        uintptr_t l = strlen(s) + 1;
+        e.reallocT(eCount + l + 1);
+        strcpy(e.ptr() + eCount,s);
+        eCount += l;
+        e[eCount] = '\0';
       }
-      e.writeBuffer("",1);
     }
     sui.cb = sizeof(sui);
     sui.hStdInput = params.stdio_;
@@ -2148,23 +2152,27 @@ pid_t execute(const ExecuteProcessParameters & params)
       NULL,
       sui.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE,
       /*DETACHED_PROCESS |*/ CREATE_NO_WINDOW | CREATE_SUSPENDED,
-      params.env_.count() > 0 ? e.raw() : NULL,
+      e,
       NULL,
       &sui,
       &pi
     );
   }
   else {
+    AutoPtr<wchar_t> e;
+    uintptr_t eCount = 0;
     if( params.env_.count() > 0 ){
       for( i = 0; i < params.env_.count(); i++ ){
-        if( params.usePathEnv_ && params.env_[i].strncasecmp("PATH=",5) == 0 ){
-          utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
-          for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
-        }
-        utf8::WideString a(params.env_[i].getUNICODEString());
-        e.writeBuffer(a,(wcslen(a) + 1) * sizeof(wchar_t));
+        //if( params.usePathEnv_ && params.env_[i].strncasecmp("PATH=",5) == 0 ){
+        //  utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
+        //  for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
+        //}
+        uintptr_t l = params.env_[i].strlen() + 1;
+        e.reallocT(eCount + l + 1);
+        utf8::utf8s2ucs(params.env_[i].c_str(),l,e.ptr() + eCount);
+        eCount += l;
+        e[eCount] = L'\0';
       }
-      e.writeBuffer(L"",sizeof(wchar_t));
     }
     suiW.cb = sizeof(suiW);
     suiW.hStdInput = params.stdio_;
@@ -2194,7 +2202,7 @@ pid_t execute(const ExecuteProcessParameters & params)
       NULL,
       suiW.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE,
       /*DETACHED_PROCESS |*/ CREATE_NO_WINDOW | CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
-      params.env_.count() > 0 ? e.raw() : NULL,
+      e,
       NULL,
       &suiW,
       &pi
@@ -2202,22 +2210,22 @@ pid_t execute(const ExecuteProcessParameters & params)
   }
   if( r == 0 ){
     err = GetLastError();
-    if( params.usePathEnv_ && (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND || err == ERROR_INVALID_NAME) ){
-      utf8::String a(getEnv("PATH"));
-      for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
-      for( i = 0; i < path.count(); i++ ){
-        ExecuteProcessParameters params2(params);
-        params2.name_ = includeTrailingPathDelimiter(path[i]) + params.name_;
-        params2.usePathEnv_ = false;
-        params2.noThrow_ = true;
-        pid_t exitCode = execute(params2);
-        if( exitCode >= 0 ) return exitCode;
-        params2.name_ += ".exe";
-        exitCode = execute(params2);
-        if( exitCode >= 0 ) return exitCode;
-        err = GetLastError();
-      }
-    }
+    //if( params.usePathEnv_ && (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND || err == ERROR_INVALID_NAME) ){
+    //  utf8::String a(getEnv("PATH"));
+    //  for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
+    //  for( i = 0; i < path.count(); i++ ){
+    //    ExecuteProcessParameters params2(params);
+    //    params2.name_ = includeTrailingPathDelimiter(path[i]) + params.name_;
+    //    params2.usePathEnv_ = false;
+    //    params2.noThrow_ = true;
+    //    pid_t exitCode = execute(params2);
+    //    if( exitCode >= 0 ) return exitCode;
+    //    params2.name_ += ".exe";
+    //    exitCode = execute(params2);
+    //    if( exitCode >= 0 ) return exitCode;
+    //    err = GetLastError();
+    //  }
+    //}
     if( !params.noThrow_ ) newObjectV1C2<Exception>(err + errorOffset,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     SetLastError(err);
     return -1;

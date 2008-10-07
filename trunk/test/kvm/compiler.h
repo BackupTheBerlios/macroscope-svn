@@ -51,7 +51,33 @@ class Compiler : public Object {
 
     bool testCxx(const utf8::String & config,const utf8::String & test,const utf8::String & tmpCxx);
     intptr_t testRunCxx(const utf8::String & config,const utf8::String & test,const utf8::String & tmpCxx);
-    intptr_t testCxxType(const utf8::String & config,const utf8::String & type,const utf8::String & tmpCxx);
+
+    utf8::String testCxxHeaderHelper(
+      const utf8::String & config,
+      const utf8::String & header,
+      const utf8::String & tmpCxx,
+      const utf8::String & headers = utf8::String());
+
+    utf8::String testCxxTypeHelper(
+      const utf8::String & config,
+      const utf8::String & type,
+      const utf8::String & member,
+      const utf8::String & tmpCxx,
+      const utf8::String & header,
+      const utf8::String & body);
+
+    utf8::String testCxxTypeEqualCheck(
+      const utf8::String & config,
+      const utf8::String & type1,
+      const utf8::String & type2,
+      const utf8::String & tmpCxx,
+      const utf8::String & header);
+
+    intptr_t testCxxCode(
+      const utf8::String & config,
+      const utf8::String & tmpCxx,
+      const utf8::String & header,
+      const utf8::String & body);
   private:
     Compiler(const Compiler &);
     void operator = (const Compiler &);

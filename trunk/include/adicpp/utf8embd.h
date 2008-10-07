@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -269,6 +269,23 @@ inline intptr_t utf82ucs(const unsigned char * & utf8s,uintptr_t & utf8l,uintptr
 inline intptr_t utf82ucs(const char * & utf8s,uintptr_t & utf8l,uintptr_t & c)
 {
   return utf82ucs(*(const unsigned char **) &utf8s, utf8l, c);
+}
+//---------------------------------------------------------------------------
+inline intptr_t utf8s2ucs(const unsigned char * utf8s,uintptr_t utf8l,wchar_t * ucs)
+{
+  intptr_t r = 0;
+  while( utf8l > 0 ){
+    uintptr_t c;
+    if( (r = utf82ucs(utf8s,utf8l,c) != 0) ) break;
+    *ucs++ = wchar_t(c);
+    if( c == 0 ) break;
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
+inline intptr_t utf8s2ucs(const char * utf8s,uintptr_t utf8l,wchar_t * ucs)
+{
+  return utf8s2ucs((const unsigned char *) utf8s,utf8l,ucs);
 }
 //---------------------------------------------------------------------------
 uintptr_t utf8strlen(const char * utf8s);

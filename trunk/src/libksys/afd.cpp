@@ -551,7 +551,7 @@ uint64_t AsyncFile::copy(AsyncFile & src,uint64_t size)
   AutoPtr<uint8_t> b((uint8_t *) kmalloc(getpagesize() * 16u));
   if( size == 0 ) size = ~uint64_t(0);
   int64_t r, w = 0;
-  while( size > 0 && (r = src.read(b,tmin(size,getpagesize() * 16u))) > 0 ){
+  while( size > 0 && (r = src.read(b,tmin(size,uint64_t(getpagesize() * 16u)))) > 0 ){
     writeBuffer(b,r);
     w += r;
     size -= r;
