@@ -2147,7 +2147,7 @@ pid_t execute(const ExecuteProcessParameters & params)
       NULL,
       NULL,
       sui.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE,
-      /*DETACHED_PROCESS | CREATE_NO_WINDOW |*/ CREATE_SUSPENDED,
+      /*DETACHED_PROCESS |*/ CREATE_NO_WINDOW | CREATE_SUSPENDED,
       params.env_.count() > 0 ? e.raw() : NULL,
       NULL,
       &sui,
@@ -2193,7 +2193,7 @@ pid_t execute(const ExecuteProcessParameters & params)
       NULL,
       NULL,
       suiW.dwFlags & STARTF_USESTDHANDLES ? TRUE : FALSE,
-      /*DETACHED_PROCESS | CREATE_NO_WINDOW |*/ CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
+      /*DETACHED_PROCESS |*/ CREATE_NO_WINDOW | CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT,
       params.env_.count() > 0 ? e.raw() : NULL,
       NULL,
       &suiW,
@@ -2209,6 +2209,7 @@ pid_t execute(const ExecuteProcessParameters & params)
         ExecuteProcessParameters params2(params);
         params2.name_ = includeTrailingPathDelimiter(path[i]) + params.name_;
         params2.usePathEnv_ = false;
+        params2.noThrow_ = true;
         pid_t exitCode = execute(params2);
         if( exitCode >= 0 ) return exitCode;
         params2.name_ += ".exe";
@@ -2228,19 +2229,19 @@ pid_t execute(const ExecuteProcessParameters & params)
 err:  err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
     if( r != WAIT_OBJECT_0 ){
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
-      newObjectV1C2<Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(ERROR_INVALID_DATA,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
     DWORD exitCode;
     if( GetExitCodeProcess(pi.hProcess,&exitCode) == 0 ){
       err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
-      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
     pi.dwProcessId = exitCode;
   }
@@ -2248,7 +2249,7 @@ err:  err = GetLastError() + errorOffset;
   CloseHandle(pi.hThread);
   return pi.dwProcessId;
 #else
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+  newObjectV1C2<Exception>(ENOSYS,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
   return 0;
 #endif
 }

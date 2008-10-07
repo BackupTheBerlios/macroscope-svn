@@ -57,6 +57,7 @@ AsyncFile::AsyncFile(const utf8::String & fileName) :
   direct_(false),
   nocache_(false),
   createPath_(true),
+  async_(false),
   codePage_(CP_UTF8)
 {
   Requester::requester().attachDescriptor(*this);
@@ -91,9 +92,8 @@ AsyncFile & AsyncFile::close()
   return *this;
 }
 //---------------------------------------------------------------------------
-file_t AsyncFile::openHelper(bool async)
+file_t AsyncFile::openHelper()
 {
-  async = true;
   file_t handle = INVALID_HANDLE_VALUE;
   int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -107,7 +107,7 @@ file_t AsyncFile::openHelper(bool async)
         NULL,
         createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
-          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (async_ ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
           (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
           (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
@@ -116,12 +116,12 @@ file_t AsyncFile::openHelper(bool async)
     else if( handle == INVALID_HANDLE_VALUE )
       handle = CreateFileA(
         ansiFileName,
-	GENERIC_READ,
+	      GENERIC_READ,
         exclusive_ ? 0 : FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
         createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
-          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (async_ ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
           (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
           (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
@@ -138,7 +138,7 @@ file_t AsyncFile::openHelper(bool async)
         NULL,
         createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
-          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (async_ ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
           (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
           (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
@@ -152,7 +152,7 @@ file_t AsyncFile::openHelper(bool async)
         NULL,
         createIfNotExist_ ? OPEN_ALWAYS : OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_ARCHIVE |
-          (async ? FILE_FLAG_OVERLAPPED : 0) |
+          (async_ ? FILE_FLAG_OVERLAPPED : 0) |
           (random_ ? FILE_FLAG_RANDOM_ACCESS : FILE_FLAG_SEQUENTIAL_SCAN) |
           (direct_ ? FILE_FLAG_WRITE_THROUGH : 0) |
           (nocache_ ? FILE_FLAG_NO_BUFFERING : 0),
@@ -163,7 +163,7 @@ file_t AsyncFile::openHelper(bool async)
     err = GetLastError();
     if( err == ERROR_PATH_NOT_FOUND && createPath_ && !readOnly_ ){
       createDirectory(getPathFromPathName(fileName_));
-      return openHelper(async);
+      return openHelper();
     }
     newObjectV1C2<Exception>(err + errorOffset,fileName_ + " " + __PRETTY_FUNCTION__)->throwSP();
   }
@@ -255,6 +255,7 @@ AsyncFile & AsyncFile::open()
   if( !isOpen() && !redirectByName() ){
     Fiber * fiber = currentFiber();
     if( fiber != NULL ){
+      async_ = true;
       fiber->event_.timeout_ = ~uint64_t(0);
       fiber->event_.string0_ = fileName_;
       fiber->event_.createIfNotExist_ = createIfNotExist_;
@@ -270,7 +271,7 @@ AsyncFile & AsyncFile::open()
       descriptor_ = fiber->event_.fileDescriptor_;
     }
     else {
-      descriptor_ = openHelper(true);
+      descriptor_ = openHelper();
     }
 #if defined(__WIN32__) || defined(__WIN64__)
     if( fileName_.strncasecmp("COM",3) == 0 ){
@@ -325,7 +326,7 @@ bool AsyncFile::tryOpen()
     r = true;
   }
   catch( ExceptionSP & e ){
-    oserror(e->code());
+    oserror(e->code() >= errorOffset ? e->code() - errorOffset : e->code());
   }
   return r;
 }
@@ -542,6 +543,21 @@ int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
   errno = err;
   return r;
 #endif
+}
+//---------------------------------------------------------------------------
+uint64_t AsyncFile::copy(AsyncFile & src,uint64_t size)
+{
+  uint64_t pos = src.seekable_ ? src.tell() : 0;
+  AutoPtr<uint8_t> b((uint8_t *) kmalloc(getpagesize() * 16u));
+  if( size == 0 ) size = ~uint64_t(0);
+  int64_t r, w = 0;
+  while( size > 0 && (r = src.read(b,tmin(size,getpagesize() * 16u))) > 0 ){
+    writeBuffer(b,r);
+    w += r;
+    size -= r;
+  }
+  if( src.seekable_ ) src.seek(pos);
+  return w;
 }
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::readBuffer(void * buf,uint64_t size)

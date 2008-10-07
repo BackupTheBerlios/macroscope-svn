@@ -43,7 +43,7 @@ class AsyncFile : public AsyncDescriptor {
 
     bool isOpen() const;
     AsyncFile & open();
-    file_t openHelper(bool async = false);
+    file_t openHelper();
     bool tryOpen();
     AsyncFile & close();
     AsyncFile & seek(uint64_t pos);
@@ -70,6 +70,7 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & wrLock(uint64_t pos,uint64_t size,uint64_t timeout = ~uint64_t(0));
     AsyncFile & unLock(uint64_t pos,uint64_t size);
     file_t dup() const;
+    uint64_t copy(AsyncFile & src,uint64_t size = 0);
 
     uintptr_t gets(AutoPtr<char> & p,bool * eof = NULL);
 
@@ -113,9 +114,11 @@ class AsyncFile : public AsyncDescriptor {
     AsyncFile & nocache(bool v);
     bool createPath() const;
     AsyncFile & createPath(bool v);
+    bool async() const;
+    AsyncFile & async(bool v);
 
-    const uintptr_t & codePage() const { return codePage_; }
-    AsyncFile & codePage(uintptr_t v) { codePage_ = v; return *this; }
+    const uintptr_t & codePage() const;
+    AsyncFile & codePage(uintptr_t v);
 
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD waitCommEvent();
@@ -168,6 +171,7 @@ class AsyncFile : public AsyncDescriptor {
       uint8_t direct_           : 1;
       uint8_t nocache_          : 1;
       uint8_t createPath_       : 1;
+      uint8_t async_            : 1;
     };
 #if _MSC_VER
 #pragma warning(pop)
@@ -327,6 +331,28 @@ inline bool AsyncFile::createPath() const
 inline AsyncFile & AsyncFile::createPath(bool v)
 {
   createPath_ = v;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool AsyncFile::async() const
+{
+  return async_ != 0;
+}
+//---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::async(bool v)
+{
+  async_ = v;
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline const uintptr_t & AsyncFile::codePage() const
+{
+  return codePage_;
+}
+//---------------------------------------------------------------------------
+inline AsyncFile & AsyncFile::codePage(uintptr_t v)
+{
+  codePage_ = v;
   return *this;
 }
 //---------------------------------------------------------------------------

@@ -858,7 +858,8 @@ void AsyncMiscSlave::threadExecute()
       if( request->type_ == etOpenFile ){
         int32_t err = 0;
         try {
-          request->fileDescriptor_ = request->file_->openHelper(true);
+          request->file_->async(true);
+          request->fileDescriptor_ = request->file_->openHelper();
         }
         catch( ExceptionSP & e ){
           err = e->code();

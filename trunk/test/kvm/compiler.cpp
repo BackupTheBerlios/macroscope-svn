@@ -193,7 +193,7 @@ intptr_t Compiler::testCxxType(const utf8::String & config,const utf8::String & 
     "#include <sys/types.h>\n"
     "#endif\n"
     "\n"
-    "extern \"C\" int main(int /*argc*/,char * /*argv*/[])\n"
+    "int main(int /*argc*/,char * /*argv*/[])\n"
     "{\n"
     "  return (int) sizeof(" + type + ");\n"
     "}\n",
