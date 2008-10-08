@@ -50,7 +50,16 @@ class Compiler : public Object {
     bool keepStderr_;
 
     bool testCxx(const utf8::String & config,const utf8::String & test,const utf8::String & tmpCxx);
-    intptr_t testRunCxx(const utf8::String & config,const utf8::String & test,const utf8::String & tmpCxx);
+    bool testLinkCxx(
+      const utf8::String & config,
+      const utf8::String & test,
+      const utf8::String & tmpCxx,
+      const utf8::String & libraries = utf8::String());
+    intptr_t testRunCxx(
+      const utf8::String & config,
+      const utf8::String & test,
+      const utf8::String & tmpCxx,
+      const utf8::String & libraries = utf8::String());
 
     utf8::String testCxxHeaderHelper(
       const utf8::String & config,
@@ -72,6 +81,25 @@ class Compiler : public Object {
       const utf8::String & type2,
       const utf8::String & tmpCxx,
       const utf8::String & header);
+
+    utf8::String testCxxFuncExists(
+      const utf8::String & config,
+      const utf8::String & func,
+      const utf8::String & tmpCxx,
+      const utf8::String & header);
+
+    utf8::String testCxxSymbolExists(
+      const utf8::String & config,
+      const utf8::String & symbol,
+      const utf8::String & tmpCxx,
+      const utf8::String & header);
+
+    utf8::String testCxxLibExists(
+      const utf8::String & library,
+      const utf8::String & symbol,
+      const utf8::String & mod,
+      const utf8::String & tmpCxx,
+      utf8::String * existsLibraries = NULL);
 
     intptr_t testCxxCode(
       const utf8::String & config,

@@ -134,7 +134,11 @@ bool Compiler::testCxx(const utf8::String & config,const utf8::String & test,con
   return exitCode == 0 && stat(object);
 }
 //------------------------------------------------------------------------------
-intptr_t Compiler::testRunCxx(const utf8::String & config,const utf8::String & test,const utf8::String & tmpCxx)
+bool Compiler::testLinkCxx(
+  const utf8::String & config,
+  const utf8::String & test,
+  const utf8::String & tmpCxx,
+  const utf8::String & libraries)
 {
   AsyncFile file(tmpCxx);
   file.createIfNotExist(true);
@@ -167,14 +171,41 @@ intptr_t Compiler::testRunCxx(const utf8::String & config,const utf8::String & t
   testStderr << "\n";
   if( exitCode == 0 && stat(object) ){
     utf8::String executable(changeFileExt(tmpCxx,".exe"));
-    AutoFileRemove afr3(executable);
     utf8::String linkerArgs(linkerArgs_.replaceCaseAll("${object}",object));
     linkerArgs = linkerArgs.replaceCaseAll("${executable}",executable);
+    utf8::String libs;
+    for( uintptr_t k = enumStringParts(libraries,",",false), i = 0; i < k; i++ ){
+      utf8::String s(stringPartByNo(libraries,i,",",false));
+      if( type_.strcasecmp("gnu") == 0 ){
+        libs += "-l" + s;
+      }
+      else if( type_.strcasecmp("msvc") == 0 || type_.strcasecmp("intel") == 0 ){
+        libs += s.right(4).strcasecmp(".lib") == 0 ? s : s + ".lib";
+      }
+      else {
+        libs += s.isNull() ? s : " " + s;
+      }
+    }
+    linkerArgs = linkerArgs.replaceCaseAll("\"${libraries}\"",libs);
+    linkerArgs = linkerArgs.replaceCaseAll("${libraries}",libs);
     params.name_ = linker_;
     params.args_ = linkerArgs;
     exitCode = execute(params);
-    if( exitCode == 0 && stat(executable) )
-      return execute(executable,utf8::String(),&compilerEnv_,true);
+    if( exitCode == 0 && stat(executable) ) return true;
+  }
+  return false;
+}
+//------------------------------------------------------------------------------
+intptr_t Compiler::testRunCxx(
+  const utf8::String & config,
+  const utf8::String & test,
+  const utf8::String & tmpCxx,
+  const utf8::String & libraries)
+{
+  if( testLinkCxx(config,test,tmpCxx,libraries) ){
+    utf8::String executable(changeFileExt(tmpCxx,".exe"));
+    AutoFileRemove afr3(executable);
+    return execute(executable,utf8::String(),&compilerEnv_,true);
   }
   return -1;
 }
@@ -214,7 +245,6 @@ utf8::String Compiler::testCxxTypeHelper(
   return 
     "#define SIZEOF_" + s +
     utf8::int2Str(testCxxCode(config,tmpCxx,header,body)) + "\n"
-    //+ "#define HAVE_" + s + " (SIZEOF_" + s + " > 0)\n"
   ;
 }
 //------------------------------------------------------------------------------
@@ -262,6 +292,84 @@ utf8::String Compiler::testCxxTypeEqualCheck(
     "}\n",
     tmpCxx) ? " 0" : " 1") + "\n"
   ;
+}
+//------------------------------------------------------------------------------
+utf8::String Compiler::testCxxFuncExists(
+  const utf8::String & config,
+  const utf8::String & func,
+  const utf8::String & tmpCxx,
+  const utf8::String & header)
+{
+  utf8::String f(func.replaceAll("::","_").upper());
+  utf8::String name(createGUIDAsBase32String());
+  return 
+    "#define HAVE_" + f +
+    (testCxx(config,header +
+    "\n"
+    "void * funcPtr" + name + " = " + func + ";\n"
+    "\n"
+    "int main(int /*argc*/,char * /*argv*/[])\n"
+    "{\n"
+    "  return funcPtr" + name + " == NULL ? 1 : 0;\n"
+    "}\n",
+    tmpCxx) ? " 1" : " 0") + "\n"
+  ;
+}
+//------------------------------------------------------------------------------
+utf8::String Compiler::testCxxSymbolExists(
+  const utf8::String & config,
+  const utf8::String & symbol,
+  const utf8::String & tmpCxx,
+  const utf8::String & header)
+{
+  utf8::String s(symbol.replaceAll("::","_").upper());
+  return 
+    "#define HAVE_" + s +
+    (testCxx(config,header +
+    "void requireSymbol(int /*dummy*/,...)\n"
+    "{\n"
+    "}\n"
+    "\n"
+    "int main(int /*argc*/,char * /*argv*/[])\n"
+    "{\n"
+    "#ifdef " + symbol + "\n"
+    "  return 0;\n"
+    "#else\n"
+    "#error Symbol " + symbol + " not exists\n"
+    "#endif\n"
+    "}\n",
+    tmpCxx) ? " 1" : " 0") + "\n"
+  ;
+}
+//------------------------------------------------------------------------------
+utf8::String Compiler::testCxxLibExists(
+  const utf8::String & library,
+  const utf8::String & symbol,
+  const utf8::String & mod,
+  const utf8::String & tmpCxx,
+  utf8::String * existsLibraries)
+{
+  utf8::String lib(library.upper());
+  utf8::String name(createGUIDAsBase32String());
+  bool r =
+    testLinkCxx(
+      utf8::String(),
+      "extern \"C\" {\n"
+      "extern " + (mod.isNull() ? "void " + symbol + "(void)" : mod.replaceAll("${symbol}",symbol)) + ";\n"
+      "void * symbol" + name + " = " + symbol + ";\n"
+      "}\n"
+      "\n"
+      "int main(int /*argc*/,char * /*argv*/[])\n"
+      "{\n"
+      "  return symbol" + name + " == (void *) 0 ? 1 : 0;\n"
+      "}\n",
+      tmpCxx,
+      library
+    );
+  utf8::String executable(changeFileExt(tmpCxx,".exe"));
+  AutoFileRemove afr3(executable);
+  if( existsLibraries != NULL && r ) *existsLibraries += existsLibraries->isNull() ? library : ", " + library;
+  return "#define HAVE_" + lib + "_LIB" + (r ? " 1" : " 0") + "\n";
 }
 //------------------------------------------------------------------------------
 Compiler & Compiler::test(const utf8::String & config)
@@ -375,7 +483,6 @@ Compiler & Compiler::test(const utf8::String & config)
       "windows.h",
       "winsock.h",
       "winsock2.h",
-      "mswsock.h",
       "winternl.h",
       "ntstatus.h",
       "ntdll.h"
@@ -597,6 +704,11 @@ Compiler & Compiler::test(const utf8::String & config)
       "#endif\n"
     );
     out << testCxxHeaderHelper(config,"sql.h",tmpCxx,
+      "#if HAVE_WINDOWS_H\n"
+      "#include <windows.h>\n"
+      "#endif\n"
+    );
+    out << testCxxHeaderHelper(config,"mswsock.h",tmpCxx,
       "#if HAVE_WINDOWS_H\n"
       "#include <windows.h>\n"
       "#endif\n"
@@ -857,6 +969,240 @@ Compiler & Compiler::test(const utf8::String & config)
     };
     for( uintptr_t i = 0; i < sizeof(types2Equ) / sizeof(types2Equ[0]); i++ )
       out << testCxxTypeEqualCheck(config,types2Equ[i].type1_,types2Equ[i].type2_,tmpCxx,header);
+
+    // detect functions
+    out << "\n// functions\n";
+    static const char * const functions[] = {
+      "chown",
+      "opendir",
+      "closedir",
+      "malloc",
+      "realloc",
+      "memcmp",
+      "mktime",
+      "timegm",
+      "stat",
+      "strerror_r",
+      "utime",
+      "_utime",
+      "vprintf",
+      "localtime",
+      "gmtime_s",
+      "gmtime",
+      "getpwnam",
+      "getgrnam",
+      "floor",
+      "floorl",
+      "ftruncate",
+      "getcwd",
+      "getpagesize",
+      "gettimeofday",
+      "memmove",
+      "memset",
+      "memcpy",
+      "bcopy",
+      "strcasecmp",
+      "strchr",
+      "strncasecmp",
+      "strstr",
+      "sprintf",
+      "_sprintf",
+      "vsprintf",
+      "snprintf",
+      "_snprintf",
+      "vsnprintf",
+      "sscanf",
+      "_sscanf",
+      "snscanf",
+      "_snscanf",
+      "_chsize",
+      "chsize",
+      "fstat",
+      "_fseeki64",
+      "utime",
+      "utimes",
+      "nanosleep",
+      "sleep",
+      "usleep",
+      "pread",
+      "pwrite",
+      "getuid",
+      "getgid",
+      "getpid",
+      "gettid",
+      "sem_init",
+      "sem_close",
+      "sem_open",
+      "sem_unlink",
+      "sem_timedwait",
+      "uname",
+      "umask",
+      "readdir_r",
+      "socket",
+      "mkdir",
+      "inet_ntoa",
+      "gethostbyname",
+      "gethostbyname2",
+      "gethostbyaddr",
+      "getnameinfo",
+      "getaddrinfo",
+      "strerror",
+      "sysconf",
+      "sigwait",
+      "rmdir",
+      "_isatty",
+      "isatty",
+      "_fileno",
+      "fileno",
+      "kqueue",
+      "kevent",
+      "aio_read",
+      "aio_write",
+      "aio_return",
+      "aio_error",
+      "mmap",
+      "munmap",
+      "mlock",
+      "munlock",
+      "mlockall",
+      "munlockall",
+      "shm_open",
+      "shm_unlink",
+      "daemon",
+      "uuidgen",
+      "uuid_create",
+      "uuid_from_string",
+      "semget",
+      "semop",
+      "semctl",
+      "ftok",
+      "exit",
+      "_tzset",
+      "tzset",
+      "nice",
+      "clock_getres",
+      "clock_gettime",
+      "setpriority",
+      "getpriority",
+      "rtprio",
+
+      "pthread_create",
+      "pthread_detach",
+      "pthread_self",
+      "pthread_yield",
+      "pthread_join",
+      "pthread_setcancelstate",
+      "pthread_attr_setguardsize",
+      "pthread_attr_getstack",
+      "pthread_getprio",
+      "pthread_setprio",
+      "pthread_attr_getschedparam",
+      "pthread_attr_setschedparam",
+      "pthread_setschedparam",
+      "pthread_getschedparam",
+      "pthread_rwlock_init",
+      "pthread_rwlock_destroy",
+      "pthread_rwlock_rdlock",
+      "pthread_rwlock_tryrdlock",
+      "pthread_rwlock_wrlock",
+      "pthread_rwlock_trywrlock",
+      "pthread_rwlock_unlock",
+      "getcontext",
+      "setcontext",
+      "makecontext",
+      "swapcontext",
+    };
+    utf8::String h;
+    for( uintptr_t i = 0; i < sizeof(headers) / sizeof(headers[0]); i++ ){
+      if( strcmp(headers[i],"windows.h") == 0 ) continue;
+      if( strcmp(headers[i],"winsock.h") == 0 ) continue;
+      if( strcmp(headers[i],"winsock2.h") == 0 ) continue;
+      if( strcmp(headers[i],"ntstatus.h") == 0 ) continue;
+      h +=
+        "#if HAVE_" + utf8::String(headers[i]).replaceAll(".","_").replaceAll("/","_").upper()+ "\n"
+        "#include <" + utf8::String(headers[i]) + ">\n"
+        "#endif\n"
+      ;
+    }
+    utf8::String hw(h +
+        "#if HAVE_WINSOCK2_H\n"
+        "#include <winsock2.h>\n"
+        "#elif HAVE_WINSOCK_H\n"
+        "#include <winsock.h>\n"
+        "#endif\n"
+        "#if HAVE_MSWSOCK_H\n"
+        "#include <mswsock.h>\n"
+        "#endif\n"
+        "#if HAVE_WS2TCPIP_H\n"
+        "#include <ws2tcpip.h>\n"
+        "#endif\n"
+        "#if HAVE_WINDOWS_H\n"
+        "#include <windows.h>\n"
+        "#endif\n"
+        "#if HAVE_TLHELP32_H\n"
+        "#include <tlhelp32.h>\n"
+        "#endif\n"
+        "#if HAVE_IPHLPAPI_H\n"
+        "#include <tlhelp32.h>\n"
+        "#endif\n"
+    );
+    for( uintptr_t i = 0; i < sizeof(functions) / sizeof(functions[0]); i++ )
+      out << testCxxFuncExists(config,functions[i],tmpCxx,hw);
+    
+    // detect symbols
+    out << "\n// symbols\n";
+    static const char * const symbols[] = {
+      "be16enc",
+      "be32enc",
+      "be64enc",
+      "be16toh",
+      "be32toh",
+      "be64toh",
+      "le16enc",
+      "le32enc",
+      "le64enc",
+      "le16toh",
+      "le32toh",
+      "le64toh",
+      "be16dec",
+      "be32dec",
+      "be64dec",
+      "htobe16",
+      "htobe32",
+      "htobe64",
+      "le16dec",
+      "le32dec",
+      "le64dec",
+      "htole16",
+      "htole32",
+      "htole64",
+      "_malloc_options",
+      "do_cpuid",
+      "atomic_fetchadd_32",
+    };
+    for( uintptr_t i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++ )
+      out << testCxxSymbolExists(config,symbols[i],tmpCxx,hw);
+
+    // detect libraries
+    out << "\n// libraries\n";
+    utf8::String existsLibraries;
+    static struct {
+      const char * const library_;
+      const char * const symbol_;
+      const char * const mod_;
+    } libraries[] = {
+      { "md", "SHA256_Init", "" },
+      { "lzo", "lzo1x_999_compress_level", "" },
+      { "lzo2", "lzo1x_999_compress_level", "" },
+      { "pthread", "pthread_create", "" },
+      { "rtkaio", "rtprio", "" },
+      //{ "rpcrt4", "UuidCreate", "long __stdcall ${symbol}(void *)" }
+    };
+    for( uintptr_t i = 0; i < sizeof(libraries) / sizeof(libraries[0]); i++ )
+      out << testCxxLibExists(libraries[i].library_,libraries[i].symbol_,libraries[i].mod_,tmpCxx,&existsLibraries);
+
+    if( !existsLibraries.isNull() )
+      out << "\n// using libraries " << "{[NLOSJVNK0SU2UD4CFBWP2UT10H]}: " << existsLibraries << "\n";
   }
   return *this;
 }
