@@ -27,6 +27,11 @@
 #define _VERSION_C_AS_HEADER_
 #include "version.c"
 #undef _VERSION_C_AS_HEADER_
+#define ENABLE_GD_INTERFACE 1
+//#define ENABLE_PCAP_INTERFACE 1
+//#define ENABLE_ODBC_INTERFACE 1
+#define ENABLE_MYSQL_INTERFACE 1
+#define ENABLE_FIREBIRD_INTERFACE 1
 #include <adicpp/adicpp.h>
 #include "Parser.h"
 #include "Scanner.h"
@@ -36,6 +41,7 @@
 //------------------------------------------------------------------------------
 using namespace ksys;
 using namespace ksys::kvm;
+using namespace adicpp;
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
@@ -87,6 +93,10 @@ int main(int _argc,char * _argv[])
       utf8::String::Stream() << kvm_version.gnu_ << " started\n"
     );
     config->silent(false);
+    utf8::String defaultConfigSectionName(config->text("default_config",kvm_version.gnu_));
+    utf8::String defaultConnectionSectionName(config->textByPath(defaultConfigSectionName + ".connection","default_connection"));
+    AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
+    
     for( uintptr_t i = 0; i < sources.count(); i++ ){
       AutoPtr<wchar_t> fileName(coco_string_create(sources[i].getUNICODEString()));
       AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));

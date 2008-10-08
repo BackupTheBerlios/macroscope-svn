@@ -60,6 +60,7 @@ Compiler & Compiler::detect(const ConfigSP config)
     compilerArgs = compilerArgs.replaceCaseAll("${source}",tmpCxx.fileName());
     utf8::String object(changeFileExt(tmpCxx.fileName(),".o"));
     compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
+    compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
     tmpCxx <<
       "namespace ksys {\n"
       "namespace kvm {\n"
@@ -108,6 +109,7 @@ bool Compiler::testCxx(const utf8::String & config,const utf8::String & test,con
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",tmpCxx));
   utf8::String object(changeFileExt(tmpCxx,".o"));
   compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
+  compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
   file.open().resize(0);
   if( stat(config) ){
     AsyncFile cfg(config);
@@ -142,10 +144,10 @@ bool Compiler::testLinkCxx(
 {
   AsyncFile file(tmpCxx);
   file.createIfNotExist(true);
-  utf8::String compilerArgs;
-  compilerArgs = compilerArgs_.replaceCaseAll("${source}",tmpCxx);
+  utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",tmpCxx));
   utf8::String object(changeFileExt(tmpCxx,".o"));
   compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
+  compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
   file.open().resize(0);
   if( stat(config) ){
     AsyncFile cfg(config);
@@ -176,17 +178,17 @@ bool Compiler::testLinkCxx(
     utf8::String libs;
     for( uintptr_t k = enumStringParts(libraries,",",false), i = 0; i < k; i++ ){
       utf8::String s(stringPartByNo(libraries,i,",",false));
+      libs += libs.isNull() ? "" : " ";
       if( type_.strcasecmp("gnu") == 0 ){
-        libs += "-l" + s;
+        libs += "\"-l" + s + "\"";
       }
       else if( type_.strcasecmp("msvc") == 0 || type_.strcasecmp("intel") == 0 ){
-        libs += s.right(4).strcasecmp(".lib") == 0 ? s : s + ".lib";
+        libs += "\"" + s.right(4).strcasecmp(".lib") == 0 ? s : s + ".lib" + "\"";
       }
       else {
-        libs += s.isNull() ? s : " " + s;
+        libs += s;
       }
     }
-    linkerArgs = linkerArgs.replaceCaseAll("\"${libraries}\"",libs);
     linkerArgs = linkerArgs.replaceCaseAll("${libraries}",libs);
     params.name_ = linker_;
     params.args_ = linkerArgs;
@@ -1202,8 +1204,25 @@ Compiler & Compiler::test(const utf8::String & config)
       out << testCxxLibExists(libraries[i].library_,libraries[i].symbol_,libraries[i].mod_,tmpCxx,&existsLibraries);
 
     if( !existsLibraries.isNull() )
-      out << "\n// using libraries " << "{[NLOSJVNK0SU2UD4CFBWP2UT10H]}: " << existsLibraries << "\n";
+      out << "\n// ***WARNING*** Don't edit this line. This is machine generated line. Using libraries. " << "{[NLOSJVNK0SU2UD4CFBWP2UT10H]}: " << existsLibraries << "\n";
   }
+  return *this;
+}
+//------------------------------------------------------------------------------
+Compiler & Compiler::compile(
+  const utf8::String & config,
+  const utf8::String & source,
+  const utf8::String & object)
+{
+  return *this;
+}
+//------------------------------------------------------------------------------
+Compiler & Compiler::link(
+  const utf8::String & config,
+  const Array<utf8::String> & objects,
+  const utf8::String & module,
+  bool dlm)
+{
   return *this;
 }
 //------------------------------------------------------------------------------

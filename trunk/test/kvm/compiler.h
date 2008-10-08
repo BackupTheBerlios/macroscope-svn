@@ -40,6 +40,8 @@ class Compiler : public Object {
 
     Compiler & detect(const ConfigSP config);
     Compiler & test(const utf8::String & config);
+    Compiler & compile(const utf8::String & config,const utf8::String & source,const utf8::String & object);
+    Compiler & link(const utf8::String & config,const Array<utf8::String> & objects,const utf8::String & module,bool dlm = true);
   protected:
     utf8::String type_;
     utf8::String compiler_;
