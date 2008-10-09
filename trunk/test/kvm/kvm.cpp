@@ -38,6 +38,7 @@
 #include "CodeGenerator.h"
 #include "SymbolTable.h"
 #include "Compiler.h"
+#include "varnum.h"
 //------------------------------------------------------------------------------
 using namespace ksys;
 using namespace ksys::kvm;
@@ -45,7 +46,34 @@ using namespace adicpp;
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
+  static VarInteger a, b, c;
+
+  a = 0xFFFFFFFFFFFFFFFFi64;
+  b = 0xFFFFFFFFFFFFFFFFi64;
+  c = a + b;
+  c = c + -2;
+
   //Sleep(15000);
+  ldouble freqs[256] = {
+    1,
+    2,
+    3,
+    4,
+    5
+  };
+  ldouble weights[256] = {
+    1,
+    1,
+    1,
+    1,
+    1
+  };
+  ldouble weight = 5;
+  ldouble range, freq, low = 0, high = 1;
+  range = high - low;
+  high  = low + range / freqs[3] * weights[3] / weight;
+  //low   = low + range * cumFreq[1];
+
 
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
