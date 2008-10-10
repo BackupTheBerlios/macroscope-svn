@@ -2428,24 +2428,6 @@ utf8::String getTimestamp(const utf8::String & date,const utf8::String & time)
   ;
 }
 //---------------------------------------------------------------------------
-void reverseByteArray(void * array,uintptr_t size)
-{
-  for( uintptr_t i = size; i > size / 2; i-- )
-    xchg(((uint8_t *) array) [i - 1],((uint8_t *) array) [size - i]);
-}
-//---------------------------------------------------------------------------
-void reverseByteArray(void * dst,const void * src,uintptr_t size)
-{
-  if( dst == src ){
-    for( uintptr_t i = size; i > size / 2; i-- )
-  	  xchg(((uint8_t *) dst) [i - 1],((uint8_t *) dst) [size - i]);
-  }
-  else {
-    for( intptr_t i = size - 1; i >= 0; i-- )
-      ((uint8_t *) dst) [size - i - 1] = ((const uint8_t *) src) [i];
-  }
-}
-//---------------------------------------------------------------------------
 // base64 routines
 //---------------------------------------------------------------------------
 static const char base64Table[64] = {

@@ -396,6 +396,51 @@ typedef int file_t;
 #define INVALID_SOCKET -1
 #endif
 //---------------------------------------------------------------------------
+template <typename T> inline void xchg(T & v1, T & v2)
+{
+  T v(v1);
+  v1 = v2;
+  v2 = v;
+}
+//---------------------------------------------------------------------------
+template <typename T> inline const T & tmin(const T & v1, const T & v2)
+{
+  return v1 < v2 ? v1 : v2;
+}
+//---------------------------------------------------------------------------
+template <typename T> inline const T & tmax(const T & v1, const T & v2)
+{
+  return v1 > v2 ? v1 : v2;
+}
+//---------------------------------------------------------------------------
+template <typename T> inline T tabs(const T & v)
+{
+  return v > 0 ? v : -v;
+}
+//---------------------------------------------------------------------------
+inline void reverseByteArray(void * array,uintptr_t size)
+{
+  for( uintptr_t i = size; i > size / 2; i-- )
+    xchg(((uint8_t *) array) [i - 1],((uint8_t *) array) [size - i]);
+}
+//---------------------------------------------------------------------------
+inline void reverseByteArray(void * dst,const void * src,uintptr_t size)
+{
+  if( dst == src ){
+    for( uintptr_t i = size; i > size / 2; i-- )
+  	  xchg(((uint8_t *) dst) [i - 1],((uint8_t *) dst) [size - i]);
+  }
+  else {
+    for( intptr_t i = size - 1; i >= 0; i-- )
+      ((uint8_t *) dst) [size - i - 1] = ((const uint8_t *) src) [i];
+  }
+}
+//---------------------------------------------------------------------------
+inline uintptr_t strlen(const char * s)
+{
+  return (uintptr_t) ::strlen(s);
+}
+//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
 extern "C" {

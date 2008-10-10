@@ -49,42 +49,125 @@ class VarInteger {
     VarInteger();
 
     VarInteger(const VarInteger & v);
+#if !HAVE_INTPTR_T_AS_INT
     VarInteger(int v);
     VarInteger(unsigned int v);
+#endif
     VarInteger(intptr_t v);
     VarInteger(uintptr_t v);
+#if !HAVE_INTMAX_T_AS_INT && !HAVE_INTMAX_T_AS_INTPTR_T
+    VarInteger(intmax_t v);
+    VarInteger(uintmax_t v);
+#endif
 
     void * operator new (size_t sz){ return alloc(sz); }
     void operator delete (void * p){ free(p); }
 
     VarInteger & operator = (const VarInteger & v);
-    VarInteger & operator = (int v);
-    VarInteger & operator = (unsigned int v);
+#if !HAVE_INTPTR_T_AS_INT
+    VarInteger & operator = (int v) { return operator = (intptr_t(v)); }
+    VarInteger & operator = (unsigned int v) { return operator = (uintptr_t(v)); }
+#endif
     VarInteger & operator = (intptr_t v);
     VarInteger & operator = (uintptr_t v);
+#if !HAVE_INTMAX_T_AS_INT && !HAVE_INTMAX_T_AS_INTPTR_T
+    VarInteger & operator = (intmax_t v);
+    VarInteger & operator = (uintmax_t v);
+#endif
 
-    VarInteger operator << (intptr_t shift) const;
+#if !HAVE_INTPTR_T_AS_INT
+    VarInteger operator << (int shift) const { return operator << (intptr_t(shift)); }
+    VarInteger operator << (unsigned int shift) const { return operator << (uintptr_t(shift)); }
+    VarInteger operator >> (int shift) const { return operator >> (intptr_t(shift)); }
+    VarInteger operator >> (unsigned int shift) const { return operator >> (uintptr_t(shift)); }
+
+    VarInteger & operator <<= (int shift){ return operator <<= (intptr_t(shift)); }
+    VarInteger & operator <<= (unsigned int shift) { return operator <<= (uintptr_t(shift)); }
+    VarInteger & operator >>= (int shift) { return operator >>= (intptr_t(shift)); }
+    VarInteger & operator >>= (unsigned int shift) { return operator >>= (uintptr_t(shift)); }
+#endif
+
+    VarInteger operator << (intptr_t shift) const { return operator << (uintptr_t(shift)); }
     VarInteger operator << (uintptr_t shift) const;
-    VarInteger operator >> (intptr_t shift) const;
+    VarInteger operator >> (intptr_t shift) const { return operator >> (uintptr_t(shift)); }
     VarInteger operator >> (uintptr_t shift) const;
+
+    VarInteger & operator <<= (intptr_t shift) { return operator <<= (uintptr_t(shift)); }
+    VarInteger & operator <<= (uintptr_t shift) { return *this = operator << (shift); }
+    VarInteger & operator >>= (intptr_t shift) { return operator >>= (uintptr_t(shift)); }
+    VarInteger & operator >>= (uintptr_t shift) { return *this = operator >> (shift); }
 
     VarInteger operator + (const VarInteger & v) const;
     VarInteger operator - (const VarInteger & v) const;
     VarInteger operator * (const VarInteger & v) const;
-    VarInteger operator / (const VarInteger & v) const;
+    VarInteger operator / (const VarInteger & v) const { return div(v); }
+    VarInteger operator % (const VarInteger & v) const;
 
-    uintptr_t print(const char * s,uintptr_t pow = 10) const;
+    VarInteger & operator += (const VarInteger & v) { return *this = operator + (v); }
+    VarInteger & operator -= (const VarInteger & v) { return *this = operator - (v); }
+    VarInteger & operator *= (const VarInteger & v) { return *this = operator * (v); }
+    VarInteger & operator /= (const VarInteger & v) { return *this = operator / (v); }
+    VarInteger & operator %= (const VarInteger & v) { return *this = operator % (v); }
 
-    mint_t sign() const { return count_ > 0 ? mint_t(data_[count_ - 1]) >> (sizeof(mint_t) * 8 - 1) : 0; }
+    bool operator >  (const VarInteger & v) const { return compare(v) >  0; }
+    bool operator >= (const VarInteger & v) const { return compare(v) >= 0; }
+    bool operator <  (const VarInteger & v) const { return compare(v) <  0; }
+    bool operator <= (const VarInteger & v) const { return compare(v) <= 0; }
+    bool operator == (const VarInteger & v) const { return compare(v) == 0; }
+    bool operator != (const VarInteger & v) const { return compare(v) != 0; }
 
+    bool operator ! () const { return isZero(); }
+    VarInteger operator - () const;
+
+#if !HAVE_INTPTR_T_AS_INT
+    int asInt() const { return (int) asIntPtrT(); }
+    unsigned int asUInt() const { return (unsigned int) asUIntPtrT(); }
+#endif
+    intptr_t asIntPtrT() const;
+    uintptr_t asUIntPtrT() const;
+#if !HAVE_INTMAX_T_AS_INT && !HAVE_INTMAX_T_AS_INTPTR_T
+    intmax_t asIntMaxT() const;
+    uintmax_t asUIntMaxT() const;
+#endif
+
+    mint_t compare(const VarInteger & v) const;
+    VarInteger div(const VarInteger & divider,VarInteger * remainder = NULL) const;
+    VarInteger abs() const;
+
+    uintptr_t print(char * s = NULL,uintptr_t pow = 10) const;
+
+    mint_t sign() const { return mint_t(container_->data_[container_->count_ - 1]) >> (sizeof(mint_t) * 8 - 1); }
+    bool isNeg() const { return sign() < 0; }
+    bool isZero() const;
+    bool isOne() const;
+
+    struct Container {
+        void cleanup()
+        {
+          VarInteger::free(data_);
+          VarInteger::free(this);
+        }
+
+        static Container * initialize(void * data = NULL,uintptr_t count = 0,uintptr_t ref = 0);
+
+        void addRef(){ interlockedIncrement(ref_,1); }
+        void remRef(){ if( interlockedIncrement(ref_,-1) == 1 ) cleanup(); }
+
+        mutable mword_t * data_;
+        mutable uintptr_t count_;
+        mutable ilock_t ref_;
+    };
+    friend struct Container;
   protected:
-    mutable mword_t * data_;
-    mutable uintptr_t count_;
-    mutable uintptr_t ref_;
+    mutable SPRC<Container> container_;
 
-    VarInteger(mword_t * data,uintptr_t count);
-    static mword_t * alloc(uintptr_t size) { return realloc(NULL,size); }
-    static mword_t * realloc(mword_t * p,uintptr_t size);
+    VarInteger(void * data,uintptr_t count);
+
+    mdint_t sign2() const { return sign(); }
+    intptr_t getFirstSignificantBitIndex() const;
+
+    static void * alloc(uintptr_t size) { return realloc(NULL,size); }
+    static void * realloc(void * p,uintptr_t size);
     static void free(void * p);
   private:
 };

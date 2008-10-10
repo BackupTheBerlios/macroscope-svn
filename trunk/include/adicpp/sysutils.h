@@ -310,14 +310,6 @@ pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const A
 pid_t execute(const ExecuteProcessParameters & params);
 int32_t waitForProcess(pid_t pid);
 //---------------------------------------------------------------------------
-inline uintptr_t strlen(const char * s)
-{
-  return (uintptr_t) ::strlen(s);
-}
-//---------------------------------------------------------------------------
-void reverseByteArray(void * array,uintptr_t size);
-void reverseByteArray(void * dst,const void * src,uintptr_t size);
-//---------------------------------------------------------------------------
 utf8::String  screenChar(const utf8::String::Iterator & ii);
 utf8::String  screenString(const utf8::String & s);
 utf8::String  unScreenChar(const utf8::String::Iterator & ii, uintptr_t & screenLen);

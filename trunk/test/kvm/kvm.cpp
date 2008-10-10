@@ -46,12 +46,36 @@ using namespace adicpp;
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  static VarInteger a, b, c;
+  {
+    //intmax_t aa = 0x10000000i64, bb = 0x10000001i64, cc;
+    //cc = aa * bb;
+    intmax_t aa = 0, bb = -1, cc;
+    cc = aa - bb;
 
-  a = 0xFFFFFFFFFFFFFFFFi64;
-  b = 0xFFFFFFFFFFFFFFFFi64;
-  c = a + b;
-  c = c + -2;
+    VarInteger a, b, c;
+
+    for( uintptr_t i = 31; i < 300; i++ ){
+      a = 0xFFF;
+      a <<= i;
+    }
+
+    a = 0xFFFFFFFFFFFFFFFFi64;
+    b = 0xFFFFFFFFFFFFFFFFi64;
+    c = a + b;
+    c = c + -2;
+    b = -b;
+    a = 3;
+    b = 5;
+    c = a * b;
+    AutoPtr<char> s((char *) kmalloc(c.print() + 1));
+    c.print(s);
+    a = 0x100000000i64;
+    b = 0x100000001i64;
+    c = a * b;
+    AutoPtr<char> s2((char *) kmalloc(c.print() + 1));
+    c.print(s2);
+    c = c;
+  }
 
   //Sleep(15000);
   ldouble freqs[256] = {
