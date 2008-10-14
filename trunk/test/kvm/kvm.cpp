@@ -54,10 +54,15 @@ int main(int _argc,char * _argv[])
 
     VarInteger a, b, c;
 
-    for( uintptr_t i = 31; i < 300; i++ ){
-      a = 0xFFF;
+    for( uintptr_t i = 33; i < 300; i++ ){
+      a = 0xFFFFFFFFFFFFFF00ui64;
       a <<= i;
     }
+
+    a = 6ui64;
+    b = 10;
+    c = a - b;
+
 
     a = 0xFFFFFFFFFFFFFFFFi64;
     b = 0xFFFFFFFFFFFFFFFFi64;
@@ -69,12 +74,18 @@ int main(int _argc,char * _argv[])
     c = a * b;
     AutoPtr<char> s((char *) kmalloc(c.print() + 1));
     c.print(s);
-    a = 0x100000000i64;
-    b = 0x100000001i64;
+    a = 0x100000000ui64;
+    b = 3;
     c = a * b;
-    AutoPtr<char> s2((char *) kmalloc(c.print() + 1));
-    c.print(s2);
+    AutoPtr<char> s2((char *) kmalloc(c.print(NULL,16) + 1));
+    c.print(s2,16);
     c = c;
+    ldouble r = sqrt(ldouble(2));
+    VarNumber sqrt(2);
+    sqrt = sqrt.sqrt();
+    AutoPtr<char> s3((char *) kmalloc(sqrt.print() + 1));
+    sqrt.print(s3);
+    sqrt = sqrt;
   }
 
   //Sleep(15000);

@@ -32,6 +32,7 @@ namespace ksys {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class VarInteger {
+  friend class VarNumber;
   public:
 #if SIZEOF_INTMAX_T == 8
     typedef int32_t mint_t;
@@ -97,6 +98,11 @@ class VarInteger {
     VarInteger & operator >>= (intptr_t shift) { return operator >>= (uintptr_t(shift)); }
     VarInteger & operator >>= (uintptr_t shift) { return *this = operator >> (shift); }
 
+    VarInteger & operator ++ (int); // postfix form
+    VarInteger & operator ++ ();
+    VarInteger & operator -- (int);
+    VarInteger & operator -- ();
+
     VarInteger operator + (const VarInteger & v) const;
     VarInteger operator - (const VarInteger & v) const;
     VarInteger operator * (const VarInteger & v) const;
@@ -131,8 +137,13 @@ class VarInteger {
 #endif
 
     mint_t compare(const VarInteger & v) const;
+    VarInteger nodNok(const VarInteger & divider,VarInteger * nok = NULL) const;
     VarInteger div(const VarInteger & divider,VarInteger * remainder = NULL) const;
     VarInteger abs() const;
+
+    VarInteger pow(uintptr_t pow) const;
+    VarInteger pow10(uintptr_t pow = 1) const;
+    VarInteger mul10(uintptr_t pow = 1) const;
 
     uintptr_t print(char * s = NULL,uintptr_t pow = 10) const;
 
@@ -162,6 +173,7 @@ class VarInteger {
     mutable SPRC<Container> container_;
 
     VarInteger(void * data,uintptr_t count);
+    VarInteger(Container * container);
 
     mdint_t sign2() const { return sign(); }
     intptr_t getFirstSignificantBitIndex() const;
@@ -179,11 +191,67 @@ class VarNumber {
     virtual ~VarNumber();
     VarNumber();
 
+    VarNumber(const VarInteger & v);
+    VarNumber(const VarInteger & numerator,const VarInteger & denominator);
     VarNumber(const VarNumber & v);
+
+    VarNumber & operator = (const VarInteger & v);
     VarNumber & operator = (const VarNumber & v);
 
+    VarNumber operator + (const VarInteger & v) const;
+    VarNumber operator + (const VarNumber & v) const;
+    VarNumber operator - (const VarInteger & v) const;
+    VarNumber operator - (const VarNumber & v) const;
+    VarNumber operator * (const VarInteger & v) const;
+    VarNumber operator * (const VarNumber & v) const;
+    VarNumber operator / (const VarInteger & v) const;
+    VarNumber operator / (const VarNumber & v) const;
+
+    VarNumber & operator += (const VarInteger & v) { return *this = operator + (v); }
+    VarNumber & operator += (const VarNumber & v) { return *this = operator + (v); }
+    VarNumber & operator -= (const VarInteger & v) { return *this = operator - (v); }
+    VarNumber & operator -= (const VarNumber & v) { return *this = operator - (v); }
+    VarNumber & operator *= (const VarInteger & v) { return *this = operator * (v); }
+    VarNumber & operator *= (const VarNumber & v) { return *this = operator * (v); }
+    VarNumber & operator /= (const VarInteger & v) { return *this = operator / (v); }
+    VarNumber & operator /= (const VarNumber & v) { return *this = operator / (v); }
+
+    bool operator >  (const VarNumber & v) const { return compare(v) >  0; }
+    bool operator >= (const VarNumber & v) const { return compare(v) >= 0; }
+    bool operator <  (const VarNumber & v) const { return compare(v) <  0; }
+    bool operator <= (const VarNumber & v) const { return compare(v) <= 0; }
+    bool operator == (const VarNumber & v) const { return compare(v) == 0; }
+    bool operator != (const VarNumber & v) const { return compare(v) != 0; }
+
+    bool operator ! () const { return isZero(); }
+    VarNumber operator - () const;
+
+    VarInteger::mint_t compare(const VarNumber & v) const;
+    VarNumber simplify() const;
+    VarInteger::mint_t sign() const { return numerator_.sign(); }
+    bool isNeg() const { return sign() < 0; }
+    bool isZero() const { return numerator_.isZero() && denominator_.isOne(); }
+    bool isOne() const { return numerator_.isOne() && denominator_.isOne(); }
+
+    VarNumber sqrt(uintptr_t sqrtpow = 2,uintptr_t iter = 32) const;
+    VarNumber abs() const;
+    VarNumber pow(intptr_t pow) const;
+    VarNumber sal(uintptr_t v) const;
+    VarNumber sar(uintptr_t v) const;
+
+    enum FormatMode {
+      fmtLeadZeros = 1,
+      fmtLeftJustifies = 2,
+      fmtSign = 4,
+      fmtEatRightZeros = 8,
+      fmtEatFixedPoint = 16,
+      fmtExponent = 32,
+      fmtDefault = 0
+    };
+
+    uintptr_t print(char * s = NULL,uintptr_t width = 0,uintptr_t precision = 0,uintptr_t fmt = fmtDefault) const;
   protected:
-    mutable VarInteger numerator_; // числитель
+    mutable VarInteger numerator_;     // числитель
     mutable VarInteger denominator_;   // знаменатель
   private:
 };

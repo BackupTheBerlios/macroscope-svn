@@ -135,6 +135,8 @@ VarInteger::~VarInteger()
 //------------------------------------------------------------------------------
 static VarInteger::mword_t defaultContainerData = 0;
 static VarInteger::Container defaultContainer = { &defaultContainerData, 1, 1 };
+static VarInteger::mword_t defaultOneData = 1;
+static VarInteger::Container defaultOne = { &defaultOneData, 1, 1 };
 //------------------------------------------------------------------------------
 VarInteger::VarInteger() : container_(&defaultContainer)
 {
@@ -142,6 +144,10 @@ VarInteger::VarInteger() : container_(&defaultContainer)
 //------------------------------------------------------------------------------
 VarInteger::VarInteger(void * data,uintptr_t count) :
   container_(Container::initialize(data,count))
+{
+}
+//------------------------------------------------------------------------------
+VarInteger::VarInteger(Container * container) : container_(container)
 {
 }
 //------------------------------------------------------------------------------
@@ -242,21 +248,33 @@ VarInteger VarInteger::operator << (uintptr_t shift) const
   VarInteger q(alloc(qsize * sizeof(mword_t)),qsize);
   uintptr_t i, k, sb = shift & (sizeof(mword_t) * 8 - 1), sw = shift / (sizeof(mword_t) * 8);
   mword_t * data = container_->data_, * qdata = q.container_->data_;
-  for( i = 0; i < sw; i++ ) qdata[i] = 0;
+  memset(qdata,0,(i = sw) * sizeof(mword_t));
+  mint_t s = sign();
   if( sb == 0 ){
-    for( i = 0, k = container_->count_; i < k; i++ ){
-      qdata[i + sw] = data[i];
-    }
+    memcpy(qdata + sw,data,container_->count_ * sizeof(mword_t));
+    i += container_->count_ - 1;
   }
   else {
+    uintptr_t sb2 = sizeof(mword_t) * 8 - sb;
     qdata[i] = 0;
     for( i = 0, k = container_->count_; i < k; i++ ){
       qdata[i + sw] |= data[i] << sb;
-      qdata[i + sw + 1] = mint_t(data[i]) >> (sizeof(mword_t) * 8 - sb);
+      qdata[i + sw + 1] = data[i] >> sb2;
     }
+    qdata[i + sw] |= s << sb;
+    i += sw + 1;
   }
-  mint_t s = sign();
-  for( i += sw + (sb != 0); i < qsize; i++ ) qdata[i] = s;
+  memset(qdata + i,int(s),(qsize - i) * sizeof(mword_t));
+  bool eq = true;
+  k = qsize;
+  i = i / 2;
+  s = mint_t(qdata[i - 1]) >> (sizeof(mint_t) * 8 - 1);
+  while( i < k ){
+    if( qdata[i] != s ) return q;
+    i++;
+  }
+  q.container_->data_ = (mword_t *) realloc(qdata,(q.container_->count_ >> 1) * sizeof(mword_t));
+  q.container_->count_ >>= 1;
   return q;
 }
 //------------------------------------------------------------------------------
@@ -264,13 +282,21 @@ VarInteger VarInteger::operator >> (uintptr_t shift) const
 {
   if( shift == 0 ) return *this;
   VarInteger q(alloc(container_->count_ * sizeof(mword_t)),container_->count_);
-  uintptr_t i, k, sb = shift & (sizeof(mword_t) * 8 - 1), sw = shift / (sizeof(mword_t) * 8);
+  uintptr_t i, j, k, sb = shift & (sizeof(mword_t) * 8 - 1), sw = shift / (sizeof(mword_t) * 8);
   mword_t * data = container_->data_, * qdata = q.container_->data_;
-  for( i = 0, k = container_->count_; i < k; i++ ){
-    qdata[i] = (data[i + sw] >> sb) | (data[i + sw + 1] << (sizeof(mword_t) * 8 - sb));
-  }
   mint_t s = sign();
-  for( ++i, k = q.container_->count_; i < k; i++ ) qdata[i] = s;
+  if( sb == 0 ){
+    memcpy(qdata,data + sw,(container_->count_ - sw) * sizeof(mword_t));
+    memset(qdata + container_->count_ - sw,int(s),sw * sizeof(mword_t));
+  }
+  else {
+    uintptr_t sb2 = sizeof(mword_t) * 8 - sb;
+    for( i = 0, j = sw, k = container_->count_; j + 1 < k; i++, j++ ){
+      qdata[i] = (data[j] >> sb) | (data[j + 1] << sb2);
+    }
+    qdata[i] = (data[j] >> sb) | (s << sb2);
+    memset(qdata + i + 1,int(s),(container_->count_ - i - 1) * sizeof(mword_t));
+  }
   return q;
 }
 //------------------------------------------------------------------------------
@@ -280,30 +306,30 @@ VarInteger VarInteger::operator + (const VarInteger & v) const
   qsize += (qsize == 0) * 2;
   VarInteger q(alloc(qsize * sizeof(mword_t)),qsize);
   mword_t * data = container_->data_, * vdata = v.container_->data_, * qdata = q.container_->data_;
-  mword_t overflow = 0;
+  mint_t overflow = 0;
   uintptr_t i, k;
   for( i = 0, k = tmin(container_->count_,v.container_->count_); i < k; i++ ){
-    mdword_t x = mdword_t(data[i]) + vdata[i];
-    qdata[i] = mword_t(x) + overflow;
+    mdword_t x = mdword_t(data[i]) + vdata[i] + overflow;
+    qdata[i] = mword_t(x);
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t vs = v.sign();
   for( k = container_->count_; i < k; i++ ){
-    mdword_t x = mdword_t(data[i]) + vs;
-    qdata[i] = mword_t(x) + overflow;
+    mdword_t x = mdword_t(data[i]) + vs + overflow;
+    qdata[i] = mword_t(x);
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t s = sign();
   for( k = v.container_->count_; i < k; i++ ){
-    mdword_t x = mdword_t(s) + vdata[i];
-    qdata[i] = mword_t(x) + overflow;
+    mdword_t x = mdword_t(s) + vdata[i] + overflow;
+    qdata[i] = mword_t(x);
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t qs = mint_t(qdata[i - 1]) >> (sizeof(mint_t) * 8 - 1);
   bool eq = true;
   for( k = qsize; i < k; i++ ){
-    mdword_t x = mdword_t(s) + vs;
-    eq = (qdata[i] = mword_t(x) + overflow) == qs && eq;
+    mdword_t x = mdword_t(s) + vs + overflow;
+    eq = (qdata[i] = mword_t(x)) == qs && eq;
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   if( eq ){
@@ -319,30 +345,30 @@ VarInteger VarInteger::operator - (const VarInteger & v) const
   qsize += (qsize == 0) * 2;
   VarInteger q(alloc(qsize * sizeof(mword_t)),qsize);
   mword_t * data = container_->data_, * vdata = v.container_->data_, * qdata = q.container_->data_;
-  mword_t overflow = 0;
+  mint_t overflow = 0;
   uintptr_t i, k;
   for( i = 0, k = tmin(container_->count_,v.container_->count_); i < k; i++ ){
-    mdword_t x = mdword_t(data[i]) - vdata[i];
-    qdata[i] = mword_t(x) + overflow;
+    mdword_t x = mdword_t(data[i]) - vdata[i] + overflow;
+    qdata[i] = mword_t(x);
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t vs = v.sign();
   for( k = container_->count_; i < k; i++ ){
-    mdword_t x = mdword_t(data[i]) - vs;
-    qdata[i] = mword_t(x) + overflow;
+    mdword_t x = mdword_t(data[i]) - vs + overflow;
+    qdata[i] = mword_t(x);
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t s = sign();
   for( k = v.container_->count_; i < k; i++ ){
-    mdword_t x = mdword_t(s) - vdata[i];
-    qdata[i] = mword_t(x) + overflow;
+    mdword_t x = mdword_t(s) - vdata[i] + overflow;
+    qdata[i] = mword_t(x);
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t qs = mint_t(qdata[i - 1]) >> (sizeof(mint_t) * 8 - 1);
   bool eq = true;
   for( k = qsize; i < k; i++ ){
-    mdword_t x = mdword_t(s) - vs;
-    eq = (qdata[i] = mword_t(x) + overflow) == qs && eq;
+    mdword_t x = mdword_t(s) - vs + overflow;
+    eq = (qdata[i] = mword_t(x)) == qs && eq;
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   if( eq ){
@@ -377,19 +403,46 @@ VarInteger VarInteger::operator * (const VarInteger & v) const
   return summ;
 }
 //------------------------------------------------------------------------------
+VarInteger VarInteger::operator % (const VarInteger & v) const
+{
+  VarInteger remainder;
+  div(v,&remainder);
+  return remainder;
+}
+//------------------------------------------------------------------------------
 VarInteger VarInteger::operator - () const
 {
   uintptr_t qsize = container_->count_;
   VarInteger q(alloc(qsize * sizeof(mword_t)),qsize);
   mword_t * data = container_->data_, * qdata = q.container_->data_;
-  mword_t overflow = 0;
+  mint_t overflow = 0;
   uintptr_t i;
   for( i = 0; i < qsize; i++ ){
-    mdword_t x = mdword_t(0) - data[i];
-    qdata[i] = mword_t(x) + overflow;
+    mdword_t x = mdword_t(0) - data[i] + overflow;
+    qdata[i] = mword_t(x);
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   return q;
+}
+//------------------------------------------------------------------------------
+VarInteger & VarInteger::operator ++ (int)
+{
+  return *this += VarInteger(&defaultOne);
+}
+//------------------------------------------------------------------------------
+VarInteger & VarInteger::operator ++ ()
+{
+  return *this += VarInteger(&defaultOne);
+}
+//------------------------------------------------------------------------------
+VarInteger & VarInteger::operator -- (int)
+{
+  return *this -= VarInteger(&defaultOne);
+}
+//------------------------------------------------------------------------------
+VarInteger & VarInteger::operator -- ()
+{
+  return *this -= VarInteger(&defaultOne);
 }
 //------------------------------------------------------------------------------
 intptr_t VarInteger::asIntPtrT() const
@@ -425,30 +478,63 @@ uintmax_t VarInteger::asUIntMaxT() const
 VarInteger::mint_t VarInteger::compare(const VarInteger & v) const
 {
   mword_t * data = container_->data_, * vdata = v.container_->data_;
-  mword_t overflow = 0, lv = 0;
+  mint_t overflow = 0, lv = 0;
   bool zero = true;
   uintptr_t i, k;
   for( i = 0, k = tmin(container_->count_,v.container_->count_); i < k; i++ ){
-    mdword_t x = mdword_t(data[i]) - vdata[i];
-    lv = mword_t(x) + overflow;
+    mdword_t x = mdword_t(data[i]) - vdata[i] + overflow;
+    lv = mword_t(x);
     zero = lv == 0 && zero;
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t vs = v.sign();
   for( k = container_->count_; i < k; i++ ){
-    mdword_t x = mdword_t(data[i]) - vs;
-    lv = mword_t(x) + overflow;
+    mdword_t x = mdword_t(data[i]) - vs + overflow;
+    lv = mword_t(x);
     zero = lv == 0 && zero;
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
   mword_t s = sign();
   for( k = v.container_->count_; i < k; i++ ){
-    mdword_t x = mdword_t(s) - vdata[i];
-    lv = mword_t(x) + overflow;
+    mdword_t x = mdword_t(s) - vdata[i] + overflow;
+    lv = mword_t(x);
     zero = lv == 0 && zero;
     overflow = mword_t(x >> (sizeof(mdword_t) * 8 / 2));
   }
-  return zero ? 0 : lv == 0 ? 1 : lv;
+  return zero ? 0 : lv >= 0 ? 1 : -1;
+}
+//------------------------------------------------------------------------------
+VarInteger VarInteger::nodNok(const VarInteger & divider,VarInteger * nok) const
+{
+  if( divider.isZero() ){ int zero = 0; zero /= zero; }
+  VarInteger x(abs()), y(divider.abs()), u, v, q, g;
+  if( isZero() ){
+    x = 0;
+    if( nok != NULL ) *nok = 0;
+  }
+  else {
+    intptr_t c;
+    u = y;
+    v = x;
+    for(;;){
+      c = x.compare(y);
+      if( c > 0 ){
+        if( nok != NULL ) g = u;
+        for( q = y; x - (q << 1u) >= y; q <<= 1u ) if( nok != NULL ) g <<= 1u;
+        x -= q;
+        if( nok != NULL ) v += g;
+      }
+      else if( c < 0 ){
+        if( nok != NULL ) g = v;
+        for( q = x; y - (q << 1u) >= x; q <<= 1u ) if( nok != NULL ) g <<= 1u;
+        y -= q;
+        if( nok != NULL ) u += g;
+      }
+      else if( c == 0 ) break;
+    }
+    if( nok != NULL ) *nok = (u + v) >> 1u;
+  }
+  return x;
 }
 //------------------------------------------------------------------------------
 VarInteger VarInteger::div(const VarInteger & divider,VarInteger * remainder) const
@@ -459,14 +545,13 @@ VarInteger VarInteger::div(const VarInteger & divider,VarInteger * remainder) co
   mod = abs();
   VarInteger summ;
   if( !isZero() ){
-    VarInteger one(1);
-    VarInteger divr(divider.abs());
-    uintptr_t shift;
+    VarInteger divr(divider.abs()), one(&defaultOne);
 
     if( divr.isOne() ){
       summ = mod;
     }
     else {
+      uintptr_t shift;
       while( mod >= divr ){
         intptr_t k = mod.getFirstSignificantBitIndex() - divr.getFirstSignificantBitIndex() - 1;
         for( shift = k <= 0 ? 1 : k; (divr << shift) <= mod; shift++ );
@@ -491,10 +576,11 @@ uintptr_t VarInteger::print(char * s,uintptr_t pow) const
 {
   char * p = s;
   uintptr_t l = 0;
-  VarInteger m(*this), q;
+  VarInteger m(*this), q, ten(pow);
   do {
-    m = m.div(10,&q);
-    if( s != NULL ) *s++ = char(q.abs().asUIntPtrT()) + '0';
+    m = m.div(ten,&q);
+    char c(q.abs().asUIntPtrT());
+    if( s != NULL ) *s++ = c + (c < 10 ? '0' : 'A');
     l++;
   } while( !m.isZero() );
   if( isNeg() ) if( s != NULL ){ *s++ = '-'; l++; }
@@ -532,6 +618,27 @@ intptr_t VarInteger::getFirstSignificantBitIndex() const
   return i * sizeof(mword_t) * 8 + j;
 }
 //------------------------------------------------------------------------------
+VarInteger VarInteger::pow(uintptr_t pow) const
+{
+  VarInteger t(&defaultOne);
+  for( uintptr_t i = 1; i <= pow; i++ ) t *= *this;
+  return t;
+}
+//------------------------------------------------------------------------------
+VarInteger VarInteger::pow10(uintptr_t pow) const
+{
+  VarInteger t(&defaultOne);
+  for( uintptr_t i = 1; i <= pow; i++ ) t = (t << 3u) + (t << 1u);
+  return t;
+}
+//------------------------------------------------------------------------------
+VarInteger VarInteger::mul10(uintptr_t pow) const
+{
+  VarInteger t(*this);
+  for( uintptr_t i = 0; i < pow; i++ ) t = (t << 3u) + (t << 1u);
+  return t;
+}
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 VarNumber::~VarNumber()
@@ -542,10 +649,27 @@ VarNumber::VarNumber()
 {
 }
 //------------------------------------------------------------------------------
+VarNumber::VarNumber(const VarInteger & v) : numerator_(v), denominator_(&defaultOne)
+{
+}
+//------------------------------------------------------------------------------
 VarNumber::VarNumber(const VarNumber & v) :
   numerator_(v.numerator_),
   denominator_(v.denominator_)
 {
+}
+//------------------------------------------------------------------------------
+VarNumber::VarNumber(const VarInteger & numerator,const VarInteger & denominator) :
+  numerator_(numerator),
+  denominator_(denominator.abs())
+{
+}
+//------------------------------------------------------------------------------
+VarNumber & VarNumber::operator = (const VarInteger & v)
+{
+  numerator_ = v;
+  denominator_ = &defaultOne;
+  return *this;
 }
 //------------------------------------------------------------------------------
 VarNumber & VarNumber::operator = (const VarNumber & v)
@@ -553,6 +677,205 @@ VarNumber & VarNumber::operator = (const VarNumber & v)
   numerator_ = v.numerator_;
   denominator_ = v.denominator_;
   return *this;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator + (const VarInteger & v) const
+{
+  return VarNumber(numerator_ + v * denominator_,denominator_);
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator + (const VarNumber & v) const
+{
+  return VarNumber(numerator_ * v.denominator_ + v.numerator_ * denominator_,denominator_ * v.denominator_);
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator - (const VarInteger & v) const
+{
+  return VarNumber(numerator_ - v * denominator_,denominator_);
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator - (const VarNumber & v) const
+{
+  return VarNumber(numerator_ * v.denominator_ - v.numerator_ * denominator_,denominator_ * v.denominator_);
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator * (const VarInteger & v) const
+{
+  return VarNumber(numerator_ * v,denominator_);
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator * (const VarNumber & v) const
+{
+  return VarNumber(numerator_ * v.numerator_,denominator_ * v.denominator_);
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator / (const VarInteger & v) const
+{
+  if( v.isZero() ){ int zero = 0; zero /= zero; }
+  VarNumber t(numerator_.abs(),denominator_ * v.abs());
+  if( (numerator_.isNeg() ^ v.isNeg()) != 0 ) t.numerator_ = -t.numerator_;
+  return t;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator / (const VarNumber & v) const
+{
+  VarNumber t(numerator_.abs() * v.denominator_,denominator_ * v.numerator_.abs());
+  if( (numerator_.isNeg() ^ v.numerator_.isNeg()) != 0 ) t.numerator_ = -t.numerator_;
+  return t;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::operator - () const
+{
+  return VarNumber(-numerator_,denominator_);
+}
+//------------------------------------------------------------------------------
+VarInteger::mint_t VarNumber::compare(const VarNumber & v) const
+{
+  VarNumber t(*this - v);
+  return t.isNeg() ? -1 : t.isZero() ? 0 : 1;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::simplify() const
+{
+  VarNumber t(*this);
+  if( t.numerator_.isZero() ){
+    VarInteger nod(t.numerator_.nodNok(t.denominator_,NULL));
+/* упрощаем дробь через наибольший общий делитель */
+    t.numerator_ /= nod;
+    t.denominator_ /= nod;
+  }
+  return t;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::sqrt(uintptr_t sqrtpow,uintptr_t iter) const
+{
+  VarNumber root;
+  if( (sqrtpow & 1) == 0 ) root = abs(); else root = *this;
+  if( root.isZero() ){
+    root = 0;
+  }
+  else if( root.isOne() ){
+    root = &defaultOne;
+  }
+  else {
+    VarInteger y(root.numerator_ * root.denominator_);
+    y >>= y.getFirstSignificantBitIndex() / 2;
+    VarNumber a(y >> 1u), b(y);
+    VarNumber m, mm;
+    for( uintptr_t n = 0; a < b && n < iter; n++ ){
+      m = a + (b - a).sar(1);
+      //m = m.simplify();
+      //AutoPtr<char> s3((char *) kmalloc(m.print() + 1));
+      //m.print(s3);
+      mm = m.pow(sqrtpow);
+      //mm = mm.simplify();
+      if( mm < root ) a = m; else if( mm > root ) b = m; else break;
+    }
+    root = m;
+  }
+  return root;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::abs() const
+{
+  return VarNumber(numerator_.abs(),denominator_);
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::pow(intptr_t pow) const
+{
+  VarNumber t(&defaultOne);
+  while( pow < 0 ){
+    t /= *this;
+    pow++;
+  }
+  while( pow > 0 ){
+    t *= *this;
+    pow--;
+  }
+  return t;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::sal(uintptr_t v) const
+{
+  VarNumber t(*this);
+  t.numerator_ <<= v;
+  return t;
+}
+//------------------------------------------------------------------------------
+VarNumber VarNumber::sar(uintptr_t v) const
+{
+  VarNumber t(*this);
+  t.denominator_ <<= v;
+  return t;
+}
+//------------------------------------------------------------------------------
+uintptr_t VarNumber::print(char * s,uintptr_t width,uintptr_t precision,uintptr_t fmt) const
+{
+  char * p = s;
+  uintptr_t l = 0, l2;
+  VarInteger exp = 0;
+  VarNumber e(*this);
+  if( (fmt & fmtExponent) != 0 ){
+    for(;;){
+      if( e <= VarInteger(-10) || e >= VarInteger(+10) ){
+        e /= VarInteger(10);
+        exp--;
+      }
+      else if( e < VarInteger(-1) || e < VarInteger(&defaultOne) ){
+        e *= VarInteger(10);
+        exp++;
+      }
+      else break;
+    }
+  }
+  VarInteger remainder, q;
+  q = e.numerator_.div(e.denominator_,&remainder);
+  if( !q.isNeg() && (fmt & fmtSign) != 0 ){ if( s != NULL ) *s++ = '+'; l++; }
+  l2 = q.print(s,10);
+  l += l2;
+  if( s != NULL ) s += l2;
+  //if( width != 0 ){
+  //  wchar_t c = (fmt & fmtLeadZeros) != 0 ? '0' : ' ';
+  //  if( (fmt & fmtLeftJustifies) == 0 ){
+  //    intptr_t i = isdigit(p[0]) ? 0 : 1;
+  //    while( uintptr_t(t.Len() - i) < precision ) t.Paste(i,c);
+  //  }
+  //}
+  remainder = remainder.abs();
+  if( s != NULL ) *s++ = '.';
+  l++;
+  char * fraction = s;
+  do {
+    remainder = remainder.mul10();
+    l2 = remainder.div(e.denominator_,&q).print(s == NULL ? NULL : fraction,10);
+    l += l2;
+    fraction += l2;
+    remainder = q;
+    if( precision == 0 ){
+      ldouble a = (e.numerator_.container_->count_ + e.denominator_.container_->count_) * sizeof(VarInteger::mword_t) * 8 / 4;
+      if( fraction - s > 0.625 * a ) break;
+    }
+    else {
+      if( precision != 0 && uintptr_t(fraction - s) >= precision ) break;
+    }
+  } while( !remainder.isZero() );
+  s = fraction;
+  //if( precision != 0 ){
+  //  while( s - fraction < precision ){ if( s != NULL ) *s++ = '0'; l++; }
+  //  if( s - fraction > precision ) fraction.Delete(fraction.Len() - precision,fraction.Len() - precision);
+  //}
+  if( (fmt & fmtExponent) != 0 ){
+    if( s != NULL ) *s++ = 'E';
+    l++;
+    if( exp > 0 ){
+      if( s != NULL ) *s++ = '+';
+      l++;
+    }
+    l2 = exp.print(s,10);
+    l += l2;
+    if( s != NULL ) s += l2;
+  }
+  return l;
 }
 //------------------------------------------------------------------------------
 } // namespace ksys
