@@ -83,6 +83,9 @@ class AsyncFile : public AsyncDescriptor {
 
         uint64_t tell();
         LineGetBuffer & seek(uint64_t pos);
+        bool gets(utf8::String & str) { return file_->gets(str,this); }
+        intptr_t getc(LineGetBuffer * buffer = NULL) { return file_->getc(this); }
+        static bool eof(intptr_t c) { return c == ~(~uintptr_t(0) >> 1); }
 
         AsyncFile * file_;
         AutoPtr<uint8_t> buffer_;
@@ -95,6 +98,8 @@ class AsyncFile : public AsyncDescriptor {
 	      bool detectUnicodeFFFE_;
     };
     bool gets(utf8::String & str,LineGetBuffer * buffer = NULL);
+    intptr_t getc(LineGetBuffer * buffer = NULL);
+    static bool eof(intptr_t c) { return c == ~(~uintptr_t(0) >> 1); }
 
     const utf8::String & fileName() const;
     AsyncFile & fileName(const utf8::String & name);

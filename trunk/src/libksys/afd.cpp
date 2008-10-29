@@ -1166,6 +1166,54 @@ l1:
   return eof;
 }
 //---------------------------------------------------------------------------
+intptr_t AsyncFile::getc(LineGetBuffer * buffer)
+{
+  intptr_t c = 0;
+  if( buffer == NULL ){
+    int64_t r = read(&c,1);
+    if( r != 1 ) c = ~(~uintptr_t(0) >> 1);
+  }
+  else {
+    int64_t r;
+    if( buffer->size_ == 0 ) buffer->size_ = getpagesize() * 16;
+    if( buffer->buffer_ == (const uint8_t *) NULL ) buffer->buffer_.alloc(buffer->size_);
+    if( buffer->pos_ >= buffer->len_ ){
+      if( buffer->len_ == 0 ){
+        buffer->bufferFilePos_ = tell();
+        r = read(buffer->buffer_,buffer->size_);
+      }
+      else {
+    	  if( seekable_ )
+          r = read(buffer->bufferFilePos_ + buffer->len_,buffer->buffer_,buffer->size_);
+        else
+          r = read(buffer->buffer_,buffer->size_);
+        buffer->bufferFilePos_ += buffer->pos_;
+        buffer->pos_ = buffer->len_ = 0;
+      }
+      if( r <= 0 ) return ~(~uintptr_t(0) >> 1);
+      if( seekable_ ) seek(buffer->bufferFilePos_);
+      buffer->len_ = (uintptr_t) r;
+      buffer->pos_ = 0;
+    }
+    if( buffer->detectUnicodeFFFE_ && buffer->bufferFilePos_ == 0 && buffer->pos_ == 0 && buffer->len_ >= 2 &&
+        buffer->buffer_[0] == 0xFF && buffer->buffer_[1] == 0xFE ){
+      buffer->pos_ += 2;
+      buffer->codePage_ = CP_UNICODE;
+    }
+    uintptr_t symSize;
+    if( buffer->codePage_ == CP_UNICODE ){
+      symSize = sizeof(wchar_t);
+    }
+    else {
+      symSize = sizeof(char);
+    }
+    memcpy(&c,&buffer->buffer_[buffer->pos_],symSize);
+    buffer->pos_ += symSize;
+    if( seekable_ ) seek(buffer->bufferFilePos_ + symSize);
+  }
+  return c;
+}
+//---------------------------------------------------------------------------
 uint64_t AsyncFile::LineGetBuffer::tell()
 {
   return bufferFilePos_ + pos_;

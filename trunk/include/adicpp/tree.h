@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -733,18 +733,29 @@ EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::saveEmbeddedTreeGraph(AsyncFile &
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-class RBTreeNode { // base class for deriving
+#ifdef _MSC_VER
+#pragma pack(push)
+#pragma pack(1)
+#elif defined(__BCPLUSPLUS__)
+#pragma option push -a1
+#endif
+class PACKED RBTreeNode { // base class for deriving
   public:
     RBTreeNode * left_;         /* left child */
     RBTreeNode * right_;        /* right child */
     RBTreeNode * parent_;       /* parent */
-    uintptr_t color_;             /* node color (BLACK, RED) */
+    uint8_t color_;             /* node color (BLACK, RED) */
     
     template <typename OT> inline
     OT & object(const RBTreeNode & node) const {
       return *(OT *) const_cast<uint8_t *>((const uint8_t *) this - uintptr_t(&node));
     }
 };
+#ifdef _MSC_VER
+#pragma pack(pop)
+#elif defined(__BCPLUSPLUS__)
+#pragma option pop
+#endif
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
@@ -821,36 +832,36 @@ class RBTree {
           y = x->parent_->parent_->right_;
           if( y->color_ == RED ){
     	      x->parent_->color_ = BLACK;
-	      y->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      x = x->parent_->parent_;
+	          y->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          x = x->parent_->parent_;
           }
           else {
-	      if( x == x->parent_->right_){
-	        x = x->parent_;
-	        rotateLeft(x);
-	      }
-	      x->parent_->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      rotateRight(x->parent_->parent_);
+	          if( x == x->parent_->right_){
+	            x = x->parent_;
+	            rotateLeft(x);
+	          }
+	          x->parent_->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          rotateRight(x->parent_->parent_);
           } 
         }
         else {
           y = x->parent_->parent_->left_;
           if( y->color_ == RED ){
-	      x->parent_->color_ = BLACK;
-	      y->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      x = x->parent_->parent_;
+	          x->parent_->color_ = BLACK;
+	          y->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          x = x->parent_->parent_;
           }
           else {
-	      if( x == x->parent_->left_ ){
-	        x = x->parent_;
-	        rotateRight(x);
-	      }
-	      x->parent_->color_ = BLACK;
-	      x->parent_->parent_->color_ = RED;
-	      rotateLeft(x->parent_->parent_);
+	          if( x == x->parent_->left_ ){
+	            x = x->parent_;
+	            rotateRight(x);
+	          }
+	          x->parent_->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          rotateLeft(x->parent_->parent_);
           } 
         }
       }
@@ -901,6 +912,26 @@ class RBTree {
         removeFixup(x);
       }
       count_--;
+      return *this;
+    }
+
+    RBTree<OT,PT,O2N,N2O,CO> & replace(const OT & oldObject,const OT & newObject)
+    {
+      RBTreeNode * oldNode = &O2N(oldObject,param_);
+      RBTreeNode * newNode = &O2N(newObject,param_);
+      newNode->parent_ = oldNode->parent_;
+      newNode->left_ = oldNode->left_;
+      newNode->right_ = oldNode->right_;
+      newNode->color_ = oldNode->color_;
+      if( root_->left_ == oldNode ) root_->left_ = newNode;
+      if( oldNode->parent_->left_ == oldNode ){
+        oldNode->parent_->left_ = newNode;
+      }
+      else {
+        oldNode->parent_->right_ = newNode;
+      }
+      if( oldNode->left_ != &sentinel_ ) oldNode->left_->parent_ = newNode;
+      if( oldNode->right_ != &sentinel_ ) oldNode->right_->parent_ = newNode;
       return *this;
     }
 
@@ -1223,53 +1254,53 @@ class RBTree {
         if( x == x->parent_->left_ ){
           w = x->parent_->right_;
           if( w->color_ == RED ){
-	      w->color_ = BLACK;
-	      x->parent_->color_ = RED;
-	      rotateLeft(x->parent_);
-	      w = x->parent_->right_;
+	          w->color_ = BLACK;
+	          x->parent_->color_ = RED;
+	          rotateLeft(x->parent_);
+	          w = x->parent_->right_;
           }
           if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
-	      w->color_ = RED;
-	      x = x->parent_;
+	          w->color_ = RED;
+	          x = x->parent_;
           }
           else {
-	      if( w->right_->color_ != RED ){
-	        w->left_->color_ = BLACK;
-	        w->color_ = RED;
-	        rotateRight(w);
-	        w = x->parent_->right_;
-	      }
-	      w->color_ = x->parent_->color_;
-	      x->parent_->color_ = BLACK;
-	      w->right_->color_ = BLACK;
-	      rotateLeft(x->parent_);
-	      x = rootLeft; /* this is to exit while loop */
+	          if( w->right_->color_ != RED ){
+	            w->left_->color_ = BLACK;
+	            w->color_ = RED;
+	            rotateRight(w);
+	            w = x->parent_->right_;
+	          }
+	          w->color_ = x->parent_->color_;
+	          x->parent_->color_ = BLACK;
+	          w->right_->color_ = BLACK;
+	          rotateLeft(x->parent_);
+	          x = rootLeft; /* this is to exit while loop */
           }
         }
         else { /* the code below is has left and right switched from above */
           w = x->parent_->left_;
           if( w->color_ == RED ){
-	      w->color_ = BLACK;
-	      x->parent_->color_ = RED;
-	      rotateRight(x->parent_);
-	      w = x->parent_->left_;
+	          w->color_ = BLACK;
+	          x->parent_->color_ = RED;
+	          rotateRight(x->parent_);
+	          w = x->parent_->left_;
           }
           if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
-	      w->color_ = RED;
-	      x = x->parent_;
+	          w->color_ = RED;
+	          x = x->parent_;
           }
           else {
-	      if( w->left_->color_ != RED ){
-	        w->right_->color_ = BLACK;
-	        w->color_ = RED;
-	        rotateLeft(w);
-	        w = x->parent_->left_;
-	      }
-	      w->color_ = x->parent_->color_;
-	      x->parent_->color_ = BLACK;
-	      w->left_->color_ = BLACK;
-	      rotateRight(x->parent_);
-	      x = rootLeft; /* this is to exit while loop */
+	          if( w->left_->color_ != RED ){
+	            w->right_->color_ = BLACK;
+	            w->color_ = RED;
+	            rotateLeft(w);
+	            w = x->parent_->left_;
+	          }
+	          w->color_ = x->parent_->color_;
+	          x->parent_->color_ = BLACK;
+	          w->left_->color_ = BLACK;
+	          rotateRight(x->parent_);
+	          x = rootLeft; /* this is to exit while loop */
           }
         }
       }
@@ -1302,18 +1333,18 @@ class RBTree {
       intptr_t c = 0;
       while( x != &sentinel_ ){
         y = x;
-        c = CO(N2O(*x,param_),N2O(*z,param_),param_);
-        if( c > 0 ){
+        c = CO(N2O(*z,param_),N2O(*x,param_),param_);
+        if( c < 0 ){
           x = x->left_;
         }
-        else if( c < 0 ){
+        else if( c > 0 ){
           x = x->right_;
         }
         else
           return x;
       }
       z->parent_ = y;
-      if( y == root_ || c > 0 ){ 
+      if( y == root_ || c < 0 ){ 
         y->left_ = z;
       }
       else {
