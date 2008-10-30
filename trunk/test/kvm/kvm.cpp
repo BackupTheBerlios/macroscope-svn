@@ -165,7 +165,7 @@ class Encoder2 {
     uintptr_t mlen_; // maximum look ahead string length
     uintptr_t mnct_; // maximum nodes count
 
-    Encoder & initialize()
+    Encoder2 & initialize()
     {
       apos_ = 0;
       alen_ = 0;
@@ -187,7 +187,7 @@ class Encoder2 {
       return *this;
     }
 
-    Encoder & encode(AsyncFile::LineGetBuffer & lgb,AsyncFile & out)
+    Encoder2 & encode(AsyncFile::LineGetBuffer & lgb,AsyncFile & out)
     {
       Node & ahead = ahead_;
       intptr_t c = 0;
@@ -238,11 +238,19 @@ class Encoder2 {
     }
 };
 //------------------------------------------------------------------------------
-class Encoder {
+class LZKFilter {
   public:
+    LZKFilter & initializeEncoder();
+    LZKFilter & encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+    LZKFilter & flush(void * out,uintptr_t * wb = NULL);
+    LZKFilter & encode(AsyncFile & inp,AsyncFile & out);
+    LZKFilter & initializeDecoder();
+    LZKFilter & decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+    LZKFilter & decode(AsyncFile & inp,AsyncFile & out);
+  protected:
     struct Node;
     struct TreeParams {
-      Encoder * encoder_;
+      LZKFilter * filter_;
       Node * dict_;
       uintptr_t dmsk_;
       uintptr_t mlen_;
@@ -258,6 +266,7 @@ class Encoder {
     struct PACKED Node {
       mutable RBTreeNode treeNode_;
       mutable uint8_t c_;
+      mutable uint8_t alignment_[(sizeof(RBTreeNode) < 16 ? 16 : 32) - sizeof(RBTreeNode) - 1];
 
       Node & operator = (const Node & )
       {
@@ -275,8 +284,8 @@ class Encoder {
       }
 
       static intptr_t treeCO(const Node & a0,const Node & a1,TreeParams * params){
-        intptr_t c, cc = 0, l = params->mlen_;
-        intptr_t s1 = &a0 - params->dict_, s2 = &a1 - params->dict_;
+        intptr_t c, s1 = &a0 - params->dict_, s2 = &a1 - params->dict_;
+        uintptr_t l = params->mlen_;
         do {
           c = intptr_t(params->dict_[s1].c_) - params->dict_[s2].c_;
           if( c != 0 ) break;
@@ -285,7 +294,7 @@ class Encoder {
         } while( --l > 0 );
         l = params->mlen_ - l;
         if( l > params->bestMatchLen_ ){
-          params->bestMatchNode_ = params->dict_ + s2;
+          params->bestMatchNode_ = params->dict_ + s2 - l;
           params->bestMatchLen_ = l;
         }
         return c;
@@ -308,6 +317,7 @@ class Encoder {
     NodeTree tree_;
     TreeParams params_;
 
+    // encoder stateful variables
     AutoPtr<Node> nodes_;
     Node * dict_;
     uintptr_t dpos_;
@@ -315,47 +325,211 @@ class Encoder {
     uintptr_t dmsk_; // dict mask
     uintptr_t alen_; // look ahead string length
     uintptr_t mlen_; // maximum look ahead string length
+    intptr_t dlen_;
+    uintmax_t lstat_[8];
 
-    Encoder & initialize()
-    {
-      dpos_ = 0;
-      alen_ = 0;
-      mlen_ = 8;
-      dcnt_ = 8192;
-      dmsk_ = dcnt_ - 1;
-      nodes_.reallocT(dcnt_);
-      memset(dict_ = nodes_,0,dcnt_);
-      params_.encoder_ = this;
-      params_.dict_ = dict_;
-      params_.dmsk_ = dmsk_;
-      params_.mlen_ = mlen_;
-      params_.bestMatchNode_ = NULL;
-      params_.bestMatchLen_ = 0;
-      tree_.param(&params_);
-      return *this;
-    }
+    // decoder stateful variables
+    AutoPtr<uint8_t> ddict_;
+    uintptr_t ddpos_;
+    uintptr_t dcpos_;
+    uintptr_t ddcnt_; // decode dict size
+    uintptr_t ddmsk_; // decode dict mask
+    uintptr_t ddlen_;
 
-    Encoder & encode(AsyncFile::LineGetBuffer & lgb,AsyncFile & out)
-    {
-      intptr_t c = 0;
-      for(;;){
-        while( alen_ < mlen_ ){
-          c = lgb.getc();
-          if( lgb.eof(c) ) break;
-          dict_[dpos_].c_ = uint8_t(c);
-          dpos_ = (dpos_ + 1) & dmsk_;
-          alen_++;
-        }
-        if( alen_ == 0 ) break;
-        params_.bestMatchNode_ = NULL;
-        params_.bestMatchLen_ = 0;
-        Node * p, * node = tree_.insert(dict_ + apos_,false,false,&p);
-        assert( params_.bestMatchNode_ != NULL );
-
-      }
-      return *this;
-    }
+    enum { stInit, stInp, stOut } eState_, dState_;
+  private:
 };
+//------------------------------------------------------------------------------
+LZKFilter & LZKFilter::initializeEncoder()
+{
+  dpos_ = 0;
+  alen_ = 0;
+  mlen_ = 8;
+  dlen_ = 0;
+  eState_ = stInit;
+  dcnt_ = 8192;
+  dmsk_ = dcnt_ - 1;
+  nodes_.reallocT(dcnt_);
+  memset(dict_ = nodes_,0,dcnt_ * sizeof(Node));
+  memset(lstat_,0,sizeof(lstat_));
+  params_.filter_ = this;
+  params_.dict_ = dict_;
+  params_.dmsk_ = dmsk_;
+  params_.mlen_ = mlen_;
+  params_.bestMatchNode_ = NULL;
+  params_.bestMatchLen_ = 0;
+  tree_.param(&params_);
+  return *this;
+}
+//------------------------------------------------------------------------------
+LZKFilter & LZKFilter::encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
+{
+  if( eState_ == stInit ){
+    while( alen_ < mlen_ ){
+      if( inpSize == 0 ){
+        eState_ = stInp;
+        return *this;
+      }
+      dict_[(dpos_ + alen_) & dmsk_].c_ = *(const uint8_t *) inp;
+      alen_ += sizeof(uint8_t);
+      inp = (const uint8_t *) inp + sizeof(uint8_t);
+      inpSize -= sizeof(uint8_t);
+      if( rb != NULL ) *rb += sizeof(uint8_t);
+    }
+    goto init;
+  }
+  if( eState_ == stInp ) goto inp;
+  if( eState_ == stOut ) goto out;
+  for(;;){
+    do {
+inp:  Node * p = dict_ + ((dpos_ + mlen_) & dmsk_);
+      if( p->treeNode_.parent_ != NULL ) tree_.remove(*p);
+      if( inpSize == 0 ){
+        eState_ = stInp;
+        return *this;
+      }
+      p->c_ = *(const uint8_t *) inp;
+      inp = (const uint8_t *) inp + sizeof(uint8_t);
+      inpSize -= sizeof(uint8_t);
+      if( rb != NULL ) *rb += sizeof(uint8_t);
+      dpos_ = (dpos_ + sizeof(uint8_t)) & dmsk_;
+init: params_.bestMatchNode_ = dict_ + dict_[dpos_].c_;
+      params_.bestMatchLen_ = 1;
+      tree_.insert(dict_[dpos_],false,false);
+    } while( --dlen_ >= 0 );
+    dlen_ = params_.bestMatchLen_ - 1;
+out:
+    if( outSize < sizeof(uint16_t) ){
+      eState_ = stOut;
+      return *this;
+    }
+    lstat_[dlen_]++;
+    *(uint16_t *) out = uint16_t(dlen_ | ((params_.bestMatchNode_ - dict_) << 3));
+    out = (uint8_t *) out + sizeof(uint16_t);
+    outSize -= sizeof(uint16_t);
+    if( wb != NULL ) *wb += sizeof(uint16_t);
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+LZKFilter & LZKFilter::flush(void * out,uintptr_t * wb)
+{
+  if( eState_ == stInit ) return *this;
+  if( eState_ == stOut ) goto out;
+  for(;;){
+    do {
+      dict_[(dpos_ + mlen_) & dmsk_].c_ = 0;
+      dpos_ = (dpos_ + 1) & dmsk_;
+      if( --alen_ == 0 ){
+        eState_ = stInit;
+        return *this;
+      }
+    } while( --dlen_ >= 0 );
+    params_.bestMatchNode_ = dict_ + dict_[dpos_].c_;
+    params_.bestMatchLen_ = 1;
+    tree_.find(dict_[dpos_]);
+    dlen_ = tmin(alen_,params_.bestMatchLen_) - 1;
+out:
+    lstat_[dlen_]++;
+    *(uint16_t *) out = uint16_t(dlen_ | ((params_.bestMatchNode_ - dict_) << 3));
+    out = (uint8_t *) out + sizeof(uint16_t);
+    if( wb != NULL ) *wb += sizeof(uint16_t);
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+LZKFilter & LZKFilter::encode(AsyncFile & inp,AsyncFile & out)
+{
+  uintptr_t rbs = getpagesize() * 16;
+  uintptr_t wbs = getpagesize() * 16;
+  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  uintptr_t rb = 0, wb = 0;
+  int64_t r;
+  while( (r = inp.read(inpBuffer,rbs)) > 0 ){
+    while( rb < uintptr_t(r) ){
+      encodeBuffer(&inpBuffer[rb],uintptr_t(r) - rb,&outBuffer[wb],wbs - wb,&rb,&wb);
+      if( wb == wbs ){
+        out.writeBuffer(outBuffer,wbs);
+        wb = 0;
+      }
+    }
+    rb = 0;
+  }
+  out.writeBuffer(outBuffer,wb);
+  wb = 0;
+  flush(outBuffer,&wb);
+  out.writeBuffer(outBuffer,wb);
+  return *this;
+}
+//------------------------------------------------------------------------------
+LZKFilter & LZKFilter::initializeDecoder()
+{
+  ddpos_ = 0;
+  ddcnt_ = 8192;
+  ddmsk_ = dcnt_ - 1;
+  dState_ = stInit;
+  ddict_.reallocT(ddcnt_);
+  memset(ddict_,0,ddcnt_);
+  return *this;
+}
+//------------------------------------------------------------------------------
+LZKFilter & LZKFilter::decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
+{
+  uint8_t * dict = ddict_;
+  if( dState_ == stOut ) goto out;
+  for(;;){
+    if( inpSize == 0 ){
+      dState_ = stInp;
+      return *this;
+    }
+    uint16_t code = *(const uint16_t *) inp;
+    inp = (const uint8_t *) inp + sizeof(uint16_t);
+    inpSize -= sizeof(uint16_t);
+    if( rb != NULL ) *rb += sizeof(uint16_t);
+    ddlen_ = (code & 7) + 1;
+    if( ddlen_ == 1 ){
+      dict[dcpos_ = ddpos_] = uint8_t(code >> 3);
+      goto out;
+    }
+    dcpos_ = code >> 3;
+    do {
+out:  if( outSize == 0 ){
+        dState_ = stOut;
+        return *this;
+      }
+      *(uint8_t *) out = dict[ddpos_] = dict[dcpos_];
+      out = (uint8_t *) out + sizeof(uint8_t);
+      outSize -= sizeof(uint8_t);
+      if( wb != NULL ) *wb += sizeof(uint8_t);
+      ddpos_ = (ddpos_ + 1) & ddmsk_;
+      dcpos_ = (dcpos_ + 1) & ddmsk_;
+    } while( --ddlen_ > 0 );
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+LZKFilter & LZKFilter::decode(AsyncFile & inp,AsyncFile & out)
+{
+  uintptr_t rbs = getpagesize() * 16;
+  uintptr_t wbs = getpagesize() * 16;
+  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  uintptr_t rb = 0, wb = 0;
+  int64_t r;
+  while( (r = inp.read(inpBuffer,rbs)) > 0 ){
+    while( rb < uintptr_t(r) ){
+      decodeBuffer(&inpBuffer[rb],uintptr_t(r) - rb,&outBuffer[wb],wbs - wb,&rb,&wb);
+      if( wb == wbs ){
+        out.writeBuffer(outBuffer,wbs);
+        wb = 0;
+      }
+    }
+    rb = 0;
+  }
+  out.writeBuffer(outBuffer,wb);
+  return *this;
+}
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
@@ -433,14 +607,34 @@ int main(int _argc,char * _argv[])
     AsyncFile::LineGetBuffer lgb(file);
     file.open();
 
-    AsyncFile out("C:/Korvin/trunk/test/kvm/test.out");
-    out.createIfNotExist(true).open().resize(0);
+    AsyncFile encFile("C:/Korvin/trunk/test/kvm/test.enc");
+    encFile.createIfNotExist(true).open().resize(0);
 
-    Encoder enc;
-    enc.initialize();
-    enc.encode(lgb,out);
+    AsyncFile decFile("C:/Korvin/trunk/test/kvm/test.dec");
+    decFile.createIfNotExist(true).open().resize(0);
+
+    uint64_t ellapsed;
+
+    LZKFilter filter;
+    filter.initializeEncoder();
+    ellapsed = gettimeofday();
+    filter.encode(file,encFile);
+    ellapsed = gettimeofday() - ellapsed;
+    fprintf(stderr,"encode: ellapsed %s, %lf kbps\n",
+      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+      (file.size() * 1000000. / ellapsed) / 1024
+    );
+    encFile.seek(0);
+    filter.initializeDecoder();
+    ellapsed = gettimeofday();
+    filter.decode(encFile,decFile);
+    ellapsed = gettimeofday() - ellapsed;
+    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    );
+    return 0;
 //
-
 
     stdErr.fileName(includeTrailingPathDelimiter(SYSLOG_DIR(kvm_version.tag_)) + kvm_version.tag_ + ".log");
     Config::defaultFileName(SYSCONF_DIR("") + kvm_version.tag_ + ".conf");

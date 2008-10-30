@@ -911,6 +911,7 @@ class RBTree {
       else if( y->color_ != RED ){
         removeFixup(x);
       }
+      z->parent_ = z->right_ = z->left_ = NULL;
       count_--;
       return *this;
     }

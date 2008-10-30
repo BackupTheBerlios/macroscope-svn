@@ -1168,10 +1168,10 @@ l1:
 //---------------------------------------------------------------------------
 intptr_t AsyncFile::getc(LineGetBuffer * buffer)
 {
-  intptr_t c = 0;
+  intptr_t c = ~(~uintptr_t(0) >> 1);
   if( buffer == NULL ){
     int64_t r = read(&c,1);
-    if( r != 1 ) c = ~(~uintptr_t(0) >> 1);
+    if( r == 1 ) c &= 0xff;
   }
   else {
     int64_t r;
@@ -1209,7 +1209,7 @@ intptr_t AsyncFile::getc(LineGetBuffer * buffer)
     }
     memcpy(&c,&buffer->buffer_[buffer->pos_],symSize);
     buffer->pos_ += symSize;
-    if( seekable_ ) seek(buffer->bufferFilePos_ + symSize);
+    if( seekable_ ) seek(buffer->bufferFilePos_ + buffer->pos_);
   }
   return c;
 }
