@@ -44,199 +44,195 @@ using namespace ksys;
 using namespace ksys::kvm;
 using namespace adicpp;
 //------------------------------------------------------------------------------
-class Encoder2 {
+class RangeCoderFilter32 {
   public:
-    struct Node;
-    struct TreeParams {
-      uintptr_t pos_;
-      Node * bestMatchNode_;
-      Node * worstMatchNode_;
-    };
-#ifdef _MSC_VER
-#pragma pack(push)
-#pragma pack(1)
-#elif defined(__BCPLUSPLUS__)
-#pragma option push -a1
-#endif
-    struct PACKED Node {
-      mutable RBTreeNode treeNode_;
-      mutable uint8_t len_;
-      mutable uint16_t idx_;
-      mutable uint8_t data_[1];
+    RangeCoderFilter32 & initializeEncoder();
+    RangeCoderFilter32 & encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+    RangeCoderFilter32 & flush(void * out,uintptr_t * wb);
+    RangeCoderFilter32 & encode(AsyncFile & inp,AsyncFile & out);
 
-      Node & operator = (const Node & )
-      {
-        assert(0);
-        return *this;
-      }
+    RangeCoderFilter32 & initializeDecoder();
+    RangeCoderFilter32 & decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+    RangeCoderFilter32 & decode(AsyncFile & inp,AsyncFile & out);
+  private:
+	  static const uint32_t top_ = uint32_t(1) << 24;
+    static const uint32_t bottom_ = uint32_t(1) << 16;
+	  static const uint32_t maxRange_ = bottom_;
 
-      static RBTreeNode & treeO2N(const Node & object,TreeParams *){
-        return object.treeNode_;
-      }
+    // encoder stateful members
+    uint32_t eFreq_[257];
+    uint32_t eLow_;
+    uint32_t eRange_;
+    uintptr_t ec_;
 
-      static Node & treeN2O(const RBTreeNode & node,TreeParams *){
-        Node * p = NULL;
-        return node.object<Node>(p->treeNode_);
-      }
+    // decoder stateful members
+    uint32_t dFreq_[257];
+    uint32_t code_;
+    uint32_t dLow_;
+    uint32_t dRange_;
+    uintptr_t dc_;
+    uintptr_t di_;
 
-      static intptr_t treeCO(const Node & a0,const Node & a1,TreeParams * params){
-        return a0.memncmp2(a1,params);
-      }
+    enum { stInit, stInp, stOut } eState_, dState_;
 
-      intptr_t memncmp2(const Node & n,TreeParams * params) const
-      {
-        intptr_t c, cc = 0;
-        const uint8_t * s1 = data_ + params->pos_, * r1 = s1 + len_, * s2 = n.data_, * r2 = s2 + n.len_;
-        while( s1 < r1 && s2 < r2 ){
-          c = intptr_t(*s1) - *s2;
-          if( c != 0 ) goto e1;
-          cc++;
-          s1++;
-          s2++;
-        }
-        while( s1 < r1 ){
-          c = intptr_t(*s1) - 0;
-          if( c != 0 ) goto e1;
-          cc++;
-          s1++;
-        }
-        while( s2 < r2 ){
-          c = intptr_t(0) - *s2;
-          if( c != 0 ) break;
-          cc++;
-          s2++;
-        }
-        e1:
-        if( cc == n.len_ ){
-          if( params->bestMatchNode_ == NULL || len_ > params->bestMatchNode_->len_ ){
-            params->bestMatchNode_ = const_cast<Node *>(&n);
-          }
-          if( params->worstMatchNode_ == NULL || len_ < params->worstMatchNode_->len_ ){
-            params->worstMatchNode_ = const_cast<Node *>(&n);
-          }
-        }
-        return c;
-      }
-    };
-#ifdef _MSC_VER
-#pragma pack(pop)
-#elif defined(__BCPLUSPLUS__)
-#pragma option pop
-#endif
-
-    typedef
-      RBTree<
-        Node,
-        TreeParams,
-        Node::treeO2N,
-        Node::treeN2O,
-        Node::treeCO
-    > NodeTree;
-    NodeTree tree_;
-    Vector<Node> lru_;
-    TreeParams params_;
-
-    Node * newNode(uintptr_t len) const
+    void rescale(uint32_t * freq)
     {
-      Node * node = (Node *) kmalloc(sizeof(Node) + len - sizeof(node->data_));
-      node->len_ = uint8_t(len);
-      return node;
+	    for( uintptr_t i = 1; i <= 256; i++ ){
+		    freq[i] /= 2;
+		    if( freq[i] <= freq[i - 1]) freq[i] = freq[i - 1] + 1;
+	    }
     }
 
-    Node * newNode(uintptr_t len,const uint8_t * s) const
+    void update(uintptr_t c,uint32_t * freq)
     {
-      Node * node = newNode(len);
-      memcpy(node->data_,s,len);
-      return node;
-    }
-
-    Node * newNode(const Node & n,uintptr_t pos = 0,uintptr_t len = 0) const
-    {
-      uint8_t l = uint8_t(len == 0 ? n.len_ : len);
-      Node * node = (Node *) kmalloc(sizeof(Node) + l - sizeof(node->data_));
-      node->len_ = l;
-      memcpy(node->data_,n.data_ + pos,node->len_);
-      return node;
-    }
-
-    AutoPtr<Node> ahead_;
-    uintptr_t apos_;
-    uintptr_t alen_; // look ahead string length
-    uintptr_t mlen_; // maximum look ahead string length
-    uintptr_t mnct_; // maximum nodes count
-
-    Encoder2 & initialize()
-    {
-      apos_ = 0;
-      alen_ = 0;
-      mlen_ = 8;
-      mnct_ = 65536 - 1;
-      ahead_ = newNode(mlen_ * 2);
-      params_.pos_ = 0;
-      params_.bestMatchNode_ = params_.worstMatchNode_ = NULL;
-      tree_.param(&params_);
-      lru_.clear();
-      for( uintptr_t i = 0; i < 256; i++ ){
-        uint8_t s[1];
-        s[0] = uint8_t(i);
-        Node * node = newNode(1,s);
-        lru_.safeAdd(node);
-        tree_.insert(*node,true,false);
-        node->idx_ = uint16_t(lru_.count() - 1);
-      }
-      return *this;
-    }
-
-    Encoder2 & encode(AsyncFile::LineGetBuffer & lgb,AsyncFile & out)
-    {
-      Node & ahead = ahead_;
-      intptr_t c = 0;
-      for(;;){
-        while( alen_ < mlen_ ){
-          c = lgb.getc();
-          if( lgb.eof(c) ) break;
-          ahead.data_[apos_ + alen_] = uint8_t(c);
-          alen_++;
-        }
-        if( alen_ == 0 ) break;
-        ahead.len_ = uint8_t(alen_);
-        params_.pos_ = apos_;
-        params_.bestMatchNode_ = params_.worstMatchNode_ = NULL;
-        Node * node = tree_.find(ahead);
-        assert( params_.bestMatchNode_ != NULL );
-        assert( params_.worstMatchNode_ != NULL );
-        if( node == NULL ) node = params_.bestMatchNode_;
-        out.writeBuffer(&node->idx_,sizeof(node->idx_));
-        if( node->idx_ > 256 ){
-          lru_.xchg(node->idx_,node->idx_ - 1);
-          lru_[node->idx_].idx_ = node->idx_;
-          node->idx_--;
-        }
-        params_.pos_ = 0;
-        for( uintptr_t i = node->len_ + 1; i <= mlen_; i++ ){
-          Node * p = newNode(ahead,apos_,i), * p2, * p3;
-          params_.bestMatchNode_ = params_.worstMatchNode_ = NULL;
-          tree_.insert(*p,false,true,&p2);
-          p3 = tree_.find(*p);
-          if( p == p2 ){
-            p->idx_ = uint16_t(lru_.count());
-            lru_.safeAdd(p);
-            uint16_t idx = uint16_t(mnct_);
-            out.writeBuffer(&idx,sizeof(idx));
-            out.writeBuffer(&p->len_,sizeof(p->len_));
-            out.writeBuffer(p->data_,p->len_);
-          }
-        }
-        apos_ += node->len_;
-        alen_ -= node->len_;
-        if( apos_ >= mlen_ ){
-          memcpy(ahead.data_,ahead.data_ + apos_,alen_);
-          apos_ = 0;
-        }
-      }
-      return *this;
+      for( uintptr_t j = c + 1; j < 257; j++ ) freq[j]++;
+		  if( freq[256] >= maxRange_ ) rescale(freq);
     }
 };
+//------------------------------------------------------------------------------
+RangeCoderFilter32 & RangeCoderFilter32::initializeEncoder()
+{
+  eLow_ = 0;
+  eRange_ = int32_t(-1);
+	for( uintptr_t i = 0; i < sizeof(eFreq_) / sizeof(eFreq_[0]); i++ ) eFreq_[i] = uint32_t(i);
+  eState_ = stInit;
+  return *this;
+}
+//------------------------------------------------------------------------------
+RangeCoderFilter32 & RangeCoderFilter32::encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
+{
+  if( eState_ == stOut ) goto out;
+  for(;;){
+    if( inpSize == 0 ){
+      eState_ = stInp;
+      return *this;
+    }
+    ec_ = *(const uint8_t *) inp;
+    inp = (const uint8_t *) inp + sizeof(uint8_t);
+    inpSize -= sizeof(uint8_t);
+    if( rb != NULL ) *rb += sizeof(uint8_t);
+
+    uint32_t symbolLow = eFreq_[ec_], symbolHigh = eFreq_[ec_ + 1], totalRange = eFreq_[256];
+    eLow_ += symbolLow * (eRange_ /= totalRange);
+    eRange_ *= symbolHigh - symbolLow;
+
+    while( (eLow_ ^ (eLow_ + eRange_)) < top_ || eRange_ < bottom_ && ((eRange_ = -int32_t(eLow_) & (bottom_ - 1)),1) ){
+out:  if( outSize == 0 ){
+        eState_ = stOut;
+        return *this;
+      }	     
+      *(uint8_t *) out = uint8_t(eLow_ >> 24);
+      out = (uint8_t *) out + sizeof(uint8_t);
+      outSize -= sizeof(uint8_t);
+      if( wb != NULL ) *wb += sizeof(uint8_t);
+
+      eRange_ <<= 8;
+      eLow_ <<= 8;
+    }
+    update(ec_,eFreq_);
+	}
+  return *this;
+}
+//------------------------------------------------------------------------------
+RangeCoderFilter32 & RangeCoderFilter32::flush(void * out,uintptr_t * wb)
+{
+	for( uintptr_t i = 0; i < 4; i++ ){
+    *(uint8_t *) out = uint8_t(eLow_ >> 24);
+    out = (uint8_t *) out + sizeof(uint8_t);
+    if( wb != NULL ) *wb += sizeof(uint8_t);
+		eLow_ <<= 8;
+	}
+  return *this;
+}
+//------------------------------------------------------------------------------
+RangeCoderFilter32 & RangeCoderFilter32::encode(AsyncFile & inp,AsyncFile & out)
+{
+  uintptr_t rbs = getpagesize() * 16;
+  uintptr_t wbs = getpagesize() * 16;
+  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  uintptr_t rb = 0, wb = 0;
+  int64_t r;
+  while( (r = inp.read(inpBuffer,rbs)) > 0 ){
+    while( rb < uintptr_t(r) ){
+      encodeBuffer(&inpBuffer[rb],uintptr_t(r) - rb,&outBuffer[wb],wbs - wb,&rb,&wb);
+      if( wb == wbs ){
+        out.writeBuffer(outBuffer,wbs);
+        wb = 0;
+      }
+    }
+    rb = 0;
+  }
+  out.writeBuffer(outBuffer,wb);
+  wb = 0;
+  flush(outBuffer,&wb);
+  out.writeBuffer(outBuffer,wb);
+  return *this;
+}
+//------------------------------------------------------------------------------
+RangeCoderFilter32 & RangeCoderFilter32::initializeDecoder()
+{
+  eLow_ = 0;
+  eRange_ = int32_t(-1);
+	for( uintptr_t i = 0; i < sizeof(dFreq_) / sizeof(dFreq_[0]); i++ ) dFreq_[i] = uint32_t(i);
+	code_ = 0;
+  di_ = 0;
+  dState_ = stInit;
+  return *this;
+}
+//------------------------------------------------------------------------------
+RangeCoderFilter32 & RangeCoderFilter32::decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
+{
+  if( eState_ == stInp ) goto inp;
+  if( eState_ == stOut ) goto out;
+  if( dState_ == stInit ){
+	  while( di_ < 4 ){
+      if( inpSize == 0 ) return *this;
+		  code_ = (code_ << 8) | *(const uint8_t *) inp;
+      inp = (const uint8_t *) inp + sizeof(uint8_t);
+      inpSize -= sizeof(uint8_t);
+      if( rb != NULL ) *rb += sizeof(uint8_t);
+      di_++;
+	  }
+  }
+  for(;;){
+    uint32_t totalRange = dFreq_[256];
+    uint32_t count = (code_ - dLow_) / (dRange_ /= totalRange);
+  	for( dc_ = 255; dFreq_[dc_] > count; dc_-- );
+out:
+    if( outSize == 0 ){
+      dState_ = stOut;
+      return *this;
+    }	     
+    *(uint8_t *) out = uint8_t(dc_);
+    out = (uint8_t *) out + sizeof(uint8_t);
+    outSize -= sizeof(uint8_t);
+    if( wb != NULL ) *wb += sizeof(uint8_t);
+
+    uint32_t symbolLow = dFreq_[dc_], symbolHigh = dFreq_[dc_ + 1];
+    dLow_ += symbolLow * dRange_;
+    dRange_ *= symbolHigh - symbolLow;
+
+    while( (dLow_ ^ dLow_ + dRange_) < top_ || dRange_ < bottom_ && ((dRange_ = -int32_t(dLow_) & bottom_ - 1),1) ){
+inp:  if( inpSize == 0 ){
+        dState_ = stInp;
+        return *this;
+      }
+      code_ = code_ << 8 | *(const uint8_t *) inp;
+      inp = (const uint8_t *) inp + sizeof(uint8_t);
+      inpSize -= sizeof(uint8_t);
+      if( rb != NULL ) *rb += sizeof(uint8_t);
+
+      dRange_ <<= 8;
+      dLow_ <<= 8;
+    }
+
+    update(dc_,dFreq_);
+  }
+  return *this;
+}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 class LZKFilter {
   public:
@@ -615,10 +611,20 @@ int main(int _argc,char * _argv[])
 
     uint64_t ellapsed;
 
+    RangeCoderFilter32 filter2;
+    filter2.initializeEncoder();
+    ellapsed = gettimeofday();
+    filter2.encode(file,encFile);
+    ellapsed = gettimeofday() - ellapsed;
+    fprintf(stderr,"encode: ellapsed %s, %lf kbps\n",
+      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+      (file.size() * 1000000. / ellapsed) / 1024
+    );
+
     LZKFilter filter;
     filter.initializeEncoder();
     ellapsed = gettimeofday();
-    filter.encode(file,encFile);
+    filter.encode(file.seek(0),encFile);
     ellapsed = gettimeofday() - ellapsed;
     fprintf(stderr,"encode: ellapsed %s, %lf kbps\n",
       (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
