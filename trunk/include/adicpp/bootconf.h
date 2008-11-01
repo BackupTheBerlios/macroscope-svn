@@ -594,7 +594,11 @@ typedef int32_t gid_t;
 #endif
 
 #ifndef PACKED
+#ifdef _MSC_VER
+#define PACKED __declspec(align(1))
+#else
 #define PACKED
+#endif
 #endif
 
 #ifndef SYSCONF_DIR

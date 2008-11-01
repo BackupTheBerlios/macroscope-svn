@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,18 +36,18 @@ uint8_t MemoryManager::globalMemoryManagerHolder_[sizeof(MemoryManager)];
 //---------------------------------------------------------------------------
 void MemoryManager::initialize()
 {
-  interlockedCompareExchangeAcquire(globalMemoryManager().initMutex_,-1,0);
-  if( globalMemoryManager().initCount_ == 0 ) new (globalMemoryManagerHolder_) MemoryManager;
-  globalMemoryManager().initCount_++;
-  interlockedIncrement(globalMemoryManager().initMutex_,1);
+  //interlockedCompareExchangeAcquire(globalMemoryManager().initMutex_,-1,0);
+  //if( globalMemoryManager().initCount_ == 0 ) new (globalMemoryManagerHolder_) MemoryManager;
+  //globalMemoryManager().initCount_++;
+  //interlockedIncrement(globalMemoryManager().initMutex_,1);
 }
 //---------------------------------------------------------------------------
 void MemoryManager::cleanup()
 {
-  interlockedCompareExchangeAcquire(globalMemoryManager().initMutex_,-1,0);
-  if( globalMemoryManager().initCount_ == 1 ) globalMemoryManager().~MemoryManager();
-  globalMemoryManager().initCount_--;
-  interlockedIncrement(globalMemoryManager().initMutex_,1);
+  //interlockedCompareExchangeAcquire(globalMemoryManager().initMutex_,-1,0);
+  //if( globalMemoryManager().initCount_ == 1 ) globalMemoryManager().~MemoryManager();
+  //globalMemoryManager().initCount_--;
+  //interlockedIncrement(globalMemoryManager().initMutex_,1);
 }
 //---------------------------------------------------------------------------
 MemoryManager::~MemoryManager()
