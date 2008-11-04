@@ -375,9 +375,9 @@ inline void ksleep1()
 }
 //---------------------------------------------------------------------------
 struct Stat : public
-#if HAVE_STAT64
+#if SIZEOF_STAT64 > 0
 stat64
-#elif HAVE__STAT64
+#elif SIZEOF__STAT64 > 0
 _stat64
 #else
 stat
@@ -385,7 +385,7 @@ stat
 {
 };
 bool stat(const utf8::String & pathName,Stat * st = NULL);
-bool stat(const utf8::String & pathName,struct Stat & st);
+bool stat(const utf8::String & pathName,Stat & st);
 //---------------------------------------------------------------------------
 typedef utf8::String (* StrErrorHandler)(int32_t);
 typedef Array< StrErrorHandler> StrErrorHandlers;

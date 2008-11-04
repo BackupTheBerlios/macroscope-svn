@@ -205,11 +205,11 @@ file_t AsyncFile::openHelper()
       err = ENOTDIR;
     if( err == ENOTDIR && createPath_ && !readOnly_ ){
       createDirectory(getPathFromPathName(fileName_));
-      return openHelper(async);
+      return openHelper();
     }
     newObjectV1C2<Exception>(err,fileName_ + " " + __PRETTY_FUNCTION__)->throwSP();
   }
-  if( async ){
+  if( async_ ){
     int flags = fcntl(handle,F_GETFL,0);
     if( flags == -1 || fcntl(handle,F_SETFL,flags | O_NONBLOCK) == -1 ){
       err = errno;
@@ -241,7 +241,7 @@ file_t AsyncFile::dup() const
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();
   }
 #else
-  handle = dup(descriptor_);
+  handle = ::dup(descriptor_);
   if( handle == -1 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + fileName_)->throwSP();

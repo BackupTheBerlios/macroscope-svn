@@ -170,7 +170,17 @@ done:
   if( err != 0 && err != ERROR_PATH_NOT_FOUND && err != ERROR_FILE_NOT_FOUND && err != ERROR_INVALID_NAME )
     newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
 #else
-  if( stat((const char *) anyPathName2HostPathName(pathName).getANSIString(), &st) != 0 ){
+  utf8::AnsiString s(anyPathName2HostPathName(pathName).getANSIString());
+#if SIZEOF_STAT64 > 0
+  if( ::stat64((const char *) s,&st) != 0 )
+#elif SIZEOF__STAT64 > 0
+  if( ::_stat64((const char *) s,&st) != 0 )
+#elif HAVE_STAT
+  if( ::stat((const char *) s,&st) != 0 )
+#else
+  errno = ENOSYS;
+#endif
+  {
     err = errno;
     if( err != ENOENT )
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();

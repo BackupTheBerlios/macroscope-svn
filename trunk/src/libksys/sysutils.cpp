@@ -459,7 +459,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   if( fiber->event_.errno_ == ERROR_REQUEST_ABORTED ) stop();
   if( fiber->event_.errno_ != 0 && fiber->event_.errno_ != ERROR_NOTIFY_ENUM_DIR ){
     if( noThrow ) return;
-    newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + pathName)->throwSP();
+    newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
   }
   SetLastError(fiber->event_.errno_);
 #else
@@ -1301,7 +1301,7 @@ bool createDirectory(const utf8::String & name)
     if( currentFiber()->event_.errno_ == EEXIST ) return false;
 #endif
     if( currentFiber()->event_.errno_ != 0 )
-      newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(currentFiber()->event_.errno_,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     return currentFiber()->event_.rval_;
   }
   int32_t err = 0;
@@ -1334,7 +1334,7 @@ bool createDirectory(const utf8::String & name)
 #else
   if( err != 0 && err != EEXIST )
 #endif
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
   oserror(err);
   return err == 0;
 }
@@ -1376,7 +1376,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
     if( fiber->event_.errno_ == ENOTDIR ) return false;
 #endif
     if( fiber->event_.errno_ != 0 && !noThrow )
-      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(fiber->event_.errno_,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = removeDirectoryHelper(name);
@@ -1424,7 +1424,7 @@ bool removeDirectory(const utf8::String & name,bool recursive,bool noThrow)
 #endif
   oserror(err);
   if( err != 0 && !noThrow )
-    newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+    newObjectV1C2<Exception>(err + errorOffset,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
   return err == 0;
 }
 //---------------------------------------------------------------------------
@@ -1445,7 +1445,7 @@ bool remove(const utf8::String & name,bool noThrow)
     if( fiber->event_.errno_ == ENOENT ) return false;
 #endif
     if( fiber->event_.errno_ != 0 && !noThrow )
-      newObjectV1C2<Exception>(fiber->event_.errno_,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(fiber->event_.errno_,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     return fiber->event_.rval_ && fiber->event_.errno_ == 0;
   }
   int32_t err = 0;
@@ -1477,7 +1477,7 @@ bool remove(const utf8::String & name,bool noThrow)
       }
     }
     if( !noThrow )
-      newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__ + utf8::String(" ") + name)->throwSP();
+      newObjectV1C2<Exception>(err + errorOffset,name + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     oserror(err);
   }
   return err == 0;

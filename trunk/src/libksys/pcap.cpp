@@ -126,7 +126,11 @@ PCAP_API & PCAP_API::open()
 //    api.handle_ = LoadLibraryExW(L"wpcap.dll",NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
 //  }
 #elif HAVE_DLFCN_H
+#ifdef __linux__
+#define LIB_NAME "libpcap.so.0"
+#else
 #define LIB_NAME "libpcap.so"
+#endif
     api.handle_ = dlopen(LIB_NAME,
 #ifdef __linux__
       RTLD_GLOBAL | RTLD_NOW
@@ -296,6 +300,7 @@ void PCAP::printAllDevices()
   oserror(0);
   if( api.pcap_findalldevs(&alldevs,errbuf) != 0 || errbuf[0] != '\0' ){
     int32_t err = oserror() + errorOffset;
+    if( err == 0 ) err = ENOENT;
     api.close();
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__ + utf8::String(" ") + errbuf)->throwSP();
   }
