@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,17 +48,6 @@ namespace ksys {
 //__XSTRING(MPLOCKED2)*/
 //---------------------------------------------------------------------------
 #if __GNUG__ && __i386__
-//inline int32_t interlockedIncrement(volatile int32_t * v,int32_t a)
-//{
-//  asm volatile (
-//    " lock ; "
-//    "       xaddl   %0, %1 ;        "
-//    "# atomic_fetchadd_int"
-//    : "+r" (a),                     /* 0 (result) */
-//    "=m" (*v)                     /* 1 */
-//    : "m" (*v));                    /* 2 */
-//  return a;
-//}
 
 #if !HAVE_ATOMIC_FETCHADD_32
 static __inline uint32_t atomic_fetchadd_32(volatile uint32_t * p,uint32_t v)
@@ -72,32 +61,18 @@ static __inline uint32_t atomic_fetchadd_32(volatile uint32_t * p,uint32_t v)
     : "m" (*p));                    /* 2 */
     return (v);
 }
+#undef HAVE_ATOMIC_FETCHADD_32
+#define HAVE_ATOMIC_FETCHADD_32 1
 #endif
 
 inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
-  asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
-  return a;
-/*  //  register long eax asm("eax");
-  //  long r;
-  __asm __volatile (//    ".arch i686\n"
-  //    ".intel_syntax noprefix\n"
-  __XSTRING(MPLOCKED) "xadd %%eax,(%%edx)\n"
-  // возвращаемые параметры
-  : "=a" (a)
-  // принимаемые параметры    
-  : "d" (&v), // первый параметр %0 c - edx
-  "a" (a)  // второй параметр %1 a - eax
-  // регистры, в которые гадим
-  //    : "ecx"
-  );*/
-//  return interlockedIncrement(&v,a);
-//#if HAVE_ATOMIC_FETCHADD_32
+#if __linux__
   return atomic_fetchadd_32((volatile uint32_t *) &v,a);
-//#else
-//  asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
-//  return a;
-//#endif
+#else
+  asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
+#endif
+  return a;
 }
 
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
