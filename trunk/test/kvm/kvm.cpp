@@ -82,18 +82,23 @@ class RangeCoderFilter32 {
       register uint32_t * q = freq + 1;
       freq = q + 256;
 	    while( q < freq ){
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
+		    q[0] /= 2;
+		    if( q[0] <= q[-1] ) q[0] = q[-1] + 1;
+		    q[1] /= 2;
+		    if( q[1] <= q[-1 + 1] ) q[1] = q[-1 + 1] + 1;
+		    q[2] /= 2;
+		    if( q[1] <= q[-1 + 2] ) q[2] = q[-1 + 2] + 1;
+		    q[3] /= 2;
+		    if( q[3] <= q[-1 + 3] ) q[3] = q[-1 + 3] + 1;
+		    q[4] /= 2;
+		    if( q[4] <= q[-1 + 4] ) q[4] = q[-1 + 4] + 1;
+		    q[5] /= 2;
+		    if( q[5] <= q[-1 + 5] ) q[5] = q[-1 + 5] + 1;
+		    q[6] /= 2;
+		    if( q[6] <= q[-1 + 6] ) q[6] = q[-1 + 6] + 1;
+		    q[7] /= 2;
+		    if( q[7] <= q[-1 + 7] ) q[7] = q[-1 + 7] + 1;
+        q += 8;
 	    }
     }
 
@@ -490,6 +495,22 @@ RangeCoderFilter32 & RangeCoderFilter32::decodeBuffer(const void * inp,uintptr_t
       if( freq[--dc] <= count ) break;
       if( freq[--dc] <= count ) break;
       if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
     }
     dc_ = uint32_t(dc);
 out:
@@ -585,18 +606,23 @@ class RangeCoderFilter64 {
       register uint32_t * q = freq + 1;
       freq = q + 256;
 	    while( q < freq ){
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
-		    *q /= 2;
-		    if( *q <= q[-1] ) *q = q[-1] + 1;
-        q++;
+		    q[0] /= 2;
+		    if( q[0] <= q[-1] ) q[0] = q[-1] + 1;
+		    q[1] /= 2;
+		    if( q[1] <= q[-1 + 1] ) q[1] = q[-1 + 1] + 1;
+		    q[2] /= 2;
+		    if( q[1] <= q[-1 + 2] ) q[2] = q[-1 + 2] + 1;
+		    q[3] /= 2;
+		    if( q[3] <= q[-1 + 3] ) q[3] = q[-1 + 3] + 1;
+		    q[4] /= 2;
+		    if( q[4] <= q[-1 + 4] ) q[4] = q[-1 + 4] + 1;
+		    q[5] /= 2;
+		    if( q[5] <= q[-1 + 5] ) q[5] = q[-1 + 5] + 1;
+		    q[6] /= 2;
+		    if( q[6] <= q[-1 + 6] ) q[6] = q[-1 + 6] + 1;
+		    q[7] /= 2;
+		    if( q[7] <= q[-1 + 7] ) q[7] = q[-1 + 7] + 1;
+        q += 8;
 	    }
     }
 
@@ -993,6 +1019,22 @@ RangeCoderFilter64 & RangeCoderFilter64::decodeBuffer(const void * inp,uintptr_t
       if( freq[--dc] <= count ) break;
       if( freq[--dc] <= count ) break;
       if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
+      if( freq[--dc] <= count ) break;
     }
     dc_ = dc;
 out:
@@ -1354,8 +1396,9 @@ class LZKFilter {
     };
     struct PACKED Node {
       mutable RBTreeNode treeNode_;
+      mutable uint32_t idx_;
       mutable uint8_t c_;
-      mutable uint8_t alignment_[(sizeof(RBTreeNode) < 16 ? 16 : 32) - sizeof(RBTreeNode) - 1];
+      mutable uint8_t alignment_[(sizeof(RBTreeNode) + 2 + 1 < 16 ? 16 : 32) - sizeof(RBTreeNode) - 2 - 1];
 
       Node & operator = (const Node & )
       {
@@ -1407,10 +1450,15 @@ class LZKFilter {
     uintptr_t dpos_;
     uintptr_t dcnt_; // dict size
     uintptr_t dmsk_; // dict mask
+    uintptr_t dcsz_;
+    uintptr_t dlsz_;
     uintptr_t alen_; // look ahead string length
     uintptr_t mlen_; // maximum look ahead string length
     intptr_t dlen_;
-    uintmax_t lstat_[8];
+    uintmax_t dbits_;
+    uintptr_t dbiti_;
+    uintptr_t dcode_;
+    uintptr_t dcount_;
 
     // decoder stateful variables
     AutoPtr<uint8_t> ddict_;
@@ -1418,9 +1466,70 @@ class LZKFilter {
     uintptr_t dcpos_;
     uintptr_t ddcnt_; // decode dict size
     uintptr_t ddmsk_; // decode dict mask
+    uintptr_t dmlen_;
+    uintptr_t ddcsz_;
+    uintptr_t ddlsz_;
     uintptr_t ddlen_;
+    uintmax_t ddbits_;
+    uintptr_t ddbiti_;
+    uintptr_t ddbitc_;
+    uintptr_t ddcode_;
+    uintptr_t ddcount_;
+    uintptr_t ddci_;
 
-    enum { stInit, stInp, stOut } eState_, dState_;
+    enum { stInit, stInp, stInp2, stInp3, stOut } eState_, dState_;
+
+    bool writeBits(uintptr_t & bits,uintptr_t & count,void * & out,uintptr_t & outSize,uintptr_t * wb)
+    {
+      while( count > 0 ){
+        if( dbiti_ >= sizeof(dbits_) * 8u ){
+          if( outSize == 0 ) return true;
+          uintptr_t sz = tmin(dbiti_ >> 3,outSize);
+          memcpy(out,&dbits_,sz);
+          out = (uint8_t *) out + sz;
+          outSize -= sz;
+          if( wb != NULL ) *wb += sz;
+          sz <<= 3;
+          if( sz == sizeof(dbits_) * 8u ) dbits_ = 0; else dbits_ >>= sz;
+          dbiti_ -= sz;
+        }
+        uintptr_t bc = tmin(count,sizeof(dbits_) * 8u - dbiti_);
+        dbits_ |= uintmax_t(bits & ~(~uintptr_t(0) << bc)) << dbiti_;
+        count -= bc;
+        dbiti_ += bc;
+        bits >>= bc;
+      }
+      return false;
+    }
+
+    bool readBits(uintptr_t & bits,uintptr_t & pos,uintptr_t & count,const void * & inp,uintptr_t & inpSize,uintptr_t * rb)
+    {
+      while( count > 0 ){
+        if( ddbiti_ >= ddbitc_ ){
+          if( inpSize == 0 ) return true;
+          uintptr_t sz = tmin(sizeof(ddbits_),inpSize);
+          memcpy(&ddbits_,inp,sz);
+          inp = (const uint8_t *) inp + sz;
+          inpSize -= sz;
+          if( rb != NULL ) *rb += sz;
+          ddbiti_ = 0;
+          ddbitc_ = sz << 3;
+        }
+        uintptr_t bc = tmin(count,ddbitc_ - ddbiti_);
+        bits |= (uintptr_t(ddbits_ >> ddbiti_) & ~(~uintptr_t(0) << bc)) << pos;
+        count -= bc;
+        ddbiti_ += bc;
+        pos += bc;
+      }
+      return false;
+    }
+
+    intptr_t getFirstBitIndex(uintptr_t bits)
+    {
+      intptr_t i;
+      for( i = sizeof(bits) * 8u - 1; i >= 0 && (bits & (uintptr_t(1) << i)) == 0; i-- );
+      return i;
+    }
   private:
 };
 //------------------------------------------------------------------------------
@@ -1431,11 +1540,19 @@ LZKFilter & LZKFilter::initializeEncoder()
   mlen_ = 8;
   dlen_ = 0;
   eState_ = stInit;
-  dcnt_ = 8192;
+  dcnt_ = 65536;
   dmsk_ = dcnt_ - 1;
+  dcsz_ = getFirstBitIndex(dcnt_);
+  dlsz_ = getFirstBitIndex(mlen_);
+  dbits_ = 0;
+  dbiti_ = 0;
   nodes_.reallocT(dcnt_);
-  memset(dict_ = nodes_,0,dcnt_ * sizeof(Node));
-  memset(lstat_,0,sizeof(lstat_));
+  dict_ = nodes_;
+  for( intptr_t i = dmsk_; i >= 0; i-- ){
+    dict_[i].treeNode_.parent_ = NULL;
+    dict_[i].idx_ = uint32_t(i);
+    dict_[i].c_ = 0;
+  }
   params_.filter_ = this;
   params_.dict_ = dict_;
   params_.dmsk_ = dmsk_;
@@ -1482,16 +1599,19 @@ init: params_.bestMatchNode_ = dict_ + dict_[dpos_].c_;
       tree_.insert(dict_[dpos_],false,false);
     } while( --dlen_ >= 0 );
     dlen_ = params_.bestMatchLen_ - 1;
+    if( dlen_ == 0 ){
+      dcode_ = ((params_.bestMatchNode_ - dict_) << 1) | 1u;
+      dcount_ = 8 + 1;
+    }
+    else {
+      dcode_ = (((params_.bestMatchNode_ - dict_) << dlsz_) | dlen_) << 1;
+      dcount_ = dcsz_ + dlsz_ + 1;
+    }
 out:
-    if( outSize < sizeof(uint16_t) ){
+    if( writeBits(dcode_,dcount_,out,outSize,wb) ){
       eState_ = stOut;
       return *this;
     }
-    lstat_[dlen_]++;
-    *(uint16_t *) out = uint16_t(dlen_ | ((params_.bestMatchNode_ - dict_) << 3));
-    out = (uint8_t *) out + sizeof(uint16_t);
-    outSize -= sizeof(uint16_t);
-    if( wb != NULL ) *wb += sizeof(uint16_t);
   }
   return *this;
 }
@@ -1499,26 +1619,35 @@ out:
 LZKFilter & LZKFilter::flush(void * out,uintptr_t * wb)
 {
   if( eState_ == stInit ) return *this;
-  if( eState_ == stOut ) goto out;
+  uintptr_t outSize = ~uintptr_t(0);
   for(;;){
     do {
       dict_[(dpos_ + mlen_) & dmsk_].c_ = 0;
       dpos_ = (dpos_ + 1) & dmsk_;
       if( --alen_ == 0 ){
         eState_ = stInit;
-        return *this;
+        goto exit;
       }
     } while( --dlen_ >= 0 );
     params_.bestMatchNode_ = dict_ + dict_[dpos_].c_;
     params_.bestMatchLen_ = 1;
     tree_.find(dict_[dpos_]);
     dlen_ = tmin(alen_,params_.bestMatchLen_) - 1;
-out:
-    lstat_[dlen_]++;
-    *(uint16_t *) out = uint16_t(dlen_ | ((params_.bestMatchNode_ - dict_) << 3));
-    out = (uint8_t *) out + sizeof(uint16_t);
-    if( wb != NULL ) *wb += sizeof(uint16_t);
+    if( dlen_ == 0 ){
+      dcode_ = ((params_.bestMatchNode_ - dict_) << 1) | 1u;
+      dcount_ = 8 + 1;
+    }
+    else {
+      dcode_ = (((params_.bestMatchNode_ - dict_) << dlsz_) | dlen_) << 1;
+      dcount_ = dcsz_ + dlsz_ + 1;
+    }
+    writeBits(dcode_,dcount_,out,outSize,wb);
   }
+exit:
+  uintptr_t sz = (dbiti_ >> 3) + ((dbiti_ & 7) != 0);
+  memcpy(out,&dbits_,sz);
+  out = (uint8_t *) out + sz;
+  if( wb != NULL ) *wb += sz;
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -1550,11 +1679,20 @@ LZKFilter & LZKFilter::encode(AsyncFile & inp,AsyncFile & out)
 LZKFilter & LZKFilter::initializeDecoder()
 {
   ddpos_ = 0;
-  ddcnt_ = 8192;
+  ddcnt_ = 65536;
   ddmsk_ = dcnt_ - 1;
+  dmlen_ = 8;
+  ddcsz_ = getFirstBitIndex(ddcnt_);
+  ddlsz_ = getFirstBitIndex(dmlen_);
+  ddbits_ = 0;
+  ddbiti_ = 0;
+  ddbitc_ = 0;
   dState_ = stInit;
   ddict_.reallocT(ddcnt_);
   memset(ddict_,0,ddcnt_);
+  ddcode_ = 0;
+  ddcount_ = 1;
+  ddci_ = 0;
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -1562,33 +1700,53 @@ LZKFilter & LZKFilter::decodeBuffer(const void * inp,uintptr_t inpSize,void * ou
 {
   uint8_t * dict = ddict_;
   if( dState_ == stOut ) goto out;
+  if( dState_ == stInp2 ) goto inp2;
+  if( dState_ == stInp3 ) goto inp3;
   for(;;){
-    if( inpSize == 0 ){
+    if( readBits(ddcode_,ddci_,ddcount_,inp,inpSize,rb) ){
       dState_ = stInp;
       return *this;
     }
-    uint16_t code = *(const uint16_t *) inp;
-    inp = (const uint8_t *) inp + sizeof(uint16_t);
-    inpSize -= sizeof(uint16_t);
-    if( rb != NULL ) *rb += sizeof(uint16_t);
-    ddlen_ = (code & 7) + 1;
+    ddci_ = 0;
+    if( ddcode_ == 0 ){
+      ddcount_ = ddcsz_ + ddlsz_;
+inp2:
+      if( readBits(ddcode_,ddci_,ddcount_,inp,inpSize,rb) ){
+        dState_ = stInp2;
+        return *this;
+      }
+    }
+    else {
+      ddcode_ = 0;
+      ddcount_ = 8;
+inp3:
+      if( readBits(ddcode_,ddci_,ddcount_,inp,inpSize,rb) ){
+        dState_ = stInp3;
+        return *this;
+      }
+      ddcode_ <<= ddlsz_;
+    }
+    ddlen_ = (ddcode_ & ~(~uintptr_t(0) << ddlsz_)) + 1;
     if( ddlen_ == 1 ){
-      dict[dcpos_ = ddpos_] = uint8_t(code >> 3);
+      dict[dcpos_ = ddpos_] = uint8_t(ddcode_ >> ddlsz_);
       goto out;
     }
-    dcpos_ = code >> 3;
+    dcpos_ = ddcode_ >> ddlsz_;
     do {
 out:  if( outSize == 0 ){
         dState_ = stOut;
         return *this;
       }
       *(uint8_t *) out = dict[ddpos_] = dict[dcpos_];
-      out = (uint8_t *) out + sizeof(uint8_t);
-      outSize -= sizeof(uint8_t);
-      if( wb != NULL ) *wb += sizeof(uint8_t);
+      out = (uint8_t *) out + 1;
+      outSize -= 1;
+      if( wb != NULL ) *wb += 1;
       ddpos_ = (ddpos_ + 1) & ddmsk_;
       dcpos_ = (dcpos_ + 1) & ddmsk_;
     } while( --ddlen_ > 0 );
+    ddcode_ = 0;
+    ddcount_ = 1;
+    ddci_ = 0;
   }
   return *this;
 }
@@ -1666,6 +1824,8 @@ int main(int _argc,char * _argv[])
 
   try {
 // tests
+    ksys::setProcessPriority("REALTIME_PRIORITY_CLASS");
+
     AsyncFile file("C:/Korvin/trunk/test/kvm/test.txt");
     AsyncFile::LineGetBuffer lgb(file);
     file.open();
@@ -1678,64 +1838,64 @@ int main(int _argc,char * _argv[])
 
     uint64_t ellapsed;
 
-    RangeCoderFilter32 filter2;
-    filter2.initializeEncoder();
-    ellapsed = gettimeofday();
-    filter2.encode(file,encFile);
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (file.size() * 1000000. / ellapsed) / 1024,
-      100 - encFile.size() * 100. / file.size()
-    );
-    filter2.initializeDecoder();
-    ellapsed = gettimeofday();
-    filter2.decode(encFile.seek(0),decFile.seek(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
-    );
+    //RangeCoderFilter32 filter2;
+    //filter2.initializeEncoder();
+    //ellapsed = gettimeofday();
+    //filter2.encode(file,encFile);
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (file.size() * 1000000. / ellapsed) / 1024,
+    //  100 - encFile.size() * 100. / file.size()
+    //);
+    //filter2.initializeDecoder();
+    //ellapsed = gettimeofday();
+    //filter2.decode(encFile.seek(0),decFile.seek(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    //);
 
-    RangeCoderFilter64 filter3;
-    filter3.initializeEncoder();
-    ellapsed = gettimeofday();
-    filter3.encode(file.seek(0),encFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (file.size() * 1000000. / ellapsed) / 1024,
-      100 - encFile.size() * 100. / file.size()
-    );
-    filter3.initializeDecoder();
-    ellapsed = gettimeofday();
-    filter3.decode(encFile.seek(0),decFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
-    );
+    //RangeCoderFilter64 filter3;
+    //filter3.initializeEncoder();
+    //ellapsed = gettimeofday();
+    //filter3.encode(file.seek(0),encFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (file.size() * 1000000. / ellapsed) / 1024,
+    //  100 - encFile.size() * 100. / file.size()
+    //);
+    //filter3.initializeDecoder();
+    //ellapsed = gettimeofday();
+    //filter3.decode(encFile.seek(0),decFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    //);
 
-    return 0;
+    //return 0;
 
-    ArithmeticCoderFilter32 filter4;
-    filter4.initializeEncoder();
-    ellapsed = gettimeofday();
-    filter4.encode(file.seek(0),encFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (file.size() * 1000000. / ellapsed) / 1024,
-      100 - encFile.size() * 100. / file.size()
-    );
-    filter4.initializeDecoder();
-    ellapsed = gettimeofday();
-    filter4.decode(encFile.seek(0),decFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
-    );
+    //ArithmeticCoderFilter32 filter4;
+    //filter4.initializeEncoder();
+    //ellapsed = gettimeofday();
+    //filter4.encode(file.seek(0),encFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (file.size() * 1000000. / ellapsed) / 1024,
+    //  100 - encFile.size() * 100. / file.size()
+    //);
+    //filter4.initializeDecoder();
+    //ellapsed = gettimeofday();
+    //filter4.decode(encFile.seek(0),decFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    //);
 
     //return 0;
 
