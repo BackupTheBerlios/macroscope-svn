@@ -33,6 +33,20 @@
 #define ENABLE_MYSQL_INTERFACE 1
 #define ENABLE_FIREBIRD_INTERFACE 1
 #include <adicpp/adicpp.h>
+
+//#define _NO_EXCEPTIONS 1
+//#define NO_CMyUnknownImp 1
+//#include <adicpp/lzma/Common/Alloc.cpp>
+//#include <adicpp/lzma/Common/CRC.cpp>
+////#include <adicpp/lzma/7zip/Common/InBuffer.cpp>
+////#include <adicpp/lzma/7zip/Common/OutBuffer.cpp>
+////#include <adicpp/lzma/7zip/Common/StreamUtils.cpp>
+//#include <adicpp/lzma/7zip/Compress/RangeCoder/RangeCoderBit.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZ/LZInWindow.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZ/LZOutWindow.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.cpp>
+//#include <adicpp/lzma/7zip/Compress/LZMA/LZMADecoder.cpp>
+
 #include "Parser.h"
 #include "Scanner.h"
 #include "CodeGenerator.h"
@@ -1377,6 +1391,9 @@ ArithmeticCoderFilter32 & ArithmeticCoderFilter32::decode(AsyncFile & inp,AsyncF
 //------------------------------------------------------------------------------
 class LZKFilter {
   public:
+    ~LZKFilter();
+    LZKFilter();
+
     LZKFilter & initializeEncoder();
     LZKFilter & encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
     LZKFilter & flush(void * out,uintptr_t * wb = NULL);
@@ -1385,68 +1402,310 @@ class LZKFilter {
     LZKFilter & decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
     LZKFilter & decode(AsyncFile & inp,AsyncFile & out);
   protected:
-    struct Node;
-    struct TreeParams {
-      LZKFilter * filter_;
-      Node * dict_;
-      uintptr_t dmsk_;
-      uintptr_t mlen_;
-      Node * bestMatchNode_;
-      uintptr_t bestMatchLen_;
+#ifdef _MSC_VER
+#pragma pack(push)
+#pragma pack(1)
+#elif defined(__BCPLUSPLUS__)
+#pragma option push -a1
+#endif
+    struct PACKED RBTreeNode {
+      RBTreeNode * left_;         /* left child */
+      RBTreeNode * right_;        /* right child */
+      RBTreeNode * parent_;       /* parent */
+      uint8_t color_;             /* node color (BLACK, RED) */
+      //mutable uint32_t idx_;
+      //mutable uint8_t c_;
+      uint8_t alignment_[(sizeof(RBTreeNode *) * 3 + 1 < 16 ? 16 : 32) - sizeof(RBTreeNode *) * 3 - 1];
     };
-    struct PACKED Node {
-      mutable RBTreeNode treeNode_;
-      mutable uint32_t idx_;
-      mutable uint8_t c_;
-      mutable uint8_t alignment_[(sizeof(RBTreeNode) + 2 + 1 < 16 ? 16 : 32) - sizeof(RBTreeNode) - 2 - 1];
+#ifdef _MSC_VER
+#pragma pack(pop)
+#elif defined(__BCPLUSPLUS__)
+#pragma option pop
+#endif
+    typedef enum { BLACK, RED } RBTreeNodeColor;
 
-      Node & operator = (const Node & )
-      {
-        assert(0);
-        return *this;
-      }
+    RBTreeNode sentinel_;
+    RBTreeNode rootNode_;
+    RBTreeNode * root_;
 
-      static RBTreeNode & treeO2N(const Node & object,TreeParams *){
-        return object.treeNode_;
-      }
-
-      static Node & treeN2O(const RBTreeNode & node,TreeParams *){
-        Node * p = NULL;
-        return node.object<Node>(p->treeNode_);
-      }
-
-      static intptr_t treeCO(const Node & a0,const Node & a1,TreeParams * params){
-        intptr_t c, s1 = &a0 - params->dict_, s2 = &a1 - params->dict_;
-        uintptr_t l = params->mlen_;
-        do {
-          c = intptr_t(params->dict_[s1].c_) - params->dict_[s2].c_;
-          if( c != 0 ) break;
-          s1 = (s1 + 1) & params->dmsk_;
-          s2 = (s2 + 1) & params->dmsk_;
-        } while( --l > 0 );
-        l = params->mlen_ - l;
-        if( l > params->bestMatchLen_ ){
-          params->bestMatchNode_ = params->dict_ + s2 - l;
-          params->bestMatchLen_ = l;
+    intptr_t compare(RBTreeNode * a0,RBTreeNode * a1){
+      intptr_t c, s1 = a0 - nodes_, s2 = a1 - nodes_;
+      uintptr_t l = mlen_ + 2, l2;
+      goto in;
+      do {
+        s1 += l2;
+        s2 += l2;
+in:     l2 = 0;
+        switch( l & 3 ){
+          case 3 :
+            l2++;
+            if( (c = intptr_t(dict_[(s1 + 0) & dmsk_]) - dict_[(s2 + 0) & dmsk_]) != 0 ) goto out;
+          case 2 :
+            l2++;
+            if( (c = intptr_t(dict_[(s1 + 1) & dmsk_]) - dict_[(s2 + 1) & dmsk_]) != 0 ) goto out;
+          case 1 :
+            l2++;
+            if( (c = intptr_t(dict_[(s1 + 2) & dmsk_]) - dict_[(s2 + 2) & dmsk_]) != 0 ) goto out;
+          case 0 :
+            l2++;
+            if( (c = intptr_t(dict_[(s1 + 3) & dmsk_]) - dict_[(s2 + 3) & dmsk_]) != 0 ) goto out;
         }
-        return c;
+        l -= l2;
+      } while( intptr_t(l) > 0 );
+out:  l = s2 + l2 - 1 - (a1 - nodes_);
+      if( l > bestMatchLen_ ){
+        bestMatchLen_ = l;
+        bestMatchNode_ = a1;
       }
-    };
+      return c;
+    }
 
-    typedef
-      RBTree<
-        Node,
-        TreeParams,
-        Node::treeO2N,
-        Node::treeN2O,
-        Node::treeCO
-    > NodeTree;
-    NodeTree tree_;
-    TreeParams params_;
+    RBTreeNode * find(RBTreeNode * node)
+    {
+      RBTreeNode * current = root_->left_;
+      for(;;){
+        if( current == &sentinel_ ){ current = NULL; break; }
+        intptr_t c = compare(node,current);
+        if( c == 0 ) break;
+        current = c < 0 ? current->left_ : current->right_;
+      }
+      return current;
+    }
+
+    void rotateLeft(RBTreeNode * x)
+    {
+      RBTreeNode * y = x->right_;
+      x->right_ = y->left_;
+      if( y->left_ != &sentinel_ ) y->left_->parent_ = x;
+      y->parent_ = x->parent_;
+      if( x == x->parent_->left_ ){
+        x->parent_->left_ = y;
+      }
+      else {
+        x->parent_->right_ = y;
+      }
+      y->left_ = x;
+      x->parent_ = y;
+    }
+
+    void rotateRight(RBTreeNode * y)
+    {
+      RBTreeNode * x = y->left_;
+      y->left_ = x->right_;
+      if( x->right_ != &sentinel_ ) x->right_->parent_ = y;
+      x->parent_ = y->parent_;
+      if( y == y->parent_->left_ ){
+        y->parent_->left_ = x;
+      }
+      else {
+        y->parent_->right_ = x;
+      }
+      x->right_ = y;
+      y->parent_ = x;
+    }
+
+    RBTreeNode * treeInsertHelp(RBTreeNode * z)
+    {
+      RBTreeNode * y = root_, * x = root_->left_;
+      z->left_ = z->right_ = &sentinel_;
+      intptr_t c = 0;
+      while( x != &sentinel_ ){
+        y = x;
+        c = compare(z,x);
+        if( c < 0 ){
+          x = x->left_;
+        }
+        else if( c > 0 ){
+          x = x->right_;
+        }
+        else
+          return x;
+      }
+      z->parent_ = y;
+      if( y == root_ || c < 0 ){ 
+        y->left_ = z;
+      }
+      else {
+        y->right_ = z;
+      }
+      return NULL;
+    }
+
+    void insert(RBTreeNode * x)
+    {
+      RBTreeNode * y;
+      if( (y = treeInsertHelp(x)) != NULL ) return;
+      x->color_ = RED;
+      while( x->parent_->color_ == RED ){
+        if( x->parent_ == x->parent_->parent_->left_ ){
+          y = x->parent_->parent_->right_;
+          if( y->color_ == RED ){
+    	      x->parent_->color_ = BLACK;
+	          y->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          x = x->parent_->parent_;
+          }
+          else {
+	          if( x == x->parent_->right_){
+	            x = x->parent_;
+	            rotateLeft(x);
+	          }
+	          x->parent_->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          rotateRight(x->parent_->parent_);
+          } 
+        }
+        else {
+          y = x->parent_->parent_->left_;
+          if( y->color_ == RED ){
+	          x->parent_->color_ = BLACK;
+	          y->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          x = x->parent_->parent_;
+          }
+          else {
+	          if( x == x->parent_->left_ ){
+	            x = x->parent_;
+	            rotateRight(x);
+	          }
+	          x->parent_->color_ = BLACK;
+	          x->parent_->parent_->color_ = RED;
+	          rotateLeft(x->parent_->parent_);
+          } 
+        }
+      }
+      root_->left_->color_ = BLACK;
+    }
+
+    RBTreeNode * getSuccessorOf(RBTreeNode * x)
+    {
+      RBTreeNode * y;
+/* assignment to y is intentional */  
+      if( (y = x->right_) != &sentinel_ ){
+/* returns the minium of the right subtree of x */  
+        while( y->left_ != &sentinel_ ) y = y->left_;
+        return y;
+      }
+      y = x->parent_;
+/* sentinel used instead of checking for nil */    
+      while( x == y->right_ ){
+        x = y;
+        y = y->parent_;
+      }
+      if( y == root_ ) return &sentinel_;
+      return y;
+    }
+
+    void removeFixup(RBTreeNode * x)
+    {
+      RBTreeNode * w, * rootLeft = root_->left_;
+
+      while( x->color_ != RED && rootLeft != x ){
+        if( x == x->parent_->left_ ){
+          w = x->parent_->right_;
+          if( w->color_ == RED ){
+	          w->color_ = BLACK;
+	          x->parent_->color_ = RED;
+	          rotateLeft(x->parent_);
+	          w = x->parent_->right_;
+          }
+          if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+	          w->color_ = RED;
+	          x = x->parent_;
+          }
+          else {
+	          if( w->right_->color_ != RED ){
+	            w->left_->color_ = BLACK;
+	            w->color_ = RED;
+	            rotateRight(w);
+	            w = x->parent_->right_;
+	          }
+	          w->color_ = x->parent_->color_;
+	          x->parent_->color_ = BLACK;
+	          w->right_->color_ = BLACK;
+	          rotateLeft(x->parent_);
+	          x = rootLeft; /* this is to exit while loop */
+          }
+        }
+        else { /* the code below is has left and right switched from above */
+          w = x->parent_->left_;
+          if( w->color_ == RED ){
+	          w->color_ = BLACK;
+	          x->parent_->color_ = RED;
+	          rotateRight(x->parent_);
+	          w = x->parent_->left_;
+          }
+          if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+	          w->color_ = RED;
+	          x = x->parent_;
+          }
+          else {
+	          if( w->left_->color_ != RED ){
+	            w->right_->color_ = BLACK;
+	            w->color_ = RED;
+	            rotateLeft(w);
+	            w = x->parent_->left_;
+	          }
+	          w->color_ = x->parent_->color_;
+	          x->parent_->color_ = BLACK;
+	          w->left_->color_ = BLACK;
+	          rotateRight(x->parent_);
+	          x = rootLeft; /* this is to exit while loop */
+          }
+        }
+      }
+      x->color_ = BLACK;
+    }
+
+    void remove(RBTreeNode * z)
+    {
+      RBTreeNode * x, * y;
+      y = ((z->left_ == &sentinel_) || (z->right_ == &sentinel_)) ? z : getSuccessorOf(z);
+      x = (y->left_ == &sentinel_) ? y->right_ : y->left_;
+/* x is y's only child */
+      if( y->left_ != &sentinel_ ) x = y->left_; else x = y->right_;
+/* assignment of y->p to x->p is intentional */  
+      if( root_ == (x->parent_ = y->parent_) ){
+        root_->left_ = x;
+      }
+      else {
+        if( y == y->parent_->left_ ){
+          y->parent_->left_ = x;
+        }
+        else {
+          y->parent_->right_ = x;
+        }
+      }
+      if( y != z ){
+        y->left_ = z->left_;
+        y->right_ = z->right_;
+        y->parent_ = z->parent_;
+        z->left_->parent_ = z->right_->parent_ = y;
+        if( z == z->parent_->left_ ){
+          z->parent_->left_ = y;
+        }
+        else {
+          z->parent_->right_ = y;
+        }
+        if( y->color_ != RED ){
+          y->color_ = z->color_;
+          removeFixup(x);
+        }
+        else {
+          y->color_ = z->color_;
+        }
+      }
+      else if( y->color_ != RED ){
+        removeFixup(x);
+      }
+      z->parent_ = z->right_ = z->left_ = NULL;
+      return;
+    }
+
 
     // encoder stateful variables
-    AutoPtr<Node> nodes_;
-    Node * dict_;
+    RBTreeNode * nodes_;
+    uint8_t * dict_;
     uintptr_t dpos_;
     uintptr_t dcnt_; // dict size
     uintptr_t dmsk_; // dict mask
@@ -1459,9 +1718,11 @@ class LZKFilter {
     uintptr_t dbiti_;
     uintptr_t dcode_;
     uintptr_t dcount_;
+    RBTreeNode * bestMatchNode_;
+    uintptr_t bestMatchLen_;
 
     // decoder stateful variables
-    AutoPtr<uint8_t> ddict_;
+    uint8_t * ddict_;
     uintptr_t ddpos_;
     uintptr_t dcpos_;
     uintptr_t ddcnt_; // decode dict size
@@ -1533,11 +1794,21 @@ class LZKFilter {
   private:
 };
 //------------------------------------------------------------------------------
+LZKFilter::LZKFilter() : nodes_(NULL), dict_(NULL), ddict_(NULL)
+{
+}
+//------------------------------------------------------------------------------
+LZKFilter::~LZKFilter()
+{
+  kfree(ddict_);
+  kfree(nodes_);
+}
+//------------------------------------------------------------------------------
 LZKFilter & LZKFilter::initializeEncoder()
 {
   dpos_ = 0;
   alen_ = 0;
-  mlen_ = 8;
+  mlen_ = 16;
   dlen_ = 0;
   eState_ = stInit;
   dcnt_ = 65536;
@@ -1546,36 +1817,41 @@ LZKFilter & LZKFilter::initializeEncoder()
   dlsz_ = getFirstBitIndex(mlen_);
   dbits_ = 0;
   dbiti_ = 0;
-  nodes_.reallocT(dcnt_);
-  dict_ = nodes_;
+  nodes_ = (RBTreeNode *) krealloc(nodes_,dcnt_ * sizeof(nodes_[0]) + dcnt_);
+  dict_ = (uint8_t *) (nodes_ + dcnt_);
   for( intptr_t i = dmsk_; i >= 0; i-- ){
-    dict_[i].treeNode_.parent_ = NULL;
-    dict_[i].idx_ = uint32_t(i);
-    dict_[i].c_ = 0;
+    nodes_[i].parent_ = NULL;
+    //dict_[i].idx_ = uint32_t(i);
+    dict_[i] = 0;
   }
-  params_.filter_ = this;
-  params_.dict_ = dict_;
-  params_.dmsk_ = dmsk_;
-  params_.mlen_ = mlen_;
-  params_.bestMatchNode_ = NULL;
-  params_.bestMatchLen_ = 0;
-  tree_.param(&params_);
+
+  sentinel_.left_ = &sentinel_;
+  sentinel_.right_ = &sentinel_;
+  sentinel_.parent_ = NULL;
+  sentinel_.color_ = BLACK;
+
+  root_ = &rootNode_;
+  rootNode_.left_ = &sentinel_;
+  rootNode_.right_ = &sentinel_;
+  rootNode_.parent_ = NULL;
+  rootNode_.color_ = BLACK;
+
   return *this;
 }
 //------------------------------------------------------------------------------
 LZKFilter & LZKFilter::encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
 {
   if( eState_ == stInit ){
-    while( alen_ < mlen_ ){
+    while( alen_ < mlen_ + 2 ){
       if( inpSize == 0 ){
         eState_ = stInp;
         return *this;
       }
-      dict_[(dpos_ + alen_) & dmsk_].c_ = *(const uint8_t *) inp;
-      alen_ += sizeof(uint8_t);
-      inp = (const uint8_t *) inp + sizeof(uint8_t);
-      inpSize -= sizeof(uint8_t);
-      if( rb != NULL ) *rb += sizeof(uint8_t);
+      dict_[(dpos_ + alen_) & dmsk_] = *(const uint8_t *) inp;
+      alen_ += 1;
+      inp = (const uint8_t *) inp + 1;
+      inpSize -= 1;
+      if( rb != NULL ) *rb += 1;
     }
     goto init;
   }
@@ -1583,28 +1859,29 @@ LZKFilter & LZKFilter::encodeBuffer(const void * inp,uintptr_t inpSize,void * ou
   if( eState_ == stOut ) goto out;
   for(;;){
     do {
-inp:  Node * p = dict_ + ((dpos_ + mlen_) & dmsk_);
-      if( p->treeNode_.parent_ != NULL ) tree_.remove(*p);
+inp:  RBTreeNode * p = nodes_ + ((dpos_ + mlen_ + 2) & dmsk_);
+      if( p->parent_ != NULL ) remove(p);
       if( inpSize == 0 ){
         eState_ = stInp;
         return *this;
       }
-      p->c_ = *(const uint8_t *) inp;
-      inp = (const uint8_t *) inp + sizeof(uint8_t);
-      inpSize -= sizeof(uint8_t);
-      if( rb != NULL ) *rb += sizeof(uint8_t);
-      dpos_ = (dpos_ + sizeof(uint8_t)) & dmsk_;
-init: params_.bestMatchNode_ = dict_ + dict_[dpos_].c_;
-      params_.bestMatchLen_ = 1;
-      tree_.insert(dict_[dpos_],false,false);
-    } while( --dlen_ >= 0 );
-    dlen_ = params_.bestMatchLen_ - 1;
-    if( dlen_ == 0 ){
-      dcode_ = ((params_.bestMatchNode_ - dict_) << 1) | 1u;
+      dict_[(dpos_ + mlen_ + 2) & dmsk_] = *(const uint8_t *) inp;
+      inp = (const uint8_t *) inp + 1;
+      inpSize -= 1;
+      if( rb != NULL ) *rb += 1;
+      dpos_ = (dpos_ + 1) & dmsk_;
+init: bestMatchNode_ = NULL;
+      bestMatchLen_ = 1;
+      insert(nodes_ + dpos_);
+    } while( --dlen_ > 0 );
+    dlen_ = bestMatchLen_;
+    if( dlen_ <= 2 ){
+      dlen_ = 1;
+      dcode_ = (uintptr_t(dict_[dpos_]) << 1) | 1u;
       dcount_ = 8 + 1;
     }
     else {
-      dcode_ = (((params_.bestMatchNode_ - dict_) << dlsz_) | dlen_) << 1;
+      dcode_ = (((bestMatchNode_ - nodes_) << dlsz_) | (dlen_ - 3)) << 1;
       dcount_ = dcsz_ + dlsz_ + 1;
     }
 out:
@@ -1622,23 +1899,24 @@ LZKFilter & LZKFilter::flush(void * out,uintptr_t * wb)
   uintptr_t outSize = ~uintptr_t(0);
   for(;;){
     do {
-      dict_[(dpos_ + mlen_) & dmsk_].c_ = 0;
+      dict_[(dpos_ + mlen_ + 2) & dmsk_] = 0;
       dpos_ = (dpos_ + 1) & dmsk_;
       if( --alen_ == 0 ){
         eState_ = stInit;
         goto exit;
       }
-    } while( --dlen_ >= 0 );
-    params_.bestMatchNode_ = dict_ + dict_[dpos_].c_;
-    params_.bestMatchLen_ = 1;
-    tree_.find(dict_[dpos_]);
-    dlen_ = tmin(alen_,params_.bestMatchLen_) - 1;
-    if( dlen_ == 0 ){
-      dcode_ = ((params_.bestMatchNode_ - dict_) << 1) | 1u;
+    } while( --dlen_ > 0 );
+    bestMatchNode_ = NULL;
+    bestMatchLen_ = 1;
+    find(nodes_ + dpos_);
+    dlen_ = tmin(alen_,bestMatchLen_) - 1;
+    if( dlen_ <= 2 ){
+      dlen_ = 1;
+      dcode_ = (uintptr_t(dict_[dpos_]) << 1) | 1u;
       dcount_ = 8 + 1;
     }
     else {
-      dcode_ = (((params_.bestMatchNode_ - dict_) << dlsz_) | dlen_) << 1;
+      dcode_ = (((bestMatchNode_ - nodes_) << dlsz_) | (dlen_ - 3)) << 1;
       dcount_ = dcsz_ + dlsz_ + 1;
     }
     writeBits(dcode_,dcount_,out,outSize,wb);
@@ -1681,14 +1959,14 @@ LZKFilter & LZKFilter::initializeDecoder()
   ddpos_ = 0;
   ddcnt_ = 65536;
   ddmsk_ = dcnt_ - 1;
-  dmlen_ = 8;
+  dmlen_ = 16;
   ddcsz_ = getFirstBitIndex(ddcnt_);
   ddlsz_ = getFirstBitIndex(dmlen_);
   ddbits_ = 0;
   ddbiti_ = 0;
   ddbitc_ = 0;
   dState_ = stInit;
-  ddict_.reallocT(ddcnt_);
+  ddict_ = (uint8_t *) krealloc(ddict_,dcnt_);
   memset(ddict_,0,ddcnt_);
   ddcode_ = 0;
   ddcount_ = 1;
@@ -1715,6 +1993,8 @@ inp2:
         dState_ = stInp2;
         return *this;
       }
+      ddlen_ = (ddcode_ & ~(~uintptr_t(0) << ddlsz_)) + 3;
+      dcpos_ = ddcode_ >> ddlsz_;
     }
     else {
       ddcode_ = 0;
@@ -1724,14 +2004,9 @@ inp3:
         dState_ = stInp3;
         return *this;
       }
-      ddcode_ <<= ddlsz_;
+      dict[dcpos_ = ddpos_] = uint8_t(ddcode_);
+      ddlen_ = 1;
     }
-    ddlen_ = (ddcode_ & ~(~uintptr_t(0) << ddlsz_)) + 1;
-    if( ddlen_ == 1 ){
-      dict[dcpos_ = ddpos_] = uint8_t(ddcode_ >> ddlsz_);
-      goto out;
-    }
-    dcpos_ = ddcode_ >> ddlsz_;
     do {
 out:  if( outSize == 0 ){
         dState_ = stOut;
@@ -1772,6 +2047,72 @@ LZKFilter & LZKFilter::decode(AsyncFile & inp,AsyncFile & out)
   out.writeBuffer(outBuffer,wb);
   return *this;
 }
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
+//class LZMAFilter : protected NCompress::NLZMA::CEncoder, protected NCompress::NLZMA::CDecoder {
+//  public:
+//    LZMAFilter & initializeEncoder();
+//    LZMAFilter & encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+//    LZMAFilter & flush(void * out,uintptr_t * wb = NULL);
+//    LZMAFilter & encode(AsyncFile & inp,AsyncFile & out);
+//    LZMAFilter & initializeDecoder();
+//    LZMAFilter & decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+//    LZMAFilter & decode(AsyncFile & inp,AsyncFile & out);
+//  protected:
+//
+//    // encoder stateful variables
+//    // decoder stateful variables
+//    enum { stInit, stInp, stInp2, stInp3, stOut } eState_, dState_;
+//  private:
+//};
+////------------------------------------------------------------------------------
+//LZMAFilter & LZMAFilter::initializeEncoder()
+//{
+//  static const PROPID propIDs[] = {
+//    NCoderPropID::kNumFastBytes,
+//    NCoderPropID::kMatchFinderCycles,
+//    NCoderPropID::kAlgorithm,
+//    NCoderPropID::kMatchFinder,
+//    NCoderPropID::kDictionarySize,
+//    NCoderPropID::kPosStateBits,
+//    NCoderPropID::kLitPosBits,
+//    NCoderPropID::kLitContextBits,
+//    NCoderPropID::kEndMarker
+//  };
+//  PROPVARIANT properties[sizeof(propIDs) / sizeof(propIDs[0])] = {
+//    { VT_UI4, 0, 0, 0 }, // 5 - 273
+//    { VT_UI4, 0, 0, 0 },
+//    { VT_UI4, 0, 0, 0 },
+//    { VT_BSTR, 0, 0, 0 }, // BT2, BT3, BT4, HC4
+//    { VT_UI4, 0, 0, 0 }, // 1 - 1 << 30
+//    { VT_UI4, 0, 0, 0 }, // 0 - 4
+//    { VT_UI4, 0, 0, 0 }, // 0 - 4
+//    { VT_UI4, 0, 0, 0 }, // 0 - 8
+//    { VT_BOOL, 0, 0, 0 } // VARIANT_FALSE, VARIANT_TRUE
+//  };
+//// this is default values
+//  V_UI4(properties + 0) = 32;               // NumFastBytes
+//  V_UI4(properties + 1) = 0;                // MatchFinderCycles
+//  V_UI4(properties + 2) = 1;                // Algorithm
+//  V_BSTR(properties + 3) = L"BT4";          // MatchFinder
+//  V_UI4(properties + 4) = 4194304;          // DictionarySize
+//  V_UI4(properties + 5) = 2;                // PosStateBits
+//  V_UI4(properties + 6) = 0;                // LitPosBits
+//  V_UI4(properties + 7) = 3;                // LitContextBits
+//  V_BOOL(properties + 8) = VARIANT_FALSE;   // EndMarker
+//// test values for fast
+//  V_UI4(properties + 2) = 0;                // Algorithm
+//  V_BSTR(properties + 3) = L"HC4";          // MatchFinder
+//  V_UI4(properties + 4) = 64 * 1024;      // DictionarySize
+//  V_BOOL(properties + 8) = VARIANT_TRUE;    // EndMarker
+//
+//  HRESULT hr = SetCoderProperties(propIDs,properties,sizeof(propIDs) / sizeof(propIDs[0]));
+//  //if( SUCCEEDED(hr) ) hr = WriteCoderProperties(encoder_);
+//  if( FAILED(hr) ) newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
+//
+//  return *this;
+//}
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
@@ -1818,13 +2159,14 @@ int main(int _argc,char * _argv[])
   //}
 
   ////Sleep(15000);
+
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);
   autoInitializer = autoInitializer;
 
   try {
 // tests
-    ksys::setProcessPriority("REALTIME_PRIORITY_CLASS");
+    //setProcessPriority("REALTIME_PRIORITY_CLASS");
 
     AsyncFile file("C:/Korvin/trunk/test/kvm/test.txt");
     AsyncFile::LineGetBuffer lgb(file);

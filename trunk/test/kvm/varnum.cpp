@@ -579,7 +579,7 @@ uintptr_t VarInteger::print(char * s,uintptr_t pow) const
   VarInteger m(*this), q, ten(pow);
   do {
     m = m.div(ten,&q);
-    char c(q.abs().asUIntPtrT());
+    char c = char(q.abs().asUIntPtrT());
     if( s != NULL ) *s++ = c + (c < 10 ? '0' : 'A');
     l++;
   } while( !m.isZero() );
@@ -852,7 +852,7 @@ uintptr_t VarNumber::print(char * s,uintptr_t width,uintptr_t precision,uintptr_
     fraction += l2;
     remainder = q;
     if( precision == 0 ){
-      ldouble a = (e.numerator_.container_->count_ + e.denominator_.container_->count_) * sizeof(VarInteger::mword_t) * 8 / 4;
+      ldouble a = (e.numerator_.container_->count_ + e.denominator_.container_->count_) * sizeof(VarInteger::mword_t) * 8 / 4.;
       if( fraction - s > 0.625 * a ) break;
     }
     else {
