@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -100,7 +100,7 @@ enum HashChainType {
 //---------------------------------------------------------------------------
 template< class TKey,class TObj> class HashedObjectListItem {
   public:
-    ~HashedObjectListItem();
+    virtual ~HashedObjectListItem();
     HashedObjectListItem() {}
     HashedObjectListItem(const TKey & key, TObj * object, uintptr_t index);
 
@@ -242,7 +242,7 @@ HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::index(uintp
 //---------------------------------------------------------------------------
 template< class TKey,class TObj> class HashedObjectListHash {
   public:
-    ~HashedObjectListHash();
+    virtual ~HashedObjectListHash();
     HashedObjectListHash(uintptr_t slotCount = 1);
 
     HashedObjectListItem< TKey,TObj> **         find(const TKey & key, bool caseSensitive) const;
@@ -268,7 +268,7 @@ template< class TKey,class TObj> class HashedObjectListHash {
 //---------------------------------------------------------------------------
 template< class TKey,class TObj> inline HashedObjectListHash< TKey,TObj>::~HashedObjectListHash()
 {
-  xfree(slots_);
+  kfree(slots_);
 }
 //---------------------------------------------------------------------------
 template< class TKey,class TObj> inline HashedObjectListHash< TKey,TObj>::HashedObjectListHash(uintptr_t slotCount)
@@ -329,7 +329,7 @@ template< class TKey,class TObj>
 #endif
 HashedObjectListHash< TKey,TObj> & HashedObjectListHash< TKey,TObj>::resize(uintptr_t slotCount)
 {
-  xrealloc(slots_, sizeof(HashedObjectListItem< TKey,TObj>) * slotCount);
+  slots_ = (HashedObjectListItem<TKey,TObj> **) krealloc(slots_, sizeof(HashedObjectListItem< TKey,TObj>) * slotCount);
   while( slotCount_ < slotCount ) slots_[slotCount_++] = NULL;
   return *this;
 }

@@ -76,7 +76,7 @@ class AsyncFile : public AsyncDescriptor {
 
     class LineGetBuffer {
       public:
-        ~LineGetBuffer() {}
+        virtual ~LineGetBuffer() {}
         LineGetBuffer() {}
         LineGetBuffer(AsyncFile & file,uintptr_t size = 0) : 
           file_(&file), bufferFilePos_(0), size_(size), pos_(0), len_(0), codePage_(CP_ACP), removeNewLine_(false), detectUnicodeFFFE_(true) {}

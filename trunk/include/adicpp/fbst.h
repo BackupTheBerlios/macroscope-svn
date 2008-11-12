@@ -45,7 +45,7 @@ int             getTokenValue(char * mBuffer,char token,char subToken = -1);
 class XSQLDAHolder {
   public:
     XSQLDAHolder();
-    ~XSQLDAHolder();
+    virtual ~XSQLDAHolder();
 
     XSQLDAHolder &        resize(long n);
     // properties
@@ -78,7 +78,7 @@ class DSQLParam {
   friend class DSQLParams;
   friend class DSQLStatement;
   public:
-    ~DSQLParam();
+    virtual ~DSQLParam();
     DSQLParam(DSQLStatement * statement = NULL,const utf8::String & name = utf8::String());
 
     ksys::Mutant getMutant();
@@ -430,7 +430,7 @@ inline const ISC_BLOB_DESC & DSQLParam::blobDesc() const
 class DSQLParams {
   friend class DSQLStatement;
   public:
-    ~DSQLParams();
+    virtual ~DSQLParams();
     DSQLParams();
 
     uintptr_t         count();
@@ -821,7 +821,7 @@ inline const ISC_BLOB_DESC & DSQLValueBlob::desc()
 class DSQLValues {
   friend class DSQLStatement;
   public:
-    ~DSQLValues();
+    virtual ~DSQLValues();
     DSQLValues();
 
     uintptr_t                   rowCount();
@@ -982,7 +982,7 @@ enum Stmt {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement : virtual public ksys::Object {
+class DSQLStatement {
   friend class Database;
   friend class Transaction;
   friend class DSQLParam;
@@ -994,7 +994,7 @@ class DSQLStatement : virtual public ksys::Object {
     virtual ~DSQLStatement();
     DSQLStatement();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     DSQLStatement &   attach(Database & database, Transaction & transaction);
     DSQLStatement &   detach();

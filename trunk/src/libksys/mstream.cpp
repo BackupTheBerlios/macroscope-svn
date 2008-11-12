@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@ namespace ksys {
 uint8_t MemoryStream::nullContainer_[sizeof(MemoryStream::Container)];
 //---------------------------------------------------------------------------
 MemoryStream::Container::Container(uintptr_t count)
-  : ptr_(xmalloc(ptr_, count)),
+  : ptr_(kmalloc(count)),
     count_(count),
     mcount_(0),
     refCount_(0)
@@ -85,7 +85,7 @@ MemoryStream & MemoryStream::resize(uintptr_t newSize)
       if( newSize > container_->mcount_ || newSize < (container_->mcount_ << 1) ){
         uintptr_t a;
         for( a = 1; a < newSize; a <<= 1 );
-        xrealloc(container_->ptr_, a);
+        krealloc(container_->ptr_, a);
         container_->mcount_ = a;
       }
       container_->count_ = newSize;

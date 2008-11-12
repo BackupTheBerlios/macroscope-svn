@@ -33,7 +33,7 @@ namespace ksys {
 //-----------------------------------------------------------------------------
 template <typename T,class RT = Array<T> > class Table {
   public:
-    ~Table();
+    virtual ~Table();
     Table();
     Table(const Table<T,RT> & table){ operator = (table); }
 
@@ -141,6 +141,7 @@ template <typename T,class RT = Array<T> > class Table {
         utf8::String name_;
         uintptr_t index_;
 
+        virtual ~Name2Index() {}
         Name2Index(){}
         Name2Index(const utf8::String & name, uintptr_t index) : name_(name), index_(index) {}
       protected:

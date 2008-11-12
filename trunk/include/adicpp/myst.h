@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ inline int64_t str2Time(const utf8::String & s)
 //---------------------------------------------------------------------------
 class MYSQL_BIND_Holder {
   public:
-    ~MYSQL_BIND_Holder();
+    virtual ~MYSQL_BIND_Holder();
     MYSQL_BIND_Holder();
 
     MYSQL_BIND_Holder &   resize(long n);
@@ -59,12 +59,12 @@ inline MYSQL_BIND_Holder::MYSQL_BIND_Holder() : bind_(NULL), count_(0)
 //---------------------------------------------------------------------------
 inline MYSQL_BIND_Holder::~MYSQL_BIND_Holder()
 {
-  ksys::xfree(bind_);
+  ksys::kfree(bind_);
 }
 //---------------------------------------------------------------------------
 inline MYSQL_BIND_Holder & MYSQL_BIND_Holder::resize(long count)
 {
-  ksys::xrealloc(bind_, sizeof(MYSQL_BIND) * count);
+  bind_ = (MYSQL_BIND *) ksys::krealloc(bind_, sizeof(MYSQL_BIND) * count);
   count_ = count;
   return *this;
 }
@@ -85,7 +85,7 @@ class DSQLParam {
   friend class DSQLParams;
   friend class DSQLStatement;
   public:
-    ~DSQLParam();
+    virtual ~DSQLParam();
     DSQLParam() {}
     DSQLParam(DSQLStatement & statement);
   protected:
@@ -124,7 +124,7 @@ inline DSQLParam::DSQLParam(DSQLStatement & statement) :
 class DSQLParams {
   friend class DSQLStatement;
   public:
-    ~DSQLParams();
+    virtual ~DSQLParams();
     DSQLParams() {}
     DSQLParams(DSQLStatement & statement);
 
@@ -188,7 +188,7 @@ inline intptr_t DSQLParams::paramIndex(const utf8::String & name)
 class DSQLRow {
   friend class DSQLValues;
   public:
-    ~DSQLRow();
+    virtual ~DSQLRow();
     DSQLRow();
   protected:
     ksys::AutoPtr<uint8_t> raw_;
@@ -212,7 +212,7 @@ class DSQLValues {
   friend class DSQLStatement;
   friend class Transaction;
   public:
-    ~DSQLValues();
+    virtual ~DSQLValues();
     DSQLValues() {}
     DSQLValues(DSQLStatement & statement);
 
@@ -372,7 +372,7 @@ inline const MYSQL_FIELD & DSQLValues::field(uintptr_t i)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement : virtual public ksys::Object {
+class DSQLStatement {
   friend class Database;
   friend class Transaction;
   friend class DSQLParams;
@@ -381,7 +381,7 @@ class DSQLStatement : virtual public ksys::Object {
     virtual ~DSQLStatement();
     DSQLStatement();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
     
     DSQLStatement & attach(Database & database);
     DSQLStatement & detach();

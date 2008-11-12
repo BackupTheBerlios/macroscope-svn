@@ -225,7 +225,7 @@ DSQLParam & DSQLParam::setString(const utf8::String & value)
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::clear()
 {
-  ksys::xfree(data_);
+  ksys::kfree(data_);
   data_ = NULL;
   return *this;
 }
@@ -246,7 +246,7 @@ DSQLParam & DSQLParam::checkData()
     for( i = arrayDesc_.array_desc_dimensions - 1; i > 0; i-- ){
       dimElements_[i - 1] = uint16_t(dimElements_[i - 1] * dimElements_[i]);
     }
-    ksys::xmalloc(data_,dataSize_);
+    data_ = ksys::kmalloc(dataSize_);
     memset(data_,0,dataSize_);
   }
   return *this;

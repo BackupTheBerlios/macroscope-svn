@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,10 +39,10 @@ void addStrErrorHandler(StrErrorHandler strErrorHandler)
 utf8::String strError(int32_t err)
 {
   if( err - errorOffset != 0 ){
-    intptr_t  i;
+    intptr_t i;
     for( i = strErrorHandlers().count() - 1; i >= 0; i-- ){
       utf8::String se(strErrorHandlers()[i](err));
-      if( se.strlen() > 0 ) return se;
+      if( !se.isNull() > 0 ) return se;
     }
 #if defined(__WIN32__) || defined(__WIN64__)
     if( err >= errorOffset ){
@@ -107,22 +107,32 @@ utf8::String strError(int32_t err)
     }*/
 #endif
     AutoPtr<char> serr;
-#if HAVE_STRERROR_R && !__linux__
+#if HAVE_STRERROR_R
     int32_t er;
     size_t sel = 16;
     for(;;){
-      serr.realloc(sel = (sel << 1) + (sel == 0));
-//      memset(serr,'@',sel);
-//      fprintf(stderr,"%s %d sel = %u\n",__FILE__,__LINE__,sel);
-      if( (er = strerror_r(err,serr,sel)) != 0 && er != ERANGE && er != EINVAL ){
+#if (defined(_GNU_SOURCE) || defined(__USE_GNU)) && !__freebsd__
+      char * p = strerror_r(err,serr,sel);
+      sel = strlen(p) + 1;
+      serr.reallocT(sel);
+      strcpy(serr,p);
+      er = 0;
+#else
+      serr.reallocT(sel = (sel << 1) + (sel == 0));
+      er = strerror_r(err,serr,sel);
+#endif
+      if( er == 0 || er == EINVAL ) break;
+      if( er != ERANGE ){
         perror(NULL);
 	abort();
       }
-      if( er == 0 || er == EINVAL ) break;
     }
 #elif HAVE_STRERROR
-    serr.realloc(::strlen(strerror(err)) + 1);
-    strcpy(serr,strerror(err));
+    static ilock_t mutex = 0;
+    AutoInterlockedLock<ilock_t> lock(mutex);
+    char * p = strerror(err);
+    serr.reallocT(::strlen(p) + 1);
+    strcpy(serr,p);
 #endif
     if( strchr(serr.ptr(),'\r') != NULL ) *strchr(serr.ptr(),'\r') = '\0';
     if( strchr(serr.ptr(),'\n') != NULL ) *strchr(serr.ptr(),'\n') = '\0';

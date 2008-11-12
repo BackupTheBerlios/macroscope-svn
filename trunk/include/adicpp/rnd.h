@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -255,7 +255,7 @@ class Randomizer : public QTIsaac<> {
   typedef QTIsaac<> Inherited;
   private:
   public:
-    ~Randomizer();
+    virtual ~Randomizer();
     Randomizer();
 
     Randomizer & randomize();

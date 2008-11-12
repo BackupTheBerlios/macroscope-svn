@@ -33,14 +33,14 @@ class Database;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Transaction : virtual public Base {
+class Transaction {
   friend class Database;
   friend class DSQLStatement;
   public:
     virtual ~Transaction();
     Transaction();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Transaction &         attach(Database & database);
     Transaction &         detach();

@@ -35,18 +35,6 @@ class EventHandler;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Base : virtual public ksys::Object {
-  friend class EClientServer;
-  public:
-    virtual ~Base() {}
-    Base() {}
-  protected:
-    virtual void exceptionHandler(ksys::Exception * e) = 0;
-  private:
-};
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
 class DPB {
   friend class Database;
   public:
@@ -156,7 +144,7 @@ inline const utf8::String & DPB::charset() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Database : virtual public Base {
+class Database {
   friend class Transaction;
   friend class DSQLStatement;
   friend class EventHandler;
@@ -166,7 +154,7 @@ class Database : virtual public Base {
     virtual ~Database();
     Database();
     
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Database &            create(const utf8::String & name = utf8::String());
     Database &            drop();

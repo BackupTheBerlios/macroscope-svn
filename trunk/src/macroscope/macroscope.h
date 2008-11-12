@@ -43,7 +43,7 @@ class SnifferService;
 class Logger {
   friend class SnifferService;
   public:
-    ~Logger();
+    virtual ~Logger();
     Logger(bool sniffer,bool daemon);
 
     void readConfig();
@@ -75,6 +75,7 @@ class Logger {
         struct tm     et_;
         TrafType      trafType_;
 
+        virtual ~TrafCacheEntry() {}
         TrafCacheEntry(){}
         TrafCacheEntry(const utf8::String & user,const struct tm & bt,const struct tm & et,TrafType trafType)
           : user_(user), bt_(bt), et_(et), trafType_(trafType) {}
@@ -135,7 +136,7 @@ class Logger {
 
     class SquidSendmailThread : public Thread {
       public:
-        ~SquidSendmailThread();
+        virtual ~SquidSendmailThread();
         SquidSendmailThread() {}
         SquidSendmailThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage);
 
@@ -209,7 +210,7 @@ class Logger {
       public:
         utf8::String name_;
 
-        ~DNSCacheEntry() {}
+        virtual ~DNSCacheEntry() {}
         DNSCacheEntry() {}
 
         static EmbeddedHashNode<DNSCacheEntry,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
@@ -277,7 +278,7 @@ class Logger {
 
     class BPFTThread : public Thread {
       public:
-        ~BPFTThread();
+        virtual ~BPFTThread();
         BPFTThread();
         BPFTThread(Logger & logger,const utf8::String & section,const utf8::String & sectionName,uintptr_t stage);
 
@@ -285,6 +286,8 @@ class Logger {
       protected:
         class CachedPacketSum {
           public:
+            virtual ~CachedPacketSum() {}
+            CachedPacketSum() {}
             static EmbeddedHashNode<CachedPacketSum,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t &){
 	            return *reinterpret_cast<EmbeddedHashNode<CachedPacketSum,uintptr_t> *>(link);
 	          }
@@ -469,6 +472,7 @@ class SnifferService : public Service {
   public:
     Logger * logger_;
 
+    virtual ~SnifferService() {}
     SnifferService();
   protected:
   private:

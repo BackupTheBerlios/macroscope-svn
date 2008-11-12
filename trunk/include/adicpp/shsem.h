@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -97,8 +97,7 @@ class Semaphore
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
     sem_t   handle_;
-    sem_t   * pHandle_;
-    Semaphore(intptr_t) : pHandle_(SEM_FAILED) {}
+    static uint8_t handleNull_[sizeof(sem_t)];
 #elif defined(__WIN32__) || defined(__WIN64__)
     HANDLE  handle_;
 #else
@@ -115,7 +114,7 @@ class SharedSemaphore
 #if USE_SV_SEMAPHORES
  : public SVSharedSemaphore
 #else
- : public Semaphore
+// : public Semaphore
 #endif
 {
   public:
@@ -134,9 +133,16 @@ class SharedSemaphore
 #if !USE_SV_SEMAPHORES
     const bool &        creator() const;
 #endif
+#if !USE_SV_SEMAPHORES
+    SharedSemaphore & post();
+    SharedSemaphore & wait();
+    bool tryWait();
+#endif
+    bool timedWait(uint64_t timeout);
   protected:
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
+    sem_t   * pHandle_;
     utf8::AnsiString  name_;
     bool              creator_;
 #elif defined(__WIN32__) || defined(__WIN64__)
@@ -153,10 +159,7 @@ class SharedSemaphore
 
     {
     }
-    SharedSemaphore & operator =(const SharedSemaphore &)
-    {
-      return *this;
-    }
+    void operator =(const SharedSemaphore &);
 };
 //---------------------------------------------------------------------------
 #if !USE_SV_SEMAPHORES

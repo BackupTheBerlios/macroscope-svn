@@ -44,12 +44,12 @@ enum FieldType {
   ftUnknown
 };
 //---------------------------------------------------------------------------
-class Statement : virtual public ksys::Object {
+class Statement : public ksys::Object {
   public:
     virtual ~Statement() {}
     Statement() {}
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     virtual Database *                  database() = 0;
     

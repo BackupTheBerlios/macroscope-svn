@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,13 +28,12 @@
 #define _shmem_H_
 //---------------------------------------------------------------------------
 namespace ksys {
-
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class SharedMemory {
   public:
-    ~SharedMemory();
+    virtual ~SharedMemory();
     SharedMemory(const utf8::String & name = utf8::String(), uintptr_t len = 0, const void * address = NULL,
 #if HAVE_SYS_MMAN_H
       uintptr_t mode = S_IRWXU
@@ -92,23 +91,18 @@ inline const bool & SharedMemory::creator() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class ClassSMQRDLCK {
-};
-class ClassSMQRDULK {
-};
-class ClassSMQWRLCK {
-};
-class ClassSMQWRULK {
-};
-
-extern ClassSMQRDLCK  SMQ_RDL;
-extern ClassSMQRDULK  SMQ_RDU;
-extern ClassSMQWRLCK  SMQ_WRL;
-extern ClassSMQWRULK  SMQ_WRU;
+class ClassSMQRDLCK {};
+class ClassSMQRDULK {};
+class ClassSMQWRLCK {};
+class ClassSMQWRULK {};
+extern ClassSMQRDLCK SMQ_RDL;
+extern ClassSMQRDULK SMQ_RDU;
+extern ClassSMQWRLCK SMQ_WRL;
+extern ClassSMQWRULK SMQ_WRU;
 //---------------------------------------------------------------------------
 class SharedMemoryQueue : public SharedMemory {
   public:
-    ~SharedMemoryQueue();
+    virtual ~SharedMemoryQueue();
     SharedMemoryQueue(const utf8::String & name = utf8::String(), uintptr_t len = 0, const void * address = NULL,
 #if HAVE_SYS_MMAN_H
       uintptr_t mode = S_IRWXU

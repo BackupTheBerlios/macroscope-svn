@@ -110,12 +110,12 @@ DPB::DPB() : dpb_(NULL)
 //---------------------------------------------------------------------------
 DPB::~DPB()
 {
-  ksys::xfree(dpb_);
+  ksys::kfree(dpb_);
 }
 //---------------------------------------------------------------------------
 DPB & DPB::clear()
 {
-  ksys::xfree(dpb_);
+  ksys::kfree(dpb_);
   dpb_ = NULL;
   dpbLen_ = 0;
   dialect_ = 3;
@@ -154,14 +154,14 @@ DPB & DPB::injectTimeout()
 //---------------------------------------------------------------------------
 DPB & DPB::writeChar(uintptr_t code)
 {
-  ksys::xrealloc(dpb_, dpbLen_ + 1);
+  dpb_ = (char *) ksys::krealloc(dpb_, dpbLen_ + 1);
   dpb_[dpbLen_++] = char(code);
   return *this;
 }
 //---------------------------------------------------------------------------
 DPB & DPB::writeLong(uintptr_t a)
 {
-  ksys::xrealloc(dpb_, dpbLen_ + sizeof(int));
+  dpb_ = (char *) ksys::krealloc(dpb_, dpbLen_ + sizeof(int));
   *(int *) (dpb_ + dpbLen_) = (int32_t) a;
   dpbLen_ += sizeof(int32_t);
   return *this;
@@ -172,7 +172,7 @@ intptr_t DPB::writeISCCode(const utf8::String & name)
   intptr_t  i;
   for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
     if( name.strcasecmp(params[i].name_) == 0 ){
-      ksys::xrealloc(dpb_, dpbLen_ + 1);
+      dpb_ = (char *) ksys::krealloc(dpb_, dpbLen_ + 1);
       dpb_[dpbLen_++] = params[i].number;
       return params[i].number;
     }
@@ -182,7 +182,7 @@ intptr_t DPB::writeISCCode(const utf8::String & name)
 //---------------------------------------------------------------------------
 DPB & DPB::writeBuffer(const void * buf, uintptr_t size)
 {
-  ksys::xrealloc(dpb_, dpbLen_ + size);
+  dpb_ = (char *) ksys::krealloc(dpb_, dpbLen_ + size);
   memcpy(dpb_ + dpbLen_, buf, size);
   dpbLen_ += size;
   return *this;

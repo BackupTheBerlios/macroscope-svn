@@ -45,7 +45,7 @@ class ODObject : public Object {
     virtual ODObject callFunction(const String name,const ODObject parameters){ return *this; }
   protected:
   private:
-    ilock_t refCount_;
+    volatile ilock_t refCount_;
     ODObject * object_;
 
     ODObject(const ODObject & object);

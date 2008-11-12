@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@ struct PACKED ISC_TEB {
 class TPB {
   friend class Transaction;
   public:
-    ~TPB();
+    virtual ~TPB();
     TPB();
 
     TPB & clear();
@@ -90,7 +90,7 @@ class TPB {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Transaction : virtual public Base {
+class Transaction {
   friend class Database;
   friend class DSQLStatement;
   public:
@@ -101,7 +101,7 @@ class Transaction : virtual public Base {
     Transaction &   detach(Database & database);
     Transaction &   detach();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Transaction &   isolation(const utf8::String & isolation);
     const utf8::String & isolation() const;

@@ -56,6 +56,7 @@ class InterlockedMutex {
     HANDLE sem_;
 #elif HAVE_PTHREAD_H
     pthread_mutex_t mutex_;
+    static uint8_t pthreadMutexNull_[sizeof(pthread_mutex_t)];
 #endif
     static void initialize();
     static void cleanup();
@@ -108,7 +109,7 @@ class Mutex
   protected:
   private:
 #if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
-    int32_t           value_;
+    volatile int32_t           value_;
     static void (*rdLock_)(Mutex * mutex);
     static void singleRDLock(Mutex * mutex);
     static void multiRDLock(Mutex * mutex);
@@ -116,7 +117,8 @@ class Mutex
     static void singleWRLock(Mutex * mutex);
     static void multiWRLock(Mutex * mutex);
 #elif HAVE_PTHREAD_RWLOCK_INIT
-    pthread_rwlock_t  mutex_;
+    pthread_rwlock_t mutex_;
+    static uint8_t pthreadRWLockNull_[sizeof(pthread_rwlock_t)];
 #else
 #error pthread_rwlock not implemented
 #endif
@@ -175,6 +177,30 @@ inline Mutex & Mutex::unlock()
 }
 //---------------------------------------------------------------------------
 #endif
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T> class AutoInterlockedLock {
+  public:
+    ~AutoInterlockedLock();
+    AutoInterlockedLock(volatile T & ilock);
+  protected:
+  private:
+    volatile T & ilock_;
+
+    AutoInterlockedLock(const AutoInterlockedLock<T> &){}
+    void operator =(const AutoInterlockedLock<T> &){}
+};
+//---------------------------------------------------------------------------
+template<typename T> inline AutoInterlockedLock<T>::~AutoInterlockedLock()
+{
+  interlockedIncrement(ilock_,1);
+}
+//---------------------------------------------------------------------------
+template<typename T> inline AutoInterlockedLock<T>::AutoInterlockedLock(volatile T & ilock) : ilock_(ilock)
+{
+  interlockedCompareExchangeAcquire(ilock_,-1,0);
+}
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

@@ -48,9 +48,8 @@ namespace ksys {
 class ConfigSection {
   friend class Config;
   public:
-    ~ConfigSection();
-    ConfigSection() {}
-    ConfigSection(const utf8::String & name);
+    virtual ~ConfigSection();
+    ConfigSection(const utf8::String & name = utf8::String());
 
     const utf8::String & name() const;
 

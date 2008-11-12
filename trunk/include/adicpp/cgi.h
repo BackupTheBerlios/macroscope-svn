@@ -35,7 +35,7 @@ enum CGIMethod { cgiInit, cgiNone, cgiPOST, cgiGET, cgiHEAD };
 //---------------------------------------------------------------------------
 class CGI {
   public:
-    ~CGI();
+    virtual ~CGI();
     CGI();
     
     void initialize();
@@ -68,7 +68,7 @@ class CGI {
     class Param {
       friend class CGI;
       public:
-        ~Param() {}
+        virtual ~Param() {}
 	      Param(const utf8::String & name = utf8::String(),const utf8::String & value = utf8::String()) :
 	        name_(name), value_(value) {}
       protected:

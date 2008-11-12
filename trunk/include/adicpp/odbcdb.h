@@ -34,14 +34,14 @@ class DSQLStatement;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Database : virtual public Base {
+class Database {
   friend class Transaction;
   friend class DSQLStatement;
   public:
     virtual ~Database();
     Database();
     
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Database &            create(const utf8::String & name = utf8::String());
     Database &            drop();

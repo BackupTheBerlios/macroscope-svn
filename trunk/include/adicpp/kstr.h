@@ -57,7 +57,7 @@ class String {
           return ::strcmp(a0.string_,a1.string_);
 	      }
 
-        ilock_t refCount_;
+        volatile ilock_t refCount_;
         RBTreeNode node_;
         uint8_t string_[1];
     };

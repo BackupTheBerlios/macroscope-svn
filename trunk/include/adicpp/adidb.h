@@ -33,12 +33,12 @@ namespace adicpp {
 //---------------------------------------------------------------------------
 class Statement;
 //---------------------------------------------------------------------------
-class Database : virtual public ksys::Object {
+class Database : public ksys::Object {
   public:
     virtual ~Database() {}
     Database() {}
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     static Database *     newDatabase(const ksys::ConfigSection * config);
 

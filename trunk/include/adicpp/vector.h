@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ template <class T> class Vector {
     Vector();
     Vector(const Array<T> & s);
     Vector(const Vector<T> & s);
-    ~Vector();
+    virtual ~Vector();
 
     Vector<T> & operator =(const Array<T> & s);
     Vector<T> & operator =(const Vector<T> & s);
@@ -126,7 +126,7 @@ template <class T>
 Vector<T>::~Vector()
 {
   while( count_ > 0 ) deleteObject(ptr_[--count_]);
-  xfree(ptr_);
+  kfree(ptr_);
 }
 //---------------------------------------------------------------------------
 template <class T> inline
@@ -218,7 +218,7 @@ Vector<T> & Vector<T>::resize(uintptr_t asize)
   uintptr_t max = 0;
   if( asize > 0 ) for( max = 1; max < asize; max <<= 1 );
   if( max != max_ ){
-    xrealloc(ptr_, sizeof(T *) * max);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * max);
     max_ = max;
   }
   while( count_ < asize ) ptr_[count_++] = newObject<T>();
@@ -240,7 +240,7 @@ T & Vector<T>::add(const T & val)
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   return *(ptr_[count_++] = newObject<T>()) = val;
@@ -255,7 +255,7 @@ T & Vector<T>::add(T * val)
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   return *(ptr_[count_++] = val);
@@ -270,7 +270,7 @@ T & Vector<T>::add()
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   return *(ptr_[count_++] = newObject<T>());
@@ -286,7 +286,7 @@ T & Vector<T>::safeAdd(T * val)
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
     try{
-      xrealloc(ptr_, sizeof(T *) * amax);
+      ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
       max_ = amax;
     }
     catch( ... ){
@@ -307,7 +307,7 @@ T & Vector<T>::insert(uintptr_t i)
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
@@ -326,7 +326,7 @@ T & Vector<T>::insert(uintptr_t i, const T & val)
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
@@ -345,8 +345,8 @@ T & Vector<T>::safeInsert(uintptr_t i, T * val)
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
-    try{
-      xrealloc(ptr_, sizeof(T *) * amax);
+    try {
+      ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
       max_ = amax;
     }
     catch( ... ){
@@ -370,7 +370,7 @@ T & Vector<T>::insert(uintptr_t i, T * val)
   uintptr_t amax  = max_;
   while( amax < count_ + 1 ) amax = (amax << 1) + (amax == 0);
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   memmove(ptr_ + i + 1, ptr_ + i, sizeof(T *) * (count_ - i));
@@ -402,7 +402,7 @@ Vector<T> & Vector<T>::remove(uintptr_t i)
   while( amax != 0 && (amax >> 1) >= count_ )
     amax = amax >> 1;
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   return *this;
@@ -417,12 +417,12 @@ T * Vector<T>::cut(uintptr_t i)
   assert(i < count_);
   T * object  = ptr_[i];
   memcpy(ptr_ + i, ptr_ + i + 1, sizeof(T *) * (count_ - i - 1));
-  xrealloc(ptr_, sizeof(T *) * (count_ - 1));
+  ptr_ = (T **) krealloc(ptr_, sizeof(T *) * (count_ - 1));
   count_--;
   uintptr_t amax  = max_;
   while( amax != 0 && (amax >> 1) >= count_ ) amax = amax >> 1;
   if( amax != max_ ){
-    xrealloc(ptr_, sizeof(T *) * amax);
+    ptr_ = (T **) krealloc(ptr_, sizeof(T *) * amax);
     max_ = amax;
   }
   return object;

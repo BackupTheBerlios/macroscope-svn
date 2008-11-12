@@ -37,22 +37,6 @@ void * kmalloc(size_t size,bool noThrow = false);
 void * krealloc(void * p,size_t size,bool noThrow = false);
 void kfree(void * p);
 //---------------------------------------------------------------------------
-template <class T> inline T * xmalloc(T *& lp, size_t size)
-{
-  lp = NULL;
-  return lp = (T *) kmalloc(size);
-}
-//---------------------------------------------------------------------------
-template <typename T> inline T * xrealloc(T *& lp, size_t size)
-{
-  return lp = (T *) krealloc(lp, size);
-}
-//---------------------------------------------------------------------------
-template <class T> inline void xfree(T * lp)
-{
-  kfree(lp);
-}
-//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
 inline void * operator new(size_t size)
@@ -79,18 +63,68 @@ inline void operator delete[](void * ptr)
 //---------------------------------------------------------------------------
 #define DISABLE_OBJECT_ACTIONS 1
 //---------------------------------------------------------------------------
-template <typename T> inline void deleteObject(T * object)
+/*inline void deleteObject(ksys::Object * object)
 {
   if( object != NULL ){
-    ksys::ObjectActions::beforeDestruction(object);
+    object->beforeDestruction();
 #if !DISABLE_OBJECT_ACTIONS
-    ksys::ObjectActions::beforeDestructor(object);
+    object->beforeDestructor();
 #endif
 #if DISABLE_OBJECT_ACTIONS
     delete object;
 #else
     object->~T();
-    ksys::ObjectActions::afterDestructor(object);
+    object->afterDestructor();
+    ksys::kfree(object);
+#endif
+  }
+}*/
+//---------------------------------------------------------------------------
+inline void deleteObject(char * object)
+{
+  ksys::kfree(object);
+}
+//---------------------------------------------------------------------------
+inline void deleteObject(char ** object)
+{
+  ksys::kfree(object);
+}
+//---------------------------------------------------------------------------
+inline void deleteObject(unsigned char * object)
+{
+  ksys::kfree(object);
+}
+//---------------------------------------------------------------------------
+inline void deleteObject(wchar_t * object)
+{
+  ksys::kfree(object);
+}
+//---------------------------------------------------------------------------
+inline void deleteObject(int * object)
+{
+  ksys::kfree(object);
+}
+//---------------------------------------------------------------------------
+inline void deleteObject(fd_set * object)
+{
+  delete object;
+}
+//---------------------------------------------------------------------------
+template <typename T> inline void deleteObject(T * object)
+{
+  if( object != NULL ){
+    ksys::Object * obj = dynamic_cast<ksys::Object *>(object);
+    if( obj != NULL ){
+      obj->beforeDestruction();
+#if !DISABLE_OBJECT_ACTIONS
+      obj->beforeDestructor();
+#endif
+    }
+#if DISABLE_OBJECT_ACTIONS
+    delete object;
+#else
+    object->~T();
+    if( obj != NULL ) obj->afterDestructor();
     ksys::kfree(object);
 #endif
   }
@@ -98,19 +132,7 @@ template <typename T> inline void deleteObject(T * object)
 //---------------------------------------------------------------------------
 template <typename T> inline void deleteObject(const T * object)
 {
-  if( object != NULL ){
-    ksys::ObjectActions::beforeDestruction(const_cast<T *>(object));
-#if !DISABLE_OBJECT_ACTIONS
-    ksys::ObjectActions::beforeDestructor(const_cast<T *>(object));
-#endif
-#if DISABLE_OBJECT_ACTIONS
-    delete object;
-#else
-    const_cast<T *>(object)->~T();
-    ksys::ObjectActions::afterDestructor(const_cast<T *>(object));
-    ksys::kfree(const_cast<T *>(object));
-#endif
-  }
+  deleteObject(const_cast<T *>(object));
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

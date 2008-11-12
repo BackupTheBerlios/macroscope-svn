@@ -45,7 +45,7 @@ class Mutant {
   friend void initialize(int,char **);
   friend void cleanup();
   public:
-    ~Mutant();
+    virtual ~Mutant();
     Mutant();
 
     Mutant(bool a);
@@ -169,43 +169,27 @@ class Mutant {
     static bool         isIntegerString(const utf8::String & string, intmax_t & value);
     static bool         isIntegerString(const utf8::String & string, intmax_t * i = NULL);
   protected:
-#if _MSC_VER
-#pragma warning(push,3)
-#endif
-    struct {
-        union {
-#if _MSC_VER
-#pragma warning(disable:4200)
-#endif
-            char            raw_[];
-#if _MSC_VER
-#pragma warning(default:4200)
-#endif
-            intmax_t        int_;
-            intptr_t        pint_;
-            long            lint_;
-#if HAVE_LONG_DOUBLE
-            long
-#endif
-            double float_;
-            const char *    cStr_;
-            const wchar_t * wStr_;
-            const char *    str_;
-            char            stringPlaceHolder_[sizeof(utf8::String)];
-            char            streamPlaceHolder_[sizeof(MemoryStream)];
-        };
-        MutantType  type_;
+    union {
+      char raw_[1];
+      intmax_t int_;
+      intptr_t pint_;
+      long lint_;
+      ldouble float_;
+      const char * cStr_;
+      const wchar_t * wStr_;
+      const char * str_;
+      char stringPlaceHolder_[sizeof(utf8::String)];
+      char streamPlaceHolder_[sizeof(MemoryStream)];
     };
-#if _MSC_VER
-#pragma warning(pop)
-#endif
-    utf8::String &        string();
-    const utf8::String &  string() const;
-    MemoryStream &        stream();
-    const MemoryStream &  stream() const;
+    MutantType type_;
+    
+    utf8::String & string();
+    const utf8::String & string() const;
+    MemoryStream & stream();
+    const MemoryStream & stream() const;
   private:
-    static void           initialize();
-    static void           cleanup();
+    static void initialize();
+    static void cleanup();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

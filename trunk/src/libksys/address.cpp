@@ -191,7 +191,7 @@ SockAddr & SockAddr::resolveName(const utf8::String & addr,const ksys::Mutant & 
     assert( fiber->event_.type_ == ksys::etResolveName );
     if( fiber->event_.errno_ != 0 )
       newObjectV1C2<EAsyncSocket>(fiber->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
-    memcpy(&addr4_,&fiber->event_.address_.addr4_,fiber->event_.address_.sockAddrSize());
+    memcpy(&addr4_,&((SockAddr *) fiber->event_.address_)->addr4_,((SockAddr *) fiber->event_.address_)->sockAddrSize());
   }
   else {
     clear();
@@ -307,7 +307,7 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
   ksys::Fiber * fiber = ksys::currentFiber();
   if( fiber != NULL ){
     fiber->event_.timeout_ = ~uint64_t(0);
-    fiber->event_.address_ = *this;
+    memcpy(fiber->event_.address_,this,sizeof(*this));
     fiber->event_.defPort_ = defPort;
     fiber->event_.aiFlag_ = aiFlag;
     fiber->event_.type_ = ksys::etResolveAddress;

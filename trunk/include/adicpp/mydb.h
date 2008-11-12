@@ -34,18 +34,6 @@ class DSQLStatement;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Base : virtual ksys::Object {
-  friend class EClientServer;
-  public:
-    virtual ~Base() {}
-    Base() {}
-  protected:
-    virtual void exceptionHandler(ksys::Exception * e) = 0;
-  private:
-};
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
 class DPB {
   public:
     ~DPB();
@@ -117,7 +105,7 @@ inline const bool & DPB::compress() const
 //---------------------------------------------------------------------------
 class EClientServer;
 //---------------------------------------------------------------------------
-class Database : virtual public Base {
+class Database {
   friend class Transaction;
   friend class DSQLValues;
   friend class DSQLStatement;
@@ -125,7 +113,7 @@ class Database : virtual public Base {
     virtual ~Database();
     Database();
     
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Database &            create(const utf8::String & name = utf8::String());
     Database &            drop();

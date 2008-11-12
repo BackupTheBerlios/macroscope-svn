@@ -116,7 +116,7 @@ XSQLDAHolder::~XSQLDAHolder()
 XSQLDAHolder & XSQLDAHolder::resize(long n)
 {
   if( n < 0 ) n = 0;
-  ksys::xrealloc(sqlda_,XSQLDA_LENGTH(n));
+  sqlda_ = (XSQLDA *) ksys::krealloc(sqlda_,XSQLDA_LENGTH(n));
   sqlda_->sqln = (short) n;
   return *this;
 }

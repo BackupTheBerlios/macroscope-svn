@@ -48,30 +48,19 @@ namespace ksys {
 //__XSTRING(MPLOCKED2)*/
 //---------------------------------------------------------------------------
 #if __GNUG__ && __i386__
-
 #if !HAVE_ATOMIC_FETCHADD_32
-static __inline uint32_t atomic_fetchadd_32(volatile uint32_t * p,uint32_t v)
-{
-    __asm __volatile (
-    "       lock ;                  "
-    "       xaddl   %0, %1 ;        "
-    "# atomic_fetchadd_int"
-    : "+r" (v),                     /* 0 (result) */
-      "=m" (*p)                     /* 1 */
-    : "m" (*p));                    /* 2 */
-    return (v);
-}
+uint32_t atomic_fetchadd_32(volatile uint32_t * p,uint32_t v);
 #undef HAVE_ATOMIC_FETCHADD_32
 #define HAVE_ATOMIC_FETCHADD_32 1
 #endif
 
 inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
-#if __linux__
-  return atomic_fetchadd_32((volatile uint32_t *) &v,a);
-#else
+//#if __linux__
+//  return atomic_fetchadd_32((volatile uint32_t *) &v,a);
+//#else
   asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
-#endif
+//#endif
   return a;
 }
 
@@ -206,8 +195,8 @@ typedef uint32_t uilock_t;
 inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(volatile int64_t *) &v,(int64_t) a); }
 inline uintptr_t interlockedIncrement(volatile uintptr_t & v,uintptr_t a){ return interlockedIncrement(*(volatile int64_t *) &v,(int64_t) a); }
 #endif
-typedef int64_t ilock_t;
-typedef uint64_t uilock_t;
+typedef int32_t ilock_t;
+typedef uint32_t uilock_t;
 #endif
 //---------------------------------------------------------------------------
 } // namespace ksys

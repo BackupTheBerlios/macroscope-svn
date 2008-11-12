@@ -34,7 +34,7 @@ namespace fbcpp {
 class EPB {
   friend class EventHandler;
   public:
-    ~EPB();
+    virtual ~EPB();
     EPB();
     EPB(EventHandler & eventHandler);
   protected:
@@ -57,12 +57,12 @@ inline EPB::EPB() : eventHandler_(NULL)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class EventHandler : virtual public ksys::Object {
+class EventHandler {
   public:
     virtual ~EventHandler();
     EventHandler();
     
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     EventHandler &          attach(Database & database);
     EventHandler &          detach();

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@ template <class T> class Vector;
 //-----------------------------------------------------------------------------
 template <class T> class Array {
   public:
-    ~Array();
+    virtual ~Array();
     Array(T * ptr = NULL);
     Array(const T & element);
     Array(const Array<T> & array);
@@ -62,8 +62,7 @@ template <class T> class Array {
 
     const uintptr_t & count() const;
     Array<T> &       clear();
-    T * &             ptr();
-    const T * &       ptr() const;
+    T * &             ptr() const;
     Array<T> &       resize(uintptr_t newSize);
     Array<T> &       add(const T & element);
     Array<T> &       insert(uintptr_t i, const T & element);
@@ -91,8 +90,8 @@ template <class T> class Array {
     Array<T> &       invertBitRange(uintptr_t n, uintptr_t c);
     Array<T> & replace(Array< T> & array);
   protected:
-    T *       ptr_;
-    uintptr_t count_;
+    mutable T *       ptr_;
+    mutable uintptr_t count_;
   private:
 };
 //-----------------------------------------------------------------------------
@@ -244,19 +243,13 @@ Array< T> & Array< T>::clear()
     count_--;
     (ptr_ + count_)->~T();
   }
-  xfree(ptr_);
+  kfree(ptr_);
   ptr_ = NULL;
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-T * & Array< T>::ptr()
-{
-  return ptr_;
-}
-//-----------------------------------------------------------------------------
-template< class T> inline
-const T * & Array< T>::ptr() const
+template <class T> inline
+T * & Array<T>::ptr() const
 {
   return ptr_;
 }
@@ -692,7 +685,7 @@ SparseArray<T> & SparseArray<T>::clear()
     count_--;
     ptr_[count_].~T();
   }
-  xfree(ptr_);
+  kfree(ptr_);
   ptr_ = NULL;
   return *this;
 }

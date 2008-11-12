@@ -211,6 +211,7 @@ PCAP::~PCAP()
 {
   EmbeddedListNode<PCAP> * node;
   while( (node = joined_.last()) != NULL ) joined_.drop(*node);
+  //memset(this,0,sizeof(*this));
 }
 //------------------------------------------------------------------------------
 PCAP::PCAP() :
@@ -242,7 +243,7 @@ PCAP::PCAP() :
 //  tempFile_ = getTempPath() + createGUIDAsBase32String() + ".tmp";
 }
 //------------------------------------------------------------------------------
-ilock_t PCAP::startupMutex_ = 0;
+volatile ilock_t PCAP::startupMutex_ = 0;
 //------------------------------------------------------------------------------
 PCAP::PacketGroupingPeriod PCAP::stringToGroupingPeriod(const utf8::String & gp)
 {
@@ -432,25 +433,41 @@ void PCAP::shutdown()
 //------------------------------------------------------------------------------
 void PCAP::threadExecute()
 {
-  bool startupLocked = false;
 //  for( uintptr_t len = 65536; len <= swapThreshold_; len += 65536 )
 //    fprintf(stderr,"%s\n",formatByteLength(len,swapThreshold_).c_str());
 #if HAVE_PCAP_H
   char errbuf[PCAP_ERRBUF_SIZE + 1]; // Error string
   struct bpf_program * fp;         // The compiled filter expression
-  bpf_u_int32 mask;              // The netmask of our sniffing device
-  bpf_u_int32 net;               // The IP of our sniffing device
+  bpf_u_int32 mask = 0;              // The netmask of our sniffing device
+  bpf_u_int32 net = 0;               // The IP of our sniffing device
 //  stdErr.bufferDataTTA(0);
   api.open();
   try {
     fp_ = kmalloc(sizeof(struct bpf_program));
     fp = (struct bpf_program *) fp_;
-    if( api.pcap_lookupnet(iface_.getANSIString(),&net,&mask,errbuf) != 0 ) goto errexit;
-    handle_ = api.pcap_open_live(iface_.getANSIString(),INT_MAX,promisc_,int(pcapReadTimeout_),errbuf);
-    if( handle_ == NULL ) goto errexit;
+    //ksleep(2 * 1000000);
+    utf8::AnsiString iface(iface_.getANSIString());
+    //fprintf(stderr,"%s, %s %d\n",(const char *) iface,__FILE__,__LINE__);
+    if( api.pcap_lookupnet(iface,&net,&mask,errbuf) != 0 ){
+      int32_t err = oserror();
+      newObjectV1C2<Exception>(err + errorOffset,
+        utf8::String(errbuf) + ", interface: " + ifName_ + ", " + __PRETTY_FUNCTION__
+      )->throwSP();
+    }
+    
+    int snaplen = 96;//INT_MAX;
+    //while( snaplen > 0 && handle_ != NULL ){
+      handle_ = api.pcap_open_live(iface,snaplen,promisc_,int(pcapReadTimeout_),errbuf);
+      //snaplen /= 2;
+    //}
+    if( handle_ == NULL ){
+      int32_t err = oserror();
+      newObjectV1C2<Exception>(err + errorOffset,
+        utf8::String(errbuf) + ", interface: " + ifName_ + ", " + __PRETTY_FUNCTION__
+      )->throwSP();
+    }
     if( !filter_.isNull() ){
-      interlockedCompareExchangeAcquire(startupMutex_,-1,0);
-      startupLocked = true;
+      AutoInterlockedLock<ilock_t> lock(startupMutex_);
       memset(fp,0,sizeof(struct bpf_program));
       errbuf[0] = '\0';
       utf8::AnsiString s(filter_.getANSIString());
@@ -464,12 +481,18 @@ void PCAP::threadExecute()
           oserror(EINVAL);
 #endif
         }
-        goto errexit;
+        int32_t err = oserror();
+        newObjectV1C2<Exception>(err + errorOffset,
+          utf8::String(errbuf) + ", interface: " + ifName_ + ", " + __PRETTY_FUNCTION__
+        )->throwSP();
       }
       fc_ = true;
-      if( api.pcap_setfilter((pcap_t *) handle_,fp) != 0 ) goto errexit;
-      interlockedIncrement(startupMutex_,1);
-      startupLocked = false;
+      if( api.pcap_setfilter((pcap_t *) handle_,fp) != 0 ){
+        int32_t err = oserror();
+        newObjectV1C2<Exception>(err + errorOffset,
+          utf8::String(errbuf) + ", interface: " + ifName_ + ", " + __PRETTY_FUNCTION__
+        )->throwSP();
+      }
     }
 //    fprintf(stderr,"%s %d\n",__FILE__,__LINE__); fflush(stderr);
     //if( api.pcap_setmode((pcap_t *) handle_,MODE_MON) != 0 ) goto errexit;
@@ -489,16 +512,25 @@ void PCAP::threadExecute()
       databaseInserter_->resume();
       lazyWriter_->resume();
     }
-    stdErr.debug(1,utf8::String::Stream() <<
-      "Interface: " << ifName_ <<
-      " on device: " << iface_ <<
-      ", memory using swap threshold: " << formatByteLength(swapThreshold_,0,"S") <<
-      ", pregrouping buffer size: " << formatByteLength(pregroupingBufferSize_,0,"S") <<
-      ", pregrouping buffer max packet count: " << pregroupingBufferSize_ / sizeof(Packet) <<
-      ", grouping period: " << groupingPeriodToString(groupingPeriod_) <<
-      (joinMaster_ == NULL ? utf8::String() : ", joined to " + joinMaster_->ifName_) <<
-      ", capture started.\n"
-    );
+    {
+      utf8::String::Stream ss;
+      ss <<
+        "Interface: " << ifName_ <<
+        " on device: " << iface_ <<
+        ", memory using swap threshold: " << formatByteLength(swapThreshold_,0,"S") <<
+        ", pregrouping buffer size: " << formatByteLength(pregroupingBufferSize_,0,"S") <<
+        ", pregrouping buffer max packet count: " << pregroupingBufferSize_ / sizeof(Packet) <<
+        ", grouping period: "
+      ;
+      //fprintf(stderr,"%s, %s %d\n",ss.plane(),__FILE__,__LINE__);
+      ss << groupingPeriodToString(groupingPeriod_);
+      //fprintf(stderr,"%s, %s %d\n",ss.plane(),__FILE__,__LINE__);
+      ss <<
+        (joinMaster_ == NULL ? utf8::String() : ", joined to " + joinMaster_->ifName_) <<
+        ", capture started.\n"
+      ;
+      stdErr.debug(1,ss);
+    }
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
   }
@@ -507,15 +539,6 @@ void PCAP::threadExecute()
     api.close();
     throw;
   }
-errexit:
-  int32_t err = oserror();
-  if( startupLocked ) interlockedIncrement(startupMutex_,1);
-  shutdown();
-  api.close();
-  if( err != 0 )
-    newObjectV1C2<Exception>(err + errorOffset,
-      utf8::String(errbuf) + ", interface: " + ifName_ + ", " + __PRETTY_FUNCTION__
-    )->throwSP();
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
@@ -845,7 +868,7 @@ void PCAP::Grouper::threadExecute()
         }
         if( pGroup->header_.count_ == pGroup->maxCount_ ){
           uintptr_t count = (pGroup->maxCount_ << 1) + ((pGroup->maxCount_ == 0) << 4);
-          pGroup->packets_.realloc(count * sizeof(HashedPacket));
+          pGroup->packets_.resize(count);
           interlockedIncrement(
             pcap_->memoryUsage_,
             uilock_t((count - pGroup->maxCount_) * sizeof(HashedPacket))
@@ -1112,7 +1135,7 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
     group->header_ = header;
     group->maxCount_ = header.count_;
     uintptr_t groupSize = header.count_ * sizeof(HashedPacket);
-    group->packets_.alloc(groupSize);
+    group->packets_.resize(header.count_);
     tempFile.readBuffer(pos - groupSize,group->packets_,groupSize);
     tempFile.resize(pos - groupSize);
     PacketGroup * pGroup;
@@ -1220,7 +1243,7 @@ PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,volat
   for( intptr_t i = group.header_.count_ - 1; i >= 0; i-- ){
     if( header_.count_ == maxCount_ ){
       uintptr_t count = (maxCount_ << 1) + ((maxCount_ == 0) << 4);
-      packets_.realloc(count * sizeof(HashedPacket));
+      packets_.resize(count);
       interlockedIncrement(
         memoryUsage,
         uilock_t((count - maxCount_) * sizeof(HashedPacket))

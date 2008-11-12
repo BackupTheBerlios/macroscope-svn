@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -157,12 +157,12 @@ DSQLValueArray::DSQLValueArray() :
 //---------------------------------------------------------------------------
 DSQLValueArray::~DSQLValueArray()
 {
-  ksys::xfree(data_);
+  ksys::kfree(data_);
 }
 //---------------------------------------------------------------------------
 DSQLValueArray & DSQLValueArray::clear()
 {
-  ksys::xfree(data_);
+  ksys::kfree(data_);
   data_ = NULL;
   return *this;
 }
@@ -190,7 +190,7 @@ DSQLValueArray & DSQLValueArray::checkData()
     for( i = desc_.array_desc_dimensions - 1; i > 0; i-- ){
       dimElements_[i - 1] *= dimElements_[i];
     }
-    ksys::xmalloc(data_, dataSize_);
+    data_ = ksys::kmalloc(dataSize_);
   }
   return *this;
 }

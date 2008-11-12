@@ -43,13 +43,13 @@ String::Container * String::Container::container(uintptr_t l)
   return cp;
 }
 //---------------------------------------------------------------------------
-void String::Container::acquire()
+/*void String::Container::acquire()
 {
-/*  for(;;){
+  for(;;){
     if( ksys::interlockedCompareExchange(mutex_,-1,0) == 0 ) break;
     ksys::ksleep1();
-  }*/
-}
+  }
+}*/
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -209,7 +209,7 @@ String & String::operator +=(const char * str)
   if( *str != '\0' ){
     uintptr_t l1, l2  = mbcs2utf8s(CP_ACP, NULL, 0, str, ~uintptr_t(0) >> 1);
     if( container_.ptr() != &nullContainer() ){
-      ksys::xrealloc(container_->string_, (l1 = ksys::strlen(container_->string_)) + l2 + 1);
+      container_->string_ = (char *) ksys::krealloc(container_->string_, (l1 = ksys::strlen(container_->string_)) + l2 + 1);
     }
     else{
       container_ = Container::container(l2);
@@ -260,7 +260,7 @@ String & String::operator +=(const String & str)
         l1 = ksys::strlen(container_->string_);
       else
         l1 = l2;
-      ksys::xrealloc(container_->string_, l1 + l2 + 1);
+      container_->string_ = (char *) ksys::krealloc(container_->string_, l1 + l2 + 1);
     }
     else{
       container_ = Container::container(l2);
@@ -286,7 +286,7 @@ String & String::resize(uintptr_t bCount)
     uintptr_t l = ksys::strlen(container_->string_);
     if( bCount != l ){
       if( container_.ptr() != &nullContainer() ){
-        ksys::xrealloc(container_->string_, bCount + 1);
+        container_->string_ = (char *) ksys::krealloc(container_->string_, bCount + 1);
       }
       else{
         container_ = Container::container(bCount);
@@ -649,7 +649,7 @@ String String::cut(const Iterator & i1, const Iterator & i2) const
     }
     else{
       memcpy(container->string_, i2.c_str(), l + 1);
-      ksys::xrealloc(container_->string_, i1.cursor_ + l + 1);
+      container_->string_ = (char *) ksys::krealloc(container_->string_, i1.cursor_ + l + 1);
     }
   }
   else{
@@ -672,10 +672,10 @@ String & String::replace(const Iterator & d1,const Iterator & d2, const Iterator
   if( s1.cursor_ > s2.cursor_ ) return replace(d1, d1, s2, s1);
   uintptr_t l = ksys::strlen(container_->string_);
   intptr_t  k = (s2.cursor_ - s1.cursor_) - (d2.cursor_ - d1.cursor_);
-  if( k > 0 ) ksys::xrealloc(container_->string_, l + k + 1);
+  if( k > 0 ) container_->string_ = (char *) ksys::krealloc(container_->string_, l + k + 1);
   memmove((char *) d2.c_str() + k, d2.c_str(), l - d2.cursor_ + 1);
   memcpy((char *) d1.c_str(), s1.c_str(), s2.cursor_ - s1.cursor_);
-  if( k < 0 ) ksys::xrealloc(container_->string_, l + k + 1);
+  if( k < 0 ) container_->string_ = (char *) ksys::krealloc(container_->string_, l + k + 1);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -722,85 +722,75 @@ String String::middle(uintptr_t pos, uintptr_t symbols) const
 //---------------------------------------------------------------------------
 String String::catPrint(const char * fmt, ...)
 {
-  int     a;
+  int a;
   va_list arglist;
-  String  s;
-
-#if !defined(__BCPLUSPLUS__) && !defined(__FreeBSD__)
-  va_start(arglist, fmt);
+  String s;
+  
+  va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-  a = vsnprintf(
+  a = vsnprintf(s.c_str(),0,fmt,arglist);
 #elif HAVE__VSNPRINTF
-  a = _vsnprintf(
+  a = _vsnprintf(s.c_str(),0,fmt,arglist);
 #endif
-    s.c_str(),0,fmt,arglist);
   va_end(arglist);
   if( a < 0 ){ // hack for ugly msvcrt.dll versions
-#endif
-    s.resize(65535);
+    s.resize(a = 65535);
     va_start(arglist,fmt);
     a =
 #if __BCPLUSPLUS__
       std::
 #endif
-      vsprintf(s.c_str(),fmt,arglist);
+      vsnprintf(s.c_str(),a + 1,fmt,arglist);
     va_end(arglist);
     s.resize(a);
-#if !defined(__BCPLUSPLUS__) && !defined(__FreeBSD__)
   }
   else {
+    s.resize(a);
     va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-    vsnprintf(
+    vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #elif HAVE__VSNPRINTF
-    _vsnprintf(
+    _vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #endif
-      s.c_str(),a + 1,fmt,arglist);
     va_end(arglist);
   }
-#endif
   return *this + s;
 }
 //---------------------------------------------------------------------------
 String String::print(const char * fmt, ...)
 {
-  int     a;
+  int a;
   va_list arglist;
-  String  s;
-
-#if !defined(__BCPLUSPLUS__) && !defined(__FreeBSD__)
-  va_start(arglist, fmt);
+  String s;
+  
+  va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-  a = vsnprintf(
+  a = vsnprintf(s.c_str(),0,fmt,arglist);
 #elif HAVE__VSNPRINTF
-  a = _vsnprintf(
+  a = _vsnprintf(s.c_str(),0,fmt,arglist);
 #endif
-    s.c_str(),0,fmt,arglist);
   va_end(arglist);
   if( a < 0 ){ // hack for ugly msvcrt.dll versions
-#endif
-    s.resize(65535);
+    s.resize(a = 65535);
     va_start(arglist,fmt);
     a =
 #if __BCPLUSPLUS__
       std::
 #endif
-      vsprintf(s.c_str(),fmt,arglist);
+      vsnprintf(s.c_str(),a + 1,fmt,arglist);
     va_end(arglist);
     s.resize(a);
-#if !defined(__BCPLUSPLUS__) && !defined(__FreeBSD__)
   }
   else {
+    s.resize(a);
     va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-    vsnprintf(
+    vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #elif HAVE__VSNPRINTF
-    _vsnprintf(
+    _vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #endif
-      s.c_str(),a + 1,fmt,arglist);
     va_end(arglist);
   }
-#endif
   return s;
 }
 //---------------------------------------------------------------------------

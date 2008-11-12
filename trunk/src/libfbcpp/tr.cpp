@@ -61,12 +61,12 @@ TPB::TPB() : tpb_(NULL), tpbLen_(0)
 //---------------------------------------------------------------------------
 TPB::~TPB()
 {
-  ksys::xfree(tpb_);
+  ksys::kfree(tpb_);
 }
 //---------------------------------------------------------------------------
 TPB & TPB::clear()
 {
-  ksys::xfree(tpb_);
+  ksys::kfree(tpb_);
   tpb_ = NULL;
   tpbLen_ = 0;
   return *this;
@@ -74,7 +74,7 @@ TPB & TPB::clear()
 //---------------------------------------------------------------------------
 TPB & TPB::writeChar(uintptr_t code)
 {
-  ksys::xrealloc(tpb_, tpbLen_ + 1);
+  tpb_ = (char *) ksys::krealloc(tpb_, tpbLen_ + 1);
   tpb_[tpbLen_++] = char(code);
   return *this;
 }
@@ -84,7 +84,7 @@ intptr_t TPB::writeISCCode(const utf8::String & name)
   intptr_t  i;
   for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
     if( name.strcasecmp(params[i].name_) == 0 ){
-      ksys::xrealloc(tpb_, tpbLen_ + 1);
+      tpb_ = (char *) ksys::krealloc(tpb_, tpbLen_ + 1);
       tpb_[tpbLen_++] = params[i].number;
       return params[i].number;
     }
@@ -221,8 +221,8 @@ Transaction & Transaction::start()
     newObjectV1C2<ETrNotActive>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__);
   if( startCount_ == 0 ){
     retainingHelper(); // pumping retaining transactions
-    ksys::AutoPtr<ISC_TEB> tebVector;
-    tebVector.alloc(sizeof(ISC_TEB) * databases_.count());
+    ksys::Array<ISC_TEB> tebVector;
+    tebVector.resize(databases_.count());
     for( intptr_t i = databases_.count() - 1; i >= 0; i-- ){
 #if __GNUG__
       tebVector[i].db_ptr = &databases_[i]->handle_;
@@ -265,7 +265,7 @@ l1:       tpb->add("version3");
       tebVector[i].tpb_len = tpb->tpbLen_;
       tebVector[i].tpb_ptr = tpb->tpb_;
     }
-    ISC_STATUS_ARRAY  status;
+    ISC_STATUS_ARRAY status;
     if( api.isc_start_multiple(status, &handle_, (short) databases_.count(), tebVector.ptr()) != 0 )
       exceptionHandler(newObjectV1C2<ETrStart>(status, __PRETTY_FUNCTION__));
   }

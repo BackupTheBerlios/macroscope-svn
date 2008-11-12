@@ -144,6 +144,7 @@ class Thread : virtual public Object {
 #else
     pthread_t       handle_;
     //pthread_mutex_t mutex_;
+    static uint8_t handleNull_[sizeof(pthread_t)];
 #endif
     intptr_t        exitCode_;
     volatile bool   started_;

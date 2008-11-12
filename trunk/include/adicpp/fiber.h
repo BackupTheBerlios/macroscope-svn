@@ -491,7 +491,7 @@ inline void Requester::shutdownDescriptors()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class BaseThread : public Thread, public Fiber {
+class BaseThread : virtual public Thread, virtual public Fiber {
   friend void initialize(int,char **);
   friend void cleanup();
   friend class Fiber;

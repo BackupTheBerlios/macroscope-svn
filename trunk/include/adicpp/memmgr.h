@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,7 @@ class MemoryManager {
   friend void initialize(int,char **);
   friend void cleanup();
   public:
-    ~MemoryManager();
+    virtual ~MemoryManager();
     MemoryManager();
 
     static MemoryManager & globalMemoryManager();
@@ -64,6 +64,7 @@ class MemoryManager {
     class Clusters;
     class Cluster {
       public:
+        virtual ~Cluster() {}
         Cluster(Clusters * cs = NULL,void * memory = NULL) :
           cs_(cs),
           memory_((uint8_t *) memory),

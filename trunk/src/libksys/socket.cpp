@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -336,7 +336,7 @@ AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
   assert( fiber != NULL );
   fiber->event_.timeout_ = ~uint64_t(0);
   fiber->event_.position_ = 0;
-  fiber->event_.address_ = addr;
+  memcpy(fiber->event_.address_,&addr,sizeof(addr));
   fiber->event_.type_ = ksys::etConnect;
   fiber->thread()->postRequest(this);
   fiber->switchFiber(fiber->mainFiber());
@@ -932,7 +932,7 @@ void AsyncSocket::connect(ksys::AsyncEvent * request)
   api.connect(
     socket_,
     (const struct sockaddr *) &request->address_,
-    (socklen_t) request->address_.sockAddrSize()
+    (socklen_t) ((SockAddr *) request->address_)->sockAddrSize()
   );
 }
 //---------------------------------------------------------------------------

@@ -48,6 +48,20 @@ Sniffer::Sniffer(Database * database,Database * database2) :
   storagePeriodOfStatistics_(0),
   maintenanceThreshold_(0.1)
 {
+//  fprintf(stderr,"%p %p, %s %d\n",this,database,__FILE__,__LINE__);
+}
+//------------------------------------------------------------------------------
+void Sniffer::threadExecute()
+{
+  try {
+    PCAP::threadExecute();
+  }
+  catch( ... ){
+//    fprintf(stderr,"%p %p, %s %d\n",this,database_.ptr(),__FILE__,__LINE__);
+    database_->detach();
+    throw;
+  }
+  database_->detach();
 }
 //------------------------------------------------------------------------------
 Sniffer & Sniffer::totalsPeriod(PacketGroupingPeriod period)
@@ -401,18 +415,6 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
 // shutdown
   if( packets == NULL ) database_->detach();
   return r;
-}
-//------------------------------------------------------------------------------
-void Sniffer::threadExecute()
-{
-  try {
-    PCAP::threadExecute();
-  }
-  catch( ... ){
-    database_->detach();
-    throw;
-  }
-  database_->detach();
 }
 //------------------------------------------------------------------------------
 void Sniffer::maintenanceInternal()

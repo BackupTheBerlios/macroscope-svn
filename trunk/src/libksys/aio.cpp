@@ -933,7 +933,7 @@ void AsyncMiscSlave::threadExecute()
       else if( request->type_ == etResolveName ){
         int32_t err = 0;
         try {
-          request->address_.resolveName(request->string0_,request->string1_,request->aiFlag_);
+          ((ksock::SockAddr *) request->address_)->resolveName(request->string0_,request->string1_,request->aiFlag_);
         }
         catch( ExceptionSP & e ){
           err = e->code();
@@ -945,7 +945,7 @@ void AsyncMiscSlave::threadExecute()
       else if( request->type_ == etResolveAddress ){
         int32_t err = 0;
         try {
-          request->string0_ = request->address_.resolveAddr(request->defPort_,request->aiFlag_);
+          request->string0_ = ((ksock::SockAddr *) request->address_)->resolveAddr(request->defPort_,request->aiFlag_);
         }
         catch( ExceptionSP & e ){
           err = e->code();

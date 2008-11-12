@@ -64,7 +64,7 @@ template <typename T> class StringT {
         ksys::AutoPtr<T> string_;
         volatile int32_t refCount_;
 
-        ~Container(){}
+        virtual ~Container(){}
 
         Container(T * string = NULL) : string_(string), refCount_(0){}
 
@@ -151,7 +151,7 @@ class String {
             unsigned char * ustring_;
         };
 
-        ~Container();
+        virtual ~Container();
         Container();
         Container(int32_t refCount,char * string);
 
@@ -162,7 +162,7 @@ class String {
         void acquire();
         void release();
       private:
-        int32_t refCount_;
+        volatile int32_t refCount_;
 //        int32_t mutex_;
     };
     class Iterator {
@@ -362,7 +362,7 @@ class String {
     friend String       operator +(const char * s1, const String & s2);
     friend String       operator +(const wchar_t * s1, const String & s2);
   public:
-    ~String();
+    virtual ~String();
     String();
     String(Container * container);
     String(const char * s, uintptr_t l = ~uintptr_t(0) >> 1);

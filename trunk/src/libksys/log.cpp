@@ -241,27 +241,33 @@ void LogFile::threadExecute()
   bool exception = false;
   for(;;){
     AutoPtr<char> buffer;
-    uintptr_t bufferPos;
+    uintptr_t bufferPos = 0;
     int64_t ft;
-    {
-      AutoLock<InterlockedMutex> lock(threadMutex_);
-      bufferPos = bufferPos_;
-      ft = bufferDataTTA_ - (gettimeofday() - lastFlushTime_);
-    }
-    if( bufferPos == 0 && !terminated_ ){
-      bufferSemaphore_.wait();
-      continue;
-    }
-    if( bufferPos > 0 && !terminated_ && ft >= 0 ){
+    try {
+      {
+        AutoLock<InterlockedMutex> lock(threadMutex_);
+        bufferPos = bufferPos_;
+        ft = bufferDataTTA_ - (gettimeofday() - lastFlushTime_);
+      }
+      if( bufferPos == 0 && !terminated_ ){
+        bufferSemaphore_.wait();
+        continue;
+      }
+      if( bufferPos > 0 && !terminated_ && ft >= 0 ){
 //      fprintf(stderr,"%s %d\n",__FILE__,__LINE__);
-      bufferSemaphore_.timedWait(ft);
+        bufferSemaphore_.timedWait(ft);
+      }
+      {
+        AutoLock<InterlockedMutex> lock(threadMutex_);
+        buffer.xchg(buffer_);
+        bufferPos = bufferPos_;
+        bufferPos_ = 0;
+        bufferSize_ = 0;
+      }
     }
-    {
-      AutoLock<InterlockedMutex> lock(threadMutex_);
-      buffer.xchg(buffer_);
-      bufferPos = bufferPos_;
-      bufferPos_ = 0;
-      bufferSize_ = 0;
+    catch( ExceptionSP & e ){
+      exception = true;
+      exceptionStdErrorToSyslog(e);
     }
     if( terminated_ && (bufferPos == 0 || exception) ) break;
     if( bufferPos > 0 ){

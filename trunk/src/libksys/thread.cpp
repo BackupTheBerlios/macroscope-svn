@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -74,6 +74,10 @@ void Thread::afterConstruction()
   //  )->throwSP();
 }
 //---------------------------------------------------------------------------
+#if HAVE_PTHREAD_H
+uint8_t Thread::handleNull_[sizeof(pthread_t)];
+#endif
+//---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 DWORD WINAPI Thread::threadFunc(LPVOID thread)
 #else
@@ -124,6 +128,7 @@ void * Thread::threadFunc(void * thread)
 #endif
   }
   catch( ExceptionSP & e ){
+    fprintf(stderr,"%s\n",e->what().c_str());
     e->writeStdError();
     reinterpret_cast<Thread *>(thread)->exitCode_ = e->code();
   }
@@ -155,11 +160,14 @@ Thread::Thread() :
   handle_(NULL),
   id_(~DWORD(0)),
 #elif HAVE_PTHREAD_H
-  handle_((pthread_t) NULL),// mutex_(NULL),
+//  handle_((pthread_t) NULL),// mutex_(NULL),
 #endif
   exitCode_(0),
   started_(false), terminated_(false), finished_(false)
 {
+#if HAVE_PTHREAD_H
+  memcpy(&handle_,handleNull_,sizeof(handle_));
+#endif
 //  stackSize((uintptr_t) getpagesize());
 }
 //---------------------------------------------------------------------------
@@ -186,7 +194,7 @@ Thread & Thread::resume()
 #elif HAVE_PTHREAD_H
   pthread_attr_t attr;
   memset(&attr,0,sizeof(attr));
-  if( handle_ == (pthread_t) NULL ){
+  if( memcmp(&handle_,handleNull_,sizeof(handle_)) == 0 ){
     started_ = terminated_ = false;
 //    if( (errno = pthread_mutex_init(&mutex_,NULL)) != 0 ) goto l1;
     if( (errno = pthread_attr_init(&attr)) != 0 ) goto l1;
@@ -250,7 +258,7 @@ Thread & Thread::wait()
     CloseHandle(handle_);
     handle_ = NULL;
 #elif HAVE_PTHREAD_H
-  if( handle_ != (pthread_t) NULL ){
+  if( memcmp(&handle_,handleNull_,sizeof(handle_)) != 0 ){
     threadBeforeWait();
     void * result;
     if( (errno = pthread_join(handle_,&result)) != 0 ){
@@ -264,7 +272,7 @@ Thread & Thread::wait()
       }
       mutex_ = NULL;
     }*/
-    handle_ = (pthread_t) NULL;
+    memcpy(&handle_,handleNull_,sizeof(handle_));
 #endif
     threadAfterWait();
   }
@@ -676,6 +684,9 @@ void Thread::initialize()
   new (beforeExecuteActions_) Array<Action>;
   new (afterExecuteActions_) Array<Action>;
   new (currentThreadPlaceHolder) ThreadLocalVariable<Thread *>;
+#if HAVE_PTHREAD_H
+  memset(handleNull_,0xFF,sizeof(pthread_t));
+#endif
 }
 //---------------------------------------------------------------------------
 void Thread::cleanup()

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,23 +34,11 @@ class DSQLStatement;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Base : virtual ksys::Object {
-  friend class EClientServer;
-  public:
-    virtual ~Base() {}
-    Base() {}
-  protected:
-    virtual void exceptionHandler(ksys::Exception * e) = 0;
-  private:
-};
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
 class DSQLParam {
   friend class DSQLParams;
   friend class DSQLStatement;
   public:
-    ~DSQLParam();
+    virtual ~DSQLParam();
     DSQLParam(DSQLStatement * statement = NULL);
   protected:
     DSQLStatement * statement_;
@@ -110,7 +98,7 @@ inline DSQLParam::DSQLParam(DSQLStatement * statement) :
 class DSQLParams {
   friend class DSQLStatement;
   public:
-    ~DSQLParams();
+    virtual ~DSQLParams();
     DSQLParams();
 
     uintptr_t count();
@@ -183,7 +171,7 @@ class DSQLValues {
   friend class DSQLStatement;
   friend class Transaction;
   public:
-    ~DSQLValues();
+    virtual ~DSQLValues();
     DSQLValues() {}
     DSQLValues(DSQLStatement & statement);
 
@@ -226,7 +214,7 @@ inline DSQLValues::DSQLValues(DSQLStatement & statement)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement : virtual public ksys::Object {
+class DSQLStatement {
   friend class Database;
   friend class Transaction;
   friend class DSQLParams;
@@ -235,7 +223,7 @@ class DSQLStatement : virtual public ksys::Object {
     virtual ~DSQLStatement();
     DSQLStatement();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
     
     DSQLStatement & attach(Database & database);
     DSQLStatement & detach();

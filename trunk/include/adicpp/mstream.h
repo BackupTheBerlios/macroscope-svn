@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@ class MemoryStream {
     class Container {
       friend class MemoryStream;
       public:
-        ~Container();
+        virtual ~Container();
         Container() {}
         Container(uintptr_t count);
         Container(int32_t refCount,void * ptr,uintptr_t count);
@@ -66,7 +66,7 @@ class MemoryStream {
     
     MemoryStream(Container * container);
   public:
-    ~MemoryStream();
+    virtual ~MemoryStream();
     MemoryStream();
     MemoryStream(const MemoryStream & stream);
 
@@ -156,7 +156,7 @@ class MemoryStream {
 //---------------------------------------------------------------------------
 inline MemoryStream::Container::~Container()
 {
-  xfree(ptr_);
+  kfree(ptr_);
 }
 //---------------------------------------------------------------------------
 inline MemoryStream::Container::Container(int32_t refCount, void * ptr, uintptr_t count)

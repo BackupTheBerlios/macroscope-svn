@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,8 @@ class SockAddr {
   friend void ksys::initialize(int argc,char ** argv);
   friend void ksys::cleanup();
   public:
+    virtual ~SockAddr() {}
+    SockAddr() {}
     union {
       struct sockaddr_in  addr4_;
 #if SIZEOF_SOCKADDR_IN6

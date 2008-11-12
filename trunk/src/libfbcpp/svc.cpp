@@ -116,12 +116,12 @@ SPB::SPB() : spb_(NULL), spbLen_(0)
 //---------------------------------------------------------------------------
 SPB::~SPB()
 {
-  ksys::xfree(spb_);
+  ksys::kfree(spb_);
 }
 //---------------------------------------------------------------------------
 SPB & SPB::clear()
 {
-  ksys::xfree(spb_);
+  ksys::kfree(spb_);
   spb_ = NULL;
   spbLen_ = 0;
   writeChar(isc_spb_version).writeChar(isc_spb_current_version);
@@ -130,14 +130,14 @@ SPB & SPB::clear()
 //---------------------------------------------------------------------------
 SPB & SPB::writeChar(uintptr_t code)
 {
-  ksys::xrealloc(spb_, spbLen_ + 1);
+  spb_ = (char *) ksys::krealloc(spb_, spbLen_ + 1);
   spb_[spbLen_++] = char(code);
   return *this;
 }
 //---------------------------------------------------------------------------
 SPB & SPB::writeLong(uintptr_t a)
 {
-  ksys::xrealloc(spb_, spbLen_ + sizeof(ISC_LONG));
+  spb_ = (char *) ksys::krealloc(spb_, spbLen_ + sizeof(ISC_LONG));
   *(ISC_LONG *) (spb_ + spbLen_) = (ISC_LONG) a;
   spbLen_ += sizeof(ISC_LONG);
   return *this;
@@ -148,7 +148,7 @@ intptr_t SPB::writeISCCode(const utf8::String & name)
   intptr_t  i;
   for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
     if( name.strcasecmp(params[i].name_) == 0 ){
-      ksys::xrealloc(spb_, spbLen_ + 1);
+      spb_ = (char *) ksys::krealloc(spb_, spbLen_ + 1);
       spb_[spbLen_++] = char(params[i].number & ~0xFFFF8000);
       return params[i].number;
     }
@@ -158,7 +158,7 @@ intptr_t SPB::writeISCCode(const utf8::String & name)
 //---------------------------------------------------------------------------
 SPB & SPB::writeBuffer(const void * buf, uintptr_t size)
 {
-  ksys::xrealloc(spb_, spbLen_ + size);
+  spb_ = (char *) ksys::krealloc(spb_, spbLen_ + size);
   memcpy(spb_ + spbLen_, buf, size);
   spbLen_ += size;
   return *this;
@@ -204,12 +204,12 @@ ServiceRequest::ServiceRequest() : request_(NULL), requestLen_(0)
 //---------------------------------------------------------------------------
 ServiceRequest::~ServiceRequest()
 {
-  ksys::xfree(request_);
+  ksys::kfree(request_);
 }
 //---------------------------------------------------------------------------
 ServiceRequest & ServiceRequest::clear()
 {
-  ksys::xfree(request_);
+  ksys::kfree(request_);
   request_ = NULL;
   requestLen_ = 0;
   return *this;
@@ -217,14 +217,14 @@ ServiceRequest & ServiceRequest::clear()
 //---------------------------------------------------------------------------
 ServiceRequest & ServiceRequest::writeChar(uintptr_t code)
 {
-  ksys::xrealloc(request_, requestLen_ + 1);
+  request_ = (char *) ksys::krealloc(request_, requestLen_ + 1);
   request_[requestLen_++] = char(code);
   return *this;
 }
 //---------------------------------------------------------------------------
 ServiceRequest & ServiceRequest::writeShort(short a)
 {
-  ksys::xrealloc(request_, requestLen_ + sizeof(short));
+  request_ = (char *) ksys::krealloc(request_, requestLen_ + sizeof(short));
   *(short *) (request_ + requestLen_) = a;
   requestLen_ += sizeof(short);
   return *this;
@@ -232,7 +232,7 @@ ServiceRequest & ServiceRequest::writeShort(short a)
 //---------------------------------------------------------------------------
 ServiceRequest & ServiceRequest::writeLong(uintptr_t a)
 {
-  ksys::xrealloc(request_, requestLen_ + sizeof(ISC_LONG));
+  request_ = (char *) ksys::krealloc(request_, requestLen_ + sizeof(ISC_LONG));
   *(ISC_LONG *) (request_ + requestLen_) = (ISC_LONG) a;
   requestLen_ += sizeof(ISC_LONG);
   return *this;
@@ -254,7 +254,7 @@ intptr_t ServiceRequest::writeISCCode(const utf8::String & name)
 {
   intptr_t i = getISCCode(name);
   if( i >= 0 ){
-    ksys::xrealloc(request_, requestLen_ + 1);
+    request_ = (char *) ksys::krealloc(request_, requestLen_ + 1);
     request_[requestLen_++] = char(i & ~0xFFFF8000);
     return i;
   }
@@ -279,7 +279,7 @@ intptr_t ServiceRequest::writeISCCode(const utf8::String & name)
 //---------------------------------------------------------------------------
 ServiceRequest & ServiceRequest::writeBuffer(const void * buf, uintptr_t size)
 {
-  ksys::xrealloc(request_, requestLen_ + size);
+  request_ = (char *) ksys::krealloc(request_, requestLen_ + size);
   memcpy(request_ + requestLen_, buf, size);
   requestLen_ += size;
   return *this;
@@ -354,7 +354,7 @@ Service::Service() : handle_(0), queryResponse_(NULL), queryResponseLen_(0)
 Service::~Service()
 {
   detach();
-  ksys::xfree(queryResponse_);
+  ksys::kfree(queryResponse_);
 }
 //---------------------------------------------------------------------------
 Service & Service::attach(const utf8::String & name)
@@ -421,7 +421,7 @@ Service & Service::invoke()
           detach().attach(name_);
           ksys::ksleep1();
         }
-        ksys::xrealloc(queryResponse_, getpagesize());
+        queryResponse_ = (char *) ksys::krealloc(queryResponse_, getpagesize());
         queryResponseLen_ = getpagesize();
         response_.clear();
         for(;;){
@@ -434,7 +434,7 @@ Service & Service::invoke()
             if( ret != 0 )
               exceptionHandler(newObjectV1C2<EServiceQuery>(status,__PRETTY_FUNCTION__));
             if( *queryResponse_ != isc_info_truncated ) break;
-            ksys::xrealloc(queryResponse_, queryResponseLen_ << 1);
+            queryResponse_ = (char *) ksys::krealloc(queryResponse_, queryResponseLen_ << 1);
             queryResponseLen_ <<= 1;
           }
           utf8::String s(getTokenString(queryResponse_,isc_info_svc_line));

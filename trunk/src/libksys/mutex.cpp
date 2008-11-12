@@ -129,9 +129,11 @@ void InterlockedMutex::initialize()
     Mutex::wrLock_ = Mutex::singleWRLock;
 #endif
   }
-#endif
-#if defined(__WIN32__) || defined(__WIN64__)
+#elif defined(__WIN32__) || defined(__WIN64__)
   //memset(&staticCS_,0,sizeof(staticCS_));
+#elif HAVE_PTHREAD_H
+  memset(pthreadMutexNull_,0xFF,sizeof(pthread_mutex_t));
+  memset(Mutex::pthreadRWLockNull_,0xFF,sizeof(pthread_rwlock_t));
 #endif
   new (giantPlaceHolder) InterlockedMutex;
 }
@@ -145,6 +147,10 @@ void InterlockedMutex::cleanup()
 //CRITICAL_SECTION InterlockedMutex::staticCS_;
 #endif
 //---------------------------------------------------------------------------
+#if !FAST_MUTEX && HAVE_PTHREAD_H
+uint8_t InterlockedMutex::pthreadMutexNull_[sizeof(pthread_mutex_t)];
+#endif
+//---------------------------------------------------------------------------
 InterlockedMutex::~InterlockedMutex()
 {
 #if FAST_MUTEX
@@ -156,8 +162,7 @@ InterlockedMutex::~InterlockedMutex()
     sem_ = NULL;
   }
 #elif HAVE_PTHREAD_H
-  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
-  if( memcmp(&mutex_,&stm,sizeof(mutex_)) != 0 ){
+  if( memcmp(&mutex_,pthreadMutexNull_,sizeof(mutex_)) != 0 ){
     int r = pthread_mutex_destroy(&mutex_);
     if( r != 0 )
       newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -237,8 +242,7 @@ void InterlockedMutex::release()
 //---------------------------------------------------------------------------
 InterlockedMutex::InterlockedMutex()
 {
-  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
-  mutex_ = stm;
+  memcpy(&mutex_,pthreadMutexNull_,sizeof(mutex_));
   int r;
   /*pthread_mutexattr_t attr;
   if( pthread_mutexattr_init(&attr) != 0 ){
@@ -256,6 +260,7 @@ InterlockedMutex::InterlockedMutex()
 #endif*/
   r = pthread_mutex_init(&mutex_,NULL);
   if( r != 0 ){
+    memcpy(&mutex_,pthreadMutexNull_,sizeof(mutex_));
     //pthread_mutexattr_destroy(&attr);
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
@@ -354,17 +359,25 @@ void Mutex::singleWRLock(Mutex * mutex)
 //---------------------------------------------------------------------------
 #else
 //---------------------------------------------------------------------------
+uint8_t Mutex::pthreadRWLockNull_[sizeof(pthread_rwlock_t)];
+//---------------------------------------------------------------------------
 Mutex::~Mutex()
 {
-  int r = pthread_rwlock_destroy(&mutex_);
-  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( memcmp(&mutex_,pthreadRWLockNull_,sizeof(mutex_)) != 0 ){
+    int r = pthread_rwlock_destroy(&mutex_);
+    assert( r == 0 );
+    if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  }
 }
 //---------------------------------------------------------------------------
 Mutex::Mutex()
 {
-  mutex_ = NULL;
+  memcpy(&mutex_,pthreadRWLockNull_,sizeof(mutex_));
   int r = pthread_rwlock_init(&mutex_,NULL);
-  if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  if( r != 0 ){
+    memcpy(&mutex_,pthreadRWLockNull_,sizeof(mutex_));
+    newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  }
 }
 //---------------------------------------------------------------------------
 Mutex & Mutex::rdLock()

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -128,18 +128,24 @@ bool SVSharedSemaphore::tryWait(uintptr_t sem)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+#if USE_SV_SEMAPHORES
+#elif HAVE_SEMAPHORE_H
+uint8_t Semaphore::handleNull_[sizeof(sem_t)];
+#endif
+//---------------------------------------------------------------------------
 Semaphore::~Semaphore()
 {
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
-  if( pHandle_ != SEM_FAILED ){
+  if( memcmp(&handle_,handleNull_,sizeof(sem_t)) != 0 ){
 #ifndef NDEBUG
     int r =
 #endif
-    sem_destroy(pHandle_);
+    sem_destroy(&handle_);
 #ifndef NDEBUG
     assert( r == 0 );
 #endif
+    memcpy(&handle_,handleNull_,sizeof(sem_t));
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   if( handle_ != NULL ){
@@ -153,12 +159,13 @@ Semaphore::Semaphore()
 {
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
-  pHandle_ = SEM_FAILED;
+  if( handleNull_[0] != 0xFF ) memset(handleNull_,0xFF,sizeof(sem_t));
+  memcpy(&handle_,handleNull_,sizeof(sem_t));
   if( sem_init(&handle_, 0, 0) != 0 ){
     int32_t err = errno;
+    memcpy(&handle_,handleNull_,sizeof(sem_t));
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
-  pHandle_ = &handle_;
 #elif defined(__WIN32__) || defined(__WIN64__)
   handle_ = CreateSemaphoreA(NULL,0,~(ULONG) 0 >> 1,NULL);
   if( handle_ == NULL ){
@@ -173,7 +180,7 @@ Semaphore::Semaphore()
 Semaphore & Semaphore::post()
 {
 #if HAVE_SEMAPHORE_H
-  if( sem_post(pHandle_) != 0 ){
+  if( sem_post(&handle_) != 0 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
@@ -189,7 +196,7 @@ Semaphore & Semaphore::post()
 Semaphore & Semaphore::wait()
 {
 #if HAVE_SEMAPHORE_H
-  if( sem_wait(pHandle_) != 0 ){
+  if( sem_wait(&handle_) != 0 ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
@@ -219,7 +226,7 @@ bool Semaphore::timedWait(uint64_t timeout)
   t.tv_sec = timeout / (1000000u * 1000u);
   t.tv_nsec = timeout % (1000000u * 1000u);
 //  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec); fflush(stderr);
-  int r = sem_timedwait(pHandle_,&t);
+  int r = sem_timedwait(&handle_,&t);
 //  if( r > 0 ) errno = r;
   /*if( r != 0 && errno == EINVAL ){
     bool rr;
@@ -234,7 +241,7 @@ bool Semaphore::timedWait(uint64_t timeout)
   }*/
   if( r != 0 && errno != ETIMEDOUT ){
     r = errno;
-    fprintf(stderr,"%s %d errno = %d\n",__FILE__,__LINE__,r); fflush(stderr);
+    //fprintf(stderr,"%s %d errno = %d\n",__FILE__,__LINE__,r); fflush(stderr);
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
   return r == 0;
@@ -264,7 +271,7 @@ bool Semaphore::tryWait()
 {
 #if HAVE_SEMAPHORE_H
   errno = 0;
-  int r = sem_trywait(pHandle_);
+  int r = sem_trywait(&handle_);
   if( r != 0 && errno != EAGAIN ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
@@ -297,9 +304,8 @@ SharedSemaphore::~SharedSemaphore()
 #endif
     sem_close(pHandle_);
 #ifndef NDEBUG
-    assert(r == 0 || errno == EINVAL);
+    assert( r == 0 || errno == EINVAL );
 #endif
-    pHandle_ = SEM_FAILED;
     if( creator() ){
 #ifndef NDEBUG
       r =
@@ -322,7 +328,7 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
   SVSharedSemaphore(name, mode)
 #elif HAVE_SEMAPHORE_H
 SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
-  : Semaphore(0),
+  : pHandle_(SEM_FAILED),
     name_(genName(name).getANSIString()),
     creator_(false)
 #elif defined(__WIN32__) || defined(__WIN64__)
@@ -334,7 +340,7 @@ SharedSemaphore::SharedSemaphore(const utf8::String & name, uintptr_t mode)
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
 #ifndef NDEBUG
-  fprintf(stderr,"%s %s\n",(const char *) name_,__PRETTY_FUNCTION__);
+  //fprintf(stderr,"%s %s\n",(const char *) name_,__PRETTY_FUNCTION__);
 #endif
   pHandle_ = sem_open(name_, O_EXCL | O_CREAT, (mode_t) mode, 0);
   if( pHandle_ == SEM_FAILED ){
@@ -416,6 +422,120 @@ void SharedSemaphore::unlink(const utf8::String & name)
   s = name;
 #endif
 }
+//---------------------------------------------------------------------------
+#if !USE_SV_SEMAPHORES
+//---------------------------------------------------------------------------
+SharedSemaphore & SharedSemaphore::post()
+{
+#if HAVE_SEMAPHORE_H
+  if( sem_post(pHandle_) != 0 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+  }
+#elif defined(__WIN32__) || defined(__WIN64__)
+  if( ReleaseSemaphore(handle_,1,NULL) == 0 ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+  }
+#endif
+  return *this;
+}
+//---------------------------------------------------------------------------
+SharedSemaphore & SharedSemaphore::wait()
+{
+#if HAVE_SEMAPHORE_H
+  if( sem_wait(pHandle_) != 0 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#elif defined(__WIN32__) || defined(__WIN64__)
+  DWORD r = WaitForSingleObject(handle_,INFINITE);
+  if( r != WAIT_OBJECT_0 && r != WAIT_ABANDONED ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+  }
+#endif
+  return *this;
+}
+//---------------------------------------------------------------------------
+bool SharedSemaphore::timedWait(uint64_t timeout)
+{
+//  fprintf(stderr,"%s %d timeout = %"PRIu64"\n",__FILE__,__LINE__,timeout); fflush(stderr);
+#if HAVE_SEMAPHORE_H
+#if HAVE_SEM_TIMEDWAIT
+  struct timespec t;
+#if HAVE_CLOCK_GETTIME
+  clock_gettime(CLOCK_REALTIME,&t);
+//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec); fflush(stderr);
+  timeout = (uint64_t(1000000u) * t.tv_sec + timeout) * 1000u + t.tv_nsec;
+#else
+  timeout = (timeout + gettimeofday()) * 1000u;
+#endif
+  t.tv_sec = timeout / (1000000u * 1000u);
+  t.tv_nsec = timeout % (1000000u * 1000u);
+//  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec); fflush(stderr);
+  int r = sem_timedwait(pHandle_,&t);
+//  if( r > 0 ) errno = r;
+  /*if( r != 0 && errno == EINVAL ){
+    bool rr;
+    uint64_t t = gettimeofday();
+    for(;;){
+      rr = tryWait();
+      if( rr ) break;
+      if( gettimeofday() - t >= timeout ) break;
+      ksleep(1);
+    }
+    return rr;
+  }*/
+  if( r != 0 && errno != ETIMEDOUT ){
+    r = errno;
+    //fprintf(stderr,"%s %d errno = %d\n",__FILE__,__LINE__,r); fflush(stderr);
+    newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  }
+  return r == 0;
+#else
+  bool r;
+  uint64_t t = gettimeofday();
+  for(;;){
+    r = tryWait();
+    if( r ) break;
+    if( gettimeofday() - t >= timeout ) break;
+    ksleep(1);
+  }
+  return r;
+#endif
+#elif defined(__WIN32__) || defined(__WIN64__)
+  uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);
+  DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));
+  if( r == WAIT_FAILED ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+  }
+  return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
+#endif
+}
+//---------------------------------------------------------------------------
+bool SharedSemaphore::tryWait()
+{
+#if HAVE_SEMAPHORE_H
+  errno = 0;
+  int r = sem_trywait(pHandle_);
+  if( r != 0 && errno != EAGAIN ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+  }
+  return r == 0;
+#elif defined(__WIN32__) || defined(__WIN64__)
+  DWORD r = WaitForSingleObject(handle_,0);
+  if( r == WAIT_FAILED ){
+    int32_t err = GetLastError() + errorOffset;
+    newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
+  }
+  return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
+#endif
+}
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

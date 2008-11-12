@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -86,6 +86,7 @@ static const struct CharsetEntry {
   { "ISO88597", 28597 },
   { "ISO88598", 28598 },
   { "ISO88599", 28599 },
+  { "UTF-8", CP_UTF8 },
   { "UTF8", CP_UTF8 },
   { "KOI8-R", 20866 },
   { "KOI8-U", 20866 }
@@ -97,7 +98,7 @@ inline
 #endif
 uintptr_t mapCharsetNameToCodepage(const char * charset)
 {
-  const struct CharsetEntry * bsa = charsetNames;
+  const CharsetEntry * bsa = charsetNames;
   intptr_t low = 0, high = sizeof(charsetNames) / sizeof(charsetNames[0]) - 1;
   intptr_t pos, c;
 
@@ -135,22 +136,25 @@ uintptr_t getANSICodepage()
   uintptr_t cp = CP_UTF8;
   if( cpansi == 0 ){
     char * lang;
-    if ( (lang = getenv( "LC_ALL" )) ||
-         (lang = getenv( "LANGUAGE" )) ||
-         (lang = getenv( "LANG" )) ){
+    lang = getenv("LC_ALL");
+    if( lang == NULL ) lang = getenv("LANGUAGE");
+    if( lang == NULL ) lang = getenv("LANG");
+    if( lang != NULL ){
       char * buf = (char *) malloc(strlen(lang) + 1);
-      strcpy(buf,lang);
-      lang = buf;
-      do {
-        char * next, * dialect, * charset, * country;
-        if( (next = strchr(lang,':')) != NULL ) *next++ = '\0';
-        if( (dialect = strchr(lang,'@')) != NULL ) *dialect++ = '\0';
-        if( (charset = strchr(lang,'.')) != NULL ) *charset++ = '\0';
-        if( (country = strchr(lang,'_')) != NULL ) *country++ = '\0';
-        if( (cp = mapCharsetNameToCodepage(charset)) == CP_UTF8 ) break;
-        lang = next;
-      } while( lang != NULL );
-      free(lang);
+      if( buf != NULL ){
+        strcpy(buf,lang);
+        lang = buf;
+        do {
+          char * next, * dialect, * charset, * country;
+          if( (next = strchr(lang,':')) != NULL ) *next++ = '\0';
+          if( (dialect = strchr(lang,'@')) != NULL ) *dialect++ = '\0';
+          if( (charset = strchr(lang,'.')) != NULL ) *charset++ = '\0';
+          if( (country = strchr(lang,'_')) != NULL ) *country++ = '\0';
+          if( charset != NULL && (cp = mapCharsetNameToCodepage(charset)) == CP_UTF8 ) break;
+          lang = next;
+        } while( lang != NULL );
+        free(lang);
+      }
     }
     cpansi = cp;
   }

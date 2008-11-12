@@ -163,8 +163,6 @@ Mutant & Mutant::changeType(MutantType newType,const Mutant & m)
       intmax_t i;
       ldouble f;
     };
-    utf8::String  s;
-    MemoryStream  ms;
     switch( newType ){
       case      mtNull :
         clear().type_ = mtNull;
@@ -282,17 +280,24 @@ Mutant & Mutant::changeType(MutantType newType,const Mutant & m)
       case      mtCStr :
       case      mtWStr :
       case       mtStr :
-        s = m;
-        new (clear().raw_) utf8::String(s);
-        newType = mtString;
+        {
+          utf8::String s(m);
+          new (clear().raw_) utf8::String(s);
+          newType = mtString;
+        }
         break;
       case    mtString :
-        s = m;
-        new (clear().raw_) utf8::String(s);
+        {
+          utf8::String s(m);
+          new (clear().raw_) utf8::String(s);
+        }
         break;
       case    mtBinary :
-        ms = m;
-        clear().stream() = ms;
+        {
+          MemoryStream ms;
+          ms = m;
+          clear().stream() = ms;
+        }
     }
     type_ = newType;
   }
