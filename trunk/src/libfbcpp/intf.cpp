@@ -113,7 +113,7 @@ utf8::String API::tryOpen()
   static const char libName[] = "libfbclient.so";
 #endif
   utf8::String libFileName(clientLibraryNL());
-  if( libFileName.strlen() == 0 ) libFileName = libName;
+  if( libFileName.isNull() ) libFileName = libName;
   if( handle_ == NULL ){
     try {
 #if defined(__WIN32__) || defined(__WIN64__)

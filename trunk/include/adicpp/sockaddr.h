@@ -116,7 +116,7 @@ class SockAddr {
       IP_ADAPTER_ADDRESSES addresses_;
       IP_ADAPTER_INFO infos_;
     };
-    static void getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses);
+    static void getAdaptersAddresses(ksys::Array<IpInfo> & addresses);
 #endif
     utf8::String internalGetAddrInfo(
       const utf8::String & host,

@@ -148,7 +148,7 @@ HuffmanFilter & HuffmanFilter::decompress(const void * buf,uintptr_t count)
 //---------------------------------------------------------------------------
 HuffmanFilter & HuffmanFilter::compressFile(const utf8::String & src,const utf8::String & dst)
 {
-  AutoPtr<uint8_t> buf;
+  AutoPtrBuffer buf;
   buf.alloc(getpagesize() * 16);
   AsyncFile srcFile(src), dstFile(dst);
   srcFile.readOnly(true).open();
@@ -192,7 +192,7 @@ void HuffmanFilter::genStatisticTable(const Array<utf8::String> & fileNames)
     table[i].freq_ = 0;
     table[i].i_ = (uint8_t) i;
   }
-  AutoPtr<uint8_t> b;
+  AutoPtrBuffer b;
   b.alloc(getpagesize() * 16);
   AsyncFile f;
   for( i = 0; i < fileNames.count(); i++ ){
@@ -471,7 +471,7 @@ LZSSKFilter & LZSSKFilter::decompress(const void * buf,uintptr_t count)
 //---------------------------------------------------------------------------
 LZSSKFilter & LZSSKFilter::compressFile(const utf8::String & src,const utf8::String & dst)
 {
-  AutoPtr<uint8_t> buf;
+  AutoPtrBuffer buf;
   buf.alloc(getpagesize() * 16);
   AsyncFile srcFile(src), dstFile(dst);
   srcFile.readOnly(true).open();

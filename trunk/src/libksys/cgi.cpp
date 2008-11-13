@@ -71,7 +71,7 @@ utf8::String CGI::uudecode(const utf8::String & string)
 {
   uintptr_t count = string.size();
   if( count > 0 ){
-    AutoPtr<char> b;
+    AutoPtr<char,AutoPtrMemoryDestructor> b;
     b.alloc(count + 1);
     const char * src = string.c_str(), * last = src + count;
     char * dest = b;
@@ -120,7 +120,7 @@ void CGI::initalizeByMethodPOST()
 {
   uintptr_t count((uintptr_t) utf8::str2Int(getEnv("CONTENT_LENGTH")));
   if( count > 0 ){
-    AutoPtr<char> b;
+    AutoPtr<char,AutoPtrMemoryDestructor> b;
     b.alloc(count + 1);
     if( fread(b,count,1,stdin) != 1 && count > 0 ){
       int32_t err = errno;
@@ -142,16 +142,16 @@ CGIMethod CGI::method() const
     if( !getEnv("GATEWAY_INTERFACE").isNull() ){
       utf8::String requestMethod(getEnv("REQUEST_METHOD"));
       queryString_ = getEnv("QUERY_STRING");
-      if( requestMethod.strcasecmp("POST") == 0 ){
+      if( requestMethod.casecompare("POST") == 0 ){
         method_ = cgiPOST;
       }
-      else if( requestMethod.strcasecmp("GET") == 0 ){
+      else if( requestMethod.casecompare("GET") == 0 ){
         method_ = cgiGET;
       }
-      else if( requestMethod.strcasecmp("HEAD") == 0 ){
+      else if( requestMethod.casecompare("HEAD") == 0 ){
         method_ = cgiHEAD;
       }
-      else if( queryString_.trim().strlen() > 0 ){
+      else if( !queryString_.trim().isNull() ){
         method_ = cgiGET;
       }
       else

@@ -31,61 +31,61 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template< typename T> class HashedObjectListKey {
+template <typename T> class HashedObjectListKey {
   public:
-    ~HashedObjectListKey();
+    virtual ~HashedObjectListKey();
     HashedObjectListKey();
     HashedObjectListKey(const T & key);
-    HashedObjectListKey(const HashedObjectListKey< T> & key);
+    HashedObjectListKey(const HashedObjectListKey<T> & key);
 
-    HashedObjectListKey< T> & operator =(const T & key);
-    HashedObjectListKey< T> & operator =(const HashedObjectListKey< T> & key);
+    HashedObjectListKey<T> & operator =(const T & key);
+    HashedObjectListKey<T> & operator =(const HashedObjectListKey<T> & key);
 
-    bool hashKeyEqu(const HashedObjectListKey< T> & key, bool) const;
+    bool hashKeyEqu(const HashedObjectListKey<T> & key, bool) const;
     uintptr_t hash(bool) const;
   protected:
   private:
     T key_;
 };
 //---------------------------------------------------------------------------
-template< typename T> inline HashedObjectListKey< T>::~HashedObjectListKey()
+template <typename T> inline HashedObjectListKey<T>::~HashedObjectListKey()
 {
 }
 //---------------------------------------------------------------------------
-template< typename T> inline HashedObjectListKey< T>::HashedObjectListKey()
+template <typename T> inline HashedObjectListKey<T>::HashedObjectListKey()
 {
 }
 //---------------------------------------------------------------------------
-template< typename T> inline HashedObjectListKey< T>::HashedObjectListKey(const T & key) : key_(key)
+template <typename T> inline HashedObjectListKey<T>::HashedObjectListKey(const T & key) : key_(key)
 {
 }
 //---------------------------------------------------------------------------
-template< typename T> inline HashedObjectListKey< T>::HashedObjectListKey(const HashedObjectListKey< T> & key) : key_(key.key_)
+template <typename T> inline HashedObjectListKey<T>::HashedObjectListKey(const HashedObjectListKey<T> & key) : key_(key.key_)
 {
 }
 //---------------------------------------------------------------------------
-template< typename T> inline
-HashedObjectListKey< T> & HashedObjectListKey<T>::operator =(const T & key)
+template <typename T> inline
+HashedObjectListKey<T> & HashedObjectListKey<T>::operator =(const T & key)
 {
   key_ = key;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< typename T> inline
-HashedObjectListKey< T> & HashedObjectListKey<T>::operator =(const HashedObjectListKey< T> & key)
+template <typename T> inline
+HashedObjectListKey<T> & HashedObjectListKey<T>::operator =(const HashedObjectListKey<T> & key)
 {
   key_ = key.key_;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< typename T> inline
-bool HashedObjectListKey< T>::hashKeyEqu(const HashedObjectListKey< T> & key, bool) const
+template <typename T> inline
+bool HashedObjectListKey<T>::hashKeyEqu(const HashedObjectListKey<T> & key, bool) const
 {
   return memcmp(&key_, &key.key_, sizeof(key_)) == 0;
 }
 //---------------------------------------------------------------------------
-template< typename T> inline
-uintptr_t HashedObjectListKey< T>::hash(bool) const
+template <typename T> inline
+uintptr_t HashedObjectListKey<T>::hash(bool) const
 {
   return HF::hash((void *) &key_, sizeof(key_), 0);
 }
@@ -98,38 +98,38 @@ enum HashChainType {
   hctIndex 
 };
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> class HashedObjectListItem {
+template <typename TKey,typename TObj> class HashedObjectListItem {
   public:
     virtual ~HashedObjectListItem();
     HashedObjectListItem() {}
     HashedObjectListItem(const TKey & key, TObj * object, uintptr_t index);
 
-    HashedObjectListItem< TKey,TObj> ** next() const;
+    HashedObjectListItem<TKey,TObj> ** next() const;
     TKey &                              key() const;
-    HashedObjectListItem< TKey,TObj> *& keyNext() const;
-    HashedObjectListItem< TKey,TObj> &  keyNext(HashedObjectListItem< TKey,TObj> * keyNextA);
-    HashedObjectListItem< TKey,TObj> *& objectNext() const;
-    HashedObjectListItem< TKey,TObj> &  objectNext(HashedObjectListItem< TKey,TObj> * objectNextA);
-    HashedObjectListItem< TKey,TObj> *& indexNext() const;
-    HashedObjectListItem< TKey,TObj> &  indexNext(HashedObjectListItem< TKey,TObj> * indexNextA);
-    HashedObjectListItem< TKey,TObj> &  key(const TKey & keyA);
+    HashedObjectListItem<TKey,TObj> *& keyNext() const;
+    HashedObjectListItem<TKey,TObj> &  keyNext(HashedObjectListItem<TKey,TObj> * keyNextA);
+    HashedObjectListItem<TKey,TObj> *& objectNext() const;
+    HashedObjectListItem<TKey,TObj> &  objectNext(HashedObjectListItem<TKey,TObj> * objectNextA);
+    HashedObjectListItem<TKey,TObj> *& indexNext() const;
+    HashedObjectListItem<TKey,TObj> &  indexNext(HashedObjectListItem<TKey,TObj> * indexNextA);
+    HashedObjectListItem<TKey,TObj> &  key(const TKey & keyA);
     TObj *&                             object() const;
-    HashedObjectListItem< TKey,TObj> &  object(TObj * objectA);
+    HashedObjectListItem<TKey,TObj> &  object(TObj * objectA);
     const uintptr_t &                   index() const;
-    HashedObjectListItem< TKey,TObj> &  index(uintptr_t indexA);
+    HashedObjectListItem<TKey,TObj> &  index(uintptr_t indexA);
   protected:
   private:
-    HashedObjectListItem(const HashedObjectListItem< TKey,TObj> &){}
-    void operator =(const HashedObjectListItem< TKey,TObj> &){}
+    HashedObjectListItem(const HashedObjectListItem<TKey,TObj> &){}
+    void operator =(const HashedObjectListItem<TKey,TObj> &){}
 #if _MSC_VER
 #pragma warning(push,3)
 #endif
     union {
-        mutable HashedObjectListItem< TKey,TObj> *  next_[3];
+        mutable HashedObjectListItem<TKey,TObj> *  next_[3];
         struct {
-            mutable HashedObjectListItem< TKey,TObj> *  keyNext_;
-            mutable HashedObjectListItem< TKey,TObj> *  objectNext_;
-            mutable HashedObjectListItem< TKey,TObj> *  indexNext_;
+            mutable HashedObjectListItem<TKey,TObj> *  keyNext_;
+            mutable HashedObjectListItem<TKey,TObj> *  objectNext_;
+            mutable HashedObjectListItem<TKey,TObj> *  indexNext_;
         };
     };
 #if _MSVC_VER
@@ -140,11 +140,11 @@ template< class TKey,class TObj> class HashedObjectListItem {
     mutable uintptr_t index_;
 };
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline HashedObjectListItem< TKey,TObj>::~HashedObjectListItem()
+template <typename TKey,typename TObj> inline HashedObjectListItem<TKey,TObj>::~HashedObjectListItem()
 {
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline HashedObjectListItem< TKey,TObj>::HashedObjectListItem(const TKey & key, TObj * object, uintptr_t index)
+template <typename TKey,typename TObj> inline HashedObjectListItem<TKey,TObj>::HashedObjectListItem(const TKey & key, TObj * object, uintptr_t index)
   : keyNext_(NULL),
     objectNext_(NULL),
     indexNext_(NULL),
@@ -154,85 +154,85 @@ template< class TKey,class TObj> inline HashedObjectListItem< TKey,TObj>::Hashed
 {
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> ** HashedObjectListItem< TKey,TObj>::next() const
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> ** HashedObjectListItem<TKey,TObj>::next() const
 {
   return next_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> *& HashedObjectListItem< TKey,TObj>::keyNext() const
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> *& HashedObjectListItem<TKey,TObj>::keyNext() const
 {
   return keyNext_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::keyNext(HashedObjectListItem< TKey,TObj> * keyNextA)
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> & HashedObjectListItem<TKey,TObj>::keyNext(HashedObjectListItem<TKey,TObj> * keyNextA)
 {
   keyNext_ = keyNextA;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> *& HashedObjectListItem< TKey,TObj>::objectNext() const
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> *& HashedObjectListItem<TKey,TObj>::objectNext() const
 {
   return objectNext_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::objectNext(HashedObjectListItem< TKey,TObj> * objectNextA)
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> & HashedObjectListItem<TKey,TObj>::objectNext(HashedObjectListItem<TKey,TObj> * objectNextA)
 {
   objectNext_ = objectNextA;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> *& HashedObjectListItem< TKey,TObj>::indexNext() const
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> *& HashedObjectListItem<TKey,TObj>::indexNext() const
 {
   return indexNext_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::indexNext(HashedObjectListItem< TKey,TObj> * indexNextA)
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> & HashedObjectListItem<TKey,TObj>::indexNext(HashedObjectListItem<TKey,TObj> * indexNextA)
 {
   indexNext_ = indexNextA;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TKey & HashedObjectListItem< TKey,TObj>::key() const
+template <typename TKey,typename TObj> inline
+TKey & HashedObjectListItem<TKey,TObj>::key() const
 {
   return key_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::key(const TKey & keyA)
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> & HashedObjectListItem<TKey,TObj>::key(const TKey & keyA)
 {
   key_ = keyA;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj *& HashedObjectListItem< TKey,TObj>::object() const
+template <typename TKey,typename TObj> inline
+TObj *& HashedObjectListItem<TKey,TObj>::object() const
 {
   return object_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::object(TObj * objectA)
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> & HashedObjectListItem<TKey,TObj>::object(TObj * objectA)
 {
   object_ = objectA;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-const uintptr_t & HashedObjectListItem< TKey,TObj>::index() const
+template <typename TKey,typename TObj> inline
+const uintptr_t & HashedObjectListItem<TKey,TObj>::index() const
 {
   return index_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::index(uintptr_t indexA)
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> & HashedObjectListItem<TKey,TObj>::index(uintptr_t indexA)
 {
   index_ = indexA;
   return *this;
@@ -240,107 +240,107 @@ HashedObjectListItem< TKey,TObj> & HashedObjectListItem< TKey,TObj>::index(uintp
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> class HashedObjectListHash {
+template <typename TKey,typename TObj> class HashedObjectListHash {
   public:
     virtual ~HashedObjectListHash();
     HashedObjectListHash(uintptr_t slotCount = 1);
 
-    HashedObjectListItem< TKey,TObj> **         find(const TKey & key, bool caseSensitive) const;
-    HashedObjectListItem< TKey,TObj> **         find(const TObj * object) const;
-    HashedObjectListItem< TKey,TObj> **         find(const uintptr_t index) const;
+    HashedObjectListItem<TKey,TObj> **         find(const TKey & key, bool caseSensitive) const;
+    HashedObjectListItem<TKey,TObj> **         find(const TObj * object) const;
+    HashedObjectListItem<TKey,TObj> **         find(const uintptr_t index) const;
 
     uintptr_t                                   maxChainLength(HashChainType chain) const;
     uintptr_t                                   minChainLength(HashChainType chain) const;
     uintptr_t                                   avgChainLength(HashChainType chain) const;
 
-    HashedObjectListHash< TKey,TObj> &          resize(uintptr_t slotCount);
-    HashedObjectListItem< TKey,TObj> ** const & slots() const;
-    HashedObjectListHash< TKey,TObj> &          slots(HashedObjectListItem< TKey,TObj> ** slotsA);
+    HashedObjectListHash<TKey,TObj> &          resize(uintptr_t slotCount);
+    HashedObjectListItem<TKey,TObj> ** const & slots() const;
+    HashedObjectListHash<TKey,TObj> &          slots(HashedObjectListItem<TKey,TObj> ** slotsA);
     const uintptr_t &                           slotCount() const;
-    HashedObjectListHash< TKey,TObj> &          slotCount(uintptr_t slotCountA);
+    HashedObjectListHash<TKey,TObj> &          slotCount(uintptr_t slotCountA);
   protected:
   private:
-    HashedObjectListHash(const HashedObjectListHash< TKey,TObj> &){}
-    void operator =(const HashedObjectListHash< TKey,TObj> &){}
-    HashedObjectListItem< TKey,TObj> ** slots_;
+    HashedObjectListHash(const HashedObjectListHash<TKey,TObj> &){}
+    void operator =(const HashedObjectListHash<TKey,TObj> &){}
+    HashedObjectListItem<TKey,TObj> ** slots_;
     uintptr_t                           slotCount_;
 };
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline HashedObjectListHash< TKey,TObj>::~HashedObjectListHash()
+template <typename TKey,typename TObj> inline HashedObjectListHash<TKey,TObj>::~HashedObjectListHash()
 {
   kfree(slots_);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline HashedObjectListHash< TKey,TObj>::HashedObjectListHash(uintptr_t slotCount)
+template <typename TKey,typename TObj> inline HashedObjectListHash<TKey,TObj>::HashedObjectListHash(uintptr_t slotCount)
   : slots_(NULL),
     slotCount_(0)
 {
   resize(slotCount);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-uintptr_t HashedObjectListHash< TKey,TObj>::maxChainLength(HashChainType chain) const
+uintptr_t HashedObjectListHash<TKey,TObj>::maxChainLength(HashChainType chain) const
 {
   uintptr_t max = 0, m ;
   for( intptr_t i = slotCount_ - 1; i >= 0; i-- ){
-    HashedObjectListItem< TKey,TObj> ** p;
+    HashedObjectListItem<TKey,TObj> ** p;
     for( m = 0, p = slots_ + i; *p != NULL; p = &(*p)->next()[chain], m++ );
     if( m > max ) max = m;
   }
   return max;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-uintptr_t HashedObjectListHash< TKey,TObj>::minChainLength(HashChainType chain) const
+uintptr_t HashedObjectListHash<TKey,TObj>::minChainLength(HashChainType chain) const
 {
   uintptr_t min = ~(uintptr_t) 0, m ;
   for( intptr_t i = slotCount_ - 1; i >= 0; i-- ){
-    HashedObjectListItem< TKey,TObj> ** p;
+    HashedObjectListItem<TKey,TObj> ** p;
     for( m = 0, p = slots_ + i; *p != NULL; p = &(*p)->next()[chain], m++ );
     if( m < min ) min = m;
   }
   return min;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-uintptr_t HashedObjectListHash< TKey,TObj>::avgChainLength(HashChainType chain) const
+uintptr_t HashedObjectListHash<TKey,TObj>::avgChainLength(HashChainType chain) const
 {
   uintptr_t avg = 0, m ;
   for( intptr_t i = slotCount_ - 1; i >= 0; i-- ){
-    HashedObjectListItem< TKey,TObj> ** p;
+    HashedObjectListItem<TKey,TObj> ** p;
     for( m = 0, p = slots_ + i; *p != NULL; p = &(*p)->next()[chain], m++ );
     avg += m;
   }
   return slotCount_ > 0 ? avg / slotCount_ : 0;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-HashedObjectListHash< TKey,TObj> & HashedObjectListHash< TKey,TObj>::resize(uintptr_t slotCount)
+HashedObjectListHash<TKey,TObj> & HashedObjectListHash<TKey,TObj>::resize(uintptr_t slotCount)
 {
-  slots_ = (HashedObjectListItem<TKey,TObj> **) krealloc(slots_, sizeof(HashedObjectListItem< TKey,TObj>) * slotCount);
+  slots_ = (HashedObjectListItem<TKey,TObj> **) krealloc(slots_, sizeof(HashedObjectListItem<TKey,TObj>) * slotCount);
   while( slotCount_ < slotCount ) slots_[slotCount_++] = NULL;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-HashedObjectListItem< TKey,TObj> ** HashedObjectListHash< TKey,TObj>::find(const TKey & key, bool caseSensitive) const
+HashedObjectListItem<TKey,TObj> ** HashedObjectListHash<TKey,TObj>::find(const TKey & key, bool caseSensitive) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem;
+  HashedObjectListItem<TKey,TObj> ** pItem;
   pItem = slots_ + (key.hash(caseSensitive) & (slotCount_ - 1));
   while( *pItem != NULL ){
     if( key.hashKeyEqu((*pItem)->key(), caseSensitive) ) break;
@@ -349,13 +349,13 @@ HashedObjectListItem< TKey,TObj> ** HashedObjectListHash< TKey,TObj>::find(const
   return pItem;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-HashedObjectListItem< TKey,TObj> ** HashedObjectListHash< TKey,TObj>::find(const TObj * object) const
+HashedObjectListItem<TKey,TObj> ** HashedObjectListHash<TKey,TObj>::find(const TObj * object) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = slots_ + (HF::hash(uintptr_t(object)) & (slotCount_ - 1));
+  HashedObjectListItem<TKey,TObj> ** pItem = slots_ + (HF::hash(uintptr_t(object)) & (slotCount_ - 1));
   while( *pItem != NULL ){
     if( object == (*pItem)->object() )
       break;
@@ -364,13 +364,13 @@ HashedObjectListItem< TKey,TObj> ** HashedObjectListHash< TKey,TObj>::find(const
   return pItem;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-HashedObjectListItem< TKey,TObj> ** HashedObjectListHash< TKey,TObj>::find(const uintptr_t index) const
+HashedObjectListItem<TKey,TObj> ** HashedObjectListHash<TKey,TObj>::find(const uintptr_t index) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = slots_ + (HF::hash(index) & (slotCount_ - 1));
+  HashedObjectListItem<TKey,TObj> ** pItem = slots_ + (HF::hash(index) & (slotCount_ - 1));
   while( *pItem != NULL ){
     if( index == (*pItem)->index() )
       break;
@@ -379,27 +379,27 @@ HashedObjectListItem< TKey,TObj> ** HashedObjectListHash< TKey,TObj>::find(const
   return pItem;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> ** const & HashedObjectListHash< TKey,TObj>::slots() const
+template <typename TKey,typename TObj> inline
+HashedObjectListItem<TKey,TObj> ** const & HashedObjectListHash<TKey,TObj>::slots() const
 {
   return slots_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListHash< TKey,TObj> & HashedObjectListHash< TKey,TObj>::slots(HashedObjectListItem< TKey,TObj> ** slotsA)
+template <typename TKey,typename TObj> inline
+HashedObjectListHash<TKey,TObj> & HashedObjectListHash<TKey,TObj>::slots(HashedObjectListItem<TKey,TObj> ** slotsA)
 {
   slots_ = slotsA;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-const uintptr_t & HashedObjectListHash< TKey,TObj>::slotCount() const
+template <typename TKey,typename TObj> inline
+const uintptr_t & HashedObjectListHash<TKey,TObj>::slotCount() const
 {
   return slotCount_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListHash< TKey,TObj> & HashedObjectListHash< TKey,TObj>::slotCount(uintptr_t slotCountA)
+template <typename TKey,typename TObj> inline
+HashedObjectListHash<TKey,TObj> & HashedObjectListHash<TKey,TObj>::slotCount(uintptr_t slotCountA)
 {
   slotCount_ = slotCountA;
   return *this;
@@ -407,21 +407,21 @@ HashedObjectListHash< TKey,TObj> & HashedObjectListHash< TKey,TObj>::slotCount(u
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> class HashedObjectList {
+template <class TKey,class TObj,class D = AutoPtrClassDestructor<TObj> > class HashedObjectList {
   public:
-    ~HashedObjectList();
+    virtual ~HashedObjectList();
     HashedObjectList();
 
     TObj *                              operator[](intptr_t i) const;
     TObj *                              operator[](uintptr_t i) const;
 
-    HashedObjectList< TKey,TObj> &      clear();
-    HashedObjectList< TKey,TObj> &      assign(const HashedObjectList< TKey,TObj> & source);
-    HashedObjectList< TKey,TObj> &      transplant(HashedObjectList< TKey,TObj> & donor);
-    uintptr_t                           add(TObj * object, const TKey & key, HashedObjectListItem< TKey,TObj> ** pItem = NULL,bool throwIfExist = true);
-    HashedObjectList< TKey,TObj> &      removeByKey(const TKey & key);
-    HashedObjectList< TKey,TObj> &      removeByObject(TObj * object);
-    HashedObjectList< TKey,TObj> &      removeByIndex(uintptr_t index);
+    HashedObjectList<TKey,TObj,D> &      clear();
+    HashedObjectList<TKey,TObj,D> &      assign(const HashedObjectList<TKey,TObj,D> & source);
+    HashedObjectList<TKey,TObj,D> &      transplant(HashedObjectList<TKey,TObj,D> & donor);
+    uintptr_t                           add(TObj * object, const TKey & key, HashedObjectListItem<TKey,TObj> ** pItem = NULL,bool throwIfExist = true);
+    HashedObjectList<TKey,TObj,D> &      removeByKey(const TKey & key);
+    HashedObjectList<TKey,TObj,D> &      removeByObject(TObj * object);
+    HashedObjectList<TKey,TObj,D> &      removeByIndex(uintptr_t index);
     TObj *                              extractByKey(const TKey & key);
     TObj *                              extractByObject(TObj * object);
     TObj *                              extractByIndex(uintptr_t index);
@@ -433,31 +433,31 @@ template< class TKey,class TObj> class HashedObjectList {
     TObj *                              objectOfKey(const TKey & key) const;
     TObj *                              objectOfIndex(uintptr_t index) const;
 
-    HashedObjectListItem< TKey,TObj> *  itemOfKey(const TKey & key) const;
-    HashedObjectListItem< TKey,TObj> *  itemOfObject(TObj * key) const;
-    HashedObjectListItem< TKey,TObj> *  itemOfIndex(uintptr_t index) const;
+    HashedObjectListItem<TKey,TObj> *  itemOfKey(const TKey & key) const;
+    HashedObjectListItem<TKey,TObj> *  itemOfObject(TObj * key) const;
+    HashedObjectListItem<TKey,TObj> *  itemOfIndex(uintptr_t index) const;
 
-    HashedObjectList< TKey,TObj> &      changeKey(const TKey & oldKey, const TKey & newKey);
-    HashedObjectList< TKey,TObj> &      changeObject(TObj * oldObject, TObj * newObject);
-    HashedObjectList< TKey,TObj> &      changeIndex(uintptr_t oldIndex, uintptr_t newIndex);
+    HashedObjectList<TKey,TObj,D> &      changeKey(const TKey & oldKey, const TKey & newKey);
+    HashedObjectList<TKey,TObj,D> &      changeObject(TObj * oldObject, TObj * newObject);
+    HashedObjectList<TKey,TObj,D> &      changeIndex(uintptr_t oldIndex, uintptr_t newIndex);
 
-    HashedObjectList< TKey,TObj> &      transplantByKey(HashedObjectList< TKey,TObj> & donor, const TKey & key);
-    HashedObjectList< TKey,TObj> &      transplantByObject(HashedObjectList< TKey,TObj> & donor, TObj * object);
-    HashedObjectList< TKey,TObj> &      transplantByIndex(HashedObjectList< TKey,TObj> & donor, uintptr_t index);
+    HashedObjectList<TKey,TObj,D> &      transplantByKey(HashedObjectList<TKey,TObj,D> & donor, const TKey & key);
+    HashedObjectList<TKey,TObj,D> &      transplantByObject(HashedObjectList<TKey,TObj,D> & donor, TObj * object);
+    HashedObjectList<TKey,TObj,D> &      transplantByIndex(HashedObjectList<TKey,TObj,D> & donor, uintptr_t index);
 
     const bool &                        ownsObjects() const;
-    HashedObjectList< TKey,TObj> &      ownsObjects(bool ownsObjects);
+    HashedObjectList<TKey,TObj,D> &      ownsObjects(bool ownsObjects);
     const bool &                        caseSensitive() const;
-    HashedObjectList< TKey,TObj> &      caseSensitive(bool caseSensitive);
+    HashedObjectList<TKey,TObj,D> &      caseSensitive(bool caseSensitive);
     const uintptr_t &                   count() const;
 
     uintptr_t                           maxChainLength(HashChainType chain) const;
     uintptr_t                           minChainLength(HashChainType chain) const;
     uintptr_t                           avgChainLength(HashChainType chain) const;
   protected:
-    HashedObjectListHash< TKey,TObj>  keyHash_;
-    HashedObjectListHash< TKey,TObj>  objectHash_;
-    HashedObjectListHash< TKey,TObj>  indexHash_;
+    HashedObjectListHash<TKey,TObj>  keyHash_;
+    HashedObjectListHash<TKey,TObj>  objectHash_;
+    HashedObjectListHash<TKey,TObj>  indexHash_;
 
     uintptr_t                         count_;
     bool                              ownsObjects_;
@@ -467,44 +467,44 @@ template< class TKey,class TObj> class HashedObjectList {
     void                                reHash(uintptr_t slotCount);
     void                                renumeration(uintptr_t index);
 
-    uintptr_t                           addHelper(HashedObjectListItem< TKey,TObj> * & item,bool throwIfExists);
+    uintptr_t                           addHelper(HashedObjectListItem<TKey,TObj> * & item,bool throwIfExists);
   private:
-    HashedObjectList(const HashedObjectList< TKey,TObj> &){}
-    void operator =(const HashedObjectList< TKey,TObj> &){}
+    HashedObjectList(const HashedObjectList<TKey,TObj,D> &){}
+    void operator =(const HashedObjectList<TKey,TObj,D> &){}
 };
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline HashedObjectList< TKey,TObj>::~HashedObjectList()
+template <typename TKey,typename TObj,class D> inline HashedObjectList<TKey,TObj,D>::~HashedObjectList()
 {
   clear();
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj,class D>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-HashedObjectList< TKey,TObj>::HashedObjectList() : count_(0), ownsObjects_(true), caseSensitive_(true)
+HashedObjectList<TKey,TObj,D>::HashedObjectList() : count_(0), ownsObjects_(true), caseSensitive_(true)
 {
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj * HashedObjectList<TKey,TObj>::operator[](intptr_t i) const
+template <typename TKey,typename TObj,class D> inline
+TObj * HashedObjectList<TKey,TObj,D>::operator[](intptr_t i) const
 {
   assert((uintptr_t) i < count_);
   return objectOfIndex(i);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj * HashedObjectList<TKey,TObj>::operator[](uintptr_t i) const
+template <typename TKey,typename TObj,class D> inline
+TObj * HashedObjectList<TKey,TObj,D>::operator[](uintptr_t i) const
 {
   assert(i < count_);
   return objectOfIndex(i);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj,class D>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-void HashedObjectList< TKey,TObj>::clearHash()
+void HashedObjectList<TKey,TObj,D>::clearHash()
 {
   for( intptr_t i = keyHash_.slotCount() - 1; i >= 0; i-- ){
     keyHash_.slots()[i] = NULL;
@@ -513,15 +513,15 @@ void HashedObjectList< TKey,TObj>::clearHash()
   }
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj,class D>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-void HashedObjectList< TKey,TObj>::reHash(uintptr_t slotCount)
+void HashedObjectList<TKey,TObj,D>::reHash(uintptr_t slotCount)
 {
   if( slotCount > 0 ){
-    HashedObjectListItem< TKey,TObj> ** ppItem0 = keyHash_.slots(), ** ppItem1 = ppItem0 + keyHash_.slotCount();
-    HashedObjectListItem< TKey,TObj> *  head    = NULL, * pItem;
+    HashedObjectListItem<TKey,TObj> ** ppItem0 = keyHash_.slots(), ** ppItem1 = ppItem0 + keyHash_.slotCount();
+    HashedObjectListItem<TKey,TObj> *  head    = NULL, * pItem;
     while( ppItem0 < ppItem1 ){
       pItem = *ppItem0;
       while( pItem != NULL ){
@@ -558,7 +558,7 @@ void HashedObjectList< TKey,TObj>::reHash(uintptr_t slotCount)
     catch( ... ){
       assert(0);
     }
-    HashedObjectListItem< TKey,TObj> ** pKeyItem, ** pIndexItem, ** pObjectItem;
+    HashedObjectListItem<TKey,TObj> ** pKeyItem, ** pIndexItem, ** pObjectItem;
     while( head != NULL ){
       pItem = head->indexNext();
       pKeyItem = keyHash_.find(head->key(), caseSensitive_);
@@ -576,8 +576,8 @@ void HashedObjectList< TKey,TObj>::reHash(uintptr_t slotCount)
   }
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::caseSensitive(bool caseSensitive)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::caseSensitive(bool caseSensitive)
 {
   if( caseSensitive != caseSensitive_ ){
     if( caseSensitive && !caseSensitive_ && count_ > 0 )
@@ -587,20 +587,20 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::caseSensitive(bool 
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj,class D>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::clear()
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::clear()
 {
   if( count_ > 0 ){
-    HashedObjectListItem< TKey,TObj> ** ppItem0 = keyHash_.slots(), ** ppItem1 = ppItem0 + keyHash_.slotCount();
+    HashedObjectListItem<TKey,TObj> ** ppItem0 = keyHash_.slots(), ** ppItem1 = ppItem0 + keyHash_.slotCount();
     while( ppItem0 < ppItem1 ){
-      HashedObjectListItem< TKey,TObj> *  pItem = *ppItem0;
+      HashedObjectListItem<TKey,TObj> *  pItem = *ppItem0;
       while( pItem != NULL ){
         if( ownsObjects_ )
-          deleteObject(pItem->object());
-        HashedObjectListItem< TKey,TObj> *  pItem1  = pItem->keyNext();
+          D::destroyObject(pItem->object());
+        HashedObjectListItem<TKey,TObj> *  pItem1  = pItem->keyNext();
         deleteObject(pItem);
         pItem = pItem1;
       }
@@ -612,18 +612,18 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::clear()
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj,class D>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::assign(const HashedObjectList & source)
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::assign(const HashedObjectList & source)
 {
   clear();
   ownsObjects_ = false;
-  HashedObjectListItem< TKey,TObj> ** ppItem0 = source.keyHash_.slots();
-  HashedObjectListItem< TKey,TObj> ** ppItem1 = ppItem0 + source.keyHash_.slotCount();
+  HashedObjectListItem<TKey,TObj> ** ppItem0 = source.keyHash_.slots();
+  HashedObjectListItem<TKey,TObj> ** ppItem1 = ppItem0 + source.keyHash_.slotCount();
   while( ppItem0 < ppItem1 ){
-    HashedObjectListItem< TKey,TObj> *  pItem = *ppItem0;
+    HashedObjectListItem<TKey,TObj> *  pItem = *ppItem0;
     while( pItem != NULL ){
       addHelper(newObject<HashedObjectListItem<TKey,TObj> >(*pItem));
       pItem = pItem->keyNext();
@@ -633,23 +633,23 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::assign(const Hashed
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj,class D>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplant(HashedObjectList & donor)
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::transplant(HashedObjectList & donor)
 {
-  HashedObjectListItem< TKey,TObj> ** ppItem0 = donor.keyHash_.slots();
-  HashedObjectListItem< TKey,TObj> ** ppItem1 = ppItem0 + donor.keyHash_.slotCount();
+  HashedObjectListItem<TKey,TObj> ** ppItem0 = donor.keyHash_.slots();
+  HashedObjectListItem<TKey,TObj> ** ppItem1 = ppItem0 + donor.keyHash_.slotCount();
   while( ppItem0 < ppItem1 ){
-    HashedObjectListItem< TKey,TObj> *  pItem = *ppItem0;
+    HashedObjectListItem<TKey,TObj> *  pItem = *ppItem0;
     while( pItem != NULL ){
-      HashedObjectListItem< TKey,TObj> ** ppKey0, ** ppObject0, ** ppIndex0;
+      HashedObjectListItem<TKey,TObj> ** ppKey0, ** ppObject0, ** ppIndex0;
       pItem->index() = count_++;
       ppKey0 = keyHash_.find(pItem->key(), caseSensitive_);
       ppObject0 = objectHash_.find(pItem->object());
       ppIndex0 = indexHash_.find(pItem->index());
-      HashedObjectListItem< TKey,TObj> *  pItemNext = pItem->keyNext();
+      HashedObjectListItem<TKey,TObj> *  pItemNext = pItem->keyNext();
       pItem->keyNext() = NULL;
       pItem->objectNext() = NULL;
       pItem->indexNext() = NULL;
@@ -665,8 +665,8 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplant(HashedOb
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::addHelper(HashedObjectListItem<TKey,TObj> * & item,bool throwIfExists)
+template <typename TKey,typename TObj,class D> inline
+uintptr_t HashedObjectList<TKey,TObj,D>::addHelper(HashedObjectListItem<TKey,TObj> * & item,bool throwIfExists)
 {
   HashedObjectListItem<TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
   pKeyItem = keyHash_.find(item->key(),caseSensitive_);
@@ -687,16 +687,16 @@ uintptr_t HashedObjectList< TKey,TObj>::addHelper(HashedObjectListItem<TKey,TObj
   return count_ - 1;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeKey(const TKey & oldKey, const TKey & newKey)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::changeKey(const TKey & oldKey, const TKey & newKey)
 {
-  HashedObjectListItem< TKey,TObj> ** ppOldKeyItem, * pOldKeyItem;
+  HashedObjectListItem<TKey,TObj> ** ppOldKeyItem, * pOldKeyItem;
   ppOldKeyItem = keyHash_.find(oldKey, caseSensitive_);
   if( *ppOldKeyItem == NULL )
     newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
   *ppOldKeyItem = (pOldKeyItem = *ppOldKeyItem)->keyNext();
 
-  HashedObjectListItem< TKey,TObj> ** ppNewKeyItem;
+  HashedObjectListItem<TKey,TObj> ** ppNewKeyItem;
   ppNewKeyItem = keyHash_.find(newKey, caseSensitive_);
   if( *ppNewKeyItem != NULL ){
     *ppOldKeyItem = pOldKeyItem;
@@ -708,37 +708,37 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeKey(const TKe
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeObject(TObj * oldObject, TObj * newObject)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::changeObject(TObj * oldObject, TObj * newObject)
 {
-  HashedObjectListItem< TKey,TObj> ** ppOldObjectItem, * pOldObjectItem;
+  HashedObjectListItem<TKey,TObj> ** ppOldObjectItem, * pOldObjectItem;
   ppOldObjectItem = objectHash_.find(oldObject);
   if( *ppOldObjectItem == NULL )
     newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
   *ppOldObjectItem = (pOldObjectItem = *ppOldObjectItem)->objectNext();
 
-  HashedObjectListItem< TKey,TObj> ** ppNewObjectItem;
+  HashedObjectListItem<TKey,TObj> ** ppNewObjectItem;
   ppNewObjectItem = objectHash_.find(newObject);
   if( *ppNewObjectItem != NULL ){
     *ppOldObjectItem = pOldObjectItem;
     newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
   }
-  if( ownsObjects_ ) deleteObject(pOldObjectItem->object());
+  if( ownsObjects_ ) D::destroyObject(pOldObjectItem->object());
   pOldObjectItem->object() = newObject;
   *ppNewObjectItem = pOldObjectItem;
   pOldObjectItem->objectNext() = NULL;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeIndex(uintptr_t oldIndex, uintptr_t newIndex)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::changeIndex(uintptr_t oldIndex, uintptr_t newIndex)
 {
-  HashedObjectListItem< TKey,TObj> ** ppOldItem, ** ppNewItem;
+  HashedObjectListItem<TKey,TObj> ** ppOldItem, ** ppNewItem;
   ppOldItem = indexHash_.find(oldIndex);
   ppNewItem = indexHash_.find(newIndex);
   assert(*ppOldItem != NULL && *ppNewItem != NULL);
   if( oldIndex != newIndex ){
-    HashedObjectListItem< TKey,TObj> *  pOldItem, * pNewItem;
+    HashedObjectListItem<TKey,TObj> *  pOldItem, * pNewItem;
     *ppOldItem = (pOldItem = *ppOldItem)->indexNext();
     *ppNewItem = (pNewItem = *ppNewItem)->indexNext();
 
@@ -758,8 +758,8 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::changeIndex(uintptr
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-uintptr_t HashedObjectList<TKey,TObj>::add(TObj * object,const TKey & key,HashedObjectListItem<TKey,TObj> ** pItem,bool throwIfExist)
+template <typename TKey,typename TObj,class D> inline
+uintptr_t HashedObjectList<TKey,TObj,D>::add(TObj * object,const TKey & key,HashedObjectListItem<TKey,TObj> ** pItem,bool throwIfExist)
 {
   AutoPtr<HashedObjectListItem<TKey,TObj> > item(
     newObjectC1V2V3<HashedObjectListItem<TKey,TObj> >(key,object,count_)
@@ -771,29 +771,29 @@ uintptr_t HashedObjectList<TKey,TObj>::add(TObj * object,const TKey & key,Hashed
   return i;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByKey(const TKey & key)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::removeByKey(const TKey & key)
 {
   TObj * object = extractByKey(key);
-  if( ownsObjects_ ) deleteObject(object);
+  if( ownsObjects_ ) D::destroyObject(object);
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByObject(TObj * object)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::removeByObject(TObj * object)
 {
   object = extractByObject(object);
   if( ownsObjects_ )
-    deleteObject(object);
+    D::destroyObject(object);
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByIndex(uintptr_t index)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::removeByIndex(uintptr_t index)
 {
   TObj *  object  = extractByIndex(index);
   if( ownsObjects_ )
-    deleteObject(object);
+    D::destroyObject(object);
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -801,16 +801,16 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::removeByIndex(uintp
 #pragma option push -w-8013
 #endif
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj * HashedObjectList< TKey,TObj>::extractByKey(const TKey & key)
+template <typename TKey,typename TObj,class D> inline
+TObj * HashedObjectList<TKey,TObj,D>::extractByKey(const TKey & key)
 {
-  HashedObjectListItem< TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
+  HashedObjectListItem<TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
   pKeyItem = keyHash_.find(key, caseSensitive_);
   pObjectItem = objectHash_.find((*pKeyItem)->object());
   pIndexItem = indexHash_.find((*pKeyItem)->index());
   if( *pKeyItem == NULL || *pObjectItem == NULL || *pIndexItem == NULL )
     newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
-  HashedObjectListItem< TKey,TObj> *  pItem = *pKeyItem;
+  HashedObjectListItem<TKey,TObj> *  pItem = *pKeyItem;
   *pKeyItem = (*pKeyItem)->keyNext();
   *pObjectItem = (*pObjectItem)->objectNext();
   *pIndexItem = (*pIndexItem)->indexNext();
@@ -825,17 +825,17 @@ TObj * HashedObjectList< TKey,TObj>::extractByKey(const TKey & key)
   return object;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj * HashedObjectList< TKey,TObj>::extractByObject(TObj * object)
+template <typename TKey,typename TObj,class D> inline
+TObj * HashedObjectList<TKey,TObj,D>::extractByObject(TObj * object)
 {
   if( object != NULL ){
-    HashedObjectListItem< TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
+    HashedObjectListItem<TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
     pObjectItem = objectHash_.find(object);
     pKeyItem = keyHash_.find((*pObjectItem)->key(), caseSensitive_);
     pIndexItem = indexHash_.find((*pObjectItem)->index());
     if( *pObjectItem == NULL || *pKeyItem == NULL || *pIndexItem == NULL )
       newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
-    HashedObjectListItem< TKey,TObj> *  pItem = *pKeyItem;
+    HashedObjectListItem<TKey,TObj> *  pItem = *pKeyItem;
     *pKeyItem = (*pKeyItem)->keyNext();
     *pObjectItem = (*pObjectItem)->objectNext();
     *pIndexItem = (*pIndexItem)->indexNext();
@@ -850,16 +850,16 @@ TObj * HashedObjectList< TKey,TObj>::extractByObject(TObj * object)
   return object;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj * HashedObjectList< TKey,TObj>::extractByIndex(uintptr_t index)
+template <typename TKey,typename TObj,class D> inline
+TObj * HashedObjectList<TKey,TObj,D>::extractByIndex(uintptr_t index)
 {
-  HashedObjectListItem< TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
+  HashedObjectListItem<TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
   pIndexItem = indexHash_.find(index);
   pObjectItem = objectHash_.find((*pIndexItem)->object());
   pKeyItem = keyHash_.find((*pIndexItem)->key(), caseSensitive_);
   if( *pIndexItem == NULL || *pObjectItem == NULL || *pKeyItem == NULL )
     newObjectV1C2<Exception>(ENOENT, __PRETTY_FUNCTION__)->throwSP();
-  HashedObjectListItem< TKey,TObj> *  pItem = *pKeyItem;
+  HashedObjectListItem<TKey,TObj> *  pItem = *pKeyItem;
   *pKeyItem = (*pKeyItem)->keyNext();
   *pObjectItem = (*pObjectItem)->objectNext();
   *pIndexItem = (*pIndexItem)->indexNext();
@@ -877,11 +877,11 @@ TObj * HashedObjectList< TKey,TObj>::extractByIndex(uintptr_t index)
 #pragma option pop
 #endif
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-void HashedObjectList< TKey,TObj>::renumeration(uintptr_t index)
+template <typename TKey,typename TObj,class D> inline
+void HashedObjectList<TKey,TObj,D>::renumeration(uintptr_t index)
 {
   if( index < count_ - 1 ){
-    HashedObjectListItem< TKey,TObj> ** pIndexItem, * pItem;
+    HashedObjectListItem<TKey,TObj> ** pIndexItem, * pItem;
     pIndexItem = indexHash_.find(count_ - 1);
     pItem = *pIndexItem;
     assert(pItem != NULL);
@@ -893,74 +893,74 @@ void HashedObjectList< TKey,TObj>::renumeration(uintptr_t index)
   }
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::indexOfObject(TObj * object) const
+template <typename TKey,typename TObj,class D> inline
+uintptr_t HashedObjectList<TKey,TObj,D>::indexOfObject(TObj * object) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = objectHash_.find(object);
+  HashedObjectListItem<TKey,TObj> ** pItem = objectHash_.find(object);
   return *pItem == NULL ? -1 : (*pItem)->index();
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::indexOfKey(const TKey & key) const
+template <typename TKey,typename TObj,class D> inline
+uintptr_t HashedObjectList<TKey,TObj,D>::indexOfKey(const TKey & key) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = keyHash_.find(key, caseSensitive_);
+  HashedObjectListItem<TKey,TObj> ** pItem = keyHash_.find(key, caseSensitive_);
   return *pItem == NULL ? -1 : (*pItem)->index();
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TKey HashedObjectList< TKey,TObj>::keyOfObject(TObj * object) const
+template <typename TKey,typename TObj,class D> inline
+TKey HashedObjectList<TKey,TObj,D>::keyOfObject(TObj * object) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = objectHash_.find(object);
+  HashedObjectListItem<TKey,TObj> ** pItem = objectHash_.find(object);
   return *pItem == NULL ? TKey() : (*pItem)->key();
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj>
+template <typename TKey,typename TObj,class D>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
-TKey HashedObjectList< TKey,TObj>::keyOfIndex(uintptr_t index) const
+TKey HashedObjectList<TKey,TObj,D>::keyOfIndex(uintptr_t index) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = indexHash_.find(index);
+  HashedObjectListItem<TKey,TObj> ** pItem = indexHash_.find(index);
   return *pItem == NULL ? TKey() : (*pItem)->key();
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj * HashedObjectList< TKey,TObj>::objectOfKey(const TKey & key) const
+template <typename TKey,typename TObj,class D> inline
+TObj * HashedObjectList<TKey,TObj,D>::objectOfKey(const TKey & key) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = keyHash_.find(key, caseSensitive_);
+  HashedObjectListItem<TKey,TObj> ** pItem = keyHash_.find(key, caseSensitive_);
   return *pItem == NULL ? NULL : (*pItem)->object();
 }                      
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-TObj * HashedObjectList< TKey,TObj>::objectOfIndex(uintptr_t index) const
+template <typename TKey,typename TObj,class D> inline
+TObj * HashedObjectList<TKey,TObj,D>::objectOfIndex(uintptr_t index) const
 {
-  HashedObjectListItem< TKey,TObj> ** pItem = indexHash_.find(index);
+  HashedObjectListItem<TKey,TObj> ** pItem = indexHash_.find(index);
   return *pItem == NULL ? NULL : (*pItem)->object();
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> * HashedObjectList< TKey,TObj>::itemOfKey(const TKey & key) const
+template <typename TKey,typename TObj,class D> inline
+HashedObjectListItem<TKey,TObj> * HashedObjectList<TKey,TObj,D>::itemOfKey(const TKey & key) const
 {
   return *keyHash_.find(key, caseSensitive_);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> * HashedObjectList< TKey,TObj>::itemOfObject(TObj * object) const
+template <typename TKey,typename TObj,class D> inline
+HashedObjectListItem<TKey,TObj> * HashedObjectList<TKey,TObj,D>::itemOfObject(TObj * object) const
 {
   return *objectHash_.find(object);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectListItem< TKey,TObj> * HashedObjectList< TKey,TObj>::itemOfIndex(uintptr_t index) const
+template <typename TKey,typename TObj,class D> inline
+HashedObjectListItem<TKey,TObj> * HashedObjectList<TKey,TObj,D>::itemOfIndex(uintptr_t index) const
 {
   return *indexHash_.find(index);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByKey(HashedObjectList & donor, const TKey & key)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::transplantByKey(HashedObjectList & donor, const TKey & key)
 {
-  HashedObjectListItem< TKey,TObj> ** ppKeyItem0, ** ppObjectItem0, ** ppIndexItem0;
-  HashedObjectListItem< TKey,TObj> ** ppKeyItem1, ** ppObjectItem1, ** ppIndexItem1;
+  HashedObjectListItem<TKey,TObj> ** ppKeyItem0, ** ppObjectItem0, ** ppIndexItem0;
+  HashedObjectListItem<TKey,TObj> ** ppKeyItem1, ** ppObjectItem1, ** ppIndexItem1;
 
   ppKeyItem0 = donor.keyHash_.find(key, donor.caseSensitive_);
   ppObjectItem0 = donor.objectHash_.find((*ppKeyItem0)->object());
@@ -973,7 +973,7 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByKey(Has
   if( *ppKeyItem1 != NULL || *ppObjectItem1 != NULL )
     newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
 
-  HashedObjectListItem< TKey,TObj> *  pItem = *ppKeyItem0;
+  HashedObjectListItem<TKey,TObj> *  pItem = *ppKeyItem0;
 
   *ppKeyItem0 = pItem->keyNext();
   *ppObjectItem0 = pItem->objectNext();
@@ -995,11 +995,11 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByKey(Has
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByObject(HashedObjectList & donor, TObj * object)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::transplantByObject(HashedObjectList & donor, TObj * object)
 {
-  HashedObjectListItem< TKey,TObj> ** ppKeyItem0, ** ppObjectItem0, ** ppIndexItem0;
-  HashedObjectListItem< TKey,TObj> ** ppKeyItem1, ** ppObjectItem1, ** ppIndexItem1;
+  HashedObjectListItem<TKey,TObj> ** ppKeyItem0, ** ppObjectItem0, ** ppIndexItem0;
+  HashedObjectListItem<TKey,TObj> ** ppKeyItem1, ** ppObjectItem1, ** ppIndexItem1;
 
   ppObjectItem0 = donor.objectHash_.find(object);
   ppKeyItem0 = donor.keyHash_.find((*ppObjectItem0)->key(), donor.caseSensitive_);
@@ -1012,7 +1012,7 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByObject(
   if( *ppKeyItem1 != NULL || *ppObjectItem1 != NULL )
     newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
 
-  HashedObjectListItem< TKey,TObj> *  pItem = *ppKeyItem0;
+  HashedObjectListItem<TKey,TObj> *  pItem = *ppKeyItem0;
 
   *ppKeyItem0 = pItem->keyNext();
   *ppObjectItem0 = pItem->objectNext();
@@ -1034,11 +1034,11 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByObject(
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByIndex(HashedObjectList & donor, uintptr_t index)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::transplantByIndex(HashedObjectList & donor, uintptr_t index)
 {
-  HashedObjectListItem< TKey,TObj> ** ppKeyItem0, ** ppObjectItem0, ** ppIndexItem0;
-  HashedObjectListItem< TKey,TObj> ** ppKeyItem1, ** ppObjectItem1, ** ppIndexItem1;
+  HashedObjectListItem<TKey,TObj> ** ppKeyItem0, ** ppObjectItem0, ** ppIndexItem0;
+  HashedObjectListItem<TKey,TObj> ** ppKeyItem1, ** ppObjectItem1, ** ppIndexItem1;
 
   ppIndexItem0 = donor.indexHash_.find(index);
   ppObjectItem0 = donor.objectHash_.find((*ppIndexItem0)->object());
@@ -1051,7 +1051,7 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByIndex(H
   if( *ppKeyItem1 != NULL || *ppObjectItem1 != NULL )
     newObjectV1C2<Exception>(EEXIST, __PRETTY_FUNCTION__)->throwSP();
 
-  HashedObjectListItem< TKey,TObj> *  pItem = *ppKeyItem0;
+  HashedObjectListItem<TKey,TObj> *  pItem = *ppKeyItem0;
 
   *ppKeyItem0 = pItem->keyNext();
   *ppObjectItem0 = pItem->objectNext();
@@ -1073,45 +1073,45 @@ HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::transplantByIndex(H
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-const bool & HashedObjectList< TKey,TObj>::ownsObjects() const
+template <typename TKey,typename TObj,class D> inline
+const bool & HashedObjectList<TKey,TObj,D>::ownsObjects() const
 {
   return ownsObjects_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-HashedObjectList< TKey,TObj> & HashedObjectList< TKey,TObj>::ownsObjects(bool owns)
+template <typename TKey,typename TObj,class D> inline
+HashedObjectList<TKey,TObj,D> & HashedObjectList<TKey,TObj,D>::ownsObjects(bool owns)
 {
   ownsObjects_ = owns;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-const bool & HashedObjectList< TKey,TObj>::caseSensitive() const
+template <typename TKey,typename TObj,class D> inline
+const bool & HashedObjectList<TKey,TObj,D>::caseSensitive() const
 {
   return caseSensitive_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-const uintptr_t & HashedObjectList< TKey,TObj>::count() const
+template <typename TKey,typename TObj,class D> inline
+const uintptr_t & HashedObjectList<TKey,TObj,D>::count() const
 {
   return count_;
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::maxChainLength(HashChainType chain) const
+template <typename TKey,typename TObj,class D> inline
+uintptr_t HashedObjectList<TKey,TObj,D>::maxChainLength(HashChainType chain) const
 {
   return (&keyHash_ + chain)->maxChainLength(chain);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::minChainLength(HashChainType chain) const
+template <typename TKey,typename TObj,class D> inline
+uintptr_t HashedObjectList<TKey,TObj,D>::minChainLength(HashChainType chain) const
 {
   return (&keyHash_ + chain)->minChainLength(chain);
 }
 //---------------------------------------------------------------------------
-template< class TKey,class TObj> inline
-uintptr_t HashedObjectList< TKey,TObj>::avgChainLength(HashChainType chain) const
+template <typename TKey,typename TObj,class D> inline
+uintptr_t HashedObjectList<TKey,TObj,D>::avgChainLength(HashChainType chain) const
 {
   return (&keyHash_ + chain)->avgChainLength(chain);
 }

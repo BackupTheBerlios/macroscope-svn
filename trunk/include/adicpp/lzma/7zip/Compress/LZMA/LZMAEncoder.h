@@ -3,13 +3,13 @@
 #ifndef __LZMA_ENCODER_H
 #define __LZMA_ENCODER_H
 
-#include "../../../Common/MyCom.h"
-#include "../../../Common/Alloc.h"
-#include "../../ICoder.h"
-#include "../LZ/IMatchFinder.h"
-#include "../RangeCoder/RangeCoderBitTree.h"
+#include <adicpp/lzma/Common/MyCom.h>
+#include <adicpp/lzma/Common/Alloc.h>
+#include <adicpp/lzma/7zip/ICoder.h>
+#include <adicpp/lzma/7zip/Compress/LZ/IMatchFinder.h>
+#include <adicpp/lzma/7zip/Compress/RangeCoder/RangeCoderBitTree.h>
 
-#include "LZMA.h"
+#include <adicpp/lzma/7zip/Compress/LZMA/LZMA.h>
 
 namespace NCompress {
 namespace NLZMA {

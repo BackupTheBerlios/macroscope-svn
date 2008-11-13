@@ -247,13 +247,13 @@ volatile ilock_t PCAP::startupMutex_ = 0;
 //------------------------------------------------------------------------------
 PCAP::PacketGroupingPeriod PCAP::stringToGroupingPeriod(const utf8::String & gp)
 {
-  if( gp.strcasecmp("none") == 0 ) return pgpNone;
-  if( gp.strcasecmp("sec") == 0 ) return pgpSec;
-  if( gp.strcasecmp("min") == 0 ) return pgpMin;
-  if( gp.strcasecmp("hour") == 0 ) return pgpHour;
-  if( gp.strcasecmp("day") == 0 ) return pgpDay;
-  if( gp.strcasecmp("mon") == 0 ) return pgpMon;
-  if( gp.strcasecmp("year") == 0 ) return pgpYear;
+  if( gp.casecompare("none") == 0 ) return pgpNone;
+  if( gp.casecompare("sec") == 0 ) return pgpSec;
+  if( gp.casecompare("min") == 0 ) return pgpMin;
+  if( gp.casecompare("hour") == 0 ) return pgpHour;
+  if( gp.casecompare("day") == 0 ) return pgpDay;
+  if( gp.casecompare("mon") == 0 ) return pgpMon;
+  if( gp.casecompare("year") == 0 ) return pgpYear;
   return pgpDay;
 }
 //------------------------------------------------------------------------------
@@ -554,12 +554,19 @@ PCAP & PCAP::join(PCAP * pcap)
 void PCAP::pcapCallback(void * args,const void * header,const void * packet)
 {
 #if HAVE_PCAP_H
-  reinterpret_cast<PCAP *>(args)->capture(
-    timeval2Time(reinterpret_cast<const struct pcap_pkthdr *>(header)->ts),
-    reinterpret_cast<const struct pcap_pkthdr *>(header)->caplen,
-    reinterpret_cast<const struct pcap_pkthdr *>(header)->len,
-    (const uint8_t *) packet
-  );
+  try {
+    reinterpret_cast<PCAP *>(args)->capture(
+      timeval2Time(reinterpret_cast<const struct pcap_pkthdr *>(header)->ts),
+      reinterpret_cast<const struct pcap_pkthdr *>(header)->caplen,
+      reinterpret_cast<const struct pcap_pkthdr *>(header)->len,
+      (const uint8_t *) packet
+    );
+  }
+  catch( ExceptionSP & e ){
+    e->writeStdError();
+  }
+  catch( ... ){
+  }
 #endif
 }
 //------------------------------------------------------------------------------
@@ -754,31 +761,23 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   uint64_t bt, et;
   setBounds(groupingPeriod_,timestamp,bt,et);
   if( packets_ == NULL ||
-      (packets_->packets_ == packets_->count() && packets_->packets_ > 0) ||
+      (packets_->count() == packets_->mcount() && packets_->count() > 0) ||
       (groupingPeriod_ > pgpNone && bt != curPeriod_) ){
     groupPackets();
     curPeriod_ = bt;
-    packets_.ptr(newObjectV1<Packets>(pregroupingBufferSize_ / sizeof(Packet)));
+    packets_.ptr(newObject<Packets>());
+    packets_->reserve(pregroupingBufferSize_ / sizeof(Packet));
     interlockedIncrement(
       memoryUsage_,
-      uilock_t(packets_->count() * sizeof(Packet) + sizeof(Packets))
+      packets_->mcount() * sizeof(Packet) + sizeof(Packets)
     );
     lazyWriterSem_.post();
   }
   const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp + sizeUdp;
-  Packet & pkt = (*packets_.ptr())[packets_->packets_];
+  Packet & pkt = packets_->operator [] (packets_->count());
   pkt.timestamp_ = bt;
   pkt.pktSize_ = len;
   pkt.dataSize_ = len - (payload - packet);
-#ifndef NDEBUG
-//  static const uint8_t bc[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-//  if( memcmp(ethernet->dstAddr_,bc,6) == 0 || memcmp(ethernet->srcAddr_,bc,6) == 0 ){
-//    len = len;
-//  }
-//  if( pkt.pktSize_ < pkt.dataSize_ ){
-//    len = len;
-//  }
-#endif
   memcpy(&pkt.srcAddr_,&ip->src_,sizeof(pkt.srcAddr_));
   memcpy(&pkt.dstAddr_,&ip->dst_,sizeof(pkt.dstAddr_));
   pkt.srcPort_ = 0;
@@ -794,14 +793,15 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
     }
   }
   pkt.proto_ = protocols_ ? ip->proto_ : -1;
-  for( intptr_t i = packets_->packets_ - 1, j = i - pregroupingWindowSize_; i >= 0 && i >= j; i-- )
-    if( pkt == (*packets_.ptr())[i] ){
-      Packet & pkt2 = (*packets_.ptr())[i];
+  for( intptr_t i = packets_->count() - 2, j = i - pregroupingWindowSize_; i >= 0 && i >= j; i-- ){
+    Packet & pkt2 = packets_->operator [] (i);
+    if( pkt == pkt2 ){
       pkt2.pktSize_ += pkt.pktSize_;
       pkt2.dataSize_ += pkt.dataSize_;
       return;
     }
-  packets_->packets_++;
+  }
+  packets_->add(0,0);
 #endif
 }
 //------------------------------------------------------------------------------
@@ -834,7 +834,7 @@ void PCAP::Grouper::threadExecute()
   priority(THREAD_PRIORITY_IDLE);
   for(;;){
     AutoPtr<Packets> packets(get());
-    if( packets == NULL || packets->packets_ == 0 ){
+    if( packets == NULL || packets->count() == 0 ){
       if( terminated_ ) break;
       pcap_->grouperSem_.wait();
       continue;
@@ -844,8 +844,8 @@ void PCAP::Grouper::threadExecute()
     PacketGroup * pGroup = NULL;
     AutoPtr<PacketGroup> group;
     try {
-      for( intptr_t i = packets->packets_ - 1; i >= 0; i-- ){
-        const Packet & pkt = (*packets.ptr())[i];
+      for( intptr_t i = packets->count() - 1; i >= 0; i-- ){
+        const Packet & pkt = packets->operator [] (i);
         if( group == NULL || pkt.timestamp_ < header.bt_ || pkt.timestamp_ > header.et_ ){
           if( group != NULL ){
             AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
@@ -866,14 +866,12 @@ void PCAP::Grouper::threadExecute()
             header = pGroup->header_;
           }
         }
-        if( pGroup->header_.count_ == pGroup->maxCount_ ){
-          uintptr_t count = (pGroup->maxCount_ << 1) + ((pGroup->maxCount_ == 0) << 4);
-          pGroup->packets_.resize(count);
+        if( pGroup->packets_.count() == pGroup->packets_.mcount() ){
+          pGroup->packets_.reserve(pGroup->packets_.mcount() * 2u + (pGroup->packets_.mcount() == 0));
           interlockedIncrement(
             pcap_->memoryUsage_,
-            uilock_t((count - pGroup->maxCount_) * sizeof(HashedPacket))
+            (pGroup->packets_.mcount() - pGroup->packets_.count()) * sizeof(HashedPacket)
           );
-          pGroup->maxCount_ = count;
         }
         HashedPacket & hpkt = pGroup->packets_[pGroup->header_.count_], * p;
         hpkt.pktSize_ = pkt.pktSize_;
@@ -890,6 +888,7 @@ void PCAP::Grouper::threadExecute()
         }
         else {
           pGroup->header_.count_++;
+          pGroup->packets_.add(0,0);
         }
       }
       AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
@@ -898,7 +897,7 @@ void PCAP::Grouper::threadExecute()
         pGroup->joinGroup(group,pcap_->memoryUsage_);
         interlockedIncrement(
           pcap_->memoryUsage_,
-          -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+          -intptr_t(group->packets_.mcount() * sizeof(HashedPacket) + sizeof(PacketGroup))
         );
       }
       else {
@@ -914,7 +913,7 @@ void PCAP::Grouper::threadExecute()
         pGroup->joinGroup(group,pcap_->memoryUsage_);
         interlockedIncrement(
           pcap_->memoryUsage_,
-          -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+          -intptr_t(group->packets_.mcount() * sizeof(HashedPacket) + sizeof(PacketGroup))
         );
       }
       else {
@@ -924,7 +923,7 @@ void PCAP::Grouper::threadExecute()
     }
     interlockedIncrement(
       pcap_->memoryUsage_,
-      -ilock_t(packets->count() * sizeof(Packet) + sizeof(Packets))
+      -intptr_t(packets->count() * sizeof(Packet) + sizeof(Packets))
     );
     if( stdErr.debugLevel(4) ){
       int pcapStatSize;
@@ -1029,7 +1028,7 @@ void PCAP::DatabaseInserter::threadExecute()
     if( success && pCount == 0 ){
       interlockedIncrement(
         pcap_->memoryUsage_,
-        -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+        -intptr_t(group->packets_.mcount() * sizeof(HashedPacket) + sizeof(PacketGroup))
       );
       pcap_->lazyWriterSem_.post();
     }
@@ -1040,7 +1039,7 @@ void PCAP::DatabaseInserter::threadExecute()
         pGroup->joinGroup(group,pcap_->memoryUsage_);
         interlockedIncrement(
           pcap_->memoryUsage_,
-          -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+          -intptr_t(group->packets_.mcount() * sizeof(HashedPacket) + sizeof(PacketGroup))
         );
       }
       else {
@@ -1095,7 +1094,7 @@ void PCAP::LazyWriter::swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group
       swapped = true;
       interlockedIncrement(
         pcap_->memoryUsage_,
-        -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+        -intptr_t(group->packets_.mcount() * sizeof(HashedPacket) + sizeof(PacketGroup))
       );
       group = NULL;
     }
@@ -1133,26 +1132,29 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
     tempFile.readBuffer(pos,&header,sizeof(header));
     AutoPtr<PacketGroup> group(newObject<PacketGroup>());
     group->header_ = header;
-    group->maxCount_ = header.count_;
     uintptr_t groupSize = header.count_ * sizeof(HashedPacket);
-    group->packets_.resize(header.count_);
+    group->packets_.reserve(header.count_);
     tempFile.readBuffer(pos - groupSize,group->packets_,groupSize);
-    tempFile.resize(pos - groupSize);
     PacketGroup * pGroup;
     {
       AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
       pcap_->groupTree_.insert(group,false,false,&pGroup);
       if( pGroup == group ){
-        group.ptr(NULL);
+        while( group->packets_.count() < header.count_ ){
+          pGroup->packetsHash_.insert(group->packets_[group->packets_.count()],false,false);
+          group->packets_.add(0,0);
+        }
         interlockedIncrement(
           pcap_->memoryUsage_,
-          uilock_t(sizeof(PacketGroup) + groupSize)
+          sizeof(PacketGroup) + group->packets_.mcount() * sizeof(HashedPacket)
         );
+        group.ptr(NULL);
       }
       else {
         pGroup->joinGroup(group,pcap_->memoryUsage_);
       }
     }
+    tempFile.resize(pos - groupSize);
     if( stdErr.debugLevel(5) )
       stdErr.debug(5,utf8::String::Stream() <<
         "Interface: " << pcap_->ifName_ << ", swapin packets group: " <<
@@ -1185,7 +1187,7 @@ void PCAP::LazyWriter::threadExecute()
   lastSwapIn_ = 0;
   lastSwapOut_ = gettimeofday() - pcap_->swapWatchTime_;
   for(;;){
-    uilock_t memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
+    uintptr_t memoryUsage = interlockedIncrement(pcap_->memoryUsage_,0);
     bool swapin = memoryUsage < pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
     bool swapout = memoryUsage >= pcap_->swapThreshold() * pcap_->swapHighWatermark_ / 100;
     while( (swapout && gettimeofday() - lastSwapIn_ >= pcap_->swapWatchTime_) || terminated_ ){
@@ -1214,7 +1216,7 @@ void PCAP::LazyWriter::threadExecute()
           pGroup->joinGroup(group,pcap_->memoryUsage_);
           interlockedIncrement(
             pcap_->memoryUsage_,
-            -ilock_t(group->maxCount_ * sizeof(HashedPacket) + sizeof(PacketGroup))
+            -intptr_t(group->packets_.mcount() * sizeof(HashedPacket) + sizeof(PacketGroup))
           );
         }
       }
@@ -1238,17 +1240,15 @@ void PCAP::LazyWriter::threadExecute()
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,volatile uilock_t & memoryUsage)
+PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,volatile uintptr_t & memoryUsage)
 {
   for( intptr_t i = group.header_.count_ - 1; i >= 0; i-- ){
-    if( header_.count_ == maxCount_ ){
-      uintptr_t count = (maxCount_ << 1) + ((maxCount_ == 0) << 4);
-      packets_.resize(count);
+    if( packets_.count() == packets_.mcount() ){
+      packets_.reserve(packets_.mcount() * 2u + (packets_.mcount() == 0));
       interlockedIncrement(
         memoryUsage,
-        uilock_t((count - maxCount_) * sizeof(HashedPacket))
+        (packets_.mcount() - packets_.count()) * sizeof(HashedPacket)
       );
-      maxCount_ = count;
     }
     HashedPacket & pkt = packets_[header_.count_], * p;
     pkt = group.packets_[i];
@@ -1259,6 +1259,7 @@ PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,volat
     }
     else {
       header_.count_++;
+      packets_.add(0,0);
     }
   }
   return *this;

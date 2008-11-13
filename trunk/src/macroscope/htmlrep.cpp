@@ -235,7 +235,7 @@ void Logger::SquidSendmailThread::writeUserTop(
         "      <A HREF=\"" + utf8::String(result(i,"url")) + "\">\n" +
           result(i,"url") + "\n"
           "      </A>\n" :
-          (utf8::String(result(i,"st_from")).strncmp(result(i,"st_user"),utf8::String(result(i,"st_user")).strlen()) == 0 ?
+          (utf8::String(result(i,"st_from")).ncompare(result(i,"st_user"),utf8::String(result(i,"st_user")).length()) == 0 ?
             utf8::String(result(i,"st_user")) + "<B> --> </B>" + utf8::String(result(i,"st_to")) :
             utf8::String(result(i,"st_from")) + "<B> --> </B>" + utf8::String(result(i,"st_user"))
           ) + "\n"
@@ -456,7 +456,7 @@ void Logger::SquidSendmailThread::writeMonthHtmlOutput(const utf8::String & file
             "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.user",section_) + "\" nowrap>\n"
             "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
             alias +
-	          (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
+	          (alias.casecompare(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
             "    </FONT>\n"
             "  </TH>\n"
           ;
@@ -564,7 +564,7 @@ intptr_t Logger::SquidSendmailThread::sortUsersTrafTable(uintptr_t row1,uintptr_
     int64_t t1 = table(row1,"ST_TRAF"), t2 = table(row2,"ST_TRAF");
     c = t1 > t2 ? 1 : t1 < t2 ? -1 : 0;
     if( c == 0 )
-      c = utf8::String(table(row1,"ST_USER")).strcasecmp(table(row2,"ST_USER"));
+      c = utf8::String(table(row1,"ST_USER")).casecompare(table(row2,"ST_USER"));
   }
   return c;
 }
@@ -617,7 +617,7 @@ void Logger::SquidSendmailThread::genUsersTable(Vector<Table<Mutant> > & usersTr
         usersTrafTables[k](j,"ST_GROUP") = "group: " + key;
         usersTrafTables[k](j,"ST_TRAF_SMTP") = 0;
       }
-      if( groupedUsers.strlen() > 0 ) groupedUsers += ",";
+      if( !groupedUsers.isNull() ) groupedUsers += ",";
       groupedUsers += value;
     }
     if( !perGroupReport_ ){
@@ -869,7 +869,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
 	            "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.user",section_) + "\" nowrap>\n"
               "    <FONT FACE=\"Arial\" SIZE=\"2\">\n" +
               alias +
-	            (alias.strcasecmp(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
+	            (alias.casecompare(user) == 0 ? utf8::String() : " (" + user + ")") + "\n"
 	            "    </FONT>\n"
 	            "  </TH>\n"
             ;
@@ -1054,7 +1054,7 @@ int64_t Logger::SquidSendmailThread::getTrafNL(TrafType tt,const struct tm & bt,
           (tt == ttWWW ? "SUM(ST_TRAF_WWW)" : "") +
           (tt == ttSMTP ? "SUM(ST_TRAF_SMTP) " : " ") +
           "FROM INET_USERS_TRAF WHERE" +
-          (user.strlen() > 0 ? users : utf8::String()) +
+          (!user.isNull() ? users : utf8::String()) +
           " ST_TIMESTAMP >= :BT AND ST_TIMESTAMP <= :ET"
         );
         statement_->prepare();
@@ -1090,7 +1090,7 @@ int64_t Logger::SquidSendmailThread::getTraf(TrafType tt,const struct tm & bt,co
 //------------------------------------------------------------------------------
 void Logger::SquidSendmailThread::parseSquidLogLine(char * p,uintptr_t size,Array<const char *> & slcp)
 {
-  char *  rb  = p + size, * a, * s;
+  char * rb  = p + size, * a, * s;
   for( a = p; *a != '\r' && *a != '\n' && a < rb; a++ );
   slcp = NULL;
   for( uintptr_t i = 0; p < a; i++ ){
@@ -1458,7 +1458,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
               a++;
             }
             if( *a == '@' ){
-              if( utf8::plane(a + 1,domain.strlen()).strcasecmp(domain) == 0 )
+              if( utf8::plane(a + 1,domain.length()).casecompare(domain) == 0 )
                 st_user = utf8::plane(from,a - from).lower();
               while( *a != '>' && *a != ',' && !isspace(*a) ) a++;
               fromAddr = utf8::plane(from,a - from).lower().replaceAll("\"","");
@@ -1475,7 +1475,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
               a++;
             }
             if( *a == '@' ){
-              if( utf8::plane(a + 1,domain.strlen()).strcasecmp(domain) == 0 )
+              if( utf8::plane(a + 1,domain.length()).casecompare(domain) == 0 )
                 st_user = utf8::plane(to,a - to).lower();
               while( *a != '>' && *a != ',' && *a != '\r' && *a != '\n' && *a != '\0' && !isspace(*a) ) a++;
               toAddr = utf8::plane(to,a - to).lower().replaceAll("\"","");
@@ -1508,7 +1508,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
           stat = NULL;
         }
 	      st_user = st_user.lower().replaceAll("\"","");
-        if( !calculateInterdomainTraffic && fromAddr.strcmp(toAddr) == 0 ) from = to = NULL;
+        if( !calculateInterdomainTraffic && fromAddr.compare(toAddr) == 0 ) from = to = NULL;
         if( from != NULL && cid == NULL && msgSize > 0 ){
           try {
             stMsgsIns_->prepare()->

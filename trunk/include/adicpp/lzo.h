@@ -66,8 +66,8 @@ class LZO1X {
     LZO1X & active(bool active);
     bool active() const;
 
-    LZO1X & compress(AutoPtr<uint8_t> & buf,uint8_t * & p,int32_t & len);
-    LZO1X & decompress(AutoPtr<uint8_t> & buf);
+    LZO1X & compress(AutoPtrBuffer & buf,uint8_t * & p,int32_t & len);
+    LZO1X & decompress(AutoPtrBuffer & buf);
 
     enum MethodType {
       LZO1X_1,
@@ -83,9 +83,9 @@ class LZO1X {
     };
   protected:
   private:
-    AutoPtr<uint8_t> rBuf_;
-    AutoPtr<uint8_t> wBuf_;
-    AutoPtr<uint8_t> wWrkMem_;
+    AutoPtrBuffer rBuf_;
+    AutoPtrBuffer wBuf_;
+    AutoPtrBuffer wWrkMem_;
     uint32_t rBufPos_;
     uint32_t rBufSize_;
     uint32_t wBufPos_;

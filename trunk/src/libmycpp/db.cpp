@@ -50,14 +50,14 @@ DPB & DPB::clear()
 //---------------------------------------------------------------------------
 DPB & DPB::add(const utf8::String & name, const ksys::Mutant & value)
 {
-  if( name.strcasecmp("user_name") == 0 ) user_ = value;
-  else if( name.strcasecmp("password") == 0 ) password_ = value;
-  else if( name.strcasecmp("protocol") == 0 ) protocol_ = value;
-  else if( name.strcasecmp("connect_timeout") == 0 ) connectTimeout_ = (unsigned int) value;
-  else if( name.strcasecmp("read_timeout") == 0 ) readTimeout_ = (unsigned int) value;
-  else if( name.strcasecmp("write_timeout") == 0 ) writeTimeout_ = (unsigned int) value;
-  else if( name.strcasecmp("reconnect") == 0 ) reconnect_ = value;
-  else if( name.strcasecmp("compress") == 0 ) compress_ = value;
+  if( name.casecompare("user_name") == 0 ) user_ = value;
+  else if( name.casecompare("password") == 0 ) password_ = value;
+  else if( name.casecompare("protocol") == 0 ) protocol_ = value;
+  else if( name.casecompare("connect_timeout") == 0 ) connectTimeout_ = (unsigned int) value;
+  else if( name.casecompare("read_timeout") == 0 ) readTimeout_ = (unsigned int) value;
+  else if( name.casecompare("write_timeout") == 0 ) writeTimeout_ = (unsigned int) value;
+  else if( name.casecompare("reconnect") == 0 ) reconnect_ = value;
+  else if( name.casecompare("compress") == 0 ) compress_ = value;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -122,12 +122,21 @@ Database & Database::create(const utf8::String & name)
 {
   utf8::String  hostName, dbName;
   uintptr_t     port;
-  separateDBName(name.strlen() > 0 ? name : name_, hostName, dbName, port);
+  separateDBName(name.isNull() ? name_ : name, hostName, dbName, port);
   api.open();
   MYSQL * handle  = NULL;
   try {
     allocHandle(handle);
-    api.mysql_real_connect(handle, hostName.strlen() > 0 ? hostName.c_str() : NULL, dpb_.user().c_str(), dpb_.password().c_str(), NULL, (unsigned int) port, hostName.strlen() > 0 ? hostName.c_str() : NULL,dpb_.compress() ? CLIENT_COMPRESS : 0);
+    api.mysql_real_connect(
+      handle,
+      hostName.isNull() ? NULL : hostName.c_str(),
+      dpb_.user().c_str(),
+      dpb_.password().c_str(),
+      NULL,
+      (unsigned int) port,
+      hostName.isNull() ? NULL : hostName.c_str(),
+      dpb_.compress() ? CLIENT_COMPRESS : 0
+    );
     if( api.mysql_errno(handle) != 0 )
       exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle), api.mysql_error(handle)));
     dbName = "CREATE DATABASE " + dbName + " DEFAULT CHARACTER SET UTF8";
@@ -162,19 +171,19 @@ Database & Database::attach(const utf8::String & name)
 {
   utf8::String  hostName, dbName;
   uintptr_t     port;
-  separateDBName(name.strlen() > 0 ? name : name_, hostName, dbName, port);
+  separateDBName(name.isNull() ? name_ : name, hostName, dbName, port);
   if( !attached() ){
     api.open();
     try{
       allocHandle(handle_);
       unsigned int protocol = MYSQL_PROTOCOL_DEFAULT;
-      if( dpb_.protocol().strcasecmp("DEFAULT") == 0 )
+      if( dpb_.protocol().casecompare("DEFAULT") == 0 )
         protocol = MYSQL_PROTOCOL_DEFAULT;
-      else if( dpb_.protocol().strcasecmp("TCP") == 0 )
+      else if( dpb_.protocol().casecompare("TCP") == 0 )
         protocol = MYSQL_PROTOCOL_TCP;
-      else if( dpb_.protocol().strcasecmp("PIPE") == 0 )
+      else if( dpb_.protocol().casecompare("PIPE") == 0 )
         protocol = MYSQL_PROTOCOL_PIPE;
-      else if( dpb_.protocol().strcasecmp("MEMORY") == 0 )
+      else if( dpb_.protocol().casecompare("MEMORY") == 0 )
         protocol = MYSQL_PROTOCOL_MEMORY;
       if( api.mysql_options(handle_, MYSQL_OPT_PROTOCOL, &protocol) != 0 )
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
@@ -195,12 +204,13 @@ Database & Database::attach(const utf8::String & name)
 
       api.mysql_real_connect(
         handle_,
-        hostName.strlen() > 0 ? hostName.c_str() : NULL, 
-        dpb_.user().c_str(), 
-        dpb_.password().c_str(), 
-        dbName.c_str(), 
-        (unsigned int) port, 
-        hostName.strlen() > 0 ? hostName.c_str() : NULL,dpb_.compress() ? CLIENT_COMPRESS : 0// | CLIENT_MULTI_STATEMENTS
+        hostName.isNull() ? NULL : hostName.c_str(),
+        dpb_.user().c_str(),
+        dpb_.password().c_str(),
+        dbName.c_str(),
+        (unsigned int) port,
+        hostName.isNull() ? NULL : hostName.c_str(),
+        dpb_.compress() ? CLIENT_COMPRESS : 0// | CLIENT_MULTI_STATEMENTS
       );
       if( api.mysql_errno(handle_) != 0 )
         exceptionHandler(newObjectV1C2<EDBAttach>(api.mysql_errno(handle_), api.mysql_error(handle_)));
@@ -211,7 +221,7 @@ Database & Database::attach(const utf8::String & name)
       detach();
       throw;
     }
-    if( name.strlen() > 0 ) name_ = name;
+    if( !name.isNull() ) name_ = name;
   }
   return *this;
 }
@@ -252,7 +262,7 @@ void Database::exceptionHandler(ksys::Exception * e)
 //---------------------------------------------------------------------------
 Database & Database::name(const utf8::String & name)
 {
-  if( name_.strcasecmp(name) != 0 ){
+  if( name_.casecompare(name) != 0 ){
     if( attached() ) detach();
     name_ = name;
   }

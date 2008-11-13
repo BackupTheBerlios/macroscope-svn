@@ -225,7 +225,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
   if( err != eOK ) return *this;
   if( file.size() < pos ) file.resize(pos);
   file.seek(pos);
-  AutoPtr<uint8_t> b;
+  AutoPtrBuffer b;
   if( cmd_ != cmPutFilePartial ){
     if( bs > ll ) bs = (uint32_t) ll; else if( bs == 0 ) bs = (uint32_t) ll;
     if( bs > 0x40000000 ) bs = 0x40000000;
@@ -296,7 +296,7 @@ MSFTPServerFiber & MSFTPServerFiber::get()
   putCode(file.isOpen() ? eOK : eFileOpen);
   if( file.isOpen() ){
     file.seek(l);
-    AutoPtr<uint8_t> b;
+    AutoPtrBuffer b;
     b.alloc((size_t) bs);
     SHA256 lhash, rhash;
     memset(lhash.sha256(),0,lhash.size());
@@ -355,7 +355,7 @@ MSFTPServerFiber & MSFTPServerFiber::getFileHash()
   *this << ll << l;
   if( file.isOpen() ){
     SHA256 hash;
-    AutoPtr<uint8_t> b;
+    AutoPtrBuffer b;
     b.alloc((size_t) bs);
     ll = lp;
     for( l = 0; l < ll; l += lp ){

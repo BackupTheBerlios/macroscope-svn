@@ -80,8 +80,8 @@ class Exception : public Object {
   protected:
     class Error {
       public:
-        ~Error() {}
-        Error(int32_t code,const utf8::String & what) : code_(code), what_(what) {}
+        virtual ~Error() {}
+        Error(int32_t code = 0,const utf8::String & what = utf8::String()) : code_(code), what_(what) {}
         Error(int32_t code,const char * what) : code_(code), what_(what) {}
 	
         int32_t code_;

@@ -36,7 +36,7 @@ String::Container::Container() : string_(NULL), refCount_(0)/*, mutex_(0)*/
 //---------------------------------------------------------------------------
 String::Container * String::Container::container(uintptr_t l)
 {
-  ksys::AutoPtr<char> string;
+  ksys::AutoPtr<char,AutoPtrMemoryDestructor> string;
   string.alloc(l + 1);
   String::Container * cp = newObjectV1V2<Container>(0,string.ptr());
   string.ptr(NULL);
@@ -84,14 +84,14 @@ String plane(const char * s,uintptr_t size)
   return container;
 }
 //---------------------------------------------------------------------------
-String plane0(ksys::AutoPtr<char> & s)
+String plane0(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s)
 {
   String::Container * container = newObjectV1V2<String::Container>(0,s.ptr());
   s.ptr(NULL);
   return container;
 }
 //---------------------------------------------------------------------------
-String plane(ksys::AutoPtr<char> & s,uintptr_t size)
+String plane(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s,uintptr_t size)
 {
   String str(plane(s.ptr(),size));
   s.ptr(NULL);
@@ -102,7 +102,7 @@ String::String(const String::Iterator & i) : container_(&nullContainer())
 {
   String::Container * container;
   if( i.container_.ptr() != &String::nullContainer() ){
-    uintptr_t l = ksys::strlen(i.container_->string_ + i.cursor_);
+    uintptr_t l = strlen(i.container_->string_ + i.cursor_);
     container = Container::container(l);
     memcpy(container->string_, i.container_->string_ + i.cursor_, l + 1);
   }
@@ -209,7 +209,7 @@ String & String::operator +=(const char * str)
   if( *str != '\0' ){
     uintptr_t l1, l2  = mbcs2utf8s(CP_ACP, NULL, 0, str, ~uintptr_t(0) >> 1);
     if( container_.ptr() != &nullContainer() ){
-      container_->string_ = (char *) ksys::krealloc(container_->string_, (l1 = ksys::strlen(container_->string_)) + l2 + 1);
+      container_->string_ = (char *) ksys::krealloc(container_->string_, (l1 = strlen(container_->string_)) + l2 + 1);
     }
     else{
       container_ = Container::container(l2);
@@ -239,8 +239,8 @@ String String::operator +(const String & str) const
 {
   Container * container;
   if( container_.ptr() != &nullContainer() || str.container_.ptr() != &nullContainer() ){
-    uintptr_t l1  = ksys::strlen(container_->string_);
-    uintptr_t l2  = ksys::strlen(str.container_->string_);
+    uintptr_t l1  = strlen(container_->string_);
+    uintptr_t l2  = strlen(str.container_->string_);
     container = Container::container(l1 + l2);
     memcpy(container->string_, container_->string_, l1);
     memcpy(container->string_ + l1, str.container_->string_, l2 + 1);
@@ -254,10 +254,10 @@ String String::operator +(const String & str) const
 String & String::operator +=(const String & str)
 {
   if( str.container_.ptr() != &nullContainer() ){
-    uintptr_t l1, l2  = ksys::strlen(str.container_->string_);
+    uintptr_t l1, l2  = strlen(str.container_->string_);
     if( container_.ptr() != &nullContainer() ){
       if( container_.ptr() != str.container_.ptr() )
-        l1 = ksys::strlen(container_->string_);
+        l1 = strlen(container_->string_);
       else
         l1 = l2;
       container_->string_ = (char *) ksys::krealloc(container_->string_, l1 + l2 + 1);
@@ -274,7 +274,7 @@ String & String::operator +=(const String & str)
 String String::unique() const
 {
   ksys::SPRC<Container> rc(container_);
-  uintptr_t l = ksys::strlen(container_->string_);
+  uintptr_t l = strlen(container_->string_);
   Container * container = Container::container(l);
   memcpy(container->string_,container_->string_,l + 1);
   return container;
@@ -283,7 +283,7 @@ String String::unique() const
 String & String::resize(uintptr_t bCount)
 {
   if( bCount > 0 ){
-    uintptr_t l = ksys::strlen(container_->string_);
+    uintptr_t l = strlen(container_->string_);
     if( bCount != l ){
       if( container_.ptr() != &nullContainer() ){
         container_->string_ = (char *) ksys::krealloc(container_->string_, bCount + 1);
@@ -303,7 +303,7 @@ String & String::resize(uintptr_t bCount)
 //---------------------------------------------------------------------------
 String String::lower() const
 {
-  uintptr_t l = ksys::strlen(container_->string_);
+  uintptr_t l = strlen(container_->string_);
   Container * container;
   if( container_.ptr() != &nullContainer() ){
     container = Container::container(l);
@@ -321,7 +321,7 @@ String String::lower() const
 //---------------------------------------------------------------------------
 String String::upper() const
 {
-  uintptr_t l = ksys::strlen(container_->string_);
+  uintptr_t l = strlen(container_->string_);
   Container * container;
   if( container_.ptr() != &nullContainer() ){
     container = Container::container(l);
@@ -337,7 +337,7 @@ String String::upper() const
   return container;
 }
 //---------------------------------------------------------------------------
-intptr_t String::strcmp(const String & s) const
+intptr_t String::compare(const String & s) const
 {
   intptr_t              c;
   uintptr_t             l1, l2;
@@ -351,7 +351,7 @@ intptr_t String::strcmp(const String & s) const
   return c;
 }
 //---------------------------------------------------------------------------
-intptr_t String::strncmp(const String & s, uintptr_t n) const
+intptr_t String::ncompare(const String & s, uintptr_t n) const
 {
   intptr_t              c   = 0;
   uintptr_t             l1, l2;
@@ -365,7 +365,7 @@ intptr_t String::strncmp(const String & s, uintptr_t n) const
   return c;
 }
 //---------------------------------------------------------------------------
-intptr_t String::strcasecmp(const String & s) const
+intptr_t String::casecompare(const String & s) const
 {
   intptr_t c;
   uintptr_t l1, l2;
@@ -379,7 +379,7 @@ intptr_t String::strcasecmp(const String & s) const
   return c;
 }
 //---------------------------------------------------------------------------
-intptr_t String::strncasecmp(const String & s, uintptr_t n) const
+intptr_t String::ncasecompare(const String & s, uintptr_t n) const
 {
   intptr_t      c   = 0;
   uintptr_t     l1, l2;
@@ -509,7 +509,7 @@ OemString String::getOEMString() const
 //---------------------------------------------------------------------------
 WideString String::getUNICODEString() const
 {
-  WideString  p ((wchar_t *) ksys::kmalloc((strlen() + 1) * sizeof(wchar_t)));
+  WideString  p ((wchar_t *) ksys::kmalloc((length() + 1) * sizeof(wchar_t)));
   Iterator i(*this);
   for(;;){
     p[i.position()] = (wchar_t) i.getChar();
@@ -519,7 +519,7 @@ WideString String::getUNICODEString() const
   return p;
 }
 //---------------------------------------------------------------------------
-uintptr_t String::getMBCSString(const char * string,uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos)
+uintptr_t String::getMBCSString(const char * string,uintptr_t codePage,ksys::AutoPtrBuffer & s,bool eos)
 {
   intptr_t sl;
   if( codePage != CP_UTF8 ){
@@ -541,7 +541,7 @@ uintptr_t String::getMBCSString(const char * string,uintptr_t codePage,ksys::Aut
   return sl;
 }
 //---------------------------------------------------------------------------
-uintptr_t String::getMBCSString(uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos) const
+uintptr_t String::getMBCSString(uintptr_t codePage,ksys::AutoPtrBuffer & s,bool eos) const
 {
   return getMBCSString(container_->string_,codePage,s,eos);
 }
@@ -549,7 +549,7 @@ uintptr_t String::getMBCSString(uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bo
 #if defined(__WIN32__) || defined(__WIN64__)
 BSTR String::getOLEString() const
 {
-  uintptr_t l = strlen();
+  uintptr_t l = length();
   UINT t = 0;
   t = ~t;
   if( l > t ) newObjectV1C2<ksys::Exception>(ERROR_INVALID_DATA,__PRETTY_FUNCTION__)->throwSP();
@@ -574,7 +574,7 @@ String String::trimLeft() const
     container = &nullContainer();
   }
   else if( sl.position() > 0 ){
-    container = Container::container(ksys::strlen(container_->string_) - sl.cursor());
+    container = Container::container(strlen(container_->string_) - sl.cursor());
     strcpy(container->string_,sl.c_str());
   }
   else{
@@ -642,7 +642,7 @@ String String::cut(const Iterator & i1, const Iterator & i2) const
     container = Container::container(i2.cursor_ - i1.cursor_);
     memcpy(container->string_, i1.c_str(), i2.cursor_ - i1.cursor_);
     container->string_[i2.cursor_ - i1.cursor_] = '\0';
-    uintptr_t l = ksys::strlen(i2.c_str());
+    uintptr_t l = strlen(i2.c_str());
     if( l == 0 ){
       container_ = &nullContainer();
       i1.container_ = i2.container_ = container_;
@@ -670,7 +670,7 @@ String & String::replace(const Iterator & d1,const Iterator & d2, const Iterator
   }
   if( d1.cursor_ > d2.cursor_ ) return replace(d2, d1, s1, s2);
   if( s1.cursor_ > s2.cursor_ ) return replace(d1, d1, s2, s1);
-  uintptr_t l = ksys::strlen(container_->string_);
+  uintptr_t l = strlen(container_->string_);
   intptr_t  k = (s2.cursor_ - s1.cursor_) - (d2.cursor_ - d1.cursor_);
   if( k > 0 ) container_->string_ = (char *) ksys::krealloc(container_->string_, l + k + 1);
   memmove((char *) d2.c_str() + k, d2.c_str(), l - d2.cursor_ + 1);
@@ -684,7 +684,7 @@ String String::replaceAll(const String & what,const String & onWhat) const
   String s(unique());
   Iterator i(s.strstr(what));
   while( !i.eos() ){
-    s = s.replace(i,i + what.strlen(),onWhat);
+    s = s.replace(i,i + what.length(),onWhat);
     i = s.strstr(what);
   }
   return s;
@@ -695,7 +695,7 @@ String String::replaceCaseAll(const String & what,const String & onWhat) const
   String s(unique());
   Iterator i(s.strcasestr(what));
   while( !i.eos() ){
-    s = s.replace(i,i + what.strlen(),onWhat);
+    s = s.replace(i,i + what.length(),onWhat);
     i = s.strstr(what);
   }
   return s;
@@ -722,15 +722,16 @@ String String::middle(uintptr_t pos, uintptr_t symbols) const
 //---------------------------------------------------------------------------
 String String::catPrint(const char * fmt, ...)
 {
-  int a;
+  int a = 31;
   va_list arglist;
   String s;
   
+  s.resize(a);
   va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-  a = vsnprintf(s.c_str(),0,fmt,arglist);
+  a = vsnprintf(s.c_str(),a,fmt,arglist);
 #elif HAVE__VSNPRINTF
-  a = _vsnprintf(s.c_str(),0,fmt,arglist);
+  a = _vsnprintf(s.c_str(),a,fmt,arglist);
 #endif
   va_end(arglist);
   if( a < 0 ){ // hack for ugly msvcrt.dll versions
@@ -740,7 +741,7 @@ String String::catPrint(const char * fmt, ...)
 #if __BCPLUSPLUS__
       std::
 #endif
-      vsnprintf(s.c_str(),a + 1,fmt,arglist);
+      vsnprintf(s.c_str(),a,fmt,arglist);
     va_end(arglist);
     s.resize(a);
   }
@@ -748,9 +749,9 @@ String String::catPrint(const char * fmt, ...)
     s.resize(a);
     va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-    vsnprintf(s.c_str(),a + 1,fmt,arglist);
+    vsnprintf(s.c_str(),a,fmt,arglist);
 #elif HAVE__VSNPRINTF
-    _vsnprintf(s.c_str(),a + 1,fmt,arglist);
+    _vsnprintf(s.c_str(),a,fmt,arglist);
 #endif
     va_end(arglist);
   }
@@ -759,15 +760,16 @@ String String::catPrint(const char * fmt, ...)
 //---------------------------------------------------------------------------
 String String::print(const char * fmt, ...)
 {
-  int a;
+  int a = 31;
   va_list arglist;
   String s;
   
+  s.resize(a);
   va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-  a = vsnprintf(s.c_str(),0,fmt,arglist);
+  a = vsnprintf(s.c_str(),a,fmt,arglist);
 #elif HAVE__VSNPRINTF
-  a = _vsnprintf(s.c_str(),0,fmt,arglist);
+  a = _vsnprintf(s.c_str(),a,fmt,arglist);
 #endif
   va_end(arglist);
   if( a < 0 ){ // hack for ugly msvcrt.dll versions
@@ -777,7 +779,7 @@ String String::print(const char * fmt, ...)
 #if __BCPLUSPLUS__
       std::
 #endif
-      vsnprintf(s.c_str(),a + 1,fmt,arglist);
+      vsnprintf(s.c_str(),a,fmt,arglist);
     va_end(arglist);
     s.resize(a);
   }
@@ -785,9 +787,9 @@ String String::print(const char * fmt, ...)
     s.resize(a);
     va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-    vsnprintf(s.c_str(),a + 1,fmt,arglist);
+    vsnprintf(s.c_str(),a,fmt,arglist);
 #elif HAVE__VSNPRINTF
-    _vsnprintf(s.c_str(),a + 1,fmt,arglist);
+    _vsnprintf(s.c_str(),a,fmt,arglist);
 #endif
     va_end(arglist);
   }
@@ -1735,7 +1737,7 @@ intptr_t String::Stream::Format::format(char * buffer) const
     p = buffer;
     size2 = INT_MAX;
   }
-  ksys::AutoPtr<char> b;
+  ksys::AutoPtr<char,AutoPtrMemoryDestructor> b;
   if( fmt_[0] != '%' ){ errno = EINVAL; goto l1; }
   for(;;){
     errno = 0;

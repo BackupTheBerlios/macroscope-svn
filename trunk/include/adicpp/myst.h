@@ -191,7 +191,7 @@ class DSQLRow {
     virtual ~DSQLRow();
     DSQLRow();
   protected:
-    ksys::AutoPtr<uint8_t> raw_;
+    ksys::AutoPtrBuffer raw_;
     ksys::Array<int32_t>   index_;
     ksys::Array<my_bool>   isNulls_;
     uint32_t               rowSize_;
@@ -246,29 +246,29 @@ class DSQLValues {
     MYSQL_BIND_Holder                               bind_;
     MYSQL_RES *                                     res_;
     MYSQL_FIELD *                                   fields_;
-    ksys::Array< unsigned long>                     lengths_;
-    ksys::Vector< DSQLRow>                          rows_;
+    ksys::Array<unsigned long>                      lengths_;
+    ksys::Vector<DSQLRow>                           rows_;
     intptr_t                                        row_;
-    ksys::HashedObjectList<utf8::String,int32_t>    valuesIndex_;
+    ksys::HashedObjectList<utf8::String,int32_t,AutoPtrMemoryDestructor> valuesIndex_;
 
     DSQLValues &  clear();
     DSQLRow *     bind();
     DSQLValues &  fillRow(DSQLRow * row);
     struct fillRowVars {
-        union {
-            char *              pc;
-            int8_t *            pb;
-            int16_t *           ps;
-            uint16_t *          pus;
-            int32_t *           pl;
-            int64_t *           pll;
-            float *             pf;
-            double *            pd;
-            const MYSQL_TIME *  stamp;
-        };
-        intptr_t      i, j, k;
-        MYSQL_BIND *  rbind;
-        DSQLRow *     row;
+      union {
+        char *              pc;
+        int8_t *            pb;
+        int16_t *           ps;
+        uint16_t *          pus;
+        int32_t *           pl;
+        int64_t *           pll;
+        float *             pf;
+        double *            pd;
+        const MYSQL_TIME *  stamp;
+      };
+      intptr_t      i, j, k;
+      MYSQL_BIND *  rbind;
+      DSQLRow *     row;
     };
 
     DSQLValues &        fillRowHelper(struct fillRowVars & v, uintptr_t ds);
@@ -295,7 +295,7 @@ inline DSQLValues & DSQLValues::selectRow(uintptr_t row)
 //---------------------------------------------------------------------------
 inline intptr_t valueIndexComparator(const utf8::String & s1, const utf8::String & s2)
 {
-  return s1.strcasecmp(s2);
+  return s1.casecompare(s2);
 }
 //---------------------------------------------------------------------------
 inline intptr_t DSQLValues::getValueIndex(const utf8::String & name)
@@ -372,7 +372,7 @@ inline const MYSQL_FIELD & DSQLValues::field(uintptr_t i)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement {
+class DSQLStatement : virtual public ksys::Object {
   friend class Database;
   friend class Transaction;
   friend class DSQLParams;
@@ -381,7 +381,7 @@ class DSQLStatement {
     virtual ~DSQLStatement();
     DSQLStatement();
 
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { detach(); }
     
     DSQLStatement & attach(Database & database);
     DSQLStatement & detach();

@@ -176,30 +176,29 @@ class PCAP : public Thread {
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
-	uint16_t dstPort_;
+	      uint16_t dstPort_;
         int16_t proto_;
 
         bool operator == (const Packet & object) const {
           bool r = timestamp_ == object.timestamp_;
           if( r ){
             r = memcmp(&srcAddr_,&object.srcAddr_,sizeof(srcAddr_)) == 0;
-	    if( r ){
-	      r = memcmp(&dstAddr_,&object.dstAddr_,sizeof(dstAddr_)) == 0;
-	      if( r ){
+	          if( r ){
+	            r = memcmp(&dstAddr_,&object.dstAddr_,sizeof(dstAddr_)) == 0;
+	            if( r ){
                 r = srcPort_ == object.srcPort_;
                 if( r ){
                   r = dstPort_ == object.dstPort_;
                   if( r ) r = proto_ == object.proto_;
                 }
-	      }
-	    }
+	            }
+	          }
           }
           return r;
         }
     };
-    class HashedPacket {
+    struct HashedPacket {
       public:
-        virtual ~HashedPacket() {}
         static EmbeddedHashNode<HashedPacket,uintptr_t> & ehNLT(const uintptr_t & link,const Array<HashedPacket> * & param){
           return keyNode((*param)[link - 1]);
         }
@@ -249,11 +248,8 @@ class PCAP : public Thread {
     class Packets : public Array<Packet> {
       public:
         virtual ~Packets() {}
-	Packets() {}
-	Packets(uintptr_t packets) : packets_(0) { resize(packets); }
+	      Packets() {}
 
-        uintptr_t packets_;
-	
         static EmbeddedListNode<Packets> & listNode(const Packets & object){
           return object.listNode_;
         }
@@ -273,13 +269,14 @@ class PCAP : public Thread {
       HashedPacket::keyNode,
       HashedPacket::keyNodeObject,
       HashedPacket::keyNodeHash,
-      HashedPacket::keyHashNodeEqu
+      HashedPacket::keyHashNodeEqu,
+      AutoPtrNullDestructor
     > PacketsHash;
 
     class PacketGroup {
       public:
         virtual ~PacketGroup() {}
-        PacketGroup() : maxCount_(0) { packetsHash_.param() = &packets_; }
+        PacketGroup() { packetsHash_.param() = &packets_; }
       
         class SwapFileHeader {
           public:
@@ -292,24 +289,23 @@ class PCAP : public Thread {
         SwapFileHeader header_;
       
         Array<HashedPacket> packets_;
-        uintptr_t maxCount_;
         PacketsHash packetsHash_;
 	
-        PacketGroup & joinGroup(const PacketGroup & group,volatile uilock_t & memoryUsage);
+        PacketGroup & joinGroup(const PacketGroup & group,volatile uintptr_t & memoryUsage);
 
         bool isInBounds(uint64_t timestamp) const { return timestamp >= header_.bt_ && timestamp <= header_.et_; }
       
         static RBTreeNode & treeO2N(const PacketGroup & object,uintptr_t *){
           return object.treeNode_;
-	}
-	static PacketGroup & treeN2O(const RBTreeNode & node,uintptr_t *){
-	  PacketGroup * p = NULL;
-	  return node.object<PacketGroup>(p->treeNode_);
-	}
-	static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1,uintptr_t *){
-	  return a0.header_.bt_ > a1.header_.et_ ? 1 : a0.header_.et_ < a1.header_.bt_ ? -1 : 0;
-	}
-	mutable RBTreeNode treeNode_;
+	    }
+	    static PacketGroup & treeN2O(const RBTreeNode & node,uintptr_t *){
+	      PacketGroup * p = NULL;
+	      return node.object<PacketGroup>(p->treeNode_);
+	    }
+	    static intptr_t treeCO(const PacketGroup & a0,const PacketGroup & a1,uintptr_t *){
+	      return a0.header_.bt_ > a1.header_.et_ ? 1 : a0.header_.et_ < a1.header_.bt_ ? -1 : 0;
+	    }
+	    mutable RBTreeNode treeNode_;
     };
     typedef
       RBTree<
@@ -395,7 +391,7 @@ class PCAP : public Thread {
     uintptr_t swapThreshold_;
     uintptr_t pregroupingBufferSize_;
     uintptr_t pregroupingWindowSize_;
-    volatile uilock_t memoryUsage_;
+    volatile uintptr_t memoryUsage_;
     ldouble swapLowWatermark_;
     ldouble swapHighWatermark_;
     uint64_t swapWatchTime_;

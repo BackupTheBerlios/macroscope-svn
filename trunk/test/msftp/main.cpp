@@ -223,7 +223,7 @@ void KFTPClient::put()
         *this << cmd << rfile << file.tell() << ll << mtime << bs;
         if( cmd == cmPutFilePartial ) *this << partialBlockSize;
         getCode();
-        AutoPtr<uint8_t> b;
+        AutoPtrBuffer b;
         b.alloc((size_t) bs);
         ttime = getlocaltimeofday();
         SHA256 lhash, rhash;
@@ -389,7 +389,7 @@ void KFTPClient::get()
       *this << cmd << remotel + list[i] << file.tell() << ll;
       if( cmd == cmGetFilePartial ) *this << partialBlockSize;
       getCode();
-      AutoPtr<uint8_t> b;
+      AutoPtrBuffer b;
       b.alloc((size_t) bs);
       ttime = getlocaltimeofday();
       SHA256 lhash, rhash;

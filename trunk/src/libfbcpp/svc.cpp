@@ -147,7 +147,7 @@ intptr_t SPB::writeISCCode(const utf8::String & name)
 {
   intptr_t  i;
   for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
-    if( name.strcasecmp(params[i].name_) == 0 ){
+    if( name.casecompare(params[i].name_) == 0 ){
       spb_ = (char *) ksys::krealloc(spb_, spbLen_ + 1);
       spb_[spbLen_++] = char(params[i].number & ~0xFFFF8000);
       return params[i].number;
@@ -242,10 +242,10 @@ intptr_t ServiceRequest::getISCCode(const utf8::String & name)
 {
   intptr_t i = -1;
   for( i = sizeof(SPB::params) / sizeof(SPB::params[0]) - 1; i >= 0; i-- )
-    if( name.strcasecmp(SPB::params[i].name_) == 0 ) return SPB::params[i].number;
+    if( name.casecompare(SPB::params[i].name_) == 0 ) return SPB::params[i].number;
   if( i < 0 )
     for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
-      if( name.strcasecmp(params[i].name_) == 0 ) return params[i].number;
+      if( name.casecompare(params[i].name_) == 0 ) return params[i].number;
     }
   return i;
 }
@@ -259,7 +259,7 @@ intptr_t ServiceRequest::writeISCCode(const utf8::String & name)
     return i;
   }
   //for( i = sizeof(SPB::params) / sizeof(SPB::params[0]) - 1; i >= 0; i-- ){
-  //  if( name.strcasecmp(SPB::params[i].name_) == 0 ){
+  //  if( name.casecompare(SPB::params[i].name_) == 0 ){
   //    ksys::xrealloc(request_, requestLen_ + 1);
   //    request_[requestLen_++] = char(SPB::params[i].number & ~0xFFFF8000);
   //    return SPB::params[i].number;
@@ -267,7 +267,7 @@ intptr_t ServiceRequest::writeISCCode(const utf8::String & name)
   //}
   //if( i < 0 ){
   //  for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
-  //    if( name.strcasecmp(params[i].name_) == 0 ){
+  //    if( name.casecompare(params[i].name_) == 0 ){
   //      ksys::xrealloc(request_, requestLen_ + 1);
   //      request_[requestLen_++] = params[i].number;
   //      return params[i].number;

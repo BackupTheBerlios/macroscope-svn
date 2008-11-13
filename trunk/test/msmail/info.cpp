@@ -307,7 +307,7 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   qSort(list.ptr(),0,list.count() - 1,attributeCompare);
   utf8::String numberSign("#");
   size_t bl = getpagesize() * 16;
-  AutoPtr<uint8_t> b;
+  AutoPtrBuffer b;
   uintptr_t i, j, k, sz;
   for( k = i = 0; i < list.count(); i++ ){
     bool isNumberSign = utf8::String(list[i]->key_).strncmp(numberSign,1) == 0;

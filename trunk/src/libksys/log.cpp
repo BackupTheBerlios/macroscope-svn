@@ -240,7 +240,7 @@ void LogFile::threadExecute()
   lck.fileName(threadFile_.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
   bool exception = false;
   for(;;){
-    AutoPtr<char> buffer;
+    AutoPtr<char,AutoPtrMemoryDestructor> buffer;
     uintptr_t bufferPos = 0;
     int64_t ft;
     try {

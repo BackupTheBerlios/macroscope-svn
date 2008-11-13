@@ -83,7 +83,7 @@ intptr_t TPB::writeISCCode(const utf8::String & name)
 {
   intptr_t  i;
   for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
-    if( name.strcasecmp(params[i].name_) == 0 ){
+    if( name.casecompare(params[i].name_) == 0 ){
       tpb_ = (char *) ksys::krealloc(tpb_, tpbLen_ + 1);
       tpb_[tpbLen_++] = params[i].number;
       return params[i].number;
@@ -232,27 +232,27 @@ Transaction & Transaction::start()
       TPB * tpb = tpbs_.objectOfKey(databases_.keyOfIndex(i));
 #endif
       if( tpb->tpbLen_ == 0 ){
-        if( isolation_.strcasecmp("REPEATABLE") == 0 ){
+        if( isolation_.casecompare("REPEATABLE") == 0 ){
           tpb->add("version3");
           tpb->add("consistency");
           //tpb->add("read");
           tpb->add("write");
           tpb->add("nowait");
         }
-        else if( isolation_.strcasecmp("SERIALIZABLE") == 0 ){
+        else if( isolation_.casecompare("SERIALIZABLE") == 0 ){
           tpb->add("version3");
           tpb->add("concurrency");
           //tpb->add("read");
           tpb->add("write");
           tpb->add("nowait");
         }
-        else if( isolation_.strcasecmp("READ_COMMITTED") == 0 ){
+        else if( isolation_.casecompare("READ_COMMITTED") == 0 ){
 l1:       tpb->add("version3");
           tpb->add("read_committed");
           tpb->add("rec_version");
           tpb->add("nowait");
         }
-        else if( isolation_.strcasecmp("READ_ONLY_COMMITTED") == 0 ){
+        else if( isolation_.casecompare("READ_ONLY_COMMITTED") == 0 ){
           tpb->add("version3");
           tpb->add("read");
           tpb->add("read_committed");

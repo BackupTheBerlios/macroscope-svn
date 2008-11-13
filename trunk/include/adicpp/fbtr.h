@@ -90,7 +90,7 @@ class TPB {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Transaction {
+class Transaction : virtual public ksys::Object {
   friend class Database;
   friend class DSQLStatement;
   public:
@@ -101,7 +101,7 @@ class Transaction {
     Transaction &   detach(Database & database);
     Transaction &   detach();
 
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { detach(); }
 
     Transaction &   isolation(const utf8::String & isolation);
     const utf8::String & isolation() const;

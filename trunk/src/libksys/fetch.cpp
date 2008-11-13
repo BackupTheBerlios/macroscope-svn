@@ -159,12 +159,12 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
   ;
   parseUrl(proxy_,proto,proxyUser,proxyPassword,proxy,path,name,proxyPort);
   parseUrl(url_,proto,user,password,host,path,name,port);
-  if( port.strlen() == 0 ){
+  if( port.isNull() ){
     port = "80";
-    if( proto.strcmp("FTP") == 0 ) port = "21";
+    if( proto.compare("FTP") == 0 ) port = "21";
   }
   ksock::SockAddr addr;
-  if( proxy.strlen() > 0 ){
+  if( !proxy.isNull() ){
     addr.resolveName(proxy,proxyPort);
   }
   else {
@@ -172,9 +172,9 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
   }
   Stat st;
   AsyncFile file(
-    (localPath_.strlen() > 0 ? includeTrailingPathDelimiter(localPath_) : utf8::String()) +
-    (storeHostPath_ ? path.strncmp("/",1) == 0 ? utf8::String(utf8::String::Iterator(path) + 1) : path : utf8::String()) +
-    (localName.strlen() > 0 ? localName : name)
+    (!localPath_.isNull() ? includeTrailingPathDelimiter(localPath_) : utf8::String()) +
+    (storeHostPath_ ? path.ncompare("/",1) == 0 ? utf8::String(utf8::String::Iterator(path) + 1) : path : utf8::String()) +
+    (!localName.isNull() ? localName : name)
   );
   localPathName_ = file.fileName();
   ksock::AsyncSocket socket;
@@ -186,15 +186,15 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
     response.clear();
     socket.close();
     utf8::String::Stream request;
-    if( proxy.strlen() > 0 ){
-      if( proxyPort.strlen() == 0 ) proxyPort = "3128";
+    if( !proxy.isNull() ){
+      if( proxyPort.isNull() ) proxyPort = "3128";
       request << "GET " << url_ << " HTTP/1.0\r\n";
     }
     else {
       request << "GET " << path << name << " HTTP/1.0\r\n" <<
         "Host: " << host << ":" << port << "\r\n";
     }
-    if( proxyUser.strlen() > 0 || proxyPassword.strlen() > 0 ){
+    if( !proxyUser.isNull() || !proxyPassword.isNull() ){
       utf8::String auth64(proxyUser + ":" + proxyPassword);
       utf8::String base64;
       base64.resize(rfcBase64Encode((const uint8_t *) auth64.c_str(),auth64.size(),NULL,0));
@@ -208,7 +208,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
         "Proxy-Connection: Keep-Alive\r\n"
       ;
     }
-    if( user.strlen() > 0 || password.strlen() > 0 ){
+    if( !user.isNull() || !password.isNull() ){
       utf8::String auth64(user + ":" + password);
       utf8::String base64;
       base64.resize(rfcBase64Encode((const uint8_t *) auth64.c_str(),auth64.size(),NULL,0));

@@ -105,7 +105,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text,const utf8::String & 
       while( i.next() && i.isSpace() );
       if( (i - 1).isSpace() ){
         ksock::SockAddr addr;
-        if( sd.strcasecmp("src") == 0 || sd.strcasecmp("dst") == 0 ){
+        if( sd.casecompare("src") == 0 || sd.casecompare("dst") == 0 ){
           sd = tableName + sd.lower() + "_ip";
           utf8::String::Iterator j(i), net(j);
           bool isNetwork = false;
@@ -141,7 +141,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text,const utf8::String & 
           }
           i = j;
 	      }
-        else if( sd.strcasecmp("src_port") == 0 || sd.strcasecmp("dst_port") == 0 ){
+        else if( sd.casecompare("src_port") == 0 || sd.casecompare("dst_port") == 0 ){
           sd = tableName + sd.lower();
           utf8::String::Iterator j(i);
           while( j.next() && !j.isSpace() && j.getChar() != ')' );
@@ -150,7 +150,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text,const utf8::String & 
 	        ;
           i = j;
 	      }
-        else if( sd.strcasecmp("proto") == 0 ){
+        else if( sd.casecompare("proto") == 0 ){
           sd = tableName + "ip_proto";
           utf8::String::Iterator j(i);
           while( j.next() && !j.isSpace() && j.getChar() != ')' );
@@ -442,7 +442,7 @@ utf8::String Logger::BPFTThread::genHRef(const in_addr & ip,uintptr_t port)
   utf8::String addr(logger_->resolveAddr(stDNSCache_,resolveDNSNames_,ip,true));
   return
     "    <A HREF=\"http://" + name + "\">\n" + name +
-    (name.strcmp(addr) == 0 ?utf8::String() : " (" + addr + ")") +
+    (name.compare(addr) == 0 ? utf8::String() : " (" + addr + ")") +
     (port > 0 ? ":" + utf8::int2Str(port) : utf8::String()) +
     "\n    </A>\n"
   ;
@@ -662,25 +662,25 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       utf8::String maxTotals(logger_->cgi_.paramAsString("max_totals"));
       utf8::String minTotals(logger_->cgi_.paramAsString("min_totals"));
 
-      if( maxTotals.strcasecmp("Min") == 0 ) maxTotalsLevel_ = rlMin;
+      if( maxTotals.casecompare("Min") == 0 ) maxTotalsLevel_ = rlMin;
       else
-      if( maxTotals.strcasecmp("Hour") == 0 ) maxTotalsLevel_ = rlHour;
+      if( maxTotals.casecompare("Hour") == 0 ) maxTotalsLevel_ = rlHour;
       else
-      if( maxTotals.strcasecmp("Day") == 0 ) maxTotalsLevel_ = rlDay;
+      if( maxTotals.casecompare("Day") == 0 ) maxTotalsLevel_ = rlDay;
       else
-      if( maxTotals.strcasecmp("Mon") == 0 ) maxTotalsLevel_ = rlMon;
+      if( maxTotals.casecompare("Mon") == 0 ) maxTotalsLevel_ = rlMon;
       else
-      if( maxTotals.strcasecmp("Year") == 0 ) maxTotalsLevel_ = rlYear;
+      if( maxTotals.casecompare("Year") == 0 ) maxTotalsLevel_ = rlYear;
 
-      if( minTotals.strcasecmp("Min") == 0 ) minTotalsLevel_ = rlMin;
+      if( minTotals.casecompare("Min") == 0 ) minTotalsLevel_ = rlMin;
       else
-      if( minTotals.strcasecmp("Hour") == 0 ) minTotalsLevel_ = rlHour;
+      if( minTotals.casecompare("Hour") == 0 ) minTotalsLevel_ = rlHour;
       else
-      if( minTotals.strcasecmp("Day") == 0 ) minTotalsLevel_ = rlDay;
+      if( minTotals.casecompare("Day") == 0 ) minTotalsLevel_ = rlDay;
       else
-      if( minTotals.strcasecmp("Mon") == 0 ) minTotalsLevel_ = rlMon;
+      if( minTotals.casecompare("Mon") == 0 ) minTotalsLevel_ = rlMon;
       else
-      if( minTotals.strcasecmp("Year") == 0 ) minTotalsLevel_ = rlYear;
+      if( minTotals.casecompare("Year") == 0 ) minTotalsLevel_ = rlYear;
 
       if( minTotalsLevel_ < maxTotalsLevel_ ) ksys::xchg(minTotalsLevel_,maxTotalsLevel_);
       level = maxTotalsLevel_;

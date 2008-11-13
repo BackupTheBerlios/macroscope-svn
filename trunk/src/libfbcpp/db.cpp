@@ -171,7 +171,7 @@ intptr_t DPB::writeISCCode(const utf8::String & name)
 {
   intptr_t  i;
   for( i = sizeof(params) / sizeof(params[0]) - 1; i >= 0; i-- ){
-    if( name.strcasecmp(params[i].name_) == 0 ){
+    if( name.casecompare(params[i].name_) == 0 ){
       dpb_ = (char *) ksys::krealloc(dpb_, dpbLen_ + 1);
       dpb_[dpbLen_++] = params[i].number;
       return params[i].number;
@@ -223,7 +223,7 @@ DPB & DPB::add(const utf8::String & name, const ksys::Mutant & value)
       break;
     case isc_dpb_sql_role_name   :
       role_ = value;
-      if( role_.strlen() == 0 ){
+      if( role_.isNull() ){
         dpbLen_--;
         break;
       }
@@ -305,14 +305,14 @@ bool Database::separateDBName(const utf8::String & name, utf8::String & hostName
 //---------------------------------------------------------------------------
 Database & Database::create(const utf8::String & name)
 {
-  utf8::String createSQL("CREATE DATABASE '" + (name.strlen() > 0 ? name : name_) + "' ");
-  if( dpb_.user().strlen() == 0 ){
+  utf8::String createSQL("CREATE DATABASE '" + (name.isNull() ? name_ : name) + "' ");
+  if( dpb_.user().isNull() ){
     createSQL += "USER 'SYSDBA' ";
   }
   else {
     createSQL += "USER '" + dpb_.user() + "' ";
   }
-  if( dpb_.password().strlen() == 0 ){
+  if( dpb_.password().isNull() ){
     createSQL += "PASSWORD 'masterkey' ";
   }
   else {
@@ -387,12 +387,12 @@ Database & Database::attach(const utf8::String & name)
     dpb_.injectCharset().injectTimeout();
     api.open();
     ISC_STATUS_ARRAY status;
-    if( api.isc_attach_database(status, 0, (char *) (name.strlen() > 0 ? name.c_str() : name_.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 ){
+    if( api.isc_attach_database(status, 0, (char *) (name.isNull() ? name_.c_str() : name.c_str()), &handle_, (short) dpb_.dpbLen(), dpb_.dpb()) != 0 ){
       ksys::AutoPtr<EDBAttach> p(newObjectV1C2<EDBAttach>(status, __PRETTY_FUNCTION__));
       api.close();
       p.ptr(NULL)->throwSP();
     }
-    if( name.strlen() > 0 ) name_ = name;
+    if( !name.isNull() ) name_ = name;
   }
   return *this;
 }

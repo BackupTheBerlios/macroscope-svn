@@ -31,7 +31,7 @@ namespace ksys {
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template <class T> class Vector {
+template <typename T> class Vector {
   private:
   protected:
     T **      ptr_;
@@ -60,6 +60,7 @@ template <class T> class Vector {
 
     Vector<T> &      assign(const Vector<T> & s);
     const uintptr_t & count() const;
+    const uintptr_t & mcount() const;
     Vector<T> &      clear();
     Vector<T> &      resize(uintptr_t asize);
     T ** const &      ptr() const;
@@ -105,21 +106,21 @@ template <class T> class Vector {
     Vector<T> & xchg(Vector<T> & v);
 };
 //---------------------------------------------------------------------------
-template <class T> inline Vector<T>::Vector() : ptr_(NULL), count_(0), max_(0)
+template <typename T> inline Vector<T>::Vector() : ptr_(NULL), count_(0), max_(0)
 {
 }
 //---------------------------------------------------------------------------
-template <class T> inline Vector<T>::Vector(const Vector<T> & s) : ptr_(NULL), count_(0), max_(0)
+template <typename T> inline Vector<T>::Vector(const Vector<T> & s) : ptr_(NULL), count_(0), max_(0)
 {
   assign(s);
 }
 //---------------------------------------------------------------------------
-template <class T> inline Vector<T>::Vector(const Array<T> & s) : ptr_(NULL), count_(0), max_(0)
+template <typename T> inline Vector<T>::Vector(const Array<T> & s) : ptr_(NULL), count_(0), max_(0)
 {
   *this = s;
 }
 //---------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -129,13 +130,13 @@ Vector<T>::~Vector()
   kfree(ptr_);
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 Vector<T> & Vector<T>::operator =(const Vector<T> & s)
 {
   return assign(s);
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 Vector<T> & Vector<T>::operator =(const Array<T> & s)
 {
   resize(s.count_);
@@ -143,49 +144,49 @@ Vector<T> & Vector<T>::operator =(const Array<T> & s)
   return *this;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const T & Vector<T>::operator[](intptr_t i) const
 {
   assert((uintptr_t) i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T & Vector<T>::operator[](intptr_t i)
 {
   assert((uintptr_t) i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const T & Vector<T>::operator[](uintptr_t i) const
 {
   assert(i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T & Vector<T>::operator[](uintptr_t i)
 {
   assert(i < count_);
   return *ptr_[i];
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 Vector<T> & Vector<T>::operator <<(const T & val)
 {
   add(val);
   return *this;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 Vector<T> & Vector<T>::operator <<(T * val)
 {
   add(val);
   return *this;
 }
 //---------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -196,19 +197,25 @@ Vector<T> & Vector<T>::assign(const Vector<T> & s)
   return *this;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const uintptr_t & Vector<T>::count() const
 {
   return count_;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
+const uintptr_t & Vector<T>::mcount() const
+{
+  return max_;
+}
+//---------------------------------------------------------------------------
+template <typename T> inline
 Vector<T> & Vector<T>::clear()
 {
   return resize(0);
 }
 //---------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -225,13 +232,13 @@ Vector<T> & Vector<T>::resize(uintptr_t asize)
   return *this;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T ** const & Vector<T>::ptr() const
 {
   return ptr_;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -246,7 +253,7 @@ T & Vector<T>::add(const T & val)
   return *(ptr_[count_++] = newObject<T>()) = val;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -261,7 +268,7 @@ T & Vector<T>::add(T * val)
   return *(ptr_[count_++] = val);
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -276,7 +283,7 @@ T & Vector<T>::add()
   return *(ptr_[count_++] = newObject<T>());
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -297,7 +304,7 @@ T & Vector<T>::safeAdd(T * val)
   return *(ptr_[count_++] = val);
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -316,7 +323,7 @@ T & Vector<T>::insert(uintptr_t i)
   return *ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -335,7 +342,7 @@ T & Vector<T>::insert(uintptr_t i, const T & val)
   return *ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -360,7 +367,7 @@ T & Vector<T>::safeInsert(uintptr_t i, T * val)
   return *ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -379,7 +386,7 @@ T & Vector<T>::insert(uintptr_t i, T * val)
   return *ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 Vector<T> & Vector<T>::replace(uintptr_t i, T * val)
 {
   assert(i < count_);
@@ -388,7 +395,7 @@ Vector<T> & Vector<T>::replace(uintptr_t i, T * val)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -408,7 +415,7 @@ Vector<T> & Vector<T>::remove(uintptr_t i)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
  inline
 #endif
@@ -428,7 +435,7 @@ T * Vector<T>::cut(uintptr_t i)
   return object;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -439,7 +446,7 @@ intptr_t Vector<T>::search(const T & element) const
   return i;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -461,7 +468,7 @@ intptr_t Vector<T>::bSearch(const T & element) const
   return -1;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -488,7 +495,7 @@ uintptr_t Vector<T>::bSearch(const T & element, intptr_t & c) const
   return pos;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -499,7 +506,7 @@ intptr_t Vector<T>::searchCase(const T & element) const
   return i;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -522,7 +529,7 @@ intptr_t Vector<T>::bSearchCase(const T & element) const
   return -1;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -546,7 +553,7 @@ uintptr_t Vector<T>::bSearchCase(const T & element,intptr_t & c) const
   return pos;
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 Vector<T> & Vector<T>::xchg(uintptr_t e1,uintptr_t e2)
 {
   assert( e1 < count_ && e2 < count_ );
@@ -556,7 +563,7 @@ Vector<T> & Vector<T>::xchg(uintptr_t e1,uintptr_t e2)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 Vector<T> & Vector<T>::xchg(Vector<T> & v)
 {
   ksys::xchg(ptr_,v.ptr_);

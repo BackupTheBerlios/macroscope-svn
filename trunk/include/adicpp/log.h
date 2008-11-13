@@ -69,7 +69,7 @@ class LogFile : protected Thread {
     utf8::String file_;
     FiberInterlockedMutex mutex_;
     InterlockedMutex threadMutex_;
-    AutoPtr<char> buffer_;
+    AutoPtr<char,AutoPtrMemoryDestructor> buffer_;
     uintptr_t bufferPos_;
     uintptr_t bufferSize_;
     uint64_t bufferDataTTA_; // data time to accumulation

@@ -229,11 +229,11 @@ utf8::String Table<T,RT>::genColumnName(const utf8::String & columnNameTemplate,
   utf8::String cn(columnNameTemplate);
   i = name2Index(cn, c);
   if( c == 0 ){
-    if( cn.strlen() == 0 && name2Index_.count() > 0 )
+    if( cn.length() == 0 && name2Index_.count() > 0 )
       cn = index2Name_[name2Index_.count() - 1]->name_;
-    if( cn.strlen() == 0 || cn.strncmp("COLUMN_", 7) == 0 ) cn = "COLUMN";
+    if( cn.isNull() == 0 || cn.ncompare("COLUMN_", 7) == 0 ) cn = "COLUMN";
     for( i = name2Index_.count(); i < ~uintptr_t(0); i++ ){
-      utf8::String  s (cn + "_" + utf8::int2Str((uintmax_t) i));
+      utf8::String s(cn + "_" + utf8::int2Str((uintmax_t) i));
       i = name2Index(s, c);
       if( c != 0 ){
         cn = s;
@@ -322,7 +322,7 @@ intptr_t Table<T,RT>::name2Index(const utf8::String & columnName) const
 
   while( low <= high ){
     pos = (low + high) / 2;
-    c = columnName.strcasecmp(name2Index_[pos].name_);
+    c = columnName.casecompare(name2Index_[pos].name_);
     if( c > 0 ){
       low = pos + 1;
     }
@@ -346,7 +346,7 @@ uintptr_t Table<T,RT>::name2Index(const utf8::String & columnName, intptr_t & c)
   c = 1;
   while( low <= high ){
     pos = (low + high) / 2;
-    c = columnName.strcasecmp(name2Index_[pos].name_);
+    c = columnName.casecompare(name2Index_[pos].name_);
     if( c > 0 ){
       low = pos + 1;
     }

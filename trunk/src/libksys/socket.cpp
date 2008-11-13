@@ -286,10 +286,6 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
     &prsa,
     &rsaLen
   );
-  assert(
-    lsaLen == sizeof(pAcceptExBuffer_->localAddress_.addr4_) && 
-    rsaLen == sizeof(pAcceptExBuffer_->remoteAddress_.addr4_)
-  );
   //memmove(&socket.localAddress_.addr4_,plsa,sizeof(socket.localAddress_.addr4_));
   memmove(&socket.remoteAddress_->addr4_,prsa,sizeof(socket.remoteAddress_->addr4_));
 #elif HAVE_KQUEUE
@@ -409,7 +405,7 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
         if( ksys::SHA256Filter::active() ) decrypt(rBuf(),-cps);
       }
       else if( cps >= 0 ){
-        ksys::AutoPtr<uint8_t> b;
+        ksys::AutoPtrBuffer b;
         b.alloc(cps);
         for( l = sizeof(int32_t); l < cps; l += (int32_t) sysRecv(b.ptr() + l,cps - l) );
         *(int32_t *) b.ptr() = cps;
@@ -496,7 +492,7 @@ uint64_t AsyncSocket::send(const void * buf,uint64_t len)
   }
   else if( ksys::SHA256Filter::active() ){
     len = len > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : len;
-    ksys::AutoPtr<char> p;
+    ksys::AutoPtrBuffer p;
     p.alloc((size_t) len);
     encrypt(p,buf,(uintptr_t) len);
     buf = p.ptr();
@@ -530,7 +526,7 @@ AsyncSocket & AsyncSocket::write(const void * buf,uint64_t len)
 AsyncSocket & AsyncSocket::flush()
 {
   if( ksys::LZO1X::active() && wBufPos() > 0 ){
-    ksys::AutoPtr<uint8_t> buf;
+    ksys::AutoPtrBuffer buf;
     uint8_t * p;
     int32_t l, ll;
     compress(buf,p,ll);
@@ -608,33 +604,33 @@ enum rad { radRequired, radAllow, radDisabled };
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper(const utf8::String & s)
 {
-  if( s.strcasecmp("required") == 0 ) return radRequired;
-  if( s.strcasecmp("allow") == 0 ) return radAllow;
-  if( s.strcasecmp("disabled") == 0) return radDisabled;
-  if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return radAllow;
+  if( s.casecompare("required") == 0 ) return radRequired;
+  if( s.casecompare("allow") == 0 ) return radAllow;
+  if( s.casecompare("disabled") == 0) return radDisabled;
+  if( s.casecompare("default") == 0 || s.isNull() ) return radAllow;
   newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper2(const utf8::String & s)
 {
-  if( s.strcasecmp("LZO1X_1") == 0 ) return ksys::LZO1X::LZO1X_1;
-  if( s.strcasecmp("LZO1X_1_11") == 0 ) return ksys::LZO1X::LZO1X_1_11;
-  if( s.strcasecmp("LZO1X_1_12") == 0 ) return ksys::LZO1X::LZO1X_1_12;
-  if( s.strcasecmp("LZO1X_1_15") == 0 ) return ksys::LZO1X::LZO1X_1_15; // fastest
-  if( s.strcasecmp("LZO1X_999") == 0 ) return ksys::LZO1X::LZO1X_999; // slowest, best compression
-  if( s.strcasecmp("LZMA") == 0 ) return ksys::LZO1X::LZO1X_999 + 1;
-  if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::LZO1X_999 + 1;
+  if( s.casecompare("LZO1X_1") == 0 ) return ksys::LZO1X::LZO1X_1;
+  if( s.casecompare("LZO1X_1_11") == 0 ) return ksys::LZO1X::LZO1X_1_11;
+  if( s.casecompare("LZO1X_1_12") == 0 ) return ksys::LZO1X::LZO1X_1_12;
+  if( s.casecompare("LZO1X_1_15") == 0 ) return ksys::LZO1X::LZO1X_1_15; // fastest
+  if( s.casecompare("LZO1X_999") == 0 ) return ksys::LZO1X::LZO1X_999; // slowest, best compression
+  if( s.casecompare("LZMA") == 0 ) return ksys::LZO1X::LZO1X_999 + 1;
+  if( s.casecompare("default") == 0 || s.isNull() ) return ksys::LZO1X::LZO1X_999 + 1;
   newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper3(const utf8::String & s)
 {
-  if( s.strcasecmp("disabled") == 0 ) return ksys::LZO1X::CRCNone;
-  if( s.strcasecmp("CRC32") == 0 ) return ksys::LZO1X::CRC32;
-  if( s.strcasecmp("ADLER32") == 0 ) return ksys::LZO1X::ADLER32;
-  if( s.strcasecmp("default") == 0 || s.strlen() == 0 ) return ksys::LZO1X::ADLER32;
+  if( s.casecompare("disabled") == 0 ) return ksys::LZO1X::CRCNone;
+  if( s.casecompare("CRC32") == 0 ) return ksys::LZO1X::CRC32;
+  if( s.casecompare("ADLER32") == 0 ) return ksys::LZO1X::ADLER32;
+  if( s.casecompare("default") == 0 || s.isNull() ) return ksys::LZO1X::ADLER32;
   newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
 }
@@ -691,7 +687,7 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
     utf8::String password(getUserPassword(user,&ap));
     memset(passwordSHA256,0,sizeof(passwordSHA256));
     ksys::SHA256 SHA256;
-    if( password.strncasecmp("sha256:",7) == 0 ){
+    if( password.ncasecompare("sha256:",7) == 0 ){
       ksys::base64Decode(
         utf8::String::Iterator(password) + 7,
         passwordSHA256,
@@ -778,7 +774,7 @@ AsyncSocket::AuthErrorType AsyncSocket::clientAuth(const AuthParams & ap)
 
     memset(passwordSHA256,0,sizeof(passwordSHA256));
     ksys::SHA256 SHA256;
-    if( ap.password_.strncasecmp("sha256:",7) == 0 ){
+    if( ap.password_.ncasecompare("sha256:",7) == 0 ){
       ksys::base64Decode(
         utf8::String::Iterator(ap.password_) + 7,
         passwordSHA256,
@@ -878,7 +874,7 @@ BOOL AsyncSocket::Connect(HANDLE event,ksys::AsyncEvent * request)
     api.connect(
       socket_,
       (struct sockaddr *) &request->address_,
-      request->address_.sockAddrSize()
+      ((SockAddr *) request->address_)->sockAddrSize()
     ) != SOCKET_ERROR ? TRUE : FALSE;
 }
 //---------------------------------------------------------------------------

@@ -88,7 +88,7 @@ class CGI {
           return object.name_.hash(false);
         }
         static bool keyHashNodeEqu(const Param & object1,const Param & object2){
-          return object1.name_.strcasecmp(object2.name_) == 0;
+          return object1.name_.casecompare(object2.name_) == 0;
         }
         mutable EmbeddedHashNode<Param,uintptr_t> keyNode_;
 	

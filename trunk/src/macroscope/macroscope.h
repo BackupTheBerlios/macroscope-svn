@@ -98,7 +98,7 @@ class Logger {
           return object.id().hash(false);
         }
         static bool keyHashNodeEqu(const TrafCacheEntry & object1,const TrafCacheEntry & object2){
-          return object1.id().strcasecmp(object2.id()) == 0;
+          return object1.id().casecompare(object2.id()) == 0;
         }
         
         mutable EmbeddedHashNode<TrafCacheEntry,uintptr_t> keyNode_;

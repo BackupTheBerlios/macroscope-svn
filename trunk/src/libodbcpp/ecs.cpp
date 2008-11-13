@@ -50,7 +50,7 @@ EClientServer::~EClientServer()
 //---------------------------------------------------------------------------
 EClientServer::EClientServer(int32_t code,const utf8::String what) : ksys::Exception(code,what)
 {
-  if( errors_[0].what_.strlen() == 0 ) errors_[0].what_ += strErrorHandler(code);
+  if( errors_[0].what_.isNull() ) errors_[0].what_ += strErrorHandler(code);
 }
 //---------------------------------------------------------------------------
 bool EClientServer::isFatalError() const

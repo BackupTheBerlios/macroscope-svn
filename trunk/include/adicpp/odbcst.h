@@ -43,7 +43,7 @@ class DSQLParam {
   protected:
     DSQLStatement * statement_;
     utf8::String name_;
-    ksys::AutoPtr<wchar_t> string_;
+    ksys::AutoPtr<wchar_t,AutoPtrMemoryDestructor> string_;
     ksys::MemoryStream stream_;
     union {
       int64_t int_;
@@ -76,7 +76,7 @@ class DSQLParam {
       return object.name_.hash(false);
     }
     static bool keyHashNodeEqu(const DSQLParam & object1,const DSQLParam & object2){
-      return object1.name_.strcasecmp(object2.name_) == 0;
+      return object1.name_.casecompare(object2.name_) == 0;
     }
     mutable ksys::EmbeddedHashNode<DSQLParam,uintptr_t> keyNode_;
   private:
@@ -214,7 +214,7 @@ inline DSQLValues::DSQLValues(DSQLStatement & statement)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement {
+class DSQLStatement : virtual public ksys::Object {
   friend class Database;
   friend class Transaction;
   friend class DSQLParams;
@@ -223,7 +223,7 @@ class DSQLStatement {
     virtual ~DSQLStatement();
     DSQLStatement();
 
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { detach(); }
     
     DSQLStatement & attach(Database & database);
     DSQLStatement & detach();

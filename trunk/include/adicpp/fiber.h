@@ -70,7 +70,7 @@ class Fiber : virtual public Object {
     static VOID WINAPI start(Fiber * fiber);
     LPVOID fiber_;
 #else
-    AutoPtr<uint8_t> stack_;
+    AutoPtrBuffer stack_;
     void * stackPointer_;
     static void start(Fiber * fiber) GNUG_NOTHROW GNUG_CDECL GNUG_NORETURN;
     static void switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber * fiber) GNUG_NOTHROW GNUG_CDECL;

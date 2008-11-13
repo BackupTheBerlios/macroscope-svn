@@ -72,16 +72,17 @@ template <
   typename LT,
   typename LPT,
   EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param), // must return node reference by node link type
-  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param), // must link value from node reference
-  EmbeddedHashNode<T,LT> & (*N) (const T &),     // must return node embedded in object
-  T & (*O) (const EmbeddedHashNode<T,LT> &,T *), // must return object of node embedded
-  uintptr_t (*H)(const T &),                        // must return computed hash of object key
-  bool (*E) (const T &, const T &)                  // must return true if objects keys equals
+  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),   // must link value from node reference
+  EmbeddedHashNode<T,LT> & (*N) (const T &),                 // must return node embedded in object
+  T & (*O) (const EmbeddedHashNode<T,LT> &,T *),             // must return object of node embedded
+  uintptr_t (*H)(const T &),                                 // must return computed hash of object key
+  bool (*E) (const T &, const T &),                          // must return true if objects keys equals
+  class D = AutoPtrClassDestructor<T>
 >
 class EmbeddedHash {
   // member methods declared inside class for borland (bugland) compiler compatibility
   public:
-    ~EmbeddedHash() { clear(); }
+    virtual ~EmbeddedHash() { clear(); }
     EmbeddedHash() :
       hash_(staticHash_),
       size_(staticHashCount()),
@@ -93,7 +94,7 @@ class EmbeddedHash {
       clearStaticHash();
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & xchg(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & a) const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & xchg(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & a) const
     {
       LT * hash = hash_;
       if( a.hash_ != a.staticHash_ )
@@ -107,20 +108,20 @@ class EmbeddedHash {
       ksys::xchg(thresholdNumerator_,a.thresholdNumerator_);
       ksys::xchg(thresholdDenominator_,a.thresholdDenominator_);
       ksys::xchg(param_,a.param_);
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & clear() const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & clear() const
     {
       if( size_ > staticHashCount() ) kfree(hash_);
       hash_ = staticHash_;
       clearStaticHash();
       size_ = staticHashCount();
       count_ = 0;
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL) const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & insert(const T & object,bool throwIfExist = true,bool deleteIfExist = true,T ** pObject = NULL) const
     {
       LT * head = internalFind(object,throwIfExist,false,deleteIfExist,false);
       if( *head == (LT) NULL ){
@@ -132,7 +133,7 @@ class EmbeddedHash {
       else if( pObject != NULL ){
         *pObject = &O(NLT(*head,param_),NULL);
       }
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
     T & remove(const T & object,bool throwIfNotExist = true,bool deleteIfNotExist = true) const
@@ -170,14 +171,14 @@ class EmbeddedHash {
       return O(NLT(*p1,param_),NULL);
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & drop() const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & drop() const
     {
       LT * head = hash_, * tail = head + size_, walk, w;
       while( head < tail ){
         walk = *head;
         while( walk != (LT) NULL ){
           w = NLT(walk,param_).next();
-          deleteObject(&O(NLT(walk,param_),NULL));
+          D::destroyObject(&O(NLT(walk,param_),NULL));
           walk = w;
         }
         head++;
@@ -185,10 +186,10 @@ class EmbeddedHash {
       return clear();
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & drop(T & object,bool throwIfNotExist = true) const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & drop(T & object,bool throwIfNotExist = true) const
     {
-      deleteObject(&remove(object,throwIfNotExist));
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      D::destroyObject(&remove(object,throwIfNotExist));
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
     T & search(const T & object,bool deleteIfExist = false,bool deleteIfNotExist = false) const
@@ -202,7 +203,7 @@ class EmbeddedHash {
       return *p == (LT) NULL ? (T *) NULL : &O(NLT(*p,param_),NULL);
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & list(Array<T *> & l) const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & list(Array<T *> & l) const
     {
       l.resize(count_);
       intptr_t i = 0;
@@ -215,7 +216,7 @@ class EmbeddedHash {
         }
         head++;
       }
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
     const uintptr_t & count() const { return count_; }
@@ -225,22 +226,22 @@ class EmbeddedHash {
     const uintptr_t & thresholdNumerator() const { return thresholdNumerator_; }
     const uintptr_t & thresholdDenominator() const { return thresholdDenominator_; }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & estimatedChainLength(uintptr_t a) const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & estimatedChainLength(uintptr_t a) const
     {
       estimatedChainLength_ = a;
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & thresholdNumerator(uintptr_t a) const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & thresholdNumerator(uintptr_t a) const
     {
       thresholdNumerator_ = a;
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
-    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & thresholdDenominator(uintptr_t a) const
+    EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & thresholdDenominator(uintptr_t a) const
     {
       thresholdDenominator_ = a;
-      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> *>(this);
+      return *const_cast<EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> *>(this);
     }
 
     uintptr_t maxChainLength() const
@@ -288,7 +289,7 @@ class EmbeddedHash {
 
     template <typename ST> ST & get(ST & stream) const
     {
-      EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> t;
+      EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> t;
       uint64_t u;
       stream >> u;
       while( u-- > 0 ){
@@ -312,8 +313,8 @@ class EmbeddedHash {
     mutable uintptr_t thresholdDenominator_;
     mutable LPT param_;
 
-    EmbeddedHash(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> &);
-    void operator = (const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> &);
+    EmbeddedHash(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> &);
+    void operator = (const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> &);
 
     uintptr_t staticHashCount() const
     {
@@ -325,7 +326,7 @@ class EmbeddedHash {
       for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) staticHash_[i] = (LT) NULL;
     }
 
-    void xchgStaticHash(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E> & a) const
+    void xchgStaticHash(const EmbeddedHash<T,LT,LPT,NLT,LTN,N,O,H,E,D> & a) const
     {
       for( intptr_t i = staticHashCount() - 1; i >= 0; i-- ) ksys::xchg(staticHash_[i],a.staticHash_[i]);
     }
@@ -339,7 +340,7 @@ class EmbeddedHash {
       }
       int32_t err = 0;
       if( *head != (LT) NULL ){
-        if( deleteIfExist ) deleteObject(&object);
+        if( deleteIfExist ) D::destroyObject(&object);
         if( throwIfExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
           err = ERROR_ALREADY_EXISTS;
@@ -349,7 +350,7 @@ class EmbeddedHash {
         }
       }
       else if( *head == (LT) NULL ){
-        if( deleteIfNotExist ) deleteObject(&object);
+        if( deleteIfNotExist ) D::destroyObject(&object);
         if( throwIfNotExist ){
 #if defined(__WIN32__) || defined(__WIN64__)
           err = ERROR_NOT_FOUND;

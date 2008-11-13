@@ -80,36 +80,6 @@ inline void operator delete[](void * ptr)
   }
 }*/
 //---------------------------------------------------------------------------
-inline void deleteObject(char * object)
-{
-  ksys::kfree(object);
-}
-//---------------------------------------------------------------------------
-inline void deleteObject(char ** object)
-{
-  ksys::kfree(object);
-}
-//---------------------------------------------------------------------------
-inline void deleteObject(unsigned char * object)
-{
-  ksys::kfree(object);
-}
-//---------------------------------------------------------------------------
-inline void deleteObject(wchar_t * object)
-{
-  ksys::kfree(object);
-}
-//---------------------------------------------------------------------------
-inline void deleteObject(int * object)
-{
-  ksys::kfree(object);
-}
-//---------------------------------------------------------------------------
-inline void deleteObject(fd_set * object)
-{
-  delete object;
-}
-//---------------------------------------------------------------------------
 template <typename T> inline void deleteObject(T * object)
 {
   if( object != NULL ){
@@ -137,24 +107,62 @@ template <typename T> inline void deleteObject(const T * object)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T>
+template <typename T> class AutoPtrClassDestructor {
+  public:
+    static void destroyObject(T * object)
+    {
+      deleteObject(object);
+    }
+
+    static void destroyObject(const T * object)
+    {
+      deleteObject(object);
+    }
+};
+class AutoPtrMemoryDestructor {
+  public:
+    static void destroyObject(void * object)
+    {
+      ksys::kfree(object);
+    }
+
+    static void destroyObject(const void * object)
+    {
+      ksys::kfree(const_cast<void *>(object));
+    }
+};
+class AutoPtrNullDestructor {
+  public:
+    static void destroyObject(void *) {}
+
+    static void destroyObject(const void *) {}
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+template <typename T,class D = AutoPtrClassDestructor<T> >
 class XAutoPtr {
   public:
-    ~XAutoPtr() { deleteObject(ptr_); }
+    ~XAutoPtr() { D::destroyObject(ptr_); }
     XAutoPtr(T * ptr) : ptr_(ptr) {}
 
     T * operator ->() const { return ptr_; }
     
-    T * ptr() const { return ptr_; }
+    T * & ptr() const { return ptr_; }
     T * ptr(T * ptr) const { ksys::xchg(ptr_,ptr); return ptr; }
   protected:
   private:
     mutable T * ptr_;
+
+    XAutoPtr(const XAutoPtr &);
+    void operator = (const XAutoPtr &);
 };
+//---------------------------------------------------------------------------
+typedef XAutoPtr<uint8_t,AutoPtrMemoryDestructor> XAutoPtrBuffer;
 //---------------------------------------------------------------------------
 template <typename T> inline T * newObject()
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -169,7 +177,8 @@ template <typename T> inline T * newObject()
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -179,7 +188,7 @@ template <
 > inline
 T * newObjectV1(Param1 p1)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -194,7 +203,8 @@ T * newObjectV1(Param1 p1)
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -204,7 +214,7 @@ template <
 > inline
 T * newObjectR1(Param1 & p1)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -219,7 +229,8 @@ T * newObjectR1(Param1 & p1)
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -229,7 +240,7 @@ template <
 > inline
 T * newObjectC1(const Param1 & p1)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -244,7 +255,8 @@ T * newObjectC1(const Param1 & p1)
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -254,7 +266,7 @@ template <
   typename Param2
 > inline T * newObjectV1V2(Param1 p1,Param2 p2)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -269,7 +281,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -279,7 +292,7 @@ template <
   typename Param2
 > inline T * newObjectR1V2(Param1 & p1,Param2 p2)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -294,7 +307,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -304,7 +318,7 @@ template <
   typename Param2
 > inline T * newObjectR1R2(Param1 & p1,Param2 & p2)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -319,7 +333,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -329,7 +344,7 @@ template <
   typename Param2
 > inline T * newObjectV1C2(Param1 p1,const Param2 & p2)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -344,7 +359,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -354,7 +370,7 @@ template <
   typename Param2
 > inline T * newObjectR1C2(Param1 & p1,const Param2 & p2)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -369,7 +385,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -379,7 +396,7 @@ template <
   typename Param2
 > inline T * newObjectC1R2(const Param1 & p1,Param2 & p2)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -394,7 +411,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -408,7 +426,7 @@ template <
   typename Param2
 > inline T * newObjectC1C2(const Param1 & p1,const Param2 & p2)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -423,7 +441,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 #if _MSC_VER
@@ -437,7 +456,7 @@ template <
   typename Param3
 > inline T * newObjectR1R2R3(Param1 & p1,Param2 & p2,Param3 & p3)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -452,7 +471,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -463,7 +483,7 @@ template <
   typename Param3
 > inline T * newObjectC1C2C3(const Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -478,7 +498,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -489,7 +510,7 @@ template <
   typename Param3
 > inline T * newObjectC1V2V3(const Param1 & p1,Param2 p2,Param3 p3)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -504,7 +525,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -515,7 +537,7 @@ template <
   typename Param3
 > inline T * newObjectR1C2C3(Param1 & p1,const Param2 & p2,const Param3 & p3)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -530,7 +552,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -541,7 +564,7 @@ template <
   typename Param3
 > inline T * newObjectC1C2R3(const Param1 & p1,const Param2 & p2,Param3 & p3)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -556,7 +579,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -567,7 +591,7 @@ template <
   typename Param3
 > inline T * newObjectV1V2V3(Param1 p1,Param2 p2,Param3 p3)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -582,7 +606,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -593,7 +618,7 @@ template <
   typename Param3
 > inline T * newObjectV1C2V3(Param1 p1,const Param2 & p2,Param3 p3)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -608,7 +633,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -620,7 +646,7 @@ template <
   typename Param4
 > inline T * newObjectR1R2R3R4(Param1 & p1,Param2 & p2,Param3 & p3,Param4 & p4)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -635,7 +661,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -647,7 +674,7 @@ template <
   typename Param4
 > inline T * newObjectV1C2C3C4(Param1 p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -662,7 +689,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -674,7 +702,7 @@ template <
   typename Param4
 > inline T * newObjectR1C2C3C4(Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -689,7 +717,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -701,7 +730,7 @@ template <
   typename Param4
 > inline T * newObjectC1C2C3C4(const Param1 & p1,const Param2 & p2,const Param3 & p3,const Param4 & p4)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -716,7 +745,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -728,7 +758,7 @@ template <
   typename Param4
 > inline T * newObjectC1C2C3V4(const Param1 & p1,const Param2 & p2,const Param3 & p3,Param4 p4)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -743,7 +773,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------
@@ -755,7 +786,7 @@ template <
   typename Param4
 > inline T * newObjectV1V2V3V4(Param1 p1,Param2 p2,Param3 p3,Param4 p4)
 {
-  XAutoPtr<uint8_t> safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
 #if !DISABLE_OBJECT_ACTIONS
   const T st;
 #if __GNUG__
@@ -770,7 +801,8 @@ template <
 #if !DISABLE_OBJECT_ACTIONS
   ksys::ObjectActions::afterConstructor(safe2.ptr());
 #endif
-  ksys::ObjectActions::afterConstruction(safe2.ptr());
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
   return safe2.ptr(NULL);
 }
 //---------------------------------------------------------------------------

@@ -217,7 +217,7 @@ ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,b
     for( i = 0; i < level - 1; i++ ) stream << "  ";
     stream << "}\n";
   }
-  AutoPtr<uint8_t> s;
+  AutoPtrBuffer s;
   i = stream.string().getMBCSString(codePage,s,false);
   file.writeBuffer(s,i);
   if( recursive ){
@@ -453,7 +453,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
     if( tt == ttEof ) break;
     token += utf8::String(aheadi_, aheadi_ + 1);
     aheadi_.next();
-    if( token.strlen() == maxTokenLen ) break;
+    if( token.length() == maxTokenLen ) break;
   }
   lastTokenType_ = tt;
   if( throwUnexpectedEof && tt == ttEof )
@@ -525,7 +525,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
     utf8::String key(token);
     token = getToken(tt);
     if( tt != ttEqual ){
-      if( key.strcasecmp("#include") == 0 && (tt == ttString || tt == ttQuotedString || tt == ttNumeric) ){ // pragma
+      if( key.casecompare("#include") == 0 && (tt == ttString || tt == ttQuotedString || tt == ttNumeric) ){ // pragma
         Config config;
         config.fileName(token);
         if( !stat(token) )
@@ -533,7 +533,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
         config.silent(true).parse();
         root.addSection(config);
       }
-      else if( key.strcasecmp("#charset") == 0 && tt == ttNumeric ){ // pragma
+      else if( key.casecompare("#charset") == 0 && tt == ttNumeric ){ // pragma
         buffer_->codePage_ = Mutant(token);
       }
       else { // try new subsection
@@ -639,7 +639,7 @@ Config & Config::override(const Array< utf8::String> & oargv)
 {
   const Array< utf8::String> & pargv = oargv.count() > 0 ? oargv : argv();
   for( uintptr_t arg = 0; arg < pargv.count(); arg++ ){
-    if( pargv[arg].strcmp("-co") == 0 && arg + 2 < pargv.count() ){
+    if( pargv[arg].compare("-co") == 0 && arg + 2 < pargv.count() ){
       valueRefByPath(pargv[arg + 1]) = pargv[arg + 2];
       arg += 2;
     }

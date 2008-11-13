@@ -42,7 +42,7 @@ utf8::String strError(int32_t err)
     intptr_t i;
     for( i = strErrorHandlers().count() - 1; i >= 0; i-- ){
       utf8::String se(strErrorHandlers()[i](err));
-      if( !se.isNull() > 0 ) return se;
+      if( !se.isNull() ) return se;
     }
 #if defined(__WIN32__) || defined(__WIN64__)
     if( err >= errorOffset ){
@@ -106,7 +106,7 @@ utf8::String strError(int32_t err)
       err -= errorOffset;
     }*/
 #endif
-    AutoPtr<char> serr;
+    AutoPtr<char,AutoPtrMemoryDestructor> serr;
 #if HAVE_STRERROR_R
     int32_t er;
     size_t sel = 16;

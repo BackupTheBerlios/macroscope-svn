@@ -443,8 +443,8 @@ RangeCoderFilter32 & RangeCoderFilter32::encode(AsyncFile & inp,AsyncFile & out)
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){
@@ -564,8 +564,8 @@ RangeCoderFilter32 & RangeCoderFilter32::decode(AsyncFile & inp,AsyncFile & out)
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){
@@ -967,8 +967,8 @@ RangeCoderFilter64 & RangeCoderFilter64::encode(AsyncFile & inp,AsyncFile & out)
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){
@@ -1088,8 +1088,8 @@ RangeCoderFilter64 & RangeCoderFilter64::decode(AsyncFile & inp,AsyncFile & out)
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){
@@ -1275,8 +1275,8 @@ ArithmeticCoderFilter32 & ArithmeticCoderFilter32::encode(AsyncFile & inp,AsyncF
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){
@@ -1369,8 +1369,8 @@ ArithmeticCoderFilter32 & ArithmeticCoderFilter32::decode(AsyncFile & inp,AsyncF
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){
@@ -1933,8 +1933,8 @@ LZKFilter & LZKFilter::encode(AsyncFile & inp,AsyncFile & out)
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){
@@ -2030,8 +2030,8 @@ LZKFilter & LZKFilter::decode(AsyncFile & inp,AsyncFile & out)
 {
   uintptr_t rbs = getpagesize() * 16;
   uintptr_t wbs = getpagesize() * 16;
-  AutoPtr<uint8_t> inpBuffer((uint8_t *) kmalloc(rbs));
-  AutoPtr<uint8_t> outBuffer((uint8_t *) kmalloc(wbs));
+  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
   uintptr_t rb = 0, wb = 0;
   int64_t r;
   while( (r = inp.read(inpBuffer,rbs)) > 0 ){

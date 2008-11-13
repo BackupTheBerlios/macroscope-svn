@@ -526,10 +526,10 @@ Logger & Logger::createDatabase()
       database_->attach();
       for( uintptr_t i = 0; i < metadata.count(); i++ ){
         if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
-          if( metadata[i].strncasecmp("CREATE TABLE",12) == 0 ){
+          if( metadata[i].ncasecompare("CREATE TABLE",12) == 0 ){
             metadata[i] += " ENGINE = " + config_->textByPath("macroscope.mysql_table_type","INNODB");
           }
-          else if( metadata[i].strncasecmp("ALTER TABLE",11) == 0 && !metadata[i].strcasestr(" partitions ").eos() ){
+          else if( metadata[i].ncasecompare("ALTER TABLE",11) == 0 && !metadata[i].strcasestr(" partitions ").eos() ){
             Mutant m(config_->valueByPath("macroscope.mysql_table_partitions",8));
             if( (uintmax_t) m == 0 ) continue;
             metadata[i] += (utf8::String) m;
@@ -559,7 +559,7 @@ Logger & Logger::createDatabase()
       uintptr_t port;
       database_->separateDBName(database_->name(),hostName,dbName,port);
       //  if( hostName.trim().strlen() > 0 ){
-      utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
+      utf8::String serviceName(hostName + (hostName.trim().isNull() ? "" : ":") + "service_mgr");
       fbcpp::Service service;
       service.params().
         add("user_name",config_->valueByPath(connection_ + ".firebird.user"));
@@ -761,7 +761,7 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
       "ORDER BY RDB$RELATION_NAME DESC, RDB$INDEX_NAME DESC")->execute()->fetchAll();
     for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
-      if( statement_->valueAsString("RDB$RELATION_NAME").strncasecmp("RDB$",4) == 0 ) continue;
+      if( statement_->valueAsString("RDB$RELATION_NAME").ncasecompare("RDB$",4) == 0 ) continue;
       utf8::String tableName(statement_->valueAsString("RDB$RELATION_NAME").trimRight());
       utf8::String indexName(statement_->valueAsString("RDB$INDEX_NAME").trimRight());
       int64_t ellapsed;
@@ -1136,7 +1136,7 @@ int32_t Logger::doWork(uintptr_t stage)
       utf8::String joined;
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
-        if( sectionName.strcasecmp("decoration") == 0 ) continue;
+        if( sectionName.casecompare("decoration") == 0 ) continue;
         if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
         utf8::String join(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
         if( !join.isNull() ){
@@ -1149,7 +1149,7 @@ int32_t Logger::doWork(uintptr_t stage)
       }
       for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount(); i++ ){
         utf8::String sectionName(config_->sectionByPath("macroscope.bpft").section(i).name());
-        if( sectionName.strcasecmp("decoration") == 0 ) continue;
+        if( sectionName.casecompare("decoration") == 0 ) continue;
         if( !(bool) config_->valueByPath("macroscope.bpft." + sectionName + ".sniffer.enabled",false) ) continue;
         utf8::String join(config_->textByPath("macroscope.bpft." + sectionName + ".sniffer.join"));
         if( join.isNull() && findStringPart(joined,sectionName,false) < 0 ){
@@ -1178,7 +1178,7 @@ int32_t Logger::doWork(uintptr_t stage)
     rolloutBPFTByIPs(
       utf8::time2Str(tm2Time(cgiBT)),
       utf8::time2Str(tm2Time(cgiET) + 999999),
-      cgi_.paramAsString("if").strcasecmp("all") == 0 ? utf8::String() : cgi_.paramAsString("if"),
+      cgi_.paramAsString("if").casecompare("all") == 0 ? utf8::String() : cgi_.paramAsString("if"),
       cgi_.paramAsString("filter")
     );
     cgi_ <<
@@ -1208,7 +1208,7 @@ int32_t Logger::doWork(uintptr_t stage)
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("renameif") >= 0 ){
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
-    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     statement_->text("DELETE FROM INET_IFACES" + utf8::String(all ? "" : " WHERE iface = :if"));
     if( !all ) statement_->prepare()->paramAsString("if",cgi_.paramAsString("if"));
@@ -1298,7 +1298,7 @@ int32_t Logger::doWork(uintptr_t stage)
     
     if( !connection.isNull() ) database2->attach();
 
-    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     if( connection.isNull() ){
       statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
@@ -1423,7 +1423,7 @@ int32_t Logger::doWork(uintptr_t stage)
     uint64_t ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
     utf8::String filter(cgi_.paramAsString("filter"));
-    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
       statement_->text("DELETE FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
@@ -1493,7 +1493,7 @@ int32_t Logger::doWork(uintptr_t stage)
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("recalc_totals") >= 0 ){
     uint64_t ellapsed = gettimeofday();
-    bool all = cgi_.paramAsString("if").strcasecmp("all") == 0;
+    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
     Array<utf8::String> ifaces;
     if( all ){
       database_->attach()->start();
@@ -1614,9 +1614,9 @@ int32_t Logger::doWork(uintptr_t stage)
     if( !cgi_.isCGI() ){
       trafCacheSize_ = config_->valueByPath("macroscope.html_report.traffic_cache_size",0);
       threads_.safeAdd(newObjectR1C2C3C4<SquidSendmailThread>(*this,"macroscope","macroscope",stage));
-      if( mtMode.strcasecmp("BOTH") == 0 ||
-          (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
-          (stage == 1 && mtMode.strcasecmp("REPORT") == 0) ){
+      if( mtMode.casecompare("BOTH") == 0 ||
+          (stage == 0 && mtMode.casecompare("FILL") == 0) ||
+          (stage == 1 && mtMode.casecompare("REPORT") == 0) ){
         threads_[threads_.count() - 1].resume();
       }
       else {
@@ -1628,16 +1628,16 @@ int32_t Logger::doWork(uintptr_t stage)
     dnsCacheSize_ = config_->valueByPath("macroscope.bpft.dns_cache_size",0);
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount() || cgi_.isCGI(); i++ ){
       utf8::String sectionName(cgi_.isCGI() ? cgi_.paramAsString("if") : config_->sectionByPath("macroscope.bpft").section(i).name());
-      if( sectionName.strcasecmp("decoration") == 0 ) continue;
+      if( sectionName.casecompare("decoration") == 0 ) continue;
       if( cgi_.isCGI() && (stage < 1 || cgi_.paramIndex("report") < 0) ) break;
       threads_.safeAdd(
         newObjectR1C2C3C4<BPFTThread>(
           *this,"macroscope.bpft." + sectionName,sectionName,stage)
         );
       if( !cgi_.isCGI() && 
-          (mtMode.strcasecmp("BOTH") == 0 ||
-            (stage == 0 && mtMode.strcasecmp("FILL") == 0) ||
-            (stage == 1 && mtMode.strcasecmp("REPORT") == 0)
+          (mtMode.casecompare("BOTH") == 0 ||
+            (stage == 0 && mtMode.casecompare("FILL") == 0) ||
+            (stage == 1 && mtMode.casecompare("REPORT") == 0)
           )
       ){
         threads_[threads_.count() - 1].resume();
@@ -1720,10 +1720,10 @@ void SnifferService::install()
   displayName_ = logger_->config_->textByPath("macroscope.service_display_name","Macroscope Packet Collection Service");
 #if defined(__WIN32__) || defined(__WIN64__)
   utf8::String startType(logger_->config_->textByPath("macroscope.service_start_type","auto"));
-  if( startType.strcasecmp("auto") == 0 ){
+  if( startType.casecompare("auto") == 0 ){
     startType_ = SERVICE_AUTO_START;
   }
-  else if( startType.strcasecmp("manual") == 0 ){
+  else if( startType.casecompare("manual") == 0 ){
     startType_ = SERVICE_DEMAND_START;
   }
 #endif
@@ -1782,19 +1782,19 @@ int main(int _argc,char * _argv[])
     bool dispatch = true, sniffer = false, svc = false, rollout = false, install = false, uninstall = false;
     utf8::String pidFileName, rolloutParams;
     for( i = 1; i < argv().count(); i++ ){
-      if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
+      if( argv()[i].compare("--chdir") == 0 && i + 1 < argv().count() ){
         changeCurrentDir(argv()[i + 1]);
       }
-      else if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
+      else if( argv()[i].compare("-c") == 0 && i + 1 < argv().count() ){
         Config::defaultFileName(argv()[i + 1]);
       }
-      else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
+      else if( argv()[i].compare("--log") == 0 && i + 1 < argv().count() ){
         stdErr.fileName(argv()[i + 1]);
       }
-      else if( argv()[i].strcmp("--pid") == 0 && i + 1 < argv().count() ){
+      else if( argv()[i].compare("--pid") == 0 && i + 1 < argv().count() ){
         pidFileName = argv()[i + 1];
       }
-      else if( argv()[i].strcmp("--query") == 0 && i + 1 < argv().count() ){
+      else if( argv()[i].compare("--query") == 0 && i + 1 < argv().count() ){
         setEnv("GATEWAY_INTERFACE","CGI/1.1");
         setEnv("REQUEST_METHOD","GET");
         setEnv("QUERY_STRING",argv()[i + 1]);
@@ -1802,34 +1802,34 @@ int main(int _argc,char * _argv[])
       }
     }
     for( i = 1; i < argv().count(); i++ ){
-      if( argv()[i].strcmp("--version") == 0 ){
+      if( argv()[i].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << macroscope_version.tex_ << "\n");
         fprintf(stdout,"%s\n",macroscope_version.tex_);
         dispatch = false;
         continue;
       }
-      if( argv()[i].strcmp("--sniffer") == 0 ){
+      if( argv()[i].compare("--sniffer") == 0 ){
         sniffer = true;        
       }
-      else if( argv()[i].strcmp("--iflist") == 0 ){
+      else if( argv()[i].compare("--iflist") == 0 ){
         PCAP::printAllDevices();
         dispatch = false;
       }
-      else if( argv()[i].strncmp("--rollout-sniffer-db=",21) == 0 ){
+      else if( argv()[i].ncompare("--rollout-sniffer-db=",21) == 0 ){
         rolloutParams = utf8::String(utf8::String::Iterator(argv()[i]) + 21);
         rollout = true;
         dispatch = false;
       }
-      else if( argv()[i].strcmp("--benchmark") == 0 ){
+      else if( argv()[i].compare("--benchmark") == 0 ){
         heapBenchmark();
 //        RBTreeBenchmarkTree tree;
 //        tree.benchmark(10000000,3);
         dispatch = false;
       }
-      else if( argv()[i].strcmp("--service") == 0 ){
+      else if( argv()[i].compare("--service") == 0 ){
         svc = true;
       }
-      else if( argv()[i].strcmp("--install") == 0 ){
+      else if( argv()[i].compare("--install") == 0 ){
         for( uintptr_t j = i + 1; j < argv().count(); j++ )
           if( argv()[j].isSpace() )
             service->args(service->args() + " \"" + argv()[j] + "\"");
@@ -1838,12 +1838,12 @@ int main(int _argc,char * _argv[])
         install = true;
         dispatch = false;
       }
-      else if( argv()[i].strcmp("--uninstall") == 0 ){
+      else if( argv()[i].compare("--uninstall") == 0 ){
         uninstall = true;
         dispatch = false;
       }
 #if PRIVATE_RELEASE
-      else if( argv()[i].strcmp("--machine-key") == 0 ){
+      else if( argv()[i].compare("--machine-key") == 0 ){
         utf8::String key(getMachineCleanUniqueKey());
         fprintf(stdout,"%s\n",(const char *) key.getOEMString());
         copyStrToClipboard(key);
@@ -1860,7 +1860,7 @@ int main(int _argc,char * _argv[])
     //;
     //uint8_t buf[1024];
     //uint8_t dText[sizeof(text)];
-//    AutoPtr<uint8_t> cText;
+//    AutoPtrBuffer cText;
 //    LZWFilter lzw;
     
     //Vector<utf8::String> fileNamesVector;

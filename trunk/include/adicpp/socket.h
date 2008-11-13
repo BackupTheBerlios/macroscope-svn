@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -210,15 +210,11 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
 #if defined(__WIN32__) || defined(__WIN64__)
     int WSAEnumNetworkEvents(WSAEVENT hEventObject,DWORD event);
 
-    struct AcceptExBuffer {
-      union {
-        SockAddr  localAddress_;
-        uint8_t   pLocalAddr4_[sizeof(struct sockaddr_in) + 16];
-      };
-      union {
-        SockAddr  remoteAddress_;
-        uint8_t   pRemoteAddr4_[sizeof(struct sockaddr_in) + 16];
-      };
+    class AcceptExBuffer {
+      public:
+        virtual ~AcceptExBuffer() {}
+        uint8_t pLocalAddr4_[sizeof(struct sockaddr_in) + 16];
+        uint8_t pRemoteAddr4_[sizeof(struct sockaddr_in) + 16];
     };
     ksys::AutoPtr<AcceptExBuffer> pAcceptExBuffer_;
 

@@ -72,7 +72,7 @@ class AsyncFile : public AsyncDescriptor {
     file_t dup() const;
     uint64_t copy(AsyncFile & src,uint64_t size = 0);
 
-    uintptr_t gets(AutoPtr<char> & p,bool * eof = NULL);
+    uintptr_t gets(AutoPtr<char,AutoPtrMemoryDestructor> & p,bool * eof = NULL);
 
     class LineGetBuffer {
       public:
@@ -88,7 +88,7 @@ class AsyncFile : public AsyncDescriptor {
         static bool eof(intptr_t c) { return c == intptr_t(~(~uintptr_t(0) >> 1)); }
 
         AsyncFile * file_;
-        AutoPtr<uint8_t> buffer_;
+        AutoPtrBuffer buffer_;
         uint64_t bufferFilePos_;
         uintptr_t size_;
         uintptr_t pos_;
@@ -241,9 +241,9 @@ inline const utf8::String & AsyncFile::fileName() const
 inline AsyncFile & AsyncFile::fileName(const utf8::String & name)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( fileName_.strcasecmp(name) != 0 ){
+  if( fileName_.casecompare(name) != 0 ){
 #else
-  if( fileName_.strcmp(name) != 0 ){
+  if( fileName_.compare(name) != 0 ){
 #endif
     close();
     fileName_ = name;

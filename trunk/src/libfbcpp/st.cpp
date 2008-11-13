@@ -228,7 +228,7 @@ utf8::String DSQLStatement::compileSQLParameters()
 {
   params_.params_.drop();
   params_.indexToParam_.clear();
-  if( sqlText_.strncasecmp("CREATE PROCEDURE ",17) == 0 || sqlText_.strncasecmp("ALTER PROCEDURE ",16) == 0 )
+  if( sqlText_.ncasecompare("CREATE PROCEDURE ",17) == 0 || sqlText_.ncasecompare("ALTER PROCEDURE ",16) == 0 )
     return sqlText_;
   utf8::String text(sqlText_.unique());
   utf8::String::Iterator i(text);
@@ -554,7 +554,7 @@ utf8::String DSQLStatement::plan()
     utf8::String text(getPreparedSqlText());
     for( intptr_t i = st.values_.rowCount() - 1; i >= 0; i-- ){
       st.values_.selectRow(i);
-      if( st.valueAsString("MON$SQL_TEXT").strcmp(text) == 0 ){
+      if( st.valueAsString("MON$SQL_TEXT").compare(text) == 0 ){
         if( !info.isNull() ) info += "\n";
         info += "page reads: " + st.valueAsString("MON$PAGE_READS");
         info += ", page writes: " + st.valueAsString("MON$PAGE_WRITES");

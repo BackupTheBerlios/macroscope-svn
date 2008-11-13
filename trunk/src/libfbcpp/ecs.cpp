@@ -821,7 +821,7 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
       while( api.fb_interpret(error,sizeof(error),&pStatus) != 0 ){
         if( *aStatus == 1 ){
           utf8::String e(strErrorHandler(int32_t(aStatus[1])));
-          if( e.strlen() > 0 ){
+          if( !e.isNull() ){
             strcat(error, ", isc_");
             strcat(error, e.c_str());
           }
@@ -835,7 +835,7 @@ EClientServer::EClientServer(const ISC_STATUS_ARRAY stat,const utf8::String & wh
       while( api.isc_interprete(error,&pStatus) != 0 ){
         if( *aStatus == 1 ){
           utf8::String e(strErrorHandler(int32_t(aStatus[1])));
-          if( e.strlen() > 0 ){
+          if( !e.isNull() ){
             strcat(error, ", isc_");
             strcat(error, e.c_str());
           }

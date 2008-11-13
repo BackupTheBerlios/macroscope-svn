@@ -251,7 +251,7 @@ utf8::String DSQLValueBlob::getString()
   if( sqlind_ >= 0 ){
     closeBlob().openBlob();
     intptr_t r, l = 0;
-    ksys::AutoPtr< char>  aref;
+    ksys::AutoPtr<char,AutoPtrMemoryDestructor> aref;
     aref.alloc(desc_.blob_desc_segment_size + 1);
     try{
       for(;;){

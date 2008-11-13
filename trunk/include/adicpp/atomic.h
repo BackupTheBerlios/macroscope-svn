@@ -105,40 +105,40 @@ inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,i
   asm volatile ("lock; cmpxchg %%rcx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
 }
-#elif _MSC_VER && _M_IX86
-__forceinline int32_t __fastcall interlockedIncrement(volatile int32_t & v,int32_t a)
-{
-  __asm {
-    mov         eax,a
-    mov         edx,v
-    lock xadd   [edx],eax
-  }
-}
-
-int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
-
-__forceinline int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
-{
-  __asm {
-    mov         eax,cmpValue
-    mov         ecx,exValue
-    mov         edx,v
-    lock cmpxchg [edx],ecx
-  }
-}
-
-__forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
-{
-  __asm {
-    mov         esi,v
-    mov         ebx,dword ptr exValue
-    mov         ecx,dword ptr exValue + 4
-    mov         eax,dword ptr cmpValue
-    mov         edx,dword ptr cmpValue + 4
-    lock cmpxchg8b qword ptr [esi]
-  }
-}
-#elif (_MSC_VER && _M_X64) || defined(__BCPLUSPLUS__)
+//#elif _MSC_VER && _M_IX86
+//__forceinline int32_t __fastcall interlockedIncrement(volatile int32_t & v,int32_t a)
+//{
+//  __asm {
+//    mov         eax,a
+//    mov         edx,v
+//    lock xadd   [edx],eax
+//  }
+//}
+//
+//int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
+//
+//__forceinline int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
+//{
+//  __asm {
+//    mov         eax,cmpValue
+//    mov         ecx,exValue
+//    mov         edx,v
+//    lock cmpxchg [edx],ecx
+//  }
+//}
+//
+//__forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+//{
+//  __asm {
+//    mov         esi,v
+//    mov         ebx,dword ptr exValue
+//    mov         ecx,dword ptr exValue + 4
+//    mov         eax,dword ptr cmpValue
+//    mov         edx,dword ptr cmpValue + 4
+//    lock cmpxchg8b qword ptr [esi]
+//  }
+//}
+#elif defined(__WIN32__) || defined(__WIN64__)//(_MSC_VER && (_M_IX86 || _M_X64)) || defined(__BCPLUSPLUS__)
 #ifdef __BCPLUSPLUS__
 #define __forceinline inline
 __forceinline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a)

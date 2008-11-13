@@ -1,11 +1,11 @@
 // LZMA/Encoder.cpp
 
-#include "StdAfx.h"
+//#include "StdAfx.h"
 
-#include "../../../Common/Defs.h"
-#include "../../Common/StreamUtils.h"
+#include <adicpp/lzma/Common/Defs.h>
+#include <adicpp/lzma/7zip/Common/StreamUtils.h>
 
-#include "LZMAEncoder.h"
+#include <adicpp/lzma/7zip/Compress/LZMA/LZMAEncoder.h>
 
 // for minimal compressing code size define these:
 // #define COMPRESS_MF_BT
@@ -23,22 +23,22 @@
 #define COMPRESS_MF_BT4
 #endif
 #ifdef COMPRESS_MF_BT2
-#include "../LZ/BinTree/BinTree2.h"
+#include <adicpp/lzma/7zip/Compress/LZ/BinTree/BinTree2.h>
 #endif
 #ifdef COMPRESS_MF_BT3
-#include "../LZ/BinTree/BinTree3.h"
+#include <adicpp/lzma/7zip/Compress/LZ/BinTree/BinTree3.h>
 #endif
 #ifdef COMPRESS_MF_BT4
-#include "../LZ/BinTree/BinTree4.h"
+#include <adicpp/lzma/7zip/Compress/LZ/BinTree/BinTree4.h>
 #endif
 #endif
 
 #ifdef COMPRESS_MF_HC
-#include "../LZ/HashChain/HC4.h"
+#include <adicpp/lzma/7zip/Compress/LZ/HashChain/HC4.h>
 #endif
 
 #ifdef COMPRESS_MF_MT
-#include "../LZ/MT/MT.h"
+#include <adicpp/lzma/7zip/Compress/LZ/MT/MT.h>
 #endif
 
 namespace NCompress {

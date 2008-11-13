@@ -144,7 +144,7 @@ inline const utf8::String & DPB::charset() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Database {
+class Database : virtual public ksys::Object {
   friend class Transaction;
   friend class DSQLStatement;
   friend class EventHandler;
@@ -154,7 +154,7 @@ class Database {
     virtual ~Database();
     Database();
     
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { detach(); }
 
     Database &            create(const utf8::String & name = utf8::String());
     Database &            drop();

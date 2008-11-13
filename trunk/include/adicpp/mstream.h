@@ -30,8 +30,8 @@
 namespace ksys {
 //---------------------------------------------------------------------------
 class MemoryStream {
-    friend void initialize(int,char **);
-    friend void cleanup();
+  friend void initialize(int,char **);
+  friend void cleanup();
   private:
     static void initialize();
     static void cleanup();
@@ -55,7 +55,7 @@ class MemoryStream {
         };
         uintptr_t count_;
         uintptr_t mcount_;
-        volatile int32_t   refCount_;
+        volatile ilock_t refCount_;
     };
 
     mutable SPRC<Container> container_;

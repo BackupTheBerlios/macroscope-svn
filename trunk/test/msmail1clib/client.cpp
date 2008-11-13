@@ -1017,7 +1017,7 @@ bool Client::attachFileToMessage(const utf8::String id,const utf8::String key,co
   AsyncFile file;
   file.fileName(fileName).readOnly(true).open();
   size_t bl = getpagesize() * 16;
-  AutoPtr<uint8_t> b;
+  AutoPtrBuffer b;
   b.alloc(bl);
   uint64_t i = 0, l = 0, ll;
   for( ll = file.size(); ll > 0; ll -= l, i++ ){
@@ -1046,7 +1046,7 @@ bool Client::saveMessageAttachmentToFile(const utf8::String id,const utf8::Strin
   }
   AsyncFile file;
   file.fileName(fileName).createIfNotExist(true).open();
-  AutoPtr<uint8_t> b;
+  AutoPtrBuffer b;
   for( uint64_t i = 0; i < ~uint64_t(0); i++ ){
     utf8::String bkey(key + "#" + utf8::int2HexStr(i,8)), v;
     {

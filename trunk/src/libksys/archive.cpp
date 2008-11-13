@@ -53,7 +53,7 @@ Archive & Archive::flush(AsyncFile & archive)
 {
   uint8_t * p;
   int32_t ll;
-  AutoPtr<uint8_t> cbuf;
+  AutoPtrBuffer cbuf;
   compress(cbuf,p,ll);
   if( SHA256Filter::active() ) encrypt(p,ll);
   archive.writeBuffer(p,ll);
@@ -86,7 +86,7 @@ Archive & Archive::readBuffer(void * buffer,uint64_t len,AsyncFile & archive)
         if( SHA256Filter::active() ) decrypt(rBuf(),-cps);
       }
       else if( cps >= 0 ){
-        AutoPtr<uint8_t> buf;
+        AutoPtrBuffer buf;
         buf.alloc(cps);
         archive.readBuffer(buf.ptr() + sizeof(int32_t),cps);
         *(int32_t *) buf.ptr() = cps;
@@ -105,8 +105,8 @@ Archive & Archive::activateFeatures()
 {
   LZO1X::active(false);
   SHA256Filter::active(false);
-  if( password_.strlen() > 0 ){
-    if( password_.strncasecmp("sha256:",7) == 0 ){
+  if( !password_.isNull() ){
+    if( password_.ncasecompare("sha256:",7) == 0 ){
       uint8_t sha256[32];
       base64Decode(
         utf8::String::Iterator(password_) + 7,
@@ -128,7 +128,7 @@ Archive & Archive::pack(const Vector<utf8::String> & fileList)
 {
   activateFeatures();
   intptr_t i;
-  AutoPtr<uint8_t> cbuf;
+  AutoPtrBuffer cbuf;
   AsyncFile archive(fileName_);
   archive.createIfNotExist(true).open();
   AutoFileWRLock<AsyncFile> lock(archive);
@@ -192,7 +192,7 @@ Archive & Archive::unpack(const utf8::String & path,Vector<utf8::String> * pList
     readBuffer(fileName.c_str(),l,archive);
     pList->add(fileName);
     readBuffer(&sz,sizeof(sz),archive);
-    AutoPtr<uint8_t> buf;
+    AutoPtrBuffer buf;
     buf.alloc(wBufSize());
     AsyncFile file(includeTrailingPathDelimiter(path) + fileName);
     file.createIfNotExist(true).open();

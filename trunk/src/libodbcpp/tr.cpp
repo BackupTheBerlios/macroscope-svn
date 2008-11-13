@@ -68,13 +68,13 @@ Transaction & Transaction::start()
     newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
     SQLRETURN r = SQL_SUCCESS;
-    if( isolation_.strcasecmp("REPEATABLE") == 0 )
+    if( isolation_.casecompare("REPEATABLE") == 0 )
       r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_REPEATABLE_READ,0);
-    else if( isolation_.strcasecmp("READ_UNCOMMITTED") == 0 )
+    else if( isolation_.casecompare("READ_UNCOMMITTED") == 0 )
       r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_READ_UNCOMMITTED,0);
-    else if( isolation_.strcasecmp("READ_COMMITTED") == 0 )
+    else if( isolation_.casecompare("READ_COMMITTED") == 0 )
       r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_READ_COMMITTED,0);
-    else if( isolation_.strcasecmp("SERIALIZABLE") == 0 )
+    else if( isolation_.casecompare("SERIALIZABLE") == 0 )
       r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_SERIALIZABLE,0);
     else
       r = api.SQLSetConnectAttr(database_->handle_,SQL_ATTR_TXN_ISOLATION,(SQLPOINTER) SQL_TXN_READ_COMMITTED,0);

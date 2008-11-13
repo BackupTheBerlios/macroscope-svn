@@ -143,7 +143,7 @@ utf8::String Exception::stdError(utf8::String::Stream * s) const
     if( utf8::tryStr2Int(serr,a) ) serr.resize(0); else a = errors_[i].code_;
     if( a >= errorOffset ) a -= errorOffset;
     *s << a;
-    if( !serr.isNull() > 0 ) *s << " " << serr;
+    if( !serr.isNull() ) *s << " " << serr;
     *s << " " << errors_[i].what_ << "\n";
   }
   return s == &stream ? s->string() : utf8::String();

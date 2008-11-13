@@ -35,7 +35,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
 #if __GNUG__
   thread = thread;
   utf8::String s;
-  AutoPtr<char *> strings(backtrace());
+  AutoPtr<char *,AutoPtrMemoryDestructor> strings(backtrace());
   strings.ptr(backtrace_symbols(strings));
   for( char ** p = strings; p != NULL && *p != NULL; p++ ){
     if( --skipCount < 0 ){
@@ -161,22 +161,22 @@ void setProcessPriority(const Mutant & m,bool noThrow)
   }
   if( r == 0 && err == 0 ){
     utf8::String s(m);
-    if( s.strcasecmp("IDLE_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("IDLE_PRIORITY_CLASS") == 0 )
       r = SetPriorityClass(GetCurrentProcess(),IDLE_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
       r = SetPriorityClass(GetCurrentProcess(),BELOW_NORMAL_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("NORMAL_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("NORMAL_PRIORITY_CLASS") == 0 )
       r = SetPriorityClass(GetCurrentProcess(),NORMAL_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
       r = SetPriorityClass(GetCurrentProcess(),ABOVE_NORMAL_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("HIGH_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("HIGH_PRIORITY_CLASS") == 0 )
       r = SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("REALTIME_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("REALTIME_PRIORITY_CLASS") == 0 )
       r = SetPriorityClass(GetCurrentProcess(),REALTIME_PRIORITY_CLASS);
     err = GetLastError();
   }
@@ -196,7 +196,7 @@ void setProcessPriority(const Mutant & m,bool noThrow)
   }
   if( r != 0 && err == 0 ){
     utf8::String s(m);
-    if( s.strcasecmp("IDLE_PRIORITY_CLASS") == 0 ){
+    if( s.casecompare("IDLE_PRIORITY_CLASS") == 0 ){
 #if HAVE_RTPRIO
       struct rtprio rtp;
       rtp.type = RTP_PRIO_IDLE;
@@ -207,19 +207,19 @@ void setProcessPriority(const Mutant & m,bool noThrow)
 #endif
     }
     else
-    if( s.strcasecmp("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
       r = setpriority(PRIO_PROCESS,0,BELOW_NORMAL_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("NORMAL_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("NORMAL_PRIORITY_CLASS") == 0 )
       r = setpriority(PRIO_PROCESS,0,NORMAL_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
       r = setpriority(PRIO_PROCESS,0,ABOVE_NORMAL_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("HIGH_PRIORITY_CLASS") == 0 )
+    if( s.casecompare("HIGH_PRIORITY_CLASS") == 0 )
       r = setpriority(PRIO_PROCESS,0,HIGH_PRIORITY_CLASS);
     else
-    if( s.strcasecmp("REALTIME_PRIORITY_CLASS") == 0 ){
+    if( s.casecompare("REALTIME_PRIORITY_CLASS") == 0 ){
 #if HAVE_RTPRIO
       struct rtprio rtp;
       rtp.type = RTP_PRIO_REALTIME;
@@ -254,7 +254,7 @@ bool isEnv(const utf8::String & name)
       newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     return true;
   }
-  AutoPtr<wchar_t> b;
+  AutoPtr<wchar_t,AutoPtrMemoryDestructor> b;
   utf8::WideString s(name.getUNICODEString());
   sz = GetEnvironmentVariableW(s,NULL,0);
   int32_t err = GetLastError();
@@ -272,7 +272,7 @@ utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
 #if defined(__WIN32__) || defined(__WIN64__)
   DWORD sz;
   if( isWin9x() ){
-    AutoPtr<char> b;
+    AutoPtr<char,AutoPtrMemoryDestructor> b;
     utf8::AnsiString s(name.getANSIString());
     SetLastError(ERROR_SUCCESS);
     sz = GetEnvironmentVariableA(s,b,0);
@@ -288,7 +288,7 @@ utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
     if( sz <= 1 ) return utf8::String();
     return b.ptr();
   }
-  AutoPtr<wchar_t> b;
+  AutoPtr<wchar_t,AutoPtrMemoryDestructor> b;
   utf8::WideString s(name.getUNICODEString());
   SetLastError(ERROR_SUCCESS);
   sz = GetEnvironmentVariableW(s,b,0);
@@ -420,10 +420,10 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
     }
   }
   else {
-    if( buffer_ == NULL ){
-      bufferSize_ = getpagesize() / sizeof(FILE_NOTIFY_INFORMATION);
+    if( buffer_.count() == 0 ){
+      bufferSize_ = getpagesize() * 16u / sizeof(FILE_NOTIFY_INFORMATION);
+      buffer_.resize(bufferSize_);
       bufferSize_ *= sizeof(FILE_NOTIFY_INFORMATION);
-      buffer_.alloc(bufferSize_);
     }
     if( hDirectory_ == INVALID_HANDLE_VALUE ){
       hDirectory_ = CreateFileW(
@@ -478,7 +478,7 @@ void DirectoryChangeNotification::stop()
     CloseHandle(hDirectory_);
     hDirectory_ = INVALID_HANDLE_VALUE;
   }
-  buffer_.free();
+  buffer_.clear();
   bufferSize_ = 0;
 #endif
 }
@@ -728,7 +728,7 @@ utf8::String screenString(const utf8::String & s)
 {
   const char * p;
   uintptr_t seql, l, len = 0;
-  AutoPtr<char> a;
+  AutoPtr<char,AutoPtrMemoryDestructor> a;
   for( p = s.c_str(); *p != '\0'; p += seql, len += l ) screenChar(p,seql,NULL,l);
   if( len == 0 ) return utf8::String();
   a.alloc(len + 1);
@@ -866,7 +866,7 @@ utf8::String unScreenString(const utf8::String & s)
 {
   const char * p;
   uintptr_t seql, l, len = 0, c;
-  AutoPtr<char> a;
+  AutoPtr<char,AutoPtrMemoryDestructor> a;
   for( p = s.c_str(); *p != '\0'; p += seql, len += l ){
     c = utf8::utf82ucs(p,seql);
     l = seql;
@@ -957,10 +957,10 @@ intptr_t findStringPart(const utf8::String & s,const utf8::String & part,bool ca
   intptr_t i;
   for( i = enumStringParts(s) - 1; i >= 0; i-- ){
     if( caseSensitive ){
-      if( stringPartByNo(s,i,delim,unscreen).strcmp(part) == 0 ) break;
+      if( stringPartByNo(s,i,delim,unscreen).compare(part) == 0 ) break;
     }
     else {
-      if( stringPartByNo(s,i,delim,unscreen).strcasecmp(part) == 0 ) break;
+      if( stringPartByNo(s,i,delim,unscreen).casecompare(part) == 0 ) break;
     }
   }
   return i;
@@ -970,7 +970,7 @@ utf8::String splitString(const utf8::String & s,utf8::String & s0,utf8::String &
 {
   utf8::String::Iterator i(s.strcasestr(separator));
   if( i.eos() ) s0 = s; else s0 = utf8::String(s,i);
-  s1 = i + separator.strlen();
+  s1 = i + separator.length();
   return s;
 }
 //---------------------------------------------------------------------------
@@ -1090,7 +1090,7 @@ utf8::String getModuleFileNameByHandle(HMODULE h)
 {
   DWORD a = 1, b;
   if( isWin9x() ){
-    AutoPtr<char> moduleFileName;
+    AutoPtr<char,AutoPtrMemoryDestructor> moduleFileName;
     for(;;){
       moduleFileName.realloc(a * sizeof(char));
       if( (b = GetModuleFileNameA(h,moduleFileName,a)) < a ) break;
@@ -1099,7 +1099,7 @@ utf8::String getModuleFileNameByHandle(HMODULE h)
     moduleFileName.realloc((b + 1) * sizeof(char));
     return moduleFileName.ptr();
   }
-  AutoPtr<wchar_t> moduleFileName;
+  AutoPtr<wchar_t,AutoPtrMemoryDestructor> moduleFileName;
   for(;;){
     moduleFileName.realloc(a * sizeof(wchar_t));
     if( (b = GetModuleFileNameW(h,moduleFileName,a)) < a ) break;
@@ -1115,17 +1115,17 @@ utf8::String getCurrentDir()
 #if defined(__WIN32__) || defined(__WIN64__)
   DWORD a;
   if( isWin9x() ){
-    AutoPtr<char> dirName;
+    AutoPtr<char,AutoPtrMemoryDestructor> dirName;
     dirName.realloc((a = GetCurrentDirectoryA(0,NULL)) * sizeof(char));
     GetCurrentDirectoryA(a,dirName);
     return dirName.ptr();
   }
-  AutoPtr<wchar_t> dirName;
+  AutoPtr<wchar_t,AutoPtrMemoryDestructor> dirName;
   dirName.realloc((a = GetCurrentDirectoryW(0,NULL)) * sizeof(wchar_t));
   GetCurrentDirectoryW(a,dirName);
   return dirName.ptr();
 #else
-  AutoPtr<char> dirName((char *) kmalloc(MAXPATHLEN + 1 + 1));
+  AutoPtr<char,AutoPtrMemoryDestructor> dirName((char *) kmalloc(MAXPATHLEN + 1 + 1));
   if( getcwd(dirName,MAXPATHLEN + 1) == NULL ) strcpy(dirName,".");
   strcat(dirName,pathDelimiterStr);
   return dirName.ptr();
@@ -1161,13 +1161,13 @@ utf8::String getTempPath()
 #if defined(__WIN32__) || defined(__WIN64__)
   DWORD a;
   if( isWin9x() ){
-    AutoPtr<char> dirName;
+    AutoPtr<char,AutoPtrMemoryDestructor> dirName;
     dirName.realloc((a = GetTempPathA(0,NULL) + 2) * sizeof(char));
     GetTempPathA(a,dirName);
     if( dirName[strlen(dirName) - 1] != '\\' ) strcat(dirName,"\\");
     return dirName.ptr();
   }
-  AutoPtr<wchar_t> dirName;
+  AutoPtr<wchar_t,AutoPtrMemoryDestructor> dirName;
   dirName.realloc((a = GetTempPathW(0,NULL) + 2) * sizeof(wchar_t));
   GetTempPathW(a,dirName);
   if( dirName[lstrlenW(dirName) - 1] != '\\' ) lstrcatW(dirName,L"\\");
@@ -1324,7 +1324,7 @@ bool createDirectory(const utf8::String & name)
   if( err == ENOTDIR ){
 #endif
     utf8::String parentDir(getPathFromPathName(name));
-    if( parentDir.strlen() > 0 ){
+    if( !parentDir.isNull() ){
       if( createDirectory(parentDir) ) return createDirectory(name);
       err = oserror();
     }
@@ -1523,9 +1523,9 @@ void chModOwn(const utf8::String &,const Mutant &,const Mutant &,const Mutant &)
 utf8::String getRootFromPathName(const utf8::String & pathName)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  uintptr_t offset = pathName.strncmp("\\\\?\\",4) == 0 || pathName.strncmp("//?/",4) == 0 ? 4 : 0;
+  uintptr_t offset = pathName.ncompare("\\\\?\\",4) == 0 || pathName.ncompare("//?/",4) == 0 ? 4 : 0;
   utf8::String s(utf8::String::Iterator(pathName) + offset);
-  if( s.strncmp("\\\\",2) == 0 || s.strncmp("//",2) == 0 ){ // windows network path
+  if( s.ncompare("\\\\",2) == 0 || s.ncompare("//",2) == 0 ){ // windows network path
     utf8::String::Iterator i(utf8::String::Iterator(s) + 2);
     while( !i.bos() ){
       uintptr_t c = i.getChar();
@@ -1755,7 +1755,7 @@ void copy(const utf8::String & dstPathName,const utf8::String & srcPathName,uint
     srcFile.fileName(srcPathName).readOnly(true);
     dstFile.open();
     srcFile.open();
-    AutoPtr<uint8_t> buffer;
+    AutoPtrBuffer buffer;
     buffer.alloc(bufferSize);
     dstFile.resize(0);
     for( uint64_t ll, l = srcFile.size(); l > 0; l -= ll ){
@@ -2109,11 +2109,11 @@ pid_t execute(const ExecuteProcessParameters & params)
   Array<utf8::String> path;
   int32_t err;
   if( isWin9x() ){
-    AutoPtr<char> e;
+    AutoPtr<char,AutoPtrMemoryDestructor> e;
     uintptr_t eCount = 0;
     if( params.env_.count() > 0 ){
       for( i = 0; i < params.env_.count(); i++ ){
-        if( params.usePathEnv_ && params.env_[i].strncasecmp("PATH=",5) == 0 ){
+        if( params.usePathEnv_ && params.env_[i].ncasecompare("PATH=",5) == 0 ){
           utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
           for( intptr_t k = enumStringParts(a,";") - 1; k >= 0; k-- ) path.add(stringPartByNo(a,k,";"));
         }
@@ -2159,15 +2159,15 @@ pid_t execute(const ExecuteProcessParameters & params)
     );
   }
   else {
-    AutoPtr<wchar_t> e;
+    AutoPtr<wchar_t,AutoPtrMemoryDestructor> e;
     uintptr_t eCount = 0;
     if( params.env_.count() > 0 ){
       for( i = 0; i < params.env_.count(); i++ ){
-        //if( params.usePathEnv_ && params.env_[i].strncasecmp("PATH=",5) == 0 ){
+        //if( params.usePathEnv_ && params.env_[i].ncasecompare("PATH=",5) == 0 ){
         //  utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
         //  for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
         //}
-        uintptr_t l = params.env_[i].strlen() + 1;
+        uintptr_t l = params.env_[i].length() + 1;
         e.reallocT(eCount + l + 1);
         utf8::utf8s2ucs(params.env_[i].c_str(),l,e.ptr() + eCount);
         eCount += l;
@@ -2333,21 +2333,21 @@ int64_t getProcessStartTime(bool toLocalTime)
 //---------------------------------------------------------------------------
 intptr_t strToMonth(const utf8::String & month)
 {
-  if( month.strcasecmp("Jan") == 0 ) return 0;
-  if( month.strcasecmp("Feb") == 0 ) return 1;
-  if( month.strcasecmp("Mar") == 0 ) return 2;
-  if( month.strcasecmp("Apr") == 0 ) return 3;
-  if( month.strcasecmp("Mai") == 0 ) return 4;
-  if( month.strcasecmp("May") == 0 ) return 4;
-  if( month.strcasecmp("Jun") == 0 ) return 5;
-  if( month.strcasecmp("Jul") == 0 ) return 6;
-  if( month.strcasecmp("Aug") == 0 ) return 7;
-  if( month.strcasecmp("Sep") == 0 ) return 8;
-  if( month.strcasecmp("Okt") == 0 ) return 9;
-  if( month.strcasecmp("Oct") == 0 ) return 9;
-  if( month.strcasecmp("Nov") == 0 ) return 10;
-  if( month.strcasecmp("Dez") == 0 ) return 11;
-  if( month.strcasecmp("Dec") == 0 ) return 11;
+  if( month.casecompare("Jan") == 0 ) return 0;
+  if( month.casecompare("Feb") == 0 ) return 1;
+  if( month.casecompare("Mar") == 0 ) return 2;
+  if( month.casecompare("Apr") == 0 ) return 3;
+  if( month.casecompare("Mai") == 0 ) return 4;
+  if( month.casecompare("May") == 0 ) return 4;
+  if( month.casecompare("Jun") == 0 ) return 5;
+  if( month.casecompare("Jul") == 0 ) return 6;
+  if( month.casecompare("Aug") == 0 ) return 7;
+  if( month.casecompare("Sep") == 0 ) return 8;
+  if( month.casecompare("Okt") == 0 ) return 9;
+  if( month.casecompare("Oct") == 0 ) return 9;
+  if( month.casecompare("Nov") == 0 ) return 10;
+  if( month.casecompare("Dez") == 0 ) return 11;
+  if( month.casecompare("Dec") == 0 ) return 11;
   return -1;
 }
 //------------------------------------------------------------------------------
@@ -2818,7 +2818,7 @@ utf8::String getMachineUniqueKey()
                   hr = VariantChangeTypeEx(&vtProcessorId,&vtProcessorId,0,0,VT_BSTR);
                   newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                 }
-                if( s.strlen() > 0 ) s += "\n";
+                if( !s.isNull() ) s += "\n";
                 s += utf8::String(V_BSTR(&vtDeviceId)) + " " +
                   V_BSTR(&vtName) + " " +
                   V_BSTR(&vtDescription) + " " +
@@ -2879,7 +2879,7 @@ utf8::String getMachineUniqueKey()
                 }
                 if( V_VT(&vtAdapterTypeId) != VT_NULL ){
                   if( V_VT(&vtAdapterTypeId) == VT_BSTR ){
-                    if( utf8::String("Ethernet").strncasecmp(V_BSTR(&vtAdapterTypeId),8) == 0 ){
+                    if( utf8::String("Ethernet").ncasecompare(V_BSTR(&vtAdapterTypeId),8) == 0 ){
                       VariantClear(&vtAdapterTypeId);
                       V_VT(&vtAdapterTypeId) = VT_I4;
                       V_I4(&vtAdapterTypeId) = 0;
@@ -2903,7 +2903,7 @@ utf8::String getMachineUniqueKey()
                         hr = VariantChangeTypeEx(&vtMACAddress,&vtMACAddress,0,0,VT_BSTR);
                         newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__)->throwSP();
                       }
-                      if( s.strlen() > 0 ) s += "\n";
+                      if( !s.isNull() ) s += "\n";
                       s += utf8::String(V_BSTR(&vtName)) + " " + V_BSTR(&vtMACAddress);
                     }
                   }
@@ -2999,7 +2999,7 @@ utf8::String getMachineUniqueKey()
   mib[4] = NET_RT_IFLIST;
   mib[5] = 0;
   size_t needed;
-  AutoPtr<uint8_t> buf;
+  AutoPtrBuffer buf;
 
   for(;;){
     if( sysctl(mib,6,NULL,&needed,NULL,0) != 0 ){
@@ -3125,7 +3125,7 @@ utf8::String getMachineCryptedUniqueKey(const utf8::String & text,const utf8::St
   SHA256 sha;
   sha.make(cryptor.sha256(),cryptor.size());
   utf8::String key(base64Encode(sha.sha256(),sha.size()));
-  AutoPtr<uint8_t> info2;
+  AutoPtrBuffer info2;
   uintptr_t size = info.size();
   info2.alloc(size + sizeof(uint32_t) + sizeof(uint32_t));
   uint32_t checksum = crc32(0,NULL,0);
@@ -3149,16 +3149,16 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
   bool pirate = true, mkey = true, expire = true;
   try {
     SHA256Cryptor decryptor;
-    if( machineUniqueCryptedKey().strlen() == 0 ){
+    if( machineUniqueCryptedKey().isNull() ){
       machineUniqueCryptedKey() = getMachineCryptedUniqueKey(getMachineCleanUniqueKey(),utf8::String(),&decryptor);
     }
     else {
       memcpy(decryptor.sha256(),machineCryptKey,decryptor.size());
     }
-    pirate = mkey = machineUniqueCryptedKey().left(43).strcmp(key.left(43)) != 0;
-    if( key.strlen() > 43 ){ // check expiration date
+    pirate = mkey = machineUniqueCryptedKey().left(43).compare(key.left(43)) != 0;
+    if( key.length() > 43 ){ // check expiration date
       utf8::String info(key.right(key.size() - 43));
-      AutoPtr<uint8_t> info1;
+      AutoPtrBuffer info1;
       uintptr_t size, size2;
       info1.alloc(size = base64Decode(info,NULL,0));
       if( size > sizeof(uint32_t) * 2 ){
@@ -3301,7 +3301,7 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
       if( noThrow ) return NULL;
       newObjectV1C2<Exception>(ERROR_INVALID_DATA + errorOffset,__PRETTY_FUNCTION__)->throwSP();
     }
-    if( utf8::String((const char *)(basePointer + dllNameOffset)).strcasecmp(importedDllName) != 0 ){
+    if( utf8::String((const char *)(basePointer + dllNameOffset)).casecompare(importedDllName) != 0 ){
       rva += 20;
       continue;
     }
@@ -3314,7 +3314,7 @@ void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::Str
       }
       nFuncName++;
       utf8::String name((const char *)(basePointer + funcNameOffset) + 2);
-      if( name.strcmp(funcName) != 0 ){
+      if( name.compare(funcName) != 0 ){
         funcNamesOffset += sizeof(uintptr_t);
         nFuncName++;
         continue;
@@ -3346,7 +3346,7 @@ bool isDaemonCommandLineOption()
 {
   utf8::String opt("--daemon");
   for( uintptr_t i = 1; i < argv().count(); i++ )
-    if( argv()[i].strcmp(opt) == 0 ) return true;
+    if( argv()[i].compare(opt) == 0 ) return true;
   return false;
 }
 //---------------------------------------------------------------------------

@@ -83,7 +83,7 @@ int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t 
 }
 #endif
 //---------------------------------------------------------------------------
-#if (_M_IX86 || __i386__ || defined(BCPLUSPLUS)) && !__x86_64__ && !_M_X64
+#if !defined(__WIN32__) && !defined(__WIN64__)//(_M_IX86 || __i386__ || defined(BCPLUSPLUS)) && !__x86_64__ && !_M_X64
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
 {
   int64_t old;

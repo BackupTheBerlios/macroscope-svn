@@ -81,7 +81,7 @@ DSQLStatement & DSQLStatement::allocateHandle()
     if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO ){
       utf8::String state;
       ksys::AutoPtr<EClientServer> e(database_->exception(SQL_HANDLE_STMT,handle_,&state));
-      if( state.strcmp("HYC00") != 0 ) database_->exceptionHandler(e.ptr(NULL));
+      if( state.compare("HYC00") != 0 ) database_->exceptionHandler(e.ptr(NULL));
     }
   }
 #else

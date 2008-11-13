@@ -45,13 +45,13 @@ class HuffmanFilter {
     HuffmanFilter & compressFile(const utf8::String & src,const utf8::String & dst);
     HuffmanFilter & decompressFile(const utf8::String & src,const utf8::String & dst);
 
-    AutoPtr<uint8_t> & output(){ return output_; }
+    AutoPtrBuffer & output(){ return output_; }
     const uintptr_t & outputSize(){ return outputSize_; }
 
     static void genStatisticTable(const Array<utf8::String> & fileNames);
   protected:
-    AutoPtr<uint8_t> buffer_;
-    AutoPtr<uint8_t> output_;
+    AutoPtrBuffer buffer_;
+    AutoPtrBuffer output_;
     uintptr_t outputBitPos_;
     uintptr_t outputSize_;
     uintptr_t outputMaxSize_;
@@ -79,13 +79,13 @@ class LZSSKFilter : protected HuffmanFilter {
     LZSSKFilter & compressFile(const utf8::String & src,const utf8::String & dst);
     LZSSKFilter & decompressFile(const utf8::String & src,const utf8::String & dst);
 
-    AutoPtr<uint8_t> & output(){ return output_; }
+    AutoPtrBuffer & output(){ return output_; }
     const uintptr_t & outputSize(){ return outputSize_; }
     const bool & eos(){ return eos_; }
   protected:
     class DictChar {
       public:
-        ~DictChar() {}
+        virtual ~DictChar() {}
         DictChar() { treeNode_.parent_ = NULL; }
 
         static RBTreeNode & treeO2N(const DictChar & object,LZSSKFilter *){
@@ -123,7 +123,7 @@ class LZSSKFilter : protected HuffmanFilter {
         DictChar::treeCO
     > DictTree;
     DictTree dictTree_;
-    AutoPtr<uint8_t> buffer_;
+    AutoPtrBuffer buffer_;
     DictChar * dict_;
     uintptr_t dictSize_;
     uintptr_t dictSizeMask_;

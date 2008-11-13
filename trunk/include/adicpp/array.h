@@ -29,20 +29,20 @@
 //-----------------------------------------------------------------------------
 namespace ksys {
 //-----------------------------------------------------------------------------
-template <class T> class Vector;
+//template <typename T> class Vector;
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-template <class T> class Array {
+template <typename T> class Array {
   public:
     virtual ~Array();
     Array(T * ptr = NULL);
     Array(const T & element);
     Array(const Array<T> & array);
-    Array(const Vector<T> & vector);
+    //Array(const Vector<T> & vector);
 
     Array<T> & operator = (const Array<T> & array);
-    Array<T> & operator = (const Vector<T> & vector);
+    //Array<T> & operator = (const Vector<T> & vector);
     Array<T> & operator = (const T & element);
 #if !HAVE_INTPTR_T_AS_INT
     T &        operator [] (int i);
@@ -61,9 +61,13 @@ template <class T> class Array {
     Array<T> & operator << (const T & element){ return add(element); }
 
     const uintptr_t & count() const;
+    const uintptr_t & mcount() const;
     Array<T> &       clear();
     T * &             ptr() const;
     Array<T> &       resize(uintptr_t newSize);
+    Array<T> &       reserve(uintptr_t newMaxSize);
+    Array<T> &       add();
+    Array<T> &       add(int,int);
     Array<T> &       add(const T & element);
     Array<T> &       insert(uintptr_t i, const T & element);
 
@@ -88,244 +92,374 @@ template <class T> class Array {
     Array<T> &       setBitRange(uintptr_t n, uintptr_t c);
     Array<T> &       resetBitRange(uintptr_t n, uintptr_t c);
     Array<T> &       invertBitRange(uintptr_t n, uintptr_t c);
-    Array<T> & replace(Array< T> & array);
+    Array<T> & replace(Array<T> & array);
   protected:
     mutable T *       ptr_;
     mutable uintptr_t count_;
+    mutable uintptr_t mcount_;
   private:
 };
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::replace(Array< T> & array)
+template <typename T> inline
+Array<T> & Array<T>::replace(Array<T> & array)
 {
   xchg(ptr_,array.ptr_);
   xchg(count_,array.count_);
+  xchg(mcount_,array.mcount_);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Array< T>::~Array()
+template <typename T> inline Array<T>::~Array()
 {
   clear();
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Array< T>::Array(T * ptr) : ptr_(ptr), count_(0)
+template <typename T> inline Array<T>::Array(T * ptr) : ptr_(ptr), count_(0), mcount_(0)
 {
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Array< T>::Array(const T & element) : ptr_(NULL), count_(0)
+template <typename T> inline Array<T>::Array(const T & element) : ptr_(NULL), count_(0), mcount_(0)
 {
   resize(1).ptr_[0] = element;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline Array< T>::Array(const Array< T> & array) : ptr_(NULL), count_(0)
+template <typename T> inline Array<T>::Array(const Array<T> & array) : ptr_(NULL), count_(0), mcount_(0)
 {
   *this = array;
 }
 //-----------------------------------------------------------------------------
-template <class T> inline Array<T>::Array(const Vector<T> & vector) : ptr_(NULL), count_(0)
-{
-  *this = vector;
-}
+//template <typename T> inline Array<T>::Array(const Vector<T> & vector) : ptr_(NULL), count_(0), mcount_(0)
+//{
+//  *this = vector;
+//}
 //-----------------------------------------------------------------------------
-template< class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Array< T> & Array<T>::operator =(const Array< T> & array)
+Array<T> & Array<T>::operator = (const Array<T> & array)
 {
   Array<T> newArray;
-  newArray.ptr_ = (T *) kmalloc(sizeof(T) * array.count_);
+  newArray.ptr_ = (T *) kmalloc(sizeof(T) * array.mcount_);
   while( newArray.count_ < array.count_ ){
     new (newArray.ptr_ + newArray.count_) T(array.ptr_[newArray.count_]);
     newArray.count_++;
   }
-  return replace(newArray);
-}
-//-----------------------------------------------------------------------------
-template <class T>
-#ifndef __BCPLUSPLUS__
-inline
-#endif
-Array<T> & Array<T>::operator = (const Vector<T> & vector)
-{
-  Array<T> newArray;
-  newArray.ptr_ = (T *) kmalloc(sizeof(T) * vector.count());
-  while( newArray.count_ < vector.count() ){
-    new (newArray.ptr_ + newArray.count_) T(vector[newArray.count_]);
-    newArray.count_++;
+  newArray.mcount_ = newArray.count_;
+  while( newArray.mcount_ < array.mcount_ ){
+    new (newArray.ptr_ + newArray.mcount_) T();
+    newArray.mcount_++;
   }
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
-template< class T>
+//template <typename T>
+//#ifndef __BCPLUSPLUS__
+//inline
+//#endif
+//Array<T> & Array<T>::operator = (const Vector<T> & vector)
+//{
+//  Array<T> newArray;
+//  newArray.ptr_ = (T *) kmalloc(sizeof(T) * vector.mcount());
+//  while( newArray.count_ < vector.count() ){
+//    if( vector[newArray.count_] != NULL )
+//      new (newArray.ptr_ + newArray.count_) T(vector[newArray.count_]);
+//    else
+//      new (newArray.ptr_ + newArray.count_) T;
+//    newArray.count_++;
+//  }
+//  newArray.mcount_ = newArray.count_;
+//  while( newArray.mcount_ < vector.mcount() ){
+//    new (newArray.ptr_ + newArray.mcount_) T();
+//    newArray.mcount_++;
+//  }
+//  return replace(newArray);
+//}
+//-----------------------------------------------------------------------------
+template <typename T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
 #endif
-Array< T> & Array<T>::operator =(const T & element)
+Array<T> & Array<T>::operator = (const T & element)
 {
   for( intptr_t i = count_ - 1; i >= 0; i-- ) ptr_[i] = element;
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
+template <typename T> inline
 T & Array<T>::operator[](intptr_t i)
 {
-  assert((uintptr_t) i < count_);
+  assert( (uintptr_t) i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
+template <typename T> inline
 const T & Array<T>::operator[](intptr_t i) const
 {
-  assert((uintptr_t) i < count_);
+  assert( (uintptr_t) i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
+template <typename T> inline
 T & Array<T>::operator[](uintptr_t i)
 {
-  assert(i < count_);
+  assert( i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const T & Array<T>::operator[](uintptr_t i) const
 {
-  assert(i < count_);
+  assert( i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T & Array<T>::operator [] (int i)
 {
-  assert( (uintptr_t) i < count_ );
+  assert( (uintptr_t) i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const T & Array<T>::operator [] (int i) const
 {
-  assert( (uintptr_t) i < count_ );
+  assert( (uintptr_t) i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T & Array<T>::operator [] (unsigned int i)
 {
-  assert( i < count_ );
+  assert( i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const T & Array<T>::operator [] (unsigned int i) const
 {
-  assert( i < count_ );
+  assert( i < mcount_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
 #endif
 //-----------------------------------------------------------------------------
-template< class T> inline
-const uintptr_t & Array< T>::count() const
+template <typename T> inline
+const uintptr_t & Array<T>::count() const
 {
   return count_;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <typename T> inline
+const uintptr_t & Array<T>::mcount() const
+{
+  return mcount_;
+}
+//-----------------------------------------------------------------------------
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-Array< T> & Array< T>::clear()
+Array<T> & Array<T>::clear()
 {
-  while( count_ > 0 ){
-    count_--;
-    (ptr_ + count_)->~T();
+  while( mcount_ > 0 ){
+    mcount_--;
+    (ptr_ + mcount_)->~T();
   }
+  count_ = 0;
   kfree(ptr_);
   ptr_ = NULL;
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T * & Array<T>::ptr() const
 {
   return ptr_;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
 Array<T> & Array<T>::resize(uintptr_t newSize)
 {
-  if( newSize == count_ ) return *this;
-  Array<T> newArray;
-  newArray.ptr_ = (T *) kmalloc(sizeof(T) * newSize);
-  while( newArray.count_ < newSize ){
-    if( newArray.count_ < count_ )
-      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
-    else
-      new (newArray.ptr_ + newArray.count_) T;
-    newArray.count_++;
+  uintptr_t mcount = mcount_;
+  while( newSize < mcount / 2u ) mcount /= 2;
+  while( newSize > mcount ) mcount = (mcount * 2u) + (mcount == 0);
+  if( mcount != mcount_ ){
+    Array<T> newArray;
+    newArray.ptr_ = (T *) kmalloc(sizeof(T) * mcount);
+    while( newArray.count_ < mcount ){
+      if( newArray.count_ < count_ )
+        new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+      else
+        new (newArray.ptr_ + newArray.count_) T;
+      newArray.count_++;
+      newArray.mcount_++;
+    }
+    replace(newArray);
   }
-  return replace(newArray);
+  count_ = newSize;
+  return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T> inline
+Array<T> & Array<T>::reserve(uintptr_t newMaxSize)
+{
+  uintptr_t count = count_;
+  resize(newMaxSize);
+  count_ = count > mcount_ ? mcount_ : count;
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+Array<T> & Array<T>::add(int,int)
+{
+  count_++;
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+Array<T> & Array<T>::add()
+{
+  if( count_ == mcount_ ){
+    uintptr_t mcount = mcount_ * 2u + (mcount_ == 0);
+    Array<T> newArray;
+    newArray.ptr_ = (T *) kmalloc(sizeof(T) * mcount);
+    while( newArray.count_ < count_ ){
+      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+      newArray.count_++;
+      newArray.mcount_++;
+    }
+    while( newArray.mcount_ < mcount ){
+      new (newArray.ptr_ + newArray.mcount_) T;
+      newArray.mcount_++;
+    }
+    replace(newArray);
+  }
+  count_++;
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
 Array<T> & Array<T>::add(const T & element)
 {
-  Array<T> newArray;
-  newArray.ptr_ = (T *) kmalloc(sizeof(T) * (count_ + 1));
-  while( newArray.count_ < count_ ){
-    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
-    newArray.count_++;
+  if( count_ == mcount_ ){
+    uintptr_t mcount = mcount_ * 2u + (mcount_ == 0);
+    Array<T> newArray;
+    newArray.ptr_ = (T *) kmalloc(sizeof(T) * mcount);
+    while( newArray.count_ < count_ ){
+      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+      newArray.count_++;
+      newArray.mcount_++;
+    }
+    while( newArray.mcount_ < mcount ){
+      new (newArray.ptr_ + newArray.mcount_) T;
+      newArray.mcount_++;
+    }
+    replace(newArray);
   }
-  new (newArray.ptr_ + newArray.count_++) T(element);
-  return replace(newArray);
+  ptr_[count_++] = element;
+  return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
 Array<T> & Array<T>::insert(uintptr_t i,const T & element)
 {
-  assert( (uintptr_t) i <= count_ );
-  Array<T> newArray;
-  newArray.ptr_ = (T *) kmalloc(sizeof(T) * (count_ + 1));
-  while( newArray.count_ < i ){
-    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+  assert( i < count_ );
+  uintptr_t mcount;
+  if( count_ == mcount_ ){
+    mcount = mcount_ * 2u + (mcount_ == 0);
+    Array<T> newArray;
+    newArray.ptr_ = (T *) kmalloc(sizeof(T) * mcount);
+    while( newArray.count_ < i ){
+      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+      newArray.count_++;
+      newArray.mcount_++;
+    }
+    new (newArray.ptr_ + newArray.count_) T(element);
     newArray.count_++;
+    newArray.mcount_++;
+    while( newArray.count_ - 1 < count_ ){
+      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_ - 1]);
+      newArray.count_++;
+      newArray.mcount_++;
+    }
+    while( newArray.mcount_ < mcount ){
+      new (newArray.ptr_ + newArray.mcount_) T;
+      newArray.mcount_++;
+    }
+    replace(newArray);
   }
-  new (newArray.ptr_ + newArray.count_++) T(element);
-  while( newArray.count_ - 1 < count_ ){
-    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_ - 1]);
-    newArray.count_++;
+  else {
+    for( mcount = count_; mcount > i; mcount-- ) ptr_[mcount] = ptr_[mcount - 1];
+    ptr_[count_++] = element;
   }
-  return replace(newArray);
+  return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template<typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-intptr_t Array< T>::search(const T & element) const
+Array<T> & Array<T>::remove(uintptr_t i)
 {
-  intptr_t  i;
+  assert( i < count_ );
+  uintptr_t mcount;
+  if( count_ - 1 == mcount_ / 2u ){
+    mcount = mcount_ / 2u + (mcount_ == 0);
+    Array<T> newArray;
+    newArray.ptr_ = (T *) kmalloc(sizeof(T) * mcount);
+    while( newArray.count_ < i ){
+      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
+      newArray.count_++;
+      newArray.mcount_++;
+    }
+    while( newArray.count_ + 1 < count_ ){
+      new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_ + 1]);
+      newArray.count_++;
+      newArray.mcount_++;
+    }
+    replace(newArray);
+  }
+  else {
+    for( mcount = i; mcount < count_ - 1; mcount++ ) ptr_[mcount] = ptr_[mcount + 1];
+    count_--;
+  }
+  return *this;
+}
+//-----------------------------------------------------------------------------
+template <typename T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+intptr_t Array<T>::search(const T & element) const
+{
+  intptr_t i;
   for( i = count_ - 1; i >= 0; i-- ) if( ptr_[i] == element ) break;
   return i;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-intptr_t Array< T>::bSearch(const T & element) const
+intptr_t Array<T>::bSearch(const T & element) const
 {
   intptr_t  low = 0, high = count_ - 1, pos ;
 
@@ -343,13 +477,13 @@ intptr_t Array< T>::bSearch(const T & element) const
   return -1;
 }
 //-----------------------------------------------------------------------------
-template< class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
-uintptr_t Array< T>::bSearch(const T & element, intptr_t & c) const
+uintptr_t Array<T>::bSearch(const T & element, intptr_t & c) const
 {
-  intptr_t  low = 0, high = count_ - 1, pos = -1;
+  intptr_t low = 0, high = count_ - 1, pos = -1;
 
   c = 1;
   while( low <= high ){
@@ -370,7 +504,7 @@ uintptr_t Array< T>::bSearch(const T & element, intptr_t & c) const
   return pos;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -381,7 +515,7 @@ intptr_t Array<T>::searchCase(const T & element) const
   return i;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -404,7 +538,7 @@ intptr_t Array<T>::bSearchCase(const T & element) const
   return -1;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -428,52 +562,32 @@ uintptr_t Array<T>::bSearchCase(const T & element,intptr_t & c) const
   return pos;
 }
 //-----------------------------------------------------------------------------
-template<class T>
-#ifndef __BCPLUSPLUS__
-inline
-#endif
-Array<T> & Array<T>::remove(uintptr_t i)
-{
-  assert(i < count_);
-  Array<T> newArray;
-  newArray.ptr_ = (T *) kmalloc(sizeof(T) * (count_ - 1));
-  while( newArray.count_ < i ){
-    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_]);
-    newArray.count_++;
-  }
-  while( newArray.count_ + 1 < count_ ){
-    new (newArray.ptr_ + newArray.count_) T(ptr_[newArray.count_ + 1]);
-    newArray.count_++;
-  }
-  return replace(newArray);
-}
-//-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::setBit(uintptr_t n)
+template <typename T> inline
+Array<T> & Array<T>::setBit(uintptr_t n)
 {
   assert(n < count_ * 8);
   setBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::resetBit(uintptr_t n)
+template <typename T> inline
+Array<T> & Array<T>::resetBit(uintptr_t n)
 {
   assert(n < count_ * 8);
   resetBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::invertBit(uintptr_t n)
+template <typename T> inline
+Array<T> & Array<T>::invertBit(uintptr_t n)
 {
   assert(n < count_ * 8);
   invertBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-uintptr_t Array< T>::bit(uintptr_t n) const
+template <typename T> inline
+uintptr_t Array<T>::bit(uintptr_t n) const
 {
   assert(n < count_ * 8);
   return bit(ptr_, n);
@@ -481,32 +595,32 @@ uintptr_t Array< T>::bit(uintptr_t n) const
 //-----------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INTMAX_T
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::setBit(uintmax_t n)
+template <typename T> inline
+Array<T> & Array<T>::setBit(uintmax_t n)
 {
   assert(n < count_ * 8);
   setBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::resetBit(uintmax_t n)
+template <typename T> inline
+Array<T> & Array<T>::resetBit(uintmax_t n)
 {
   assert(n < count_ * 8);
   resetBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::invertBit(uintmax_t n)
+template <typename T> inline
+Array<T> & Array<T>::invertBit(uintmax_t n)
 {
   assert(n < count_ * 8);
   invertBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-uintptr_t Array< T>::bit(uintmax_t n) const
+template <typename T> inline
+uintptr_t Array<T>::bit(uintmax_t n) const
 {
   assert(n < count_ * 8);
   return bit(ptr_, n);
@@ -514,24 +628,24 @@ uintptr_t Array< T>::bit(uintmax_t n) const
 //-----------------------------------------------------------------------------
 #endif
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::setBitRange(uintptr_t n, uintptr_t c)
+template <typename T> inline
+Array<T> & Array<T>::setBitRange(uintptr_t n, uintptr_t c)
 {
   assert(n < count_ * 8 && n + c <= count_ * 8);
   setBitRange(ptr_, n, c);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::resetBitRange(uintptr_t n, uintptr_t c)
+template <typename T> inline
+Array<T> & Array<T>::resetBitRange(uintptr_t n, uintptr_t c)
 {
   assert(n < count_ * 8 && n + c <= count_ * 8);
   resetBitRange(ptr_, n, c);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-Array< T> & Array< T>::invertBitRange(uintptr_t n, uintptr_t c)
+template <typename T> inline
+Array<T> & Array<T>::invertBitRange(uintptr_t n, uintptr_t c)
 {
   assert(n < count_ * 8 && n + c <= count_ * 8);
   invertBitRange(ptr_, n, c);
@@ -561,7 +675,7 @@ ST & operator >> (ST & stream,Array<T> & array)
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
-/*template <class T> class SparseArray {
+/*template <typename T> class SparseArray {
   private:
   protected:
     T * ptr_;
@@ -593,7 +707,7 @@ ST & operator >> (ST & stream,Array<T> & array)
     SparseArray<T> & remove(long i);
 };
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 SparseArray<T> & SparseArray<T>::replace(SparseArray<T> & array)
 {
   clear();
@@ -604,7 +718,7 @@ SparseArray<T> & SparseArray<T>::replace(SparseArray<T> & array)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -617,24 +731,24 @@ SparseArray<T>::SparseArray(long count) : count_(0)
   }
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 SparseArray<T>::~SparseArray()
 {
   clear();
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 SparseArray<T>::SparseArray(T * ptr) : ptr_(ptr), count_(0)
 {
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 SparseArray<T>::SparseArray(const SparseArray<T> & array) : ptr_(NULL), count_(0)
 {
   *this = array;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -645,7 +759,7 @@ SparseArray<T> & SparseArray<T>::operator = (const SparseArray<T> & array)
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -655,27 +769,27 @@ SparseArray<T> & SparseArray<T>::operator = (const T & element)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T & SparseArray<T>::operator [] (long i)
 {
   assert( i >= 0 && i < count_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const T & SparseArray<T>::operator [] (long i) const
 {
   assert( i >= 0 && i < count_ );
   return ptr_[i];
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 const long & SparseArray<T>::count() const
 {
   return count_;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -690,19 +804,19 @@ SparseArray<T> & SparseArray<T>::clear()
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T * & SparseArray<T>::ptr()
 {
   return ptr_;
 }
 //-----------------------------------------------------------------------------
-template <class T> inline
+template <typename T> inline
 T * const & SparseArray<T>::ptr() const
 {
   return ptr_;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -714,7 +828,7 @@ SparseArray<T> & SparseArray<T>::resize(long newSize)
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -726,7 +840,7 @@ SparseArray<T> & SparseArray<T>::add(const T & element)
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -744,7 +858,7 @@ SparseArray<T> & SparseArray<T>::insert(long i,const T & element)
   return replace(newArray);
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -756,7 +870,7 @@ long SparseArray<T>::search(const T & element) const
   return i;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -778,7 +892,7 @@ long SparseArray<T>::bSearch(const T & element) const
   return -1;
 }
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif
@@ -806,7 +920,7 @@ long SparseArray<T>::bSearch(const T & element,long & c) const
 }
 
 //-----------------------------------------------------------------------------
-template <class T>
+template <typename T>
 #ifndef __BCPLUSPLUS__
 inline
 #endif

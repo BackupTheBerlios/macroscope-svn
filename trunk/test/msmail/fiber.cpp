@@ -350,7 +350,7 @@ void ServerFiber::sendMail() // client sending mail
     file.open();
     *this << file.size() >> remainder;
     file.seek(file.size());
-    AutoPtr<uint8_t> b;
+    AutoPtrBuffer b;
     size_t bl = getpagesize() * 16;
     b.alloc(bl);
     while( remainder > 0 ){
@@ -898,7 +898,7 @@ void MailQueueWalker::main()
           AsyncFile file;
           file.fileName(server_->mqueueDir() + *mId + ".msg").readOnly(true).open().seek(restFrom);
           *this << (remainder = file.size() - restFrom);
-          AutoPtr<uint8_t> b;
+          AutoPtrBuffer b;
           size_t bl = getpagesize() * 16;
           b.alloc(bl);
           while( remainder > 0 ){

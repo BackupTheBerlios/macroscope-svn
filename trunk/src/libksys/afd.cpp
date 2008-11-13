@@ -274,7 +274,7 @@ AsyncFile & AsyncFile::open()
       descriptor_ = openHelper();
     }
 #if defined(__WIN32__) || defined(__WIN64__)
-    if( fileName_.strncasecmp("COM",3) == 0 ){
+    if( fileName_.ncasecompare("COM",3) == 0 ){
       utf8::String::Iterator i(fileName_);
       i += 3;
       while( i.isDigit() ) i.next();
@@ -548,7 +548,7 @@ int64_t AsyncFile::write(uint64_t pos,const void * buf,uint64_t size)
 uint64_t AsyncFile::copy(AsyncFile & src,uint64_t size)
 {
   uint64_t pos = src.seekable_ ? src.tell() : 0;
-  AutoPtr<uint8_t> b((uint8_t *) kmalloc(getpagesize() * 16u));
+  AutoPtrBuffer b((uint8_t *) kmalloc(getpagesize() * 16u));
   if( size == 0 ) size = ~uint64_t(0);
   int64_t r, w = 0;
   while( size > 0 && (r = src.read(b,tmin(size,uint64_t(getpagesize() * 16u)))) > 0 ){
@@ -1030,7 +1030,7 @@ AsyncFile & AsyncFile::seek(uint64_t pos)
   return *this;
 }
 //---------------------------------------------------------------------------
-uintptr_t AsyncFile::gets(AutoPtr<char> & p,bool * eof)
+uintptr_t AsyncFile::gets(AutoPtr<char,AutoPtrMemoryDestructor> & p,bool * eof)
 {
   uint64_t op = tell();
   int64_t r, rr, l = 0;
@@ -1062,7 +1062,7 @@ bool AsyncFile::gets(utf8::String & str,LineGetBuffer * buffer)
 {
   int64_t r;
   bool eof = false;
-  AutoPtr<char> s;
+  AutoPtr<char,AutoPtrMemoryDestructor> s;
   if( buffer == NULL ){
     uint64_t op = tell();
     int64_t rr, l = 0;
@@ -1154,7 +1154,7 @@ l1:
         int32_t err = errno;
         newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
-      AutoPtr<char> s2;
+      AutoPtr<char,AutoPtrMemoryDestructor> s2;
       s2.alloc(sl + 1);
       sl = utf8::mbcs2utf8s(buffer->codePage_,s2,sl + 1,s,~uintptr_t(0) >> 1);
       s2.xchg(s);
@@ -1246,7 +1246,7 @@ AsyncFile & AsyncFile::operator << (const utf8::String & s)
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     if( codePage_ == CP_UNICODE ) l *= sizeof(wchar_t);
-    AutoPtr<uint8_t> buf((uint8_t *) kmalloc(l));
+    AutoPtrBuffer buf((uint8_t *) kmalloc(l));
     utf8::utf8s2mbcs(codePage_,(char *) buf.ptr(),l,s.c_str(),~uintptr_t(0) >> 1);
     writeBuffer(buf,l);
   }
@@ -1398,17 +1398,17 @@ bool AsyncFile::redirectByName()
 {
   bool r = true;
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( fileName_.strcasecmp("stdin") == 0 ) redirectToStdin();
+  if( fileName_.casecompare("stdin") == 0 ) redirectToStdin();
   else
-  if( fileName_.strcasecmp("stdout") == 0 ) redirectToStdout();
+  if( fileName_.casecompare("stdout") == 0 ) redirectToStdout();
   else
-  if( fileName_.strcasecmp("stderr") == 0 ) redirectToStderr();
+  if( fileName_.casecompare("stderr") == 0 ) redirectToStderr();
 #else
-  if( fileName_.strcmp("stdin") == 0 ) redirectToStdin();
+  if( fileName_.compare("stdin") == 0 ) redirectToStdin();
   else
-  if( fileName_.strcmp("stdout") == 0 ) redirectToStdout();
+  if( fileName_.compare("stdout") == 0 ) redirectToStdout();
   else
-  if( fileName_.strcmp("stderr") == 0 ) redirectToStderr();
+  if( fileName_.compare("stderr") == 0 ) redirectToStderr();
 #endif
   else
     r = false;

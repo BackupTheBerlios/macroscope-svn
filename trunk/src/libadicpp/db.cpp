@@ -35,7 +35,7 @@ Database * Database::newDatabase(const ksys::ConfigSection * config)
   utf8::String stype0(config->valueByPath("server_type","MYSQL"));
   utf8::String stype(stype0.lower());
   utf8::String section(stype);
-  if( stype.strcmp("firebird") == 0 ){
+  if( stype.compare("firebird") == 0 ){
     fbcpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
     ksys::AutoPtr<FirebirdDatabase> p(newObject<FirebirdDatabase>());
     p->name(config->valueByPath(section + ".database"));
@@ -48,7 +48,7 @@ Database * Database::newDatabase(const ksys::ConfigSection * config)
     p->params().add("lc_messages",config->valueByPath(section + ".messages_charset","WIN1251"));
     return p.ptr(NULL);
   }
-  else if( stype.strcmp("mysql") == 0 ){
+  else if( stype.compare("mysql") == 0 ){
     mycpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
     ksys::AutoPtr<MYSQLDatabase> p(newObject<MYSQLDatabase>());
     p->name(config->valueByPath(section + ".database"));
@@ -62,7 +62,7 @@ Database * Database::newDatabase(const ksys::ConfigSection * config)
     p->params().add("compress",config->valueByPath(section + ".compress",false));
     return p.ptr(NULL);
   }
-  else if( stype.strcmp("odbc") == 0 ){
+  else if( stype.compare("odbc") == 0 ){
     odbcpp::api.clientLibrary(config->valueByPath(section + ".client_library"));
     ksys::AutoPtr<ODBCDatabase> p(newObject<ODBCDatabase>());
     p->connection(config->valueByPath(section + ".connection"));

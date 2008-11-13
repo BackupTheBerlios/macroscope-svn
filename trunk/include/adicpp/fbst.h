@@ -147,7 +147,7 @@ class DSQLParam {
       return object.name_.hash(false);
     }
     static bool keyHashNodeEqu(const DSQLParam & object1,const DSQLParam & object2){
-      return object1.name_.strcasecmp(object2.name_) == 0;
+      return object1.name_.casecompare(object2.name_) == 0;
     }
     mutable ksys::EmbeddedHashNode<DSQLParam,uintptr_t> keyNode_;
     DSQLStatement * statement_;
@@ -982,7 +982,7 @@ enum Stmt {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class DSQLStatement {
+class DSQLStatement : virtual public ksys::Object {
   friend class Database;
   friend class Transaction;
   friend class DSQLParam;
@@ -994,7 +994,7 @@ class DSQLStatement {
     virtual ~DSQLStatement();
     DSQLStatement();
 
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { detach(); }
 
     DSQLStatement &   attach(Database & database, Transaction & transaction);
     DSQLStatement &   detach();

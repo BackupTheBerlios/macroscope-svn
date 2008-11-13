@@ -33,12 +33,13 @@ namespace adicpp {
 //---------------------------------------------------------------------------
 class Statement;
 //---------------------------------------------------------------------------
-class Database : public ksys::Object {
+class Database : virtual public ksys::Object {
   public:
     virtual ~Database() {}
     Database() {}
 
-    //void beforeDestruction() { detach(); }
+    
+    void beforeDestruction() { detach(); }
 
     static Database *     newDatabase(const ksys::ConfigSection * config);
 
@@ -94,7 +95,7 @@ class FirebirdDatabase : public Database, public fbcpp::Database, public fbcpp::
     virtual ~FirebirdDatabase();
     FirebirdDatabase();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Statement *         newStatement();
     Statement *         newAttachedStatement();
@@ -130,7 +131,7 @@ class MYSQLDatabase : public Database, public mycpp::Database, public mycpp::Tra
     virtual ~MYSQLDatabase();
     MYSQLDatabase();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Statement *     newStatement();
     Statement *     newAttachedStatement();
@@ -166,7 +167,7 @@ class ODBCDatabase : public Database, public odbcpp::Database, public odbcpp::Tr
     virtual ~ODBCDatabase();
     ODBCDatabase();
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     Statement *     newStatement();
     Statement *     newAttachedStatement();

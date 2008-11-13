@@ -436,11 +436,6 @@ inline void reverseByteArray(void * dst,const void * src,uintptr_t size)
   }
 }
 //---------------------------------------------------------------------------
-inline uintptr_t strlen(const char * s)
-{
-  return (uintptr_t) ::strlen(s);
-}
-//---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------
 extern "C" {

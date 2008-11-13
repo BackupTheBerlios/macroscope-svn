@@ -217,7 +217,7 @@ SockAddr & SockAddr::resolveName(const utf8::String & addr,const ksys::Mutant & 
       if( pi.position() < 0 ) pi.last();
       utf8::String host(utf8::String::Iterator(addr), pi);
       utf8::String port(pi + 1);
-      if( port.trim().strlen() == 0 ) port = defPort;
+      if( port.trim().isNull() ) port = defPort;
       host = host.trim();
       port = port.trim();
       ksock::APIAutoInitializer ksockAPIAutoInitializer;
@@ -420,26 +420,25 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
 }
 //------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
+void SockAddr::getAdaptersAddresses(ksys::Array<IpInfo> & addresses)
 {
   DWORD dwRetVal;
-  ULONG outBufLen, len = (ULONG) getpagesize();
-  addresses.realloc(len);
+  ULONG outBufLen;
+  addresses.resize((ULONG) getpagesize() * 16u / sizeof(IpInfo));
   if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
     for(;;){
-      outBufLen = len;
+      outBufLen = addresses.count() * sizeof(IpInfo);
       dwRetVal = iphlpapi.GetAdaptersAddresses(
         AF_UNSPEC,
         0, 
         NULL, 
-        &addresses->addresses_,
+        &addresses[0].addresses_,
         &outBufLen
       );
       if( dwRetVal == ERROR_SUCCESS ) break;
       if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
-        if( len < (ULONG(1) << (sizeof(ULONG) * CHAR_BIT - 1)) ){
-          len = len << 1;
-          addresses.realloc(len);
+        if( addresses.count() * sizeof(IpInfo) < (ULONG(1) << (sizeof(ULONG) * CHAR_BIT - 1)) ){
+          addresses.resize(addresses.count() << 1);
           continue;
         }
       }
@@ -448,13 +447,12 @@ void SockAddr::getAdaptersAddresses(ksys::AutoPtr<IpInfo> & addresses)
   }
   else {
     for(;;){
-      outBufLen = len;
-      dwRetVal = iphlpapi.GetAdaptersInfo(&addresses->infos_,&outBufLen);
+      outBufLen = addresses.count() * sizeof(IpInfo);
+      dwRetVal = iphlpapi.GetAdaptersInfo(&addresses[0].infos_,&outBufLen);
       if( dwRetVal == ERROR_SUCCESS ) break;
       if( dwRetVal == ERROR_BUFFER_OVERFLOW ){
-        if( len < (ULONG(1) << (sizeof(ULONG) * CHAR_BIT - 1)) ){
-          len = len << 1;
-          addresses.realloc(len);
+        if( addresses.count() * sizeof(IpInfo) < (ULONG(1) << (sizeof(ULONG) * CHAR_BIT - 1)) ){
+          addresses.resize(addresses.count() << 1);
           continue;
         }
       }
@@ -471,10 +469,10 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
   utf8::String s;
   APIAutoInitializer ksockAPIAutoInitializer;
 #if defined(__WIN32__) || defined(__WIN64__)
-  ksys::AutoPtr<IpInfo> addresses;
+  ksys::Array<IpInfo> addresses;
   getAdaptersAddresses(addresses);
   if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
-    IP_ADAPTER_ADDRESSES * pAddress = &addresses->addresses_;
+    IP_ADAPTER_ADDRESSES * pAddress = &addresses[0].addresses_;
     while( pAddress != NULL ){
 // exclude loopback interface
       if( pAddress->IfType == MIB_IF_TYPE_LOOPBACK ) continue;
@@ -510,7 +508,7 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
     }
   }
   else {
-    IP_ADAPTER_INFO * pAddress = &addresses->infos_;
+    IP_ADAPTER_INFO * pAddress = &addresses[0].infos_;
     while( pAddress != NULL ){
       if( pAddress->Type == MIB_IF_TYPE_LOOPBACK ) continue;
       PIP_ADDR_STRING list = &pAddress->IpAddressList;
@@ -530,7 +528,7 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
     }
   }
 #endif
-  if( s.strlen() == 0 ){
+  if( s.isNull() ){
     while( api.gethostname(s.c_str(),(socklen_t) s.size()) != 0 ){
 #if defined(__WIN32__) || defined(__WIN64__)
       if( (err = errNo()) != WSAEFAULT ) break;
@@ -579,7 +577,7 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
 //------------------------------------------------------------------------------
 utf8::String SockAddr::addr2Index(const struct in_addr & addr)
 {
-  ksys::AutoPtr<char> b;
+  ksys::AutoPtr<char,AutoPtrMemoryDestructor> b;
   b.alloc(sizeof(addr.s_addr) * 2 + 1);
   const uint8_t * ip = (const uint8_t *) &addr;
   uintptr_t i;
@@ -593,7 +591,7 @@ utf8::String SockAddr::addr2Index(const struct in_addr & addr)
 //------------------------------------------------------------------------------
 utf8::String SockAddr::addr2Index(const struct in6_addr & addr)
 {
-  ksys::AutoPtr<char> b;
+  ksys::AutoPtr<char,AutoPtrMemoryDestructor> b;
   b.alloc(sizeof(addr) * 2 + 1);
   const uint8_t * ip = (const uint8_t *) &addr;
   uintptr_t i;
@@ -1146,7 +1144,7 @@ utf8::String SockAddr::protoAsString(uintptr_t proto)
 uintptr_t SockAddr::stringAsProto(const utf8::String & proto)
 {
   for( intptr_t i = sizeof(protos) / sizeof(protos[0]) - 1; i >= 0; i-- )
-    if( proto.strcasecmp(protos[i].name_) == 0 ) return protos[i].proto_;
+    if( proto.casecompare(protos[i].name_) == 0 ) return protos[i].proto_;
   return (uintptr_t) utf8::str2Int(proto);
 }
 //------------------------------------------------------------------------------

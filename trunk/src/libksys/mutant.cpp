@@ -70,17 +70,17 @@ bool Mutant::isBooleanString(const utf8::String & string, bool & value)
 {
   bool  r, a1, a2;
   a1 =
-    string.strcasecmp("TRUE") == 0 || string.strcasecmp("YES") == 0 ||
-    string.strcasecmp("ON") == 0 || string.strcasecmp("ACCEPT") == 0 ||
-    string.strcasecmp("PASS") == 0 || string.strcasecmp("PERMIT") == 0 ||
-    string.strcasecmp("ALLOW") == 0 || string.strcasecmp("ALLOWED") == 0 ||
-    string.strcasecmp("ENABLE") == 0 || string.strcasecmp("ENABLED") == 0
+    string.casecompare("TRUE") == 0 || string.casecompare("YES") == 0 ||
+    string.casecompare("ON") == 0 || string.casecompare("ACCEPT") == 0 ||
+    string.casecompare("PASS") == 0 || string.casecompare("PERMIT") == 0 ||
+    string.casecompare("ALLOW") == 0 || string.casecompare("ALLOWED") == 0 ||
+    string.casecompare("ENABLE") == 0 || string.casecompare("ENABLED") == 0
   ;
   a2 =
-      string.strcasecmp("FALSE") == 0 || string.strcasecmp("NO") == 0 ||
-      string.strcasecmp("OFF") == 0 || string.strcasecmp("DENY") == 0 ||
-      string.strcasecmp("DENIED") == 0 || string.strcasecmp("DISABLE") == 0 ||
-      string.strcasecmp("DISABLED") == 0
+      string.casecompare("FALSE") == 0 || string.casecompare("NO") == 0 ||
+      string.casecompare("OFF") == 0 || string.casecompare("DENY") == 0 ||
+      string.casecompare("DENIED") == 0 || string.casecompare("DISABLE") == 0 ||
+      string.casecompare("DISABLED") == 0
   ;
   r = a1 || a2;
   value = a1 ? true : a2 ? false : false;
@@ -998,10 +998,10 @@ bool Mutant::operator == (const Mutant & m) const
       case mtInt    : r = int_ == m.int_; break;
       case mtFloat  : r = float_ == m.float_; break;
       case mtTime   : r = int_ == m.int_; break;
-      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) == 0; break;
-      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) == 0; break;
-      case mtStr    : r = strcmp(str_,str_) == 0; break;
-      case mtString : r = string().strcmp(m.string()) == 0; break;
+      case mtCStr   : r = utf8::String(cStr_).compare(m.cStr_) == 0; break;
+      case mtWStr   : r = utf8::String(cStr_).compare(m.wStr_) == 0; break;
+      case mtStr    : r = strcmp(str_,m.str_) == 0; break;
+      case mtString : r = string().compare(m.string()) == 0; break;
       case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) == 0; break;
       default       :
         newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -1019,10 +1019,10 @@ bool Mutant::operator != (const Mutant & m) const
       case mtInt    : r = int_ != m.int_; break;
       case mtFloat  : r = float_ != m.float_; break;
       case mtTime   : r = int_ != m.int_; break;
-      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) != 0; break;
-      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) != 0; break;
-      case mtStr    : r = strcmp(str_,str_) != 0; break;
-      case mtString : r = string().strcmp(m.string()) != 0; break;
+      case mtCStr   : r = utf8::String(cStr_).compare(m.cStr_) != 0; break;
+      case mtWStr   : r = utf8::String(cStr_).compare(m.wStr_) != 0; break;
+      case mtStr    : r = strcmp(str_,m.str_) != 0; break;
+      case mtString : r = string().compare(m.string()) != 0; break;
       case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) != 0; break;
       default       :
         newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -1040,10 +1040,10 @@ bool Mutant::operator >  (const Mutant & m) const
       case mtInt    : r = int_ > m.int_; break;
       case mtFloat  : r = float_ > m.float_; break;
       case mtTime   : r = int_ > m.int_; break;
-      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) > 0; break;
-      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) > 0; break;
-      case mtStr    : r = strcmp(str_,str_) > 0; break;
-      case mtString : r = string().strcmp(m.string()) > 0; break;
+      case mtCStr   : r = utf8::String(cStr_).compare(m.cStr_) > 0; break;
+      case mtWStr   : r = utf8::String(cStr_).compare(m.wStr_) > 0; break;
+      case mtStr    : r = strcmp(str_,m.str_) > 0; break;
+      case mtString : r = string().compare(m.string()) > 0; break;
       case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) > 0; break;
       default       :
         newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -1061,10 +1061,10 @@ bool Mutant::operator >= (const Mutant & m) const
       case mtInt    : r = int_ >= m.int_; break;
       case mtFloat  : r = float_ >= m.float_; break;
       case mtTime   : r = int_ >= m.int_; break;
-      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) >= 0; break;
-      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) >= 0; break;
-      case mtStr    : r = strcmp(str_,str_) >= 0; break;
-      case mtString : r = string().strcmp(m.string()) >= 0; break;
+      case mtCStr   : r = utf8::String(cStr_).compare(m.cStr_) >= 0; break;
+      case mtWStr   : r = utf8::String(cStr_).compare(m.wStr_) >= 0; break;
+      case mtStr    : r = strcmp(str_,m.str_) >= 0; break;
+      case mtString : r = string().compare(m.string()) >= 0; break;
       case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) >= 0; break;
       default       :
         newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -1082,10 +1082,10 @@ bool Mutant::operator <  (const Mutant & m) const
       case mtInt    : r = int_ < m.int_; break;
       case mtFloat  : r = float_ < m.float_; break;
       case mtTime   : r = int_ < m.int_; break;
-      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) < 0; break;
-      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) < 0; break;
-      case mtStr    : r = strcmp(str_,str_) < 0; break;
-      case mtString : r = string().strcmp(m.string()) < 0; break;
+      case mtCStr   : r = utf8::String(cStr_).compare(m.cStr_) < 0; break;
+      case mtWStr   : r = utf8::String(cStr_).compare(m.wStr_) < 0; break;
+      case mtStr    : r = strcmp(str_,m.str_) < 0; break;
+      case mtString : r = string().compare(m.string()) < 0; break;
       case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) < 0; break;
       default       :
         newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -1103,10 +1103,10 @@ bool Mutant::operator <= (const Mutant & m) const
       case mtInt    : r = int_ <= m.int_; break;
       case mtFloat  : r = float_ <= m.float_; break;
       case mtTime   : r = int_ <= m.int_; break;
-      case mtCStr   : r = utf8::String(cStr_).strcmp(m.cStr_) <= 0; break;
-      case mtWStr   : r = utf8::String(cStr_).strcmp(m.wStr_) <= 0; break;
-      case mtStr    : r = strcmp(str_,str_) <= 0; break;
-      case mtString : r = string().strcmp(m.string()) <= 0; break;
+      case mtCStr   : r = utf8::String(cStr_).compare(m.cStr_) <= 0; break;
+      case mtWStr   : r = utf8::String(cStr_).compare(m.wStr_) <= 0; break;
+      case mtStr    : r = strcmp(str_,m.str_) <= 0; break;
+      case mtString : r = string().compare(m.string()) <= 0; break;
       case mtBinary : r = memncmp(stream().raw(),stream().count(),m.stream().raw(),m.stream().count()) <= 0; break;
       default       :
         newObjectV1C2<EMutant>(EINVAL,__PRETTY_FUNCTION__)->throwSP();

@@ -128,7 +128,7 @@ Database & Database::attach(const utf8::String & name)
       /*r = api.SQLSetConnectAttr(handle_,SQL_LOGIN_TIMEOUT,(SQLPOINTER) 5,0);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
         exceptionHandler(exception(SQL_HANDLE_DBC,handle_));*/
-      ksys::AutoPtr<SQLWCHAR> connOut;
+      ksys::AutoPtr<SQLWCHAR,AutoPtrMemoryDestructor> connOut;
       connOut.alloc(sizeof(SQLWCHAR) * SQLSMALLINT((1u << (sizeof(SQLSMALLINT) * 8 - 1)) - 1));
       SQLSMALLINT cbConnStrOut = 0;
       r = api.SQLBrowseConnectW(
@@ -214,7 +214,7 @@ void Database::exceptionHandler(ksys::Exception * e)
 //---------------------------------------------------------------------------
 Database & Database::connection(const utf8::String & connection)
 {
-  if( connection_.strcasecmp(connection) != 0 ){
+  if( connection_.casecompare(connection) != 0 ){
     if( attached() ) detach();
     connection_ = connection;
   }

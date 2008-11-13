@@ -284,27 +284,17 @@ int gettimeofday(struct timeval * tvp, struct timezone * tzp)
     FILETIME st;
     ULARGE_INTEGER sti;
   };
-/*  union {
-    FILETIME st2;
-    ULARGE_INTEGER st2i;
-  };*/
   GetSystemTimeAsFileTime(&st);
-//  FileTimeToLocalFileTime(&st,&st2);
-
-  /*time_t tt, tt2;
-  tt2 = time(&tt);
-  ULARGE_INTEGER v;
-  v.QuadPart = sti.QuadPart / 10000000u - tt;*/
 
   sti.QuadPart -= UINT64_C(11644473600) * 10000000u; // January 1, 1970 (UTC) - January 1, 1601 (UTC)
-//  st2i.QuadPart -= UINT64_C(11644473600) * 10000000u; // January 1, 1970 (UTC) - January 1, 1601 (UTC)
   if( ksys::sizeOf_timeval_tv_sec == 4 ){
     *(uint32_t *) &tvp->tv_sec = (uint32_t) (sti.QuadPart / 10000000u);
+    tvp->tv_usec = (unsigned long) (sti.QuadPart - *(uint32_t *) &tvp->tv_sec * UINT64_C(10000000)) / 10u;
   }
   if( ksys::sizeOf_timeval_tv_sec == 8 ){
     *(uint64_t *) &tvp->tv_sec = (uint64_t) (sti.QuadPart / 10000000u);
+    tvp->tv_usec = (unsigned long) (sti.QuadPart - *(uint64_t *) &tvp->tv_sec * UINT64_C(10000000)) / 10u;
   }
-  tvp->tv_usec = long((sti.QuadPart % 10000000u) / 10u);
   if( tzp != NULL ){
     struct _timeb tb;
     _ftime(&tb);

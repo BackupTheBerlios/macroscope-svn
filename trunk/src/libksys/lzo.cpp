@@ -71,7 +71,7 @@ void LZO1X::initialize()
 #pragma option push -w-8013 -w-8004
 #endif
 //---------------------------------------------------------------------------
-LZO1X & LZO1X::compress(AutoPtr<uint8_t> & buf,uint8_t * & p,int32_t & len)
+LZO1X & LZO1X::compress(AutoPtrBuffer & buf,uint8_t * & p,int32_t & len)
 {
   int r = 0;
   lzo_uint dst_len = 0;
@@ -174,7 +174,7 @@ l1: ((int32_t *) wBuf_.ptr())[0] = -int32_t(wBufPos_);
 #pragma option pop
 #endif
 //---------------------------------------------------------------------------
-LZO1X & LZO1X::decompress(AutoPtr<uint8_t> & buf)
+LZO1X & LZO1X::decompress(AutoPtrBuffer & buf)
 {
   union {
     int32_t * i32;

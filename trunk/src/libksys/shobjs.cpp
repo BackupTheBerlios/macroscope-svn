@@ -621,7 +621,7 @@ SharedMemory::SharedMemory(const utf8::String & name, uintptr_t length, const vo
   if( memory_ == MAP_FAILED )
     goto l1;
 #elif defined(__WIN32__) || defined(__WIN64__)
-  if( name.strlen() > 0 ){
+  if( !name.isNull() ){
     if( isWin9x() ){
       file_ = CreateFileA(name.strstr(pathDelimiterStr).position() == 0 ? name.getANSIString() : (getTempPath() + name).getANSIString(), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE, NULL);
     }
@@ -697,8 +697,8 @@ SharedMemoryQueue::SharedMemoryQueue(const utf8::String & name, uintptr_t length
     wrQueueRDLockedV_(false),
     wrQueueWRLockedV_(false)
 {
-  assert(name.strlen() > 0);
-  assert(length_ >= sizeof(Queue) * 2 + 2 && (length_ & 1) == 0);
+  assert( !name.isNull() );
+  assert( length_ >= sizeof(Queue) * 2 + 2 && (length_ & 1) == 0 );
   rdQueue_ = (Queue *) memory_;
   wrQueue_ = (Queue *) (u8_ + length_ / 2);
   rdQueueRDLock_ = &rdQueueRDLockObject_;

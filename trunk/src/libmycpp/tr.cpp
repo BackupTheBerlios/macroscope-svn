@@ -62,13 +62,13 @@ Transaction & Transaction::start()
     newObjectV1C2<ETrNotAttached>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   if( startCount_ == 0 ){
     utf8::String trSQL("SET SESSION TRANSACTION ISOLATION LEVEL ");
-    if( isolation_.strcasecmp("REPEATABLE") == 0 )
+    if( isolation_.casecompare("REPEATABLE") == 0 )
       trSQL += "REPEATABLE READ";
-    else if( isolation_.strcasecmp("READ_COMMITTED") == 0 )
+    else if( isolation_.casecompare("READ_COMMITTED") == 0 )
       trSQL += "READ COMMITTED";
-    else if( isolation_.strcasecmp("SERIALIZABLE") == 0 )
+    else if( isolation_.casecompare("SERIALIZABLE") == 0 )
       trSQL += "SERIALIZABLE";
-//    else if( isolation_.strcasecmp("SNAPSHOT") == 0 )
+//    else if( isolation_.casecompare("SNAPSHOT") == 0 )
 //      trSQL += " WITH CONSISTENT SNAPSHOT";
     else
       trSQL += "READ COMMITTED";

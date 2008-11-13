@@ -1790,7 +1790,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
             if( SUCCEEDED(hr) ){
               if( V_VT(pv0) != VT_BSTR ) hr = VariantChangeTypeEx(pv0,pv0,0,0,VT_BSTR);
               if( SUCCEEDED(hr) ){
-                AutoPtr<uint8_t> buffer;
+                AutoPtrBuffer buffer;
                 Stat st;
                 if( stat(V_BSTR(pv0),st) ){
                   buffer.alloc((size_t) st.st_size);
@@ -1821,7 +1821,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                 if( SUCCEEDED(hr) ){
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
-                    AutoPtr<uint8_t> buffer;
+                    AutoPtrBuffer buffer;
                     uintptr_t fsize = base64Decode(V_BSTR(pv0),buffer,0);
                     buffer.alloc(fsize);
                     base64Decode(V_BSTR(pv0),buffer,fsize);

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,13 +29,9 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
-void * kmalloc(size_t size,bool noThrow);
-void * krealloc(void * p,size_t size,bool noThrow);
-void kfree(void * p);
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template< class T> class AutoPtr {
+template <typename T,class D = AutoPtrClassDestructor<T> > class AutoPtr {
   public:
     AutoPtr(T * ptr = NULL);
     ~AutoPtr();
@@ -59,297 +55,299 @@ template< class T> class AutoPtr {
     operator T & ();
     operator const T & () const;
 
-    AutoPtr<T> & operator = (T * ptr);
+    AutoPtr<T,D> & operator = (T * ptr);
 
     bool            operator ==(const T * ptr) const;
-    bool            operator ==(const AutoPtr< T> & ptr) const;
+    bool            operator ==(const AutoPtr<T,D> & ptr) const;
     bool            operator !=(const T * ptr) const;
-    bool            operator !=(const AutoPtr< T> & ptr) const;
+    bool            operator !=(const AutoPtr<T,D> & ptr) const;
 
     T * ptr(T * ptr) const;
     T * & ptr() const;
-    AutoPtr<T> & xchg(AutoPtr<T> & ptr);
+    AutoPtr<T,D> & xchg(AutoPtr<T,D> & ptr);
 
-    AutoPtr< T> &   alloc(size_t size);
-    AutoPtr< T> &   realloc(size_t size);
-    AutoPtr<T> &    reallocT(uintptr_t count){ return realloc(count * sizeof(T)); }
+    AutoPtr<T,D> & alloc(size_t size);
+    AutoPtr<T,D> & realloc(size_t size);
+    AutoPtr<T,D> & reallocT(uintptr_t count){ return realloc(count * sizeof(T)); }
     T * realloc(size_t size,int);
-    AutoPtr< T> &   free();
+    AutoPtr<T,D> & free();
 
-    AutoPtr< T> &   setBit(uintptr_t n);
-    AutoPtr< T> &   resetBit(uintptr_t n);
-    AutoPtr< T> &   invertBit(uintptr_t n);
-    uintptr_t       bit(uintptr_t n) const;
+    AutoPtr<T,D> & setBit(uintptr_t n);
+    AutoPtr<T,D> & resetBit(uintptr_t n);
+    AutoPtr<T,D> & invertBit(uintptr_t n);
+    uintptr_t bit(uintptr_t n) const;
 #if !HAVE_INTPTR_T_AS_INTMAX_T
-    AutoPtr< T> &   setBit(uintmax_t n);
-    AutoPtr< T> &   resetBit(uintmax_t n);
-    AutoPtr< T> &   invertBit(uintmax_t n);
-    uintptr_t       bit(uintmax_t n) const;
+    AutoPtr<T,D> & setBit(uintmax_t n);
+    AutoPtr<T,D> & resetBit(uintmax_t n);
+    AutoPtr<T,D> & invertBit(uintmax_t n);
+    uintptr_t bit(uintmax_t n) const;
 #endif
-    AutoPtr< T> &   setBitRange(uintptr_t n, uintptr_t c);
-    AutoPtr< T> &   resetBitRange(uintptr_t n, uintptr_t c);
-    AutoPtr< T> &   invertBitRange(uintptr_t n, uintptr_t c);
+    AutoPtr<T,D> & setBitRange(uintptr_t n, uintptr_t c);
+    AutoPtr<T,D> & resetBitRange(uintptr_t n, uintptr_t c);
+    AutoPtr<T,D> & invertBitRange(uintptr_t n, uintptr_t c);
   protected:
   private:
     mutable T * ptr_;
 };
 //---------------------------------------------------------------------------
-template< class T> inline AutoPtr< T>::~AutoPtr()
+template <typename T,class D> inline AutoPtr<T,D>::~AutoPtr()
 {
-  deleteObject(ptr_);
+  D::destroyObject(ptr_);
 }
 //---------------------------------------------------------------------------
-template< class T> inline AutoPtr< T>::AutoPtr(T * ptr) : ptr_(ptr)
+template <typename T,class D> inline AutoPtr<T,D>::AutoPtr(T * ptr) : ptr_(ptr)
 {
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T * AutoPtr<T>::operator ->()
+template <typename T,class D> inline
+T * AutoPtr<T,D>::operator ->()
 {
   return ptr_;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T * AutoPtr<T>::operator ->() const
+template <typename T,class D> inline
+T * AutoPtr<T,D>::operator ->() const
 {
   return ptr_;
 }
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT
 //---------------------------------------------------------------------------
-template< class T> inline
-T & AutoPtr<T>::operator[](int i)
+template <typename T,class D> inline
+T & AutoPtr<T,D>::operator[](int i)
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-const T & AutoPtr<T>::operator[](int i) const
+template <typename T,class D> inline
+const T & AutoPtr<T,D>::operator[](int i) const
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T & AutoPtr<T>::operator[](unsigned int i)
+template <typename T,class D> inline
+T & AutoPtr<T,D>::operator[](unsigned int i)
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-const T & AutoPtr<T>::operator[](unsigned int i) const
+template <typename T,class D> inline
+const T & AutoPtr<T,D>::operator[](unsigned int i) const
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-template< class T> inline
-T & AutoPtr<T>::operator[](intptr_t i)
+template <typename T,class D> inline
+T & AutoPtr<T,D>::operator[](intptr_t i)
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-const T & AutoPtr<T>::operator[](intptr_t i) const
+template <typename T,class D> inline
+const T & AutoPtr<T,D>::operator[](intptr_t i) const
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T & AutoPtr<T>::operator[](uintptr_t i)
+template <typename T,class D> inline
+T & AutoPtr<T,D>::operator[](uintptr_t i)
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-const T & AutoPtr<T>::operator[](uintptr_t i) const
+template <typename T,class D> inline
+const T & AutoPtr<T,D>::operator[](uintptr_t i) const
 {
   return ptr_[i];
 }
 //---------------------------------------------------------------------------
-template <class T> inline AutoPtr<T>::operator T * & ()
+template <typename T,class D> inline AutoPtr<T,D>::operator T * & ()
 {
   return ptr_;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
-AutoPtr<T>::operator T * const & () const
+template <typename T,class D> inline
+AutoPtr<T,D>::operator T * const & () const
 {
   return ptr_;
 }
 //---------------------------------------------------------------------------
-template <class T> inline AutoPtr<T>::operator T & ()
+template <typename T,class D> inline AutoPtr<T,D>::operator T & ()
 {
   return *ptr_;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
-AutoPtr<T>::operator const T & () const
+template <typename T,class D> inline
+AutoPtr<T,D>::operator const T & () const
 {
   return *ptr_;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
-bool AutoPtr<T>::operator == (const T * ptr) const
+template <typename T,class D> inline
+bool AutoPtr<T,D>::operator == (const T * ptr) const
 {
   return ptr_ == ptr;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool AutoPtr<T>::operator ==(const AutoPtr< T> & ptr) const
+template <typename T,class D> inline
+bool AutoPtr<T,D>::operator ==(const AutoPtr<T,D> & ptr) const
 {
   return ptr_ == ptr.ptr_;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool AutoPtr<T>::operator !=(const T * ptr) const
+template <typename T,class D> inline
+bool AutoPtr<T,D>::operator !=(const T * ptr) const
 {
   return ptr_ != ptr;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-bool AutoPtr<T>::operator !=(const AutoPtr< T> & ptr) const
+template <typename T,class D> inline
+bool AutoPtr<T,D>::operator !=(const AutoPtr<T,D> & ptr) const
 {
   return ptr_ != ptr.ptr_;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr<T>::operator = (T * ptr)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::operator = (T * ptr)
 {
-  deleteObject(ptr_);
+  D::destroyObject(ptr_);
   ptr_ = ptr;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T * AutoPtr<T>::ptr(T * ptr) const
+template <typename T,class D> inline
+T * AutoPtr<T,D>::ptr(T * ptr) const
 {
   ksys::xchg(ptr_, ptr);
   return ptr;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T * & AutoPtr< T>::ptr() const
+template <typename T,class D> inline
+T * & AutoPtr<T,D>::ptr() const
 {
   return ptr_;
 }
 //---------------------------------------------------------------------------
-template <class T> inline
-AutoPtr<T> & AutoPtr< T>::xchg(AutoPtr<T> & ptr)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::xchg(AutoPtr<T,D> & ptr)
 {
   ksys::xchg(ptr_,ptr.ptr_);
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::alloc(size_t size)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::alloc(size_t size)
 {
   assert(ptr_ == NULL);
   ptr_ = (T *) kmalloc(size);
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::realloc(size_t size)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::realloc(size_t size)
 {
   ptr_ = (T *) krealloc(ptr_,size);
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-T * AutoPtr<T>::realloc(size_t size,int)
+template <typename T,class D> inline
+T * AutoPtr<T,D>::realloc(size_t size,int)
 {
   T * p = (T *) ::realloc(ptr_,size);
   if( p != NULL || size == 0 ) ptr_ = p;
   return p;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::free()
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::free()
 {
   kfree(ptr_);
   ptr_ = NULL;
   return *this;
 }
 //---------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::setBit(uintptr_t n)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::setBit(uintptr_t n)
 {
   setBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::resetBit(uintptr_t n)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::resetBit(uintptr_t n)
 {
   resetBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::invertBit(uintptr_t n)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::invertBit(uintptr_t n)
 {
   invertBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-uintptr_t AutoPtr< T>::bit(uintptr_t n) const
+template <typename T,class D> inline
+uintptr_t AutoPtr<T,D>::bit(uintptr_t n) const
 {
   return bit(ptr_, n);
 }
 //-----------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INTMAX_T
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::setBit(uintmax_t n)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::setBit(uintmax_t n)
 {
   setBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::resetBit(uintmax_t n)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::resetBit(uintmax_t n)
 {
   resetBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::invertBit(uintmax_t n)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::invertBit(uintmax_t n)
 {
   invertBit(ptr_, n);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-uintptr_t AutoPtr< T>::bit(uintmax_t n) const
+template <typename T,class D> inline
+uintptr_t AutoPtr<T,D>::bit(uintmax_t n) const
 {
   return bit(ptr_, n);
 }
 //-----------------------------------------------------------------------------
 #endif
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::setBitRange(uintptr_t n, uintptr_t c)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::setBitRange(uintptr_t n, uintptr_t c)
 {
   ksys::setBitRange(ptr_, n, c);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::resetBitRange(uintptr_t n, uintptr_t c)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::resetBitRange(uintptr_t n, uintptr_t c)
 {
   ksys::resetBitRange(ptr_, n, c);
   return *this;
 }
 //-----------------------------------------------------------------------------
-template< class T> inline
-AutoPtr< T> & AutoPtr< T>::invertBitRange(uintptr_t n, uintptr_t c)
+template <typename T,class D> inline
+AutoPtr<T,D> & AutoPtr<T,D>::invertBitRange(uintptr_t n, uintptr_t c)
 {
   ksys::invertBitRange(ptr_, n, c);
   return *this;
 }
+//-----------------------------------------------------------------------------
+typedef AutoPtr<uint8_t,AutoPtrMemoryDestructor> AutoPtrBuffer;
 //-----------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

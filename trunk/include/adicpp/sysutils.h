@@ -62,7 +62,7 @@ void daemonize();
 //---------------------------------------------------------------------------
 class DirectoryChangeNotification {
   public:
-    ~DirectoryChangeNotification();
+    virtual ~DirectoryChangeNotification();
     DirectoryChangeNotification();
 
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -81,7 +81,7 @@ class DirectoryChangeNotification {
 #if defined(__WIN32__) || defined(__WIN64__)
     HANDLE hFFCNotification_; // from FindFirstChangeNotification for FindNextChangeNotification
     HANDLE hDirectory_; // for ReadDirectoryChangesW
-    AutoPtr<FILE_NOTIFY_INFORMATION> buffer_; // for ReadDirectoryChangesW
+    Array<FILE_NOTIFY_INFORMATION> buffer_; // for ReadDirectoryChangesW
     uintptr_t bufferSize_;
 #endif
     union {
@@ -103,7 +103,7 @@ inline const HANDLE & DirectoryChangeNotification::hDirectory() const
 //---------------------------------------------------------------------------
 inline FILE_NOTIFY_INFORMATION * const DirectoryChangeNotification::buffer() const
 {
-  return buffer_;
+  return buffer_.ptr();
 }
 //---------------------------------------------------------------------------
 inline const uintptr_t & DirectoryChangeNotification::bufferSize() const

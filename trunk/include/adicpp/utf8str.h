@@ -61,8 +61,8 @@ template <typename T> class StringT {
     StringT(T * string);
     class Container {
       public:
-        ksys::AutoPtr<T> string_;
-        volatile int32_t refCount_;
+        ksys::AutoPtr<T,AutoPtrMemoryDestructor> string_;
+        volatile ksys::ilock_t refCount_;
 
         virtual ~Container(){}
 
@@ -135,8 +135,8 @@ typedef StringT<wchar_t> WideString;
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 String plane(const char * s, uintptr_t size);
-String plane0(ksys::AutoPtr<char> & s);
-String plane(ksys::AutoPtr<char> & s,uintptr_t size);
+String plane0(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s);
+String plane(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s,uintptr_t size);
 String operator +(const char * s1, const String & s2);
 String operator +(const wchar_t * s1, const String & s2);
 //---------------------------------------------------------------------------
@@ -162,7 +162,7 @@ class String {
         void acquire();
         void release();
       private:
-        volatile int32_t refCount_;
+        volatile ksys::ilock_t refCount_;
 //        int32_t mutex_;
     };
     class Iterator {
@@ -348,7 +348,7 @@ class String {
         Stream & clear();
       protected:
       private:
-        ksys::AutoPtr<char> stream_;
+        ksys::AutoPtr<char,AutoPtrMemoryDestructor> stream_;
         uintptr_t count_;
 
         Stream(const Stream &){}
@@ -393,21 +393,20 @@ class String {
     String              upper() const;
     String &            lowerInPlace();
     String &            upperInPlace();
-    uintptr_t           strlen() const;
+    uintptr_t           length() const;
     uintptr_t           size() const;
-#ifndef __BCPLUSPLUS__
-#undef strcmp
-#endif
-    bool operator == (const String & s) const { return strcmp(s) == 0; }
-    bool operator != (const String & s) const { return strcmp(s) != 0; }
-    bool operator >= (const String & s) const { return strcmp(s) >= 0; }
-    bool operator >  (const String & s) const { return strcmp(s) >  0; }
-    bool operator <= (const String & s) const { return strcmp(s) <= 0; }
-    bool operator <  (const String & s) const { return strcmp(s) <  0; }
-    intptr_t            strcmp(const String & s) const;
-    intptr_t            strncmp(const String & s, uintptr_t n) const;
-    intptr_t            strcasecmp(const String & s) const;
-    intptr_t            strncasecmp(const String & s, uintptr_t n) const;
+
+    bool operator == (const String & s) const { return compare(s) == 0; }
+    bool operator != (const String & s) const { return compare(s) != 0; }
+    bool operator >= (const String & s) const { return compare(s) >= 0; }
+    bool operator >  (const String & s) const { return compare(s) >  0; }
+    bool operator <= (const String & s) const { return compare(s) <= 0; }
+    bool operator <  (const String & s) const { return compare(s) <  0; }
+
+    intptr_t            compare(const String & s) const;
+    intptr_t            ncompare(const String & s, uintptr_t n) const;
+    intptr_t            casecompare(const String & s) const;
+    intptr_t            ncasecompare(const String & s, uintptr_t n) const;
     Iterator            strstr(const String & str) const;
     Iterator            strcasestr(const String & str) const;
     Iterator            strrstr(const String & str) const;
@@ -415,8 +414,8 @@ class String {
     AnsiString          getANSIString() const;
     OemString           getOEMString() const;
     WideString          getUNICODEString() const;
-    static uintptr_t getMBCSString(const char * string,uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos = true);
-    uintptr_t getMBCSString(uintptr_t codePage,ksys::AutoPtr<uint8_t> & s,bool eos = true) const;
+    static uintptr_t getMBCSString(const char * string,uintptr_t codePage,ksys::AutoPtrBuffer & s,bool eos = true);
+    uintptr_t getMBCSString(uintptr_t codePage,ksys::AutoPtrBuffer & s,bool eos = true) const;
 #if defined(__WIN32__) || defined(__WIN64__)
     BSTR getOLEString() const;
 #endif
@@ -554,7 +553,7 @@ inline String & String::upperInPlace()
   return *this;
 }
 //---------------------------------------------------------------------------
-inline uintptr_t String::strlen() const
+inline uintptr_t String::length() const
 {
   return utf8strlen(container_->string_);
 }
@@ -840,7 +839,7 @@ inline bool String::isEqu(const String & s) const
 //---------------------------------------------------------------------------
 inline bool String::hashKeyEqu(const String & key, bool caseSensitive) const
 {
-  return (caseSensitive ? strcmp(key) : strcasecmp(key)) == 0;
+  return (caseSensitive ? compare(key) : casecompare(key)) == 0;
 }
 //---------------------------------------------------------------------------
 String operator + (const char * s1, const String & s2);
@@ -1139,7 +1138,7 @@ inline uintptr_t hash(const utf8::String & s,bool caseSensitive = true)
 inline uintptr_t compareObjects(const utf8::String & s1,const utf8::String & s2,bool caseSensitive = true)
 {
   static intptr_t (utf8::String::* const cmp[2])(const utf8::String &) const = {
-    &utf8::String::strcasecmp, &utf8::String::strcmp
+    &utf8::String::casecompare, &utf8::String::compare
   };
   return (s1.*cmp[caseSensitive])(s2);
 }

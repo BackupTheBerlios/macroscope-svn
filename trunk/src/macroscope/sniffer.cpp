@@ -481,7 +481,7 @@ void Sniffer::MaintenanceThread::threadExecute()
   utf8::String hostName, dbName;
   uintptr_t port;
   sniffer_->database2_->separateDBName(sniffer_->database2_->name(),hostName,dbName,port);
-  utf8::String serviceName(hostName + (hostName.trim().strlen() > 0 ? ":" : "") + "service_mgr");
+  utf8::String serviceName(hostName + (hostName.trim().isNull() ? "" : ":") + "service_mgr");
   fbcpp::Service service;
   service.params().
     add("user_name",sniffer_->user_).

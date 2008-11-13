@@ -124,7 +124,7 @@ Service & Service::install(SC_HANDLE hSCManager)
   install();
   utf8::WideString serviceNameW(serviceName_.getUNICODEString());
   utf8::WideString displayNameW(displayName_.getUNICODEString());
-  utf8::WideString binaryPathNameW((args_.strlen() > 0 ? binaryPathName_ + args_ : binaryPathName_).getUNICODEString());
+  utf8::WideString binaryPathNameW((!args_.isNull() ? binaryPathName_ + args_ : binaryPathName_).getUNICODEString());
   utf8::WideString loadOrderGroupW(loadOrderGroup_.getUNICODEString());
   utf8::WideString dependenciesW(dependencies_.getUNICODEString());
   utf8::WideString serviceStartNameW(serviceStartName_.getUNICODEString());
@@ -138,13 +138,13 @@ Service & Service::install(SC_HANDLE hSCManager)
     startType_,
     errorControl_,
     binaryPathNameW,
-    loadOrderGroup_.strlen() > 0 ? (wchar_t *) loadOrderGroupW : NULL,
+    !loadOrderGroup_.isNull() ? (wchar_t *) loadOrderGroupW : NULL,
     (serviceType_ == SERVICE_KERNEL_DRIVER || serviceType_ == SERVICE_FILE_SYSTEM_DRIVER) &&
     (startType_ == SERVICE_BOOT_START || startType_ == SERVICE_SYSTEM_START) ?
     &tagId_ : NULL,
-    dependencies_.strlen() > 0 ? (wchar_t *) dependenciesW : NULL,
-    serviceStartName_.strlen() > 0 ? (wchar_t *) serviceStartNameW : NULL,
-    password_.strlen() > 0 ? (wchar_t *) passwordW : NULL
+    !dependencies_.isNull() ? (wchar_t *) dependenciesW : NULL,
+    !serviceStartName_.isNull() ? (wchar_t *) serviceStartNameW : NULL,
+    !password_.isNull() ? (wchar_t *) passwordW : NULL
   );
   if( handle == NULL ){
     int32_t err = GetLastError();
@@ -157,13 +157,13 @@ Service & Service::install(SC_HANDLE hSCManager)
             startType_,
             errorControl_,
             binaryPathNameW,
-            loadOrderGroup_.strlen() > 0 ? (wchar_t *) loadOrderGroupW : NULL,
+            !loadOrderGroup_.isNull() ? (wchar_t *) loadOrderGroupW : NULL,
             (serviceType_ == SERVICE_KERNEL_DRIVER || serviceType_ == SERVICE_FILE_SYSTEM_DRIVER) &&
             (startType_ == SERVICE_BOOT_START || startType_ == SERVICE_SYSTEM_START) ?
             &tagId_ : NULL,
-            dependencies_.strlen() > 0 ? (wchar_t *) dependenciesW : NULL,
-            serviceStartName_.strlen() > 0 ? (wchar_t *) serviceStartNameW : NULL,
-            password_.strlen() > 0 ? (wchar_t *) passwordW : NULL,
+            !dependencies_.isNull() ? (wchar_t *) dependenciesW : NULL,
+            !serviceStartName_.isNull() ? (wchar_t *) serviceStartNameW : NULL,
+            !password_.isNull() ? (wchar_t *) passwordW : NULL,
             displayNameW
       ) == 0 ) err = GetLastError();
     }
@@ -374,7 +374,7 @@ Service & Services::serviceByName(const utf8::String & serviceName)
 #if defined(__WIN32__) || defined(__WIN64__)
     sizeof(services_) / sizeof(services_[0]);
   while( --i >= 0 )
-    if( services_[i]->serviceName_.strcasecmp(serviceName) == 0 )
+    if( services_[i]->serviceName_.casecompare(serviceName) == 0 )
       return *services_[i];
 #else
     services_.count();
