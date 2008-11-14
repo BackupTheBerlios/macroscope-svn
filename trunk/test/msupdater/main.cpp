@@ -46,7 +46,7 @@ void MSUpdateSetuper::executeAction(const utf8::String & name,const ConfigSectio
   int32_t result = 0;
   utf8::String image(section.value());
   utf8::String args(section.value("args"));
-  if( name.strlen() > 0 ){
+  if( !name.isNull() ){
     result = execute(image,args,NULL,true);
     utf8::String::Stream s;
     s << name <<
@@ -92,7 +92,7 @@ void MSUpdateSetuper::fiberExecute()
       ));
       updateSetup.silent(true).fileName(updateLocalPath + "setup.conf").parse();
       for( uintptr_t j = 0; j < updateSetup.sectionCount(); j++ ){
-        if( updateSetup.section(j).name().strncasecmp("file",4) != 0 ) continue;
+        if( updateSetup.section(j).name().ncasecompare("file",4) != 0 ) continue;
         if( (bool) updateSetup.section(j).value("installed",false) ) continue;
         utf8::String fileName(updateSetup.section(j).value(""));
         if( updateSetup.section(j).isSection("before") ){ // run before actions
@@ -250,7 +250,7 @@ void MSUpdateFetcher::fiberExecute()
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 MSUpdaterService::MSUpdaterService() :
-  config_(newObject<InterlockedConfig<FiberInterlockedMutex> >())
+  config_(newObject<InterlockedConfig<FiberWriteLock> >())
 {
   serviceName_ = "msupdater";
   displayName_ = "Macroscope Update Service";
@@ -288,7 +288,7 @@ void MSUpdaterService::genUpdatePackage(const utf8::String & setupConfigFile)
   updatesSetup.silent(true).fileName(setupConfigFile).parse();
   Vector<utf8::String> fileList;
   for( uintptr_t i = 0; i < updatesSetup.sectionCount(); i++ ){
-    if( updatesSetup.section(i).name().strncasecmp("file",4) != 0 ) continue;
+    if( updatesSetup.section(i).name().ncasecompare("file",4) != 0 ) continue;
     fileList.add(updatesSetup.section(i).value("file_name"));
   }
   fileList.add(updatesSetup.fileName());
@@ -316,54 +316,54 @@ int main(int ac,char * av[])
     bool dispatch = false;
 #endif
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--version") == 0 ){
+      if( argv()[u].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msupdater_version.tex_ << "\n");
         fprintf(stdout,"%s\n",msupdater_version.tex_);
         dispatch = false;
         continue;
       }
-      if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+      if( argv()[u].compare("-c") == 0 && u + 1 < argv().count() ){
         Config::defaultFileName(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--install") == 0 ){
+      else if( argv()[u].compare("--install") == 0 ){
         services.install();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--uninstall") == 0 ){
+      else if( argv()[u].compare("--uninstall") == 0 ){
         services.uninstall();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--start") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--start") == 0 && u + 1 < argv().count() ){
         services.start(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--stop") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--stop") == 0 && u + 1 < argv().count() ){
         services.stop(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--suspend") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--suspend") == 0 && u + 1 < argv().count() ){
         services.suspend(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--resume") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--resume") == 0 && u + 1 < argv().count() ){
         services.resume(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--query") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--query") == 0 && u + 1 < argv().count() ){
         services.query(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--start-disp") == 0 ){
+      else if( argv()[u].compare("--start-disp") == 0 ){
         dispatch = true;
       }
-      else if( argv()[u].strcmp("--stop-disp") == 0 ){
+      else if( argv()[u].compare("--stop-disp") == 0 ){
         services.stopServiceCtrlDispatcher();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--sha256") == 0 && u + 1 < argv().count() ){
         SHA256 passwordSHA256;
         passwordSHA256.make(argv()[u + 1].c_str(),argv()[u + 1].size());
         utf8::String b64(base64Encode(passwordSHA256.sha256(),passwordSHA256.size()));
@@ -371,14 +371,14 @@ int main(int ac,char * av[])
         copyStrToClipboard(b64);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--generate-update-package") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--generate-update-package") == 0 && u + 1 < argv().count() ){
         MSUpdaterService::genUpdatePackage(argv()[u + 1]);
       }
     }
     if( dispatch ){
       bool daemon;
       {
-        ConfigSP config(newObject<InterlockedConfig<FiberInterlockedMutex> >());
+        ConfigSP config(newObject<InterlockedConfig<FiberWriteLock> >());
         daemon = config->value("daemon",false);
       }
       services.startServiceCtrlDispatcher(daemon);

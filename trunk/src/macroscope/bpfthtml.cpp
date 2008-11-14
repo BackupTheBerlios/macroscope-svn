@@ -177,7 +177,7 @@ utf8::String Logger::resolveAddr(AutoPtr<Statement> st[3],bool resolveDNSNames,c
   addr->addr4_.sin_port = 0;
   addr->addr4_.sin_family = PF_INET;
   if( numeric || !resolveDNSNames ) return addr->resolveAddr(0,NI_NUMERICHOST | NI_NUMERICSERV);
-  AutoLock<InterlockedMutex> lock(dnsMutex_);
+  AutoLock<WriteLock> lock(dnsReadWriteLock_);
   DNSCacheEntry * pAddr = addr;
   dnsCache_.insert(addr,false,false,&pAddr);
   if( pAddr == addr ){
@@ -1338,7 +1338,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     utf8::String filter(logger_->config_->textByPath(section_ + ".html_report.filter"));
     if( logger_->cgi_.isCGI() )
       filter = logger_->cgi_.paramAsString("filter");
-    AutoLock<InterlockedMutex> lock(logger_->dnsMutex_);
+    AutoLock<WriteLock> lock(logger_->dnsReadWriteLock_);
     uintmax_t m0 = logger_->dnsCacheHitCount_ + logger_->dnsCacheMissCount_;
     utf8::String hitRatio("-"), missRatio("-");
     if( m0 > 0 ){

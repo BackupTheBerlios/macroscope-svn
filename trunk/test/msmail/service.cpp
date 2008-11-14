@@ -36,7 +36,7 @@ namespace msmail {
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 Service::Service() :
-  msmailConfig_(newObject<InterlockedConfig<FiberInterlockedMutex> >()),
+  msmailConfig_(newObject<InterlockedConfig<FiberWriteLock> >()),
   msmail_(msmailConfig_)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -57,10 +57,10 @@ void Service::install()
 #if defined(__WIN32__) || defined(__WIN64__)
   loadOrderGroup_ = msmailConfig_->text("service_load_order_group",utf8::String());
   utf8::String startType(msmailConfig_->text("service_start_type","auto"));
-  if( startType.strcasecmp("auto") == 0 ){
+  if( startType.casecompare("auto") == 0 ){
     startType_ = SERVICE_AUTO_START;
   }
-  else if( startType.strcasecmp("manual") == 0 ){
+  else if( startType.casecompare("manual") == 0 ){
     startType_ = SERVICE_DEMAND_START;
   }
 #endif

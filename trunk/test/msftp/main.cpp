@@ -170,7 +170,7 @@ void KFTPClient::put()
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
     uint64_t l, ll, lp, rl;
     utf8::String rfile(
-      remotePath + utf8::String(utf8::String::Iterator(list[i]) + localPath.strlen())
+      remotePath + utf8::String(utf8::String::Iterator(list[i]) + localPath.length())
     );
     try {
       int8_t cmd = int8_t(cmPutFile);
@@ -183,7 +183,7 @@ void KFTPClient::put()
         file.open();
         ll = 0;
         int64_t mtime = lmst.st_mtime_;
-        if( mode.strcasecmp("auto") == 0 ){
+        if( mode.casecompare("auto") == 0 ){
           *this << int8_t(cmStat) << rfile;
           read(&rmst,sizeof(rmst));
           getCode(eBadPathName);
@@ -199,14 +199,14 @@ void KFTPClient::put()
             }
           }
         }
-        else if( mode.strcasecmp("overwrite") == 0 ){
+        else if( mode.casecompare("overwrite") == 0 ){
           ll = file.size();
           if( lmst.st_size_ > 0 ){
             *this << int8_t(cmResize) << rfile << int64_t(0);
             getCode(eResize);
           }
         }
-        else if( mode.strcasecmp("partial") == 0 ){
+        else if( mode.casecompare("partial") == 0 ){
           *this << int8_t(cmStat) << rfile;
           read(&rmst,sizeof(rmst));
           getCode(eBadPathName);
@@ -365,7 +365,7 @@ void KFTPClient::get()
       read(&rmst,sizeof(rmst));
       getCode();
       int8_t cmd = cmGetFile;
-      if( mode.strcasecmp("auto") == 0 ){
+      if( mode.casecompare("auto") == 0 ){
         if( rmst.st_size_ > lmst.st_size_ ){
           file.seek(rmst.st_size_);
           ll = rmst.st_size_ - lmst.st_size_;
@@ -375,11 +375,11 @@ void KFTPClient::get()
           file.resize(0);
         }
       }
-      else if( mode.strcasecmp("overwrite") == 0 ){
+      else if( mode.casecompare("overwrite") == 0 ){
         file.resize(0);
         ll = rmst.st_size_;
       }
-      else if( mode.strcasecmp("partial") == 0 ){
+      else if( mode.casecompare("partial") == 0 ){
         if( lmst.st_size_ > rmst.st_size_ ) file.resize(rmst.st_size_);
         cmd = cmGetFilePartial;
         ll = rmst.st_size_;
@@ -914,7 +914,7 @@ KFTPShell::~KFTPShell()
 //------------------------------------------------------------------------------
 KFTPShell::KFTPShell(int & errorCode) :
   config_(
-    newObject<InterlockedConfig<FiberInterlockedMutex> >()
+    newObject<InterlockedConfig<FiberWriteLock> >()
   ),
   errorCode_(errorCode)
 {
@@ -941,7 +941,7 @@ void KFTPShell::open()
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
-    if( sectionName.strncasecmp("job",3) == 0 )
+    if( sectionName.ncasecompare("job",3) == 0 )
       attachFiber(newObjectR1C2<KFTPClient>(*this,sectionName));
   }
 }
@@ -958,24 +958,24 @@ int main(int _argc,char * _argv[])
     Config::defaultFileName(SYSCONF_DIR("") + "msftp.conf");
     bool dispatch = true;
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--chdir") == 0 && u + 1 < argv().count() ){
+      if( argv()[u].compare("--chdir") == 0 && u + 1 < argv().count() ){
         changeCurrentDir(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("-c") == 0 && u + 1 < argv().count() ){
         Config::defaultFileName(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
       }
     }
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--version") == 0 ){
+      if( argv()[u].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msftp_version.tex_ << "\n");
         fprintf(stdout,"%s\n",msftp_version.tex_);
         dispatch = false;
         continue;
       }
-      else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--sha256") == 0 && u + 1 < argv().count() ){
         SHA256 passwordSHA256;
         passwordSHA256.make(argv()[u + 1].c_str(),argv()[u + 1].size());
         utf8::String b64(base64Encode(passwordSHA256.sha256(),32));

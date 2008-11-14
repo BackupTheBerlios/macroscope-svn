@@ -402,12 +402,12 @@ Database & Database::detach()
   intptr_t  i;
   for( i = eventHandlers_.count() - 1; i >= 0; i-- )
     eventHandlers_.objectOfIndex(i)->cancel();
-  for( i = dsqlStatements_.count() - 1; i >= 0; i-- )
-    dsqlStatements_.objectOfIndex(i)->free();
   for( i = transactions_.count() - 1; i >= 0; i-- ){
     Transaction * transaction = transactions_.objectOfIndex(0);
     while( transaction->active() ) transaction->rollback(true);
   }
+  for( i = dsqlStatements_.count() - 1; i >= 0; i-- )
+    dsqlStatements_.objectOfIndex(i)->free();
   if( attached() ){
     ISC_STATUS_ARRAY status;
     api.isc_detach_database(status,&handle_);

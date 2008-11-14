@@ -92,7 +92,7 @@ void SerialPortFiber::removeControl()
 {
   if( control_ != NULL ){
     if( control_->control_ == this ){
-      AutoLock<FiberInterlockedMutex> lock(service_->serialPortsMutex_);
+      AutoLock<FiberWriteLock> lock(service_->serialPortsReadWriteLock_);
       for( intptr_t i = service_->serialPorts_.count() - 1; i >= 0; i-- )
         if( &service_->serialPorts_[i] == control_ ){
           service_->serialPorts_.remove(i);
@@ -111,16 +111,16 @@ void SerialPortFiber::main()
 {
   utf8::String device(readString()), mode(readString());
   if( control_ == NULL ){
-    AutoLock<FiberInterlockedMutex> lock(service_->serialPortsMutex_);
+    AutoLock<FiberWriteLock> lock(service_->serialPortsReadWriteLock_);
     for( intptr_t i = service_->serialPorts_.count() - 1; i >= 0; i-- ){
       bool isRD = false, isWR = false;
 #if defined(__WIN32__) || defined(__WIN64__)
-      if( service_->serialPorts_[i].device_.fileName().strcasecmp(device) == 0 ){
+      if( service_->serialPorts_[i].device_.fileName().casecompare(device) == 0 ){
 #else
-      if( service_->serialPorts_[i].device_.fileName().strcmp(device) == 0 ){
+      if( service_->serialPorts_[i].device_.fileName().compare(device) == 0 ){
 #endif
-        isRD = mode.strcasecmp("READ")  == 0;
-        isWR = mode.strcasecmp("WRITE") == 0;
+        isRD = mode.casecompare("READ")  == 0;
+        isWR = mode.casecompare("WRITE") == 0;
         if( (isRD && service_->serialPorts_[i].reader_ != NULL) ||
             (isWR && service_->serialPorts_[i].writer_ != NULL) )
           newObjectV1C2<Exception>(EACCES,__PRETTY_FUNCTION__)->throwSP();
@@ -186,7 +186,7 @@ void SerialPortFiber::main()
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 MSSerialService::MSSerialService() :
-  config_(newObject<InterlockedConfig<FiberInterlockedMutex> >())
+  config_(newObject<InterlockedConfig<FiberWriteLock> >())
 {
   serviceName_ = "msserial";
   displayName_ = "Macroscope Serial Port Service";
@@ -240,54 +240,54 @@ int main(int ac,char * av[])
     bool dispatch = false;
 #endif
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--version") == 0 ){
+      if( argv()[u].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msserial_version.tex_ << "\n");
         fprintf(stdout,"%s\n",msserial_version.tex_);
         dispatch = false;
         continue;
       }
-      if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+      if( argv()[u].compare("-c") == 0 && u + 1 < argv().count() ){
         Config::defaultFileName(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--install") == 0 ){
+      else if( argv()[u].compare("--install") == 0 ){
         services.install();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--uninstall") == 0 ){
+      else if( argv()[u].compare("--uninstall") == 0 ){
         services.uninstall();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--start") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--start") == 0 && u + 1 < argv().count() ){
         services.start(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--stop") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--stop") == 0 && u + 1 < argv().count() ){
         services.stop(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--suspend") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--suspend") == 0 && u + 1 < argv().count() ){
         services.suspend(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--resume") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--resume") == 0 && u + 1 < argv().count() ){
         services.resume(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--query") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--query") == 0 && u + 1 < argv().count() ){
         services.query(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--start-disp") == 0 ){
+      else if( argv()[u].compare("--start-disp") == 0 ){
         dispatch = true;
       }
-      else if( argv()[u].strcmp("--stop-disp") == 0 ){
+      else if( argv()[u].compare("--stop-disp") == 0 ){
         services.stopServiceCtrlDispatcher();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--sha256") == 0 && u + 1 < argv().count() ){
         SHA256 passwordSHA256;
         passwordSHA256.make(argv()[u + 1].c_str(),argv()[u + 1].size());
         utf8::String b64(base64Encode(passwordSHA256.sha256(),passwordSHA256.size()));
@@ -299,7 +299,7 @@ int main(int ac,char * av[])
     if( dispatch ){
       bool daemon;
       {
-        ConfigSP config(newObject<InterlockedConfig<FiberInterlockedMutex> >());
+        ConfigSP config(newObject<InterlockedConfig<FiberWriteLock> >());
         daemon = config->value("daemon",false);
       }
       services.startServiceCtrlDispatcher(daemon);

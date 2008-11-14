@@ -45,7 +45,7 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
   }
   return s;
 #elif !defined(NDEBUG) && (defined(__WIN32__) || defined(__WIN64__))
-  InterlockedMutex mutex;
+  WriteLock mutex;
   if( currentFiber() != NULL ){
     if( thread == NULL ){
       thread = currentThread();
@@ -3529,7 +3529,7 @@ void initialize(int argc,char ** argv)
       base32DecodeTable[uintptr_t(base32Table[i])] = (uint8_t) i;
   }
 //---------------------------------------------------------------------------
-  InterlockedMutex::initialize();
+  LiteWriteLock::initialize();
   MemoryManager::initialize();
   Thread::initialize();
   MemoryStream::initialize();
@@ -3609,7 +3609,7 @@ void cleanup()
   MemoryStream::cleanup();
   Thread::cleanup();
   MemoryManager::cleanup();
-  InterlockedMutex::cleanup();
+  LiteWriteLock::cleanup();
   Object::cleanup();
 #if defined(__WIN32__) || defined(__WIN64__)
   SetConsoleCtrlHandler(consoleCtrlHandler,FALSE);

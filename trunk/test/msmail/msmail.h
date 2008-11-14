@@ -76,13 +76,13 @@ class Message {
   friend AsyncFile & operator >> (AsyncFile & s,Message & a);
   friend AsyncFile & operator << (AsyncFile & s,const Message & a);
   public:
-    ~Message();
+    virtual ~Message();
     Message();
     Message(const utf8::String & mId);
 
     class Key {
       public:
-        ~Key(){}
+        virtual ~Key(){}
         Key(){}
         Key(const Key & a) : key_(a.key_) {}
         Key(const utf8::String & key) : key_(key) {}
@@ -97,12 +97,12 @@ class Message {
           return *this;
         }
 
-        bool operator == (const Key & a) const { return key_.strcmp(a.key_) == 0; }
-        bool operator != (const Key & a) const { return key_.strcmp(a.key_) != 0; }
-        bool operator >= (const Key & a) const { return key_.strcmp(a.key_) >= 0; }
-        bool operator >  (const Key & a) const { return key_.strcmp(a.key_) >  0; }
-        bool operator <= (const Key & a) const { return key_.strcmp(a.key_) <= 0; }
-        bool operator <  (const Key & a) const { return key_.strcmp(a.key_) <  0; }
+        bool operator == (const Key & a) const { return key_.compare(a.key_) == 0; }
+        bool operator != (const Key & a) const { return key_.compare(a.key_) != 0; }
+        bool operator >= (const Key & a) const { return key_.compare(a.key_) >= 0; }
+        bool operator >  (const Key & a) const { return key_.compare(a.key_) >  0; }
+        bool operator <= (const Key & a) const { return key_.compare(a.key_) <= 0; }
+        bool operator <  (const Key & a) const { return key_.compare(a.key_) <  0; }
 
         operator const utf8::String & () const { return key_; }
 
@@ -122,7 +122,7 @@ class Message {
           return object.key_.hash(true);
         }
         static bool keyHashNodeEqu(const Key & object1,const Key & object2){
-          return object1.key_.strcmp(object2.key_) == 0;
+          return object1.key_.compare(object2.key_) == 0;
         }
 
         static EmbeddedListNode<Key> & listNode(const Key & object){
@@ -152,7 +152,7 @@ class Message {
     class Attribute {
       friend class Message;
       public:
-        ~Attribute(){}
+        virtual ~Attribute(){}
         Attribute(){}
         Attribute(const Attribute & a) : key_(a.key_), value_(a.value_), index_(a.index_), size_(a.size_) {}
         Attribute(const utf8::String & key,const utf8::String & value = utf8::String()) :
@@ -200,11 +200,11 @@ class Message {
         mutable EmbeddedHashNode<Attribute,uintptr_t> keyNode_;
     };
 
-    bool operator == (const Message & a) const { return id().strcmp(a.id()) == 0; }
-    bool operator >= (const Message & a) const { return id().strcmp(a.id()) >= 0; }
-    bool operator >  (const Message & a) const { return id().strcmp(a.id()) >  0; }
-    bool operator <= (const Message & a) const { return id().strcmp(a.id()) <= 0; }
-    bool operator <  (const Message & a) const { return id().strcmp(a.id()) <  0; }
+    bool operator == (const Message & a) const { return id().compare(a.id()) == 0; }
+    bool operator >= (const Message & a) const { return id().compare(a.id()) >= 0; }
+    bool operator >  (const Message & a) const { return id().compare(a.id()) >  0; }
+    bool operator <= (const Message & a) const { return id().compare(a.id()) <= 0; }
+    bool operator <  (const Message & a) const { return id().compare(a.id()) <  0; }
 
     static void validateKey(const utf8::String & key);
 
@@ -233,7 +233,7 @@ class Message {
       return object.id().hash(true);
     }
     static bool idHashNodeEqu(const Message & object1,const Message & object2){
-      return object1.id().strcmp(object2.id()) == 0;
+      return object1.id().compare(object2.id()) == 0;
     }
 
     const uintptr_t & codePage() const;
@@ -306,7 +306,7 @@ class InfoLinkKey {
   friend ksock::AsyncSocket & operator >> (ksock::AsyncSocket & s,InfoLinkKey & a);
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const InfoLinkKey & a);
   public:
-    ~InfoLinkKey(){}
+    virtual ~InfoLinkKey(){}
     InfoLinkKey(){}
     InfoLinkKey(const InfoLinkKey & a) : key_(a.key_) {}
     InfoLinkKey(const utf8::String & key) : key_(key) {}
@@ -319,12 +319,12 @@ class InfoLinkKey {
       key_ = key_;
       return *this;
     }
-    bool operator == (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) == 0; }
-    bool operator != (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) != 0; }
-    bool operator >= (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) >= 0; }
-    bool operator >  (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) >  0; }
-    bool operator <= (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) <= 0; }
-    bool operator <  (const InfoLinkKey & a) const { return key_.strcasecmp(a.key_) <  0; }
+    bool operator == (const InfoLinkKey & a) const { return key_.casecompare(a.key_) == 0; }
+    bool operator != (const InfoLinkKey & a) const { return key_.casecompare(a.key_) != 0; }
+    bool operator >= (const InfoLinkKey & a) const { return key_.casecompare(a.key_) >= 0; }
+    bool operator >  (const InfoLinkKey & a) const { return key_.casecompare(a.key_) >  0; }
+    bool operator <= (const InfoLinkKey & a) const { return key_.casecompare(a.key_) <= 0; }
+    bool operator <  (const InfoLinkKey & a) const { return key_.casecompare(a.key_) <  0; }
     operator const utf8::String & () const { return key_; }
 
     static EmbeddedHashNode<InfoLinkKey,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
@@ -343,7 +343,7 @@ class InfoLinkKey {
       return object.key_.hash(false);
     }
     static bool keyHashNodeEqu(const InfoLinkKey & object1,const InfoLinkKey & object2){
-      return object1.key_.strcasecmp(object2.key_) == 0;
+      return object1.key_.casecompare(object2.key_) == 0;
     }
 
   protected:
@@ -391,18 +391,18 @@ class UserInfo {
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const UserInfo & a);
   friend utf8::String::Stream & operator << (utf8::String::Stream & s,const UserInfo & a);
   public:
-    ~UserInfo();
+    virtual ~UserInfo();
     UserInfo();
     UserInfo(const utf8::String & name);
     UserInfo(const UserInfo &);
     UserInfo & operator = (const UserInfo &);
 
-    /*bool operator == (const UserInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
-    bool operator != (const UserInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
-    bool operator >= (const UserInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
-    bool operator >  (const UserInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
-    bool operator <= (const UserInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const UserInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
+    /*bool operator == (const UserInfo & a) const { return name_.casecompare(a.name_) == 0; }
+    bool operator != (const UserInfo & a) const { return name_.casecompare(a.name_) != 0; }
+    bool operator >= (const UserInfo & a) const { return name_.casecompare(a.name_) >= 0; }
+    bool operator >  (const UserInfo & a) const { return name_.casecompare(a.name_) >  0; }
+    bool operator <= (const UserInfo & a) const { return name_.casecompare(a.name_) <= 0; }
+    bool operator <  (const UserInfo & a) const { return name_.casecompare(a.name_) <  0; }*/
 
     static EmbeddedHashNode<UserInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<UserInfo,uintptr_t> *>(link);
@@ -420,7 +420,7 @@ class UserInfo {
       return object.name_.hash(false);
     }
     static bool hashNodeEqu(const UserInfo & object1,const UserInfo & object2){
-      return object1.name_.strcasecmp(object2.name_) == 0;
+      return object1.name_.casecompare(object2.name_) == 0;
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
@@ -440,18 +440,18 @@ class KeyInfo {
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const KeyInfo & a);
   friend utf8::String::Stream & operator << (utf8::String::Stream & s,const KeyInfo & a);
   public:
-    ~KeyInfo();
+    virtual ~KeyInfo();
     KeyInfo();
     KeyInfo(const utf8::String & name);
     KeyInfo(const KeyInfo &);
     KeyInfo & operator = (const KeyInfo &);
 
-    /*bool operator == (const KeyInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
-    bool operator != (const KeyInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
-    bool operator >= (const KeyInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
-    bool operator >  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
-    bool operator <= (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const KeyInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
+    /*bool operator == (const KeyInfo & a) const { return name_.casecompare(a.name_) == 0; }
+    bool operator != (const KeyInfo & a) const { return name_.casecompare(a.name_) != 0; }
+    bool operator >= (const KeyInfo & a) const { return name_.casecompare(a.name_) >= 0; }
+    bool operator >  (const KeyInfo & a) const { return name_.casecompare(a.name_) >  0; }
+    bool operator <= (const KeyInfo & a) const { return name_.casecompare(a.name_) <= 0; }
+    bool operator <  (const KeyInfo & a) const { return name_.casecompare(a.name_) <  0; }*/
 
     static EmbeddedHashNode<KeyInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<KeyInfo,uintptr_t> *>(link);
@@ -469,7 +469,7 @@ class KeyInfo {
       return object.name_.hash(false);
     }
     static bool hashNodeEqu(const KeyInfo & object1,const KeyInfo & object2){
-      return object1.name_.strcasecmp(object2.name_) == 0;
+      return object1.name_.casecompare(object2.name_) == 0;
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
@@ -489,18 +489,18 @@ class GroupInfo {
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const GroupInfo & a);
   friend utf8::String::Stream & operator << (utf8::String::Stream & s,const GroupInfo & a);
   public:
-    ~GroupInfo();
+    virtual ~GroupInfo();
     GroupInfo();
     GroupInfo(const utf8::String & name);
     GroupInfo(const GroupInfo &);
     GroupInfo & operator = (const GroupInfo &);
 
-    /*bool operator == (const GroupInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
-    bool operator != (const GroupInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
-    bool operator >= (const GroupInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
-    bool operator >  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
-    bool operator <= (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const GroupInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
+    /*bool operator == (const GroupInfo & a) const { return name_.casecompare(a.name_) == 0; }
+    bool operator != (const GroupInfo & a) const { return name_.casecompare(a.name_) != 0; }
+    bool operator >= (const GroupInfo & a) const { return name_.casecompare(a.name_) >= 0; }
+    bool operator >  (const GroupInfo & a) const { return name_.casecompare(a.name_) >  0; }
+    bool operator <= (const GroupInfo & a) const { return name_.casecompare(a.name_) <= 0; }
+    bool operator <  (const GroupInfo & a) const { return name_.casecompare(a.name_) <  0; }*/
 
     static EmbeddedHashNode<GroupInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<GroupInfo,uintptr_t> *>(link);
@@ -518,7 +518,7 @@ class GroupInfo {
       return object.name_.hash(false);
     }
     static bool hashNodeEqu(const GroupInfo & object1,const GroupInfo & object2){
-      return object1.name_.strcasecmp(object2.name_) == 0;
+      return object1.name_.casecompare(object2.name_) == 0;
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
@@ -538,18 +538,18 @@ class ServerInfo {
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const ServerInfo & a);
   friend utf8::String::Stream & operator << (utf8::String::Stream & s,const ServerInfo & a);
   public:
-    ~ServerInfo();
+    virtual ~ServerInfo();
     ServerInfo();
     ServerInfo(const utf8::String & name,ServerType type = stNone);
     ServerInfo(const ServerInfo &);
     ServerInfo & operator = (const ServerInfo &);
 
-    /*bool operator == (const ServerInfo & a) const { return name_.strcasecmp(a.name_) == 0; }
-    bool operator != (const ServerInfo & a) const { return name_.strcasecmp(a.name_) != 0; }
-    bool operator >= (const ServerInfo & a) const { return name_.strcasecmp(a.name_) >= 0; }
-    bool operator >  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) >  0; }
-    bool operator <= (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <= 0; }
-    bool operator <  (const ServerInfo & a) const { return name_.strcasecmp(a.name_) <  0; }*/
+    /*bool operator == (const ServerInfo & a) const { return name_.casecompare(a.name_) == 0; }
+    bool operator != (const ServerInfo & a) const { return name_.casecompare(a.name_) != 0; }
+    bool operator >= (const ServerInfo & a) const { return name_.casecompare(a.name_) >= 0; }
+    bool operator >  (const ServerInfo & a) const { return name_.casecompare(a.name_) >  0; }
+    bool operator <= (const ServerInfo & a) const { return name_.casecompare(a.name_) <= 0; }
+    bool operator <  (const ServerInfo & a) const { return name_.casecompare(a.name_) <  0; }*/
 
     static EmbeddedHashNode<ServerInfo,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<ServerInfo,uintptr_t> *>(link);
@@ -567,7 +567,7 @@ class ServerInfo {
       return object.name_.hash(false);
     }
     static bool hashNodeEqu(const ServerInfo & object1,const ServerInfo & object2){
-      return object1.name_.strcasecmp(object2.name_) == 0;
+      return object1.name_.casecompare(object2.name_) == 0;
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
@@ -591,18 +591,18 @@ class User2KeyLink {
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const User2KeyLink & a);
   friend utf8::String::Stream & operator << (utf8::String::Stream & s,const User2KeyLink & a);
   public:
-    ~User2KeyLink();
+    virtual ~User2KeyLink();
     User2KeyLink();
     User2KeyLink(const utf8::String & userName,const utf8::String & keyName);
     User2KeyLink(const User2KeyLink &);
     User2KeyLink & operator = (const User2KeyLink &);
 
-    /*bool operator == (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) == 0 && key_.strcasecmp(a.key_) == 0; }
-    bool operator != (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) != 0 && key_.strcasecmp(a.key_) != 0; }
-    bool operator >= (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) >= 0 && key_.strcasecmp(a.key_) >= 0; }
-    bool operator >  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) >= 0 && key_.strcasecmp(a.key_) >  0; }
-    bool operator <= (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <= 0; }
-    bool operator <  (const User2KeyLink & a) const { return user_.strcasecmp(a.user_) <= 0 && key_.strcasecmp(a.key_) <  0; }*/
+    /*bool operator == (const User2KeyLink & a) const { return user_.casecompare(a.user_) == 0 && key_.casecompare(a.key_) == 0; }
+    bool operator != (const User2KeyLink & a) const { return user_.casecompare(a.user_) != 0 && key_.casecompare(a.key_) != 0; }
+    bool operator >= (const User2KeyLink & a) const { return user_.casecompare(a.user_) >= 0 && key_.casecompare(a.key_) >= 0; }
+    bool operator >  (const User2KeyLink & a) const { return user_.casecompare(a.user_) >= 0 && key_.casecompare(a.key_) >  0; }
+    bool operator <= (const User2KeyLink & a) const { return user_.casecompare(a.user_) <= 0 && key_.casecompare(a.key_) <= 0; }
+    bool operator <  (const User2KeyLink & a) const { return user_.casecompare(a.user_) <= 0 && key_.casecompare(a.key_) <  0; }*/
 
     static EmbeddedHashNode<User2KeyLink,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<User2KeyLink,uintptr_t> *>(link);
@@ -620,7 +620,7 @@ class User2KeyLink {
       return object.user_.hash(false,object.key_.hash(false));
     }
     static bool hashNodeEqu(const User2KeyLink & object1,const User2KeyLink & object2){
-      return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
+      return object1.user_.casecompare(object2.user_) == 0 && object1.key_.casecompare(object2.key_) == 0;
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
@@ -641,18 +641,18 @@ class Key2GroupLink {
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2GroupLink & a);
   friend utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2GroupLink & a);
   public:
-    ~Key2GroupLink();
+    virtual ~Key2GroupLink();
     Key2GroupLink();
     Key2GroupLink(const utf8::String & keyName,const utf8::String & groupName);
     Key2GroupLink(const Key2GroupLink &);
     Key2GroupLink & operator = (const Key2GroupLink &);
 
-    /*bool operator == (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) == 0 && group_.strcasecmp(a.group_) == 0; }
-    bool operator != (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) != 0 && group_.strcasecmp(a.group_) != 0; }
-    bool operator >= (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) >= 0 && group_.strcasecmp(a.group_) >= 0; }
-    bool operator >  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) >= 0 && group_.strcasecmp(a.group_) >  0; }
-    bool operator <= (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <= 0; }
-    bool operator <  (const Key2GroupLink & a) const { return key_.strcasecmp(a.key_) <= 0 && group_.strcasecmp(a.group_) <  0; }*/
+    /*bool operator == (const Key2GroupLink & a) const { return key_.casecompare(a.key_) == 0 && group_.casecompare(a.group_) == 0; }
+    bool operator != (const Key2GroupLink & a) const { return key_.casecompare(a.key_) != 0 && group_.casecompare(a.group_) != 0; }
+    bool operator >= (const Key2GroupLink & a) const { return key_.casecompare(a.key_) >= 0 && group_.casecompare(a.group_) >= 0; }
+    bool operator >  (const Key2GroupLink & a) const { return key_.casecompare(a.key_) >= 0 && group_.casecompare(a.group_) >  0; }
+    bool operator <= (const Key2GroupLink & a) const { return key_.casecompare(a.key_) <= 0 && group_.casecompare(a.group_) <= 0; }
+    bool operator <  (const Key2GroupLink & a) const { return key_.casecompare(a.key_) <= 0 && group_.casecompare(a.group_) <  0; }*/
 
     static EmbeddedHashNode<Key2GroupLink,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<Key2GroupLink,uintptr_t> *>(link);
@@ -670,7 +670,7 @@ class Key2GroupLink {
       return object.key_.hash(false,object.group_.hash(false));
     }
     static bool hashNodeEqu(const Key2GroupLink & object1,const Key2GroupLink & object2){
-      return object1.key_.strcasecmp(object2.key_) == 0 && object1.group_.strcasecmp(object2.group_) == 0;
+      return object1.key_.casecompare(object2.key_) == 0 && object1.group_.casecompare(object2.group_) == 0;
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
@@ -691,18 +691,18 @@ class Key2ServerLink {
   friend ksock::AsyncSocket & operator << (ksock::AsyncSocket & s,const Key2ServerLink & a);
   friend utf8::String::Stream & operator << (utf8::String::Stream & s,const Key2ServerLink & a);
   public:
-    ~Key2ServerLink();
+    virtual ~Key2ServerLink();
     Key2ServerLink();
     Key2ServerLink(const utf8::String & keyName,const utf8::String & serverName = utf8::String());
     Key2ServerLink(const Key2ServerLink &);
     Key2ServerLink & operator = (const Key2ServerLink &);
 
-    /*bool operator == (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) == 0; }
-    bool operator != (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) != 0; }
-    bool operator >= (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) >= 0; }
-    bool operator >  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) >= 0; }
-    bool operator <= (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }
-    bool operator <  (const Key2ServerLink & a) const { return key_.strcasecmp(a.key_) <= 0; }*/
+    /*bool operator == (const Key2ServerLink & a) const { return key_.casecompare(a.key_) == 0; }
+    bool operator != (const Key2ServerLink & a) const { return key_.casecompare(a.key_) != 0; }
+    bool operator >= (const Key2ServerLink & a) const { return key_.casecompare(a.key_) >= 0; }
+    bool operator >  (const Key2ServerLink & a) const { return key_.casecompare(a.key_) >= 0; }
+    bool operator <= (const Key2ServerLink & a) const { return key_.casecompare(a.key_) <= 0; }
+    bool operator <  (const Key2ServerLink & a) const { return key_.casecompare(a.key_) <= 0; }*/
 
     static EmbeddedHashNode<Key2ServerLink,uintptr_t> & ehNLT(const uintptr_t & link,uintptr_t * &){
       return *reinterpret_cast<EmbeddedHashNode<Key2ServerLink,uintptr_t> *>(link);
@@ -720,7 +720,7 @@ class Key2ServerLink {
       return object.key_.hash(false);
     }
     static bool hashNodeEqu(const Key2ServerLink & object1,const Key2ServerLink & object2){
-      return object1.key_.strcasecmp(object2.key_) == 0;
+      return object1.key_.casecompare(object2.key_) == 0;
     }
 
     uint64_t atime_; // время последнего обращения (для удаления устаревших)
@@ -772,7 +772,7 @@ class ServerFiber : public ksock::ServerFiber {
       return object.key_.hash(false,object.user_.hash(false));
     }
     static bool hashNodeEqu(const ServerFiber & object1,const ServerFiber & object2){
-      return object1.user_.strcasecmp(object2.user_) == 0 && object1.key_.strcasecmp(object2.key_) == 0;
+      return object1.user_.casecompare(object2.user_) == 0 && object1.key_.casecompare(object2.key_) == 0;
     }
     mutable EmbeddedHashNode<ServerFiber,uintptr_t> hashNode_;
     utf8::String user_;
@@ -846,12 +846,12 @@ class MailQueueWalker : public ksock::ClientFiber {
       return object.host_.hash(false);
     }
     static bool hostHashNodeEqu(const MailQueueWalker & object1,const MailQueueWalker & object2){
-      return object1.host_.strcasecmp(object2.host_) == 0;
+      return object1.host_.casecompare(object2.host_) == 0;
     }
     mutable EmbeddedHashNode<MailQueueWalker,uintptr_t> hostHashNode_;
     Server * server_;
     utf8::String host_;
-    FiberInterlockedMutex messagesMutex_;
+    FiberWriteLock messagesReadWriteLock_;
     typedef EmbeddedList<
       Message::Key,
       Message::Key::listNode,
@@ -915,7 +915,7 @@ class Server : public ksock::Server {
         ~Data();
         Data();
 
-        FiberMutex & mutex() const;
+        FiberReadWriteLock & mutex() const;
         uint64_t & stime() const;
 
         bool registerUserNL(const UserInfo & info,const utf8::String & sendingTo = utf8::String());
@@ -969,7 +969,7 @@ class Server : public ksock::Server {
 
 // last time when database sweep
         mutable uint64_t stime_;
-        mutable FiberMutex mutex_;
+        mutable FiberReadWriteLock mutex_;
         typedef EmbeddedHash<
           UserInfo,
 	  uintptr_t,
@@ -1105,14 +1105,14 @@ class Server : public ksock::Server {
     Data data_[2];
 // misc
     Data & data(ServerType type);
-    FiberInterlockedMutex rndMutex_;
-    SPEIA<Randomizer,FiberInterlockedMutex> rnd_;
-    FiberInterlockedMutex nodeClientMutex_;
+    FiberWriteLock rndReadWriteLock_;
+    SPEIA<Randomizer,FiberWriteLock> rnd_;
+    FiberWriteLock nodeClientReadWriteLock_;
     NodeClient * nodeClient_;
     int32_t skippedNodeClientStarts_;
     Array<NodeClient *> nodeExchangeClients_;
     int32_t skippedNodeExchangeStarts_;
-    FiberInterlockedMutex recvMailFibersMutex_;
+    FiberWriteLock recvMailFibersReadWriteLock_;
     EmbeddedHash<
       ServerFiber,
       uintptr_t,
@@ -1127,7 +1127,7 @@ class Server : public ksock::Server {
 
     uintptr_t spoolFibers_;
 
-    FiberInterlockedMutex sendMailFibersMutex_;
+    FiberWriteLock sendMailFibersReadWriteLock_;
     EmbeddedHash<
       MailQueueWalker,
       uintptr_t,
@@ -1148,7 +1148,7 @@ inline Server::Data & Server::data(ServerType type)
   return data_[type];
 }
 //------------------------------------------------------------------------------
-inline FiberMutex & Server::Data::mutex() const
+inline FiberReadWriteLock & Server::Data::mutex() const
 {
   return mutex_;
 }

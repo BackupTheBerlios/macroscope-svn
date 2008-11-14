@@ -132,7 +132,7 @@ class Logger {
     > TrafCacheLRU;
     TrafCacheLRU trafCacheLRU_;
     uintptr_t trafCacheSize_;
-    InterlockedMutex trafCacheMutex_;
+    WriteLock trafCacheReadWriteLock_;
 
     class SquidSendmailThread : public Thread {
       public:
@@ -274,7 +274,7 @@ class Logger {
     uintptr_t dnsCacheSize_;
     uintmax_t dnsCacheHitCount_;
     uintmax_t dnsCacheMissCount_;
-    InterlockedMutex dnsMutex_;
+    WriteLock dnsReadWriteLock_;
 
     class BPFTThread : public Thread {
       public:

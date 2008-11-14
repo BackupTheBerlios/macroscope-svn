@@ -89,7 +89,7 @@ const char * const  API::symbols_[] = {
 void API::initialize()
 {
 #if !FIREBIRD_STATIC_LIBRARY
-  new (mutex_) ksys::InterlockedMutex;
+  new (mutex_) ksys::WriteLock;
   count_ = 0;
 #endif
   new (clientLibrary_) utf8::String;
@@ -100,7 +100,7 @@ void API::cleanup()
   using namespace utf8;
   reinterpret_cast<utf8::String *>(clientLibrary_)->~String();
 #if !FIREBIRD_STATIC_LIBRARY
-  mutex().~InterlockedMutex();
+  mutex().~WriteLock();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ void API::open()
 {
 #if !FIREBIRD_STATIC_LIBRARY
   int32_t err;
-  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  ksys::AutoLock<ksys::WriteLock> lock(mutex());
   if( count_ == 0 ){
     utf8::String libFileName(tryOpen());
     if( handle_ == NULL ){
@@ -206,7 +206,7 @@ void API::close()
 {
 #if !FIREBIRD_STATIC_LIBRARY
   assert( count_ > 0 );
-  ksys::AutoLock<ksys::InterlockedMutex> lock  (mutex());
+  ksys::AutoLock<ksys::WriteLock> lock  (mutex());
   if( count_ == 1 ){
 #if defined(__WIN32__) || defined(__WIN64__)
     FreeLibrary(handle_);

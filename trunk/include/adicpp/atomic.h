@@ -31,36 +31,10 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-//#if __i386__ || __x86_64__
-//#define FAST_MUTEX 1
-//#endif
-//---------------------------------------------------------------------------
-/*#ifndef MPLOCKED
-#ifdef SMP
-#define __STRING(x) #x
-#define __XSTRING(x) __STRING(x)
-#else
-#define __STRING(x) #x
-#define __XSTRING(x) __STRING(x)
-#endif
-#endif
-#define MPLOCKED2 "lock ; "
-//__XSTRING(MPLOCKED2)*/
-//---------------------------------------------------------------------------
 #if __GNUG__ && __i386__
-#if !HAVE_ATOMIC_FETCHADD_32
-uint32_t atomic_fetchadd_32(volatile uint32_t * p,uint32_t v);
-#undef HAVE_ATOMIC_FETCHADD_32
-#define HAVE_ATOMIC_FETCHADD_32 1
-#endif
-
 inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
-//#if __linux__
-//  return atomic_fetchadd_32((volatile uint32_t *) &v,a);
-//#else
   asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
-//#endif
   return a;
 }
 
@@ -74,12 +48,16 @@ inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue,
 
 inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
 {
-//  asm volatile ("lock; cmpxchg8b (%%ebp)" : "=a" (cmpValue) : "ebp" (&v), "a" (cmpValue), "c" (exValue));
-//#if HAVE_MACHINE_ATOMIC_H
-//  atomic_cmpset_long(&v,cmpValue,exValue);
-//#endif
-//  return cmpValue;
-  return interlockedCompareExchange(*(int32_t *) &v,int32_t(exValue),int32_t(cmpValue));
+  asm volatile (
+    "lock; cmpxchg8b (%%ebp)"
+    :
+    : "ebp" (&v),
+      "b" ((uint32_t) exValue),
+      "c" (*((uint32_t *) &exValue + 1)),
+      "a" ((uint32_t) cmpValue),
+      "d" (*((uint32_t *) &cmpValue + 1)),
+  );
+  return cmpValue;
 }
 #elif __GNUG__ && __x86_64__
 inline int32_t interlockedIncrement(volatile int32_t & v, int32_t a)
@@ -105,71 +83,20 @@ inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,i
   asm volatile ("lock; cmpxchg %%rcx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
 }
-//#elif _MSC_VER && _M_IX86
-//__forceinline int32_t __fastcall interlockedIncrement(volatile int32_t & v,int32_t a)
-//{
-//  __asm {
-//    mov         eax,a
-//    mov         edx,v
-//    lock xadd   [edx],eax
-//  }
-//}
-//
-//int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
-//
-//__forceinline int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
-//{
-//  __asm {
-//    mov         eax,cmpValue
-//    mov         ecx,exValue
-//    mov         edx,v
-//    lock cmpxchg [edx],ecx
-//  }
-//}
-//
-//__forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
-//{
-//  __asm {
-//    mov         esi,v
-//    mov         ebx,dword ptr exValue
-//    mov         ecx,dword ptr exValue + 4
-//    mov         eax,dword ptr cmpValue
-//    mov         edx,dword ptr cmpValue + 4
-//    lock cmpxchg8b qword ptr [esi]
-//  }
-//}
-#elif defined(__WIN32__) || defined(__WIN64__)//(_MSC_VER && (_M_IX86 || _M_X64)) || defined(__BCPLUSPLUS__)
-#ifdef __BCPLUSPLUS__
-#define __forceinline inline
-__forceinline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a)
+#elif defined(__WIN32__) || defined(__WIN64__)
+inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   return InterlockedExchangeAdd((LONG *) &v,a);
 }
 
-__forceinline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a)
-{
-  return InterlockedExchangeAdd64((LONGLONG *) &v,a);
-}
-#endif
-__forceinline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
-{
-  return InterlockedExchangeAdd((LONG *) &v,a);
-}
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
 
-__forceinline int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
-{
-  return InterlockedExchangeAdd64((LONGLONG *) &v,a);
-}
-
-__forceinline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
+inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
 {
   return InterlockedCompareExchange((LONG *) &v,exValue,cmpValue);
 }
 
-__forceinline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
-{
-  return InterlockedCompareExchange64((LONGLONG *) &v,exValue,cmpValue);
-}
+int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue);
 #else
 int32_t interlockedIncrement(volatile int32_t & v,int32_t a);
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
@@ -179,10 +106,8 @@ int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t 
 //---------------------------------------------------------------------------
 void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int32_t cmpValue);
 void interlockedCompareExchangeAcquire(volatile int64_t & v,int64_t exValue,int64_t cmpValue);
-#ifndef __BCPLUSPLUS__
 inline uint32_t interlockedIncrement(volatile uint32_t & v,uint32_t a){ return interlockedIncrement(*(volatile int32_t *) &v,(int32_t) a); }
 inline uint64_t interlockedIncrement(volatile uint64_t & v,uint64_t a){ return interlockedIncrement(*(volatile int64_t *) &v,(int64_t) a); }
-#endif
 #if SIZEOF_VOID_P <= 4
 #if !HAVE_INTPTR_T_AS_INT32_T && !HAVE_INT32_T_AS_INTPTR_T
 inline uintptr_t interlockedIncrement(volatile intptr_t & v,intptr_t a){ return interlockedIncrement(*(volatile int32_t *) &v,(int32_t) a); }

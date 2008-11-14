@@ -761,6 +761,8 @@ class PACKED RBTreeNode { // base class for deriving
 //-----------------------------------------------------------------------------
 class RBTreeBenchmarkObject {
   public:
+    virtual ~RBTreeBenchmarkObject() {}
+
     intmax_t key_;
       
     static RBTreeNode & treeO2N(const RBTreeBenchmarkObject & object,uintptr_t *){

@@ -51,7 +51,7 @@ int64_t __fastcall rdtsc();
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 #ifdef NETMAIL_ENABLE_PROFILER
-class TProfiler : public TInterlockedMutex {
+class TProfiler : public TWriteLock {
     friend void initialize();
     friend void cleanup();
   private:
@@ -59,8 +59,8 @@ class TProfiler : public TInterlockedMutex {
     static void cleanup();
 
     static int64_t              ProcessTSC;
-    static char                 StubMutex[];
-    static TInterlockedMutex &  Mutex;
+    static char                 StubReadWriteLock[];
+    static TWriteLock &  ReadWriteLock;
     static TProfiler *          FirstProfiler_;
     static bool                 Enabled_;
 

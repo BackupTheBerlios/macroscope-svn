@@ -32,7 +32,7 @@ namespace ksys {
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class AsyncFile;
-class FiberInterlockedMutex;
+class FiberWriteLock;
 //---------------------------------------------------------------------------
 class LogFile : protected Thread {
   friend void initialize(int,char **);
@@ -67,8 +67,8 @@ class LogFile : protected Thread {
   protected:
     static const char * const priNicks_[];
     utf8::String file_;
-    FiberInterlockedMutex mutex_;
-    InterlockedMutex threadMutex_;
+    FiberWriteLock mutex_;
+    WriteLock threadReadWriteLock_;
     AutoPtr<char,AutoPtrMemoryDestructor> buffer_;
     uintptr_t bufferPos_;
     uintptr_t bufferSize_;

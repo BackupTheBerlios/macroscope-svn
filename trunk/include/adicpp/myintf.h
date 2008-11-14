@@ -364,8 +364,8 @@ class API {
     utf8::String clientLibrary();
     void clientLibrary(const utf8::String & lib);
   protected:
-    uint8_t mutex_[sizeof(ksys::InterlockedMutex)];
-    ksys::InterlockedMutex & mutex();
+    uint8_t mutex_[sizeof(ksys::WriteLock)];
+    ksys::WriteLock & mutex();
     utf8::String clientLibraryNL();
     uint8_t clientLibrary_[sizeof(utf8::String)];
     intptr_t                 count_;
@@ -391,14 +391,14 @@ class API {
 //---------------------------------------------------------------------------
 extern API api;
 //---------------------------------------------------------------------------
-inline ksys::InterlockedMutex & API::mutex()
+inline ksys::WriteLock & API::mutex()
 {
-  return *reinterpret_cast<ksys::InterlockedMutex *>(mutex_);
+  return *reinterpret_cast<ksys::WriteLock *>(mutex_);
 }
 //---------------------------------------------------------------------------
 inline utf8::String API::clientLibrary()
 {
-  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  ksys::AutoLock<ksys::WriteLock> lock(mutex());
   return *reinterpret_cast<utf8::String *>(clientLibrary_);
 }
 //---------------------------------------------------------------------------
@@ -409,7 +409,7 @@ inline utf8::String API::clientLibraryNL()
 //---------------------------------------------------------------------------
 inline void API::clientLibrary(const utf8::String & lib)
 {
-  ksys::AutoLock<ksys::InterlockedMutex> lock(mutex());
+  ksys::AutoLock<ksys::WriteLock> lock(mutex());
   *reinterpret_cast<utf8::String *>(clientLibrary_) = lib;
 }
 //---------------------------------------------------------------------------

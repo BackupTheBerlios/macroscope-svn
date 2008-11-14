@@ -137,7 +137,7 @@ class ClientMailFiber : public BaseClientFiber {
     ClientMailFiber(Client * client);
   protected:
     Client * client_;
-    FiberInterlockedMutex messageMutex_;
+    FiberWriteLock messageReadWriteLock_;
     FiberSemaphore semaphore_;
     class MessageControl {
       public:
@@ -145,7 +145,7 @@ class ClientMailFiber : public BaseClientFiber {
           msgNone, msgSend, msgRemove
         };
 
-        ~MessageControl(){}
+        virtual ~MessageControl(){}
         MessageControl(Message * message = NULL,Operation op = msgNone,bool async = false) :
           message_(message), operation_(op), async_(async) {}
 
@@ -239,7 +239,7 @@ class MK1100TCPServer : public ksock::Server {
     void open();
   protected:
     Client * client_;
-    FiberInterlockedMutex fibersMutex_;
+    FiberWriteLock fibersReadWriteLock_;
     Array<MK1100ClientFiber *> fibers_;
 
     Fiber * newFiber();
@@ -270,7 +270,7 @@ class Client : public ksock::Client {
     utf8::String configFile_;
     utf8::String logFile_;
     ConfigSP config_;
-    mutable FiberInterlockedMutex connectedMutex_;
+    mutable FiberWriteLock connectedReadWriteLock_;
     utf8::String connectedToServer_;
     bool connected_;
     bool asyncMessagesReceiving_;
@@ -307,10 +307,10 @@ class Client : public ksock::Client {
 
     Client & readConfig(const utf8::String & configFile,const utf8::String & logFile);
 
-    InterlockedMutex workFiberWait_;
+    WriteLock workFiberWait_;
     int32_t workFiberLastError_;
   protected:
-    mutable FiberInterlockedMutex queueMutex_;
+    mutable FiberWriteLock queueReadWriteLock_;
     Messages recvQueue_;
     AutoDrop<Messages> recvQueueAutoDrop_;
     Messages sendQueue_;
@@ -368,7 +368,7 @@ public:
 public:
   class msmail1c {
     public:
-      ~msmail1c();
+      virtual ~msmail1c();
       msmail1c();
 
       adicpp::AutoInitializer initializer_;
@@ -395,7 +395,7 @@ public:
           DWORD lastError_;
           bool locked_;
 
-          ~LockedFile();
+          virtual ~LockedFile();
           LockedFile();
           void unlockFile();
       };

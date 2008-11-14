@@ -51,7 +51,7 @@ Symbol * SymbolTable::newSymbol(CodeObjectOwner * parent,const wchar_t * symbol,
   Symbol * parentSymbol = parent->symbols_.count() > 0 ? &parent->symbols_[0] : NULL;
   char b[sizeof(object) * 2 + 1];
   if( symbol == NULL ) sprintf(b,"%"PRIxPTR,object);
-  AutoPtr<wchar_t> symSafe(symbol != NULL ? coco_string_create(symbol) : coco_string_create(b));
+  AutoPtr<wchar_t,AutoPtrMemoryDestructor> symSafe(symbol != NULL ? coco_string_create(symbol) : coco_string_create(b));
   ksys::AutoPtr<Symbol> sym(newObjectV1V2V3<Symbol>(parentSymbol,symSafe.ptr(),object));
   symSafe.ptr(NULL);
   if( !pseudonym ){

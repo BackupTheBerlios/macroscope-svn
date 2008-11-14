@@ -205,8 +205,8 @@ class SharedMemoryQueue : public SharedMemory {
     SharedSemaphore rdQueueWRLockObject_;
     SharedSemaphore wrQueueRDLockObject_;
     SharedSemaphore wrQueueWRLockObject_;
-    SharedSemaphore rdQueueMutexObject_;
-    SharedSemaphore wrQueueMutexObject_;
+    SharedSemaphore rdQueueReadWriteLockObject_;
+    SharedSemaphore wrQueueReadWriteLockObject_;
     SharedSemaphore rdQueueRDIndicatorObject_;
     SharedSemaphore rdQueueWRIndicatorObject_;
     SharedSemaphore wrQueueRDIndicatorObject_;
@@ -237,8 +237,8 @@ class SharedMemoryQueue : public SharedMemory {
     SharedSemaphore * wrQueueRDLock_;
     SharedSemaphore * wrQueueWRLock_;
     SharedSemaphore * wrQueueLock_;
-    SharedSemaphore * rdQueueMutex_;
-    SharedSemaphore * wrQueueMutex_;
+    SharedSemaphore * rdQueueReadWriteLock_;
+    SharedSemaphore * wrQueueReadWriteLock_;
     SharedSemaphore * rdQueueRDIndicator_;
     SharedSemaphore * rdQueueWRIndicator_;
     SharedSemaphore * wrQueueRDIndicator_;

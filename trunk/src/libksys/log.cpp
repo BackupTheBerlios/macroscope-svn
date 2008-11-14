@@ -184,9 +184,9 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
       }
       if( codePage_ == CP_UNICODE ) a *= sizeof(wchar_t);
-      AutoLock<FiberInterlockedMutex> lock(mutex_);
+      AutoLock<FiberWriteLock> lock(mutex_);
       resume();
-      AutoLock<InterlockedMutex> lock2(threadMutex_);
+      AutoLock<WriteLock> lock2(threadReadWriteLock_);
       uintptr_t bufferSize = bufferSize_;
       while( bufferSize < bufferPos_ + a + l ) bufferSize = (bufferSize << 1) + (bufferSize == 0);
       buffer_.realloc(bufferSize);
@@ -245,7 +245,7 @@ void LogFile::threadExecute()
     int64_t ft;
     try {
       {
-        AutoLock<InterlockedMutex> lock(threadMutex_);
+        AutoLock<WriteLock> lock(threadReadWriteLock_);
         bufferPos = bufferPos_;
         ft = bufferDataTTA_ - (gettimeofday() - lastFlushTime_);
       }
@@ -258,7 +258,7 @@ void LogFile::threadExecute()
         bufferSemaphore_.timedWait(ft);
       }
       {
-        AutoLock<InterlockedMutex> lock(threadMutex_);
+        AutoLock<WriteLock> lock(threadReadWriteLock_);
         buffer.xchg(buffer_);
         bufferPos = bufferPos_;
         bufferPos_ = 0;
@@ -281,7 +281,7 @@ void LogFile::threadExecute()
         threadFile_.exclusive(false).open();
         threadFile_.seek(threadFile_.size()).writeBuffer(buffer,bufferPos);
         {
-          AutoLock<InterlockedMutex> lock(threadMutex_);
+          AutoLock<WriteLock> lock(threadReadWriteLock_);
           lastFlushTime_ = gettimeofday();
 	}
         rotate(threadFile_);
@@ -332,7 +332,7 @@ LogFile & LogFile::flush(bool wait)
 {
   uint64_t ft = 0;
   {
-    AutoLock<InterlockedMutex> lock2(threadMutex_);
+    AutoLock<WriteLock> lock2(threadReadWriteLock_);
     if( bufferPos_ > 0 ){
       bufferSemaphore_.post();
       ft = lastFlushTime_;
@@ -342,7 +342,7 @@ LogFile & LogFile::flush(bool wait)
     }
   }
   while( wait ){
-    AutoLock<InterlockedMutex> lock2(threadMutex_);
+    AutoLock<WriteLock> lock2(threadReadWriteLock_);
     if( ft != lastFlushTime_ ) break;
     ksleep1();
   }

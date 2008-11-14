@@ -201,7 +201,7 @@ inline bool isRunInFiber()
 typedef EmbeddedList<AsyncEvent,AsyncEvent::node,AsyncEvent::nodeObject> Events;
 typedef EmbeddedListNode<AsyncEvent> EventsNode;
 //---------------------------------------------------------------------------
-class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncIoSlave : public Thread, public Semaphore, public LiteWriteLock {
   public:
     virtual ~AsyncIoSlave();
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -247,10 +247,10 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 #else
 #if HAVE_KQUEUE
     int kqueue_;
-    Array<struct kevent> kevents_;
+    Array<struct kevent,AutoPtrMemoryDestructor> kevents_;
 #endif
-    AutoPtr<fd_set> rfds_;
-    AutoPtr<fd_set> wfds_;
+    AutoPtr<fd_set,AutoPtrMemoryDestructor> rfds_;
+    AutoPtr<fd_set,AutoPtrMemoryDestructor> wfds_;
     bool connect_;
 #endif
     uintptr_t maxRequests_;
@@ -259,7 +259,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public InterlockedMutex {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AsyncMiscSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncMiscSlave : public Thread, public Semaphore, public LiteWriteLock {
   public:
     virtual ~AsyncMiscSlave();
     AsyncMiscSlave();
@@ -288,7 +288,7 @@ class AsyncMiscSlave : public Thread, public Semaphore, public InterlockedMutex 
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AsyncProcessSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncProcessSlave : public Thread, public Semaphore, public LiteWriteLock {
   public:
     virtual ~AsyncProcessSlave();
     AsyncProcessSlave();
@@ -310,7 +310,7 @@ class AsyncProcessSlave : public Thread, public Semaphore, public InterlockedMut
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AsyncTimerSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncTimerSlave : public Thread, public Semaphore, public LiteWriteLock {
   public:
     virtual ~AsyncTimerSlave();
     AsyncTimerSlave();
@@ -330,7 +330,7 @@ class AsyncTimerSlave : public Thread, public Semaphore, public InterlockedMutex
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncAcquireSlave : public Thread, public Semaphore, public LiteWriteLock {
   public:
     virtual ~AsyncAcquireSlave();
     AsyncAcquireSlave();
@@ -356,7 +356,7 @@ class AsyncAcquireSlave : public Thread, public Semaphore, public InterlockedMut
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 //---------------------------------------------------------------------------
-class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semaphore, public LiteWriteLock {
   public:
     virtual ~AsyncWin9xDirectoryChangeNotificationSlave();
     AsyncWin9xDirectoryChangeNotificationSlave();
@@ -382,7 +382,7 @@ class AsyncWin9xDirectoryChangeNotificationSlave : public Thread, public Semapho
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AsyncStackBackTraceSlave : public Thread, public Semaphore, public InterlockedMutex {
+class AsyncStackBackTraceSlave : public Thread, public Semaphore, public LiteWriteLock {
   public:
     virtual ~AsyncStackBackTraceSlave();
     AsyncStackBackTraceSlave();
@@ -420,45 +420,45 @@ class Requester {
     static Requester & requester();
   protected:
   private:
-    InterlockedMutex mutex_;
+    LiteWriteLock mutex_;
     EmbeddedList<
       AsyncDescriptor,
       AsyncDescriptor::listNode,
       AsyncDescriptor::listNodeObject
     > descriptors_;
 
-    InterlockedMutex ioRequestsMutex_;
+    LiteWriteLock ioRequestsReadWriteLock_;
     Vector<AsyncIoSlave> ioSlaves_;
     int64_t ioSlavesSweepTime_;
 
 #if !defined(__WIN32__) && !defined(__WIN64__)
-    InterlockedMutex connectRequestsMutex_;
+    LiteWriteLock connectRequestsReadWriteLock_;
     Vector<AsyncIoSlave> connectSlaves_;
     int64_t connectSlavesSweepTime_;
 #endif
 
-    InterlockedMutex ofRequestsMutex_;
+    LiteWriteLock ofRequestsReadWriteLock_;
     Vector<AsyncMiscSlave> ofSlaves_;
     int64_t ofSlavesSweepTime_;
 
-    InterlockedMutex prRequestsMutex_;
+    LiteWriteLock prRequestsReadWriteLock_;
     Vector<AsyncProcessSlave> prSlaves_;
     int64_t prSlavesSweepTime_;
 
-    InterlockedMutex timerRequestsMutex_;
+    LiteWriteLock timerRequestsReadWriteLock_;
     AutoPtr<AsyncTimerSlave> timerSlave_;
 
-    InterlockedMutex acquireRequestsMutex_;
+    LiteWriteLock acquireRequestsReadWriteLock_;
     Vector<AsyncAcquireSlave> acquireSlaves_;
     int64_t acquireSlavesSweepTime_;
 
 #if defined(__WIN32__) || defined(__WIN64__)
-    InterlockedMutex wdcnRequestsMutex_;
+    LiteWriteLock wdcnRequestsReadWriteLock_;
     Vector<AsyncWin9xDirectoryChangeNotificationSlave> wdcnSlaves_;
     int64_t wdcnSlavesSweepTime_;
 
 #ifndef NDEBUG
-    InterlockedMutex asyncStackBackTraceSlaveMutex_;
+    LiteWriteLock asyncStackBackTraceSlaveReadWriteLock_;
     AutoPtr<AsyncStackBackTraceSlave> asyncStackBackTraceSlave_;
 #endif
 #endif
@@ -469,19 +469,19 @@ class Requester {
 //---------------------------------------------------------------------------
 inline void Requester::attachDescriptor(AsyncDescriptor & descriptor)
 {
-  AutoLock<InterlockedMutex> lock(mutex_);
+  AutoLock<LiteWriteLock> lock(mutex_);
   descriptors_.insToTail(descriptor);
 }
 //---------------------------------------------------------------------------
 inline void Requester::detachDescriptor(AsyncDescriptor & descriptor)
 {
-  AutoLock<InterlockedMutex> lock(mutex_);
+  AutoLock<LiteWriteLock> lock(mutex_);
   descriptors_.remove(descriptor);
 }
 //---------------------------------------------------------------------------
 inline void Requester::shutdownDescriptors()
 {
-  AutoLock<InterlockedMutex> lock(mutex_);
+  AutoLock<LiteWriteLock> lock(mutex_);
   EmbeddedListNode<AsyncDescriptor> * adp;
   for( adp = descriptors_.first(); adp != NULL; adp = adp->next() ){
     AsyncDescriptor::listNodeObject(*adp).shutdown2();
@@ -510,19 +510,19 @@ class BaseThread : virtual public Thread, virtual public Fiber {
     BaseThread & maxFibersPerThread(uintptr_t mfpt);
   protected:
     void afterConstruction() { Thread::afterConstruction(); Fiber::afterConstruction(); }
-    void beforeDestruction() { Thread::beforeDestruction(); Fiber::beforeDestruction(); }
+    void beforeDestruction() { Fiber::beforeDestruction(); Thread::beforeDestruction(); }
     void threadBeforeWait();
   private:
     BaseServer * server_;
     Semaphore semaphore_;
-    InterlockedMutex mutex_;
+    LiteWriteLock mutex_;
     Events events_;
     EmbeddedList<
       Fiber,
       Fiber::node,
       Fiber::nodeObject
     > fibers_;
-    InterlockedMutex fibersMutex_;
+    LiteWriteLock fibersReadWriteLock_;
 //    uintptr_t maxStackSize_;
     uintptr_t mfpt_;
 
@@ -631,7 +631,7 @@ class BaseServer {
     void sweepThreads();
     bool shutdown_;
   private:
-    mutable InterlockedMutex mutex_;
+    mutable LiteWriteLock mutex_;
     EmbeddedList<
       BaseThread,
       BaseThread::serverListNode,

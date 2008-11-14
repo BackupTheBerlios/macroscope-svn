@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,141 +24,133 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#ifndef _Mutex_H_
-#define _Mutex_H_
+#ifndef _ReadWriteLock_H_
+#define _ReadWriteLock_H_
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class InterlockedMutex {
+class LiteWriteLock {
   friend void initialize(int,char **);
   friend void cleanup();
-  friend class Mutex;
   public:
-    ~InterlockedMutex();
-    InterlockedMutex();
+    ~LiteWriteLock();
+    LiteWriteLock();
 
     void acquire();
     bool tryAcquire();
     void release();
+
+    static void (* acquire_)(volatile ilock_t & ref);
+    static void singleAcquire(volatile ilock_t & ref);
+    static void multiAcquire(volatile ilock_t & ref);
   protected:
   private:
-#if FAST_MUTEX
-    volatile int32_t refCount_;
+    volatile ilock_t refCount_;
 
-    static void (* acquire_)(InterlockedMutex * mutex);
-    static void singleAcquire(InterlockedMutex * mutex);
-    static void multiAcquire(InterlockedMutex * mutex);
-#elif defined(__WIN32__) || defined(__WIN64__)
-//    static CRITICAL_SECTION staticCS_;
-//    CRITICAL_SECTION cs_;
-    HANDLE sem_;
-#elif HAVE_PTHREAD_H
-    pthread_mutex_t mutex_;
-    static uint8_t pthreadMutexNull_[sizeof(pthread_mutex_t)];
-#endif
+    LiteWriteLock(const LiteWriteLock &){}
+    void operator =(const LiteWriteLock &){}
+
     static void initialize();
     static void cleanup();
-    InterlockedMutex(const InterlockedMutex &){}
-    void operator =(const InterlockedMutex &){}
 };
 //---------------------------------------------------------------------------
-#if FAST_MUTEX
-inline InterlockedMutex::InterlockedMutex() : refCount_(0)
+inline LiteWriteLock::~LiteWriteLock()
 {
-}
-#endif
-//---------------------------------------------------------------------------
-#if FAST_MUTEX
-//---------------------------------------------------------------------------
-inline void InterlockedMutex::acquire()
-{
-  acquire_(this);
+  assert( refCount_ == 0 );
 }
 //---------------------------------------------------------------------------
-inline bool InterlockedMutex::tryAcquire()
+inline LiteWriteLock::LiteWriteLock() : refCount_(0)
 {
-  return interlockedCompareExchange(refCount_, -1, 0) == 0;
 }
 //---------------------------------------------------------------------------
-inline void InterlockedMutex::release()
+inline void LiteWriteLock::acquire()
 {
-  interlockedIncrement(refCount_, 1);
+  acquire_(refCount_);
 }
 //---------------------------------------------------------------------------
-#endif
+inline bool LiteWriteLock::tryAcquire()
+{
+  return interlockedCompareExchange(refCount_,-1,0) == 0;
+}
+//---------------------------------------------------------------------------
+inline void LiteWriteLock::release()
+{
+  interlockedIncrement(refCount_,1);
+}
+//---------------------------------------------------------------------------
+class AutoILock {
+  public:
+    ~AutoILock() { interlockedIncrement(*ref_,1); }
+    AutoILock(volatile ilock_t & ref) : ref_(&ref) { LiteWriteLock::acquire_(ref); }
+  protected:
+  private:
+    volatile ilock_t * ref_;
+
+    AutoILock(const AutoILock &);
+    void operator = (const AutoILock &);
+};
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Mutex
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
- : public InterlockedMutex
-#endif
+class LiteReadWriteLock : protected LiteWriteLock
 {
-  friend class InterlockedMutex;
+  friend class LiteWriteLock;
   public:
-    ~Mutex();
-    Mutex();
+    ~LiteReadWriteLock();
+    LiteReadWriteLock();
 
-    Mutex &     rdLock();
-    bool        tryRDLock();
-    Mutex &     wrLock();
-    bool        tryWRLock();
-    Mutex &     unlock();
+    LiteReadWriteLock & rdLock();
+    bool tryRDLock();
+    LiteReadWriteLock & wrLock();
+    bool tryWRLock();
+    LiteReadWriteLock & unlock();
   protected:
   private:
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
-    volatile int32_t           value_;
-    static void (*rdLock_)(Mutex * mutex);
-    static void singleRDLock(Mutex * mutex);
-    static void multiRDLock(Mutex * mutex);
-    static void (*wrLock_)(Mutex * mutex);
-    static void singleWRLock(Mutex * mutex);
-    static void multiWRLock(Mutex * mutex);
-#elif HAVE_PTHREAD_RWLOCK_INIT
-    pthread_rwlock_t mutex_;
-    static uint8_t pthreadRWLockNull_[sizeof(pthread_rwlock_t)];
-#else
-#error pthread_rwlock not implemented
-#endif
-    Mutex(const Mutex &){}
-    void operator =(const Mutex &){}
+    volatile ilock_t value_;
+    static void (*rdLock_)(LiteReadWriteLock * mutex);
+    static void singleRDLock(LiteReadWriteLock * mutex);
+    static void multiRDLock(LiteReadWriteLock * mutex);
+    static void (*wrLock_)(LiteReadWriteLock * mutex);
+    static void singleWRLock(LiteReadWriteLock * mutex);
+    static void multiWRLock(LiteReadWriteLock * mutex);
+
+    LiteReadWriteLock(const LiteReadWriteLock &) {}
+    void operator =(const LiteReadWriteLock &) {}
 };
 //---------------------------------------------------------------------------
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
+inline LiteReadWriteLock::~LiteReadWriteLock()
+{
+  assert( value_ == 0 );
+}
 //---------------------------------------------------------------------------
-inline Mutex::~Mutex()
+inline LiteReadWriteLock::LiteReadWriteLock() : value_(0)
 {
 }
 //---------------------------------------------------------------------------
-inline Mutex::Mutex()
-{
-  value_ = 0;
-}
-//---------------------------------------------------------------------------
-inline Mutex & Mutex::rdLock()
+inline LiteReadWriteLock & LiteReadWriteLock::rdLock()
 {
   rdLock_(this);
   return *this;
 }
 //---------------------------------------------------------------------------
-inline bool Mutex::tryRDLock()
+inline bool LiteReadWriteLock::tryRDLock()
 {
   acquire();
-  bool  r = value_ >= 0;
+  bool r = value_ >= 0;
   if( r ) value_++;
   release();
   return r;
 }
 //---------------------------------------------------------------------------
-inline Mutex & Mutex::wrLock()
+inline LiteReadWriteLock & LiteReadWriteLock::wrLock()
 {
   wrLock_(this);
   return *this;
 }
 //---------------------------------------------------------------------------
-inline bool Mutex::tryWRLock()
+inline bool LiteReadWriteLock::tryWRLock()
 {
   acquire();
   bool r = value_ == 0;
@@ -167,10 +159,120 @@ inline bool Mutex::tryWRLock()
   return r;
 }
 //---------------------------------------------------------------------------
-inline Mutex & Mutex::unlock()
+inline LiteReadWriteLock & LiteReadWriteLock::unlock()
 {
   acquire();
-  assert(value_ != 0);
+  assert( value_ != 0 );
+  if( value_ > 0 ) value_--; else if( value_ < 0 ) value_++;
+  release();
+  return *this;
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class WriteLock {
+  friend void initialize(int,char **);
+  friend void cleanup();
+  friend class ReadWriteLock;
+  public:
+    ~WriteLock();
+    WriteLock();
+
+    void acquire();
+    bool tryAcquire();
+    void release();
+  protected:
+  private:
+#if defined(__WIN32__) || defined(__WIN64__)
+    HANDLE sem_;
+#elif HAVE_PTHREAD_H
+    pthread_mutex_t mutex_;
+    static uint8_t pthreadReadWriteLockNull_[sizeof(pthread_mutex_t)];
+#endif
+    WriteLock(const WriteLock &){}
+    void operator =(const WriteLock &){}
+};
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class ReadWriteLock
+#if !HAVE_PTHREAD_H
+  : protected WriteLock
+#endif
+{
+  friend class WriteLock;
+  public:
+    ~ReadWriteLock();
+    ReadWriteLock();
+
+    ReadWriteLock & rdLock();
+    bool tryRDLock();
+    ReadWriteLock & wrLock();
+    bool tryWRLock();
+    ReadWriteLock & unlock();
+  protected:
+  private:
+#if HAVE_PTHREAD_H
+    pthread_rwlock_t mutex_;
+    static uint8_t pthreadRWLockNull_[sizeof(pthread_rwlock_t)];
+#else
+    volatile int32_t value_;
+    static void (*rdLock_)(ReadWriteLock * mutex);
+    static void singleRDLock(ReadWriteLock * mutex);
+    static void multiRDLock(ReadWriteLock * mutex);
+    static void (*wrLock_)(ReadWriteLock * mutex);
+    static void singleWRLock(ReadWriteLock * mutex);
+    static void multiWRLock(ReadWriteLock * mutex);
+#endif
+    ReadWriteLock(const ReadWriteLock &){}
+    void operator =(const ReadWriteLock &){}
+};
+//---------------------------------------------------------------------------
+#if !HAVE_PTHREAD_H
+//---------------------------------------------------------------------------
+inline ReadWriteLock::~ReadWriteLock()
+{
+  assert( value_ == 0 );
+}
+//---------------------------------------------------------------------------
+inline ReadWriteLock::ReadWriteLock() : value_(0)
+{
+}
+//---------------------------------------------------------------------------
+inline ReadWriteLock & ReadWriteLock::rdLock()
+{
+  rdLock_(this);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool ReadWriteLock::tryRDLock()
+{
+  acquire();
+  bool  r = value_ >= 0;
+  if( r ) value_++;
+  release();
+  return r;
+}
+//---------------------------------------------------------------------------
+inline ReadWriteLock & ReadWriteLock::wrLock()
+{
+  wrLock_(this);
+  return *this;
+}
+//---------------------------------------------------------------------------
+inline bool ReadWriteLock::tryWRLock()
+{
+  acquire();
+  bool r = value_ == 0;
+  if( r ) value_ = -1;
+  release();
+  return r;
+}
+//---------------------------------------------------------------------------
+inline ReadWriteLock & ReadWriteLock::unlock()
+{
+  acquire();
+  assert( value_ != 0 );
   if( value_ > 0 ) value_--; else if( value_ < 0 ) value_++;
   release();
   return *this;
@@ -180,72 +282,48 @@ inline Mutex & Mutex::unlock()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T> class AutoInterlockedLock {
+template <typename T> class AutoReadWriteLockRDLock {
   public:
-    ~AutoInterlockedLock();
-    AutoInterlockedLock(volatile T & ilock);
-  protected:
-  private:
-    volatile T & ilock_;
-
-    AutoInterlockedLock(const AutoInterlockedLock<T> &){}
-    void operator =(const AutoInterlockedLock<T> &){}
-};
-//---------------------------------------------------------------------------
-template<typename T> inline AutoInterlockedLock<T>::~AutoInterlockedLock()
-{
-  interlockedIncrement(ilock_,1);
-}
-//---------------------------------------------------------------------------
-template<typename T> inline AutoInterlockedLock<T>::AutoInterlockedLock(volatile T & ilock) : ilock_(ilock)
-{
-  interlockedCompareExchangeAcquire(ilock_,-1,0);
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-template <typename T> class AutoMutexRDLock {
-  public:
-    ~AutoMutexRDLock();
-    AutoMutexRDLock(T & mutex);
+    ~AutoReadWriteLockRDLock();
+    AutoReadWriteLockRDLock(T & mutex);
   protected:
   private:
     T & mutex_;
 
-    AutoMutexRDLock(const AutoMutexRDLock<T> &){}
-    void operator =(const AutoMutexRDLock<T> &){}
+    AutoReadWriteLockRDLock(const AutoReadWriteLockRDLock<T> &){}
+    void operator =(const AutoReadWriteLockRDLock<T> &){}
 };
 //---------------------------------------------------------------------------
-template<typename T> inline AutoMutexRDLock<T>::~AutoMutexRDLock()
+template<typename T> inline AutoReadWriteLockRDLock<T>::~AutoReadWriteLockRDLock()
 {
   mutex_.unlock();
 }
 //---------------------------------------------------------------------------
-template<typename T> inline AutoMutexRDLock<T>::AutoMutexRDLock(T & mutex) : mutex_(mutex)
+template<typename T> inline AutoReadWriteLockRDLock<T>::AutoReadWriteLockRDLock(T & mutex) : mutex_(mutex)
 {
   mutex_.rdLock();
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T> class AutoMutexWRLock {
+template <typename T> class AutoReadWriteLockWRLock {
   public:
-    ~AutoMutexWRLock();
-    AutoMutexWRLock(T & mutex);
+    ~AutoReadWriteLockWRLock();
+    AutoReadWriteLockWRLock(T & mutex);
   protected:
   private:
     T & mutex_;
 
-    AutoMutexWRLock(const AutoMutexWRLock<T> &){}
-    void operator =(const AutoMutexWRLock<T> &){}
+    AutoReadWriteLockWRLock(const AutoReadWriteLockWRLock<T> &){}
+    void operator =(const AutoReadWriteLockWRLock<T> &){}
 };
 //---------------------------------------------------------------------------
-template<typename T> inline AutoMutexWRLock<T>::~AutoMutexWRLock()
+template<typename T> inline AutoReadWriteLockWRLock<T>::~AutoReadWriteLockWRLock()
 {
   mutex_.unlock();
 }
 //---------------------------------------------------------------------------
-template<typename T> inline AutoMutexWRLock<T>::AutoMutexWRLock(T & mutex) : mutex_(mutex)
+template<typename T> inline AutoReadWriteLockWRLock<T>::AutoReadWriteLockWRLock(T & mutex) : mutex_(mutex)
 {
   mutex_.wrLock();
 }
@@ -253,9 +331,9 @@ template<typename T> inline AutoMutexWRLock<T>::AutoMutexWRLock(T & mutex) : mut
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 extern uint8_t giantPlaceHolder[];
-inline InterlockedMutex & giant()
+inline WriteLock & giant()
 {
-  return *reinterpret_cast<InterlockedMutex *>(giantPlaceHolder);
+  return *reinterpret_cast<WriteLock *>(giantPlaceHolder);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -291,67 +369,6 @@ template <typename T> inline AutoLock<T>::AutoLock(T & mutex) : mutex_(&mutex)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Event {
-  public:
-    ~Event();
-    Event();
-#if HAVE_PTHREAD_H
-    pthread_cond_t  handle_;
-    pthread_mutex_t mutex_;
-#elif defined(__WIN32__) || defined(__WIN64__)
-    HANDLE          handle_;
-#endif
-    Event & post();
-    Event & wait();
-    bool tryWait();
-  protected:
-  private:
-};
-//---------------------------------------------------------------------------
-inline Event & Event::post()
-{
-#if HAVE_PTHREAD_H
-  pthread_cond_broadcast(&handle_);
-#elif defined(__WIN32__) || defined(__WIN64__)
-  PulseEvent(handle_);
-#endif
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline Event & Event::wait()
-{
-#if HAVE_PTHREAD_H
-#ifndef NDEBUG
-  int r =
-#endif
-  pthread_cond_wait(&handle_, &mutex_);
-#ifndef NDEBUG
-  assert(r == 0);
-#endif
-#elif defined(__WIN32__) || defined(__WIN64__)
-  WaitForSingleObject(handle_, INFINITE);
-#endif
-  return *this;
-}
-//---------------------------------------------------------------------------
-inline bool Event::tryWait()
-{
-#if HAVE_PTHREAD_H
-  struct timeval  now;
-  struct timespec timeout;
-  gettimeofday(&now, NULL);
-  timeout.tv_sec = now.tv_sec;
-  timeout.tv_nsec = now.tv_usec * 1000;
-  int err = pthread_cond_timedwait(&handle_, &mutex_, &timeout);
-  assert(err == 0 || err == ETIMEDOUT);
-  return err == 0;
-#elif defined(__WIN32__) || defined(__WIN64__)
-  return WaitForSingleObject(handle_, 0) == WAIT_OBJECT_0;
-#endif
-}
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
 inline uintptr_t numberOfProcessors()
 {
   uintptr_t   n = 1;
@@ -374,6 +391,6 @@ inline int32_t SwitchToThread()
 }
 #endif
 //---------------------------------------------------------------------------
-#endif /* _Mutex_H_ */
+#endif /* _ReadWriteLock_H_ */
 //---------------------------------------------------------------------------
 

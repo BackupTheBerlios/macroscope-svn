@@ -511,7 +511,7 @@ inline
 intptr_t Array<T>::searchCase(const T & element) const
 {
   intptr_t  i;
-  for( i = count_ - 1; i >= 0; i-- ) if( ptr_[i].strcasecmp(element) == 0 ) break;
+  for( i = count_ - 1; i >= 0; i-- ) if( ptr_[i].casecompare(element) == 0 ) break;
   return i;
 }
 //-----------------------------------------------------------------------------
@@ -525,7 +525,7 @@ intptr_t Array<T>::bSearchCase(const T & element) const
 
   while( low <= high ){
     pos = (low + high) / 2;
-    c = element.strcasecmp(ptr_[pos]);
+    c = element.casecompare(ptr_[pos]);
     if( c > 0 ){
       low = pos + 1;
     }
@@ -549,7 +549,7 @@ uintptr_t Array<T>::bSearchCase(const T & element,intptr_t & c) const
   c = 1;
   while( low <= high ){
     pos = (low + high) / 2;
-    c = element.strcasecmp(ptr_[pos]);
+    c = element.casecompare(ptr_[pos]);
     if( c > 0 ){
       low = pos + 1;
     }

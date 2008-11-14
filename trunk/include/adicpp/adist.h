@@ -49,7 +49,7 @@ class Statement : virtual public ksys::Object {
     virtual ~Statement() {}
     Statement() {}
 
-    void beforeDestruction() { detach(); }
+    //void beforeDestruction() { detach(); }
 
     virtual Database *                  database() = 0;
     
@@ -216,7 +216,7 @@ class FirebirdStatement : public Statement, public fbcpp::DSQLStatement {
     virtual ~FirebirdStatement();
     FirebirdStatement();
 
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { fbcpp::DSQLStatement::detach(); }
 
     Database * database();
 
@@ -279,7 +279,7 @@ class MYSQLStatement : public Statement, public mycpp::DSQLStatement {
     ~MYSQLStatement();
     MYSQLStatement();
 
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { mycpp::DSQLStatement::detach(); }
 
     Database * database();
 
@@ -342,7 +342,7 @@ class ODBCStatement : public Statement, public odbcpp::DSQLStatement {
     ~ODBCStatement();
     ODBCStatement();
 
-    //void beforeDestruction() { detach(); }
+    void beforeDestruction() { odbcpp::DSQLStatement::detach(); }
 
     Database * database();
 

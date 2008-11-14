@@ -204,10 +204,10 @@ class MemoryManager {
 #if defined(__WIN32__) || defined(__WIN64__)
     DWORD flags_;
 #endif
-    FiberInterlockedMutex mutex_;
+    FiberWriteLock mutex_;
     bool lock_;
     bool interlocked_;
-    volatile ilock_t initMutex_; // used only in global
+    volatile ilock_t initReadWriteLock_; // used only in global
     volatile ilock_t initCount_; // used only in global
 
 

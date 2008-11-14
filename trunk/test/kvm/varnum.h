@@ -159,7 +159,7 @@ class VarInteger {
           VarInteger::free(this);
         }
 
-        static Container * initialize(void * data = NULL,uintptr_t count = 0,uintptr_t ref = 0);
+        static Container * initialize(void * data = NULL,uintptr_t count = 0,ilock_t ref = 0);
 
         void addRef(){ interlockedIncrement(ref_,1); }
         void remRef(){ if( interlockedIncrement(ref_,-1) == 1 ) cleanup(); }

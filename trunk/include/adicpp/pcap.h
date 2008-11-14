@@ -371,7 +371,7 @@ class PCAP : public Thread {
     void * fp_;
     PacketGroupingPeriod groupingPeriod_;
     PacketsList packetsList_;
-    InterlockedMutex packetsListMutex_;
+    WriteLock packetsListReadWriteLock_;
     AutoDrop<PacketsList> packetsAutoDrop_;
     Semaphore grouperSem_;
     AutoPtr<Grouper> grouper_;
@@ -380,7 +380,7 @@ class PCAP : public Thread {
     Semaphore lazyWriterSem_;
     AutoPtr<LazyWriter> lazyWriter_;
     AutoPtr<Packets> packets_;
-    InterlockedMutex groupTreeMutex_;
+    WriteLock groupTreeReadWriteLock_;
     PacketGroupTree groupTree_;
     AutoDrop<PacketGroupTree> groupTreeAutoDrop_;
     utf8::String ifName_;
@@ -396,7 +396,7 @@ class PCAP : public Thread {
     ldouble swapHighWatermark_;
     uint64_t swapWatchTime_;
     uint64_t curPeriod_;
-    static volatile ilock_t startupMutex_;
+    static volatile ilock_t startupReadWriteLock_;
     bool promisc_;
     bool ports_;
     bool protocols_;

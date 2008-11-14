@@ -225,7 +225,7 @@ void ServerFiber::registerClient()
   }
   bool startNodeClient = false;
   if( serverType_ == stStandalone ){
-    AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+    AutoReadWriteLockWRLock<FiberReadWriteLock> lock(data.mutex_);
     diff.xorNL(data,tdata);
     startNodeClient = data.orNL(tdata);
   }
@@ -291,7 +291,7 @@ void ServerFiber::registerDB()
   Server::Data & data = server_->data(serverType_);
   bool fullDump;
   {
-    AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+    AutoReadWriteLockWRLock<FiberReadWriteLock> lock(data.mutex_);
     ServerInfo * si = data.servers_.find(host);
     fullDump = si == NULL || si->stime_ != rStartTime;
     diff.xorNL(data,rdata);
@@ -384,7 +384,7 @@ void ServerFiber::sendMail() // client sending mail
   if( !message->isValue("#Recepient",&recepient) || 
       recepient.trim().isNull() ||
       !message->isValue(messageIdKey,&mid) ||
-      id.strcmp(mid) != 0 ){
+      id.compare(mid) != 0 ){
     putCode(eInvalidMessage);
     return;
   }
@@ -456,18 +456,18 @@ void ServerFiber::processMailbox(
       }
       file.close();
       if( !file.removeAfterClose() ){
-        assert( message->id().strcmp(id) == 0 );
+        assert( message->id().compare(id) == 0 );
         utf8::String suser, skey;
         splitString(message->value("#Recepient"),suser,skey,"@");
         bool lostSheep = true;
         {
           Server::Data & data = server_->data(stStandalone);
-          AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+          AutoReadWriteLockRDLock<FiberReadWriteLock> lock(data.mutex_);
           Key2ServerLink * key2ServerLink = data.key2ServerLinks_.find(skey);
           if( key2ServerLink != NULL )
-            lostSheep = key2ServerLink->server_.strcasecmp(myHost) != 0;
+            lostSheep = key2ServerLink->server_.casecompare(myHost) != 0;
         }
-        lostSheep = user_.strcasecmp(suser) != 0 || lostSheep;
+        lostSheep = user_.casecompare(suser) != 0 || lostSheep;
         if( lostSheep ){
           try {
             rename(file.fileName(),server_->spoolDir(id.hash(true) & (server_->spoolFibers_ - 1)) + getNameFromPathName(list[i]));
@@ -478,7 +478,7 @@ void ServerFiber::processMailbox(
         }
         else {
           bool messageAccepted = true;
-          if( skey.strcasecmp(key_) == 0 ){
+          if( skey.casecompare(key_) == 0 ){
             if( !waitForMail ) *this << bool(true);
             *this << *message.ptr() >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
@@ -604,10 +604,10 @@ void SpoolWalker::processQueue(bool & timeWait)
         Key2ServerLink * key2ServerLink = NULL;
         {
           Server::Data & data = server_->data(stStandalone);
-          AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+          AutoReadWriteLockRDLock<FiberReadWriteLock> lock(data.mutex_);
           key2ServerLink = data.key2ServerLinks_.find(skey);
           if( key2ServerLink != NULL ){
-            if( key2ServerLink->server_.strcasecmp(myHost) == 0 ){
+            if( key2ServerLink->server_.casecompare(myHost) == 0 ){
               deliverLocaly = true;
             }
             else {
@@ -849,7 +849,7 @@ void MailQueueWalker::connectHost(bool & online,bool & mwt)
   uint64_t cec;
   {
     Server::Data & data = server_->data(stStandalone);
-    AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+    AutoReadWriteLockWRLock<FiberReadWriteLock> lock(data.mutex_);
     ServerInfo * si = data.servers_.find(host_);
     if( si == NULL ) data.registerServerNL(host_);
     if( online ){
@@ -889,7 +889,7 @@ void MailQueueWalker::main()
       if( online ){
         Message::Key * mId = NULL;
         {
-          AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
+          AutoLock<FiberWriteLock> lock(messagesReadWriteLock_);
           if( messages_.count() > 0 ) mId = &Message::Key::listNodeObject(*messages_.first());
         }
         if( mId != NULL ){
@@ -915,7 +915,7 @@ void MailQueueWalker::main()
           );
           file.close();
           remove(file.fileName());
-          AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
+          AutoLock<FiberWriteLock> lock(messagesReadWriteLock_);
           messages_.drop(*mId);
         }
         else {
@@ -932,7 +932,7 @@ void MailQueueWalker::main()
       }
       else {        
 // robot response
-        AutoLock<FiberInterlockedMutex> lock(messagesMutex_);
+        AutoLock<FiberWriteLock> lock(messagesReadWriteLock_);
         for( EmbeddedListNode<Message::Key> * node = messages_.first(); node != NULL; node = node->next() ){
           Message::Key * mId = &Message::Key::listNodeObject(*node);
           AsyncFile file(server_->mqueueDir() + *mId + ".msg");
@@ -1072,7 +1072,7 @@ void NodeClient::main()
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
       connected = exchanged = false;
       {
-        AutoLock<FiberInterlockedMutex> lock(server_->nodeClientMutex_);
+        AutoLock<FiberWriteLock> lock(server_->nodeClientReadWriteLock_);
         doWork = 
           dataType_ != stStandalone ||
           (server_->nodeClient_ == NULL && periodicaly_) ||
@@ -1107,7 +1107,7 @@ void NodeClient::main()
             uintptr_t cec = 0;
             uint64_t lastFailedConnectTime = 0;
             if( !periodicaly_ ){
-              AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+              AutoReadWriteLockWRLock<FiberReadWriteLock> lock(data.mutex_);
               ServerInfo * si = data.servers_.find(host);
               if( si == NULL ){
                 //assert( dataType_ == stNode );
@@ -1174,7 +1174,7 @@ void NodeClient::main()
               if( useProto1 ) *this << uint8_t(dataType_);
               bool fullDump = false;
               {
-                AutoMutexRDLock<FiberMutex> lock(data.mutex_);
+                AutoReadWriteLockRDLock<FiberReadWriteLock> lock(data.mutex_);
                 ServerInfo * si = data.servers_.find(host);
                 fullDump = si == NULL || si->stime_ != rStartTime;
                 dump.orNL(data);
@@ -1184,7 +1184,7 @@ void NodeClient::main()
               rdata.recvDatabaseNL(*this);
               getCode();
               {
-                AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+                AutoReadWriteLockWRLock<FiberReadWriteLock> lock(data.mutex_);
                 rdata.setSendedToNL(hostDB);
                 ldata.setSendedToNL(hostDB);
                 data.orNL(rdata);
@@ -1224,7 +1224,7 @@ void NodeClient::main()
           }
           else if( !periodicaly_ ){
             {
-              AutoMutexWRLock<FiberMutex> lock(data.mutex_);
+              AutoReadWriteLockWRLock<FiberReadWriteLock> lock(data.mutex_);
               ServerInfo * si = data.servers_.find(host);
               if( si != NULL && tryConnect ){
                 si->connectErrorCount_++;
@@ -1251,7 +1251,7 @@ void NodeClient::main()
         ksleep(timeout * 1000000u);
       }
     } while( periodicaly_ && !terminated_ );
-    AutoLock<FiberInterlockedMutex> lock(server_->nodeClientMutex_);
+    AutoLock<FiberWriteLock> lock(server_->nodeClientReadWriteLock_);
     if( !periodicaly_ && !exchanged ){
       if( dataType_ == stStandalone ) server_->skippedNodeClientStarts_++;
       if( dataType_ == stNode ) server_->skippedNodeExchangeStarts_++;

@@ -40,8 +40,6 @@ namespace adicpp {
 class Initializer {
   friend class AutoInitializer;
   public:
-    static void acquire();
-    static void release();
   protected:
     static void initialize(int argc,char ** argv);
     static void cleanup();
@@ -50,19 +48,9 @@ class Initializer {
     static ksys::ilock_t initCount_;
 };
 //---------------------------------------------------------------------------
-inline void Initializer::acquire()
-{
-  ksys::interlockedCompareExchangeAcquire(mutex_,-1,0);
-}
-//---------------------------------------------------------------------------
-inline void Initializer::release()
-{
-  ksys::interlockedIncrement(mutex_,1);
-}
-//---------------------------------------------------------------------------
 inline void Initializer::initialize(int argc,char ** argv)
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~uintptr_t(NULL));
+  ksys::AutoILock lock(Initializer::mutex_);
   if( initCount_ == 0 ){
     ksys::initialize(argc,argv);
 #if ENABLE_FIREBIRD_INTERFACE
@@ -86,7 +74,7 @@ inline void Initializer::initialize(int argc,char ** argv)
 //---------------------------------------------------------------------------
 inline void Initializer::cleanup()
 {
-  ksys::AutoLock<Initializer> lock(*(Initializer *) ~uintptr_t(NULL));
+  ksys::AutoILock lock(Initializer::mutex_);
   assert( initCount_ > 0 );
   if( initCount_ == 1 ){
 #if ENABLE_GD_INTERFACE

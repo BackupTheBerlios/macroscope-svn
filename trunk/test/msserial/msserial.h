@@ -38,7 +38,7 @@ class SerialPortControl {
   friend class SerialPortFiber;
   friend class MSSerialService;
   public:
-    ~SerialPortControl();
+    virtual ~SerialPortControl();
     SerialPortControl();
   protected:
   private:
@@ -84,7 +84,7 @@ class MSSerialService : public Service, protected BaseServer {
   protected:
   private:
     ConfigSP config_;
-    FiberInterlockedMutex serialPortsMutex_;
+    FiberWriteLock serialPortsReadWriteLock_;
     Vector<SerialPortControl> serialPorts_;
 
     Fiber * newFiber();

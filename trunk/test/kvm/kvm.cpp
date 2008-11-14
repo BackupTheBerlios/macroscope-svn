@@ -2264,21 +2264,21 @@ int main(int _argc,char * _argv[])
 
     stdErr.fileName(includeTrailingPathDelimiter(SYSLOG_DIR(kvm_version.tag_)) + kvm_version.tag_ + ".log");
     Config::defaultFileName(SYSCONF_DIR("") + kvm_version.tag_ + ".conf");
-    ConfigSP config(newObject<InterlockedConfig<FiberInterlockedMutex> >());
+    ConfigSP config(newObject<InterlockedConfig<FiberWriteLock> >());
     Array<utf8::String> sources;
     for( uintptr_t i = 1; i < argv().count(); i++ ){
-      if( argv()[i].strcmp("--version") == 0 ){
+      if( argv()[i].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << kvm_version.tex_ << "\n");
         fprintf(stdout,"%s\n",kvm_version.tex_);
         break;
       }
-      else if( argv()[i].strcmp("--chdir") == 0 && i + 1 < argv().count() ){
+      else if( argv()[i].compare("--chdir") == 0 && i + 1 < argv().count() ){
         changeCurrentDir(argv()[++i]);
       }
-      else if( argv()[i].strcmp("--log") == 0 && i + 1 < argv().count() ){
+      else if( argv()[i].compare("--log") == 0 && i + 1 < argv().count() ){
         stdErr.fileName(argv()[++i]);
       }
-      else if( argv()[i].strcmp("-c") == 0 && i + 1 < argv().count() ){
+      else if( argv()[i].compare("-c") == 0 && i + 1 < argv().count() ){
         Config::defaultFileName(argv()[i + 1]);
         config->fileName(argv()[++i]);
       }
@@ -2308,7 +2308,7 @@ int main(int _argc,char * _argv[])
     AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
     
     for( uintptr_t i = 0; i < sources.count(); i++ ){
-      AutoPtr<wchar_t> fileName(coco_string_create(sources[i].getUNICODEString()));
+      AutoPtr<wchar_t,AutoPtrMemoryDestructor> fileName(coco_string_create(sources[i].getUNICODEString()));
       AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));
       AutoPtr<Parser> parser(newObjectV1<Parser>(scanner.ptr()));
       parser->gen = newObject<CodeGenerator>();

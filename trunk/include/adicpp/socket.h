@@ -509,7 +509,7 @@ class AcceptFiber : public ksys::Fiber, public AsyncSocket {
     AcceptFiber();
   protected:
   private:
-    ksys::InterlockedMutex mutex_;
+    ksys::WriteLock mutex_;
     void fiberExecute();
 };
 //---------------------------------------------------------------------------

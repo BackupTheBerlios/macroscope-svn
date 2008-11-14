@@ -79,8 +79,8 @@ int64_t __fastcall rdtsc()
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 longlong                                  TProfiler::ProcessTSC;
-char                                      TProfiler::StubMutex[sizeof(TInterlockedMutex) / sizeof(char)];
-TInterlockedMutex &                       TProfiler::Mutex          = *reinterpret_cast< TInterlockedMutex *>(&StubMutex);
+char                                      TProfiler::StubReadWriteLock[sizeof(TWriteLock) / sizeof(char)];
+TWriteLock &                       TProfiler::ReadWriteLock          = *reinterpret_cast< TWriteLock *>(&StubReadWriteLock);
 TProfiler *                               TProfiler::FirstProfiler_ = NULL;
 bool                                      TProfiler::Enabled_       = true;
 char                                      TProfiler::StubLastProfiler[sizeof(TThreadLocalVariable< TProfiler::Auto>) / sizeof(char)];
@@ -88,7 +88,7 @@ TThreadLocalVariable< TProfiler::Auto> &  TProfiler::LastProfiler   = *reinterpr
 //---------------------------------------------------------------------------
 HRESULT TProfiler::Initialize()
 {
-  new (&Mutex) TInterlockedMutex;
+  new (&ReadWriteLock) TWriteLock;
   FirstProfiler_ = NULL;
   new (&LastProfiler) TThreadLocalVariable< TProfiler::Auto>;
   SetProcessAffinityMask(GetCurrentProcess(), 1);
@@ -147,7 +147,7 @@ HRESULT TProfiler::Cleanup()
   ProcessTSC = rdtsc() - ProcessTSC;
   Enabled_ = false;
   LastProfiler.~TThreadLocalVariable< TProfiler::Auto>();
-  Mutex.~TInterlockedMutex();
+  ReadWriteLock.~TWriteLock();
   StdErr.SysLog(lmPROFILER, L"Execution time %I64dtps %I64d:%02I64d:%02I64d:%02I64d.%03I64d\n", ProcessTSC, ProcessTSC / (CPU_TPS * 60 * 60 * 24 * 1000),                // days
     ProcessTSC / (CPU_TPS * 60 * 60 * 1000),                     // hours
     ProcessTSC / (CPU_TPS * 60 * 1000),                          // minutes
@@ -240,12 +240,12 @@ TProfiler::Auto::~Auto()
 //---------------------------------------------------------------------------
 void TProfiler::Constructor(const char * Func, const char * PrettyFunc, const char * FuncFile, long FuncLine, bool & Flag)
 {
-  Mutex.Acquire();
+  ReadWriteLock.Acquire();
   if( !Flag ){
     new (this) TProfiler(Func, PrettyFunc, FuncFile, FuncLine);
     Flag = true;
   }
-  Mutex.Release();
+  ReadWriteLock.Release();
 }
 //---------------------------------------------------------------------------
 #endif

@@ -974,7 +974,7 @@ void Logger::SquidSendmailThread::writeHtmlYearOutput()
     }
     database_->commit();
     {
-      AutoLock<InterlockedMutex> lock(logger_->trafCacheMutex_);
+      AutoLock<WriteLock> lock(logger_->trafCacheReadWriteLock_);
       f << "Cache size: " + utf8::int2Str((uintmax_t) logger_->trafCache_.count()) + "<BR>\n";
     }
     writeHtmlTail(f,ellapsed_);
@@ -1084,7 +1084,7 @@ int64_t Logger::SquidSendmailThread::getTrafNL(TrafType tt,const struct tm & bt,
 //------------------------------------------------------------------------------
 int64_t Logger::SquidSendmailThread::getTraf(TrafType tt,const struct tm & bt,const struct tm & et,const utf8::String & user,uintptr_t isGroup)
 {
-  AutoLock<InterlockedMutex> lock(logger_->trafCacheMutex_);
+  AutoLock<WriteLock> lock(logger_->trafCacheReadWriteLock_);
   return getTrafNL(tt,bt,et,user,isGroup);
 }
 //------------------------------------------------------------------------------

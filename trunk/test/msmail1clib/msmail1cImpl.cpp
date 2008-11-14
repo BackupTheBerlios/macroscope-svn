@@ -743,14 +743,14 @@ HRESULT Cmsmail1c::GetPropVal(long lPropNum,VARIANT * pvarPropVal)
         if( SUCCEEDED(hr) ){
           V_I4(pvarPropVal) = 0;
           if( msmail1c_->active_ ){
-            AutoLock<FiberInterlockedMutex> lock(msmail1c_->client_.connectedMutex_);
+            AutoLock<FiberWriteLock> lock(msmail1c_->client_.connectedReadWriteLock_);
             V_I4(pvarPropVal) = msmail1c_->client_.connected_ ? 1 : 0;
           }
         }
         break;
       case 16 : // WorkServer
         {
-          AutoLock<FiberInterlockedMutex> lock(msmail1c_->client_.connectedMutex_);
+          AutoLock<FiberWriteLock> lock(msmail1c_->client_.connectedReadWriteLock_);
           if( msmail1c_->active_ && msmail1c_->client_.connected_ ){
             V_BSTR(pvarPropVal) = msmail1c_->client_.connectedToServer_.getOLEString();
             V_VT(pvarPropVal) = VT_BSTR;
@@ -847,22 +847,22 @@ HRESULT Cmsmail1c::SetPropVal(long lPropNum,VARIANT * varPropVal)
         if( V_VT(varPropVal) == VT_BSTR ){
           r = true;
           utf8::String s(V_BSTR(varPropVal));
-          if( s.strcasecmp("IDLE_PRIORITY_CLASS") == 0 )
+          if( s.casecompare("IDLE_PRIORITY_CLASS") == 0 )
             SetPriorityClass(GetCurrentProcess(),IDLE_PRIORITY_CLASS);
           else
-          if( s.strcasecmp("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
+          if( s.casecompare("BELOW_NORMAL_PRIORITY_CLASS") == 0 )
             SetPriorityClass(GetCurrentProcess(),BELOW_NORMAL_PRIORITY_CLASS);
           else
-          if( s.strcasecmp("NORMAL_PRIORITY_CLASS") == 0 )
+          if( s.casecompare("NORMAL_PRIORITY_CLASS") == 0 )
             SetPriorityClass(GetCurrentProcess(),NORMAL_PRIORITY_CLASS);
           else
-          if( s.strcasecmp("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
+          if( s.casecompare("ABOVE_NORMAL_PRIORITY_CLASS") == 0 )
             SetPriorityClass(GetCurrentProcess(),ABOVE_NORMAL_PRIORITY_CLASS);
           else
-          if( s.strcasecmp("HIGH_PRIORITY_CLASS") == 0 )
+          if( s.casecompare("HIGH_PRIORITY_CLASS") == 0 )
             SetPriorityClass(GetCurrentProcess(),HIGH_PRIORITY_CLASS);
           else
-          if( s.strcasecmp("REALTIME_PRIORITY_CLASS") == 0 )
+          if( s.casecompare("REALTIME_PRIORITY_CLASS") == 0 )
             SetPriorityClass(GetCurrentProcess(),REALTIME_PRIORITY_CLASS);
           else
             r = false;
@@ -1754,7 +1754,7 @@ HRESULT Cmsmail1c::CallAsFunc(long lMethodNum,VARIANT * pvarRetValue,SAFEARRAY *
                   if( V_VT(pv1) != VT_BSTR ) hr = VariantChangeTypeEx(pv1,pv1,0,0,VT_BSTR);
                   if( SUCCEEDED(hr) ){
                     msmail::MK1100ClientFiber * mk1100 = (msmail::MK1100ClientFiber *) utf8::str2Int(V_BSTR(pv0));
-                    AutoLock<FiberInterlockedMutex> lock(msmail1c_->client_.mk1100TCPServer_->fibersMutex_);
+                    AutoLock<FiberWriteLock> lock(msmail1c_->client_.mk1100TCPServer_->fibersReadWriteLock_);
                     intptr_t i = msmail1c_->client_.mk1100TCPServer_->fibers_.bSearch(mk1100);
                     if( i >= 0 ){
                       mk1100->data_ = V_BSTR(pv1);
@@ -2257,7 +2257,7 @@ Cmsmail1c::msmail1c::LockedFile::LockedFile() : lastError_(0), locked_(false)
 Cmsmail1c::msmail1c::LockedFile * Cmsmail1c::msmail1c::findFileByName(const utf8::String & name)
 {
   for( intptr_t i = files_.count() - 1; i >= 0; i-- )
-    if( files_[i].file_.fileName().strcasecmp(name) == 0 ) return &files_[i];
+    if( files_[i].file_.fileName().casecompare(name) == 0 ) return &files_[i];
   return NULL;
 }
 //---------------------------------------------------------------------------
@@ -2393,7 +2393,7 @@ err:
 {
   return
     GetModuleHandleA("KERNEL32.DLL") == hModule &&
-    strcmp(lpProcName,"LockFile") == 0 ?
+    compare(lpProcName,"LockFile") == 0 ?
       (FARPROC) reparedLockFile :
       oldSEVENGetProcAddress_.f_(hModule,lpProcName)
   ;
@@ -2420,7 +2420,7 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
   return lk;
 //  utf8::String name(getFileNameByHandle(hFile));
 //  utf8::String ext(getFileNameByHandle(hFile).right(4));
-//  DWORD flag = ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ? 0 : LOCKFILE_FAIL_IMMEDIATELY;
+//  DWORD flag = ext.casecompare(".lck") != 0 && ext.casecompare(".tmp") != 0 ? 0 : LOCKFILE_FAIL_IMMEDIATELY;
   //OVERLAPPED overlapped;
   //memset(&overlapped,0,sizeof(overlapped));
   //overlapped.Offset = dwFileOffsetLow;
@@ -2438,7 +2438,7 @@ BOOL WINAPI Cmsmail1c::repairedLockFile(
   //DWORD err = GetLastError();
   //if( lk == FALSE && err == ERROR_LOCK_VIOLATION ){
   //  utf8::String ext(getFileNameByHandle(hFile).right(4));
-  //  if( ext.strcasecmp(".lck") != 0 && ext.strcasecmp(".tmp") != 0 ){
+  //  if( ext.casecompare(".lck") != 0 && ext.casecompare(".tmp") != 0 ){
   //    lk = LockFileEx(
   //      hFile,
   //      LOCKFILE_EXCLUSIVE_LOCK,

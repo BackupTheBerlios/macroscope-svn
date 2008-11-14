@@ -52,25 +52,25 @@ int main(int _argc,char * _argv[])
 #endif
     service->msmailConfig()->silent(true);
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--chdir") == 0 && u + 1 < argv().count() ){
+      if( argv()[u].compare("--chdir") == 0 && u + 1 < argv().count() ){
         changeCurrentDir(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("-c") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("-c") == 0 && u + 1 < argv().count() ){
         Config::defaultFileName(argv()[u + 1]);
         service->msmailConfig()->fileName(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--log") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
       }
     }
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--version") == 0 ){
+      if( argv()[u].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msmail_version.tex_ << "\n");
         fprintf(stdout,"%s\n",msmail_version.tex_);
         dispatch = false;
         continue;
       }
-      if( argv()[u].strcmp("--install") == 0 ){
+      if( argv()[u].compare("--install") == 0 ){
         for( uintptr_t j = u + 1; j < argv().count(); j++ )
           if( argv()[j].isSpace() )
             service->args(service->args() + " \"" + argv()[j] + "\"");
@@ -79,49 +79,49 @@ int main(int _argc,char * _argv[])
         services.install();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--uninstall") == 0 ){
+      else if( argv()[u].compare("--uninstall") == 0 ){
         services.uninstall();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--start") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--start") == 0 && u + 1 < argv().count() ){
         services.start(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--stop") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--stop") == 0 && u + 1 < argv().count() ){
         services.stop(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--suspend") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--suspend") == 0 && u + 1 < argv().count() ){
         services.suspend(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--resume") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--resume") == 0 && u + 1 < argv().count() ){
         services.resume(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--query") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--query") == 0 && u + 1 < argv().count() ){
         services.query(argv()[u + 1]);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--debug-levels") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--debug-levels") == 0 && u + 1 < argv().count() ){
         stdErr.setDebugLevels(argv()[u + 1]);
       }
-      else if( argv()[u].strcmp("--debug") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--debug") == 0 && u + 1 < argv().count() ){
         stdErr.setAllDebugLevels(1);
       }
-      else if( argv()[u].strcmp("--start-disp") == 0 ){
+      else if( argv()[u].compare("--start-disp") == 0 ){
         dispatch = true;
       }
-      else if( argv()[u].strcmp("--stop-disp") == 0 ){
+      else if( argv()[u].compare("--stop-disp") == 0 ){
         services.stopServiceCtrlDispatcher();
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--benchmark") == 0 ){
+      else if( argv()[u].compare("--benchmark") == 0 ){
         RBTreeBenchmarkTree tree;
         tree.benchmark(10000000,3);
         dispatch = false;
       }
-      else if( argv()[u].strcmp("--sha256") == 0 && u + 1 < argv().count() ){
+      else if( argv()[u].compare("--sha256") == 0 && u + 1 < argv().count() ){
         SHA256 passwordSHA256;
         passwordSHA256.make(argv()[u + 1].c_str(),argv()[u + 1].size());
         utf8::String b64(base64Encode(passwordSHA256.sha256(),32));
@@ -130,7 +130,7 @@ int main(int _argc,char * _argv[])
         dispatch = false;
       }
 #if PRIVATE_RELEASE
-      else if( argv()[u].strcmp("--machine-key") == 0 ){
+      else if( argv()[u].compare("--machine-key") == 0 ){
         utf8::String key(getMachineCleanUniqueKey());
         fprintf(stdout,"%s\n",key.c_str());
         copyStrToClipboard(key);

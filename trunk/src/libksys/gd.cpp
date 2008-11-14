@@ -101,8 +101,8 @@ class GD_API {
     void * handle_;
 #endif
     intptr_t count_;
-    uint8_t mutex_[sizeof(InterlockedMutex)];
-    InterlockedMutex & mutex(){ return *reinterpret_cast<InterlockedMutex *>(mutex_); }
+    uint8_t mutex_[sizeof(WriteLock)];
+    WriteLock & mutex(){ return *reinterpret_cast<WriteLock *>(mutex_); }
   private:
     GD_API(const GD_API &);
     void operator = (const GD_API &);
@@ -148,7 +148,7 @@ GD_API & GD_API::open()
     "gdImageFilledEllipse",
     "gdImageFilledRectangle"
   };
-  AutoLock<InterlockedMutex> lock(api.mutex());
+  AutoLock<WriteLock> lock(api.mutex());
 #if defined(__WIN32__) || defined(__WIN64__)
 #define LIB_NAME "bgd.dll"
     api.handle_ = LoadLibraryExA(LIB_NAME,NULL,LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -218,7 +218,7 @@ GD_API & GD_API::open()
 //------------------------------------------------------------------------------
 GD_API & GD_API::close()
 {
-  AutoLock<InterlockedMutex> lock(mutex());
+  AutoLock<WriteLock> lock(mutex());
   assert( count_ > 0 );
   if( count_ == 1 ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -236,13 +236,13 @@ GD_API & GD_API::close()
 //------------------------------------------------------------------------------
 void GD::initialize()
 {
-  new (api.mutex_) InterlockedMutex;
+  new (api.mutex_) WriteLock;
   api.count_ = 0;
 }
 //------------------------------------------------------------------------------
 void GD::cleanup()
 {
-  api.mutex().~InterlockedMutex();
+  api.mutex().~WriteLock();
 }
 //------------------------------------------------------------------------------
 GD::~GD()

@@ -265,11 +265,7 @@ Expression::Expression() : count_(0), max_(0)
 //------------------------------------------------------------------------------
 Expression & Expression::add(CodeObject * object)
 {
-  if( count_ >= max_ ){
-    expression_.reallocT((max_ << 1) + ((max_ == 0) << 5));
-    max_ = (max_ << 1) + ((max_ == 0) << 5);
-  }
-  expression_[count_++] = object;
+  expression_.add(object);
   return *this;
 }
 //------------------------------------------------------------------------------

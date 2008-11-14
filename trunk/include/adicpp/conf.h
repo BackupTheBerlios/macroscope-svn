@@ -362,8 +362,8 @@ void InterlockedConfig<T>::remRef()
   if( this != NULL && interlockedIncrement(refCount_,-1) == 1 ) deleteObject(this);
 }
 //---------------------------------------------------------------------------
-typedef SPIARC<InterlockedConfig<InterlockedMutex> > ConfigSPi;
-typedef SPIARC<InterlockedConfig<FiberInterlockedMutex> > ConfigSP;
+typedef SPIARC<InterlockedConfig<WriteLock> > ConfigSPi;
+typedef SPIARC<InterlockedConfig<FiberWriteLock> > ConfigSP;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

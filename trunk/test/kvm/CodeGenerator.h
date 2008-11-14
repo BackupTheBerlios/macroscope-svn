@@ -100,6 +100,7 @@ class CodeObjectOwner : virtual public CodeObject { // base class only
         listNode,
         listNodeObject> {
       public:
+        virtual ~TypedList() {}
         TypedList(const char * type = NULL) : type_(type) {}
         const char * type_;
     };
@@ -227,7 +228,7 @@ class Expression : public CodeObjectOwner {
 
     Expression & add(CodeObject * object);
   protected:
-    AutoPtr<CodeObject *> expression_;
+    Array<CodeObject *> expression_;
     uintptr_t count_;
     uintptr_t max_;
   private:

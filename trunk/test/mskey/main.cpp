@@ -47,12 +47,12 @@ int main(int ac,char * av[])
     ksys::Config::defaultFileName(SYSCONF_DIR("") + "mskey.conf");
     utf8::String expirationDate("00.00.0000");
     for( u = 1; u < argv().count(); u++ ){
-      if( argv()[u].strcmp("--version") == 0 ){
+      if( argv()[u].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << mskey_version.tex_ << "\n");
         fprintf(stdout,"%s\n",mskey_version.tex_);
         continue;
       }
-      if( argv()[u].strcmp("--expiration-date") == 0 && u + 1 < argv().count() ){
+      if( argv()[u].compare("--expiration-date") == 0 && u + 1 < argv().count() ){
         expirationDate = argv()[++u];
         continue;
       }

@@ -686,8 +686,8 @@ SharedMemoryQueue::SharedMemoryQueue(const utf8::String & name, uintptr_t length
     rdQueueWRLockObject_(name + ".rdwrl"),
     wrQueueRDLockObject_(name + ".wrrdl"),
     wrQueueWRLockObject_(name + ".wrwrl"),
-    rdQueueMutexObject_(name + ".rdm"),
-    wrQueueMutexObject_(name + ".wrm"),
+    rdQueueReadWriteLockObject_(name + ".rdm"),
+    wrQueueReadWriteLockObject_(name + ".wrm"),
     rdQueueRDIndicatorObject_(name + ".rdrdi"),
     rdQueueWRIndicatorObject_(name + ".rdwri"),
     wrQueueRDIndicatorObject_(name + ".wrrdi"),
@@ -705,8 +705,8 @@ SharedMemoryQueue::SharedMemoryQueue(const utf8::String & name, uintptr_t length
   rdQueueWRLock_ = &rdQueueWRLockObject_;
   wrQueueRDLock_ = &wrQueueRDLockObject_;
   wrQueueWRLock_ = &wrQueueWRLockObject_;
-  rdQueueMutex_ = &rdQueueMutexObject_;
-  wrQueueMutex_ = &wrQueueMutexObject_;
+  rdQueueReadWriteLock_ = &rdQueueReadWriteLockObject_;
+  wrQueueReadWriteLock_ = &wrQueueReadWriteLockObject_;
   rdQueueRDIndicator_ = &rdQueueRDIndicatorObject_;
   rdQueueWRIndicator_ = &rdQueueWRIndicatorObject_;
   wrQueueRDIndicator_ = &wrQueueRDIndicatorObject_;
@@ -723,8 +723,8 @@ SharedMemoryQueue::SharedMemoryQueue(const utf8::String & name, uintptr_t length
     wrQueue_->head_ = 0;
     wrQueue_->tail_ = 0;
     wrQueue_->bound_ = length_ / 2 - sizeof(Queue);
-    rdQueueMutexObject_.post();
-    wrQueueMutexObject_.post();
+    rdQueueReadWriteLockObject_.post();
+    wrQueueReadWriteLockObject_.post();
     rdQueueRDLockObject_.post();
     rdQueueWRLockObject_.post();
     wrQueueRDLockObject_.post();
@@ -756,7 +756,7 @@ SharedMemoryQueue & SharedMemoryQueue::swap()
   xchg(rdQueue_, wrQueue_);
   xchg(rdQueueRDIndicator_, wrQueueRDIndicator_);
   xchg(rdQueueWRIndicator_, wrQueueWRIndicator_);
-  xchg(rdQueueMutex_, wrQueueMutex_);
+  xchg(rdQueueReadWriteLock_, wrQueueReadWriteLock_);
   xchg(rdQueueRDLock_, wrQueueRDLock_);
   xchg(rdQueueWRLock_, wrQueueWRLock_);
   xchg(rdQueueRDLocked_, wrQueueRDLocked_);
@@ -770,10 +770,10 @@ SharedMemoryQueue & SharedMemoryQueue::Queue::read(SharedMemoryQueue * queue, vo
     queue->rdQueueRDLock_->wait();
   try{
     while( len > 0 ){
-      queue->rdQueueMutex_->wait();
+      queue->rdQueueReadWriteLock_->wait();
       uintptr_t l = head_ < tail_ ? bound_ - tail_ : head_ - tail_;
       if( l == 0 ){
-        queue->rdQueueMutex_->post();
+        queue->rdQueueReadWriteLock_->post();
         queue->rdQueueWRIndicator_->post(); // enable writes
         queue->rdQueueRDIndicator_->wait(); // wait for data
         continue;
@@ -790,7 +790,7 @@ SharedMemoryQueue & SharedMemoryQueue::Queue::read(SharedMemoryQueue * queue, vo
         tail_ = 0;
       buf = (uint8_t *) buf + l;
       len -= l;
-      queue->rdQueueMutex_->post();
+      queue->rdQueueReadWriteLock_->post();
     }
   }
   catch( ... ){
@@ -810,10 +810,10 @@ SharedMemoryQueue & SharedMemoryQueue::Queue::write(SharedMemoryQueue * queue, c
     queue->wrQueueWRLock_->wait();
   try{
     while( len > 0 ){
-      queue->wrQueueMutex_->wait();
+      queue->wrQueueReadWriteLock_->wait();
       uintptr_t l = head_ >= tail_ ? bound_ - head_ + tail_ : tail_ - head_;
       if( l < 2 ){
-        queue->wrQueueMutex_->post();
+        queue->wrQueueReadWriteLock_->post();
         queue->wrQueueRDIndicator_->post(); // enable reads
         queue->wrQueueWRIndicator_->wait(); // wait for write permission
         continue;
@@ -830,7 +830,7 @@ SharedMemoryQueue & SharedMemoryQueue::Queue::write(SharedMemoryQueue * queue, c
         head_ = 0;
       buf = (uint8_t *) buf + l;
       len -= l;
-      queue->wrQueueMutex_->post();
+      queue->wrQueueReadWriteLock_->post();
     }
   }
   catch( ... ){

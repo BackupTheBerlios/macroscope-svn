@@ -257,7 +257,7 @@ void BaseThread::queue()
 void BaseThread::sweepFiber(Fiber * fiber)
 {
   {
-    AutoLock<InterlockedMutex> lock(fibersMutex_);
+    AutoLock<LiteWriteLock> lock(fibersReadWriteLock_);
     fibers_.remove(*fiber);
   }
   if( fiber->destroy_ ) deleteObject(fiber);
@@ -273,7 +273,7 @@ void BaseThread::detectMaxFiberStackSize()
 //------------------------------------------------------------------------------
 void BaseThread::postEvent(AsyncEvent * event)
 {
-  AutoLock<InterlockedMutex> lock(mutex_);
+  AutoLock<LiteWriteLock> lock(mutex_);
   bool postSem = events_.count() == 0;
   events_.insToTail(*event);
   if( postSem ) semaphore_.post();
@@ -310,18 +310,18 @@ BaseThread * BaseServer::newThread()
 //------------------------------------------------------------------------------
 void BaseServer::sweepThreads()
 {
-  AutoLock<InterlockedMutex> lock(mutex_);
+  AutoLock<LiteWriteLock> lock(mutex_);
   EmbeddedListNode<BaseThread> * btp = threads_.first();
   while( btp != NULL ){
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
-    thread->fibersMutex_.acquire();
+    thread->fibersReadWriteLock_.acquire();
     if( thread->fibers_.count() == 0 ){
       thread->wait();
       btp = btp->next();
       threads_.drop(*thread);
     }
     else {
-      thread->fibersMutex_.release();
+      thread->fibersReadWriteLock_.release();
       btp = btp->next();
     }
   }
@@ -336,10 +336,10 @@ void BaseServer::closeServer()
   BaseThread * thread;
   shutdown_ = true;
   {
-    AutoLock<InterlockedMutex> lock(mutex_);
+    AutoLock<LiteWriteLock> lock(mutex_);
     for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
       thread = &BaseThread::serverListNodeObject(*btp);
-      AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
+      AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
       for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() ){
         if( how & csTerminate ) Fiber::nodeObject(*bfp).terminate();
         Fiber::nodeObject(*bfp).fiberBreakExecution();
@@ -351,10 +351,10 @@ void BaseServer::closeServer()
     uint64_t fbtm, fbtmd = 100000;
     for( fbtm = fiberTimeout_; fbtm > 0; fbtm -= fbtmd ){
       {
-        AutoLock<InterlockedMutex> lock(mutex_);
+        AutoLock<LiteWriteLock> lock(mutex_);
         for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
           thread = &BaseThread::serverListNodeObject(*btp);
-          AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
+          AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
           if( thread->fibers_.count() > 0 ) break;
         }
       }
@@ -406,7 +406,7 @@ BaseThread * BaseServer::selectThread()
     EmbeddedListNode<BaseThread> * btp;
     for( btp = threads_.first(); btp != NULL; ){
       BaseThread * athread = &BaseThread::serverListNodeObject(*btp);
-      athread->fibersMutex_.acquire();
+      athread->fibersReadWriteLock_.acquire();
       if( threads_.count() > mt_ && athread->fibers_.count() == 0 ){
         thread->wait();
         btp = btp->next();
@@ -418,7 +418,7 @@ BaseThread * BaseServer::selectThread()
           thread = athread;
         }
         btp = btp->next();
-        athread->fibersMutex_.release();
+        athread->fibersReadWriteLock_.release();
       }
     }
   }
@@ -435,11 +435,11 @@ BaseThread * BaseServer::selectThread()
 void BaseServer::attachFiber(Fiber & fiber)
 {
  {
-    AutoLock<InterlockedMutex> lock(mutex_);
+    AutoLock<LiteWriteLock> lock(mutex_);
     BaseThread * thread = selectThread();
     fiber.allocateStack(fiberStackSize_,thread);
     {
-      AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
+      AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
       thread->fibers_.insToTail(fiber);
       fiber.thread_ = thread;
     }
@@ -456,12 +456,12 @@ void BaseServer::attachFiber(Fiber & fiber)
 void BaseServer::attachFiber(const AutoPtr<Fiber> & fiber)
 {
   {
-    AutoLock<InterlockedMutex> lock(mutex_);
+    AutoLock<LiteWriteLock> lock(mutex_);
     BaseThread * thread = selectThread();
     fiber->allocateStack(fiberStackSize_,thread);
     Fiber * fib = fiber;
     {
-      AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
+      AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
       thread->fibers_.insToTail(*fiber.ptr(NULL));
       fib->thread_ = thread;
     }
@@ -479,10 +479,10 @@ void BaseServer::maintainFibers()
 {
   EmbeddedListNode<BaseThread> * btp;
   EmbeddedListNode<Fiber> * bfp;
-  AutoLock<InterlockedMutex> lock(mutex_);
+  AutoLock<LiteWriteLock> lock(mutex_);
   for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
-    AutoLock<InterlockedMutex> lock2(thread->fibersMutex_);
+    AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
     for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() )
       maintainFiber(&Fiber::nodeObject(*bfp));
   }
@@ -513,7 +513,7 @@ void BaseServer::DispatchWindowMessages()
 //------------------------------------------------------------------------------
 bool BaseServer::active() const
 {
-  AutoLock<InterlockedMutex> lock(mutex_);
+  AutoLock<LiteWriteLock> lock(mutex_);
   EmbeddedListNode<BaseThread> * btp;
   for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
     BaseThread * thread = &BaseThread::serverListNodeObject(*btp);
@@ -526,12 +526,12 @@ bool BaseServer::active() const
 //------------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 //------------------------------------------------------------------------------
-FiberInterlockedMutex::~FiberInterlockedMutex()
+FiberWriteLock::~FiberWriteLock()
 {
   if( sem_ != NULL ) CloseHandle(sem_);
 }
 //---------------------------------------------------------------------------
-FiberInterlockedMutex::FiberInterlockedMutex()
+FiberWriteLock::FiberWriteLock()
 {
   sem_ = CreateSemaphoreA(NULL,1,~(ULONG) 0 >> 1, NULL);
   if( sem_ == NULL ){
@@ -540,7 +540,7 @@ FiberInterlockedMutex::FiberInterlockedMutex()
   }
 }
 //---------------------------------------------------------------------------
-bool FiberInterlockedMutex::tryAcquireHelper()
+bool FiberWriteLock::tryAcquireHelper()
 {
   DWORD r = WaitForSingleObject(sem_,0);
   if( r == WAIT_FAILED ){
@@ -552,7 +552,7 @@ bool FiberInterlockedMutex::tryAcquireHelper()
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
-bool FiberInterlockedMutex::internalAcquire(bool wait)
+bool FiberWriteLock::internalAcquire(bool wait)
 {
   if( isRunInFiber() ){
     if( wait ){
@@ -564,10 +564,10 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
       assert( currentFiber() != NULL );
       currentFiber()->event_.mutex_ = this;
       currentFiber()->event_.timeout_ = ~uint64_t(0);
-      currentFiber()->event_.type_ = etAcquireMutex;
+      currentFiber()->event_.type_ = etAcquireReadWriteLock;
       currentFiber()->thread()->postRequest();
       currentFiber()->switchFiber(currentFiber()->mainFiber());
-      assert( currentFiber()->event_.type_ == etAcquireMutex );
+      assert( currentFiber()->event_.type_ == etAcquireReadWriteLock );
       if( currentFiber()->event_.errno_ != 0 )
         newObjectV1C2<Exception>(currentFiber()->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
       return true;
@@ -595,7 +595,7 @@ bool FiberInterlockedMutex::internalAcquire(bool wait)
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-void FiberInterlockedMutex::release()
+void FiberWriteLock::release()
 {
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
@@ -606,7 +606,7 @@ void FiberInterlockedMutex::release()
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-FiberMutex & FiberMutex::rdLock()
+FiberReadWriteLock & FiberReadWriteLock::rdLock()
 {
   bool r;
   for(;;){
@@ -624,7 +624,7 @@ FiberMutex & FiberMutex::rdLock()
   return *this;
 }
 //---------------------------------------------------------------------------
-FiberMutex & FiberMutex::wrLock()
+FiberReadWriteLock & FiberReadWriteLock::wrLock()
 {
   bool r;
   for(;;){
@@ -642,7 +642,7 @@ FiberMutex & FiberMutex::wrLock()
   return *this;
 }
 //---------------------------------------------------------------------------
-FiberMutex & FiberMutex::unlock()
+FiberReadWriteLock & FiberReadWriteLock::unlock()
 {
   acquire();
   assert( value_ != 0 );
@@ -654,12 +654,12 @@ FiberMutex & FiberMutex::unlock()
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-/*FiberMutex & FiberMutex::rdLock()
+/*FiberReadWriteLock & FiberReadWriteLock::rdLock()
 {
   Fiber * fib = currentFiber();
   if( fib == NULL ){
     for(;;){
-      AutoLock<FiberInterlockedMutex> lock(mutex_);
+      AutoLock<FiberWriteLock> lock(mutex_);
       if( counter_ >= 0 ){
         counter_++;
         break;
@@ -688,7 +688,7 @@ FiberMutex & FiberMutex::unlock()
   return *this;
 }
 //---------------------------------------------------------------------------
-FiberMutex & FiberMutex::wrLock()
+FiberReadWriteLock & FiberReadWriteLock::wrLock()
 {
   Fiber * fib = currentFiber();
   if( fib == NULL ){
@@ -715,7 +715,7 @@ FiberMutex & FiberMutex::wrLock()
   return *this;
 }
 //---------------------------------------------------------------------------
-FiberMutex & FiberMutex::unlock()
+FiberReadWriteLock & FiberReadWriteLock::unlock()
 {
   if( currentFiber() == NULL )
     stdErr.log(

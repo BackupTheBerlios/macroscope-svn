@@ -74,7 +74,7 @@ public:
 -->declarations
 
 	Parser(Scanner *scanner = NULL);
-	~Parser();
+	virtual ~Parser();
 	void SemErr(const wchar_t* msg);
 
 -->productionsheader

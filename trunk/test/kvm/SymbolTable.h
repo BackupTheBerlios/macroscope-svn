@@ -37,7 +37,7 @@ class Symbol {
   friend class CodeObject;
   friend class SymbolTable;
   public:
-    ~Symbol();
+    virtual ~Symbol();
     Symbol(Symbol * parent = NULL,
            wchar_t * symbol = NULL,
            CodeObject * object = NULL);

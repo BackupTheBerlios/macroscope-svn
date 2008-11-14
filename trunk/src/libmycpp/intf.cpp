@@ -79,7 +79,7 @@ const char * const  API::symbols_[] = {
 //---------------------------------------------------------------------------
 void API::initialize()
 {
-  new (mutex_) InterlockedMutex;
+  new (mutex_) WriteLock;
   new (clientLibrary_) utf8::String;
   new (threadCount_) ThreadLocalVariable<intptr_t>;
 #if !MYSQL_STATIC_LIBRARY  
@@ -94,7 +94,7 @@ void API::cleanup()
   threadCount().~ThreadLocalVariable<intptr_t>();
   using namespace utf8;
   reinterpret_cast<utf8::String *>(clientLibrary_)->~String();
-  mutex().~InterlockedMutex();
+  mutex().~WriteLock();
 }
 //---------------------------------------------------------------------------
 #if !MYSQL_STATIC_LIBRARY
@@ -143,7 +143,7 @@ utf8::String API::tryOpen()
 //---------------------------------------------------------------------------
 void API::open()
 {
-  AutoLock<InterlockedMutex> lock(mutex());
+  AutoLock<WriteLock> lock(mutex());
   if( count_ == 0 ){
 #if !MYSQL_STATIC_LIBRARY
     int32_t       err;
@@ -246,7 +246,7 @@ void API::open()
 //---------------------------------------------------------------------------
 void API::close()
 {
-  AutoLock<InterlockedMutex> lock(mutex());
+  AutoLock<WriteLock> lock(mutex());
   assert( count_ > 0 );
   assert( (intptr_t) threadCount() > 0 );
   if( (intptr_t) threadCount() == 1 ){

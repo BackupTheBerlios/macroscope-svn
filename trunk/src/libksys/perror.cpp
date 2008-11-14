@@ -129,7 +129,7 @@ utf8::String strError(int32_t err)
     }
 #elif HAVE_STRERROR
     static ilock_t mutex = 0;
-    AutoInterlockedLock<ilock_t> lock(mutex);
+    AutoILock lock(mutex);
     char * p = strerror(err);
     serr.reallocT(::strlen(p) + 1);
     strcpy(serr,p);

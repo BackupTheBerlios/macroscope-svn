@@ -59,7 +59,7 @@ const char * const API::symbols_[] = {
 //---------------------------------------------------------------------------
 void API::initialize()
 {
-  new (mutex_) InterlockedMutex;
+  new (mutex_) WriteLock;
   new (clientLibrary_) utf8::String;
   count_ = 0;
 }
@@ -68,7 +68,7 @@ void API::cleanup()
 {
   using namespace utf8;
   reinterpret_cast<utf8::String *>(clientLibrary_)->~String();
-  mutex().~InterlockedMutex();
+  mutex().~WriteLock();
 }
 //---------------------------------------------------------------------------
 utf8::String API::tryOpen()
@@ -115,7 +115,7 @@ utf8::String API::tryOpen()
 //---------------------------------------------------------------------------
 void API::open()
 {
-  AutoLock<InterlockedMutex> lock(mutex());
+  AutoLock<WriteLock> lock(mutex());
   if( count_ == 0 ){
     int32_t       err;
     utf8::String  libFileName (tryOpen());
@@ -164,7 +164,7 @@ void API::open()
 //---------------------------------------------------------------------------
 void API::close()
 {
-  AutoLock<InterlockedMutex> lock(mutex());
+  AutoLock<WriteLock> lock(mutex());
   assert( count_ > 0 );
   if( count_ == 1 ){
 #if defined(__WIN32__) || defined(__WIN64__)

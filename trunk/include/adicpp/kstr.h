@@ -71,8 +71,8 @@ class String {
     > StringTree;
     static uint8_t treeHolder_[];
     StringTree & tree() const { return *reinterpret_cast<StringTree *>(treeHolder_); }
-    static uint8_t treeMutexHolder_[];
-    InterlockedMutex & treeMutex() const { return *reinterpret_cast<InterlockedMutex *>(treeMutexHolder_); }
+    static uint8_t treeReadWriteLockHolder_[];
+    WriteLock & treeReadWriteLock() const { return *reinterpret_cast<WriteLock *>(treeReadWriteLockHolder_); }
     static SubString nullString_;
     static void addRef(SubString * string);
     static void release(SubString * string);

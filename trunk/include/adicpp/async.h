@@ -57,7 +57,7 @@ enum AsyncEventType {
   etQuit,
   etDispatch,
   etTimer,
-  etAcquireMutex,
+  etAcquireReadWriteLock,
   etAcquireSemaphore,
   etStackBackTrace,
   etStackBackTraceZero,
@@ -69,7 +69,7 @@ enum AsyncEventType {
 class Fiber;
 class AsyncDescriptor;
 class AsyncFile;
-class FiberInterlockedMutex;
+class FiberWriteLock;
 class FiberSemaphore;
 //---------------------------------------------------------------------------
 class AsyncEvent {
@@ -113,8 +113,8 @@ class AsyncEvent {
           const void * cbuffer_;
           file_t fileDescriptor_;
           sock_t socket_;
-          InterlockedMutex * mutex0_;
-          FiberInterlockedMutex * mutex_;
+          WriteLock * mutex0_;
+          FiberWriteLock * mutex_;
           FiberSemaphore * semaphore_;
           DirectoryChangeNotification * directoryChangeNotification_;
           const ExecuteProcessParameters * executeParameters_;
@@ -279,11 +279,11 @@ inline AsyncDescriptor::AsyncDescriptor()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class FiberInterlockedMutex {
+class FiberWriteLock {
   friend class AsyncAcquireSlave;
   public:
-    ~FiberInterlockedMutex();
-    FiberInterlockedMutex();
+    ~FiberWriteLock();
+    FiberWriteLock();
 
     void acquire();
     bool tryAcquire();
@@ -294,39 +294,39 @@ class FiberInterlockedMutex {
     HANDLE sem_;
     bool tryAcquireHelper();
 #else
-    InterlockedMutex mutex_;
+    WriteLock mutex_;
 #endif
 
-    FiberInterlockedMutex(const FiberInterlockedMutex &){}
-    void operator =(const FiberInterlockedMutex &){}
+    FiberWriteLock(const FiberWriteLock &){}
+    void operator =(const FiberWriteLock &){}
 
     bool internalAcquire(bool wait);
 };
 //---------------------------------------------------------------------------
 #if !defined(__WIN32__) && !defined(__WIN64__)
-inline FiberInterlockedMutex::~FiberInterlockedMutex()
+inline FiberWriteLock::~FiberWriteLock()
 {
 }
 #endif
 //---------------------------------------------------------------------------
 #if !defined(__WIN32__) && !defined(__WIN64__)
-inline FiberInterlockedMutex::FiberInterlockedMutex()
+inline FiberWriteLock::FiberWriteLock()
 {
 }
 #endif
 //---------------------------------------------------------------------------
-inline void FiberInterlockedMutex::acquire()
+inline void FiberWriteLock::acquire()
 {
   internalAcquire(true);
 }
 //---------------------------------------------------------------------------
-inline bool FiberInterlockedMutex::tryAcquire()
+inline bool FiberWriteLock::tryAcquire()
 {
   return internalAcquire(false);
 }
 //---------------------------------------------------------------------------
 #if !defined(__WIN32__) && !defined(__WIN64__)
-inline void FiberInterlockedMutex::release()
+inline void FiberWriteLock::release()
 {
   mutex_.release();
 }
@@ -334,35 +334,35 @@ inline void FiberInterlockedMutex::release()
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class FiberMutex : protected FiberInterlockedMutex {
+class FiberReadWriteLock : protected FiberWriteLock {
   public:
-    ~FiberMutex();
-    FiberMutex();
+    ~FiberReadWriteLock();
+    FiberReadWriteLock();
 
-    FiberMutex & rdLock();
+    FiberReadWriteLock & rdLock();
     bool tryRDLock();
-    FiberMutex & wrLock();
+    FiberReadWriteLock & wrLock();
     bool tryWRLock();
-    FiberMutex & unlock();
+    FiberReadWriteLock & unlock();
   protected:
-    FiberInterlockedMutex waitQueue_;
+    FiberWriteLock waitQueue_;
     int32_t value_;
     int32_t queue_;
 
-    FiberMutex(const FiberMutex &){}
-    void operator =(const FiberMutex &){}
+    FiberReadWriteLock(const FiberReadWriteLock &){}
+    void operator =(const FiberReadWriteLock &){}
   private:
 };
 //---------------------------------------------------------------------------
-inline FiberMutex::~FiberMutex()
+inline FiberReadWriteLock::~FiberReadWriteLock()
 {
 }
 //---------------------------------------------------------------------------
-inline FiberMutex::FiberMutex() : value_(0), queue_(0)
+inline FiberReadWriteLock::FiberReadWriteLock() : value_(0), queue_(0)
 {
 }
 //---------------------------------------------------------------------------
-inline bool FiberMutex::tryRDLock()
+inline bool FiberReadWriteLock::tryRDLock()
 {
   acquire();
   bool r = value_ >= 0;
@@ -371,7 +371,7 @@ inline bool FiberMutex::tryRDLock()
   return r;
 }
 //---------------------------------------------------------------------------
-inline bool FiberMutex::tryWRLock()
+inline bool FiberReadWriteLock::tryWRLock()
 {
   acquire();
   bool r = value_ == 0;

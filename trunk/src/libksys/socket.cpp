@@ -153,7 +153,7 @@ AsyncSocket & AsyncSocket::close()
 {
   bool closed = false;
   {
-    ksys::AutoLock<ksys::InterlockedMutex> lock(api.mutex());
+    ksys::AutoLock<ksys::WriteLock> lock(api.mutex());
     if( socket_ != INVALID_SOCKET ){
       if( api.closesocket(socket_) != 0 ){
         int32_t err = errNo();
@@ -171,7 +171,7 @@ AsyncSocket & AsyncSocket::close()
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::shutdown(int how)
 {
-  ksys::AutoLock<ksys::InterlockedMutex> lock(api.mutex());
+  ksys::AutoLock<ksys::WriteLock> lock(api.mutex());
   if( socket_ != INVALID_SOCKET ){
     if( api.shutdown(socket_,how) != 0 ){
       int32_t err = errNo();

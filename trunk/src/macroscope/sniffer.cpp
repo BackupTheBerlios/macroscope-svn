@@ -48,7 +48,6 @@ Sniffer::Sniffer(Database * database,Database * database2) :
   storagePeriodOfStatistics_(0),
   maintenanceThreshold_(0.1)
 {
-//  fprintf(stderr,"%p %p, %s %d\n",this,database,__FILE__,__LINE__);
 }
 //------------------------------------------------------------------------------
 void Sniffer::threadExecute()
@@ -57,7 +56,6 @@ void Sniffer::threadExecute()
     PCAP::threadExecute();
   }
   catch( ... ){
-//    fprintf(stderr,"%p %p, %s %d\n",this,database_.ptr(),__FILE__,__LINE__);
     database_->detach();
     throw;
   }

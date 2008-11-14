@@ -243,24 +243,24 @@ void SockAddr::resolveNameForBind(const utf8::String & bind,ksys::Array<SockAddr
 }
 //------------------------------------------------------------------------------
 uint8_t SockAddr::reverseResolveOverrideHolder_[sizeof(ksys::Array<ReverseResolveOverride>)];
-uint8_t SockAddr::reverseResolveOverrideMutexHolder_[sizeof(ksys::InterlockedMutex)];
+uint8_t SockAddr::reverseResolveOverrideReadWriteLockHolder_[sizeof(ksys::WriteLock)];
 //------------------------------------------------------------------------------
 void SockAddr::initialize()
 {
   new (reverseResolveOverrideHolder_) ksys::Array<ReverseResolveOverride>;
-  new (reverseResolveOverrideMutexHolder_) ksys::InterlockedMutex;
+  new (reverseResolveOverrideReadWriteLockHolder_) ksys::WriteLock;
 }
 //------------------------------------------------------------------------------
 void SockAddr::cleanup()
 {
   using namespace ksys;
-  reverseResolveOverrideMutex().~InterlockedMutex();
+  reverseResolveOverrideReadWriteLock().~WriteLock();
   reverseResolveOverride().~Array<ReverseResolveOverride>();
 }
 //------------------------------------------------------------------------------
 void SockAddr::reverseResolveOverrideAdd(const SockAddr & addr,const utf8::String & name)
 {
-  ksys::AutoLock<ksys::InterlockedMutex> lock(reverseResolveOverrideMutex());
+  ksys::AutoLock<ksys::WriteLock> lock(reverseResolveOverrideReadWriteLock());
   ReverseResolveOverride ovr(addr,name);
   ovr.addr_.addr4_.sin_port = 0;
   intptr_t i = reverseResolveOverride().search(ovr);
@@ -269,7 +269,7 @@ void SockAddr::reverseResolveOverrideAdd(const SockAddr & addr,const utf8::Strin
 //------------------------------------------------------------------------------
 void SockAddr::reverseResolveOverrideRemove(const SockAddr & addr)
 {
-  ksys::AutoLock<ksys::InterlockedMutex> lock(reverseResolveOverrideMutex());
+  ksys::AutoLock<ksys::WriteLock> lock(reverseResolveOverrideReadWriteLock());
   ReverseResolveOverride ovr(addr);
   ovr.addr_.addr4_.sin_port = 0;
   intptr_t i = reverseResolveOverride().search(ovr);
@@ -286,7 +286,7 @@ void SockAddr::reverseResolveOverrideRemove(const SockAddr & addr)
 //------------------------------------------------------------------------------
 utf8::String SockAddr::reverseResolveGetOverride(const SockAddr & addr,const ksys::Mutant & defPort)
 {
-  ksys::AutoLock<ksys::InterlockedMutex> lock(reverseResolveOverrideMutex());
+  ksys::AutoLock<ksys::WriteLock> lock(reverseResolveOverrideReadWriteLock());
   ReverseResolveOverride ovr(addr);
   ovr.addr_.addr4_.sin_port = 0;
   intptr_t i = reverseResolveOverride().search(ovr);
@@ -427,7 +427,7 @@ void SockAddr::getAdaptersAddresses(ksys::Array<IpInfo> & addresses)
   addresses.resize((ULONG) getpagesize() * 16u / sizeof(IpInfo));
   if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
     for(;;){
-      outBufLen = addresses.count() * sizeof(IpInfo);
+      outBufLen = (ULONG) (addresses.count() * sizeof(IpInfo));
       dwRetVal = iphlpapi.GetAdaptersAddresses(
         AF_UNSPEC,
         0, 
@@ -447,7 +447,7 @@ void SockAddr::getAdaptersAddresses(ksys::Array<IpInfo> & addresses)
   }
   else {
     for(;;){
-      outBufLen = addresses.count() * sizeof(IpInfo);
+      outBufLen = (ULONG) (addresses.count() * sizeof(IpInfo));
       dwRetVal = iphlpapi.GetAdaptersInfo(&addresses[0].infos_,&outBufLen);
       if( dwRetVal == ERROR_SUCCESS ) break;
       if( dwRetVal == ERROR_BUFFER_OVERFLOW ){

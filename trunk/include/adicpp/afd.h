@@ -141,7 +141,7 @@ class AsyncFile : public AsyncDescriptor {
   protected:
   private:
     static uint8_t mutex_[];
-    static InterlockedMutex & mutex();
+    static WriteLock & mutex();
 #if _MSC_VER
 #pragma warning(push,3)
 #endif
@@ -361,9 +361,9 @@ inline AsyncFile & AsyncFile::codePage(uintptr_t v)
   return *this;
 }
 //---------------------------------------------------------------------------
-inline InterlockedMutex & AsyncFile::mutex()
+inline WriteLock & AsyncFile::mutex()
 {
-  return *reinterpret_cast<InterlockedMutex *>(mutex_);
+  return *reinterpret_cast<WriteLock *>(mutex_);
 }
 //---------------------------------------------------------------------------
 inline int64_t AsyncFile::read(void * buf,uint64_t size)

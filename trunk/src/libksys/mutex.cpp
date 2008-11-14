@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,10 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-uint8_t giantPlaceHolder[sizeof(InterlockedMutex)];
+uint8_t giantPlaceHolder[sizeof(WriteLock)];
 //---------------------------------------------------------------------------
 #if !defined(__GNUG__) && !defined(__i386__) && !defined(_MSC_VER) && !defined(__BCPLUSPLUS__)
+//---------------------------------------------------------------------------
 int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   giant().acquire();
@@ -41,7 +42,7 @@ int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
   giant().release();
   return ov;
 }
-
+//---------------------------------------------------------------------------
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
 {
   giant().acquire();
@@ -50,8 +51,7 @@ int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
   giant().release();
   return ov;
 }
-
-
+//---------------------------------------------------------------------------
 int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t cmpValue)
 {
   giant().acquire();
@@ -66,7 +66,7 @@ int32_t interlockedCompareExchange(volatile int32_t & v,int32_t exValue,int32_t 
   giant().release();
   return ov;
 }
-
+//---------------------------------------------------------------------------
 int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
 {
   giant().acquire();
@@ -81,9 +81,22 @@ int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t 
   giant().release();
   return ov;
 }
+//---------------------------------------------------------------------------
+#elif defined(__WIN32__) || defined(__WIN64__)
+//---------------------------------------------------------------------------
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
+{
+  return InterlockedExchangeAdd64((LONGLONG *) &v,a);
+}
+//---------------------------------------------------------------------------
+int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+{
+  return InterlockedCompareExchange64((LONGLONG *) &v,exValue,cmpValue);
+}
+//---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if !defined(__WIN32__) && !defined(__WIN64__)//(_M_IX86 || __i386__ || defined(BCPLUSPLUS)) && !__x86_64__ && !_M_X64
+#if !defined(__WIN32__) && !defined(__WIN64__) && __i386__ && !__x86_64__
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
 {
   int64_t old;
@@ -112,57 +125,136 @@ void interlockedCompareExchangeAcquire(volatile int64_t & v,int64_t exValue,int6
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-void InterlockedMutex::initialize()
+void (*LiteWriteLock::acquire_)(volatile ilock_t & ref) = LiteWriteLock::singleAcquire;
+//---------------------------------------------------------------------------
+void LiteWriteLock::multiAcquire(volatile ilock_t & ref)
 {
-#if FAST_MUTEX
+  uintptr_t i;
+  for(;;){
+    i = 4096;
+    do {
+      if( interlockedCompareExchange(ref,-1,0) == 0 ) goto l1;
+    } while( --i > 0 );
+    ksleep1();
+  }
+l1:;
+}
+//---------------------------------------------------------------------------
+void LiteWriteLock::singleAcquire(volatile ilock_t & ref)
+{
+  for(;;){
+    if( interlockedCompareExchange(ref,-1,0) == 0 ) break;
+    ksleep1();
+  }
+}
+//---------------------------------------------------------------------------
+void LiteWriteLock::initialize()
+{
   if( numberOfProcessors() > 1 ){
-    InterlockedMutex::acquire_ = InterlockedMutex::multiAcquire;
-#if !HAVE_PTHREAD_RWLOCK_INIT
-    Mutex::rdLock_ = Mutex::multiRDLock;
-    Mutex::wrLock_ = Mutex::multiWRLock;
-#endif
+    LiteWriteLock::acquire_ = LiteWriteLock::multiAcquire;
+    LiteReadWriteLock::rdLock_ = LiteReadWriteLock::multiRDLock;
+    LiteReadWriteLock::wrLock_ = LiteReadWriteLock::multiWRLock;
   }
   else {
-    InterlockedMutex::acquire_ = InterlockedMutex::singleAcquire;
-#if !HAVE_PTHREAD_RWLOCK_INIT
-    Mutex::rdLock_ = Mutex::singleRDLock;
-    Mutex::wrLock_ = Mutex::singleWRLock;
-#endif
+    LiteWriteLock::acquire_ = LiteWriteLock::singleAcquire;
+    LiteReadWriteLock::rdLock_ = LiteReadWriteLock::singleRDLock;
+    LiteReadWriteLock::wrLock_ = LiteReadWriteLock::singleWRLock;
   }
-#elif defined(__WIN32__) || defined(__WIN64__)
-  //memset(&staticCS_,0,sizeof(staticCS_));
-#elif HAVE_PTHREAD_H
-  memset(pthreadMutexNull_,0xFF,sizeof(pthread_mutex_t));
-  memset(Mutex::pthreadRWLockNull_,0xFF,sizeof(pthread_rwlock_t));
+#if HAVE_PTHREAD_H
+  memset(WriteLock::pthreadReadWriteLockNull_,0xFF,sizeof(pthread_mutex_t));
+  memset(ReadWriteLock::pthreadRWLockNull_,0xFF,sizeof(pthread_rwlock_t));
 #endif
-  new (giantPlaceHolder) InterlockedMutex;
+  new (giantPlaceHolder) WriteLock;
 }
 //---------------------------------------------------------------------------
-void InterlockedMutex::cleanup()
+void LiteWriteLock::cleanup()
 {
-  giant().~InterlockedMutex();
+  giant().~WriteLock();
 }
 //---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+void (*LiteReadWriteLock::rdLock_)(LiteReadWriteLock * mutex) = LiteReadWriteLock::singleRDLock;
+//---------------------------------------------------------------------------
+void LiteReadWriteLock::multiRDLock(LiteReadWriteLock * mutex)
+{
+  uintptr_t st = 1;
+  uintptr_t i;
+  for(;;){
+    i = 4096;
+    do {
+      mutex->acquire();
+      if( mutex->value_ >= 0 ){ mutex->value_++; goto l1; }
+      mutex->release();
+    } while( --i > 0 );
+    ksleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+l1:
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+void LiteReadWriteLock::singleRDLock(LiteReadWriteLock * mutex)
+{
+  uintptr_t st = 1;
+  for(;;){
+    mutex->acquire();
+    if( mutex->value_ >= 0 ){ mutex->value_++; break; }
+    mutex->release();
+    ksleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+void (*LiteReadWriteLock::wrLock_)(LiteReadWriteLock * mutex) = LiteReadWriteLock::singleWRLock;
+//---------------------------------------------------------------------------
+void LiteReadWriteLock::multiWRLock(LiteReadWriteLock * mutex)
+{
+  uintptr_t st = 1;
+  uintptr_t i;
+  for(;;){
+    i = 4096;
+    do {
+      mutex->acquire();
+      if( mutex->value_ == 0 ){ mutex->value_--; goto l1; }
+      mutex->release();
+    } while( --i > 0 );
+    ksleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+l1:
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+void LiteReadWriteLock::singleWRLock(LiteReadWriteLock * mutex)
+{
+  uintptr_t st = 1;
+  for(;;){
+    mutex->acquire();
+    if( mutex->value_ == 0 ){ mutex->value_--; break; }
+    mutex->release();
+    ksleep(st);
+    if( st < 100000 ) st <<= 1;
+  }
+  mutex->release();
+}
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+#if HAVE_PTHREAD_H
+uint8_t WriteLock::pthreadReadWriteLockNull_[sizeof(pthread_mutex_t)];
+#endif
+//---------------------------------------------------------------------------
+WriteLock::~WriteLock()
+{
 #if defined(__WIN32__) || defined(__WIN64__)
-//CRITICAL_SECTION InterlockedMutex::staticCS_;
-#endif
-//---------------------------------------------------------------------------
-#if !FAST_MUTEX && HAVE_PTHREAD_H
-uint8_t InterlockedMutex::pthreadMutexNull_[sizeof(pthread_mutex_t)];
-#endif
-//---------------------------------------------------------------------------
-InterlockedMutex::~InterlockedMutex()
-{
-#if FAST_MUTEX
-  assert( refCount_ == 0 );
-#elif defined(__WIN32__) || defined(__WIN64__)
-//  if( memcmp(&cs_,&staticCS_,sizeof(cs_)) != 0 ) DeleteCriticalSection(&cs_);
   if( sem_ != NULL ){
     CloseHandle(sem_);
     sem_ = NULL;
   }
 #elif HAVE_PTHREAD_H
-  if( memcmp(&mutex_,pthreadMutexNull_,sizeof(mutex_)) != 0 ){
+  if( memcmp(&mutex_,pthreadReadWriteLockNull_,sizeof(mutex_)) != 0 ){
     int r = pthread_mutex_destroy(&mutex_);
     if( r != 0 )
       newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -170,37 +262,10 @@ InterlockedMutex::~InterlockedMutex()
 #endif
 }
 //---------------------------------------------------------------------------
-#if FAST_MUTEX
+#if defined(__WIN32__) || defined(__WIN64__)
 //---------------------------------------------------------------------------
-void (*InterlockedMutex::acquire_)(InterlockedMutex * mutex) = InterlockedMutex::singleAcquire;
-//---------------------------------------------------------------------------
-void InterlockedMutex::multiAcquire(InterlockedMutex * mutex)
+WriteLock::WriteLock()
 {
-  uintptr_t i;
-  for(;;){
-    i = 4096;
-    do {
-      if( interlockedCompareExchange(mutex->refCount_,-1,0) == 0 ) goto l1;
-    } while( --i > 0 );
-    ksleep1();
-  }
-l1:;
-}
-//---------------------------------------------------------------------------
-void InterlockedMutex::singleAcquire(InterlockedMutex * mutex)
-{
-  for(;;){
-    if( interlockedCompareExchange(mutex->refCount_,-1,0) == 0 ) break;
-    ksleep1();
-  }
-}
-//---------------------------------------------------------------------------
-#elif defined(__WIN32__) || defined(__WIN64__)
-//---------------------------------------------------------------------------
-InterlockedMutex::InterlockedMutex()
-{
-//  memset(&cs_,0,sizeof(cs_));
-//  if( InitializeCriticalSectionAndSpinCount(&cs_,4000 | (DWORD(1) << 31)) == 0 ){
   sem_ = CreateSemaphoreA(NULL,1,~(ULONG) 0 >> 1, NULL);
   if( sem_ == NULL ){
     int32_t err = GetLastError() + errorOffset;
@@ -208,9 +273,8 @@ InterlockedMutex::InterlockedMutex()
   }
 }
 //---------------------------------------------------------------------------
-void InterlockedMutex::acquire()
+void WriteLock::acquire()
 {
-//  EnterCriticalSection(&cs_);
   DWORD r = WaitForSingleObject(sem_,INFINITE);
   if( r == WAIT_FAILED || (r != WAIT_OBJECT_0 && r != WAIT_ABANDONED) ){
     int32_t err = GetLastError() + errorOffset;
@@ -218,9 +282,8 @@ void InterlockedMutex::acquire()
   }
 }
 //---------------------------------------------------------------------------
-bool InterlockedMutex::tryAcquire()
+bool WriteLock::tryAcquire()
 {
-//  return TryEnterCriticalSection(&cs_) != 0;
   DWORD r = WaitForSingleObject(sem_,0);
   if( r == WAIT_FAILED ){
     int32_t err = GetLastError() + errorOffset;
@@ -229,9 +292,8 @@ bool InterlockedMutex::tryAcquire()
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 }
 //---------------------------------------------------------------------------
-void InterlockedMutex::release()
+void WriteLock::release()
 {
-//  LeaveCriticalSection(&cs_);
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
@@ -240,9 +302,9 @@ void InterlockedMutex::release()
 //---------------------------------------------------------------------------
 #elif HAVE_PTHREAD_H
 //---------------------------------------------------------------------------
-InterlockedMutex::InterlockedMutex()
+WriteLock::WriteLock()
 {
-  memcpy(&mutex_,pthreadMutexNull_,sizeof(mutex_));
+  memcpy(&mutex_,pthreadReadWriteLockNull_,sizeof(mutex_));
   int r;
   /*pthread_mutexattr_t attr;
   if( pthread_mutexattr_init(&attr) != 0 ){
@@ -260,27 +322,27 @@ InterlockedMutex::InterlockedMutex()
 #endif*/
   r = pthread_mutex_init(&mutex_,NULL);
   if( r != 0 ){
-    memcpy(&mutex_,pthreadMutexNull_,sizeof(mutex_));
+    memcpy(&mutex_,pthreadReadWriteLockNull_,sizeof(mutex_));
     //pthread_mutexattr_destroy(&attr);
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   }
 }
 //---------------------------------------------------------------------------
-void InterlockedMutex::acquire()
+void WriteLock::acquire()
 {
   int r = pthread_mutex_lock(&mutex_);
   if( r != 0 )
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------
-bool InterlockedMutex::tryAcquire()
+bool WriteLock::tryAcquire()
 {
   int r = pthread_mutex_trylock(&mutex_);
   if( r != 0 && r != EBUSY ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
-void InterlockedMutex::release()
+void WriteLock::release()
 {
   int r = pthread_mutex_unlock(&mutex_);
   if( r != 0 )
@@ -289,79 +351,13 @@ void InterlockedMutex::release()
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#if FAST_MUTEX || !HAVE_PTHREAD_RWLOCK_INIT
+/////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-void (*Mutex::rdLock_)(Mutex * mutex) = Mutex::singleRDLock;
+#if HAVE_PTHREAD_H
 //---------------------------------------------------------------------------
-void Mutex::multiRDLock(Mutex * mutex)
-{
-  uint64_t st = 1;
-  uintptr_t i;
-  for(;;){
-    i = 4096;
-    do {
-      mutex->acquire();
-      if( mutex->value_ >= 0 ){ mutex->value_++; goto l1; }
-      mutex->release();
-    } while( --i > 0 );
-    ksleep(st);
-    if( st < 100000 ) st <<= 1;
-  }
-l1:
-  mutex->release();
-}
+uint8_t ReadWriteLock::pthreadRWLockNull_[sizeof(pthread_rwlock_t)];
 //---------------------------------------------------------------------------
-void Mutex::singleRDLock(Mutex * mutex)
-{
-  uint64_t st = 1;
-  for(;;){
-    mutex->acquire();
-    if( mutex->value_ >= 0 ){ mutex->value_++; break; }
-    mutex->release();
-    ksleep(st);
-    if( st < 100000 ) st <<= 1;
-  }
-  mutex->release();
-}
-//---------------------------------------------------------------------------
-void (*Mutex::wrLock_)(Mutex * mutex) = Mutex::singleWRLock;
-//---------------------------------------------------------------------------
-void Mutex::multiWRLock(Mutex * mutex)
-{
-  uint64_t st = 1;
-  uintptr_t i;
-  for(;;){
-    i = 4096;
-    do {
-      mutex->acquire();
-      if( mutex->value_ == 0 ){ mutex->value_--; goto l1; }
-      mutex->release();
-    } while( --i > 0 );
-    ksleep(st);
-    if( st < 100000 ) st <<= 1;
-  }
-l1:
-  mutex->release();
-}
-//---------------------------------------------------------------------------
-void Mutex::singleWRLock(Mutex * mutex)
-{
-  uint64_t st = 1;
-  for(;;){
-    mutex->acquire();
-    if( mutex->value_ == 0 ){ mutex->value_--; break; }
-    mutex->release();
-    ksleep(st);
-    if( st < 100000 ) st <<= 1;
-  }
-  mutex->release();
-}
-//---------------------------------------------------------------------------
-#else
-//---------------------------------------------------------------------------
-uint8_t Mutex::pthreadRWLockNull_[sizeof(pthread_rwlock_t)];
-//---------------------------------------------------------------------------
-Mutex::~Mutex()
+ReadWriteLock::~ReadWriteLock()
 {
   if( memcmp(&mutex_,pthreadRWLockNull_,sizeof(mutex_)) != 0 ){
     int r = pthread_rwlock_destroy(&mutex_);
@@ -370,7 +366,7 @@ Mutex::~Mutex()
   }
 }
 //---------------------------------------------------------------------------
-Mutex::Mutex()
+ReadWriteLock::ReadWriteLock()
 {
   memcpy(&mutex_,pthreadRWLockNull_,sizeof(mutex_));
   int r = pthread_rwlock_init(&mutex_,NULL);
@@ -380,35 +376,35 @@ Mutex::Mutex()
   }
 }
 //---------------------------------------------------------------------------
-Mutex & Mutex::rdLock()
+ReadWriteLock & ReadWriteLock::rdLock()
 {
   int r = pthread_rwlock_rdlock(&mutex_);
   if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
-bool Mutex::tryRDLock()
+bool ReadWriteLock::tryRDLock()
 {
   int r = pthread_rwlock_tryrdlock(&mutex_);
   if( r != 0 && r != EBUSY ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
-Mutex & Mutex::wrLock()
+ReadWriteLock & ReadWriteLock::wrLock()
 {
   int r = pthread_rwlock_wrlock(&mutex_);
   if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //---------------------------------------------------------------------------
-bool Mutex::tryWRLock()
+bool ReadWriteLock::tryWRLock()
 {
   int r = pthread_rwlock_trywrlock(&mutex_);
   if( r != 0 && r != EBUSY ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
   return r == 0;
 }
 //---------------------------------------------------------------------------
-Mutex & Mutex::unlock()
+ReadWriteLock & ReadWriteLock::unlock()
 {
   int r = pthread_rwlock_unlock(&mutex_);
   if( r != 0 ) newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -416,41 +412,6 @@ Mutex & Mutex::unlock()
 }
 //---------------------------------------------------------------------------
 #endif
-//---------------------------------------------------------------------------
-/////////////////////////////////////////////////////////////////////////////
-//---------------------------------------------------------------------------
-Event::~Event()
-{
-#if HAVE_PTHREAD_H
-  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
-  if( memcpy(&mutex_,&stm,sizeof(mutex_)) != 0 ) pthread_mutex_destroy(&mutex_);
-  static const pthread_cond_t stc = PTHREAD_COND_INITIALIZER;
-  if( memcmp(&handle_,&stc,sizeof(handle_)) != 0 ) pthread_cond_destroy(&handle_);
-#elif defined(__WIN32__) || defined(__WIN64__)
-  if( handle_ != NULL ) CloseHandle(handle_);
-#endif
-}
-//---------------------------------------------------------------------------
-Event::Event()
-{
-  int32_t err;
-#if HAVE_PTHREAD_H
-  static const pthread_cond_t stc = PTHREAD_COND_INITIALIZER;
-  handle_ = stc;
-  static const pthread_mutex_t stm = PTHREAD_MUTEX_INITIALIZER;
-  mutex_ = stm;
-  if( pthread_cond_init(&handle_,NULL) != 0 || pthread_mutex_init(&mutex_,NULL) != 0 ){
-    err = errno;
-    pthread_mutex_destroy(&mutex_);
-    pthread_cond_destroy(&handle_);
-#elif defined(__WIN32__) || defined(__WIN64__)
-  handle_ = CreateEvent(NULL,TRUE,FALSE,NULL);
-  if( handle_ == NULL ){
-    err = GetLastError() + errorOffset;
-#endif
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-  }
-}
 //---------------------------------------------------------------------------
 } // namespace ksys
 //---------------------------------------------------------------------------

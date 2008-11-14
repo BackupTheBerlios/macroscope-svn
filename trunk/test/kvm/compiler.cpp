@@ -44,7 +44,7 @@ Compiler::Compiler() : keepStderr_(false)
 Compiler & Compiler::detect(const ConfigSP config)
 {
   utf8::String defaultCompiler(config->text("default_cxx_compiler","auto"));
-  bool autoCompiler = defaultCompiler.strcasecmp("auto") == 0, f = false;
+  bool autoCompiler = defaultCompiler.casecompare("auto") == 0, f = false;
   for( uintptr_t i = 0; i < config->section("cxx_compilers").sectionCount(); i++ ){
     utf8::String sectionPath("cxx_compilers." + (autoCompiler ? config->section("cxx_compilers").section(i).name() : defaultCompiler));
     utf8::String envSectionPath(sectionPath + ".environment");
@@ -179,11 +179,11 @@ bool Compiler::testLinkCxx(
     for( uintptr_t k = enumStringParts(libraries,",",false), i = 0; i < k; i++ ){
       utf8::String s(stringPartByNo(libraries,i,",",false));
       libs += libs.isNull() ? "" : " ";
-      if( type_.strcasecmp("gnu") == 0 ){
+      if( type_.casecompare("gnu") == 0 ){
         libs += "\"-l" + s + "\"";
       }
-      else if( type_.strcasecmp("msvc") == 0 || type_.strcasecmp("intel") == 0 ){
-        libs += "\"" + s.right(4).strcasecmp(".lib") == 0 ? s : s + ".lib" + "\"";
+      else if( type_.casecompare("msvc") == 0 || type_.casecompare("intel") == 0 ){
+        libs += "\"" + s.right(4).casecompare(".lib") == 0 ? s : s + ".lib" + "\"";
       }
       else {
         libs += s;
@@ -243,7 +243,7 @@ utf8::String Compiler::testCxxTypeHelper(
   utf8::String s((type + (member.isNull() ? utf8::String() : " " + member)).
     replaceAll(" ","_").replaceAll("::","_").replaceAll("*","P").upper()
   );
-  s += s.right(2).strcasecmp("_T") == 0 || s.right(2).strcasecmp("_P") == 0 ? " " : "_T ";
+  s += s.right(2).casecompare("_T") == 0 || s.right(2).casecompare("_P") == 0 ? " " : "_T ";
   return 
     "#define SIZEOF_" + s +
     utf8::int2Str(testCxxCode(config,tmpCxx,header,body)) + "\n"
@@ -258,9 +258,9 @@ utf8::String Compiler::testCxxTypeEqualCheck(
   const utf8::String & header)
 {
   utf8::String t1(type1.replaceAll(" ","_").replaceAll("::","_").replaceAll("*","P").upper());
-  t1 += t1.right(2).strcasecmp("_T") == 0 || t1.right(2).strcasecmp("_P") == 0 ? "" : "_T";
+  t1 += t1.right(2).casecompare("_T") == 0 || t1.right(2).casecompare("_P") == 0 ? "" : "_T";
   utf8::String t2(type2.replaceAll(" ","_").replaceAll("::","_").replaceAll("*","P").upper());
-  t2 += t2.right(2).strcasecmp("_T") == 0 || t1.right(2).strcasecmp("_P") == 0 ? "" : "_T";
+  t2 += t2.right(2).casecompare("_T") == 0 || t1.right(2).casecompare("_P") == 0 ? "" : "_T";
   return 
     "#define HAVE_" + t1 + "_AS_" + t2 +
     (testCxx(config,header +
@@ -1003,7 +1003,7 @@ Compiler & Compiler::test(const utf8::String & config)
       "memset",
       "memcpy",
       "bcopy",
-      "strcasecmp",
+      "casecompare",
       "strchr",
       "strncasecmp",
       "strstr",

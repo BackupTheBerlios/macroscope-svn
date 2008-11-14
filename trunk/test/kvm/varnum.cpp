@@ -37,7 +37,7 @@
 //------------------------------------------------------------------------------
 namespace ksys {
 //------------------------------------------------------------------------------
-VarInteger::Container * VarInteger::Container::initialize(void * data,uintptr_t count,uintptr_t ref)
+VarInteger::Container * VarInteger::Container::initialize(void * data,uintptr_t count,ilock_t ref)
 {
   Container * p = NULL;
   try {

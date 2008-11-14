@@ -41,7 +41,7 @@ Logger::~Logger()
 }
 //------------------------------------------------------------------------------
 Logger::Logger(bool sniffer,bool daemon) :
-  config_(newObject<InterlockedConfig<InterlockedMutex> >()),
+  config_(newObject<InterlockedConfig<WriteLock> >()),
   sniffer_(sniffer),
   daemon_(daemon),
   configReaded_(false),
@@ -1762,6 +1762,8 @@ bool SnifferService::active()
 int main(int _argc,char * _argv[])
 {
   //Sleep(15000);
+  //volatile int64_t v = 0, exValue = 1, cmpValue = 2;
+  //interlockedCompareExchange(v,exValue,cmpValue);
 
   int errcode = EINVAL;
   adicpp::AutoInitializer autoInitializer(_argc,_argv);

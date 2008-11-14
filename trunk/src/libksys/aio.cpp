@@ -190,7 +190,7 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
   bool r = false;
 #if defined(__WIN32__) || defined(__WIN64__)
   if( !terminated_ ){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     if( requests_.count() + newRequests_.count() < maxRequests_ ){
       newRequests_.insToTail(request);
       BOOL es = SetEvent(safeEvents_[MAXIMUM_WAIT_OBJECTS - 1]);
@@ -206,7 +206,7 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 #endif
   if( connect_ ) MAX_REQS = FD_SETSIZE;
   if( !terminated_ ){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     if( requests_.count() + newRequests_.count() < MAX_REQS ){
       newRequests_.insToTail(request);
       if( newRequests_.count() < 2 ){
@@ -248,7 +248,7 @@ void AsyncIoSlave::threadExecute()
   AsyncEvent * object = NULL;
   HANDLE events[MAXIMUM_WAIT_OBJECTS];
   for(;;){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
       //openAPI(object);
@@ -543,7 +543,7 @@ void AsyncIoSlave::threadExecute()
   EventsNode * node;
   AsyncEvent * object = NULL;
   for(;;){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
       //openAPI(object);
@@ -781,7 +781,7 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
   bool r = false;
 #if defined(__WIN32__) || defined(__WIN64__)
   assert( !isWin9x() );
-  AutoLock<InterlockedMutex> lock(*this);
+  AutoLock<LiteWriteLock> lock(*this);
   EventsNode * node;
   for( node = requests_.first(); node != NULL; node = node->next() ){
     AsyncEvent & object = AsyncEvent::nodeObject(*node);
@@ -831,7 +831,7 @@ bool AsyncMiscSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
   if( !terminated_ ){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     if( requests_.count() < maxRequests_ ){
       requests_.insToTail(request);
       if( requests_.count() < 2 ) post();
@@ -1019,7 +1019,7 @@ bool AsyncProcessSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
   if( !terminated_ ){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     if( requests_.count() < maxRequests_ ){
       requests_.insToTail(request);
       post();
@@ -1086,7 +1086,7 @@ AsyncTimerSlave::AsyncTimerSlave()
 //------------------------------------------------------------------------------
 void AsyncTimerSlave::transplant(AsyncEvent & request)
 {
-  AutoLock<InterlockedMutex> lock(*this);
+  AutoLock<LiteWriteLock> lock(*this);
   requests_.insToTail(request);
   post();
 }
@@ -1126,7 +1126,7 @@ void AsyncTimerSlave::threadExecute()
       assert( minRequest->type_ == etTimer );
       timerStartTime = gettimeofday();
       timedWait(minRequest->timeout_);
-      AutoLock<InterlockedMutex> lock(*this);
+      AutoLock<LiteWriteLock> lock(*this);
       requestNode = requests_.first();
       while( requestNode != NULL ){
         elapsedTime = (currentTime = gettimeofday()) - timerStartTime;
@@ -1156,7 +1156,7 @@ void AsyncTimerSlave::threadExecute()
 //------------------------------------------------------------------------------
 void AsyncTimerSlave::abortTimer()
 {
-  AutoLock<InterlockedMutex> lock(*this);
+  AutoLock<LiteWriteLock> lock(*this);
   EventsNode * requestNode = requests_.first();
   while( requestNode != NULL ){
     AsyncEvent::nodeObject(*requestNode).abort_ = true;
@@ -1198,7 +1198,7 @@ bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
   if( !terminated_ ){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
 #if defined(__WIN32__) || defined(__WIN64__)
     if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 1 ){
       newRequests_.insToTail(request);
@@ -1226,14 +1226,14 @@ void AsyncAcquireSlave::threadExecute()
   EventsNode * node;
   intptr_t sp = -1;
   for(;;){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     for(;;){
       node = newRequests_.first();
       if( node == NULL ) break;
       object = &AsyncEvent::nodeObject(*node);
       assert( sp < MAXIMUM_WAIT_OBJECTS - 1 );
       sp++;
-      if( object->type_ == etAcquireMutex ) sems_[sp] = object->mutex_->sem_;
+      if( object->type_ == etAcquireReadWriteLock ) sems_[sp] = object->mutex_->sem_;
       else
       if( object->type_ == etAcquireSemaphore ) sems_[sp] = object->semaphore_->handle_;
       eSems_[sp] = object;
@@ -1334,7 +1334,7 @@ void AsyncAcquireSlave::threadExecute()
       Semaphore::wait();
     }
     else {
-      if( request->type_ == etAcquireMutex ){
+      if( request->type_ == etAcquireReadWriteLock ){
         request->errno_ = 0;
         try {
           request->mutex_->acquire();
@@ -1396,7 +1396,7 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::transplant(AsyncEvent & request
   intptr_t i;
   bool r = false;
   if( !terminated_ ){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     if( !terminated_ && requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
       for( i = sp_; i >= 0; i-- ) if( sems_[i] == request.directoryChangeNotification_->hFFCNotification() ) break;
       if( i < 0 ){
@@ -1416,12 +1416,12 @@ void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
   AsyncEvent * object;
   EventsNode * node;
   for(;;){
-    AutoLock<InterlockedMutex> lock(*this);
+    AutoLock<LiteWriteLock> lock(*this);
     for(;;){
       node = newRequests_.first();
       if( node == NULL ) break;
       object = &AsyncEvent::nodeObject(*node);
-      assert( object->type_ == etAcquireMutex );
+      assert( object->type_ == etAcquireReadWriteLock );
       assert( sp_ < MAXIMUM_WAIT_OBJECTS - 1 );
       ++sp_;
       sems_[sp_] = object->directoryChangeNotification_->hFFCNotification();
@@ -1484,7 +1484,7 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::abortNotification(DirectoryChan
 {
   bool r = false;
   assert( !isWin9x() );
-  AutoLock<InterlockedMutex> lock(*this);
+  AutoLock<LiteWriteLock> lock(*this);
   EventsNode * node;
   for( node = requests_.first(); node != NULL; node = node->next() ){
     AsyncEvent & object = AsyncEvent::nodeObject(*node);
@@ -1521,7 +1521,7 @@ void AsyncStackBackTraceSlave::threadBeforeWait()
 //---------------------------------------------------------------------------
 void AsyncStackBackTraceSlave::transplant(AsyncEvent & request)
 {
-  AutoLock<InterlockedMutex> lock(*this);
+  AutoLock<LiteWriteLock> lock(*this);
   requests_.insToTail(request);
   post();
 }
@@ -1660,7 +1660,7 @@ Requester::Requester() :
 void Requester::abort()
 {
   {
-    AutoLock<InterlockedMutex> lock(timerRequestsMutex_);
+    AutoLock<LiteWriteLock> lock(timerRequestsReadWriteLock_);
     if( timerSlave_ != NULL ){
       timerSlave_->terminate();
       timerSlave_->abortTimer();
@@ -1678,7 +1678,7 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
 #if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;
   if( isWin9x() ){
-    AutoLock<InterlockedMutex> lock(wdcnRequestsMutex_);
+    AutoLock<LiteWriteLock> lock(wdcnRequestsReadWriteLock_);
     for( i = wdcnSlaves_.count() - 1; i >= 0; i-- ){
       wdcnSlaves_[i].terminate();
       r = wdcnSlaves_[i].abortNotification(dcn);
@@ -1689,7 +1689,7 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
     }
   }
   else {
-    AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
+    AutoLock<LiteWriteLock> lock(ioRequestsReadWriteLock_);
     for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
       r = ioSlaves_[i].abortNotification(dcn);
       if( r ) break;
@@ -1720,7 +1720,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etResolveAddress :
     case etStat :
       {
-        AutoLock<InterlockedMutex> lock(ofRequestsMutex_);
+        AutoLock<LiteWriteLock> lock(ofRequestsReadWriteLock_);
         if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
           for( i = ofSlaves_.count() - 1; i >= 0; i-- )
             if( ofSlaves_[i].finished() ) ofSlaves_.remove(i);
@@ -1742,7 +1742,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etExec :
     case etWaitForProcess :
       {
-        AutoLock<InterlockedMutex> lock(prRequestsMutex_);
+        AutoLock<LiteWriteLock> lock(prRequestsReadWriteLock_);
         if( gettimeofday() - prSlavesSweepTime_ >= 10000000 ){
           for( i = prSlaves_.count() - 1; i >= 0; i-- )
             if( prSlaves_[i].finished() ) prSlaves_.remove(i);
@@ -1764,7 +1764,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etDirectoryChangeNotification :
 #if defined(__WIN32__) || defined(__WIN64__)
       if( isWin9x() ){
-        AutoLock<InterlockedMutex> lock(wdcnRequestsMutex_);
+        AutoLock<LiteWriteLock> lock(wdcnRequestsReadWriteLock_);
         if( gettimeofday() - wdcnSlavesSweepTime_ >= 10000000 ){
           for( i = wdcnSlaves_.count() - 1; i >= 0; i-- )
             if( wdcnSlaves_[i].finished() ) wdcnSlaves_.remove(i);
@@ -1794,7 +1794,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etConnect :
 #endif
       {
-        AutoLock<InterlockedMutex> lock(ioRequestsMutex_);
+        AutoLock<LiteWriteLock> lock(ioRequestsReadWriteLock_);
         if( gettimeofday() - ioSlavesSweepTime_ >= 10000000 ){
           for( i = ioSlaves_.count() - 1; i >= 0; i-- )
             if( ioSlaves_[i].finished() ) ioSlaves_.remove(i);
@@ -1816,7 +1816,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
 #if !defined(__WIN32__) && !defined(__WIN64__)
     case etConnect :
       {
-        AutoLock<InterlockedMutex> lock(connectRequestsMutex_);
+        AutoLock<LiteWriteLock> lock(connectRequestsReadWriteLock_);
         if( gettimeofday() - connectSlavesSweepTime_ >= 10000000 ){
           for( i = connectSlaves_.count() - 1; i >= 0; i-- )
             if( connectSlaves_[i].finished() ) connectSlaves_.remove(i);
@@ -1842,7 +1842,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
       break;
     case etTimer :
       {
-        AutoLock<InterlockedMutex> lock(timerRequestsMutex_);
+        AutoLock<LiteWriteLock> lock(timerRequestsReadWriteLock_);
         if( timerSlave_ == NULL ){
           AutoPtr<AsyncTimerSlave> slave(newObject<AsyncTimerSlave>());
           slave->resume();
@@ -1851,10 +1851,10 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         timerSlave_->transplant(fiber->event_);
       }
       return;
-    case etAcquireMutex :
+    case etAcquireReadWriteLock :
     case etAcquireSemaphore :
       {
-        AutoLock<InterlockedMutex> lock(acquireRequestsMutex_);
+        AutoLock<LiteWriteLock> lock(acquireRequestsReadWriteLock_);
         if( gettimeofday() - acquireSlavesSweepTime_ >= 10000000 ){
           for( i = acquireSlaves_.count() - 1; i >= 0; i-- )
             if( acquireSlaves_[i].finished() ) acquireSlaves_.remove(i);
@@ -1877,7 +1877,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
 #ifndef NDEBUG
     case etStackBackTrace :
       {
-        AutoLock<InterlockedMutex> lock(asyncStackBackTraceSlaveMutex_);
+        AutoLock<LiteWriteLock> lock(asyncStackBackTraceSlaveReadWriteLock_);
         if( asyncStackBackTraceSlave_ == NULL ){
           AutoPtr<AsyncStackBackTraceSlave> p(newObject<AsyncStackBackTraceSlave>());
           p->resume();
@@ -1900,7 +1900,7 @@ void Requester::postRequest(AsyncEvent * event)
   switch( event->type_ ){
     case etStackBackTraceZero :
       {
-        AutoLock<InterlockedMutex> lock(asyncStackBackTraceSlaveMutex_);
+        AutoLock<LiteWriteLock> lock(asyncStackBackTraceSlaveReadWriteLock_);
         if( asyncStackBackTraceSlave_ == NULL ){
           AutoPtr<AsyncStackBackTraceSlave> p(newObject<AsyncStackBackTraceSlave>());
           p->resume();

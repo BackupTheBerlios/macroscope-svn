@@ -475,7 +475,7 @@ template <typename KeyT,typename ValueT,bool caseV = true>
 class EmbeddedHashKey {
   typedef EmbeddedHashKey<KeyT,ValueT,caseV> ClassT;
   public:
-    ~EmbeddedHashKey(){}
+    virtual ~EmbeddedHashKey(){}
     EmbeddedHashKey(){}
     EmbeddedHashKey(const ClassT & a) : key_(a.key_), value_(a.value_) {}
     EmbeddedHashKey(const KeyT & key,const ValueT & value = ValueT()) : key_(key), value_(value) {}

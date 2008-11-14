@@ -30,7 +30,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-uint8_t AsyncFile::mutex_[sizeof(InterlockedMutex)];
+uint8_t AsyncFile::mutex_[sizeof(WriteLock)];
 //---------------------------------------------------------------------------
 AsyncFile::~AsyncFile()
 {
@@ -75,7 +75,7 @@ AsyncFile & AsyncFile::close()
 {
   bool closed = false;
   {
-    AutoLock<InterlockedMutex> lock(mutex());
+    AutoLock<WriteLock> lock(mutex());
     if( descriptor_ != INVALID_HANDLE_VALUE ){
       if( !std_ ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1448,12 +1448,12 @@ uint32_t AsyncFile::waitCommEvent()
 //---------------------------------------------------------------------------
 void AsyncFile::initialize()
 {
-  new (mutex_) InterlockedMutex;
+  new (mutex_) WriteLock;
 }
 //---------------------------------------------------------------------------
 void AsyncFile::cleanup()
 {
-  mutex().~InterlockedMutex();
+  mutex().~WriteLock();
 }
 //---------------------------------------------------------------------------
 } // namespace ksys

@@ -37,7 +37,7 @@ Server::~Server()
 //------------------------------------------------------------------------------
 Server::Server(const ConfigSP config) :
   config_(config),
-  rnd_(newObject<Randomizer>(),rndMutex_),
+  rnd_(newObject<Randomizer>(),rndReadWriteLock_),
   nodeClient_(NULL),
   skippedNodeClientStarts_(0),
   skippedNodeExchangeStarts_(0),
@@ -118,7 +118,7 @@ utf8::String Server::incompleteDir() const
 //------------------------------------------------------------------------------
 void Server::clearNodeClient(NodeClient * client)
 {
-  AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
+  AutoLock<FiberWriteLock> lock(nodeClientReadWriteLock_);
   if( nodeClient_ == client ){
     nodeClient_ = NULL;
     if( skippedNodeClientStarts_ > 0 ){
@@ -153,7 +153,7 @@ void Server::startNodeClientNL(ServerType dataType,const utf8::String & nodeHost
 //------------------------------------------------------------------------------
 void Server::startNodeClient(ServerType dataType,const utf8::String & nodeHostName)
 {
-  AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
+  AutoLock<FiberWriteLock> lock(nodeClientReadWriteLock_);
   startNodeClientNL(dataType,nodeHostName);
 }
 //------------------------------------------------------------------------------
@@ -177,7 +177,7 @@ void Server::startNodesExchangeNL()
     ksock::SockAddr addr;
     addr.resolveName(host,defaultPort);
     host = addr.resolveAddr(defaultPort);
-    if( host.strcasecmp(me) == 0 ) continue;
+    if( host.casecompare(me) == 0 ) continue;
     j = nodes.bSearchCase(host,c);
     if( c != 0 ) nodes.insert(j + (c > 0),host);
   }
@@ -205,13 +205,13 @@ void Server::startNodesExchangeNL()
 //------------------------------------------------------------------------------
 void Server::startNodesExchange()
 {
-  AutoLock<FiberInterlockedMutex> lock(nodeClientMutex_);
+  AutoLock<FiberWriteLock> lock(nodeClientReadWriteLock_);
   startNodesExchangeNL();
 }
 //------------------------------------------------------------------------------
 void Server::addRecvMailFiber(ServerFiber & fiber)
 {
-  AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+  AutoLock<FiberWriteLock> lock(recvMailFibersReadWriteLock_);
   ServerFiber * fib;
   recvMailFibers_.insert(fiber,false,false,&fib);
   if( fib != &fiber ){
@@ -224,7 +224,7 @@ void Server::addRecvMailFiber(ServerFiber & fiber)
 //------------------------------------------------------------------------------
 bool Server::remRecvMailFiber(ServerFiber & fiber)
 {
-  AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+  AutoLock<FiberWriteLock> lock(recvMailFibersReadWriteLock_);
   ServerFiber * fib = findRecvMailFiberNL(fiber);
   if( fib == &fiber ) recvMailFibers_.remove(fiber,false,false);
   return fib == &fiber;
@@ -237,7 +237,7 @@ ServerFiber * Server::findRecvMailFiberNL(const ServerFiber & fiber)
 //------------------------------------------------------------------------------
 ServerFiber * Server::findRecvMailFiber(const ServerFiber & fiber)
 {
-  AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+  AutoLock<FiberWriteLock> lock(recvMailFibersReadWriteLock_);
   return findRecvMailFiberNL(fiber);
 }
 //------------------------------------------------------------------------------
@@ -311,7 +311,7 @@ bool Server::processRequestUserOnline(AutoPtr<Message> & message,const utf8::Str
   bool process = true;
   utf8::String value;
   if( message->isValue("#request.user.online",&value) && value.isNull() ){
-    AutoLock<FiberInterlockedMutex> lock(recvMailFibersMutex_);
+    AutoLock<FiberWriteLock> lock(recvMailFibersReadWriteLock_);
     ServerFiber sfib(*this,suser,skey);
     ServerFiber * fib = findRecvMailFiberNL(sfib);
     if( fib == NULL ){
@@ -344,11 +344,11 @@ bool Server::processRequestUserOnline(AutoPtr<Message> & message,const utf8::Str
 void Server::sendMessage(const utf8::String & host,const utf8::String & id,const utf8::String & fileName)
 {
   MailQueueWalker * pWalker, * pWalker2;
-  AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
+  AutoLock<FiberWriteLock> lock(sendMailFibersReadWriteLock_);
   pWalker2 = newObjectR1C2<MailQueueWalker>(*this,host);
   sendMailFibers_.insert(*pWalker2,false,true,&pWalker);
   if( pWalker == pWalker2 ) attachFiber(pWalker);
-  AutoLock<FiberInterlockedMutex> lock2(pWalker->messagesMutex_);
+  AutoLock<FiberWriteLock> lock2(pWalker->messagesReadWriteLock_);
   pWalker->messages_.insToTail(*newObjectC1<Message::Key>(id));
   bool step0 = true;
   try {
@@ -370,7 +370,7 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
 //------------------------------------------------------------------------------
 void Server::removeSender(MailQueueWalker & sender) // must be called only from terminating fiber !!!
 {
-  AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
+  AutoLock<FiberWriteLock> lock(sendMailFibersReadWriteLock_);
   EmbeddedListNode<Message::Key> * p = sender.messages_.first();
   while( p != NULL ){
     utf8::String key(Message::Key::listNodeObject(*p));
@@ -397,7 +397,7 @@ void Server::removeSender(MailQueueWalker & sender) // must be called only from 
 //------------------------------------------------------------------------------
 void Server::closeSenders()
 {
-  AutoLock<FiberInterlockedMutex> lock(sendMailFibersMutex_);
+  AutoLock<FiberWriteLock> lock(sendMailFibersReadWriteLock_);
   Array<MailQueueWalker *> list;
   sendMailFibers_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){

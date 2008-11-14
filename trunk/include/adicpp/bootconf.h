@@ -427,6 +427,10 @@ typedef int32_t gid_t;
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0502
 #endif
+#if _WIN32_WINNT < 0x0502
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0502
+#endif
 #ifndef INT8_C
 #define INT8_C(c)               (c)
 #define UINT8_C(c)              (c)

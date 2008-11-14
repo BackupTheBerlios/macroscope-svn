@@ -77,7 +77,7 @@ utf8::String Message::valueHelper(Attribute * p) const
   if( p->index_ == 0 ) return p->value_;
   if( p->size_ == 0 ) return utf8::String();
   file_.open();
-  AutoPtr<char> s;
+  AutoPtr<char,AutoPtrMemoryDestructor> s;
   s.alloc((uintptr_t) p->size_ + 1);
   s[(uintptr_t) p->size_] = '\0';
   file_.readBuffer(p->index_,s,p->size_);
@@ -124,7 +124,7 @@ Message & Message::value(const utf8::String & key,const utf8::String & value,Att
     file_.open();
     file_.seek(file_.size());
     utf8::String v(key), v2(value);
-    if( key.strncmp("#",1) != 0 ){
+    if( key.ncompare("#",1) != 0 ){
       v = screenString(key);
       v2 = screenString(value);
     }
@@ -166,9 +166,9 @@ Message & Message::removeValueByLeft(const utf8::String & key)
 {
   Array<Attribute *> list;
   attributes_.list(list);
-  for( intptr_t l = key.strlen(), i = list.count() - 1; i >= 0; i-- ){
+  for( intptr_t l = key.length(), i = list.count() - 1; i >= 0; i-- ){
     utf8::String k(list[i]->key_);
-    if( k.strncmp(key,l) == 0 ){
+    if( k.ncompare(key,l) == 0 ){
       residentSize_ -= sizeof(Attribute) + k.size() + list[i]->value_.size() + 2;
       attributes_.drop(*list[i]);
     }
@@ -183,7 +183,7 @@ void Message::validateKey(const utf8::String & key)
   else
   if( !key.strstr(": index ").eos() ) invalid = true;
   else
-  if( key.strncmp("#",1) == 0 ){
+  if( key.ncompare("#",1) == 0 ){
     utf8::String::Iterator i(key);
     while( i.eos() )
       if( i.isSpace() ){
@@ -203,7 +203,7 @@ static inline intptr_t attributeCompare(const Message::Attribute * const & p1,co
 {
   uintptr_t c1 = utf8::String::Iterator(p1->key_).getChar(), c2 = utf8::String::Iterator(p2->key_).getChar();
   if( c1 == '#' ){
-    if( c2 == '#' ) return utf8::String(p1->key_).strcmp(p2->key_);
+    if( c2 == '#' ) return utf8::String(p1->key_).compare(p2->key_);
     return -1;
   }
   if( c2 == '#' ) return 1;
@@ -250,7 +250,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
     uint64_t pos = s.tell();
     eof = s.gets(str,&buffer);
     if( eof ) break;
-    bool isNumberSign = str.strncmp(numberSign,1) == 0;
+    bool isNumberSign = str.ncompare(numberSign,1) == 0;
     utf8::String::Iterator i(str), ia(i);
     ia.last();
     if( !(i = str.strstr(index)).eos() ){
@@ -271,7 +271,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
       if( isNumberSign ){
         key = utf8::String(str,i);
         value = utf8::String(i + 2,ia);
-        if( str.strcmp(codepage) == 0 ){
+        if( str.compare(codepage) == 0 ){
           buffer.codePage_ = (uintptr_t) utf8::str2Int(value);
         }
       }
@@ -310,7 +310,7 @@ AsyncFile & operator << (AsyncFile & s,const Message & a)
   AutoPtrBuffer b;
   uintptr_t i, j, k, sz;
   for( k = i = 0; i < list.count(); i++ ){
-    bool isNumberSign = utf8::String(list[i]->key_).strncmp(numberSign,1) == 0;
+    bool isNumberSign = utf8::String(list[i]->key_).ncompare(numberSign,1) == 0;
     j = uintptr_t(list[i]->value_.size() + list[i]->size_ + 2 + sizeof(Message::Attribute));
     utf8::String v;
     if( k + j < bl ){
@@ -367,7 +367,7 @@ Message & Message::copyUserAttributes(const Message & msg)
   Array<Attribute *> list;
   msg.attributes_.list(list);
   for( intptr_t i = list.count() - 1; i >= 0; i-- )
-    if( utf8::String(list[i]->key_).strncmp(numberSign,1) != 0 )
+    if( utf8::String(list[i]->key_).ncompare(numberSign,1) != 0 )
       value(list[i]->key_,list[i]->value_);
   return *this;
 }
@@ -805,7 +805,7 @@ bool Server::Data::registerUserNL(const UserInfo & info,const utf8::String & sen
 //------------------------------------------------------------------------------
 bool Server::Data::registerUser(const UserInfo & info,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return registerUserNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -836,7 +836,7 @@ bool Server::Data::registerKeyNL(const KeyInfo & info,const utf8::String & sendi
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey(const KeyInfo & info,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return registerKeyNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -867,7 +867,7 @@ bool Server::Data::registerGroupNL(const GroupInfo & info,const utf8::String & s
 //------------------------------------------------------------------------------
 bool Server::Data::registerGroup(const GroupInfo & info,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return registerGroupNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -903,7 +903,7 @@ bool Server::Data::registerServerNL(const ServerInfo & info,const utf8::String &
 //------------------------------------------------------------------------------
 bool Server::Data::registerServer(const ServerInfo & info,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return registerServerNL(info,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -934,7 +934,7 @@ bool Server::Data::registerUser2KeyLinkNL(const User2KeyLink & link,const utf8::
 //------------------------------------------------------------------------------
 bool Server::Data::registerUser2KeyLink(const User2KeyLink & link,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return registerUser2KeyLinkNL(link,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -965,7 +965,7 @@ bool Server::Data::registerKey2GroupLinkNL(const Key2GroupLink & link,const utf8
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey2GroupLink(const Key2GroupLink & link,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return registerKey2GroupLinkNL(link,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -986,7 +986,7 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
       p->rtime_ = 0;
       r = true;
     }
-    if( p->server_.strcasecmp(link.server_) != 0 ){
+    if( p->server_.casecompare(link.server_) != 0 ){
       p->server_ = link.server_;
       p->sendedTo_.drop();
       r = true;
@@ -1001,7 +1001,7 @@ bool Server::Data::registerKey2ServerLinkNL(const Key2ServerLink & link,const ut
 //------------------------------------------------------------------------------
 bool Server::Data::registerKey2ServerLink(const Key2ServerLink & link,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return registerKey2ServerLinkNL(link,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -1070,7 +1070,7 @@ void Server::Data::sendDatabaseNL(ksock::AsyncSocket & socket,const utf8::String
 //------------------------------------------------------------------------------
 void Server::Data::sendDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
 {
-  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock(mutex_);
   sendDatabaseNL(socket,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -1123,7 +1123,7 @@ void Server::Data::recvDatabaseNL(ksock::AsyncSocket & socket,const utf8::String
 //------------------------------------------------------------------------------
 void Server::Data::recvDatabase(ksock::AsyncSocket & socket,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   recvDatabaseNL(socket,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -1134,7 +1134,7 @@ utf8::String Server::Data::getNodeListNL() const
   servers_.list(serverList);
   for( intptr_t i = serverList.count() - 1; i >= 0; i-- ){
     if( !serverList[i]->type_ == stNode ) continue;
-    if( list.strlen() > 0 ) list += ", ";
+    if( !list.isNull() ) list += ", ";
     list += serverList[i]->name_;
   }
   return list;
@@ -1142,7 +1142,7 @@ utf8::String Server::Data::getNodeListNL() const
 //------------------------------------------------------------------------------
 utf8::String Server::Data::getNodeList() const
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return getNodeListNL();
 }
 //------------------------------------------------------------------------------
@@ -1202,7 +1202,7 @@ void Server::Data::dumpNL(utf8::String::Stream & stream) const
 //------------------------------------------------------------------------------
 void Server::Data::dump(utf8::String::Stream & stream) const
 {
-  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock(mutex_);
   dumpNL(stream);
 }
 //------------------------------------------------------------------------------
@@ -1243,8 +1243,8 @@ bool Server::Data::orNL(const Data & a,const utf8::String & sendingTo)
 //------------------------------------------------------------------------------
 bool Server::Data::ore(const Data & a,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock0(mutex_);
-  AutoMutexRDLock<FiberMutex> lock1(a.mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock0(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock1(a.mutex_);
   return orNL(a,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -1291,9 +1291,9 @@ Server::Data & Server::Data::xorNL(const Data & data1,const Data & data2,const u
 //------------------------------------------------------------------------------
 Server::Data & Server::Data::xore(const Data & data1,const Data & data2,const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock0(mutex_);
-  AutoMutexRDLock<FiberMutex> lock1(data1.mutex_);
-  AutoMutexRDLock<FiberMutex> lock2(data2.mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock0(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock1(data1.mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock2(data2.mutex_);
   return xorNL(data1,data2,sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -1333,7 +1333,7 @@ Server::Data & Server::Data::setSendedToNL(const utf8::String & sendingTo)
 //------------------------------------------------------------------------------
 Server::Data & Server::Data::setSendedTo(const utf8::String & sendingTo)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return setSendedToNL(sendingTo);
 }
 //------------------------------------------------------------------------------
@@ -1366,7 +1366,7 @@ Server::Data & Server::Data::clearSendedToNL()
 //------------------------------------------------------------------------------
 Server::Data & Server::Data::clearSendedTo()
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return clearSendedToNL();
 }
 //------------------------------------------------------------------------------
@@ -1384,7 +1384,7 @@ Server::Data & Server::Data::clearNL()
 //------------------------------------------------------------------------------
 Server::Data & Server::Data::clear()
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return clearNL();
 }
 //------------------------------------------------------------------------------
@@ -1435,7 +1435,7 @@ bool Server::Data::sweepNL(uint64_t stime,uint64_t rtime,utf8::String::Stream * 
 //------------------------------------------------------------------------------
 bool Server::Data::sweep(uint64_t stime,uint64_t rtime,utf8::String::Stream * log)
 {
-  AutoMutexWRLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockWRLock<FiberReadWriteLock> lock(mutex_);
   return sweepNL(stime,rtime,log);
 }
 //------------------------------------------------------------------------------
@@ -1455,7 +1455,7 @@ utf8::String Server::Data::getUserListNL(bool quoted) const
 //------------------------------------------------------------------------------
 utf8::String Server::Data::getUserList(bool quoted) const
 {
-  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock(mutex_);
   return getUserListNL(quoted);
 }
 //------------------------------------------------------------------------------
@@ -1475,7 +1475,7 @@ utf8::String Server::Data::getKeyListNL(bool quoted) const
 //------------------------------------------------------------------------------
 utf8::String Server::Data::getKeyList(bool quoted) const
 {
-  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock(mutex_);
   return getKeyListNL(quoted);
 }
 //------------------------------------------------------------------------------
@@ -1488,7 +1488,7 @@ utf8::String Server::Data::getKeyGroupListNL(const utf8::String & groups,bool qu
     for( j = enumStringParts(groups) - 1; j >= 0; j-- )
       if( key2GroupLinks_.find(Key2GroupLink(keyList[i]->name_,stringPartByNo(groups,j))) != NULL ) break;
     if( j >= 0 ){
-      if( list.strlen() > 0 ) list += ",";
+      if( !list.isNull() ) list += ",";
       if( quoted ) list += "\"";
       list += keyList[i]->name_;
       if( quoted ) list += "\"";
@@ -1499,7 +1499,7 @@ utf8::String Server::Data::getKeyGroupListNL(const utf8::String & groups,bool qu
 //------------------------------------------------------------------------------
 utf8::String Server::Data::getKeyGroupList(const utf8::String & groups,bool quoted) const
 {
-  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock(mutex_);
   return getKeyGroupListNL(groups,quoted);
 }
 //------------------------------------------------------------------------------
@@ -1510,7 +1510,7 @@ utf8::String Server::Data::getKeyInGroupListNL(const utf8::String & group,bool q
   keys_.list(keyList);
   for( intptr_t i = keyList.count() - 1; i >= 0; i-- ){
     if( key2GroupLinks_.find(Key2GroupLink(keyList[i]->name_,group)) == NULL ) continue;
-    if( list.strlen() > 0 ) list += ",";
+    if( !list.isNull() ) list += ",";
     if( quoted ) list += "\"";
     list += keyList[i]->name_;
     if( quoted ) list += "\"";
@@ -1520,7 +1520,7 @@ utf8::String Server::Data::getKeyInGroupListNL(const utf8::String & group,bool q
 //------------------------------------------------------------------------------
 utf8::String Server::Data::getKeyInGroupList(const utf8::String & group,bool quoted) const
 {
-  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock(mutex_);
   return getKeyInGroupListNL(group,quoted);
 }
 //------------------------------------------------------------------------------
@@ -1539,7 +1539,7 @@ bool Server::Data::isEmptyNL() const
 //------------------------------------------------------------------------------
 bool Server::Data::isEmpty() const
 {
-  AutoMutexRDLock<FiberMutex> lock(mutex_);
+  AutoReadWriteLockRDLock<FiberReadWriteLock> lock(mutex_);
   return isEmptyNL();
 }
 //------------------------------------------------------------------------------

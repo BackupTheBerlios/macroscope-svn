@@ -36,18 +36,18 @@ uint8_t MemoryManager::globalMemoryManagerHolder_[sizeof(MemoryManager)];
 //---------------------------------------------------------------------------
 void MemoryManager::initialize()
 {
-  //interlockedCompareExchangeAcquire(globalMemoryManager().initMutex_,-1,0);
+  //interlockedCompareExchangeAcquire(globalMemoryManager().initReadWriteLock_,-1,0);
   //if( globalMemoryManager().initCount_ == 0 ) new (globalMemoryManagerHolder_) MemoryManager;
   //globalMemoryManager().initCount_++;
-  //interlockedIncrement(globalMemoryManager().initMutex_,1);
+  //interlockedIncrement(globalMemoryManager().initReadWriteLock_,1);
 }
 //---------------------------------------------------------------------------
 void MemoryManager::cleanup()
 {
-  //interlockedCompareExchangeAcquire(globalMemoryManager().initMutex_,-1,0);
+  //interlockedCompareExchangeAcquire(globalMemoryManager().initReadWriteLock_,-1,0);
   //if( globalMemoryManager().initCount_ == 1 ) globalMemoryManager().~MemoryManager();
   //globalMemoryManager().initCount_--;
-  //interlockedIncrement(globalMemoryManager().initMutex_,1);
+  //interlockedIncrement(globalMemoryManager().initReadWriteLock_,1);
 }
 //---------------------------------------------------------------------------
 MemoryManager::~MemoryManager()
@@ -216,7 +216,7 @@ void * MemoryManager::malloc(uintptr_t size,bool lock,bool & locked)
   if( size > 0 ){
     if( this == &globalMemoryManager() ) initialize();
     {
-      AutoLock<FiberInterlockedMutex> ilock;
+      AutoLock<FiberWriteLock> ilock;
       if( interlocked_ ) ilock.setLocked(mutex_);
       size += -intptr_t(size) & (align_ - 1);
       uintptr_t fsize, lsize;
@@ -352,7 +352,7 @@ void * MemoryManager::realloc(void * ptr,uintptr_t size,bool lock,bool & locked)
   }
   Cluster * cp = NULL;
   if( ptr != NULL ){
-    AutoLock<FiberInterlockedMutex> ilock;
+    AutoLock<FiberWriteLock> ilock;
     if( interlocked_ ) ilock.setLocked(mutex_);
     Cluster c(NULL,ptr);
     cp = clustersTree_.find(c);
@@ -391,7 +391,7 @@ void MemoryManager::free(void * ptr)
 {
   if( ptr != NULL ){
     {
-      AutoLock<FiberInterlockedMutex> ilock;
+      AutoLock<FiberWriteLock> ilock;
       if( interlocked_ ) ilock.setLocked(mutex_);
       Cluster c(NULL,ptr), * cp = clustersTree_.find(c);
       if( cp == NULL ){

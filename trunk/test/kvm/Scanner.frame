@@ -95,7 +95,7 @@ public:
 	Token *next;  // ML 2005-03-11 Peek tokens are kept in linked list
 
 	Token();
-	~Token();
+	virtual ~Token();
 };
 
 class Buffer {
@@ -269,7 +269,7 @@ public:
 	Scanner(const unsigned char * buf, int len);
 	Scanner(const wchar_t * fileName = NULL);
 	Scanner(FILE* s);
-	~Scanner();
+	virtual ~Scanner();
 	Token* Scan();
 	Token* Peek();
 	void ResetPeek();

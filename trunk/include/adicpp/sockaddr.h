@@ -126,13 +126,13 @@ class SockAddr {
     );
   private:
     static uint8_t reverseResolveOverrideHolder_[];
-    static uint8_t reverseResolveOverrideMutexHolder_[];
+    static uint8_t reverseResolveOverrideReadWriteLockHolder_[];
 
     static ksys::Array<ReverseResolveOverride> & reverseResolveOverride() {
       return *reinterpret_cast<ksys::Array<ReverseResolveOverride> *>(reverseResolveOverrideHolder_);
     }
-    static ksys::InterlockedMutex & reverseResolveOverrideMutex() {
-      return *reinterpret_cast<ksys::InterlockedMutex *>(reverseResolveOverrideMutexHolder_);
+    static ksys::WriteLock & reverseResolveOverrideReadWriteLock() {
+      return *reinterpret_cast<ksys::WriteLock *>(reverseResolveOverrideReadWriteLockHolder_);
     }
 
     static void initialize();

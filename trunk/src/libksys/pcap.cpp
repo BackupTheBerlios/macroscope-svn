@@ -89,8 +89,8 @@ class PCAP_API {
     void * handle_;
 #endif
     intptr_t count_;
-    uint8_t mutex_[sizeof(InterlockedMutex)];
-    InterlockedMutex & mutex(){ return *reinterpret_cast<InterlockedMutex *>(mutex_); }
+    uint8_t mutex_[sizeof(WriteLock)];
+    WriteLock & mutex(){ return *reinterpret_cast<WriteLock *>(mutex_); }
   private:
     PCAP_API(const PCAP_API &);
     void operator = (const PCAP_API &);
@@ -116,7 +116,7 @@ PCAP_API & PCAP_API::open()
     "pcap_geterr",
     "pcap_setmode"
   };
-  AutoLock<InterlockedMutex> lock(api.mutex());
+  AutoLock<WriteLock> lock(api.mutex());
 #if defined(__WIN32__) || defined(__WIN64__)
 #define LIB_NAME "wpcap.dll"
 //  if( isWin9x() ){
@@ -180,7 +180,7 @@ PCAP_API & PCAP_API::open()
 //------------------------------------------------------------------------------
 PCAP_API & PCAP_API::close()
 {
-  AutoLock<InterlockedMutex> lock(mutex());
+  AutoLock<WriteLock> lock(mutex());
   assert( count_ > 0 );
   if( count_ == 1 ){
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -198,13 +198,13 @@ PCAP_API & PCAP_API::close()
 //------------------------------------------------------------------------------
 void PCAP::initialize()
 {
-  new (api.mutex_) InterlockedMutex;
+  new (api.mutex_) WriteLock;
   api.count_ = 0;
 }
 //------------------------------------------------------------------------------
 void PCAP::cleanup()
 {
-  api.mutex().~InterlockedMutex();
+  api.mutex().~WriteLock();
 }
 //------------------------------------------------------------------------------
 PCAP::~PCAP()
@@ -243,7 +243,7 @@ PCAP::PCAP() :
 //  tempFile_ = getTempPath() + createGUIDAsBase32String() + ".tmp";
 }
 //------------------------------------------------------------------------------
-volatile ilock_t PCAP::startupMutex_ = 0;
+volatile ilock_t PCAP::startupReadWriteLock_ = 0;
 //------------------------------------------------------------------------------
 PCAP::PacketGroupingPeriod PCAP::stringToGroupingPeriod(const utf8::String & gp)
 {
@@ -389,7 +389,7 @@ void PCAP::threadAfterWait()
 void PCAP::groupPackets()
 {
   if( packets_ != NULL ){
-    AutoLock<InterlockedMutex> lock(joinMaster_ == NULL ? packetsListMutex_ : joinMaster_->packetsListMutex_);
+    AutoLock<WriteLock> lock(joinMaster_ == NULL ? packetsListReadWriteLock_ : joinMaster_->packetsListReadWriteLock_);
     (joinMaster_ == NULL ? packetsList_ : joinMaster_->packetsList_).insToTail(*packets_.ptr(NULL));
     (joinMaster_ == NULL ? grouperSem_ : joinMaster_->grouperSem_).post();
   }
@@ -467,7 +467,7 @@ void PCAP::threadExecute()
       )->throwSP();
     }
     if( !filter_.isNull() ){
-      AutoInterlockedLock<ilock_t> lock(startupMutex_);
+      AutoILock lock(startupReadWriteLock_);
       memset(fp,0,sizeof(struct bpf_program));
       errbuf[0] = '\0';
       utf8::AnsiString s(filter_.getANSIString());
@@ -539,6 +539,8 @@ void PCAP::threadExecute()
     api.close();
     throw;
   }
+  shutdown();
+  api.close();
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
@@ -823,7 +825,7 @@ void PCAP::Grouper::threadBeforeWait()
 PCAP::Packets * PCAP::Grouper::get()
 {
   Packets * packets = NULL;
-  AutoLock<InterlockedMutex> lock(pcap_->packetsListMutex_);
+  AutoLock<WriteLock> lock(pcap_->packetsListReadWriteLock_);
   if( pcap_->packetsList_.count() > 0 )
     packets = &pcap_->packetsList_.remove(*pcap_->packetsList_.first());
   return packets;
@@ -848,13 +850,13 @@ void PCAP::Grouper::threadExecute()
         const Packet & pkt = packets->operator [] (i);
         if( group == NULL || pkt.timestamp_ < header.bt_ || pkt.timestamp_ > header.et_ ){
           if( group != NULL ){
-            AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+            AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
             pcap_->groupTree_.insert(group,false,false,&pGroup);
           }
           group.ptr(newObject<PacketGroup>());
           pcap_->setBounds(pkt.timestamp_,group->header_.bt_,group->header_.et_);
           {
-            AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+            AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
             pcap_->groupTree_.insert(group,false,false,&pGroup);
             pcap_->groupTree_.remove(*pGroup);
             if( pGroup != group ){
@@ -891,7 +893,7 @@ void PCAP::Grouper::threadExecute()
           pGroup->packets_.add(0,0);
         }
       }
-      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
       pcap_->groupTree_.insert(group,false,false,&pGroup);
       if( group.ptr() != pGroup ){
         pGroup->joinGroup(group,pcap_->memoryUsage_);
@@ -907,7 +909,7 @@ void PCAP::Grouper::threadExecute()
       pcap_->lazyWriterSem_.post();
     }
     catch( ExceptionSP & ){
-      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
       pcap_->groupTree_.insert(group,false,false,&pGroup);
       if( group.ptr() != pGroup ){
         pGroup->joinGroup(group,pcap_->memoryUsage_);
@@ -923,7 +925,7 @@ void PCAP::Grouper::threadExecute()
     }
     interlockedIncrement(
       pcap_->memoryUsage_,
-      -intptr_t(packets->count() * sizeof(Packet) + sizeof(Packets))
+      -intptr_t(packets->mcount() * sizeof(Packet) + sizeof(Packets))
     );
     if( stdErr.debugLevel(4) ){
       int pcapStatSize;
@@ -976,7 +978,7 @@ void PCAP::DatabaseInserter::threadExecute()
     PacketGroup * pGroup;
     AutoPtr<PacketGroup> group;
     {
-      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
       PacketGroupTree::Walker walker(pcap_->groupTree_);
       uint64_t ct = gettimeofday(), bt, et;
       pcap_->setBounds(ct,bt,et);
@@ -1033,7 +1035,7 @@ void PCAP::DatabaseInserter::threadExecute()
       pcap_->lazyWriterSem_.post();
     }
     else {
-      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
       pcap_->groupTree_.insert(group,false,false,&pGroup);
       if( pGroup != group ){
         pGroup->joinGroup(group,pcap_->memoryUsage_);
@@ -1137,7 +1139,7 @@ void PCAP::LazyWriter::swapIn(AsyncFile & tempFile)
     tempFile.readBuffer(pos - groupSize,group->packets_,groupSize);
     PacketGroup * pGroup;
     {
-      AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+      AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
       pcap_->groupTree_.insert(group,false,false,&pGroup);
       if( pGroup == group ){
         while( group->packets_.count() < header.count_ ){
@@ -1194,7 +1196,7 @@ void PCAP::LazyWriter::threadExecute()
       AutoPtr<PacketGroup> group;
       bool term;
       {
-        AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+        AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
         PacketGroupTree::Walker walker(pcap_->groupTree_);
         if( walker.next() ){
           group.ptr(&walker.object());
@@ -1206,7 +1208,7 @@ void PCAP::LazyWriter::threadExecute()
       swapOut(tempFile,group);
       if( !tempFile.isOpen() ) break;
       if( group != NULL ){
-        AutoLock<InterlockedMutex> lock(pcap_->groupTreeMutex_);
+        AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
         PacketGroup * pGroup;
         pcap_->groupTree_.insert(group,false,false,&pGroup);
         if( pGroup == group ){
