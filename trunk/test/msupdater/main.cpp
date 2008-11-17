@@ -184,7 +184,7 @@ void MSUpdateFetcher::fiberExecute()
           buffer.codePage_ = CP_UTF8;
           buffer.removeNewLine_ = true;
           utf8::String s;
-          while( !updateList.gets(s,&buffer) ) updateURLs.add(s);
+          while( !updateList.getString(s,&buffer) ) updateURLs.add(s);
         }
         if( (!fetch.fetched() && !fetch.resumed() && !fetch.modified()) || updateURLs.count() == 0 ){
           stdErr.debug(3,utf8::String::Stream() << this <<

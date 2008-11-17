@@ -146,7 +146,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
 
     class AuthParams {
       public:
-        ~AuthParams();
+        virtual ~AuthParams();
         AuthParams();
 
         AuthParams & param(const utf8::String & name,const ksys::Mutant & value);
@@ -204,6 +204,8 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     uint64_t recvTimeout_;
     uint64_t sendTimeout_;
     uint64_t srb_, nrb_, ssb_, nsb_;
+
+    ksys::AutoPtr<ksys::StreamCRCFilter> crc_;
     ksys::AutoPtr<ksys::StreamCryptFilter> cryptor_;
     ksys::AutoPtr<ksys::StreamCompressionFilter> compressor_;
 
@@ -251,38 +253,9 @@ inline AsyncSocket & AsyncSocket::activateEncryption(const uint8_t sha256[32])
   return *this;
 }
 //------------------------------------------------------------------------------
-inline AsyncSocket & AsyncSocket::activateEncryption(const void * key, uintptr_t keyLen)
-{
-  init(key, keyLen);
-  return *this;
-}
-//------------------------------------------------------------------------------
-inline AsyncSocket & AsyncSocket::deActivateEncryption()
-{
-  ksys::SHA256Filter::active(false);
-  return *this;
-}
-//------------------------------------------------------------------------------
 inline bool AsyncSocket::encryptionActive() const
 {
   return ksys::SHA256Filter::active();
-}
-//------------------------------------------------------------------------------
-inline AsyncSocket & AsyncSocket::activateCompression(uintptr_t method,uintptr_t crc,uintptr_t level,bool optimize,uintptr_t wBufSize)
-{
-  ksys::LZO1X::wBufSize(wBufSize > 1024 * 1024 * 1024 ? ksys::LZO1X::wBufSize() : (uint32_t) wBufSize);
-  ksys::LZO1X::method(method);
-  ksys::LZO1X::crc(crc);
-  ksys::LZO1X::level(level);
-  ksys::LZO1X::optimize(optimize);
-  ksys::LZO1X::active(true);
-  return *this;
-}
-//------------------------------------------------------------------------------
-inline AsyncSocket & AsyncSocket::deActivateCompression()
-{
-  ksys::LZO1X::active(false);
-  return *this;
 }
 //------------------------------------------------------------------------------
 inline bool AsyncSocket::compressionActive() const

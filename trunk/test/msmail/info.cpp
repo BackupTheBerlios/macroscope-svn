@@ -248,7 +248,7 @@ AsyncFile & operator >> (AsyncFile & s,Message & a)
 
   for(;;){
     uint64_t pos = s.tell();
-    eof = s.gets(str,&buffer);
+    eof = s.getString(str,&buffer);
     if( eof ) break;
     bool isNumberSign = str.ncompare(numberSign,1) == 0;
     utf8::String::Iterator i(str), ia(i);
