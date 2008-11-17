@@ -545,9 +545,6 @@ void AsyncIoSlave::threadExecute()
       //openAPI(object);
       errno = 0;
       switch( object->type_ ){
-        case etDirectoryChangeNotification :
-	  error = ENOSYS;
-          break;
         case etLockFile :
 	  error = ENOSYS;
           break;
@@ -821,6 +818,19 @@ void AsyncMiscSlave::threadBeforeWait()
 {
   terminate();
   post();
+#if HAVE_FAM_H
+  AutoLock<LiteWriteLock> lock(*this);
+  EventsNode * node;
+  for( node = requests_.first(); node != NULL; node = node->next() ){
+    AsyncEvent & object = AsyncEvent::nodeObject(*node);
+    if( object.type_ == etDirectoryChangeNotification ){
+      FAMCancelMonitor(
+        &object.directoryChangeNotification_->famConnection_,
+        &object.directoryChangeNotification_->famRequest_
+      );
+    }
+  }
+#endif
 }
 //---------------------------------------------------------------------------
 bool AsyncMiscSlave::transplant(AsyncEvent & request)
@@ -830,7 +840,10 @@ bool AsyncMiscSlave::transplant(AsyncEvent & request)
     AutoLock<LiteWriteLock> lock(*this);
     if( requests_.count() < maxRequests_ ){
       requests_.insToTail(request);
-      if( requests_.count() < 2 ) post();
+      if( requests_.count() < 2 ){
+        post();
+        if( request.type_ == etDirectoryChangeNotification ) maxRequests_ = 1;
+      }
       r = true;
     }
   }
@@ -851,6 +864,20 @@ void AsyncMiscSlave::threadExecute()
       Semaphore::wait();
     }
     else {
+#if HAVE_FAM_H
+      if( request->type_ == etDirectoryChangeNotification ){
+        terminate();
+	request->errno_ = 0;
+        int r = FAMNextEvent(
+	  &request->directoryChangeNotification_->famConnection_,
+	  &request->directoryChangeNotification_->famEvent_
+	);
+	if( r < 0 ) request->errno_ = FAMError;
+        assert( request->fiber_ != NULL );
+        request->fiber_->thread()->postEvent(request);
+      }
+      else
+#endif
       if( request->type_ == etOpenFile ){
         int32_t err = 0;
         try {
@@ -1715,6 +1742,9 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etResolveName :
     case etResolveAddress :
     case etStat :
+#if HAVE_FAM_H
+    case etDirectoryChangeNotification :
+#endif
       {
         AutoLock<LiteWriteLock> lock(ofRequestsReadWriteLock_);
         if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
@@ -1757,8 +1787,8 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
-    case etDirectoryChangeNotification :
 #if defined(__WIN32__) || defined(__WIN64__)
+    case etDirectoryChangeNotification :
       if( isWin9x() ){
         AutoLock<LiteWriteLock> lock(wdcnRequestsReadWriteLock_);
         if( gettimeofday() - wdcnSlavesSweepTime_ >= 10000000 ){

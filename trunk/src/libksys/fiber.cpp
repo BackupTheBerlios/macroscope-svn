@@ -51,10 +51,11 @@ Fiber::~Fiber()
 //---------------------------------------------------------------------------
 Fiber::Fiber() :
   started_(false), terminated_(false), finished_(false), destroy_(true),
-#if !defined(__WIN32__) && !defined(__WIN64__)
-  stackPointer_(NULL),
-#else
+#if HAVE_UCONTEXT_H
+#elif defined(__WIN32__) || defined(__WIN64__)
   fiber_(NULL),
+#else
+  stackPointer_(NULL),
 #endif
   thread_(NULL)
 {
@@ -70,12 +71,26 @@ Fiber & Fiber::allocateStack(
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   createFiber(size);
-#else
+#elif HAVE_UCONTEXT_H
 /*!
  * \todo rewrite fiber context switching on ucontext functions
  */
-  size += -intptr_t(size) & (sizeof(uintptr_t) - 1);
+  size += -intptr_t(size) & (MINSIGSTKSZ - 1);
   stack_.realloc(size);
+  context_.uc_stack.ss_sp = stack_;
+  context_.uc_stack.ss_size = size;
+  context_.uc_mcontext.mc_len = sizeof(mcontext_t);
+  context_.uc_link = NULL;
+  union {
+    void (* funcPtr)();
+    void (* ptr)(Fiber*);
+  };
+  ptr = start;
+  if( makecontext(&context_,funcPtr,1,this) != 0 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+#else
 //  for( intptr_t i = size / sizeof(uintptr_t) - 1; i >= 0; i-- )
 //    ((uintptr_t *) stackPointer_)[i] = i;
 //  memset(stackPointer_,0xAA,size);
@@ -118,6 +133,7 @@ Fiber & Fiber::allocateStack(
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
+#elif HAVE_UCONTEXT_H
 #elif __i386__ && __GNUG__
 /*!
  * \todo rewrite fiber context switching on ucontext functions
@@ -164,10 +180,6 @@ void Fiber::switchFiber2(void ** currentFiberSP,void ** switchToFiberSP,Fiber * 
     "mov   %%rsp,[%%rsi]\n"
     "mov   %%rbp,%%rsp\n"
     "mov   %%rdi,%%rdx\n"
-//    "mov   %%rax,[%%rsp + 0]\n"
-//    "mov   %%rbx,[%%rsp + 8]\n"
-//    "mov   %%rcx,[%%rsp + 12]\n"
-//    "mov   %%rdx,[%%rsp + 16]\n"
     ".att_syntax\n"
     :
     :

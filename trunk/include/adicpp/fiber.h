@@ -69,6 +69,10 @@ class Fiber : virtual public Object {
 #if defined(__WIN32__) || defined(__WIN64__)
     static VOID WINAPI start(Fiber * fiber);
     LPVOID fiber_;
+#elif HAVE_UCONTEXT_H
+    AutoPtr<char *,AutoPtrMemoryDestructor> stack_;
+    ucontext_t context_;
+    static void start(Fiber * fiber);
 #else
     AutoPtrBuffer stack_;
     void * stackPointer_;
@@ -167,16 +171,20 @@ inline Fiber & Fiber::clearFiber()
 //---------------------------------------------------------------------------
 inline void Fiber::switchFiber(Fiber * fiber)
 {
-  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder) = fiber;
   SwitchToFiber(fiber->fiber_);
+  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder) = this;
 }
 //---------------------------------------------------------------------------
 #else
 //---------------------------------------------------------------------------
 inline void Fiber::switchFiber(Fiber * fiber)
 {
-  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder) = fiber;
+#if HAVE_UCONTEXT_H
+  swapcontext(&context_,&fiber->context_);
+#else
   switchFiber2(&stackPointer_,&fiber->stackPointer_,fiber);
+#endif
+  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder) = this;
 }
 //---------------------------------------------------------------------------
 #endif

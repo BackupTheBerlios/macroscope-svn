@@ -267,6 +267,10 @@
 #include <ucontext.h>
 #endif
 
+#if HAVE_FAM_H
+#include <fam.h>
+#endif
+
 // C++ headers
 #ifdef __cplusplus
 

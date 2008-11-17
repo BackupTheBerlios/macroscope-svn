@@ -409,7 +409,7 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
       }
       compressor_->decoderReadBytes(compressor_->decoderReadBytes() + uintptr_t(r));
     }
-    uintptr_t rb = 0, wb = 0, crcSize = 0;
+    uintptr_t rb = 0, wb = 0;//, crcSize = 0;
     //if( crc_ != NULL && crc_->active() ){
     //  crc_->make(
     //    compressor_->encoderOutputBuffer(),

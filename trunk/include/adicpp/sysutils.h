@@ -69,7 +69,7 @@ class DirectoryChangeNotification {
     const HANDLE & hFFCNotification() const;
     const HANDLE & hDirectory() const;
     FILE_NOTIFY_INFORMATION * const buffer() const;
-    const uintptr_t & bufferSize() const; 
+    const uintptr_t & bufferSize() const;
 #endif
     void monitor(const utf8::String & pathName,uint64_t timeout = ~uint64_t(0),bool noThrow = false);
     void stop();
@@ -83,6 +83,11 @@ class DirectoryChangeNotification {
     HANDLE hDirectory_; // for ReadDirectoryChangesW
     Array<FILE_NOTIFY_INFORMATION> buffer_; // for ReadDirectoryChangesW
     uintptr_t bufferSize_;
+#elif HAVE_FAM_H
+    FAMConnection famConnection_;
+    FAMRequest famRequest_;
+    FAMEvent famEvent_;
+    bool monitorStarted_;
 #endif
     union {
       uint8_t createPath_       : 1;

@@ -379,11 +379,17 @@ DirectoryChangeNotification::DirectoryChangeNotification() :
   hFFCNotification_(INVALID_HANDLE_VALUE),
   hDirectory_(INVALID_HANDLE_VALUE),
   bufferSize_(0),
+#elif HAVE_FAM_H
+  monitorStarted_(false),
 #endif
   createPath_(true)
 {
 #if !defined(__WIN32__) && !defined(__WIN64__)
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
+#elif HAVE_FAM_H
+  FAMCONNECTION_GETFD(famConnection_) = -1;
+  if( FAMOpen(&famConnection_) != 0 )
+    newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -462,6 +468,34 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
     newObjectV1C2<Exception>(fiber->event_.errno_ + errorOffset,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
   }
   SetLastError(fiber->event_.errno_);
+#elif HAVE_FAM_H
+  if( !monitorStarted_ ){
+    if( FAMMonitorDirectory(&famConnection_,anyPathName2HostPathName(pathName).getANSIString(),&famRequest_,NULL) != 0 ){
+      if( noThrow ) return;
+      newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[FAMErrno] + __PRETTY_FUNCTION__)->throwSP();
+    }
+    else {
+      monitorStarted_ = true;
+    }
+  }
+  if( monitorStarted_ ){
+    Fiber * fiber = currentFiber();
+    assert( fiber != NULL );
+    fiber->event_.abort_ = false;
+    fiber->event_.position_ = 0;
+    fiber->event_.directoryChangeNotification_ = this;
+    fiber->event_.timeout_ = timeout;
+    fiber->event_.type_ = etDirectoryChangeNotification;
+    fiber->thread()->postRequest();
+    fiber->switchFiber(fiber->mainFiber());
+    assert( fiber->event_.type_ == etDirectoryChangeNotification );
+    if( fiber->event_.errno_ != 0 ){
+      if( noThrow ) return;
+      newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[fiber->event_.errno_] + __PRETTY_FUNCTION__)->throwSP();
+    }
+    errno = fiber->event_.errno_;
+    FAMErrno = fiber->event_.errno_;
+  }
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
@@ -480,6 +514,14 @@ void DirectoryChangeNotification::stop()
   }
   buffer_.clear();
   bufferSize_ = 0;
+#elif HAVE_FAM_H
+  if( FAMCONNECTION_GETFD(famConnection_) != -1 ){
+    if( FAMCancelMonitor(&famConnection_,&famRequest_) != 0 )
+      newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+    if( FAMClose(&famConnection_) != 0 )
+      newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+    FAMCONNECTION_GETFD(famConnection_) = -1;
+  }
 #endif
 }
 //---------------------------------------------------------------------------

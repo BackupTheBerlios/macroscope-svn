@@ -102,6 +102,7 @@
 #cmakedefine HAVE_TYPEINFO 1
 #cmakedefine HAVE_DEMANGLE_H 1
 #cmakedefine HAVE_LIBIBERTY_DEMANGLE_H 1
+#cmakedefine HAVE_FAM_H 1
 
 #ifndef LITTLE_ENDIAN
 #define LITTLE_ENDIAN 1

@@ -491,6 +491,7 @@ inline Range32CoderFilter * Range32CoderFilter::initializeEncoder()
 //------------------------------------------------------------------------------
 inline Range32CoderFilter * Range32CoderFilter::encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
 {
+  uint32_t symbolLow, symbolHigh, totalRange;
   if( eState_ == stOut ) goto out;
   for(;;){
     if( inpSize == 0 ){
@@ -502,7 +503,9 @@ inline Range32CoderFilter * Range32CoderFilter::encodeBuffer(const void * inp,ui
     inpSize -= sizeof(uint8_t);
     if( rb != NULL ) *rb += sizeof(uint8_t);
 
-    uint32_t symbolLow = eFreq_[ec_], symbolHigh = eFreq_[ec_ + 1], totalRange = eFreq_[256];
+    symbolLow = eFreq_[ec_];
+    symbolHigh = eFreq_[ec_ + 1];
+    totalRange = eFreq_[256];
     eLow_ += symbolLow * (eRange_ /= totalRange);
     eRange_ *= symbolHigh - symbolLow;
 
@@ -520,7 +523,7 @@ out:  if( outSize == 0 ){
       eLow_ <<= 8;
     }
     update(ec_,eFreq_);
-	}
+  }
   return this;
 }
 //------------------------------------------------------------------------------
@@ -573,21 +576,21 @@ inline Range32CoderFilter * Range32CoderFilter::initializeDecoder()
 //------------------------------------------------------------------------------
 inline Range32CoderFilter * Range32CoderFilter::decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
 {
+  uint32_t symbolLow, symbolHigh, totalRange, count, dc, * freq = dFreq_;
   if( dState_ == stInp ) goto inp;
   if( dState_ == stOut ) goto out;
   while( di_ < 4 ){
     if( inpSize == 0 ) return this;
-	  code_ = (code_ << 8) | *(const uint8_t *) inp;
+    code_ = (code_ << 8) | *(const uint8_t *) inp;
     inp = (const uint8_t *) inp + sizeof(uint8_t);
     inpSize -= sizeof(uint8_t);
     if( rb != NULL ) *rb += sizeof(uint8_t);
     di_++;
   }
   for(;;){
-    uint32_t totalRange = dFreq_[256];
-    register uint32_t count = (code_ - dLow_) / (dRange_ /= totalRange);
-    register uintptr_t dc = 255;
-    register uint32_t * freq = dFreq_;
+    totalRange = dFreq_[256];
+    count = (code_ - dLow_) / (dRange_ /= totalRange);
+    dc = 255;
     for(;;){
       if( freq[dc] <= count ) break;
       if( freq[--dc] <= count ) break;
@@ -633,7 +636,8 @@ out:
     outSize -= sizeof(uint8_t);
     if( wb != NULL ) *wb += sizeof(uint8_t);
 
-    uint32_t symbolLow = dFreq_[dc_], symbolHigh = dFreq_[dc_ + 1];
+    symbolLow = freq[dc_];
+    symbolHigh = freq[dc_ + 1];
     dLow_ += symbolLow * dRange_;
     dRange_ *= symbolHigh - symbolLow;
 
@@ -1132,6 +1136,7 @@ inline LZSSRBTFilter * LZSSRBTFilter::initializeEncoder()
 //------------------------------------------------------------------------------
 inline LZSSRBTFilter * LZSSRBTFilter::encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
 {
+  RBTreeNode * p;
   if( eState_ == stInit ){
     while( alen_ < mlen_ + 2 ){
       if( inpSize == 0 ){
@@ -1150,7 +1155,7 @@ inline LZSSRBTFilter * LZSSRBTFilter::encodeBuffer(const void * inp,uintptr_t in
   if( eState_ == stOut ) goto out;
   for(;;){
     do {
-inp:  RBTreeNode * p = nodes_ + ((dpos_ + mlen_ + 2) & dmsk_);
+inp:  p = nodes_ + ((dpos_ + mlen_ + 2) & dmsk_);
       if( p->parent_ != NULL ) remove(p);
       if( inpSize == 0 ){
         eState_ = stInp;
