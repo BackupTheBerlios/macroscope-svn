@@ -769,7 +769,8 @@ class RBTreeBenchmarkObject {
       return object.treeNode_;
     }
     static RBTreeBenchmarkObject & treeN2O(const RBTreeNode & node,uintptr_t *){
-      return node.object<RBTreeBenchmarkObject>(reinterpret_cast<RBTreeBenchmarkObject *>(NULL)->treeNode_);
+      RBTreeBenchmarkObject * p = NULL;
+      return node.object<RBTreeBenchmarkObject>(p->treeNode_);
     }
     static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1,uintptr_t *){
       return a0.key_ > a1.key_ ? 1 : a0.key_ < a1.key_ ? -1 : 0;

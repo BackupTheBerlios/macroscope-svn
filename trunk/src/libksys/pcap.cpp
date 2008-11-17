@@ -531,6 +531,7 @@ void PCAP::threadExecute()
       ;
       stdErr.debug(1,ss);
     }
+    //newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
     api.pcap_loop((pcap_t *) handle_,-1,(pcap_handler) pcapCallback,(u_char *) this);
     oserror(0);
   }
@@ -1065,8 +1066,8 @@ void PCAP::DatabaseInserter::threadExecute()
         ) << "\n"
       );
   }
-  pCount = 0;
-  pcap_->insertPacketsInDatabase(0,0,NULL,pCount,this);
+//  pCount = 0;
+//  pcap_->insertPacketsInDatabase(0,0,NULL,pCount,this);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

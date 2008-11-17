@@ -326,7 +326,7 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   t = tt = ttUnknown;
   for(;;){
     if( aheadi_.eos() ){
-      if( file_.gets(ahead_,buffer_) ){
+      if( file_.getString(ahead_,buffer_) ){
         ahead_.resize(0);
         t = ttEof;
       }

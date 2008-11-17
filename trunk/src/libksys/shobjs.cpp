@@ -54,10 +54,10 @@ SVSharedSemaphore::SVSharedSemaphore(const utf8::String & name, uintptr_t flags,
     count_(count),
     creator_(false)
 {
-  id_ = semget(name.strlen() > 0 ? getKey(name) : IPC_PRIVATE, (int) count, (int) (flags | IPC_CREAT | IPC_EXCL));
+  id_ = semget(name.isNull() ? IPC_PRIVATE : getKey(name), (int) count, (int) (flags | IPC_CREAT | IPC_EXCL));
   if( id_ == -1 ){
     if( errno == EEXIST )
-      id_ = semget(name.strlen() > 0 ? getKey(name) : IPC_PRIVATE, (int) count, (int) (flags & ~(IPC_CREAT | IPC_EXCL)));
+      id_ = semget(name.isNull() ? IPC_PRIVATE : getKey(name), (int) count, (int) (flags & ~(IPC_CREAT | IPC_EXCL)));
     if( id_ == -1 ){
       int32_t err = errno;
       newObjectV1C2<Exception>(err, name + ", key=" + utf8::int2Str((uintmax_t) getKey(name)) + ", " + __PRETTY_FUNCTION__)->throwSP();
@@ -76,7 +76,7 @@ key_t SVSharedSemaphore::getKey(const utf8::String & name)
 {
   uintptr_t h = name.hash(true);
   key_t k = hashT< key_t>(&h, sizeof(h));
-  if( k == IPC_PRIVATE && name.strlen() > 0 )
+  if( k == IPC_PRIVATE && !name.isNull() )
     newObjectV1C2<Exception>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   return k;
 }
@@ -599,7 +599,7 @@ SharedMemory::SharedMemory(const utf8::String & name, uintptr_t length, const vo
 #endif
   int mmap_flags  = MAP_NOSYNC | MAP_NOCORE | MAP_SHARED;
   if( memory != NULL ) mmap_flags |= MAP_FIXED;
-  if( name.strlen() > 0 ){
+  if( !name.isNull() ){
     file_ = shm_open(name_, O_RDWR | O_CREAT | O_EXCL | O_TRUNC, (mode_t) mode);
     if( file_ < 0 && errno == EEXIST ){
       //      if( creator() && shm_unlink(name_) != 0 && errno != ENOENT ) goto l1;

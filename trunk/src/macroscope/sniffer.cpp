@@ -410,8 +410,6 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
     e->writeStdError();
   }
   pCount = count;
-// shutdown
-  if( packets == NULL ) database_->detach();
   return r;
 }
 //------------------------------------------------------------------------------

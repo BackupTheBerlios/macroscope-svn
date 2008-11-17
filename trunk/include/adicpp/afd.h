@@ -72,7 +72,7 @@ class AsyncFile : public AsyncDescriptor {
     file_t dup() const;
     uint64_t copy(AsyncFile & src,uint64_t size = 0);
 
-    uintptr_t gets(AutoPtr<char,AutoPtrMemoryDestructor> & p,bool * eof = NULL);
+    uintptr_t getString(AutoPtr<char,AutoPtrMemoryDestructor> & p,bool * eof = NULL);
 
     class LineGetBuffer {
       public:
@@ -83,8 +83,8 @@ class AsyncFile : public AsyncDescriptor {
 
         uint64_t tell();
         LineGetBuffer & seek(uint64_t pos);
-        bool gets(utf8::String & str) { return file_->gets(str,this); }
-        intptr_t getc(LineGetBuffer * buffer = NULL) { return file_->getc(this); }
+        bool getString(utf8::String & str) { return file_->getString(str,this); }
+        intptr_t getChar(LineGetBuffer * buffer = NULL) { return file_->getChar(this); }
         static bool eof(intptr_t c) { return c == intptr_t(~(~uintptr_t(0) >> 1)); }
 
         AsyncFile * file_;
@@ -95,10 +95,10 @@ class AsyncFile : public AsyncDescriptor {
         uintptr_t len_;
         uintptr_t codePage_;
         bool removeNewLine_;
-	      bool detectUnicodeFFFE_;
+        bool detectUnicodeFFFE_;
     };
-    bool gets(utf8::String & str,LineGetBuffer * buffer = NULL);
-    intptr_t getc(LineGetBuffer * buffer = NULL);
+    bool getString(utf8::String & str,LineGetBuffer * buffer = NULL);
+    intptr_t getChar(LineGetBuffer * buffer = NULL);
     static bool eof(intptr_t c) { return c == intptr_t(~(~uintptr_t(0) >> 1)); }
 
     const utf8::String & fileName() const;

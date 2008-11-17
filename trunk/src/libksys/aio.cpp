@@ -148,7 +148,7 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect), maxRequests_(64)
       int32_t err = errno;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
-    kevents_.resize(64);
+    kevents_.reallocT(64);
   }
 #else // TODO: use epoll under linux
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
@@ -200,14 +200,11 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
     }
   }
 #else
-  uintptr_t MAX_REQS;
-#if HAVE_KQUEUE
-  MAX_REQS = 64;
-#endif
-  if( connect_ ) MAX_REQS = FD_SETSIZE;
+  uintptr_t mReqs = 64;
+  if( connect_ ) mReqs = FD_SETSIZE;
   if( !terminated_ ){
     AutoLock<LiteWriteLock> lock(*this);
-    if( requests_.count() + newRequests_.count() < MAX_REQS ){
+    if( requests_.count() + newRequests_.count() < mReqs ){
       newRequests_.insToTail(request);
       if( newRequests_.count() < 2 ){
         if( connect_ ){
@@ -229,7 +226,6 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
       r = true;
     }
   }
-#undef MAX_REQS
 #endif
   return r;
 }

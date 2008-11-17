@@ -128,7 +128,7 @@ void * Thread::threadFunc(void * thread)
 #endif
   }
   catch( ExceptionSP & e ){
-    fprintf(stderr,"%s\n",e->what().c_str());
+    //fprintf(stderr,"%s\n",e->what().c_str());
     e->writeStdError();
     reinterpret_cast<Thread *>(thread)->exitCode_ = e->code();
   }

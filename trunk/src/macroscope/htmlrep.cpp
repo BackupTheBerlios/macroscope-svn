@@ -1222,7 +1222,7 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
   for(;;){
 //    fprintf(stderr,"%"PRId64"\n",lineNo);
     utf8::String sb;
-    if( flog.gets(sb,&lgb) ) break;
+    if( flog.getString(sb,&lgb) ) break;
     size = sb.size();
     validLine = size > 0 && sb.c_str()[size - 1] == '\n';
     parseSquidLogLine(sb.c_str(),size,slcp);
@@ -1407,7 +1407,7 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
   bool calculateInterdomainTraffic = logger_->config_->valueByPath(section_ + ".sendmail.calculate_interdomain_traffic",false);
   for(;;){
     utf8::String sb;
-    if( flog.gets(sb,&lgb) ) break;
+    if( flog.getString(sb,&lgb) ) break;
     size = sb.size();
     if( size > 0 && sb.c_str()[size - 1] == '\n' ){
       char * a, * id, * cid = NULL, * idl, * prefix, * prefixl, * from, * to, * stat; //* relay;

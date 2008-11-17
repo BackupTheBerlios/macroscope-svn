@@ -49,13 +49,12 @@ inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue,
 inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
 {
   asm volatile (
-    "lock; cmpxchg8b (%%ebp)"
-    :
-    : "ebp" (&v),
+    "lock; cmpxchg8b %2"
+    : "+A" (cmpValue),
+      "=m" (v)
+    : "m" (v),
       "b" ((uint32_t) exValue),
-      "c" (*((uint32_t *) &exValue + 1)),
-      "a" ((uint32_t) cmpValue),
-      "d" (*((uint32_t *) &cmpValue + 1)),
+      "c" ((uint32_t) (exValue >> 32))
   );
   return cmpValue;
 }

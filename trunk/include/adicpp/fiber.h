@@ -247,7 +247,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public LiteWriteLock {
 #else
 #if HAVE_KQUEUE
     int kqueue_;
-    Array<struct kevent,AutoPtrMemoryDestructor> kevents_;
+    AutoPtr<struct kevent,AutoPtrMemoryDestructor> kevents_;
 #endif
     AutoPtr<fd_set,AutoPtrMemoryDestructor> rfds_;
     AutoPtr<fd_set,AutoPtrMemoryDestructor> wfds_;

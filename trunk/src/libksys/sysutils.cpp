@@ -305,7 +305,7 @@ utf8::String getEnv(const utf8::String & name,const utf8::String & defValue)
   return b.ptr();
 #else
   char * env = getenv(name.getANSIString());
-  if( env == NULL && errno != 0 ){
+  if( env == NULL && errno != 0 && errno != ENOENT ){
     int32_t err = errno;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }

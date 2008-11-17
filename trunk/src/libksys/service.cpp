@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -370,16 +370,15 @@ Services & Services::uninstall()
 //---------------------------------------------------------------------------
 Service & Services::serviceByName(const utf8::String & serviceName)
 {
-  intptr_t i =
 #if defined(__WIN32__) || defined(__WIN64__)
-    sizeof(services_) / sizeof(services_[0]);
+  intptr_t i = sizeof(services_) / sizeof(services_[0]);
   while( --i >= 0 )
     if( services_[i]->serviceName_.casecompare(serviceName) == 0 )
       return *services_[i];
 #else
-    services_.count();
+  intptr_t i = services_.count();
   while( --i >= 0 )
-    if( services_[i].serviceName_.strcasecmp(serviceName) == 0 )
+    if( services_[i].serviceName_.casecompare(serviceName) == 0 )
       return services_[i];
 #endif
   newObjectV1C2<Exception>(EINVAL,"Unknown service")->throwSP();
@@ -512,7 +511,7 @@ Services & Services::query(const utf8::String &
   control_ = newObjectC1<SharedMemoryQueue>(controlName_);
   if( control_->creator() )
     newObjectV1C2<Exception>(EAGAIN,"dispatcher not started")->throwSP();
-  utf8::String sn(serviceName.strcasecmp("all") == 0 ? utf8::String() : serviceName);
+  utf8::String sn(serviceName.casecompare("all") == 0 ? utf8::String() : serviceName);
   int32_t err;
   utf8::String error;
   control_->swap() << SMQ_WRL << svcQuery << sn;
@@ -731,7 +730,7 @@ void Services::threadExecute()
 	}
       }
       else if( cmd == svcQuery ){
-        if( name.strlen() > 0 ){
+        if( !name.isNull() ){
 	  Service & service = serviceByName(name);
           control_->ref() << SMQ_WRL << err << uintptr_t(1) << name;
 	  try {

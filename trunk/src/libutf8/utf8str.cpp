@@ -729,9 +729,9 @@ String String::catPrint(const char * fmt, ...)
   s.resize(a);
   va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-  a = vsnprintf(s.c_str(),a,fmt,arglist);
+  a = vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #elif HAVE__VSNPRINTF
-  a = _vsnprintf(s.c_str(),a,fmt,arglist);
+  a = _vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #endif
   va_end(arglist);
   if( a < 0 ){ // hack for ugly msvcrt.dll versions
@@ -741,7 +741,11 @@ String String::catPrint(const char * fmt, ...)
 #if __BCPLUSPLUS__
       std::
 #endif
-      vsnprintf(s.c_str(),a,fmt,arglist);
+#if HAVE_VSNPRINTF
+      vsnprintf(s.c_str(),a + 1,fmt,arglist);
+#elif HAVE__VSNPRINTF
+      _vsnprintf(s.c_str(),a + 1,fmt,arglist);
+#endif
     va_end(arglist);
     s.resize(a);
   }
@@ -749,9 +753,9 @@ String String::catPrint(const char * fmt, ...)
     s.resize(a);
     va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-    vsnprintf(s.c_str(),a,fmt,arglist);
+    vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #elif HAVE__VSNPRINTF
-    _vsnprintf(s.c_str(),a,fmt,arglist);
+    _vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #endif
     va_end(arglist);
   }
@@ -767,9 +771,9 @@ String String::print(const char * fmt, ...)
   s.resize(a);
   va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-  a = vsnprintf(s.c_str(),a,fmt,arglist);
+  a = vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #elif HAVE__VSNPRINTF
-  a = _vsnprintf(s.c_str(),a,fmt,arglist);
+  a = _vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #endif
   va_end(arglist);
   if( a < 0 ){ // hack for ugly msvcrt.dll versions
@@ -779,7 +783,11 @@ String String::print(const char * fmt, ...)
 #if __BCPLUSPLUS__
       std::
 #endif
-      vsnprintf(s.c_str(),a,fmt,arglist);
+#if HAVE_VSNPRINTF
+      vsnprintf(s.c_str(),a + 1,fmt,arglist);
+#elif HAVE__VSNPRINTF
+      _vsnprintf(s.c_str(),a + 1,fmt,arglist);
+#endif
     va_end(arglist);
     s.resize(a);
   }
@@ -787,9 +795,9 @@ String String::print(const char * fmt, ...)
     s.resize(a);
     va_start(arglist,fmt);
 #if HAVE_VSNPRINTF
-    vsnprintf(s.c_str(),a,fmt,arglist);
+    vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #elif HAVE__VSNPRINTF
-    _vsnprintf(s.c_str(),a,fmt,arglist);
+    _vsnprintf(s.c_str(),a + 1,fmt,arglist);
 #endif
     va_end(arglist);
   }

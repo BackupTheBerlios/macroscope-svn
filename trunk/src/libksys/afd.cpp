@@ -1030,7 +1030,7 @@ AsyncFile & AsyncFile::seek(uint64_t pos)
   return *this;
 }
 //---------------------------------------------------------------------------
-uintptr_t AsyncFile::gets(AutoPtr<char,AutoPtrMemoryDestructor> & p,bool * eof)
+uintptr_t AsyncFile::getString(AutoPtr<char,AutoPtrMemoryDestructor> & p,bool * eof)
 {
   uint64_t op = tell();
   int64_t r, rr, l = 0;
@@ -1058,7 +1058,7 @@ l1:
   return uintptr_t(l);
 }
 //---------------------------------------------------------------------------
-bool AsyncFile::gets(utf8::String & str,LineGetBuffer * buffer)
+bool AsyncFile::getString(utf8::String & str,LineGetBuffer * buffer)
 {
   int64_t r;
   bool eof = false;
@@ -1166,7 +1166,7 @@ l1:
   return eof;
 }
 //---------------------------------------------------------------------------
-intptr_t AsyncFile::getc(LineGetBuffer * buffer)
+intptr_t AsyncFile::getChar(LineGetBuffer * buffer)
 {
   intptr_t c = ~(~uintptr_t(0) >> 1);
   if( buffer == NULL ){

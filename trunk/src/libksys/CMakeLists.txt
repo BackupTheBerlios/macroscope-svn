@@ -27,7 +27,6 @@ ADD_LIBRARY(ksys STATIC
   afd.cpp
   aio.cpp
   archive.cpp
-  atomic.cpp
   cgi.cpp
   conf.cpp
   except.cpp

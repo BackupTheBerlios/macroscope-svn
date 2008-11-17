@@ -173,7 +173,7 @@ inline LiteReadWriteLock & LiteReadWriteLock::unlock()
 class WriteLock {
   friend void initialize(int,char **);
   friend void cleanup();
-  friend class ReadWriteLock;
+  friend class LiteWriteLock;
   public:
     ~WriteLock();
     WriteLock();
@@ -200,7 +200,7 @@ class ReadWriteLock
   : protected WriteLock
 #endif
 {
-  friend class WriteLock;
+  friend class LiteWriteLock;
   public:
     ~ReadWriteLock();
     ReadWriteLock();

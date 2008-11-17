@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -238,8 +238,9 @@ void LogFile::threadExecute()
   threadFile_.fileName(file_).createIfNotExist(true);
   AsyncFile lck;
   lck.fileName(threadFile_.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
-  bool exception = false;
+  bool exception;
   for(;;){
+    exception = false;
     AutoPtr<char,AutoPtrMemoryDestructor> buffer;
     uintptr_t bufferPos = 0;
     int64_t ft;
@@ -266,12 +267,10 @@ void LogFile::threadExecute()
       }
     }
     catch( ExceptionSP & e ){
-      exception = true;
       exceptionStdErrorToSyslog(e);
     }
     if( terminated_ && (bufferPos == 0 || exception) ) break;
     if( bufferPos > 0 ){
-//      fprintf(stderr,"%s %d bufferPos = %"PRIuPTR", terminated_ = %d, exception = %d\n",__FILE__,__LINE__,bufferPos,terminated_,exception);
       exception = false;
       AutoFileWRLock<AsyncFile> lock;
       try {
