@@ -725,29 +725,14 @@ class LZSSRBTFilter : public StreamCompressionFilter {
 
     intptr_t compare(RBTreeNode * a0,RBTreeNode * a1){
       intptr_t c, s1 = a0 - nodes_, s2 = a1 - nodes_;
-      uintptr_t l = mlen_ + 2, l2;
-      goto in;
+      uintptr_t l = mlen_ + 2;
       do {
-        s1 += l2;
-        s2 += l2;
-in:     l2 = 0;
-        switch( l & 3 ){
-          case 3 :
-            l2++;
-            if( (c = intptr_t(dict_[(s1 + 0) & dmsk_]) - dict_[(s2 + 0) & dmsk_]) != 0 ) goto out;
-          case 2 :
-            l2++;
-            if( (c = intptr_t(dict_[(s1 + 1) & dmsk_]) - dict_[(s2 + 1) & dmsk_]) != 0 ) goto out;
-          case 1 :
-            l2++;
-            if( (c = intptr_t(dict_[(s1 + 2) & dmsk_]) - dict_[(s2 + 2) & dmsk_]) != 0 ) goto out;
-          case 0 :
-            l2++;
-            if( (c = intptr_t(dict_[(s1 + 3) & dmsk_]) - dict_[(s2 + 3) & dmsk_]) != 0 ) goto out;
-        }
-        l -= l2;
-      } while( intptr_t(l) > 0 );
-out:  l = s2 + l2 - 1 - (a1 - nodes_);
+        c = intptr_t(dict_[s1]) - dict_[s2];
+	if( c != 0 ) break;
+	s1 = (s1 + 1) & dmsk_;
+	s2 = (s2 + 1) & dmsk_;
+      } while( --l > 0 );
+      l = s2 - l;
       if( l > bestMatchLen_ ){
         bestMatchLen_ = l;
         bestMatchNode_ = a1;
