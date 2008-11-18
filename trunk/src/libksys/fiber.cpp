@@ -81,15 +81,7 @@ Fiber & Fiber::allocateStack(
   context_.uc_stack.ss_size = size;
   context_.uc_mcontext.mc_len = sizeof(mcontext_t);
   context_.uc_link = NULL;
-  union {
-    void (* funcPtr)();
-    void (* ptr)(Fiber*);
-  };
-  ptr = start;
-  if( makecontext(&context_,funcPtr,1,this) != 0 ){
-    int32_t err = errno;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-  }
+  makecontext(&context_,(void (*)()) start,1,this);
 #else
 //  for( intptr_t i = size / sizeof(uintptr_t) - 1; i >= 0; i-- )
 //    ((uintptr_t *) stackPointer_)[i] = i;

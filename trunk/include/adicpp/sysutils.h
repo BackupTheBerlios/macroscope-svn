@@ -61,16 +61,12 @@ void daemonize();
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class DirectoryChangeNotification {
+  friend class AsyncIoSlave;
+  friend class AsyncMiscSlave;
   public:
     virtual ~DirectoryChangeNotification();
     DirectoryChangeNotification();
 
-#if defined(__WIN32__) || defined(__WIN64__)
-    const HANDLE & hFFCNotification() const;
-    const HANDLE & hDirectory() const;
-    FILE_NOTIFY_INFORMATION * const buffer() const;
-    const uintptr_t & bufferSize() const;
-#endif
     void monitor(const utf8::String & pathName,uint64_t timeout = ~uint64_t(0),bool noThrow = false);
     void stop();
 

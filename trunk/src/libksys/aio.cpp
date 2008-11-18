@@ -264,16 +264,16 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
       SetLastError(ERROR_SUCCESS);
       switch( object->type_ ){
         case etDirectoryChangeNotification :
-          assert( !isw9x && object->directoryChangeNotification_->hDirectory() != INVALID_HANDLE_VALUE );
+          assert( !isw9x && object->directoryChangeNotification_->hDirectory_ != INVALID_HANDLE_VALUE );
           if( object->abort_ ){
             rw = 0;
             SetLastError(ERROR_REQUEST_ABORTED);
           }
           else {
             rw = ReadDirectoryChangesW(
-              object->directoryChangeNotification_->hDirectory(),
-              object->directoryChangeNotification_->buffer(),
-              (DWORD) object->directoryChangeNotification_->bufferSize(),
+              object->directoryChangeNotification_->hDirectory_,
+              object->directoryChangeNotification_->buffer_,
+              (DWORD) object->directoryChangeNotification_->bufferSize_,
               FALSE,
               FILE_NOTIFY_CHANGE_FILE_NAME,
               &nb,
@@ -872,7 +872,7 @@ void AsyncMiscSlave::threadExecute()
 	  &request->directoryChangeNotification_->famConnection_,
 	  &request->directoryChangeNotification_->famEvent_
 	);
-	if( r < 0 ) request->errno_ = FAMError;
+	if( r < 0 ) request->errno_ = FAMErrno;
         assert( request->fiber_ != NULL );
         request->fiber_->thread()->postEvent(request);
       }

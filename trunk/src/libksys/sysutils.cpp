@@ -515,12 +515,12 @@ void DirectoryChangeNotification::stop()
   buffer_.clear();
   bufferSize_ = 0;
 #elif HAVE_FAM_H
-  if( FAMCONNECTION_GETFD(famConnection_) != -1 ){
+  if( FAMCONNECTION_GETFD(&famConnection_) != -1 ){
     if( FAMCancelMonitor(&famConnection_,&famRequest_) != 0 )
       newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     if( FAMClose(&famConnection_) != 0 )
       newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
-    FAMCONNECTION_GETFD(famConnection_) = -1;
+    FAMCONNECTION_GETFD(&famConnection_) = -1;
   }
 #endif
 }
