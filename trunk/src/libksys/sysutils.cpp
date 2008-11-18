@@ -2279,11 +2279,14 @@ pid_t execute(const ExecuteProcessParameters & params)
 err:  err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
+      if( params.noThrow_ ) return pi.dwProcessId;
       newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
     if( r != WAIT_OBJECT_0 ){
+      if( params.noThrow_ ) return pi.dwProcessId;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
+      if( params.noThrow_ ) return pi.dwProcessId;
       newObjectV1C2<Exception>(ERROR_INVALID_DATA,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
     DWORD exitCode;
@@ -2291,6 +2294,7 @@ err:  err = GetLastError() + errorOffset;
       err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
+      if( params.noThrow_ ) return pi.dwProcessId;
       newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
     pi.dwProcessId = exitCode;
@@ -2299,8 +2303,51 @@ err:  err = GetLastError() + errorOffset;
   CloseHandle(pi.hThread);
   return pi.dwProcessId;
 #else
-  newObjectV1C2<Exception>(ENOSYS,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
-  return 0;
+  utf8::AnsiString name((anyPathName2HostPathName("\"" + params.name_ + "\" ") + params.args_).getANSIString());
+  Array<utf8::AnsiString> aargs;
+  utf8::String::Iterator sep(params.args_);
+  while( !sep.eos() ){
+    while( sep.isSpace() && sep.next() );
+    utf8::String::Iterator sep2(sep + 1);
+    if( sep.getChar() == '\"' ){
+      while( (sep2.getChar() != '\"' || (sep2 - 1).getChar() == '\\') && sep2.next() );
+    }
+    else {
+      while( (!sep2.isSpace() || (sep2 - 1).getChar() == '\\') && sep2.next() );
+    }
+    aargs.add(utf8::String(sep + 1,sep2).getANSIString());
+    sep = sep2;
+  }
+  AutoPtr<char *,AutoPtrMemoryDestructor> argsPtrs;
+  argsPtrs.reallocT(aargs.count());
+  for( uintptr_t i = 0; i < aargs.count(); i++ ) argsPtrs[i] = aargs[i];
+  pid_t pid = fork();
+  if( pid == -1 ){
+    if( params.noThrow_ ) return -1;
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+  }
+  if( pid == 0 ){
+    for( uintptr_t i = 0; i < params.env_.count(); i++ ){
+      utf8::String::Iterator sep(params.env_[i].strstr("="));
+      if( sep.eos() ) continue;
+      setEnv(utf8::String(params.env_[i],sep),sep + 1);
+    }
+    if( params.stdio_ != INVALID_HANDLE_VALUE && dup2(STDIN_FILENO,params.stdio_) == - 1 ) exit(errno);
+    if( params.stdout_ != INVALID_HANDLE_VALUE && dup2(STDOUT_FILENO,params.stdout_) == - 1 ) exit(errno);
+    if( params.stderr_ != INVALID_HANDLE_VALUE && dup2(STDERR_FILENO,params.stderr_) == - 1 ) exit(errno);
+    if( execvp(params.name_.getANSIString(),argsPtrs) == - 1 ) exit(errno);
+  }
+  else if( params.wait_ ){
+    int status;
+    pid_t pid2 = waitpid(pid,&status,0);
+    if( pid2 == -1 || WEXITSTATUS(status) != 0 ){
+      if( params.noThrow_ ) return pid;
+      int32_t err = pid2 == -1 ? errno : WEXITSTATUS(status);
+      newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+    }
+  }
+  return pid;
 #endif
 }
 //---------------------------------------------------------------------------
@@ -2344,8 +2391,13 @@ int32_t waitForProcess(pid_t pid)
   CloseHandle(hProcess);
   return exitCode;
 #else
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-  return -1;
+  int status;
+  pid_t pid2 = waitpid(pid,&status,0);
+  if( pid2 == -1 ){
+    int32_t err = errno;
+    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+  }
+  return WEXITSTATUS(status);
 #endif
 }
 //---------------------------------------------------------------------------

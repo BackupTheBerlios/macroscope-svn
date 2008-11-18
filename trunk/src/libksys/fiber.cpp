@@ -47,19 +47,27 @@ Fiber::~Fiber()
 #if defined(__WIN32__) || defined(__WIN64__)
   if( fiber_ != NULL ) DeleteFiber(fiber_);
 #endif
+#if HAVE_UCONTEXT_H
+  kfree(context_.uc_stack.ss_sp);
+#endif
 }
 //---------------------------------------------------------------------------
 Fiber::Fiber() :
   started_(false), terminated_(false), finished_(false), destroy_(true),
-#if HAVE_UCONTEXT_H
-#elif defined(__WIN32__) || defined(__WIN64__)
+#if defined(__WIN32__) || defined(__WIN64__)
   fiber_(NULL),
+#elif HAVE_UCONTEXT_H
 #else
   stackPointer_(NULL),
 #endif
   thread_(NULL)
 {
   event_.fiber_ = this;
+#if HAVE_UCONTEXT_H
+  context_.uc_stack.ss_sp = NULL;
+  context_.uc_mcontext.mc_len = 0;
+  context_.uc_flags = 0;
+#endif
 }
 //---------------------------------------------------------------------------
 Fiber & Fiber::allocateStack(
@@ -76,16 +84,14 @@ Fiber & Fiber::allocateStack(
  * \todo rewrite fiber context switching on ucontext functions
  */
   size += -intptr_t(size) & (MINSIGSTKSZ - 1);
-  stack_.realloc(size);
-  context_.uc_stack.ss_sp = stack_;
+  context_.uc_mcontext = mainFiber->context_.uc_mcontext;
+  context_.uc_stack.ss_sp = (char *) krealloc(context_.uc_stack.ss_sp,size);
   context_.uc_stack.ss_size = size;
-  context_.uc_mcontext.mc_len = sizeof(mcontext_t);
+  //context_.uc_mcontext.mc_len = sizeof(mcontext_t);
+  context_.uc_flags = 0;
   context_.uc_link = NULL;
   makecontext(&context_,(void (*)()) start,1,this);
 #else
-//  for( intptr_t i = size / sizeof(uintptr_t) - 1; i >= 0; i-- )
-//    ((uintptr_t *) stackPointer_)[i] = i;
-//  memset(stackPointer_,0xAA,size);
   if( &dummy1 < &dummy2 ){
     stackPointer_ = stack_.ptr() + size;
 #if __GNUG__ && __x86_64__
@@ -192,6 +198,7 @@ VOID WINAPI Fiber::start(Fiber * fiber)
 void Fiber::start(Fiber * fiber)
 #endif
 {
+  *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(currentFiberPlaceHolder) = fiber;
   fiber->started_ = true;
   fiber->terminated_ = false;
   interlockedIncrement(fiber->thread_->server_->fibersCount_,1);
@@ -225,6 +232,10 @@ void BaseThread::threadExecute()
   convertThreadToFiber();
   try {
 #endif
+#if HAVE_UCONTEXT_H
+    getcontext(&context_);
+    context_.uc_mcontext.mc_len = sizeof(mcontext_t);
+#endif
     while( !Thread::terminated_ ) queue();
 #if defined(__WIN32__) || defined(__WIN64__)
   }
@@ -252,7 +263,7 @@ void BaseThread::queue()
     Fiber::switchFiber(ev->fiber_);
     if( ev->fiber_->finished() ){
       //detectMaxFiberStackSize();
-      setCurrentFiber(NULL);
+      currentFiber(NULL);
       sweepFiber(ev->fiber_);
     }
   }
@@ -345,8 +356,9 @@ void BaseServer::closeServer()
       thread = &BaseThread::serverListNodeObject(*btp);
       AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
       for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() ){
-        if( how & csTerminate ) Fiber::nodeObject(*bfp).terminate();
-        Fiber::nodeObject(*bfp).fiberBreakExecution();
+        Fiber * fiber = &Fiber::nodeObject(*bfp);
+        if( how & csTerminate ) fiber->terminate();
+        fiber->fiberBreakExecution();
       }
     }
   }
@@ -431,6 +443,10 @@ BaseThread * BaseServer::selectThread()
     thread->resume();
     threads_.insToTail(*p.ptr(NULL));
     thread->server(this);
+#if HAVE_UCONTEXT_H
+    volatile uintptr_t l;
+    while( (l = thread->context_.uc_mcontext.mc_len) == 0 ) ksleep1();
+#endif
   }
   assert( thread != NULL );
   return thread;

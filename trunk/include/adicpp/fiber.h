@@ -42,7 +42,7 @@ class Fiber : virtual public Object {
   friend class Requester;
   friend class AsyncDescriptor;
   friend Fiber * currentFiber();
-  friend void setCurrentFiber(Fiber * fiber);
+  friend void currentFiber(Fiber * fiber);
   public:
     virtual ~Fiber();
     Fiber();
@@ -70,7 +70,6 @@ class Fiber : virtual public Object {
     static VOID WINAPI start(Fiber * fiber);
     LPVOID fiber_;
 #elif HAVE_UCONTEXT_H
-    AutoPtr<char *,AutoPtrMemoryDestructor> stack_;
     ucontext_t context_;
     static void start(Fiber * fiber);
 #else
@@ -194,7 +193,7 @@ inline Fiber * currentFiber()
   return *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(Fiber::currentFiberPlaceHolder);
 }
 //---------------------------------------------------------------------------
-inline void setCurrentFiber(Fiber * fiber)
+inline void currentFiber(Fiber * fiber)
 {
   *reinterpret_cast<ThreadLocalVariable<Fiber *> *>(Fiber::currentFiberPlaceHolder) = fiber;
 }
@@ -220,7 +219,9 @@ class AsyncIoSlave : public Thread, public Semaphore, public LiteWriteLock {
 
     bool transplant(AsyncEvent & requests);
 #if HAVE_KQUEUE
-    void cancelEvent(const AsyncEvent & request);
+    void abortIo();
+#else
+    void abortIo() {}
 #endif
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
     const uintptr_t & maxRequests() const { return maxRequests_; }
@@ -417,6 +418,7 @@ class Requester {
     Requester();
 
     void abort();
+    void abortIo();
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
     void postRequest(AsyncDescriptor * descriptor);
     void postRequest(AsyncEvent * event);

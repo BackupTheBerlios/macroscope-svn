@@ -44,6 +44,7 @@ template <typename T> class StringT {
   friend class String;
   public:
     ~StringT();
+    StringT(T * string = &(*(T *) ksys::kmalloc(sizeof(T)) = (T) 0) );
     StringT(const StringT<T> & string);
 
     StringT<T> & operator = (const StringT<T> & string);
@@ -58,7 +59,6 @@ template <typename T> class StringT {
     T * ptr(T * p){ return container_->string_.ptr(p); }
   protected:
   private:
-    StringT(T * string);
     class Container {
       public:
         ksys::AutoPtr<T,AutoPtrMemoryDestructor> string_;

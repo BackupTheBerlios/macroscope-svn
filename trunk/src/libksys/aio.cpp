@@ -162,29 +162,6 @@ void AsyncIoSlave::threadBeforeWait()
   post();
 }
 //---------------------------------------------------------------------------
-#if HAVE_KQUEUE
-//---------------------------------------------------------------------------
-void AsyncIoSlave::cancelEvent(const AsyncEvent & request)
-{
-  if( request.type_ != etConnect ){
-    struct kevent ke;
-    EV_SET(&ke,request.descriptor_->socket_,EVFILT_READ | EVFILT_WRITE,EV_DELETE,0,0,0);
-    if( kevent(kqueue_,&ke,1,NULL,0,NULL) == -1 ){
-      perror(NULL);
-      assert( 0 );
-      abort();
-    }
-    EV_SET(&ke,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,&request.node(request));
-    if( kevent(kqueue_,&ke,1,NULL,0,NULL) == -1 ){
-      perror(NULL);
-      assert( 0 );
-      abort();
-    }
-  }
-}
-//---------------------------------------------------------------------------
-#endif
-//---------------------------------------------------------------------------
 bool AsyncIoSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
@@ -523,6 +500,14 @@ l2:       object = eReqs_[wm];
 //------------------------------------------------------------------------------
 #else
 //------------------------------------------------------------------------------
+void AsyncIoSlave::abortIo()
+{
+  AutoLock<LiteWriteLock> lock(*this);
+  EventsNode * node;
+  for( node = requests_.first(); node != NULL; node = node->next() )
+    AsyncEvent::nodeObject(*node).cancelAsyncEvent();
+}
+//------------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
 //  priority(THREAD_PRIORITY_HIGHEST);
@@ -645,7 +630,10 @@ void AsyncIoSlave::threadExecute()
           assert( 0 );
       }
       if( errno == EINPROGRESS ){
-        object->ioSlave_ = this;
+#if HAVE_KQUEUE
+	object->kqueue_ = kqueue_;
+#endif
+        //object->ioSlave_ = this;
         requests_.insToTail(newRequests_.remove(*object));
       }
       else if( errno != EINPROGRESS ){
@@ -679,7 +667,7 @@ void AsyncIoSlave::threadExecute()
       error = errno;
       acquire();
       errno = error;
-      if( evCount == -1 ){
+      if( evCount == -1 && errno != EINTR ){
         perror(NULL);
         assert( 0 );
         abort();
@@ -758,7 +746,10 @@ void AsyncIoSlave::threadExecute()
         }
 	      //closeAPI(object);
         requests_.remove(*object);
-        object->ioSlave_ = NULL;
+#if HAVE_KQUEUE
+        object->kqueue_ = -1;
+#endif
+        //object->ioSlave_ = NULL;
         object->errno_ = error;
         object->count_ = count;
         object->fiber_->thread()->postEvent(object);
@@ -784,7 +775,7 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
         object.abort_ = true;
         SetEvent(object.overlapped_.hEvent);
         post();
-        if( r ) break;
+        if( dcn != NULL ) break;
       }
     }
   }
@@ -1517,7 +1508,7 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::abortNotification(DirectoryChan
         object.abort_ = true;
         object.directoryChangeNotification_->stop();
         post();
-        if( r ) break;
+        if( dcn != NULL ) break;
       }
     }
   }
@@ -1692,13 +1683,23 @@ void Requester::abort()
       timerSlave_ = NULL;
     }
   }
+  abortIo();
   abortNotification();
+}
+//---------------------------------------------------------------------------
+void Requester::abortIo()
+{
+  AutoLock<LiteWriteLock> lock(ioRequestsReadWriteLock_);
+  for( intptr_t i = ioSlaves_.count() - 1; i >= 0; i-- ){
+    ioSlaves_[i].abortIo();
+  }
 }
 //---------------------------------------------------------------------------
 bool Requester::abortNotification(DirectoryChangeNotification * dcn)
 {
   bool r = false;
 #if defined(__WIN32__) || defined(__WIN64__)
+  if( dcn != NULL ){
   intptr_t i;
   if( isWin9x() ){
     AutoLock<LiteWriteLock> lock(wdcnRequestsReadWriteLock_);
@@ -1715,7 +1716,7 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
     AutoLock<LiteWriteLock> lock(ioRequestsReadWriteLock_);
     for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
       r = ioSlaves_[i].abortNotification(dcn);
-      if( r ) break;
+      if( dcn != NULL ) break;
     }
   }
 #endif

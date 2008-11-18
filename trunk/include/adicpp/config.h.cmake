@@ -22,6 +22,7 @@
 #cmakedefine HAVE_SYSEXITS_H 1
 #cmakedefine HAVE_SYS_ENDIAN_H 1
 #cmakedefine HAVE_SYS_TYPES_H 1
+#cmakedefine HAVE_SYS_WAIT_H 1
 #cmakedefine HAVE_SYS_IPC_H 1
 #cmakedefine HAVE_SYS_SEM_H 1
 #cmakedefine HAVE_SYS_PARAM_H 1

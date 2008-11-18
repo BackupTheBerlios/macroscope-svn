@@ -484,6 +484,7 @@ class AcceptFiber : public ksys::Fiber, public AsyncSocket {
   private:
     ksys::WriteLock mutex_;
     void fiberExecute();
+    void fiberBreakExecution();
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////

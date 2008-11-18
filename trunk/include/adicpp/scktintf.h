@@ -596,7 +596,7 @@ class API {
     {
     }
 #endif
-    static ksys::WriteLock & mutex();
+    static ksys::LiteWriteLock & mutex();
   protected:
 #if defined(__WIN32__) || defined(__WIN64__)
     static WSADATA            wsaData_;
@@ -612,9 +612,9 @@ class API {
     void                            cleanup();
 };
 //---------------------------------------------------------------------------
-inline ksys::WriteLock & API::mutex()
+inline ksys::LiteWriteLock & API::mutex()
 {
-  return *reinterpret_cast< ksys::WriteLock *>(mutex_);
+  return *reinterpret_cast<ksys::LiteWriteLock *>(mutex_);
 }
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

@@ -153,7 +153,7 @@ AsyncSocket & AsyncSocket::close()
 {
   bool closed = false;
   {
-    ksys::AutoLock<ksys::WriteLock> lock(api.mutex());
+    ksys::AutoLock<ksys::LiteWriteLock> lock(api.mutex());
     if( socket_ != INVALID_SOCKET ){
       if( api.closesocket(socket_) != 0 ){
         int32_t err = errNo();
@@ -171,20 +171,20 @@ AsyncSocket & AsyncSocket::close()
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::shutdown(int how)
 {
-  ksys::AutoLock<ksys::WriteLock> lock(api.mutex());
+  ksys::AutoLock<ksys::LiteWriteLock> lock(api.mutex());
   if( socket_ != INVALID_SOCKET ){
     if( api.shutdown(socket_,how) != 0 ){
       int32_t err = errNo();
       if( err != ENOTCONN && err != ENOTSOCK && err != EWSANOTINITIALISED )
         newObjectV1C2<EAsyncSocket>(err,__PRETTY_FUNCTION__)->throwSP();
     }
-#if HAVE_KQUEUE
+/*#if HAVE_KQUEUE
     ksys::Fiber * fiber = ksys::currentFiber();
     if( fiber->event_.type_ == ksys::etAccept ){
       ksys::AsyncIoSlave * slave = dynamic_cast<ksys::AsyncIoSlave *>(fiber->event_.ioSlave_);
       if( slave != NULL ) slave->cancelEvent(fiber->event_);
     }
-#endif
+#endif*/
   }
   return *this;
 }

@@ -87,6 +87,10 @@
 #include <sys/types.h>
 #endif
 
+#if HAVE_SYS_WAIT_H
+#include <sys/wait.h>
+#endif
+
 #if HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif

@@ -62,6 +62,11 @@ void AcceptFiber::fiberExecute()
   }
 }
 //------------------------------------------------------------------------------
+void AcceptFiber::fiberBreakExecution()
+{
+  event_.cancelAsyncEvent();
+}
+//------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 Server::~Server()
@@ -108,8 +113,10 @@ void Server::close()
 {
   if( acceptFiber_ != NULL ){
     acceptFiber_->shutdown();
+#if defined(__WIN32__) || defined(__WIN64__)
 // socket must be closed, because shutdown don't interrupt accepting
     acceptFiber_->AsyncSocket::close();
+#endif
     acceptFiber_->mutex_.release();
     closeServer();
     acceptFiber_ = NULL;

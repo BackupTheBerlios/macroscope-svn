@@ -113,7 +113,7 @@ HINSTANCE WSHIP6API::handle_;
 #endif
 //---------------------------------------------------------------------------
 API api;
-uint8_t API::mutex_[sizeof(ksys::WriteLock)];
+uint8_t API::mutex_[sizeof(ksys::LiteWriteLock)];
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ void API::open()
 {
   int32_t err;
 
-  ksys::AutoLock<ksys::WriteLock> lock(mutex());
+  ksys::AutoLock<ksys::LiteWriteLock> lock(mutex());
   if( count_ == 0 ){
 #ifndef USE_STATIC_SOCKET_LIBRARY
     if( ksys::isWin9x() ){
@@ -301,7 +301,7 @@ void API::open()
 //---------------------------------------------------------------------------
 void API::close()
 {
-  ksys::AutoLock<ksys::WriteLock> lock(mutex());
+  ksys::AutoLock<ksys::LiteWriteLock> lock(mutex());
   assert( count_ > 0 );
   if( count_ == 1 ){
     /*int r = */this->WSACleanup();
@@ -341,7 +341,7 @@ void API::close()
 void API::initialize()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  new (mutex_) ksys::WriteLock;
+  new (mutex_) ksys::LiteWriteLock;
   count_ = 0;
 #ifndef USE_STATIC_SOCKET_LIBRARY
   handle_ = NULL;
@@ -354,7 +354,7 @@ void API::cleanup()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   using ksys::WriteLock;
-  mutex().~WriteLock();
+  mutex().~LiteWriteLock();
 #endif
 }
 //---------------------------------------------------------------------------

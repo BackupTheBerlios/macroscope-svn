@@ -83,6 +83,7 @@ class AsyncEvent {
     static AsyncEvent & nodeObject(const EmbeddedListNode<AsyncEvent> & node, AsyncEvent * p = NULL){
       return node.object(p->node_);
     }
+    void cancelAsyncEvent() const;
   private:
     mutable EmbeddedListNode<AsyncEvent> node_;
   public:
@@ -93,7 +94,7 @@ class AsyncEvent {
     OVERLAPPED overlapped_;
 #elif SIZEOF_AIOCB
     struct aiocb iocb_;
-    Thread * ioSlave_;
+    //Thread * ioSlave_;
 #endif
 #if _MSC_VER
 #pragma warning(push,3)
@@ -157,6 +158,9 @@ class AsyncEvent {
     AsyncDescriptor * descriptor_;
     uint64_t timeout_;
     int32_t errno_;
+#if HAVE_KQUEUE
+    int kqueue_;
+#endif
     AsyncEventType type_;
   private:
     AsyncEvent(const AsyncEvent &){}
@@ -175,7 +179,10 @@ inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 #endif
 #if SIZEOF_AIOCB
   memset(&iocb_, 0, sizeof(iocb_));
-  ioSlave_ = NULL;
+  //ioSlave_ = NULL;
+#endif
+#if HAVE_KQUEUE
+  kqueue_ = -1;
 #endif
 }
 //------------------------------------------------------------------------------
@@ -276,6 +283,28 @@ inline AsyncDescriptor::~AsyncDescriptor()
 inline AsyncDescriptor::AsyncDescriptor()
 {
 }
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+inline void AsyncEvent::cancelAsyncEvent() const
+//------------------------------------------------------------------------------
+#if HAVE_KQUEUE
+//---------------------------------------------------------------------------
+{
+  if( kqueue_ != -1 ){
+    struct kevent ke;
+    EV_SET(&ke,descriptor_->socket_,EVFILT_READ | EVFILT_WRITE,EV_DELETE,0,0,0);
+    kevent(kqueue_,&ke,1,NULL,0,NULL);
+    EV_SET(&ke,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,&node(*this));
+    kevent(kqueue_,&ke,1,NULL,0,NULL);
+  }
+}
+//---------------------------------------------------------------------------
+#else
+//---------------------------------------------------------------------------
+;
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

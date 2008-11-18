@@ -924,6 +924,9 @@ void KFTPShell::open()
 {
   intptr_t i;
   config_->parse().override();
+  stdErr.bufferDataTTA(
+    (uint64_t) config_->value("debug_file_max_collection_time",60) * 1000000u
+  );
   stdErr.rotationThreshold(
     config_->value("debug_file_rotate_threshold",1024 * 1024)
   );

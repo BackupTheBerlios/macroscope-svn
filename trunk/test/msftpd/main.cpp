@@ -485,6 +485,9 @@ MSFTPService::MSFTPService(int) :
 void MSFTPService::initialize()
 {
   msftpConfig_->silent(true).parse().override();
+  stdErr.bufferDataTTA(
+    (uint64_t) msftpConfig_->value("debug_file_max_collection_time",60) * 1000000u
+  );
   stdErr.rotationThreshold(
     msftpConfig_->value("debug_file_rotate_threshold",1024 * 1024)
   );
@@ -566,11 +569,7 @@ int main(int _argc,char * _argv[])
     Services services(msftpd_version.gnu_);
     MSFTPService * service;
     services.add(service = newObjectV1<MSFTPService>(0));
-#if defined(__WIN32__) || defined(__WIN64__)
     bool dispatch = true;
-#else
-    bool dispatch = false;
-#endif
     service->msftpConfig()->silent(true);
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].compare("--chdir") == 0 && u + 1 < argv().count() ){
@@ -605,7 +604,7 @@ int main(int _argc,char * _argv[])
         services.uninstall();
         dispatch = false;
       }
-      else if( argv()[u].compare("--start") == 0 && u + 1 < argv().count() ){
+      /*else if( argv()[u].compare("--start") == 0 && u + 1 < argv().count() ){
         services.start(argv()[u + 1]);
         dispatch = false;
       }
@@ -631,7 +630,7 @@ int main(int _argc,char * _argv[])
       else if( argv()[u].compare("--stop-disp") == 0 ){
         services.stopServiceCtrlDispatcher();
         dispatch = false;
-      }
+      }*/
       else if( argv()[u].compare("--sha256") == 0 && u + 1 < argv().count() ){
         SHA256 passwordSHA256;
         passwordSHA256.make(argv()[u + 1].c_str(),argv()[u + 1].size());
@@ -642,21 +641,20 @@ int main(int _argc,char * _argv[])
       }
     }
     if( dispatch ){
-      bool daemon = service->msftpConfig()->parse().override().value("daemon",true);
+      bool daemon = service->msftpConfig()->parse().override().value("daemon",false);
       if( !daemon && isDaemon ) daemon = true;
       service->msftpConfig()->silent(false);
 #if defined(__WIN32__) || defined(__WIN64__)
       if( daemon ){
         services.startServiceCtrlDispatcher();
       }
-      else {
+      else
 #endif
+      {
         service->start();
-        service->wait();
+        Thread::waitForSignal();
         service->stop();
-#if defined(__WIN32__) || defined(__WIN64__)
       }
-#endif
     }
   }
   catch( ExceptionSP & e ){
