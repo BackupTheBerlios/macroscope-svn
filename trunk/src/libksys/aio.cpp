@@ -430,7 +430,7 @@ l2:       object = eReqs_[wm];
               }
               else {
                 GetOverlappedResult(
-                  object->directoryChangeNotification_->hDirectory(),
+                  object->directoryChangeNotification_->hDirectory_,
                   &object->overlapped_,
                   &nb,
                   TRUE
@@ -1421,7 +1421,7 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::transplant(AsyncEvent & request
   if( !terminated_ ){
     AutoLock<LiteWriteLock> lock(*this);
     if( !terminated_ && requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 2 ){
-      for( i = sp_; i >= 0; i-- ) if( sems_[i] == request.directoryChangeNotification_->hFFCNotification() ) break;
+      for( i = sp_; i >= 0; i-- ) if( sems_[i] == request.directoryChangeNotification_->hFFCNotification_ ) break;
       if( i < 0 ){
         newRequests_.insToTail(request);
         if( sp_ >= 0 ) SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
@@ -1447,7 +1447,7 @@ void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
       assert( object->type_ == etAcquireReadWriteLock );
       assert( sp_ < MAXIMUM_WAIT_OBJECTS - 1 );
       ++sp_;
-      sems_[sp_] = object->directoryChangeNotification_->hFFCNotification();
+      sems_[sp_] = object->directoryChangeNotification_->hFFCNotification_;
       eSems_[sp_] = object;
       sems_[sp_ + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
       requests_.insToTail(newRequests_.remove(*node));

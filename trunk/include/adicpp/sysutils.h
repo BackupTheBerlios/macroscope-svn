@@ -63,6 +63,9 @@ void daemonize();
 class DirectoryChangeNotification {
   friend class AsyncIoSlave;
   friend class AsyncMiscSlave;
+#if defined(__WIN32__) || defined(__WIN64__)
+  friend class AsyncWin9xDirectoryChangeNotificationSlave;
+#endif
   public:
     virtual ~DirectoryChangeNotification();
     DirectoryChangeNotification();
@@ -91,26 +94,6 @@ class DirectoryChangeNotification {
 };
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
-//---------------------------------------------------------------------------
-inline const HANDLE & DirectoryChangeNotification::hFFCNotification() const
-{
-  return hFFCNotification_;
-}
-//---------------------------------------------------------------------------
-inline const HANDLE & DirectoryChangeNotification::hDirectory() const
-{
-  return hDirectory_;
-}
-//---------------------------------------------------------------------------
-inline FILE_NOTIFY_INFORMATION * const DirectoryChangeNotification::buffer() const
-{
-  return buffer_.ptr();
-}
-//---------------------------------------------------------------------------
-inline const uintptr_t & DirectoryChangeNotification::bufferSize() const
-{
-  return bufferSize_;
-}
 //---------------------------------------------------------------------------
 utf8::String getFileNameByHandle(HANDLE hFile);
 //---------------------------------------------------------------------------
