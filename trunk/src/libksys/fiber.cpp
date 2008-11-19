@@ -333,6 +333,7 @@ void BaseServer::sweepThreads()
     if( thread->fibers_.count() == 0 ){
       thread->wait();
       btp = btp->next();
+      thread->fibersReadWriteLock_.release();
       threads_.drop(*thread);
     }
     else {
@@ -424,9 +425,10 @@ BaseThread * BaseServer::selectThread()
       BaseThread * athread = &BaseThread::serverListNodeObject(*btp);
       athread->fibersReadWriteLock_.acquire();
       if( threads_.count() > mt_ && athread->fibers_.count() == 0 ){
-        thread->wait();
+        athread->wait();
         btp = btp->next();
-        threads_.drop(*thread);
+	athread->fibersReadWriteLock_.release();
+        threads_.drop(*athread);
       }
       else {
         if( athread->fibers_.count() < athread->mfpt_ && athread->fibers_.count() < msc ){

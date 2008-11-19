@@ -178,8 +178,7 @@ void (*LiteReadWriteLock::rdLock_)(LiteReadWriteLock * mutex) = LiteReadWriteLoc
 //---------------------------------------------------------------------------
 void LiteReadWriteLock::multiRDLock(LiteReadWriteLock * mutex)
 {
-  uintptr_t st = 1;
-  uintptr_t i;
+  uintptr_t st = 1, i;
   for(;;){
     i = 4096;
     do {
@@ -211,8 +210,7 @@ void (*LiteReadWriteLock::wrLock_)(LiteReadWriteLock * mutex) = LiteReadWriteLoc
 //---------------------------------------------------------------------------
 void LiteReadWriteLock::multiWRLock(LiteReadWriteLock * mutex)
 {
-  uintptr_t st = 1;
-  uintptr_t i;
+  uintptr_t st = 1, i;
   for(;;){
     i = 4096;
     do {
@@ -273,13 +271,14 @@ WriteLock::WriteLock()
   }
 }
 //---------------------------------------------------------------------------
-void WriteLock::acquire()
+WriteLock & WriteLock::acquire()
 {
   DWORD r = WaitForSingleObject(sem_,INFINITE);
   if( r == WAIT_FAILED || (r != WAIT_OBJECT_0 && r != WAIT_ABANDONED) ){
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
+  return *this;
 }
 //---------------------------------------------------------------------------
 bool WriteLock::tryAcquire()
@@ -292,12 +291,13 @@ bool WriteLock::tryAcquire()
   return r == WAIT_OBJECT_0 || r == WAIT_ABANDONED;
 }
 //---------------------------------------------------------------------------
-void WriteLock::release()
+WriteLock & WriteLock::release()
 {
   if( ReleaseSemaphore(sem_,1,NULL) == 0 ){
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
+  return *this;
 }
 //---------------------------------------------------------------------------
 #elif HAVE_PTHREAD_H
@@ -328,11 +328,12 @@ WriteLock::WriteLock()
   }
 }
 //---------------------------------------------------------------------------
-void WriteLock::acquire()
+WriteLock & WriteLock::acquire()
 {
   int r = pthread_mutex_lock(&mutex_);
   if( r != 0 )
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  return *this;
 }
 //---------------------------------------------------------------------------
 bool WriteLock::tryAcquire()
@@ -342,11 +343,12 @@ bool WriteLock::tryAcquire()
   return r == 0;
 }
 //---------------------------------------------------------------------------
-void WriteLock::release()
+WriteLock & WriteLock::release()
 {
   int r = pthread_mutex_unlock(&mutex_);
   if( r != 0 )
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
+  return *this;
 }
 //---------------------------------------------------------------------------
 #endif

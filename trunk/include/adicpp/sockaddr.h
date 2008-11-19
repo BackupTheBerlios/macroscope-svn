@@ -52,7 +52,7 @@ class SockAddr {
   friend void ksys::initialize(int argc,char ** argv);
   friend void ksys::cleanup();
   public:
-    virtual ~SockAddr() {}
+    ~SockAddr() {}
     SockAddr() {}
     union {
       struct sockaddr_in  addr4_;

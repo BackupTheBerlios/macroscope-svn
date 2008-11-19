@@ -52,7 +52,7 @@ void AcceptFiber::fiberExecute()
     }
   }
   catch( ksys::ExceptionSP & e ){
-    mutex_.acquire();
+    mutex_.acquire().release();
 #if defined(__WIN32__) || defined(__WIN64__)
     if( e->code() != ERROR_OPERATION_ABORTED + ksys::errorOffset &&
         e->code() != WSAENOTSOCK + ksys::errorOffset) throw;

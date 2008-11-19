@@ -407,7 +407,7 @@ HashedObjectListHash<TKey,TObj> & HashedObjectListHash<TKey,TObj>::slotCount(uin
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <class TKey,class TObj,class D = AutoPtrClassDestructor<TObj> > class HashedObjectList {
+template <class TKey,class TObj,class D = AutoPtrClassDestructor> class HashedObjectList {
   public:
     virtual ~HashedObjectList();
     HashedObjectList();

@@ -38,9 +38,9 @@ class LiteWriteLock {
     ~LiteWriteLock();
     LiteWriteLock();
 
-    void acquire();
+    LiteWriteLock & acquire();
     bool tryAcquire();
-    void release();
+    LiteWriteLock & release();
 
     static void (* acquire_)(volatile ilock_t & ref);
     static void singleAcquire(volatile ilock_t & ref);
@@ -65,9 +65,10 @@ inline LiteWriteLock::LiteWriteLock() : refCount_(0)
 {
 }
 //---------------------------------------------------------------------------
-inline void LiteWriteLock::acquire()
+inline LiteWriteLock & LiteWriteLock::acquire()
 {
   acquire_(refCount_);
+  return *this;
 }
 //---------------------------------------------------------------------------
 inline bool LiteWriteLock::tryAcquire()
@@ -75,9 +76,10 @@ inline bool LiteWriteLock::tryAcquire()
   return interlockedCompareExchange(refCount_,-1,0) == 0;
 }
 //---------------------------------------------------------------------------
-inline void LiteWriteLock::release()
+inline LiteWriteLock & LiteWriteLock::release()
 {
   interlockedIncrement(refCount_,1);
+  return *this;
 }
 //---------------------------------------------------------------------------
 class AutoILock {
@@ -178,9 +180,9 @@ class WriteLock {
     ~WriteLock();
     WriteLock();
 
-    void acquire();
+    WriteLock & acquire();
     bool tryAcquire();
-    void release();
+    WriteLock & release();
   protected:
   private:
 #if defined(__WIN32__) || defined(__WIN64__)

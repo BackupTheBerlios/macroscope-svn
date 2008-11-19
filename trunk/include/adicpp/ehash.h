@@ -77,7 +77,7 @@ template <
   T & (*O) (const EmbeddedHashNode<T,LT> &,T *),             // must return object of node embedded
   uintptr_t (*H)(const T &),                                 // must return computed hash of object key
   bool (*E) (const T &, const T &),                          // must return true if objects keys equals
-  class D = AutoPtrClassDestructor<T>
+  class D = AutoPtrClassDestructor
 >
 class EmbeddedHash {
   // member methods declared inside class for borland (bugland) compiler compatibility

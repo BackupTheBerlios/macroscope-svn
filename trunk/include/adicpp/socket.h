@@ -195,7 +195,7 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
   protected:
     virtual bool isValidUser(const utf8::String & /*user*/){ return false; }
     virtual utf8::String getUserPassword(const utf8::String & /*user*/,const AuthParams * /*ap*/){ return utf8::String(); }
-    ksys::AutoPtr<SockAddr> remoteAddress_; // client address which accept returns
+    ksys::AutoPtr<SockAddr,AutoPtrNonVirtualClassDestructor> remoteAddress_; // client address which accept returns
   private:
     static const uint8_t authMagic_[16];
     static const uint8_t authMagic2_[16];
@@ -214,11 +214,10 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
 
     class AcceptExBuffer {
       public:
-        virtual ~AcceptExBuffer() {}
         uint8_t pLocalAddr4_[sizeof(struct sockaddr_in) + 16];
         uint8_t pRemoteAddr4_[sizeof(struct sockaddr_in) + 16];
     };
-    ksys::AutoPtr<AcceptExBuffer> pAcceptExBuffer_;
+    ksys::AutoPtr<AcceptExBuffer,AutoPtrNonVirtualClassDestructor> pAcceptExBuffer_;
 
     BOOL    AcceptEx(SOCKET sAcceptSocket, PVOID lpOutputBuffer, DWORD dwReceiveDataLength, DWORD dwLocalAddressLength, DWORD dwRemoteAddressLength, LPDWORD lpdwBytesReceived, LPOVERLAPPED lpOverlapped);
 

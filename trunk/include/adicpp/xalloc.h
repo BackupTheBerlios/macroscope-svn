@@ -107,16 +107,34 @@ template <typename T> inline void deleteObject(const T * object)
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T> class AutoPtrClassDestructor {
+class AutoPtrClassDestructor {
   public:
-    static void destroyObject(T * object)
+    template <typename T> static void destroyObject(T * object)
     {
       deleteObject(object);
     }
 
-    static void destroyObject(const T * object)
+    template <typename T> static void destroyObject(const T * object)
     {
       deleteObject(object);
+    }
+};
+class AutoPtrNonVirtualClassDestructor {
+  public:
+    template <typename T> static void destroyObject(T * object)
+    {
+      if( object != NULL ){
+        object->~T();
+        ksys::kfree(object);
+      }
+    }
+
+    template <typename T> static void destroyObject(const T * object)
+    {
+      if( object != NULL ){
+        const_cast<T *>(object)->~T();
+        ksys::kfree(const_cast<T *>(object));
+      }
     }
 };
 class AutoPtrMemoryDestructor {
@@ -140,7 +158,7 @@ class AutoPtrNullDestructor {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T,class D = AutoPtrClassDestructor<T> >
+template <typename T,class D = AutoPtrClassDestructor>
 class XAutoPtr {
   public:
     ~XAutoPtr() { D::destroyObject(ptr_); }

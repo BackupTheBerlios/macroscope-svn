@@ -31,7 +31,7 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-template <typename T,class D = AutoPtrClassDestructor<T> > class AutoPtr {
+template <typename T,class D = AutoPtrClassDestructor> class AutoPtr {
   public:
     AutoPtr(T * ptr = NULL);
     ~AutoPtr();
