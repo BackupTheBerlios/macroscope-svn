@@ -1699,7 +1699,6 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
 {
   bool r = false;
 #if defined(__WIN32__) || defined(__WIN64__)
-  if( dcn != NULL ){
   intptr_t i;
   if( isWin9x() ){
     AutoLock<LiteWriteLock> lock(wdcnRequestsReadWriteLock_);
@@ -1709,14 +1708,14 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
       wdcnSlaves_[i].post();
       wdcnSlaves_[i].Thread::wait();
       wdcnSlaves_.remove(i);
-      if( r ) break;
+      if( dcn != NULL && r ) break;
     }
   }
   else {
     AutoLock<LiteWriteLock> lock(ioRequestsReadWriteLock_);
     for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
       r = ioSlaves_[i].abortNotification(dcn);
-      if( dcn != NULL ) break;
+      if( dcn != NULL && r ) break;
     }
   }
 #endif
