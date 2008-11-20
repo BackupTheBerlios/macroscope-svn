@@ -602,7 +602,7 @@ inline Requester & Requester::requester()
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class BaseServer {
+class BaseServer : public Object {
   friend class Fiber;
   friend class BaseThread;
   public:
@@ -632,10 +632,14 @@ class BaseServer {
 
     virtual void attachFiber(Fiber & fiber);
     virtual void attachFiber(const AutoPtr<Fiber> & fiber);
+    
+    virtual void open() {}
+    virtual void close() {}
   protected:
     virtual BaseThread * newThread();
     virtual Fiber * newFiber() = 0;
     virtual void maintainFiber(Fiber * fiber);
+    void beforeDestruction() { close(); }
     void maintainFibers();
     void abortNotification(DirectoryChangeNotification * dcn = NULL);
     void sweepThreads();

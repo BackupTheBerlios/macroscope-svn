@@ -326,12 +326,19 @@ utf8::String Config::getToken(TokenType & tt, bool throwUnexpectedEof)
   t = tt = ttUnknown;
   for(;;){
     if( aheadi_.eos() ){
-      if( file_.getString(ahead_,buffer_) ){
+      for(;;){
+        if( file_.getString(ahead_,buffer_) ){
+          ahead_.resize(0);
+          t = ttEof;
+	  break;
+        }
+        else {
+          line_++;
+        }
+	if( ahead_.isValid() ) break;
+        AutoPtr<EConfig> e(newObjectV1C2<EConfig>(this,"invalid string, will be skipped"));
+        e->writeStdError();
         ahead_.resize(0);
-        t = ttEof;
-      }
-      else {
-        line_++;
       }
       aheadi_ = ahead_;
     }

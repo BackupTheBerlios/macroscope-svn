@@ -38,7 +38,7 @@ String::Container * String::Container::container(uintptr_t l)
 {
   ksys::AutoPtr<char,AutoPtrMemoryDestructor> string;
   string.alloc(l + 1);
-  String::Container * cp = newObjectV1V2<Container>(0,string.ptr());
+  String::Container * cp = newObjectV1V2<Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,string.ptr());
   string.ptr(NULL);
   return cp;
 }
@@ -86,7 +86,7 @@ String plane(const char * s,uintptr_t size)
 //---------------------------------------------------------------------------
 String plane0(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s)
 {
-  String::Container * container = newObjectV1V2<String::Container>(0,s.ptr());
+  String::Container * container = newObjectV1V2<String::Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,s.ptr());
   s.ptr(NULL);
   return container;
 }
@@ -309,7 +309,7 @@ String String::lower() const
     container = Container::container(l);
     utf8s2Lower(container->string_, l + 1, container_->string_, l + 1);
     if( memcmp(container->string_, container_->string_, l) == 0 ){
-      deleteObject(container);
+      delete container;
       container = container_.ptr();
     }
   }
@@ -327,7 +327,7 @@ String String::upper() const
     container = Container::container(l);
     utf8s2Upper(container->string_, l + 1, container_->string_, l + 1);
     if( memcmp(container->string_, container_->string_, l) == 0 ){
-      deleteObject(container);
+      delete container;
       container = container_.ptr();
     }
   }
@@ -718,6 +718,33 @@ String String::middle(uintptr_t pos, uintptr_t symbols) const
   Iterator i(*this);
   i += pos;
   return String(i, i + symbols);
+}
+//---------------------------------------------------------------------------
+bool String::isValid() const
+{
+  const unsigned char * p = container_->ustring_;
+  while( *p != '\0' ){
+    uintptr_t l, c = utf82ucs(p,l);
+    if( c > 0x7FFFFFFF ) return false;
+    switch( l ){
+      case 6 :
+        if( *p++ == '\0' ) return false;
+      case 5 :
+        if( *p++ == '\0' ) return false;
+      case 4 :
+        if( *p++ == '\0' ) return false;
+      case 3 :
+        if( *p++ == '\0' ) return false;
+      case 2 :
+        if( *p++ == '\0' ) return false;
+      case 1 :
+        if( *p++ == '\0' ) return false;
+        break;
+      case 0 :
+        return false;
+    }
+  }
+  return true;
 }
 //---------------------------------------------------------------------------
 String String::catPrint(const char * fmt, ...)
@@ -1797,7 +1824,7 @@ String::Stream & String::Stream::operator << (const Format & a)
 utf8::String String::Stream::string()
 {
   if( stream_.ptr() == NULL ) return String();
-  String::Container * container = newObjectV1V2<String::Container>(0,stream_.ptr());
+  String::Container * container = newObjectV1V2<String::Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,stream_.ptr());
   stream_.ptr(NULL);
   count_ = 0;
   return container;

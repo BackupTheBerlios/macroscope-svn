@@ -1013,7 +1013,7 @@ BOOL AsyncSocket::Connect(HANDLE event,ksys::AsyncEvent * request)
   return
     api.connect(
       socket_,
-      (struct sockaddr *) &request->address_,
+      (struct sockaddr *) &((SockAddr *) request->address_)->addr4_,
       ((SockAddr *) request->address_)->sockAddrSize()
     ) != SOCKET_ERROR ? TRUE : FALSE;
 }
@@ -1067,7 +1067,7 @@ void AsyncSocket::connect(ksys::AsyncEvent * request)
   errno = 0;
   api.connect(
     socket_,
-    (const struct sockaddr *) &request->address_,
+    (const struct sockaddr *) &((SockAddr *) request->address_)->addr4_,
     (socklen_t) ((SockAddr *) request->address_)->sockAddrSize()
   );
 }

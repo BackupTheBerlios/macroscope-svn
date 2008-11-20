@@ -92,7 +92,7 @@ utf8::String CGI::uudecode(const utf8::String & string)
     }
     b[count] = '\0';
     b.realloc(count + 1);
-    utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,b.ptr());
+    utf8::String::Container * container = newObjectV1V2<utf8::String::Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,b.ptr());
     b.ptr(NULL);
     return container;
   }
@@ -127,7 +127,7 @@ void CGI::initalizeByMethodPOST()
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
     b[count] = '\0';
-    utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,b.ptr());
+    utf8::String::Container * container = newObjectV1V2<utf8::String::Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,b.ptr());
     b.ptr(NULL);
     queryString_ = container;
   }

@@ -53,7 +53,7 @@ class SockAddr {
   friend void ksys::cleanup();
   public:
     ~SockAddr() {}
-    SockAddr() {}
+    SockAddr() { clear(); }
     union {
       struct sockaddr_in  addr4_;
 #if SIZEOF_SOCKADDR_IN6
@@ -86,7 +86,7 @@ class SockAddr {
     socklen_t sockAddrSize() const;
     socklen_t addrSize() const;
 
-    SockAddr & clear();
+    SockAddr & clear(uintptr_t family = PF_INET);
     
     static utf8::String addr2Index(const struct in_addr & addr);
     static utf8::String saddr2Index(const struct sockaddr_in & addr);

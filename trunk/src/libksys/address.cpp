@@ -34,18 +34,18 @@ namespace ksock {
 #pragma option push -w-8004
 #endif
 //------------------------------------------------------------------------------
-SockAddr & SockAddr::clear()
+SockAddr & SockAddr::clear(uintptr_t family)
 {
 #if SIZEOF_SOCKADDR_IN6
   memset(&addr6_,0,sizeof(addr6_));
 #if SIZEOF_SOCKADDR_IN6_SIN6_LEN
-  addr6_.sin6_len = sizeof(addr6_);
+  //addr6_.sin6_len = sizeof(addr6_);
 #endif
-  addr6_.sin6_family = PF_INET6;
+  //addr6_.sin6_family = PF_INET6;
 #else
   memset(&addr4_,0,sizeof(addr4_));
-  addr4_.sin_family = PF_INET;
 #endif
+  addr4_.sin_family = uint8_t(family);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -106,7 +106,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
       else {
         s = he->h_name;
         addr4_.sin_family = he->h_addrtype;
-	      memcpy(&addr4_.sin_addr,he->h_addr_list[0],he->h_length);
+        memcpy(&addr4_.sin_addr,he->h_addr_list[0],he->h_length);
       }
     }
     else {
@@ -154,7 +154,8 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   if( (ksys::isWin9x() || api.GetAddrInfoW == NULL) && api.freeaddrinfo != NULL ){
     for( res = aiList; res != NULL; res = res->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
-      memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
+      if( addr4_.sin_family == res->ai_addr.sa_family )
+        memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
     }
     api.freeaddrinfo(aiList);
   }
@@ -163,14 +164,16 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   else {
     for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
-      memcpy(&addr4_,resW->ai_addr,resW->ai_addrlen);
+      if( addr4_.sin_family == resW->ai_addr.sa_family )
+        memcpy(&addr4_,resW->ai_addr,resW->ai_addrlen);
     }
     api.FreeAddrInfoW(aiListW);
   }
 #else
   for( res = aiList; res != NULL; res = res->ai_next ){
     if( res->ai_canonname != NULL ) s = res->ai_canonname;
-    memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
+    if( addr4_.sin_family == res->ai_addr->sa_family )
+      memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
   }
   api.freeaddrinfo(aiList);
 #endif
@@ -190,7 +193,7 @@ SockAddr & SockAddr::resolveName(const utf8::String & addr,const ksys::Mutant & 
     fiber->switchFiber(fiber->mainFiber());
     assert( fiber->event_.type_ == ksys::etResolveName );
     if( fiber->event_.errno_ != 0 )
-      newObjectV1C2<EAsyncSocket>(fiber->event_.errno_,__PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<EAsyncSocket>(fiber->event_.errno_,addr + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     memcpy(&addr4_,&((SockAddr *) fiber->event_.address_)->addr4_,((SockAddr *) fiber->event_.address_)->sockAddrSize());
   }
   else {

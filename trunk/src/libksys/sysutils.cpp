@@ -777,7 +777,7 @@ utf8::String screenString(const utf8::String & s)
   char * q = a;
   for( p = s.c_str(); *p != '\0'; p += seql, q += l ) screenChar(p,seql,q,l);
   a[len] = '\0';
-  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,a.ptr());
+  utf8::String::Container * container = newObjectV1V2<utf8::String::Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,a.ptr());
   a.ptr(NULL);
   return container;
 }
@@ -934,7 +934,7 @@ utf8::String unScreenString(const utf8::String & s)
     }
   }
   a[len] = '\0';
-  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,a.ptr());
+  utf8::String::Container * container = newObjectV1V2<utf8::String::Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,a.ptr());
   a.ptr(NULL);
   return container;
 }
@@ -3530,15 +3530,21 @@ static inline Semaphore & signalsCountersSem()
 {
   return *reinterpret_cast<Semaphore *>(signalsCountersSemPlaceHolder);
 }
+
 void waitForSignalsSemaphore()
 {
   signalsCountersSem().wait();
 }
+
 volatile uilock_t signalsCounters[_SIG_MAXSIG];
-static void sigHandler(int sig,siginfo_t * siginfo,ucontext_t * uap)
+static void sigHandler(int sig,siginfo_t * /*siginfo*/,ucontext_t * /*uap*/)
 {
   interlockedIncrement(signalsCounters[sig - 1],1);
   signalsCountersSem().post();
+}
+
+static void sigSYSHandler(int sig,siginfo_t * /*siginfo*/,ucontext_t * /*uap*/)
+{
 }
 #endif
 //---------------------------------------------------------------------------
@@ -3588,14 +3594,18 @@ void initialize(int argc,char ** argv)
   if( processStartTime == 0 ) processStartTime = gettimeofday();
 #if HAVE_SIGNAL_H
   new (signalsCountersSemPlaceHolder) Semaphore;
+  struct sigaction act;
+  memset(&act,0,sizeof(act));
+  act.sa_flags = SA_SIGINFO;
+  act.sa_handler = (void (*)(int)) sigSYSHandler;
   sigset_t ss;
   if( sigemptyset(&ss) != 0 ||
       sigaddset(&ss,SIGSYS) != 0 ||
-      sigprocmask(SIG_BLOCK,&ss,NULL) != 0 ){
+      sigprocmask(SIG_BLOCK,&ss,NULL) != 0 ||
+      sigaction(SIGSYS,&act,NULL) != 0 ){
     perror(NULL);
     abort();
   }
-  struct sigaction act;//, oact;
   memset(&act,0,sizeof(act));
   act.sa_flags = SA_SIGINFO;
   act.sa_handler = (void (*)(int)) sigHandler;

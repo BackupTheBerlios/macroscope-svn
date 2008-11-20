@@ -1082,7 +1082,7 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
   dbParamsSection.addSection(config_->sectionByPath(connection));
   AutoPtr<Database> database(Database::newDatabase(&dbParamsSection));
   AutoPtr<Database> database2(Database::newDatabase(&dbParamsSection));
-  AutoPtr<Sniffer> sniffer(newObjectV1V2<Sniffer>(database.ptr(),database2.ptr()));
+  AutoPtr<Sniffer> sniffer(newObjectV1V2<Sniffer,Database *,Database *,AutoPtrClassDestructor>(database.ptr(),database2.ptr()));
   database.ptr(NULL);
   database2.ptr(NULL);
   sniffer->ifName(sectionName);

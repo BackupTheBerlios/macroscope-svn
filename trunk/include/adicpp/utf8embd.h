@@ -94,20 +94,9 @@ inline uintptr_t imul11(uintptr_t c)
   return c * 8u + c * 2u + c;
 }
 //---------------------------------------------------------------------------
-inline uintptr_t getC1Type(uintptr_t c)
-{
-  return *(uint16_t *) ((uint8_t *) C1Table + c * 9u / 8u) >> (c * 9u % 8u);
-}
-//---------------------------------------------------------------------------
-inline uintptr_t getC2Type(uintptr_t c)
-{
-  return *((uint8_t *) C2Table + c * 4u / 8u) >> (c * 4u % 8u);
-}
-//---------------------------------------------------------------------------
-inline uintptr_t getC3Type(uintptr_t c)
-{
-  return *(uint16_t *) ((uint8_t *) C3Table + imul11(c) / 8u) >> (imul11(c) % 8u);
-}
+uintptr_t getC1Type(uintptr_t c);
+uintptr_t getC2Type(uintptr_t c);
+uintptr_t getC3Type(uintptr_t c);
 //---------------------------------------------------------------------------
 struct utf8cp {
   const uint8_t * cps2utf8s;

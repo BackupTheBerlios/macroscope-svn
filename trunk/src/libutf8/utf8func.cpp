@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2007 Guram Dukashvili
+ * Copyright 2005-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -264,30 +264,39 @@ fd:   if( c < 0x100 ){
   return r;
 }
 //---------------------------------------------------------------------------
+static uint16_t lowerBuffer[0x10000];
+//---------------------------------------------------------------------------
 uintptr_t utf8s2Lower(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uintptr_t utf8lS)
 {
-  intptr_t  r = 0, l = utf8lD, low , high ;
+  intptr_t r = 0, l = utf8lD, low, high;
 
   while( utf8lS > 0 ){
     uintptr_t c = 0;
-    r = utf82ucs(*(const unsigned char **) &utf8sS, utf8lS, c);
+    r = utf82ucs(*(const unsigned char **) &utf8sS,utf8lS,c);
     if( r != 0 ) break;
-    low = 0;
-    high = (sizeof(lowerTable) / sizeof(lowerTable[0])) / 2 - 1;
-    while( low <= high ){
-      const uint16_t *  p = lowerTable + ((low + high) / 2) * 2;
-      if( c > (uintptr_t) *p ){
-        low = (p - lowerTable) / 2 + 1;
+    uintptr_t k = c;
+    if( c < 0x10000 ){
+      if( lowerBuffer[k] == 0 ){
+        low = 0;
+        high = (sizeof(lowerTable) / sizeof(lowerTable[0])) / 2 - 1;
+        while( low <= high ){
+          const uint16_t *  p = lowerTable + ((low + high) / 2) * 2;
+          if( c > (uintptr_t) *p ){
+            low = (p - lowerTable) / 2 + 1;
+          }
+          else if( c < (uintptr_t) *p ){
+            high = (p - lowerTable) / 2 - 1;
+          }
+          else{
+            c = p[1];
+            break;
+          }
+        }
+        lowerBuffer[k] = (uint16_t) c;
       }
-      else if( c < (uintptr_t) *p ){
-        high = (p - lowerTable) / 2 - 1;
-      }
-      else{
-        c = p[1];
-        break;
-      }
+      c = lowerBuffer[k];
     }
-    r = ucs2utf8(*(unsigned char **) &utf8sD, utf8lD, c);
+    r = ucs2utf8(*(unsigned char **) &utf8sD,utf8lD,c);
     if( c == 0 || (r != 0 && r != -2) ) break;
   }
   if( r < 0 ){
@@ -297,28 +306,37 @@ uintptr_t utf8s2Lower(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uint
   return r;
 }
 //---------------------------------------------------------------------------
+static uint16_t upperBuffer[0x10000];
+//---------------------------------------------------------------------------
 uintptr_t utf8s2Upper(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uintptr_t utf8lS)
 {
-  intptr_t  r = 0, l = utf8lD, low , high ;
+  intptr_t r = 0, l = utf8lD, low, high;
 
   while( utf8lS > 0 ){
     uintptr_t c = 0;
     r = utf82ucs(*(const unsigned char **) &utf8sS, utf8lS, c);
     if( r != 0 ) break;
-    low = 0;
-    high = (sizeof(upperTable) / sizeof(upperTable[0])) / 2 - 1;
-    while( low <= high ){
-      const uint16_t *  p = upperTable + ((low + high) / 2) * 2;
-      if( c > (uintptr_t) *p ){
-        low = (p - upperTable) / 2 + 1;
+    uintptr_t k = c;
+    if( c < 0x10000 ){
+      if( upperBuffer[k] == 0 ){
+        low = 0;
+        high = (sizeof(upperTable) / sizeof(upperTable[0])) / 2 - 1;
+        while( low <= high ){
+          const uint16_t *  p = upperTable + ((low + high) / 2) * 2;
+          if( c > (uintptr_t) *p ){
+            low = (p - upperTable) / 2 + 1;
+          }
+          else if( c < (uintptr_t) *p ){
+            high = (p - upperTable) / 2 - 1;
+          }
+          else{
+            c = p[1];
+            break;
+          }
+        }
+        upperBuffer[k] = (uint16_t) c;
       }
-      else if( c < (uintptr_t) *p ){
-        high = (p - upperTable) / 2 - 1;
-      }
-      else{
-        c = p[1];
-        break;
-      }
+      c = upperBuffer[k];
     }
     r = ucs2utf8(*(unsigned char **) &utf8sD, utf8lD, c);
     if( c == 0 || (r != 0 && r != -2) ) break;
@@ -377,8 +395,6 @@ uintptr_t utf8strlen(const char * utf8s, uintptr_t l, uintptr_t & size)
   return q;
 }
 //---------------------------------------------------------------------------
-static uint16_t lowerBuffer[65536];
-//---------------------------------------------------------------------------
 uintptr_t utf8c2LowerUCS(const char * utf8s)
 {
   uintptr_t c = utf82ucs((const unsigned char *) utf8s);
@@ -432,8 +448,6 @@ uintptr_t utf8c2LowerUCS(const char * utf8s, uintptr_t & l)
   }
   return c;
 }
-//---------------------------------------------------------------------------
-static uint16_t upperBuffer[65536];
 //---------------------------------------------------------------------------
 uintptr_t utf8c2UpperUCS(const char * utf8s)
 {

@@ -186,6 +186,13 @@ static void GenEmbed()
   fprintf(file, "\n};\n");
   fprintf(file,
     "//---------------------------------------------------------------------------\n"
+    "uintptr_t getC1Type(uintptr_t c)\n"
+    "{\n"
+    "  uintptr_t i = c * 9u / 8u;\n"
+    "  if( i >= sizeof(C1Table) / sizeof(C1Table[0]) ) return 0;\n"
+    "  return *(uint16_t *) ((uint8_t *) C1Table + i) >> (c * 9u % 8u);\n"
+    "}\n"
+    "//---------------------------------------------------------------------------\n"
     "} // namespace utf8\n"
     "//---------------------------------------------------------------------------\n"
   );
@@ -209,6 +216,13 @@ static void GenEmbed()
   }
   fprintf(file, "\n};\n");
   fprintf(file,
+    "//---------------------------------------------------------------------------\n"
+    "uintptr_t getC2Type(uintptr_t c)\n"
+    "{\n"
+    "  uintptr_t i = c * 4u / 8u;\n"
+    "  if( i >= sizeof(C2Table) / sizeof(C2Table[0]) ) return 0;\n"
+    "  return *((uint8_t *) C2Table + i) >> (c * 4u % 8u);\n"
+    "}\n"
     "//---------------------------------------------------------------------------\n"
     "} // namespace utf8\n"
     "//---------------------------------------------------------------------------\n"
@@ -234,6 +248,12 @@ static void GenEmbed()
   fprintf(file, "\n};\n");
   fprintf(file,
     "//---------------------------------------------------------------------------\n"
+    "uintptr_t getC3Type(uintptr_t c)\n"
+    "{\n"
+    "  uintptr_t i = imul11(c) / 8u;\n"
+    "  if( i >= sizeof(C3Table) / sizeof(C3Table[0]) ) return 0;\n"
+    "  return *(uint16_t *) ((uint8_t *) C3Table + i) >> (imul11(c) % 8u);\n"
+    "}\n"
     "} // namespace utf8\n"
     "//---------------------------------------------------------------------------\n"
   );

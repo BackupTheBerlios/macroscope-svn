@@ -151,7 +151,7 @@ class String {
             unsigned char * ustring_;
         };
 
-        virtual ~Container();
+        ~Container();
         Container();
         Container(int32_t refCount,char * string);
 
@@ -437,6 +437,8 @@ class String {
     String left(uintptr_t symbols) const;
     String right(uintptr_t symbols) const;
     String middle(uintptr_t pos, uintptr_t symbols) const;
+    
+    bool isValid() const;
 
     static String       print(const char * fmt, ...);
     String              catPrint(const char * fmt, ...);
@@ -494,7 +496,7 @@ inline void String::Container::addRef()
 //---------------------------------------------------------------------------
 inline void String::Container::remRef()
 {
-  if( ksys::interlockedIncrement(refCount_,-1) == 1 ) deleteObject(this);
+  if( ksys::interlockedIncrement(refCount_,-1) == 1 ) delete this;
 }
 //---------------------------------------------------------------------------
 inline void String::Container::release()

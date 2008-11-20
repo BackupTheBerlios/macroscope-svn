@@ -495,8 +495,8 @@ class Server : public ksys::BaseServer {
     virtual ~Server();
     Server();
 
-    virtual void open();
-    virtual void close();
+    void open();
+    void close();
 
     Server & clearBind();
     Server & addBind(const SockAddr & addr);
@@ -550,17 +550,15 @@ class Client : public ksys::BaseServer {
     virtual ~Client();
     Client();
 
-    virtual void open();
-    virtual void close();
+    void open();
+    void close();
   protected:
   private:
-    void fiberExecute();
     ksys::Fiber * newFiber(){ return NULL; }
 };
 //------------------------------------------------------------------------------
 inline Client::~Client()
 {
-  close();
 }
 //------------------------------------------------------------------------------
 inline Client::Client()

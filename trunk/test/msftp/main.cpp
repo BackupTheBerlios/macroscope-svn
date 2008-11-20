@@ -40,8 +40,7 @@ class KFTPShell;
 class KFTPClient : public ksock::ClientFiber {
   public:
     virtual ~KFTPClient();
-    KFTPClient() {}
-    KFTPClient(KFTPShell & shell,const utf8::String & section);
+    KFTPClient(KFTPShell * shell = NULL,const utf8::String & section = utf8::String());
   protected:
     void main();
   private:
@@ -64,7 +63,7 @@ class KFTPClient : public ksock::ClientFiber {
 class KFTPShell : public ksock::Client {
   friend class KFTPClient;
   public:
-    ~KFTPShell();
+    virtual ~KFTPShell();
     KFTPShell(int & errorCode);
 
     void open();
@@ -80,8 +79,8 @@ KFTPClient::~KFTPClient()
 {
 }
 //------------------------------------------------------------------------------
-KFTPClient::KFTPClient(KFTPShell & shell,const utf8::String & section) :
-  shell_(&shell), section_(section), log_(&stdErr)
+KFTPClient::KFTPClient(KFTPShell * shell,const utf8::String & section) :
+  shell_(shell), section_(section), log_(&stdErr)
 {
   host_ = shell_->config_->section(section_).text();
 }
@@ -892,6 +891,7 @@ void KFTPClient::main()
     getCode();
   }
   catch( ExceptionSP & e ){
+    shell_ = shell_;
     shell_->errorCode_ = e->code() == 0 ? EPERM : e->code();
     log_->debug(8,utf8::String::Stream() << section_ << " " << host_ << " incomplete.\n");
     log_->close();
@@ -909,7 +909,6 @@ void KFTPClient::main()
 //------------------------------------------------------------------------------
 KFTPShell::~KFTPShell()
 {
-  close();
 }
 //------------------------------------------------------------------------------
 KFTPShell::KFTPShell(int & errorCode) :
@@ -945,7 +944,7 @@ void KFTPShell::open()
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.ncasecompare("job",3) == 0 )
-      attachFiber(newObjectR1C2<KFTPClient>(*this,sectionName));
+      attachFiber(newObjectR1C2<KFTPClient>(this,sectionName));
   }
 }
 //------------------------------------------------------------------------------
@@ -988,8 +987,8 @@ int main(int _argc,char * _argv[])
       }
     }
     if( dispatch ){
-      KFTPShell shell(errcode);
-      shell.open();
+      AutoPtr<KFTPShell> shell(newObjectR1<KFTPShell>(errcode));
+      shell->open();
     }
   }
   catch( ExceptionSP & e ){

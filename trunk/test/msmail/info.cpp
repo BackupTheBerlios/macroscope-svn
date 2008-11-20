@@ -81,7 +81,7 @@ utf8::String Message::valueHelper(Attribute * p) const
   s.alloc((uintptr_t) p->size_ + 1);
   s[(uintptr_t) p->size_] = '\0';
   file_.readBuffer(p->index_,s,p->size_);
-  utf8::String::Container * container = newObjectV1V2<utf8::String::Container>(0,s.ptr());
+  utf8::String::Container * container = newObjectV1V2<utf8::String::Container,int,char *,AutoPtrNonVirtualClassDestructor>(0,s.ptr());
   s.ptr(NULL);
   utf8::String ss(container);
   if( utf8::String(p->key_).c_str()[0] != '#' ) ss = unScreenString(ss);
