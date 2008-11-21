@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,8 +83,8 @@ SerialPortFiber::~SerialPortFiber()
 {
 }
 //------------------------------------------------------------------------------
-SerialPortFiber::SerialPortFiber(MSSerialService & service,SerialPortControl * control) :
-  service_(&service), control_(control)
+SerialPortFiber::SerialPortFiber(MSSerialService * service,SerialPortControl * control) :
+  service_(service), control_(control)
 {
 }
 //------------------------------------------------------------------------------
@@ -136,7 +136,7 @@ void SerialPortFiber::main()
       control_->open(device);
     }
     if( control_->reader_ == NULL ){
-      control_->reader_ = newObjectR1V2<SerialPortFiber>(*service_,control_);
+      control_->reader_ = newObjectV1V2<SerialPortFiber>(service_,control_);
       control_->reader_->socket_ = socket_;
       socket_ = INVALID_SOCKET;
       thread()->server()->attachFiber(control_->reader_);
@@ -202,7 +202,7 @@ MSSerialService::MSSerialService() :
 //------------------------------------------------------------------------------
 Fiber * MSSerialService::newFiber()
 {
-  return newObjectR1<SerialPortFiber>(*this);
+  return newObjectV1<SerialPortFiber>(this);
 }
 //------------------------------------------------------------------------------
 void MSSerialService::start()
@@ -228,17 +228,16 @@ int main(int ac,char * av[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(ac,av);
   autoInitializer = autoInitializer;
+  bool isDaemon = isDaemonCommandLineOption();
+  if( isDaemon ) daemonize();
   try {
     uintptr_t u;
     stdErr.fileName(SYSLOG_DIR("msserial/") + "msserial.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msserial.conf");
     Services services(msserial_version.gnu_);
-    services.add(newObject<MSSerialService>());
-#if defined(__WIN32__) || defined(__WIN64__)
+    MSSerialService * service = newObject<MSSerialService>();
+    services.add(service);
     bool dispatch = true;
-#else
-    bool dispatch = false;
-#endif
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msserial_version.tex_ << "\n");
@@ -302,7 +301,18 @@ int main(int ac,char * av[])
         ConfigSP config(newObject<InterlockedConfig<FiberWriteLock> >());
         daemon = config->value("daemon",false);
       }
-      services.startServiceCtrlDispatcher(daemon);
+      if( !daemon && isDaemon ) daemon = true;
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( daemon ){
+        services.startServiceCtrlDispatcher();
+      }
+      else
+#endif
+      {
+        service->start();
+        Thread::waitForSignal();
+        service->stop();
+      }
     }
   }
   catch( ExceptionSP & e ){

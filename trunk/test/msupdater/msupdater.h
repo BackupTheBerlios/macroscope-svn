@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,8 +37,7 @@ class MSUpdateFetcher;
 class MSUpdateSetuper : public Fiber {
   public:
     virtual ~MSUpdateSetuper();
-    MSUpdateSetuper() {}
-    MSUpdateSetuper(MSUpdateFetcher & fetcher);
+    MSUpdateSetuper(MSUpdateFetcher * fetcher = NULL);
   protected:
     void fiberExecute();
   private:
@@ -52,8 +51,7 @@ class MSUpdateFetcher : public Fiber {
   friend class MSUpdateSetuper;
   public:
     virtual ~MSUpdateFetcher();
-    MSUpdateFetcher() {}
-    MSUpdateFetcher(MSUpdaterService & updater);
+    MSUpdateFetcher(MSUpdaterService * updater = NULL);
   protected:
     void fiberExecute();
   private:
@@ -63,22 +61,24 @@ class MSUpdateFetcher : public Fiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class MSUpdaterService : public Service, protected BaseServer {
+class MSUpdaterService : public Service, public BaseServer {
   friend class MSUpdateSetuper;
   friend class MSUpdateFetcher;
   public:
+    virtual ~MSUpdaterService() {}
     MSUpdaterService();
 
+    //void beforeDestruction() { BaseServer::beforeDestruction(); }
+
     static void genUpdatePackage(const utf8::String & setupConfigFile);
+    void start();
+    void stop();
+    bool active();
   protected:
   private:
     ConfigSP config_;
 
     Fiber * newFiber(){ return NULL; }
-
-    void start();
-    void stop();
-    bool active();
 };
 //------------------------------------------------------------------------------
 #endif

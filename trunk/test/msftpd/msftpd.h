@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,10 +68,10 @@ struct MSFTPStat {
   int32_t st_uid_;
   int32_t st_gid_;
   int16_t st_rdev_;
-  int64_t st_size_;
-  int64_t st_atime_;
-  int64_t st_mtime_;
-  int64_t st_ctime_;
+  uint64_t st_size_;
+  uint64_t st_atime_;
+  uint64_t st_mtime_;
+  uint64_t st_ctime_;
 
   bool stat(const utf8::String & pathName);
 };
@@ -90,9 +90,21 @@ inline bool MSFTPStat::stat(const utf8::String & pathName)
     st_gid_ = st.st_gid;
     st_rdev_ = (int16_t) st.st_rdev;
     st_size_ = st.st_size;
-    st_atime_ = st.st_atime;
-    st_mtime_ = st.st_mtime;
-    st_ctime_ = st.st_ctime;
+#if HAVE_STAT_ST_ATIMESPEC
+    st_atime_ = st.st_atimespec.tv_sec * uint64_t(1000000) + st.st_atimespec.tv_nsec;
+#else
+    st_atime_ = st.st_atime * uint64_t(1000000);
+#endif
+#if HAVE_STAT_ST_MTIMESPEC
+    st_mtime_ = st.st_mtimespec.tv_sec * uint64_t(1000000) + st.st_mtimespec.tv_nsec;
+#else
+    st_mtime_ = st.st_mtime * uint64_t(1000000);
+#endif
+#if HAVE_STAT_ST_CTIMESPEC
+    st_ctime_ = st.st_ctimespec.tv_sec * uint64_t(1000000) + st.st_ctimespec.tv_nsec;
+#else
+    st_ctime_ = st.st_ctime * uint64_t(1000000);
+#endif
   }
   return isSt;
 }

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2007 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,7 @@ MSUpdateSetuper::~MSUpdateSetuper()
 {
 }
 //------------------------------------------------------------------------------
-MSUpdateSetuper::MSUpdateSetuper(MSUpdateFetcher & fetcher) : fetcher_(&fetcher)
+MSUpdateSetuper::MSUpdateSetuper(MSUpdateFetcher * fetcher) : fetcher_(fetcher)
 {
 }
 //------------------------------------------------------------------------------
@@ -147,7 +147,7 @@ MSUpdateFetcher::~MSUpdateFetcher()
 {
 }
 //------------------------------------------------------------------------------
-MSUpdateFetcher::MSUpdateFetcher(MSUpdaterService & updater) : updater_(&updater)
+MSUpdateFetcher::MSUpdateFetcher(MSUpdaterService * updater) : updater_(updater)
 {
 }
 //------------------------------------------------------------------------------
@@ -241,7 +241,7 @@ void MSUpdateFetcher::fiberExecute()
         );
       }
       lastCheckUpdate = getlocaltimeofday();
-      thread()->server()->attachFiber(newObjectR1<MSUpdateSetuper>(*this));
+      thread()->server()->attachFiber(newObjectV1<MSUpdateSetuper>(this));
     }
     if( setupEnded ) ksleep(interval); else ksleep(1000000u);
   }
@@ -266,7 +266,7 @@ MSUpdaterService::MSUpdaterService() :
 //------------------------------------------------------------------------------
 void MSUpdaterService::start()
 {
-  attachFiber(newObjectR1<MSUpdateFetcher>(*this));
+  attachFiber(newObjectV1<MSUpdateFetcher>(this));
   stdErr.debug(0,utf8::String::Stream() << msupdater_version.gnu_ << " started\n");
 }
 //------------------------------------------------------------------------------
@@ -304,17 +304,16 @@ int main(int ac,char * av[])
   int errcode = 0;
   adicpp::AutoInitializer autoInitializer(ac,av);
   autoInitializer = autoInitializer;
+  bool isDaemon = isDaemonCommandLineOption();
+  if( isDaemon ) daemonize();
   try {
     uintptr_t u;
     stdErr.fileName(SYSLOG_DIR("msupdater/") + "msupdater.log");
     Config::defaultFileName(SYSCONF_DIR("") + "msupdater.conf");
     Services services(msupdater_version.gnu_);
-    services.add(newObject<MSUpdaterService>());
-#if defined(__WIN32__) || defined(__WIN64__)
+    MSUpdaterService * service = newObject<MSUpdaterService>();
+    services.add(service);
     bool dispatch = true;
-#else
-    bool dispatch = false;
-#endif
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << msupdater_version.tex_ << "\n");
@@ -381,7 +380,18 @@ int main(int ac,char * av[])
         ConfigSP config(newObject<InterlockedConfig<FiberWriteLock> >());
         daemon = config->value("daemon",false);
       }
-      services.startServiceCtrlDispatcher(daemon);
+      if( !daemon && isDaemon ) daemon = true;
+#if defined(__WIN32__) || defined(__WIN64__)
+      if( daemon ){
+        services.startServiceCtrlDispatcher();
+      }
+      else
+#endif
+      {
+        service->start();
+        Thread::waitForSignal();
+        service->stop();
+      }
     }
   }
   catch( ExceptionSP & e ){

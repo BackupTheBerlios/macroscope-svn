@@ -130,6 +130,52 @@ Fiber & Fiber::allocateStack(
   return *this;
 }
 //---------------------------------------------------------------------------
+#if !defined(__WIN32__) && !defined(__WIN64__)
+//---------------------------------------------------------------------------
+#if __i386__ && __GNUG__
+static inline uintptr_t getSP()
+{
+  uintptr_t a;
+  asm volatile ("mov %%esp,%%eax" : "=a" (a) : );
+  return a;
+}
+#endif
+#if __x86_64__ && __GNUG__
+static inline uintptr_t getSP()
+{
+  uintptr_t a;
+  asm volatile ("mov %%rsp,%%rax" : "=a" (a) : );
+  return a;
+}
+#endif
+//---------------------------------------------------------------------------
+void Fiber::checkFiberStackOverflow() const
+{
+#if HAVE_UCONTEXT_H
+  uintptr_t base = uintptr_t(context_.uc_stack.ss_sp);
+#else
+  uintptr_t base = uintptr_t(stack_.ptr());
+#endif
+  uintptr_t sp = getSP();
+  if( sp <= base ){
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack overflow\n").flush();
+  }
+  else if( sp <= base + 256 ){
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 256 reached\n").flush();
+  }
+  else if( sp <= base + 512 ){
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 512 reached\n").flush();
+  }
+  else if( sp <= base + 1024 ){
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 1024 reached\n").flush();
+  }
+  else if( sp <= base + 2048 ){
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 2048 reached\n").flush();
+  }
+}
+//---------------------------------------------------------------------------
+#endif
+//---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
 #elif HAVE_UCONTEXT_H
 #elif __i386__ && __GNUG__
@@ -351,58 +397,31 @@ void BaseServer::closeServer()
   EmbeddedListNode<Fiber> * bfp;
   BaseThread * thread;
   shutdown_ = true;
-  {
-    AutoLock<LiteWriteLock> lock(mutex_);
-    for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
-      thread = &BaseThread::serverListNodeObject(*btp);
-      AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
-      for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() ){
-        Fiber * fiber = &Fiber::nodeObject(*bfp);
-        if( how & csTerminate ) fiber->terminate();
-        fiber->fiberBreakExecution();
-      }
-    }
-  }
   for(;;){
     btp = NULL;
-    uint64_t fbtm, fbtmd = 100000;
+    uint64_t fbtm, fbtmd = 10000;
     for( fbtm = fiberTimeout_; fbtm > 0; fbtm -= fbtmd ){
       {
         AutoLock<LiteWriteLock> lock(mutex_);
-        for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
-          thread = &BaseThread::serverListNodeObject(*btp);
-          AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
-          if( thread->fibers_.count() > 0 ) break;
-        }
+	if( how & (csTerminate | csAbort) ){
+          for( btp = threads_.first(); btp != NULL; btp = btp->next() ){
+            thread = &BaseThread::serverListNodeObject(*btp);
+            AutoLock<LiteWriteLock> lock2(thread->fibersReadWriteLock_);
+            for( bfp = thread->fibers_.first(); bfp != NULL; bfp = bfp->next() ){
+              Fiber * fiber = &Fiber::nodeObject(*bfp);
+              if( how & csTerminate ) fiber->terminate();
+              if( how & csAbort ) fiber->fiberBreakExecution();
+            }
+          }
+	}
+	btp = threads_.first();
       }
       if( how & csAbort ) BaseThread::requester().abort();
       if( btp == NULL ) break;
       sweepThreads();
       fbtmd = fbtm > fbtmd ? fbtmd : fbtm;
-      if( how & csWait ){
-/*#if defined(__WIN32__) || defined(__WIN64__)
-        if( how & csDWM ){
-          MSG msg;
-          if( PeekMessage(&msg,NULL,0,0,PM_REMOVE) != 0 ){
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-            if( msg.message == fiberFinishMessage ){
-              sweepThreads();
-            }
-            else if( msg.message == WM_QUIT ){
-              how |= csShutdown;
-              fbtmd = fbtm;
-            }
-          }
-          else if( WaitMessage() == 0 ){
-            int32_t err = GetLastError() + errorOffset;
-            newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
-          }
-        }
-        else
-#endif*/
-        ksleep(fbtmd);
-      }
+      if( Thread::checkForSignal() > 0 ) how |= csShutdown | csAbort | csTerminate;
+      if( how & csWait ) ksleep(fbtmd);
     }
     if( btp == NULL ) break;
     if( how & csShutdown ){

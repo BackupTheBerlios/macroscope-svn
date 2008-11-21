@@ -347,6 +347,7 @@ AsyncSocket & AsyncSocket::connect(const SockAddr & addr)
 //------------------------------------------------------------------------------
 uint64_t AsyncSocket::sysRecv(void * buf,uint64_t len)
 {
+  ksys::currentFiber()->checkFiberStackOverflow();
   uint64_t r = 0;
   if( len > maxRecvSize_ ) len = maxRecvSize_;
 #if HAVE_KQUEUE || __linux__
@@ -489,6 +490,7 @@ AsyncSocket & AsyncSocket::read(void * buf,uint64_t len)
 //------------------------------------------------------------------------------
 uint64_t AsyncSocket::sysSend(const void * buf,uint64_t len)
 {
+  ksys::currentFiber()->checkFiberStackOverflow();
   uint64_t w = 0;
   if( len > maxSendSize_ ) len = maxSendSize_;
 #if HAVE_KQUEUE || __linux__
@@ -756,6 +758,7 @@ AsyncSocket::AuthParams::AuthParams() :
 //------------------------------------------------------------------------------
 AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
 {
+  ksys::currentFiber()->checkFiberStackOverflow();
   maxRecvSize_ = ap.maxRecvSize_;
   maxSendSize_ = ap.maxSendSize_;
   recvTimeout_ = ap.recvTimeout_;
@@ -893,6 +896,7 @@ AsyncSocket & AsyncSocket::deActivateEncryption()
 //------------------------------------------------------------------------------
 AsyncSocket::AuthErrorType AsyncSocket::clientAuth(const AuthParams & ap)
 {
+  ksys::currentFiber()->checkFiberStackOverflow();
   maxRecvSize_ = ap.maxRecvSize_;
   maxSendSize_ = ap.maxSendSize_;
   recvTimeout_ = ap.recvTimeout_;

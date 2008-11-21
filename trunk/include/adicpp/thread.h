@@ -89,8 +89,10 @@ class Thread : virtual public Object {
 
 #if defined(__WIN32__) || defined(__WIN64__)
     static uintptr_t waitForSignal(uintptr_t mId = WM_QUIT);
+    static uintptr_t checkForSignal(uintptr_t mId = WM_QUIT);
 #else
     static uintptr_t waitForSignal(uintptr_t sId = 0);
+    static uintptr_t checkForSignal(uintptr_t sId = 0);
 #endif
 
     Thread & resume();

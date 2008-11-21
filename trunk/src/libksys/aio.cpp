@@ -551,7 +551,11 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif
 #if HAVE_AIO_READ
-            if( aio_read(iocb) == 0 ) errno = EINPROGRESS;
+            if( aio_read(iocb) == 0 ) errno = EINPROGRESS; else {
+#if __FreeBSD__	    
+	      stdErr.debug(9,utf8::String::Stream() << "Function aio_read return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush();
+#endif
+	    }
 #else
 	    error = ENOSYS;
 #endif
@@ -578,7 +582,11 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif
 #if HAVE_AIO_WRITE
-            if( aio_write(iocb) == 0 ) errno = EINPROGRESS;
+            if( aio_write(iocb) == 0 ) errno = EINPROGRESS; else {
+#if __FreeBSD__	    
+	      stdErr.debug(9,utf8::String::Stream() << "Function aio_write return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush();
+#endif
+            }	    
 #else
 	    error = ENOSYS;
 #endif
@@ -697,7 +705,6 @@ void AsyncIoSlave::threadExecute()
   	  if( node == NULL ) continue;
 	  object = &AsyncEvent::nodeObject(*node);
           if( kev->filter == EVFILT_TIMER ){
-            assert( object->type_ == etAccept );
 	    kev->filter = EVFILT_READ;
             kev->flags |= EV_ERROR;
             kev->data = EINTR;
@@ -710,17 +717,13 @@ void AsyncIoSlave::threadExecute()
         switch( object->type_ ){
           case etRead    :
 #if HAVE_KQUEUE
-              assert( kev->filter == EVFILT_AIO );
               error = aio_error(&object->iocb_);
-              assert( error != EINPROGRESS );
               count = aio_return(&object->iocb_);
 #endif
 	    break;
           case etWrite   :
 #if HAVE_KQUEUE
-	      assert( kev->filter == EVFILT_AIO );
               error = aio_error(&object->iocb_);
-              assert( error != EINPROGRESS );
               count = aio_return(&object->iocb_);
 #endif
 	    break;

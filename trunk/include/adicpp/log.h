@@ -68,7 +68,7 @@ class LogFile : protected Thread {
     static const char * const priNicks_[];
     utf8::String file_;
     FiberWriteLock mutex_;
-    WriteLock threadReadWriteLock_;
+    LiteWriteLock threadReadWriteLock_;
     AutoPtr<char,AutoPtrMemoryDestructor> buffer_;
     uintptr_t bufferPos_;
     uintptr_t bufferSize_;

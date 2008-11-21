@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006 Guram Dukashvili
+ * Copyright 2006-2008 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,8 +60,7 @@ class SerialPortFiber : public ksock::ServerFiber {
   friend class MSSerialService;
   public:
     virtual ~SerialPortFiber();
-    SerialPortFiber() {}
-    SerialPortFiber(MSSerialService & service,SerialPortControl * control = NULL);
+    SerialPortFiber(MSSerialService * service = NULL,SerialPortControl * control = NULL);
   protected:
   private:
     SerialPortFiber(const SerialPortFiber &);
@@ -76,11 +75,15 @@ class SerialPortFiber : public ksock::ServerFiber {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class MSSerialService : public Service, protected BaseServer {
+class MSSerialService : public Service, public BaseServer {
   friend class SerialPortFiber;
   public:
+    virtual ~MSSerialService() {}
     MSSerialService();
 
+    void start();
+    void stop();
+    bool active();
   protected:
   private:
     ConfigSP config_;
@@ -88,10 +91,6 @@ class MSSerialService : public Service, protected BaseServer {
     Vector<SerialPortControl> serialPorts_;
 
     Fiber * newFiber();
-
-    void start();
-    void stop();
-    bool active();
 };
 //------------------------------------------------------------------------------
 #endif

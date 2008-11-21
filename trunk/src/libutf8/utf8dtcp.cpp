@@ -26,6 +26,7 @@
 //---------------------------------------------------------------------------
 #include <adicpp/lconfig.h>
 #include <adicpp/utf8embd.h>
+#include <adicpp/qsort.h>
 //---------------------------------------------------------------------------
 namespace utf8 {
 //---------------------------------------------------------------------------
@@ -34,9 +35,24 @@ uintptr_t cpoem = 0;
 const utf8cp * cpansip = NULL;
 const utf8cp * cpoemp = NULL;
 //---------------------------------------------------------------------------
-static const struct CharsetEntry {
+static struct CharsetEntry {
   const char * charsetName_;
   uint32_t codepage_;
+  
+#if HAVE_STRCASECMP
+  bool operator > (const CharsetEntry & e) const { return strcasecmp(charsetName_,e.charsetName_) > 0; }
+  bool operator < (const CharsetEntry & e) const { return strcasecmp(charsetName_,e.charsetName_) < 0; }
+#elif HAVE__STRICMP
+  bool operator > (const CharsetEntry & e) const { return _stricmp(charsetName_,e.charsetName_) > 0; }
+  bool operator < (const CharsetEntry & e) const { return _stricmp(charsetName_,e.charsetName_) < 0; }
+#elif HAVE_STRICMP
+  bool operator > (const CharsetEntry & e) const { return stricmp(charsetName_,e.charsetName_) > 0; }
+  bool operator < (const CharsetEntry & e) const { return stricmp(charsetName_,e.charsetName_) < 0; }
+#else
+  bool operator > (const CharsetEntry & e) const { return strcmp(charsetName_,e.charsetName_) > 0; }
+  bool operator < (const CharsetEntry & e) const { return strcmp(charsetName_,e.charsetName_) < 0; }
+#endif
+  
 } charsetNames[] = {
   { "BIG5", 950 },
   { "CP1250", 1250 },
@@ -86,10 +102,10 @@ static const struct CharsetEntry {
   { "ISO88597", 28597 },
   { "ISO88598", 28598 },
   { "ISO88599", 28599 },
-  { "UTF-8", CP_UTF8 },
-  { "UTF8", CP_UTF8 },
   { "KOI8-R", 20866 },
-  { "KOI8-U", 20866 }
+  { "KOI8-U", 20866 },
+  { "UTF-8", CP_UTF8 },
+  { "UTF8", CP_UTF8 }
 };
 //---------------------------------------------------------------------------
 static
@@ -133,6 +149,9 @@ uintptr_t getANSICodepage()
 #if defined(__WIN32__) || defined(__WIN64__)
   return GetACP();
 #else
+  //ksys::qSort(charsetNames,0,sizeof(charsetNames) / sizeof(charsetNames[0]) - 1);
+  //for( uintptr_t i = 0; i < sizeof(charsetNames) / sizeof(charsetNames[0]); i++ )
+  //  fprintf(stderr,"%s\n",charsetNames[i].charsetName_);
   uintptr_t cp = CP_UTF8;
   if( cpansi == 0 ){
     char * lang;

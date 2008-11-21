@@ -302,6 +302,32 @@ T * newObjectC1(const Param1 & p1)
 template <
   typename T,
   typename Param1,
+  typename Param2
+> inline T * newObjectV1V2(Param1 p1,Param2 p2)
+{
+  XAutoPtrBuffer safe((uint8_t *) ksys::kmalloc(sizeof(T)));
+#if !DISABLE_OBJECT_ACTIONS
+  const T st;
+#if __GNUG__
+  if( sizeof(T) >= sizeof(void *) * 2 ) memcpy(safe.ptr(),&st,sizeof(void *) * 2);
+#else
+  memcpy(safe.ptr(),&st,sizeof(T));
+#endif
+  ksys::ObjectActions::beforeConstructor((T *) safe.ptr());
+#endif
+  new (safe.ptr()) T(p1,p2);
+  XAutoPtr<T> safe2((T *) safe.ptr(NULL));
+#if !DISABLE_OBJECT_ACTIONS
+  ksys::ObjectActions::afterConstructor(safe2.ptr());
+#endif
+  ksys::Object * object = dynamic_cast<ksys::Object *>(safe2.ptr());
+  if( object != NULL ) object->afterConstruction();
+  return safe2.ptr(NULL);
+}
+//---------------------------------------------------------------------------
+template <
+  typename T,
+  typename Param1,
   typename Param2,
   typename D
 > inline T * newObjectV1V2(Param1 p1,Param2 p2)

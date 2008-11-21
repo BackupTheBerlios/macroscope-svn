@@ -381,6 +381,9 @@
 
 #cmakedefine HAVE_SIGVAL_SIGVAL_PTR 1
 #cmakedefine HAVE_SIGVAL_SIVAL_PTR 1
+#cmakedefine HAVE_STAT_ST_ATIMESPEC 1
+#cmakedefine HAVE_STAT_ST_MTIMESPEC 1
+#cmakedefine HAVE_STAT_ST_CTIMESPEC 1
 
 #cmakedefine PRIVATE_RELEASE 1
 #cmakedefine CMAKE_BUILD 1

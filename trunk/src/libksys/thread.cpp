@@ -659,19 +659,44 @@ uintptr_t Thread::waitForSignal(uintptr_t mId)
   return msg.message;
 }
 //---------------------------------------------------------------------------
+uintptr_t Thread::checkForSignal(uintptr_t mId)
+{
+  MSG msg;
+  if( PeekMessage(&msg,NULL,0,0,PM_REMOVE) != 0 ){
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
+  }
+  return msg.message == mId ? msg.message : 0;
+}
+//---------------------------------------------------------------------------
 #elif HAVE_SIGNAL_H
 //---------------------------------------------------------------------------
 uintptr_t Thread::waitForSignal(uintptr_t sId)
 {
+  assert( sId < _SIG_MAXSIG );
   for(;;){
     waitForSignalsSemaphore();
     if( sId == 0 ){
-      if( signalsCounters[SIGINT - 1] > 0 ) return SIGINT;
-      if( signalsCounters[SIGQUIT - 1] > 0 ) return SIGQUIT;
-      if( signalsCounters[SIGTERM - 1] > 0 ) return SIGTERM;
+      interlockedIncrement(signalsCounters[SIGINT - 1],0);
+      if( interlockedIncrement(signalsCounters[SIGINT - 1],0) > 0 ) return SIGINT;
+      if( interlockedIncrement(signalsCounters[SIGQUIT - 1],0) > 0 ) return SIGQUIT;
+      if( interlockedIncrement(signalsCounters[SIGTERM - 1],0) > 0 ) return SIGTERM;
     }
-    else if( signalsCounters[sId - 1] > 0 ) return sId;
+    else if( interlockedIncrement(signalsCounters[sId - 1],0) > 0 ) return sId;
   }
+}
+//---------------------------------------------------------------------------
+uintptr_t Thread::checkForSignal(uintptr_t sId)
+{
+  assert( sId < _SIG_MAXSIG );
+  if( sId == 0 ){
+    interlockedIncrement(signalsCounters[SIGINT - 1],0);
+    if( interlockedIncrement(signalsCounters[SIGINT - 1],0) > 0 ) return SIGINT;
+    if( interlockedIncrement(signalsCounters[SIGQUIT - 1],0) > 0 ) return SIGQUIT;
+    if( interlockedIncrement(signalsCounters[SIGTERM - 1],0) > 0 ) return SIGTERM;
+  }
+  else if( interlockedIncrement(signalsCounters[sId - 1],0) > 0 ) return sId;
+  return 0;
 }
 //---------------------------------------------------------------------------
 #endif

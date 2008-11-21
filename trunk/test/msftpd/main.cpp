@@ -103,9 +103,6 @@ class MSFTPService : public Service {
     void initialize();
     void start();
     void stop();
-    void wait() {
-      msftp_->howCloseServer(msftp_->howCloseServer() & ~(ksys::BaseServer::csTerminate | ksys::BaseServer::csShutdown | ksys::BaseServer::csAbort));
-    }
   protected:
   private:
     ConfigSP msftpConfig_;
@@ -144,6 +141,7 @@ utf8::String MSFTPServerFiber::getUserPassword(const utf8::String & user,const A
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::auth()
 {
+  currentFiber()->checkFiberStackOverflow();
   AuthParams ap;
   ap.maxRecvSize_ = msftp_->msftpConfig_->value("max_recv_size",-1);
   ap.maxSendSize_ = msftp_->msftpConfig_->value("max_send_size",-1);
@@ -168,6 +166,7 @@ MSFTPServerFiber & MSFTPServerFiber::auth()
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::stat()
 {
+  currentFiber()->checkFiberStackOverflow();
   MSFTPStat mst;
   utf8::String file(absolutePathNameFromWorkDir(workDir_,readString()));
   bool isSt = mst.stat(file);
@@ -177,6 +176,7 @@ MSFTPServerFiber & MSFTPServerFiber::stat()
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::setTimes()
 {
+  currentFiber()->checkFiberStackOverflow();
   utf8::String file(absolutePathNameFromWorkDir(workDir_,readString()));
   MSFTPStat mst, lmst;
   read(&mst,sizeof(mst));
@@ -190,6 +190,7 @@ MSFTPServerFiber & MSFTPServerFiber::setTimes()
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::resize()
 {
+  currentFiber()->checkFiberStackOverflow();
   AsyncFile file(absolutePathNameFromWorkDir(workDir_,readString()));
   int64_t l;
   *this >> l;
@@ -201,6 +202,7 @@ MSFTPServerFiber & MSFTPServerFiber::resize()
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::put()
 {
+  currentFiber()->checkFiberStackOverflow();
   AsyncFile file(absolutePathNameFromWorkDir(workDir_,readString()));
   file.createIfNotExist(true).exclusive(true);
   uint64_t l, lp, ll, pos, r;
@@ -272,7 +274,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
     }
     if( err != eOK || terminated() ) return *this;
   }
-  if( cmd_ != cmPutFilePartial && l != ll ) return putCode(eFileWrite);
+  if( cmd_ != cmPutFilePartial && l != ll && lp > 0 ) return putCode(eFileWrite);
   file.close();
   MSFTPStat mst;
   if( !mst.stat(file.fileName()) ) return putCode(eFileStat);
@@ -281,6 +283,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::get()
 {
+  currentFiber()->checkFiberStackOverflow();
   utf8::String name;
   uint64_t l, ll, lp, bs = msftp_->msftpConfig_->value("buffer_size",getpagesize());
   *this >> name >> l >> ll;
@@ -319,6 +322,7 @@ MSFTPServerFiber & MSFTPServerFiber::get()
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::list()
 {
+  currentFiber()->checkFiberStackOverflow();
   utf8::String localPath, exclude;
   uint8_t recursive;
   *this >> localPath >> exclude >> recursive;
@@ -336,6 +340,7 @@ MSFTPServerFiber & MSFTPServerFiber::list()
 //------------------------------------------------------------------------------
 MSFTPServerFiber & MSFTPServerFiber::getFileHash()
 {
+  currentFiber()->checkFiberStackOverflow();
   utf8::String name;
   uint64_t l, ll, lp, bs, partialBlockSize;
   *this >> name >> partialBlockSize;
@@ -370,6 +375,7 @@ MSFTPServerFiber & MSFTPServerFiber::getFileHash()
 //------------------------------------------------------------------------------
 void MSFTPServerFiber::main()
 {
+  currentFiber()->checkFiberStackOverflow();
   msftp_->msftpConfig_->silent(false).parse().override();
   stdErr.rotationThreshold(
     msftp_->msftpConfig_->value("debug_file_rotate_threshold",1024 * 1024)
@@ -426,6 +432,7 @@ MSFTPServer::~MSFTPServer()
 //------------------------------------------------------------------------------
 MSFTPServer::MSFTPServer(MSFTPService * msftp) : msftp_(msftp)
 {
+  fiberStackSize(8192 * sizeof(void *) / 4);
 }
 //------------------------------------------------------------------------------
 Fiber * MSFTPServer::newFiber()
@@ -437,6 +444,7 @@ Fiber * MSFTPServer::newFiber()
 //------------------------------------------------------------------------------
 void MSFTPWatchdog::fiberExecute()
 {
+  currentFiber()->checkFiberStackOverflow();
   utf8::String dir(excludeTrailingPathDelimiter(msftp_->msftpConfig_->textByPath(section_ + ".directory")));
   utf8::String exec(msftp_->msftpConfig_->textByPath(section_ + ".exec"));
   utf8::String cmdLine(msftp_->msftpConfig_->textByPath(section_ + ".command_line"));
@@ -500,6 +508,7 @@ void MSFTPService::initialize()
   stdErr.fileName(
     msftpConfig_->value("log_file",stdErr.fileName())
   );
+  msftp_->fiberStackSize(msftpConfig_->value("fiber_stack_size",msftp_->fiberStackSize()));
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   checkMachineBinding(msftpConfig_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */

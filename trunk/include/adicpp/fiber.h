@@ -57,6 +57,12 @@ class Fiber : virtual public Object {
     Fiber * mainFiber() const;
     BaseThread * const & thread() const;
     AsyncEvent event_;
+    
+#if defined(__WIN32__) || defined(__WIN64__)
+    void checkFiberStackOverflow() const {}
+#else
+    void checkFiberStackOverflow() const;
+#endif
   protected:
     volatile bool started_;
     volatile bool terminated_;
@@ -602,7 +608,7 @@ inline Requester & Requester::requester()
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class BaseServer : public Object {
+class BaseServer : virtual public Object {
   friend class Fiber;
   friend class BaseThread;
   public:

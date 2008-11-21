@@ -453,7 +453,7 @@ inline uint64_t AsyncSocket::rscRatio() const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class ServerFiber : public ksys::Fiber, public AsyncSocket {
+class ServerFiber : virtual public ksys::Fiber, virtual public AsyncSocket {
   friend class AcceptFiber;
   public:
     virtual ~ServerFiber();
@@ -474,7 +474,7 @@ inline ServerFiber::ServerFiber()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class AcceptFiber : public ksys::Fiber, public AsyncSocket {
+class AcceptFiber : virtual public ksys::Fiber, virtual public AsyncSocket {
   friend class Server;
   public:
     virtual ~AcceptFiber();
@@ -488,7 +488,7 @@ class AcceptFiber : public ksys::Fiber, public AsyncSocket {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class Server : public ksys::BaseServer {
+class Server : virtual public ksys::BaseServer {
   friend class AcceptFiber;
   friend class ServerFiber;
   public:
@@ -532,7 +532,7 @@ inline Server & Server::addBind(const SockAddr & addr)
 //------------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-class ClientFiber : public ksys::Fiber, public AsyncSocket {
+class ClientFiber : virtual public ksys::Fiber, virtual public AsyncSocket {
   public:
     virtual ~ClientFiber();
     ClientFiber();
@@ -544,7 +544,7 @@ class ClientFiber : public ksys::Fiber, public AsyncSocket {
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class Client : public ksys::BaseServer {
+class Client : virtual public ksys::BaseServer {
   friend class ClientFiber;
   public:
     virtual ~Client();

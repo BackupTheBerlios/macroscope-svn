@@ -145,7 +145,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
         a = SNPRINTF(
           buf,
           sizeof(buf),
-          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u.%p,%u): ",
+          "%02u.%02u.%04u %02u:%02u:%02u.%06ld (%u.%"PRIxPTR",%u): ",
           t.tm_mday,
           t.tm_mon + 1,
           t.tm_year + 1900,
@@ -154,7 +154,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
           t.tm_sec,
           tv.tv_usec,
           getpid(),
-          currentFiber(),
+          uintptr_t(currentFiber()),
           (unsigned int) level
         );
       else
@@ -186,7 +186,7 @@ LogFile & LogFile::internalLog(uintptr_t level,const utf8::String::Stream & stre
       if( codePage_ == CP_UNICODE ) a *= sizeof(wchar_t);
       AutoLock<FiberWriteLock> lock(mutex_);
       resume();
-      AutoLock<WriteLock> lock2(threadReadWriteLock_);
+      AutoLock<LiteWriteLock> lock2(threadReadWriteLock_);
       uintptr_t bufferSize = bufferSize_;
       while( bufferSize < bufferPos_ + a + l ) bufferSize = (bufferSize << 1) + (bufferSize == 0);
       buffer_.realloc(bufferSize);
@@ -246,7 +246,7 @@ void LogFile::threadExecute()
     int64_t ft;
     try {
       {
-        AutoLock<WriteLock> lock(threadReadWriteLock_);
+        AutoLock<LiteWriteLock> lock(threadReadWriteLock_);
         bufferPos = bufferPos_;
         ft = bufferDataTTA_ - (gettimeofday() - lastFlushTime_);
       }
@@ -259,7 +259,7 @@ void LogFile::threadExecute()
         bufferSemaphore_.timedWait(ft);
       }
       {
-        AutoLock<WriteLock> lock(threadReadWriteLock_);
+        AutoLock<LiteWriteLock> lock(threadReadWriteLock_);
         buffer.xchg(buffer_);
         bufferPos = bufferPos_;
         bufferPos_ = 0;
@@ -280,7 +280,7 @@ void LogFile::threadExecute()
         threadFile_.exclusive(false).open();
         threadFile_.seek(threadFile_.size()).writeBuffer(buffer,bufferPos);
         {
-          AutoLock<WriteLock> lock(threadReadWriteLock_);
+          AutoLock<LiteWriteLock> lock(threadReadWriteLock_);
           lastFlushTime_ = gettimeofday();
 	}
         rotate(threadFile_);
@@ -331,7 +331,7 @@ LogFile & LogFile::flush(bool wait)
 {
   uint64_t ft = 0;
   {
-    AutoLock<WriteLock> lock2(threadReadWriteLock_);
+    AutoLock<LiteWriteLock> lock2(threadReadWriteLock_);
     if( bufferPos_ > 0 ){
       bufferSemaphore_.post();
       ft = lastFlushTime_;
@@ -341,7 +341,7 @@ LogFile & LogFile::flush(bool wait)
     }
   }
   while( wait ){
-    AutoLock<WriteLock> lock2(threadReadWriteLock_);
+    AutoLock<LiteWriteLock> lock2(threadReadWriteLock_);
     if( ft != lastFlushTime_ ) break;
     ksleep1();
   }

@@ -101,6 +101,7 @@ KFTPClient & KFTPClient::getCode(int32_t noThrowCode)
 //------------------------------------------------------------------------------
 void KFTPClient::auth()
 {
+  currentFiber()->checkFiberStackOverflow();
   AuthParams ap;
   ap.maxRecvSize_ = shell_->config_->value("max_recv_size",-1);
   ap.maxRecvSize_ = shell_->config_->section(section_).value("max_recv_size",ap.maxRecvSize_);
@@ -139,6 +140,7 @@ void KFTPClient::auth()
 //------------------------------------------------------------------------------
 void KFTPClient::put()
 {
+  currentFiber()->checkFiberStackOverflow();
   if( !shell_->config_->section(section_).isSection("put") ) return;
   utf8::String local(shell_->config_->section(section_).section("put").text("local"));
   utf8::String localPath(
@@ -318,6 +320,7 @@ void KFTPClient::put()
 //------------------------------------------------------------------------------
 void KFTPClient::get()
 {
+  currentFiber()->checkFiberStackOverflow();
   //clearStatistic();
   if( !shell_->config_->section(section_).isSection("get") ) return;
   utf8::String localPath(
@@ -871,6 +874,7 @@ void ZebexPDL::fiberExecute()
 //------------------------------------------------------------------------------
 void KFTPClient::main()
 {
+  currentFiber()->checkFiberStackOverflow();
   try {
 //    ZebexPDL pdl;
 //    pdl.fiberExecute();
@@ -891,7 +895,6 @@ void KFTPClient::main()
     getCode();
   }
   catch( ExceptionSP & e ){
-    shell_ = shell_;
     shell_->errorCode_ = e->code() == 0 ? EPERM : e->code();
     log_->debug(8,utf8::String::Stream() << section_ << " " << host_ << " incomplete.\n");
     log_->close();
@@ -917,6 +920,8 @@ KFTPShell::KFTPShell(int & errorCode) :
   ),
   errorCode_(errorCode)
 {
+  fiberStackSize(8192 * sizeof(void *) / 4);
+  howCloseServer(howCloseServer() & ~(csTerminate | csShutdown | csAbort));
 }
 //------------------------------------------------------------------------------
 void KFTPShell::open()
@@ -938,13 +943,14 @@ void KFTPShell::open()
   stdErr.fileName(
     config_->value("log_file",stdErr.fileName())
   );
+  fiberStackSize(config_->value("fiber_stack_size",fiberStackSize()));
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
   checkMachineBinding(config_->value("machine_key"),true);
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
   for( i = config_->sectionCount() - 1; i >= 0; i-- ){
     utf8::String sectionName(config_->section(i).name());
     if( sectionName.ncasecompare("job",3) == 0 )
-      attachFiber(newObjectR1C2<KFTPClient>(this,sectionName));
+      attachFiber(newObjectV1C2<KFTPClient>(this,sectionName));
   }
 }
 //------------------------------------------------------------------------------
