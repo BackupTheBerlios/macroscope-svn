@@ -210,7 +210,7 @@ Semaphore & Semaphore::wait()
   return *this;
 }
 //---------------------------------------------------------------------------
-bool Semaphore::timedWait(uint64_t timeout)
+bool Semaphore::timedWait(uint64_t timeout,bool noThrow)
 {
 //  fprintf(stderr,"%s %d timeout = %"PRIu64"\n",__FILE__,__LINE__,timeout); fflush(stderr);
 #if HAVE_SEMAPHORE_H
@@ -239,7 +239,7 @@ bool Semaphore::timedWait(uint64_t timeout)
     }
     return rr;
   }*/
-  if( r != 0 && errno != ETIMEDOUT ){
+  if( r != 0 && errno != ETIMEDOUT && !noThrow ){
     r = errno;
     //fprintf(stderr,"%s %d errno = %d\n",__FILE__,__LINE__,r); fflush(stderr);
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -259,7 +259,7 @@ bool Semaphore::timedWait(uint64_t timeout)
 #elif defined(__WIN32__) || defined(__WIN64__)
   uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);
   DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));
-  if( r == WAIT_FAILED ){
+  if( r == WAIT_FAILED && !noThrow ){
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }
@@ -458,7 +458,7 @@ SharedSemaphore & SharedSemaphore::wait()
   return *this;
 }
 //---------------------------------------------------------------------------
-bool SharedSemaphore::timedWait(uint64_t timeout)
+bool SharedSemaphore::timedWait(uint64_t timeout,bool noThrow)
 {
 //  fprintf(stderr,"%s %d timeout = %"PRIu64"\n",__FILE__,__LINE__,timeout); fflush(stderr);
 #if HAVE_SEMAPHORE_H
@@ -487,7 +487,7 @@ bool SharedSemaphore::timedWait(uint64_t timeout)
     }
     return rr;
   }*/
-  if( r != 0 && errno != ETIMEDOUT ){
+  if( r != 0 && errno != ETIMEDOUT && !noThrow){
     r = errno;
     //fprintf(stderr,"%s %d errno = %d\n",__FILE__,__LINE__,r); fflush(stderr);
     newObjectV1C2<Exception>(r,__PRETTY_FUNCTION__)->throwSP();
@@ -507,7 +507,7 @@ bool SharedSemaphore::timedWait(uint64_t timeout)
 #elif defined(__WIN32__) || defined(__WIN64__)
   uint64_t t = timeout / 1000u + (timeout > 0 && timeout < 1000u);
   DWORD r = WaitForSingleObject(handle_,t > ~DWORD(0) - 1 ? ~DWORD(0) - 1 : DWORD(t));
-  if( r == WAIT_FAILED ){
+  if( r == WAIT_FAILED && !noThrow ){
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err, __PRETTY_FUNCTION__)->throwSP();
   }

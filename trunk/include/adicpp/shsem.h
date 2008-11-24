@@ -92,7 +92,7 @@ class Semaphore
     Semaphore & wait();
     bool tryWait();
 #endif
-    bool timedWait(uint64_t timeout);
+    bool timedWait(uint64_t timeout,bool noThrow = true);
   protected:
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H
@@ -138,7 +138,7 @@ class SharedSemaphore
     SharedSemaphore & wait();
     bool tryWait();
 #endif
-    bool timedWait(uint64_t timeout);
+    bool timedWait(uint64_t timeout,bool noThrow = true);
   protected:
 #if USE_SV_SEMAPHORES
 #elif HAVE_SEMAPHORE_H

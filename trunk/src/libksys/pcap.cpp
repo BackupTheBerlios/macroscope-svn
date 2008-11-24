@@ -1210,7 +1210,15 @@ void PCAP::LazyWriter::threadExecute()
         }
         term = terminated_;
       }
-      if( group == NULL ){ if( term ) return; else break; }
+      if( group == NULL ){
+        if( term ){
+#ifndef NDEBUG
+	  stdErr.debug(9,utf8::String::Stream() << __FILE__ << ", " << __LINE__ << "\n");
+#endif
+          return;
+	}
+	break;
+      }
       swapOut(tempFile,group);
       if( !tempFile.isOpen() ) break;
       if( group != NULL ){
@@ -1241,8 +1249,7 @@ void PCAP::LazyWriter::threadExecute()
       swapin = memoryUsage < pcap_->swapThreshold() * pcap_->swapLowWatermark_ / 100;
       if( !tempFile.isOpen() ) break;
     }
-    if( !terminated_ )
-      pcap_->lazyWriterSem_.timedWait(pcap_->swapWatchTime_);
+    if( !terminated_ ) pcap_->lazyWriterSem_.timedWait(pcap_->swapWatchTime_);
   }
 }
 //------------------------------------------------------------------------------

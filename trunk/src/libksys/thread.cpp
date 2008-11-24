@@ -137,11 +137,17 @@ void * Thread::threadFunc(void * thread)
       e->writeStdError();
     }
     catch( ... ){
+#ifndef NDEBUG
+    stdErr.debug(9,utf8::String::Stream() << __FILE__ << " " << __LINE__).flush();
+#endif
     }
     e->writeStdError();
     reinterpret_cast<Thread *>(thread)->exitCode_ = e->code();
   }
   catch( ... ){
+#ifndef NDEBUG
+    stdErr.debug(9,utf8::String::Stream() << __FILE__ << " " << __LINE__).flush();
+#endif
   }
   for( i = afterExecuteActions().count() - 1; i >= 0; i-- )
     ((void (*)(void *)) afterExecuteActions()[i].handler())(afterExecuteActions()[i].data());
