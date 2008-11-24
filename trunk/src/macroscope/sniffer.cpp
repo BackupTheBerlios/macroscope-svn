@@ -50,15 +50,8 @@ Sniffer::Sniffer(Database * database,Database * database2) :
 {
 }
 //------------------------------------------------------------------------------
-void Sniffer::threadExecute()
+void Sniffer::detach()
 {
-  try {
-    PCAP::threadExecute();
-  }
-  catch( ... ){
-    database_->detach();
-    throw;
-  }
   database_->detach();
 }
 //------------------------------------------------------------------------------

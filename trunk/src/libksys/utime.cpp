@@ -55,8 +55,8 @@ bool utime(const utf8::String & path,uint64_t atime,uint64_t mtime)
   };
 //  lat.QuadPart = times.actime * UINT64_C(10000000) + EPOCH_BIAS;
 //  lwt.QuadPart = times.modtime * UINT64_C(10000000) + EPOCH_BIAS;
-  lat.QuadPart = atime * UINT64_C(10000000) + EPOCH_BIAS;
-  lwt.QuadPart = mtime * UINT64_C(10000000) + EPOCH_BIAS;
+  lat.QuadPart = atime * 10u + EPOCH_BIAS;
+  lwt.QuadPart = mtime * 10u + EPOCH_BIAS;
   if( SetFileTime(hFile, NULL, &lastAccessTime, &lastWriteTime) == 0 ){
     err = GetLastError() + errorOffset;
     CloseHandle(hFile);

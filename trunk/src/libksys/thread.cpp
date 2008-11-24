@@ -121,16 +121,27 @@ void * Thread::threadFunc(void * thread)
   reinterpret_cast<Thread *>(thread)->started_ = true;
   try {
     currentThread() = reinterpret_cast<Thread *>(thread);
+    reinterpret_cast<Thread *>(thread)->beforeExecute();
     reinterpret_cast<Thread *>(thread)->threadExecute();
+    reinterpret_cast<Thread *>(thread)->afterExecute();
 #if defined(__WIN32__) || defined(__WIN64__)
     if( reinterpret_cast<Thread *>(thread)->exitCode_ == (int32_t) STILL_ACTIVE )
       reinterpret_cast<Thread *>(thread)->exitCode_ = 0;
 #endif
   }
   catch( ExceptionSP & e ){
-    //fprintf(stderr,"%s\n",e->what().c_str());
+    try {
+      reinterpret_cast<Thread *>(thread)->afterExecute();
+    }
+    catch( ExceptionSP & e ){
+      e->writeStdError();
+    }
+    catch( ... ){
+    }
     e->writeStdError();
     reinterpret_cast<Thread *>(thread)->exitCode_ = e->code();
+  }
+  catch( ... ){
   }
   for( i = afterExecuteActions().count() - 1; i >= 0; i-- )
     ((void (*)(void *)) afterExecuteActions()[i].handler())(afterExecuteActions()[i].data());

@@ -244,6 +244,7 @@ class PCAP : public Thread {
     };
     virtual bool insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * pkts,uintptr_t & count,Thread * caller) throw();
     void threadExecute();
+    virtual void detach() {}
   private:
     class Packets : public Array<Packet> {
       public:
@@ -338,6 +339,7 @@ class PCAP : public Thread {
 	
         void threadBeforeWait();
         void threadExecute();
+        void afterExecute();
     };
     friend class DatabaseInserter;
 

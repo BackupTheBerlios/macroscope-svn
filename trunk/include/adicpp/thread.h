@@ -137,6 +137,8 @@ class Thread : virtual public Object {
   protected:
     void afterConstruction();
     void beforeDestruction() { wait(); }
+    virtual void afterExecute() {}
+    virtual void beforeExecute() {}
     virtual void threadBeforeWait() {}
     virtual void threadAfterWait() {}
     uintptr_t       stackSize_;

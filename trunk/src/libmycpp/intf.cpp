@@ -85,12 +85,12 @@ void API::initialize()
 #if !MYSQL_STATIC_LIBRARY  
   count_ = 0;
 #endif
-  Thread::afterExecuteActions().add(Thread::Action((void *) afterThreadExecute,this));
+  //Thread::afterExecuteActions().add(Thread::Action((void *) afterThreadExecute,this));
 }
 //---------------------------------------------------------------------------
 void API::cleanup()
 {
-  Thread::afterExecuteActions().remove(Thread::afterExecuteActions().search(Thread::Action((void *) afterThreadExecute,this)));
+  //Thread::afterExecuteActions().remove(Thread::afterExecuteActions().search(Thread::Action((void *) afterThreadExecute,this)));
   threadCount().~ThreadLocalVariable<intptr_t>();
   using namespace utf8;
   reinterpret_cast<utf8::String *>(clientLibrary_)->~String();
@@ -147,7 +147,7 @@ void API::open()
   if( count_ == 0 ){
 #if !MYSQL_STATIC_LIBRARY
     int32_t       err;
-    utf8::String  libFileName (tryOpen());
+    utf8::String  libFileName(tryOpen());
     if( handle_ == NULL ){
 #if defined(__WIN32__) || defined(__WIN64__)
       err = GetLastError() + errorOffset;

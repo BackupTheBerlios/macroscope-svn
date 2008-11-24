@@ -154,7 +154,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   if( (ksys::isWin9x() || api.GetAddrInfoW == NULL) && api.freeaddrinfo != NULL ){
     for( res = aiList; res != NULL; res = res->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
-      if( addr4_.sin_family == res->ai_addr.sa_family )
+      if( addr4_.sin_family == res->ai_addr->sa_family )
         memcpy(&addr4_,res->ai_addr,res->ai_addrlen);
     }
     api.freeaddrinfo(aiList);
@@ -164,7 +164,7 @@ utf8::String SockAddr::internalGetAddrInfo(const utf8::String & host,const utf8:
   else {
     for( resW = aiListW; resW != NULL; resW = resW->ai_next ){
       if( res->ai_canonname != NULL ) s = res->ai_canonname;
-      if( addr4_.sin_family == resW->ai_addr.sa_family )
+      if( addr4_.sin_family == resW->ai_addr->sa_family )
         memcpy(&addr4_,resW->ai_addr,resW->ai_addrlen);
     }
     api.FreeAddrInfoW(aiListW);

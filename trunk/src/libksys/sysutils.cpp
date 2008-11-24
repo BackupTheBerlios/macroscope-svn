@@ -2109,7 +2109,7 @@ pid_t execute(const utf8::String & name,const utf8::String & args,const Array<ut
   ExecuteProcessParameters params;
   params.name_ = name;
   params.args_ = args;
-  params.env_ = *env;
+  if( env != NULL ) params.env_ = *env;
   params.wait_ = wait;
   params.usePathEnv_ = usePathEnv;
   params.noThrow_ = noThrow;

@@ -104,8 +104,9 @@ class Sniffer : public PCAP {
     AutoPtr<MaintenanceThread> maintenanceThread_;
     AutoPtr<MaintenanceThread> storagePeriodOfStatisticsThread_;
 
-    void threadExecute();
     void maintenanceInternal();
+
+    void detach();
 
     Sniffer(const Sniffer &);
     void operator = (const Sniffer &);
