@@ -72,6 +72,7 @@ class DirectoryChangeNotification {
 
     void monitor(const utf8::String & pathName,uint64_t timeout = ~uint64_t(0),bool noThrow = false);
     void stop();
+    void cancel();
 
     bool createPath() const { return createPath_; }
     DirectoryChangeNotification & createPath(bool v){ createPath_ = v; return *this; }
@@ -83,14 +84,14 @@ class DirectoryChangeNotification {
     Array<FILE_NOTIFY_INFORMATION> buffer_; // for ReadDirectoryChangesW
     uintptr_t bufferSize_;
 #elif HAVE_FAM_H
+    utf8::String name_;
     FAMConnection famConnection_;
     FAMRequest famRequest_;
     FAMEvent famEvent_;
     bool monitorStarted_;
+    bool abort_;
 #endif
-    union {
-      uint8_t createPath_       : 1;
-    };    
+    bool createPath_;
 };
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)

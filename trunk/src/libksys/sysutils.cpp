@@ -371,6 +371,7 @@ void unSetEnv(const utf8::String & name)
 //---------------------------------------------------------------------------
 DirectoryChangeNotification::~DirectoryChangeNotification()
 {
+  cancel();
   stop();
 }
 //---------------------------------------------------------------------------
@@ -384,12 +385,12 @@ DirectoryChangeNotification::DirectoryChangeNotification() :
 #endif
   createPath_(true)
 {
-#if !defined(__WIN32__) && !defined(__WIN64__)
-  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
-#elif HAVE_FAM_H
-  FAMCONNECTION_GETFD(famConnection_) = -1;
+#if HAVE_FAM_H
+  FAMCONNECTION_GETFD(&famConnection_) = -1;
   if( FAMOpen(&famConnection_) != 0 )
     newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+#elif !defined(__WIN32__) && !defined(__WIN64__)
+  newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 }
 //---------------------------------------------------------------------------
@@ -469,32 +470,55 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   }
   SetLastError(fiber->event_.errno_);
 #elif HAVE_FAM_H
-  if( !monitorStarted_ ){
-    if( FAMMonitorDirectory(&famConnection_,anyPathName2HostPathName(pathName).getANSIString(),&famRequest_,NULL) != 0 ){
+  if( !monitorStarted_ ){    
+    utf8::String name(anyPathName2HostPathName(pathName));
+    Stat st;
+    if( !stat(name,st) ){
+      errno = ENOENT;
       if( noThrow ) return;
-      newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[FAMErrno] + __PRETTY_FUNCTION__)->throwSP();
+      newObjectV1C2<Exception>(ENOENT,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
-    else {
-      monitorStarted_ = true;
+    if( (st.st_mode & S_IFDIR) == 0 ){
+      if( noThrow ) return;
+      newObjectV1C2<Exception>(ENOTDIR,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
+    utf8::AnsiString aname(name.getANSIString());
+    if( access(aname,R_OK | X_OK) != 0 ){
+      int32_t err = errno;
+      if( noThrow ) return;
+      newObjectV1C2<Exception>(err,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+    }    
+    if( FAMMonitorDirectory(&famConnection_,aname,&famRequest_,NULL) != 0 ){
+      if( noThrow ) return;
+      newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[FAMErrno] + " " + __PRETTY_FUNCTION__)->throwSP();
+    }
+    monitorStarted_ = true;
+    abort_ = false;
+    name_ = name;
   }
   if( monitorStarted_ ){
-    Fiber * fiber = currentFiber();
-    assert( fiber != NULL );
-    fiber->event_.abort_ = false;
-    fiber->event_.position_ = 0;
-    fiber->event_.directoryChangeNotification_ = this;
-    fiber->event_.timeout_ = timeout;
-    fiber->event_.type_ = etDirectoryChangeNotification;
-    fiber->thread()->postRequest();
-    fiber->switchFiber(fiber->mainFiber());
-    assert( fiber->event_.type_ == etDirectoryChangeNotification );
-    if( fiber->event_.errno_ != 0 ){
-      if( noThrow ) return;
-      newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[fiber->event_.errno_] + __PRETTY_FUNCTION__)->throwSP();
+    for(;;){
+      Fiber * fiber = currentFiber();
+      assert( fiber != NULL );
+      fiber->event_.abort_ = false;
+      fiber->event_.position_ = 0;
+      fiber->event_.directoryChangeNotification_ = this;
+      fiber->event_.timeout_ = timeout;
+      fiber->event_.type_ = etDirectoryChangeNotification;
+      fiber->thread()->postRequest();
+      fiber->switchFiber(fiber->mainFiber());
+      assert( fiber->event_.type_ == etDirectoryChangeNotification );
+      errno = fiber->event_.errno_;
+      FAMErrno = fiber->event_.errno_;
+      if( fiber->event_.errno_ != 0 ){
+        if( noThrow ) return;
+        newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[fiber->event_.errno_] + " " + __PRETTY_FUNCTION__)->throwSP();
+      }
+      else if( abort_ ){
+        newObjectV1C2<Exception>(EINTR,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+      }
+      else if( famEvent_.code == FAMDeleted || famEvent_.code == FAMCreated ) break;
     }
-    errno = fiber->event_.errno_;
-    FAMErrno = fiber->event_.errno_;
   }
 #else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
@@ -520,7 +544,21 @@ void DirectoryChangeNotification::stop()
       newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     if( FAMClose(&famConnection_) != 0 )
       newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+    monitorStarted_ = false;
     FAMCONNECTION_GETFD(&famConnection_) = -1;
+  }
+#endif
+}
+//---------------------------------------------------------------------------
+void DirectoryChangeNotification::cancel()
+{
+#if defined(__WIN32__) || defined(__WIN64__)
+  requester().abortNotification(this);
+#elif HAVE_FAM_H
+  if( FAMCONNECTION_GETFD(&famConnection_) != -1 ){
+    abort_ = true;
+    AsyncFile file(includeTrailingPathDelimiter(name_) + getTempFileName(".brk"));
+    file.createIfNotExist(true).removeAfterClose(true).tryOpen();
   }
 #endif
 }
@@ -2303,7 +2341,7 @@ err:  err = GetLastError() + errorOffset;
   CloseHandle(pi.hThread);
   return pi.dwProcessId;
 #else
-  utf8::AnsiString name((anyPathName2HostPathName("\"" + params.name_ + "\" ") + params.args_).getANSIString());
+  //utf8::AnsiString name((anyPathName2HostPathName("\"" + params.name_ + "\" ") + params.args_).getANSIString());
   Array<utf8::AnsiString> aargs;
   utf8::String::Iterator sep(params.args_);
   while( !sep.eos() ){
@@ -2315,12 +2353,21 @@ err:  err = GetLastError() + errorOffset;
     else {
       while( (!sep2.isSpace() || (sep2 - 1).getChar() == '\\') && sep2.next() );
     }
-    aargs.add(utf8::String(sep + 1,sep2).getANSIString());
+    aargs.add(utf8::String(sep,sep2).getANSIString());
     sep = sep2;
   }
+  utf8::AnsiString nameHolder(params.name_.getANSIString());
+  const char * name = nameHolder;
   AutoPtr<char *,AutoPtrMemoryDestructor> argsPtrs;
-  argsPtrs.reallocT(aargs.count());
-  for( uintptr_t i = 0; i < aargs.count(); i++ ) argsPtrs[i] = aargs[i];
+  argsPtrs.reallocT(aargs.count() + 2);
+  argsPtrs[0] = nameHolder;
+  for( uintptr_t i = 0; i < aargs.count(); i++ ){
+    argsPtrs[i + 1] = aargs[i];
+#ifndef NDEBUG
+    fprintf(stderr,"%s\n",argsPtrs[i]);
+#endif
+  }
+  argsPtrs[aargs.count() + 1] = NULL;
   pid_t pid = fork();
   if( pid == -1 ){
     if( params.noThrow_ ) return -1;
@@ -2329,6 +2376,9 @@ err:  err = GetLastError() + errorOffset;
   }
   if( pid == 0 ){
     for( uintptr_t i = 0; i < params.env_.count(); i++ ){
+#ifndef NDEBUG
+      fprintf(stderr,"%s, %d, %s\n",__FILE__,__LINE__,params.env_[i].c_str());
+#endif
       utf8::String::Iterator sep(params.env_[i].strstr("="));
       if( sep.eos() ) continue;
       setEnv(utf8::String(params.env_[i],sep),sep + 1);
@@ -2336,16 +2386,29 @@ err:  err = GetLastError() + errorOffset;
     if( params.stdio_ != INVALID_HANDLE_VALUE && dup2(STDIN_FILENO,params.stdio_) == - 1 ) exit(errno);
     if( params.stdout_ != INVALID_HANDLE_VALUE && dup2(STDOUT_FILENO,params.stdout_) == - 1 ) exit(errno);
     if( params.stderr_ != INVALID_HANDLE_VALUE && dup2(STDERR_FILENO,params.stderr_) == - 1 ) exit(errno);
-    if( execvp(params.name_.getANSIString(),argsPtrs) == - 1 ) exit(errno);
+    if( execvp(name,argsPtrs) == -1 ){
+#ifndef NDEBUG
+      fprintf(stderr,"%s, %d\n",__FILE__,__LINE__);
+#endif
+      exit(errno);
+    }
+#ifndef NDEBUG
+    fprintf(stderr,"%s, %d\n",__FILE__,__LINE__);
+#endif
+    exit(0);
   }
   else if( params.wait_ ){
     int status;
     pid_t pid2 = waitpid(pid,&status,0);
+#ifndef NDEBUG
+    fprintf(stderr,"%s, %d, %d\n",__FILE__,__LINE__,WEXITSTATUS(status));
+#endif
+    pid = WEXITSTATUS(status);
     if( pid2 == -1 || WEXITSTATUS(status) != 0 ){
       if( params.noThrow_ ) return pid;
       int32_t err = pid2 == -1 ? errno : WEXITSTATUS(status);
       newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
-    }
+    }    
   }
   return pid;
 #endif

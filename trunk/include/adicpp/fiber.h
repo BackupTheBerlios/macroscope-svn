@@ -282,6 +282,9 @@ class AsyncMiscSlave : public Thread, public Semaphore, public LiteWriteLock {
     bool transplant(AsyncEvent & requests);
     const uintptr_t & maxRequests() const { return maxRequests_; }
     AsyncMiscSlave & maxRequests(uintptr_t v){ maxRequests_ = v; return *this; }
+#if HAVE_FAM_H
+    bool abortNotification(DirectoryChangeNotification * dcn = NULL);
+#endif
   protected:
     void threadBeforeWait();
   private:

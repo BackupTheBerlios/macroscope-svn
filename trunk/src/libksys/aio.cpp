@@ -763,10 +763,10 @@ void AsyncIoSlave::threadExecute()
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
+#if defined(__WIN32__) || defined(__WIN64__)
 bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
 {
   bool r = false;
-#if defined(__WIN32__) || defined(__WIN64__)
   assert( !isWin9x() );
   AutoLock<LiteWriteLock> lock(*this);
   EventsNode * node;
@@ -782,9 +782,9 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
       }
     }
   }
-#endif
   return r;
 }
+#endif
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -812,21 +812,27 @@ void AsyncMiscSlave::threadBeforeWait()
 {
   terminate();
   post();
+}
+//---------------------------------------------------------------------------
 #if HAVE_FAM_H
+bool AsyncMiscSlave::abortNotification(DirectoryChangeNotification * dcn)
+{
   AutoLock<LiteWriteLock> lock(*this);
   EventsNode * node;
   for( node = requests_.first(); node != NULL; node = node->next() ){
     AsyncEvent & object = AsyncEvent::nodeObject(*node);
-    if( object.type_ == etDirectoryChangeNotification ){
+    if( object.type_ == etDirectoryChangeNotification && (dcn == NULL || dcn == object.directoryChangeNotification_) ){
       FAMCancelMonitor(
         &object.directoryChangeNotification_->famConnection_,
         &object.directoryChangeNotification_->famRequest_
       );
+      return true;
     }
   }
-#endif
+  return false;
 }
 //---------------------------------------------------------------------------
+#endif
 bool AsyncMiscSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
@@ -1701,8 +1707,8 @@ void Requester::abortIo()
 bool Requester::abortNotification(DirectoryChangeNotification * dcn)
 {
   bool r = false;
-#if defined(__WIN32__) || defined(__WIN64__)
   intptr_t i;
+#if defined(__WIN32__) || defined(__WIN64__)
   if( isWin9x() ){
     AutoLock<LiteWriteLock> lock(wdcnRequestsReadWriteLock_);
     for( i = wdcnSlaves_.count() - 1; i >= 0; i-- ){
@@ -1720,6 +1726,12 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
       r = ioSlaves_[i].abortNotification(dcn);
       if( dcn != NULL && r ) break;
     }
+  }
+#elif HAVE_FAM_H
+  AutoLock<LiteWriteLock> lock(ofRequestsReadWriteLock_);
+  for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
+    r = ofSlaves_[i].abortNotification(dcn);
+    if( dcn != NULL && r ) break;
   }
 #endif
   return r;

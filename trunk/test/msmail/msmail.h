@@ -781,6 +781,7 @@ class ServerFiber : public ksock::ServerFiber {
     AutoDrop<Message::Keys> idsAutoDrop_;
     DirectoryChangeNotification dcn_;
 
+    void fiberBreakExecution() { dcn_.cancel(); }
     void putCode(int32_t code);
     void checkCode(int32_t code,int32_t noThrowCode = eOK);
     void getCode(int32_t noThrowCode = eOK);
@@ -811,6 +812,7 @@ class SpoolWalker : public Fiber {
     intptr_t id_; // if negative then fiber must work as collector for lost sheeps
     DirectoryChangeNotification dcn_;
 
+    void fiberBreakExecution() { dcn_.cancel(); }
     void processQueue(bool & timeWait);
     void fiberExecute();
   private:

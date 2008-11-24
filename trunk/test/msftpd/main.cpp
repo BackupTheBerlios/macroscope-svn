@@ -44,9 +44,11 @@ class MSFTPWatchdog : public Fiber {
       msftp_(msftp), section_(section) {}
   protected:
     void fiberExecute();
+    void fiberBreakExecution() { dcn_.cancel(); }
   private:
     MSFTPService * msftp_;
     utf8::String section_;
+    DirectoryChangeNotification dcn_;
 };
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -453,19 +455,19 @@ void MSFTPWatchdog::fiberExecute()
   bool execDaemonStartup = msftp_->msftpConfig_->valueByPath(section_ + ".exec_daemon_startup",true);
   bool repeatIfExitCodeNonzero = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_if_exit_code_nonzero",true);
   uint64_t repeatDelay = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_delay",10);
-  DirectoryChangeNotification dcn;
-  dcn.createPath(false);
+  dcn_.createPath(false);
   intptr_t exitCode = 0;
   while( !terminated_ ){
     try {
       try {
-        if( !execDaemonStartup ) dcn.monitor(dir,timeout == 0 ? ~uint64_t(0) : timeout * 1000000u);
+        if( !execDaemonStartup ) dcn_.monitor(dir,timeout == 0 ? ~uint64_t(0) : timeout * 1000000u);
         if( delay > 0 && !execDaemonStartup ) ksleep(delay * 1000000u);
       }
       catch( ExceptionSP & e ){
-//        e->writeStdError();
 #if defined(__WIN32__) || defined(__WIN64__)
         if( !e->searchCode(WAIT_TIMEOUT + errorOffset) ) throw;
+#else
+        if( !e->searchCode(ETIMEDOUT) ) throw;
 #endif
       }
       for(;;){
