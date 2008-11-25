@@ -173,7 +173,6 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     AuthErrorType clientAuth(const AuthParams & ap);
 
     AsyncSocket & clearStatistic();
-    AsyncSocket & activateEncryption(const uint8_t sha256[32]);
     AsyncSocket & activateEncryption(const void * key,uintptr_t keyLen);
     AsyncSocket & deActivateEncryption();
     bool encryptionActive() const;
@@ -246,12 +245,6 @@ inline AsyncSocket & AsyncSocket::writeBuffer(const void * buf,uint64_t len)
   return write(buf,len);
 }
 //---------------------------------------------------------------------------
-inline AsyncSocket & AsyncSocket::activateEncryption(const uint8_t sha256[32])
-{
-  init(sha256);
-  return *this;
-}
-//------------------------------------------------------------------------------
 inline bool AsyncSocket::encryptionActive() const
 {
   return ksys::SHA256Filter::active();

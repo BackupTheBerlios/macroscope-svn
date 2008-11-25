@@ -69,10 +69,10 @@ class StreamCryptFilter {
     virtual ~StreamCryptFilter();
     StreamCryptFilter();
 
-    virtual StreamCryptFilter & initializeCrypting() = 0;
-    virtual StreamCryptFilter & encrypt(void * dst,const void * src,uintptr_t size) = 0;
-    virtual StreamCryptFilter & initializeDecrypting() = 0;
-    virtual StreamCryptFilter & decrypt(void * dst,const void * src,uintptr_t size) = 0;
+    virtual StreamCryptFilter * initializeCrypting(const void * key,uintptr_t keyLen) = 0;
+    virtual StreamCryptFilter * encrypt(void * dst,const void * src,uintptr_t size) = 0;
+    virtual StreamCryptFilter * initializeDecrypting(const void * key,uintptr_t keyLen) = 0;
+    virtual StreamCryptFilter * decrypt(void * dst,const void * src,uintptr_t size) = 0;
 
     StreamCryptFilter & active(bool v) { active_ = v; return *this; }
     const bool & active() const { return active_; }
@@ -90,6 +90,25 @@ inline StreamCryptFilter::~StreamCryptFilter()
 inline StreamCryptFilter::StreamCryptFilter() : active_(false)
 {
 }
+//---------------------------------------------------------------------------
+/////////////////////////////////////////////////////////////////////////////
+//---------------------------------------------------------------------------
+class SHA256CryptFilter : public StreamCryptFilter {
+  public:
+    virtual ~SHA256CryptFilter() {}
+    SHA256CryptFilter() {}
+
+    SHA256CryptFilter * initializeCrypting(const void * key,uintptr_t keyLen) { encryptor_.init(key,keyLen); return this; }
+    SHA256CryptFilter * encrypt(void * dst,const void * src,uintptr_t size) { encryptor_.crypt(dst,src,size); return this; }
+    SHA256CryptFilter * initializeDecrypting(const void * key,uintptr_t keyLen) { decryptor_.init(key,keyLen); return this; }
+    SHA256CryptFilter * decrypt(void * dst,const void * src,uintptr_t size) { decryptor_.crypt(dst,src,size); return this; }
+  protected:
+    SHA256Cryptor encryptor_;
+    SHA256Cryptor decryptor_;
+  private:
+    SHA256CryptFilter(const SHA256CryptFilter &) {}
+    void operator = (const SHA256CryptFilter &) {}
+};
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
@@ -725,12 +744,13 @@ class LZSSRBTFilter : public StreamCompressionFilter {
 
     intptr_t compare(RBTreeNode * a0,RBTreeNode * a1){
       intptr_t c, s1 = a0 - nodes_, s2 = a1 - nodes_;
-      uintptr_t l = mlen_ + 2;
+//      uintptr_t l = mlen_ + 2;
+      uintptr_t l = alen_;
       do {
         c = intptr_t(dict_[s1]) - dict_[s2];
-	if( c != 0 ) break;
-	s1 = (s1 + 1) & dmsk_;
-	s2 = (s2 + 1) & dmsk_;
+        if( c != 0 ) break;
+        s1 = (s1 + 1) & dmsk_;
+        s2 = (s2 + 1) & dmsk_;
       } while( --l > 0 );
       l = s2 - l;
       if( l > bestMatchLen_ ){
@@ -1124,10 +1144,7 @@ inline LZSSRBTFilter * LZSSRBTFilter::encodeBuffer(const void * inp,uintptr_t in
   RBTreeNode * p;
   if( eState_ == stInit ){
     while( alen_ < mlen_ + 2 ){
-      if( inpSize == 0 ){
-        eState_ = stInp;
-        return this;
-      }
+      if( inpSize == 0 ) return this;
       dict_[(dpos_ + alen_) & dmsk_] = *(const uint8_t *) inp;
       alen_ += 1;
       inp = (const uint8_t *) inp + 1;
@@ -1178,19 +1195,18 @@ inline LZSSRBTFilter * LZSSRBTFilter::flush(void * out,uintptr_t * wb)
 {
   if( eState_ == stInit ) return this;
   uintptr_t outSize = ~uintptr_t(0);
+  //struct {
+  //  uintptr_t dpos_;
+  //  uintptr_t alen_;
+  //  uintptr_t dlen_;
+  //} safe;
   for(;;){
-    do {
-      dict_[(dpos_ + mlen_ + 2) & dmsk_] = 0;
-      dpos_ = (dpos_ + 1) & dmsk_;
-      if( --alen_ == 0 ){
-        eState_ = stInit;
-        goto exit;
-      }
-    } while( --dlen_ > 0 );
+    dpos_ = (dpos_ + dlen_) & dmsk_;
+    if( (alen_ -= dlen_) == 0 ) goto exit;
     bestMatchNode_ = NULL;
     bestMatchLen_ = 1;
     find(nodes_ + dpos_);
-    dlen_ = tmin(alen_,bestMatchLen_) - 1;
+    dlen_ = bestMatchLen_;
     if( dlen_ <= 2 ){
       dlen_ = 1;
       dcode_ = (uintptr_t(dict_[dpos_]) << 1) | 1u;

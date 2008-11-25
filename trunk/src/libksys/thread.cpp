@@ -138,7 +138,7 @@ void * Thread::threadFunc(void * thread)
     }
     catch( ... ){
 #ifndef NDEBUG
-    stdErr.debug(9,utf8::String::Stream() << __FILE__ << " " << __LINE__).flush();
+    stdErr.debug(9,utf8::String::Stream() << __FILE__ << " " << __LINE__).flush(true);
 #endif
     }
     e->writeStdError();
@@ -146,7 +146,7 @@ void * Thread::threadFunc(void * thread)
   }
   catch( ... ){
 #ifndef NDEBUG
-    stdErr.debug(9,utf8::String::Stream() << __FILE__ << " " << __LINE__).flush();
+    stdErr.debug(9,utf8::String::Stream() << __FILE__ << " " << __LINE__).flush(true);
 #endif
   }
   for( i = afterExecuteActions().count() - 1; i >= 0; i-- )
@@ -199,7 +199,7 @@ Thread & Thread::resume()
       err = GetLastError() + errorOffset;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
-    if( ResumeThread(handle_) == (DWORD) - 1 ){
+    if( ResumeThread(handle_) == (DWORD) -1 ){
       err = GetLastError() + errorOffset;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }

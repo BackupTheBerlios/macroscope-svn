@@ -152,6 +152,7 @@ void KFTPClient::put()
   uint64_t partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
   partialBlockSize = shell_->config_->section(section_).section("put").value("partial_block_size",partialBlockSize);
   if( shell_->config_->section(section_).section("put").isValue("log_file") ){
+    logFile_.flush(true);
     logFile_.codePage(shell_->config_->section(section_).section("put").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
     logFile_.fileName(shell_->config_->section(section_).section("put").text("log_file"));
     logFile_.rotatedFileCount(0).rotationThreshold(0);
@@ -343,6 +344,7 @@ void KFTPClient::get()
   uint64_t partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
   partialBlockSize = shell_->config_->section(section_).section("get").value("partial_block_size",partialBlockSize);
   if( shell_->config_->section(section_).section("get").isValue("log_file") ){
+    logFile_.flush(true);
     logFile_.codePage(shell_->config_->section(section_).section("get").value("log_file_codepage",utf8::getCodePage(CP_ACP)));
     logFile_.fileName(shell_->config_->section(section_).section("get").text("log_file"));
     logFile_.rotatedFileCount(0).rotationThreshold(0);
@@ -466,8 +468,8 @@ void KFTPClient::get()
   }
   if( (ptime = getlocaltimeofday() - ptime) == 0 ) ptime = 1;
   if( atime == 0 ) atime = 1;
-  log_->debug(0,
-    utf8::String::Stream() <<
+  utf8::String::Stream stream;
+  stream <<
     section_ << " " << host_ << " operation get complete.\n" <<
     "  elapsed: " << utf8::elapsedTime2Str(ptime) << ", avg speed " << 
     printTraffic(all * 1000000u / atime,true) << "bps, " <<
@@ -482,7 +484,9 @@ void KFTPClient::get()
     "    overall  difference: " << printTraffic(rscDifference(),true) << "." << ", ratio: " << 
     utf8::String::Stream::Format(rscRatio() / 100u,"%3") << "." <<
     utf8::String::Stream::Format(rscRatio() % 100u,"%02") << "%\n"
-  );
+  ;
+  log_->debug(0,stream);
+  if( log_ != &stdErr ) stdErr.debug(0,stream);
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

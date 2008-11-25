@@ -392,42 +392,47 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
   len = len > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : len;
   uint64_t r = 0;
   if( compressor_ != NULL && compressor_->active() ){
-    if( compressor_->decoderReadBytes2() == compressor_->decoderInputBufferSize() ){
-      compressor_->decoderReadBytes(0);
-      compressor_->decoderReadBytes2(0);
-    }
-    if( compressor_->decoderReadBytes() < compressor_->decoderInputBufferSize() ){
-      r = sysRecv(
-        compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
-        compressor_->decoderInputBufferSize() - compressor_->decoderReadBytes()
+    flush();
+    uintptr_t rb, wb;//, crcSize = 0;
+      //if( crc_ != NULL && crc_->active() ){
+      //  crc_->make(
+      //    compressor_->encoderOutputBuffer(),
+      //    compressor_->encoderOutputBufferSize(),
+      //    compressor_->encoderOutputBuffer() + compressor_->encoderOutputBufferSize(),
+      //    &crcSize
+      //  );
+      //}
+    for(;;){
+      rb = wb = 0;
+      compressor_->decodeBuffer(
+        compressor_->decoderInputBuffer() + compressor_->decoderReadBytes2(),
+        compressor_->decoderReadBytes() - compressor_->decoderReadBytes2(),
+        buf,
+        uintptr_t(len),
+        &rb,
+        &wb
       );
-      if( cryptor_ != NULL && cryptor_->active() ){
-        cryptor_->decrypt(
+      compressor_->decoderReadBytes2(compressor_->decoderReadBytes2() + rb);
+      if( wb > 0 ) break;
+      if( compressor_->decoderReadBytes2() == compressor_->decoderReadBytes2() ){
+        if( compressor_->decoderReadBytes() == compressor_->decoderInputBufferSize() ){
+          compressor_->decoderReadBytes(0);
+          compressor_->decoderReadBytes2(0);
+        }
+        r = sysRecv(
           compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
-          compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
-          uintptr_t(r)
+          compressor_->decoderInputBufferSize() - compressor_->decoderReadBytes()
         );
+        if( cryptor_ != NULL && cryptor_->active() ){
+          cryptor_->decrypt(
+            compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
+            compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
+            uintptr_t(r)
+          );
+        }
+        compressor_->decoderReadBytes(compressor_->decoderReadBytes() + uintptr_t(r));
       }
-      compressor_->decoderReadBytes(compressor_->decoderReadBytes() + uintptr_t(r));
     }
-    uintptr_t rb = 0, wb = 0;//, crcSize = 0;
-    //if( crc_ != NULL && crc_->active() ){
-    //  crc_->make(
-    //    compressor_->encoderOutputBuffer(),
-    //    compressor_->encoderOutputBufferSize(),
-    //    compressor_->encoderOutputBuffer() + compressor_->encoderOutputBufferSize(),
-    //    &crcSize
-    //  );
-    //}
-    compressor_->decodeBuffer(
-      compressor_->decoderInputBuffer() + compressor_->decoderReadBytes2(),
-      compressor_->decoderInputBufferSize() - compressor_->decoderReadBytes2(),
-      buf,
-      uintptr_t(len),
-      &rb,
-      &wb
-    );
-    compressor_->decoderReadBytes2(compressor_->decoderReadBytes2() + rb);
     r = wb;
   }
   else if( cryptor_ != NULL && cryptor_->active() ){
@@ -568,6 +573,7 @@ uint64_t AsyncSocket::send(const void * buf,uint64_t len)
         buf = (uint8_t *) buf + (size_t) l;
         len -= l;
       }
+      compressor_->encoderWriteBytes(0);
     }
     w = rb;
   }
@@ -620,7 +626,45 @@ AsyncSocket & AsyncSocket::write(const void * buf,uint64_t len)
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::flush()
 {
-  if( ksys::LZO1X::active() && wBufPos() > 0 ){
+  if( compressor_ != NULL && compressor_->active() && compressor_->encoderWriteBytes() > 0 ){
+    uintptr_t wb = 0, crcSize = 0;
+    if( cryptor_ != NULL && cryptor_->active() ){
+      cryptor_->encrypt(
+        compressor_->encoderOutputBuffer(),
+        compressor_->encoderOutputBuffer(),
+        compressor_->encoderWriteBytes()
+      );
+    }
+    void * buf = compressor_->encoderOutputBuffer();
+    uintptr_t len = compressor_->encoderWriteBytes() + crcSize;
+    while( len > 0 ){
+      uint64_t l = sysSend(buf,len);
+      buf = (uint8_t *) buf + (size_t) l;
+      len -= (size_t) l;
+    }
+    compressor_->encoderWriteBytes(0);
+    compressor_->flush(
+      compressor_->encoderOutputBuffer() + compressor_->encoderWriteBytes(),
+      &wb
+    );
+    compressor_->encoderWriteBytes(compressor_->encoderWriteBytes() + wb);
+    if( cryptor_ != NULL && cryptor_->active() ){
+      cryptor_->encrypt(
+        compressor_->encoderOutputBuffer(),
+        compressor_->encoderOutputBuffer(),
+        compressor_->encoderWriteBytes()
+      );
+    }
+    buf = compressor_->encoderOutputBuffer();
+    len = compressor_->encoderWriteBytes() + crcSize;
+    while( len > 0 ){
+      uint64_t l = sysSend(buf,len);
+      buf = (uint8_t *) buf + (size_t) l;
+      len -= (size_t) l;
+    }
+    compressor_->encoderWriteBytes(0);
+  }
+  else if( ksys::LZO1X::active() && wBufPos() > 0 ){
     ksys::AutoPtrBuffer buf;
     uint8_t * p;
     int32_t l, ll;
@@ -679,10 +723,13 @@ AsyncSocket & AsyncSocket::operator >> (utf8::String & s)
   uintptr_t q = 0;
   q = ~q;
   if( l > q ) newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
-  utf8::String t;
-  t.resize((size_t) l);
-  read(t.c_str(),l);
-  s = t;
+  ksys::AutoPtr<utf8::String::Container,AutoPtrNonVirtualClassDestructor> t(utf8::String::Container::container(uintptr_t(l)));
+  read(t->string_,l);
+  t->string_[l] = '\0';
+  utf8::String e(t.ptr(NULL));
+  if( !e.isValid() )
+    newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
+  s = e;
   return *this;
 }
 //---------------------------------------------------------------------------
@@ -841,12 +888,12 @@ AsyncSocket::AuthErrorType AsyncSocket::serverAuth(const AuthParams & ap)
   }
   *this << int32_t(aeOK);
 
-  if( (se == radRequired || se == radAllow) && (ce == radRequired || ce == radAllow) ){
-    this->threshold(ap.threshold_);
-    activateEncryption(passwordSHA256);
-  }
   if( (sc == radRequired || sc == radAllow) && (cc == radRequired || cc == radAllow) )
     activateCompression(smethod,scrc,ap.level_,ap.optimize_,ap.bufferSize_);
+  if( (se == radRequired || se == radAllow) && (ce == radRequired || ce == radAllow) ){
+    this->threshold(ap.threshold_);
+    activateEncryption(passwordSHA256,sizeof(passwordSHA256));
+  }
   return aeOK;
 }
 //------------------------------------------------------------------------------
@@ -870,6 +917,9 @@ AsyncSocket & AsyncSocket::activateCompression(uintptr_t method,uintptr_t crc,ui
     wBufSize = wBufSize > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : wBufSize > 0 ? wBufSize : getpagesize() * 16u;
     compressor_->encoderOutputBufferSize(wBufSize);
     compressor_->decoderInputBufferSize(wBufSize);
+    compressor_->initializeEncoder();
+    compressor_->initializeDecoder();
+    compressor_->active(true);
   }
   return *this;
 }
@@ -883,7 +933,15 @@ AsyncSocket & AsyncSocket::deActivateCompression()
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::activateEncryption(const void * key, uintptr_t keyLen)
 {
-  init(key,keyLen);
+  if( compressor_ != NULL ){
+    cryptor_ = newObject<ksys::SHA256CryptFilter>();
+    cryptor_->initializeCrypting(key,keyLen);
+    cryptor_->initializeDecrypting(key,keyLen);
+    cryptor_->active(true);
+  }
+  else {
+    init(key,keyLen);
+  }
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -949,12 +1007,12 @@ AsyncSocket::AuthErrorType AsyncSocket::clientAuth(const AuthParams & ap)
   *this >> e;
   if( e != aeOK ) return ae;
 
-  if( (se == radRequired || se == radAllow) && (ce == radRequired || ce == radAllow) ){
-    this->threshold(sthreshold);
-    activateEncryption(passwordSHA256);
-  }
   if( (sc == radRequired || sc == radAllow) && (cc == radRequired || cc == radAllow) )
     activateCompression(cmethod,scrc,ap.level_,ap.optimize_,ap.bufferSize_);
+  if( (se == radRequired || se == radAllow) && (ce == radRequired || ce == radAllow) ){
+    this->threshold(sthreshold);
+    activateEncryption(passwordSHA256,sizeof(passwordSHA256));
+  }
   return aeOK;
 }
 //------------------------------------------------------------------------------

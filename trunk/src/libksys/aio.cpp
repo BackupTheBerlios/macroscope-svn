@@ -571,7 +571,7 @@ void AsyncIoSlave::threadExecute()
 	    }
 	    else {
 #if __FreeBSD__	    
-	      stdErr.debug(9,utf8::String::Stream() << "Function aio_read return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush();
+	      stdErr.debug(9,utf8::String::Stream() << "Function aio_read return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush(true);
 #endif
 	    }
 #else
@@ -606,7 +606,7 @@ void AsyncIoSlave::threadExecute()
 	    }
 	    else {
 #if __FreeBSD__	    
-	      stdErr.debug(9,utf8::String::Stream() << "Function aio_write return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush();
+	      stdErr.debug(9,utf8::String::Stream() << "Function aio_write return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush(true);
 #endif
             }	    
 #else

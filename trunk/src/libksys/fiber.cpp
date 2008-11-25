@@ -158,19 +158,19 @@ void Fiber::checkFiberStackOverflow() const
 #endif
   uintptr_t sp = getSP();
   if( sp <= base ){
-    stdErr.debug(9,utf8::String::Stream() << "fiber stack overflow\n").flush();
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack overflow\n").flush(true);
   }
   else if( sp <= base + 256 ){
-    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 256 reached\n").flush();
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 256 reached\n").flush(true);
   }
   else if( sp <= base + 512 ){
-    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 512 reached\n").flush();
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 512 reached\n").flush(true);
   }
   else if( sp <= base + 1024 ){
-    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 1024 reached\n").flush();
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 1024 reached\n").flush(true);
   }
   else if( sp <= base + 2048 ){
-    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 2048 reached\n").flush();
+    stdErr.debug(9,utf8::String::Stream() << "fiber stack limit 2048 reached\n").flush(true);
   }
 }
 //---------------------------------------------------------------------------

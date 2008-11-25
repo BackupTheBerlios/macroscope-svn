@@ -1212,7 +1212,7 @@ void PCAP::LazyWriter::threadExecute()
       }
       if( group == NULL ){
         if( term ) return;
-	break;
+        break;
       }
       swapOut(tempFile,group);
       if( !tempFile.isOpen() ) break;

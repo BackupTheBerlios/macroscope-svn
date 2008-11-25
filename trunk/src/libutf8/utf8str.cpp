@@ -385,7 +385,9 @@ intptr_t String::ncasecompare(const String & s, uintptr_t n) const
   uintptr_t     l1, l2;
   const char *  s1  = container_->string_, * s2 = s.container_->string_;
   while( n-- > 0 ){
-    c = utf8c2UpperUCS(s1, l1) - utf8c2UpperUCS(s2, l2);
+    c = utf8c2UpperUCS(s1,l1) - utf8c2UpperUCS(s2,l2);
+    if( l1 == 0 || l2 == 0 )
+      newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
     if( c != 0 || *s1 == 0 || *s2 == 0 ) break;
     s1 += l1;
     s2 += l2;
