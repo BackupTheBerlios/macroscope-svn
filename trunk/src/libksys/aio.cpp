@@ -177,14 +177,21 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
     }
   }
 #else
-  uintptr_t mReqs = 64;
-  if( connect_ ) mReqs = FD_SETSIZE;
   if( !terminated_ ){
     AutoLock<LiteWriteLock> lock(*this);
+    uintptr_t mReqs = maxRequests_;
+    if( connect_ ){
+      mReqs = FD_SETSIZE;
+      if( request.type_ == etDirectoryChangeNotification ) return r;
+    }
+    if( request.type_ == etDirectoryChangeNotification ) mReqs = 1;
     if( requests_.count() + newRequests_.count() < mReqs ){
       newRequests_.insToTail(request);
       if( newRequests_.count() < 2 ){
         if( connect_ ){
+	}
+	else if( request.type_ == etDirectoryChangeNotification ){
+	  maxRequests_ = mReqs;
 	}
 #if HAVE_KQUEUE
         else {
@@ -530,6 +537,13 @@ void AsyncIoSlave::threadExecute()
       //openAPI(object);
       errno = 0;
       switch( object->type_ ){
+        case etDirectoryChangeNotification :
+#if HAVE_FAM_H
+	  errno = EINPROGRESS;
+#else
+	  error = ENOSYS;
+#endif
+	  break;
         case etLockFile :
 	  error = ENOSYS;
           break;
@@ -551,7 +565,11 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif
 #if HAVE_AIO_READ
-            if( aio_read(iocb) == 0 ) errno = EINPROGRESS; else {
+            if( aio_read(iocb) == 0 ){
+	      errno = EINPROGRESS;
+              object->kqueue_ = kqueue_;
+	    }
+	    else {
 #if __FreeBSD__	    
 	      stdErr.debug(9,utf8::String::Stream() << "Function aio_read return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush();
 #endif
@@ -582,7 +600,11 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif
 #if HAVE_AIO_WRITE
-            if( aio_write(iocb) == 0 ) errno = EINPROGRESS; else {
+            if( aio_write(iocb) == 0 ){
+	      errno = EINPROGRESS;
+              object->kqueue_ = kqueue_;
+	    }
+	    else {
 #if __FreeBSD__	    
 	      stdErr.debug(9,utf8::String::Stream() << "Function aio_write return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush();
 #endif
@@ -612,6 +634,7 @@ void AsyncIoSlave::threadExecute()
 	  }
 	  else {
 	    errno = EINPROGRESS;
+            object->kqueue_ = kqueue_;
 	  }
 #else
           errno = ENOSYS;
@@ -638,9 +661,6 @@ void AsyncIoSlave::threadExecute()
           assert( 0 );
       }
       if( errno == EINPROGRESS ){
-#if HAVE_KQUEUE
-	object->kqueue_ = kqueue_;
-#endif
         //object->ioSlave_ = this;
         requests_.insToTail(newRequests_.remove(*object));
       }
@@ -648,6 +668,7 @@ void AsyncIoSlave::threadExecute()
         error = errno;
         //closeAPI(object);
         newRequests_.remove(*object);
+        object->kqueue_ = -1;
         object->errno_ = error;
         object->count_ = ~(uint64_t) 0;
         object->fiber_->thread()->postEvent(object);
@@ -661,13 +682,20 @@ void AsyncIoSlave::threadExecute()
       acquire();
     }
     else {
+      node = requests_.first();
+      object = &AsyncEvent::nodeObject(*node);
       release();
       if( connect_ ){
 	nrd = select(FD_SETSIZE,rfds_,wfds_,NULL,NULL);
       }
+#if HAVE_FAM_H
+      else if( object->type_ == etDirectoryChangeNotification ){
+        nrd = 1;
+      }
+#endif
       else {
 #if HAVE_KQUEUE
-        evCount = kevent(kqueue_,NULL,0,&kevents_[0],1,NULL);
+        evCount = kevent(kqueue_,NULL,0,&kevents_[0],64,NULL);
 #else
         errno = ENOSYS;
 #endif
@@ -680,7 +708,6 @@ void AsyncIoSlave::threadExecute()
         assert( 0 );
         abort();
       }
-      node = requests_.first();
       while( evCount > 0 ){
 #if HAVE_KQUEUE
         struct kevent * kev = NULL;
@@ -697,6 +724,11 @@ void AsyncIoSlave::threadExecute()
             continue;
 	  }
 	}
+#if HAVE_FAM_H
+        else if( object->type_ == etDirectoryChangeNotification ){
+          evCount = 0;
+        }
+#endif
 #if HAVE_KQUEUE
 	else {
           evCount--;
@@ -715,6 +747,16 @@ void AsyncIoSlave::threadExecute()
 	error = 0;
 	count = 0;
         switch( object->type_ ){
+#if HAVE_FAM_H
+          case etDirectoryChangeNotification :
+            release();
+            if( FAMNextEvent(
+  	      &object->directoryChangeNotification_->famConnection_,
+	      &object->directoryChangeNotification_->famEvent_
+	    ) < 0 ) error = FAMErrno;
+            acquire();
+	    break;
+#endif
           case etRead    :
 #if HAVE_KQUEUE
               error = aio_error(&object->iocb_);
@@ -763,7 +805,6 @@ void AsyncIoSlave::threadExecute()
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
 bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
 {
   bool r = false;
@@ -776,7 +817,14 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
       r = object.directoryChangeNotification_ == dcn;
       if( dcn == NULL || r ){
         object.abort_ = true;
+#if defined(__WIN32__) || defined(__WIN64__)
         SetEvent(object.overlapped_.hEvent);
+#elif HAVE_FAM_H
+        if( object.directoryChangeNotification_->monitorStarted_ ){
+	  AsyncFile file(object.directoryChangeNotification_->fname_);
+	  file.createIfNotExist(true).createPath(false).tryOpen();
+	}
+#endif
         post();
         if( dcn != NULL ) break;
       }
@@ -784,7 +832,6 @@ bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
   }
   return r;
 }
-#endif
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
@@ -814,25 +861,6 @@ void AsyncMiscSlave::threadBeforeWait()
   post();
 }
 //---------------------------------------------------------------------------
-#if HAVE_FAM_H
-bool AsyncMiscSlave::abortNotification(DirectoryChangeNotification * dcn)
-{
-  AutoLock<LiteWriteLock> lock(*this);
-  EventsNode * node;
-  for( node = requests_.first(); node != NULL; node = node->next() ){
-    AsyncEvent & object = AsyncEvent::nodeObject(*node);
-    if( object.type_ == etDirectoryChangeNotification && (dcn == NULL || dcn == object.directoryChangeNotification_) ){
-      FAMCancelMonitor(
-        &object.directoryChangeNotification_->famConnection_,
-        &object.directoryChangeNotification_->famRequest_
-      );
-      return true;
-    }
-  }
-  return false;
-}
-//---------------------------------------------------------------------------
-#endif
 bool AsyncMiscSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
@@ -840,10 +868,7 @@ bool AsyncMiscSlave::transplant(AsyncEvent & request)
     AutoLock<LiteWriteLock> lock(*this);
     if( requests_.count() < maxRequests_ ){
       requests_.insToTail(request);
-      if( requests_.count() < 2 ){
-        post();
-        if( request.type_ == etDirectoryChangeNotification ) maxRequests_ = 1;
-      }
+      if( requests_.count() < 2 ) post();
       r = true;
     }
   }
@@ -864,20 +889,6 @@ void AsyncMiscSlave::threadExecute()
       Semaphore::wait();
     }
     else {
-#if HAVE_FAM_H
-      if( request->type_ == etDirectoryChangeNotification ){
-        terminate();
-	request->errno_ = 0;
-        int r = FAMNextEvent(
-	  &request->directoryChangeNotification_->famConnection_,
-	  &request->directoryChangeNotification_->famEvent_
-	);
-	if( r < 0 ) request->errno_ = FAMErrno;
-        assert( request->fiber_ != NULL );
-        request->fiber_->thread()->postEvent(request);
-      }
-      else
-#endif
       if( request->type_ == etOpenFile ){
         int32_t err = 0;
         try {
@@ -1720,20 +1731,15 @@ bool Requester::abortNotification(DirectoryChangeNotification * dcn)
       if( dcn != NULL && r ) break;
     }
   }
-  else {
+  else
+#endif
+  {
     AutoLock<LiteWriteLock> lock(ioRequestsReadWriteLock_);
     for( i = ioSlaves_.count() - 1; i >= 0; i-- ){
       r = ioSlaves_[i].abortNotification(dcn);
       if( dcn != NULL && r ) break;
     }
   }
-#elif HAVE_FAM_H
-  AutoLock<LiteWriteLock> lock(ofRequestsReadWriteLock_);
-  for( i = ofSlaves_.count() - 1; i >= 0; i-- ){
-    r = ofSlaves_[i].abortNotification(dcn);
-    if( dcn != NULL && r ) break;
-  }
-#endif
   return r;
 }
 //---------------------------------------------------------------------------
@@ -1757,9 +1763,6 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etResolveName :
     case etResolveAddress :
     case etStat :
-#if HAVE_FAM_H
-    case etDirectoryChangeNotification :
-#endif
       {
         AutoLock<LiteWriteLock> lock(ofRequestsReadWriteLock_);
         if( gettimeofday() - ofSlavesSweepTime_ >= 10000000 ){
@@ -1802,8 +1805,8 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
-#if defined(__WIN32__) || defined(__WIN64__)
     case etDirectoryChangeNotification :
+#if defined(__WIN32__) || defined(__WIN64__)
       if( isWin9x() ){
         AutoLock<LiteWriteLock> lock(wdcnRequestsReadWriteLock_);
         if( gettimeofday() - wdcnSlavesSweepTime_ >= 10000000 ){

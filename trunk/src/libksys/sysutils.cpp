@@ -470,8 +470,9 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
   }
   SetLastError(fiber->event_.errno_);
 #elif HAVE_FAM_H
-  if( !monitorStarted_ ){    
+  if( !monitorStarted_ ){
     utf8::String name(anyPathName2HostPathName(pathName));
+    fname_ = includeTrailingPathDelimiter(name) + getTempFileName("flag");
     Stat st;
     if( !stat(name,st) ){
       errno = ENOENT;
@@ -493,7 +494,6 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
       newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[FAMErrno] + " " + __PRETTY_FUNCTION__)->throwSP();
     }
     monitorStarted_ = true;
-    abort_ = false;
     name_ = name;
   }
   if( monitorStarted_ ){
@@ -514,10 +514,16 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
         if( noThrow ) return;
         newObjectV1C2<Exception>(EINVAL,pathName + utf8::String(" ") + FamErrlist[fiber->event_.errno_] + " " + __PRETTY_FUNCTION__)->throwSP();
       }
-      else if( abort_ ){
-        newObjectV1C2<Exception>(EINTR,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+      else if( famEvent_.code == FAMDeleted || famEvent_.code == FAMCreated ){
+        if( stat(fname_) ){
+          //for( uintptr_t i = 0; i < 100; i++ ){
+          //  if( remove(fname_,true) ) break;
+	  //  ksleep(10000);
+	  //}
+          newObjectV1C2<Exception>(EINTR,pathName + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
+        }
+        break;
       }
-      else if( famEvent_.code == FAMDeleted || famEvent_.code == FAMCreated ) break;
     }
   }
 #else
@@ -527,6 +533,7 @@ void DirectoryChangeNotification::monitor(const utf8::String & pathName,uint64_t
 //---------------------------------------------------------------------------
 void DirectoryChangeNotification::stop()
 {
+  cancel();
 #if defined(__WIN32__) || defined(__WIN64__)
   if( hFFCNotification_ != INVALID_HANDLE_VALUE ){
     FindCloseChangeNotification(hFFCNotification_);
@@ -546,21 +553,14 @@ void DirectoryChangeNotification::stop()
       newObjectV1C2<Exception>(EINVAL,FamErrlist[FAMErrno] + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     monitorStarted_ = false;
     FAMCONNECTION_GETFD(&famConnection_) = -1;
+    remove(fname_,true);
   }
 #endif
 }
 //---------------------------------------------------------------------------
 void DirectoryChangeNotification::cancel()
 {
-#if defined(__WIN32__) || defined(__WIN64__)
-  requester().abortNotification(this);
-#elif HAVE_FAM_H
-  if( FAMCONNECTION_GETFD(&famConnection_) != -1 ){
-    abort_ = true;
-    AsyncFile file(includeTrailingPathDelimiter(name_) + getTempFileName(".brk"));
-    file.createIfNotExist(true).removeAfterClose(true).tryOpen();
-  }
-#endif
+  Requester::requester().abortNotification(this);
 }
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -2361,12 +2361,7 @@ err:  err = GetLastError() + errorOffset;
   AutoPtr<char *,AutoPtrMemoryDestructor> argsPtrs;
   argsPtrs.reallocT(aargs.count() + 2);
   argsPtrs[0] = nameHolder;
-  for( uintptr_t i = 0; i < aargs.count(); i++ ){
-    argsPtrs[i + 1] = aargs[i];
-#ifndef NDEBUG
-    fprintf(stderr,"%s\n",argsPtrs[i]);
-#endif
-  }
+  for( uintptr_t i = 0; i < aargs.count(); i++ ) argsPtrs[i + 1] = aargs[i];
   argsPtrs[aargs.count() + 1] = NULL;
   pid_t pid = fork();
   if( pid == -1 ){
@@ -2386,23 +2381,12 @@ err:  err = GetLastError() + errorOffset;
     if( params.stdio_ != INVALID_HANDLE_VALUE && dup2(STDIN_FILENO,params.stdio_) == - 1 ) exit(errno);
     if( params.stdout_ != INVALID_HANDLE_VALUE && dup2(STDOUT_FILENO,params.stdout_) == - 1 ) exit(errno);
     if( params.stderr_ != INVALID_HANDLE_VALUE && dup2(STDERR_FILENO,params.stderr_) == - 1 ) exit(errno);
-    if( execvp(name,argsPtrs) == -1 ){
-#ifndef NDEBUG
-      fprintf(stderr,"%s, %d\n",__FILE__,__LINE__);
-#endif
-      exit(errno);
-    }
-#ifndef NDEBUG
-    fprintf(stderr,"%s, %d\n",__FILE__,__LINE__);
-#endif
+    if( execvp(name,argsPtrs) == -1 ) exit(errno);
     exit(0);
   }
   else if( params.wait_ ){
     int status;
     pid_t pid2 = waitpid(pid,&status,0);
-#ifndef NDEBUG
-    fprintf(stderr,"%s, %d, %d\n",__FILE__,__LINE__,WEXITSTATUS(status));
-#endif
     pid = WEXITSTATUS(status);
     if( pid2 == -1 || WEXITSTATUS(status) != 0 ){
       if( params.noThrow_ ) return pid;

@@ -1211,12 +1211,7 @@ void PCAP::LazyWriter::threadExecute()
         term = terminated_;
       }
       if( group == NULL ){
-        if( term ){
-#ifndef NDEBUG
-	  stdErr.debug(9,utf8::String::Stream() << __FILE__ << ", " << __LINE__ << "\n");
-#endif
-          return;
-	}
+        if( term ) return;
 	break;
       }
       swapOut(tempFile,group);

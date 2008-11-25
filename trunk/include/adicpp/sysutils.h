@@ -85,11 +85,11 @@ class DirectoryChangeNotification {
     uintptr_t bufferSize_;
 #elif HAVE_FAM_H
     utf8::String name_;
+    utf8::String fname_;
     FAMConnection famConnection_;
     FAMRequest famRequest_;
     FAMEvent famEvent_;
     bool monitorStarted_;
-    bool abort_;
 #endif
     bool createPath_;
 };
