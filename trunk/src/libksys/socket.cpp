@@ -288,7 +288,7 @@ AsyncSocket & AsyncSocket::accept(AsyncSocket & socket)
   );
   //memmove(&socket.localAddress_.addr4_,plsa,sizeof(socket.localAddress_.addr4_));
   memmove(&socket.remoteAddress_->addr4_,prsa,sizeof(socket.remoteAddress_->addr4_));
-#elif HAVE_KQUEUE
+#else
   ksys::Fiber * fiber = ksys::currentFiber();
   assert( fiber != NULL );
   assert( socket.socket_ == INVALID_SOCKET );
@@ -1114,7 +1114,7 @@ BOOL AsyncSocket::GetOverlappedResult(
   return api.WSAGetOverlappedResult(socket_,lpOverlapped,lpNumberOfBytesTransferred,bWait,lpdwFlags);
 }
 //---------------------------------------------------------------------------
-#elif HAVE_KQUEUE || __linux__
+#else
 //---------------------------------------------------------------------------
 int AsyncSocket::accept()
 {

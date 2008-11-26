@@ -247,6 +247,8 @@
 #cmakedefine HAVE_AIO_WRITE 1
 #cmakedefine HAVE_AIO_RETURN 1
 #cmakedefine HAVE_AIO_ERROR 1
+#cmakedefine HAVE_AIO_SUSPEND 1
+#cmakedefine HAVE_AIO_WAITCOMPLETE 1
 #cmakedefine HAVE_MMAP 1
 #cmakedefine HAVE_MUNMAP 1
 #cmakedefine HAVE_MLOCK 1
@@ -384,6 +386,7 @@
 #cmakedefine HAVE_STAT_ST_ATIMESPEC 1
 #cmakedefine HAVE_STAT_ST_MTIMESPEC 1
 #cmakedefine HAVE_STAT_ST_CTIMESPEC 1
+#cmakedefine HAVE_MCONTEXT_T_MC_LEN 1
 
 #cmakedefine PRIVATE_RELEASE 1
 #cmakedefine CMAKE_BUILD 1

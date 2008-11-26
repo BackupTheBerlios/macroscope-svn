@@ -77,6 +77,9 @@ class Fiber : virtual public Object {
     LPVOID fiber_;
 #elif HAVE_UCONTEXT_H
     ucontext_t context_;
+#if !HAVE_MCONTEXT_T_MC_LEN
+    volatile uintptr_t mcLen_;
+#endif
     static void start(Fiber * fiber);
 #else
     AutoPtrBuffer stack_;
@@ -224,7 +227,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public LiteWriteLock {
 #endif
 
     bool transplant(AsyncEvent & requests);
-#if HAVE_KQUEUE
+#if HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
     void abortIo();
 #else
     void abortIo() {}
@@ -234,7 +237,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public LiteWriteLock {
     AsyncIoSlave & maxRequests(uintptr_t v){
 #if defined(__WIN32__) || defined(__WIN64__)
       maxRequests_ = v > MAXIMUM_WAIT_OBJECTS - 1 ? MAXIMUM_WAIT_OBJECTS - 1 : v;
-#elif HAVE_KQUEUE
+#elif HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
       maxRequests_ = 128;
 #else
       maxRequests_ = 1;
@@ -260,7 +263,9 @@ class AsyncIoSlave : public Thread, public Semaphore, public LiteWriteLock {
     HANDLE safeEvents_[MAXIMUM_WAIT_OBJECTS];
     AsyncEvent * eReqs_[MAXIMUM_WAIT_OBJECTS];
 #else
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+    AutoPtr<struct aiocb *,AutoPtrMemoryDestructor> aiocbs_;
+#elif HAVE_KQUEUE
     int kqueue_;
     AutoPtr<struct kevent,AutoPtrMemoryDestructor> kevents_;
 #endif

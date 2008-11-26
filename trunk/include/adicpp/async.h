@@ -83,7 +83,7 @@ class AsyncEvent {
     static AsyncEvent & nodeObject(const EmbeddedListNode<AsyncEvent> & node, AsyncEvent * p = NULL){
       return node.object(p->node_);
     }
-    void cancelAsyncEvent() const;
+    void cancelAsyncEvent();
   private:
     mutable EmbeddedListNode<AsyncEvent> node_;
   public:
@@ -94,7 +94,6 @@ class AsyncEvent {
     OVERLAPPED overlapped_;
 #elif SIZEOF_AIOCB
     struct aiocb iocb_;
-    //Thread * ioSlave_;
 #endif
 #if _MSC_VER
 #pragma warning(push,3)
@@ -158,7 +157,7 @@ class AsyncEvent {
     AsyncDescriptor * descriptor_;
     uint64_t timeout_;
     int32_t errno_;
-#if HAVE_KQUEUE
+#if HAVE_KQUEUE && !HAVE_AIO_SUSPEND && !HAVE_AIO_WAITCOMPLETE
     int kqueue_;
 #endif
     AsyncEventType type_;
@@ -179,7 +178,6 @@ inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 #endif
 #if SIZEOF_AIOCB
   memset(&iocb_, 0, sizeof(iocb_));
-  //ioSlave_ = NULL;
 #endif
 #if HAVE_KQUEUE
   kqueue_ = -1;
@@ -257,7 +255,7 @@ class AsyncDescriptor : public AsyncDescriptorKey {
     virtual BOOL GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD lpdwFlags = NULL) = 0;
 #endif
   protected:
-#if HAVE_KQUEUE || __linux__
+#if HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
     virtual int accept() = 0;
     virtual void connect(AsyncEvent * request) = 0;
     virtual int64_t read2(void * buf, uint64_t len);
@@ -286,9 +284,12 @@ inline AsyncDescriptor::AsyncDescriptor()
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-inline void AsyncEvent::cancelAsyncEvent() const
+inline void AsyncEvent::cancelAsyncEvent()
 {
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+  if( descriptor_ != NULL )
+    aio_cancel(descriptor_->descriptor_,&iocb_);
+#elif HAVE_KQUEUE
   if( kqueue_ != -1 ){
     struct kevent ke;
     EV_SET(&ke,descriptor_->socket_,EVFILT_READ | EVFILT_WRITE,EV_DELETE,0,0,0);

@@ -140,7 +140,11 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect), maxRequests_(64)
     FD_ZERO(rfds_);
     FD_ZERO(wfds_);
   }
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+  else {
+    aiocbs_.reallocT(maxRequests_ + 1);
+  }
+#elif HAVE_KQUEUE
   else {
     kqueue_ = -1;
     kqueue_ = kqueue();
@@ -148,9 +152,9 @@ AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect), maxRequests_(64)
       int32_t err = errno;
       newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
     }
-    kevents_.reallocT(64);
+    kevents_.reallocT(maxRequests_);
   }
-#else // TODO: use epoll under linux
+#else
   newObjectV1C2<Exception>(ENOSYS,__PRETTY_FUNCTION__)->throwSP();
 #endif
 #endif
@@ -193,7 +197,11 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 	else if( request.type_ == etDirectoryChangeNotification ){
 	  maxRequests_ = mReqs;
 	}
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+        else {
+          pthread_kill(handle(),SIGINT);
+        }
+#elif HAVE_KQUEUE
         else {
           struct kevent ev;
           EV_SET(&ev,1000,EVFILT_TIMER,EV_ADD | EV_ONESHOT,0,0,0);
@@ -507,6 +515,7 @@ l2:       object = eReqs_[wm];
 //------------------------------------------------------------------------------
 #else
 //------------------------------------------------------------------------------
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
 void AsyncIoSlave::abortIo()
 {
   AutoLock<LiteWriteLock> lock(*this);
@@ -514,13 +523,33 @@ void AsyncIoSlave::abortIo()
   for( node = requests_.first(); node != NULL; node = node->next() )
     AsyncEvent::nodeObject(*node).cancelAsyncEvent();
 }
+#elif HAVE_KQUEUE
+void AsyncIoSlave::abortIo()
+{
+  AutoLock<LiteWriteLock> lock(*this);
+  EventsNode * node;
+  for( node = requests_.first(); node != NULL; node = node->next() )
+    AsyncEvent::nodeObject(*node).cancelAsyncEvent();
+}
+#endif
 //------------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
 //  priority(THREAD_PRIORITY_HIGHEST);
-  intptr_t sp = -1;
 #if SIZEOF_AIOCB
   struct aiocb * iocb;
+#endif
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+  sigset_t ss;
+  struct sigaction act;
+  memset(&act,0,sizeof(act));
+  if( sigemptyset(&ss) != 0 ||
+      sigaddset(&ss,SIGINT) != 0 ||
+      sigprocmask(SIG_UNBLOCK,&ss,NULL) != 0 ||
+      sigaction(SIGSYS,&act,NULL) != 0 ){
+    perror(NULL);
+    abort();
+  }
 #endif
   union {
     int nrd;
@@ -534,7 +563,6 @@ void AsyncIoSlave::threadExecute()
     AutoLock<LiteWriteLock> lock(*this);
     for( node = newRequests_.first(); node != NULL; node = newRequests_.first() ){
       object = &AsyncEvent::nodeObject(*node);
-      //openAPI(object);
       errno = 0;
       switch( object->type_ ){
         case etDirectoryChangeNotification :
@@ -555,25 +583,30 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
 	    iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
-#if HAVE_SIGVAL_SIVAL_PTR
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_SIGVAL_SIVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
 #elif HAVE_SIGVAL_SIGVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
 #endif
-#ifdef SIGEV_KEVENT
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif SIGEV_KEVENT
             iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif
 #if HAVE_AIO_READ
             if( aio_read(iocb) == 0 ){
 	      errno = EINPROGRESS;
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_KQUEUE
               object->kqueue_ = kqueue_;
-	    }
-	    else {
-#if __FreeBSD__	    
-	      stdErr.debug(9,utf8::String::Stream() << "Function aio_read return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush(true);
 #endif
 	    }
+#if __FreeBSD__
+	    else if( errno == ENOSYS ){
+	      stdErr.debug(9,utf8::String::Stream() << "Function aio_read return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush(true);
+	    }
+#endif
 #else
 	    error = ENOSYS;
 #endif
@@ -590,25 +623,30 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
             iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
-#if HAVE_SIGVAL_SIVAL_PTR
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_SIGVAL_SIVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
 #elif HAVE_SIGVAL_SIGVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
 #endif
-#ifdef SIGEV_KEVENT
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif SIGEV_KEVENT
             iocb->aio_sigevent.sigev_notify_kqueue = kqueue_;
             iocb->aio_sigevent.sigev_notify = SIGEV_KEVENT;
 #endif
 #if HAVE_AIO_WRITE
             if( aio_write(iocb) == 0 ){
 	      errno = EINPROGRESS;
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_KQUEUE
               object->kqueue_ = kqueue_;
-	    }
-	    else {
-#if __FreeBSD__	    
-	      stdErr.debug(9,utf8::String::Stream() << "Function aio_write return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush(true);
 #endif
+	    }
+#if __FreeBSD__	    
+	    else if( errno == ENOSYS ){
+	      stdErr.debug(9,utf8::String::Stream() << "Function aio_write return ENOSYS, aio kernel module required. Execute command under root 'kldload aio'\n").flush(true);
             }	    
+#endif
 #else
 	    error = ENOSYS;
 #endif
@@ -617,8 +655,10 @@ void AsyncIoSlave::threadExecute()
             errno = EINVAL;
 	  }
           break;
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
         case etAccept :
-#if HAVE_KQUEUE
+#elif HAVE_KQUEUE
+        case etAccept :
           EV_SET(&kevents_[0],object->descriptor_->socket_,EVFILT_READ,EV_ADD | EV_ONESHOT,0,0,node);
           if( kevent(kqueue_,&kevents_[0],1,NULL,0,NULL) != -1 )
             count = object->descriptor_->accept();
@@ -636,10 +676,12 @@ void AsyncIoSlave::threadExecute()
 	    errno = EINPROGRESS;
             object->kqueue_ = kqueue_;
 	  }
-#else
-          errno = ENOSYS;
-#endif
           break;
+#else
+        case etAccept :
+          errno = error = ENOSYS;
+          break;
+#endif
         case etConnect :
 	  if( object->descriptor_->socket_ < 0 ||
 	      (uintptr_t) object->descriptor_->socket_ >= FD_SETSIZE ){
@@ -648,8 +690,23 @@ void AsyncIoSlave::threadExecute()
 	  else {
 	    FD_SET(object->descriptor_->socket_,rfds_);
 	    FD_SET(object->descriptor_->socket_,wfds_);
-            object->descriptor_->connect(object);
-            if( errno != EINPROGRESS ){
+	    if( object->type_ == etAccept ){
+              count = object->descriptor_->accept();
+              if( errno == 0 ){
+                newRequests_.remove(*object);
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_KQUEUE
+                object->kqueue_ = -1;
+#endif
+                object->errno_ = 0;
+                object->count_ = count;
+                object->fiber_->thread()->postEvent(object);
+                continue;
+              }
+            }
+            else
+              object->descriptor_->connect(object);
+            if( errno != EINPROGRESS && errno != EAGAIN ){
     	      error = errno;
 	      FD_CLR(object->descriptor_->socket_,rfds_);
 	      FD_CLR(object->descriptor_->socket_,wfds_);
@@ -668,11 +725,13 @@ void AsyncIoSlave::threadExecute()
         error = errno;
         //closeAPI(object);
         newRequests_.remove(*object);
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_KQUEUE
         object->kqueue_ = -1;
+#endif
         object->errno_ = error;
         object->count_ = ~(uint64_t) 0;
         object->fiber_->thread()->postEvent(object);
-        sp--;
       }
     }
     if( requests_.count() == 0 ){
@@ -682,11 +741,37 @@ void AsyncIoSlave::threadExecute()
       acquire();
     }
     else {
+      struct timespec to, * timeout = NULL;
+      uint64_t tmout = ~uint64_t(0);
+      {
+        uintptr_t i = 0;
+        for( node = requests_.first(); node != NULL; node = node->next(), i++ ){
+          object = &AsyncEvent::nodeObject(*node);
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+          aiocbs_[i] = &object->iocb_;
+#endif
+          if( object->timeout_ < tmout ) tmout = object->timeout_;
+        }
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+        aiocbs_[i] = NULL;
+#endif
+        if( tmout != ~uint64_t(0) ){
+          to.tv_sec = tmout / 1000000u;
+          to.tv_nsec = tmout % 1000000u;
+          timeout = &to;
+        }
+      }
       node = requests_.first();
       object = &AsyncEvent::nodeObject(*node);
       release();
+      errno = 0;
       if( connect_ ){
-	nrd = select(FD_SETSIZE,rfds_,wfds_,NULL,NULL);
+        struct timeval tv, * tp = NULL;
+        if( timeout != NULL ){
+          tv.tv_sec = timeout->tv_sec;
+          tv.tv_usec = timeout->tv_nsec;
+        }
+	nrd = select(FD_SETSIZE,rfds_,wfds_,NULL,tp);
       }
 #if HAVE_FAM_H
       else if( object->type_ == etDirectoryChangeNotification ){
@@ -694,28 +779,44 @@ void AsyncIoSlave::threadExecute()
       }
 #endif
       else {
-#if HAVE_KQUEUE
-        evCount = kevent(kqueue_,NULL,0,&kevents_[0],64,NULL);
+#if HAVE_AIO_SUSPEND
+        nrd = aio_suspend(aiocbs_,nrd,timeout);
+#elif HAVE_AIO_WAITCOMPLETE
+        nrd = aio_waitcomplete(aiocbs_,timeout);
+#elif HAVE_KQUEUE
+        evCount = kevent(kqueue_,NULL,0,&kevents_[0],maxRequests_,timeout);
 #else
         errno = ENOSYS;
 #endif
       }
       error = errno;
       acquire();
-      errno = error;
-      if( evCount == -1 && errno != EINTR ){
-        perror(NULL);
-        assert( 0 );
-        abort();
+      if( evCount == -1 ){
+        if( errno == EAGAIN ){
+          for( node = requests_.first(); node != NULL; node = node->next() ){
+            object = &AsyncEvent::nodeObject(*node);
+            if( object->timeout_ == ~uint64_t(0) ) continue;
+            object->timeout_ -= object->timeout_ < tmout ? object->timeout_ : tmout;
+            if( object->timeout_ == 0 && object->descriptor_ != NULL )
+              aio_cancel(object->descriptor_->descriptor_,&object->iocb_);
+          }
+        }
+        else if( errno != EINTR ){
+          perror(NULL);
+          assert( 0 );
+          abort();
+        }
       }
+      errno = error;
       while( evCount > 0 ){
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_KQUEUE
         struct kevent * kev = NULL;
 #endif
         if( connect_ ){
 	   if( node == NULL ) break;
 	   object = &AsyncEvent::nodeObject(*node);
-           assert( object->type_ == etConnect );
+           assert( object->type_ == etAccept || object->type_ == etConnect );
 	   node = node->next();
 	   if( !FD_ISSET(object->descriptor_->socket_,rfds_) &&
 	       !FD_ISSET(object->descriptor_->socket_,wfds_) ){
@@ -729,7 +830,8 @@ void AsyncIoSlave::threadExecute()
           evCount = 0;
         }
 #endif
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_KQUEUE
 	else {
           evCount--;
           kev = &kevents_[evCount];
@@ -758,19 +860,19 @@ void AsyncIoSlave::threadExecute()
 	    break;
 #endif
           case etRead    :
-#if HAVE_KQUEUE
-              error = aio_error(&object->iocb_);
-              count = aio_return(&object->iocb_);
-#endif
+            error = aio_error(&object->iocb_);
+            count = aio_return(&object->iocb_);
 	    break;
           case etWrite   :
-#if HAVE_KQUEUE
-              error = aio_error(&object->iocb_);
-              count = aio_return(&object->iocb_);
-#endif
+            error = aio_error(&object->iocb_);
+            count = aio_return(&object->iocb_);
 	    break;
           case etAccept  :
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+	    errLen = sizeof(error);
+	    dynamic_cast<ksock::AsyncSocket *>(object->descriptor_)->getsockopt(SOL_SOCKET,SO_ERROR,&error,errLen);
+	    if( error == 0 ) count = object->descriptor_->accept();
+#elif HAVE_KQUEUE
             assert( kev->filter == EVFILT_READ );
             if( kev->flags & EV_ERROR ){
               error = kev->data;
@@ -789,12 +891,11 @@ void AsyncIoSlave::threadExecute()
           default        :
             assert( 0 );
         }
-	      //closeAPI(object);
         requests_.remove(*object);
-#if HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+#elif HAVE_KQUEUE
         object->kqueue_ = -1;
 #endif
-        //object->ioSlave_ = NULL;
         object->errno_ = error;
         object->count_ = count;
         object->fiber_->thread()->postEvent(object);

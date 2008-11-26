@@ -101,6 +101,11 @@ class Thread : virtual public Object {
     bool isSuspended() const;
     Thread & wait();
 
+#if defined(__WIN32__) || defined(__WIN64__)
+    HANDLE handle() const { return handle_; }
+#else
+    pthread_t handle() const { return handle_; }
+#endif
     uintptr_t id() const;
     const intptr_t & exitCode() const;
     bool active() const;

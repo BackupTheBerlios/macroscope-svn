@@ -65,7 +65,11 @@ Fiber::Fiber() :
   event_.fiber_ = this;
 #if HAVE_UCONTEXT_H
   context_.uc_stack.ss_sp = NULL;
+#if HAVE_MCONTEXT_T_MC_LEN
   context_.uc_mcontext.mc_len = 0;
+#else
+  mcLen_ = 0;
+#endif
   context_.uc_flags = 0;
 #endif
 }
@@ -84,10 +88,9 @@ Fiber & Fiber::allocateStack(
  * \todo rewrite fiber context switching on ucontext functions
  */
   size += -intptr_t(size) & (MINSIGSTKSZ - 1);
-  context_.uc_mcontext = mainFiber->context_.uc_mcontext;
+  memcpy(&context_.uc_mcontext,&mainFiber->context_.uc_mcontext,sizeof(context_.uc_mcontext));
   context_.uc_stack.ss_sp = (char *) krealloc(context_.uc_stack.ss_sp,size);
   context_.uc_stack.ss_size = size;
-  //context_.uc_mcontext.mc_len = sizeof(mcontext_t);
   context_.uc_flags = 0;
   context_.uc_link = NULL;
   makecontext(&context_,(void (*)()) start,1,this);
@@ -280,7 +283,11 @@ void BaseThread::threadExecute()
 #endif
 #if HAVE_UCONTEXT_H
     getcontext(&context_);
+#if HAVE_MCONTEXT_T_MC_LEN
     context_.uc_mcontext.mc_len = sizeof(mcontext_t);
+#else
+    mcLen_ = sizeof(mcontext_t);
+#endif
 #endif
     while( !Thread::terminated_ ) queue();
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -466,7 +473,11 @@ BaseThread * BaseServer::selectThread()
     thread->server(this);
 #if HAVE_UCONTEXT_H
     volatile uintptr_t l;
+#if HAVE_MCONTEXT_T_MC_LEN
     while( (l = thread->context_.uc_mcontext.mc_len) == 0 ) ksleep1();
+#else
+    while( (l = thread->mcLen_) == 0 ) ksleep1();
+#endif
 #endif
   }
   assert( thread != NULL );
