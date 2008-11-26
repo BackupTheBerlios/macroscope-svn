@@ -119,7 +119,7 @@ AsyncIoSlave::~AsyncIoSlave()
 #if defined(__WIN32__) || defined(__WIN64__)
 AsyncIoSlave::AsyncIoSlave() : maxRequests_(MAXIMUM_WAIT_OBJECTS - 1)
 #else
-AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect), maxRequests_(64)
+AsyncIoSlave::AsyncIoSlave(bool connect) : connect_(connect), maxRequests_(128)
 #endif
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -515,15 +515,7 @@ l2:       object = eReqs_[wm];
 //------------------------------------------------------------------------------
 #else
 //------------------------------------------------------------------------------
-#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
-void AsyncIoSlave::abortIo()
-{
-  AutoLock<LiteWriteLock> lock(*this);
-  EventsNode * node;
-  for( node = requests_.first(); node != NULL; node = node->next() )
-    AsyncEvent::nodeObject(*node).cancelAsyncEvent();
-}
-#elif HAVE_KQUEUE
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE || HAVE_KQUEUE
 void AsyncIoSlave::abortIo()
 {
   AutoLock<LiteWriteLock> lock(*this);
@@ -691,15 +683,16 @@ void AsyncIoSlave::threadExecute()
 	    FD_SET(object->descriptor_->socket_,rfds_);
 	    FD_SET(object->descriptor_->socket_,wfds_);
 	    if( object->type_ == etAccept ){
-              count = object->descriptor_->accept();
-              if( errno == 0 ){
+              object->data2_ = object->descriptor_->accept();
+              if( object->data2_ != -1 ){
+                FD_CLR(object->descriptor_->socket_,rfds_);
+                FD_CLR(object->descriptor_->socket_,wfds_);
                 newRequests_.remove(*object);
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
 #elif HAVE_KQUEUE
                 object->kqueue_ = -1;
 #endif
                 object->errno_ = 0;
-                object->count_ = count;
                 object->fiber_->thread()->postEvent(object);
                 continue;
               }
@@ -718,7 +711,6 @@ void AsyncIoSlave::threadExecute()
           assert( 0 );
       }
       if( errno == EINPROGRESS ){
-        //object->ioSlave_ = this;
         requests_.insToTail(newRequests_.remove(*object));
       }
       else if( errno != EINPROGRESS ){
@@ -1934,8 +1926,8 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
     case etLockFile :
     case etRead :
     case etWrite :
-    case etAccept :
 #if defined(__WIN32__) || defined(__WIN64__)
+    case etAccept :
     case etConnect :
 #endif
       {
@@ -1959,6 +1951,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
       }
       return;
 #if !defined(__WIN32__) && !defined(__WIN64__)
+    case etAccept :
     case etConnect :
       {
         AutoLock<LiteWriteLock> lock(connectRequestsReadWriteLock_);

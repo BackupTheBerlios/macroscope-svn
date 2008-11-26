@@ -134,6 +134,7 @@ class AsyncEvent {
           uint64_t length_;
           uint64_t count_;
           uintptr_t data_;
+          intptr_t data2_;
           Thread * thread_;
           pid_t pid_;
           uintptr_t tid_;
