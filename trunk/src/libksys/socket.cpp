@@ -391,10 +391,10 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
 {
   len = len > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : len;
   uint64_t r = 0;
-  if( compressor_ != NULL && compressor_->active() ){
+  if( compressor_ != NULL ){
     flush();
     uintptr_t rb, wb;//, crcSize = 0;
-      //if( crc_ != NULL && crc_->active() ){
+      //if( crc_ != NULL ){
       //  crc_->make(
       //    compressor_->encoderOutputBuffer(),
       //    compressor_->encoderOutputBufferSize(),
@@ -423,7 +423,7 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
           compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
           compressor_->decoderInputBufferSize() - compressor_->decoderReadBytes()
         );
-        if( cryptor_ != NULL && cryptor_->active() ){
+        if( cryptor_ != NULL ){
           cryptor_->decrypt(
             compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
             compressor_->decoderInputBuffer() + compressor_->decoderReadBytes(),
@@ -435,7 +435,7 @@ uint64_t AsyncSocket::recv(void * buf,uint64_t len)
     }
     r = wb;
   }
-  else if( cryptor_ != NULL && cryptor_->active() ){
+  else if( cryptor_ != NULL ){
     r = sysRecv(buf,len);
     cryptor_->decrypt(buf,buf,uintptr_t(r));
   }
@@ -539,7 +539,7 @@ uint64_t AsyncSocket::send(const void * buf,uint64_t len)
 {
   len = len > 1024 * 1024 * 1024 ? 1024 * 1024 * 1024 : len;
   uint64_t w = 0;
-  if( compressor_ != NULL && compressor_->active() ){
+  if( compressor_ != NULL ){
     uintptr_t rb = 0, wb = 0, crcSize = 0;
     compressor_->encodeBuffer(
       buf,
@@ -551,7 +551,7 @@ uint64_t AsyncSocket::send(const void * buf,uint64_t len)
     );
     compressor_->encoderWriteBytes(compressor_->encoderWriteBytes() + wb);
     if( compressor_->encoderWriteBytes() == compressor_->encoderOutputBufferSize() ){
-      if( cryptor_ != NULL && cryptor_->active() ){
+      if( cryptor_ != NULL ){
         cryptor_->encrypt(
           compressor_->encoderOutputBuffer(),
           compressor_->encoderOutputBuffer(),
@@ -577,7 +577,7 @@ uint64_t AsyncSocket::send(const void * buf,uint64_t len)
     }
     w = rb;
   }
-  else if( cryptor_ != NULL && cryptor_->active() ){
+  else if( cryptor_ != NULL ){
     ksys::AutoPtrBuffer p;
     p.alloc((size_t) len);
     buf = p.ptr();
@@ -626,9 +626,9 @@ AsyncSocket & AsyncSocket::write(const void * buf,uint64_t len)
 //------------------------------------------------------------------------------
 AsyncSocket & AsyncSocket::flush()
 {
-  if( compressor_ != NULL && compressor_->active() && compressor_->encoderWriteBytes() > 0 ){
+  if( compressor_ != NULL && compressor_->encoderWriteBytes() > 0 ){
     uintptr_t wb = 0, crcSize = 0;
-    if( cryptor_ != NULL && cryptor_->active() ){
+    if( cryptor_ != NULL ){
       cryptor_->encrypt(
         compressor_->encoderOutputBuffer(),
         compressor_->encoderOutputBuffer(),
@@ -648,7 +648,7 @@ AsyncSocket & AsyncSocket::flush()
       &wb
     );
     compressor_->encoderWriteBytes(compressor_->encoderWriteBytes() + wb);
-    if( cryptor_ != NULL && cryptor_->active() ){
+    if( cryptor_ != NULL ){
       cryptor_->encrypt(
         compressor_->encoderOutputBuffer(),
         compressor_->encoderOutputBuffer(),
@@ -919,7 +919,6 @@ AsyncSocket & AsyncSocket::activateCompression(uintptr_t method,uintptr_t crc,ui
     compressor_->decoderInputBufferSize(wBufSize);
     compressor_->initializeEncoder();
     compressor_->initializeDecoder();
-    compressor_->active(true);
   }
   return *this;
 }
@@ -937,7 +936,6 @@ AsyncSocket & AsyncSocket::activateEncryption(const void * key, uintptr_t keyLen
     cryptor_ = newObject<ksys::SHA256CryptFilter>();
     cryptor_->initializeCrypting(key,keyLen);
     cryptor_->initializeDecrypting(key,keyLen);
-    cryptor_->active(true);
   }
   else {
     init(key,keyLen);

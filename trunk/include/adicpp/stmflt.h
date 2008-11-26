@@ -45,10 +45,7 @@ class StreamCRCFilter {
 
     virtual StreamCRCFilter & make(const void * inp,uintptr_t inpSize,void * crc,uintptr_t * crcSize = NULL) = 0;
 
-    StreamCRCFilter & active(bool v) { active_ = v; return *this; }
-    const bool & active() const { return active_; }
   protected:
-    bool active_;
   private:
     StreamCRCFilter(const StreamCRCFilter &){}
     void operator = (const StreamCRCFilter &){}
@@ -58,7 +55,7 @@ inline StreamCRCFilter::~StreamCRCFilter()
 {
 }
 //---------------------------------------------------------------------------
-inline StreamCRCFilter::StreamCRCFilter() : active_(false)
+inline StreamCRCFilter::StreamCRCFilter()
 {
 }
 //---------------------------------------------------------------------------
@@ -73,11 +70,7 @@ class StreamCryptFilter {
     virtual StreamCryptFilter * encrypt(void * dst,const void * src,uintptr_t size) = 0;
     virtual StreamCryptFilter * initializeDecrypting(const void * key,uintptr_t keyLen) = 0;
     virtual StreamCryptFilter * decrypt(void * dst,const void * src,uintptr_t size) = 0;
-
-    StreamCryptFilter & active(bool v) { active_ = v; return *this; }
-    const bool & active() const { return active_; }
   protected:
-    bool active_;
   private:
     StreamCryptFilter(const StreamCryptFilter &){}
     void operator = (const StreamCryptFilter &){}
@@ -87,7 +80,7 @@ inline StreamCryptFilter::~StreamCryptFilter()
 {
 }
 //---------------------------------------------------------------------------
-inline StreamCryptFilter::StreamCryptFilter() : active_(false)
+inline StreamCryptFilter::StreamCryptFilter()
 {
 }
 //---------------------------------------------------------------------------
@@ -137,9 +130,6 @@ class StreamCompressionFilter {
     const uintptr_t & decoderReadBytes() const { return decoderReadBytes_; }
     StreamCompressionFilter & decoderReadBytes2(uintptr_t v) { decoderReadBytes2_ = v; return *this; }
     const uintptr_t & decoderReadBytes2() const { return decoderReadBytes2_; }
-
-    StreamCompressionFilter & active(bool v) { active_ = v; return *this; }
-    const bool & active() const { return active_; }
   protected:
     mutable AutoPtrBuffer encoderOutputBuffer_;
     uintptr_t encoderOutputBufferSize_;
@@ -149,8 +139,6 @@ class StreamCompressionFilter {
     uintptr_t decoderInputBufferSize_;
     uintptr_t decoderReadBytes_;
     uintptr_t decoderReadBytes2_;
-
-    bool active_;
   private:
     StreamCompressionFilter(const StreamCompressionFilter &);
     void operator = (const StreamCompressionFilter &);
@@ -165,8 +153,7 @@ inline StreamCompressionFilter::StreamCompressionFilter() :
   encoderWriteBytes_(0),
   decoderInputBufferSize_(0),
   decoderReadBytes_(0),
-  decoderReadBytes2_(0),
-  active_(false)
+  decoderReadBytes2_(0)
 {
 }
 //---------------------------------------------------------------------------

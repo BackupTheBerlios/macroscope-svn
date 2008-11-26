@@ -600,13 +600,13 @@ class RangeCoderFilter64 {
 	  static const uint64_t maxRange_ = bottom_;
 
     // encoder stateful members
-    uint32_t eFreq_[257];
+    uint64_t eFreq_[257];
     uint64_t eLow_;
     uint64_t eRange_;
     uint32_t ec_;
 
     // decoder stateful members
-    uint32_t dFreq_[257];
+    uint64_t dFreq_[257];
     uint64_t code_;
     uint64_t dLow_;
     uint64_t dRange_;
@@ -640,7 +640,7 @@ class RangeCoderFilter64 {
 	    }
     }
 
-    void update(uint32_t c,uint32_t * freq)
+    void update(uint32_t c,uint64_t * freq)
     {
       //for( uintptr_t j = c + 1; j < 257; j++ ) freq[j]++;
       switch( c + 1 ){
@@ -904,7 +904,7 @@ class RangeCoderFilter64 {
         case 256 : freq[256]++;
  
       }
-		  if( freq[256] >= maxRange_ ) rescale(freq);
+		  //if( freq[256] >= maxRange_ ) rescale(freq);
     }
 };
 //------------------------------------------------------------------------------
@@ -930,7 +930,7 @@ RangeCoderFilter64 & RangeCoderFilter64::encodeBuffer(const void * inp,uintptr_t
     inpSize -= sizeof(uint8_t);
     if( rb != NULL ) *rb += sizeof(uint8_t);
 
-    uint32_t symbolLow = eFreq_[ec_], symbolHigh = eFreq_[ec_ + 1], totalRange = eFreq_[256];
+    uint64_t symbolLow = eFreq_[ec_], symbolHigh = eFreq_[ec_ + 1], totalRange = eFreq_[256];
     eLow_ += symbolLow * (eRange_ /= totalRange);
     eRange_ *= symbolHigh - symbolLow;
 
@@ -1012,10 +1012,10 @@ RangeCoderFilter64 & RangeCoderFilter64::decodeBuffer(const void * inp,uintptr_t
     di_++;
   }
   for(;;){
-    uint32_t totalRange = dFreq_[256];
+    uint64_t totalRange = dFreq_[256];
     register uint32_t count = uint32_t((code_ - dLow_) / (dRange_ /= totalRange));
     register uint32_t dc = 255;
-    register uint32_t * freq = dFreq_;
+    register uint64_t * freq = dFreq_;
     for(;;){
       if( freq[dc] <= count ) break;
       if( freq[--dc] <= count ) break;
@@ -1061,7 +1061,7 @@ out:
     outSize -= sizeof(uint8_t);
     if( wb != NULL ) *wb += sizeof(uint8_t);
 
-    uint32_t symbolLow = dFreq_[dc_], symbolHigh = dFreq_[dc_ + 1];
+    uint64_t symbolLow = dFreq_[dc_], symbolHigh = dFreq_[dc_ + 1];
     dLow_ += symbolLow * dRange_;
     dRange_ *= symbolHigh - symbolLow;
 
@@ -2050,6 +2050,590 @@ LZKFilter & LZKFilter::decode(AsyncFile & inp,AsyncFile & out)
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+//class LZRBTFilter {
+//  public:
+//    ~LZRBTFilter();
+//    LZRBTFilter();
+//
+//    LZRBTFilter & initializeEncoder();
+//    LZRBTFilter & encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+//    LZRBTFilter & flush(void * out,uintptr_t * wb = NULL);
+//    LZRBTFilter & encode(AsyncFile & inp,AsyncFile & out);
+//    LZRBTFilter & initializeDecoder();
+//    LZRBTFilter & decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
+//    LZRBTFilter & decode(AsyncFile & inp,AsyncFile & out);
+//  protected:
+//#ifdef _MSC_VER
+//#pragma pack(push)
+//#pragma pack(1)
+//#elif defined(__BCPLUSPLUS__)
+//#pragma option push -a1
+//#endif
+//    struct PACKED RBTreeNode {
+//      RBTreeNode * left_;         /* left child */
+//      RBTreeNode * right_;        /* right child */
+//      RBTreeNode * parent_;       /* parent */
+//      RBTreeNode * lruPrev_;
+//      RBTreeNode * lruNext_;
+//      uint8_t color_;             /* node color (BLACK, RED) */
+//      uint8_t l_;
+//      uint8_t string_[(sizeof(RBTreeNode *) < 8 ? 32 : 64) - sizeof(RBTreeNode *) * 5 - 1 - 1];
+//    };
+//#ifdef _MSC_VER
+//#pragma pack(pop)
+//#elif defined(__BCPLUSPLUS__)
+//#pragma option pop
+//#endif
+//    typedef enum { BLACK, RED } RBTreeNodeColor;
+//
+//    RBTreeNode sentinel_;
+//    RBTreeNode rootNode_;
+//    RBTreeNode * root_;
+//    RBTreeNode * lruHead_;
+//    RBTreeNode * lruTail_;
+//
+//    intptr_t compare(RBTreeNode * a0,RBTreeNode * a1){
+//      intptr_t c;
+//      uintptr_t l = 0;
+//      do {
+//        c = a0->string_[l] - a1->string_[l];
+//        if( c != 0 ) break;
+//        l++;
+//      } while( l < a0->l_ && l < a1->l_ );
+//      if( l > bestMatchLen_ ){
+//        bestMatchLen_ = l;
+//        bestMatchNode_ = a1;
+//      }
+//      return c;
+//    }
+//
+//    void updateLRU(RBTreeNode * x)
+//    {
+//      x->lruPrev_ = NULL;
+//      x->lruNext_ = lruHead_;
+//      if( lruHead_ != NULL ) lruHead_->lruPrev_ = x; else lruTail_ = x;
+//      lruHead_ = x;
+//    }
+//
+//    RBTreeNode * find(RBTreeNode * node)
+//    {
+//      RBTreeNode * current = root_->left_;
+//      for(;;){
+//        if( current == &sentinel_ ){ current = NULL; break; }
+//        intptr_t c = compare(node,current);
+//        if( c == 0 ) break;
+//        current = c < 0 ? current->left_ : current->right_;
+//      }
+//      return current;
+//    }
+//
+//    void rotateLeft(RBTreeNode * x)
+//    {
+//      RBTreeNode * y = x->right_;
+//      x->right_ = y->left_;
+//      if( y->left_ != &sentinel_ ) y->left_->parent_ = x;
+//      y->parent_ = x->parent_;
+//      if( x == x->parent_->left_ ){
+//        x->parent_->left_ = y;
+//      }
+//      else {
+//        x->parent_->right_ = y;
+//      }
+//      y->left_ = x;
+//      x->parent_ = y;
+//    }
+//
+//    void rotateRight(RBTreeNode * y)
+//    {
+//      RBTreeNode * x = y->left_;
+//      y->left_ = x->right_;
+//      if( x->right_ != &sentinel_ ) x->right_->parent_ = y;
+//      x->parent_ = y->parent_;
+//      if( y == y->parent_->left_ ){
+//        y->parent_->left_ = x;
+//      }
+//      else {
+//        y->parent_->right_ = x;
+//      }
+//      x->right_ = y;
+//      y->parent_ = x;
+//    }
+//
+//    RBTreeNode * treeInsertHelp(RBTreeNode * z)
+//    {
+//      RBTreeNode * y = root_, * x = root_->left_;
+//      z->left_ = z->right_ = &sentinel_;
+//      intptr_t c = 0;
+//      while( x != &sentinel_ ){
+//        y = x;
+//        c = compare(z,x);
+//        if( c < 0 ){
+//          x = x->left_;
+//        }
+//        else if( c > 0 ){
+//          x = x->right_;
+//        }
+//        else
+//          return x;
+//      }
+//      z->parent_ = y;
+//      if( y == root_ || c < 0 ){ 
+//        y->left_ = z;
+//      }
+//      else {
+//        y->right_ = z;
+//      }
+//      return NULL;
+//    }
+//
+//    void insert(RBTreeNode * x)
+//    {
+//      RBTreeNode * y = treeInsertHelp(x);
+//      if( y != NULL ) return;
+//      x->color_ = RED;
+//      while( x->parent_->color_ == RED ){
+//        if( x->parent_ == x->parent_->parent_->left_ ){
+//          y = x->parent_->parent_->right_;
+//          if( y->color_ == RED ){
+//    	      x->parent_->color_ = BLACK;
+//	          y->color_ = BLACK;
+//	          x->parent_->parent_->color_ = RED;
+//	          x = x->parent_->parent_;
+//          }
+//          else {
+//	          if( x == x->parent_->right_){
+//	            x = x->parent_;
+//	            rotateLeft(x);
+//	          }
+//	          x->parent_->color_ = BLACK;
+//	          x->parent_->parent_->color_ = RED;
+//	          rotateRight(x->parent_->parent_);
+//          } 
+//        }
+//        else {
+//          y = x->parent_->parent_->left_;
+//          if( y->color_ == RED ){
+//	          x->parent_->color_ = BLACK;
+//	          y->color_ = BLACK;
+//	          x->parent_->parent_->color_ = RED;
+//	          x = x->parent_->parent_;
+//          }
+//          else {
+//	          if( x == x->parent_->left_ ){
+//	            x = x->parent_;
+//	            rotateRight(x);
+//	          }
+//	          x->parent_->color_ = BLACK;
+//	          x->parent_->parent_->color_ = RED;
+//	          rotateLeft(x->parent_->parent_);
+//          } 
+//        }
+//      }
+//      root_->left_->color_ = BLACK;
+//    }
+//
+//    RBTreeNode * getSuccessorOf(RBTreeNode * x)
+//    {
+//      RBTreeNode * y;
+///* assignment to y is intentional */  
+//      if( (y = x->right_) != &sentinel_ ){
+///* returns the minium of the right subtree of x */  
+//        while( y->left_ != &sentinel_ ) y = y->left_;
+//        return y;
+//      }
+//      y = x->parent_;
+///* sentinel used instead of checking for nil */    
+//      while( x == y->right_ ){
+//        x = y;
+//        y = y->parent_;
+//      }
+//      if( y == root_ ) return &sentinel_;
+//      return y;
+//    }
+//
+//    void removeFixup(RBTreeNode * x)
+//    {
+//      RBTreeNode * w, * rootLeft = root_->left_;
+//
+//      while( x->color_ != RED && rootLeft != x ){
+//        if( x == x->parent_->left_ ){
+//          w = x->parent_->right_;
+//          if( w->color_ == RED ){
+//	          w->color_ = BLACK;
+//	          x->parent_->color_ = RED;
+//	          rotateLeft(x->parent_);
+//	          w = x->parent_->right_;
+//          }
+//          if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+//	          w->color_ = RED;
+//	          x = x->parent_;
+//          }
+//          else {
+//	          if( w->right_->color_ != RED ){
+//	            w->left_->color_ = BLACK;
+//	            w->color_ = RED;
+//	            rotateRight(w);
+//	            w = x->parent_->right_;
+//	          }
+//	          w->color_ = x->parent_->color_;
+//	          x->parent_->color_ = BLACK;
+//	          w->right_->color_ = BLACK;
+//	          rotateLeft(x->parent_);
+//	          x = rootLeft; /* this is to exit while loop */
+//          }
+//        }
+//        else { /* the code below is has left and right switched from above */
+//          w = x->parent_->left_;
+//          if( w->color_ == RED ){
+//	          w->color_ = BLACK;
+//	          x->parent_->color_ = RED;
+//	          rotateRight(x->parent_);
+//	          w = x->parent_->left_;
+//          }
+//          if( w->right_->color_ != RED && w->left_->color_ != RED ){ 
+//	          w->color_ = RED;
+//	          x = x->parent_;
+//          }
+//          else {
+//	          if( w->left_->color_ != RED ){
+//	            w->right_->color_ = BLACK;
+//	            w->color_ = RED;
+//	            rotateLeft(w);
+//	            w = x->parent_->left_;
+//	          }
+//	          w->color_ = x->parent_->color_;
+//	          x->parent_->color_ = BLACK;
+//	          w->left_->color_ = BLACK;
+//	          rotateRight(x->parent_);
+//	          x = rootLeft; /* this is to exit while loop */
+//          }
+//        }
+//      }
+//      x->color_ = BLACK;
+//    }
+//
+//    void remove(RBTreeNode * z)
+//    {
+//      RBTreeNode * x, * y;
+//      y = ((z->left_ == &sentinel_) || (z->right_ == &sentinel_)) ? z : getSuccessorOf(z);
+//      x = (y->left_ == &sentinel_) ? y->right_ : y->left_;
+///* x is y's only child */
+//      if( y->left_ != &sentinel_ ) x = y->left_; else x = y->right_;
+///* assignment of y->p to x->p is intentional */  
+//      if( root_ == (x->parent_ = y->parent_) ){
+//        root_->left_ = x;
+//      }
+//      else {
+//        if( y == y->parent_->left_ ){
+//          y->parent_->left_ = x;
+//        }
+//        else {
+//          y->parent_->right_ = x;
+//        }
+//      }
+//      if( y != z ){
+//        y->left_ = z->left_;
+//        y->right_ = z->right_;
+//        y->parent_ = z->parent_;
+//        z->left_->parent_ = z->right_->parent_ = y;
+//        if( z == z->parent_->left_ ){
+//          z->parent_->left_ = y;
+//        }
+//        else {
+//          z->parent_->right_ = y;
+//        }
+//        if( y->color_ != RED ){
+//          y->color_ = z->color_;
+//          removeFixup(x);
+//        }
+//        else {
+//          y->color_ = z->color_;
+//        }
+//      }
+//      else if( y->color_ != RED ){
+//        removeFixup(x);
+//      }
+//      z->parent_ = z->right_ = z->left_ = NULL;
+//      return;
+//    }
+//
+//
+//    // encoder stateful variables
+//    RBTreeNode * enodes_;
+//    uintptr_t edcnt_; // dict size
+//    uintptr_t edmsk_; // dict mask
+//    uintptr_t ealen_; // look ahead string length
+//    uintptr_t emlen_; // maximum look ahead string length
+//    uintptr_t ecode_;
+//    RBTreeNode * bestMatchNode_;
+//    uintptr_t bestMatchLen_;
+//
+//    // decoder stateful variables
+//    RBTreeNode * dnodes_;
+//    uintptr_t ddcnt_; // dict size
+//    uintptr_t ddmsk_; // dict mask
+//
+//    enum { stInit, stInp, stInp2, stInp3, stOut } eState_, dState_;
+//
+//    intptr_t getFirstBitIndex(uintptr_t bits)
+//    {
+//      intptr_t i;
+//      for( i = sizeof(bits) * 8u - 1; i >= 0 && (bits & (uintptr_t(1) << i)) == 0; i-- );
+//      return i;
+//    }
+//  private:
+//};
+////------------------------------------------------------------------------------
+//LZRBTFilter::LZRBTFilter() : nodes_(NULL), dict_(NULL), ddict_(NULL)
+//{
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter::~LZRBTFilter()
+//{
+//  kfree(ddict_);
+//  kfree(nodes_);
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter & LZRBTFilter::initializeEncoder()
+//{
+//  eState_ = stInit;
+//  dcnt_ = 65536;
+//  dmsk_ = dcnt_ - 1;
+//  enodes_ = (RBTreeNode *) krealloc(enodes_,dcnt_ * sizeof(enodes_[0]));
+//  for( intptr_t i = dmsk_; i >= 256; i-- ){
+//    enodes_[i].parent_ = NULL;
+//  }
+//  lruHead_ = lruTail_ = NULL;
+//  for( intptr_t i = 255; i >= 0; i-- ){
+//    enodes_[i].string_[0] = uint8_t(i);
+//    insert(enodes_ + i);
+//  }
+//
+//  sentinel_.left_ = &sentinel_;
+//  sentinel_.right_ = &sentinel_;
+//  sentinel_.parent_ = NULL;
+//  sentinel_.color_ = BLACK;
+//
+//  root_ = &rootNode_;
+//  rootNode_.left_ = &sentinel_;
+//  rootNode_.right_ = &sentinel_;
+//  rootNode_.parent_ = NULL;
+//  rootNode_.color_ = BLACK;
+//
+//  return *this;
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter & LZRBTFilter::encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
+//{
+//  if( eState_ == stInit ){
+//    while( alen_ < mlen_ + 2 ){
+//      if( inpSize == 0 ){
+//        eState_ = stInp;
+//        return *this;
+//      }
+//      dict_[(dpos_ + alen_) & dmsk_] = *(const uint8_t *) inp;
+//      alen_ += 1;
+//      inp = (const uint8_t *) inp + 1;
+//      inpSize -= 1;
+//      if( rb != NULL ) *rb += 1;
+//    }
+//    goto init;
+//  }
+//  if( eState_ == stInp ) goto inp;
+//  if( eState_ == stOut ) goto out;
+//  for(;;){
+//    do {
+//inp:  RBTreeNode * p = nodes_ + ((dpos_ + mlen_ + 2) & dmsk_);
+//      if( p->parent_ != NULL ) remove(p);
+//      if( inpSize == 0 ){
+//        eState_ = stInp;
+//        return *this;
+//      }
+//      dict_[(dpos_ + mlen_ + 2) & dmsk_] = *(const uint8_t *) inp;
+//      inp = (const uint8_t *) inp + 1;
+//      inpSize -= 1;
+//      if( rb != NULL ) *rb += 1;
+//      dpos_ = (dpos_ + 1) & dmsk_;
+//init: bestMatchNode_ = NULL;
+//      bestMatchLen_ = 1;
+//      insert(nodes_ + dpos_);
+//    } while( --dlen_ > 0 );
+//    dlen_ = bestMatchLen_;
+//    if( dlen_ <= 2 ){
+//      dlen_ = 1;
+//      dcode_ = (uintptr_t(dict_[dpos_]) << 1) | 1u;
+//      dcount_ = 8 + 1;
+//    }
+//    else {
+//      dcode_ = (((bestMatchNode_ - nodes_) << dlsz_) | (dlen_ - 3)) << 1;
+//      dcount_ = dcsz_ + dlsz_ + 1;
+//    }
+//out:
+//    if( writeBits(dcode_,dcount_,out,outSize,wb) ){
+//      eState_ = stOut;
+//      return *this;
+//    }
+//  }
+//  return *this;
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter & LZRBTFilter::flush(void * out,uintptr_t * wb)
+//{
+//  if( eState_ == stInit ) return *this;
+//  uintptr_t outSize = ~uintptr_t(0);
+//  for(;;){
+//    do {
+//      dict_[(dpos_ + mlen_ + 2) & dmsk_] = 0;
+//      dpos_ = (dpos_ + 1) & dmsk_;
+//      if( --alen_ == 0 ){
+//        eState_ = stInit;
+//        goto exit;
+//      }
+//    } while( --dlen_ > 0 );
+//    bestMatchNode_ = NULL;
+//    bestMatchLen_ = 1;
+//    find(nodes_ + dpos_);
+//    dlen_ = tmin(alen_,bestMatchLen_) - 1;
+//    if( dlen_ <= 2 ){
+//      dlen_ = 1;
+//      dcode_ = (uintptr_t(dict_[dpos_]) << 1) | 1u;
+//      dcount_ = 8 + 1;
+//    }
+//    else {
+//      dcode_ = (((bestMatchNode_ - nodes_) << dlsz_) | (dlen_ - 3)) << 1;
+//      dcount_ = dcsz_ + dlsz_ + 1;
+//    }
+//    writeBits(dcode_,dcount_,out,outSize,wb);
+//  }
+//exit:
+//  uintptr_t sz = (dbiti_ >> 3) + ((dbiti_ & 7) != 0);
+//  memcpy(out,&dbits_,sz);
+//  out = (uint8_t *) out + sz;
+//  if( wb != NULL ) *wb += sz;
+//  return *this;
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter & LZRBTFilter::encode(AsyncFile & inp,AsyncFile & out)
+//{
+//  uintptr_t rbs = getpagesize() * 16;
+//  uintptr_t wbs = getpagesize() * 16;
+//  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+//  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
+//  uintptr_t rb = 0, wb = 0;
+//  int64_t r;
+//  while( (r = inp.read(inpBuffer,rbs)) > 0 ){
+//    while( rb < uintptr_t(r) ){
+//      encodeBuffer(&inpBuffer[rb],uintptr_t(r) - rb,&outBuffer[wb],wbs - wb,&rb,&wb);
+//      if( wb == wbs ){
+//        out.writeBuffer(outBuffer,wbs);
+//        wb = 0;
+//      }
+//    }
+//    rb = 0;
+//  }
+//  out.writeBuffer(outBuffer,wb);
+//  wb = 0;
+//  flush(outBuffer,&wb);
+//  out.writeBuffer(outBuffer,wb);
+//  return *this;
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter & LZRBTFilter::initializeDecoder()
+//{
+//  ddpos_ = 0;
+//  ddcnt_ = 65536;
+//  ddmsk_ = dcnt_ - 1;
+//  dmlen_ = 16;
+//  ddcsz_ = getFirstBitIndex(ddcnt_);
+//  ddlsz_ = getFirstBitIndex(dmlen_);
+//  ddbits_ = 0;
+//  ddbiti_ = 0;
+//  ddbitc_ = 0;
+//  dState_ = stInit;
+//  ddict_ = (uint8_t *) krealloc(ddict_,dcnt_);
+//  memset(ddict_,0,ddcnt_);
+//  ddcode_ = 0;
+//  ddcount_ = 1;
+//  ddci_ = 0;
+//  return *this;
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter & LZRBTFilter::decodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb,uintptr_t * wb)
+//{
+//  uint8_t * dict = ddict_;
+//  if( dState_ == stOut ) goto out;
+//  if( dState_ == stInp2 ) goto inp2;
+//  if( dState_ == stInp3 ) goto inp3;
+//  for(;;){
+//    if( readBits(ddcode_,ddci_,ddcount_,inp,inpSize,rb) ){
+//      dState_ = stInp;
+//      return *this;
+//    }
+//    ddci_ = 0;
+//    if( ddcode_ == 0 ){
+//      ddcount_ = ddcsz_ + ddlsz_;
+//inp2:
+//      if( readBits(ddcode_,ddci_,ddcount_,inp,inpSize,rb) ){
+//        dState_ = stInp2;
+//        return *this;
+//      }
+//      ddlen_ = (ddcode_ & ~(~uintptr_t(0) << ddlsz_)) + 3;
+//      dcpos_ = ddcode_ >> ddlsz_;
+//    }
+//    else {
+//      ddcode_ = 0;
+//      ddcount_ = 8;
+//inp3:
+//      if( readBits(ddcode_,ddci_,ddcount_,inp,inpSize,rb) ){
+//        dState_ = stInp3;
+//        return *this;
+//      }
+//      dict[dcpos_ = ddpos_] = uint8_t(ddcode_);
+//      ddlen_ = 1;
+//    }
+//    do {
+//out:  if( outSize == 0 ){
+//        dState_ = stOut;
+//        return *this;
+//      }
+//      *(uint8_t *) out = dict[ddpos_] = dict[dcpos_];
+//      out = (uint8_t *) out + 1;
+//      outSize -= 1;
+//      if( wb != NULL ) *wb += 1;
+//      ddpos_ = (ddpos_ + 1) & ddmsk_;
+//      dcpos_ = (dcpos_ + 1) & ddmsk_;
+//    } while( --ddlen_ > 0 );
+//    ddcode_ = 0;
+//    ddcount_ = 1;
+//    ddci_ = 0;
+//  }
+//  return *this;
+//}
+////------------------------------------------------------------------------------
+//LZRBTFilter & LZRBTFilter::decode(AsyncFile & inp,AsyncFile & out)
+//{
+//  uintptr_t rbs = getpagesize() * 16;
+//  uintptr_t wbs = getpagesize() * 16;
+//  AutoPtrBuffer inpBuffer((uint8_t *) kmalloc(rbs));
+//  AutoPtrBuffer outBuffer((uint8_t *) kmalloc(wbs));
+//  uintptr_t rb = 0, wb = 0;
+//  int64_t r;
+//  while( (r = inp.read(inpBuffer,rbs)) > 0 ){
+//    while( rb < uintptr_t(r) ){
+//      decodeBuffer(&inpBuffer[rb],uintptr_t(r) - rb,&outBuffer[wb],wbs - wb,&rb,&wb);
+//      if( wb == wbs ){
+//        out.writeBuffer(outBuffer,wbs);
+//        wb = 0;
+//      }
+//    }
+//    rb = 0;
+//  }
+//  out.writeBuffer(outBuffer,wb);
+//  return *this;
+//}
+//------------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 //class LZMAFilter : protected NCompress::NLZMA::CEncoder, protected NCompress::NLZMA::CDecoder {
 //  public:
 //    LZMAFilter & initializeEncoder();
@@ -2180,43 +2764,43 @@ int main(int _argc,char * _argv[])
 
     uint64_t ellapsed;
 
-    //RangeCoderFilter32 filter2;
-    //filter2.initializeEncoder();
-    //ellapsed = gettimeofday();
-    //filter2.encode(file,encFile);
-    //ellapsed = gettimeofday() - ellapsed;
-    //fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
-    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-    //  (file.size() * 1000000. / ellapsed) / 1024,
-    //  100 - encFile.size() * 100. / file.size()
-    //);
-    //filter2.initializeDecoder();
-    //ellapsed = gettimeofday();
-    //filter2.decode(encFile.seek(0),decFile.seek(0));
-    //ellapsed = gettimeofday() - ellapsed;
-    //fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
-    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-    //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
-    //);
+    RangeCoderFilter32 filter2;
+    filter2.initializeEncoder();
+    ellapsed = gettimeofday();
+    filter2.encode(file,encFile);
+    ellapsed = gettimeofday() - ellapsed;
+    fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
+      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+      (file.size() * 1000000. / ellapsed) / 1024,
+      100 - encFile.size() * 100. / file.size()
+    );
+    filter2.initializeDecoder();
+    ellapsed = gettimeofday();
+    filter2.decode(encFile.seek(0),decFile.seek(0));
+    ellapsed = gettimeofday() - ellapsed;
+    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    );
 
-    //RangeCoderFilter64 filter3;
-    //filter3.initializeEncoder();
-    //ellapsed = gettimeofday();
-    //filter3.encode(file.seek(0),encFile.seek(0).resize(0));
-    //ellapsed = gettimeofday() - ellapsed;
-    //fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
-    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-    //  (file.size() * 1000000. / ellapsed) / 1024,
-    //  100 - encFile.size() * 100. / file.size()
-    //);
-    //filter3.initializeDecoder();
-    //ellapsed = gettimeofday();
-    //filter3.decode(encFile.seek(0),decFile.seek(0).resize(0));
-    //ellapsed = gettimeofday() - ellapsed;
-    //fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
-    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-    //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
-    //);
+    RangeCoderFilter64 filter3;
+    filter3.initializeEncoder();
+    ellapsed = gettimeofday();
+    filter3.encode(file.seek(0),encFile.seek(0).resize(0));
+    ellapsed = gettimeofday() - ellapsed;
+    fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
+      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+      (file.size() * 1000000. / ellapsed) / 1024,
+      100 - encFile.size() * 100. / file.size()
+    );
+    filter3.initializeDecoder();
+    ellapsed = gettimeofday();
+    filter3.decode(encFile.seek(0),decFile.seek(0).resize(0));
+    ellapsed = gettimeofday() - ellapsed;
+    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    );
 
     //return 0;
 
@@ -2241,24 +2825,24 @@ int main(int _argc,char * _argv[])
 
     //return 0;
 
-    LZKFilter filter;
-    filter.initializeEncoder();
-    ellapsed = gettimeofday();
-    filter.encode(file.seek(0),encFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (file.size() * 1000000. / ellapsed) / 1024,
-      100 - encFile.size() * 100. / file.size()
-    );
-    filter.initializeDecoder();
-    ellapsed = gettimeofday();
-    filter.decode(encFile.seek(0),decFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
-    );
+    //LZKFilter filter;
+    //filter.initializeEncoder();
+    //ellapsed = gettimeofday();
+    //filter.encode(file.seek(0),encFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (file.size() * 1000000. / ellapsed) / 1024,
+    //  100 - encFile.size() * 100. / file.size()
+    //);
+    //filter.initializeDecoder();
+    //ellapsed = gettimeofday();
+    //filter.decode(encFile.seek(0),decFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    //);
     return 0;
 //
 
