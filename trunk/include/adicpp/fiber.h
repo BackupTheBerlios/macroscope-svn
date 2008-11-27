@@ -227,11 +227,7 @@ class AsyncIoSlave : public Thread, public Semaphore, public LiteWriteLock {
 #endif
 
     bool transplant(AsyncEvent & requests);
-#if HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
     void abortIo();
-#else
-    void abortIo() {}
-#endif
     bool abortNotification(DirectoryChangeNotification * dcn = NULL);
     const uintptr_t & maxRequests() const { return maxRequests_; }
     AsyncIoSlave & maxRequests(uintptr_t v){
