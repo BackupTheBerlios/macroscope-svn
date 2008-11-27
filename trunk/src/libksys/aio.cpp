@@ -166,6 +166,42 @@ void AsyncIoSlave::threadBeforeWait()
   post();
 }
 //---------------------------------------------------------------------------
+void AsyncIoSlave::abortIo()
+{
+  AutoLock<LiteWriteLock> lock(*this);
+  EventsNode * node;
+  for( node = requests_.first(); node != NULL; node = node->next() )
+    AsyncEvent::nodeObject(*node).cancelAsyncEvent();
+}
+//------------------------------------------------------------------------------
+bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
+{
+  bool r = false;
+  assert( !isWin9x() );
+  AutoLock<LiteWriteLock> lock(*this);
+  EventsNode * node;
+  for( node = requests_.first(); node != NULL; node = node->next() ){
+    AsyncEvent & object = AsyncEvent::nodeObject(*node);
+    if( object.type_ == etDirectoryChangeNotification ){
+      r = object.directoryChangeNotification_ == dcn;
+      if( dcn == NULL || r ){
+        object.abort_ = true;
+#if defined(__WIN32__) || defined(__WIN64__)
+        SetEvent(object.overlapped_.hEvent);
+#elif HAVE_FAM_H
+        if( object.directoryChangeNotification_->monitorStarted_ ){
+	  AsyncFile file(object.directoryChangeNotification_->fname_);
+	  file.createIfNotExist(true).createPath(false).tryOpen();
+	}
+#endif
+        post();
+        if( dcn != NULL ) break;
+      }
+    }
+  }
+  return r;
+}
+//---------------------------------------------------------------------------
 bool AsyncIoSlave::transplant(AsyncEvent & request)
 {
   bool r = false;
@@ -183,23 +219,23 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
 #else
   if( !terminated_ ){
     AutoLock<LiteWriteLock> lock(*this);
-    uintptr_t mReqs = maxRequests_;
     if( connect_ ){
-      mReqs = FD_SETSIZE;
+      maxRequests_ = FD_SETSIZE;
       if( request.type_ == etDirectoryChangeNotification ) return r;
     }
-    if( request.type_ == etDirectoryChangeNotification ) mReqs = 1;
-    if( requests_.count() + newRequests_.count() < mReqs ){
+    if( requests_.count() + newRequests_.count() < (request.type_ == etDirectoryChangeNotification ? 1 : maxRequests_) ){
       newRequests_.insToTail(request);
       if( newRequests_.count() < 2 ){
         if( connect_ ){
+          pthread_kill(handle(),SIGINT); // this break select on accept or connect
 	}
 	else if( request.type_ == etDirectoryChangeNotification ){
-	  maxRequests_ = mReqs;
+	  maxRequests_ = 1;
+	  terminate();
 	}
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
         else {
-          pthread_kill(handle(),SIGINT);
+          pthread_kill(handle(),SIGINT); // this break aio_suspend || aio_waitcomplete
         }
 #elif HAVE_KQUEUE
         else {
@@ -514,17 +550,6 @@ l2:       object = eReqs_[wm];
 }
 //------------------------------------------------------------------------------
 #else
-//------------------------------------------------------------------------------
-#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE || HAVE_KQUEUE
-void AsyncIoSlave::abortIo()
-{
-  AutoLock<LiteWriteLock> lock(*this);
-  EventsNode * node;
-  for( node = requests_.first(); node != NULL; node = node->next() )
-    AsyncEvent::nodeObject(*node).cancelAsyncEvent();
-}
-#endif
-//------------------------------------------------------------------------------
 void AsyncIoSlave::threadExecute()
 {
 //  priority(THREAD_PRIORITY_HIGHEST);
@@ -575,8 +600,7 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
 	    iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
-#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
-#elif HAVE_SIGVAL_SIVAL_PTR
+#if HAVE_SIGVAL_SIVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
 #elif HAVE_SIGVAL_SIGVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
@@ -615,8 +639,7 @@ void AsyncIoSlave::threadExecute()
             iocb->aio_nbytes = object->length_;
             iocb->aio_buf = object->buffer_;
             iocb->aio_offset = object->position_;
-#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
-#elif HAVE_SIGVAL_SIVAL_PTR
+#if HAVE_SIGVAL_SIVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sival_ptr = node; // udata
 #elif HAVE_SIGVAL_SIGVAL_PTR
 	    iocb->aio_sigevent.sigev_value.sigval_ptr = node; // udata
@@ -683,23 +706,35 @@ void AsyncIoSlave::threadExecute()
 	    FD_SET(object->descriptor_->socket_,rfds_);
 	    FD_SET(object->descriptor_->socket_,wfds_);
 	    if( object->type_ == etAccept ){
-              object->data2_ = object->descriptor_->accept();
-              if( object->data2_ != -1 ){
-                FD_CLR(object->descriptor_->socket_,rfds_);
-                FD_CLR(object->descriptor_->socket_,wfds_);
-                newRequests_.remove(*object);
+	      for(;;){
+                object->data2_ = object->descriptor_->accept();
+                if( object->data2_ != -1 ){
+                  FD_CLR(object->descriptor_->socket_,rfds_);
+                  FD_CLR(object->descriptor_->socket_,wfds_);
+                  newRequests_.remove(*object);
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
 #elif HAVE_KQUEUE
-                object->kqueue_ = -1;
+                  object->kqueue_ = -1;
 #endif
-                object->errno_ = 0;
-                object->fiber_->thread()->postEvent(object);
-                continue;
+                  object->errno_ = 0;
+                  object->fiber_->thread()->postEvent(object);
+                  continue;
+                }
+                if( errno == EAGAIN ){
+                  errno = EINPROGRESS;
+                  break;
+                }
+                else if( errno == EINVAL ){
+                  object->data2_ = object->descriptor_->listen(0);
+                  if( object->data2_ == -1 ) break;
+                }
+                else
+                  break;
               }
             }
             else
               object->descriptor_->connect(object);
-            if( errno != EINPROGRESS && errno != EAGAIN ){
+            if( errno != EINPROGRESS ){
     	      error = errno;
 	      FD_CLR(object->descriptor_->socket_,rfds_);
 	      FD_CLR(object->descriptor_->socket_,wfds_);
@@ -740,12 +775,13 @@ void AsyncIoSlave::threadExecute()
         for( node = requests_.first(); node != NULL; node = node->next(), i++ ){
           object = &AsyncEvent::nodeObject(*node);
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
-          aiocbs_[i] = &object->iocb_;
+          if( !connect_ ) aiocbs_[i] = &object->iocb_;
 #endif
           if( object->timeout_ < tmout ) tmout = object->timeout_;
         }
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
-        aiocbs_[i] = NULL;
+        if( !connect_ ) aiocbs_[i] = NULL;
+        nrd = i;
 #endif
         if( tmout != ~uint64_t(0) ){
           to.tv_sec = tmout / 1000000u;
@@ -772,9 +808,10 @@ void AsyncIoSlave::threadExecute()
 #endif
       else {
 #if HAVE_AIO_SUSPEND
-        nrd = aio_suspend(aiocbs_,nrd,timeout);
+        if( aio_suspend(aiocbs_,nrd,timeout) != 0 ) evCount = -1;
 #elif HAVE_AIO_WAITCOMPLETE
-        nrd = aio_waitcomplete(aiocbs_,timeout);
+        struct aiocb * a = aiocbs_;
+        if( aio_waitcomplete(&a,timeout) == -1 ) evCount = -1;
 #elif HAVE_KQUEUE
         evCount = kevent(kqueue_,NULL,0,&kevents_[0],maxRequests_,timeout);
 #else
@@ -784,7 +821,7 @@ void AsyncIoSlave::threadExecute()
       error = errno;
       acquire();
       if( evCount == -1 ){
-        if( errno == EAGAIN ){
+        if( errno == EAGAIN || errno == EINPROGRESS ){
           for( node = requests_.first(); node != NULL; node = node->next() ){
             object = &AsyncEvent::nodeObject(*node);
             if( object->timeout_ == ~uint64_t(0) ) continue;
@@ -792,6 +829,8 @@ void AsyncIoSlave::threadExecute()
             if( object->timeout_ == 0 && object->descriptor_ != NULL )
               aio_cancel(object->descriptor_->descriptor_,&object->iocb_);
           }
+        }
+        else if( errno == EINTR || errno == ECANCELED ){
         }
         else if( errno != EINTR ){
           perror(NULL);
@@ -823,6 +862,16 @@ void AsyncIoSlave::threadExecute()
         }
 #endif
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+        else {
+          --evCount;
+          if( (iocb = aiocbs_[evCount]) == NULL ) continue;
+#if HAVE_SIGVAL_SIVAL_PTR
+	  node = (EventsNode *) iocb->aio_sigevent.sigev_value.sival_ptr;
+#elif HAVE_SIGVAL_SIGVAL_PTR
+          node = (EventsNode *) iocb->aio_sigevent.sigev_value.sigval_ptr;
+#endif
+  	  object = &AsyncEvent::nodeObject(*node);
+  	}
 #elif HAVE_KQUEUE
 	else {
           evCount--;
@@ -861,9 +910,20 @@ void AsyncIoSlave::threadExecute()
 	    break;
           case etAccept  :
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
-	    errLen = sizeof(error);
-	    dynamic_cast<ksock::AsyncSocket *>(object->descriptor_)->getsockopt(SOL_SOCKET,SO_ERROR,&error,errLen);
-	    if( error == 0 ) count = object->descriptor_->accept();
+	    //errLen = sizeof(error);
+	    //dynamic_cast<ksock::AsyncSocket *>(object->descriptor_)->getsockopt(SOL_SOCKET,SO_ERROR,&error,errLen);
+	    if( object->cancel_ ){
+	      errno = ECANCELED;
+	    }
+	    else {
+  	      while( (object->data2_ = object->descriptor_->accept()) == -1 ){
+	        if( errno != EINVAL ) break;
+                object->data2_ = object->descriptor_->listen(0);
+              }
+              if( errno == EAGAIN ) continue;
+            }
+	    error = errno;
+	    count = object->data2_;
 #elif HAVE_KQUEUE
             assert( kev->filter == EVFILT_READ );
             if( kev->flags & EV_ERROR ){
@@ -898,34 +958,6 @@ void AsyncIoSlave::threadExecute()
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------
-bool AsyncIoSlave::abortNotification(DirectoryChangeNotification * dcn)
-{
-  bool r = false;
-  assert( !isWin9x() );
-  AutoLock<LiteWriteLock> lock(*this);
-  EventsNode * node;
-  for( node = requests_.first(); node != NULL; node = node->next() ){
-    AsyncEvent & object = AsyncEvent::nodeObject(*node);
-    if( object.type_ == etDirectoryChangeNotification ){
-      r = object.directoryChangeNotification_ == dcn;
-      if( dcn == NULL || r ){
-        object.abort_ = true;
-#if defined(__WIN32__) || defined(__WIN64__)
-        SetEvent(object.overlapped_.hEvent);
-#elif HAVE_FAM_H
-        if( object.directoryChangeNotification_->monitorStarted_ ){
-	  AsyncFile file(object.directoryChangeNotification_->fname_);
-	  file.createIfNotExist(true).createPath(false).tryOpen();
-	}
-#endif
-        post();
-        if( dcn != NULL ) break;
-      }
-    }
-  }
-  return r;
-}
-//---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
 AsyncMiscSlave::SocketInitializer::~SocketInitializer()

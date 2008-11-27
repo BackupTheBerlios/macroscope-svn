@@ -196,9 +196,10 @@ Semaphore & Semaphore::post()
 Semaphore & Semaphore::wait()
 {
 #if HAVE_SEMAPHORE_H
-  if( sem_wait(&handle_) != 0 ){
+  while( sem_wait(&handle_) != 0 ){
     int32_t err = errno;
-    newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
+    if( err != EINTR )
+      newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
 #elif defined(__WIN32__) || defined(__WIN64__)
   DWORD r = WaitForSingleObject(handle_,INFINITE);
@@ -226,7 +227,8 @@ bool Semaphore::timedWait(uint64_t timeout,bool noThrow)
   t.tv_sec = timeout / (1000000u * 1000u);
   t.tv_nsec = timeout % (1000000u * 1000u);
 //  fprintf(stderr,"%s %d %ld %ld\n",__FILE__,__LINE__,t.tv_sec,t.tv_nsec); fflush(stderr);
-  int r = sem_timedwait(&handle_,&t);
+  int r;
+  while( (r = sem_timedwait(&handle_,&t)) != 0 && errno == EINTR );
 //  if( r > 0 ) errno = r;
   /*if( r != 0 && errno == EINVAL ){
     bool rr;
@@ -551,7 +553,7 @@ SharedMemory::~SharedMemory()
 #endif
     munmap(memory_, length_);
 #ifndef NDEBUG
-    assert(r == 0);
+    assert( r == 0 );
 #endif
   }
   if( file_ >= 0 && creator() ){
@@ -560,7 +562,7 @@ SharedMemory::~SharedMemory()
 #endif
     shm_unlink(name_);
 #ifndef NDEBUG
-    assert(r == 0);
+    assert( r == 0 );
 #endif
   }
 #elif defined(__WIN32__) || defined(__WIN64__)

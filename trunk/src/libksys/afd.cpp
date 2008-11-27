@@ -1288,7 +1288,13 @@ BOOL AsyncFile::GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberO
   return ::GetOverlappedResult(descriptor_, lpOverlapped, lpNumberOfBytesTransferred, bWait);
 }
 //---------------------------------------------------------------------------
-#elif HAVE_KQUEUE || __linux__
+#else
+//---------------------------------------------------------------------------
+int AsyncFile::listen(int)
+{
+  errno = ENOSYS;
+  return -1;
+}
 //---------------------------------------------------------------------------
 int AsyncFile::accept()
 {

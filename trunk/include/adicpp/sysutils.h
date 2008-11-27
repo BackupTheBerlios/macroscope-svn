@@ -166,6 +166,7 @@ inline bool isWinXPorLater()
 bool isWow64();
 
 #else
+extern pthread_t mainThread;
 inline bool isWin9x()
 {
   return false;

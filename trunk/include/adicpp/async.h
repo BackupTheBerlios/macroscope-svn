@@ -162,6 +162,7 @@ class AsyncEvent {
     int kqueue_;
 #endif
     AsyncEventType type_;
+    bool cancel_;
   private:
     AsyncEvent(const AsyncEvent &){}
     void operator = (const AsyncEvent &){}
@@ -172,13 +173,14 @@ inline AsyncEvent::~AsyncEvent()
 }
 //---------------------------------------------------------------------------
 inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
-  fiber_(NULL), descriptor_(NULL), timeout_(~uint64_t(0)), errno_(0), type_(etNone)
+  fiber_(NULL), descriptor_(NULL), timeout_(~uint64_t(0)), errno_(0),
+  type_(etNone), cancel_(false)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
   memset(&overlapped_,0,sizeof(overlapped_));
 #endif
 #if SIZEOF_AIOCB
-  memset(&iocb_, 0, sizeof(iocb_));
+  memset(&iocb_,0,sizeof(iocb_));
 #endif
 #if HAVE_KQUEUE
   kqueue_ = -1;
@@ -257,6 +259,7 @@ class AsyncDescriptor : public AsyncDescriptorKey {
 #endif
   protected:
 #if HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+    virtual int listen(int) = 0;
     virtual int accept() = 0;
     virtual void connect(AsyncEvent * request) = 0;
     virtual int64_t read2(void * buf, uint64_t len);
@@ -287,6 +290,10 @@ inline AsyncDescriptor::AsyncDescriptor()
 //---------------------------------------------------------------------------
 inline void AsyncEvent::cancelAsyncEvent()
 {
+  cancel_ = true;
+#if defined(__WIN32__) || defined(__WIN64__)
+  SetEvent(overlapped_.hEvent);
+#endif
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
   if( descriptor_ != NULL )
     aio_cancel(descriptor_->descriptor_,&iocb_);

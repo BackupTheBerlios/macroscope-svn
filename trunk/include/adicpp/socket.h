@@ -224,7 +224,8 @@ class AsyncSocket : public ksys::AsyncDescriptor, private ksys::LZO1X, private k
     BOOL    Read(LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
     BOOL    Write(LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
     BOOL    GetOverlappedResult(LPOVERLAPPED lpOverlapped, LPDWORD lpNumberOfBytesTransferred, BOOL bWait, LPDWORD lpdwFlags);
-#elif HAVE_KQUEUE || __linux__
+#else
+    int     listen(int);
     int     accept();
     void    connect(ksys::AsyncEvent * request);
     int64_t read2(void * buf, uint64_t len);
@@ -474,7 +475,6 @@ class AcceptFiber : virtual public ksys::Fiber, virtual public AsyncSocket {
     AcceptFiber();
   protected:
   private:
-    ksys::WriteLock mutex_;
     void fiberExecute();
     void fiberBreakExecution();
 };

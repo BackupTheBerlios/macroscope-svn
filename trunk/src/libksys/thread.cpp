@@ -691,23 +691,41 @@ uintptr_t Thread::checkForSignal(uintptr_t mId)
 uintptr_t Thread::waitForSignal(uintptr_t sId)
 {
   assert( sId < _SIG_MAXSIG );
+  /*sigset_t ss, ssp;
+  if( sigemptyset(&ss) != 0 ||
+      sigaddset(&ss,SIGINT) != 0 ||
+      pthread_sigmask(SIG_BLOCK,&ss,&ssp) != 0 ){
+    perror(NULL);
+    abort();
+  }
+  struct sigaction act;
+  memset(&act,0,sizeof(act));
+  act.sa_flags = SA_SIGINFO;
+  act.sa_handler = (void (*)(int)) sigHandler;
+  if( sigaction(SIGHUP,&act,NULL) != 0 ||*/
+        
+  for( intptr_t i = sizeof(signalsCounters) / sizeof(signalsCounters[0]) - 1; i >= 0; i-- )
+    signalsCounters[i] = 0;
   for(;;){
     waitForSignalsSemaphore();
     if( sId == 0 ){
-      interlockedIncrement(signalsCounters[SIGINT - 1],0);
-      if( interlockedIncrement(signalsCounters[SIGINT - 1],0) > 0 ) return SIGINT;
-      if( interlockedIncrement(signalsCounters[SIGQUIT - 1],0) > 0 ) return SIGQUIT;
-      if( interlockedIncrement(signalsCounters[SIGTERM - 1],0) > 0 ) return SIGTERM;
+      if( interlockedIncrement(signalsCounters[SIGINT - 1],0) > 0 ){ sId = SIGINT; break; }
+      if( interlockedIncrement(signalsCounters[SIGQUIT - 1],0) > 0 ){ sId = SIGQUIT; break; }
+      if( interlockedIncrement(signalsCounters[SIGTERM - 1],0) > 0 ){ sId = SIGTERM; break; }
     }
-    else if( interlockedIncrement(signalsCounters[sId - 1],0) > 0 ) return sId;
+    else if( interlockedIncrement(signalsCounters[sId - 1],0) > 0 ) break;
   }
+/*  if( pthread_sigmask(SIG_SETMASK,&ssp,NULL) != 0 ){
+    perror(NULL);
+    abort();
+  }*/
+  return sId;
 }
 //---------------------------------------------------------------------------
 uintptr_t Thread::checkForSignal(uintptr_t sId)
 {
   assert( sId < _SIG_MAXSIG );
   if( sId == 0 ){
-    interlockedIncrement(signalsCounters[SIGINT - 1],0);
     if( interlockedIncrement(signalsCounters[SIGINT - 1],0) > 0 ) return SIGINT;
     if( interlockedIncrement(signalsCounters[SIGQUIT - 1],0) > 0 ) return SIGQUIT;
     if( interlockedIncrement(signalsCounters[SIGTERM - 1],0) > 0 ) return SIGTERM;

@@ -129,16 +129,18 @@ AsyncSocket & AsyncSocket::open(int domain, int type, int protocol)
         setsockopt(SOL_SOCKET,SO_RCVTIMEO,&timeo,sizeof(timeo));
         setsockopt(SOL_SOCKET,SO_SNDTIMEO,&timeo,sizeof(timeo));*/
 #endif
-        int ka = true;
+        int ka = 1;
         setsockopt(SOL_SOCKET,SO_KEEPALIVE,&ka,sizeof(ka));
         struct linger lg;
         lg.l_onoff = 0;
         lg.l_linger = 0;
         setsockopt(SOL_SOCKET,SO_LINGER,&lg,sizeof(lg));
-        int reuse = true;
+//#ifndef __linux__
+        int reuse = 1;
 //        socklen_t rlen = sizeof(reuse);
 //        getsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,rlen);
         setsockopt(SOL_SOCKET,SO_REUSEADDR,&reuse,(socklen_t) sizeof(reuse));
+//#endif
       }
     }
     catch( ... ){
@@ -350,7 +352,7 @@ uint64_t AsyncSocket::sysRecv(void * buf,uint64_t len)
   ksys::currentFiber()->checkFiberStackOverflow();
   uint64_t r = 0;
   if( len > maxRecvSize_ ) len = maxRecvSize_;
-#if HAVE_KQUEUE || __linux__
+#if HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
 l1:
 #endif
   ksys::Fiber * fiber = ksys::currentFiber();
@@ -363,7 +365,7 @@ l1:
   assert( fiber->event_.type_ == ksys::etRead );
 #if defined(__WIN32__) || defined(__WIN64__)
   if( fiber->event_.errno_ != 0 || fiber->event_.count_ == 0 ){
-#elif HAVE_KQUEUE || __linux__
+#elif HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
   switch( fiber->event_.errno_ ){
     case 0           :
       if( fiber->event_.count_ == 0 ) goto l2;
@@ -498,7 +500,7 @@ uint64_t AsyncSocket::sysSend(const void * buf,uint64_t len)
   ksys::currentFiber()->checkFiberStackOverflow();
   uint64_t w = 0;
   if( len > maxSendSize_ ) len = maxSendSize_;
-#if HAVE_KQUEUE || __linux__
+#if HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
 l1:
 #endif
   ksys::Fiber * fiber = ksys::currentFiber();
@@ -511,7 +513,7 @@ l1:
   assert( fiber->event_.type_ == ksys::etWrite );
 #if defined(__WIN32__) || defined(__WIN64__)
   if( fiber->event_.errno_ != 0 || fiber->event_.count_ == 0 ){
-#elif HAVE_KQUEUE || __linux__
+#elif HAVE_KQUEUE || HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
   switch( fiber->event_.errno_ ){
     case 0           :
       if( fiber->event_.count_ == 0 ) goto l2;
@@ -1116,10 +1118,16 @@ BOOL AsyncSocket::GetOverlappedResult(
 //---------------------------------------------------------------------------
 #else
 //---------------------------------------------------------------------------
+int AsyncSocket::listen(int)
+{
+  errno = 0;
+  return api.listen(socket_,SOMAXCONN);
+}
+//---------------------------------------------------------------------------
 int AsyncSocket::accept()
 {
   errno = 0;
-  return api.accept(socket_,NULL,0);
+  return api.accept(socket_,NULL,NULL);
 }
 //---------------------------------------------------------------------------
 void AsyncSocket::connect(ksys::AsyncEvent * request)

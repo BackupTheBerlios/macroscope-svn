@@ -52,12 +52,11 @@ void AcceptFiber::fiberExecute()
     }
   }
   catch( ksys::ExceptionSP & e ){
-    mutex_.acquire().release();
 #if defined(__WIN32__) || defined(__WIN64__)
     if( e->code() != ERROR_OPERATION_ABORTED + ksys::errorOffset &&
         e->code() != WSAENOTSOCK + ksys::errorOffset) throw;
 #else
-    if( e->code() != EINTR && e->code() != ENOTSOCK ) throw;
+    if( !e->searchCode(ECANCELED) ) throw;
 #endif
   }
 }
@@ -65,6 +64,7 @@ void AcceptFiber::fiberExecute()
 void AcceptFiber::fiberBreakExecution()
 {
   event_.cancelAsyncEvent();
+  shutdown();
 }
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,7 +104,6 @@ void Server::open()
   for( intptr_t i = bindAddrs_.count() - 1; i >= 0; i-- )
     acceptFiber->bind(bindAddrs_[i]);
   acceptFiber->listen();
-  acceptFiber->mutex_.acquire();
   attachFiber(fiber);
   //acceptFiber->thread()->maxFibersPerThread(1);
   acceptFiber_ = acceptFiber;
@@ -113,12 +112,6 @@ void Server::open()
 void Server::close()
 {
   if( acceptFiber_ != NULL ){
-    acceptFiber_->shutdown();
-#if defined(__WIN32__) || defined(__WIN64__)
-// socket must be closed, because shutdown don't interrupt accepting
-    acceptFiber_->AsyncSocket::close();
-#endif
-    acceptFiber_->mutex_.release();
     closeServer();
     acceptFiber_ = NULL;
   }

@@ -580,6 +580,8 @@ DWORD mainThreadId;
 UINT threadFinishMessage;
 UINT fiberFinishMessage;
 //---------------------------------------------------------------------------
+#else
+pthread_t mainThread;
 #endif
 //---------------------------------------------------------------------------
 uintmax_t fibonacci(uintmax_t n)
@@ -3586,8 +3588,10 @@ void waitForSignalsSemaphore()
 volatile uilock_t signalsCounters[_SIG_MAXSIG];
 static void sigHandler(int sig,siginfo_t * /*siginfo*/,ucontext_t * /*uap*/)
 {
-  interlockedIncrement(signalsCounters[sig - 1],1);
-  signalsCountersSem().post();
+  if( mainThread == pthread_self() ){
+    interlockedIncrement(signalsCounters[sig - 1],1);
+    signalsCountersSem().post();
+  }
 }
 
 static void sigSYSHandler(int sig,siginfo_t * /*siginfo*/,ucontext_t * /*uap*/)
@@ -3639,6 +3643,7 @@ void initialize(int argc,char ** argv)
   SetConsoleCtrlHandler(consoleCtrlHandler,TRUE);
 #else
   if( processStartTime == 0 ) processStartTime = gettimeofday();
+  mainThread = pthread_self();
 #if HAVE_SIGNAL_H
   new (signalsCountersSemPlaceHolder) Semaphore;
   struct sigaction act;
