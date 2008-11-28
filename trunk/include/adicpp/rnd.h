@@ -259,7 +259,7 @@ class Randomizer : public QTIsaac<> {
     Randomizer();
 
     Randomizer & randomize();
-    Randomizer & srand(uint64_t a);
+    Randomizer & srand(uint64_t a = 1,uint64_t b = 2,uint64_t c = 3);
     uint64_t random(uint64_t m = ~UINT64_C(0));
     uint64_t random2(uint64_t m = UINT64_C(0));
     uint64_t zrandom();

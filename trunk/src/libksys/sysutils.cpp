@@ -3803,3 +3803,23 @@ intptr_t memncmp(const void * m1,uintptr_t n1,const void * m2,uintptr_t n2)
   return c;
 }
 //---------------------------------------------------------------------------
+void memxchg(void * m1,void * m2,uintptr_t n)
+{
+  while( n >= sizeof(uintptr_t) ){
+    register uintptr_t v = *(uintptr_t *) m1;
+    *(uintptr_t *) m1 = *(uintptr_t *) m2;
+    *(uintptr_t *) m2 = v;
+    m1 = (uintptr_t *) m1 + 1;
+    m2 = (uintptr_t *) m2 + 1;
+    n -= sizeof(uintptr_t);
+  }
+  while( n > 0 ){
+    register uint8_t v = *(uint8_t *) m1;
+    *(uint8_t *) m1 = *(uint8_t *) m2;
+    *(uint8_t *) m2 = v;
+    m1 = (uint8_t *) m1 + 1;
+    m2 = (uint8_t *) m2 + 1;
+    n--;
+  }
+}
+//---------------------------------------------------------------------------

@@ -437,6 +437,7 @@ utf8::String getTimeCode(int64_t t);
 //---------------------------------------------------------------------------
 intptr_t memncmp(const void * m1,const void * m2,uintptr_t n);
 intptr_t memncmp(const void * m1,uintptr_t n1,const void * m2,uintptr_t n2);
+void memxchg(void * m1,void * m2,uintptr_t n);
 //---------------------------------------------------------------------------
 #endif /* _Sysutils_H_ */
 //---------------------------------------------------------------------------

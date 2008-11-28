@@ -35,9 +35,9 @@ Randomizer & Randomizer::randomize()
   return *this;
 }
 //---------------------------------------------------------------------------
-Randomizer & Randomizer::srand(uint64_t a)
+Randomizer & Randomizer::srand(uint64_t a,uint64_t b,uint64_t c)
 {
-  Inherited::srand(a,a,a,NULL);
+  Inherited::srand(a,b,c,NULL);
   return *this;
 }
 //---------------------------------------------------------------------------
