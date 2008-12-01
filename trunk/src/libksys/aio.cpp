@@ -902,12 +902,15 @@ void AsyncIoSlave::threadExecute()
 	    break;
 #endif
           case etRead    :
-            error = aio_error(&object->iocb_);
-            count = aio_return(&object->iocb_);
-	    break;
           case etWrite   :
             error = aio_error(&object->iocb_);
             count = aio_return(&object->iocb_);
+#if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
+            if( error == EAGAIN ){
+              newRequests_.insToTail(requests_.remove(*object));
+              continue;
+            }
+#endif
 	    break;
           case etAccept  :
 #if HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
