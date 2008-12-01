@@ -182,7 +182,7 @@ inline AsyncEvent::AsyncEvent() : position_(0), buffer_(NULL), length_(0),
 #if SIZEOF_AIOCB
   memset(&iocb_,0,sizeof(iocb_));
 #endif
-#if HAVE_KQUEUE
+#if HAVE_KQUEUE && !HAVE_AIO_SUSPEND && !HAVE_AIO_WAITCOMPLETE
   kqueue_ = -1;
 #endif
 }

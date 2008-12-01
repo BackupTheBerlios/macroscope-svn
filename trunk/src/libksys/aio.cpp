@@ -107,6 +107,7 @@ AsyncIoSlave::~AsyncIoSlave()
 #if defined(__WIN32__) || defined(__WIN64__)
   for( intptr_t i = sizeof(safeEvents_) / sizeof(safeEvents_[0]) - 1; i >= 0; i-- )
     CloseHandle(safeEvents_[i]);
+#elif HAVE_AIO_SUSPEND || HAVE_AIO_WAITCOMPLETE
 #elif HAVE_KQUEUE
   if( kqueue_ >= 0 && close(kqueue_) != 0 ){
     perror(NULL);
