@@ -220,12 +220,12 @@ void Service::stop()
 //---------------------------------------------------------------------------
 void Service::suspend()
 {
-  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not support suspending")->throwSP();
+//  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not support suspending")->throwSP();
 }
 //---------------------------------------------------------------------------
 void Service::resume()
 {
-  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not support resuming")->throwSP();
+//  newObjectV1C2<Exception>(ENOSYS,"service " + serviceName_ + " not support resuming")->throwSP();
 }
 //---------------------------------------------------------------------------
 utf8::String Service::status()

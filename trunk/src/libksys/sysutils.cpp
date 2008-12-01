@@ -3588,7 +3588,8 @@ void waitForSignalsSemaphore()
 volatile uilock_t signalsCounters[_SIG_MAXSIG];
 static void sigHandler(int sig,siginfo_t * /*siginfo*/,ucontext_t * /*uap*/)
 {
-  if( mainThread == pthread_self() ){
+  pthread_t tid = pthread_self();
+  if( pthread_equal(mainThread,tid) || sig != SIGINT ){
     interlockedIncrement(signalsCounters[sig - 1],1);
     signalsCountersSem().post();
   }
