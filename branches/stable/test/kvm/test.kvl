@@ -1,0 +1,20 @@
+﻿// ***WARNING*** Don't edit this line. This is machine generated line. Revision {[YXPPZNMVQDN0EHSOJ3XP1BMLEA]}: 0
+
+class test1 {
+
+  d1;
+  d2;
+
+  класс субтест1 {
+    m1;
+
+    y(x,z);
+  }
+
+  y(x,z,q){
+    q = x + z;
+    return q;
+  }
+}
+
+псевдоним test1 тест1 тест2;
