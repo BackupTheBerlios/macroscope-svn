@@ -2568,17 +2568,42 @@ inp:  if( inpSize == 0 ){
       eaPos_ -= sizeof(eAhead_->string_);
     }
 out:
-    if( outSize == 0 ){
-      eState_ = stOut;
-      return *this;
+    switch( eCodeSize_ ){
+      default:
+      case 3 :
+        if( outSize == 0 ){
+          eState_ = stOut;
+          return *this;
+        }
+        *(uint8_t *) out = uint8_t(eCode_);
+        eCode_ >>= 8u;
+        eCodeSize_ -= 1;
+        out = (uint8_t *) out + l;
+        outSize -= 1;
+        wb += 1;
+      case 2 :
+        if( outSize == 0 ){
+          eState_ = stOut;
+          return *this;
+        }
+        *(uint8_t *) out = uint8_t(eCode_);
+        eCode_ >>= 8u;
+        eCodeSize_ -= 1;
+        out = (uint8_t *) out + l;
+        outSize -= 1;
+        wb += 1;
+      case 1 :
+        if( outSize == 0 ){
+          eState_ = stOut;
+          return *this;
+        }
+        *(uint8_t *) out = uint8_t(eCode_);
+        eCode_ >>= 8u;
+        eCodeSize_ -= 1;
+        out = (uint8_t *) out + l;
+        outSize -= 1;
+        wb += 1;
     }
-    uintptr_t l = min(eCodeSize_,outSize);
-    memcpy(out,&eCode_,l);
-    eCode_ >>= l * 8u;
-    eCodeSize_ -= l;
-    out = (uint8_t *) out + l;
-    outSize -= l;
-    wb += l;
   }
   return *this;
 }

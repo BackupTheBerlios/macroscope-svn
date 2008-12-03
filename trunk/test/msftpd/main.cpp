@@ -582,6 +582,7 @@ int main(int _argc,char * _argv[])
     services.add(service = newObjectV1<MSFTPService>(0));
     bool dispatch = true;
     service->msftpConfig()->silent(true);
+    utf8::String pidFileName;
     for( u = 1; u < argv().count(); u++ ){
       if( argv()[u].compare("--chdir") == 0 && u + 1 < argv().count() ){
         changeCurrentDir(argv()[u + 1]);
@@ -592,6 +593,9 @@ int main(int _argc,char * _argv[])
       }
       else if( argv()[u].compare("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
+      }
+      else if( argv()[i].compare("--pid") == 0 && i + 1 < argv().count() ){
+        pidFileName = argv()[i + 1];
       }
     }
     service->initialize();
@@ -663,6 +667,11 @@ int main(int _argc,char * _argv[])
 #endif
       {
         service->start();
+        if( !pidFileName.isNull() ){
+          AsyncFile pidFile(pidFileName);
+  	      pidFile.createIfNotExist(true).open() << utf8::int2Str(ksys::getpid());
+	        pidFile.resize(pidFile.size());
+        }
         Thread::waitForSignal();
         service->stop();
       }
