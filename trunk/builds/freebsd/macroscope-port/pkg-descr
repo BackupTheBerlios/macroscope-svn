@@ -12,8 +12,10 @@ Features:
   Traffic static HTML reports generating by date periods.
   Traffic dynamic HTML reports generating via CGI (Web interface).
   Multithreading architecture.
-  Portable: BSD os'es and Windows NT family supported, but tested at this time
-            only under FreeBSD 5.x 6.x 7.x amd64 i386 and Windows 2000 XP 2003.
+  Ports tested on following platforms:
+    FreeBSD 5.x 6.x 7.x amd64 i386
+    CentOS 5.2 i386
+    Windows 2000 XP 2003 x86 x64    
 
 WWW: http://developer.berlios.de/projects/macroscope/
 
