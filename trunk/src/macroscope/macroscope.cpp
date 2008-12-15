@@ -1609,6 +1609,63 @@ int32_t Logger::doWork(uintptr_t stage)
     chart.createChart();
     cgi_.writeBuffer(chart.png(),chart.pngSize());
   }
+  else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("ldChart") >= 0 ){
+    struct tm cgiBT, cgiET;
+    memset(&cgiBT,0,sizeof(cgiBT));
+    cgiBT.tm_year = (int) cgi_.paramAsMutant("byear") - 1900;
+    cgiBT.tm_mon = (int) cgi_.paramAsMutant("bmon") - 1;
+    cgiBT.tm_mday = (int) cgi_.paramAsMutant("bday");
+    cgiBT.tm_hour = (int) cgi_.paramAsMutant("bhour");
+    cgiBT.tm_min = (int) cgi_.paramAsMutant("bmin");
+    memset(&cgiET,0,sizeof(cgiET));
+    cgiET.tm_year = (int) cgi_.paramAsMutant("eyear") - 1900;
+    cgiET.tm_mon = (int) cgi_.paramAsMutant("emon") - 1;
+    cgiET.tm_mday = (int) cgi_.paramAsMutant("eday");
+    cgiET.tm_hour = (int) cgi_.paramAsMutant("ehour");
+    cgiET.tm_min = (int) cgi_.paramAsMutant("emin");
+    cgiET.tm_sec = 59;
+    if( tm2Time(cgiBT) > tm2Time(cgiET) ) ksys::xchg(cgiBT,cgiET);
+    cgiBT = time2tm(tm2Time(cgiBT) - getgmtoffset());
+    cgiET = time2tm(tm2Time(cgiET) - getgmtoffset());
+
+    AutoDatabaseDetach autoDatabaseDetach(database_);
+    utf8::String filter(cgi_.paramAsString("filter"));
+    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
+    database_->start();
+    statement_->text(
+      "SELECT"
+      "  ts, SUM(dgram) AS dgram "
+      "FROM INET_SNIFFER_STAT_HOUR " +
+      utf8::String(
+        all ? 
+          filter.isNull() ? utf8::String() : " WHERE ts >= :bt AND ts <= :et AND" + getIPFilter(filter)
+            :
+          filter.isNull() ? " WHERE iface = :if AND ts >= :bt AND ts <= :et" :
+                            " WHERE iface = :if AND ts >= :bt AND ts <= :et AND" + getIPFilter(filter)
+      ) +
+      " GROUP BY ts"
+    )->prepare()->
+      paramAsMutant("bt",cgiBT)->
+      paramAsMutant("et",cgiET);
+    if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
+    statement_->execute();
+
+    cgi_.contentType("image/png");
+    GDChart chart;
+    chart.data().resize(1);
+    while( statement_->fetch() ){
+      chart.data()[0].add(statement_->valueAsMutant("dgram"));
+    }
+    database_->commit();
+
+    chart.xlvs(cgi_.paramAsMutant("xlvs",0));
+    chart.width(cgi_.paramAsMutant("width",1280));
+    chart.height(cgi_.paramAsMutant("height",1024));
+    chart.createChart();
+    cgi_.writeBuffer(chart.png(),chart.pngSize());
+    AsyncFile f("1.png");
+    f.createIfNotExist(true).open().writeBuffer(chart.png(),chart.pngSize());
+  }
   else {
     utf8::String mtMode(config_->textByPath("macroscope.multithreaded_mode","BOTH"));
     if( !cgi_.isCGI() ){
@@ -1761,6 +1818,8 @@ bool SnifferService::active()
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
+  static volatile int a;
+  a = 1 / a;
   //Sleep(15000);
   //volatile int64_t v = 0, exValue = 1, cmpValue = 2;
   //interlockedCompareExchange(v,exValue,cmpValue);
@@ -1895,24 +1954,11 @@ int main(int _argc,char * _argv[])
     errcode = 0;
     if( dispatch || sniffer || rollout || install || uninstall ){
 #ifndef NDEBUG
-      /*setEnv("GATEWAY_INTERFACE","CGI/1.1");
-      setEnv("REQUEST_METHOD","GET");
-      setEnv("QUERY_STRING",""
-        //"if=pleh&bday=7&bmon=12&byear=2007&eday=7&emon=12&eyear=2007&totals=Day&bidirectional=on&protocols=on&ports=on&threshold=1M&threshold2=&filter=src+87.242.73.67+or+dst+87.242.73.67%0D%0A&report=Start"*/
-        /*"if=win_test&"
-        "bday=01&bmon=12&byear=2007&"
-        "eday=31&emon=12&eyear=2007&"
-        "resolve=off&"
-        "bidirectional=on&"
-        "protocols=off&"
-        "ports=off&"
-        "threshold=4M&"
-        "threshold2=&"
-        "totals=Day&"
-        "filter=&"
-        //"filter=(src+amber+or+dst+amber)+and+(src_port+8010+or+dst_port+8010)+and+proto+tcp&"
-        "report=Start"
-      );*/
+      //setEnv("GATEWAY_INTERFACE","CGI/1.1");
+      //setEnv("REQUEST_METHOD","GET");
+      //setEnv("QUERY_STRING",
+//        "if=inet2&bhour=14&bmin=15&bday=5&bmon=12&byear=2008&ehour=14&emin=15&eday=5&emon=12&eyear=2008&max_totals=Day&min_totals=Day&bidirectional=on&threshold=256M&threshold2=&filter=&ldChart="
+      //);
 #endif
       macroscope::Logger logger(sniffer,isDaemon);
       isCGI = logger.cgi().isCGI();

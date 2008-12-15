@@ -489,7 +489,7 @@ class Range32CoderFilter : public StreamCompressionFilter {
 inline Range32CoderFilter * Range32CoderFilter::initializeEncoder()
 {
   eLow_ = 0;
-  eRange_ = int32_t(-1);
+  eRange_ = ~uint32_t(0);
 	for( uintptr_t i = 0; i < sizeof(eFreq_) / sizeof(eFreq_[0]); i++ ) eFreq_[i] = uint32_t(i);
   eState_ = stInit;
   return this;
@@ -572,7 +572,7 @@ inline Range32CoderFilter * Range32CoderFilter::flush(void * out,uintptr_t * wb)
 inline Range32CoderFilter * Range32CoderFilter::initializeDecoder()
 {
   dLow_ = 0;
-  dRange_ = int32_t(-1);
+  dRange_ = ~uint32_t(0);
 	for( uintptr_t i = 0; i < sizeof(dFreq_) / sizeof(dFreq_[0]); i++ ) dFreq_[i] = uint32_t(i);
 	code_ = 0;
   di_ = 0;
