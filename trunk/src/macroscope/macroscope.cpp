@@ -1818,8 +1818,8 @@ bool SnifferService::active()
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
-  static volatile int a;
-  a = 1 / a;
+  //static volatile int a;
+  //a = 1 / a;
   //Sleep(15000);
   //volatile int64_t v = 0, exValue = 1, cmpValue = 2;
   //interlockedCompareExchange(v,exValue,cmpValue);
