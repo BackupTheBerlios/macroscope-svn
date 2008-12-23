@@ -78,6 +78,7 @@ class Sniffer : public PCAP {
     uint64_t maintenance_;
     uint64_t storagePeriodOfStatistics_;
     ldouble maintenanceThreshold_;
+    utf8::String lastIndex_;
     utf8::String user_;
     utf8::String password_;
 
