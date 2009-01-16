@@ -61,6 +61,9 @@ class Exception : public Object {
     bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4) const;
     bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5) const;
     bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5,int32_t code6) const;
+    bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5,int32_t code6,int32_t code7) const;
+    bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5,int32_t code6,int32_t code7,int32_t code8) const;
+    bool searchCode(int32_t code1,int32_t code2,int32_t code3,int32_t code4,int32_t code5,int32_t code6,int32_t code7,int32_t code8,int32_t code9) const;
 
 //    static Exception * newObject();
 //    static Exception * newObject(int32_t code,const char * what);
@@ -120,6 +123,21 @@ inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,in
 inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,int32_t code4,int32_t code5,int32_t code6) const
 {
   return searchCode(code1,code2,code3,code4,code5) || searchCode(code6);
+}
+//---------------------------------------------------------------------------
+inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,int32_t code4,int32_t code5,int32_t code6,int32_t code7) const
+{
+  return searchCode(code1,code2,code3,code4,code5,code6) || searchCode(code7);
+}
+//---------------------------------------------------------------------------
+inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,int32_t code4,int32_t code5,int32_t code6,int32_t code7,int32_t code8) const
+{
+  return searchCode(code1,code2,code3,code4,code5,code6,code7) || searchCode(code8);
+}
+//---------------------------------------------------------------------------
+inline bool Exception::searchCode(int32_t code1, int32_t code2, int32_t code3,int32_t code4,int32_t code5,int32_t code6,int32_t code7,int32_t code8,int32_t code9) const
+{
+  return searchCode(code1,code2,code3,code4,code5,code6,code7,code8) || searchCode(code9);
 }
 //---------------------------------------------------------------------------
 inline Exception & Exception::addRef()

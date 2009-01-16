@@ -362,7 +362,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         else
         if( dynamic_cast<FirebirdDatabase *>(database_.ptr()) != NULL ) exec = "EXECUTE PROCEDURE";
         statement_->text(
-          exec + " INET_UPDATE_SNIFFER_STAT_YEAR(:iface,:ts0,:ts1,:ts2,:ts3,:ts4,:ts5,:ts6,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:dgram,:data,:ports,:protocols,:mt)"
+          exec + " INET_UPDATE_SNIFFER_STAT_YEAR(:iface,:ts0,:ts1,:ts2,:ts3,:ts4,:ts5,:ts6,:src_ip,:src_port,:dst_ip,:dst_port,:proto,:pkts,:dgram,:data,:ports,:protocols,:mt)"
         )->prepare()->
           paramAsMutant("iface",ifName())->
           paramAsMutant("ports",ports())->
@@ -379,6 +379,7 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket
         paramAsString("dst_ip",ksock::SockAddr::addr2Index(packet.dstAddr_))->
         paramAsMutant("dst_port",packet.dstPort_)->
         paramAsMutant("proto",packet.proto_)->
+        paramAsMutant("pkts",packet.pkts_)->
         paramAsMutant("dgram",packet.pktSize_)->
         paramAsMutant("data",packet.dataSize_)->
         execute();
@@ -448,16 +449,16 @@ void Sniffer::MaintenanceThread::threadExecute()
       );
     statement_->database()->/*isolation("SERIALIZABLE")->*/start();
     for( uintptr_t i = 0; i < pgpCount; i++ ){
-      statement_->text("SELECT ");
-      if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL )
-        statement_->text(statement_->text() + "FIRST 1 ");
-      statement_->text(statement_->text() + "TS FROM INET_SNIFFER_STAT_" + pgpNames[i] + " WHERE iface = :if ORDER BY iface, ts");
-      if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL )
-        statement_->text(statement_->text() + " LIMIT 0,1");
+      if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
+        statement_->text("SELECT FIRST 1 TS FROM INET_SNIFFER_STAT_" + utf8::String(pgpNames[i]) + " WHERE iface = :if ORDER BY iface, ts");
+      }
+      else if( dynamic_cast<MYSQLDatabase *>(statement_->database()) != NULL ){
+        statement_->text("SELECT MIN(TS) AS TS FROM INET_SNIFFER_STAT_" + utf8::String(pgpNames[i]) + " WHERE iface = :if");
+      }
       statement_->prepare()->
         paramAsString("if",sniffer_->ifName())->
         execute()->fetchAll();
-      if( statement_->rowCount() > 0 ){
+      if( statement_->rowCount() > 0 && !statement_->valueIsNull("TS") ){
         ellapsed2 = statement_->valueAsMutant("TS");
         break;
       }

@@ -344,6 +344,7 @@ class Logger {
             AutoPtr<Table<Mutant> > table_;
     	      uint64_t bt_;
     	      uint64_t et_;
+            uintmax_t pkts_;
             uintmax_t pktSize_;
             uintmax_t dataSize_;
             struct in_addr srcAddr_;
@@ -431,11 +432,12 @@ class Logger {
           struct tm & ett,
           struct tm & bta,
           struct tm & eta,
+          uintmax_t & sum0,
           uintmax_t & sum1,
           uintmax_t & sum2
         );
         void writeBPFTHtmlReport(intptr_t level = rlYear,const struct tm * rt = NULL);
-        void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
+        void getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pPkts = NULL,uintmax_t * pDgramBytes = NULL,uintmax_t * pDataBytes = NULL);
         utf8::String genHRef(const in_addr & ip,uintptr_t port);
       private:
     };

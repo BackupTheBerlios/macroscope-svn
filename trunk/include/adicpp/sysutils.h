@@ -252,6 +252,7 @@ intptr_t strToMonth(const utf8::String & month);
 utf8::String printTraffic(intmax_t traf,bool zero = false);
 utf8::String printTraffic(uintmax_t traf,bool zero = false);
 utf8::String printTraffic(uintmax_t traf,uintmax_t allTraf,bool html = true);
+utf8::String printCount(uintmax_t count,uintmax_t allCount,bool html = true);
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time);
 //---------------------------------------------------------------------------
 class ExecuteProcessParameters {

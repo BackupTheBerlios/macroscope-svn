@@ -170,9 +170,10 @@ class PCAP : public Thread {
       public:
         virtual ~Packet() {}
       
-        uint64_t pktSize_;
-        uint64_t dataSize_;
-        uint64_t timestamp_;
+        uintmax_t pkts_;
+        uintmax_t pktSize_;
+        uintmax_t dataSize_;
+        uintmax_t timestamp_;
         struct in_addr srcAddr_;
         struct in_addr dstAddr_;
         uint16_t srcPort_;
@@ -234,6 +235,7 @@ class PCAP : public Thread {
         }
         mutable EmbeddedHashNode<HashedPacket,uintptr_t> keyNode_;
 	
+        uintmax_t pkts_;
         uintmax_t pktSize_;
         uintmax_t dataSize_;
         struct in_addr srcAddr_;

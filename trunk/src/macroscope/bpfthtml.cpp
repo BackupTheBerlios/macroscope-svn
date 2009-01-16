@@ -337,7 +337,12 @@ void Logger::BPFTThread::threadExecute()
   }
 }
 //------------------------------------------------------------------------------
-void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pResult,uintmax_t * pDgramBytes,uintmax_t * pDataBytes)
+void Logger::BPFTThread::getBPFTCached(
+  Statement * pStatement,
+  Table<Mutant> * pResult,
+  uintmax_t * pPkts,
+  uintmax_t * pDgramBytes,
+  uintmax_t * pDataBytes)
 {
   CachedPacketSum * p;
   AutoPtr<CachedPacketSum> pktSum;
@@ -353,6 +358,7 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
     cachedPacketSumHash_.insert(*p,false,false,&p);
     if( p == pktSum ){
       pStatement->execute()->fetchAll();
+      p->pkts_ = pStatement->sum("SUM0");
       p->pktSize_ = pStatement->sum("SUM1");
       p->dataSize_ = pStatement->sum("SUM2");
       pktSum.ptr(NULL);
@@ -365,6 +371,7 @@ void Logger::BPFTThread::getBPFTCached(Statement * pStatement,Table<Mutant> * pR
       cachedPacketSumHitCount_++;
     }
     cachedPacketSumLRU_.insToHead(*p);
+    *pPkts = p->pkts_;
     *pDgramBytes = p->pktSize_;
     *pDataBytes = p->dataSize_;
   }
@@ -386,6 +393,7 @@ hash:
       p->srcPort_ = ports_ ? (uint16_t) pResult->cell(row,"src_port") : 0;
       p->dstPort_ = ports_ ? (uint16_t) pResult->cell(row,"dst_port") : 0;
       p->proto_ = protocols_ ? (int16_t) pResult->cell(row,"ip_proto") : -1;
+      p->pkts_ = pResult->cell(row,"SUM0");
       p->pktSize_ = pResult->cell(row,"SUM1");
       p->dataSize_ = pResult->cell(row,"SUM2");
 
@@ -422,6 +430,7 @@ hash:
       }
       if( protocols_ )
         pResult->cell(threshold + 1,"ip_proto") = -1;
+      pResult->cell(threshold + 1,"SUM0") = pResult->sum("SUM0",0,threshold);
       pResult->cell(threshold + 1,"SUM1") = pResult->sum("SUM1",0,threshold);
       pResult->cell(threshold + 1,"SUM2") = pResult->sum("SUM2",0,threshold);
       pResult->removeRows(0,threshold);
@@ -471,6 +480,7 @@ void Logger::BPFTThread::writeBPFTHtmlReportHelper1(
   struct tm & ett,
   struct tm & bta,
   struct tm & eta,
+  uintmax_t & sum0,
   uintmax_t & sum1,
   uintmax_t & sum2)
 {
@@ -492,7 +502,7 @@ void Logger::BPFTThread::writeBPFTHtmlReportHelper1(
   if( protocols_ ){
     stBPFTHostSel_[rl2pgp(level + 1)]->paramAsMutant("proto",table[0](i,"ip_proto"));
   }
-  getBPFTCached(stBPFTHostSel_[rl2pgp(level + 1)],NULL,&sum1,&sum2);
+  getBPFTCached(stBPFTHostSel_[rl2pgp(level + 1)],NULL,&sum0,&sum1,&sum2);
 }
 //------------------------------------------------------------------------------
 void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt)
@@ -542,6 +552,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "    a.src_ip, a.dst_ip,\n" +
         utf8::String(ports_ ? "a.src_port, a.dst_port,\n" : "") +
         utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "    a.pkts AS sum0,\n"
         "    a.dgram AS sum1,\n"
         "    a.data AS sum2\n"
         "  FROM\n"
@@ -578,6 +589,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "  a.src_ip, a.dst_ip,\n" +
         utf8::String(ports_ ? "a.src_port, a.dst_port,\n" : "") +
         utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "  sum(a.pkts) AS sum0,\n"
         "  sum(a.dgram) AS sum1,\n"
         "  sum(a.data) AS sum2\n"
         "FROM (\n"
@@ -585,6 +597,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "    a.src_ip AS src_ip, a.src_ip AS dst_ip,\n" +
         utf8::String(ports_ ? "a.src_port AS src_port, a.src_port AS dst_port,\n" : "") +
         utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "    a.pkts,\n"
         "    a.dgram,\n"
         "    a.data\n"
         "  FROM\n"
@@ -597,6 +610,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         "    a.dst_ip AS src_ip, a.dst_ip AS dst_ip,\n" +
         utf8::String(ports_ ? "a.dst_port AS src_port, a.dst_port AS dst_port,\n" : "") +
         utf8::String(protocols_ ? " a.ip_proto,\n" : "") +
+        "    a.pkts,\n"
         "    a.dgram,\n"
         "    a.data\n"
         "  FROM\n"
@@ -935,7 +949,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
           "<TR>\n"
           "  <TH BGCOLOR=\"" + logger_->getDecor("table_head",section_) + "\" COLSPAN=\"" +
-          utf8::int2Str(colCount * 2 + 3) + "\" ALIGN=left nowrap>\n"
+          utf8::int2Str(colCount * 3 + 4) + "\" ALIGN=left nowrap>\n"
         ;
         switch( level ){
           case rlYear :
@@ -1008,11 +1022,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.dgram",section_) + "\" nowrap>\n"
           "    Datagram bytes\n"
           "  </TH>\n"
+          "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.pkts",section_) + "\" nowrap>\n"
+          "    Packets\n"
+          "  </TH>\n"
         ;
         while( *pi >= sv ){
           if( sums[*pi + av] > 0 )
             f <<
-              "  <TH COLSPAN=2 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
+              "  <TH COLSPAN=3 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
               "    " + utf8::int2Str(*pi + (level == rlYear)) + "\n"
               "  </TH>\n"
 	          ;
@@ -1062,6 +1079,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.dgram",section_) + "\" nowrap>\n" +
             formatTraf(table[0](i,"SUM1"),sums[0]) + "\n"
             "  </TH>\n"
+            "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("body.pkts",section_) + "\" nowrap>\n" +
+            printCount(table[0](i,"SUM0"),table[0].sum("SUM0")) + "\n"
+            "  </TH>\n"
           );
           utf8::String lineChartData, lineChartData2;
           while( *pi >= sv ){
@@ -1086,14 +1106,17 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
                 assert( 0 );
             }
             if( sums[*pi + av] > 0 ){
-              uintmax_t sum1, sum2;
-              writeBPFTHtmlReportHelper1(i,level,beginTime,endTime,btt,ett,bta,eta,sum1,sum2);
+              uintmax_t sum0, sum1, sum2;
+              writeBPFTHtmlReportHelper1(i,level,beginTime,endTime,btt,ett,bta,eta,sum0,sum1,sum2);
               row2 +=
                 "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.data",section_) + "\" nowrap>\n" +
                 formatTraf(sum2,sums[*pi + av]) + "\n"
                 "  </TH>\n"
                 "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.dgram",section_) + "\" nowrap>\n" +
                 formatTraf(sum1,sums[*pi + av]) + "\n"
+                "  </TH>\n"
+                "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.body.pkts",section_) + "\" nowrap>\n" +
+                printCount(sum0,table[*pi + av].sum("SUM0")) + "\n"
                 "  </TH>\n"
               ;
               if( logger_->cgi_.isCGI() ){
@@ -1149,6 +1172,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.dgram",section_) + "\" nowrap>\n" +
           formatTraf(sums[0],sums[0]) + "\n"
           "  </TH>\n"
+          "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.pkts",section_) + "\" nowrap>\n" +
+          printCount(table[0].sum("SUM0"),table[0].sum("SUM0")) + "\n"
+          "  </TH>\n"
         ;
         while( *pi >= sv ){
           if( sums[*pi + av] > 0 )
@@ -1158,6 +1184,9 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               "  </TH>\n"
               "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.dgram",section_) + "\" nowrap>\n" +
               formatTraf(sums[*pi + av],sums[0]) + "\n"
+              "  </TH>\n"
+              "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.pkts",section_) + "\" nowrap>\n" +
+              printCount(table[*pi + av].sum("SUM0"),table[0].sum("SUM0")) + "\n"
               "  </TH>\n"
             ;
           (*pi)--;

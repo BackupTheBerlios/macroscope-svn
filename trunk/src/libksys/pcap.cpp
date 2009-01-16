@@ -779,6 +779,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   const uint8_t * payload = packet + SIZE_ETHERNET + sizeIp + sizeTcp + sizeUdp;
   Packet & pkt = packets_->operator [] (packets_->count());
   pkt.timestamp_ = bt;
+  pkt.pkts_ = 1;
   pkt.pktSize_ = len;
   pkt.dataSize_ = len - (payload - packet);
   memcpy(&pkt.srcAddr_,&ip->src_,sizeof(pkt.srcAddr_));
@@ -799,6 +800,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
   for( intptr_t i = packets_->count() - 2, j = i - pregroupingWindowSize_; i >= 0 && i >= j; i-- ){
     Packet & pkt2 = packets_->operator [] (i);
     if( pkt == pkt2 ){
+      pkt2.pkts_++;
       pkt2.pktSize_ += pkt.pktSize_;
       pkt2.dataSize_ += pkt.dataSize_;
       return;
@@ -877,6 +879,7 @@ void PCAP::Grouper::threadExecute()
           );
         }
         HashedPacket & hpkt = pGroup->packets_[pGroup->header_.count_], * p;
+        hpkt.pkts_ = pkt.pkts_;
         hpkt.pktSize_ = pkt.pktSize_;
         hpkt.dataSize_ = pkt.dataSize_;
         memcpy(&hpkt.srcAddr_,&pkt.srcAddr_,sizeof(pkt.srcAddr_));
@@ -886,6 +889,7 @@ void PCAP::Grouper::threadExecute()
         hpkt.proto_ = pkt.proto_;
         pGroup->packetsHash_.insert(hpkt,false,false,&p);
         if( p != &hpkt ){
+          p->pkts_ += pkt.pkts_;
           p->pktSize_ += pkt.pktSize_;
           p->dataSize_ += pkt.dataSize_;
         }
@@ -1264,6 +1268,7 @@ PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,volat
     pkt = group.packets_[i];
     packetsHash_.insert(pkt,false,false,&p);
     if( p != &pkt ){
+      p->pkts_ += pkt.pkts_;
       p->pktSize_ += pkt.pktSize_;
       p->dataSize_ += pkt.dataSize_;
     }

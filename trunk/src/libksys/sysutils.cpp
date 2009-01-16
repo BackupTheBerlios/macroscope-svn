@@ -2560,6 +2560,13 @@ utf8::String printTraffic(uintmax_t traf,uintmax_t allTraf,bool html)
   return printTraffic(traf) + utf8::String::print(html ? "<FONT SIZE=0>(%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" : "(%"PRIuMAX".%02"PRIuMAX"%%)",b,c);
 }
 //------------------------------------------------------------------------------
+utf8::String printCount(uintmax_t count,uintmax_t allCount,bool html)
+{
+  uintmax_t q = count * 10000u / allCount, b = q / 100u, c = q % 100u;
+  if( count == 0 ) return "-";
+  return utf8::int2Str(count) + utf8::String::print(html ? "<FONT SIZE=0>(%"PRIuMAX".%02"PRIuMAX"%%)</FONT>" : "(%"PRIuMAX".%02"PRIuMAX"%%)",b,c);
+}
+//------------------------------------------------------------------------------
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time)
 {
   utf8::String::Iterator i(date);
