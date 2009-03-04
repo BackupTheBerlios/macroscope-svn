@@ -1216,9 +1216,10 @@ Compiler & Compiler::compile(
 {
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",anyPathName2HostPathName(source)));
   compilerArgs = compilerArgs.replaceCaseAll("${object}",anyPathName2HostPathName(object));
-  compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",
-    utf8::String()
-  );
+  utf8::String value;
+  for( uintptr_t i = 0; i < enumStringParts(includeDirectories_); i++ )
+    value += (value.isNull() ? "-I" : ";") + anyPathName2HostPathName(stringPartByNo(includeDirectories_,i));
+  compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",value);
   ExecuteProcessParameters params;
   params.name_ = compiler_;
   params.args_ = compilerArgs;

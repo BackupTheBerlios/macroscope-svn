@@ -131,7 +131,7 @@ void Class::generateCode(const CodeGeneratorParameters & p)
   }
   else {
     p.file_ <<
-      "#include <kvm/mutant.h>\n"
+      "#include <kvm/include/mutant.h>\n"
       "\n"
       "using kvm::Mutant;\n"
     ;

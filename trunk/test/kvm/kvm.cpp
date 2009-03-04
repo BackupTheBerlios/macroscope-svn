@@ -3064,9 +3064,26 @@ int main(int _argc,char * _argv[])
       utf8::String::Stream() << kvm_version.gnu_ << " started\n"
     );
     config->silent(false);
-    utf8::String defaultConfigSectionName(config->text("default_config",kvm_version.gnu_));
+    utf8::String defaultConfigSectionName(config->text("default_config",kvm_version.tag_));
     utf8::String defaultConnectionSectionName(config->textByPath(defaultConfigSectionName + ".connection","default_connection"));
     AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
+    utf8::String cacheDirectory(includeTrailingPathDelimiter(config->textByPath(defaultConfigSectionName + ".kvm_include_directory",".")));
+    utf8::String cName(cacheDirectory + "config.h");
+    Compiler compiler;
+    compiler.detect(config);
+    if( !stat(cName) ){
+      //compiler.test(includeTrailingPathDelimiter(getPathFromPathName(sources[i])) + "config.h");
+      compiler.test(cName);
+    }
+    compiler.includeDirectories(
+      config->textByPath(
+        defaultConfigSectionName + ".kvm_include_directory",
+        SYSINCLUDE_DIR("kvm")
+      )
+    );
+    compiler.libDirectories(
+      config->textByPath(defaultConfigSectionName + ".kvm_lib_directory")
+    );
     
     for( uintptr_t i = 0; i < sources.count(); i++ ){
       AutoPtr<wchar_t,AutoPtrMemoryDestructor> fileName(coco_string_create(sources[i].getUNICODEString()));
@@ -3078,17 +3095,10 @@ int main(int _argc,char * _argv[])
 	    if( parser->errors->count > 0 ){
         exit(EINVAL);
 	    }
-      utf8::String cName(getCurrentDir() + "config.h");
-      Compiler compiler;
-      compiler.detect(config);
-      if( !stat(cName) ){
-        //compiler.test(includeTrailingPathDelimiter(getPathFromPathName(sources[i])) + "config.h");
-        compiler.test(cName);
-      }
       Stat sSt, xSt, oSt;
       if( stat(sources[i],sSt) ){
         utf8::String xName(changeFileExt(sources[i],".cxx"));
-        if( !stat(sources[i],xSt) || sSt.st_mtime != xSt.st_mtime )
+        if( !stat(xName,xSt) || sSt.st_mtime != xSt.st_mtime )
           parser->gen->generate(compiler,xName);
         utf8::String oName(changeFileExt(sources[i],".cxx"));
         if( !stat(oName,oSt) || xSt.st_mtime != oSt.st_mtime )

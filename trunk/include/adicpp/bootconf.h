@@ -629,4 +629,24 @@ typedef int32_t gid_t;
 #endif
 #endif
 
+#ifndef SYSINCLUDE_DIR
+#if defined(__WIN32__) || defined(__WIN64__)
+#define SYSINCLUDE_DIR(a) ksys::getExecutablePath()
+#elif BSD
+#define SYSINCLUDE_DIR(a) utf8::String("/usr/local/include") + a
+#else
+#define SYSINCLUDE_DIR(a) utf8::String("/usr/include") + a
+#endif
+#endif
+
+#ifndef SYSLIB_DIR
+#if defined(__WIN32__) || defined(__WIN64__)
+#define SYSLIB_DIR(a) ksys::getExecutablePath()
+#elif BSD
+#define SYSLIB_DIR(a) utf8::String("/usr/local/lib") + a
+#else
+#define SYSLIB_DIR(a) utf8::String("/usr/lib") + a
+#endif
+#endif
+
 #endif /* _bootconf_H_ */
