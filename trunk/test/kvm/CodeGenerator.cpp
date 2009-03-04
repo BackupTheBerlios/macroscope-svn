@@ -130,7 +130,11 @@ void Class::generateCode(const CodeGeneratorParameters & p)
     p.file_ << "\n" << p.margin_<< "  public:\n";
   }
   else {
-    p.file_ << "using ksys::Mutant;\n";
+    p.file_ <<
+      "#include <kvm/mutant.h>\n"
+      "\n"
+      "using kvm::Mutant;\n"
+    ;
   }
   CodeGeneratorParameters p2(p,p.margin_+ (this != p.codeGenerator_.root() ? "    " : ""));
   for( uintptr_t i = 0; i < childs_.count(); i++ ) childs_[i].generateCode(p2);
@@ -259,7 +263,7 @@ Expression::~Expression()
 {
 }
 //------------------------------------------------------------------------------
-Expression::Expression() : count_(0), max_(0)
+Expression::Expression()
 {
 }
 //------------------------------------------------------------------------------
@@ -274,7 +278,7 @@ void Expression::generateCode(const CodeGeneratorParameters & p)
   if( p.caller_ == NULL ) p.file_ << p.margin_;
   CodeGeneratorParameters p2(p);
   p2.caller_ = this;
-  for( uintptr_t i = 0; i < count_; i++ ){
+  for( uintptr_t i = 0; i < expression_.count(); i++ ){
     if( expression_[i] == NULL ) continue;
     Expression * e = dynamic_cast<Expression *>(expression_[i]);
     if( e != NULL ) p.file_ << "(";

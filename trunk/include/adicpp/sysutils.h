@@ -124,6 +124,8 @@ inline Array<utf8::String> & argv()
 }
 extern char pathDelimiter;
 extern char pathDelimiterStr[2];
+extern wchar_t pathDelimiterW;
+extern wchar_t pathDelimiterStrW[2];
 //---------------------------------------------------------------------------
 void  initializeArguments(int argc,char ** argv);
 void  initialize(int argc,char ** argv);

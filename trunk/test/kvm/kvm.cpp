@@ -2909,17 +2909,17 @@ int main(int _argc,char * _argv[])
 // tests
     //setProcessPriority("REALTIME_PRIORITY_CLASS");
 
-    AsyncFile file("C:/Korvin/trunk/test/kvm/test.txt");
-    AsyncFile::LineGetBuffer lgb(file);
-    file.open();
+    //AsyncFile file("C:/Korvin/trunk/test/kvm/test.txt");
+    //AsyncFile::LineGetBuffer lgb(file);
+    //file.open();
 
-    AsyncFile encFile("C:/Korvin/trunk/test/kvm/test.enc");
-    encFile.createIfNotExist(true).open().resize(0);
+    //AsyncFile encFile("C:/Korvin/trunk/test/kvm/test.enc");
+    //encFile.createIfNotExist(true).open().resize(0);
 
-    AsyncFile decFile("C:/Korvin/trunk/test/kvm/test.dec");
-    decFile.createIfNotExist(true).open().resize(0);
+    //AsyncFile decFile("C:/Korvin/trunk/test/kvm/test.dec");
+    //decFile.createIfNotExist(true).open().resize(0);
 
-    uint64_t ellapsed;
+    //uint64_t ellapsed;
 
     //RangeCoderFilter32 filter2;
     //filter2.initializeEncoder();
@@ -3001,26 +3001,26 @@ int main(int _argc,char * _argv[])
     //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
     //);
 
-    LZRBTFilter<> filter;
-    filter.initializeEncoder();
-    ellapsed = gettimeofday();
-    filter.encode(file.seek(0),encFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (file.size() * 1000000. / ellapsed) / 1024,
-      100 - encFile.size() * 100. / file.size()
-    );
-    filter.initializeDecoder();
-    ellapsed = gettimeofday();
-    filter.decode(encFile.seek(0),decFile.seek(0).resize(0));
-    ellapsed = gettimeofday() - ellapsed;
-    fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
-      (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
-      (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
-    );
+    //LZRBTFilter<> filter;
+    //filter.initializeEncoder();
+    //ellapsed = gettimeofday();
+    //filter.encode(file.seek(0),encFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"encode: ellapsed %s, %lf kbps, ratio %lf\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (file.size() * 1000000. / ellapsed) / 1024,
+    //  100 - encFile.size() * 100. / file.size()
+    //);
+    //filter.initializeDecoder();
+    //ellapsed = gettimeofday();
+    //filter.decode(encFile.seek(0),decFile.seek(0).resize(0));
+    //ellapsed = gettimeofday() - ellapsed;
+    //fprintf(stderr,"decode: ellapsed %s, %lf kbps\n",
+    //  (const char *) utf8::elapsedTime2Str(ellapsed).getOEMString(),
+    //  (decFile.size() * 1000000. / (ellapsed + (ellapsed == 0))) / 1024
+    //);
 
-    return 0;
+    //return 0;
 //
 
     stdErr.fileName(includeTrailingPathDelimiter(SYSLOG_DIR(kvm_version.tag_)) + kvm_version.tag_ + ".log");
@@ -3078,10 +3078,22 @@ int main(int _argc,char * _argv[])
 	    if( parser->errors->count > 0 ){
         exit(EINVAL);
 	    }
+      utf8::String cName(getCurrentDir() + "config.h");
       Compiler compiler;
       compiler.detect(config);
-      compiler.test(includeTrailingPathDelimiter(getPathFromPathName(sources[i])) + "config.h");
-      parser->gen->generate(compiler,changeFileExt(sources[i],".cxx"));
+      if( !stat(cName) ){
+        //compiler.test(includeTrailingPathDelimiter(getPathFromPathName(sources[i])) + "config.h");
+        compiler.test(cName);
+      }
+      Stat sSt, xSt, oSt;
+      if( stat(sources[i],sSt) ){
+        utf8::String xName(changeFileExt(sources[i],".cxx"));
+        if( !stat(sources[i],xSt) || sSt.st_mtime != xSt.st_mtime )
+          parser->gen->generate(compiler,xName);
+        utf8::String oName(changeFileExt(sources[i],".cxx"));
+        if( !stat(oName,oSt) || xSt.st_mtime != oSt.st_mtime )
+          compiler.compile(cName,xName,oName);
+      }
     }
     stdErr.debug(0,
       utf8::String::Stream() << kvm_version.gnu_ << " stopped\n"

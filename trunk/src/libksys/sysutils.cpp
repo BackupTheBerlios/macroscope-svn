@@ -569,9 +569,13 @@ uint8_t argvPlaceHolder[sizeof(Array<utf8::String>)];
 #if defined(__WIN32__) || defined(__WIN64__)
 char pathDelimiter = '\\';
 char pathDelimiterStr[2] = "\\";
+wchar_t pathDelimiterW = L'\\';
+wchar_t pathDelimiterStrW[2] = L"\\";
 #else
 char pathDelimiter = '/';
 char pathDelimiterStr[2] = "/";
+wchar_t pathDelimiterW = L'/';
+wchar_t pathDelimiterStrW[2] = L"/";
 #endif
 //---------------------------------------------------------------------------
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -1198,13 +1202,15 @@ utf8::String getCurrentDir()
   DWORD a;
   if( isWin9x() ){
     AutoPtr<char,AutoPtrMemoryDestructor> dirName;
-    dirName.realloc((a = GetCurrentDirectoryA(0,NULL)) * sizeof(char));
+    dirName.realloc((a = GetCurrentDirectoryA(0,NULL) + 1) * sizeof(char));
     GetCurrentDirectoryA(a,dirName);
+    strcat(dirName,pathDelimiterStr);
     return dirName.ptr();
   }
   AutoPtr<wchar_t,AutoPtrMemoryDestructor> dirName;
-  dirName.realloc((a = GetCurrentDirectoryW(0,NULL)) * sizeof(wchar_t));
+  dirName.realloc((a = GetCurrentDirectoryW(0,NULL) + 1) * sizeof(wchar_t));
   GetCurrentDirectoryW(a,dirName);
+  wcscat(dirName,pathDelimiterStrW);
   return dirName.ptr();
 #else
   AutoPtr<char,AutoPtrMemoryDestructor> dirName((char *) kmalloc(MAXPATHLEN + 1 + 1));

@@ -229,8 +229,6 @@ class Expression : public CodeObjectOwner {
     Expression & add(CodeObject * object);
   protected:
     Array<CodeObject *> expression_;
-    uintptr_t count_;
-    uintptr_t max_;
   private:
 };
 //------------------------------------------------------------------------------

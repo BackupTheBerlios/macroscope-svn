@@ -53,11 +53,11 @@ Compiler & Compiler::detect(const ConfigSP config)
       utf8::String key, value(config->sectionByPath(envSectionPath).value(j,&key)), e(getEnv(key));
       env.add(key + "=" + value + (e.isNull() ? utf8::String() : ";" + e));
     }
-    utf8::String compiler(config->textByPath(sectionPath + ".compiler"));
+    utf8::String compiler(anyPathName2HostPathName(config->textByPath(sectionPath + ".compiler")));
     AsyncFile tmpCxx(anyPathName2HostPathName(getTempPath() + getTempFileName("cxx")));
     tmpCxx.createIfNotExist(true).open();
     utf8::String compilerArgs(config->textByPath(sectionPath + ".compiler_args")), compilerArgs2(compilerArgs);
-    compilerArgs = compilerArgs.replaceCaseAll("${source}",tmpCxx.fileName());
+    compilerArgs = compilerArgs.replaceCaseAll("${source}",anyPathName2HostPathName(tmpCxx.fileName()));
     utf8::String object(changeFileExt(tmpCxx.fileName(),".o"));
     compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
     compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
@@ -84,12 +84,12 @@ Compiler & Compiler::detect(const ConfigSP config)
     AutoFileRemove afr2(object);
     pid_t exitCode = execute(compiler,compilerArgs,&env,true,true,true);
     if( exitCode == 0 && stat(object) ){ // detected
-      utf8::String compiler(config->textByPath(sectionPath + ".compiler"));
+      utf8::String compiler(anyPathName2HostPathName(config->textByPath(sectionPath + ".compiler")));
       type_ = config->textByPath(sectionPath + ".type");
       compiler_ = compiler;
       compilerArgs_ = compilerArgs2;
       compilerEnv_ = env;
-      linker_ = config->textByPath(sectionPath + ".linker");
+      linker_ = anyPathName2HostPathName(config->textByPath(sectionPath + ".linker"));
       linkerArgs_ = config->textByPath(sectionPath + ".linker_args");
       f = true;
       break;
@@ -107,7 +107,7 @@ bool Compiler::testCxx(const utf8::String & config,const utf8::String & test,con
   AsyncFile file(tmpCxx);
   file.createIfNotExist(true);
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",tmpCxx));
-  utf8::String object(changeFileExt(tmpCxx,".o"));
+  utf8::String object(anyPathName2HostPathName(changeFileExt(tmpCxx,".o")));
   compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
   compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
   file.open().resize(0);
@@ -145,7 +145,7 @@ bool Compiler::testLinkCxx(
   AsyncFile file(tmpCxx);
   file.createIfNotExist(true);
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",tmpCxx));
-  utf8::String object(changeFileExt(tmpCxx,".o"));
+  utf8::String object(anyPathName2HostPathName(changeFileExt(tmpCxx,".o")));
   compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
   compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
   file.open().resize(0);
@@ -172,7 +172,7 @@ bool Compiler::testLinkCxx(
   pid_t exitCode = execute(params);
   testStderr << "\n";
   if( exitCode == 0 && stat(object) ){
-    utf8::String executable(changeFileExt(tmpCxx,".exe"));
+    utf8::String executable(anyPathName2HostPathName(changeFileExt(tmpCxx,".exe")));
     utf8::String linkerArgs(linkerArgs_.replaceCaseAll("${object}",object));
     linkerArgs = linkerArgs.replaceCaseAll("${executable}",executable);
     utf8::String libs;
@@ -205,7 +205,7 @@ intptr_t Compiler::testRunCxx(
   const utf8::String & libraries)
 {
   if( testLinkCxx(config,test,tmpCxx,libraries) ){
-    utf8::String executable(changeFileExt(tmpCxx,".exe"));
+    utf8::String executable(anyPathName2HostPathName(changeFileExt(tmpCxx,".exe")));
     AutoFileRemove afr3(executable);
     return execute(executable,utf8::String(),&compilerEnv_,true);
   }
@@ -1214,6 +1214,22 @@ Compiler & Compiler::compile(
   const utf8::String & source,
   const utf8::String & object)
 {
+  utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",anyPathName2HostPathName(source)));
+  compilerArgs = compilerArgs.replaceCaseAll("${object}",anyPathName2HostPathName(object));
+  compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",
+    utf8::String()
+  );
+  ExecuteProcessParameters params;
+  params.name_ = compiler_;
+  params.args_ = compilerArgs;
+  params.env_ = compilerEnv_;
+  params.wait_ = true;
+  AsyncFile testStderr(changeFileExt(source,".err"));
+  params.stderr_ = params.stdout_ = testStderr.createIfNotExist(true).removeAfterClose(!keepStderr_).open().descriptor_;
+  testStderr.seek(testStderr.size());
+  pid_t exitCode = execute(params);
+  if( exitCode != 0 )
+    newObjectV1C2<Exception>(exitCode,__PRETTY_FUNCTION__)->throwSP();
   return *this;
 }
 //------------------------------------------------------------------------------
