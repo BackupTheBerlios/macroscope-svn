@@ -1,5 +1,5 @@
 /*-
- * Copyright 2008 Guram Dukashvili
+ * Copyright 2008-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -131,6 +131,8 @@ void Class::generateCode(const CodeGeneratorParameters & p)
   }
   else {
     p.file_ <<
+      "#include \"" + p.config_ + "\"\n"
+      "#include \"boot.h\"\n"
       "#include <kvm/include/mutant.h>\n"
       "\n"
       "using kvm::Mutant;\n"
@@ -388,14 +390,16 @@ CodeGenerator::CodeGenerator()
 {
 }
 //------------------------------------------------------------------------------
-CodeGenerator & CodeGenerator::generate(Compiler & compiler,const utf8::String & fileName)
+CodeGenerator & CodeGenerator::generate(Compiler & compiler,const utf8::String & config,const utf8::String & fileName)
 {
   AsyncFile file(fileName);
   file.createIfNotExist(true).open().resize(0);
 #ifndef NDEBUG
   file.codePage(CP_OEMCP);
 #endif
-  root_.generateCode(CodeGeneratorParameters(*this,file,utf8::String()));
+  CodeGeneratorParameters params(*this,file,utf8::String());
+  params.config_ = config;
+  root_.generateCode(params);
   return *this;
 }
 //------------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 /*-
- * Copyright 2008 Guram Dukashvili
+ * Copyright 2008-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -3067,7 +3067,13 @@ int main(int _argc,char * _argv[])
     utf8::String defaultConfigSectionName(config->text("default_config",kvm_version.tag_));
     utf8::String defaultConnectionSectionName(config->textByPath(defaultConfigSectionName + ".connection","default_connection"));
     AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
-    utf8::String cacheDirectory(includeTrailingPathDelimiter(config->textByPath(defaultConfigSectionName + ".kvm_include_directory",".")));
+    utf8::String cacheDirectory(
+      includeTrailingPathDelimiter(
+        anyPathName2HostPathName(
+          config->textByPath(defaultConfigSectionName + ".cache_directory",".")
+        )
+      )
+    );
     utf8::String cName(cacheDirectory + "config.h");
     Compiler compiler;
     compiler.detect(config);
@@ -3076,12 +3082,14 @@ int main(int _argc,char * _argv[])
       compiler.test(cName);
     }
     compiler.includeDirectories(
+      cacheDirectory + ";" +
       config->textByPath(
         defaultConfigSectionName + ".kvm_include_directory",
         SYSINCLUDE_DIR("kvm")
       )
     );
     compiler.libDirectories(
+      cacheDirectory + ";" +
       config->textByPath(defaultConfigSectionName + ".kvm_lib_directory")
     );
     
@@ -3099,7 +3107,7 @@ int main(int _argc,char * _argv[])
       if( stat(sources[i],sSt) ){
         utf8::String xName(changeFileExt(sources[i],".cxx"));
         if( !stat(xName,xSt) || sSt.st_mtime != xSt.st_mtime )
-          parser->gen->generate(compiler,xName);
+          parser->gen->generate(compiler,cName,xName);
         utf8::String oName(changeFileExt(sources[i],".cxx"));
         if( !stat(oName,oSt) || xSt.st_mtime != oSt.st_mtime )
           compiler.compile(cName,xName,oName);

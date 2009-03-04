@@ -49,6 +49,7 @@ class CodeGeneratorParameters {
     CodeGenerator & codeGenerator_;
     AsyncFile & file_;
     utf8::String margin_;
+    utf8::String config_;
     CodeObject * caller_;
 };
 //------------------------------------------------------------------------------
@@ -240,7 +241,7 @@ class CodeGenerator : public Object {
     virtual ~CodeGenerator();
     CodeGenerator();
 
-    CodeGenerator & generate(Compiler & compiler,const utf8::String & fileName);
+    CodeGenerator & generate(Compiler & compiler,const utf8::String & config,const utf8::String & fileName);
     const CodeObject * const root() const { return &root_; }
   protected:
     Class root_;

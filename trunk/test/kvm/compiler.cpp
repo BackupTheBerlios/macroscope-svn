@@ -1,5 +1,5 @@
 /*-
- * Copyright 2008 Guram Dukashvili
+ * Copyright 2008-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1217,8 +1217,11 @@ Compiler & Compiler::compile(
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",anyPathName2HostPathName(source)));
   compilerArgs = compilerArgs.replaceCaseAll("${object}",anyPathName2HostPathName(object));
   utf8::String value;
-  for( uintptr_t i = 0; i < enumStringParts(includeDirectories_); i++ )
-    value += (value.isNull() ? "-I" : ";") + anyPathName2HostPathName(stringPartByNo(includeDirectories_,i));
+  for( uintptr_t i = 0; i < enumStringParts(includeDirectories_); i++ ){
+    utf8::String v(anyPathName2HostPathName(stringPartByNo(includeDirectories_,i)));
+    if( v.isNull() ) continue;
+    value += (value.isNull() ? "-I" : ";") + v;
+  }
   compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",value);
   ExecuteProcessParameters params;
   params.name_ = compiler_;
