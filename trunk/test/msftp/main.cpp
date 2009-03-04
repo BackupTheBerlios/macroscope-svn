@@ -980,7 +980,7 @@ int main(int _argc,char * _argv[])
       else if( argv()[u].compare("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
       }
-      else if( argv()[u].compare("--pid") == 0 && i + 1 < argv().count() ){
+      else if( argv()[u].compare("--pid") == 0 && u + 1 < argv().count() ){
         pidFileName = argv()[u + 1];
       }
     }
