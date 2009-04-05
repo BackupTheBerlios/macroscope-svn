@@ -16,6 +16,10 @@
 #include "DbgString.h"
 #include "DbgVector.h"
 
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+
 namespace pdbutils {
 /**
  @addtogroup public_classes
@@ -465,5 +469,9 @@ protected:
 /** @} */
 
 } // namespace pdbutils {
+
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 
 #endif //DbgType_h

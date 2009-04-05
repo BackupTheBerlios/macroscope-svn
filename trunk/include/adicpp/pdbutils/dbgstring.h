@@ -14,7 +14,9 @@
 //#define DBGUTILS_USE_STD_STRING
 //#define DBGUTILS_USE_MFC_CSTRING
 
-
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
 
 #if defined(DBGUTILS_USE_STD_STRING)
 
@@ -299,5 +301,9 @@ public:
 } // 
 
 #endif // defined(DBGUTILS_USE_STD_STRING)
+
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 
 #endif //DbgString_h

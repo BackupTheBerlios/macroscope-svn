@@ -129,27 +129,11 @@ uintptr_t       utf8s2Upper(char * utf8sD, uintptr_t utf8lD, const char * utf8sS
 uintptr_t       utf8s2Lower(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uintptr_t utf8lS);
 uintptr_t       utf8s2Upper(char * utf8sD, uintptr_t utf8lD, const char * utf8sS, uintptr_t utf8lS);
 //---------------------------------------------------------------------------
+extern const uint8_t utf8SeqLens[64];
+//---------------------------------------------------------------------------
 inline uintptr_t utf8seqlen(const unsigned char * utf8s)
 {
-  static const uint8_t seqLens[64] = {
-//  000000  000001  000010, 000011, 000100, 000101, 000110, 000111
-         1,      1,      1,      1,      1,      1,      1,      1,
-//  001000  001001  001011, 001011, 001101, 001101, 001111, 001111
-         1,      1,      1,      1,      1,      1,      1,      1,
-//  010000  010001  010011, 010011, 010101, 010101, 010111, 010111
-         1,      1,      1,      1,      1,      1,      1,      1,
-//  011000  011001  011011, 011011, 011101, 011101, 011111, 011111
-         1,      1,      1,      1,      1,      1,      1,      1,
-//  100000  100001  100010, 100011, 100100, 100101, 100110, 100111
-         0,      0,      0,      0,      0,      0,      0,      0,
-//  101000  101001  101010, 101011, 101100, 101101, 101110, 101111
-         0,      0,      0,      0,      0,      0,      0,      0,
-//  110000  110001  110010, 110011, 110100, 110101, 110110, 110111
-         2,      2,      2,      2,      2,      2,      2,      2,
-//  111000  111001  111010, 111011, 111100, 111101, 111110, 111111
-         3,      3,      3,      3,      4,      4,      5,      6
-  };
-  return seqLens[*utf8s >> 2];
+  return utf8SeqLens[*utf8s >> 2];
 }
 //---------------------------------------------------------------------------
 inline uintptr_t utf8seqlen(const char * utf8s)
@@ -157,7 +141,12 @@ inline uintptr_t utf8seqlen(const char * utf8s)
   return utf8seqlen(reinterpret_cast<const unsigned char *>(utf8s));
 }
 //---------------------------------------------------------------------------
-inline uintptr_t utf82ucs(const unsigned char * utf8s,uintptr_t * l = NULL)
+#ifndef __BCPLUSPLUS__
+inline
+#else
+static
+#endif
+uintptr_t utf82ucs(const unsigned char * utf8s,uintptr_t * l = NULL)
 {
   uintptr_t c = 0;
   if( l == NULL ) l = &c;
@@ -204,7 +193,12 @@ inline uintptr_t utf82ucs(const char * utf8s,uintptr_t & l)
   return utf82ucs(reinterpret_cast<const unsigned char *>(utf8s),l);
 }
 //---------------------------------------------------------------------------
-inline intptr_t utf82ucs(const unsigned char * & utf8s,uintptr_t & utf8l,uintptr_t & c)
+#ifndef __BCPLUSPLUS__
+inline
+#else
+static
+#endif
+intptr_t utf82ucs(const unsigned char * & utf8s,uintptr_t & utf8l,uintptr_t & c)
 {
   intptr_t r = 0, l = utf8seqlen(utf8s);
   switch( l ){
@@ -260,12 +254,17 @@ inline intptr_t utf82ucs(const char * & utf8s,uintptr_t & utf8l,uintptr_t & c)
   return utf82ucs(*(const unsigned char **) &utf8s, utf8l, c);
 }
 //---------------------------------------------------------------------------
-inline intptr_t utf8s2ucs(const unsigned char * utf8s,uintptr_t utf8l,wchar_t * ucs)
+#ifndef __BCPLUSPLUS__
+inline
+#else
+static
+#endif
+intptr_t utf8s2ucs(const unsigned char * utf8s,uintptr_t utf8l,wchar_t * ucs)
 {
   intptr_t r = 0;
   while( utf8l > 0 ){
     uintptr_t c;
-    if( (r = utf82ucs(utf8s,utf8l,c) != 0) ) break;
+    if( (r = utf82ucs(utf8s,utf8l,c)) != 0 ) break;
     *ucs++ = wchar_t(c);
     if( c == 0 ) break;
   }
@@ -293,14 +292,19 @@ inline uintptr_t ucs2utf8seqlen(uintptr_t c)
   ;
 }
 //---------------------------------------------------------------------------
-inline uintptr_t ucs2utf8seq(unsigned char * utf8s,uintptr_t c)
+#ifndef __BCPLUSPLUS__
+inline
+#else
+static
+#endif
+uintptr_t ucs2utf8seq(unsigned char * utf8s,uintptr_t c)
 {
   uintptr_t utf8l = ucs2utf8seqlen(c);
   switch( utf8l ){
     case 0 :
       break;
     case 1 :
-      *utf8s++ = (unsigned char) c;
+      *utf8s = (unsigned char) c;
       break;
     case 2 :
       utf8s[1] = (unsigned char) (0x80 | (c & 0x3F));
@@ -358,7 +362,12 @@ inline uintptr_t ucs2utf8seq(char * utf8s, uintptr_t c)
   return ucs2utf8seq((unsigned char *) utf8s, c);
 }
 //---------------------------------------------------------------------------
-inline uintptr_t ucs2utf8seq(unsigned char * utf8s,uintptr_t utf8l,uintptr_t c)
+#ifndef __BCPLUSPLUS__
+inline
+#else
+static
+#endif
+uintptr_t ucs2utf8seq(unsigned char * utf8s,uintptr_t utf8l,uintptr_t c)
 {
   uintptr_t l = ucs2utf8seqlen(c);
   switch( l ){
@@ -435,7 +444,12 @@ inline uintptr_t ucs2utf8seq(char * utf8s, uintptr_t utf8l, uintptr_t c)
 //---------------------------------------------------------------------------
 intptr_t ucs2utf8(unsigned char *& utf8s, uintptr_t & utf8l, uintptr_t c);
 //---------------------------------------------------------------------------
-inline intptr_t ucs2utf8(unsigned char * & utf8s,uintptr_t & utf8l,uintptr_t c)
+#ifndef __BCPLUSPLUS__
+inline
+#else
+static
+#endif
+intptr_t ucs2utf8(unsigned char * & utf8s,uintptr_t & utf8l,uintptr_t c)
 {
   uintptr_t l = ucs2utf8seqlen(c);
   intptr_t r = 0;

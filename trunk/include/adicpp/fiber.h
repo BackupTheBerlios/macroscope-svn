@@ -27,6 +27,10 @@
 #ifndef _fiber_H_
 #define _fiber_H_
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
 class BaseServer;
@@ -496,16 +500,6 @@ inline void Requester::detachDescriptor(AsyncDescriptor & descriptor)
   descriptors_.remove(descriptor);
 }
 //---------------------------------------------------------------------------
-inline void Requester::shutdownDescriptors()
-{
-  AutoLock<LiteWriteLock> lock(mutex_);
-  EmbeddedListNode<AsyncDescriptor> * adp;
-  for( adp = descriptors_.first(); adp != NULL; adp = adp->next() ){
-    AsyncDescriptor::listNodeObject(*adp).shutdown2();
-    AsyncDescriptor::listNodeObject(*adp).close2();
-  }
-}
-//---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
 class BaseThread : virtual public Thread, virtual public Fiber {
@@ -719,5 +713,9 @@ inline void BaseServer::abortNotification(DirectoryChangeNotification * dcn)
 //------------------------------------------------------------------------------
 } // namespace ksys
 //------------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
+//---------------------------------------------------------------------------
 #endif /* _fiber_H_ */
 //------------------------------------------------------------------------------

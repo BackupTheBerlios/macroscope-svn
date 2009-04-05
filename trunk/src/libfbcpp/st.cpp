@@ -62,13 +62,14 @@ struct timeval iscTimeStamp2Timeval(const ISC_TIMESTAMP & stamp)
 //---------------------------------------------------------------------------
 struct tm iscTimeStamp2tm(const ISC_TIMESTAMP & stamp)
 {
-  time_t t =
+  time_t t = time_t(
     (stamp.timestamp_date << 16) +
     (stamp.timestamp_date << 14) +
     (stamp.timestamp_date << 12) +
     (stamp.timestamp_date << 8) +
     (stamp.timestamp_date << 7) +
-    stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - iscTimeOffset;
+    stamp.timestamp_time / ISC_TIME_SECONDS_PRECISION - iscTimeOffset
+  );
   return ksys::time2tm(t * 1000000u);
 }
 //---------------------------------------------------------------------------

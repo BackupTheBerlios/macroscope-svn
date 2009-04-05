@@ -91,6 +91,7 @@ ksys::Mutant DSQLParam::getMutant()
   }
   newObjectV1C2<EDSQLStInvalidParamValue>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::setMutant(const ksys::Mutant & value)
@@ -238,7 +239,7 @@ DSQLParam & DSQLParam::checkData()
     if( arrayDesc_.array_desc_dtype == blr_varying ) dataSize_ += 2;
     elementSize_ = dataSize_;
     for( i = arrayDesc_.array_desc_dimensions - 1; i >= 0; i-- ){
-      dimElements_[i] = arrayDesc_.array_desc_bounds[i].array_bound_upper - arrayDesc_.array_desc_bounds[i].array_bound_lower + 1;
+      dimElements_[i] = uint16_t(arrayDesc_.array_desc_bounds[i].array_bound_upper - arrayDesc_.array_desc_bounds[i].array_bound_lower + 1);
       dataSize_ *= dimElements_[i];
     }
     memmove(dimElements_,dimElements_ + 1,sizeof(dimElements_) - sizeof(dimElements_[0]));
@@ -384,6 +385,7 @@ ksys::Mutant DSQLParam::getMutantFromArray(uintptr_t absIndex)
   }
   newObjectV1C2<EDSQLStInvalidParam>((const ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 DSQLParam & DSQLParam::writeBuffer(const void * buf,uintptr_t size)

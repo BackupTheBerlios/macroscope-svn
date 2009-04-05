@@ -265,6 +265,18 @@ void Fiber::start(Fiber * fiber)
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
+void Requester::shutdownDescriptors()
+{
+  AutoLock<LiteWriteLock> lock(mutex_);
+  EmbeddedListNode<AsyncDescriptor> * adp;
+  for( adp = descriptors_.first(); adp != NULL; adp = adp->next() ){
+    AsyncDescriptor::listNodeObject(*adp).shutdown2();
+    AsyncDescriptor::listNodeObject(*adp).close2();
+  }
+}
+//---------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//------------------------------------------------------------------------------
 BaseThread::~BaseThread()
 {
   assert( fibers_.count() == 0 );

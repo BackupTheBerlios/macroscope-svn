@@ -257,6 +257,9 @@ utf8::String printTraffic(uintmax_t traf,uintmax_t allTraf,bool html = true);
 utf8::String printCount(uintmax_t count,uintmax_t allCount,bool html = true);
 utf8::String getTimestamp(const utf8::String & date,const utf8::String & time);
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
 class ExecuteProcessParameters {
   public:
     ExecuteProcessParameters() :
@@ -293,6 +296,9 @@ class ExecuteProcessParameters {
 
   private:
 };
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 
 pid_t execute(const utf8::String & name,const utf8::String & args,const Array<utf8::String> * env = NULL,bool wait = false,bool usePathEnv = true,bool noThrow = false);
 pid_t execute(const utf8::String & name,const Array<utf8::String> & args,const Array<utf8::String> * env = NULL,bool wait = false,bool usePathEnv = true,bool noThrow = false);

@@ -125,7 +125,7 @@ ODBCDatabase * ODBCDatabase::clearParams()
   return this;
 }
 //---------------------------------------------------------------------------
-ODBCDatabase * ODBCDatabase::addParam(const utf8::String & name, const ksys::Mutant & value)
+ODBCDatabase * ODBCDatabase::addParam(const utf8::String & /*name*/, const ksys::Mutant & /*value*/)
 {
   newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__);
   return this;
@@ -142,7 +142,7 @@ utf8::String ODBCDatabase::name()
   return static_cast<odbcpp::Database *>(this)->connection();
 }
 //---------------------------------------------------------------------------
-bool ODBCDatabase::separateDBName(const utf8::String & name, utf8::String & hostName, utf8::String & dbName, uintptr_t & port)
+bool ODBCDatabase::separateDBName(const utf8::String & /*name*/, utf8::String & /*hostName*/, utf8::String & /*dbName*/, uintptr_t & /*port*/)
 {
   newObjectV1C2<ksys::Exception>(ENOSYS,__PRETTY_FUNCTION__);
   return false;
@@ -233,7 +233,7 @@ uintptr_t ODBCStatement::paramCount()
   return static_cast<odbcpp::DSQLStatement *>(this)->params().count();
 }
 //---------------------------------------------------------------------------
-intptr_t ODBCStatement::paramIndex(const utf8::String & name,bool noThrow)
+intptr_t ODBCStatement::paramIndex(const utf8::String & /*name*/,bool /*noThrow*/)
 {
   /*intptr_t i = static_cast<odbcpp::DSQLStatement *>(this)->params().paramIndex(name);
   if( i < 0 && !noThrow )
@@ -242,55 +242,55 @@ intptr_t ODBCStatement::paramIndex(const utf8::String & name,bool noThrow)
   return -1;
 }
 //---------------------------------------------------------------------------
-utf8::String ODBCStatement::paramName(uintptr_t i)
+utf8::String ODBCStatement::paramName(uintptr_t /*i*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->params().paramName(i);
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-ksys::Mutant ODBCStatement::paramAsMutant(uintptr_t i)
+ksys::Mutant ODBCStatement::paramAsMutant(uintptr_t /*i*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->paramAsMutant(i);
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-ksys::Mutant ODBCStatement::paramAsMutant(const utf8::String & name)
+ksys::Mutant ODBCStatement::paramAsMutant(const utf8::String & /*name*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->paramAsMutant(name);
   return ksys::Mutant();
 }
 //---------------------------------------------------------------------------
-utf8::String ODBCStatement::paramAsString(uintptr_t i)
+utf8::String ODBCStatement::paramAsString(uintptr_t /*i*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->paramAsString(i);
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-utf8::String ODBCStatement::paramAsString(const utf8::String & name)
+utf8::String ODBCStatement::paramAsString(const utf8::String & /*name*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->paramAsString(name);
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-ODBCStatement * ODBCStatement::paramAsMutant(uintptr_t i, const ksys::Mutant & value)
+ODBCStatement * ODBCStatement::paramAsMutant(uintptr_t /*i*/, const ksys::Mutant & /*value*/)
 {
 //  static_cast<odbcpp::DSQLStatement *>(this)->paramAsMutant(i, value);
   return this;
 }
 //---------------------------------------------------------------------------
-ODBCStatement * ODBCStatement::paramAsMutant(const utf8::String & name, const ksys::Mutant & value)
+ODBCStatement * ODBCStatement::paramAsMutant(const utf8::String & /*name*/, const ksys::Mutant & /*value*/)
 {
 //  static_cast<odbcpp::DSQLStatement *>(this)->paramAsMutant(name, value);
   return this;
 }
 //---------------------------------------------------------------------------
-ODBCStatement * ODBCStatement::paramAsString(uintptr_t i, const utf8::String & value)
+ODBCStatement * ODBCStatement::paramAsString(uintptr_t /*i*/, const utf8::String & /*value*/)
 {
 //  static_cast<odbcpp::DSQLStatement *>(this)->paramAsString(i, value);
   return this;
 }
 //---------------------------------------------------------------------------
-ODBCStatement * ODBCStatement::paramAsString(const utf8::String & name, const utf8::String & value)
+ODBCStatement * ODBCStatement::paramAsString(const utf8::String & /*name*/, const utf8::String & /*value*/)
 {
 //  static_cast<odbcpp::DSQLStatement *>(this)->paramAsString(name, value);
   return this;
@@ -308,7 +308,7 @@ ODBCStatement * ODBCStatement::fetchAll()
   return this;
 }
 //---------------------------------------------------------------------------
-ODBCStatement * ODBCStatement::selectRow(uintptr_t i)
+ODBCStatement * ODBCStatement::selectRow(uintptr_t /*i*/)
 {
 //  static_cast<odbcpp::DSQLStatement *>(this)->values().selectRow(i);
   return this;
@@ -338,43 +338,43 @@ intptr_t ODBCStatement::rowIndex()
   return -1;
 }
 //---------------------------------------------------------------------------
-ksys::Mutant ODBCStatement::valueAsMutant(uintptr_t i)
+ksys::Mutant ODBCStatement::valueAsMutant(uintptr_t /*i*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->valueAsMutant(i);
   return ksys::Mutant();
 }
 //---------------------------------------------------------------------------
-ksys::Mutant ODBCStatement::valueAsMutant(const utf8::String & name)
+ksys::Mutant ODBCStatement::valueAsMutant(const utf8::String & /*name*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->valueAsMutant(name);
   return ksys::Mutant();
 }
 //---------------------------------------------------------------------------
-utf8::String ODBCStatement::valueAsString(uintptr_t i)
+utf8::String ODBCStatement::valueAsString(uintptr_t /*i*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->valueAsString(i);
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-utf8::String ODBCStatement::valueAsString(const utf8::String & name)
+utf8::String ODBCStatement::valueAsString(const utf8::String & /*name*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->valueAsString(name);
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-bool ODBCStatement::valueIsNull(uintptr_t i)
+bool ODBCStatement::valueIsNull(uintptr_t /*i*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->values().isNull(i);
   return false;
 }
 //---------------------------------------------------------------------------
-bool ODBCStatement::valueIsNull(const utf8::String & name)
+bool ODBCStatement::valueIsNull(const utf8::String & /*name*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->values().isNull(name);
   return false;
 }
 //---------------------------------------------------------------------------
-FieldType ODBCStatement::fieldType(uintptr_t i)
+FieldType ODBCStatement::fieldType(uintptr_t /*i*/)
 {
 /*  i = static_cast<odbcpp::DSQLStatement *>(this)->values().checkValueIndex(i);
   i = static_cast<odbcpp::DSQLStatement *>(this)->values().field(i).type;
@@ -430,19 +430,19 @@ uintptr_t ODBCStatement::fieldCount()
   return 0;
 }
 //---------------------------------------------------------------------------
-FieldType ODBCStatement::fieldType(const utf8::String & name)
+FieldType ODBCStatement::fieldType(const utf8::String & /*name*/)
 {
 //  return fieldType(static_cast<odbcpp::DSQLStatement *>(this)->values().indexOfName(name));
   return ftUnknown;
 }
 //---------------------------------------------------------------------------
-utf8::String ODBCStatement::fieldName(uintptr_t i)
+utf8::String ODBCStatement::fieldName(uintptr_t /*i*/)
 {
 //  return static_cast<odbcpp::DSQLStatement *>(this)->values().nameOfIndex(i);
   return utf8::String();
 }
 //---------------------------------------------------------------------------
-intptr_t ODBCStatement::fieldIndex(const utf8::String & name,bool noThrow)
+intptr_t ODBCStatement::fieldIndex(const utf8::String & /*name*/,bool /*noThrow*/)
 {
   /*intptr_t i = static_cast<odbcpp::DSQLStatement *>(this)->values().indexOfName(name);
   if( i < 0 && !noThrow )

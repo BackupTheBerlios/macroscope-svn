@@ -136,6 +136,9 @@
 
 #if HAVE_ERRNO_H
 #include <errno.h>
+#ifndef ENOSYS // quick hack for bcc32
+#define ENOSYS 140
+#endif
 #endif
 
 #if SIZEOF_ULONG == 0
@@ -352,6 +355,10 @@ typedef uint64_t uintptr_t;
 #define HAVE_INTPTR_T_AS_INTMAX_T 1
 #define HAVE_INTMAX_T_AS_INTPTR_T 1
 #endif
+#endif
+
+#ifndef _INTPTR_T_DEFINED
+#define _INTPTR_T_DEFINED 1
 #endif
 
 #if SIZEOF_PTRDIFF_T == 0

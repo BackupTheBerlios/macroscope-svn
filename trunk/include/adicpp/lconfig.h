@@ -305,7 +305,13 @@
 #endif
 
 #if HAVE_WS2TCPIP_H
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
 #include <ws2tcpip.h>
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 #endif
 
 #if HAVE_WINDOWS_H
@@ -374,7 +380,9 @@
 #define DECLSPEC_NORETURN
 #define GNUG_NORETURN __attribute__((noreturn))
 #else
+#ifndef DECLSPEC_NOTHROW
 #define DECLSPEC_NOTHROW __declspec(nothrow)
+#endif
 #define GNUG_NOTHROW
 #define GNUG_CDECL
 #define GNUG_CONSTRUCTOR
@@ -422,13 +430,19 @@ template <typename T> inline T tabs(const T & v)
   return v > 0 ? v : -v;
 }
 //---------------------------------------------------------------------------
-inline void reverseByteArray(void * array,uintptr_t size)
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+void reverseByteArray(void * array,uintptr_t size)
 {
   for( uintptr_t i = size; i > size / 2; i-- )
     xchg(((uint8_t *) array) [i - 1],((uint8_t *) array) [size - i]);
 }
 //---------------------------------------------------------------------------
-inline void reverseByteArray(void * dst,const void * src,uintptr_t size)
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+void reverseByteArray(void * dst,const void * src,uintptr_t size)
 {
   if( dst == src ){
     for( uintptr_t i = size; i > size / 2; i-- )

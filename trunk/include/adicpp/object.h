@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,10 @@
 #ifndef objectH
 #define objectH
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 namespace utf8 {
 class String;
 }
@@ -46,8 +50,8 @@ class Object {
   friend void cleanup();
   friend class ObjectActions;
   public:
-    virtual ~Object() {}
-    Object() {}
+    virtual __declspec(nothrow) ~Object() {}
+    __declspec(nothrow) Object() {}
     
 // actions
     virtual void afterConstruction() {}
@@ -165,6 +169,10 @@ class ObjectFabric : public Object {
 };
 //---------------------------------------------------------------------------
 } // namespace ksys
+//---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------

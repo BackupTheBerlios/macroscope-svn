@@ -2,6 +2,9 @@
 #ifndef DbgVector_h
 #define DbgVector_h
 
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
 
 namespace pdbutils {
 /**
@@ -92,5 +95,9 @@ protected:
 /** @} */
 
 } // namespace pdbutils 
+
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 
 #endif //dbgutils_h

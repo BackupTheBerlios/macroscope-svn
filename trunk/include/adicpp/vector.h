@@ -83,24 +83,7 @@ template <typename T> class Vector {
     intptr_t          searchCase(const T & element) const;
     intptr_t          bSearchCase(const T & element) const;
     uintptr_t         bSearchCase(const T & element, intptr_t & c) const;
-
-    uintptr_t bSearch(const T & element, intptr_t & c, intptr_t (* f)(const T & e1,const T & e2)) const {
-      intptr_t low = 0, high = count_ - 1, pos = -1;
-      c = 1;
-      while( low <= high ){
-        pos = (low + high) / 2;
-        c = f(element,*ptr_[pos]);
-        if( c > 0 ){
-          low = pos + 1;
-        }
-        else if( c < 0 ){
-          high = pos - 1;
-        }
-        else
-          break;
-      }
-      return pos;
-    }
+    uintptr_t bSearch(const T & element, intptr_t & c, intptr_t (* f)(const T & e1,const T & e2)) const;
 
     Vector<T> & xchg(uintptr_t e1,uintptr_t e2);
     Vector<T> & xchg(Vector<T> & v);
@@ -122,7 +105,30 @@ template <typename T> inline Vector<T>::Vector(const Array<T> & s) : ptr_(NULL),
 //---------------------------------------------------------------------------
 template <typename T>
 #ifndef __BCPLUSPLUS__
- inline
+inline
+#endif
+uintptr_t Vector<T>::bSearch(const T & element, intptr_t & c, intptr_t (* f)(const T & e1,const T & e2)) const
+{
+  intptr_t low = 0, high = count_ - 1, pos = -1;
+  c = 1;
+  while( low <= high ){
+    pos = (low + high) / 2;
+    c = f(element,*ptr_[pos]);
+    if( c > 0 ){
+      low = pos + 1;
+    }
+    else if( c < 0 ){
+      high = pos - 1;
+    }
+    else
+      break;
+  }
+  return pos;
+}
+//---------------------------------------------------------------------------
+template <typename T>
+#ifndef __BCPLUSPLUS__
+inline
 #endif
 Vector<T>::~Vector()
 {
@@ -136,7 +142,10 @@ Vector<T> & Vector<T>::operator =(const Vector<T> & s)
   return assign(s);
 }
 //---------------------------------------------------------------------------
-template <typename T> inline
+template <typename T>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 Vector<T> & Vector<T>::operator =(const Array<T> & s)
 {
   resize(s.count_);
@@ -572,7 +581,10 @@ Vector<T> & Vector<T>::xchg(Vector<T> & v)
   return *this;
 }
 //-----------------------------------------------------------------------------
-template <typename T,typename ST> inline
+template <typename T,typename ST>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 ST & operator << (ST & stream,const Vector<T> & vector)
 {
   uint64_t u = vector.count();
@@ -581,7 +593,10 @@ ST & operator << (ST & stream,const Vector<T> & vector)
   return stream;
 }
 //-----------------------------------------------------------------------------
-template <typename T,typename ST> inline
+template <typename T,typename ST>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 ST & operator >> (ST & stream,Vector<T> & vector)
 {
   uint64_t u;

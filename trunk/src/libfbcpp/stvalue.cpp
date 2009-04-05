@@ -115,6 +115,7 @@ ksys::Mutant DSQLValueScalar::getMutant()
   }
   newObjectV1C2<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLValueScalar::getString()
@@ -227,6 +228,7 @@ ksys::Mutant DSQLValueArray::getMutantFromArray(uintptr_t absIndex)
   }
   newObjectV1C2<EDSQLStInvalidValue>((ISC_STATUS *) NULL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 DSQLValueArray & DSQLValueArray::getSlice()
@@ -405,17 +407,23 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
         v.sqldata = (char *) &valueArray->id_;
         break;
     }
-    value->sqlind_ = v.sqltype & 1 ? -1 : 0;
+    value->sqlind_ = short(v.sqltype & 1 ? -1 : 0);
     v.sqlind = &value->sqlind_;
     value->sqltype_ = v.sqltype;
   }
   if( valuesIndex_.count() != row->count() ){
     for( i = 0; i < row->count(); i++ ){
       XSQLVAR & v = sqlda_.sqlda()->sqlvar[i];
-      utf8::String key(
-        v.aliasname_length > 0 ? utf8::plane(v.aliasname,v.aliasname_length) :
-          v.sqlname_length > 0 ? utf8::plane(v.sqlname,v.sqlname_length) : "V_" + utf8::int2Str(i)
-      );
+      utf8::String key;
+      if( v.aliasname_length > 0 ){
+        key = utf8::plane(v.aliasname,v.aliasname_length);
+      }
+      else if( v.sqlname_length > 0 ){
+        key = utf8::plane(v.sqlname,v.sqlname_length);
+      }
+      else {
+        key = "V_" + utf8::int2Str(i);
+      }
       utf8::String testKey(key);
       for( j = 1; j < ~uintptr_t(0); j++ ){
         if( valuesIndex_.objectOfKey(testKey) == NULL ) break;

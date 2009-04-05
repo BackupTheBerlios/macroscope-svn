@@ -737,7 +737,10 @@ EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::clear()
 template <
   typename T,EmbeddedListNode<T> & (*N) (const T &),
   T & (*O) (const EmbeddedListNode<T> &, T *)
-> inline
+>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 EmbeddedList<T,N,O> & EmbeddedList<T,N,O>::drop()
 {
   while( count_ > 0 ) drop(*first_);

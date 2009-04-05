@@ -547,7 +547,10 @@ template <
   EmbeddedTreeNode<T> & (*N)(const T &),
   T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
-> inline
+>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 T * EmbeddedTree<T,N,O,C>::internalFind(
   EmbeddedTreeNode<T> ** pNode,
   const T & object,
@@ -617,7 +620,10 @@ template <
   EmbeddedTreeNode<T> & (*N)(const T &),
   T & (*O) (const EmbeddedTreeNode<T> &,T *),
   intptr_t (*C)(const T &,const T &)
-> inline
+>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
 EmbeddedTree<T,N,O,C> & EmbeddedTree<T,N,O,C>::insert(const T & object,bool throwIfExist,bool deleteIfExist,T ** pObject)
 {
   Stack stack;
@@ -757,35 +763,53 @@ class PACKED RBTreeNode { // base class for deriving
 #pragma option pop
 #endif
 //-----------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 class RBTreeBenchmarkObject {
   public:
-    virtual ~RBTreeBenchmarkObject() {}
+    virtual ~RBTreeBenchmarkObject();
 
     intmax_t key_;
       
-    static RBTreeNode & treeO2N(const RBTreeBenchmarkObject & object,uintptr_t *){
-      return object.treeNode_;
-    }
-    static RBTreeBenchmarkObject & treeN2O(const RBTreeNode & node,uintptr_t *){
-      RBTreeBenchmarkObject * p = NULL;
-      return node.object<RBTreeBenchmarkObject>(p->treeNode_);
-    }
-    static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1,uintptr_t *){
-      return a0.key_ > a1.key_ ? 1 : a0.key_ < a1.key_ ? -1 : 0;
-    }
+    static RBTreeNode & treeO2N(const RBTreeBenchmarkObject & object,uintptr_t *);
+    static RBTreeBenchmarkObject & treeN2O(const RBTreeNode & node,uintptr_t *);
+    static intptr_t treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1,uintptr_t *);
+
     mutable RBTreeNode treeNode_;
 };
+//-----------------------------------------------------------------------------
+inline RBTreeBenchmarkObject::~RBTreeBenchmarkObject()
+{
+}
+//-----------------------------------------------------------------------------
+inline RBTreeNode & RBTreeBenchmarkObject::treeO2N(const RBTreeBenchmarkObject & object,uintptr_t *)
+{
+  return object.treeNode_;
+}
+//-----------------------------------------------------------------------------
+inline RBTreeBenchmarkObject & RBTreeBenchmarkObject::treeN2O(const RBTreeNode & node,uintptr_t *)
+{
+  RBTreeBenchmarkObject * p = NULL;
+  return node.object<RBTreeBenchmarkObject>(p->treeNode_);
+}
+//-----------------------------------------------------------------------------
+inline intptr_t RBTreeBenchmarkObject::treeCO(const RBTreeBenchmarkObject & a0,const RBTreeBenchmarkObject & a1,uintptr_t *)
+{
+  return a0.key_ > a1.key_ ? 1 : a0.key_ < a1.key_ ? -1 : 0;
+}
 //-----------------------------------------------------------------------------
 ///////////////////////////////////////////////////////////////////////////////
 //-----------------------------------------------------------------------------
 template <
   typename OT,
   typename PT,
-  RBTreeNode & O2N(const OT &,PT *),
-  OT & N2O(const RBTreeNode &,PT *),
-  intptr_t CO(const OT &,const OT &,PT *)
+  RBTreeNode & (* const O2N)(const OT &,PT *),
+  OT & (* const N2O)(const RBTreeNode &,PT *),
+  intptr_t (* const CO)(const OT &,const OT &,PT *)
 >
 class RBTree {
   // member methods declared inside class for borland (bugland) compiler compatibility
@@ -1370,6 +1394,10 @@ typedef
     RBTreeBenchmarkObject::treeCO
 > RBTreeBenchmarkTree;
 //-----------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
+//---------------------------------------------------------------------------
 } // namespace ksys
 //-----------------------------------------------------------------------------
 #endif

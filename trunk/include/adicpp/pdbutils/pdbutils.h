@@ -509,8 +509,9 @@ bar(int i = 42, char* text = (0x0055A04C) "This is Text", int tc = 1)
 #include "DbgType.h"
 
 
-
-
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
 
 namespace pdbutils {
 
@@ -806,5 +807,9 @@ struct RegisterDebugPostTypeHandler
 /** @} */
 
 } // namespace pdbutils
+
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 
 #endif //win32_pdb_utils_h

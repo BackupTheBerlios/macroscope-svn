@@ -85,7 +85,7 @@ _init_sys_libs()
 bool 
 DbgFrame::findElementForAddress(void* addr, DbgType& type) const
 {
-  intptr_t i = 0;
+  intptr_t i;
   for (i = 0; i < params.size(); ++i)
   {
     if (params[i].findElementForAddress(addr, type) == true)
@@ -108,7 +108,7 @@ getProgramCounters(FrameAddress* frames, intptr_t pccount, void* threadHandle)
     return 0;
   if (threadHandle == 0)
     threadHandle = GetCurrentThread();
-  DWORD dwMachineType = 0;
+  DWORD dwMachineType;
   
   memset(frames, 0, sizeof(FrameAddress) * pccount);
   STACKFRAME64 sf;
@@ -163,7 +163,7 @@ getProgramCounters(FrameAddress* frames, intptr_t pccount, CONTEXT& context)
   if (_init_sys_libs() == false)
     return 0;
   
-  DWORD dwMachineType = 0;
+  DWORD dwMachineType;
   memset(frames, 0, sizeof(FrameAddress) * pccount);
   STACKFRAME sf;
   memset(&sf, 0, sizeof(sf));
@@ -661,11 +661,13 @@ struct DbgThreadInfo
     intptr_t threadId;
     HANDLE threadHandle;
 
-    DbgThreadInfo(intptr_t tid, HANDLE th) 
-    : threadId(tid)
-    , threadHandle(th) 
-    {} 
+    DbgThreadInfo(intptr_t tid, HANDLE th);
 };
+
+DbgThreadInfo::DbgThreadInfo(intptr_t tid, HANDLE th)
+  : threadId(tid)
+  , threadHandle(th) 
+    {} 
 
 void
 dbgutils_suspendThreadsAndAscDump(DbgStream& ss, intptr_t dumpFlags, intptr_t skipCount, PCONTEXT pCtx)

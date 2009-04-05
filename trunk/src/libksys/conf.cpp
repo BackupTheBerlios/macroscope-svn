@@ -159,6 +159,11 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
   exit(ENOSYS);
 }
 //---------------------------------------------------------------------------
+utf8::String ConfigSection::textByPath(const utf8::String & path,const utf8::String & defText) const
+{
+  return valueByPath(path,defText);
+}
+//---------------------------------------------------------------------------
 static void saveSectionHelper(
   utf8::String::Stream & stream,
   utf8::String key,

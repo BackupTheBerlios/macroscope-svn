@@ -27,6 +27,10 @@
 #ifndef adistH
 #define adistH
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 namespace adicpp {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -202,7 +206,10 @@ Statement * Statement::unloadRowByIndex(Table & table,uintptr_t stRowNum,uintptr
   return this;
 }
 //---------------------------------------------------------------------------
-inline Statement * Statement::copyParams(Statement * statement)
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+Statement * Statement::copyParams(Statement * statement)
 {
   for( intptr_t i = statement->paramCount() - 1; i >= 0; i-- )
     paramAsMutant(statement->paramName(i),statement->paramAsMutant(statement->paramName(i)));
@@ -399,6 +406,10 @@ class ODBCStatement : public Statement, public odbcpp::DSQLStatement {
 };
 //---------------------------------------------------------------------------
 } // namespace adicpp
+//---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 //---------------------------------------------------------------------------
 #endif // adidbH
 //---------------------------------------------------------------------------

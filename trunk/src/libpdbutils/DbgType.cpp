@@ -6,6 +6,10 @@
 
 #ifdef HAVE_DBGHELP_H
 
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+
 namespace pdbutils {
 
 #define NL "\n"
@@ -588,7 +592,7 @@ queryArrayType(DWORD64 modBase, uintptr_t dwTypeIndex, DWORD_PTR address, DbgTyp
 bool
 isBadStringPtr(const char* ptr, int64_t size)
 {
-  if (intptr_t(ptr) < 1024 || intptr_t(ptr) > 0xFFFFF000 || uintptr_t(ptr) == 0xcdcdcdcd || uintptr_t(ptr) == 0xCCCCCCCC)
+  if (uintptr_t(ptr) < 1024 || uintptr_t(ptr) > 0xFFFFF000 || uintptr_t(ptr) == 0xcdcdcdcd || uintptr_t(ptr) == 0xCCCCCCCC)
     return true;
   return IsBadStringPtr(ptr, (UINT_PTR) size) == TRUE;
 }
@@ -596,7 +600,7 @@ isBadStringPtr(const char* ptr, int64_t size)
 bool
 isBadReadPtr(const void* ptr, int64_t size)
 {
-  if (intptr_t(ptr) < 1024 || intptr_t(ptr) > 0xFFFFF000  || uintptr_t(ptr) == 0xcdcdcdcd)
+  if (uintptr_t(ptr) < 1024 || uintptr_t(ptr) > 0xFFFFF000  || uintptr_t(ptr) == 0xcdcdcdcd)
     return true;
   return IsBadReadPtr(ptr, (UINT_PTR) size) == TRUE;
 }
@@ -980,7 +984,7 @@ bool querySymbolValue(PSYMBOL_INFO pSym, DbgFrame& frame)
   dbgType.flags |= symtype;
   dbgType.name =  pSym->Name;
 
-  DWORD_PTR pVariable = 0;
+  DWORD_PTR pVariable;
   if( pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGRELATIVE ){
     pVariable = frame.frame.offset;
     pVariable += (DWORD_PTR)pSym->Address;
@@ -1013,4 +1017,9 @@ bool querySymbolValue(PSYMBOL_INFO pSym, DbgFrame& frame)
 }
 
 } // namespace pdbutils {
+
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
+
 #endif

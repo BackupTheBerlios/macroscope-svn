@@ -67,16 +67,20 @@ T & EmbeddedHashNode<T,LT>::object(const EmbeddedHashNode<T,LT> & node) const
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 template <
   typename T,
   typename LT,
   typename LPT,
-  EmbeddedHashNode<T,LT> & NLT(const LT & link,LPT & param), // must return node reference by node link type
-  LT LTN(const EmbeddedHashNode<T,LT> & node,LPT & param),   // must link value from node reference
-  EmbeddedHashNode<T,LT> & (*N) (const T &),                 // must return node embedded in object
-  T & (*O) (const EmbeddedHashNode<T,LT> &,T *),             // must return object of node embedded
-  uintptr_t (*H)(const T &),                                 // must return computed hash of object key
-  bool (*E) (const T &, const T &),                          // must return true if objects keys equals
+  EmbeddedHashNode<T,LT> & (* const NLT)(const LT & link,LPT & param), // must return node reference by node link type
+  LT (* const LTN)(const EmbeddedHashNode<T,LT> & node,LPT & param),   // must return link value from node reference
+  EmbeddedHashNode<T,LT> & (* const N) (const T &),                    // must return node embedded in object
+  T & (* const O) (const EmbeddedHashNode<T,LT> &,T *),                // must return object of node embedded
+  uintptr_t (* const H)(const T &),                                    // must return computed hash of object key
+  bool (* const E) (const T &, const T &),                             // must return true if objects keys equals
   class D = AutoPtrClassDestructor
 >
 class EmbeddedHash {
@@ -443,6 +447,10 @@ class EmbeddedHash {
       }
     }
 };
+//---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------

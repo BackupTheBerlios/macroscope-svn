@@ -29,6 +29,10 @@
 //---------------------------------------------------------------------------
 #include "utf8embd.h"
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
 void initialize(int,char **);
@@ -1137,13 +1141,15 @@ inline uintptr_t hash(const utf8::String & s,bool caseSensitive = true)
   return s.hash(caseSensitive);
 }
 //---------------------------------------------------------------------------
+extern const intptr_t (utf8::String::* const strCmpFuncs[2])(const utf8::String &) const;
 inline uintptr_t compareObjects(const utf8::String & s1,const utf8::String & s2,bool caseSensitive = true)
 {
-  static intptr_t (utf8::String::* const cmp[2])(const utf8::String &) const = {
-    &utf8::String::casecompare, &utf8::String::compare
-  };
-  return (s1.*cmp[caseSensitive])(s2);
+  return (s1.*strCmpFuncs[caseSensitive])(s2);
 }
+//---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------

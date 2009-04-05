@@ -27,6 +27,10 @@
 #ifndef pcapH
 #define pcapH
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
 #ifdef _MSC_VER
@@ -64,8 +68,8 @@ struct PACKED IPPacketHeader {
   static const uint16_t MF; /* more fragments flag */
   static const uint16_t OFFMASK; /* mask for fragmenting bits */
   
-  uint8_t hl() const { return vhl_ & 0x0f; }
-  uint8_t v() const { return vhl_ >> 4; }
+  uint8_t hl() const { return uint8_t(vhl_ & 0x0f); }
+  uint8_t v() const { return uint8_t(vhl_ >> 4); }
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -92,7 +96,7 @@ struct PACKED TCPPacketHeader {
   static const uint8_t CWR;
   static const uint8_t FLAGS;
   
-  uint8_t off() const { return (offx2_ & 0xf0) >> 4; }
+  uint8_t off() const { return uint8_t((offx2_ & 0xf0) >> 4); }
 };
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -600,6 +604,10 @@ inline PCAP & PCAP::swapWatchTime(uint64_t a)
 }
 //---------------------------------------------------------------------------
 } // namespace ksys
+//---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------

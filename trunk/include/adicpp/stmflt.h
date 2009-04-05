@@ -34,6 +34,10 @@
 #undef _NO_EXCEPTIONS
 #endif
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option push -w-inl
+#endif
+//---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -530,7 +534,7 @@ out:  if( outSize == 0 ){
     }
     update(ec_,eFreq_);
   }
-  return this;
+  //return this;
 }
 //------------------------------------------------------------------------------
 inline Range32CoderFilter * Range32CoderFilter::flush(void * out,uintptr_t * wb)
@@ -652,7 +656,7 @@ inp:  if( inpSize == 0 ){
         dState_ = stInp;
         return this;
       }
-      code_ = code_ << 8 | *(const uint8_t *) inp;
+      code_ = (code_ << 8) | *(const uint8_t *) inp;
       inp = (const uint8_t *) inp + sizeof(uint8_t);
       inpSize -= sizeof(uint8_t);
       if( rb != NULL ) *rb += sizeof(uint8_t);
@@ -663,7 +667,7 @@ inp:  if( inpSize == 0 ){
 
     update(dc_,dFreq_);
   }
-  return this;
+  //return this;
 }
 //------------------------------------------------------------------------------
 //Range32CoderFilter * Range32CoderFilter::decode(AsyncFile & inp,AsyncFile & out)
@@ -1175,7 +1179,7 @@ out:
       return this;
     }
   }
-  return this;
+  //return this;
 }
 //------------------------------------------------------------------------------
 inline LZSSRBTFilter * LZSSRBTFilter::flush(void * out,uintptr_t * wb)
@@ -1307,7 +1311,7 @@ out:  if( outSize == 0 ){
     ddcount_ = 1;
     ddci_ = 0;
   }
-  return this;
+  //return this;
 }
 //------------------------------------------------------------------------------
 //inline LZSSRBTFilter * LZSSRBTFilter::decode(AsyncFile & inp,AsyncFile & out)
@@ -1469,6 +1473,10 @@ class LZMADescriptorFilter : public LZMAStreamFilter {
 #endif
 //---------------------------------------------------------------------------
 }
+//---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 //---------------------------------------------------------------------------
 #endif /* stmfltH */
 //---------------------------------------------------------------------------
