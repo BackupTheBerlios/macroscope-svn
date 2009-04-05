@@ -41,7 +41,7 @@ extern "C" {
 #elif HAVE_LZO1X_H
 #include <lzo1x.h>
 #else
-#if HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #define LZO_HAVE_CONFIG_H 1
 #endif
 #include <adicpp/lzo/lzo1x.h>

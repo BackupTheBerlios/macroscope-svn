@@ -326,17 +326,17 @@ bool Mutant::isBoolean(bool * pv) const
       is = true;
       break;
     case mtCStr   :
-      if( (is = isIntegerString(cStr_,m)) ) v = m != 0; else is = isBooleanString(cStr_,v);
+      if( (is = isIntegerString(cStr_,m)) != false ) v = m != 0; else is = isBooleanString(cStr_,v);
       break;
     case mtWStr   :
-      if( (is = isIntegerString(wStr_,m)) ) v = m != 0; else is = isBooleanString(wStr_,v);
+      if( (is = isIntegerString(wStr_,m)) != false ) v = m != 0; else is = isBooleanString(wStr_,v);
       break;
     case mtStr    :
-      if( (is = isIntegerString(utf8::plane(str_),m)) ) v = m != 0;
+      if( (is = isIntegerString(utf8::plane(str_),m)) != false ) v = m != 0;
         else is = isBooleanString(utf8::plane(str_),v);
       break;
     case mtString :
-      if( (is = isIntegerString(string(),m)) ) v = m != 0; else is = isBooleanString(string(),v);
+      if( (is = isIntegerString(string(),m)) != false ) v = m != 0; else is = isBooleanString(string(),v);
       break;
     case mtBinary :
     default       :
@@ -352,6 +352,7 @@ Mutant::operator bool() const
   if( isBoolean(&v) ) return v;
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator char() const
@@ -384,6 +385,7 @@ Mutant::operator char() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned char() const
@@ -420,6 +422,7 @@ Mutant::operator unsigned char() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator short() const
@@ -456,6 +459,7 @@ Mutant::operator short() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned short() const
@@ -492,6 +496,7 @@ Mutant::operator unsigned short() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 #if !HAVE_INTPTR_T_AS_INT
@@ -530,6 +535,7 @@ Mutant::operator int() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned() const
@@ -566,6 +572,7 @@ Mutant::operator unsigned() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -606,6 +613,7 @@ Mutant::operator long() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator unsigned long() const
@@ -642,6 +650,7 @@ Mutant::operator unsigned long() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 #endif
@@ -680,6 +689,7 @@ Mutant::operator intptr_t() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator uintptr_t() const
@@ -716,6 +726,7 @@ Mutant::operator uintptr_t() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 #if !HAVE_INTMAX_T_AS_INTPTR_T
@@ -753,6 +764,7 @@ Mutant::operator intmax_t() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator uintmax_t() const
@@ -789,6 +801,7 @@ Mutant::operator uintmax_t() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 #endif
 //---------------------------------------------------------------------------
@@ -817,6 +830,7 @@ Mutant::operator float() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator double() const
@@ -844,6 +858,7 @@ Mutant::operator double() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 #if HAVE_LONG_DOUBLE
@@ -872,6 +887,7 @@ Mutant::operator long double() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 #endif
 //---------------------------------------------------------------------------
@@ -903,6 +919,7 @@ Mutant::operator struct timeval() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator struct tm() const
@@ -932,6 +949,7 @@ Mutant::operator struct tm() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator utf8::String() const
@@ -959,6 +977,7 @@ Mutant::operator utf8::String() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Mutant::operator MemoryStream() const
@@ -987,6 +1006,7 @@ Mutant::operator MemoryStream() const
   }
   newObjectV1C2<EMutant>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 bool Mutant::operator == (const Mutant & m) const

@@ -157,6 +157,7 @@ Mutant & ConfigSection::valueRefByPath(const utf8::String & path) const
   }
   newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 utf8::String ConfigSection::textByPath(const utf8::String & path,const utf8::String & defText) const
@@ -208,7 +209,9 @@ ConfigSection & ConfigSection::saveSection(uintptr_t codePage,AsyncFile & file,b
     for( i = 0; i < level - 1; i++ ) stream << "  ";
     stream << name_ << " ";
     Mutant * m = values_.objectOfKey(utf8::String());
-    saveSectionHelper(stream,utf8::String(),m == NULL ? utf8::String() : (utf8::String) *m,level);
+    utf8::String s;
+    if( m != NULL ) s = *m;
+    saveSectionHelper(stream,utf8::String(),s,level);
     stream << " {\n";
   }
   for( i = 0; i < values_.count(); i++ ){

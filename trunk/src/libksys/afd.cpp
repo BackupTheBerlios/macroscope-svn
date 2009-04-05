@@ -1037,7 +1037,7 @@ uintptr_t AsyncFile::getString(AutoPtr<char,AutoPtrMemoryDestructor> & p,bool * 
   char * a, * q;
   if( eof != NULL ) *eof = false;
   for(;;){
-    a = p.realloc(size_t(l + 512)).ptr() + l;
+    a = p.realloc(size_t(l + 512)).ptr() + size_t(l);
     rr = r = read(a,512);
     if( r <= 0 ){
       if( eof != NULL ) *eof = true;
@@ -1068,7 +1068,7 @@ bool AsyncFile::getString(utf8::String & str,LineGetBuffer * buffer)
     int64_t rr, l = 0;
     char * a, * q;
     for(;;){
-      a = s.realloc(size_t(l + 512)).ptr() + l;
+      a = s.realloc(size_t(l + 512)).ptr() + size_t(l);
       rr = r = read(a,512);
       if( r <= 0 ){
         eof = true;

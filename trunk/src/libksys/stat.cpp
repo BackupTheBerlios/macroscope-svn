@@ -28,7 +28,11 @@
 //---------------------------------------------------------------------------
 namespace ksys {
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#define EPOCH_BIAS 116444592000000000ui64
+#else
 #define EPOCH_BIAS UINT64_C(116444592000000000)
+#endif
 //---------------------------------------------------------------------------
 bool stat(const utf8::String & pathName,Stat * st)
 {
@@ -95,7 +99,10 @@ bool stat(const utf8::String & pathName,Stat & st)
     err = GetLastError();
     goto done;
   }
-  st.st_ino = st.st_uid = st.st_gid = st.st_mode = 0;
+  st.st_ino = 0;
+  st.st_uid = 0;
+  st.st_gid = 0;
+  st.st_mode = 0;
   st.st_nlink = 1;
   if( fData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ){
     st.st_mode = S_IFDIR;
@@ -160,9 +167,9 @@ bool stat(const utf8::String & pathName,Stat & st)
   else
     st.st_mode |= ((S_IREAD | S_IWRITE) + ((S_IREAD | S_IWRITE) >> 3) + ((S_IREAD | S_IWRITE) >> 6));
   st.st_size = uint64_t(fData.nFileSizeLow) + (uint64_t(fData.nFileSizeHigh) << 32);
-  st.st_ctime = (time_t) ((*((uint64_t *) &fData.ftCreationTime) - EPOCH_BIAS) / UINT64_C(10000000));
-  st.st_atime = (time_t) ((*((uint64_t *) &fData.ftLastAccessTime) - EPOCH_BIAS) / UINT64_C(10000000));
-  st.st_mtime = (time_t) ((*((uint64_t *) &fData.ftLastWriteTime) - EPOCH_BIAS) / UINT64_C(10000000));
+  st.st_ctime = time_t((*(uint64_t *) &fData.ftCreationTime - EPOCH_BIAS) / 10000000u);
+  st.st_atime = time_t((*(uint64_t *) &fData.ftLastAccessTime - EPOCH_BIAS) / 10000000u);
+  st.st_mtime = time_t((*(uint64_t *) &fData.ftLastWriteTime - EPOCH_BIAS) / 10000000u);
   st.st_rdev = st.st_dev = 0;
 done:
   CloseHandle(hFile);

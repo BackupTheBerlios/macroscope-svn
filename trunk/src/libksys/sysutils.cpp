@@ -85,6 +85,8 @@ utf8::String getBackTrace(/*intptr_t flags,*/intptr_t skipCount,Thread * thread)
   assert( event.errno_ == 0 );
   return event.string0_;
 #else
+  skipCount = skipCount;
+  thread = thread;
   return utf8::String();
 #endif
 }
@@ -244,10 +246,9 @@ void setProcessPriority(const Mutant & m,bool noThrow)
 bool isEnv(const utf8::String & name)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  DWORD sz;
   if( isWin9x() ){
     utf8::AnsiString s(name.getANSIString());
-    sz = GetEnvironmentVariableA(s,NULL,0);
+    GetEnvironmentVariableA(s,NULL,0);
     int32_t err = GetLastError();
     if( err == ERROR_ENVVAR_NOT_FOUND ) return false;
     if( err != ERROR_SUCCESS )
@@ -256,7 +257,7 @@ bool isEnv(const utf8::String & name)
   }
   AutoPtr<wchar_t,AutoPtrMemoryDestructor> b;
   utf8::WideString s(name.getUNICODEString());
-  sz = GetEnvironmentVariableW(s,NULL,0);
+  GetEnvironmentVariableW(s,NULL,0);
   int32_t err = GetLastError();
   if( err == ERROR_ENVVAR_NOT_FOUND ) return false;
   if( err != ERROR_SUCCESS )
@@ -327,6 +328,7 @@ void setEnv(const utf8::String & name,const utf8::String & value,bool overwrite)
     int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
   }
+  overwrite = overwrite;
 #else
   if( setenv(name.getANSIString(),value.getANSIString(),overwrite) != 0 ){
     int32_t err = errno;
@@ -1004,7 +1006,8 @@ static intptr_t stringPartByNoHelper(const utf8::String & s,uintptr_t n,const ch
       bool eos;
       const char * d = delim;
       for(;;){
-        if( (eos = utf8::utf82ucs(d,l) == c) ){
+        eos = utf8::utf82ucs(d,l) == c;
+        if( eos ){
           if( pRetValue != NULL ) v += utf8::String(q,i).trim();
           q = i + 1;
           break;
@@ -1337,6 +1340,7 @@ utf8::String includeTrailingPathDelimiter(const utf8::String & path)
   i.last();
   switch( i.getChar() ){
     case '\\' : case '/' :
+      break;
     default:
       char b[2];
       b[0] = pathDelimiter;
@@ -2320,15 +2324,16 @@ pid_t execute(const ExecuteProcessParameters & params)
   }
   if( ResumeThread(pi.hThread) == DWORD(-1) ) goto err;
   if( params.wait_ ){
-    DWORD r = WaitForSingleObject(pi.hProcess,INFINITE);
-    if( r == WAIT_FAILED ){
+    DWORD rr;
+    rr = WaitForSingleObject(pi.hProcess,INFINITE);
+    if( rr == WAIT_FAILED ){
 err:  err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
       if( params.noThrow_ ) return pi.dwProcessId;
       newObjectV1C2<Exception>(err,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
-    if( r != WAIT_OBJECT_0 ){
+    if( rr != WAIT_OBJECT_0 ){
       if( params.noThrow_ ) return pi.dwProcessId;
       CloseHandle(pi.hProcess);
       CloseHandle(pi.hThread);
@@ -2456,7 +2461,10 @@ int32_t waitForProcess(pid_t pid)
 #endif
 }
 //---------------------------------------------------------------------------
+#if !defined(__WIN32__) && !defined(__WIN64__)
 static uint64_t processStartTime;
+#endif
+//---------------------------------------------------------------------------
 int64_t getProcessStartTime(bool toLocalTime)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -2474,7 +2482,11 @@ int64_t getProcessStartTime(bool toLocalTime)
   err = GetLastError();
   if( hProcess != NULL ) CloseHandle(hProcess);
   if( err != ERROR_SUCCESS ) newObjectV1C2<Exception>(err + errorOffset,__PRETTY_FUNCTION__)->throwSP();
+#ifdef __BORLANDC__
+  return (creationTime.sti.QuadPart - 11644473600ui64 * 10000000u) / 10u;
+#else
   return (creationTime.sti.QuadPart - UINT64_C(11644473600) * 10000000u) / 10u;
+#endif
 #else
   return toLocalTime ? processStartTime + getgmtoffset() : processStartTime;
 #endif
@@ -2606,8 +2618,8 @@ uintptr_t rfcBase64Encode(
   size_t currOutLen = 0, i = 0;
   while( i < inLen ){
     uint8_t a = inStr[i];
-    uint8_t b = (i + 1 >= inLen) ? 0 : inStr[i + 1];
-    uint8_t c = (i + 2 >= inLen) ? 0 : inStr[i + 2];
+    uint8_t b = uint8_t(i + 1 >= inLen ? 0 : inStr[i + 1]);
+    uint8_t c = uint8_t(i + 2 >= inLen ? 0 : inStr[i + 2]);
     if( i + 2 < inLen ){
       if( currOutLen + 4 <= outLen ){
         outStr[currOutLen++] = base64Table[(a >> 2) & 0x3F];
@@ -3333,7 +3345,8 @@ bool checkMachineBinding(const utf8::String & key,bool abortProgram)
 // now this is expiration date text from keymaker command line as plain text in info2
         uint64_t ld = gettimeofday();
         uint64_t ed = timeFromTimeString(info2,false);
-        pirate = (expire = ed > 0 && ld > ed) && pirate;
+        expire = ed > 0 && ld > ed;
+        pirate = expire && pirate;
       }
       else {
         pirate = true;
@@ -3616,23 +3629,28 @@ static void sigSYSHandler(int sig,siginfo_t * /*siginfo*/,ucontext_t * /*uap*/)
 void initialize(int argc,char ** argv)
 {
 // runtime checks for system or compiler incompatibilities
-  assert( sizeof(char) == 1 );
-  if( sizeof(char) != 1 ){
+  volatile size_t sz;
+  sz = sizeof(char);
+  assert( sz == 1 );
+  if( sz != 1 ){
     fprintf(stderr,"sizeof(char) != 1\n");
     abort();
   }
-  assert( (unsigned int) false == 0 );
-  if( (unsigned int) false != 0 ){
+  sz = false;
+  assert( sz == 0 );
+  if( sz != 0 ){
     fprintf(stderr,"(unsigned int) false != 0\n");
     abort();
   }
-  assert( (unsigned int) !1 == 0 );
-  if( (unsigned int) !1 != 0 ){
+  sz = !1;
+  assert( sz == 0 );
+  if( sz != 0 ){
     fprintf(stderr,"(unsigned int) !1 != 0\n");
     abort();
   }
-  assert( (unsigned int) !0 == 1 );
-  if( (unsigned int) !0 != 1 ){
+  sz = !0;
+  assert( sz == 1 );
+  if( sz != 1 ){
     fprintf(stderr,"(unsigned int) !0 != 1\n");
     abort();
   }
@@ -3761,6 +3779,7 @@ void initialize(int argc,char ** argv)
 void cleanup()
 {
   stdErr.close();
+  using namespace utf8;
   machineUniqueCryptedKey().~String();
 #ifdef NETMAIL_ENABLE_PROFILER
   TProfiler::cleanup();

@@ -25,6 +25,7 @@
  */
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
+#define HAVE_U_INT8_T 1
 #if HAVE_PCAP_H
 #include <pcap.h>
 #else
@@ -796,7 +797,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
       pkt.dstPort_ = udp->dstPort_;
     }
   }
-  pkt.proto_ = protocols_ ? ip->proto_ : -1;
+  pkt.proto_ = int16_t(protocols_ ? ip->proto_ : -1);
   for( intptr_t i = packets_->count() - 2, j = i - pregroupingWindowSize_; i >= 0 && i >= j; i-- ){
     Packet & pkt2 = packets_->operator [] (i);
     if( pkt == pkt2 ){
@@ -1058,7 +1059,7 @@ void PCAP::DatabaseInserter::threadExecute()
         "Interface: " << pcap_->ifName_ << ", stop processing packets group: " <<
         utf8::time2Str(header.bt_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << " - " <<
         utf8::time2Str(header.et_ + (pcap_->gmtInLog_ ? 0 : getgmtoffset())) << ", processed: " <<
-        header.count_ - pCount <<
+        (header.count_ - pCount) <<
         ", ellapsed: " << utf8::elapsedTime2Str(ellapsed) << "\n"
       );
     if( stdErr.debugLevel(6) )

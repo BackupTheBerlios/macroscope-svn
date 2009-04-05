@@ -383,6 +383,7 @@ Service & Services::serviceByName(const utf8::String & serviceName)
 #endif
   newObjectV1C2<Exception>(EINVAL,"Unknown service")->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 Services & Services::start(const utf8::String &

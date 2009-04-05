@@ -372,6 +372,8 @@ inline void ksleep1()
 struct Stat : public
 #if SIZEOF_STAT64 > 0
 stat64
+#elif SIZEOF_STATI64 > 0
+stati64
 #elif SIZEOF__STAT64 > 0
 _stat64
 #else

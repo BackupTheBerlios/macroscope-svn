@@ -76,14 +76,14 @@ void Fetcher::parseUrl(
         utf8::String::Iterator k(j);
         do {
           k.prev();
-          if( k.bos() || (c = k.getChar() == '/') ){
+          if( k.bos() || (c = k.getChar()) == '/' ){
             user = utf8::String(k + (c == '/'),j);
             break;
           }
         } while( !k.bos() );
         break;
       }
-      else if( j.bos() || (c = j.getChar() == '/') ){
+      else if( j.bos() || (c = j.getChar()) == '/' ){
         user = utf8::String(j + (c == '/'),i);
         break;
       }
@@ -223,7 +223,7 @@ Fetcher & Fetcher::fetch(const utf8::String & localName)
     if( code == 416 && cs > (uint64_t) st.st_size ) remove(file.fileName());
     if( stat(file.fileName(),st) ){
       if( code != 304 ){
-        lmtime = st.st_mtime - getgmtoffset() / 1000000u;
+        lmtime = time_t(st.st_mtime - getgmtoffset() / 1000000u);
         const char * tm = asctime(gmtime(&lmtime));
         request << "If-Modified-Since: " << asctime2HttpTime(tm) << "\r\n";
       }

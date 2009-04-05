@@ -211,8 +211,13 @@ bool AsyncIoSlave::transplant(AsyncEvent & request)
     AutoLock<LiteWriteLock> lock(*this);
     if( requests_.count() + newRequests_.count() < maxRequests_ ){
       newRequests_.insToTail(request);
-      BOOL es = SetEvent(safeEvents_[MAXIMUM_WAIT_OBJECTS - 1]);
+#ifndef NDEBUG
+      BOOL es =
+#endif
+      SetEvent(safeEvents_[MAXIMUM_WAIT_OBJECTS - 1]);
+#ifndef NDEBUG
       assert( es != 0 );
+#endif
       if( requests_.count() == 0 ) post();
       r = true;
     }
@@ -524,7 +529,7 @@ l2:       object = eReqs_[wm];
           object = NULL;
         }
         else if( wm == WAIT_FAILED ){
-          DWORD err = GetLastError();
+          //DWORD err = GetLastError();
           assert( 0 );
         }
         else {
@@ -1365,9 +1370,14 @@ bool AsyncAcquireSlave::transplant(AsyncEvent & request)
 #if defined(__WIN32__) || defined(__WIN64__)
     if( requests_.count() + newRequests_.count() < MAXIMUM_WAIT_OBJECTS - 1 ){
       newRequests_.insToTail(request);
-      BOOL es = SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
-      DWORD err = GetLastError();
+#ifndef NDEBUG
+      BOOL es =
+#endif
+      SetEvent(sems_[MAXIMUM_WAIT_OBJECTS - 1]);
+      //DWORD err = GetLastError();
+#ifndef NDEBUG
       assert( es != 0 );
+#endif
       if( requests_.count() == 0 ) post();
       r = true;
     }
@@ -1466,7 +1476,7 @@ void AsyncAcquireSlave::threadExecute()
         object = NULL;
       }
       else if( wm == WAIT_FAILED ){
-        DWORD err = GetLastError();
+        //DWORD err = GetLastError();
         assert( 0 );
       }
       else {
@@ -2087,6 +2097,7 @@ void Requester::postRequest(AsyncEvent * event)
   }
 #endif
 #endif
+  event = event;
   newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 }
 //---------------------------------------------------------------------------

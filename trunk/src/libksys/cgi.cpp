@@ -170,7 +170,7 @@ utf8::String CGI::paramAsString(const utf8::String & name,const utf8::String & d
   return i < 0 ? defValue : params_[i].value_;
 }
 //------------------------------------------------------------------------------
-utf8::String CGI::paramAsString(uintptr_t i,const utf8::String & defValue)
+utf8::String CGI::paramAsString(uintptr_t i,const utf8::String & /*defValue*/)
 {
   if( i >= params_.count() )
     newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -183,7 +183,7 @@ Mutant CGI::paramAsMutant(const utf8::String & name,const Mutant & defValue)
   return i < 0 ? defValue : Mutant(params_[i].value_);
 }
 //------------------------------------------------------------------------------
-Mutant CGI::paramAsMutant(uintptr_t i,const Mutant & defValue)
+Mutant CGI::paramAsMutant(uintptr_t i,const Mutant & /*defValue*/)
 {
   if( i >= params_.count() )
     newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -226,7 +226,13 @@ CGI & CGI::operator << (const utf8::String & s)
 CGI & CGI::writeBuffer(const void * buf,uint64_t size)
 {
   if( !contentType_.isNull() && !contentTypePrinted_ ){
-    out_ << "Content-Type: " + contentType_ + ";charset=utf-8" + utf8::String::print("%c%c",13,10) + utf8::String::print("%c%c",13,10);
+    out_ << (
+      "Content-Type: " +
+      contentType_ +
+      ";charset=utf-8" +
+      utf8::String::print("%c%c",13,10) +
+      utf8::String::print("%c%c",13,10)
+    );
     contentTypePrinted_ = true;
   }
   out_.writeBuffer(buf,size);

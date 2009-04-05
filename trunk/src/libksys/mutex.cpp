@@ -86,7 +86,18 @@ int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t 
 //---------------------------------------------------------------------------
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
 {
+#ifdef __BORLANDC__
+  static union {
+    LONGLONG __cdecl (* pInterlockedExchangeAdd64)(LONGLONG volatile *Addend,LONGLONG Value);
+    void * fp_;
+  };
+  if( pInterlockedExchangeAdd64 == NULL ){
+    fp_ == GetProcAddress(GetModuleHandle("kernel32"),"InterlockedExchangeAdd64");
+  }
+  return pInterlockedExchangeAdd64((LONGLONG *) &v,a);
+#else
   return InterlockedExchangeAdd64((LONGLONG *) &v,a);
+#endif
 }
 //---------------------------------------------------------------------------
 int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)

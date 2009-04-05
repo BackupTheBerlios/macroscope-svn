@@ -154,7 +154,10 @@
 #cmakedefine SIZEOF_SOCKADDR_DL ${SIZEOF_SOCKADDR_DL}
 #cmakedefine SIZEOF_STRUCT_AIOCB ${SIZEOF_STRUCT_AIOCB}
 #cmakedefine SIZEOF_STAT64 ${SIZEOF_STAT64}
+#cmakedefine SIZEOF_STATI64 ${SIZEOF_STATI64}
 #cmakedefine SIZEOF__STAT64 ${SIZEOF__STAT64}
+#cmakedefine SIZEOF_TIMEB ${SIZEOF_TIMEB}
+#cmakedefine SIZEOF__TIMEB ${SIZEOF__TIMEB}
 #cmakedefine SIZEOF_KEVENT ${SIZEOF_KEVENT}
 #cmakedefine SIZEOF_UTIMBUF ${SIZEOF_UTIMBUF}
 #cmakedefine SIZEOF_UCONTEXT_T ${SIZEOF_UCONTEXT_T}
@@ -170,6 +173,8 @@
 #cmakedefine HAVE_STAT 1
 #cmakedefine HAVE_STAT64 1
 #cmakedefine HAVE__STAT64 1
+#cmakedefine HAVE_FTIME 1
+#cmakedefine HAVE__FTIME 1
 #cmakedefine HAVE_STRERROR_R 1
 #cmakedefine HAVE_UTIME 1
 #cmakedefine HAVE__UTIME 1

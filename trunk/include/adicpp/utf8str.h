@@ -138,9 +138,9 @@ typedef StringT<wchar_t> WideString;
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-String plane(const char * s, uintptr_t size);
+String plane(const char * s, uintptr_t size = ~uintptr_t(0) >> 1);
 String plane0(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s);
-String plane(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s,uintptr_t size);
+String plane(ksys::AutoPtr<char,AutoPtrMemoryDestructor> & s,uintptr_t size = ~uintptr_t(0) >> 1);
 String operator +(const char * s1, const String & s2);
 String operator +(const wchar_t * s1, const String & s2);
 //---------------------------------------------------------------------------

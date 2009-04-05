@@ -219,6 +219,12 @@ utf8::String getTimeCode(int64_t t)
   return s;
 }
 //---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#define EPOCH_BIAS 11644473600ui64
+#else
+#define EPOCH_BIAS UINT64_C(11644473600)
+#endif
+//---------------------------------------------------------------------------
 struct tm time2tm(int64_t a)
 {
 #if defined(__WIN32__) || defined(__WIN64__)
@@ -227,7 +233,7 @@ struct tm time2tm(int64_t a)
     ULARGE_INTEGER sti;
   };
   SYSTEMTIME systemTime;
-  sti.QuadPart = (a + UINT64_C(11644473600) * 1000000u) * 10u;
+  sti.QuadPart = (a + EPOCH_BIAS * 1000000u) * 10u;
   if( FileTimeToSystemTime(&fileTime,&systemTime) == 0 ){
     int32_t err = GetLastError();
     newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
@@ -255,7 +261,7 @@ struct tm timeval2tm(const struct timeval & a)
     ULARGE_INTEGER sti;
   };
   SYSTEMTIME systemTime;
-  sti.QuadPart = (a.tv_sec + UINT64_C(11644473600)) * 10000000u;
+  sti.QuadPart = (a.tv_sec + EPOCH_BIAS) * 10000000u;
   if( FileTimeToSystemTime(&fileTime,&systemTime) == 0 ){
     int32_t err = GetLastError();
     newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
@@ -286,7 +292,7 @@ int gettimeofday(struct timeval * tvp, struct timezone * tzp)
   };
   GetSystemTimeAsFileTime(&st);
 
-  sti.QuadPart -= UINT64_C(11644473600) * 10000000u; // January 1, 1970 (UTC) - January 1, 1601 (UTC)
+  sti.QuadPart -= EPOCH_BIAS * 10000000u; // January 1, 1970 (UTC) - January 1, 1601 (UTC)
   if( ksys::sizeOf_timeval_tv_sec == 4 ){
     *(uint32_t *) &tvp->tv_sec = (uint32_t) (sti.QuadPart / 10000000u);
     tvp->tv_usec = (unsigned long) (sti.QuadPart - *(uint32_t *) &tvp->tv_sec * UINT64_C(10000000)) / 10u;
@@ -296,8 +302,20 @@ int gettimeofday(struct timeval * tvp, struct timezone * tzp)
     tvp->tv_usec = (unsigned long) (sti.QuadPart - *(uint64_t *) &tvp->tv_sec * UINT64_C(10000000)) / 10u;
   }
   if( tzp != NULL ){
-    struct _timeb tb;
-    _ftime(&tb);
+#if SIZEOF_TIMEB > 0
+    struct timeb tbb;
+#elif SIZEOF__TIMEB > 0
+    struct _timeb tbb;
+#endif
+#if HAVE_FTIME
+#ifdef __BORLANDC__
+    std::ftime(&tbb);
+#else
+    ftime(&tbb);
+#endif
+#elif HAVE_FTIME
+    _ftime(&tbb);
+#endif
     tzp->tz_minuteswest = tb.timezone;
     tzp->tz_dsttime = tb.dstflag;
 //    tzp->tz_minuteswest = -(int) (((st2i.QuadPart - sti.QuadPart) / 10000000u) / 60u);
@@ -373,7 +391,7 @@ time_t timegm(struct tm * t)
     newObjectV1C2<ksys::Exception>(err + ksys::errorOffset,__PRETTY_FUNCTION__)->throwSP();
   }
   sti.QuadPart /= 10000000u;
-  return (time_t) (sti.QuadPart - UINT64_C(11644473600));
+  return (time_t) (sti.QuadPart - EPOCH_BIAS);
 }
 #endif
 //---------------------------------------------------------------------------

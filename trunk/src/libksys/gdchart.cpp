@@ -79,9 +79,9 @@ GDChart & GDChart::operator = (const GDChart & v)
 intptr_t GDChart::makeColor(ldouble r,ldouble g,ldouble b)
 {
   //static const ldouble pi = M_PI / 2;
-  ldouble r0 = sin(r);
-  ldouble g0 = cos(g);
-  ldouble b0 = tan(b);
+  ldouble r0 = sin(double(r));
+  ldouble g0 = cos(double(g));
+  ldouble b0 = tan(double(b));
   return colorAllocate(intptr_t(r0 * 220),intptr_t(g0 * 220),intptr_t(b0 * 220));
 }
 //------------------------------------------------------------------------------
