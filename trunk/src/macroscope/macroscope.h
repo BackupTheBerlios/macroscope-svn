@@ -51,6 +51,9 @@ class Logger {
     Logger & rolloutBPFTByIPs(const utf8::String & bt,const utf8::String & et,const utf8::String & ifName,const utf8::String & filter);
     static utf8::String formatTraf(uintmax_t traf,uintmax_t allTraf);
     const CGI & cgi() const { return cgi_; }
+
+    enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
+
   protected:
     enum { stSel, stIns, stUpd };
 
@@ -66,7 +69,6 @@ class Logger {
     bool configReaded_;
 
     // html reporter
-    enum TrafType { ttSMTP, ttWWW, ttAll, ttCount };
     class TrafCacheEntry {
       public:
         int64_t       traf_;

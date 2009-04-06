@@ -168,10 +168,10 @@ DSQLStatement & DSQLStatement::prepare()
       database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
     if( (uintptr_t) j != params_.indexToParam_.count() )
       database_->exceptionHandler(newObjectV1C2<EClientServer>(EINVAL,"ODBC SQLNumParams failed " + utf8::String(__PRETTY_FUNCTION__)));
-    for( SQLUSMALLINT i = 0; i < params_.indexToParam_.count(); i++ ){
+    for( SQLUSMALLINT i = 0; uintptr_t(i) < params_.indexToParam_.count(); i++ ){
       SQLSMALLINT dataType, dataCType, decimalDigits, nullable;
       SQLUINTEGER paramSize;
-      r = api.SQLDescribeParam(handle_,i + 1,&dataType,&paramSize,&decimalDigits,&nullable);
+      r = api.SQLDescribeParam(handle_,SQLUSMALLINT(i + 1),&dataType,&paramSize,&decimalDigits,&nullable);
       if( r != SQL_SUCCESS && r != SQL_SUCCESS_WITH_INFO )
         database_->exceptionHandler(database_->exception(SQL_HANDLE_STMT,handle_));
       SQLPOINTER data = NULL;
@@ -179,7 +179,7 @@ DSQLStatement & DSQLStatement::prepare()
       dataCType = params_.indexToParam_[uintptr_t(i)]->sqlType(data,len);
       r = api.SQLBindParameter(
         handle_,
-        i + 1,
+        SQLUSMALLINT(i + 1),
         SQL_PARAM_INPUT,
         dataCType,
         dataType,

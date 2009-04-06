@@ -84,12 +84,12 @@ DSQLParam & DSQLParam::setMutant(const ksys::Mutant & value)
     case ksys::mtTime   :
       t = value;
       ts = (TIMESTAMP_STRUCT *) time_;
-      ts->year = t.tm_year + 1900;
-      ts->month = t.tm_mon + 1;
-      ts->day = t.tm_mday;
-      ts->hour = t.tm_hour;
-      ts->minute = t.tm_min;
-      ts->second = t.tm_sec;
+      ts->year = uint16_t(t.tm_year + 1900);
+      ts->month = uint16_t(t.tm_mon + 1);
+      ts->day = uint16_t(t.tm_mday);
+      ts->hour = uint16_t(t.tm_hour);
+      ts->minute = uint16_t(t.tm_min);
+      ts->second = uint16_t(t.tm_sec);
       ts->fraction = SQLINTEGER((uint64_t(value) % 1000000u) * 1000u);
       break;
     case ksys::mtCStr   :

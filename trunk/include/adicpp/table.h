@@ -87,7 +87,7 @@ template <typename T,class RT = Array<T> > class Table {
         const P  * param_;
         intptr_t (* const f_)(uintptr_t,uintptr_t,const P &);
 
-        SortParam(const TT & table, const P & param, intptr_t(*const f)(uintptr_t, uintptr_t, const P &))
+        SortParam(const TT & table, const P & param, intptr_t (* const f)(uintptr_t, uintptr_t, const P &))
           : table_(&table), param_(&param), f_(f) {}
       private:
         SortParam(const SortParam<TT,P> &){}
@@ -98,11 +98,12 @@ template <typename T,class RT = Array<T> > class Table {
       return param.f_(&p1 - param.table_->rows_.ptr(), &p2 - param.table_->rows_.ptr(), *param.param_);
     }
   public:
-    template <typename P> Table<T,RT> & sort(intptr_t(*const f)(uintptr_t row1, uintptr_t row2, const P & param),const P & p)
+    template <typename P> Table<T,RT> & sort(intptr_t (* const f)(uintptr_t row1, uintptr_t row2, const P & param),const P & p)
     {
       SortParam<Table<T,RT>,P> param(*this,p,f);
-      intptr_t (*pSortHelper)(RT * const & p1,RT * const & p2,const SortParam< Table<T,RT>,P> & param);
-      qSort(rows_.ptr(), 0, rows_.count() - 1, pSortHelper = sortHelper< RT,Table<T,RT>,P>, param);
+      intptr_t (* const pSortHelper)(RT * const & p1,RT * const & p2,const SortParam< Table<T,RT>,P> & param) =
+        sortHelper<RT,Table<T,RT>,P>;
+      qSort(rows_.ptr(), 0, rows_.count() - 1, pSortHelper, param);
       return *this;
     }
   protected:
@@ -123,22 +124,28 @@ template <typename T,class RT = Array<T> > class Table {
       }
       return c;
     }
-  public:
-    Table<T,RT> & sort(const utf8::String & sortOrder){
-      Array<DSP> param;
-      param.resize(enumStringParts(sortOrder));
+    static intptr_t defaultSortFunction2(uintptr_t row1,uintptr_t row2,const Array<DSP> & param){
+      intptr_t c = 0;
       for( uintptr_t i = 0; i < param.count(); i++ ){
-        utf8::String order(stringPartByNo(sortOrder,i));
-	      utf8::String::Iterator it(order);
-        param[i].descending_ = false;
-	      if( it.getChar() == '+' ){ it++; }
-	      else
-	      if( it.getChar() == '-' ){ it++; param[i].descending_ = true; }
-	      param[i].column_ = columnIndex(it);
-	      param[i].table_ = this;
+        c = param[i].table_->cell(row1,param[i].column_) < param[i].table_->cell(row2,param[i].column_) ? -1 :
+	    param[i].table_->cell(row1,param[i].column_) > param[i].table_->cell(row2,param[i].column_) ? 1 : 0;
+	if( c != 0 ){
+	  c = param[i].descending_ ? -c : c;
+	  break;
+	}
       }
-      return sort(defaultSortFunction<Array<DSP> >,param);
+      return c;
     }
+    Table<T,RT> & sort2(intptr_t (* const f)(uintptr_t row1, uintptr_t row2, const Array<DSP> & param),const Array<DSP> & p)
+    {
+      SortParam<Table<T,RT>,Array<DSP> > param(*this,p,f);
+      intptr_t (* const pSortHelper)(RT * const & p1,RT * const & p2,const SortParam<Table<T,RT>,Array<DSP> > & param) =
+        sortHelper<RT,Table<T,RT>,Array<DSP> >;
+      qSort(rows_.ptr(), 0, rows_.count() - 1, pSortHelper, param);
+      return *this;
+    }
+  public:
+    Table<T,RT> & sort(const utf8::String & sortOrder);
   protected:
     class Name2Index {
       public:
@@ -166,6 +173,27 @@ template <typename T,class RT> inline Table<T,RT>::~Table()
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline Table<T,RT>::Table()
 {
+}
+//-----------------------------------------------------------------------------
+template <typename T,class RT>
+#ifndef __BCPLUSPLUS__
+inline
+#endif
+Table<T,RT> & Table<T,RT>::sort(const utf8::String & sortOrder)
+{
+  Array<DSP> param;
+  param.resize(enumStringParts(sortOrder));
+  for( uintptr_t i = 0; i < param.count(); i++ ){
+    utf8::String order(stringPartByNo(sortOrder,i));
+    utf8::String::Iterator it(order);
+    param[i].descending_ = false;
+    if( it.getChar() == '+' ){ it++; }
+    else
+    if( it.getChar() == '-' ){ it++; param[i].descending_ = true; }
+    param[i].column_ = columnIndex(it);
+    param[i].table_ = this;
+  }
+  return sort2(defaultSortFunction2,param);
 }
 //-----------------------------------------------------------------------------
 template <typename T,class RT> inline

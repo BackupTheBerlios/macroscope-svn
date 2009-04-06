@@ -2847,7 +2847,7 @@ utf8::String getMachineUniqueKey()
 {
 #if PRIVATE_RELEASE
 #if defined(__WIN32__) || defined(__WIN64__)
-#pragma comment(lib,"wbemuuid.lib")
+//#pragma comment(lib,"wbemuuid.lib")
   utf8::String s;
 
   VARIANT vtName;

@@ -267,9 +267,9 @@ void API::close()
   count_--;
 }
 //---------------------------------------------------------------------------
-void API::afterThreadExecute(API * papi)
+void API::afterThreadExecute(API * /*papi*/)
 {
-  assert( (intptr_t) papi->threadCount() == 0 );
+  //assert( (intptr_t) papi->threadCount() == 0 );
 }
 //---------------------------------------------------------------------------
 } // namespace mycpp

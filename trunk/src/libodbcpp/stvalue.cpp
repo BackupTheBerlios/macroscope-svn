@@ -30,16 +30,18 @@ namespace odbcpp {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-ksys::Mutant DSQLValues::asMutant(uintptr_t i)
+ksys::Mutant DSQLValues::asMutant(uintptr_t /*i*/)
 {
   newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
-utf8::String DSQLValues::asString(uintptr_t i)
+utf8::String DSQLValues::asString(uintptr_t /*i*/)
 {
   newObjectV1C2<EClientServer>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 } // namespace odbcpp

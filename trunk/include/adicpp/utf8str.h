@@ -1141,7 +1141,7 @@ inline uintptr_t hash(const utf8::String & s,bool caseSensitive = true)
   return s.hash(caseSensitive);
 }
 //---------------------------------------------------------------------------
-extern const intptr_t (utf8::String::* const strCmpFuncs[2])(const utf8::String &) const;
+extern intptr_t (utf8::String::* const strCmpFuncs[2])(const utf8::String &) const;
 inline uintptr_t compareObjects(const utf8::String & s1,const utf8::String & s2,bool caseSensitive = true)
 {
   return (s1.*strCmpFuncs[caseSensitive])(s2);

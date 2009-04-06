@@ -90,7 +90,11 @@ void Logger::printStat(int64_t lineNo,int64_t spos,int64_t pos,int64_t size,int6
       a,
       pos * 1000000 / size - a * 10000,
       b,
+#if __BORLANDC__
+      lineNo * 10000000000i64 / ct - b * 10000
+#else
       lineNo * INT64_C(10000000000) / ct - b * 10000
+#endif
     );
     fprintf(stderr,
       "%s, elapsed: %-20s",
@@ -314,18 +318,18 @@ Logger & Logger::createDatabase()
       );
       for( uintptr_t i = 0; i < PCAP::pgpCount; i++ ){
         metadata << templ.replaceAll("@0001@",Sniffer::pgpNames[i]);
-        metadata <<
+        metadata << (
           "ALTER TABLE INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
           " ADD COLUMN pkts BIGINT NOT NULL"
-        ;
-        metadata <<
+        );
+        metadata << (
           "ALTER TABLE INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
           " ADD COLUMN min_dgram INTEGER NOT NULL"
-        ;
-        metadata <<
+        );
+        metadata << (
           "ALTER TABLE INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
           " ADD COLUMN max_dgram INTEGER NOT NULL"
-        ;
+        );
         //TODO:
         // в отчете в колонку пакетов добавить в скобках колво пакетов в секунду (среднее за период)
         // в отчете опциональные колонки минимальный размер пакета, максимальный и средний за период
@@ -347,7 +351,7 @@ Logger & Logger::createDatabase()
         //    utf8::String("CREATE DESC INDEX ISS_@0001@_08 ON INET_SNIFFER_STAT_@0001@ (iface,ts)").replaceAll("@0001@",Sniffer::pgpNames[i])
         //  ;
       }
-      metadata <<
+      metadata << (
         /*"CREATE TABLE INET_BPFT_STAT_CACHE ("
         " st_if            CHAR(8) CHARACTER SET ascii NOT NULL,"
         " st_bt            DATETIME NOT NULL,"
@@ -362,7 +366,7 @@ Logger & Logger::createDatabase()
         "CREATE TABLE INET_DNS_CACHE ("
         " st_ip            CHAR(8) CHARACTER SET ascii NOT NULL,"
         " st_name          VARCHAR(" + utf8::int2Str(NI_MAXHOST + NI_MAXSERV + 1) + ") CHARACTER SET ascii NOT NULL"
-        ")" <<
+        ")") <<
 
         "CREATE UNIQUE INDEX IUT_IDX1 ON INET_USERS_TRAF (ST_USER,ST_TIMESTAMP)" <<
         "CREATE INDEX IUT_IDX4 ON INET_USERS_TRAF (ST_TIMESTAMP)" <<
@@ -538,7 +542,7 @@ Logger & Logger::createDatabase()
         }
       }
       for( intptr_t i = Sniffer::pgpCount - 1; i >= 0; i-- ){
-        metadata << "DROP PROCEDURE INET_UPDATE_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]);
+        metadata << ("DROP PROCEDURE INET_UPDATE_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]));
       }
       uintptr_t pos = metadata.count();
       for( intptr_t i = Sniffer::pgpCount - 1; i >= 0; i-- ){
@@ -657,9 +661,9 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
   Array<utf8::String> ifaces;
   enumInterfaces(statement_,ifaces);
   for( uintptr_t i = 0; i < ifaces.count(); i++ ){
-    cgi_ << "    <option value=\"" + ifaces[i] + "\"";
+    cgi_ << ("    <option value=\"" + ifaces[i] + "\"");
     if( i == 0 && !addUnionIf ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + ifaces[i] + "</option>\n";
+    cgi_ << (">" + ifaces[i] + "</option>\n");
   }
   if( addUnionIf )
     cgi_ <<
@@ -676,18 +680,18 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
     "  <select name=\"bhour\" id=\"bhour\">\n"
   ;
   for( intptr_t i = 0; i <= 23; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_hour ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
     "  <select name=\"bmin\" id=\"bmin\">\n"
   ;
   for( intptr_t i = 0; i <= 59; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_min ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
@@ -695,27 +699,27 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
     "  <select name=\"bday\" id=\"bday\">\n"
   ;
   for( intptr_t i = 1; i <= 31; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
     "  <select name=\"bmon\" id=\"bmon\">\n"
   ;
   for( intptr_t i = 1; i <= 12; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
     "  <select name=\"byear\" id=\"byear\">\n"
   ;
   for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str(i) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
@@ -727,18 +731,18 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
     "  <select name=\"ehour\" id=\"ehour\">\n"
   ;
   for( intptr_t i = 0; i <= 23; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_hour ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
     "  <select name=\"emin\" id=\"emin\">\n"
   ;
   for( intptr_t i = 0; i <= 59; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_min ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
@@ -746,27 +750,27 @@ Logger & Logger::writeCGIInterfaceAndTimeSelect(bool addUnionIf)
     "  <select name=\"eday\" id=\"eday\">\n"
   ;
   for( intptr_t i = 1; i <= 31 /*(int) monthDays(curTime.tm_year + 1900,curTime.tm_mon)*/; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_mday ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
     "  <select name=\"emon\" id=\"emon\">\n"
   ;
   for( intptr_t i = 1; i <= 12; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_mon + 1 ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str0(i,2) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str0(i,2) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
     "  <select name=\"eyear\" id=\"eyear\">\n"
   ;
   for( intptr_t i = curTime.tm_year + 1900 - 25; i <= curTime.tm_year + 1900 + 25; i++ ){
-    cgi_ << "    <option value=\"" + utf8::int2Str(i) + "\"";
+    cgi_ << ("    <option value=\"" + utf8::int2Str(i) + "\"");
     if( i == curTime.tm_year + 1900 ) cgi_ << " selected=\"selected\"";
-    cgi_ << ">" + utf8::int2Str(i) + "</option>\n";
+    cgi_ << (">" + utf8::int2Str(i) + "</option>\n");
   }
   cgi_ <<
     "  </select>\n"
@@ -925,11 +929,11 @@ int32_t Logger::main()
 	      "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
       ;
       if( cgi_.paramIndex("admin") < 0 ){
-        cgi_ <<
+        cgi_ << (
           "<FORM name=\"report_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
           "  <B>Traffic report generation form</B>\n"
           "  <BR>\n"
-        ;
+        );
         writeCGIInterfaceAndTimeSelect(false);
         cgi_ <<
           "  <BR>\n"
@@ -1038,10 +1042,10 @@ int32_t Logger::main()
         ;
       }
       else {
-        cgi_ <<
+        cgi_ << (
           "<B>Administrative functions</B>\n"
           "<FORM name=\"admin_form\" ACTION=\"" + getEnv("SCRIPT_NAME") + "\"" + " METHOD=\"" + getEnv("USE_REQUEST_METHOD","GET") + "\" accept-charset=\"utf8\">\n"
-        ;
+        );
         writeCGIInterfaceAndTimeSelect(true);
         cgi_ <<
           "  <BR>\n"
@@ -1065,7 +1069,7 @@ int32_t Logger::main()
           "</FORM>\n"
         ;
       }
-      cgi_ <<
+      cgi_ << (
         "<HR>\n"
         "GMT: " + utf8::time2Str(gettimeofday()) + "\n<BR>\n"
         "Local time: " + utf8::time2Str(getlocaltimeofday()) + "\n<BR>\n"
@@ -1075,9 +1079,9 @@ int32_t Logger::main()
         "  http://developer.berlios.de/projects/macroscope/\n"
         "</A>\n"
 #endif
-	      "</BODY>\n"
-	      "</HTML>\n"
-      ;
+        "</BODY>\n"
+        "</HTML>\n"
+      );
       return 0;
     }
     verbose_ = false;
@@ -1202,13 +1206,15 @@ int32_t Logger::doWork(uintptr_t stage)
     cgiET.tm_min = 59;
     cgiET.tm_sec = 59;
     if( tm2Time(cgiBT) > tm2Time(cgiET) ) ksys::xchg(cgiBT,cgiET);
+    utf8::String ifs;
+    if( cgi_.paramAsString("if").casecompare("all") != 0 ) ifs = cgi_.paramAsString("if");
     rolloutBPFTByIPs(
       utf8::time2Str(tm2Time(cgiBT)),
       utf8::time2Str(tm2Time(cgiET) + 999999),
-      cgi_.paramAsString("if").casecompare("all") == 0 ? utf8::String() : cgi_.paramAsString("if"),
+      ifs,
       cgi_.paramAsString("filter")
     );
-    cgi_ <<
+    cgi_ << (
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
       "<HEAD>\n"
@@ -1230,7 +1236,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("renameif") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1250,7 +1256,7 @@ int32_t Logger::doWork(uintptr_t stage)
       statement_->execute();
     }
     database_->commit();
-    cgi_ <<
+    cgi_ << (
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
       "<HEAD>\n"
@@ -1272,7 +1278,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("copydb") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1290,7 +1296,7 @@ int32_t Logger::doWork(uintptr_t stage)
 
     database2->commit();
     database_->commit();
-    cgi_ <<
+    cgi_ << (
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
       "<HEAD>\n"
@@ -1312,7 +1318,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("copyif") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1406,7 +1412,9 @@ int32_t Logger::doWork(uintptr_t stage)
         )->prepare();
         for( intptr_t j = statement_->rowCount() - 1; j >= 0; j-- ){
           statement_->selectRow(j);
-          stdb2_->paramAsString("if",all ? statement_->valueAsString("iface") : cgi_.paramAsString("newIfName"));
+          utf8::String ifs;
+          if( all ) ifs = statement_->valueAsString("iface"); else ifs = cgi_.paramAsString("newIfName");
+          stdb2_->paramAsString("if",ifs);
           stdb2_->
             paramAsMutant("ts",statement_->valueAsMutant("ts"))->
             paramAsMutant("src_ip",statement_->valueAsString("src_ip"))->
@@ -1422,7 +1430,7 @@ int32_t Logger::doWork(uintptr_t stage)
       database2->commit();
     }
     database_->commit();
-    cgi_ <<
+    cgi_ << (
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
       "<HEAD>\n"
@@ -1444,7 +1452,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropif") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1453,8 +1461,15 @@ int32_t Logger::doWork(uintptr_t stage)
     bool all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
-      statement_->text("DELETE FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) +
-        utf8::String(all ? filter.isNull() ? utf8::String() : " WHERE " + getIPFilter(filter) : filter.isNull() ? " WHERE iface = :if" : " WHERE iface = :if AND " + getIPFilter(filter)))->prepare();
+      utf8::String s;
+      if( all ){
+        if( filter.isNull() ) s = utf8::String(); else s = " WHERE " + getIPFilter(filter);
+      }
+      else {
+        if( filter.isNull() ) s = " WHERE iface = :if";
+        else s = " WHERE iface = :if AND " + getIPFilter(filter);
+      }
+      statement_->text("DELETE FROM INET_SNIFFER_STAT_" + utf8::String(Sniffer::pgpNames[i]) + s)->prepare();
       if( !all ) statement_->paramAsString("if",cgi_.paramAsString("if"));
       statement_->execute();
     }
@@ -1464,7 +1479,7 @@ int32_t Logger::doWork(uintptr_t stage)
       statement_->execute();
     }
     database_->commit();
-    cgi_ <<
+    cgi_ << (
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
       "<HEAD>\n"
@@ -1486,7 +1501,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropdns") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1494,7 +1509,7 @@ int32_t Logger::doWork(uintptr_t stage)
     database_->start();
     statement_->text("delete from INET_DNS_CACHE")->execute();
     database_->commit();
-    cgi_ <<
+    cgi_ << (
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
       "<HEAD>\n"
@@ -1516,7 +1531,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("recalc_totals") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1534,7 +1549,7 @@ int32_t Logger::doWork(uintptr_t stage)
       AutoPtr<Sniffer> sniffer(getSnifferBySection(ifaces[i]));
       sniffer->recalcTotals();
     }
-    cgi_ <<
+    cgi_ << (
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
       "<HEAD>\n"
@@ -1556,7 +1571,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("reactivate_indices") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1571,7 +1586,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
     ;
     reactivateIndices(true,false);
-    cgi_ <<
+    cgi_ << (
       "<BR>\n"
       "<B>Reactivate indices operation completed successfuly.</B>\n"
       "<HR>\n"
@@ -1586,7 +1601,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("set_indices_statistics") >= 0 ){
     uint64_t ellapsed = gettimeofday();
@@ -1601,7 +1616,7 @@ int32_t Logger::doWork(uintptr_t stage)
       "<BODY LANG=EN BGCOLOR=\"#FFFFFF\" TEXT=\"#000000\" LINK=\"#0000FF\" VLINK=\"#FF0000\">\n"
     ;
     reactivateIndices(false,true);
-    cgi_ <<
+    cgi_ << (
       "<BR>\n"
       "<B>Set indices statistics operation completed successfuly.</B>\n"
       "<HR>\n"
@@ -1616,7 +1631,7 @@ int32_t Logger::doWork(uintptr_t stage)
 #endif
       "</BODY>\n"
       "</HTML>\n"
-    ;
+    );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("chart") >= 0 ){
     cgi_.contentType("image/png");
@@ -1659,18 +1674,19 @@ int32_t Logger::doWork(uintptr_t stage)
     utf8::String filter(cgi_.paramAsString("filter"));
     bool all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
+    utf8::String s;
+    if( all ){
+      if( filter.isNull() ) s = utf8::String();
+      else s =" WHERE ts >= :bt AND ts <= :et AND" + getIPFilter(filter);
+    }
+    else {
+      if( filter.isNull() ) s = " WHERE iface = :if AND ts >= :bt AND ts <= :et";
+      else s = " WHERE iface = :if AND ts >= :bt AND ts <= :et AND" + getIPFilter(filter);
+    }
     statement_->text(
       "SELECT"
       "  ts, SUM(dgram) AS dgram "
-      "FROM INET_SNIFFER_STAT_HOUR " +
-      utf8::String(
-        all ? 
-          filter.isNull() ? utf8::String() : " WHERE ts >= :bt AND ts <= :et AND" + getIPFilter(filter)
-            :
-          filter.isNull() ? " WHERE iface = :if AND ts >= :bt AND ts <= :et" :
-                            " WHERE iface = :if AND ts >= :bt AND ts <= :et AND" + getIPFilter(filter)
-      ) +
-      " GROUP BY ts"
+      "FROM INET_SNIFFER_STAT_HOUR " + s + " GROUP BY ts"
     )->prepare()->
       paramAsMutant("bt",cgiBT)->
       paramAsMutant("et",cgiET);
@@ -1711,7 +1727,9 @@ int32_t Logger::doWork(uintptr_t stage)
     dnsCacheMissCount_ = 0;
     dnsCacheSize_ = config_->valueByPath("macroscope.bpft.dns_cache_size",0);
     for( uintptr_t i = 0; i < config_->sectionByPath("macroscope.bpft").sectionCount() || cgi_.isCGI(); i++ ){
-      utf8::String sectionName(cgi_.isCGI() ? cgi_.paramAsString("if") : config_->sectionByPath("macroscope.bpft").section(i).name());
+      utf8::String sectionName;
+      if( cgi_.isCGI() ) sectionName = cgi_.paramAsString("if");
+      else sectionName = config_->sectionByPath("macroscope.bpft").section(i).name();
       if( sectionName.casecompare("decoration") == 0 ) continue;
       if( cgi_.isCGI() && (stage < 1 || cgi_.paramIndex("report") < 0) ) break;
       threads_.safeAdd(
@@ -1861,8 +1879,10 @@ int main(int _argc,char * _argv[])
   try {
     uintptr_t i;
     stdErr.fileName(SYSLOG_DIR("macroscope/") + "macroscope.log");
-    Config::defaultFileName(SYSCONF_DIR("") + "macroscope.conf");
-    Config::defaultFileName(getEnv("MACROSCOPE_CONFIG").isNull() ? Config::defaultFileName() : getEnv("MACROSCOPE_CONFIG"));
+    utf8::String dfn(getEnv("MACROSCOPE_CONFIG"));
+    if( dfn.isNull() ) dfn = Config::defaultFileName();
+    else dfn = SYSCONF_DIR("") + "macroscope.conf";
+    Config::defaultFileName(dfn);
     Services services(macroscope_version.gnu_);
     AutoPtr<macroscope::SnifferService> serviceAP(newObject<macroscope::SnifferService>());
     services.add(serviceAP);

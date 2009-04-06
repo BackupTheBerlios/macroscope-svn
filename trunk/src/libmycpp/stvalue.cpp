@@ -345,6 +345,7 @@ l1:   return ksys::Mutant(*pll).changeType(ksys::mtTime);
   }
   newObjectV1C2<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 utf8::String DSQLValues::asString(uintptr_t i)
@@ -408,6 +409,7 @@ l1:   return utf8::time2Str(*pll);
   }
   newObjectV1C2<EDSQLStInvalidValue>(EINVAL, __PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //---------------------------------------------------------------------------
 uintptr_t DSQLValues::checkRowIndex(uintptr_t row)
