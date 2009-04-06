@@ -727,7 +727,7 @@ AsyncSocket & AsyncSocket::operator >> (utf8::String & s)
   if( l > q ) newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   ksys::AutoPtr<utf8::String::Container,AutoPtrNonVirtualClassDestructor> t(utf8::String::Container::container(uintptr_t(l)));
   read(t->string_,l);
-  t->string_[l] = '\0';
+  t->string_[uintptr_t(l)] = '\0';
   utf8::String e(t.ptr(NULL));
   if( !e.isValid() )
     newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
@@ -754,6 +754,7 @@ static uint8_t authChannelHelper(const utf8::String & s)
   if( s.casecompare("default") == 0 || s.isNull() ) return radAllow;
   newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper2(const utf8::String & s)
@@ -769,6 +770,7 @@ static uint8_t authChannelHelper2(const utf8::String & s)
   if( s.casecompare("default") == 0 || s.isNull() ) return ksys::LZO1X::LZO1X_999 + 1;
   newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //------------------------------------------------------------------------------
 static uint8_t authChannelHelper3(const utf8::String & s)
@@ -780,6 +782,7 @@ static uint8_t authChannelHelper3(const utf8::String & s)
   if( s.casecompare("default") == 0 || s.isNull() ) return ksys::LZO1X::ADLER32;
   newObjectV1C2<ksys::Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
   exit(ENOSYS);
+  throw 0;
 }
 //------------------------------------------------------------------------------
 AsyncSocket::AuthParams::~AuthParams()

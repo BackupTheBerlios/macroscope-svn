@@ -1,6 +1,6 @@
 @echo off
 
-if /i %1 == bcc32 goto bcc32
+if /i "%1" == "bcc32" goto bcc32
 
 if NOT DEFINED INTEL_LICENSE_FILE goto exit
 
@@ -41,4 +41,5 @@ exit
 
 :bcc32
 rem set cmake_defs=-DCMAKE_C_COMPILER=bcc32 -DCMAKE_CXX_COMPILER=bcc32 -DCMAKE_LINKER=ilink32
+rem --debug-trycompile --debug-output 
 cmake -DPRIVATE_RELEASE=1 -DCMAKE_BUILD_TYPE=Debug -DBUILD_DOCUMENTATION=ON -DDOCUMENTATION_HTML_TARZ=ON -G "Borland Makefiles" %cmake_defs% . && make

@@ -37,6 +37,9 @@
    http://www.oberhumer.com/opensource/lzo/
  */
 
+#if __BORLANDC__
+#pragma option -w-ovf
+#endif
 
 #include <adicpp/lzo/lzo_conf.h>
 

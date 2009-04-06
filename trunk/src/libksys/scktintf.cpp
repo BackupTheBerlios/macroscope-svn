@@ -26,8 +26,8 @@
 //---------------------------------------------------------------------------
 #include <adicpp/ksys.h>
 //---------------------------------------------------------------------------
-#if __BCPLUSPLUS__
-#pragma option -w-8084
+#ifdef __BORLANDC__
+#pragma option push -w-8084
 #endif
 //---------------------------------------------------------------------------
 namespace ksock {
@@ -264,7 +264,7 @@ void API::open()
       }
     }*/
 #endif
-    if( this->WSAStartup(MAKEWORD(2,2), &wsaData_) != 0 ){
+    if( this->WSAStartup(MAKEWORD(2,2),&wsaData_) != 0 ){
       err = this->WSAGetLastError() + ksys::errorOffset;
 #ifndef USE_STATIC_SOCKET_LIBRARY
       FreeLibrary(handle_);
@@ -353,10 +353,14 @@ void API::initialize()
 void API::cleanup()
 {
 #if defined(__WIN32__) || defined(__WIN64__)
-  using ksys::WriteLock;
+  using ksys::LiteWriteLock;
   mutex().~LiteWriteLock();
 #endif
 }
 //---------------------------------------------------------------------------
 } // namespace ksock
+//---------------------------------------------------------------------------
+#ifdef __BORLANDC__
+#pragma option pop
+#endif
 //---------------------------------------------------------------------------

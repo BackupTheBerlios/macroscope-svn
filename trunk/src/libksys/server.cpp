@@ -46,7 +46,7 @@ void AcceptFiber::fiberExecute()
     for(;;){
       ServerFiber * serverFiber = dynamic_cast<ServerFiber *>(server->newFiber());
       assert( serverFiber != NULL );
-      ksys::AutoPtr<Fiber> fiber(serverFiber);
+      ksys::AutoPtr<ksys::Fiber> fiber(serverFiber);
       accept(*serverFiber);
       server->attachFiber(fiber);
     }

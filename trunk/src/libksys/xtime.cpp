@@ -309,15 +309,15 @@ int gettimeofday(struct timeval * tvp, struct timezone * tzp)
 #endif
 #if HAVE_FTIME
 #ifdef __BORLANDC__
-    std::ftime(&tbb);
+    ::ftime(&tbb);
 #else
     ftime(&tbb);
 #endif
 #elif HAVE_FTIME
     _ftime(&tbb);
 #endif
-    tzp->tz_minuteswest = tb.timezone;
-    tzp->tz_dsttime = tb.dstflag;
+    tzp->tz_minuteswest = tbb.timezone;
+    tzp->tz_dsttime = tbb.dstflag;
 //    tzp->tz_minuteswest = -(int) (((st2i.QuadPart - sti.QuadPart) / 10000000u) / 60u);
 //    tzp->tz_dsttime = 0;
   }
@@ -378,12 +378,12 @@ time_t timegm(struct tm * t)
     ULARGE_INTEGER sti;
   };
   SYSTEMTIME systemTime;
-  systemTime.wYear = t->tm_year + 1900;
-  systemTime.wMonth = t->tm_mon + 1;
-  systemTime.wDay = t->tm_mday;
-  systemTime.wHour = t->tm_hour;
-  systemTime.wMinute = t->tm_min;
-  systemTime.wSecond = t->tm_sec;
+  systemTime.wYear = uint16_t(t->tm_year + 1900);
+  systemTime.wMonth = uint16_t(t->tm_mon + 1);
+  systemTime.wDay = uint16_t(t->tm_mday);
+  systemTime.wHour = uint16_t(t->tm_hour);
+  systemTime.wMinute = uint16_t(t->tm_min);
+  systemTime.wSecond = uint16_t(t->tm_sec);
   systemTime.wMilliseconds = 0;
   systemTime.wDayOfWeek = 0;
   if( SystemTimeToFileTime(&systemTime,&fileTime) == 0 ){

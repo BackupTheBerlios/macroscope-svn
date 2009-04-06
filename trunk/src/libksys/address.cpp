@@ -30,10 +30,6 @@ namespace ksock {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-#if __BCPLUSPLUS__
-#pragma option push -w-8004
-#endif
-//------------------------------------------------------------------------------
 SockAddr & SockAddr::clear(uintptr_t family)
 {
 #if SIZEOF_SOCKADDR_IN6
@@ -364,7 +360,7 @@ utf8::String SockAddr::resolveAddr(const ksys::Mutant & defPort,intptr_t aiFlag)
     }
     else {
       s = he->h_name;
-      if( addr4_.sin_port != 0 && (uintptr_t) defPort != api.ntohs(addr4_.sin_port) ){
+      if( addr4_.sin_port != 0 && (	intptr_t) defPort != api.ntohs(addr4_.sin_port) ){
         s += ":";
         s += utf8::int2Str(api.ntohs(addr4_.sin_port));
       }
@@ -638,7 +634,7 @@ struct in_addr SockAddr::indexToAddr4(const utf8::String & index)
 //------------------------------------------------------------------------------
 #if SIZEOF_SOCKADDR_IN6
 //------------------------------------------------------------------------------
-struct in6_addr SockAddr::indexToAddr6(const utf8::String & index)
+struct in6_addr SockAddr::indexToAddr6(const utf8::String & /*index*/)
 {
   struct in6_addr addr;
   memset(&addr,0,sizeof(addr));
@@ -859,7 +855,7 @@ utf8::String SockAddr::addressFamilyAsString(uintptr_t family)
 #define IPPROTO_SCTP            132             /* SCTP */
 #endif
 static const struct {
-  const char * const name_;
+  const char * name_;
   uint8_t proto_;
 } protos[] = {
   {          "", IPPROTO_IP        },
@@ -1140,7 +1136,7 @@ static const struct {
 utf8::String SockAddr::protoAsString(uintptr_t proto)
 {
   for( intptr_t i = sizeof(protos) / sizeof(protos[0]) - 1; i >= 0; i-- )
-    if( protos[i].proto_ == proto ) return protos[i].name_;
+    if( uintptr_t(protos[i].proto_) == proto ) return protos[i].name_;
   return utf8::int2Str(proto);
 }
 //------------------------------------------------------------------------------
@@ -1150,10 +1146,6 @@ uintptr_t SockAddr::stringAsProto(const utf8::String & proto)
     if( proto.casecompare(protos[i].name_) == 0 ) return protos[i].proto_;
   return (uintptr_t) utf8::str2Int(proto);
 }
-//------------------------------------------------------------------------------
-#if __BCPLUSPLUS__
-#pragma option pop
-#endif
 //------------------------------------------------------------------------------
 } // namespace ksock
 //------------------------------------------------------------------------------
