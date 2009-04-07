@@ -114,7 +114,7 @@ const int MSFTPDefaultPort = 2121;
 static inline uint64_t partialBlockSize(uint64_t fileSize)
 {
   uint64_t ll;
-  for( ll = 1; (uint64_t(1) << ll) < fileSize; ll++ );
+  for( ll = 1; (uint64_t(1) << uintptr_t(ll)) < fileSize; ll++ );
   ll = ksys::fibonacci(ll);
 // block size must be greater system physical page size
   if( ll < (uintptr_t) getpagesize() ) ll = getpagesize();

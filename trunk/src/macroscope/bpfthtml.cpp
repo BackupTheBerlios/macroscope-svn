@@ -122,7 +122,7 @@ utf8::String Logger::getIPFilter(const utf8::String & text,const utf8::String & 
 	            uint32_t inet;
             };
 	          ineta = addr.resolveName(utf8::String(i,net)).addr4_.sin_addr;
-	          uint32_t mask = ~(~uint32_t(0) << utf8::str2Int(utf8::String(net + 1,j)));
+	          uint32_t mask = ~(~uint32_t(0) << uintptr_t(utf8::str2Int(utf8::String(net + 1,j))));
 	          inet &= mask;
             struct in_addr inet1 = ineta;
 	          ineta = addr.addr4_.sin_addr;
@@ -352,9 +352,9 @@ void Logger::BPFTThread::getBPFTCached(
     p->et_ = pStatement->paramAsMutant("ETT");
     p->srcAddr_ = ksock::SockAddr::indexToAddr4(pStatement->paramAsString("src"));
     p->dstAddr_ = ksock::SockAddr::indexToAddr4(pStatement->paramAsString("dst"));
-    p->srcPort_ = ports_ ? (uint16_t) pStatement->paramAsMutant("src_port") : 0;
-    p->dstPort_ = ports_ ? (uint16_t) pStatement->paramAsMutant("dst_port") : 0;
-    p->proto_ = protocols_ ? (int16_t) pStatement->paramAsMutant("proto") : -1;
+    p->srcPort_ = uint16_t(ports_ ? (uint16_t) pStatement->paramAsMutant("src_port") : 0);
+    p->dstPort_ = uint16_t(ports_ ? (uint16_t) pStatement->paramAsMutant("dst_port") : 0);
+    p->proto_ = int16_t(protocols_ ? (int16_t) pStatement->paramAsMutant("proto") : -1);
     cachedPacketSumHash_.insert(*p,false,false,&p);
     if( p == pktSum ){
       pStatement->execute()->fetchAll();
@@ -390,9 +390,9 @@ hash:
       p->et_ = pStatement->paramAsMutant("ETT");
       p->srcAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"src_ip"));
       p->dstAddr_ = ksock::SockAddr::indexToAddr4(pResult->cell(row,"dst_ip"));
-      p->srcPort_ = ports_ ? (uint16_t) pResult->cell(row,"src_port") : 0;
-      p->dstPort_ = ports_ ? (uint16_t) pResult->cell(row,"dst_port") : 0;
-      p->proto_ = protocols_ ? (int16_t) pResult->cell(row,"ip_proto") : -1;
+      p->srcPort_ = uint16_t(ports_ ? (uint16_t) pResult->cell(row,"src_port") : 0);
+      p->dstPort_ = uint16_t(ports_ ? (uint16_t) pResult->cell(row,"dst_port") : 0);
+      p->proto_ = int16_t(protocols_ ? (int16_t) pResult->cell(row,"ip_proto") : -1);
       p->pkts_ = pResult->cell(row,"SUM0");
       p->pktSize_ = pResult->cell(row,"SUM1");
       p->dataSize_ = pResult->cell(row,"SUM2");
@@ -705,7 +705,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
     assert( rt != NULL );
     beginTime = endTime = *rt;
   }
-  int * pi, sv, av, fv;
+  int * pi, sv, av;
   switch( level ){
     case rlYear :
       beginTime.tm_mon = 0;
@@ -721,7 +721,6 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       pi = &endTime.tm_mon;
       sv = 0;
       av = 1;
-      fv = 11;
       if( !logger_->cgi_.isCGI() )
         f.fileName(
           includeTrailingPathDelimiter(htmlDir_) +
@@ -806,7 +805,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       return;
     default :
       pi = NULL;
-      sv = av = fv = 0;
+      sv = av = 0;
   }
   if( logger_->cgi_.isCGI() && level == maxTotalsLevel_ ){
     logger_->cgi_ << utf8::String(); // write content type
@@ -945,67 +944,67 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           if( logger_->cgi_.isCGI() ) f.fileName("stdout");
           f.open();
         }
-        f <<
+        f << (
           "<TABLE WIDTH=400 BORDER=1 CELLSPACING=0 CELLPADDING=2>\n"
           "<TR>\n"
           "  <TH BGCOLOR=\"" + logger_->getDecor("table_head",section_) + "\" COLSPAN=\"" +
           utf8::int2Str(colCount * 3 + 4) + "\" ALIGN=left nowrap>\n"
-        ;
+        );
         switch( level ){
           case rlYear :
-            f <<
+            f << (
       	      (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d.html",endTime.tm_year + 1900) + "\">"
               ) +
               utf8::int2Str(endTime.tm_year + 1900) + "\n" +
 	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-            ;
+            );
             break;
           case rlMon :
-            f <<
+            f << (
   	          (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1) + "\">"
 	            ) +
               utf8::String::print("%02d.%04d",endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
 	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-            ;
+            );
             break;
           case rlDay :
-            f <<
+            f << (
 	            (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday) + "\">"
 	            ) +
               utf8::String::print("%02d.%02d.%04d",endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
 	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-            ;
+            );
             break;
           case rlHour :
-            f <<
+            f << (
 	            (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d%02d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday,endTime.tm_hour) + "\">"
 	            ) +
               utf8::String::print("%02d %02d.%02d.%04d",endTime.tm_hour,endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
 	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-            ;
+            );
             break;
           case rlMin :
-            f <<
+            f << (
 	            (logger_->cgi_.isCGI() ? utf8::String() :
                 "    <A HREF=\"bpft-" + sectionName_ +
                 utf8::String::print("-traf-by-%04d%02d%02d%02d%02d.html",endTime.tm_year + 1900,endTime.tm_mon + 1,endTime.tm_mday,endTime.tm_hour,endTime.tm_min) + "\">"
 	            ) +
               utf8::String::print("%02d:%02d %02d.%02d.%04d",endTime.tm_hour,endTime.tm_min,endTime.tm_mday,endTime.tm_mon + 1,endTime.tm_year + 1900) + "\n" +
 	            (logger_->cgi_.isCGI() ? "" : "    </A>\n")
-            ;
+            );
             break;
           default    :
             assert( 0 );
         }
-        f <<
+        f << (
           "  </TH>\n"
           "</TR>\n"
           "<TR>\n"
@@ -1025,14 +1024,14 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "  <TH ALIGN=center BGCOLOR=\"" + logger_->getDecor("head.pkts",section_) + "\" nowrap>\n"
           "    Packets\n"
           "  </TH>\n"
-        ;
+        );
         while( *pi >= sv ){
           if( sums[*pi + av] > 0 )
-            f <<
+            f << (
               "  <TH COLSPAN=3 ALIGN=center BGCOLOR=\"" + logger_->getDecor("detail_head",section_) + "\" nowrap>\n"
               "    " + utf8::int2Str(*pi + (level == rlYear)) + "\n"
               "  </TH>\n"
-	          ;
+	    );
           (*pi)--;
         }
         switch( level ){
@@ -1066,10 +1065,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             "  <TH ALIGN=left BGCOLOR=\"" + logger_->getDecor("body.host",section_) + "\" nowrap>\n" +
 	          genHRef(ip41,ip41Port) +
             (bidirectional_ ?
-              " <B>--></B> " + genHRef(ip42,ip42Port) :
+              utf8::String(" <B>--></B> ") + genHRef(ip42,ip42Port) :
               utf8::String()
             ) +
-            (ipProto >= 0 ? " " + ksock::SockAddr::protoAsString(ipProto) : "")
+            (ipProto >= 0 ? utf8::String(" ") + ksock::SockAddr::protoAsString(ipProto) : utf8::String())
           );
           utf8::String row2(
             "  </TH>\n"
@@ -1139,7 +1138,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             if( level < rlDay ) v += "&xlvs=1";
             row += "<A HREF=\"" + src + v + "\"><BIG><B> -C- </B></BIG></A>";
           }
-          f << row + row2 + "</TR>\n";
+          f << (row + row2 + "</TR>\n");
           switch( level ){
             case rlYear :
               endTime.tm_mon = 11;
@@ -1161,7 +1160,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               assert( 0 );
           }
         }
-        f <<
+        f << (
           "<TR>\n"
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.host",section_) + "\" nowrap>\n"
           "    Summary:\n"
@@ -1175,10 +1174,10 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("tail.pkts",section_) + "\" nowrap>\n" +
           printCount(table[0].sum("SUM0"),table[0].sum("SUM0")) + "\n"
           "  </TH>\n"
-        ;
+        );
         while( *pi >= sv ){
           if( sums[*pi + av] > 0 )
-            f <<
+            f << (
               "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.data",section_) + "\" nowrap>\n" +
               formatTraf(table[*pi + av].sum("SUM2"),sums[0]) + "\n"
               "  </TH>\n"
@@ -1188,7 +1187,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
               "  <TH ALIGN=right BGCOLOR=\"" + logger_->getDecor("details.tail.pkts",section_) + "\" nowrap>\n" +
               printCount(table[*pi + av].sum("SUM0"),table[0].sum("SUM0")) + "\n"
               "  </TH>\n"
-            ;
+            );
           (*pi)--;
         }
         f <<
@@ -1210,7 +1209,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
             }
           }
           if( level < rlDay ) v += "&xlvs=1";
-          f << "<A HREF=\"" + src + v + "\">Summary chart</A>\n<BR>\n<BR>\n";
+          f << ("<A HREF=\"" + src + v + "\">Summary chart</A>\n<BR>\n<BR>\n");
 
           v = "&rc=" + utf8::int2Str(table[0].rowCount());
           for( uintptr_t j = 0; j < table[0].rowCount(); j++ ){
@@ -1218,7 +1217,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
           }
           v += detailedChartData;
           if( level < rlDay ) v += "&xlvs=1";
-          f << "<A HREF=\"" + src + v + "\">Detailed chart</A>\n<BR>\n<BR>\n";
+          f << ("<A HREF=\"" + src + v + "\">Detailed chart</A>\n<BR>\n<BR>\n");
         }
       }
     }
@@ -1413,12 +1412,12 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
         ;
     }
     bool showFilter = logger_->config_->valueByPath(section_ + ".html_report.show_filter",false);
-    f <<
-      "Interface: " + sectionName_ + "<BR>\n" +
-      utf8::String(showFilter ?
+    f << (
+      "Interface: " + sectionName_ + "<BR>\n" + (
+      showFilter ? utf8::String(
         "Filter: <B>" + filter + "</B>, hash: " + filterHash_ + "<BR>\n" +
-        "FilterSQL: <B>" + filter_ + "</B><BR>\n" :
-	      utf8::String()
+        "FilterSQL: <B>" + filter_ + "</B><BR>\n"
+        ) : utf8::String()
       ) +
       "DNS cache size: " + utf8::int2Str((uintmax_t) logger_->dnsCache_.count()) + ", "
       "hit: " + utf8::int2Str(logger_->dnsCacheHitCount_) + ", " +
@@ -1432,7 +1431,7 @@ void Logger::BPFTThread::writeBPFTHtmlReport(intptr_t level,const struct tm * rt
       "miss: " + utf8::int2Str(cachedPacketSumMissCount_) + ", " +
       "miss ratio: " + missRatio2 +
       "<BR>\n"
-    ;
+    );
     logger_->writeHtmlTail(f,ellapsed_);
   }
   if( level == rlYear || (logger_->cgi_.isCGI() && level == maxTotalsLevel_) )
@@ -1458,10 +1457,9 @@ void Logger::BPFTThread::parseBPFTLogFile()
   if( flog.seekable() ) flog.seek(offset);
   int64_t lineNo = 0, tma = 0;
   int64_t cl = getlocaltimeofday();
-  union {
-    BPFTHeader header;
-    BPFTHeader32 header32;
-  };
+  uint8_t hdr[sizeof(BPFTHeader) > sizeof(BPFTHeader32) ? sizeof(BPFTHeader) : sizeof(BPFTHeader32)];
+  BPFTHeader & header = *(BPFTHeader *) hdr;
+  BPFTHeader32 & header32 = *(BPFTHeader32 *) hdr;
   stBPFTIns_->text(
     "INSERT INTO INET_BPFT_STAT ("
     "  st_if,st_start,st_src_ip,st_dst_ip,st_ip_proto,st_src_port,st_dst_port,st_dgram_bytes,st_data_bytes"

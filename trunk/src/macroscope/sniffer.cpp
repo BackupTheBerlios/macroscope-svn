@@ -326,7 +326,7 @@ void Sniffer::recalcTotals()
   database_->commit()->detach();
 }
 //------------------------------------------------------------------------------
-bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t et,const HashedPacket * packets,uintptr_t & pCount,Thread * caller) throw()
+bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t /*et*/,const HashedPacket * packets,uintptr_t & pCount,Thread * caller) throw()
 {
   bool r = false;
   uintptr_t count = pCount;

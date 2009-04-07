@@ -365,7 +365,7 @@ void KFTPClient::get()
       MSFTPStat rmst, lmst;
       lmst.stat(file.fileName());
       ll = 0;
-      *this << int8_t(cmStat) << remotel + list[i];
+      *this << int8_t(cmStat) << (remotel + list[i]);
       read(&rmst,sizeof(rmst));
       getCode();
       int8_t cmd = cmGetFile;
@@ -390,7 +390,7 @@ void KFTPClient::get()
       }
       if( bs > ll ) bs = ll;
       if( cmd == cmGetFilePartial ) bs = partialBlockSize;
-      *this << cmd << remotel + list[i] << file.tell() << ll;
+      *this << cmd << (remotel + list[i]) << file.tell() << ll;
       if( cmd == cmGetFilePartial ) *this << partialBlockSize;
       getCode();
       AutoPtrBuffer b;
@@ -412,7 +412,7 @@ void KFTPClient::get()
           else {
             r = 0;
           }
-          if( r < bs ) memset(b.ptr() + r,0,(size_t) (bs - r));
+          if( r < bs ) memset(b.ptr() + uintptr_t(r),0,size_t(bs - r));
           lhash.make(b,(uintptr_t) lp);
           readBuffer(rhash.sha256(),rhash.size());
           writeBuffer(lhash.sha256(),lhash.size());
@@ -545,14 +545,14 @@ ZebexPDL::ZebexPDL() : serialPortNumber_(0), serial_(NULL)
 ZebexPDL & ZebexPDL::operator << (const PCC & pcc)
 {
   serial_->writeBuffer(&pcc,1);
-  crc_ += pcc;
+  crc_ += uint16_t(pcc);
   return *this;
 }
 //------------------------------------------------------------------------------
 ZebexPDL & ZebexPDL::operator >> (PCC & pcc)
 {
   serial_->readBuffer(&pcc,1);
-  crc_ += pcc;
+  crc_ += uint16_t(pcc);
   return *this;
 }
 //------------------------------------------------------------------------------

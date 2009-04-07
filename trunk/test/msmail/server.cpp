@@ -289,7 +289,7 @@ bool Server::processRequestServerOnline(AutoPtr<Message> & message,const utf8::S
       message->value("#Recepient"),
       message->value("#Sender.Sended"),
       "#request.server.online","no",
-      Mutant(message->value(a)).isBoolean(&v) && v ? message : NULL
+      Mutant(message->value(a)).isBoolean(&v) && v ? message.ptr() : NULL
     );
     if( message->isValue("#request.server.remove.message.if.offline",&value) && Mutant(value).isBoolean(&v) && v ){
       utf8::String::Stream stream;
@@ -322,7 +322,7 @@ bool Server::processRequestUserOnline(AutoPtr<Message> & message,const utf8::Str
         message->value("#Recepient"),
         message->value("#Sender.Sended"),
         "#request.user.online","no",
-        Mutant(message->value(a)).isBoolean(&v) && v ? message : NULL
+        Mutant(message->value(a)).isBoolean(&v) && v ? message.ptr() : NULL
       );
       if( message->isValue("#request.user.remove.message.if.offline",&value) && Mutant(value).isBoolean(&v) && v ){
         utf8::String::Stream stream;

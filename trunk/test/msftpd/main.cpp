@@ -251,7 +251,7 @@ MSFTPServerFiber & MSFTPServerFiber::put()
       else {
         r = 0;
       }
-      if( r < bs ) memset(b.ptr() + r,0,(size_t) (bs - r));
+      if( r < bs ) memset(b.ptr() + uintptr_t(r),0,size_t(bs - r));
       lhash.make(b,(uintptr_t) lp);
       readBuffer(rhash.sha256(),rhash.size());
       writeBuffer(lhash.sha256(),lhash.size());
@@ -334,7 +334,7 @@ MSFTPServerFiber & MSFTPServerFiber::list()
   *this << (uint64_t) list.count();
   uintptr_t l = includeTrailingPathDelimiter(getPathFromPathName(localPath)).length();
   for( intptr_t i = list.count() - 1; i >= 0; i-- ){
-    *this << utf8::String::Iterator(list[i]) + l;
+    *this << (utf8::String::Iterator(list[i]) + l);
     list.resize(list.count() - 1);
   }
   return *this;
@@ -594,8 +594,8 @@ int main(int _argc,char * _argv[])
       else if( argv()[u].compare("--log") == 0 && u + 1 < argv().count() ){
         stdErr.fileName(argv()[u + 1]);
       }
-      else if( argv()[i].compare("--pid") == 0 && i + 1 < argv().count() ){
-        pidFileName = argv()[i + 1];
+      else if( argv()[u].compare("--pid") == 0 && u + 1 < argv().count() ){
+        pidFileName = argv()[u + 1];
       }
     }
     service->initialize();

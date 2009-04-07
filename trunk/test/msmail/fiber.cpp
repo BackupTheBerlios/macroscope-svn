@@ -265,7 +265,8 @@ void ServerFiber::registerDB()
   uint32_t port;
   uint64_t rStartTime;
   bool dbChanged = false;
-  *this >> port >> rStartTime << uint64_t(getProcessStartTime());
+  *this >> port >> rStartTime;
+  *this << uint64_t(getProcessStartTime());
   uint8_t rdbt;
   if( protocol_ > 0 ){
     *this >> rdbt;
@@ -348,7 +349,8 @@ void ServerFiber::sendMail() // client sending mail
   file.fileName(server_->incompleteDir() + id + ".msg").createIfNotExist(true).exclusive(true);
   if( rest ){
     file.open();
-    *this << file.size() >> remainder;
+    *this << file.size();
+    *this >> remainder;
     file.seek(file.size());
     AutoPtrBuffer b;
     size_t bl = getpagesize() * 16;
@@ -378,7 +380,7 @@ void ServerFiber::sendMail() // client sending mail
     " received from " << message->value("#Sender") <<
     " to " << message->value("#Recepient") <<
     ", traffic " <<
-    recvBytes() - rb + sendBytes() - sb << "\n"
+    (recvBytes() - rb + sendBytes() - sb) << "\n"
   ;
   utf8::String recepient, mid;
   if( !message->isValue("#Recepient",&recepient) || 
@@ -480,7 +482,8 @@ void ServerFiber::processMailbox(
           bool messageAccepted = true;
           if( skey.casecompare(key_) == 0 ){
             if( !waitForMail ) *this << bool(true);
-            *this << *message.ptr() >> messageAccepted;
+            *this << *message.ptr();
+            *this >> messageAccepted;
             putCode(i > 0 ? eOK : eLastMessage);
           }
           if( messageAccepted ){
@@ -894,7 +897,8 @@ void MailQueueWalker::main()
         }
         if( mId != NULL ){
           uint64_t restFrom, remainder, rb = recvBytes(), sb = sendBytes();
-          *this << uint8_t(cmSendMail) << *mId << true >> restFrom;
+          *this << uint8_t(cmSendMail) << *mId << true;
+          *this >> restFrom;
           AsyncFile file;
           file.fileName(server_->mqueueDir() + *mId + ".msg").readOnly(true).open().seek(restFrom);
           *this << (remainder = file.size() - restFrom);
@@ -911,7 +915,7 @@ void MailQueueWalker::main()
           stdErr.debug(0,utf8::String::Stream() <<
             "Message " << *mId <<
             " sended to " << host_ << ", traffic " <<
-            recvBytes() - rb + sendBytes() - sb << "\n"
+            (recvBytes() - rb + sendBytes() - sb) << "\n"
           );
           file.close();
           remove(file.fileName());
@@ -987,7 +991,7 @@ void NodeClient::checkCode(int32_t code,int32_t noThrowCode)
 //------------------------------------------------------------------------------
 void NodeClient::checkCode(int32_t code,int32_t noThrowCode1,int32_t noThrowCode2)
 {
-  if( code != eOK && code != noThrowCode1 && code != noThrowCode1)
+  if( code != eOK && code != noThrowCode1 && code != noThrowCode2)
     newObjectV1C2<Exception>(code,__PRETTY_FUNCTION__)->throwSP();
 }
 //------------------------------------------------------------------------------
@@ -1168,9 +1172,9 @@ void NodeClient::main()
               uint64_t rStartTime;
               *this << uint8_t(cmRegisterDB) <<
                 uint32_t(ksock::api.ntohs(server_->bindAddrs()[0].addr4_.sin_port)) <<
-                uint64_t(getProcessStartTime()) >>
-                rStartTime;
+                uint64_t(getProcessStartTime())
               ;
+              *this >> rStartTime;
               if( useProto1 ) *this << uint8_t(dataType_);
               bool fullDump = false;
               {
