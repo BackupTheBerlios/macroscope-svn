@@ -396,6 +396,39 @@ typedef struct _WSA_COMPATIBILITY_MODE {
 #pragma option pop
 #endif
 
+#if SIZEOF_ADDRINFO == 0
+#ifndef __MINGW32__
+typedef struct addrinfo
+{
+    int                ai_flags;
+    int                ai_family;
+    int                ai_socktype;
+    int                ai_protocol;
+    size_t             ai_addrlen;
+    char *             ai_canonname;
+    struct sockaddr *   ai_addr;
+    struct addrinfo *   ai_next;
+};
+#endif
+typedef struct addrinfo ADDRINFOA, *PADDRINFOA;
+
+typedef struct addrinfoW
+{
+    int                ai_flags;
+    int                ai_family;
+    int                ai_socktype;
+    int                ai_protocol;
+    size_t             ai_addrlen;
+    PWSTR              ai_canonname;
+    struct sockaddr *   ai_addr;
+    struct addrinfoW *   ai_next;
+} ADDRINFOW, *PADDRINFOW;
+
+typedef ADDRINFOA ADDRINFO, *LPADDRINFO;
+
+#define SIZEOF_ADDRINFO sizeof(ADDRINFO)
+#endif
+
 #if HAVE_WINDOWS_H
 #include <windows.h>
 #endif
@@ -419,6 +452,10 @@ typedef struct _WSA_COMPATIBILITY_MODE {
 
 #if HAVE_WINTERNL_H
 #include <winternl.h>
+#endif
+
+#if HAVE_RAS_H
+#include <ras.h>
 #endif
 
 /*#if defined(HAVE_WINDOWS_H) && !defined(__CYGWIN__)
@@ -459,7 +496,9 @@ typedef struct _WSA_COMPATIBILITY_MODE {
 #endif
 #define GNUG_CONSTRUCTOR __attribute__((constructor))
 #define GNUG_DESTRUCTOR __attribute__((destructor))
+#ifndef DECLSPEC_NORETURN
 #define DECLSPEC_NORETURN
+#endif
 #define GNUG_NORETURN __attribute__((noreturn))
 #else
 #ifndef DECLSPEC_NOTHROW

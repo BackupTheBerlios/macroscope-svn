@@ -75,7 +75,7 @@
 #include "varcont.h"
 #include "cgi.h"
 #include "pcap.h"
-#if defined(__WIN32__) || defined(__WIN64__)
+#if (defined(__WIN32__) || defined(__WIN64__)) && !defined(__GNUG__)
 #include "pdbutils/pdbutils.h"
 #endif
 #include "gd.h"

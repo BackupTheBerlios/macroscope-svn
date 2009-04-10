@@ -80,6 +80,7 @@
 #cmakedefine HAVE_WINDOWS_H 1
 #cmakedefine HAVE_NTDLL_H 1
 #cmakedefine HAVE_NTSTATUS_H 1
+#cmakedefine HAVE_RAS_H 1
 #cmakedefine HAVE_MSWSOCK_H 1
 #cmakedefine HAVE_WBEMIDL_H 1
 #cmakedefine HAVE_DBGHELP_H 1
@@ -161,6 +162,7 @@
 #cmakedefine SIZEOF_KEVENT ${SIZEOF_KEVENT}
 #cmakedefine SIZEOF_UTIMBUF ${SIZEOF_UTIMBUF}
 #cmakedefine SIZEOF_UCONTEXT_T ${SIZEOF_UCONTEXT_T}
+#cmakedefine SIZEOF_ADDRINFO ${SIZEOF_ADDRINFO}
 
 #cmakedefine HAVE_CHOWN 1
 #cmakedefine HAVE_OPENDIR 1

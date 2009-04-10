@@ -173,8 +173,8 @@ class String {
       friend class BaseString;
       friend class String;
       // typed constructors
-      friend String plane(const char * s,uintptr_t size = ~uintptr_t(0) >> 1);
-      friend String plane(ksys::AutoPtr<char> & s,uintptr_t size = ~uintptr_t(0) >> 1);
+      friend String plane(const char * s,uintptr_t size);
+      friend String plane(ksys::AutoPtr<char> & s,uintptr_t size);
       public:
         ~Iterator();
         Iterator(const Iterator & i);

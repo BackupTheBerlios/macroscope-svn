@@ -482,8 +482,12 @@ bar(int i = 42, char* text = (0x0055A04C) "This is Text", int tc = 1)
 #ifndef win32_pdb_utils_h
 #define win32_pdb_utils_h
 
-#include <string.h> 
+#include <string.h>
+#if HAVE_NEW
+#include <new>
+#else
 #include <new.h>
+#endif
 
 #if defined(WIN32_DPB_UTILS_EXPORTS)
 # define _IN_DBGUTILS 1
@@ -502,7 +506,9 @@ bar(int i = 42, char* text = (0x0055A04C) "This is Text", int tc = 1)
 #define  DBGUTILS_EXPORT_TEMPLATE  
 #endif
 
+#ifdef _MSC_VER
 #pragma warning (disable : 4231)
+#endif
 
 #include "DbgString.h"
 #include "DbgVector.h"
