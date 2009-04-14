@@ -436,9 +436,11 @@ void ServerFiber::processMailbox(
   utf8::String myHost(server_->bindAddrs()[0].resolveAddr(defaultPort));
   Vector<utf8::String> list;
   getDirList(list,userMailBox + "*.msg",utf8::String(),false);
-  for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
+  intptr_t i = 0;
+  for( i = list.count() - 1; i >= 0 && !terminated_; i-- ){
     utf8::String id(changeFileExt(getNameFromPathName(list[i]),""));
-    bool isNewMessage = ids_.find(id) == NULL;
+    bool isNewMessage = false;
+    isNewMessage = ids_.find(id) == NULL;
     AsyncFile file(list[i]);
     try {
       file.open();
@@ -588,7 +590,8 @@ void SpoolWalker::processQueue(bool & timeWait)
   utf8::String myHost(server_->bindAddrs()[0].resolveAddr(defaultPort));
   Vector<utf8::String> list;
   getDirList(list,server_->spoolDir(id_) + "*.msg",utf8::String(),false);
-  for( intptr_t i = list.count() - 1; i >= 0 && !terminated_; i-- ){
+  intptr_t i = 0;
+  for( i = list.count() - 1; i >= 0 && !terminated_; i-- ){
     AsyncFile file(list[i]);
     try {
       file.open();
@@ -937,7 +940,8 @@ void MailQueueWalker::main()
       else {        
 // robot response
         AutoLock<FiberWriteLock> lock(messagesReadWriteLock_);
-        for( EmbeddedListNode<Message::Key> * node = messages_.first(); node != NULL; node = node->next() ){
+        EmbeddedListNode<Message::Key> * node = NULL;
+        for( node = messages_.first(); node != NULL; node = node->next() ){
           Message::Key * mId = &Message::Key::listNodeObject(*node);
           AsyncFile file(server_->mqueueDir() + *mId + ".msg");
           AutoPtr<Message> message(newObject<Message>());
@@ -1063,11 +1067,11 @@ void NodeClient::main()
   server_->data(stStandalone).registerServer(
     ServerInfo(server_->bindAddrs()[0].resolveAddr(defaultPort),stStandalone)
   );
-  intptr_t i;
+  intptr_t i = 0;
   utf8::String server, host, enabledPath(utf8::String(serverConfSectionName[stStandalone]) + ".enabled");
   Server::Data & data = server_->data(dataType_);
+  bool tryConnect = false, connected = false, exchanged = false, doWork;
   try {
-    bool tryConnect = false, connected, exchanged, doWork;
     do {
       server_->config_->parse();
       stdErr.setDebugLevels(server_->config_->value("debug_levels","+0,+1,+2,+3"));

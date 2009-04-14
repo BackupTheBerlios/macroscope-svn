@@ -371,7 +371,8 @@ void Server::sendMessage(const utf8::String & host,const utf8::String & id,const
 void Server::removeSender(MailQueueWalker & sender) // must be called only from terminating fiber !!!
 {
   AutoLock<FiberWriteLock> lock(sendMailFibersReadWriteLock_);
-  EmbeddedListNode<Message::Key> * p = sender.messages_.first();
+  EmbeddedListNode<Message::Key> * p = NULL;
+  p = sender.messages_.first();
   while( p != NULL ){
     utf8::String key(Message::Key::listNodeObject(*p));
     utf8::String fileName(mqueueDir() + key + ".msg");

@@ -169,7 +169,7 @@ void API::open()
     }
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
-      (&p_isc_attach_database)[i] = GetProcAddress(handle_,symbols_[i]);
+      (&p_isc_attach_database)[i] = (void *) GetProcAddress(handle_,symbols_[i]);
       if( strcmp(symbols_[i],"fb_interpret") != 0 ){
         if( (&p_isc_attach_database)[i] == NULL ){
           err = GetLastError() + ksys::errorOffset;

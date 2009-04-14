@@ -31,7 +31,21 @@ namespace ksys {
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-#if __GNUG__ && __i386__
+#if defined(__WIN32__) || defined(__WIN64__)
+inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
+{
+  return InterlockedExchangeAdd((LONG *) &v,a);
+}
+
+int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
+
+inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
+{
+  return InterlockedCompareExchange((LONG *) &v,exValue,cmpValue);
+}
+
+int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue);
+#elif __GNUG__ && __i386__
 inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
 {
   asm volatile ( "lock; xadd %%eax,(%%edx)" : "=a" (a) : "d" (&v), "a" (a));
@@ -82,20 +96,6 @@ inline int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,i
   asm volatile ("lock; cmpxchg %%rcx,(%%rdx)" : "=a" (cmpValue) : "d" (&v), "a" (cmpValue), "c" (exValue));
   return cmpValue;
 }
-#elif defined(__WIN32__) || defined(__WIN64__)
-inline int32_t interlockedIncrement(volatile int32_t & v,int32_t a)
-{
-  return InterlockedExchangeAdd((LONG *) &v,a);
-}
-
-int64_t interlockedIncrement(volatile int64_t & v,int64_t a);
-
-inline int32_t interlockedCompareExchange(volatile int32_t & v, int32_t exValue, int32_t cmpValue)
-{
-  return InterlockedCompareExchange((LONG *) &v,exValue,cmpValue);
-}
-
-int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue);
 #else
 int32_t interlockedIncrement(volatile int32_t & v,int32_t a);
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a);

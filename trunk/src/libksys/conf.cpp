@@ -591,6 +591,7 @@ Config & Config::parseSectionBody(ConfigSection & root)
 //---------------------------------------------------------------------------
 Config & Config::parse()
 {
+  intptr_t i = 0;
   utf8::String fileName;
   if( file_.fileName().isNull() ){
     if( defaultFileName().isNull() ){
@@ -605,7 +606,7 @@ Config & Config::parse()
   if( stat(fileName,st) && mtime_ != st.st_mtime ){
     AutoPtr<Randomizer> rnd(newObject<Randomizer>());
     rnd->randomize();
-    for( intptr_t i = maxTryOpenCount_ - 1; i >= 0; i-- ){
+    for( i = maxTryOpenCount_ - 1; i >= 0; i-- ){
       try {
         file_.readOnly(true).exclusive(true).createIfNotExist(false).open();
 /*#ifndef NDEBUG

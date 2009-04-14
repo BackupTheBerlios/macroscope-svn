@@ -134,7 +134,7 @@ void API::open()
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
       void * & func = *((void **) &SQLAllocHandle + i);
 #if defined(__WIN32__) || defined(__WIN64__)
-      func = GetProcAddress(handle_,symbols_[i]);
+      func = (void *) GetProcAddress(handle_,symbols_[i]);
       if( func == NULL ){
         err = GetLastError() + errorOffset;
         FreeLibrary(handle_);

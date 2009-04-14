@@ -152,7 +152,7 @@ PCAP_API & PCAP_API::open()
   for( uintptr_t i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
 #define FUNC_NAME "GetProcAddress"
-    ((void **) &api.pcap_breakloop)[i] = GetProcAddress(handle_,symbols[i]);
+    ((void **) &api.pcap_breakloop)[i] = (void *) GetProcAddress(handle_,symbols[i]);
 #elif HAVE_DLFCN_H
 #define FUNC_NAME "dlsym"
     ((void **) &api.pcap_breakloop)[i] = dlsym(handle_,symbols[i]);
@@ -1092,11 +1092,12 @@ void PCAP::LazyWriter::threadBeforeWait()
 //------------------------------------------------------------------------------
 void PCAP::LazyWriter::swapOut(AsyncFile & tempFile,AutoPtr<PacketGroup> & group)
 {
+  uint64_t size = 0;
   PacketGroup::SwapFileHeader header;
   bool swapped = false;
   try {
     tempFile.createIfNotExist(true).open();
-    uint64_t size = tempFile.size();
+    size = tempFile.size();
     try {
       header = group->header_;
       tempFile.seek(size).

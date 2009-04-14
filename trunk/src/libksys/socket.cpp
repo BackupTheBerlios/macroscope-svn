@@ -27,6 +27,31 @@
 #include <adicpp/ksys.h>
 #include <adicpp/stmflt.h>
 //------------------------------------------------------------------------------
+#if __MINGW32__
+  typedef VOID WINAPI (* LPFN_GETACCEPTEXSOCKADDRS)(
+    IN PVOID lpOutputBuffer,
+    IN DWORD dwReceiveDataLength,
+    IN DWORD dwLocalAddressLength,
+    IN DWORD dwRemoteAddressLength,
+    OUT struct sockaddr **LocalSockaddr,
+    OUT LPINT LocalSockaddrLength,
+    OUT struct sockaddr **RemoteSockaddr,
+    OUT LPINT RemoteSockaddrLength
+  );
+#define WSAID_GETACCEPTEXSOCKADDRS { 0xB5367DF2, 0xCBAC, 0x11CF, { 0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92 } }
+  typedef BOOL WINAPI (* LPFN_ACCEPTEX)(
+    IN SOCKET sListenSocket,
+    IN SOCKET sAcceptSocket,
+    IN PVOID lpOutputBuffer,
+    IN DWORD dwReceiveDataLength,
+    IN DWORD dwLocalAddressLength,
+    IN DWORD dwRemoteAddressLength,
+    OUT LPDWORD lpdwBytesReceived,
+    IN LPOVERLAPPED lpOverlapped
+  );
+#define WSAID_ACCEPTEX { 0xB5367DF1, 0xCBAC, 0x11CF, { 0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92 } }
+#endif
+//------------------------------------------------------------------------------
 namespace ksock {
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////

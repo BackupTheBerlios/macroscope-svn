@@ -307,7 +307,7 @@ static void * getframeaddr(intptr_t level)
 static inline bool isInvalidPointer(char * p,char * pp)
 {
   return
-    (intptr_t(p) >= 0 && intptr_t(p) < getpagesize()) ||
+    (intptr_t(p) >= 0 && uintptr_t(p) < getpagesize()) ||
     p - pp > 0x100000 ||
     p == NULL
   ;
@@ -340,9 +340,10 @@ char ** backtrace_symbols(char ** buffer)
   for( i = 0; buffer != NULL && buffer[i] != NULL; i++ ) clen += sizeof(char *);
   for( i = 0; buffer != NULL && buffer[i] != NULL; i++ ){
     char * cp;
-    intptr_t alen = 0, offset, j;
-    Dl_info info;
+    intptr_t alen = 0, j;
 #if HAVE_DLFCN_H
+    intptr_t offset;
+    Dl_info info;
     if( dladdr(buffer[i],&info) != 0 ){
       if( info.dli_sname == NULL ) info.dli_sname = "???";
       if( info.dli_saddr == NULL ) info.dli_saddr = buffer[i];

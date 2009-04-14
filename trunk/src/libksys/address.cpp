@@ -465,18 +465,22 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
 {
   SockAddr addr;
   int32_t err = 0;
+  IP_ADAPTER_ADDRESSES * pAddress = NULL;
+  IP_ADAPTER_INFO * pAddress2 = NULL;
+  PIP_ADAPTER_UNICAST_ADDRESS unicast = NULL;
+  PIP_ADDR_STRING list = NULL;
   utf8::String s;
   APIAutoInitializer ksockAPIAutoInitializer;
 #if defined(__WIN32__) || defined(__WIN64__)
   ksys::Array<IpInfo> addresses;
   getAdaptersAddresses(addresses);
   if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
-    IP_ADAPTER_ADDRESSES * pAddress = &addresses[0].addresses_;
+    pAddress = &addresses[0].addresses_;
     while( pAddress != NULL ){
 // exclude loopback interface
       if( pAddress->IfType == MIB_IF_TYPE_LOOPBACK ) continue;
       if( pAddress->PhysicalAddressLength == 0 ) continue;
-      PIP_ADAPTER_UNICAST_ADDRESS unicast = pAddress->FirstUnicastAddress;
+      unicast = pAddress->FirstUnicastAddress;
       while( unicast != NULL ){
 #ifdef IP_ADAPTER_ADDRESS_PRIMARY
         if( unicast->Flags & (IP_ADAPTER_ADDRESS_DNS_ELIGIBLE | IP_ADAPTER_ADDRESS_PRIMARY) ){
@@ -507,10 +511,10 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
     }
   }
   else {
-    IP_ADAPTER_INFO * pAddress = &addresses[0].infos_;
-    while( pAddress != NULL ){
-      if( pAddress->Type == MIB_IF_TYPE_LOOPBACK ) continue;
-      PIP_ADDR_STRING list = &pAddress->IpAddressList;
+    pAddress2 = &addresses[0].infos_;
+    while( pAddress2 != NULL ){
+      if( pAddress2->Type == MIB_IF_TYPE_LOOPBACK ) continue;
+      list = &pAddress2->IpAddressList;
       while( list != NULL ){
         try {
           err = 0;
@@ -523,7 +527,7 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
         list = list->Next;
       }
       if( err == 0 ) break;
-      pAddress = pAddress->Next;
+      pAddress2 = pAddress2->Next;
     }
   }
 #endif

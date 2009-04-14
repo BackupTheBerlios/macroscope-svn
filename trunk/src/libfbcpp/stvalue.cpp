@@ -365,7 +365,7 @@ ksys::Vector< DSQLValue> * DSQLValues::bind()
     DSQLValueArray *  valueArray;
     DSQLValueBlob *   valueBlob;
   };
-  uintptr_t i, j;
+  uintptr_t i = 0, j;
   for( i = 0; i < sqlda_.count(); i++ ){
     XSQLVAR & v = sqlda_.sqlda()->sqlvar[i];
     switch( v.sqltype & ~1 ){

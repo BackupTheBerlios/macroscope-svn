@@ -184,7 +184,7 @@ void API::open()
     }
     uintptr_t i;
     for( i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
-      ((void **) &p_WSAGetLastError)[i] = GetProcAddress(handle_, symbols_[i]);
+      ((void **) &p_WSAGetLastError)[i] = (void *) GetProcAddress(handle_, symbols_[i]);
       if( ((void **) &p_WSAGetLastError)[i] == NULL &&
           (void **) &p_WSAGetLastError + i != &p_getaddrinfo &&
           (void **) &p_WSAGetLastError + i != &p_freeaddrinfo &&
@@ -208,7 +208,7 @@ void API::open()
       }
     }
     for( i = 0; i < sizeof(apiEx.symbols_) / sizeof(apiEx.symbols_[0]); i++ ){
-      ((void **) &apiEx.p_AcceptEx)[i] = GetProcAddress(apiEx.handle_, apiEx.symbols_[i]);
+      ((void **) &apiEx.p_AcceptEx)[i] = (void *) GetProcAddress(apiEx.handle_, apiEx.symbols_[i]);
       if( ((void **) &apiEx.p_AcceptEx)[i] == NULL ){
         err = GetLastError() + ksys::errorOffset;
         FreeLibrary(handle_);
@@ -226,7 +226,7 @@ void API::open()
       }
     }
     for( i = 0; i < sizeof(iphlpapi.symbols_) / sizeof(iphlpapi.symbols_[0]); i++ ){
-      ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] = GetProcAddress(iphlpapi.handle_,iphlpapi.symbols_[i]);
+      ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] = (void *) GetProcAddress(iphlpapi.handle_,iphlpapi.symbols_[i]);
       if( ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] == NULL &&
           ((void **) &iphlpapi.p_GetAdaptersAddresses)[i] != iphlpapi.p_GetAdaptersAddresses ){
         err = GetLastError() + ksys::errorOffset;
@@ -245,7 +245,7 @@ void API::open()
 
     /*if( ksys::isWin9x() || GetProcAddress(handle_,"GetAddrInfoW") == NULL ){
       for( i = 0; i < sizeof(wship6api.symbols_) / sizeof(wship6api.symbols_[0]); i++ ){
-        ((void **) &wship6api.p_getaddrinfo)[i] = GetProcAddress(wship6api.handle_,wship6api.symbols_[i]);
+        ((void **) &wship6api.p_getaddrinfo)[i] = (void *) GetProcAddress(wship6api.handle_,wship6api.symbols_[i]);
         if( ((void **) &wship6api.p_getaddrinfo)[i] == NULL ){
           err = GetLastError() + ksys::errorOffset;
           FreeLibrary(handle_);

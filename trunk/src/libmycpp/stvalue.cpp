@@ -35,7 +35,7 @@ DSQLRow * DSQLValues::bind()
   ksys::AutoPtr<DSQLRow> row(newObject<DSQLRow>());
   row->index_.resize(bind_.count());
   row->isNulls_.resize(bind_.count());
-  uintptr_t i;
+  uintptr_t i = 0;
   memset(bind_.bind(), 0, sizeof(MYSQL_BIND) * bind_.count());
   for( i = 0; i < bind_.count(); i++ ){
     row->index_[i] = row->rowSize_;

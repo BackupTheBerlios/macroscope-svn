@@ -158,9 +158,11 @@ void MSUpdateFetcher::fiberExecute()
   uint64_t lastCheckUpdate = 0;
   while( !terminated_ ){
     updater_->config_->parse().override();
-    uint64_t interval = updater_->config_->valueByPath("update.interval",180);
+    uint64_t interval = 0;
+    interval = updater_->config_->valueByPath("update.interval",180);
     interval *= 60000000u;
-    bool setupEnded = setupSem_.tryWait();
+    bool setupEnded = false;
+    setupEnded = setupSem_.tryWait();
     if( getlocaltimeofday() - lastCheckUpdate >= interval && setupEnded ){
       fetch.url(updater_->config_->valueByPath("update.url"));
       fetch.proxy(updater_->config_->valueByPath("update.proxy"));
@@ -192,7 +194,8 @@ void MSUpdateFetcher::fiberExecute()
           );
         }
         else {
-          for( intptr_t i = updateURLs.count() - 1; i >= 0; i-- ){
+          intptr_t i = 0;
+          for( i = updateURLs.count() - 1; i >= 0; i-- ){
             uint64_t urlHash = updateURLs[i].hash_ll(true);
             utf8::String sectionName(base32Encode(&urlHash,sizeof(urlHash)));
             bool fetched = false;
@@ -214,7 +217,8 @@ void MSUpdateFetcher::fiberExecute()
             }
             updatesSetup.section(sectionName).setValue("fetched",fetched);
             updatesSetup.section(sectionName).setValue("url",fetch.url());
-            bool extracted = updatesSetup.section(sectionName).value("extracted",false);
+            bool extracted = false;
+            extracted = updatesSetup.section(sectionName).value("extracted",false);
             if( fetched && !extracted ){
               Archive ar;
               try {

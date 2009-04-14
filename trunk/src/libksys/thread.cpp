@@ -296,6 +296,11 @@ Thread & Thread::wait()
   return *this;
 }
 //---------------------------------------------------------------------------
+Thread & Thread::priority(intptr_t pri,bool noThrow)
+{
+  return priority(uintptr_t(pri),noThrow);
+}
+//---------------------------------------------------------------------------
 Thread & Thread::priority(uintptr_t pri,bool noThrow)
 {
   if( started_ && !finished_ ){
@@ -366,7 +371,7 @@ uintptr_t Thread::priority() const
   return pri;
 }
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
+#if (defined(__WIN32__) || defined(__WIN64__)) && !defined(__MINGW32__)
 //---------------------------------------------------------------------------
 //#pragma comment (linker, "/defaultlib:ntdll.lib")
 //---------------------------------------------------------------------------

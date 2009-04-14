@@ -174,12 +174,12 @@ GD_API & GD_API::open()
   for( uintptr_t i = 0; i < sizeof(symbols) / sizeof(symbols[0]); i++ ){
 #if defined(__WIN32__) || defined(__WIN64__)
 #define FUNC_NAME "GetProcAddress"
-    ((void **) &api.gdImageCreate)[i] = GetProcAddress(handle_,symbols[i]);
+    ((void **) &api.gdImageCreate)[i] = (void *) GetProcAddress(handle_,symbols[i]);
     char sym[128];
     if( ((void **) &api.gdImageCreate)[i] == NULL ){
       strcpy(sym,"_");
       strcat(sym,symbols[i]);
-      ((void **) &api.gdImageCreate)[i] = GetProcAddress(handle_,sym);
+      ((void **) &api.gdImageCreate)[i] = (void *) GetProcAddress(handle_,sym);
       if( ((void **) &api.gdImageCreate)[i] == NULL ){
         for( uintptr_t j = 0; j < 128; j += 4 ){
           strcpy(sym,"_");
@@ -187,7 +187,7 @@ GD_API & GD_API::open()
           char b[5];
           sprintf(b,"@%"PRIuPTR,j);
           strcat(sym,b);
-          ((void **) &api.gdImageCreate)[i] = GetProcAddress(handle_,sym);
+          ((void **) &api.gdImageCreate)[i] = (void *) GetProcAddress(handle_,sym);
           if( ((void **) &api.gdImageCreate)[i] != NULL ) break;
         }
       }

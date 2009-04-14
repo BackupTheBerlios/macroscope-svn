@@ -450,11 +450,13 @@ void MSFTPWatchdog::fiberExecute()
   utf8::String dir(excludeTrailingPathDelimiter(msftp_->msftpConfig_->textByPath(section_ + ".directory")));
   utf8::String exec(msftp_->msftpConfig_->textByPath(section_ + ".exec"));
   utf8::String cmdLine(msftp_->msftpConfig_->textByPath(section_ + ".command_line"));
-  uint64_t timeout = msftp_->msftpConfig_->valueByPath(section_ + ".timeout",0);
-  uint64_t delay = msftp_->msftpConfig_->valueByPath(section_ + ".delay",30);
+  uint64_t timeout = 0, delay = 0, repeatDelay = 0;
+  timeout = msftp_->msftpConfig_->valueByPath(section_ + ".timeout",0);
+  delay = msftp_->msftpConfig_->valueByPath(section_ + ".delay",30);
   bool execDaemonStartup = msftp_->msftpConfig_->valueByPath(section_ + ".exec_daemon_startup",true);
-  bool repeatIfExitCodeNonzero = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_if_exit_code_nonzero",true);
-  uint64_t repeatDelay = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_delay",10);
+  bool repeatIfExitCodeNonzero = false;
+  repeatIfExitCodeNonzero = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_if_exit_code_nonzero",true);
+  repeatDelay = msftp_->msftpConfig_->valueByPath(section_ + ".repeat_delay",10);
   dcn_.createPath(false);
   intptr_t exitCode = 0;
   while( !terminated_ ){

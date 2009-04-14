@@ -305,11 +305,11 @@ void BaseThread::threadExecute()
 #if defined(__WIN32__) || defined(__WIN64__)
   }
   catch( ExceptionSP & ){
-    interlockedIncrement(server_->threadsCount_,-1);
+    interlockedIncrement(server_->threadsCount_,uintptr_t(intptr_t(-1)));
     clearFiber();
     throw;
   }
-  interlockedIncrement(server_->threadsCount_,-1);
+  interlockedIncrement(server_->threadsCount_,uintptr_t(intptr_t(-1)));
   clearFiber();
 #endif
 }

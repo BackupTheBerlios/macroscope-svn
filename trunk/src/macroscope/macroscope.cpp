@@ -790,7 +790,8 @@ void Logger::reactivateIndices(bool reactivate,bool setStat)
       "WHERE"
       "  NOT RDB$RELATION_NAME LIKE 'RDB$%' "
       "ORDER BY RDB$RELATION_NAME DESC, RDB$INDEX_NAME DESC")->execute()->fetchAll();
-    for( intptr_t i = statement_->rowCount() - 1; i >= 0; i-- ){
+    intptr_t i = 0;
+    for( i = statement_->rowCount() - 1; i >= 0; i-- ){
       statement_->selectRow(i);
       if( statement_->valueAsString("RDB$RELATION_NAME").ncasecompare("RDB$",4) == 0 ) continue;
       utf8::String tableName(statement_->valueAsString("RDB$RELATION_NAME").trimRight());
@@ -1150,6 +1151,8 @@ Sniffer * Logger::getSnifferBySection(const utf8::String & sectionName)
 //------------------------------------------------------------------------------
 int32_t Logger::doWork(uintptr_t stage)
 {
+  bool all = false;
+  uint64_t ellapsed = 0;
   int32_t exitCode = 0;
   if( sniffer_ && !cgi_.isCGI() ){
     if( stage == 1 ){
@@ -1192,7 +1195,7 @@ int32_t Logger::doWork(uintptr_t stage)
     }
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("rolloutif") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     struct tm cgiBT, cgiET;
     memset(&cgiBT,0,sizeof(cgiBT));
     cgiBT.tm_year = (int) cgi_.paramAsMutant("byear") - 1900;
@@ -1239,9 +1242,9 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("renameif") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
-    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
+    all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     statement_->text("DELETE FROM INET_IFACES" + utf8::String(all ? "" : " WHERE iface = :if"));
     if( !all ) statement_->prepare()->paramAsString("if",cgi_.paramAsString("if"));
@@ -1281,7 +1284,7 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("copydb") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
 
     ConfigSection dbParamsSection;
@@ -1321,7 +1324,7 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("copyif") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
 
     ConfigSection dbParamsSection;
@@ -1331,7 +1334,7 @@ int32_t Logger::doWork(uintptr_t stage)
     
     if( !connection.isNull() ) database2->attach();
 
-    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
+    all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     if( connection.isNull() ){
       statement_->text("INSERT INTO INET_IFACES (iface) VALUES (:if)")->
@@ -1455,10 +1458,10 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropif") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
     utf8::String filter(cgi_.paramAsString("filter"));
-    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
+    all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     for( intptr_t i = PCAP::pgpCount - 1; i >= 0; i-- ){
       utf8::String s;
@@ -1504,7 +1507,7 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("dropdns") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     AutoDatabaseDetach autoDatabaseDetach(database_);
     database_->start();
     statement_->text("delete from INET_DNS_CACHE")->execute();
@@ -1534,8 +1537,8 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("recalc_totals") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
-    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
+    ellapsed = gettimeofday();
+    all = cgi_.paramAsString("if").casecompare("all") == 0;
     Array<utf8::String> ifaces;
     if( all ){
       database_->attach()->start();
@@ -1574,7 +1577,7 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("reactivate_indices") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -1604,7 +1607,7 @@ int32_t Logger::doWork(uintptr_t stage)
     );
   }
   else if( stage == 1 && cgi_.isCGI() && cgi_.paramIndex("set_indices_statistics") >= 0 ){
-    uint64_t ellapsed = gettimeofday();
+    ellapsed = gettimeofday();
     cgi_ <<
       "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">\n"
       "<HTML>\n"
@@ -1672,7 +1675,7 @@ int32_t Logger::doWork(uintptr_t stage)
 
     AutoDatabaseDetach autoDatabaseDetach(database_);
     utf8::String filter(cgi_.paramAsString("filter"));
-    bool all = cgi_.paramAsString("if").casecompare("all") == 0;
+    all = cgi_.paramAsString("if").casecompare("all") == 0;
     database_->start();
     utf8::String s;
     if( all ){

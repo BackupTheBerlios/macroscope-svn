@@ -47,7 +47,7 @@ extern const uint8_t utf8SeqLens[64] = {
          3,      3,      3,      3,      4,      4,      5,      6
 };
 //---------------------------------------------------------------------------
-extern intptr_t (utf8::String::* const strCmpFuncs[2])(const utf8::String &) const = {
+intptr_t (utf8::String::* const strCmpFuncs[2])(const utf8::String &) const = {
     &utf8::String::casecompare, &utf8::String::compare
 };
 //---------------------------------------------------------------------------

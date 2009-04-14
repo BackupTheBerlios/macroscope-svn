@@ -383,8 +383,8 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
             object->socket_,
             NULL,
             0,
-            NULL,
-            NULL,
+            0,
+            0,
             NULL,
             isw9x ? NULL : &object->overlapped_
           );
@@ -447,7 +447,7 @@ l1:   SetErrorMode(SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS);
         DWORD err0 = GetLastError();
         acquire();
         SetLastError(err0);
-        if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp + 1 ){
+        if( wm >= wm0 && wm < DWORD(WAIT_OBJECT_0 + sp + 1) ){
           wm -= WAIT_OBJECT_0;
 l2:       object = eReqs_[wm];
           assert( object != NULL );
@@ -480,16 +480,16 @@ l2:       object = eReqs_[wm];
             }
           }
         }
-        else if( wm >= WAIT_ABANDONED_0 && wm < WAIT_ABANDONED_0 + sp + 1 ){
+        else if( wm >= WAIT_ABANDONED_0 && wm < DWORD(WAIT_ABANDONED_0 + sp + 1) ){
           wm -= WAIT_ABANDONED_0;
           goto l2;
         }
-        else if( wm == WAIT_OBJECT_0 + sp + 1	){
+        else if( wm == DWORD(WAIT_OBJECT_0 + sp + 1) ){
           wm -= WAIT_OBJECT_0;
           nb = ResetEvent(events[wm]);
           assert( nb != 0 );
         }
-        else if( wm == WAIT_ABANDONED_0 + sp + 1	){
+        else if( wm == DWORD(WAIT_ABANDONED_0 + sp + 1) ){
           wm -= WAIT_ABANDONED_0;
           nb = ResetEvent(events[wm]);
           assert( nb != 0 );
@@ -509,7 +509,7 @@ l2:       object = eReqs_[wm];
                 CancelIo(object->descriptor_->descriptor_);
 #ifndef NDEBUG
                 wm0 = GetLastError();
-                assert( cir != NULL );
+                assert( cir != FALSE );
 #endif
               }
               safeEvents_[ssp++] = events[i];
@@ -1435,22 +1435,22 @@ void AsyncAcquireSlave::threadExecute()
       sems_[sp + 1] = sems_[MAXIMUM_WAIT_OBJECTS - 1];
       DWORD wm = WaitForMultipleObjectsEx(DWORD(sp + 2),sems_,FALSE,tma,TRUE);
       acquire();
-      if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp + 1 ){
+      if( wm >= wm0 && wm < DWORD(WAIT_OBJECT_0 + sp + 1) ){
         wm -= WAIT_OBJECT_0;
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm >= WAIT_ABANDONED_0 && wm < WAIT_ABANDONED_0 + sp + 1 ){
+      else if( wm >= WAIT_ABANDONED_0 && wm < DWORD(WAIT_ABANDONED_0 + sp + 1) ){
         wm -= WAIT_ABANDONED_0;
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm == WAIT_OBJECT_0 + sp + 1 ){
+      else if( wm == DWORD(WAIT_OBJECT_0 + sp + 1) ){
         ResetEvent(sems_[wm]);
       }
-      else if( wm == WAIT_ABANDONED_0 + sp + 1 ){
+      else if( wm == DWORD(WAIT_ABANDONED_0 + sp + 1) ){
         ResetEvent(sems_[wm]);
       }
       else if( wm == WAIT_TIMEOUT ){
@@ -1615,24 +1615,24 @@ void AsyncWin9xDirectoryChangeNotificationSlave::threadExecute()
       DWORD wm0, wm = WaitForMultipleObjectsEx(DWORD(sp_ + 2),sems_,FALSE,INFINITE,FALSE);
       acquire();
       wm0 = WAIT_OBJECT_0;
-      if( wm >= wm0 && wm < WAIT_OBJECT_0 + sp_ + 1 ){
+      if( wm >= wm0 && wm < DWORD(WAIT_OBJECT_0 + sp_ + 1) ){
         wm -= WAIT_OBJECT_0;
         assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm >= STATUS_ABANDONED_WAIT_0 && wm < STATUS_ABANDONED_WAIT_0 + sp_ + 1 ){
+      else if( wm >= STATUS_ABANDONED_WAIT_0 && wm < DWORD(STATUS_ABANDONED_WAIT_0 + sp_ + 1) ){
         wm -= STATUS_ABANDONED_WAIT_0;
         assert( wm < MAXIMUM_WAIT_OBJECTS - 1 );
         object = eSems_[wm];
         assert( object != NULL );
         node = &AsyncEvent::node(*object);
       }
-      else if( wm == WAIT_OBJECT_0 + sp_ + 1 ){
+      else if( wm == DWORD(WAIT_OBJECT_0 + sp_ + 1) ){
         ResetEvent(sems_[WAIT_OBJECT_0 + sp_ + 1]);
       }
-      else if( wm == STATUS_ABANDONED_WAIT_0 + sp_ + 1 ){
+      else if( wm == DWORD(STATUS_ABANDONED_WAIT_0 + sp_ + 1) ){
         ResetEvent(sems_[STATUS_ABANDONED_WAIT_0 + sp_ + 1]);
       }
       else {
@@ -1676,7 +1676,7 @@ bool AsyncWin9xDirectoryChangeNotificationSlave::abortNotification(DirectoryChan
 //---------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-#ifndef NDEBUG
+#if !defined(NDEBUG) && !defined(__MINGW32__)
 //------------------------------------------------------------------------------
 AsyncStackBackTraceSlave::~AsyncStackBackTraceSlave()
 {
@@ -2057,7 +2057,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
         }
       }
       return;
-#if defined(__WIN32__) || defined(__WIN64__)
+#if (defined(__WIN32__) || defined(__WIN64__)) && !defined(__MINGW32__)
 #ifndef NDEBUG
     case etStackBackTrace :
       {
@@ -2079,7 +2079,7 @@ void Requester::postRequest(AsyncDescriptor * descriptor)
 //---------------------------------------------------------------------------
 void Requester::postRequest(AsyncEvent * event)
 {
-#if defined(__WIN32__) || defined(__WIN64__)
+#if (defined(__WIN32__) || defined(__WIN64__)) && !defined(__MINGW32__)
 #ifndef NDEBUG
   switch( event->type_ ){
     case etStackBackTraceZero :

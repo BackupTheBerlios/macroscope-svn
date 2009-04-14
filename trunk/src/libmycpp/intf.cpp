@@ -163,11 +163,11 @@ void API::open()
     for( uintptr_t i = 0; i < sizeof(symbols_) / sizeof(symbols_[0]); i++ ){
       void * & func = *(void **) (&p_mysql_thread_safe + i);
 #if defined(__WIN32__) || defined(__WIN64__)
-      func = GetProcAddress(handle_,symbols_[i]);
+      func = (void *) GetProcAddress(handle_,symbols_[i]);
       if( func == NULL ){
-        if( &func == &p_mysql_library_init ) func = GetProcAddress(handle_,"mysql_server_init");
+        if( &func == &p_mysql_library_init ) func = (void *) GetProcAddress(handle_,"mysql_server_init");
         else
-	      if( &func == &p_mysql_library_end ) func = GetProcAddress(handle_,"mysql_server_end");
+	if( &func == &p_mysql_library_end ) func = (void *) GetProcAddress(handle_,"mysql_server_end");
         else
         if( &func == &p_my_thread_init ) continue; //func = p_mysql_thread_init;
         else

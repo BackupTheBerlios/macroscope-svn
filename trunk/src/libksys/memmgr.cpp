@@ -117,7 +117,7 @@ MemoryManager::MemoryManager() :
           ph = GetProcAddress(GetModuleHandleA("KERNEL32.DLL"),"GetLargePageMinimum");
           if( pGetLargePageMinimum != NULL && pGetLargePageMinimum() > si.dwAllocationGranularity ){
             clusterSize_ = pGetLargePageMinimum();
-            flags_ = MEM_LARGE_PAGES;
+            //flags_ = MEM_LARGE_PAGES;
             bool locked;
             void * memory = sysalloc(clusterSize_,true,locked,true);
             if( memory == NULL ){

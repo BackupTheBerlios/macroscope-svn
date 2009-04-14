@@ -341,7 +341,8 @@ bool Sniffer::insertPacketsInDatabase(uint64_t bt,uint64_t /*et*/,const HashedPa
       updates_ = 0;
       updatesTime_ = 0;
     }
-    uint64_t ellapsed = gettimeofday();
+    uint64_t ellapsed = 0;
+    ellapsed = gettimeofday();
     database_->start();
     if( ifaces_ == NULL ) ifaces_ = database_->newAttachedStatement();
     if( !ifaces_->prepared() )

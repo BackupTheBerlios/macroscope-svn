@@ -149,7 +149,8 @@ void KFTPClient::put()
   utf8::String exclude(shell_->config_->section(section_).section("put").text("exclude"));
   bool recursive = shell_->config_->value("recursive",true);
   recursive = shell_->config_->section(section_).section("put").value("recursive",recursive);
-  uint64_t partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
+  uint64_t partialBlockSize = 0;
+  partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
   partialBlockSize = shell_->config_->section(section_).section("put").value("partial_block_size",partialBlockSize);
   if( shell_->config_->section(section_).section("put").isValue("log_file") ){
     logFile_.flush(true);
@@ -168,8 +169,10 @@ void KFTPClient::put()
       shell_->config_->section(section_).section("put").text("remote")
     )
   );
-  int64_t all = 0, ptime = getlocaltimeofday(), atime = 0, ttime;
-  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+  int64_t all = 0, ptime = 0, atime = 0, ttime;
+  ptime = getlocaltimeofday();
+  intptr_t i = 0;
+  for( i = list.count() - 1; i >= 0; i-- ){
     uint64_t l, ll, lp, rl;
     utf8::String rfile(
       remotePath + utf8::String(utf8::String::Iterator(list[i]) + localPath.length())
@@ -338,10 +341,12 @@ void KFTPClient::get()
     shell_->config_->section(section_).section("get").text("remote")
   );
   utf8::String remotel(includeTrailingPathDelimiter(getPathFromPathName(remote)));
-  uint64_t bs = (uint64_t) shell_->config_->value("buffer_size",getpagesize());
+  uint64_t bs = 0;
+  bs = (uint64_t) shell_->config_->value("buffer_size",getpagesize());
   bs = (uint64_t) shell_->config_->section(section_).section("get").value("buffer_size",bs);
   if( bs == 0 ) bs = getpagesize();
-  uint64_t partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
+  uint64_t partialBlockSize = 0;
+  partialBlockSize = shell_->config_->value("partial_block_size",getpagesize());
   partialBlockSize = shell_->config_->section(section_).section("get").value("partial_block_size",partialBlockSize);
   if( shell_->config_->section(section_).section("get").isValue("log_file") ){
     logFile_.flush(true);
@@ -351,14 +356,16 @@ void KFTPClient::get()
     log_ = &logFile_;
   }
 
-  uint64_t all = 0, ptime = getlocaltimeofday(), atime = 0, ttime;
+  uint64_t all = 0, ptime = 0, atime = 0, ttime;
   uint64_t l, ll, lp, r, wl;
   Vector<utf8::String> list;
+  ptime = getlocaltimeofday();
   *this << int8_t(cmList) << remote << exclude << uint8_t(recursive);
   getCode();
   *this >> ll;
   while( ll-- > 0 ) list.add(readString());
-  for( intptr_t i = list.count() - 1; i >= 0; i-- ){
+  intptr_t i = 0;
+  for( i = list.count() - 1; i >= 0; i-- ){
     try {
       AsyncFile file(localPath + list[i]);
       file.createIfNotExist(true).open();

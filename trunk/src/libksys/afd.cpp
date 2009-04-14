@@ -354,8 +354,9 @@ uint64_t AsyncFile::size() const
 //---------------------------------------------------------------------------
 AsyncFile & AsyncFile::resize(uint64_t nSize)
 {
-  uint64_t oldPos = tell();
-  try{
+  uint64_t oldPos = 0;
+  oldPos = tell();
+  try {
     int32_t err;
 #if defined(__WIN32__) || defined(__WIN64__)
     seek(nSize);

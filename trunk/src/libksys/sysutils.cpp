@@ -648,6 +648,7 @@ guid_t stringToGUID(const char * s)
     unsigned char __RPC_FAR* StringUuid,
     UUID __RPC_FAR* Uuid
   );
+  RPC_STATUS status = 0;
   static FpUuidFromString pUuidFromString = NULL;
   if( pUuidFromString == NULL ){
     HMODULE handle = LoadLibraryA("Rpcrt4.dll");
@@ -655,7 +656,7 @@ guid_t stringToGUID(const char * s)
     pUuidFromString = (FpUuidFromString) GetProcAddress(handle,"UuidFromString");
     if( pUuidFromString == NULL ) goto er;
   }
-  RPC_STATUS status = pUuidFromString((RPC_CSTR) s,&uuid);
+  status = pUuidFromString((unsigned char *) s,&uuid);
   if( status != RPC_S_OK ){
 er: int32_t err = GetLastError() + errorOffset;
     newObjectV1C2<Exception>(err,__PRETTY_FUNCTION__)->throwSP();
@@ -1945,7 +1946,7 @@ void getDirList(
     WIN32_FIND_DATAA fda;
     WIN32_FIND_DATAW fdw;
   };
-  HANDLE handle;
+  HANDLE handle = NULL;
   if( isWin9x() ){
     handle = FindFirstFileA(anyPathName2HostPathName(path + pathDelimiterStr + "*").getANSIString(),&fda);
     if( handle == INVALID_HANDLE_VALUE ){
@@ -2187,6 +2188,7 @@ pid_t execute(const ExecuteProcessParameters & params)
 #if defined(__WIN32__) || defined(__WIN64__)
   BOOL r;
   uintptr_t i;
+  DWORD rr = 0;
   union {
     STARTUPINFOA sui;
     STARTUPINFOW suiW;
@@ -2324,7 +2326,6 @@ pid_t execute(const ExecuteProcessParameters & params)
   }
   if( ResumeThread(pi.hThread) == DWORD(-1) ) goto err;
   if( params.wait_ ){
-    DWORD rr;
     rr = WaitForSingleObject(pi.hProcess,INFINITE);
     if( rr == WAIT_FAILED ){
 err:  err = GetLastError() + errorOffset;
@@ -2846,7 +2847,7 @@ bool isWow64()
 utf8::String getMachineUniqueKey()
 {
 #if PRIVATE_RELEASE
-#if defined(__WIN32__) || defined(__WIN64__)
+#if (defined(__WIN32__) || defined(__WIN64__)) && !defined(__MINGW32__)
 //#pragma comment(lib,"wbemuuid.lib")
   utf8::String s;
 
@@ -3137,6 +3138,8 @@ utf8::String getMachineUniqueKey()
   for( size /= 2, i = size - 1; i >= 0; i-- )
     xchg(c[c[i] % size],c[c[size - i - 1] % size]);
   return s;
+#elif __MINGW32__
+  return utf8::String();
 #elif (HAVE_SYS_IOCTL_H && HAVE_SYS_SYSCTL_H && HAVE_NET_IF_H && HAVE_NET_IF_TYPES_H) || HAVE_DO_CPUID
   utf8::String key;
 #if HAVE_DO_CPUID
@@ -3440,7 +3443,7 @@ void writeProtectedMemory(void * memory,const void * data,uintptr_t count)
 //---------------------------------------------------------------------------
 void * findProcImportedEntryAddress(const utf8::String & dllName,const utf8::String & importedDllName,const utf8::String & funcName,bool noThrow)
 {
-#if defined(__WIN32__) || defined(__WIN64__)
+#if (defined(__WIN32__) || defined(__WIN64__)) && !defined(__MINGW32__)
   union {
     HMODULE hModule;
     uintptr_t basePointer;

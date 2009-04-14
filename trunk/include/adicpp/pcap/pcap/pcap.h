@@ -38,7 +38,7 @@
 #define lib_pcap_pcap_h
 
 #if defined(WIN32)
-  #include "pcap-stdinc.h"
+  #include "../pcap-stdinc.h"
 #elif defined(MSDOS)
   #include <sys/types.h>
   #include <sys/socket.h>  /* u_int, u_char etc. */

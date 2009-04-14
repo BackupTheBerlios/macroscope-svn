@@ -44,42 +44,42 @@ namespace ksys {
 #if !defined(__WIN32__) && !defined(__WIN64__)
 /*#ifndef PTHREAD_DEFAULT_PRIORITY
 #if __FreeBSD__
-#define PTHREAD_DEFAULT_PRIORITY 15
+#define PTHREAD_DEFAULT_PRIORITY 15u
 #else
-#define PTHREAD_DEFAULT_PRIORITY 0
+#define PTHREAD_DEFAULT_PRIORITY 0u
 #endif
 #endif
 #ifndef PTHREAD_MIN_PRIORITY
 #if __FreeBSD__
-#define PTHREAD_MIN_PRIORITY 0
+#define PTHREAD_MIN_PRIORITY 0u
 #else
-#define PTHREAD_MIN_PRIORITY 0
+#define PTHREAD_MIN_PRIORITY 0u
 #endif
 #endif
 #ifndef PTHREAD_MAX_PRIORITY
 #if __FreeBSD__
-#define PTHREAD_MAX_PRIORITY 31
+#define PTHREAD_MAX_PRIORITY 31u
 #else
-#define PTHREAD_MAX_PRIORITY 0
+#define PTHREAD_MAX_PRIORITY 0u
 #endif
 #endif
 #ifndef PTHREAD_RT_PRIORITY
 #if __FreeBSD__
-#define PTHREAD_RT_PRIORITY 64
+#define PTHREAD_RT_PRIORITY 64u
 #else
-#define PTHREAD_RT_PRIORITY 0
+#define PTHREAD_RT_PRIORITY 0u
 #endif
 #endif*/
 int schedGetPriorityMin();
 int schedGetPriorityMax();
-#define THREAD_PRIORITY_QUANT ((schedGetPriorityMin() + schedGetPriorityMax() + 1) / 7.)
-#define THREAD_PRIORITY_IDLE schedGetPriorityMin()
-#define THREAD_PRIORITY_LOWEST (THREAD_PRIORITY_IDLE + int(THREAD_PRIORITY_QUANT))
-#define THREAD_PRIORITY_BELOW_NORMAL (THREAD_PRIORITY_IDLE + int(THREAD_PRIORITY_QUANT * 2))
-#define THREAD_PRIORITY_NORMAL ((schedGetPriorityMin() + schedGetPriorityMax() + 1) / 2)
-#define THREAD_PRIORITY_TIME_CRITICAL schedGetPriorityMax()
-#define THREAD_PRIORITY_ABOVE_NORMAL (THREAD_PRIORITY_TIME_CRITICAL - int(THREAD_PRIORITY_QUANT * 2))
-#define THREAD_PRIORITY_HIGHEST (THREAD_PRIORITY_TIME_CRITICAL - int(THREAD_PRIORITY_QUANT))
+#define THREAD_PRIORITY_QUANT uintptr_t((schedGetPriorityMin() + schedGetPriorityMax() + 1u) / 7.)
+#define THREAD_PRIORITY_IDLE uintptr_t(schedGetPriorityMin())
+#define THREAD_PRIORITY_LOWEST uintptr_t(THREAD_PRIORITY_IDLE + THREAD_PRIORITY_QUANT)
+#define THREAD_PRIORITY_BELOW_NORMAL uintptr_t(THREAD_PRIORITY_IDLE + THREAD_PRIORITY_QUANT * 2u)
+#define THREAD_PRIORITY_NORMAL uintptr_t((schedGetPriorityMin() + schedGetPriorityMax() + 1u) / 2u)
+#define THREAD_PRIORITY_TIME_CRITICAL uintptr_t(schedGetPriorityMax())
+#define THREAD_PRIORITY_ABOVE_NORMAL uintptr_t(THREAD_PRIORITY_TIME_CRITICAL - THREAD_PRIORITY_QUANT * 2u)
+#define THREAD_PRIORITY_HIGHEST uintptr_t(THREAD_PRIORITY_TIME_CRITICAL - THREAD_PRIORITY_QUANT)
 #endif
 //---------------------------------------------------------------------------
 /////////////////////////////////////////////////////////////////////////////
@@ -121,6 +121,7 @@ class Thread : virtual public Object {
 
     Thread & stackSize(uintptr_t newStackSize);
     const uintptr_t & stackSize() const;
+    Thread & priority(intptr_t pri,bool noThrow = true);
     Thread & priority(uintptr_t pri,bool noThrow = true);
     uintptr_t priority() const;
 

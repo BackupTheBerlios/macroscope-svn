@@ -523,6 +523,7 @@ template <typename TKey,typename TObj,class D>
 #endif
 void HashedObjectList<TKey,TObj,D>::reHash(uintptr_t slotCount)
 {
+  uintptr_t oldSlotCount = 0;
   if( slotCount > 0 ){
     HashedObjectListItem<TKey,TObj> ** ppItem0 = keyHash_.slots(), ** ppItem1 = ppItem0 + keyHash_.slotCount();
     HashedObjectListItem<TKey,TObj> *  head    = NULL, * pItem;
@@ -536,7 +537,7 @@ void HashedObjectList<TKey,TObj,D>::reHash(uintptr_t slotCount)
       ppItem0++;
     }
     clearHash();
-    uintptr_t oldSlotCount = keyHash_.slotCount();
+    oldSlotCount = keyHash_.slotCount();
     Exception * esp = NULL;
     try{
       keyHash_.resize(slotCount);
@@ -857,6 +858,7 @@ TObj * HashedObjectList<TKey,TObj,D>::extractByObject(TObj * object)
 template <typename TKey,typename TObj,class D> inline
 TObj * HashedObjectList<TKey,TObj,D>::extractByIndex(uintptr_t index)
 {
+  TObj * object = NULL;
   HashedObjectListItem<TKey,TObj> ** pKeyItem, ** pObjectItem, ** pIndexItem;
   pIndexItem = indexHash_.find(index);
   pObjectItem = objectHash_.find((*pIndexItem)->object());
@@ -867,7 +869,7 @@ TObj * HashedObjectList<TKey,TObj,D>::extractByIndex(uintptr_t index)
   *pKeyItem = (*pKeyItem)->keyNext();
   *pObjectItem = (*pObjectItem)->objectNext();
   *pIndexItem = (*pIndexItem)->indexNext();
-  TObj *  object  = pItem->object();
+  object = pItem->object();
   deleteObject(pItem);
   renumeration(index);
   count_--;

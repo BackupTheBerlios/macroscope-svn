@@ -238,7 +238,7 @@ void LogFile::threadExecute()
   threadFile_.fileName(file_).createIfNotExist(true);
   AsyncFile lck;
   lck.fileName(threadFile_.fileName() + ".lck").createIfNotExist(true).removeAfterClose(true);
-  bool exception;
+  bool exception = false;
   for(;;){
     exception = false;
     AutoPtr<char,AutoPtrMemoryDestructor> buffer;
@@ -300,7 +300,8 @@ void LogFile::threadExecute()
 LogFile & LogFile::setDebugLevels(const utf8::String & levels)
 {
   utf8::String minus("-");
-  for( intptr_t i = enumStringParts(levels) - 1; i >= 0; i-- ){
+  intptr_t i = 0;
+  for( i = enumStringParts(levels) - 1; i >= 0; i-- ){
     utf8::String s(stringPartByNo(levels,i));
     Mutant level(s);
     try {

@@ -1206,15 +1206,18 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
   database_->start();
   if( (bool) logger_->config_->valueByPath(section_ + ".squid.reset_log_file_position",false) )
     updateLogFileLastOffset(stFileStat_,logFileName,0);
-  uint64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  uint64_t offset = 0;
+  offset = fetchLogFileLastOffset(stFileStat_,logFileName);
   if( offset > flog.size() ) updateLogFileLastOffset(stFileStat_,logFileName,offset = 0);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
   int64_t lineNo = 1, tma = 0;
-  uint64_t startTime = timeFromTimeString(logger_->config_->valueByPath(section_ + ".squid.start_time","01.01.1980"));
-  uintptr_t size;
+  uint64_t startTime = 0;
+  startTime = timeFromTimeString(logger_->config_->valueByPath(section_ + ".squid.start_time","01.01.1980"));
+  uintptr_t size = 0;
   Array<const char *> slcp;
-  int64_t cl = getlocaltimeofday();
+  int64_t cl = 0;
+  cl = getlocaltimeofday();
   AsyncFile::LineGetBuffer lgb(flog);
   lgb.codePage_ = logger_->config_->valueByPath(section_ + ".squid.log_file_codepage",CP_ACP);
   stTrafIns_->prepare();
@@ -1225,7 +1228,8 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
   stMonUrlUpd_->prepare();
   stMonUrlIns_->prepare();
   bool validLine = false, startTimeLinePrinted = false;
-  uintptr_t identColumn = logger_->config_->valueByPath(section_ + ".squid.identity_column",7);
+  uintptr_t identColumn = 0;
+  identColumn = logger_->config_->valueByPath(section_ + ".squid.identity_column",7);
   for(;;){
 //    fprintf(stderr,"%"PRId64"\n",lineNo);
     utf8::String sb;
@@ -1401,23 +1405,25 @@ void Logger::SquidSendmailThread::parseSendmailLogFile(const utf8::String & logF
     lt = statement_->valueAsMutant("ST_TIMESTAMP");
     startYear = lt.tm_year + 1900;
   }
-  uint64_t offset = fetchLogFileLastOffset(stFileStat_,logFileName);
+  uint64_t offset = 0;
+  offset = fetchLogFileLastOffset(stFileStat_,logFileName);
   if( offset > flog.size() ) updateLogFileLastOffset(stFileStat_,logFileName,offset = 0);
   if( flog.seekable() ) flog.seek(offset);
   fallBackToNewLine(flog);
-  int64_t   lineNo  = 1, tma = 0;
+  int64_t   lineNo  = 1, tma = 0, cl = 0;
   uintptr_t size;
   intptr_t  mon     = 0;
-  int64_t   cl      = getlocaltimeofday();
+  cl = getlocaltimeofday();
   AsyncFile::LineGetBuffer lgb(flog);
   lgb.codePage_ = logger_->config_->valueByPath(section_ + ".sendmail.log_file_codepage",CP_ACP);
-  bool calculateInterdomainTraffic = logger_->config_->valueByPath(section_ + ".sendmail.calculate_interdomain_traffic",false);
+  bool calculateInterdomainTraffic = false;
+  calculateInterdomainTraffic = logger_->config_->valueByPath(section_ + ".sendmail.calculate_interdomain_traffic",false);
   for(;;){
     utf8::String sb;
     if( flog.getString(sb,&lgb) ) break;
     size = sb.size();
     if( size > 0 && sb.c_str()[size - 1] == '\n' ){
-      char * a, * id, * cid = NULL, * idl, * prefix, * prefixl, * from, * to, * stat; //* relay;
+      char * a, * id = NULL, * cid = NULL, * idl = NULL, * prefix, * prefixl, * from, * to = NULL, * stat; //* relay;
       from = strstr(sb.c_str(),"from=");
       if( from == NULL ) from = strstr(sb.c_str(),"from <");
       to = strstr(sb.c_str()," to=");
