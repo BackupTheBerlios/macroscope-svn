@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2008 Guram Dukashvili
+ * Copyright 2005-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -410,7 +410,6 @@ typedef struct addrinfo
     struct addrinfo *   ai_next;
 };
 #endif
-typedef struct addrinfo ADDRINFOA, *PADDRINFOA;
 
 typedef struct addrinfoW
 {
@@ -424,9 +423,17 @@ typedef struct addrinfoW
     struct addrinfoW *   ai_next;
 } ADDRINFOW, *PADDRINFOW;
 
-typedef ADDRINFOA ADDRINFO, *LPADDRINFO;
+#define SIZEOF_ADDRINFO sizeof(addrinfo)
+#endif
 
-#define SIZEOF_ADDRINFO sizeof(ADDRINFO)
+#if SIZEOF_ADDRINFOA == 0
+typedef struct addrinfo ADDRINFOA, *PADDRINFOA;
+#define SIZEOF_ADDRINFOA sizeof(ADDRINFOA)
+#endif
+
+#if SIZEOF_ADDRINFOW == 0
+typedef addrinfoW ADDRINFOW, *LPADDRINFOW;
+#define SIZEOF_ADDRINFOW sizeof(ADDRINFOW)
 #endif
 
 #if HAVE_WINDOWS_H
@@ -584,9 +591,9 @@ extern "C" {
 extern const char * _malloc_options;
 #endif
 //---------------------------------------------------------------------------
-#if HAVE_GETPAGESIZE
+#if !HAVE_GETPAGESIZE
 //---------------------------------------------------------------------------
-#if defined(__WIN32__) || defined(__WIN64__)
+#if defined(__WIN32__) || defined(__WIN64__) || defined(__MINGW32__)
 //---------------------------------------------------------------------------
 static __inline uintptr_t getpagesize()
 {
@@ -597,36 +604,34 @@ static __inline uintptr_t getpagesize()
 //---------------------------------------------------------------------------
 #elif HAVE_SYSCONF && defined(_SC_PAGESIZE)
 //---------------------------------------------------------------------------
-static inline uintptr_t getpagesize()
+static __inline uintptr_t getpagesize()
 {
   return sysconf(_SC_PAGESIZE);
 }
 //---------------------------------------------------------------------------
 #elif HAVE_SYSCONF && defined(_SC_PAGE_SIZE)
 //---------------------------------------------------------------------------
-static inline uintptr_t getpagesize()
+static __inline uintptr_t getpagesize()
 {
   return sysconf(_SC_PAGE_SIZE);
 }
 //---------------------------------------------------------------------------
 #elif __i386__
 //---------------------------------------------------------------------------
-static inline uintptr_t getpagesize()
+static __inline uintptr_t getpagesize()
 {
   return 4096;
 }
 //---------------------------------------------------------------------------
 #else
 //---------------------------------------------------------------------------
-static inline uintptr_t getpagesize()
+static __inline uintptr_t getpagesize()
 {
   return 8192;
 }
 //---------------------------------------------------------------------------
 #endif
 //---------------------------------------------------------------------------
-#elif __MINGW32__
-uintptr_t getpagesize();
 #endif
 //---------------------------------------------------------------------------
 #ifdef __cplusplus

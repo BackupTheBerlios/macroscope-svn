@@ -1,5 +1,5 @@
 /*-
- * Copyright 2006-2008 Guram Dukashvili
+ * Copyright 2006-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -406,11 +406,13 @@ Logger & Logger::createDatabase()
           ")\n"
           "AS\n"
           "  DECLARE pkts0     BIGINT;\n"
+          "  DECLARE mind0     BIGINT;\n"
+          "  DECLARE maxd0     BIGINT;\n"
           "  DECLARE dgram0    BIGINT;\n"
           "  DECLARE data0     BIGINT;\n"
           "  DECLARE cur@0001@ CURSOR FOR (\n"
           "    SELECT\n"
-          "      pkts, dgram, data\n"
+          "      pkts, min_dgram, max_dgram, dgram, data\n"
           "    FROM INET_SNIFFER_STAT_@0001@\n"
           "    WHERE\n"
           "      iface = :ifaceP AND ts = :ts@0003@P AND\n"
@@ -420,11 +422,19 @@ Logger & Logger::createDatabase()
           "    FOR UPDATE\n"
           "  );\n"
           "BEGIN\n"
+          "  mind0 = 0;\n"
+          "  maxd0 = 0;\n"
           "  OPEN cur@0001@;\n"
-          "  FETCH cur@0001@ INTO :pkts0, :dgram0, :data0;\n"
+          "  FETCH cur@0001@ INTO :pkts0, :mind0, :maxd0, :dgram0, :data0;\n"
+          "  IF (dgramP < mind0) THEN mind0 = dgramP;\n"
+          "  IF (dgramP > maxd0) THEN maxd0 = dgramP;\n"
           "  IF (ROW_COUNT <> 0) THEN\n"
           "    UPDATE INET_SNIFFER_STAT_@0001@ SET\n"
-          "      pkts = pkts + :pktsP, dgram = dgram + :dgramP, data = data + :dataP\n"
+          "      pkts = pkts + :pktsP,\n"
+          "      min_dgram = :mind0,\n"
+          "      max_dgram = :maxd0,\n"
+          "      dgram = dgram + :dgramP,\n"
+          "      data = data + :dataP\n"
           "    WHERE\n"
           "      iface = :ifaceP AND ts = :ts@0003@P AND\n"
           "      src_ip = :src_ipP AND src_port = :src_portP AND\n"
@@ -432,8 +442,8 @@ Logger & Logger::createDatabase()
           "      ip_proto = :protoP;\n"
           "  ELSE\n"
           "    INSERT INTO INET_SNIFFER_STAT_@0001@\n"
-          "      (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,pkts,dgram,data) VALUES\n"
-          "      (:ifaceP,:ts@0003@P,:src_ipP,:src_portP,:dst_ipP,:dst_portP,:protoP,:pktsP,:dgramP,:dataP);\n"
+          "      (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,pkts,min_dgram,max_dgram,dgram,data) VALUES\n"
+          "      (:ifaceP,:ts@0003@P,:src_ipP,:src_portP,:dst_ipP,:dst_portP,:protoP,:pktsP,:mind0,:maxd0,:dgramP,:dataP);\n"
           "  CLOSE cur@0001@;\n"
           "  IF (portsP <> 0 AND protocolsP <> 0) THEN\n"
           "  BEGIN\n"
@@ -493,6 +503,8 @@ Logger & Logger::createDatabase()
           "BEGIN\n"
           "  DECLARE fetched   INTEGER DEFAULT 1;\n"
           "  DECLARE pkts0     BIGINT;\n"
+          "  DECLARE mind0     BIGINT DEFAULT 0;\n"
+          "  DECLARE maxd0     BIGINT DEFAULT 0;\n"
           "  DECLARE dgram0    BIGINT;\n"
           "  DECLARE data0     BIGINT;\n"
           "  DECLARE cur@0001@ CURSOR FOR\n"
@@ -507,11 +519,17 @@ Logger & Logger::createDatabase()
           "    FOR UPDATE;\n"
           "  DECLARE CONTINUE HANDLER FOR NOT FOUND SET fetched = 0;\n"
           "\n"
+          "  IF (dgramP < mind0) THEN mind0 = dgramP;\n"
+          "  IF (dgramP > maxd0) THEN maxd0 = dgramP;\n"
           "  OPEN cur@0001@;\n"
-          "  FETCH cur@0001@ INTO pkts0, dgram0, data0;\n"
+          "  FETCH cur@0001@ INTO pkts0, mind0, maxd0, dgram0, data0;\n"
           "  IF fetched THEN\n"
           "    UPDATE INET_SNIFFER_STAT_@0001@ SET\n"
-          "      pkts = pkts + pktsP, dgram = dgram + dgramP, data = data + dataP\n"
+          "      pkts = pkts + pktsP,\n"
+          "      min_dgram = mind0,\n"
+          "      max_dgram = maxd0,\n"
+          "      dgram = dgram + dgramP,\n"
+          "      data = data + dataP\n"
           "    WHERE\n"
           "      iface = ifaceP AND ts = ts@0003@P AND\n"
           "      src_ip = src_ipP AND src_port = src_portP AND\n"
@@ -519,8 +537,8 @@ Logger & Logger::createDatabase()
           "      ip_proto = protoP;\n"
           "  ELSE\n"
           "    INSERT INTO INET_SNIFFER_STAT_@0001@\n"
-          "    (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,pkts,dgram,data) VALUES\n"
-          "    (ifaceP,ts@0003@P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,pktsP,dgramP,dataP);\n"
+          "    (iface,ts,src_ip,src_port,dst_ip,dst_port,ip_proto,pkts,min_dgram,max_dgram,dgram,data) VALUES\n"
+          "    (ifaceP,ts@0003@P,src_ipP,src_portP,dst_ipP,dst_portP,protoP,pktsP,mind0,maxd0,dgramP,dataP);\n"
           "  END IF;\n"
           "  CLOSE cur@0001@;\n"
           "  IF portsP AND protocolsP THEN\n"
@@ -563,7 +581,7 @@ Logger & Logger::createDatabase()
           }
         }
         else if( dynamic_cast<FirebirdDatabase *>(statement_->database()) != NULL ){
-          metadata[i] = metadata[i].replaceAll("DATETIME","TIMESTAMP");
+          metadata[i] = metadata[i].replaceAll("DATETIME","TIMESTAMP").replaceAll("ADD COLUMN","ADD ");
         }
         try {
           statement_->execute(metadata[i]);

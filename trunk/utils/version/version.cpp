@@ -106,7 +106,9 @@ int main(int ac, char*av[]){
 #ifdef CMAKE_SYSTEM_NAME
       " for " CMAKE_SYSTEM_NAME " " CMAKE_SYSTEM_VERSION
 #endif
+#ifdef CMAKE_COMPILER_ID
       " " CMAKE_COMPILER_ID " compiler"
+#endif
     ;
 
 #if HAVE__TZSET

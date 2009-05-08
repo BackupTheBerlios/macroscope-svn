@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005-2008 Guram Dukashvili
+ * Copyright 2005-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -86,25 +86,19 @@ int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t 
 //---------------------------------------------------------------------------
 int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
 {
-#if __BORLANDC__ || __MINGW32__
-  static union {
-    LONGLONG __cdecl (* pInterlockedExchangeAdd64)(LONGLONG volatile *Addend,LONGLONG Value);
-    void * fp_;
-  };
-  if( pInterlockedExchangeAdd64 == NULL ){
-    fp_ == GetProcAddress(GetModuleHandle("kernel32"),"InterlockedExchangeAdd64");
-  }
-  return pInterlockedExchangeAdd64((LONGLONG *) &v,a);
-#else
-  return InterlockedExchangeAdd64((LONGLONG *) &v,a);
-#endif
+  int64_t old;
+  do {
+    old = v;
+  } while( interlockedCompareExchange(v,old + a,old) != old );
+  return old;
 }
 //---------------------------------------------------------------------------
+#if __WIN64__
 int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
 {
 #if __BORLANDC__ || __MINGW32__
   static union {
-    LONGLONG __cdecl (* pInterlockedCompareExchange64)(LONGLONG volatile *Addend,LONGLONG exValue,LONGLONG cmpValue);
+    LONGLONG WINAPI (* pInterlockedCompareExchange64)(LONGLONG volatile *Addend,LONGLONG exValue,LONGLONG cmpValue);
     void * fp_;
   };
   if( pInterlockedCompareExchange64 == NULL ){
@@ -116,17 +110,34 @@ int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t 
 #endif
 }
 //---------------------------------------------------------------------------
+#elif _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4035) // disable no-return warning
+int64_t interlockedCompareExchange(volatile int64_t & v,int64_t exValue,int64_t cmpValue)
+{
+  //value returned in eax::edx
+  __asm {
+      lea esi,cmpValue;
+      lea edi,exValue;
+
+      mov eax,[esi];
+      mov edx,4[esi];
+      mov ebx,[edi];
+      mov ecx,4[edi];
+      mov esi,v;
+      //lock CMPXCHG8B [esi] is equivalent to the following except
+      //that it's atomic:
+      //ZeroFlag = (edx:eax == *esi);
+      //if (ZeroFlag) *esi = ecx:ebx;
+      //else edx:eax = *esi;
+      lock CMPXCHG8B [esi];
+  }
+}
+#pragma warning(pop)
+#else
+#error interlockedCompareExchange not implemented
 #endif
 //---------------------------------------------------------------------------
-#if !defined(__WIN32__) && !defined(__WIN64__) && __i386__ && !__x86_64__
-int64_t interlockedIncrement(volatile int64_t & v,int64_t a)
-{
-  int64_t old;
-  do {
-    old = v;
-  } while( interlockedCompareExchange(v,old + a,old) != old );
-  return old;
-}
 #endif
 //---------------------------------------------------------------------------
 void interlockedCompareExchangeAcquire(volatile int32_t & v,int32_t exValue,int32_t cmpValue)

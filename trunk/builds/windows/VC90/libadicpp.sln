@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
+# Visual C++ Express 2008
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libadicpp", "libadicpp.vcproj", "{699C55AF-E43D-48AE-9496-77D183B93940}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "msftp", "msftp.vcproj", "{9D6A0CA8-EBFD-405C-9E4C-7DCBA4357F3A}"
@@ -160,12 +160,10 @@ Global
 		{2D89A82E-6143-4F03-A127-7C92F3A20F00}.release|x64.Build.0 = Release|x64
 		{9B142E06-EC94-472D-BDA1-3F4D75604614}.debug|Win32.ActiveCfg = Debug|Win32
 		{9B142E06-EC94-472D-BDA1-3F4D75604614}.debug|Win32.Build.0 = Debug|Win32
-		{9B142E06-EC94-472D-BDA1-3F4D75604614}.debug|x64.ActiveCfg = Debug|x64
-		{9B142E06-EC94-472D-BDA1-3F4D75604614}.debug|x64.Build.0 = Debug|x64
+		{9B142E06-EC94-472D-BDA1-3F4D75604614}.debug|x64.ActiveCfg = Debug|Win32
 		{9B142E06-EC94-472D-BDA1-3F4D75604614}.release|Win32.ActiveCfg = Release|Win32
 		{9B142E06-EC94-472D-BDA1-3F4D75604614}.release|Win32.Build.0 = Release|Win32
-		{9B142E06-EC94-472D-BDA1-3F4D75604614}.release|x64.ActiveCfg = Release|x64
-		{9B142E06-EC94-472D-BDA1-3F4D75604614}.release|x64.Build.0 = Release|x64
+		{9B142E06-EC94-472D-BDA1-3F4D75604614}.release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

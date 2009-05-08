@@ -378,4 +378,4 @@
 
 #define PRIVATE_RELEASE 1
 #define CMAKE_SYSTEM_NAME "Windows"
-#define CMAKE_SYSTEM_VERSION "5.2"
+#define CMAKE_SYSTEM_VERSION "5.1"
