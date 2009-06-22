@@ -28,7 +28,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+				CommandLine=""
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -106,7 +106,7 @@
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
-				CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+				CommandLine=""
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -341,7 +341,19 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\..\test\kvm\main.cpp"
+				RelativePath="..\..\..\test\kvm\CodeGenerator.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\compiler.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\kvm.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\SymbolTable.cpp"
 				>
 			</File>
 		</Filter>
@@ -350,16 +362,74 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath="..\..\..\test\kvm\CodeGenerator.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\SymbolTable.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath="..\..\..\test\kvm\kvm.atg"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="cd $(InputDir)&#x0D;&#x0A;coco -namespace &quot;ksys:kvm&quot; $(InputFileName)&#x0D;&#x0A;del /q /f *.old&#x0D;&#x0A;"
+						Outputs="Parser.cpp;Parser.h;Scanner.cpp;Scanner.h"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\version.in"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+						Outputs="version.c"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+						CommandLine="cd ..\..\..\test\$(ProjectName)&#x0D;&#x0A;..\..\binaries\version.exe version.in version.c&#x0D;&#x0A;"
+					/>
+				</FileConfiguration>
+			</File>
 		</Filter>
 		<Filter
 			Name="Generated Files"
 			>
+			<File
+				RelativePath="..\..\..\test\kvm\Parser.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\Parser.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\Scanner.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\test\kvm\Scanner.h"
+				>
+			</File>
 			<File
 				RelativePath="..\..\..\test\kvm\version.c"
 				>

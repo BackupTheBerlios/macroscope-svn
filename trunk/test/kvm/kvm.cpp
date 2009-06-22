@@ -60,7 +60,7 @@ using namespace adicpp;
 //------------------------------------------------------------------------------
 ////////////////////////////////////////////////////////////////////////////////
 //------------------------------------------------------------------------------
-class RangeCoderFilter32 {
+/*class RangeCoderFilter32 {
   public:
     RangeCoderFilter32 & initializeEncoder();
     RangeCoderFilter32 & encodeBuffer(const void * inp,uintptr_t inpSize,void * out,uintptr_t outSize,uintptr_t * rb = NULL,uintptr_t * wb = NULL);
@@ -1409,10 +1409,10 @@ class LZKFilter {
 #pragma option push -a1
 #endif
     struct PACKED RBTreeNode {
-      RBTreeNode * left_;         /* left child */
-      RBTreeNode * right_;        /* right child */
-      RBTreeNode * parent_;       /* parent */
-      uint8_t color_;             /* node color (BLACK, RED) */
+      RBTreeNode * left_;         // left child
+      RBTreeNode * right_;        // right child
+      RBTreeNode * parent_;       // parent
+      uint8_t color_;             // node color (BLACK, RED)
       //mutable uint32_t idx_;
       //mutable uint8_t c_;
       uint8_t alignment_[(sizeof(RBTreeNode *) * 3 + 1 < 16 ? 16 : 32) - sizeof(RBTreeNode *) * 3 - 1];
@@ -1580,14 +1580,14 @@ out:  l = s2 + l2 - 1 - (a1 - nodes_);
     RBTreeNode * getSuccessorOf(RBTreeNode * x)
     {
       RBTreeNode * y;
-/* assignment to y is intentional */  
+// assignment to y is intentional
       if( (y = x->right_) != &sentinel_ ){
-/* returns the minium of the right subtree of x */  
+// returns the minium of the right subtree of x
         while( y->left_ != &sentinel_ ) y = y->left_;
         return y;
       }
       y = x->parent_;
-/* sentinel used instead of checking for nil */    
+// sentinel used instead of checking for nil    
       while( x == y->right_ ){
         x = y;
         y = y->parent_;
@@ -1624,10 +1624,10 @@ out:  l = s2 + l2 - 1 - (a1 - nodes_);
 	          x->parent_->color_ = BLACK;
 	          w->right_->color_ = BLACK;
 	          rotateLeft(x->parent_);
-	          x = rootLeft; /* this is to exit while loop */
+	          x = rootLeft; // this is to exit while loop
           }
         }
-        else { /* the code below is has left and right switched from above */
+        else { // the code below is has left and right switched from above
           w = x->parent_->left_;
           if( w->color_ == RED ){
 	          w->color_ = BLACK;
@@ -1650,7 +1650,7 @@ out:  l = s2 + l2 - 1 - (a1 - nodes_);
 	          x->parent_->color_ = BLACK;
 	          w->left_->color_ = BLACK;
 	          rotateRight(x->parent_);
-	          x = rootLeft; /* this is to exit while loop */
+	          x = rootLeft; // this is to exit while loop
           }
         }
       }
@@ -1662,9 +1662,9 @@ out:  l = s2 + l2 - 1 - (a1 - nodes_);
       RBTreeNode * x, * y;
       y = ((z->left_ == &sentinel_) || (z->right_ == &sentinel_)) ? z : getSuccessorOf(z);
       x = (y->left_ == &sentinel_) ? y->right_ : y->left_;
-/* x is y's only child */
+// x is y's only child
       if( y->left_ != &sentinel_ ) x = y->left_; else x = y->right_;
-/* assignment of y->p to x->p is intentional */  
+// assignment of y->p to x->p is intentional
       if( root_ == (x->parent_ = y->parent_) ){
         root_->left_ = x;
       }
@@ -2069,16 +2069,16 @@ template <uintptr_t slen_ = 32> class LZRBTFilter {
 //#elif defined(__BCPLUSPLUS__)
 //#pragma option push -a1
 //#endif
-    struct /*PACKED*/ RBTreeNodeBase {
-      RBTreeNode * left_;         /* left child */
-      RBTreeNode * right_;        /* right child */
-      RBTreeNode * parent_;       /* parent */
+    struct RBTreeNodeBase {
+      RBTreeNode * left_;         // left child
+      RBTreeNode * right_;        // right child
+      RBTreeNode * parent_;       // parent
       int32_t lruPrev_;
       int32_t lruNext_;
-      uint8_t color_;             /* node color (BLACK, RED) */
+      uint8_t color_;             // node color (BLACK, RED)
       uint8_t string_[slen_ + 1];
     };
-    struct /*PACKED*/ RBTreeNode : public RBTreeNodeBase {
+    struct RBTreeNode : public RBTreeNodeBase {
       uint8_t alignment_[(sizeof(RBTreeNodeBase) < 32 ? 32 : sizeof(RBTreeNodeBase) < 64 ? 64 : 128) - sizeof(RBTreeNodeBase)];
     };
 //#ifdef _MSC_VER
@@ -2267,10 +2267,10 @@ template <uintptr_t slen_ = 32> class LZRBTFilter {
 	          x->parent_->color_ = BLACK;
 	          w->right_->color_ = BLACK;
 	          rotateLeft(x->parent_);
-	          x = rootLeft; /* this is to exit while loop */
+	          x = rootLeft; // this is to exit while loop
           }
         }
-        else { /* the code below is has left and right switched from above */
+        else { //the code below is has left and right switched from above
           w = x->parent_->left_;
           if( w->color_ == RED ){
 	          w->color_ = BLACK;
@@ -2293,7 +2293,7 @@ template <uintptr_t slen_ = 32> class LZRBTFilter {
 	          x->parent_->color_ = BLACK;
 	          w->left_->color_ = BLACK;
 	          rotateRight(x->parent_);
-	          x = rootLeft; /* this is to exit while loop */
+	          x = rootLeft; // this is to exit while loop
           }
         }
       }
@@ -2853,7 +2853,7 @@ LZRBTFilter<slen_> & LZRBTFilter<slen_>::decode(AsyncFile & inp,AsyncFile & out)
 //  if( FAILED(hr) ) newObjectV1C2<Exception>(HRESULT_CODE(hr) + errorOffset,__PRETTY_FUNCTION__);
 //
 //  return *this;
-//}
+//}*/
 //------------------------------------------------------------------------------
 int main(int _argc,char * _argv[])
 {
