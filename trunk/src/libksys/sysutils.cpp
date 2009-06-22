@@ -1325,7 +1325,7 @@ utf8::String excludeTrailingPathDelimiter(const utf8::String & path)
 {
   utf8::String s(path);
   utf8::String::Iterator i(s);
-  i.last();
+  i.last().prev();
   switch( i.getChar() ){
     case '\\' : case '/' :
       s = s.unique().resize(s.size() - i.seqLen());
@@ -1338,7 +1338,7 @@ utf8::String includeTrailingPathDelimiter(const utf8::String & path)
 {
   utf8::String s(path);
   utf8::String::Iterator i(s);
-  i.last();
+  i.last().prev();
   switch( i.getChar() ){
     case '\\' : case '/' :
       break;
@@ -2257,10 +2257,10 @@ pid_t execute(const ExecuteProcessParameters & params)
     uintptr_t eCount = 0;
     if( params.env_.count() > 0 ){
       for( i = 0; i < params.env_.count(); i++ ){
-        //if( params.usePathEnv_ && params.env_[i].ncasecompare("PATH=",5) == 0 ){
-        //  utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
-        //  for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
-        //}
+        if( params.usePathEnv_ && params.env_[i].ncasecompare("PATH=",5) == 0 ){
+          utf8::String a(utf8::String::Iterator(params.env_[i]) + 5);
+          for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
+        }
         uintptr_t l = params.env_[i].length() + 1;
         e.reallocT(eCount + l + 1);
         utf8::utf8s2ucs(params.env_[i].c_str(),l,e.ptr() + eCount);
@@ -2304,25 +2304,34 @@ pid_t execute(const ExecuteProcessParameters & params)
   }
   if( r == 0 ){
     err = GetLastError();
-    //if( params.usePathEnv_ && (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND || err == ERROR_INVALID_NAME) ){
-    //  utf8::String a(getEnv("PATH"));
-    //  for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
-    //  for( i = 0; i < path.count(); i++ ){
-    //    ExecuteProcessParameters params2(params);
-    //    params2.name_ = includeTrailingPathDelimiter(path[i]) + params.name_;
-    //    params2.usePathEnv_ = false;
-    //    params2.noThrow_ = true;
-    //    pid_t exitCode = execute(params2);
-    //    if( exitCode >= 0 ) return exitCode;
-    //    params2.name_ += ".exe";
-    //    exitCode = execute(params2);
-    //    if( exitCode >= 0 ) return exitCode;
-    //    err = GetLastError();
-    //  }
-    //}
+    if( params.usePathEnv_ && (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND || err == ERROR_INVALID_NAME) ){
+      utf8::String a(getEnv("PATH"));
+      for( intptr_t k2 = enumStringParts(a,";"), k = 0; k < k2; k++ ) path.add(stringPartByNo(a,k,";"));
+      for( i = 0; i < path.count(); i++ ){
+        ExecuteProcessParameters params2(params);
+        params2.name_ = includeTrailingPathDelimiter(path[i]) + params.name_;
+        params2.usePathEnv_ = false;
+        params2.noThrow_ = true;
+        pid_t exitCode = execute(params2);
+        if( exitCode >= 0 ){
+          params.pathName_ = params2.name_;
+          return exitCode;
+        }
+        params2.name_ += ".exe";
+        exitCode = execute(params2);
+        if( exitCode >= 0 ){
+          params.pathName_ = params2.name_;
+          return exitCode;
+        }
+        err = GetLastError();
+      }
+    }
     if( !params.noThrow_ ) newObjectV1C2<Exception>(err + errorOffset,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     SetLastError(err);
     return -1;
+  }
+  else {
+    params.pathName_ = params.name_;
   }
   if( ResumeThread(pi.hThread) == DWORD(-1) ) goto err;
   if( params.wait_ ){
@@ -2341,7 +2350,7 @@ err:  err = GetLastError() + errorOffset;
       if( params.noThrow_ ) return pi.dwProcessId;
       newObjectV1C2<Exception>(ERROR_INVALID_DATA,params.name_ + utf8::String(" ") + __PRETTY_FUNCTION__)->throwSP();
     }
-    DWORD exitCode;
+    DWORD exitCode = 0;
     if( GetExitCodeProcess(pi.hProcess,&exitCode) == 0 ){
       err = GetLastError() + errorOffset;
       CloseHandle(pi.hProcess);

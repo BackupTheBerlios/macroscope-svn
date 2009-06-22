@@ -27,11 +27,11 @@
 #define _VERSION_C_AS_HEADER_
 #include "version.c"
 #undef _VERSION_C_AS_HEADER_
-#define ENABLE_GD_INTERFACE 1
+//#define ENABLE_GD_INTERFACE 1
 //#define ENABLE_PCAP_INTERFACE 1
 //#define ENABLE_ODBC_INTERFACE 1
-#define ENABLE_MYSQL_INTERFACE 1
-#define ENABLE_FIREBIRD_INTERFACE 1
+//#define ENABLE_MYSQL_INTERFACE 1
+//#define ENABLE_FIREBIRD_INTERFACE 1
 #include <adicpp/adicpp.h>
 
 //#define _NO_EXCEPTIONS 1
@@ -3065,8 +3065,8 @@ int main(int _argc,char * _argv[])
     );
     config->silent(false);
     utf8::String defaultConfigSectionName(config->text("default_config",kvm_version.tag_));
-    utf8::String defaultConnectionSectionName(config->textByPath(defaultConfigSectionName + ".connection","default_connection"));
-    AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
+    //utf8::String defaultConnectionSectionName(config->textByPath(defaultConfigSectionName + ".connection","default_connection"));
+    //AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
     utf8::String cacheDirectory(
       includeTrailingPathDelimiter(
         anyPathName2HostPathName(

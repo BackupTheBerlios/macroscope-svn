@@ -367,6 +367,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\test\kvm\compiler.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\test\kvm\SymbolTable.h"
 				>
 			</File>

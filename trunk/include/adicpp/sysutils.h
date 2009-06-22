@@ -273,6 +273,7 @@ class ExecuteProcessParameters {
     ExecuteProcessParameters & operator = (const ExecuteProcessParameters & params)
     {
       name_ = params.name_;
+      pathName_ = params.pathName_;
       args_ = params.args_;
       env_ = params.env_;
       stdio_ = params.stdio_;
@@ -285,6 +286,7 @@ class ExecuteProcessParameters {
     }
 
     utf8::String name_;
+    mutable utf8::String pathName_; // output
     utf8::String args_;
     Array<utf8::String> env_;
     file_t stdio_;

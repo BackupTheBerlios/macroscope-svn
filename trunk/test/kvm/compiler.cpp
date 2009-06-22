@@ -43,6 +43,7 @@ Compiler::Compiler() : keepStderr_(false)
 //------------------------------------------------------------------------------
 Compiler & Compiler::detect(const ConfigSP config)
 {
+  keepStderr_ = config->value("keep_compiler_stderr",false);
   utf8::String defaultCompiler(config->text("default_cxx_compiler","auto"));
   bool autoCompiler = defaultCompiler.casecompare("auto") == 0, f = false;
   for( uintptr_t i = 0; i < config->section("cxx_compilers").sectionCount(); i++ ){
@@ -82,7 +83,21 @@ Compiler & Compiler::detect(const ConfigSP config)
     tmpCxx.close();
     AutoFileRemove afr1(tmpCxx.fileName());
     AutoFileRemove afr2(object);
-    pid_t exitCode = execute(compiler,compilerArgs,&env,true,true,true);
+    
+    //pid_t exitCode = execute(compiler,compilerArgs,&env,true,true,true);
+
+    ExecuteProcessParameters params;
+    params.name_ = compiler;
+    params.args_ = compilerArgs;
+    params.env_ = env;
+    params.wait_ = true;
+    params.noThrow_ = true;
+#ifndef NDEBUG
+    AsyncFile testStderr(changeFileExt(tmpCxx.fileName(),".err"));
+    params.stderr_ = params.stdout_ = testStderr.createIfNotExist(true).removeAfterClose(!keepStderr_).open().descriptor_;
+#endif
+    pid_t exitCode = execute(params);
+
     if( exitCode == 0 && stat(object) ){ // detected
       utf8::String compiler(anyPathName2HostPathName(config->textByPath(sectionPath + ".compiler")));
       type_ = config->textByPath(sectionPath + ".type");
@@ -98,7 +113,6 @@ Compiler & Compiler::detect(const ConfigSP config)
   }
   if( !f )
     newObjectV1C2<Exception>(ENOENT,__PRETTY_FUNCTION__)->throwSP();
-  keepStderr_ = config->value("keep_compiler_stderr",false);
   return *this;
 }
 //------------------------------------------------------------------------------
@@ -268,10 +282,10 @@ utf8::String Compiler::testCxxTypeEqualCheck(
     "class Test {\n"
     "  public:\n"
     "#if SIZEOF_" + t1 + " > 0\n"
-    "    void testType1(" + type1 + " &);\n"
+    "    void testType(" + type1 + " &);\n"
     "#endif\n"
     "#if SIZEOF_" + t2 + " > 0\n"
-    "    void testType2(" + type2 + " &);\n"
+    "    void testType(" + type2 + " &);\n"
     "#endif\n"
     "};\n"
     "\n"
@@ -285,10 +299,10 @@ utf8::String Compiler::testCxxTypeEqualCheck(
     "  " + type2 + " v2;\n"
     "#endif\n"
     "#if SIZEOF_" + t1 + " > 0\n"
-    "  t.testType1(v1);\n"
+    "  t.testType(v1);\n"
     "#endif\n"
     "#if SIZEOF_" + t2 + " > 0\n"
-    "  t.testType2(v2);\n"
+    "  t.testType(v2);\n"
     "#endif\n"
     "  return 0;\n"
     "}\n",
@@ -308,7 +322,7 @@ utf8::String Compiler::testCxxFuncExists(
     "#define HAVE_" + f +
     (testCxx(config,header +
     "\n"
-    "void * funcPtr" + name + " = " + func + ";\n"
+    "void * funcPtr" + name + " = (void *) " + func + ";\n"
     "\n"
     "int main(int /*argc*/,char * /*argv*/[])\n"
     "{\n"
@@ -358,7 +372,7 @@ utf8::String Compiler::testCxxLibExists(
       utf8::String(),
       "extern \"C\" {\n"
       "extern " + (mod.isNull() ? "void " + symbol + "(void)" : mod.replaceAll("${symbol}",symbol)) + ";\n"
-      "void * symbol" + name + " = " + symbol + ";\n"
+      "void * symbol" + name + " = (void *) " + symbol + ";\n"
       "}\n"
       "\n"
       "int main(int /*argc*/,char * /*argv*/[])\n"
@@ -378,9 +392,10 @@ Compiler & Compiler::test(const utf8::String & config)
 {
   /*if( !stat(config) )*/{
     AsyncFile out(config);
-    out.createIfNotExist(true);
+    out.createIfNotExist(true).removeAfterClose(true);
     utf8::String tmpCxx(anyPathName2HostPathName(getTempPath() + getTempFileName("cxx")));
     out.open().resize(0);
+
     // detect includes
     out << "// includes\n";
     static const char header[] = {
@@ -427,6 +442,7 @@ Compiler & Compiler::test(const utf8::String & config)
       "#include <signal.h>\n"
       "#endif\n"
     };
+
     static const char * const headers[] = {
       "stddef.h",
       "stdint.h",
@@ -1205,6 +1221,43 @@ Compiler & Compiler::test(const utf8::String & config)
 
     if( !existsLibraries.isNull() )
       out << "\n// ***WARNING*** Don't edit this line. This is machine generated line. Using libraries. " << "{[NLOSJVNK0SU2UD4CFBWP2UT10H]}: " << existsLibraries << "\n";
+
+    //detect machine byte order
+    out <<
+      "\n// machine byte order\n"
+      "#if HAVE_SYS_ENDIAN_H\n"
+      "#include <sys/endian.h>\n"
+      "#endif\n"
+      "\n"
+      "#ifndef LITTLE_ENDIAN\n"
+      "#define LITTLE_ENDIAN 1\n"
+      "#endif\n"
+      "#ifndef BIG_ENDIAN\n"
+      "#define BIG_ENDIAN 2\n"
+      "#endif\n"
+      "#ifndef BYTE_ORDER\n"
+      "#define BYTE_ORDER " +
+      (utf8::String(testCxxCode(
+        config,
+        tmpCxx,
+        hw,
+        "\n"
+        "int main(int /*argc*/,char * /*argv*/[])\n"
+        "{\n"
+        "  union {\n"
+        "    unsigned char s[8];\n"
+        "    unsigned int u;\n"
+        "  };\n"
+        "  u = 0x11223344;\n"
+        "  return s[0] == 0x44 ? 0 : 1;\n"
+        "}\n"
+        ) == 0 ? "LITTLE" : "BIG"
+      )) +
+      "_ENDIAN\n"
+      "#endif\n\n"
+    ;
+
+    out.removeAfterClose(false);
   }
   return *this;
 }
