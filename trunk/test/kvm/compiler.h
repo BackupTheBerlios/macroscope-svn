@@ -50,6 +50,7 @@ class Compiler : public Object {
   protected:
     utf8::String type_;
     utf8::String compiler_;
+    utf8::String compilerVersion_;
     utf8::String compilerArgs_;
     Array<utf8::String> compilerEnv_;
     utf8::String linker_;

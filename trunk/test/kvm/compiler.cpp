@@ -84,8 +84,6 @@ Compiler & Compiler::detect(const ConfigSP config)
     AutoFileRemove afr1(tmpCxx.fileName());
     AutoFileRemove afr2(object);
     
-    //pid_t exitCode = execute(compiler,compilerArgs,&env,true,true,true);
-
     ExecuteProcessParameters params;
     params.name_ = compiler;
     params.args_ = compilerArgs;
@@ -97,10 +95,22 @@ Compiler & Compiler::detect(const ConfigSP config)
     params.stderr_ = params.stdout_ = testStderr.createIfNotExist(true).removeAfterClose(!keepStderr_).open().descriptor_;
 #endif
     pid_t exitCode = execute(params);
-
     if( exitCode == 0 && stat(object) ){ // detected
       utf8::String compiler(anyPathName2HostPathName(config->textByPath(sectionPath + ".compiler")));
       type_ = config->textByPath(sectionPath + ".type");
+
+      // get version
+      AsyncFile compilerVersion(changeFileExt(tmpCxx.fileName(),".ver"));
+      params.stderr_ = params.stdout_ = compilerVersion.createIfNotExist(true).removeAfterClose(true).open().descriptor_;
+      params.args_ = "--version";
+      exitCode = execute(params);
+      if( exitCode == 0 ){
+        utf8::String version;
+        compilerVersion_.resize(0);
+        AsyncFile::LineGetBuffer b(compilerVersion.seek(0));
+        while( !compilerVersion.getString(version,&b) ) compilerVersion_ += "// ***WARNING*** Don't edit. This is machine generated line. " + version;
+      }
+
       compiler_ = compiler;
       compilerArgs_ = compilerArgs2;
       compilerEnv_ = env;
@@ -396,8 +406,13 @@ Compiler & Compiler::test(const utf8::String & config)
     utf8::String tmpCxx(anyPathName2HostPathName(getTempPath() + getTempFileName("cxx")));
     out.open().resize(0);
 
+    out <<
+      "// ***WARNING*** Don't edit. This is machine generated line. Compiler version:\n" +
+      compilerVersion_
+    ;
+
     // detect includes
-    out << "// includes\n";
+    out << "\n// includes\n";
     static const char header[] = {
       "#if HAVE_STDINT_H\n"
       "#include <stdint.h>\n"
@@ -1220,7 +1235,7 @@ Compiler & Compiler::test(const utf8::String & config)
       out << testCxxLibExists(libraries[i].library_,libraries[i].symbol_,libraries[i].mod_,tmpCxx,&existsLibraries);
 
     if( !existsLibraries.isNull() )
-      out << "\n// ***WARNING*** Don't edit this line. This is machine generated line. Using libraries. " << "{[NLOSJVNK0SU2UD4CFBWP2UT10H]}: " << existsLibraries << "\n";
+      out << "\n// ***WARNING*** Don't edit. This is machine generated line. Using libraries. " << "{[NLOSJVNK0SU2UD4CFBWP2UT10H]}: " << existsLibraries << "\n";
 
     //detect machine byte order
     out <<
