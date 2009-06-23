@@ -138,12 +138,12 @@ typedef short wchar_t;
 #define PACKED __attribute__ ((packed))
 #endif
 
-#if SIZEOF_CHAR != 1
+#if SIZEOF_CHAR_T != 1
 #error size of char != 1
 #endif
 
 #if SIZEOF_INT8_T == 0
-#if SIZEOF_CHAR == 1
+#if SIZEOF_CHAR_T == 1
 typedef signed char int8_t;
 typedef unsigned char uint8_t;
 #elif SIZEOF__INT8 == 1
@@ -557,6 +557,8 @@ typedef int32_t gid_t;
 #endif
 #endif
 
+typedef int32_t ilock_t;
+ilock_t interlockedIncrement(volatile ilock_t & v,ilock_t a);
 //------------------------------------------------------------------------------
 #endif
 //------------------------------------------------------------------------------

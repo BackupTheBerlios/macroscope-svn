@@ -3068,13 +3068,13 @@ int main(int _argc,char * _argv[])
     //utf8::String defaultConnectionSectionName(config->textByPath(defaultConfigSectionName + ".connection","default_connection"));
     //AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
     utf8::String cacheDirectory(
-      includeTrailingPathDelimiter(
+      excludeTrailingPathDelimiter(
         anyPathName2HostPathName(
-          config->textByPath(defaultConfigSectionName + ".cache_directory",".")
+          config->textByPath(defaultConfigSectionName + ".cache_directory","")
         )
       )
     );
-    utf8::String cName(cacheDirectory + "config.h");
+    utf8::String cName(includeTrailingPathDelimiter(cacheDirectory) + "config.h");
     Compiler compiler;
     compiler.detect(config);
     if( !stat(cName) ){
@@ -3088,11 +3088,19 @@ int main(int _argc,char * _argv[])
         SYSINCLUDE_DIR("kvm")
       )
     );
-    compiler.libDirectories(
-      cacheDirectory + ";" +
-      config->textByPath(defaultConfigSectionName + ".kvm_lib_directory")
-    );
-    
+    utf8::String libDir(config->textByPath(defaultConfigSectionName + ".kvm_lib_directory"),SYSLIB_DIR("kvm"));
+    compiler.libDirectories(cacheDirectory + ";" + libDir);
+    Config libConfig;
+    libConfig.fileName(includeTrailingPathDelimiter(libDir) + "linker.conf").silent(true).parse();
+    for( uintptr_t i = 0; i < libConfig.sectionCount(); i++ ){
+      utf8::String src(libConfig.section(i).value("source"));
+      utf8::String lib(libConfig.section(i).value("library"));
+      for( uintptr_t j = 0; j < enumStringParts(src); i++ ){
+        utf8::String xName(stringPartByNo(src,j));
+        utf8::String oName(changeFileExt(xName),".o"));
+        compiler.compile(cName,xName,oName);
+      }
+    }
     for( uintptr_t i = 0; i < sources.count(); i++ ){
       AutoPtr<wchar_t,AutoPtrMemoryDestructor> fileName(coco_string_create(sources[i].getUNICODEString()));
       AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));
@@ -3101,14 +3109,14 @@ int main(int _argc,char * _argv[])
       parser->tab = newObjectV1<SymbolTable>(parser->gen.ptr());
 	    parser->Parse();
 	    if( parser->errors->count > 0 ){
-        exit(EINVAL);
+        newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 	    }
       Stat sSt, xSt, oSt;
       if( stat(sources[i],sSt) ){
         utf8::String xName(changeFileExt(sources[i],".cxx"));
         if( !stat(xName,xSt) || sSt.st_mtime != xSt.st_mtime )
           parser->gen->generate(compiler,cName,xName);
-        utf8::String oName(changeFileExt(sources[i],".cxx"));
+        utf8::String oName(changeFileExt(sources[i],".o"));
         if( !stat(oName,oSt) || xSt.st_mtime != oSt.st_mtime )
           compiler.compile(cName,xName,oName);
       }

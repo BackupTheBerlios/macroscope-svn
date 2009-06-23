@@ -1288,7 +1288,7 @@ Compiler & Compiler::compile(
   for( uintptr_t i = 0; i < enumStringParts(includeDirectories_); i++ ){
     utf8::String v(anyPathName2HostPathName(stringPartByNo(includeDirectories_,i)));
     if( v.isNull() ) continue;
-    value += (value.isNull() ? "-I" : ";") + v;
+    value += (value.isNull() ? "\"-I" : " \"-I") + excludeTrailingPathDelimiter(v) + "\"";
   }
   compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",value);
   ExecuteProcessParameters params;

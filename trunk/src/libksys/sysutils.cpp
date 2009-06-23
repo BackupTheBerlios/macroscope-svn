@@ -1337,16 +1337,18 @@ utf8::String excludeTrailingPathDelimiter(const utf8::String & path)
 utf8::String includeTrailingPathDelimiter(const utf8::String & path)
 {
   utf8::String s(path);
-  utf8::String::Iterator i(s);
-  i.last().prev();
-  switch( i.getChar() ){
-    case '\\' : case '/' :
-      break;
-    default:
-      char b[2];
-      b[0] = pathDelimiter;
-      b[1] = '\0';
-      return s + b;
+  if( !s.isNull() ){
+    utf8::String::Iterator i(s);
+    i.last().prev();
+    switch( i.getChar() ){
+      case '\\' : case '/' :
+        break;
+      default:
+        char b[2];
+        b[0] = pathDelimiter;
+        b[1] = '\0';
+        return s + b;
+    }
   }
   return s;
 }
