@@ -24,8 +24,10 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#include "boot.h"
-#include "string.h"
+#include "kboot.h"
+#include "kobject.h"
+#include "kmalloc.h"
+#include "kstring.h"
 //---------------------------------------------------------------------------
 namespace kvm {
 //---------------------------------------------------------------------------
@@ -180,14 +182,14 @@ uintptr_t String::termCharSize() const
   return 1;
 }
 //---------------------------------------------------------------------------
-String::Data * String::newData(uintptr_t codePage,uintptr_t size,uilock_t refCount)
+String::Data * String::newData(uintptr_t codePage,uintptr_t size,ilock_t refCount)
 {
   Data * data = NULL;
   size += sizeof(data->refCount_) + sizeof(data->codePage_);
 #ifndef NDEBUG
   //if( size < sizeof(Data) ) size = sizeof(Data);
 #endif
-  data = (Data *) gmalloc(size);
+  data = (Data *) kmalloc(size);
   data->refCount_ = refCount;
   data->codePage_ = uint16_t(codePage);
   return data;

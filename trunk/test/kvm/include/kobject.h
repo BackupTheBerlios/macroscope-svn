@@ -24,15 +24,30 @@
  * SUCH DAMAGE.
  */
 //---------------------------------------------------------------------------
-#include "boot.h"
-#include "mutant.h"
+#ifndef kobjectH
+#define kobjectH
 //---------------------------------------------------------------------------
 namespace kvm {
 //---------------------------------------------------------------------------
-Mutant & Mutant::clear()
-{
-  return *this;
-}
+/////////////////////////////////////////////////////////////////////////////
 //---------------------------------------------------------------------------
-} // namespace kvm
+class Object {
+  friend class ObjectActions;
+  public:
+    virtual ~Object() {}
+    Object() {}
+
+// actions
+    virtual void afterConstruction() {}
+    virtual void beforeDestruction() {}
+
+  protected:
+    Object(const Object &) {}
+    virtual Object & operator = (const Object &) { return *this; }
+  private:
+};
+//---------------------------------------------------------------------------
+} // namespace ksys
+//---------------------------------------------------------------------------
+#endif
 //---------------------------------------------------------------------------

@@ -60,7 +60,7 @@ Compiler & Compiler::detect(const ConfigSP config)
     utf8::String compilerArgs(config->textByPath(sectionPath + ".compiler_args")), compilerArgs2(compilerArgs);
     compilerArgs = compilerArgs.replaceCaseAll("${source}",anyPathName2HostPathName(tmpCxx.fileName()));
     utf8::String object(changeFileExt(tmpCxx.fileName(),".o"));
-    compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
+    compilerArgs = compilerArgs.replaceCaseAll("${object}",anyPathName2HostPathName(object));
     compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
     tmpCxx <<
       "namespace ksys {\n"
@@ -90,10 +90,6 @@ Compiler & Compiler::detect(const ConfigSP config)
     params.env_ = env;
     params.wait_ = true;
     params.noThrow_ = true;
-#ifndef NDEBUG
-    AsyncFile testStderr(changeFileExt(tmpCxx.fileName(),".err"));
-    params.stderr_ = params.stdout_ = testStderr.createIfNotExist(true).removeAfterClose(!keepStderr_).open().descriptor_;
-#endif
     pid_t exitCode = execute(params);
     if( exitCode == 0 && stat(object) ){ // detected
       utf8::String compiler(anyPathName2HostPathName(config->textByPath(sectionPath + ".compiler")));
@@ -116,6 +112,7 @@ Compiler & Compiler::detect(const ConfigSP config)
       compilerEnv_ = env;
       linker_ = anyPathName2HostPathName(config->textByPath(sectionPath + ".linker"));
       linkerArgs_ = config->textByPath(sectionPath + ".linker_args");
+      linkerDlArgs_ = config->textByPath(sectionPath + ".linker_dl_args");
       f = true;
       break;
     }
@@ -132,7 +129,7 @@ bool Compiler::testCxx(const utf8::String & config,const utf8::String & test,con
   file.createIfNotExist(true);
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",tmpCxx));
   utf8::String object(anyPathName2HostPathName(changeFileExt(tmpCxx,".o")));
-  compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
+  compilerArgs = compilerArgs.replaceCaseAll("${object}","\"" + anyPathName2HostPathName(object) + "\"");
   compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
   file.open().resize(0);
   if( stat(config) ){
@@ -155,9 +152,14 @@ bool Compiler::testCxx(const utf8::String & config,const utf8::String & test,con
   testStderr.copy(file);
   file.close();
   testStderr << "\n";
+  testStderr << params.name_ + " " + params.args_ + "\n";
   pid_t exitCode = execute(params);
   testStderr << "\n";
-  return exitCode == 0 && stat(object);
+  if( exitCode == 0 && stat(object) ){
+    testStderr.removeAfterClose(true);
+    return true;
+  }
+  return false;
 }
 //------------------------------------------------------------------------------
 bool Compiler::testLinkCxx(
@@ -170,7 +172,7 @@ bool Compiler::testLinkCxx(
   file.createIfNotExist(true);
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",tmpCxx));
   utf8::String object(anyPathName2HostPathName(changeFileExt(tmpCxx,".o")));
-  compilerArgs = compilerArgs.replaceCaseAll("${object}",object);
+  compilerArgs = compilerArgs.replaceCaseAll("${object}","\"" + anyPathName2HostPathName(object) + "\"");
   compilerArgs = compilerArgs.replaceCaseAll("${include_directories}",utf8::String());
   file.open().resize(0);
   if( stat(config) ){
@@ -193,11 +195,23 @@ bool Compiler::testLinkCxx(
   testStderr.copy(file);
   file.close();
   testStderr << "\n";
+  testStderr << params.name_ + " " + params.args_ + "\n";
   pid_t exitCode = execute(params);
   testStderr << "\n";
   if( exitCode == 0 && stat(object) ){
-    utf8::String executable(anyPathName2HostPathName(changeFileExt(tmpCxx,".exe")));
-    utf8::String linkerArgs(linkerArgs_.replaceCaseAll("${object}",object));
+    utf8::String executable(
+      anyPathName2HostPathName(
+#if defined(__WIN32__) || defined(__WIN64__)
+        changeFileExt(
+#endif
+          tmpCxx
+#if defined(__WIN32__) || defined(__WIN64__)
+          ,".exe"
+#endif
+        )
+      )
+    );
+    utf8::String linkerArgs(linkerArgs_.replaceCaseAll("${object}","\"" + anyPathName2HostPathName(object) + "\""));
     linkerArgs = linkerArgs.replaceCaseAll("${executable}",executable);
     utf8::String libs;
     for( uintptr_t k = enumStringParts(libraries,",",false), i = 0; i < k; i++ ){
@@ -214,10 +228,15 @@ bool Compiler::testLinkCxx(
       }
     }
     linkerArgs = linkerArgs.replaceCaseAll("${libraries}",libs);
+    linkerArgs = linkerArgs.replaceCaseAll("${lib_directories}","");
     params.name_ = linker_;
     params.args_ = linkerArgs;
+    testStderr << params.name_ + " " + params.args_ + "\n";
     exitCode = execute(params);
-    if( exitCode == 0 && stat(executable) ) return true;
+    if( exitCode == 0 && stat(executable) ){
+      testStderr.removeAfterClose(true);
+      return true;
+    }
   }
   return false;
 }
@@ -518,7 +537,14 @@ Compiler & Compiler::test(const utf8::String & config)
       "winsock2.h",
       "winternl.h",
       "ntstatus.h",
-      "ntdll.h"
+      "ntdll.h",
+      // Standart C++ headers
+      "new",
+      "new.h",
+      "typeinfo",
+      "typeinfo.h",
+      "stdexcept",
+      "stdexcept.h",
     };
     for( uintptr_t i = 0; i < sizeof(headers) / sizeof(headers[0]); i++ )
       out << testCxxHeaderHelper(config,headers[i],tmpCxx);
@@ -1283,7 +1309,7 @@ Compiler & Compiler::compile(
   const utf8::String & object)
 {
   utf8::String compilerArgs(compilerArgs_.replaceCaseAll("${source}",anyPathName2HostPathName(source)));
-  compilerArgs = compilerArgs.replaceCaseAll("${object}",anyPathName2HostPathName(object));
+  compilerArgs = compilerArgs.replaceCaseAll("${object}","\"" + anyPathName2HostPathName(object) + "\"");
   utf8::String value;
   for( uintptr_t i = 0; i < enumStringParts(includeDirectories_); i++ ){
     utf8::String v(anyPathName2HostPathName(stringPartByNo(includeDirectories_,i)));
@@ -1298,19 +1324,80 @@ Compiler & Compiler::compile(
   params.wait_ = true;
   AsyncFile testStderr(changeFileExt(source,".err"));
   params.stderr_ = params.stdout_ = testStderr.createIfNotExist(true).removeAfterClose(!keepStderr_).open().descriptor_;
-  testStderr.seek(testStderr.size());
+  //testStderr.seek(testStderr.size());
+  testStderr.resize(0);
+  testStderr << params.name_ + " " + params.args_ + "\n";
   pid_t exitCode = execute(params);
   if( exitCode != 0 )
     newObjectV1C2<Exception>(exitCode,__PRETTY_FUNCTION__)->throwSP();
+  testStderr.removeAfterClose(true);
   return *this;
 }
 //------------------------------------------------------------------------------
 Compiler & Compiler::link(
-  const utf8::String & config,
-  const Array<utf8::String> & objects,
   const utf8::String & module,
+  const utf8::String & objects,
   bool dlm)
 {
+  utf8::String m(module);
+#if defined(__WIN32__) || defined(__WIN64__)
+  m = module + ".dll";
+#else
+  m = "lib" + module + ".so";
+#endif
+  utf8::String linkerArgs(linkerArgs_.replaceCaseAll("${object}",objects));
+  linkerArgs = linkerArgs.replaceCaseAll("${executable}",m);
+  utf8::String libs;
+  bool isGNU = type_.casecompare("gnu") == 0;
+  for( uintptr_t k = enumStringParts(libraries_,",",false), i = 0; i < k; i++ ){
+    utf8::String s(stringPartByNo(libraries_,i,",",false));
+    libs += libs.isNull() ? "" : " ";
+    if( isGNU ){
+      libs += "\"-l" + s + "\"";
+    }
+    else if( type_.casecompare("msvc") == 0 || type_.casecompare("intel") == 0 ){
+      libs += "\"" + s.right(4).casecompare(".lib") == 0 ? s : s + ".lib" + "\"";
+    }
+    else {
+      libs += s;
+    }
+  }
+  linkerArgs = linkerArgs.replaceCaseAll("${libraries}",libs);
+  libs.resize(0);
+  for( uintptr_t k = enumStringParts(libDirectories_,",",false), i = 0; i < k; i++ ){
+    utf8::String s(stringPartByNo(libDirectories_,i,",",false));
+    libs += (libs.isNull() ? "-L" : " -L") + excludeTrailingPathDelimiter(anyPathName2HostPathName(s));
+  }
+  linkerArgs = linkerArgs.replaceCaseAll("${lib_directories}",libs);
+  if( dlm ){
+    linkerArgs = 
+      linkerDlArgs_.replaceCaseAll("${implib}",
+        changeFileExt(
+          isGNU ? "lib" + m : m,
+          isGNU ?
+#if defined(__WIN32__) || defined(__WIN64__)
+            ".dll.a"
+#else
+            ".a"
+#endif
+            : ".lib"
+        )
+      ).replaceCaseAll("${def}",changeFileExt(m,".def"))
+      + " " + linkerArgs
+    ;
+  }
+  ExecuteProcessParameters params;
+  params.name_ = linker_;
+  params.args_ = linkerArgs;
+  params.env_ = compilerEnv_;
+  params.wait_ = true;
+  AsyncFile testStderr(changeFileExt(module,".err"));
+  params.stderr_ = params.stdout_ = testStderr.createIfNotExist(true).removeAfterClose(!keepStderr_).open().descriptor_;
+  testStderr << params.name_ + " " + params.args_ + "\n";
+  pid_t exitCode = execute(params);
+  if( exitCode != 0 )
+    newObjectV1C2<Exception>(exitCode,__PRETTY_FUNCTION__)->throwSP();
+  testStderr.removeAfterClose(true);
   return *this;
 }
 //------------------------------------------------------------------------------

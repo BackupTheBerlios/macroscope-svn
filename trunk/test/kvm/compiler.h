@@ -41,12 +41,14 @@ class Compiler : public Object {
     Compiler & detect(const ConfigSP config);
     Compiler & test(const utf8::String & config);
     Compiler & compile(const utf8::String & config,const utf8::String & source,const utf8::String & object);
-    Compiler & link(const utf8::String & config,const Array<utf8::String> & objects,const utf8::String & module,bool dlm = true);
+    Compiler & link(const utf8::String & module,const utf8::String & objects,bool dlm = true);
 
     Compiler & includeDirectories(const utf8::String & v){ includeDirectories_ = v; return *this; }
     const utf8::String & includeDirectories() const { return includeDirectories_; }
     Compiler & libDirectories(const utf8::String & v){ libDirectories_ = v; return *this; }
     const utf8::String & libDirectories() const { return libDirectories_; }
+    Compiler & libraries(const utf8::String & v){ libraries_ = v; return *this; }
+    const utf8::String & libraries() const { return libraries_; }
   protected:
     utf8::String type_;
     utf8::String compiler_;
@@ -55,8 +57,10 @@ class Compiler : public Object {
     Array<utf8::String> compilerEnv_;
     utf8::String linker_;
     utf8::String linkerArgs_;
+    utf8::String linkerDlArgs_;
     utf8::String includeDirectories_;
     utf8::String libDirectories_;
+    utf8::String libraries_;
     bool keepStderr_;
 
     bool testCxx(const utf8::String & config,const utf8::String & test,const utf8::String & tmpCxx);

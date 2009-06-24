@@ -3023,7 +3023,12 @@ int main(int _argc,char * _argv[])
     //return 0;
 //
 
-    stdErr.fileName(includeTrailingPathDelimiter(SYSLOG_DIR(kvm_version.tag_)) + kvm_version.tag_ + ".log");
+    stdErr.fileName(
+      absolutePathNameFromWorkDir(
+        getCurrentDir(),
+        includeTrailingPathDelimiter(SYSLOG_DIR(kvm_version.tag_)) + kvm_version.tag_ + ".log"
+      )
+    );
     Config::defaultFileName(SYSCONF_DIR("") + kvm_version.tag_ + ".conf");
     ConfigSP config(newObject<InterlockedConfig<FiberWriteLock> >());
     Array<utf8::String> sources;
@@ -3037,7 +3042,7 @@ int main(int _argc,char * _argv[])
         changeCurrentDir(argv()[++i]);
       }
       else if( argv()[i].compare("--log") == 0 && i + 1 < argv().count() ){
-        stdErr.fileName(argv()[++i]);
+        stdErr.fileName(absolutePathNameFromWorkDir(getCurrentDir(),argv()[++i]));
       }
       else if( argv()[i].compare("-c") == 0 && i + 1 < argv().count() ){
         Config::defaultFileName(argv()[i + 1]);
@@ -3069,12 +3074,17 @@ int main(int _argc,char * _argv[])
     //AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
     utf8::String cacheDirectory(
       excludeTrailingPathDelimiter(
-        anyPathName2HostPathName(
-          config->textByPath(defaultConfigSectionName + ".cache_directory","")
+        absolutePathNameFromWorkDir(
+          getCurrentDir(),
+          excludeTrailingPathDelimiter(
+            config->textByPath(defaultConfigSectionName + ".cache_directory","")
+          )
         )
       )
     );
-    utf8::String cName(includeTrailingPathDelimiter(cacheDirectory) + "config.h");
+    utf8::String cName(
+      includeTrailingPathDelimiter(cacheDirectory) + "config.h"
+    );
     Compiler compiler;
     compiler.detect(config);
     if( !stat(cName) ){
@@ -3082,25 +3092,54 @@ int main(int _argc,char * _argv[])
       compiler.test(cName);
     }
     compiler.includeDirectories(
-      cacheDirectory + ";" +
-      config->textByPath(
-        defaultConfigSectionName + ".kvm_include_directory",
-        SYSINCLUDE_DIR("kvm")
+      cacheDirectory + "," +
+      absolutePathNameFromWorkDir(
+        getCurrentDir(),
+        includeTrailingPathDelimiter(
+          config->textByPath(defaultConfigSectionName + ".kvm_include_directory",SYSINCLUDE_DIR("kvm"))
+        ) + "include"
       )
     );
-    utf8::String libDir(config->textByPath(defaultConfigSectionName + ".kvm_lib_directory"),SYSLIB_DIR("kvm"));
-    compiler.libDirectories(cacheDirectory + ";" + libDir);
+    utf8::String libDir(
+      absolutePathNameFromWorkDir(
+        getCurrentDir(),
+        includeTrailingPathDelimiter(
+          config->textByPath(defaultConfigSectionName + ".kvm_library_directory",SYSLIB_DIR("kvm"))
+        ) + "lib"
+      )
+    );
+    compiler.libDirectories(cacheDirectory + "," + libDir);
     Config libConfig;
-    libConfig.fileName(includeTrailingPathDelimiter(libDir) + "linker.conf").silent(true).parse();
+    libConfig.fileName(
+      includeTrailingPathDelimiter(libDir) + "linker.conf"
+    ).silent(true).parse();
+    Stat sSt, xSt, oSt;
+    
+    utf8::String cwd(getCurrentDir());
+    changeCurrentDir(libDir);
     for( uintptr_t i = 0; i < libConfig.sectionCount(); i++ ){
-      utf8::String src(libConfig.section(i).value("source"));
-      utf8::String lib(libConfig.section(i).value("library"));
-      for( uintptr_t j = 0; j < enumStringParts(src); i++ ){
-        utf8::String xName(stringPartByNo(src,j));
-        utf8::String oName(changeFileExt(xName),".o"));
-        compiler.compile(cName,xName,oName);
+      utf8::String src("src/dlmain.cxx," + libConfig.section(i).text("source"));
+      utf8::String lib(libConfig.section(i).text("library"));
+      utf8::String obj;
+      bool mod = false;
+      for( uintptr_t j = 0; j < enumStringParts(src); j++ ){
+        utf8::String xName(anyPathName2HostPathName(stringPartByNo(src,j)));
+        if( stat(xName,xSt) ){
+          utf8::String oName(changeFileExt(xName,".o"));
+          if( !stat(oName,oSt) || oSt.st_mtime != xSt.st_mtime ){
+            compiler.compile(cName,xName,oName);
+            utime(oName,xSt.st_atime * 1000000u,xSt.st_mtime * 1000000u);
+            mod = true;
+          }
+          obj += (obj.isNull() ? "\"" : " \"") + oName + "\"";
+        }
       }
+      if( !stat(lib,oSt) || mod )
+        compiler.link(lib,obj,true);
+      compiler.libraries(compiler.libraries() + (compiler.libraries().isNull() ? "" : ",") + lib);
     }
+    changeCurrentDir(cwd);
+
     for( uintptr_t i = 0; i < sources.count(); i++ ){
       AutoPtr<wchar_t,AutoPtrMemoryDestructor> fileName(coco_string_create(sources[i].getUNICODEString()));
       AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));
@@ -3111,14 +3150,17 @@ int main(int _argc,char * _argv[])
 	    if( parser->errors->count > 0 ){
         newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 	    }
-      Stat sSt, xSt, oSt;
       if( stat(sources[i],sSt) ){
         utf8::String xName(changeFileExt(sources[i],".cxx"));
-        if( !stat(xName,xSt) || sSt.st_mtime != xSt.st_mtime )
+        if( !stat(xName,xSt) || sSt.st_mtime != xSt.st_mtime ){
           parser->gen->generate(compiler,cName,xName);
+          utime(xName,sSt.st_atime * 1000000u,sSt.st_mtime * 1000000u);
+        }
         utf8::String oName(changeFileExt(sources[i],".o"));
-        if( !stat(oName,oSt) || xSt.st_mtime != oSt.st_mtime )
+        if( !stat(oName,oSt) || xSt.st_mtime != oSt.st_mtime ){
           compiler.compile(cName,xName,oName);
+          utime(oName,xSt.st_atime * 1000000u,xSt.st_mtime * 1000000u);
+        }
       }
     }
     stdErr.debug(0,

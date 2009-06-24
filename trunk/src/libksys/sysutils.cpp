@@ -1376,7 +1376,7 @@ utf8::String absolutePathNameFromWorkDir(
   const utf8::String & workDir,
   const utf8::String & pathName)
 {
-  if( isPathNameRelative(pathName) ) return workDir + pathName;
+  if( isPathNameRelative(pathName) ) return includeTrailingPathDelimiter(workDir) + pathName;
   return pathName;
 }
 //---------------------------------------------------------------------------
