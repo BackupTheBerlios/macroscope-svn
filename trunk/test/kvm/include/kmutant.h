@@ -40,11 +40,12 @@ class Mutant {
       mtFloat,
       mtTime,
       mtString,
-      mtBinary
+      mtBinary,
+      mtReference
     };
 
     ~Mutant() { clear(); }
-    Mutant() : type_(mtNull) {}
+    Mutant() : type_(mtNull), refCount_(0) {}
 
     Mutant(const Mutant & v) : type_(mtNull) { operator = (v); }
 
@@ -59,16 +60,14 @@ class Mutant {
     Mutant & clear();
 
   protected:
-
     union {
       char raw_[1];
       intmax_t int_;
       ldouble float_;
       const char * str_;
     };
-
     Type type_;
-
+    volatile ilock_t refCount_;
   private:
 };
 //------------------------------------------------------------------------------

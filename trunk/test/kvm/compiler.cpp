@@ -1322,7 +1322,7 @@ Compiler & Compiler::compile(
   params.args_ = compilerArgs;
   params.env_ = compilerEnv_;
   params.wait_ = true;
-  AsyncFile testStderr(changeFileExt(source,".err"));
+  AsyncFile testStderr(changeFileExt(object,".err"));
   params.stderr_ = params.stdout_ = testStderr.createIfNotExist(true).removeAfterClose(!keepStderr_).open().descriptor_;
   //testStderr.seek(testStderr.size());
   testStderr.resize(0);

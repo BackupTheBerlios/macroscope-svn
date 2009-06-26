@@ -3077,18 +3077,18 @@ int main(int _argc,char * _argv[])
     utf8::String defaultConfigSectionName(config->text("default_config",kvm_version.tag_));
     //utf8::String defaultConnectionSectionName(config->textByPath(defaultConfigSectionName + ".connection","default_connection"));
     //AutoPtr<Database> database(Database::newDatabase(&config->section(defaultConnectionSectionName)));
-    utf8::String cacheDirectory(
+    utf8::String cacheDir(
       excludeTrailingPathDelimiter(
         absolutePathNameFromWorkDir(
           getCurrentDir(),
           excludeTrailingPathDelimiter(
-            config->textByPath(defaultConfigSectionName + ".cache_directory","")
+            config->textByPath(defaultConfigSectionName + ".cache_directory",".kcache")
           )
         )
       )
     );
     utf8::String cName(
-      includeTrailingPathDelimiter(cacheDirectory) + "config.h"
+      includeTrailingPathDelimiter(cacheDir) + "config.h"
     );
     Compiler compiler;
     compiler.detect(config);
@@ -3097,7 +3097,7 @@ int main(int _argc,char * _argv[])
       compiler.test(cName);
     }
     compiler.includeDirectories(
-      cacheDirectory + "," +
+      cacheDir + "," +
       absolutePathNameFromWorkDir(
         getCurrentDir(),
         includeTrailingPathDelimiter(
@@ -3113,10 +3113,10 @@ int main(int _argc,char * _argv[])
         ) + "lib"
       )
     );
-    compiler.libDirectories(cacheDirectory + "," + libDir);
+    compiler.libDirectories(includeTrailingPathDelimiter(cacheDir) + pathDelimiterStr + "klib," + cacheDir);
     Config klinkerConfig;
     klinkerConfig.fileName(
-      includeTrailingPathDelimiter(libDir) + "klinker.conf"
+      includeTrailingPathDelimiter(libDir) + "klib.conf"
     ).silent(true).parse();
     Stat sSt, xSt, oSt;
 // system libs
@@ -3124,13 +3124,20 @@ int main(int _argc,char * _argv[])
     changeCurrentDir(libDir);
     for( uintptr_t i = 0; i < klinkerConfig.sectionCount(); i++ ){
       utf8::String src("src/dlmain.cxx," + klinkerConfig.section(i).text("source"));
-      utf8::String lib(klinkerConfig.section(i).text("library"));
+      utf8::String libName(klinkerConfig.section(i).text("library"));
+      utf8::String lib(
+        includeTrailingPathDelimiter(cacheDir) + "klib" + pathDelimiterStr + libName
+      );
       utf8::String obj;
       bool mod = false;
       for( uintptr_t j = 0; j < enumStringParts(src); j++ ){
         utf8::String xName(anyPathName2HostPathName(stringPartByNo(src,j)));
         if( stat(xName,xSt) ){
-          utf8::String oName(changeFileExt(xName,".o"));
+          utf8::String oName(
+            includeTrailingPathDelimiter(
+              includeTrailingPathDelimiter(cacheDir) + "klib"
+            ) + changeFileExt(xName,".o")
+          );
           if( !stat(oName,oSt) || oSt.st_mtime != xSt.st_mtime ){
             compiler.compile(cName,xName,oName);
             utime(oName,xSt.st_atime * 1000000u,xSt.st_mtime * 1000000u);
@@ -3141,21 +3148,24 @@ int main(int _argc,char * _argv[])
       }
       if( !stat(lib,oSt) || mod )
         compiler.link(lib,obj,true,false);
-      compiler.libraries(compiler.libraries() + (compiler.libraries().isNull() ? "" : ",") + lib);
+      compiler.libraries(compiler.libraries() + (compiler.libraries().isNull() ? "" : ",") + libName);
     }
     changeCurrentDir(cwd);
 // user libs
     klinkerConfig.clear();
-    klinkerConfig.fileName("klinker.conf").silent(true).parse();
+    klinkerConfig.fileName("klib.conf").silent(true).parse();
     for( uintptr_t i = 0; i < klinkerConfig.sectionCount(); i++ ){
       utf8::String src("src/dlmain.cxx," + klinkerConfig.section(i).text("source"));
-      utf8::String lib(klinkerConfig.section(i).text("library"));
+      utf8::String libName(klinkerConfig.section(i).text("library"));
+      utf8::String lib(
+        includeTrailingPathDelimiter(cacheDir) + libName
+      );
       utf8::String obj;
       bool mod = false;
       for( uintptr_t j = 0; j < enumStringParts(src); j++ ){
         utf8::String xName(anyPathName2HostPathName(stringPartByNo(src,j)));
         if( stat(xName,xSt) ){
-          utf8::String oName(changeFileExt(xName,".o"));
+          utf8::String oName(includeTrailingPathDelimiter(cacheDir) + changeFileExt(xName,".o"));
           if( !stat(oName,oSt) || oSt.st_mtime != xSt.st_mtime ){
             compiler.compile(cName,xName,oName);
             utime(oName,xSt.st_atime * 1000000u,xSt.st_mtime * 1000000u);
@@ -3166,10 +3176,14 @@ int main(int _argc,char * _argv[])
       }
       if( !stat(lib,oSt) || mod )
         compiler.link(lib,obj,true,false);
-      compiler.libraries(compiler.libraries() + (compiler.libraries().isNull() ? "" : ",") + lib);
+      compiler.libraries(compiler.libraries() + (compiler.libraries().isNull() ? "" : ",") + libName);
     }
 // exe
-    utf8::String obj;
+    utf8::String obj(
+      includeTrailingPathDelimiter(cacheDir) + "klib" + pathDelimiterStr +
+      "src" + pathDelimiterStr +
+      "dlmain.o"
+    );
     bool mod = false;
     for( uintptr_t i = 0; i < sources.count(); i++ ){
       AutoPtr<wchar_t,AutoPtrMemoryDestructor> fileName(coco_string_create(sources[i].getUNICODEString()));
@@ -3182,12 +3196,12 @@ int main(int _argc,char * _argv[])
         newObjectV1C2<Exception>(EINVAL,__PRETTY_FUNCTION__)->throwSP();
 	    }
       if( stat(sources[i],sSt) ){
-        utf8::String xName(changeFileExt(sources[i],".cxx"));
+        utf8::String xName(includeTrailingPathDelimiter(cacheDir) + changeFileExt(sources[i],".cxx"));
         if( !stat(xName,xSt) || sSt.st_mtime != xSt.st_mtime ){
           parser->gen->generate(compiler,cName,xName);
           utime(xName,sSt.st_atime * 1000000u,sSt.st_mtime * 1000000u);
         }
-        utf8::String oName(changeFileExt(sources[i],".o"));
+        utf8::String oName(changeFileExt(xName,".o"));
         if( !stat(oName,oSt) || xSt.st_mtime != oSt.st_mtime ){
           compiler.compile(cName,xName,oName);
           utime(oName,xSt.st_atime * 1000000u,xSt.st_mtime * 1000000u);

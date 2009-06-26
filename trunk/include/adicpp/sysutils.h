@@ -326,6 +326,7 @@ utf8::String  getCurrentDir();
 void          changeCurrentDir(const utf8::String & name);
 utf8::String  getTempFileName(const utf8::String & ext = "tmp");
 utf8::String  getTempPath();
+utf8::String changeFilePath(const utf8::String & filePathName,const utf8::String & path,const utf8::String & newPath);
 utf8::String  changeFileExt(const utf8::String & fileName, const utf8::String & extension);
 utf8::String  getFileExt(const utf8::String & fileName);
 utf8::String  getExecutableName();

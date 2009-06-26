@@ -1271,6 +1271,13 @@ utf8::String getTempPath()
 #endif
 }
 //---------------------------------------------------------------------------
+utf8::String changeFilePath(const utf8::String & filePathName,const utf8::String & path,const utf8::String & newPath)
+{
+  utf8::String::Iterator i(filePathName);
+  uintptr_t l = includeTrailingPathDelimiter(path).length();
+  return includeTrailingPathDelimiter(newPath) + utf8::String(i + l);
+}
+//---------------------------------------------------------------------------
 utf8::String changeFileExt(const utf8::String & fileName,const utf8::String & extension)
 {
   utf8::String::Iterator i(fileName);
