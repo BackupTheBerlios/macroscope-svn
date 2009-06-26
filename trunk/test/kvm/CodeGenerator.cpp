@@ -132,9 +132,13 @@ void Class::generateCode(const CodeGeneratorParameters & p)
   else {
     p.file_ <<
       "#include \"" + p.config_ + "\"\n"
-      "#include <kvm/include/boot.h>\n"
-      "#include <kvm/include/string.h>\n"
-      "#include <kvm/include/mutant.h>\n"
+      "#include \"kboot.h\"\n"
+      "#include \"kobject.h\"\n"
+      "#include \"kmalloc.h\"\n"
+      "#include \"kstring.h\"\n"
+      "#include \"kmutant.h\"\n"
+      "#include \"karray.h\"\n"
+      "#include \"kexcp.h\"\n"
       "\n"
       "using kvm::Mutant;\n"
     ;

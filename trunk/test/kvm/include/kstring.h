@@ -81,13 +81,7 @@ class String {
 
     static String elapsedTime2Str(uint64_t time);
   protected:
-#ifdef _MSC_VER
-#pragma pack(push)
-#pragma pack(1)
-#elif __BORLANDC__
-#pragma option push -a1
-#endif
-    struct PACKED Data {
+    struct Data {
       volatile ilock_t refCount_;
       uint16_t codePage_;
       union {
@@ -107,22 +101,17 @@ class String {
 
       Data * addRef()
       {
-        interlockedIncrement(*reinterpret_cast<volatile ilock_t *>(&refCount_),1);
+        interlockedIncrement(refCount_,1);
         return this;
       }
 
       void remRef()
       {
-        if( interlockedIncrement(*reinterpret_cast<volatile ilock_t *>(&refCount_),-1) == 1 )
-          kmfree(this);
+        if( interlockedIncrement(refCount_,-1) == 1 ) kmfree(this);
       }
 
     };
-#ifdef _MSC_VER
-#pragma pack(pop)
-#elif __BORLANDC__
-#pragma option pop
-#endif
+
     Data * data_;
     static uint8_t null_[];
 

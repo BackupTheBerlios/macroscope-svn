@@ -41,7 +41,7 @@ class Compiler : public Object {
     Compiler & detect(const ConfigSP config);
     Compiler & test(const utf8::String & config);
     Compiler & compile(const utf8::String & config,const utf8::String & source,const utf8::String & object);
-    Compiler & link(const utf8::String & module,const utf8::String & objects,bool dlm = true);
+    Compiler & link(const utf8::String & module,const utf8::String & objects,bool dlm,bool exe);
 
     Compiler & includeDirectories(const utf8::String & v){ includeDirectories_ = v; return *this; }
     const utf8::String & includeDirectories() const { return includeDirectories_; }

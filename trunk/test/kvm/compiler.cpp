@@ -1337,18 +1337,19 @@ Compiler & Compiler::compile(
 Compiler & Compiler::link(
   const utf8::String & module,
   const utf8::String & objects,
-  bool dlm)
+  bool dlm,
+  bool exe)
 {
+  bool isGNU = type_.casecompare("gnu") == 0;
   utf8::String m(module);
 #if defined(__WIN32__) || defined(__WIN64__)
-  m = module + ".dll";
+  m = dlm ? module + ".dll" : isGNU ? module + (exe ? ".exe" : ".a") : m + (exe ? ".exe" : ".lib");
 #else
-  m = "lib" + module + ".so";
+  m = dlm ? "lib" + module + ".so" : exe ? module : "lib" + module + ".a";
 #endif
   utf8::String linkerArgs(linkerArgs_.replaceCaseAll("${object}",objects));
   linkerArgs = linkerArgs.replaceCaseAll("${executable}",m);
   utf8::String libs;
-  bool isGNU = type_.casecompare("gnu") == 0;
   for( uintptr_t k = enumStringParts(libraries_,",",false), i = 0; i < k; i++ ){
     utf8::String s(stringPartByNo(libraries_,i,",",false));
     libs += libs.isNull() ? "" : " ";

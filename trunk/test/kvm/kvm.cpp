@@ -3032,6 +3032,7 @@ int main(int _argc,char * _argv[])
     Config::defaultFileName(SYSCONF_DIR("") + kvm_version.tag_ + ".conf");
     ConfigSP config(newObject<InterlockedConfig<FiberWriteLock> >());
     Array<utf8::String> sources;
+    utf8::String exe;
     for( uintptr_t i = 1; i < argv().count(); i++ ){
       if( argv()[i].compare("--version") == 0 ){
         stdErr.debug(9,utf8::String::Stream() << kvm_version.tex_ << "\n");
@@ -3048,7 +3049,11 @@ int main(int _argc,char * _argv[])
         Config::defaultFileName(argv()[i + 1]);
         config->fileName(argv()[++i]);
       }
+      else if( argv()[i].compare("-o") == 0 && i + 1 < argv().count() ){
+        exe = argv()[++i];
+      }
       else {
+        if( exe.isNull() ) exe = argv()[i];
         sources.add(argv()[i]);
       }
     }
@@ -3109,17 +3114,17 @@ int main(int _argc,char * _argv[])
       )
     );
     compiler.libDirectories(cacheDirectory + "," + libDir);
-    Config libConfig;
-    libConfig.fileName(
-      includeTrailingPathDelimiter(libDir) + "linker.conf"
+    Config klinkerConfig;
+    klinkerConfig.fileName(
+      includeTrailingPathDelimiter(libDir) + "klinker.conf"
     ).silent(true).parse();
     Stat sSt, xSt, oSt;
-    
+// system libs
     utf8::String cwd(getCurrentDir());
     changeCurrentDir(libDir);
-    for( uintptr_t i = 0; i < libConfig.sectionCount(); i++ ){
-      utf8::String src("src/dlmain.cxx," + libConfig.section(i).text("source"));
-      utf8::String lib(libConfig.section(i).text("library"));
+    for( uintptr_t i = 0; i < klinkerConfig.sectionCount(); i++ ){
+      utf8::String src("src/dlmain.cxx," + klinkerConfig.section(i).text("source"));
+      utf8::String lib(klinkerConfig.section(i).text("library"));
       utf8::String obj;
       bool mod = false;
       for( uintptr_t j = 0; j < enumStringParts(src); j++ ){
@@ -3135,11 +3140,37 @@ int main(int _argc,char * _argv[])
         }
       }
       if( !stat(lib,oSt) || mod )
-        compiler.link(lib,obj,true);
+        compiler.link(lib,obj,true,false);
       compiler.libraries(compiler.libraries() + (compiler.libraries().isNull() ? "" : ",") + lib);
     }
     changeCurrentDir(cwd);
-
+// user libs
+    klinkerConfig.clear();
+    klinkerConfig.fileName("klinker.conf").silent(true).parse();
+    for( uintptr_t i = 0; i < klinkerConfig.sectionCount(); i++ ){
+      utf8::String src("src/dlmain.cxx," + klinkerConfig.section(i).text("source"));
+      utf8::String lib(klinkerConfig.section(i).text("library"));
+      utf8::String obj;
+      bool mod = false;
+      for( uintptr_t j = 0; j < enumStringParts(src); j++ ){
+        utf8::String xName(anyPathName2HostPathName(stringPartByNo(src,j)));
+        if( stat(xName,xSt) ){
+          utf8::String oName(changeFileExt(xName,".o"));
+          if( !stat(oName,oSt) || oSt.st_mtime != xSt.st_mtime ){
+            compiler.compile(cName,xName,oName);
+            utime(oName,xSt.st_atime * 1000000u,xSt.st_mtime * 1000000u);
+            mod = true;
+          }
+          obj += (obj.isNull() ? "\"" : " \"") + oName + "\"";
+        }
+      }
+      if( !stat(lib,oSt) || mod )
+        compiler.link(lib,obj,true,false);
+      compiler.libraries(compiler.libraries() + (compiler.libraries().isNull() ? "" : ",") + lib);
+    }
+// exe
+    utf8::String obj;
+    bool mod = false;
     for( uintptr_t i = 0; i < sources.count(); i++ ){
       AutoPtr<wchar_t,AutoPtrMemoryDestructor> fileName(coco_string_create(sources[i].getUNICODEString()));
       AutoPtr<Scanner> scanner(newObjectV1<Scanner>(fileName.ptr()));
@@ -3161,8 +3192,12 @@ int main(int _argc,char * _argv[])
           compiler.compile(cName,xName,oName);
           utime(oName,xSt.st_atime * 1000000u,xSt.st_mtime * 1000000u);
         }
+        obj += (obj.isNull() ? "\"" : " \"") + oName + "\"";
       }
     }
+    exe = changeFileExt(exe,"");
+    if( !stat(exe,oSt) || mod )
+      compiler.link(exe,obj,false,true);
     stdErr.debug(0,
       utf8::String::Stream() << kvm_version.gnu_ << " stopped\n"
     );

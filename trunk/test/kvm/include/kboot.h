@@ -29,6 +29,17 @@
 #ifndef kbootH
 #define kbootH
 //---------------------------------------------------------------------------
+#if building_dll
+# define DLIMPORT __declspec(dllexport)
+#else
+# if linking_to_dll
+#  define DLIMPORT __declspec(dllimport)
+# else
+#  define DLIMPORT
+# endif
+#endif
+//---------------------------------------------------------------------------
+
 #ifdef __CYGWIN__
 #ifdef __WIN32__
 #undef __WIN32__
