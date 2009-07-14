@@ -1,5 +1,5 @@
 /*-
- * Copyright 2005 Guram Dukashvili
+ * Copyright 2005-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,11 +31,21 @@
 
 #if HAVE_MYSQL_MYSQL_H
 #include <mysql/mysql.h>
+#if MYSQL_VERSION_ID >= 60000
+#include <mysql/my_config.h>
+#undef HAVE_FENV_H
+#include <mysql/my_global.h>
+#endif
 #include <mysql/mysqld_error.h>
 #include <mysql/my_pthread.h>
 #include <mysql/errmsg.h>
 #elif HAVE_MYSQL_H
 #include <mysql.h>
+#if MYSQL_VERSION_ID >= 60000
+#include <my_config.h>
+#undef HAVE_FENV_H
+#include <my_global.h>
+#endif
 #include <mysqld_error.h>
 #include <my_pthread.h>
 #include <errmsg.h>

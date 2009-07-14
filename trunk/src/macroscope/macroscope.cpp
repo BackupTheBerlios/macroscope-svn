@@ -426,8 +426,8 @@ Logger & Logger::createDatabase()
           "  maxd0 = 0;\n"
           "  OPEN cur@0001@;\n"
           "  FETCH cur@0001@ INTO :pkts0, :mind0, :maxd0, :dgram0, :data0;\n"
-          "  IF (dgramP < mind0) THEN mind0 = dgramP;\n"
-          "  IF (dgramP > maxd0) THEN maxd0 = dgramP;\n"
+          "  IF (dgramP < mind0) THEN mind0 = :dgramP;\n"
+          "  IF (dgramP > maxd0) THEN maxd0 = :dgramP;\n"
           "  IF (ROW_COUNT <> 0) THEN\n"
           "    UPDATE INET_SNIFFER_STAT_@0001@ SET\n"
           "      pkts = pkts + :pktsP,\n"
@@ -509,7 +509,7 @@ Logger & Logger::createDatabase()
           "  DECLARE data0     BIGINT;\n"
           "  DECLARE cur@0001@ CURSOR FOR\n"
           "    SELECT\n"
-          "      pkts, dgram, data\n"
+          "      pkts, min_dgram, max_dgram, dgram, data\n"
           "    FROM INET_SNIFFER_STAT_@0001@\n"
           "    WHERE\n"
           "      iface = ifaceP AND ts = ts@0003@P AND\n"
@@ -519,10 +519,14 @@ Logger & Logger::createDatabase()
           "    FOR UPDATE;\n"
           "  DECLARE CONTINUE HANDLER FOR NOT FOUND SET fetched = 0;\n"
           "\n"
-          "  IF (dgramP < mind0) THEN mind0 = dgramP;\n"
-          "  IF (dgramP > maxd0) THEN maxd0 = dgramP;\n"
           "  OPEN cur@0001@;\n"
           "  FETCH cur@0001@ INTO pkts0, mind0, maxd0, dgram0, data0;\n"
+          "  IF dgramP < mind0 THEN\n"
+          "    SET mind0 = dgramP;\n"
+          "  END IF;\n"
+          "  IF dgramP > maxd0 THEN\n"
+          "    SET maxd0 = dgramP;\n"
+          "  END IF;\n"
           "  IF fetched THEN\n"
           "    UPDATE INET_SNIFFER_STAT_@0001@ SET\n"
           "      pkts = pkts + pktsP,\n"
@@ -1901,8 +1905,7 @@ int main(int _argc,char * _argv[])
     uintptr_t i;
     stdErr.fileName(SYSLOG_DIR("macroscope/") + "macroscope.log");
     utf8::String dfn(getEnv("MACROSCOPE_CONFIG"));
-    if( dfn.isNull() ) dfn = Config::defaultFileName();
-    else dfn = SYSCONF_DIR("") + "macroscope.conf";
+    if( dfn.isNull() ) dfn = SYSCONF_DIR("") + "macroscope.conf";
     Config::defaultFileName(dfn);
     Services services(macroscope_version.gnu_);
     AutoPtr<macroscope::SnifferService> serviceAP(newObject<macroscope::SnifferService>());

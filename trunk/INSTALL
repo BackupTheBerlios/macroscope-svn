@@ -37,6 +37,6 @@ Configuring
 ===========
 Copy macroscope.conf.template to macroscope.conf
 Edit connection and network interfaces setting.
-Under FreeBSD place macroscope_enable="YES string in rc.conf
+Under FreeBSD place macroscope_enable="YES" string in rc.conf
 Under Windows type macroscope --install --sniffer --service -c path/to/you/macroscope.conf
 List of available interfaces for sniffing may get by --iflist command line option
