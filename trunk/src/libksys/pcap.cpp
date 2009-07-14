@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007-2008 Guram Dukashvili
+ * Copyright 2007-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -762,7 +762,7 @@ void PCAP::capture(uint64_t timestamp,uintptr_t capLen,uintptr_t len,const uint8
       sizeUdp = sizeof(UDPPacketHeader);
     }
   }
-  uint64_t bt, et;
+  uint64_t bt = 0, et = 0;
   setBounds(groupingPeriod_,timestamp,bt,et);
   if( packets_ == NULL ||
       (packets_->count() == packets_->mcount() && packets_->count() > 0) ||
@@ -986,7 +986,7 @@ void PCAP::DatabaseInserter::threadExecute()
     {
       AutoLock<WriteLock> lock(pcap_->groupTreeReadWriteLock_);
       PacketGroupTree::Walker walker(pcap_->groupTree_);
-      uint64_t ct = gettimeofday(), bt, et;
+      uint64_t ct = gettimeofday(), bt = 0, et = 0;
       pcap_->setBounds(ct,bt,et);
       while( walker.next() ){
         pGroup = &walker.object();

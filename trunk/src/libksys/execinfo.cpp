@@ -1,5 +1,5 @@
 /*-
- * Copyright 2007 Guram Dukashvili
+ * Copyright 2007-2009 Guram Dukashvili
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -307,7 +307,7 @@ static void * getframeaddr(intptr_t level)
 static inline bool isInvalidPointer(char * p,char * pp)
 {
   return
-    (intptr_t(p) >= 0 && uintptr_t(p) < getpagesize()) ||
+    (intptr_t(p) >= 0 && intptr_t(p) < getpagesize()) ||
     p - pp > 0x100000 ||
     p == NULL
   ;

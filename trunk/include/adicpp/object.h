@@ -50,8 +50,8 @@ class Object {
   friend void cleanup();
   friend class ObjectActions;
   public:
-    virtual __declspec(nothrow) ~Object() {}
-    __declspec(nothrow) Object() {}
+    virtual ~Object() {}
+    Object() {}
     
 // actions
     virtual void afterConstruction() {}

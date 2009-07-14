@@ -396,7 +396,7 @@ typedef struct _WSA_COMPATIBILITY_MODE {
 #pragma option pop
 #endif
 
-#if SIZEOF_ADDRINFO == 0
+#if SIZEOF_ADDRINFO == 0 && (defined(__WIN32__) || defined(__WIN64__))
 #ifndef __MINGW32__
 typedef struct addrinfo
 {
@@ -426,12 +426,12 @@ typedef struct addrinfoW
 #define SIZEOF_ADDRINFO sizeof(addrinfo)
 #endif
 
-#if SIZEOF_ADDRINFOA == 0
+#if SIZEOF_ADDRINFOA == 0 && (defined(__WIN32__) || defined(__WIN64__))
 typedef struct addrinfo ADDRINFOA, *PADDRINFOA;
 #define SIZEOF_ADDRINFOA sizeof(ADDRINFOA)
 #endif
 
-#if SIZEOF_ADDRINFOW == 0
+#if SIZEOF_ADDRINFOW == 0 && (defined(__WIN32__) || defined(__WIN64__))
 typedef addrinfoW ADDRINFOW, *LPADDRINFOW;
 #define SIZEOF_ADDRINFOW sizeof(ADDRINFOW)
 #endif

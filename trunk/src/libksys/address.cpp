@@ -465,13 +465,13 @@ utf8::String SockAddr::gethostname(bool noThrow,const utf8::String & def)
 {
   SockAddr addr;
   int32_t err = 0;
+  utf8::String s;
+  APIAutoInitializer ksockAPIAutoInitializer;
+#if defined(__WIN32__) || defined(__WIN64__)
   IP_ADAPTER_ADDRESSES * pAddress = NULL;
   IP_ADAPTER_INFO * pAddress2 = NULL;
   PIP_ADAPTER_UNICAST_ADDRESS unicast = NULL;
   PIP_ADDR_STRING list = NULL;
-  utf8::String s;
-  APIAutoInitializer ksockAPIAutoInitializer;
-#if defined(__WIN32__) || defined(__WIN64__)
   ksys::Array<IpInfo> addresses;
   getAdaptersAddresses(addresses);
   if( ksys::isWinXPorLater() || iphlpapi.GetAdaptersAddresses != NULL ){
