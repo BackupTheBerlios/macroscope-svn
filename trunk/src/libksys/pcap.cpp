@@ -873,10 +873,15 @@ void PCAP::Grouper::threadExecute()
           }
         }
         if( pGroup->packets_.count() == pGroup->packets_.mcount() ){
-          pGroup->packets_.reserve(pGroup->packets_.mcount() * 2u + (pGroup->packets_.mcount() == 0));
+          uintptr_t mcount = pGroup->packets_.mcount();
+          pGroup->packets_.reserve(mcount * 2u + (mcount == 0));
           interlockedIncrement(
             pcap_->memoryUsage_,
-            (pGroup->packets_.mcount() - pGroup->packets_.count()) * sizeof(HashedPacket)
+            -intptr_t(mcount * sizeof(HashedPacket))
+          );
+          interlockedIncrement(
+            pcap_->memoryUsage_,
+            pGroup->packets_.mcount() * sizeof(HashedPacket)
           );
         }
         HashedPacket & hpkt = pGroup->packets_[pGroup->header_.count_], * p;
@@ -1030,7 +1035,7 @@ void PCAP::DatabaseInserter::threadExecute()
       this
     );
     ellapsed = gettimeofday() - ellapsed;
-    
+
     PacketGroup::SwapFileHeader header = group->header_;
     group->header_.count_ = pCount;
     if( success && pCount == 0 ){
@@ -1260,10 +1265,15 @@ PCAP::PacketGroup & PCAP::PacketGroup::joinGroup(const PacketGroup & group,volat
 {
   for( intptr_t i = group.header_.count_ - 1; i >= 0; i-- ){
     if( packets_.count() == packets_.mcount() ){
-      packets_.reserve(packets_.mcount() * 2u + (packets_.mcount() == 0));
+      uintptr_t mcount = packets_.mcount();
+      packets_.reserve(mcount * 2u + (mcount == 0));
       interlockedIncrement(
         memoryUsage,
-        (packets_.mcount() - packets_.count()) * sizeof(HashedPacket)
+        -intptr_t(mcount * sizeof(HashedPacket))
+      );
+      interlockedIncrement(
+        memoryUsage,
+        packets_.mcount() * sizeof(HashedPacket)
       );
     }
     HashedPacket & pkt = packets_[header_.count_], * p;
