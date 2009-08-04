@@ -1268,6 +1268,23 @@ void Logger::SquidSendmailThread::parseSquidLogFile(const utf8::String & logFile
     utf8::String st_user, st_url;
     if( validLine ){
       st_user = utf8::plane(slcp[identColumn]).left(80).replaceAll("\"","").lower();
+      {
+        utf8::String::Iterator i(st_user);
+        while( !i.eos() ){
+          if( i.getChar() != '.' || !i.isDigit() ) break;
+          i.next();
+        }
+        if( !i.eos() ){
+          ksock::SockAddr addr;
+          try {
+            addr.resolveName(st_user);
+            st_user = addr.resolveAddr();
+          }
+          catch( ExceptionSP & e ){
+            e->writeStdError();
+          }
+        }
+      }
       st_url = utf8::plane(slcp[6]);
       validLine = validLine && st_url.strcasestr(skipUrl).position() < 0;
     }
